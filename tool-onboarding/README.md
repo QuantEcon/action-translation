@@ -1,5 +1,19 @@
 # tool-onboarding
 
+> ⚠️ **DEPRECATED - FOR REFERENCE ONLY**
+>
+> This tool is no longer actively developed. Development has moved to **`tool-resync`** (see [PLAN-TOOL-RESYNC.md](../PLAN-TOOL-RESYNC.md)), which provides:
+> - **Section-based analysis** instead of block-by-block matching
+> - **Simpler architecture** - integrated CLI in action-translation
+> - **Better accuracy** - LLM evaluates whole sections, not individual code blocks
+> - **Shared modules** - reuses parser.ts, heading-map.ts from action-translation
+>
+> **Why deprecated**: The code block matching approach is fundamentally flawed - it breaks when code cells are added or deleted in the target. See [feedback in issue #677](https://github.com/QuantEcon/lecture-python-intro/issues/677).
+>
+> This repository is retained for **reference only**.
+
+---
+
 CLI tool to check translation alignment between source and target repositories using a **hybrid analysis approach**: deterministic code comparison + Claude AI for prose.
 
 ## Purpose

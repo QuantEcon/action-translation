@@ -23,7 +23,8 @@ Complete documentation for the Translation Action (GitHub Action).
 
 1. **[Project Design](PROJECT-DESIGN.md)** - Design decisions and philosophy
 2. **[Architecture](ARCHITECTURE.md)** - System architecture and component design
-3. **[Implementation](IMPLEMENTATION.md)** - Comprehensive technical guide (~3,000 lines of code)
+3. **[Sync Workflow](SYNC-WORKFLOW.md)** - Complete sync lifecycle and all modes
+4. **[Implementation](IMPLEMENTATION.md)** - Comprehensive technical guide (~3,000 lines of code)
 
 ---
 
@@ -53,10 +54,11 @@ Complete documentation for the Translation Action (GitHub Action).
 
 **Standalone tools for different workflows:**
 
-1. **[Onboarding Tool](../tool-onboarding/README.md)** - Assess translation alignment before enabling sync (active)
+1. **[Resync Tool](../PLAN-TOOL-RESYNC.md)** - Backport analysis and forward sync (planned, replaces onboarding/alignment)
 2. **[Bulk Translator](../tool-bulk-translator/README.md)** - One-time bulk translation for initial setup
 3. **[GitHub Test Tool](../tool-test-action-on-github/README.md)** - Automated GitHub testing + quality evaluation
-4. **[Alignment Tool](../tool-alignment/README.md)** - Structural analysis (deprecated, for reference)
+4. **[Onboarding Tool](../tool-onboarding/README.md)** - ⚠️ DEPRECATED - see Resync Tool
+5. **[Alignment Tool](../tool-alignment/README.md)** - ⚠️ DEPRECATED - see Resync Tool
 
 ---
 
