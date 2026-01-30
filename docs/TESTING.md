@@ -1,6 +1,6 @@
 # Testing Guide
 
-**Current Test Status**: ✅ 155 tests passing | 0 failing | ~3s execution time
+**Current Test Status**: ✅ 266 tests passing | 0 failing | ~4s execution time
 
 ---
 
@@ -34,7 +34,10 @@ src/__tests__/
 ├── language-config.test.ts     # Language-specific configuration
 ├── integration.test.ts         # End-to-end workflows
 ├── e2e-fixtures.test.ts        # End-to-end fixture tests
-└── component-reconstruction.test.ts  # Component assembly
+├── component-reconstruction.test.ts  # Component assembly
+├── reviewer.test.ts            # Review mode functionality
+├── translator.test.ts          # Translation service (prompts, validation)
+└── inputs.test.ts              # Action input validation
 ```
 
 **Test Breakdown**:
@@ -47,6 +50,9 @@ src/__tests__/
 - Integration: 9 tests
 - E2E Fixtures: 1 test
 - Component Reconstruction: 4 tests
+- Reviewer: 28 tests (v0.7.0 review mode)
+- Translator: 28 tests (prompt structure, token estimation)
+- Inputs: 55 tests (mode validation, PR events, input parsing)
 
 ---
 

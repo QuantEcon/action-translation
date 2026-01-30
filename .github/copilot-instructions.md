@@ -10,7 +10,7 @@
 
 **Core Architecture**: Section-based translation with full recursive heading support
 **Current Version**: v0.7.0 (Testing & Development)
-**Test Coverage**: 183 tests, all passing
+**Test Coverage**: 266 tests, all passing
 **Code Size**: ~3,400 lines core logic across 9 modules
 **Glossary**: 357 terms (zh-cn, fa)
 
@@ -227,7 +227,7 @@ if (docsFolder === '') {
 **Purpose**: Fast, comprehensive testing of core logic
 **Location**: `src/__tests__/*.test.ts`
 **Run**: `npm test`
-**Coverage**: 183 tests across 10 files
+**Coverage**: 266 tests across 12 files
 
 **Test Files**:
 - `parser.test.ts` - MyST parsing, frontmatter (15 tests)
