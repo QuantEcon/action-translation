@@ -345,7 +345,7 @@ npx resync backport \
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture and design
 - [QUICKSTART.md](QUICKSTART.md) - Getting started guide
-- [PLAN-TOOL-RESYNC.md](../PLAN-TOOL-RESYNC.md) - Resync tool implementation plan
+- [DESIGN-RESYNC.md](DESIGN-RESYNC.md) - Resync tool design reference
 - [HEADING-MAPS.md](HEADING-MAPS.md) - How heading-maps enable cross-language matching
 
 ---

@@ -2,7 +2,7 @@
 
 > ⚠️ **DEPRECATED - FOR REFERENCE ONLY**
 >
-> This tool is no longer actively developed. Development has moved to **`tool-resync`** (see [PLAN-TOOL-RESYNC.md](../PLAN-TOOL-RESYNC.md)), which provides:
+> This tool is no longer actively developed. Development has moved to **`tool-resync`** (see [DESIGN-RESYNC.md](../docs/DESIGN-RESYNC.md)), which provides:
 > - **Section-based analysis** instead of block-by-block matching
 > - **Simpler architecture** - integrated CLI in action-translation
 > - **Better accuracy** - LLM evaluates whole sections, not individual code blocks
