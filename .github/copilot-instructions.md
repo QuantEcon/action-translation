@@ -10,8 +10,8 @@
 
 **Core Architecture**: Section-based translation with full recursive heading support
 **Current Version**: v0.7.0 (Testing & Development)
-**Test Coverage**: 266 tests, all passing
-**Code Size**: ~3,400 lines core logic across 9 modules
+**Test Coverage**: 316 tests, all passing
+**Code Size**: ~4,200 lines core logic across 11 modules
 **Glossary**: 357 terms (zh-cn, fa)
 
 ## Key Design Principles
@@ -103,12 +103,14 @@ heading-map:
 
 ```
 src/
-├── index.ts             # GitHub Actions entry point + mode routing (~780 lines)
+├── index.ts             # GitHub Actions entry point + mode routing (~450 lines)
+├── sync-orchestrator.ts # Sync processing pipeline (~420 lines)
+├── pr-creator.ts        # PR creation in target repo (~320 lines)
 ├── parser.ts            # MyST Markdown parser (282 lines)
 ├── diff-detector.ts     # Change detection (195 lines)
-├── translator.ts        # Claude API - sync mode (305 lines)
+├── translator.ts        # Claude API - sync mode (~460 lines, with retry)
 ├── reviewer.ts          # Claude API - review mode (~700 lines)
-├── file-processor.ts    # Translation orchestration (739 lines)
+├── file-processor.ts    # Translation orchestration (~670 lines)
 ├── heading-map.ts       # Heading-map system (246 lines)
 ├── language-config.ts   # Language-specific translation rules (102 lines)
 ├── inputs.ts            # Action inputs + validation (~200 lines)
@@ -135,6 +137,7 @@ src/
 - NEW mode (full translation)
 - Glossary support
 - Language-specific prompt customization
+- Retry with exponential backoff (RateLimitError, APIConnectionError, 5xx)
 
 **reviewer.ts** (v0.7.0):
 - Claude API integration for review mode
@@ -172,11 +175,27 @@ src/
 - `validatePREvent()` - Validate merged PR event (sync)
 - `validateReviewPREvent()` - Validate PR event (review)
 
+**sync-orchestrator.ts**:
+- `SyncOrchestrator` class for processing translation files
+- `classifyChangedFiles()` - Categorize files (markdown, toc, renamed, removed)
+- `loadGlossary()` - Load glossary for target language
+- `Logger` interface for decoupling from `@actions/core`
+- `FileToSync`, `SyncProcessingResult` interfaces
+- Reusable by both GitHub Action and future CLI
+
+**pr-creator.ts**:
+- `createTranslationPR()` - Create/update PR in target repo
+- `buildPrBody()` - Generate PR description with file summary
+- `buildPrTitle()` - Generate PR title from source PR info
+- `buildLabelSet()` - Compute labels for translation PR
+- `PrCreatorConfig`, `SourcePrInfo` interfaces
+
 **index.ts**:
 - GitHub Actions entry point
 - **Mode routing**: `runSync()` or `runReview()`
-- Detect changed files in merged PR (sync mode)
-- Create translation PRs in target repo (sync mode)
+- Fetch file content from GitHub API
+- Delegates processing to `SyncOrchestrator`
+- Delegates PR creation to `createTranslationPR()`
 - Evaluate and post reviews (review mode)
 - Handle root-level files (`docs-folder: '.'`)
 
@@ -227,7 +246,7 @@ if (docsFolder === '') {
 **Purpose**: Fast, comprehensive testing of core logic
 **Location**: `src/__tests__/*.test.ts`
 **Run**: `npm test`
-**Coverage**: 266 tests across 12 files
+**Coverage**: 316 tests across 15 files
 
 **Test Files**:
 - `parser.test.ts` - MyST parsing, frontmatter (15 tests)
@@ -240,6 +259,10 @@ if (docsFolder === '') {
 - `e2e-fixtures.test.ts` - End-to-end fixtures (1 test)
 - `component-reconstruction.test.ts` - Component assembly (4 tests)
 - `reviewer.test.ts` - Review mode (28 tests)
+- `sync-orchestrator.test.ts` - Sync orchestration (26 tests)
+- `pr-creator.test.ts` - PR creation utilities (12 tests)
+- `translator-retry.test.ts` - Retry logic (12 tests)
+- `inputs.test.ts` - Input validation (82 tests)
 
 **Key Regression Tests** (v0.4.7):
 - Nested subsection change detection (####, #####)
@@ -461,7 +484,9 @@ gh pr view 123
 - Parsing → `parser.ts:parseSections`
 - Change detection → `diff-detector.ts:detectSectionChanges`
 - Heading-maps → `heading-map.ts:updateHeadingMap`
+- Sync orchestration → `sync-orchestrator.ts:SyncOrchestrator`
+- PR creation → `pr-creator.ts:createTranslationPR`
 
 ---
 
-**Last Updated**: December 2025
+**Last Updated**: June 2025

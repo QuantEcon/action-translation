@@ -27,6 +27,12 @@ import { getLanguageConfig } from './language-config';
  */
 const INCOMPLETE_DOCUMENT_MARKER = '-----> INCOMPLETE DOCUMENT <------';
 
+/** Retry configuration for API calls */
+export const RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 1000,  // 1s, 2s, 4s with exponential backoff
+};
+
 /**
  * Estimate output tokens needed for translation
  * Returns a conservative estimate based on source content length
@@ -119,6 +125,61 @@ export class TranslationService {
   }
 
   /**
+   * Sleep for a given number of milliseconds
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Call Claude API with retry logic and exponential backoff.
+   *
+   * Retries on transient errors:
+   * - RateLimitError (429)
+   * - APIConnectionError (network issues)
+   * - APIError with 5xx status (server errors)
+   *
+   * Does NOT retry on:
+   * - AuthenticationError (invalid API key)
+   * - BadRequestError (prompt issues)
+   * - Other non-transient errors
+   */
+  private async callWithRetry(
+    createParams: { model: string; max_tokens: number; messages: Array<{ role: string; content: string }> },
+    operationName: string,
+  ): Promise<Anthropic.Message> {
+    const { maxRetries, baseDelayMs } = RETRY_CONFIG;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await this.client.messages.create(createParams as Anthropic.MessageCreateParamsNonStreaming);
+      } catch (error) {
+        // Don't retry on non-transient errors
+        if (error instanceof AuthenticationError || error instanceof BadRequestError) {
+          throw error;
+        }
+
+        // Check for transient errors worth retrying
+        const isRetryable =
+          error instanceof RateLimitError ||
+          error instanceof APIConnectionError ||
+          (error instanceof APIError && error.status !== undefined && error.status >= 500);
+
+        if (!isRetryable || attempt === maxRetries) {
+          throw error;
+        }
+
+        const delay = baseDelayMs * Math.pow(2, attempt - 1); // 1s, 2s, 4s
+        this.log(`${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error instanceof Error ? error.message : error}. Retrying in ${delay}ms...`);
+        await this.sleep(delay);
+      }
+    }
+
+    // Should never reach here
+    throw new Error('Unexpected: retry loop completed without result');
+  }
+
+  /**
    * Translate a section (update or new)
    */
   async translateSection(request: SectionTranslationRequest): Promise<SectionTranslationResult> {
@@ -196,11 +257,11 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
     this.log(`New ${sourceLanguage} length: ${newEnglish.length}`);
     this.log(`Current ${targetLanguage} length: ${currentTranslation.length}`);
 
-    const response = await this.client.messages.create({
+    const response = await this.callWithRetry({
       model: this.model,
       max_tokens: 8192,
       messages: [{ role: 'user', content: prompt }],
-    });
+    }, 'translateSectionUpdate');
 
     const content = response.content[0];
     if (content.type !== 'text') {
@@ -268,11 +329,11 @@ Provide ONLY the ${targetLanguage} translation. Do not include any markers, expl
     this.log(`Translating new section, mode=new`);
     this.log(`${sourceLanguage} section length: ${englishSection.length}`);
 
-    const response = await this.client.messages.create({
+    const response = await this.callWithRetry({
       model: this.model,
       max_tokens: 8192,
       messages: [{ role: 'user', content: prompt }],
-    });
+    }, 'translateNewSection');
 
     const content = response.content[0];
     if (content.type !== 'text') {
@@ -347,11 +408,11 @@ Provide the complete translated document maintaining exact MyST structure.`;
     this.log(`Translating full document`);
     this.log(`Content length: ${content.length} chars`);
 
-    const response = await this.client.messages.create({
+    const response = await this.callWithRetry({
       model: this.model,
       max_tokens: maxTokens,
       messages: [{ role: 'user', content: prompt }],
-    });
+    }, 'translateFullDocument');
 
     const result = response.content[0];
     if (result.type !== 'text') {
