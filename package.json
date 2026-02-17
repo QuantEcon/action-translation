@@ -1,6 +1,6 @@
 {
   "name": "action-translation",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "GitHub Action to sync and review translations across repositories",
   "main": "dist/index.js",
   "scripts": {
