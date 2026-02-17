@@ -72,9 +72,14 @@ This plan **builds on and refines** existing design work documented in:
 | Human review required | ✅ "Reviewed by English content maintainers" | ✅ Same |
 | Section-based analysis | ✅ Section-level translation | ✅ Same |
 
-### Design Decision: CLI Batch Analysis (Not Label-Triggered)
+### Design Decision: CLI Batch Analysis + GitHub Trigger for Authors
 
-The existing docs mention a label-triggered approach where translators add `suggest-upstream` labels. After analysis, we've decided **CLI batch analysis is the better approach**:
+The existing docs mention a label-triggered approach where translators add `suggest-upstream` labels. After analysis, we've decided on a **hybrid approach**:
+
+1. **CLI batch analysis** — the primary tool for systematic, scheduled backport detection. Flexible for testing and development.
+2. **GitHub-triggered upstream suggestions** — a lightweight mechanism for non-technical authors/translators to flag individual improvements via GitHub Issues or PR labels, without needing CLI access.
+
+The CLI handles the heavy lifting (LLM-powered filtering, consolidated reports). The GitHub trigger provides an accessible entry point for contributors who discover a bug fix or improvement while working on translations:
 
 #### Why Most Translation Changes Are NOT Backport Candidates
 
@@ -90,16 +95,18 @@ The existing docs mention a label-triggered approach where translators add `sugg
 
 The vast majority of translation changes improve the *translation*, not the *source content*. Backport candidates are rare.
 
-#### Why Batch Analysis Over Label-Triggered
+#### Complementary Approaches: Batch Analysis + GitHub Trigger
 
-| Aspect | Label-Triggered | Batch Analysis (CLI) |
-|--------|----------------|---------------------|
-| Burden on translator | High - must identify candidates | None - automatic |
-| Signal-to-noise | Low - many false positives | High - LLM filters |
-| Consistency | Variable (different translators) | Consistent (same prompts) |
-| Coverage | Scattered (only flagged items) | Complete (all changes reviewed) |
-| Output | Many small PRs | One consolidated report |
-| Reviewer experience | Fragmented | Prioritized, contextualized |
+| Aspect | CLI Batch Analysis | GitHub Trigger (for authors) |
+|--------|-------------------|-----------------------------|
+| Audience | Developers, maintainers | Translators, non-technical authors |
+| Trigger | Manual/scheduled (cron) | Issue or label on GitHub |
+| Coverage | Complete (all changes reviewed) | Individual (one suggestion at a time) |
+| LLM filtering | Yes - automatic noise reduction | Optional - can be validated by LLM |
+| Output | Consolidated report | Single issue/PR in SOURCE repo |
+| Best for | Systematic monthly reviews | Ad-hoc discoveries during translation |
+
+**Why both?** CLI batch analysis catches everything systematically, but non-technical authors shouldn't need to install tools or run commands. A simple GitHub Issue template ("Suggest upstream improvement") or a `suggest-upstream` label on a translation PR lets anyone flag a potential backport. The GitHub Action can then validate the suggestion with the same LLM prompts used in batch mode.
 
 #### Why Not Two-Way Sync?
 
@@ -127,9 +134,10 @@ This tool is part of a larger sync ecosystem. See [docs/SYNC-WORKFLOW.md](docs/S
 |------|-----------|---------|------|--------|
 | **PR Diff** | SOURCE → TARGET | Automated (PR merge) | action-translation (sync) | ✅ Implemented |
 | **Review** | Evaluates TARGET | Automated (PR open) | action-translation (review) | ✅ Implemented |
-| **Backport** | TARGET → SOURCE | Manual/scheduled | resync backport | 📋 Planned |
+| **Backward (batch)** | TARGET → SOURCE | Manual/scheduled | resync backward | 📋 Planned |
+| **Backward (ad-hoc)** | TARGET → SOURCE | GitHub Issue/label | action-translation (suggest) | 📋 Planned |
 | **Status** | Diagnostic | Manual | resync status | 📋 Planned |
-| **Forward Sync** | SOURCE → TARGET | Manual | resync sync | 📋 Planned |
+| **Forward** | SOURCE → TARGET | Manual | resync forward | 📋 Planned |
 | **Bulk Translate** | SOURCE → TARGET | Manual (one-time) | tool-bulk-translator | ✅ Implemented |
 
 ### Where resync Fits
@@ -141,14 +149,14 @@ This tool is part of a larger sync ecosystem. See [docs/SYNC-WORKFLOW.md](docs/S
 │                                                                              │
 │  PHASE 1: ONBOARDING                                                        │
 │  ├── Path A: New translation → bulk-translator → Enable PR Diff             │
-│  └── Path B: Existing translation → resync backport → resync sync → PR Diff │
+│  └── Path B: Existing translation → resync backward → resync forward → PR Diff │
 │                                                                              │
 │  PHASE 2: STEADY STATE                                                       │
 │  └── PR Diff (automated) keeps SOURCE → TARGET in sync                      │
 │                                                                              │
 │  PHASE 3: MAINTENANCE                                                        │
-│  ├── resync backport (monthly) → find improvements to suggest               │
-│  └── resync status + sync → fix drift from direct commits                   │
+│  ├── resync backward (monthly) → find improvements to suggest               │
+│  └── resync status + forward → fix drift from direct commits                │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -160,12 +168,12 @@ When onboarding a repository with existing manual translations, **order matters*
 | Step | Command | Purpose |
 |------|---------|---------|
 | 1 | `resync status` | Understand current state |
-| 2 | `resync backport` | Find improvements BEFORE overwriting |
+| 2 | `resync backward` | Find improvements BEFORE overwriting |
 | 3 | Human review | Accept good suggestions into SOURCE |
-| 4 | `resync sync` | Now safe to sync (improvements preserved) |
+| 4 | `resync forward` | Now safe to sync (improvements preserved) |
 | 5 | Enable PR Diff | Automated sync going forward |
 
-**⚠️ Warning**: Running `resync sync` before `resync backport` will overwrite TARGET, losing valuable translation improvements.
+**⚠️ Warning**: Running `resync forward` before `resync backward` will overwrite TARGET, losing valuable translation improvements.
 
 ---
 
@@ -177,8 +185,10 @@ This document outlines a new **two-step synchronization strategy** for maintaini
 
 | Command | Direction | Purpose |
 |---------|-----------|---------|
-| `resync backport` | TARGET → SOURCE | Detect and suggest backporting improvements from translations |
-| `resync sync` | SOURCE → TARGET | Migrate changes from SOURCE (source of truth) to TARGET |
+| `resync backward` | TARGET → SOURCE | Detect and suggest improvements from translations to SOURCE |
+| `resync forward` | SOURCE → TARGET | Migrate changes from SOURCE (source of truth) to TARGET |
+
+**Why `forward`/`backward`?** The names are symmetric and self-documenting — direction is immediately obvious without needing to learn domain vocabulary like "backport". The purpose (evaluate for suggestions vs translate) is clear from the direction.
 
 ### CLI Batch Analysis Design
 
@@ -197,9 +207,9 @@ The tool is designed as a **CLI utility** for periodic batch analysis:
 │                     TWO-STEP RESYNC WORKFLOW                             │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│   STEP 1: BACKPORT ANALYSIS (monthly or as-needed)                       │
+│   STEP 1: BACKWARD ANALYSIS (monthly or as-needed)                       │
 │   ┌──────────────────────────────────────────────────────────────────┐  │
-│   │  npx resync backport                                              │  │
+│   │  npx resync backward                                              │  │
 │   │  • Parse SOURCE and TARGET into sections                          │  │
 │   │  • Match sections by position (heading-map for validation)        │  │
 │   │  • Annotate with file-level git dates                             │  │
@@ -214,9 +224,9 @@ The tool is designed as a **CLI utility** for periodic batch analysis:
 │   (manually create PRs for accepted suggestions)                         │
 │                              │                                           │
 │                              ▼                                           │
-│   STEP 2: FORWARD SYNC                                                   │
+│   STEP 2: FORWARD                                                        │
 │   ┌──────────────────────────────────────────────────────────────────┐  │
-│   │  npx resync sync                                                  │  │
+│   │  npx resync forward                                               │  │
 │   │  • Compare SOURCE to TARGET sections                              │  │
 │   │  • SOURCE is the strict source of truth                           │  │
 │   │  • Translate changed sections                                     │  │
@@ -230,7 +240,7 @@ The tool is designed as a **CLI utility** for periodic batch analysis:
 
 ```bash
 # Monthly cron job example (GitHub Actions or local)
-0 0 1 * * cd /repos && npx resync backport -s lecture-python -t lecture-python.zh-cn -o reports/$(date +%Y-%m)
+0 0 1 * * cd /repos && npx resync backward -s lecture-python -t lecture-python.zh-cn -o reports/$(date +%Y-%m)
 ```
 
 ---
@@ -333,9 +343,9 @@ File-level git dates provide **context** for the LLM (e.g., "TARGET file was upd
 
 ### 4. LLM-Driven Evaluation
 
-Use LLM with full section context for backport analysis:
+Use LLM with full section context for backward analysis:
 
-**Backport Prompt Strategy**:
+**Backward Prompt Strategy**:
 ```
 Given this section:
 - SOURCE (English) content: [section content]
@@ -363,7 +373,7 @@ npx tool-sync-backports -f lectures/cobweb.md -s SOURCE -t TARGET
 # Bulk analysis
 npx tool-sync-backports -s SOURCE -t TARGET -d lectures
 
-# Forward sync (after backports reviewed)
+# Forward (after backward suggestions reviewed)
 npx tool-sync -s SOURCE -t TARGET -d lectures
 ```
 
@@ -371,9 +381,9 @@ npx tool-sync -s SOURCE -t TARGET -d lectures
 
 ## Tool Specifications
 
-### resync backport
+### resync backward
 
-**Purpose**: Analyze TARGET for improvements to suggest backporting to SOURCE
+**Purpose**: Analyze TARGET for improvements to suggest to SOURCE
 
 **Input**:
 - SOURCE repository path
@@ -420,7 +430,7 @@ when it should be the supply function S(p*) for supply-determined equilibrium.
 | **I18N_ONLY** | Font/locale changes | None - no backport needed |
 | **NO_CHANGE** | Sections equivalent | None - no action |
 
-### resync sync
+### resync forward
 
 **Purpose**: Migrate changes from SOURCE to TARGET (forward sync)
 
@@ -444,7 +454,7 @@ when it should be the supply function S(p*) for supply-determined equilibrium.
 - Updated TARGET files with translations
 - Summary of changes made
 
-**Note**: This tool treats SOURCE as strict truth. Run `backport` first, review and merge any suggestions, then run `sync`.
+**Note**: This tool treats SOURCE as strict truth. Run `backward` first, review and merge any suggestions, then run `forward`.
 
 ---
 
@@ -470,14 +480,14 @@ action-translation/
 │       ├── types.ts           # CLI-specific types
 │       ├── section-matcher.ts # Cross-language section matching
 │       ├── git-metadata.ts    # File-level git dates
-│       ├── backport-evaluator.ts  # LLM backport analysis
+│       ├── backward-evaluator.ts  # LLM backward analysis
 │       ├── report-generator.ts    # Markdown report output
 │       ├── commands/
-│       │   ├── backport.ts    # resync backport command
-│       │   └── sync.ts        # resync sync command
+│       │   ├── backward.ts    # resync backward command
+│       │   └── forward.ts     # resync forward command
 │       └── __tests__/
 │           ├── section-matcher.test.ts
-│           ├── backport.test.ts
+│           ├── backward.test.ts
 │           └── fixtures/
 ```
 
@@ -488,7 +498,7 @@ action-translation/
 | **parser.ts** | ✅ REUSE | Works identically for any language |
 | **heading-map.ts** | ✅ REUSE | Designed for cross-language matching |
 | **types.ts** | ✅ EXTEND | Add `SectionPair`, `BackportSuggestion` |
-| **translator.ts** | ✅ REUSE | For forward sync translation |
+| **translator.ts** | ✅ REUSE | For forward translation |
 | **diff-detector.ts** | ❌ NO | Wrong abstraction (same-language only) |
 | **file-processor.ts** | ⚠️ PARTIAL | Document reconstruction useful for sync |
 
@@ -540,9 +550,9 @@ async function getFileGitMetadata(
 }
 ```
 
-#### backport-evaluator.ts (LLM Analysis)
+#### backward-evaluator.ts (LLM Analysis)
 
-Prompts for backport evaluation with full section context.
+Prompts for backward evaluation with full section context.
 
 ---
 
@@ -683,8 +693,8 @@ Section (code + prose together):
 npx resync <command> [options]
 
 Commands:
-  backport    Analyze TARGET for improvements to suggest to SOURCE
-  sync        Migrate changes from SOURCE to TARGET
+  backward    Analyze TARGET for improvements to suggest to SOURCE
+  forward     Migrate changes from SOURCE to TARGET
   status      Quick sync status check (no LLM calls)
 
 Common Options:
@@ -700,7 +710,7 @@ Backport Options:
   --min-confidence <n>      Minimum confidence for reporting (default: 0.6)
   --estimate                Show cost estimate without running
 
-Sync Options:
+Forward Options:
   --dry-run                 Show what would change without making changes
 
 Status Options:
@@ -739,26 +749,29 @@ Status Options:
 ```bash
 npx resync status -s ~/repos/lecture-python -t ~/repos/lecture-python.zh-cn
 # Output: 51 files, 47 synced, 3 target-newer, 1 source-newer
+#
+# ⚠️ 3 sections have TARGET-only changes. Run `resync backward` before
+#    `resync forward` to avoid losing potential improvements.
 ```
 
-**Single File Backport Analysis**:
+**Single File Backward Analysis**:
 ```bash
-npx resync backport -f cobweb.md \
+npx resync backward -f cobweb.md \
   -s ~/repos/lecture-python \
   -t ~/repos/lecture-python.zh-cn \
   -o reports
 
-# Output: reports/cobweb-backport.md
+# Output: reports/cobweb-backward.md
 ```
 
-**Full Backport Analysis with Estimate**:
+**Full Backward Analysis with Estimate**:
 ```bash
-npx resync backport --estimate \
+npx resync backward --estimate \
   -s ~/repos/lecture-python \
   -t ~/repos/lecture-python.zh-cn
 
 # Output:
-# 📊 Backport Analysis Estimate
+# 📊 Backward Analysis Estimate
 # Files to analyze: 51
 # Sections with TARGET newer: 23
 # Estimated LLM calls: 23
@@ -768,15 +781,15 @@ npx resync backport --estimate \
 # Proceed? [y/N]
 ```
 
-**Forward Sync (after backports reviewed)**:
+**Forward (after backward suggestions reviewed)**:
 ```bash
-npx resync sync \
+npx resync forward \
   -s ~/repos/lecture-python \
   -t ~/repos/lecture-python.zh-cn \
   --dry-run
 
 # Review dry-run output, then:
-npx resync sync \
+npx resync forward \
   -s ~/repos/lecture-python \
   -t ~/repos/lecture-python.zh-cn
 ```
@@ -809,7 +822,7 @@ jobs:
           repository: quantecon/lecture-python.zh-cn
           path: target
       - run: |
-          npx resync backport \
+          npx resync backward \
             -s source -t target \
             -o reports/$(date +%Y-%m)
       - uses: actions/upload-artifact@v4
@@ -841,9 +854,9 @@ jobs:
           path: target
       
       # Run analysis with JSON output
-      - name: Analyze backport candidates
+      - name: Analyze backward candidates
         run: |
-          npx resync backport --json \
+          npx resync backward --json \
             -s source -t target \
             -o results.json
       
@@ -892,19 +905,19 @@ jobs:
 
 ## Implementation Phases
 
-### Phase 0: Single-File Backport Report (3-4 days)
+### Phase 0: Single-File Backward Report (3-4 days)
 **Goal**: Validate LLM prompts and report format with minimal scope
 
 - [ ] Set up `src/cli/` directory structure
 - [ ] CLI scaffolding with commander.js
 - [ ] `section-matcher.ts` - Cross-language section matching
 - [ ] `git-metadata.ts` - File-level git dates
-- [ ] `backport-evaluator.ts` - LLM prompts
+- [ ] `backward-evaluator.ts` - LLM prompts
 - [ ] `report-generator.ts` - Markdown output
-- [ ] Single file backport command: `npx resync backport -f file.md`
+- [ ] Single file backward command: `npx resync backward -f file.md`
 - [ ] Test fixtures from real lecture repos
 
-**Deliverable**: Working single-file backport analysis with report output
+**Deliverable**: Working single-file backward analysis with report output
 
 ### Phase 1: Bulk Analysis & Status Command (2-3 days)
 **Goal**: Scale to full repository analysis + quick diagnostic mode
@@ -921,18 +934,18 @@ jobs:
 - [ ] Unit tests for section-matcher and report-generator
 - [ ] JSON output (`--json`) for automation
 
-**Deliverable**: Full repository backport analysis + status diagnostic
+**Deliverable**: Full repository backward analysis + status diagnostic
 
-### Phase 2: Forward Sync (2-3 days)
-**Goal**: Implement SOURCE → TARGET sync
+### Phase 2: Forward (2-3 days)
+**Goal**: Implement SOURCE → TARGET forward
 
 - [ ] Integrate `translator.ts` from action-translation
-- [ ] Sync command with dry-run support
+- [ ] Forward command with dry-run support
 - [ ] Section-level translation (UPDATE mode)
 - [ ] Heading-map preservation
 - [ ] Output updated files to target repo
 
-**Deliverable**: Working forward sync for changed sections
+**Deliverable**: Working forward for changed sections
 
 ### Phase 3: Refinement & Documentation (2-3 days)
 **Goal**: Production-ready CLI
@@ -945,20 +958,85 @@ jobs:
 
 **Deliverable**: Documented, tested CLI tool
 
-### Phase 4: GitHub Action Automation (Future - 2-3 days)
-**Goal**: Scheduled automation via GitHub Actions
+### Phase 4: GitHub Action Automation & Author Trigger (Future - 3-4 days)
+**Goal**: Scheduled automation + accessible GitHub trigger for non-technical authors
 
+**Batch automation (scheduled)**:
 - [ ] Ensure `--json` output is stable and well-documented
 - [ ] Create reusable workflow template
 - [ ] Implement confidence-threshold PR creation
 - [ ] Add issue creation for medium-confidence suggestions
-- [ ] Documentation: "Setting up automated resync"
 
-**Deliverable**: GitHub Action workflow that runs monthly and creates PRs
+**GitHub trigger for authors (ad-hoc)**:
+- [ ] Create GitHub Issue template: "Suggest upstream improvement"
+  - Fields: file, section, description of improvement, category (bug fix / clarification / example)
+- [ ] GitHub Action workflow triggered by issue label (`suggest-upstream`) or issue template
+  - Validates suggestion using same LLM prompts as batch mode
+  - Cross-references with heading-map for section identification
+  - Creates formatted PR/issue in SOURCE repo if validated
+- [ ] Alternative: `suggest-upstream` label on translation PRs
+  - When label added, Action extracts changed sections and evaluates for backport
 
-**Note**: This phase can be deferred until manual workflow is proven.
+- [ ] Documentation: "Setting up automated resync" and "How to suggest upstream improvements"
+
+**Deliverable**: GitHub Action workflow for scheduled batch analysis + GitHub-native trigger for individual author suggestions
+
+**Note**: Batch automation can be deferred until manual CLI workflow is proven. The GitHub trigger can be implemented independently as it serves a different audience.
 
 **Estimated Total**: 9-13 days (Phase 0-3), +2-3 days (Phase 4)
+
+---
+
+## Testing Strategy
+
+The CLI decouples logic from GitHub Actions, enabling a layered testing approach that fills the gap between existing unit tests and the heavyweight `tool-test-action-on-github` workflow.
+
+### Design Principle: CLI Enables Testability
+
+The existing action is only fully testable through GitHub (create PR → trigger action → check results). The CLI makes the same logic testable **locally** — the key architectural benefit for development velocity.
+
+| Testing Surface | Action-Only | With CLI |
+|-----------------|-------------|----------|
+| Section matching | Mocked, same-language | Real cross-language fixtures |
+| Git metadata | Not testable locally | Temp git repos in tests |
+| Report output | N/A | Snapshot tests |
+| Full pipeline | GitHub PRs required | `npx resync backward --test` |
+| LLM prompts | Not tested | Prompt snapshots + golden responses |
+
+### Paired Fixture Repos
+
+The core testing innovation: small, self-contained directory pairs that simulate source/target repos. Each fixture tests a specific scenario without API calls or git remotes.
+
+```
+src/cli/__tests__/fixtures/
+├── aligned-pair/              # No suggestions expected
+│   ├── source/lectures/intro.md
+│   └── target/lectures/intro.md
+├── bug-fix-in-target/         # backward should detect BUG_FIX
+├── i18n-only-changes/         # backward should filter out
+├── missing-heading-map/       # Tests graceful degradation
+├── section-count-mismatch/    # TARGET has extra section
+└── structural-drift/          # Sections reordered
+```
+
+**Why paired repos vs triplets**: Existing fixtures use (old-en, new-en, current-zh) triplets for same-language diffing. The CLI needs (source-en, target-zh) pairs for cross-language matching — a fundamentally different test shape.
+
+### `--test` Flag
+
+All CLI commands support a `--test` flag that:
+- Skips real LLM calls
+- Returns deterministic mock responses
+- Enables full pipeline testing without API costs
+- Consistent with existing `TEST` mode in the GitHub Action
+
+### LLM Prompt Testing
+
+Two complementary approaches prevent prompt regression:
+
+1. **Prompt snapshot tests** (free, every commit) — snapshot the constructed prompt text to catch unintended changes to prompt structure
+2. **Golden response tests** (~$0.05/test, weekly) — verify real LLM responses for known fixtures produce expected verdicts (BACKPORT vs NO_BACKPORT, correct category, reasonable confidence)
+
+See [PLAN.md](../PLAN.md) for the full testing pyramid with all 7 layers and test organization.
 
 ---
 
@@ -1113,23 +1191,20 @@ To maintain consistency with existing documentation:
 
 | This Plan | PLAN-FUTURE-FEATURES.md | Notes |
 |-----------|------------------------|-------|
-| Backport suggestion | Upstream suggestion | Same concept - improvements from TARGET suggested to SOURCE |
-| `resync backport` | (supersedes `mode: suggest`) | CLI batch analysis preferred over label-triggered |
+| Backward suggestion | Upstream suggestion | Same concept - improvements from TARGET suggested to SOURCE |
+| `resync backward` | (complements `mode: suggest`) | CLI for batch analysis; GitHub trigger for ad-hoc author suggestions |
 | Suggestion report | - | Consolidated markdown report, not individual PRs |
-| TARGET_CHANGED | "Target has valuable improvements" | Section status indicating potential backport |
+| TARGET_CHANGED | "Target has valuable improvements" | Section status indicating potential backward suggestion |
 
 The core principle is consistent: **backports are suggestions, not automatic changes**. They require human review before inclusion in SOURCE.
 
-**Note**: The existing docs mention a label-triggered `mode: suggest` approach. After analysis, we've determined that **CLI batch analysis is superior** because:
-- Most translation changes are improvements to the translation, not backport candidates
-- The LLM can filter these automatically in batch mode
-- Consolidated reports are easier for reviewers than scattered PRs
+**Note**: The existing docs mention a label-triggered `mode: suggest` approach. This plan adopts a **hybrid strategy**: CLI batch analysis for systematic coverage, plus a lightweight GitHub trigger (Issue template or `suggest-upstream` label) for non-technical authors to flag individual improvements without CLI access.
 
 ---
 
 ## References
 
-- [PLAN-FUTURE-FEATURES.md](docs/PLAN-FUTURE-FEATURES.md) - **Section 1**: Resync Workflow, **Section 4**: Bidirectional Sync (note: label-triggered approach superseded by this plan)
+- [PLAN-FUTURE-FEATURES.md](docs/PLAN-FUTURE-FEATURES.md) - **Section 1**: Resync Workflow, **Section 4**: Bidirectional Sync (note: label-triggered approach now complemented by CLI batch analysis)
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Project lifecycle, mode relationships, "SOURCE is truth" philosophy
 - [Heading-Maps Documentation](docs/HEADING-MAPS.md) - Cross-language section matching
 - [tool-onboarding README](tool-onboarding/README.md) - Previous learnings on code/prose analysis
@@ -1151,4 +1226,4 @@ The core principle is consistent: **backports are suggestions, not automatic cha
 ---
 
 **Document Maintainer**: QuantEcon Team  
-**Next Steps**: Review plan, then proceed with Phase 0 implementation (single-file backport)
+**Next Steps**: Review plan, then proceed with Phase 0 implementation (single-file backward)

@@ -1,10 +1,9 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { getMode, getInputs, getReviewInputs, validatePREvent, validateReviewPREvent } from './inputs';
-import { TranslationService } from './translator';
-import { FileProcessor } from './file-processor';
 import { TranslationReviewer } from './reviewer';
-import { Glossary, FileChange, SyncResult } from './types';
+import { SyncOrchestrator, classifyChangedFiles, loadGlossary, FileToSync, Logger } from './sync-orchestrator';
+import { createTranslationPR, PrCreatorConfig, SourcePrInfo } from './pr-creator';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
@@ -100,6 +99,13 @@ function detectTargetLanguage(): string | undefined {
 
 /**
  * Run the SYNC mode - create translation PRs
+ *
+ * Workflow:
+ * 1. Validate inputs and PR event
+ * 2. List and classify changed files
+ * 3. Fetch content from GitHub API (source + target repos)
+ * 4. Process files via SyncOrchestrator (translation + validation)
+ * 5. Create PR in target repo via PrCreator
  */
 async function runSync(): Promise<void> {
     // Get and validate inputs
@@ -129,636 +135,312 @@ async function runSync(): Promise<void> {
       pull_number: prNumber,
     });
 
-    // Filter for renamed markdown files (need special handling)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const renamedMarkdownFiles = files.filter(
-      (file: any) =>
-        file.filename.startsWith(inputs.docsFolder) &&
-        file.filename.endsWith('.md') &&
-        file.status === 'renamed'
-    );
+    // Classify files into categories
+    const classified = classifyChangedFiles(files, inputs.docsFolder);
 
-    // Filter for files to sync: markdown files and TOC files (excluding renamed, handled separately)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const changedMarkdownFiles = files.filter(
-      (file: any) =>
-        file.filename.startsWith(inputs.docsFolder) &&
-        file.filename.endsWith('.md') &&
-        file.status !== 'removed' &&
-        file.status !== 'renamed'
-    );
-
-    // Filter for TOC files to sync (status: added or modified, not removed or renamed)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const changedTocFiles = files.filter(
-      (file: any) =>
-        file.filename.startsWith(inputs.docsFolder) &&
-        file.filename.endsWith('_toc.yml') &&
-        file.status !== 'removed' &&
-        file.status !== 'renamed'
-    );
-
-    // Filter for removed markdown files (for deletion)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const removedMarkdownFiles = files.filter(
-      (file: any) =>
-        file.filename.startsWith(inputs.docsFolder) &&
-        file.filename.endsWith('.md') &&
-        file.status === 'removed'
-    );
-
-    // Filter for removed TOC files (for deletion)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const removedTocFiles = files.filter(
-      (file: any) =>
-        file.filename.startsWith(inputs.docsFolder) &&
-        file.filename.endsWith('_toc.yml') &&
-        file.status === 'removed'
-    );
-
-    if (changedMarkdownFiles.length === 0 && changedTocFiles.length === 0 && 
-        removedMarkdownFiles.length === 0 && removedTocFiles.length === 0 &&
-        renamedMarkdownFiles.length === 0) {
+    if (classified.changedMarkdownFiles.length === 0 && classified.changedTocFiles.length === 0 &&
+        classified.removedMarkdownFiles.length === 0 && classified.removedTocFiles.length === 0 &&
+        classified.renamedMarkdownFiles.length === 0) {
       core.info('No markdown or TOC files changed in docs folder. Exiting.');
       return;
     }
 
-    core.info(`Found ${changedMarkdownFiles.length} changed markdown files`);
-    core.info(`Found ${renamedMarkdownFiles.length} renamed markdown files`);
-    core.info(`Found ${changedTocFiles.length} changed TOC files`);
-    core.info(`Found ${removedMarkdownFiles.length} removed markdown files`);
-    core.info(`Found ${removedTocFiles.length} removed TOC files`);
+    core.info(`Found ${classified.changedMarkdownFiles.length} changed markdown files`);
+    core.info(`Found ${classified.renamedMarkdownFiles.length} renamed markdown files`);
+    core.info(`Found ${classified.changedTocFiles.length} changed TOC files`);
+    core.info(`Found ${classified.removedMarkdownFiles.length} removed markdown files`);
+    core.info(`Found ${classified.removedTocFiles.length} removed TOC files`);
 
-    // Load glossary - uses built-in glossary by default
-    let glossary: Glossary | undefined;
-    
-    // First, try to load the built-in glossary (shipped with the action)
-    // Glossary path is language-specific: glossary/{target-language}.json
-    const builtInGlossaryPath = path.join(__dirname, '..', 'glossary', `${inputs.targetLanguage}.json`);
-    try {
-      const glossaryContent = await fs.readFile(builtInGlossaryPath, 'utf-8');
-      glossary = JSON.parse(glossaryContent);
-      if (glossary) {
-        core.info(`✓ Loaded built-in glossary for ${inputs.targetLanguage} with ${glossary.terms.length} terms`);
-      }
-    } catch (error) {
-      core.warning(`Could not load built-in glossary for ${inputs.targetLanguage}: ${error}`);
-      
-      // Fallback: try custom glossary path if provided
-      if (inputs.glossaryPath) {
-        try {
-          const customGlossaryContent = await fs.readFile(inputs.glossaryPath, 'utf-8');
-          glossary = JSON.parse(customGlossaryContent);
-          if (glossary) {
-            core.info(`✓ Loaded custom glossary from ${inputs.glossaryPath} with ${glossary.terms.length} terms`);
-          }
-        } catch (fallbackError) {
-          core.warning(`Could not load custom glossary from ${inputs.glossaryPath}: ${fallbackError}`);
-        }
-      }
-    }
+    // Load glossary
+    const builtInGlossaryDir = path.join(__dirname, '..', 'glossary');
+    const glossary = await loadGlossary(
+      inputs.targetLanguage,
+      builtInGlossaryDir,
+      inputs.glossaryPath || undefined,
+      coreLogger,
+    );
 
-    // Initialize translation service
-    // Enable debug mode for detailed logging
-    const debugMode = true;
-    const translator = new TranslationService(inputs.anthropicApiKey, inputs.claudeModel, debugMode);
-    const processor = new FileProcessor(translator, debugMode);
-
-    // Process each changed file
-    const processedFiles: string[] = [];
-    const translatedFiles: Array<{ path: string; content: string; sha?: string }> = [];
-    const filesToDelete: Array<{ path: string; sha: string }> = [];
-    const errors: string[] = [];
-
-    for (const file of changedMarkdownFiles) {
-      try {
-        core.info(`Processing ${file.filename}...`);
-
-        // Get file content from PR
-        const { data: fileData } = await octokit.rest.repos.getContent({
-          owner: github.context.repo.owner,
-          repo: github.context.repo.repo,
-          path: file.filename,
-          ref: github.context.sha,
-        });
-
-        if (!('content' in fileData)) {
-          throw new Error(`Could not get content for ${file.filename}`);
-        }
-
-        const newContent = Buffer.from(fileData.content, 'base64').toString('utf-8');
-
-        // Get old content (before the PR)
-        let oldContent = '';
-        try {
-          const { data: oldFileData } = await octokit.rest.repos.getContent({
-            owner: github.context.repo.owner,
-            repo: github.context.repo.repo,
-            path: file.filename,
-            ref: `${github.context.sha}^`, // Parent commit
-          });
-
-          if ('content' in oldFileData) {
-            oldContent = Buffer.from(oldFileData.content, 'base64').toString('utf-8');
-          }
-        } catch (error) {
-          // File is new (doesn't exist in parent)
-          core.info(`${file.filename} is a new file`);
-        }
-
-        // Check if file exists in target repo
-        const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
-        let targetContent = '';
-        let isNewFile = false;
-        let existingFileSha: string | undefined;
-
-        try {
-          const { data: targetFileData } = await octokit.rest.repos.getContent({
-            owner: targetOwner,
-            repo: targetRepo,
-            path: file.filename,
-          });
-
-          if ('content' in targetFileData) {
-            targetContent = Buffer.from(targetFileData.content, 'base64').toString('utf-8');
-            existingFileSha = targetFileData.sha;
-          }
-        } catch (error) {
-          isNewFile = true;
-          core.info(`${file.filename} does not exist in target repo - will create it`);
-        }
-
-        // Process the file using section-based approach
-        let translatedContent: string;
-        if (isNewFile) {
-          translatedContent = await processor.processFull(
-            newContent,
-            file.filename,
-            inputs.sourceLanguage,
-            inputs.targetLanguage,
-            glossary
-          );
-        } else {
-          // Use new section-based processing
-          translatedContent = await processor.processSectionBased(
-            oldContent,
-            newContent,
-            targetContent,
-            file.filename,
-            inputs.sourceLanguage,
-            inputs.targetLanguage,
-            glossary
-          );
-        }
-
-        // Validate the translated content
-        const validation = await processor.validateMyST(translatedContent, file.filename);
-        if (!validation.valid) {
-          throw new Error(`Validation failed: ${validation.error}`);
-        }
-
-        core.info(`Successfully processed ${file.filename}`);
-        processedFiles.push(file.filename);
-
-        // Store translated content for PR creation
-        translatedFiles.push({
-          path: file.filename,
-          content: translatedContent,
-          sha: existingFileSha,
-        });
-
-      } catch (error) {
-        const errorMessage = `Error processing ${file.filename}: ${error}`;
-        core.error(errorMessage);
-        errors.push(errorMessage);
-      }
-    }
-
-    // Process renamed markdown files (special handling: preserve translation, delete old file)
-    for (const file of renamedMarkdownFiles) {
-      try {
-        const previousFilename = file.previous_filename;
-        core.info(`Processing renamed file: ${previousFilename} → ${file.filename}...`);
-
-        // Get the new file content from the source repo
-        const { data: fileData } = await octokit.rest.repos.getContent({
-          owner: github.context.repo.owner,
-          repo: github.context.repo.repo,
-          path: file.filename,
-          ref: github.context.sha,
-        });
-
-        if (!('content' in fileData)) {
-          throw new Error(`Could not get content for ${file.filename}`);
-        }
-
-        const newContent = Buffer.from(fileData.content, 'base64').toString('utf-8');
-
-        // Get the old content (before rename) using previous_filename
-        let oldContent = '';
-        if (previousFilename) {
-          try {
-            const { data: oldFileData } = await octokit.rest.repos.getContent({
-              owner: github.context.repo.owner,
-              repo: github.context.repo.repo,
-              path: previousFilename,
-              ref: `${github.context.sha}^`, // Parent commit
-            });
-
-            if ('content' in oldFileData) {
-              oldContent = Buffer.from(oldFileData.content, 'base64').toString('utf-8');
-            }
-          } catch (error) {
-            core.info(`Could not get old content from ${previousFilename}`);
-          }
-        }
-
-        // Check if old file exists in target repo (to get existing translation)
-        const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
-        let targetContent = '';
-        let oldFileSha: string | undefined;
-
-        if (previousFilename) {
-          try {
-            const { data: targetFileData } = await octokit.rest.repos.getContent({
-              owner: targetOwner,
-              repo: targetRepo,
-              path: previousFilename,
-            });
-
-            if ('content' in targetFileData) {
-              targetContent = Buffer.from(targetFileData.content, 'base64').toString('utf-8');
-              oldFileSha = targetFileData.sha;
-              core.info(`Found existing translation at ${previousFilename} - will transfer to ${file.filename}`);
-            }
-          } catch (error) {
-            core.info(`${previousFilename} does not exist in target repo`);
-          }
-        }
-
-        // Process the file
-        let translatedContent: string;
-        if (targetContent) {
-          // We have an existing translation - use section-based processing to update it
-          translatedContent = await processor.processSectionBased(
-            oldContent,
-            newContent,
-            targetContent,
-            file.filename,
-            inputs.sourceLanguage,
-            inputs.targetLanguage,
-            glossary
-          );
-        } else {
-          // No existing translation - do full translation
-          translatedContent = await processor.processFull(
-            newContent,
-            file.filename,
-            inputs.sourceLanguage,
-            inputs.targetLanguage,
-            glossary
-          );
-        }
-
-        // Validate the translated content
-        const validation = await processor.validateMyST(translatedContent, file.filename);
-        if (!validation.valid) {
-          throw new Error(`Validation failed: ${validation.error}`);
-        }
-
-        core.info(`Successfully processed renamed file ${file.filename}`);
-        processedFiles.push(file.filename);
-
-        // Store translated content at NEW path
-        translatedFiles.push({
-          path: file.filename,
-          content: translatedContent,
-          // Note: no sha because this is a new file (renamed)
-        });
-
-        // Mark the OLD file for deletion if it existed in target repo
-        if (oldFileSha && previousFilename) {
-          filesToDelete.push({
-            path: previousFilename,
-            sha: oldFileSha,
-          });
-          core.info(`Marked ${previousFilename} for deletion (renamed to ${file.filename})`);
-        }
-
-      } catch (error) {
-        const errorMessage = `Error processing renamed file ${file.filename}: ${error}`;
-        core.error(errorMessage);
-        errors.push(errorMessage);
-      }
-    }
-
-    // Process TOC files (copy directly without translation)
-    for (const file of changedTocFiles) {
-      try {
-        core.info(`Processing TOC file ${file.filename}...`);
-
-        // Get file content from PR
-        const { data: fileData } = await octokit.rest.repos.getContent({
-          owner: github.context.repo.owner,
-          repo: github.context.repo.repo,
-          path: file.filename,
-          ref: github.context.sha,
-        });
-
-        if (!('content' in fileData)) {
-          throw new Error(`Could not get content for ${file.filename}`);
-        }
-
-        const newContent = Buffer.from(fileData.content, 'base64').toString('utf-8');
-
-        // Check if file exists in target repo
-        const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
-        let existingFileSha: string | undefined;
-
-        try {
-          const { data: targetFileData } = await octokit.rest.repos.getContent({
-            owner: targetOwner,
-            repo: targetRepo,
-            path: file.filename,
-          });
-
-          if ('content' in targetFileData) {
-            existingFileSha = targetFileData.sha;
-          }
-        } catch (error) {
-          core.info(`${file.filename} does not exist in target repo - will create it`);
-        }
-
-        core.info(`Successfully processed ${file.filename}`);
-        processedFiles.push(file.filename);
-
-        // Store content for PR creation
-        translatedFiles.push({
-          path: file.filename,
-          content: newContent,
-          sha: existingFileSha,
-        });
-
-      } catch (error) {
-        const errorMessage = `Error processing ${file.filename}: ${error}`;
-        core.error(errorMessage);
-        errors.push(errorMessage);
-      }
-    }
-
-    // Process removed files (prepare for deletion in target repo)
+    // Fetch content and build FileToSync array
     const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
-    for (const file of [...removedMarkdownFiles, ...removedTocFiles]) {
-      try {
-        core.info(`Processing removal of ${file.filename}...`);
+    const filesToSync = await fetchAllFileContents(
+      octokit, classified, inputs, targetOwner, targetRepo,
+    );
 
-        // Check if file exists in target repo
-        try {
-          const { data: targetFileData } = await octokit.rest.repos.getContent({
-            owner: targetOwner,
-            repo: targetRepo,
-            path: file.filename,
-          });
+    // Process files through the orchestrator
+    const orchestrator = new SyncOrchestrator({
+      sourceLanguage: inputs.sourceLanguage,
+      targetLanguage: inputs.targetLanguage,
+      claudeModel: inputs.claudeModel,
+      anthropicApiKey: inputs.anthropicApiKey,
+      debugMode: true,
+    }, coreLogger);
 
-          if ('content' in targetFileData) {
-            // File exists in target, mark for deletion
-            filesToDelete.push({
-              path: file.filename,
-              sha: targetFileData.sha,
-            });
-            core.info(`Marked ${file.filename} for deletion`);
-            processedFiles.push(file.filename);
-          }
-        } catch (error) {
-          core.info(`${file.filename} does not exist in target repo - skipping deletion`);
-        }
-
-      } catch (error) {
-        const errorMessage = `Error processing removal of ${file.filename}: ${error}`;
-        core.error(errorMessage);
-        errors.push(errorMessage);
-      }
-    }
+    const result = await orchestrator.processFiles(filesToSync, glossary);
 
     // Report results
-    if (errors.length > 0) {
-      core.setFailed(`Translation completed with ${errors.length} errors`);
+    if (result.errors.length > 0) {
+      core.setFailed(`Translation completed with ${result.errors.length} errors`);
     } else {
-      core.info(`Successfully processed ${processedFiles.length} files`);
-      
-      // Create PR in target repo with translated content
-      if (translatedFiles.length > 0 || filesToDelete.length > 0) {
-        try {
-          core.info('Creating PR in target repository...');
-          
-          const [targetOwner, targetRepoName] = inputs.targetRepo.split('/');
-          const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-          const branchName = `translation-sync-${timestamp}-pr-${prNumber}`;
-          
-          // Get default branch of target repo
-          const { data: targetRepoData } = await octokit.rest.repos.get({
-            owner: targetOwner,
-            repo: targetRepoName,
-          });
-          const defaultBranch = targetRepoData.default_branch;
-          
-          // Get the SHA of the default branch
-          const { data: refData } = await octokit.rest.git.getRef({
-            owner: targetOwner,
-            repo: targetRepoName,
-            ref: `heads/${defaultBranch}`,
-          });
-          const baseSha = refData.object.sha;
-          
-          // Create a new branch
-          await octokit.rest.git.createRef({
-            owner: targetOwner,
-            repo: targetRepoName,
-            ref: `refs/heads/${branchName}`,
-            sha: baseSha,
-          });
-          
-          core.info(`Created branch: ${branchName}`);
-          
-          // Fetch source PR details if available (title and labels)
-          let sourcePrTitle = '';
-          let sourcePrLabels: string[] = [];
-          if (prNumber) {
-            try {
-              const { data: sourcePr } = await octokit.rest.pulls.get({
-                owner: github.context.repo.owner,
-                repo: github.context.repo.repo,
-                pull_number: prNumber,
-              });
-              sourcePrTitle = sourcePr.title;
-              // Get labels, excluding 'test-translation' which triggers the workflow
-              sourcePrLabels = sourcePr.labels
-                .map(label => typeof label === 'string' ? label : label.name || '')
-                .filter(name => name && name !== 'test-translation');
-            } catch (error) {
-              core.warning(`Could not fetch source PR details: ${error}`);
-            }
-          }
-          
-          // Commit each translated file
-          for (const file of translatedFiles) {
-            await octokit.rest.repos.createOrUpdateFileContents({
-              owner: targetOwner,
-              repo: targetRepoName,
-              path: file.path,
-              message: `Update translation: ${file.path}`,
-              content: Buffer.from(file.content).toString('base64'),
-              branch: branchName,
-              sha: file.sha, // Include SHA if updating existing file
-            });
-            core.info(`Committed: ${file.path}`);
-          }
+      core.info(`Successfully processed ${result.processedFiles.length} files`);
+    }
 
-          // Delete removed files
-          for (const file of filesToDelete) {
-            await octokit.rest.repos.deleteFile({
-              owner: targetOwner,
-              repo: targetRepoName,
-              path: file.path,
-              message: `Delete removed file: ${file.path}`,
-              branch: branchName,
-              sha: file.sha,
-            });
-            core.info(`Deleted: ${file.path}`);
-          }
-          
-          // Create pull request
-          // Build file change list with operation indicators
-          const newFiles = translatedFiles.filter(f => !f.sha);
-          const updatedFiles = translatedFiles.filter(f => f.sha);
-          
-          let filesChangedSection = '';
-          if (newFiles.length > 0) {
-            filesChangedSection += '### Files Added\n' + newFiles.map(f => `- ✅ \`${f.path}\``).join('\n');
-          }
-          if (updatedFiles.length > 0) {
-            if (filesChangedSection) filesChangedSection += '\n\n';
-            filesChangedSection += '### Files Updated\n' + updatedFiles.map(f => `- ✏️ \`${f.path}\``).join('\n');
-          }
-          if (filesToDelete.length > 0) {
-            if (filesChangedSection) filesChangedSection += '\n\n';
-            filesChangedSection += '### Files Deleted\n' + filesToDelete.map(f => `- ❌ \`${f.path}\``).join('\n');
-          }
-          
-          const prBody = `## Automated Translation Sync
+    // Create PR in target repo with translated content
+    if (result.translatedFiles.length > 0 || result.filesToDelete.length > 0) {
+      try {
+        core.info('Creating PR in target repository...');
 
-This PR contains automated translations from [${github.context.repo.owner}/${github.context.repo.repo}](https://github.com/${github.context.repo.owner}/${github.context.repo.repo}).
+        // Fetch source PR details
+        const sourcePrInfo = await fetchSourcePrInfo(octokit, prNumber);
 
-### Source PR
-**[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ''}](https://github.com/${github.context.repo.owner}/${github.context.repo.repo}/pull/${prNumber})**
+        const prConfig: PrCreatorConfig = {
+          targetOwner,
+          targetRepo,
+          sourceLanguage: inputs.sourceLanguage,
+          targetLanguage: inputs.targetLanguage,
+          claudeModel: inputs.claudeModel,
+          sourceRepoOwner: github.context.repo.owner,
+          sourceRepoName: github.context.repo.repo,
+          prNumber,
+          prLabels: inputs.prLabels,
+          prReviewers: inputs.prReviewers,
+          prTeamReviewers: inputs.prTeamReviewers,
+        };
 
-${filesChangedSection}
+        const prResult = await createTranslationPR(
+          octokit,
+          result.translatedFiles,
+          result.filesToDelete,
+          prConfig,
+          coreLogger,
+          sourcePrInfo,
+        );
 
-### Details
-- **Source Language**: ${inputs.sourceLanguage}
-- **Target Language**: ${inputs.targetLanguage}
-- **Model**: ${inputs.claudeModel}
+        core.setOutput('pr-url', prResult.prUrl);
+        core.setOutput('files-synced', result.processedFiles.length.toString());
 
----
-*This PR was created automatically by the [translation action](https://github.com/quantecon/action-translation).*`;
-
-          // Create PR title - use source PR title if available, otherwise list files
-          let prTitle: string;
-          if (sourcePrTitle) {
-            prTitle = `🌐 [translation-sync] ${sourcePrTitle}`;
-          } else {
-            // Fallback: list files changed
-            const allFiles = [...translatedFiles.map(f => f.path), ...filesToDelete.map(f => f.path)];
-            let titleFileList: string;
-            if (allFiles.length === 1) {
-              titleFileList = allFiles[0];
-            } else if (allFiles.length === 2) {
-              titleFileList = `${allFiles[0]} + 1 more`;
-            } else {
-              titleFileList = `${allFiles.length} files`;
-            }
-            prTitle = `🌐 [translation-sync] ${titleFileList}`;
-          }
-          
-          const { data: pr } = await octokit.rest.pulls.create({
-            owner: targetOwner,
-            repo: targetRepoName,
-            title: prTitle,
-            body: prBody,
-            head: branchName,
-            base: defaultBranch,
-          });
-          
-          core.info(`Created PR: ${pr.html_url}`);
-          
-          // Prepare labels:
-          // - Start with labels from pr-labels input (default: 'action-translation,automated')
-          // - Add labels from source PR (excluding source-specific labels like 'test-translation')
-          const labelsToAdd = new Set<string>();
-          
-          // Add input labels first
-          for (const label of inputs.prLabels) {
-            labelsToAdd.add(label);
-          }
-          
-          // Add source PR labels
-          for (const label of sourcePrLabels) {
-            labelsToAdd.add(label);
-          }
-          
-          // Add labels to PR
-          const labelsArray = Array.from(labelsToAdd);
-          if (labelsArray.length > 0) {
-            await octokit.rest.issues.addLabels({
-              owner: targetOwner,
-              repo: targetRepoName,
-              issue_number: pr.number,
-              labels: labelsArray,
-            });
-            core.info(`Added labels: ${labelsArray.join(', ')}`);
-          }
-          
-          // Request reviewers if specified
-          if (inputs.prReviewers.length > 0 || inputs.prTeamReviewers.length > 0) {
-            try {
-              const reviewRequest: { reviewers?: string[]; team_reviewers?: string[] } = {};
-              if (inputs.prReviewers.length > 0) {
-                reviewRequest.reviewers = inputs.prReviewers;
-              }
-              if (inputs.prTeamReviewers.length > 0) {
-                reviewRequest.team_reviewers = inputs.prTeamReviewers;
-              }
-              
-              await octokit.rest.pulls.requestReviewers({
-                owner: targetOwner,
-                repo: targetRepoName,
-                pull_number: pr.number,
-                ...reviewRequest,
-              });
-              
-              const reviewersList = [];
-              if (inputs.prReviewers.length > 0) {
-                reviewersList.push(`users: ${inputs.prReviewers.join(', ')}`);
-              }
-              if (inputs.prTeamReviewers.length > 0) {
-                reviewersList.push(`teams: ${inputs.prTeamReviewers.join(', ')}`);
-              }
-              core.info(`Requested reviewers: ${reviewersList.join('; ')}`);
-            } catch (reviewerError) {
-              // Don't fail the entire action if reviewer request fails
-              // (e.g., if PR author is in the reviewer list)
-              core.warning(`Could not request reviewers: ${reviewerError instanceof Error ? reviewerError.message : String(reviewerError)}`);
-            }
-          }
-          
-          core.setOutput('pr-url', pr.html_url);
-          core.setOutput('files-synced', processedFiles.length.toString());
-          
-        } catch (prError) {
-          core.setFailed(`Failed to create PR: ${prError instanceof Error ? prError.message : String(prError)}`);
-        }
+      } catch (prError) {
+        core.setFailed(`Failed to create PR: ${prError instanceof Error ? prError.message : String(prError)}`);
       }
     }
+}
+
+// =============================================================================
+// HELPERS - GitHub API content fetching
+// =============================================================================
+
+/**
+ * Logger adapter: maps @actions/core to the Logger interface
+ */
+const coreLogger: Logger = {
+  info: (msg: string) => core.info(msg),
+  error: (msg: string) => core.error(msg),
+  warning: (msg: string) => core.warning(msg),
+};
+
+/**
+ * Fetch file content from a GitHub repo at a specific ref.
+ * Returns empty string if file doesn't exist.
+ */
+async function fetchFileContent(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  octokit: any,
+  owner: string,
+  repo: string,
+  filepath: string,
+  ref?: string,
+): Promise<{ content: string; sha?: string }> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const params: any = { owner, repo, path: filepath };
+  if (ref) params.ref = ref;
+
+  const { data } = await octokit.rest.repos.getContent(params);
+  if (!('content' in data)) {
+    throw new Error(`Could not get content for ${filepath}`);
+  }
+  return {
+    content: Buffer.from(data.content, 'base64').toString('utf-8'),
+    sha: data.sha,
+  };
+}
+
+/**
+ * Build FileToSync[] by fetching content from GitHub API for all classified files.
+ */
+async function fetchAllFileContents(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  octokit: any,
+  classified: ReturnType<typeof classifyChangedFiles>,
+  inputs: ReturnType<typeof getInputs>,
+  targetOwner: string,
+  targetRepo: string,
+): Promise<FileToSync[]> {
+  const filesToSync: FileToSync[] = [];
+  const sourceOwner = github.context.repo.owner;
+  const sourceRepo = github.context.repo.repo;
+  const sha = github.context.sha;
+
+  // Changed markdown files
+  for (const file of classified.changedMarkdownFiles) {
+    try {
+      const { content: newContent } = await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, sha);
+
+      let oldContent = '';
+      try {
+        const result = await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, `${sha}^`);
+        oldContent = result.content;
+      } catch {
+        core.info(`${file.filename} is a new file`);
+      }
+
+      let targetContent = '';
+      let existingFileSha: string | undefined;
+      let isNewFile = false;
+
+      try {
+        const result = await fetchFileContent(octokit, targetOwner, targetRepo, file.filename);
+        targetContent = result.content;
+        existingFileSha = result.sha;
+      } catch {
+        isNewFile = true;
+        core.info(`${file.filename} does not exist in target repo - will create it`);
+      }
+
+      filesToSync.push({
+        filename: file.filename,
+        type: 'markdown',
+        newContent,
+        oldContent,
+        targetContent,
+        existingFileSha,
+        isNewFile,
+      });
+    } catch (error) {
+      core.error(`Error fetching content for ${file.filename}: ${error}`);
+    }
+  }
+
+  // Renamed markdown files
+  for (const file of classified.renamedMarkdownFiles) {
+    try {
+      const { content: newContent } = await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, sha);
+      const previousFilename = file.previous_filename;
+
+      let oldContent = '';
+      if (previousFilename) {
+        try {
+          const result = await fetchFileContent(octokit, sourceOwner, sourceRepo, previousFilename, `${sha}^`);
+          oldContent = result.content;
+        } catch {
+          core.info(`Could not get old content from ${previousFilename}`);
+        }
+      }
+
+      let targetContent = '';
+      let oldFileSha: string | undefined;
+
+      if (previousFilename) {
+        try {
+          const result = await fetchFileContent(octokit, targetOwner, targetRepo, previousFilename);
+          targetContent = result.content;
+          oldFileSha = result.sha;
+          core.info(`Found existing translation at ${previousFilename} - will transfer to ${file.filename}`);
+        } catch {
+          core.info(`${previousFilename} does not exist in target repo`);
+        }
+      }
+
+      filesToSync.push({
+        filename: file.filename,
+        type: 'renamed',
+        newContent,
+        oldContent,
+        targetContent,
+        previousFilename,
+        oldFileSha,
+        isNewFile: !targetContent,
+      });
+    } catch (error) {
+      core.error(`Error fetching content for renamed file ${file.filename}: ${error}`);
+    }
+  }
+
+  // TOC files
+  for (const file of classified.changedTocFiles) {
+    try {
+      const { content: newContent } = await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, sha);
+
+      let existingFileSha: string | undefined;
+      try {
+        const result = await fetchFileContent(octokit, targetOwner, targetRepo, file.filename);
+        existingFileSha = result.sha;
+      } catch {
+        core.info(`${file.filename} does not exist in target repo - will create it`);
+      }
+
+      filesToSync.push({
+        filename: file.filename,
+        type: 'toc',
+        newContent,
+        existingFileSha,
+        isNewFile: !existingFileSha,
+      });
+    } catch (error) {
+      core.error(`Error fetching content for TOC file ${file.filename}: ${error}`);
+    }
+  }
+
+  // Removed files (markdown + TOC)
+  for (const file of [...classified.removedMarkdownFiles, ...classified.removedTocFiles]) {
+    try {
+      let existingFileSha: string | undefined;
+      try {
+        const result = await fetchFileContent(octokit, targetOwner, targetRepo, file.filename);
+        existingFileSha = result.sha;
+      } catch {
+        core.info(`${file.filename} does not exist in target repo - skipping deletion`);
+      }
+
+      if (existingFileSha) {
+        filesToSync.push({
+          filename: file.filename,
+          type: 'removed',
+          existingFileSha,
+          isNewFile: false,
+        });
+      }
+    } catch (error) {
+      core.error(`Error checking removal of ${file.filename}: ${error}`);
+    }
+  }
+
+  return filesToSync;
+}
+
+/**
+ * Fetch source PR title and labels for the translation PR body.
+ */
+async function fetchSourcePrInfo(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  octokit: any,
+  prNumber: number,
+): Promise<SourcePrInfo | undefined> {
+  try {
+    const { data: sourcePr } = await octokit.rest.pulls.get({
+      owner: github.context.repo.owner,
+      repo: github.context.repo.repo,
+      pull_number: prNumber,
+    });
+    return {
+      title: sourcePr.title,
+      labels: sourcePr.labels
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .map((label: any) => typeof label === 'string' ? label : label.name || '')
+        .filter((name: string) => name && name !== 'test-translation'),
+    };
+  } catch (error) {
+    core.warning(`Could not fetch source PR details: ${error}`);
+    return undefined;
+  }
 }
 
 // Run the action
