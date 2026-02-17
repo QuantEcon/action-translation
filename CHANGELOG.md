@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Sync Orchestrator**: Extracted `SyncOrchestrator` class from `index.ts` into new `src/sync-orchestrator.ts` module
+  - `Logger` interface decouples processing from `@actions/core` for future CLI reuse
+  - `classifyChangedFiles()` categorises files (markdown, toc, renamed, removed)
+  - `loadGlossary()` utility for loading target-language glossary
+  - `FileToSync` and `SyncProcessingResult` interfaces
+- **PR Creator**: Extracted PR creation logic into new `src/pr-creator.ts` module
+  - `createTranslationPR()` creates/updates PRs in target repo
+  - `buildPrBody()`, `buildPrTitle()`, `buildLabelSet()` pure utility functions
+  - `PrCreatorConfig` and `SourcePrInfo` interfaces
+- **Retry Logic**: Added exponential backoff retry to `translator.ts`
+  - Retries `RateLimitError`, `APIConnectionError`, and 5xx `APIError`
+  - Max 3 attempts with 1s/2s/4s delays
+  - No retry for permanent failures (`AuthenticationError`, `BadRequestError`)
+  - `RETRY_CONFIG` export for testing
+- **New Tests**: 133 new tests (183 → 316 total, 15 suites)
+  - `inputs.test.ts` (55 tests) — mode, repo format, language, model, PR event validation
+  - `translator.test.ts` (28 tests) — token estimation, glossary formatting, error handling
+  - `sync-orchestrator.test.ts` (26 tests)
+  - `pr-creator.test.ts` (12 tests)
+  - `translator-retry.test.ts` (12 tests)
+
+### Changed
+- **`index.ts`**: Rewritten from ~766 to ~447 lines — delegates to `SyncOrchestrator` and `createTranslationPR()`
+
+### Removed
+- **Deprecated Methods**: Removed 3 dead methods from `file-processor.ts`
+  - `findSourceSectionIndex()` (always returned -1)
+  - `findTargetSectionIndex()` (deprecated)
+  - `findMatchingSectionIndex()` (deprecated)
+
 ## [0.7.0] - 2025-12-05
 
 ### Added
@@ -31,28 +64,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Change detection tests (new/deleted/modified/renamed documents)
   - Review formatting tests
   - Integration scenarios with real-world content
-
-### Changed
-- **Action Name**: Changed from "Translation Sync" to "Translation Action"
-- **Package Name**: Changed from `action-translation-sync` to `action-translation`
-- **Input Requirements**: `target-repo` and `target-language` now only required for sync mode
-- **Test Count**: Increased from 155 to 183 tests
-
-### Removed
-- **workflow_dispatch Support**: Removed `workflow_dispatch` trigger from sync mode
-  - Use `test-translation` label on PRs for manual testing instead
-  - This ensures every translation PR has source PR metadata for accurate review
-  - Simplifies architecture: `prNumber` is now always available (never null)
-
-## [Unreleased]
-
-### Added
 - **Persian (Farsi) Glossary**: Complete Persian glossary with 357 terms
   - Economic terms (~160): تعادل, تولید ناخالص داخلی, سیاست مالی
   - Mathematical terms (~100): ماتریس, بردار ویژه, همگرایی
   - Statistical terms (~35): توزیع نرمال, رگرسیون, واریانس
   - Economist names (~45): رابرت سولو, میلتون فریدمن
-  - Ready for production deployment on Persian translation repositories
 - **Persian (Farsi) Language Support**: Added full Persian language configuration
   - Persian (`fa`) language config with RTL punctuation rules
   - Language-specific prompt customization (formal/academic style)
@@ -62,31 +78,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Always use API max tokens (32K) for translatable documents
   - Language-aware output token estimation (Persian: 1.8x, CJK: 1.3x, default: 1.5x)
   - Clear error messages for documents exceeding API limits
-- **Improved Retry Logic**: Skip retries for permanent failures
-  - Detects "document too large" and "truncated" errors
-  - No wasted API calls on documents that can't be fixed by retry
-  - Still retries transient errors (network, rate limits) with exponential backoff
 - **Incomplete Document Detection**: Validates translation completeness
   - Marker-based detection of truncated translations
   - Directive block balance validation in prompts
 
 ### Changed
+- **Action Name**: Changed from "Translation Sync" to "Translation Action"
+- **Package Name**: Changed from `action-translation-sync` to `action-translation`
+- **Input Requirements**: `target-repo` and `target-language` now only required for sync mode
+- **Test Count**: Increased from 155 to 183 tests
 - **Bulk Translator Improvements**:
   - Always fetch `_toc.yml` from GitHub (consistent behavior in all modes)
-  - Use `parseSections()` for heading-map generation (more lenient than `parseDocumentComponents()`)
+  - Use `parseSections()` for heading-map generation
   - Updated cost estimation to be model-aware (Sonnet/Opus/Haiku pricing)
-  - Improved README with accurate costs and troubleshooting
-  - Better token/cost reporting in translation summary
 - **Translation Prompt Enhancements**:
   - Added directive block balancing rules (exercise-start/end, solution-start/end)
   - More explicit instructions for complete document translation
   - Language-specific expansion factors for better token estimates
 
 ### Fixed
-- **Token Limit Issues**: Resolved truncation problems in bulk translation
-  - Increased max_tokens from 8K to 32K for full documents
-  - Pre-flight validation prevents wasted API calls on oversized docs
-  - Improved Persian token estimation (1.6x → 1.8x)
+- **Token Limit Issues**: Increased max_tokens from 8K to 32K; improved Persian token estimation (1.6x → 1.8x)
+
+### Removed
+- **workflow_dispatch Support**: Removed `workflow_dispatch` trigger from sync mode
+  - Use `test-translation` label on PRs for manual testing instead
+  - This ensures every translation PR has source PR metadata for accurate review
+  - Simplifies architecture: `prNumber` is now always available (never null)
 
 ## [0.6.3] - 2025-12-04
 
