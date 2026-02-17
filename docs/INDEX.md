@@ -54,7 +54,7 @@ Complete documentation for the Translation Action (GitHub Action).
 
 **Standalone tools for different workflows:**
 
-1. **[Resync Tool](../PLAN-TOOL-RESYNC.md)** - Backport analysis and forward sync (planned, replaces onboarding/alignment)
+1. **[Resync Tool](DESIGN-RESYNC.md)** - Backport analysis and forward sync (planned, replaces onboarding/alignment)
 2. **[Bulk Translator](../tool-bulk-translator/README.md)** - One-time bulk translation for initial setup
 3. **[GitHub Test Tool](../tool-test-action-on-github/README.md)** - Automated GitHub testing + quality evaluation
 4. **[Onboarding Tool](../tool-onboarding/README.md)** - ⚠️ DEPRECATED - see Resync Tool
