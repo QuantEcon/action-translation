@@ -19,8 +19,10 @@ coverage/
 # TypeScript build info
 *.tsbuildinfo
 
-# Temporary files
-*.tmp
+# Temporary files — .tmp/ dir is committed (for scoped gh CLI output) but contents are ignored
+.tmp/*
+**/*.tmp
+!.tmp/.gitkeep
 .cache/
 
 # Test repositories (cloned locally for testing)
