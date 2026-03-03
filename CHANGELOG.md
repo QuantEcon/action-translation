@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `section-matcher.ts`: Cross-language position-based section matching with heading-map validation
   - `git-metadata.ts`: File-level git date/author/SHA extraction for temporal context
   - `report-generator.ts`: Markdown and JSON report formatting with confidence labels
+  - **Result verdict**: Top-level report status — `✅ IN SYNC`, `📋 N SUGGESTION(S)`, `✅ NO ACTION NEEDED`, `⚠️ SKIPPED`
   - `commands/backward.ts`: Full pipeline orchestrator (read → triage → parse → match → evaluate → report)
   - `types.ts`: CLI-specific types (TriageResult, SectionPair, BackportSuggestion, etc.)
   - `index.ts`: Commander.js entry point with `--test` mode for deterministic mock responses

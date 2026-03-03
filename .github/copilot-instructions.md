@@ -34,7 +34,7 @@ src/
 │   ├── document-comparator.ts # Stage 1: whole-document LLM triage (~270 lines)
 │   ├── backward-evaluator.ts  # Stage 2: per-section LLM evaluation (~300 lines)
 │   ├── section-matcher.ts     # Cross-language section matching (~150 lines)
-│   ├── git-metadata.ts        # File-level git metadata + commit timeline (~200 lines)
+│   ├── git-metadata.ts        # File-level git metadata + commit timeline (~235 lines)
 │   ├── report-generator.ts    # Markdown/JSON report formatting (~235 lines)
 │   └── commands/
 │       └── backward.ts        # Backward command orchestrator (~260 lines)
