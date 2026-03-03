@@ -10,7 +10,7 @@ import {
   parseEvaluationResponse, 
   evaluateSection,
 } from '../backward-evaluator';
-import { FileGitMetadata } from '../types';
+import { FileGitMetadata, FileTimeline } from '../types';
 
 describe('backward-evaluator', () => {
   const mockSourceMeta: FileGitMetadata = {
@@ -29,7 +29,7 @@ describe('backward-evaluator', () => {
     it('should include source and target sections', () => {
       const prompt = buildEvaluationPrompt(
         'Source section text', 'Target section text',
-        '## Example', 'en', 'zh-cn', null, null, '',
+        '## Example', 'en', 'zh-cn', null, null, '', null,
       );
       expect(prompt).toContain('Source section text');
       expect(prompt).toContain('Target section text');
@@ -39,7 +39,7 @@ describe('backward-evaluator', () => {
     it('should include timeline when git metadata provided', () => {
       const prompt = buildEvaluationPrompt(
         'source', 'target', '## Test',
-        'en', 'zh-cn', mockSourceMeta, mockTargetMeta, '',
+        'en', 'zh-cn', mockSourceMeta, mockTargetMeta, '', null,
       );
       expect(prompt).toContain('2024-06-01');
       expect(prompt).toContain('2024-09-15');
@@ -50,7 +50,7 @@ describe('backward-evaluator', () => {
       const prompt = buildEvaluationPrompt(
         'source', 'target', '## Test',
         'en', 'zh-cn', null, null,
-        'Formula correction found in section 3',
+        'Formula correction found in section 3', null,
       );
       expect(prompt).toContain('Stage 1 Triage Notes');
       expect(prompt).toContain('Formula correction found in section 3');
@@ -59,7 +59,7 @@ describe('backward-evaluator', () => {
     it('should omit triage notes section when empty', () => {
       const prompt = buildEvaluationPrompt(
         'source', 'target', '## Test',
-        'en', 'zh-cn', null, null, '',
+        'en', 'zh-cn', null, null, '', null,
       );
       expect(prompt).not.toContain('Stage 1 Triage Notes');
     });
@@ -67,17 +67,37 @@ describe('backward-evaluator', () => {
     it('should include respectful suggestion framing', () => {
       const prompt = buildEvaluationPrompt(
         'source', 'target', '## Test',
-        'en', 'zh-cn', null, null, '',
+        'en', 'zh-cn', null, null, '', null,
       );
       expect(prompt).toContain('SUGGESTIONS');
       expect(prompt).toContain('source of truth');
       expect(prompt).toContain('respectfully');
     });
 
+    it('should include commit history when timeline is provided', () => {
+      const timeline: FileTimeline = {
+        entries: [
+          { date: '2025-12-23', repo: 'SOURCE', sha: 'abc123d', message: 'Fix SymPy' },
+          { date: '2024-07-22', repo: 'TARGET', sha: 'fed987a', message: 'Translate' },
+        ],
+        sourceCommitCount: 1,
+        targetCommitCount: 1,
+        estimatedSyncDate: '2024-07-22',
+        sourceCommitsAfterSync: 1,
+      };
+      const prompt = buildEvaluationPrompt(
+        'source', 'target', '## Test',
+        'en', 'zh-cn', mockSourceMeta, mockTargetMeta, '', timeline,
+      );
+      expect(prompt).toContain('## Commit History');
+      expect(prompt).toContain('SOURCE has 1 commit(s) AFTER');
+      expect(prompt).toContain('expected divergences');
+    });
+
     it('should match prompt structure', () => {
       const prompt = buildEvaluationPrompt(
         'source', 'target', '## Test',
-        'en', 'zh-cn', mockSourceMeta, mockTargetMeta, 'notes',
+        'en', 'zh-cn', mockSourceMeta, mockTargetMeta, 'notes', null,
       );
       expect(prompt).toContain('## Context');
       expect(prompt).toContain('## Source Section');
@@ -235,7 +255,7 @@ describe('backward-evaluator', () => {
     it('should return NO_BACKPORT in test mode', async () => {
       const result = await evaluateSection(
         'source section', 'target section',
-        '## Introduction', null, null, '', testOptions,
+        '## Introduction', null, null, '', null, testOptions,
       );
       expect(result.recommendation).toBe('NO_BACKPORT');
       expect(result.category).toBe('NO_CHANGE');
@@ -246,7 +266,7 @@ describe('backward-evaluator', () => {
     it('should include section heading in test mode result', async () => {
       const result = await evaluateSection(
         'source', 'target',
-        '## 稳态', null, null, '', testOptions,
+        '## 稳态', null, null, '', null, testOptions,
       );
       expect(result.sectionHeading).toBe('## 稳态');
     });

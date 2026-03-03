@@ -11,7 +11,7 @@ import {
   generateJsonReport,
   generateBulkJsonReport,
 } from '../report-generator';
-import { BackwardReport, BulkBackwardReport } from '../types';
+import { BackwardReport, BulkBackwardReport, FileTimeline } from '../types';
 
 describe('report-generator', () => {
   const baseReport: BackwardReport = {
@@ -27,6 +27,7 @@ describe('report-generator', () => {
       lastCommit: 'b'.repeat(40),
       lastAuthor: 'Bob',
     },
+    timeline: null,
     triageResult: {
       file: 'solow.md',
       verdict: 'CHANGES_DETECTED',
@@ -48,6 +49,29 @@ describe('report-generator', () => {
       expect(md).toContain('Alice');
       expect(md).toContain('2024-09-15');
       expect(md).toContain('Bob');
+    });
+
+    it('should include commit timeline when present', () => {
+      const timeline: FileTimeline = {
+        entries: [
+          { date: '2025-12-23', repo: 'SOURCE', sha: 'abc123d', message: 'Fix SymPy' },
+          { date: '2024-07-22', repo: 'TARGET', sha: 'fed987a', message: 'Translate to zh-cn' },
+        ],
+        sourceCommitCount: 1,
+        targetCommitCount: 1,
+        estimatedSyncDate: '2024-07-22',
+        sourceCommitsAfterSync: 1,
+      };
+      const report: BackwardReport = { ...baseReport, timeline };
+      const md = generateMarkdownReport(report);
+      expect(md).toContain('## Commit Timeline');
+      expect(md).toContain('abc123d');
+      expect(md).toContain('SOURCE has 1 commit(s) AFTER');
+    });
+
+    it('should omit commit timeline when null', () => {
+      const md = generateMarkdownReport(baseReport);
+      expect(md).not.toContain('## Commit Timeline');
     });
 
     it('should show IN_SYNC message for files in sync', () => {

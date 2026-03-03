@@ -100,6 +100,31 @@ export interface FileGitMetadata {
   lastAuthor: string;
 }
 
+/**
+ * A single entry in the interleaved commit timeline
+ */
+export interface TimelineEntry {
+  date: string;              // ISO date "YYYY-MM-DD"
+  repo: 'SOURCE' | 'TARGET';
+  sha: string;               // Short SHA (7-8 chars)
+  message: string;           // Commit message (first line)
+}
+
+/**
+ * Interleaved commit timeline for a file across both repos.
+ * Sorted newest-first. Helps the LLM reason about which repo
+ * changed what and when — preventing directional errors.
+ */
+export interface FileTimeline {
+  entries: TimelineEntry[];
+  sourceCommitCount: number;
+  targetCommitCount: number;
+  /** Date of the earliest TARGET commit — approximate sync point */
+  estimatedSyncDate: string | null;
+  /** Number of SOURCE commits after the estimated sync point */
+  sourceCommitsAfterSync: number;
+}
+
 // ============================================================================
 // REPORTS
 // ============================================================================
@@ -112,6 +137,7 @@ export interface BackwardReport {
   timestamp: string;
   sourceMetadata: FileGitMetadata | null;
   targetMetadata: FileGitMetadata | null;
+  timeline: FileTimeline | null;
   triageResult: TriageResult;
   suggestions: BackportSuggestion[];
   sectionPairs?: SectionPair[];  // Included for detail/debugging

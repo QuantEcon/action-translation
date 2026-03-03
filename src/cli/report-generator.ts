@@ -8,7 +8,7 @@
  */
 
 import { BackwardReport, BulkBackwardReport, BackportSuggestion } from './types';
-import { formatDate } from './git-metadata';
+import { formatDate, formatTimelineForPrompt } from './git-metadata';
 
 // ============================================================================
 // MARKDOWN REPORTS
@@ -33,6 +33,16 @@ export function generateMarkdownReport(report: BackwardReport): string {
     lines.push(`**TARGET last modified**: ${formatDate(report.targetMetadata.lastModified)} by ${report.targetMetadata.lastAuthor}`);
   }
   lines.push('');
+
+  // Commit timeline
+  if (report.timeline) {
+    lines.push('## Commit Timeline');
+    lines.push('');
+    lines.push('```');
+    lines.push(formatTimelineForPrompt(report.timeline));
+    lines.push('```');
+    lines.push('');
+  }
 
   // Triage result
   lines.push('## Stage 1: Document Triage');

@@ -20,7 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `index.ts`: Commander.js entry point with `--test` mode for deterministic mock responses
   - `--test` flag for all commands — no LLM calls, deterministic responses for CI/testing
   - 6 test fixture pairs (aligned, bug-fix, clarification, i18n-only, section-mismatch, no-heading-map)
-  - 70 new tests (316 → 386 total, 15 → 21 suites)
+  - 90 new tests (316 → 406 total, 15 → 21 suites)
+- **Interleaved commit timeline** (`git-metadata.ts`): Builds interleaved SOURCE/TARGET commit history
+  - `getFileTimeline()` — fetches commit logs from both repos, interleaves by date
+  - `formatTimelineForPrompt()` — compact format for inclusion in LLM prompts
+  - Timeline identifies estimated sync point (earliest TARGET commit) and counts post-sync SOURCE commits
+  - Included in both Stage 1 triage and Stage 2 evaluation prompts to prevent directional reasoning errors
+  - Included in Markdown reports under "Commit Timeline" section
+  - New types: `TimelineEntry`, `FileTimeline`
 - **CLI build**: `npm run build:cli` script, `bin.resync` entry in package.json
 - **commander.js** dependency (^14.0.3)
 

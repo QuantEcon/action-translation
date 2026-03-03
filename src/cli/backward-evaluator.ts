@@ -19,8 +19,8 @@ import {
   APIConnectionError,
   BadRequestError 
 } from '@anthropic-ai/sdk';
-import { BackportSuggestion, BackportCategory, SpecificChange, FileGitMetadata } from './types';
-import { formatDate, daysBetween } from './git-metadata';
+import { BackportSuggestion, BackportCategory, SpecificChange, FileGitMetadata, FileTimeline } from './types';
+import { formatDate, daysBetween, formatTimelineForPrompt } from './git-metadata';
 import { RETRY_CONFIG } from '../translator';
 
 /**
@@ -37,6 +37,7 @@ export function buildEvaluationPrompt(
   sourceMetadata: FileGitMetadata | null,
   targetMetadata: FileGitMetadata | null,
   triageNotes: string,
+  timeline: FileTimeline | null,
 ): string {
   let timelineContext = '';
   if (sourceMetadata && targetMetadata) {
@@ -47,6 +48,17 @@ export function buildEvaluationPrompt(
 - SOURCE last modified: ${formatDate(sourceMetadata.lastModified)}
 - TARGET last modified: ${formatDate(targetMetadata.lastModified)}
 - TARGET is ${Math.abs(days)} days ${direction} than SOURCE`;
+  }
+
+  if (timeline) {
+    timelineContext += `
+
+## Commit History
+${formatTimelineForPrompt(timeline)}
+
+**Key**: If SOURCE has commits AFTER the estimated sync point, differences from those
+newer SOURCE commits are expected divergences — the TARGET simply hasn't been updated yet.
+Do NOT recommend backporting content that SOURCE already has in a newer form.`;
   }
 
   let triageContext = '';
@@ -227,6 +239,7 @@ export async function evaluateSection(
   sourceMetadata: FileGitMetadata | null,
   targetMetadata: FileGitMetadata | null,
   triageNotes: string,
+  timeline: FileTimeline | null,
   options: {
     apiKey: string;
     model: string;
@@ -249,6 +262,7 @@ export async function evaluateSection(
     sourceMetadata,
     targetMetadata,
     triageNotes,
+    timeline,
   );
 
   const client = new Anthropic({ apiKey: options.apiKey });

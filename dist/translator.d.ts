@@ -10,12 +10,35 @@
  * For full documents (new files), translates the entire content in one pass.
  */
 import { SectionTranslationRequest, SectionTranslationResult, FullDocumentTranslationRequest } from './types';
+/** Retry configuration for API calls */
+export declare const RETRY_CONFIG: {
+    maxRetries: number;
+    baseDelayMs: number;
+};
 export declare class TranslationService {
     private client;
     private model;
     private debug;
     constructor(apiKey: string, model?: string, debug?: boolean);
     private log;
+    /**
+     * Sleep for a given number of milliseconds
+     */
+    private sleep;
+    /**
+     * Call Claude API with retry logic and exponential backoff.
+     *
+     * Retries on transient errors:
+     * - RateLimitError (429)
+     * - APIConnectionError (network issues)
+     * - APIError with 5xx status (server errors)
+     *
+     * Does NOT retry on:
+     * - AuthenticationError (invalid API key)
+     * - BadRequestError (prompt issues)
+     * - Other non-transient errors
+     */
+    private callWithRetry;
     /**
      * Translate a section (update or new)
      */

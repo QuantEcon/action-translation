@@ -12,7 +12,7 @@ import {
   parseTriageResponse, 
   triageDocument,
 } from '../document-comparator';
-import { FileGitMetadata } from '../types';
+import { FileGitMetadata, FileTimeline } from '../types';
 
 const fixturesDir = path.join(__dirname, 'fixtures');
 
@@ -32,7 +32,7 @@ describe('document-comparator', () => {
   describe('buildTriagePrompt', () => {
     it('should include source and target content', () => {
       const prompt = buildTriagePrompt(
-        'Hello world', '你好世界', 'en', 'zh-cn', null, null,
+        'Hello world', '你好世界', 'en', 'zh-cn', null, null, null,
       );
       expect(prompt).toContain('Hello world');
       expect(prompt).toContain('你好世界');
@@ -42,7 +42,7 @@ describe('document-comparator', () => {
 
     it('should include timeline when git metadata is provided', () => {
       const prompt = buildTriagePrompt(
-        'source', 'target', 'en', 'zh-cn', mockSourceMeta, mockTargetMeta,
+        'source', 'target', 'en', 'zh-cn', mockSourceMeta, mockTargetMeta, null,
       );
       expect(prompt).toContain('2024-06-01');
       expect(prompt).toContain('2024-09-15');
@@ -53,15 +53,37 @@ describe('document-comparator', () => {
 
     it('should omit timeline when no git metadata', () => {
       const prompt = buildTriagePrompt(
-        'source', 'target', 'en', 'zh-cn', null, null,
+        'source', 'target', 'en', 'zh-cn', null, null, null,
       );
       expect(prompt).not.toContain('Timeline');
       expect(prompt).not.toContain('days');
     });
 
+    it('should include commit history when timeline is provided', () => {
+      const timeline: FileTimeline = {
+        entries: [
+          { date: '2025-12-23', repo: 'SOURCE', sha: 'abc123d', message: 'Fix SymPy' },
+          { date: '2024-07-22', repo: 'TARGET', sha: 'fed987a', message: 'Translate to zh-cn' },
+          { date: '2024-06-01', repo: 'SOURCE', sha: 'ddd444e', message: 'Add lecture' },
+        ],
+        sourceCommitCount: 2,
+        targetCommitCount: 1,
+        estimatedSyncDate: '2024-07-22',
+        sourceCommitsAfterSync: 1,
+      };
+      const prompt = buildTriagePrompt(
+        'source', 'target', 'en', 'zh-cn', mockSourceMeta, mockTargetMeta, timeline,
+      );
+      expect(prompt).toContain('## Commit History');
+      expect(prompt).toContain('SOURCE has 1 commit(s) AFTER');
+      expect(prompt).toContain('abc123d');
+      expect(prompt).toContain('expected');
+      expect(prompt).toContain('divergences');
+    });
+
     it('should include recall-biased instruction', () => {
       const prompt = buildTriagePrompt(
-        'source', 'target', 'en', 'zh-cn', null, null,
+        'source', 'target', 'en', 'zh-cn', null, null, null,
       );
       expect(prompt).toContain('When in doubt, use "CHANGES_DETECTED"');
     });
@@ -69,7 +91,7 @@ describe('document-comparator', () => {
     it('should match prompt snapshot', () => {
       const prompt = buildTriagePrompt(
         'Test source content', 'Test target content',
-        'en', 'zh-cn', mockSourceMeta, mockTargetMeta,
+        'en', 'zh-cn', mockSourceMeta, mockTargetMeta, null,
       );
       // Verify key structural elements
       expect(prompt).toContain('## Context');
@@ -141,7 +163,7 @@ Let me know if you need more details.`;
 
     it('should return IN_SYNC for aligned/intro files in test mode', async () => {
       const result = await triageDocument(
-        'aligned-lecture.md', 'source', 'target', null, null, testOptions,
+        'aligned-lecture.md', 'source', 'target', null, null, null, testOptions,
       );
       expect(result.verdict).toBe('IN_SYNC');
       expect(result.file).toBe('aligned-lecture.md');
@@ -149,7 +171,7 @@ Let me know if you need more details.`;
 
     it('should return CHANGES_DETECTED for non-aligned files in test mode', async () => {
       const result = await triageDocument(
-        'solow-model.md', 'source', 'target', null, null, testOptions,
+        'solow-model.md', 'source', 'target', null, null, null, testOptions,
       );
       expect(result.verdict).toBe('CHANGES_DETECTED');
     });
@@ -157,7 +179,7 @@ Let me know if you need more details.`;
     it('should return SKIPPED_TOO_LARGE for huge documents', async () => {
       const huge = 'x'.repeat(500_000); // ~125K tokens
       const result = await triageDocument(
-        'huge-file.md', huge, huge, null, null, testOptions,
+        'huge-file.md', huge, huge, null, null, null, testOptions,
       );
       // Test mode mock runs first, but let's test the non-test path
       // For test mode, it returns based on filename
@@ -174,7 +196,7 @@ Let me know if you need more details.`;
       const nonTestOptions = { ...testOptions, testMode: false, apiKey: 'fake-key' };
       
       const result = await triageDocument(
-        'huge-file.md', huge, huge, null, null, nonTestOptions,
+        'huge-file.md', huge, huge, null, null, null, nonTestOptions,
       );
       expect(result.verdict).toBe('SKIPPED_TOO_LARGE');
       expect(result.notes).toContain('too large');

@@ -20,7 +20,7 @@ import { extractHeadingMap } from '../../heading-map';
 import { matchSections, getMatchingSummary } from '../section-matcher';
 import { triageDocument } from '../document-comparator';
 import { evaluateSection } from '../backward-evaluator';
-import { getFileGitMetadata } from '../git-metadata';
+import { getFileGitMetadata, getFileTimeline } from '../git-metadata';
 import { generateMarkdownReport, generateJsonReport } from '../report-generator';
 import { BackwardReport, BackwardOptions, BackportSuggestion } from '../types';
 
@@ -87,6 +87,19 @@ export async function runBackwardSingleFile(
     logger.info(`  TARGET last modified: ${targetMetadata.lastModified.toISOString().split('T')[0]}`);
   }
 
+  // Get interleaved commit timeline
+  logger.info('  Building commit timeline...');
+  const timeline = await getFileTimeline(source, target, path.join(docsFolder, file));
+  if (timeline) {
+    logger.info(`  Timeline: ${timeline.sourceCommitCount} source + ${timeline.targetCommitCount} target commits`);
+    if (timeline.estimatedSyncDate) {
+      logger.info(`  Estimated sync point: ${timeline.estimatedSyncDate}`);
+      if (timeline.sourceCommitsAfterSync > 0) {
+        logger.info(`  SOURCE has ${timeline.sourceCommitsAfterSync} commit(s) after sync point`);
+      }
+    }
+  }
+
   // ─── Stage 1: Document-Level Triage ───
   logger.info('  Stage 1: Document-level triage...');
   
@@ -96,6 +109,7 @@ export async function runBackwardSingleFile(
     targetContent,
     sourceMetadata,
     targetMetadata,
+    timeline,
     {
       apiKey: options.apiKey,
       model,
@@ -119,6 +133,7 @@ export async function runBackwardSingleFile(
       timestamp: new Date().toISOString(),
       sourceMetadata,
       targetMetadata,
+      timeline,
       triageResult,
       suggestions: [],
     };
@@ -170,6 +185,7 @@ export async function runBackwardSingleFile(
       sourceMetadata,
       targetMetadata,
       triageResult.notes,
+      timeline,
       {
         apiKey: options.apiKey,
         model,
@@ -197,6 +213,7 @@ export async function runBackwardSingleFile(
     timestamp: new Date().toISOString(),
     sourceMetadata,
     targetMetadata,
+    timeline,
     triageResult,
     suggestions,
     sectionPairs: pairs,

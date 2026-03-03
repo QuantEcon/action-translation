@@ -18,8 +18,8 @@ import {
   APIConnectionError,
   BadRequestError 
 } from '@anthropic-ai/sdk';
-import { TriageResult, TriageVerdict, FileGitMetadata } from './types';
-import { formatDate, daysBetween } from './git-metadata';
+import { TriageResult, TriageVerdict, FileGitMetadata, FileTimeline } from './types';
+import { formatDate, daysBetween, formatTimelineForPrompt } from './git-metadata';
 import { RETRY_CONFIG } from '../translator';
 
 /**
@@ -48,6 +48,7 @@ export function buildTriagePrompt(
   targetLanguage: string,
   sourceMetadata: FileGitMetadata | null,
   targetMetadata: FileGitMetadata | null,
+  timeline: FileTimeline | null,
 ): string {
   let timelineContext = '';
   if (sourceMetadata && targetMetadata) {
@@ -58,6 +59,18 @@ export function buildTriagePrompt(
 - SOURCE last modified: ${formatDate(sourceMetadata.lastModified)} by ${sourceMetadata.lastAuthor}
 - TARGET last modified: ${formatDate(targetMetadata.lastModified)} by ${targetMetadata.lastAuthor}
 - TARGET is ${Math.abs(days)} days ${direction} than SOURCE`;
+  }
+
+  if (timeline) {
+    timelineContext += `
+
+## Commit History
+${formatTimelineForPrompt(timeline)}
+
+**Key**: If SOURCE has commits AFTER the estimated sync point, those represent
+updates the TARGET translation has NOT received. Differences from these newer
+SOURCE commits should NOT be flagged as TARGET improvements — they are expected
+divergences because the translation predates those SOURCE changes.`;
   }
 
   return `You are comparing an English source document with its ${targetLanguage} translation to determine if the translation contains substantive changes beyond normal translation work.
@@ -172,6 +185,7 @@ export async function triageDocument(
   targetContent: string,
   sourceMetadata: FileGitMetadata | null,
   targetMetadata: FileGitMetadata | null,
+  timeline: FileTimeline | null,
   options: {
     apiKey: string;
     model: string;
@@ -208,6 +222,7 @@ export async function triageDocument(
     options.targetLanguage,
     sourceMetadata,
     targetMetadata,
+    timeline,
   );
 
   const client = new Anthropic({ apiKey: options.apiKey });
