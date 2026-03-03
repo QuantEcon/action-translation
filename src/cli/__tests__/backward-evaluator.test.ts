@@ -77,8 +77,8 @@ describe('backward-evaluator', () => {
     it('should include commit history when timeline is provided', () => {
       const timeline: FileTimeline = {
         entries: [
-          { date: '2025-12-23', repo: 'SOURCE', sha: 'abc123d', message: 'Fix SymPy' },
-          { date: '2024-07-22', repo: 'TARGET', sha: 'fed987a', message: 'Translate' },
+          { date: '2025-12-23', fullDate: '2025-12-23 10:00:00 +0000', repo: 'SOURCE', sha: 'abc123d', message: 'Fix SymPy' },
+          { date: '2024-07-22', fullDate: '2024-07-22 08:00:00 +0000', repo: 'TARGET', sha: 'fed987a', message: 'Translate' },
         ],
         sourceCommitCount: 1,
         targetCommitCount: 1,

@@ -17,7 +17,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { MystParser } from '../../parser';
 import { extractHeadingMap } from '../../heading-map';
-import { matchSections, getMatchingSummary } from '../section-matcher';
+import { matchSections, getMatchingSummary, validateMatchesWithHeadingMap } from '../section-matcher';
 import { triageDocument } from '../document-comparator';
 import { evaluateSection } from '../backward-evaluator';
 import { getFileGitMetadata, getFileTimeline } from '../git-metadata';
@@ -167,6 +167,14 @@ export async function runBackwardSingleFile(
   const summary = getMatchingSummary(pairs);
   logger.info(`  Sections: ${summary.matched} matched, ${summary.sourceOnly} source-only, ${summary.targetOnly} target-only`);
 
+  // Validate matches against heading-map if available
+  if (headingMap.size > 0) {
+    const warnings = validateMatchesWithHeadingMap(pairs, headingMap);
+    for (const warning of warnings) {
+      logger.warn(`Heading-map mismatch: ${warning}`);
+    }
+  }
+
   // Evaluate each matched section pair
   const suggestions: BackportSuggestion[] = [];
 
@@ -204,9 +212,19 @@ export async function runBackwardSingleFile(
     }
   }
 
+  // Filter suggestions by min-confidence
+  const minConfidence = options.minConfidence ?? 0;
+  const filteredSuggestions = suggestions.map(s => {
+    // Downgrade to NO_BACKPORT if below confidence threshold
+    if (s.recommendation === 'BACKPORT' && s.confidence < minConfidence) {
+      return { ...s, recommendation: 'NO_BACKPORT' as const };
+    }
+    return s;
+  });
+
   // Build report
-  const backportCount = suggestions.filter(s => s.recommendation === 'BACKPORT').length;
-  logger.info(`  Done: ${backportCount} suggestion(s) from ${suggestions.length} sections analyzed.`);
+  const backportCount = filteredSuggestions.filter(s => s.recommendation === 'BACKPORT').length;
+  logger.info(`  Done: ${backportCount} suggestion(s) from ${filteredSuggestions.length} sections analyzed.`);
 
   const report: BackwardReport = {
     file,
@@ -215,7 +233,7 @@ export async function runBackwardSingleFile(
     targetMetadata,
     timeline,
     triageResult,
-    suggestions,
+    suggestions: filteredSuggestions,
     sectionPairs: pairs,
   };
 

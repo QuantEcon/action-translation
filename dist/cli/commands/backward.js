@@ -156,6 +156,13 @@ async function runBackwardSingleFile(options, logger = defaultLogger) {
     const pairs = (0, section_matcher_1.matchSections)(sourceParsed.sections, targetParsed.sections, headingMap.size > 0 ? headingMap : undefined);
     const summary = (0, section_matcher_1.getMatchingSummary)(pairs);
     logger.info(`  Sections: ${summary.matched} matched, ${summary.sourceOnly} source-only, ${summary.targetOnly} target-only`);
+    // Validate matches against heading-map if available
+    if (headingMap.size > 0) {
+        const warnings = (0, section_matcher_1.validateMatchesWithHeadingMap)(pairs, headingMap);
+        for (const warning of warnings) {
+            logger.warn(`Heading-map mismatch: ${warning}`);
+        }
+    }
     // Evaluate each matched section pair
     const suggestions = [];
     for (const pair of pairs) {
@@ -179,9 +186,18 @@ async function runBackwardSingleFile(options, logger = defaultLogger) {
             logger.info(`    → No backport (${suggestion.category})`);
         }
     }
+    // Filter suggestions by min-confidence
+    const minConfidence = options.minConfidence ?? 0;
+    const filteredSuggestions = suggestions.map(s => {
+        // Downgrade to NO_BACKPORT if below confidence threshold
+        if (s.recommendation === 'BACKPORT' && s.confidence < minConfidence) {
+            return { ...s, recommendation: 'NO_BACKPORT' };
+        }
+        return s;
+    });
     // Build report
-    const backportCount = suggestions.filter(s => s.recommendation === 'BACKPORT').length;
-    logger.info(`  Done: ${backportCount} suggestion(s) from ${suggestions.length} sections analyzed.`);
+    const backportCount = filteredSuggestions.filter(s => s.recommendation === 'BACKPORT').length;
+    logger.info(`  Done: ${backportCount} suggestion(s) from ${filteredSuggestions.length} sections analyzed.`);
     const report = {
         file,
         timestamp: new Date().toISOString(),
@@ -189,7 +205,7 @@ async function runBackwardSingleFile(options, logger = defaultLogger) {
         targetMetadata,
         timeline,
         triageResult,
-        suggestions,
+        suggestions: filteredSuggestions,
         sectionPairs: pairs,
     };
     await writeReport(report, options, logger);

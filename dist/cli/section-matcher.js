@@ -26,7 +26,7 @@ exports.getMatchingSummary = getMatchingSummary;
  * @param headingMap - Optional heading-map from TARGET frontmatter for validation
  * @returns Array of matched section pairs with sync status
  */
-function matchSections(sourceSections, targetSections, headingMap) {
+function matchSections(sourceSections, targetSections, _headingMap) {
     const pairs = [];
     const maxLen = Math.max(sourceSections.length, targetSections.length);
     for (let i = 0; i < maxLen; i++) {

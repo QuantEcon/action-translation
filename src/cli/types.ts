@@ -104,7 +104,8 @@ export interface FileGitMetadata {
  * A single entry in the interleaved commit timeline
  */
 export interface TimelineEntry {
-  date: string;              // ISO date "YYYY-MM-DD"
+  date: string;              // ISO date "YYYY-MM-DD" (for display)
+  fullDate: string;          // Full timestamp "YYYY-MM-DD HH:MM:SS +ZZZZ" (for sorting)
   repo: 'SOURCE' | 'TARGET';
   sha: string;               // Short SHA (7-8 chars)
   message: string;           // Commit message (first line)

@@ -13,7 +13,7 @@
 
 import { Section } from '../types';
 import { HeadingMap } from '../heading-map';
-import { SectionPair, SectionSyncStatus } from './types';
+import { SectionPair } from './types';
 
 /**
  * Match sections between SOURCE and TARGET documents by position
@@ -29,7 +29,7 @@ import { SectionPair, SectionSyncStatus } from './types';
 export function matchSections(
   sourceSections: Section[],
   targetSections: Section[],
-  headingMap?: HeadingMap,
+  _headingMap?: HeadingMap,
 ): SectionPair[] {
   const pairs: SectionPair[] = [];
   const maxLen = Math.max(sourceSections.length, targetSections.length);

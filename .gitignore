@@ -25,6 +25,10 @@ coverage/
 !.tmp/.gitkeep
 .cache/
 
+# Generated reports (output of CLI tools)
+reports/
+tool-onboarding/reports/
+
 # Test repositories (cloned locally for testing)
 test-translation-sync/
 test-translation-sync.zh-cn/

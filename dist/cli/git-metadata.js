@@ -109,12 +109,13 @@ function parseTimelineEntry(line, label) {
     const dateStr = parts[0].trim();
     const sha = parts[1].trim();
     const message = parts.slice(2).join('|').trim(); // rejoin if commit message had pipes
-    // Extract YYYY-MM-DD from the date string
+    // Extract YYYY-MM-DD from the date string (keep full string for precise sorting)
     const dateMatch = dateStr.match(/^(\d{4}-\d{2}-\d{2})/);
     if (!dateMatch)
         return null;
     return {
         date: dateMatch[1],
+        fullDate: dateStr,
         repo: label,
         sha,
         message,
@@ -140,8 +141,8 @@ async function getFileTimeline(sourceRepoPath, targetRepoPath, filePath) {
     if (sourceEntries.length === 0 && targetEntries.length === 0) {
         return null;
     }
-    // Interleave and sort newest-first by date
-    const allEntries = [...sourceEntries, ...targetEntries].sort((a, b) => b.date.localeCompare(a.date));
+    // Interleave and sort newest-first by full timestamp (not just date)
+    const allEntries = [...sourceEntries, ...targetEntries].sort((a, b) => b.fullDate.localeCompare(a.fullDate));
     // Estimated sync date: earliest TARGET commit = when translation was first created
     const estimatedSyncDate = targetEntries.length > 0
         ? targetEntries[targetEntries.length - 1].date

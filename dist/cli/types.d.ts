@@ -71,6 +71,7 @@ export interface FileGitMetadata {
  */
 export interface TimelineEntry {
     date: string;
+    fullDate: string;
     repo: 'SOURCE' | 'TARGET';
     sha: string;
     message: string;

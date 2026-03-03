@@ -175,7 +175,7 @@ The steady state formula was corrected to include the technology parameter A.
 - `✅ IN SYNC` — Stage 1 found no differences
 - `📋 N SUGGESTION(S)` — Stage 2 found actionable suggestions
 - `✅ NO ACTION NEEDED` — Stage 1 flagged differences but Stage 2 found nothing to backport
-- `⚠️ SKIPPED` — File couldn't be analyzed (missing, parse error, etc.)
+- `⚠️ SKIPPED` — File skipped (currently: exceeds size threshold)
 
 ### JSON (`--json`)
 

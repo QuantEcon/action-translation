@@ -54,8 +54,8 @@ describe('report-generator', () => {
     it('should include commit timeline when present', () => {
       const timeline: FileTimeline = {
         entries: [
-          { date: '2025-12-23', repo: 'SOURCE', sha: 'abc123d', message: 'Fix SymPy' },
-          { date: '2024-07-22', repo: 'TARGET', sha: 'fed987a', message: 'Translate to zh-cn' },
+          { date: '2025-12-23', fullDate: '2025-12-23 10:00:00 +0000', repo: 'SOURCE', sha: 'abc123d', message: 'Fix SymPy' },
+          { date: '2024-07-22', fullDate: '2024-07-22 08:00:00 +0000', repo: 'TARGET', sha: 'fed987a', message: 'Translate to zh-cn' },
         ],
         sourceCommitCount: 1,
         targetCommitCount: 1,

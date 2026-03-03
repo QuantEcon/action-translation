@@ -76,7 +76,7 @@ Complete documentation for the Translation Action (GitHub Action).
 
 **Recent releases:**
 
-- **[v0.8.0](../CHANGELOG.md#080---2026-03-03)** - Resync CLI Phase 1, backward analysis command
+- **[Unreleased](../CHANGELOG.md#unreleased)** - Resync CLI Phase 1, backward analysis command
 - **[v0.7.0](../CHANGELOG.md#070---2025-12-05)** - Review mode, repository rename
 - **[v0.6.0](../CHANGELOG.md#060---2025-12-03)** - Input validation, error handling
 - **[v0.5.1](../CHANGELOG.md#051---2025-11-06)** - Language configuration system

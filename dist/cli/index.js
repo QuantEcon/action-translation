@@ -12,11 +12,25 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const commander_1 = require("commander");
 const backward_1 = require("./commands/backward");
+// Read version from package.json to stay in sync
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { version } = require('../../package.json');
 const program = new commander_1.Command();
 program
     .name('resync')
     .description('Analyze and sync translations between source and target repositories')
-    .version('0.1.0');
+    .version(version);
+/**
+ * Validate --min-confidence value: must be a number in [0, 1].
+ */
+function validateMinConfidence(raw) {
+    const value = parseFloat(raw);
+    if (!Number.isFinite(value) || value < 0 || value > 1) {
+        console.error(`❌ --min-confidence must be a number between 0 and 1 (got "${raw}")`);
+        process.exit(1);
+    }
+    return value;
+}
 // ─── backward command ───────────────────────────────────────────────────────
 program
     .command('backward')
@@ -47,7 +61,7 @@ program
         model: opts.model,
         json: opts.json,
         test: opts.test,
-        minConfidence: parseFloat(opts.minConfidence),
+        minConfidence: validateMinConfidence(opts.minConfidence),
         estimate: false,
         apiKey: apiKey || 'test-key',
     };

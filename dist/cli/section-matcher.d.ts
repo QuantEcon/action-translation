@@ -24,7 +24,7 @@ import { SectionPair } from './types';
  * @param headingMap - Optional heading-map from TARGET frontmatter for validation
  * @returns Array of matched section pairs with sync status
  */
-export declare function matchSections(sourceSections: Section[], targetSections: Section[], headingMap?: HeadingMap): SectionPair[];
+export declare function matchSections(sourceSections: Section[], targetSections: Section[], _headingMap?: HeadingMap): SectionPair[];
 /**
  * Validate position-based matches against the heading-map
  *

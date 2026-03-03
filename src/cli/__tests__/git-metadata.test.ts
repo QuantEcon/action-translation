@@ -105,6 +105,7 @@ describe('git-metadata', () => {
       );
       expect(entry).not.toBeNull();
       expect(entry!.date).toBe('2024-06-15');
+      expect(entry!.fullDate).toBe('2024-06-15 10:30:00 -0500');
       expect(entry!.repo).toBe('SOURCE');
       expect(entry!.sha).toBe('abc123d');
       expect(entry!.message).toBe('Add solow model lecture');
@@ -118,6 +119,7 @@ describe('git-metadata', () => {
       expect(entry).not.toBeNull();
       expect(entry!.sha).toBe('def456a');
       expect(entry!.message).toBe('Fix: a|b|c regression');
+      expect(entry!.fullDate).toBe('2024-01-01 00:00:00 +0800');
     });
 
     it('should return null for malformed line', () => {
@@ -138,6 +140,7 @@ describe('git-metadata', () => {
       expect(entries.length).toBeGreaterThan(0);
       expect(entries[0].repo).toBe('SOURCE');
       expect(entries[0].date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(entries[0].fullDate).toBeTruthy();
       expect(entries[0].sha).toBeTruthy();
       expect(entries[0].message).toBeTruthy();
     });
@@ -162,9 +165,9 @@ describe('git-metadata', () => {
       expect(timeline).not.toBeNull();
       expect(timeline!.sourceCommitCount).toBeGreaterThan(0);
       expect(timeline!.targetCommitCount).toBeGreaterThan(0);
-      // Entries should be sorted newest-first
+      // Entries should be sorted newest-first (by fullDate)
       for (let i = 1; i < timeline!.entries.length; i++) {
-        expect(timeline!.entries[i - 1].date >= timeline!.entries[i].date).toBe(true);
+        expect(timeline!.entries[i - 1].fullDate >= timeline!.entries[i].fullDate).toBe(true);
       }
     });
 
@@ -185,11 +188,11 @@ describe('git-metadata', () => {
   describe('formatTimelineForPrompt', () => {
     const sampleTimeline: FileTimeline = {
       entries: [
-        { date: '2025-12-23', repo: 'SOURCE', sha: 'abc123d', message: 'Fix SymPy deprecation + unicode variables' },
-        { date: '2025-03-26', repo: 'TARGET', sha: 'fed987a', message: 'Update translation syncing' },
-        { date: '2025-01-10', repo: 'SOURCE', sha: 'bbb222c', message: 'Fix FutureWarning string comparison' },
-        { date: '2024-07-22', repo: 'TARGET', sha: 'ccc333d', message: 'Translate solow.md to zh-cn' },
-        { date: '2024-06-15', repo: 'SOURCE', sha: 'ddd444e', message: 'Add solow model lecture' },
+        { date: '2025-12-23', fullDate: '2025-12-23 10:00:00 +0000', repo: 'SOURCE', sha: 'abc123d', message: 'Fix SymPy deprecation + unicode variables' },
+        { date: '2025-03-26', fullDate: '2025-03-26 14:00:00 +0000', repo: 'TARGET', sha: 'fed987a', message: 'Update translation syncing' },
+        { date: '2025-01-10', fullDate: '2025-01-10 09:00:00 +0000', repo: 'SOURCE', sha: 'bbb222c', message: 'Fix FutureWarning string comparison' },
+        { date: '2024-07-22', fullDate: '2024-07-22 08:00:00 +0000', repo: 'TARGET', sha: 'ccc333d', message: 'Translate solow.md to zh-cn' },
+        { date: '2024-06-15', fullDate: '2024-06-15 12:00:00 +0000', repo: 'SOURCE', sha: 'ddd444e', message: 'Add solow model lecture' },
       ],
       sourceCommitCount: 3,
       targetCommitCount: 2,
@@ -233,7 +236,7 @@ describe('git-metadata', () => {
     it('should handle timeline with no estimated sync date', () => {
       const noSync: FileTimeline = {
         entries: [
-          { date: '2024-06-15', repo: 'SOURCE', sha: 'aaa111b', message: 'Initial commit' },
+          { date: '2024-06-15', fullDate: '2024-06-15 12:00:00 +0000', repo: 'SOURCE', sha: 'aaa111b', message: 'Initial commit' },
         ],
         sourceCommitCount: 1,
         targetCommitCount: 0,
