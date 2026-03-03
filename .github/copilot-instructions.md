@@ -8,7 +8,7 @@
 - **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
-**Current Version**: v0.8.0 | **Tests**: 316 (15 suites) | **Glossary**: 357 terms (zh-cn, fa)
+**Current Version**: v0.8.0 | **Tests**: 386 (21 suites) | **Glossary**: 357 terms (zh-cn, fa)
 
 ---
 
@@ -27,7 +27,17 @@ src/
 ├── heading-map.ts       # Heading-map extract/update/inject (246 lines)
 ├── language-config.ts   # Language-specific translation rules (102 lines)
 ├── inputs.ts            # Action inputs + validation (~200 lines)
-└── types.ts             # TypeScript types (~250 lines)
+├── types.ts             # TypeScript types (~250 lines)
+├── cli/
+│   ├── index.ts              # CLI entry point (commander.js)
+│   ├── types.ts              # CLI-specific types
+│   ├── document-comparator.ts # Stage 1: whole-document LLM triage (~260 lines)
+│   ├── backward-evaluator.ts  # Stage 2: per-section LLM evaluation (~290 lines)
+│   ├── section-matcher.ts     # Cross-language section matching (~150 lines)
+│   ├── git-metadata.ts        # File-level git metadata extraction (~85 lines)
+│   ├── report-generator.ts    # Markdown/JSON report formatting (~215 lines)
+│   └── commands/
+│       └── backward.ts        # Backward command orchestrator (~245 lines)
 ```
 
 Full module responsibilities: `docs/ARCHITECTURE.md`
