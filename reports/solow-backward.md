@@ -1,63 +1,45 @@
 # Backward Analysis: solow.md
 
-**Generated**: 2026-03-03T04:48:59.365Z
+**Generated**: 2026-03-03T05:19:22.731Z
 **SOURCE last modified**: 2025-12-23 by Matt McKay
 **TARGET last modified**: 2025-03-26 by zzzzdf
+
+## Commit Timeline
+
+```
+Source has 15 commits, Target has 8 commits.
+Estimated sync point (earliest TARGET commit): 2024-07-22
+SOURCE has 3 commit(s) AFTER the translation was created.
+
+Commit history (newest first):
+  2025-12-23  SOURCE  059e0f40  Fix SymPy OverflowError in solow.md by using Rational (#687)
+  2025-03-26  TARGET  ea773d5  [solow] Translation update (#181)
+  2025-02-24  TARGET  ab7f62f  [FIX] Fix SyntaxWarnings from `matplotlib` raw string (#150)
+  2025-01-21  SOURCE  6cc6c4bc  [FIX] Fix string warnings (#566)
+  2024-10-11  TARGET  18d9991  update scalar dynam and solow (#96)
+  2024-10-10  TARGET  6964bf3  [bug] Fix obvious bugs across all lectures (#95)
+  2024-09-27  TARGET  829b5a5  [solow] Translation (#39)
+  2024-09-16  TARGET  3e976ef  Initialise repo with Latest English Language Versions + Clean Up (#26)
+  2024-09-12  TARGET  8b97f8a  setup lectures folder for cn language lectures
+  2024-07-26  SOURCE  f5f71615  [solow] Update unfinished suggestions (#511)
+  2024-07-22  TARGET  4ad4a93  upload lecture and prepare translation
+  2024-04-27  SOURCE  689cb068  [Solow] Update context
+  2024-04-22  SOURCE  8cb45a16  [solow] Update internal links
+  2024-04-22  SOURCE  2cb3ac3d  [solow] Update editorial suggestions
+  2024-02-12  SOURCE  8f060459  Update solow.md (#332)
+  2023-06-13  SOURCE  f5c8fdb4  Make all titles and headings in line with manual
+  2023-04-28  SOURCE  b59c8b9d  ENH: Set a default image size across all lectures (#165)
+  2023-03-13  SOURCE  337beaa1  Fix a few typos
+  2023-03-05  SOURCE  969c7b55  Add k simulation
+  2023-02-08  SOURCE  cd499efb  fix an error
+  ... and 3 older commits
+```
 
 ## Stage 1: Document Triage
 
 **Verdict**: CHANGES_DETECTED
-**Notes**: The TARGET (zh-cn) translation contains several substantive differences: 1) Uses 'alpha' instead of 'α' as variable name throughout the code, which is a non-trivial code change affecting functionality. 2) In the sympy solution section, the TARGET omits 'from sympy import Rational' and the associated code using Rational types for exact symbolic computation, resulting in different numerical output. 3) The TARGET displays 's_star' directly without converting to float, showing symbolic output instead of numerical value. These are functional code changes that go beyond normal translation work.
+**Notes**: The TARGET translation contains a substantive code change: uses `Rational` from sympy for exact symbolic computation in Exercise 1 solution, while SOURCE (after 2025-12-23 commit) also uses `Rational` but TARGET predates this fix. Additionally, TARGET uses different variable names (alpha, delta, sig, mu) vs SOURCE (α, δ, σ, μ) throughout the code, representing a systematic code improvement for Python compatibility that goes beyond simple i18n changes.
 
-## Suggestions (1 found)
+## Stage 2: Section Analysis
 
-### ## Growth in continuous time (HIGH confidence: 0.85)
-**Category**: CODE_IMPROVEMENT
-
-The TARGET uses 'alpha' and 'delta' as variable names instead of Greek symbols 'α' and 'δ', which improves code portability and compatibility across different environments. This is a substantive code improvement that affects functionality.
-
-**Variable naming in code**:
-
-*Current English*:
-> A, s, α, δ = 2, 0.3, 0.3, 0.4
-
-*Suggested improvement*:
-> A, s, alpha, delta = 2, 0.3, 0.3, 0.4
-
-**Function parameter naming**:
-
-*Current English*:
-> def g_con(A, s, α, δ, k):
-    return A * s * k**α - δ * k
-
-*Suggested improvement*:
-> def g_con(A, s, alpha, delta, k):
-    return A * s * k**alpha - delta * k
-
-**Function call arguments**:
-
-*Current English*:
-> ax.plot(k_grid, g_con(A, s, α, δ, k_grid), label='$g(k)$')
-
-*Suggested improvement*:
-> ax.plot(k_grid, g_con(A, s, alpha, delta, k_grid), label='$g(k)$')
-
-**Variable usage in calculation**:
-
-*Current English*:
-> kstar = ((s * A) / δ)**(1/(1 - α))
-
-*Suggested improvement*:
-> kstar = ((s * A) / delta)**(1/(1 - alpha))
-
-**Reasoning**: This is a genuine code improvement that should be suggested back to the source. Using ASCII variable names (alpha, delta) instead of Unicode Greek symbols (α, δ) in Python code is a best practice because: (1) It avoids potential encoding issues across different environments and editors, (2) It improves accessibility for developers using various keyboard layouts, (3) It maintains consistency with standard Python naming conventions (PEP 8 recommends ASCII identifiers), and (4) It prevents confusion with similar-looking characters. While Greek symbols in code can be visually appealing in mathematical contexts, the practical benefits of ASCII names outweigh aesthetic considerations. This is not an i18n change—it's a substantive improvement to code portability and maintainability that would benefit all users regardless of language. The mathematical notation in LaTeX/markdown (using α, δ) correctly remains unchanged, maintaining the visual connection between math and code while improving code robustness.
-
-## Sections Reviewed (No Suggestions)
-
-- **## The model**: NO_CHANGE — The target translation is faithful to the source with no substantive improvements. The Stage 1 triage notes about code changes appear to refer to other sections not shown here.
-- **## A graphical perspective**: I18N_ONLY — The target contains variable name changes (α→alpha, δ→delta) and expanded explanations, but these appear to be intentional localization choices rather than improvements to suggest back. The variable name changes are cosmetic (for ASCII compatibility) and the text expansions are translation-style clarifications.
-- **## Exercises**: I18N_ONLY — The target contains variable name changes (α→alpha, δ→delta, σ→sig, μ→mu) and omits sympy.Rational for exact computation. However, these appear to be adaptation choices for the Chinese environment rather than improvements to suggest back.
-
----
-
-*This report was generated by `resync backward`. Suggestions are for consideration by source maintainers.*
+No backport suggestions found after detailed section analysis.

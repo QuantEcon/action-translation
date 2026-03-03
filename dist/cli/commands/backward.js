@@ -99,9 +99,21 @@ async function runBackwardSingleFile(options, logger = defaultLogger) {
     if (targetMetadata) {
         logger.info(`  TARGET last modified: ${targetMetadata.lastModified.toISOString().split('T')[0]}`);
     }
+    // Get interleaved commit timeline
+    logger.info('  Building commit timeline...');
+    const timeline = await (0, git_metadata_1.getFileTimeline)(source, target, path.join(docsFolder, file));
+    if (timeline) {
+        logger.info(`  Timeline: ${timeline.sourceCommitCount} source + ${timeline.targetCommitCount} target commits`);
+        if (timeline.estimatedSyncDate) {
+            logger.info(`  Estimated sync point: ${timeline.estimatedSyncDate}`);
+            if (timeline.sourceCommitsAfterSync > 0) {
+                logger.info(`  SOURCE has ${timeline.sourceCommitsAfterSync} commit(s) after sync point`);
+            }
+        }
+    }
     // ─── Stage 1: Document-Level Triage ───
     logger.info('  Stage 1: Document-level triage...');
-    const triageResult = await (0, document_comparator_1.triageDocument)(file, sourceContent, targetContent, sourceMetadata, targetMetadata, {
+    const triageResult = await (0, document_comparator_1.triageDocument)(file, sourceContent, targetContent, sourceMetadata, targetMetadata, timeline, {
         apiKey: options.apiKey,
         model,
         sourceLanguage: 'en',
@@ -120,6 +132,7 @@ async function runBackwardSingleFile(options, logger = defaultLogger) {
             timestamp: new Date().toISOString(),
             sourceMetadata,
             targetMetadata,
+            timeline,
             triageResult,
             suggestions: [],
         };
@@ -151,7 +164,7 @@ async function runBackwardSingleFile(options, logger = defaultLogger) {
         }
         const heading = pair.sourceHeading || 'Unknown Section';
         logger.info(`  Evaluating: ${heading}`);
-        const suggestion = await (0, backward_evaluator_1.evaluateSection)(pair.sourceSection.content, pair.targetSection.content, heading, sourceMetadata, targetMetadata, triageResult.notes, {
+        const suggestion = await (0, backward_evaluator_1.evaluateSection)(pair.sourceSection.content, pair.targetSection.content, heading, sourceMetadata, targetMetadata, triageResult.notes, timeline, {
             apiKey: options.apiKey,
             model,
             sourceLanguage: 'en',
@@ -174,6 +187,7 @@ async function runBackwardSingleFile(options, logger = defaultLogger) {
         timestamp: new Date().toISOString(),
         sourceMetadata,
         targetMetadata,
+        timeline,
         triageResult,
         suggestions,
         sectionPairs: pairs,

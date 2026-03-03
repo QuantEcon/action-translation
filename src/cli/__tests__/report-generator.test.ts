@@ -74,13 +74,47 @@ describe('report-generator', () => {
       expect(md).not.toContain('## Commit Timeline');
     });
 
+    it('should show NO ACTION NEEDED verdict when changes detected but no backports', () => {
+      const md = generateMarkdownReport(baseReport);
+      expect(md).toContain('NO ACTION NEEDED');
+      expect(md).toContain('none require backporting');
+    });
+
+    it('should show IN SYNC verdict for synced files', () => {
+      const report: BackwardReport = {
+        ...baseReport,
+        triageResult: { file: 'test.md', verdict: 'IN_SYNC', notes: '' },
+      };
+      const md = generateMarkdownReport(report);
+      expect(md).toContain('Result:');
+      expect(md).toContain('IN SYNC');
+    });
+
+    it('should show SUGGESTION count verdict when backports found', () => {
+      const report: BackwardReport = {
+        ...baseReport,
+        suggestions: [{
+          sectionHeading: '## A',
+          recommendation: 'BACKPORT',
+          category: 'BUG_FIX',
+          confidence: 0.9,
+          summary: 'fix',
+          specificChanges: [],
+          reasoning: 'reason',
+        }],
+      };
+      const md = generateMarkdownReport(report);
+      expect(md).toContain('1 SUGGESTION');
+      expect(md).toContain('See details below');
+    });
+
     it('should show IN_SYNC message for files in sync', () => {
       const report: BackwardReport = {
         ...baseReport,
         triageResult: { file: 'test.md', verdict: 'IN_SYNC', notes: '' },
       };
       const md = generateMarkdownReport(report);
-      expect(md).toContain('IN_SYNC');
+      expect(md).toContain('IN SYNC');
       expect(md).toContain('faithful');
       expect(md).not.toContain('Suggestions');
     });

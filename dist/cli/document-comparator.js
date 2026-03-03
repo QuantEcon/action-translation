@@ -38,7 +38,7 @@ function estimateTokens(text) {
  *
  * Exported for snapshot testing.
  */
-function buildTriagePrompt(sourceContent, targetContent, sourceLanguage, targetLanguage, sourceMetadata, targetMetadata) {
+function buildTriagePrompt(sourceContent, targetContent, sourceLanguage, targetLanguage, sourceMetadata, targetMetadata, timeline) {
     let timelineContext = '';
     if (sourceMetadata && targetMetadata) {
         const days = (0, git_metadata_1.daysBetween)(sourceMetadata.lastModified, targetMetadata.lastModified);
@@ -48,6 +48,17 @@ function buildTriagePrompt(sourceContent, targetContent, sourceLanguage, targetL
 - SOURCE last modified: ${(0, git_metadata_1.formatDate)(sourceMetadata.lastModified)} by ${sourceMetadata.lastAuthor}
 - TARGET last modified: ${(0, git_metadata_1.formatDate)(targetMetadata.lastModified)} by ${targetMetadata.lastAuthor}
 - TARGET is ${Math.abs(days)} days ${direction} than SOURCE`;
+    }
+    if (timeline) {
+        timelineContext += `
+
+## Commit History
+${(0, git_metadata_1.formatTimelineForPrompt)(timeline)}
+
+**Key**: If SOURCE has commits AFTER the estimated sync point, those represent
+updates the TARGET translation has NOT received. Differences from these newer
+SOURCE commits should NOT be flagged as TARGET improvements — they are expected
+divergences because the translation predates those SOURCE changes.`;
     }
     return `You are comparing an English source document with its ${targetLanguage} translation to determine if the translation contains substantive changes beyond normal translation work.
 
@@ -150,7 +161,7 @@ function sleep(ms) {
  * @param options - Configuration options
  * @returns TriageResult with verdict and notes
  */
-async function triageDocument(file, sourceContent, targetContent, sourceMetadata, targetMetadata, options) {
+async function triageDocument(file, sourceContent, targetContent, sourceMetadata, targetMetadata, timeline, options) {
     // Test mode: return deterministic response
     if (options.testMode) {
         const mock = mockTriageResponse(file);
@@ -170,7 +181,7 @@ async function triageDocument(file, sourceContent, targetContent, sourceMetadata
             tokenCount: estimatedTokens,
         };
     }
-    const prompt = buildTriagePrompt(sourceContent, targetContent, options.sourceLanguage, options.targetLanguage, sourceMetadata, targetMetadata);
+    const prompt = buildTriagePrompt(sourceContent, targetContent, options.sourceLanguage, options.targetLanguage, sourceMetadata, targetMetadata, timeline);
     const client = new sdk_1.default({ apiKey: options.apiKey });
     const { maxRetries, baseDelayMs } = translator_1.RETRY_CONFIG;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {

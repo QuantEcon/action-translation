@@ -34,6 +34,19 @@ export function generateMarkdownReport(report: BackwardReport): string {
   }
   lines.push('');
 
+  // Overall verdict (clear top-level summary)
+  const backportCount = report.suggestions.filter(s => s.recommendation === 'BACKPORT').length;
+  if (report.triageResult.verdict === 'IN_SYNC') {
+    lines.push('**Result: ✅ IN SYNC** — No backport suggestions.');
+  } else if (backportCount > 0) {
+    lines.push(`**Result: 📋 ${backportCount} SUGGESTION${backportCount === 1 ? '' : 'S'}** — See details below.`);
+  } else if (report.triageResult.verdict === 'CHANGES_DETECTED') {
+    lines.push('**Result: ✅ NO ACTION NEEDED** — Differences found but none require backporting.');
+  } else {
+    lines.push('**Result: ⚠️ SKIPPED** — Document too large for triage.');
+  }
+  lines.push('');
+
   // Commit timeline
   if (report.timeline) {
     lines.push('## Commit Timeline');

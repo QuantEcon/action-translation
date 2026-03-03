@@ -27,7 +27,7 @@ const translator_1 = require("../translator");
  *
  * Exported for snapshot testing.
  */
-function buildEvaluationPrompt(sourceSection, targetSection, sectionHeading, sourceLanguage, targetLanguage, sourceMetadata, targetMetadata, triageNotes) {
+function buildEvaluationPrompt(sourceSection, targetSection, sectionHeading, sourceLanguage, targetLanguage, sourceMetadata, targetMetadata, triageNotes, timeline) {
     let timelineContext = '';
     if (sourceMetadata && targetMetadata) {
         const days = (0, git_metadata_1.daysBetween)(sourceMetadata.lastModified, targetMetadata.lastModified);
@@ -37,6 +37,16 @@ function buildEvaluationPrompt(sourceSection, targetSection, sectionHeading, sou
 - SOURCE last modified: ${(0, git_metadata_1.formatDate)(sourceMetadata.lastModified)}
 - TARGET last modified: ${(0, git_metadata_1.formatDate)(targetMetadata.lastModified)}
 - TARGET is ${Math.abs(days)} days ${direction} than SOURCE`;
+    }
+    if (timeline) {
+        timelineContext += `
+
+## Commit History
+${(0, git_metadata_1.formatTimelineForPrompt)(timeline)}
+
+**Key**: If SOURCE has commits AFTER the estimated sync point, differences from those
+newer SOURCE commits are expected divergences — the TARGET simply hasn't been updated yet.
+Do NOT recommend backporting content that SOURCE already has in a newer form.`;
     }
     let triageContext = '';
     if (triageNotes) {
@@ -199,12 +209,12 @@ function sleep(ms) {
  * @param options - Configuration options
  * @returns BackportSuggestion with recommendation
  */
-async function evaluateSection(sourceSection, targetSection, sectionHeading, sourceMetadata, targetMetadata, triageNotes, options) {
+async function evaluateSection(sourceSection, targetSection, sectionHeading, sourceMetadata, targetMetadata, triageNotes, timeline, options) {
     // Test mode: return deterministic response
     if (options.testMode) {
         return mockEvaluationResponse(sectionHeading);
     }
-    const prompt = buildEvaluationPrompt(sourceSection, targetSection, sectionHeading, options.sourceLanguage, options.targetLanguage, sourceMetadata, targetMetadata, triageNotes);
+    const prompt = buildEvaluationPrompt(sourceSection, targetSection, sectionHeading, options.sourceLanguage, options.targetLanguage, sourceMetadata, targetMetadata, triageNotes, timeline);
     const client = new sdk_1.default({ apiKey: options.apiKey });
     const { maxRetries, baseDelayMs } = translator_1.RETRY_CONFIG;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {

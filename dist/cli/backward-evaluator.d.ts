@@ -10,13 +10,13 @@
  * Tone: Respectful suggestions. SOURCE is the source of truth.
  * These are improvements "for consideration", not corrections.
  */
-import { BackportSuggestion, FileGitMetadata } from './types';
+import { BackportSuggestion, FileGitMetadata, FileTimeline } from './types';
 /**
  * Build the Stage 2 section evaluation prompt
  *
  * Exported for snapshot testing.
  */
-export declare function buildEvaluationPrompt(sourceSection: string, targetSection: string, sectionHeading: string, sourceLanguage: string, targetLanguage: string, sourceMetadata: FileGitMetadata | null, targetMetadata: FileGitMetadata | null, triageNotes: string): string;
+export declare function buildEvaluationPrompt(sourceSection: string, targetSection: string, sectionHeading: string, sourceLanguage: string, targetLanguage: string, sourceMetadata: FileGitMetadata | null, targetMetadata: FileGitMetadata | null, triageNotes: string, timeline: FileTimeline | null): string;
 /**
  * Parse the LLM response for Stage 2 evaluation
  * Robust: handles cases where Claude doesn't return clean JSON
@@ -34,7 +34,7 @@ export declare function parseEvaluationResponse(responseText: string, sectionHea
  * @param options - Configuration options
  * @returns BackportSuggestion with recommendation
  */
-export declare function evaluateSection(sourceSection: string, targetSection: string, sectionHeading: string, sourceMetadata: FileGitMetadata | null, targetMetadata: FileGitMetadata | null, triageNotes: string, options: {
+export declare function evaluateSection(sourceSection: string, targetSection: string, sectionHeading: string, sourceMetadata: FileGitMetadata | null, targetMetadata: FileGitMetadata | null, triageNotes: string, timeline: FileTimeline | null, options: {
     apiKey: string;
     model: string;
     sourceLanguage: string;

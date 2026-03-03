@@ -9,13 +9,13 @@
  * (~$0.10 for unnecessary Stage 2), but false negatives (missing a real
  * backport) mean lost improvements. When in doubt, flag it.
  */
-import { TriageResult, TriageVerdict, FileGitMetadata } from './types';
+import { TriageResult, TriageVerdict, FileGitMetadata, FileTimeline } from './types';
 /**
  * Build the Stage 1 triage prompt
  *
  * Exported for snapshot testing.
  */
-export declare function buildTriagePrompt(sourceContent: string, targetContent: string, sourceLanguage: string, targetLanguage: string, sourceMetadata: FileGitMetadata | null, targetMetadata: FileGitMetadata | null): string;
+export declare function buildTriagePrompt(sourceContent: string, targetContent: string, sourceLanguage: string, targetLanguage: string, sourceMetadata: FileGitMetadata | null, targetMetadata: FileGitMetadata | null, timeline: FileTimeline | null): string;
 /**
  * Parse the LLM response for Stage 1 triage
  * Robust: handles cases where Claude doesn't return clean JSON
@@ -35,7 +35,7 @@ export declare function parseTriageResponse(responseText: string): {
  * @param options - Configuration options
  * @returns TriageResult with verdict and notes
  */
-export declare function triageDocument(file: string, sourceContent: string, targetContent: string, sourceMetadata: FileGitMetadata | null, targetMetadata: FileGitMetadata | null, options: {
+export declare function triageDocument(file: string, sourceContent: string, targetContent: string, sourceMetadata: FileGitMetadata | null, targetMetadata: FileGitMetadata | null, timeline: FileTimeline | null, options: {
     apiKey: string;
     model: string;
     sourceLanguage: string;
