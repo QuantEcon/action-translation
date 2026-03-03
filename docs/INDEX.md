@@ -2,8 +2,8 @@
 
 Complete documentation for the Translation Action (GitHub Action).
 
-**Current Version**: v0.7.0 (Testing & Development)  
-**Status**: Review Mode & Repository Rename
+**Current Version**: v0.8.0  
+**Status**: Resync CLI Phase 1 Complete
 
 ---
 
@@ -44,7 +44,7 @@ Complete documentation for the Translation Action (GitHub Action).
 
 **For contributors and testers:**
 
-1. **[Testing Guide](TESTING.md)** - Test suite design and how to write tests (183 tests)
+1. **[Testing Guide](TESTING.md)** - Test suite design and how to write tests (409 tests)
 2. **[Test Repositories](TEST-REPOSITORIES.md)** - GitHub integration testing setup (24 scenarios)
 3. **[CHANGELOG](../CHANGELOG.md)** - Version history and release notes
 
@@ -54,11 +54,11 @@ Complete documentation for the Translation Action (GitHub Action).
 
 **Standalone tools for different workflows:**
 
-1. **[Resync Tool](DESIGN-RESYNC.md)** - Backport analysis and forward sync (planned, replaces onboarding/alignment)
+1. **[Resync CLI](../src/cli/README.md)** - Backward analysis: find improvements in translations worth backporting ([design](DESIGN-RESYNC.md))
 2. **[Bulk Translator](../tool-bulk-translator/README.md)** - One-time bulk translation for initial setup
 3. **[GitHub Test Tool](../tool-test-action-on-github/README.md)** - Automated GitHub testing + quality evaluation
-4. **[Onboarding Tool](../tool-onboarding/README.md)** - ⚠️ DEPRECATED - see Resync Tool
-5. **[Alignment Tool](../tool-alignment/README.md)** - ⚠️ DEPRECATED - see Resync Tool
+4. **[Onboarding Tool](../tool-onboarding/README.md)** - ⚠️ DEPRECATED - see Resync CLI
+5. **[Alignment Tool](../tool-alignment/README.md)** - ⚠️ DEPRECATED - see Resync CLI
 
 ---
 
@@ -76,6 +76,7 @@ Complete documentation for the Translation Action (GitHub Action).
 
 **Recent releases:**
 
+- **[v0.8.0](../CHANGELOG.md#080---2026-03-03)** - Resync CLI Phase 1, backward analysis command
 - **[v0.7.0](../CHANGELOG.md#070---2025-12-05)** - Review mode, repository rename
 - **[v0.6.0](../CHANGELOG.md#060---2025-12-03)** - Input validation, error handling
 - **[v0.5.1](../CHANGELOG.md#051---2025-11-06)** - Language configuration system
@@ -117,7 +118,7 @@ docs/
 ├── IMPLEMENTATION.md        # Comprehensive technical guide
 ├── HEADING-MAPS.md          # Cross-language matching system
 ├── CLAUDE-MODELS.md         # Model selection and configuration
-├── TESTING.md               # Test suite guide (183 tests)
+├── TESTING.md               # Test suite guide (409 tests)
 ├── TEST-REPOSITORIES.md     # GitHub integration testing setup
 ├── PLAN-FUTURE-FEATURES.md  # Future roadmap and planning
 └── presentations/           # Marp slide deck
@@ -139,8 +140,8 @@ docs/
 
 ## 📊 Project Metrics
 
-- **Core Code**: ~3,400 lines across 9 modules
-- **Test Coverage**: 183 tests (100% passing)
+- **Core Code**: ~3,400 lines across 9 modules + ~1,600 lines CLI (8 modules)
+- **Test Coverage**: 409 tests (100% passing)
 - **GitHub Tests**: 24 automated scenarios
 - **Glossary Terms**: 357 (Chinese), 357 (Persian)
 - **Bundle Size**: ~1.9MB
@@ -162,4 +163,4 @@ See [PROJECT-DESIGN.md](PROJECT-DESIGN.md) for detailed explanations.
 
 ---
 
-**Last Updated**: December 6, 2025 (v0.7.0)
+**Last Updated**: March 3, 2026 (v0.8.0)

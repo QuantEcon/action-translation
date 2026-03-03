@@ -11,7 +11,7 @@ Analyze translated documents for improvements worth backporting to the English s
 git clone https://github.com/QuantEcon/lecture-python-intro.git
 
 # TARGET (translated)
-git clone https://github.com/QuantEcon/lecture-python-intro.zh-cn.git
+git clone https://github.com/QuantEcon/lecture-intro.zh-cn.git
 ```
 
 ### 2. Build the CLI
@@ -31,13 +31,13 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 # Analyze a single file
 node dist/cli/index.js backward \
   -s ~/repos/lecture-python-intro \
-  -t ~/repos/lecture-python-intro.zh-cn \
+  -t ~/repos/lecture-intro.zh-cn \
   -f solow.md
 
 # Use --test mode (no API key needed, deterministic mock responses)
 node dist/cli/index.js backward \
   -s ~/repos/lecture-python-intro \
-  -t ~/repos/lecture-python-intro.zh-cn \
+  -t ~/repos/lecture-intro.zh-cn \
   -f solow.md \
   --test
 ```
@@ -72,6 +72,8 @@ Options:
 
 2. **Stage 2 (Section Analysis)**: For flagged files, sections are matched by position (with heading-map validation), and each matched pair gets one LLM call. Produces structured suggestions with category, confidence, and specific changes.
 
+**Commit Timeline**: Both stages receive an interleaved commit timeline from the SOURCE and TARGET repos, helping the LLM understand which changes came first and avoiding false positives where SOURCE was updated *after* the translation.
+
 ## Examples
 
 ### Test with the test repositories
@@ -94,18 +96,18 @@ node dist/cli/index.js backward \
 ```bash
 # Clone lecture repos
 git clone https://github.com/QuantEcon/lecture-python-intro.git
-git clone https://github.com/QuantEcon/lecture-python-intro.zh-cn.git
+git clone https://github.com/QuantEcon/lecture-intro.zh-cn.git
 
 # Analyze a specific lecture (requires ANTHROPIC_API_KEY)
 node dist/cli/index.js backward \
   -s lecture-python-intro \
-  -t lecture-python-intro.zh-cn \
+  -t lecture-intro.zh-cn \
   -f solow.md
 
 # JSON output for programmatic use
 node dist/cli/index.js backward \
   -s lecture-python-intro \
-  -t lecture-python-intro.zh-cn \
+  -t lecture-intro.zh-cn \
   -f solow.md \
   --json
 ```
@@ -115,7 +117,7 @@ node dist/cli/index.js backward \
 ```bash
 node dist/cli/index.js backward \
   -s lecture-python-intro \
-  -t lecture-python-intro.zh-cn \
+  -t lecture-intro.zh-cn \
   -f solow.md \
   -m claude-sonnet-4-5-20250929
 ```
@@ -143,6 +145,10 @@ Reports are written to `{output}/{filename}-backward.md`:
 **Generated**: 2026-03-03T10:00:00.000Z
 **SOURCE last modified**: 2024-06-01 by Alice
 **TARGET last modified**: 2024-09-15 by Bob
+**Result**: 📋 1 SUGGESTION(S)
+
+## Commit Timeline
+SOURCE commits: 5 | TARGET commits: 3 | Estimated sync: 2024-07-15
 
 ## Stage 1: Document Triage
 **Verdict**: CHANGES_DETECTED
@@ -164,6 +170,12 @@ The steady state formula was corrected to include the technology parameter A.
 
 **Reasoning**: The translation corrected a missing technology parameter.
 ```
+
+**Result values**:
+- `✅ IN SYNC` — Stage 1 found no differences
+- `📋 N SUGGESTION(S)` — Stage 2 found actionable suggestions
+- `✅ NO ACTION NEEDED` — Stage 1 flagged differences but Stage 2 found nothing to backport
+- `⚠️ SKIPPED` — File couldn't be analyzed (missing, parse error, etc.)
 
 ### JSON (`--json`)
 
