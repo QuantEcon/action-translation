@@ -4,7 +4,7 @@
 **Last Updated**: 2026-03-03  
 **Sources**: 2026-02-16-REVIEW.md, docs/DESIGN-RESYNC.md  
 **Current Version**: v0.8.0  
-**Test Status**: 409 tests passing (21 test suites)
+**Test Status**: 448 tests passing (23 test suites)
 
 ---
 
@@ -230,54 +230,74 @@ Running against `solow.md` revealed a critical false positive: the LLM suggested
 
 ---
 
-## Phase 2: Resync CLI — Bulk Analysis & Status (2-3 days)
+## Phase 2: Resync CLI — Bulk Analysis & Status (2-3 days) ✅ COMPLETE
 
 **Goal**: Scale backward to full repository + quick diagnostic command
+**Status**: Status command + bulk backward implemented, 39 new tests (448 total)
 
-### 2.1 Status Command (`src/cli/commands/status.ts`)
+### 2.1 Status Command (`src/cli/commands/status.ts`) ✅
 
-No LLM calls — fast and free diagnostic:
+No LLM calls — fast and free diagnostic. Output goes to the **CLI console** (like `git status`), not report files.
 
-- [ ] Check heading-map presence in each TARGET file
-- [ ] Detect structural differences (section count mismatch)
-- [ ] Compare file modification dates (git metadata)
-- [ ] Report per-file sync status:
-  - `ALIGNED` — structure matches, heading-map present
-  - `DRIFT` — structural differences detected
+- [x] Check heading-map presence in each TARGET file
+- [x] Detect structural differences (section count mismatch)
+- [x] Compare file modification dates (git metadata)
+- [x] Report per-file sync status:
+  - `ALIGNED` — structure matches, heading-map present, no newer SOURCE commits
+  - `OUTDATED` — structure/heading-map OK, but SOURCE has newer commits than TARGET
+  - `DRIFT` — structural differences detected (section count mismatch)
   - `MISSING_HEADINGMAP` — no heading-map in TARGET
   - `SOURCE_ONLY` — file missing in TARGET
   - `TARGET_ONLY` — file missing in SOURCE
-- [ ] Output summary table
-- [ ] Support `--json` flag
-- [ ] Unit tests
+- [x] Print summary table to stdout
+- [x] Support `--json` flag (prints JSON to stdout)
+- [x] Unit tests (21 tests)
 
-### 2.2 Bulk Backward Processing
+### 2.2 Bulk Backward Processing ✅
 
-- [ ] File discovery (find all `.md` files in docs folder)
-- [ ] Progress indicator (console output: `[12/51] triaging cobweb.md...`)
-- [ ] Two-stage bulk flow:
+Bulk mode writes reports into a **timestamped folder** — the folder *is* the report:
+```
+reports/backward-2026-03-03/
+├── _summary.md           # Aggregate summary
+├── _summary.json         # (with --json)
+├── _progress.json        # Checkpoint manifest
+├── cobweb-backward.md    # Per-file report
+├── solow-backward.md
+└── ...
+```
+
+- [x] File discovery (find all `.md` files in docs folder)
+- [x] File filtering:
+  - `--exclude <glob>` option (e.g., `--exclude README.md`)
+  - Respect `_toc.yml` if present to discover the actual lecture list
+- [x] Progress indicator (console output: `[12/51] triaging cobweb.md...`)
+- [x] Two-stage bulk flow:
   - Stage 1 triage on all files (fast, 1 call each)
   - Stage 2 section analysis only on flagged files
   - Progress shows both stages: `Stage 1: [12/51]... Stage 2: [2/3]...`
-- [ ] Sequential processing (respect API rate limits)
-- [ ] Aggregate results across files
-- [ ] Cost estimation (`--estimate` flag)
+- [x] Sequential processing (respect API rate limits)
+- [x] Incremental checkpointing:
+  - Write each per-file report to disk as it completes
+  - Maintain `_progress.json` tracking which files are done
+  - Support `--resume` to skip already-completed files in the output folder
+- [x] Per-file reports (individual Markdown/JSON per analyzed file)
+- [x] Aggregate summary report across all files
+- [x] Cost estimation (`--estimate` flag)
   - Count files for Stage 1 triage
   - Estimate how many files will be flagged (~5-10% based on experience)
   - Estimate Stage 2 section calls for flagged files
   - Calculate estimated total API cost
   - Calculate estimated time
   - Prompt user to proceed (y/N)
-- [ ] Summary report across all files
 
-### 2.3 Output Formats
+### 2.3 Output Formats ✅
 
-- [ ] `--json` flag for backward command
-- [ ] `--json` flag for status command
-- [ ] Define stable JSON schema
-- [ ] Document JSON output format
+- [x] Wire `--json` into bulk backward (per-file + aggregate)
+- [x] Wire `--json` into status command (stdout)
 
-**Phase 2 Deliverable**: `npx resync status` + full-repo `npx resync backward`
+> **Note**: Stable JSON schema definition and documentation deferred to Phase 4.
+
+**Phase 2 Deliverable**: `npx resync status` (console) + full-repo `npx resync backward` (report folder) ✅
 
 ---
 
@@ -661,7 +681,7 @@ npm run test:real-repos
 
 | Metric | Current | Target |
 |--------|---------|--------|
-| Test count | 409 | 400+ |
+| Test count | 448 | 400+ |
 | `index.ts` lines | ~447 | ~447 (stable) |
 | Deprecated methods | 0 | 0 |
 | Dead tool directories | 2 | 0 |
@@ -674,7 +694,7 @@ npm run test:real-repos
 |-------|----------|--------------|-----------------|
 | **Phase 0**: Foundation | 3-4 days | None | `index.ts` refactored, retry logic |
 | **Phase 1**: Single-file backward | 3-4 days | Phase 0 ✅ | `npx resync backward -f file.md` (two-stage) |
-| **Phase 2**: Bulk + status | 2-3 days | Phase 1 | `npx resync status` + bulk backward |
+| **Phase 2**: Bulk + status | 2-3 days | Phase 1 ✅ | `npx resync status` + bulk backward |
 | **Phase 3**: Backward-sync + forward | 2-3 days | Phase 1 | `npx resync backward-sync` + `npx resync forward` |
 | **Phase 4**: Refinement | 2-3 days | Phase 2, 3 | Production-ready CLI |
 | **Phase 5**: Cleanup | 1 day | Any time | Clean repo |
@@ -689,7 +709,7 @@ npm run test:real-repos
 1. **Stage 1 token limits**: Very large documents (30K+ tokens per side) may exceed context window for single-call triage. Fallback: skip Stage 1 and go direct to Stage 2 for oversized files. — Validate in Phase 1
 2. **Backport confidence threshold**: Default 0.6 — validate with real data in Phase 1
 3. **Multi-section changes**: Group in one suggestion or separate? — Decide in Phase 1
-4. **TARGET-only files**: Flag for addition to SOURCE, or just report? — Decide in Phase 2
+4. ~~**TARGET-only files**: Flag for addition to SOURCE, or just report?~~ **Resolved**: `status` reports only (diagnostic tool). Action on `TARGET_ONLY` / `SOURCE_ONLY` belongs to Phase 3 commands.
 5. **Run frequency**: Monthly default, option for more frequent? — Decide in Phase 4
 6. **backward-sync PR format**: Should `backward-sync` create PRs directly, or write files for manual PR creation? — Decide in Phase 3
 7. **Report-driven backward-sync**: The `--from-report` flag reads a backward JSON report and syncs only marked suggestions. Exact UX for "marking accepted" TBD. — Decide in Phase 3
@@ -698,7 +718,7 @@ npm run test:real-repos
 
 ## Next Steps
 
-Phase 0 and Phase 1 are complete. **Start Phase 2** with bulk backward processing (2.2) and status command (2.1). The timeline feature from Phase 1 should carry forward into bulk mode.
+Phase 0, Phase 1, and Phase 2 are complete. **Start Phase 3** with backward-sync and forward commands.
 
 ### Lessons from Phase 1 Real-World Testing
 

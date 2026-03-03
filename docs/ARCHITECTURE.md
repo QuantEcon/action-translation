@@ -620,16 +620,30 @@ npm run resync -- --all ...
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  action-translation/src/                                                    │
-│  ├── index.ts              Entry point, mode routing (~780 lines)           │
+│  ├── index.ts              Entry point, mode routing (~450 lines)           │
+│  ├── sync-orchestrator.ts  Sync processing pipeline (~420 lines)            │
+│  ├── pr-creator.ts         PR creation in target repo (~320 lines)          │
 │  ├── parser.ts             Stack-based section parser (282 lines)           │
 │  ├── diff-detector.ts      Change detection (195 lines)                     │
-│  ├── translator.ts         Claude API - SYNC mode (305 lines)               │
+│  ├── translator.ts         Claude API - SYNC mode (~460 lines)              │
 │  ├── reviewer.ts           Claude API - REVIEW mode (~700 lines)            │
-│  ├── file-processor.ts     Translation orchestration (739 lines)            │
+│  ├── file-processor.ts     Translation orchestration (~670 lines)           │
 │  ├── heading-map.ts        Heading-map system (246 lines)                   │
 │  ├── language-config.ts    Language-specific rules (102 lines)              │
 │  ├── inputs.ts             Action inputs validation (~200 lines)            │
 │  └── types.ts              TypeScript types (~250 lines)                    │
+│                                                                              │
+│  action-translation/src/cli/                                                │
+│  ├── index.ts              CLI entry point (commander.js)                   │
+│  ├── types.ts              CLI-specific types (~195 lines)                  │
+│  ├── document-comparator.ts  Stage 1: document triage (~270 lines)          │
+│  ├── backward-evaluator.ts   Stage 2: section evaluation (~300 lines)       │
+│  ├── section-matcher.ts    Cross-language section matching (~150 lines)      │
+│  ├── git-metadata.ts       File-level git metadata (~235 lines)             │
+│  ├── report-generator.ts   Markdown/JSON reports (~235 lines)               │
+│  └── commands/                                                               │
+│      ├── backward.ts       Backward: single + bulk (~530 lines)             │
+│      └── status.ts         Status: fast sync diagnostic (~280 lines)        │
 │                                                                              │
 │  tool-alignment/src/                                                        │
 │  ├── index.ts              CLI entry point                                  │
