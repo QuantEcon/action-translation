@@ -17,7 +17,6 @@ import {
   formatStatusTable,
   formatStatusJson,
   FileSyncStatus,
-  StatusOptions,
 } from '../commands/status';
 
 // ============================================================================
@@ -391,7 +390,7 @@ describe('formatStatusTable', () => {
         { file: 'cobweb.md', status: 'OUTDATED' as FileSyncStatus, details: 'SOURCE modified 2026-03-01, TARGET modified 2026-02-15' },
         { file: 'new.md', status: 'SOURCE_ONLY' as FileSyncStatus },
       ],
-      summary: { total: 3, aligned: 1, outdated: 1, drift: 0, missingHeadingmap: 0, sourceOnly: 1, targetOnly: 0 },
+      summary: { total: 3, aligned: 1, outdated: 1, drift: 0, missingHeadingMap: 0, sourceOnly: 1, targetOnly: 0 },
     };
 
     const output = formatStatusTable(result);
@@ -418,7 +417,7 @@ describe('formatStatusTable', () => {
       entries: [
         { file: 'intro.md', status: 'ALIGNED' as FileSyncStatus },
       ],
-      summary: { total: 1, aligned: 1, outdated: 0, drift: 0, missingHeadingmap: 0, sourceOnly: 0, targetOnly: 0 },
+      summary: { total: 1, aligned: 1, outdated: 0, drift: 0, missingHeadingMap: 0, sourceOnly: 0, targetOnly: 0 },
     };
 
     const output = formatStatusTable(result);
@@ -440,7 +439,7 @@ describe('formatStatusJson', () => {
       entries: [
         { file: 'intro.md', status: 'ALIGNED' as FileSyncStatus },
       ],
-      summary: { total: 1, aligned: 1, outdated: 0, drift: 0, missingHeadingmap: 0, sourceOnly: 0, targetOnly: 0 },
+      summary: { total: 1, aligned: 1, outdated: 0, drift: 0, missingHeadingMap: 0, sourceOnly: 0, targetOnly: 0 },
     };
 
     const json = formatStatusJson(result);

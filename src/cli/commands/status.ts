@@ -53,7 +53,7 @@ export interface StatusResult {
     aligned: number;
     outdated: number;
     drift: number;
-    missingHeadingmap: number;
+    missingHeadingMap: number;
     sourceOnly: number;
     targetOnly: number;
   };
@@ -73,7 +73,7 @@ export interface StatusOptions {
 
 /**
  * Find all .md files in a docs folder (non-recursive, flat list).
- * Excludes common non-lecture files by default.
+ * Use --exclude patterns to filter out non-lecture files.
  */
 export function discoverMarkdownFiles(repoPath: string, docsFolder: string): string[] {
   const fullPath = path.join(repoPath, docsFolder);
@@ -257,7 +257,7 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
     aligned: entries.filter(e => e.status === 'ALIGNED').length,
     outdated: entries.filter(e => e.status === 'OUTDATED').length,
     drift: entries.filter(e => e.status === 'DRIFT').length,
-    missingHeadingmap: entries.filter(e => e.status === 'MISSING_HEADINGMAP').length,
+    missingHeadingMap: entries.filter(e => e.status === 'MISSING_HEADINGMAP').length,
     sourceOnly: entries.filter(e => e.status === 'SOURCE_ONLY').length,
     targetOnly: entries.filter(e => e.status === 'TARGET_ONLY').length,
   };
@@ -324,7 +324,7 @@ export function formatStatusTable(result: StatusResult): string {
   if (s.aligned > 0)           lines.push(`  ${STATUS_ICONS.ALIGNED} ${s.aligned} aligned`);
   if (s.outdated > 0)          lines.push(`  ${STATUS_ICONS.OUTDATED} ${s.outdated} outdated (SOURCE newer)`);
   if (s.drift > 0)             lines.push(`  ${STATUS_ICONS.DRIFT} ${s.drift} structural drift`);
-  if (s.missingHeadingmap > 0) lines.push(`  ${STATUS_ICONS.MISSING_HEADINGMAP} ${s.missingHeadingmap} missing heading-map`);
+  if (s.missingHeadingMap > 0) lines.push(`  ${STATUS_ICONS.MISSING_HEADINGMAP} ${s.missingHeadingMap} missing heading-map`);
   if (s.sourceOnly > 0)        lines.push(`  ${STATUS_ICONS.SOURCE_ONLY} ${s.sourceOnly} source only (not yet translated)`);
   if (s.targetOnly > 0)        lines.push(`  ${STATUS_ICONS.TARGET_ONLY} ${s.targetOnly} target only (not in source)`);
 

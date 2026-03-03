@@ -64,7 +64,7 @@ program
   .option('--resume', 'Resume a previous bulk run from checkpoint', false)
   .action(async (opts) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey && !opts.test) {
+    if (!apiKey && !opts.test && !opts.estimate) {
       console.error('❌ ANTHROPIC_API_KEY environment variable is required (or use --test)');
       process.exit(1);
     }

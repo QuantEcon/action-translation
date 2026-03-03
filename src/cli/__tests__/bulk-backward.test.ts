@@ -20,9 +20,7 @@ import {
   BulkProgress,
   BackwardLogger,
 } from '../commands/backward';
-import { BackwardOptions, BackwardReport, BulkBackwardReport } from '../types';
-
-const fixturesDir = path.join(__dirname, 'fixtures');
+import { BackwardOptions, BackwardReport } from '../types';
 
 // ============================================================================
 // HELPERS
@@ -233,11 +231,11 @@ describe('progress checkpointing', () => {
 // ============================================================================
 
 describe('buildBulkOutputDir', () => {
-  it('should create a timestamped folder name', () => {
+  it('should create a timestamped folder name with time component', () => {
     const dir = buildBulkOutputDir('./reports');
 
-    // Should be in the format: reports/backward-YYYY-MM-DD
-    expect(dir).toMatch(/reports[/\\]backward-\d{4}-\d{2}-\d{2}/);
+    // Should be in the format: reports/backward-YYYY-MM-DD_HH-MM-SS
+    expect(dir).toMatch(/reports[/\\]backward-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}/);
   });
 });
 
@@ -449,7 +447,7 @@ describe('runBackwardBulk', () => {
 // ============================================================================
 
 describe('runBackwardBulk with resume', () => {
-  it('should skip already-completed files on resume', async () => {
+  it('should skip already-completed files on resume (direct path)', async () => {
     const { sourceDir, targetDir } = setupMultiFileFixture();
     const outputDir = path.join(tmpDir, 'reports');
 
@@ -467,13 +465,43 @@ describe('runBackwardBulk with resume', () => {
     expect(progress).not.toBeNull();
     expect(progress!.completedFiles).toHaveLength(3);
 
-    // Resume (point output to existing bulk dir) — all files already done
+    // Resume (point output to existing bulk dir directly) — all files already done
     const resumeOptions = buildBulkOptions(sourceDir, targetDir, bulkDir);
     const secondResult = await runBackwardBulk(resumeOptions, silentLogger, [], true);
 
-    // Because we're in test mode and all files were already completed,
-    // the resume should find 3 completed and 0 remaining
-    // The result will still show analysis based on loaded reports
+    // Resume should reload all 3 reports from JSON sidecars
     expect(secondResult).toBeDefined();
+    expect(secondResult.filesAnalyzed).toBe(3);
+  });
+
+  it('should auto-detect run folder from base output dir on resume', async () => {
+    const { sourceDir, targetDir } = setupMultiFileFixture();
+    const outputDir = path.join(tmpDir, 'reports');
+
+    // First run: process all files
+    const options = buildBulkOptions(sourceDir, targetDir, outputDir);
+    const firstResult = await runBackwardBulk(options, silentLogger);
+    expect(firstResult.filesAnalyzed).toBe(3);
+
+    // Resume with base output dir (./reports) — should auto-find the run folder
+    const resumeOptions = buildBulkOptions(sourceDir, targetDir, outputDir);
+    const secondResult = await runBackwardBulk(resumeOptions, silentLogger, [], true);
+
+    expect(secondResult).toBeDefined();
+    expect(secondResult.filesAnalyzed).toBe(3);
+  });
+
+  it('should error when no resumable run exists', async () => {
+    const emptyDir = path.join(tmpDir, 'no-runs');
+    fs.mkdirSync(emptyDir, { recursive: true });
+
+    const options = buildBulkOptions(
+      path.join(tmpDir, 'source'),
+      path.join(tmpDir, 'target'),
+      emptyDir,
+    );
+
+    await expect(runBackwardBulk(options, silentLogger, [], true))
+      .rejects.toThrow('No resumable run found');
   });
 });

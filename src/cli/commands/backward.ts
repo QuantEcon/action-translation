@@ -326,11 +326,17 @@ export function writeProgress(outputDir: string, progress: BulkProgress): void {
 
 /**
  * Build a timestamped output folder name:
- *   reports/backward-2026-03-03/
+ *   reports/backward-2026-03-03_14-23-05/
+ *
+ * Uses date + time (to the second) to avoid collisions between multiple
+ * bulk runs on the same day.
  */
 export function buildBulkOutputDir(baseOutput: string): string {
-  const dateStr = new Date().toISOString().split('T')[0];
-  return path.join(baseOutput, `backward-${dateStr}`);
+  const now = new Date();
+  const iso = now.toISOString(); // e.g. "2026-03-03T14:23:05.123Z"
+  const [dateStr, timeStr] = iso.split('T');
+  const timePart = timeStr.slice(0, 8).replace(/:/g, '-'); // "14-23-05"
+  return path.join(baseOutput, `backward-${dateStr}_${timePart}`);
 }
 
 /**
@@ -424,8 +430,8 @@ export async function runBackwardBulk(
   const { source, target, docsFolder, language } = options;
 
   // Build output directory
-  const outputDir = resume && fs.existsSync(options.output)
-    ? options.output
+  const outputDir = resume
+    ? resolveResumeDir(options.output)
     : buildBulkOutputDir(options.output);
 
   if (!fs.existsSync(outputDir)) {
@@ -478,16 +484,13 @@ export async function runBackwardBulk(
   // Process files sequentially
   const fileReports: BackwardReport[] = [];
 
-  // Load any already-written reports for the aggregate
+  // Load any already-written reports for the aggregate (always from JSON sidecar)
   for (const doneFile of progress.completedFiles) {
-    const reportPath = resolveReportPath(outputDir, doneFile, options.json);
-    if (fs.existsSync(reportPath)) {
+    const jsonPath = resolveReportPath(outputDir, doneFile, true);
+    if (fs.existsSync(jsonPath)) {
       try {
-        if (options.json) {
-          const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8')) as BackwardReport;
-          fileReports.push(report);
-        }
-        // For markdown, we don't re-parse — the aggregate will regenerate from JSON data
+        const report = JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as BackwardReport;
+        fileReports.push(report);
       } catch {
         // Skip corrupted reports
       }
@@ -511,6 +514,12 @@ export async function runBackwardBulk(
 
       const report = await runBackwardSingleFile(fileOptions, logger);
       fileReports.push(report);
+
+      // Always write a JSON sidecar for resume reliability
+      if (!options.json) {
+        const jsonSidecarPath = resolveReportPath(outputDir, file, true);
+        fs.writeFileSync(jsonSidecarPath, generateJsonReport(report), 'utf-8');
+      }
 
       progress.completedFiles.push(file);
     } catch (error) {
@@ -599,4 +608,37 @@ function resolveReportPath(outputDir: string, file: string, json: boolean): stri
   const basename = path.basename(file, '.md');
   const ext = json ? '.json' : '.md';
   return path.join(outputDir, `${basename}-backward${ext}`);
+}
+
+/**
+ * Find the correct output directory for --resume.
+ * 
+ * Checks (in order):
+ * 1. If options.output itself contains _progress.json → use it directly
+ * 2. If options.output contains backward-* subdirs → use most recent with _progress.json
+ * 3. Otherwise → error (nothing to resume from)
+ */
+function resolveResumeDir(outputPath: string): string {
+  // Case 1: Direct path to a run directory
+  if (fs.existsSync(path.join(outputPath, '_progress.json'))) {
+    return outputPath;
+  }
+
+  // Case 2: Base output directory (e.g., ./reports) — find most recent run
+  if (fs.existsSync(outputPath)) {
+    const candidates = fs.readdirSync(outputPath)
+      .filter(d => d.startsWith('backward-'))
+      .filter(d => fs.existsSync(path.join(outputPath, d, '_progress.json')))
+      .sort()
+      .reverse(); // Most recent first (lexicographic sort on timestamps)
+
+    if (candidates.length > 0) {
+      return path.join(outputPath, candidates[0]);
+    }
+  }
+
+  throw new Error(
+    `No resumable run found in ${outputPath}. ` +
+    'Run without --resume first, or point --output to a specific backward-* folder.',
+  );
 }
