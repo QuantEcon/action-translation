@@ -3,8 +3,12 @@
   "version": "0.8.0",
   "description": "GitHub Action to sync and review translations across repositories",
   "main": "dist/index.js",
+  "bin": {
+    "resync": "dist/cli/index.js"
+  },
   "scripts": {
     "build": "tsc && ncc build dist/index.js -o dist",
+    "build:cli": "tsc",
     "test": "jest",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts"
@@ -27,6 +31,7 @@
     "@actions/core": "^1.10.1",
     "@actions/github": "^6.0.0",
     "@anthropic-ai/sdk": "^0.27.0",
+    "commander": "^14.0.3",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {

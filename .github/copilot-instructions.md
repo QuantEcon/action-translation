@@ -8,7 +8,7 @@
 - **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
-**Current Version**: v0.8.0 | **Tests**: 316 (15 suites) | **Glossary**: 357 terms (zh-cn, fa)
+**Current Version**: v0.8.0 | **Tests**: 409 (21 suites) | **Glossary**: 357 terms (zh-cn, fa)
 
 ---
 
@@ -27,7 +27,17 @@ src/
 ├── heading-map.ts       # Heading-map extract/update/inject (246 lines)
 ├── language-config.ts   # Language-specific translation rules (102 lines)
 ├── inputs.ts            # Action inputs + validation (~200 lines)
-└── types.ts             # TypeScript types (~250 lines)
+├── types.ts             # TypeScript types (~250 lines)
+├── cli/
+│   ├── index.ts              # CLI entry point (commander.js)
+│   ├── types.ts              # CLI-specific types (~195 lines)
+│   ├── document-comparator.ts # Stage 1: whole-document LLM triage (~270 lines)
+│   ├── backward-evaluator.ts  # Stage 2: per-section LLM evaluation (~300 lines)
+│   ├── section-matcher.ts     # Cross-language section matching (~150 lines)
+│   ├── git-metadata.ts        # File-level git metadata + commit timeline (~235 lines)
+│   ├── report-generator.ts    # Markdown/JSON report formatting (~235 lines)
+│   └── commands/
+│       └── backward.ts        # Backward command orchestrator (~260 lines)
 ```
 
 Full module responsibilities: `docs/ARCHITECTURE.md`
@@ -69,7 +79,7 @@ Maps are flat (no nesting), include all heading levels, auto-populated on first 
 
 ### Running Tests
 ```bash
-npm test                          # All 316 tests
+npm test                          # All 409 tests
 npm test -- parser.test.ts        # Single file
 npm test -- --watch               # Watch mode
 npm test -- --coverage            # Coverage report

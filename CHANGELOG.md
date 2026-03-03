@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Resync CLI** (`src/cli/`): New CLI tool for backward analysis of translations
+  - `resync backward` command — two-stage pipeline to identify translation improvements worth backporting to SOURCE
+  - **Stage 1** (`document-comparator.ts`): Whole-document LLM triage, recall-biased, one call per file
+  - **Stage 2** (`backward-evaluator.ts`): Per-section LLM evaluation with structured JSON suggestions
+  - `section-matcher.ts`: Cross-language position-based section matching with heading-map validation
+  - `git-metadata.ts`: File-level git date/author/SHA extraction for temporal context
+  - `report-generator.ts`: Markdown and JSON report formatting with confidence labels
+  - **Result verdict**: Top-level report status — `✅ IN SYNC`, `📋 N SUGGESTION(S)`, `✅ NO ACTION NEEDED`, `⚠️ SKIPPED`
+  - `commands/backward.ts`: Full pipeline orchestrator (read → triage → parse → match → evaluate → report)
+  - `types.ts`: CLI-specific types (TriageResult, SectionPair, BackportSuggestion, etc.)
+  - `index.ts`: Commander.js entry point with `--test` mode for deterministic mock responses
+  - `--test` flag for all commands — no LLM calls, deterministic responses for CI/testing
+  - 6 test fixture pairs (aligned, bug-fix, clarification, i18n-only, section-mismatch, no-heading-map)
+  - 93 new tests (316 → 409 total, 15 → 21 suites)
+- **Interleaved commit timeline** (`git-metadata.ts`): Builds interleaved SOURCE/TARGET commit history
+  - `getFileTimeline()` — fetches commit logs from both repos, interleaves by date
+  - `formatTimelineForPrompt()` — compact format for inclusion in LLM prompts
+  - Timeline identifies estimated sync point (earliest TARGET commit) and counts post-sync SOURCE commits
+  - Included in both Stage 1 triage and Stage 2 evaluation prompts to prevent directional reasoning errors
+  - Included in Markdown reports under "Commit Timeline" section
+  - New types: `TimelineEntry`, `FileTimeline`
+- **CLI build**: `npm run build:cli` script, `bin.resync` entry in package.json
+- **commander.js** dependency (^14.0.3)
+
 ## [0.8.0] - 2026-02-18
 
 ### Added
