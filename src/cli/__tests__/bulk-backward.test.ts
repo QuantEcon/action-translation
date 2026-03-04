@@ -152,7 +152,7 @@ function buildBulkOptions(
     docsFolder: 'lectures',
     language: 'zh-cn',
     output: outputDir,
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     json: false,
     test: true,
     minConfidence: 0.6,

@@ -69,7 +69,7 @@ describe('backward command', () => {
         docsFolder: '',
         language: 'zh-cn',
         output: path.join(tmpDir, 'reports'),
-        model: 'claude-sonnet-4-5-20250929',
+        model: 'claude-sonnet-4-6',
         json: false,
         test: true,
         minConfidence: 0.6,

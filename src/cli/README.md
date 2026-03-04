@@ -60,7 +60,7 @@ Options:
   -d, --docs-folder <folder>  Documentation folder within repos (default: "lectures")
   -l, --language <code>       Target language code (default: "zh-cn")
   -o, --output <dir>          Output directory for reports (default: "./reports")
-  -m, --model <model>         Claude model (default: "claude-sonnet-4-5-20250929")
+  -m, --model <model>         Claude model (default: "claude-sonnet-4-6")
   --json                      Output reports as JSON instead of Markdown
   --test                      Use deterministic mock responses (no LLM calls)
   --min-confidence <number>   Minimum confidence for reporting (default: "0.6")
@@ -119,7 +119,7 @@ node dist/cli/index.js backward \
   -s lecture-python-intro \
   -t lecture-intro.zh-cn \
   -f solow.md \
-  -m claude-sonnet-4-5-20250929
+  -m claude-sonnet-4-6
 ```
 
 ### Custom docs folder

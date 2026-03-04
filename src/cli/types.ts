@@ -176,7 +176,7 @@ export interface CommonOptions {
   docsFolder: string;        // Documentation folder (default: "lectures")
   language: string;          // Target language code (default: "zh-cn")
   output: string;            // Output directory for reports (default: "./reports")
-  model: string;             // Claude model (default: "claude-sonnet-4-5-20250929")
+  model: string;             // Claude model (default: "claude-sonnet-4-6")
   json: boolean;             // Output as JSON
   test: boolean;             // Use deterministic mock responses (no LLM calls)
 }

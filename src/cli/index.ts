@@ -55,7 +55,7 @@ program
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
   .option('-l, --language <code>', 'Target language code', 'zh-cn')
   .option('-o, --output <dir>', 'Output directory for reports', './reports')
-  .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-5-20250929')
+  .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-6')
   .option('--json', 'Output reports as JSON', false)
   .option('--test', 'Use deterministic mock responses (no LLM calls)', false)
   .option('--min-confidence <number>', 'Minimum confidence for reporting', '0.6')

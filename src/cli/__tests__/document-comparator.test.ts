@@ -155,7 +155,7 @@ Let me know if you need more details.`;
   describe('triageDocument (test mode)', () => {
     const testOptions = {
       apiKey: 'test-key',
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       sourceLanguage: 'en',
       targetLanguage: 'zh-cn',
       testMode: true,

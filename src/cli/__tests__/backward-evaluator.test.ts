@@ -246,7 +246,7 @@ describe('backward-evaluator', () => {
   describe('evaluateSection (test mode)', () => {
     const testOptions = {
       apiKey: 'test-key',
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       sourceLanguage: 'en',
       targetLanguage: 'zh-cn',
       testMode: true,
