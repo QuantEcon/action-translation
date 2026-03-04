@@ -29,6 +29,20 @@ export interface BackwardLogger {
     error(message: string): void;
 }
 /**
+ * A logger that buffers all output, then flushes it in one block.
+ * Used for parallel processing so file outputs don't interleave.
+ */
+export declare class BufferedLogger implements BackwardLogger {
+    private buffer;
+    info(message: string): void;
+    warn(message: string): void;
+    error(message: string): void;
+    /** Flush all buffered output to a parent logger (for console). */
+    flush(parent: BackwardLogger): void;
+    /** Append all buffered output to a log file. */
+    flushToFile(logPath: string): void;
+}
+/**
  * Execute backward analysis for a single file
  *
  * @param options - Backward command options

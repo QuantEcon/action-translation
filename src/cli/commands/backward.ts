@@ -22,6 +22,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import cliProgress from 'cli-progress';
 import { MystParser } from '../../parser';
 import { extractHeadingMap } from '../../heading-map';
 import { matchSections, getMatchingSummary, validateMatchesWithHeadingMap } from '../section-matcher';
@@ -46,6 +47,39 @@ const defaultLogger: BackwardLogger = {
   warn: (msg) => console.warn(`⚠️  ${msg}`),
   error: (msg) => console.error(`❌ ${msg}`),
 };
+
+/**
+ * A logger that buffers all output, then flushes it in one block.
+ * Used for parallel processing so file outputs don't interleave.
+ */
+export class BufferedLogger implements BackwardLogger {
+  private buffer: string[] = [];
+
+  info(message: string): void {
+    this.buffer.push(message);
+  }
+  warn(message: string): void {
+    this.buffer.push(`⚠️  ${message}`);
+  }
+  error(message: string): void {
+    this.buffer.push(`❌ ${message}`);
+  }
+
+  /** Flush all buffered output to a parent logger (for console). */
+  flush(parent: BackwardLogger): void {
+    for (const line of this.buffer) {
+      parent.info(line);
+    }
+    this.buffer = [];
+  }
+
+  /** Append all buffered output to a log file. */
+  flushToFile(logPath: string): void {
+    if (this.buffer.length === 0) return;
+    fs.appendFileSync(logPath, this.buffer.join('\n') + '\n', 'utf-8');
+    this.buffer = [];
+  }
+}
 
 /**
  * Execute backward analysis for a single file
@@ -549,11 +583,16 @@ export async function runBackwardBulk(
 
   /**
    * Process a single file in the bulk pipeline.
+   * Uses a BufferedLogger so parallel output doesn't interleave.
    * Returns { file, report? } so the caller can track progress.
    */
-  async function processOneFile(file: string): Promise<{ file: string; report?: BackwardReport; error?: string }> {
+  async function processOneFile(
+    file: string,
+    logPath: string,
+  ): Promise<{ file: string; report?: BackwardReport; error?: string }> {
     const globalIdx = allFiles.indexOf(file) + 1;
-    logger.info(`\n[${globalIdx}/${allFiles.length}] ${file}`);
+    const buffered = new BufferedLogger();
+    buffered.info(`\n[${globalIdx}/${allFiles.length}] ${file}`);
 
     try {
       const fileOptions: BackwardOptions & { apiKey: string } = {
@@ -562,7 +601,7 @@ export async function runBackwardBulk(
         output: outputDir,
       };
 
-      const report = await runBackwardSingleFile(fileOptions, logger);
+      const report = await runBackwardSingleFile(fileOptions, buffered);
 
       // Always write a JSON sidecar for resume reliability (in .resync/ subfolder)
       if (!options.json) {
@@ -572,32 +611,90 @@ export async function runBackwardBulk(
         fs.writeFileSync(jsonSidecarPath, generateJsonReport(report), 'utf-8');
       }
 
+      // Write detailed output to log file
+      buffered.flushToFile(logPath);
       return { file, report };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      logger.error(`  Failed: ${errorMsg}`);
+      buffered.error(`  Failed: ${errorMsg}`);
+      buffered.flushToFile(logPath);
       return { file, error: errorMsg };
     }
   }
 
+  // Set up log file for detailed output
+  const resyncDir = path.join(outputDir, '.resync');
+  if (!fs.existsSync(resyncDir)) fs.mkdirSync(resyncDir, { recursive: true });
+  const logPath = path.join(resyncDir, '_log.txt');
+  fs.writeFileSync(logPath, `Backward analysis started: ${new Date().toISOString()}\n`, 'utf-8');
+
+  // Track running stats for progress bar
+  let completedCount = progress.completedFiles.length;
+  let inSyncCount = 0;
+  let suggestionsCount = 0;
+  let errorsCount = progress.erroredFiles.length;
+
+  // Set up progress bar (only for interactive TTY, skip in tests/piped output)
+  const isTTY = process.stderr.isTTY && logger === defaultLogger;
+  const bar = isTTY
+    ? new cliProgress.SingleBar({
+        format: '  {bar} {value}/{total} | ✓ {inSync} sync  📝 {suggestions} suggestions  ❌ {errors} errors | {currentFile}',
+        barCompleteChar: '█',
+        barIncompleteChar: '░',
+        hideCursor: true,
+        clearOnComplete: true,
+        stream: process.stderr,
+      })
+    : null;
+
+  logger.info(`Backward analysis: ${filesToProcess.length} files (${CONCURRENCY} parallel)`);
+  bar?.start(allFiles.length, completedCount, {
+    inSync: inSyncCount,
+    suggestions: suggestionsCount,
+    errors: errorsCount,
+    currentFile: filesToProcess[0] || '',
+  });
+
   // Process in batches of CONCURRENCY
   for (let i = 0; i < filesToProcess.length; i += CONCURRENCY) {
     const batch = filesToProcess.slice(i, i + CONCURRENCY);
-    const results = await Promise.all(batch.map(processOneFile));
+
+    // Show first file in batch as current
+    bar?.update({ currentFile: batch[0] });
+
+    const results = await Promise.all(batch.map(f => processOneFile(f, logPath)));
 
     for (const result of results) {
+      completedCount++;
       if (result.report) {
         fileReports.push(result.report);
         progress.completedFiles.push(result.file);
+
+        // Update stats
+        if (result.report.triageResult.verdict === 'IN_SYNC') {
+          inSyncCount++;
+        }
+        const backports = result.report.suggestions.filter(s => s.recommendation === 'BACKPORT').length;
+        suggestionsCount += backports;
       } else if (result.error) {
         progress.erroredFiles.push({ file: result.file, error: result.error });
+        errorsCount++;
       }
+
+      bar?.update(completedCount, {
+        inSync: inSyncCount,
+        suggestions: suggestionsCount,
+        errors: errorsCount,
+        currentFile: result.file,
+      });
     }
 
     // Update progress checkpoint after each batch
     progress.lastUpdated = new Date().toISOString();
     writeProgress(outputDir, progress);
   }
+
+  bar?.stop();
 
   // Build aggregate report
   const bulkReport = buildBulkReport(source, target, language, fileReports, options.model);
@@ -625,7 +722,8 @@ export async function runBackwardBulk(
   if (progress.erroredFiles.length > 0) {
     logger.info(`  Errors: ${progress.erroredFiles.length}`);
   }
-  logger.info(`\nReports written to: ${outputDir}`);
+  logger.info(`\nReports: ${outputDir}`);
+  logger.info(`Log: ${logPath}`);
 
   return bulkReport;
 }
