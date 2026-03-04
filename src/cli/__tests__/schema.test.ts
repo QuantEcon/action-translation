@@ -27,7 +27,7 @@ import {
   filterActionableSuggestions,
   BackwardReportData,
   BackportSuggestionData,
-} from '../schema';
+} from '../schema.js';
 
 // ============================================================================
 // FIXTURES

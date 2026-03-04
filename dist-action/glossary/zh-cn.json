@@ -1,0 +1,1791 @@
+{
+  "version": "1.0",
+  "description": "Translation glossary for QuantEcon lectures (English to Simplified Chinese)",
+  "terms": [
+    {
+      "en": "Accessible state",
+      "zh-cn": "可达状态",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Adaptive expectations",
+      "zh-cn": "适应性预期",
+      "context": "economics"
+    },
+    {
+      "en": "Adjacency matrix",
+      "zh-cn": "邻接矩阵",
+      "context": "graph theory"
+    },
+    {
+      "en": "Aggregate consumption",
+      "zh-cn": "总消费",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Aggregate demand for capital",
+      "zh-cn": "资本总需求",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Aggregate production function",
+      "zh-cn": "总生产函数",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Aggregate supply of capital",
+      "zh-cn": "资本总供给",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Angle sum identities",
+      "zh-cn": "和角恒等式",
+      "context": "trigonometry"
+    },
+    {
+      "en": "Annuity",
+      "zh-cn": "年金",
+      "context": "finance"
+    },
+    {
+      "en": "AR(1) processes",
+      "zh-cn": "AR(1)过程",
+      "context": "time series"
+    },
+    {
+      "en": "Arrow securities",
+      "zh-cn": "阿罗证券",
+      "context": "finance"
+    },
+    {
+      "en": "Asymptotic stability",
+      "zh-cn": "渐近稳定性",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Asymptotic stationarity",
+      "zh-cn": "渐近平稳性",
+      "context": "time series"
+    },
+    {
+      "en": "Authority centrality",
+      "zh-cn": "权威中心性",
+      "context": "network science"
+    },
+    {
+      "en": "Autarky equilibrium",
+      "zh-cn": "自给自足均衡",
+      "context": "economics"
+    },
+    {
+      "en": "Autoregressive model",
+      "zh-cn": "自回归模型",
+      "context": "time series"
+    },
+    {
+      "en": "Autoregressive representation",
+      "zh-cn": "自回归表示",
+      "context": "time series"
+    },
+    {
+      "en": "Balance sheet equation",
+      "zh-cn": "资产负债表等式",
+      "context": "accounting"
+    },
+    {
+      "en": "Bandwidth",
+      "zh-cn": "带宽",
+      "context": "kernel density estimation"
+    },
+    {
+      "en": "Barrier option",
+      "zh-cn": "障碍期权",
+      "context": "finance"
+    },
+    {
+      "en": "Bellman operator",
+      "zh-cn": "贝尔曼算子",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Beta distribution",
+      "zh-cn": "贝塔分布",
+      "context": "probability"
+    },
+    {
+      "en": "Bivariate uniform distribution",
+      "zh-cn": "二元均匀分布",
+      "context": "probability"
+    },
+    {
+      "en": "Budget constraint",
+      "zh-cn": "预算约束",
+      "context": "economics"
+    },
+    {
+      "en": "Business cycle",
+      "zh-cn": "商业周期",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Calculus",
+      "zh-cn": "微积分",
+      "context": "mathematics"
+    },
+    {
+      "en": "Capital depreciation",
+      "zh-cn": "资本折旧",
+      "context": "economics"
+    },
+    {
+      "en": "Capital dynamics",
+      "zh-cn": "资本动态",
+      "context": "economics"
+    },
+    {
+      "en": "Cauchy distribution",
+      "zh-cn": "柯西分布",
+      "context": "probability"
+    },
+    {
+      "en": "Central limit theorem",
+      "zh-cn": "中心极限定理",
+      "context": "probability"
+    },
+    {
+      "en": "Central moment",
+      "zh-cn": "中心矩",
+      "context": "statistics"
+    },
+    {
+      "en": "Centrality measure",
+      "zh-cn": "中心性度量",
+      "context": "network science"
+    },
+    {
+      "en": "Characteristic equation",
+      "zh-cn": "特征方程",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Characteristic function",
+      "zh-cn": "特征函数",
+      "context": "probability"
+    },
+    {
+      "en": "Characteristic polynomial",
+      "zh-cn": "特征多项式",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Closed economy",
+      "zh-cn": "封闭经济",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Cobb-Douglas production function",
+      "zh-cn": "科布-道格拉斯生产函数",
+      "context": "economics"
+    },
+    {
+      "en": "Cobweb model",
+      "zh-cn": "蛛网模型",
+      "context": "economics"
+    },
+    {
+      "en": "Communicating states",
+      "zh-cn": "互通状态",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Competitive equilibrium",
+      "zh-cn": "竞争均衡",
+      "context": "economics"
+    },
+    {
+      "en": "Complex conjugate",
+      "zh-cn": "共轭复数",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Complex eigenvalues",
+      "zh-cn": "复特征值",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Complex number",
+      "zh-cn": "复数",
+      "context": "mathematics"
+    },
+    {
+      "en": "Complex plane",
+      "zh-cn": "复平面",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Conditional probability",
+      "zh-cn": "条件概率",
+      "context": "probability"
+    },
+    {
+      "en": "Consumer sentiment index",
+      "zh-cn": "消费者信心指数",
+      "context": "economics"
+    },
+    {
+      "en": "Consumer surplus",
+      "zh-cn": "消费者剩余",
+      "context": "economics"
+    },
+    {
+      "en": "Consumption-smoothing model",
+      "zh-cn": "消费平滑模型",
+      "context": "economics"
+    },
+    {
+      "en": "Continuation value",
+      "zh-cn": "延续值",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Contractions",
+      "zh-cn": "压缩",
+      "context": "functional analysis"
+    },
+    {
+      "en": "Convergence",
+      "zh-cn": "收敛",
+      "context": "mathematics"
+    },
+    {
+      "en": "Convergence in distribution",
+      "zh-cn": "依分布收敛",
+      "context": "probability"
+    },
+    {
+      "en": "Core consumer price index",
+      "zh-cn": "核心消费者价格指数",
+      "context": "economics"
+    },
+    {
+      "en": "CPI",
+      "zh-cn": "核心消费者价格指数",
+      "context": "economics abbreviation"
+    },
+    {
+      "en": "Corporate bond",
+      "zh-cn": "公司债券",
+      "context": "finance"
+    },
+    {
+      "en": "Corporate tax rate",
+      "zh-cn": "企业税率",
+      "context": "public finance"
+    },
+    {
+      "en": "Cost function",
+      "zh-cn": "成本函数",
+      "context": "economics"
+    },
+    {
+      "en": "Cost-to-go function",
+      "zh-cn": "代价函数",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Counter CDF",
+      "zh-cn": "互补累积分布函数",
+      "context": "probability"
+    },
+    {
+      "en": "CCDF",
+      "zh-cn": "互补累积分布函数",
+      "context": "probability abbreviation"
+    },
+    {
+      "en": "Cumulative distribution function",
+      "zh-cn": "累积分布函数",
+      "context": "probability"
+    },
+    {
+      "en": "Cyclical price dynamics",
+      "zh-cn": "周期性价格动态",
+      "context": "economics"
+    },
+    {
+      "en": "de Moivre's theorem",
+      "zh-cn": "棣莫弗定理",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Degree centrality",
+      "zh-cn": "度中心性",
+      "context": "network science"
+    },
+    {
+      "en": "Deposit receipt",
+      "zh-cn": "存款收据",
+      "context": "banking"
+    },
+    {
+      "en": "Development economics",
+      "zh-cn": "发展经济学",
+      "context": "economics"
+    },
+    {
+      "en": "Discount factor",
+      "zh-cn": "贴现因子",
+      "context": "economics"
+    },
+    {
+      "en": "Discounted payoff",
+      "zh-cn": "贴现收益",
+      "context": "economics"
+    },
+    {
+      "en": "Discounting",
+      "zh-cn": "贴现",
+      "context": "finance"
+    },
+    {
+      "en": "Distance matrix",
+      "zh-cn": "距离矩阵",
+      "context": "graph theory"
+    },
+    {
+      "en": "Distribution dynamics",
+      "zh-cn": "分布动态",
+      "context": "economics"
+    },
+    {
+      "en": "Domestic credit",
+      "zh-cn": "国内信贷",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Dominant eigenvalue",
+      "zh-cn": "主特征值",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Dynamic Laffer curve",
+      "zh-cn": "动态拉弗曲线",
+      "context": "public finance"
+    },
+    {
+      "en": "Dynamic model",
+      "zh-cn": "动态模型",
+      "context": "economics"
+    },
+    {
+      "en": "Dynamic process",
+      "zh-cn": "动态过程",
+      "context": "mathematics"
+    },
+    {
+      "en": "Dynamic programming",
+      "zh-cn": "动态规划",
+      "context": "optimization"
+    },
+    {
+      "en": "Eigenvector",
+      "zh-cn": "特征向量",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Eigenvector centrality",
+      "zh-cn": "特征向量中心性",
+      "context": "network science"
+    },
+    {
+      "en": "Eigenvector decomposition",
+      "zh-cn": "特征向量分解",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Elasticity of substitution",
+      "zh-cn": "替代弹性",
+      "context": "economics"
+    },
+    {
+      "en": "Empirical Distribution",
+      "zh-cn": "经验分布",
+      "context": "statistics"
+    },
+    {
+      "en": "Equalizing Difference Model",
+      "zh-cn": "均衡差异模型",
+      "context": "labor economics"
+    },
+    {
+      "en": "Equilibrium",
+      "zh-cn": "均衡",
+      "context": "economics"
+    },
+    {
+      "en": "Ergodicity",
+      "zh-cn": "遍历性",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Euclidean distance",
+      "zh-cn": "欧几里得距离",
+      "context": "mathematics"
+    },
+    {
+      "en": "Euler equation",
+      "zh-cn": "欧拉方程",
+      "context": "economics"
+    },
+    {
+      "en": "Euler's formula",
+      "zh-cn": "欧拉公式",
+      "context": "complex analysis"
+    },
+    {
+      "en": "European call option",
+      "zh-cn": "欧式看涨期权",
+      "context": "finance"
+    },
+    {
+      "en": "Exercise",
+      "zh-cn": "练习",
+      "context": "educational content"
+    },
+    {
+      "en": "Exogenous",
+      "zh-cn": "外生的",
+      "context": "economics"
+    },
+    {
+      "en": "Exogenous initial capital stock",
+      "zh-cn": "外生初始资本存量",
+      "context": "economics"
+    },
+    {
+      "en": "Expansions",
+      "zh-cn": "扩张",
+      "context": "business cycles"
+    },
+    {
+      "en": "Expiry date",
+      "zh-cn": "到期日",
+      "context": "finance"
+    },
+    {
+      "en": "Exponential distribution",
+      "zh-cn": "指数分布",
+      "context": "probability"
+    },
+    {
+      "en": "Fiat money",
+      "zh-cn": "法定货币",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Financial repression",
+      "zh-cn": "金融压抑",
+      "context": "economics"
+    },
+    {
+      "en": "Finite horizon",
+      "zh-cn": "有限视界",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "First fundamental welfare theorem",
+      "zh-cn": "福利经济学第一定理",
+      "context": "welfare economics"
+    },
+    {
+      "en": "First Moment",
+      "zh-cn": "一阶矩",
+      "context": "statistics"
+    },
+    {
+      "en": "Fiscal policy multiplier",
+      "zh-cn": "财政政策乘数",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Fiscal theory",
+      "zh-cn": "财政理论",
+      "context": "public finance"
+    },
+    {
+      "en": "Fiscal theory of price levels",
+      "zh-cn": "价格水平的财政理论",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Flow utility function",
+      "zh-cn": "流量效用函数",
+      "context": "economics"
+    },
+    {
+      "en": "Folk theorem",
+      "zh-cn": "无名氏定理",
+      "context": "game theory"
+    },
+    {
+      "en": "Forcing variable",
+      "zh-cn": "强制变量",
+      "context": "difference equations"
+    },
+    {
+      "en": "Forecast errors",
+      "zh-cn": "预测误差",
+      "context": "time series"
+    },
+    {
+      "en": "Forward-looking difference equation",
+      "zh-cn": "前瞻性差分方程",
+      "context": "economics"
+    },
+    {
+      "en": "Fractional reserve banking",
+      "zh-cn": "部分准备金银行制度",
+      "context": "banking"
+    },
+    {
+      "en": "FRED",
+      "zh-cn": "美联储经济数据",
+      "context": "data source"
+    },
+    {
+      "en": "Federal Reserve Economic Data",
+      "zh-cn": "美联储经济数据",
+      "context": "data source"
+    },
+    {
+      "en": "Gaussian kernel",
+      "zh-cn": "高斯核",
+      "context": "kernel methods"
+    },
+    {
+      "en": "Geary–Khamis dollar",
+      "zh-cn": "吉尔里-卡米斯元",
+      "context": "international comparison"
+    },
+    {
+      "en": "Gershgorin Circle Theorem",
+      "zh-cn": "格什戈林圆盘定理",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Global Financial Crisis",
+      "zh-cn": "全球金融危机",
+      "context": "economic history"
+    },
+    {
+      "en": "GFC",
+      "zh-cn": "全球金融危机",
+      "context": "economic history abbreviation"
+    },
+    {
+      "en": "Global stability",
+      "zh-cn": "全局稳定性",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Golden Rule savings rate",
+      "zh-cn": "黄金法则储蓄率",
+      "context": "growth theory"
+    },
+    {
+      "en": "Gordon formula",
+      "zh-cn": "戈登公式",
+      "context": "finance"
+    },
+    {
+      "en": "Government budget constraint",
+      "zh-cn": "政府预算约束",
+      "context": "public finance"
+    },
+    {
+      "en": "Government expenditures multiplier",
+      "zh-cn": "政府支出乘数",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Greek debt crisis",
+      "zh-cn": "希腊债务危机",
+      "context": "economic history"
+    },
+    {
+      "en": "Gross Domestic Product",
+      "zh-cn": "国内生产总值",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "GDP",
+      "zh-cn": "国内生产总值",
+      "context": "macroeconomics abbreviation"
+    },
+    {
+      "en": "Gross nominal interest rate",
+      "zh-cn": "总名义利率",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Gross rate of return",
+      "zh-cn": "总回报率",
+      "context": "finance"
+    },
+    {
+      "en": "Growth facts",
+      "zh-cn": "增长事实",
+      "context": "growth theory"
+    },
+    {
+      "en": "Grim trigger strategy",
+      "zh-cn": "冷酷策略",
+      "context": "game theory"
+    },
+    {
+      "en": "Heavy-tailed distribution",
+      "zh-cn": "重尾分布",
+      "context": "probability"
+    },
+    {
+      "en": "Hicksian demand curve",
+      "zh-cn": "希克斯需求曲线",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Histogram",
+      "zh-cn": "直方图",
+      "context": "statistics"
+    },
+    {
+      "en": "Hub centrality",
+      "zh-cn": "枢纽中心性",
+      "context": "network science"
+    },
+    {
+      "en": "Human wealth",
+      "zh-cn": "人力财富",
+      "context": "economics"
+    },
+    {
+      "en": "Hyperinflation",
+      "zh-cn": "恶性通货膨胀",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Imaginary part",
+      "zh-cn": "虚部",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Independent and identically distributed",
+      "zh-cn": "独立同分布",
+      "context": "probability"
+    },
+    {
+      "en": "Indicator function",
+      "zh-cn": "指示函数",
+      "context": "mathematics"
+    },
+    {
+      "en": "Industrial output",
+      "zh-cn": "工业产出",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Industrial Revolution",
+      "zh-cn": "工业革命",
+      "context": "economic history"
+    },
+    {
+      "en": "Inflation tax",
+      "zh-cn": "通货膨胀税",
+      "context": "public finance"
+    },
+    {
+      "en": "Inflation-indexed bonds",
+      "zh-cn": "通胀指数化债券",
+      "context": "finance"
+    },
+    {
+      "en": "Inflation-tax theory",
+      "zh-cn": "通货膨胀税理论",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Initial condition",
+      "zh-cn": "初始条件",
+      "context": "differential equations"
+    },
+    {
+      "en": "Input-output model",
+      "zh-cn": "投入产出模型",
+      "context": "economics"
+    },
+    {
+      "en": "Invariant subspace",
+      "zh-cn": "不变子空间",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Investment multiplier",
+      "zh-cn": "投资乘数",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Irreducible matrix",
+      "zh-cn": "不可约矩阵",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Jump Chain Algorithm",
+      "zh-cn": "跳跃链算法",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Jump variable",
+      "zh-cn": "跳跃变量",
+      "context": "economics"
+    },
+    {
+      "en": "Katz centrality",
+      "zh-cn": "卡茨中心性",
+      "context": "network science"
+    },
+    {
+      "en": "Kernel",
+      "zh-cn": "核",
+      "context": "functional analysis"
+    },
+    {
+      "en": "Kernel density estimate",
+      "zh-cn": "核密度估计",
+      "context": "statistics"
+    },
+    {
+      "en": "Kernel density estimator",
+      "zh-cn": "核密度估计器",
+      "context": "statistics"
+    },
+    {
+      "en": "Keynesian multiplier",
+      "zh-cn": "凯恩斯乘数",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Knockout barrier",
+      "zh-cn": "敲出障碍",
+      "context": "options"
+    },
+    {
+      "en": "Kolmogorov-Smirnov test",
+      "zh-cn": "科尔莫戈罗夫-斯米尔诺夫检验",
+      "context": "statistics"
+    },
+    {
+      "en": "Laffer curve",
+      "zh-cn": "拉弗曲线",
+      "context": "public finance"
+    },
+    {
+      "en": "Lake model",
+      "zh-cn": "湖泊模型",
+      "context": "labor economics"
+    },
+    {
+      "en": "Law of large numbers",
+      "zh-cn": "大数定律",
+      "context": "probability"
+    },
+    {
+      "en": "Law of total probability",
+      "zh-cn": "全概率公式",
+      "context": "probability"
+    },
+    {
+      "en": "Lecture",
+      "zh-cn": "讲座",
+      "context": "educational content"
+    },
+    {
+      "en": "Legal restrictions theory",
+      "zh-cn": "法律限制理论",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Leontief Inverse",
+      "zh-cn": "列昂惕夫逆矩阵",
+      "context": "input-output economics"
+    },
+    {
+      "en": "Light-tailed distribution",
+      "zh-cn": "轻尾分布",
+      "context": "probability"
+    },
+    {
+      "en": "Linear algebra",
+      "zh-cn": "线性代数",
+      "context": "mathematics"
+    },
+    {
+      "en": "Linear differential equation",
+      "zh-cn": "线性微分方程",
+      "context": "mathematics"
+    },
+    {
+      "en": "Linear programming",
+      "zh-cn": "线性规划",
+      "context": "optimization"
+    },
+    {
+      "en": "Log likelihood function",
+      "zh-cn": "对数似然函数",
+      "context": "statistics"
+    },
+    {
+      "en": "Log transform",
+      "zh-cn": "对数转换",
+      "context": "mathematics"
+    },
+    {
+      "en": "Log-normal distribution",
+      "zh-cn": "对数正态分布",
+      "context": "probability"
+    },
+    {
+      "en": "Long-Run Growth",
+      "zh-cn": "长期增长",
+      "context": "growth theory"
+    },
+    {
+      "en": "Lorenz curve",
+      "zh-cn": "洛伦兹曲线",
+      "context": "income distribution"
+    },
+    {
+      "en": "Marginal distribution",
+      "zh-cn": "边缘分布",
+      "context": "probability"
+    },
+    {
+      "en": "Marginal product of capital",
+      "zh-cn": "资本边际产量",
+      "context": "economics"
+    },
+    {
+      "en": "Marginal propensity to consume",
+      "zh-cn": "边际消费倾向",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Marginal propensity to save",
+      "zh-cn": "边际储蓄倾向",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Marginal revenue",
+      "zh-cn": "边际收入",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Marginal utility of wealth",
+      "zh-cn": "财富的边际效用",
+      "context": "economics"
+    },
+    {
+      "en": "Market clearing",
+      "zh-cn": "市场出清",
+      "context": "economics"
+    },
+    {
+      "en": "Markov chain",
+      "zh-cn": "马尔可夫链",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Marshallian demand curve",
+      "zh-cn": "马歇尔需求曲线",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Matrix inversion",
+      "zh-cn": "矩阵求逆",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Matrix multiplication",
+      "zh-cn": "矩阵乘法",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Maximum likelihood estimation",
+      "zh-cn": "最大似然估计",
+      "context": "statistics"
+    },
+    {
+      "en": "Method of successive approximations",
+      "zh-cn": "连续近似法",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Moment generating function",
+      "zh-cn": "矩生成函数",
+      "context": "probability"
+    },
+    {
+      "en": "Moments",
+      "zh-cn": "矩",
+      "context": "probability"
+    },
+    {
+      "en": "Money demand",
+      "zh-cn": "货币需求",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Money multiplier",
+      "zh-cn": "货币乘数",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Money supply",
+      "zh-cn": "货币供给",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Money-financed government deficit",
+      "zh-cn": "货币融资的政府赤字",
+      "context": "public finance"
+    },
+    {
+      "en": "Monte Carlo",
+      "zh-cn": "蒙特卡洛",
+      "context": "simulation methods"
+    },
+    {
+      "en": "Moving average representation",
+      "zh-cn": "移动平均表示",
+      "context": "time series"
+    },
+    {
+      "en": "Multiple consumer economy",
+      "zh-cn": "多消费者经济",
+      "context": "economics"
+    },
+    {
+      "en": "Multiplier-accelerator model",
+      "zh-cn": "乘数-加速数模型",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Multivariate normal distributions",
+      "zh-cn": "多元正态分布",
+      "context": "probability"
+    },
+    {
+      "en": "Mutual fund",
+      "zh-cn": "共同基金",
+      "context": "finance"
+    },
+    {
+      "en": "Naive expectations",
+      "zh-cn": "简单预期",
+      "context": "economics"
+    },
+    {
+      "en": "NBER",
+      "zh-cn": "美国国家经济研究局",
+      "context": "institution"
+    },
+    {
+      "en": "National Bureau of Economic Research",
+      "zh-cn": "美国国家经济研究局",
+      "context": "institution"
+    },
+    {
+      "en": "Net nominal interest rate",
+      "zh-cn": "净名义利率",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Network science",
+      "zh-cn": "网络科学",
+      "context": "mathematics"
+    },
+    {
+      "en": "Neumann Series Lemma",
+      "zh-cn": "诺伊曼级数引理",
+      "context": "functional analysis"
+    },
+    {
+      "en": "Newton's method",
+      "zh-cn": "牛顿法",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Non-financial income",
+      "zh-cn": "非金融收入",
+      "context": "economics"
+    },
+    {
+      "en": "Non-satiation",
+      "zh-cn": "非饱和性",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Non-stationary univariate time series",
+      "zh-cn": "非平稳单变量时间序列",
+      "context": "time series"
+    },
+    {
+      "en": "Normal distribution",
+      "zh-cn": "正态分布",
+      "context": "probability"
+    },
+    {
+      "en": "Numeraire",
+      "zh-cn": "计价商品",
+      "context": "economics"
+    },
+    {
+      "en": "Numerical integration",
+      "zh-cn": "数值积分",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Oil Crisis",
+      "zh-cn": "石油危机",
+      "context": "economic history"
+    },
+    {
+      "en": "Open market operations",
+      "zh-cn": "公开市场操作",
+      "context": "monetary policy"
+    },
+    {
+      "en": "Optimal path",
+      "zh-cn": "最优路径",
+      "context": "optimization"
+    },
+    {
+      "en": "Optimal policy",
+      "zh-cn": "最优策略",
+      "context": "optimization"
+    },
+    {
+      "en": "Ordinary Least Squares",
+      "zh-cn": "普通最小二乘法",
+      "context": "econometrics"
+    },
+    {
+      "en": "OLS",
+      "zh-cn": "普通最小二乘法",
+      "context": "econometrics abbreviation"
+    },
+    {
+      "en": "Output elasticity of capital",
+      "zh-cn": "资本产出弹性",
+      "context": "production economics"
+    },
+    {
+      "en": "Output multiplier",
+      "zh-cn": "产出乘数",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Overlapping generations model",
+      "zh-cn": "世代交叠模型",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "OLG model",
+      "zh-cn": "世代交叠模型",
+      "context": "macroeconomics abbreviation"
+    },
+    {
+      "en": "PageRank algorithm",
+      "zh-cn": "网页排名算法",
+      "context": "network science"
+    },
+    {
+      "en": "Pareto tail",
+      "zh-cn": "帕累托尾",
+      "context": "probability"
+    },
+    {
+      "en": "Partial derivative",
+      "zh-cn": "偏导数",
+      "context": "calculus"
+    },
+    {
+      "en": "Path simulation",
+      "zh-cn": "路径模拟",
+      "context": "simulation"
+    },
+    {
+      "en": "Perfect foresight",
+      "zh-cn": "完全预见",
+      "context": "economics"
+    },
+    {
+      "en": "Perfect foresight model",
+      "zh-cn": "完全预见模型",
+      "context": "economics"
+    },
+    {
+      "en": "Perron projection",
+      "zh-cn": "佩龙投影",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Perron-Frobenius theorem",
+      "zh-cn": "佩龙-弗罗贝尼乌斯定理",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Power law",
+      "zh-cn": "幂律",
+      "context": "probability"
+    },
+    {
+      "en": "Present discounted value",
+      "zh-cn": "现值",
+      "context": "finance"
+    },
+    {
+      "en": "Present value",
+      "zh-cn": "现值",
+      "context": "finance"
+    },
+    {
+      "en": "Present value model",
+      "zh-cn": "现值模型",
+      "context": "finance"
+    },
+    {
+      "en": "Price level",
+      "zh-cn": "价格水平",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Primitive matrix",
+      "zh-cn": "原始矩阵",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Probability density function",
+      "zh-cn": "概率密度函数",
+      "context": "probability"
+    },
+    {
+      "en": "Probability mass function",
+      "zh-cn": "概率质量函数",
+      "context": "probability"
+    },
+    {
+      "en": "Producer surplus",
+      "zh-cn": "生产者剩余",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Projected corporate tax revenue",
+      "zh-cn": "预计企业税收",
+      "context": "public finance"
+    },
+    {
+      "en": "Purchasing power parity",
+      "zh-cn": "购买力平价",
+      "context": "international economics"
+    },
+    {
+      "en": "Quantity theory of money",
+      "zh-cn": "货币数量论",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Rational expectations",
+      "zh-cn": "理性预期",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Real bills theory",
+      "zh-cn": "实物票据理论",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Real money balances",
+      "zh-cn": "实际货币余额",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Real part",
+      "zh-cn": "实部",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Recessions",
+      "zh-cn": "衰退",
+      "context": "business cycles"
+    },
+    {
+      "en": "Recursive expressions",
+      "zh-cn": "递归表达式",
+      "context": "mathematics"
+    },
+    {
+      "en": "Reform and liberalization",
+      "zh-cn": "改革开放",
+      "context": "economic policy"
+    },
+    {
+      "en": "Reserve-deposit ratio",
+      "zh-cn": "准备金存款比率",
+      "context": "banking"
+    },
+    {
+      "en": "Residuals",
+      "zh-cn": "残差",
+      "context": "econometrics"
+    },
+    {
+      "en": "Risk-neutral pricing",
+      "zh-cn": "风险中性定价",
+      "context": "finance"
+    },
+    {
+      "en": "Sample mean",
+      "zh-cn": "样本均值",
+      "context": "statistics"
+    },
+    {
+      "en": "Sample variance",
+      "zh-cn": "样本方差",
+      "context": "statistics"
+    },
+    {
+      "en": "Scatter plot",
+      "zh-cn": "散点图",
+      "context": "statistics"
+    },
+    {
+      "en": "Second fundamental welfare theorem",
+      "zh-cn": "福利经济学第二定理",
+      "context": "welfare economics"
+    },
+    {
+      "en": "Second-order linear difference equation",
+      "zh-cn": "二阶线性差分方程",
+      "context": "difference equations"
+    },
+    {
+      "en": "Seigniorage",
+      "zh-cn": "铸币税",
+      "context": "public finance"
+    },
+    {
+      "en": "Silverman's rule",
+      "zh-cn": "西尔弗曼法则",
+      "context": "kernel density estimation"
+    },
+    {
+      "en": "Simple regression model",
+      "zh-cn": "简单回归模型",
+      "context": "econometrics"
+    },
+    {
+      "en": "Social welfare",
+      "zh-cn": "社会福利",
+      "context": "welfare economics"
+    },
+    {
+      "en": "Solow-Swan Growth Model",
+      "zh-cn": "索洛-斯旺增长模型",
+      "context": "growth theory"
+    },
+    {
+      "en": "Spectral gap",
+      "zh-cn": "谱隙",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Spectral radius",
+      "zh-cn": "谱半径",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Spectral theory",
+      "zh-cn": "谱理论",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Spot price",
+      "zh-cn": "现货价格",
+      "context": "finance"
+    },
+    {
+      "en": "Stable cycle",
+      "zh-cn": "稳定循环",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Stagflation",
+      "zh-cn": "滞胀",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "State space",
+      "zh-cn": "状态空间",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "State transition matrix",
+      "zh-cn": "状态转移矩阵",
+      "context": "Markov chains"
+    },
+    {
+      "en": "State variable",
+      "zh-cn": "状态变量",
+      "context": "dynamic systems"
+    },
+    {
+      "en": "State-contingent claims",
+      "zh-cn": "或有债权",
+      "context": "finance"
+    },
+    {
+      "en": "Stationary distribution",
+      "zh-cn": "平稳分布",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Stationarity",
+      "zh-cn": "平稳性",
+      "context": "time series"
+    },
+    {
+      "en": "Statistical stationarity",
+      "zh-cn": "统计平稳性",
+      "context": "time series"
+    },
+    {
+      "en": "Steady state",
+      "zh-cn": "稳态",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Stochastic difference equation",
+      "zh-cn": "随机差分方程",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Stochastic linear difference equation",
+      "zh-cn": "随机线性差分方程",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Stochastic matrix",
+      "zh-cn": "随机矩阵",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Stochastic productivity",
+      "zh-cn": "随机生产率",
+      "context": "economics"
+    },
+    {
+      "en": "Stochastic volatility",
+      "zh-cn": "随机波动率",
+      "context": "finance"
+    },
+    {
+      "en": "Strike price",
+      "zh-cn": "行权价",
+      "context": "options"
+    },
+    {
+      "en": "Strong law of large numbers",
+      "zh-cn": "强大数定律",
+      "context": "probability"
+    },
+    {
+      "en": "Strongly connected",
+      "zh-cn": "强连通的",
+      "context": "graph theory"
+    },
+    {
+      "en": "Successive approximation",
+      "zh-cn": "逐次近似",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Support",
+      "zh-cn": "支持",
+      "context": "probability"
+    },
+    {
+      "en": "Sum of the squared residuals",
+      "zh-cn": "残差平方和",
+      "context": "econometrics"
+    },
+    {
+      "en": "SSR",
+      "zh-cn": "残差平方和",
+      "context": "econometrics abbreviation"
+    },
+    {
+      "en": "Survey of Consumer Finances",
+      "zh-cn": "消费者财务调查",
+      "context": "data source"
+    },
+    {
+      "en": "Tail index",
+      "zh-cn": "尾指数",
+      "context": "probability"
+    },
+    {
+      "en": "Tax farming",
+      "zh-cn": "包税制",
+      "context": "public finance"
+    },
+    {
+      "en": "Tax-smoothing model",
+      "zh-cn": "税收平滑模型",
+      "context": "public finance"
+    },
+    {
+      "en": "Taylor series",
+      "zh-cn": "泰勒级数",
+      "context": "calculus"
+    },
+    {
+      "en": "Terminal condition",
+      "zh-cn": "终端条件",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Terminal price",
+      "zh-cn": "终端价格",
+      "context": "finance"
+    },
+    {
+      "en": "Time series",
+      "zh-cn": "时间序列",
+      "context": "statistics"
+    },
+    {
+      "en": "Time to build",
+      "zh-cn": "建设时间",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Transition probability",
+      "zh-cn": "转移概率",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Trigonometric form",
+      "zh-cn": "三角形式",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Trigonometric integrals",
+      "zh-cn": "三角积分",
+      "context": "calculus"
+    },
+    {
+      "en": "Underlying asset",
+      "zh-cn": "标的资产",
+      "context": "derivatives"
+    },
+    {
+      "en": "University of Michigan",
+      "zh-cn": "密歇根大学",
+      "context": "institution"
+    },
+    {
+      "en": "Unpleasant monetarist arithmetic",
+      "zh-cn": "不愉快的货币主义算术",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Vector field",
+      "zh-cn": "向量场",
+      "context": "mathematics"
+    },
+    {
+      "en": "Vector linear difference equations",
+      "zh-cn": "向量线性差分方程",
+      "context": "difference equations"
+    },
+    {
+      "en": "Vectorization",
+      "zh-cn": "向量化",
+      "context": "numerical computation"
+    },
+    {
+      "en": "Vertices",
+      "zh-cn": "顶点",
+      "context": "graph theory"
+    },
+    {
+      "en": "Violin plot",
+      "zh-cn": "小提琴图",
+      "context": "data visualization"
+    },
+    {
+      "en": "Volatility",
+      "zh-cn": "波动率",
+      "context": "finance"
+    },
+    {
+      "en": "Wage gap",
+      "zh-cn": "工资差距",
+      "context": "labor economics"
+    },
+    {
+      "en": "Weighted average",
+      "zh-cn": "加权平均",
+      "context": "statistics"
+    },
+    {
+      "en": "Weighted directed graph",
+      "zh-cn": "加权有向图",
+      "context": "graph theory"
+    },
+    {
+      "en": "Weight function",
+      "zh-cn": "权重函数",
+      "context": "mathematics"
+    },
+    {
+      "en": "Welfare criterion",
+      "zh-cn": "福利标准",
+      "context": "welfare economics"
+    },
+    {
+      "en": "Welfare maximization problem",
+      "zh-cn": "福利最大化问题",
+      "context": "welfare economics"
+    },
+    {
+      "en": "World Bank",
+      "zh-cn": "世界银行",
+      "context": "institution"
+    },
+    {
+      "en": "Zero-sum game",
+      "zh-cn": "零和博弈",
+      "context": "game theory"
+    },
+    {
+      "en": "Abba Lerner",
+      "zh-cn": "阿巴·勒纳",
+      "context": "economist name"
+    },
+    {
+      "en": "Adam Tooze",
+      "zh-cn": "亚当·图泽",
+      "context": "historian name"
+    },
+    {
+      "en": "Albert Marcet",
+      "zh-cn": "阿尔伯特·马塞特",
+      "context": "economist name"
+    },
+    {
+      "en": "Alberto Bisin",
+      "zh-cn": "阿尔贝托·比辛",
+      "context": "economist name"
+    },
+    {
+      "en": "Angus Maddison",
+      "zh-cn": "安格斯·麦迪森",
+      "context": "economic historian name"
+    },
+    {
+      "en": "Brian Wright",
+      "zh-cn": "布莱恩·赖特",
+      "context": "economist name"
+    },
+    {
+      "en": "Christian Schluter",
+      "zh-cn": "克里斯蒂安·施卢特",
+      "context": "economist name"
+    },
+    {
+      "en": "Dimitris Bertsimas",
+      "zh-cn": "迪米特里斯·伯齐马斯",
+      "context": "mathematician name"
+    },
+    {
+      "en": "Eugene Slutsky",
+      "zh-cn": "欧根·斯卢茨基",
+      "context": "economist name"
+    },
+    {
+      "en": "Francis Ysidro Edgeworth",
+      "zh-cn": "弗朗西斯·伊西德罗·埃奇沃思",
+      "context": "economist name"
+    },
+    {
+      "en": "Gerard Debreu",
+      "zh-cn": "热拉尔·德布鲁",
+      "context": "economist name"
+    },
+    {
+      "en": "Guangming Zhao",
+      "zh-cn": "赵光明",
+      "context": "researcher name"
+    },
+    {
+      "en": "Harold Hotelling",
+      "zh-cn": "哈罗德·霍特林",
+      "context": "economist name"
+    },
+    {
+      "en": "Hiroki Kondo",
+      "zh-cn": "近藤弘树",
+      "context": "researcher name"
+    },
+    {
+      "en": "James Hamilton",
+      "zh-cn": "詹姆斯·汉密尔顿",
+      "context": "economist name"
+    },
+    {
+      "en": "Jennifer Burns",
+      "zh-cn": "珍妮弗·伯恩斯",
+      "context": "historian name"
+    },
+    {
+      "en": "Jess Benhabib",
+      "zh-cn": "杰斯·本哈比卜",
+      "context": "economist name"
+    },
+    {
+      "en": "John Tsitsiklis",
+      "zh-cn": "约翰·齐齐克利斯",
+      "context": "mathematician name"
+    },
+    {
+      "en": "Jonathan Temple",
+      "zh-cn": "乔纳森·坦普尔",
+      "context": "economist name"
+    },
+    {
+      "en": "José Scheinkman",
+      "zh-cn": "何塞·舍因克曼",
+      "context": "economist name"
+    },
+    {
+      "en": "Kenneth Arrow",
+      "zh-cn": "肯尼斯·阿罗",
+      "context": "economist name"
+    },
+    {
+      "en": "Leon Walras",
+      "zh-cn": "莱昂·瓦尔拉斯",
+      "context": "economist name"
+    },
+    {
+      "en": "Leonhard Euler",
+      "zh-cn": "莱昂哈德·欧拉",
+      "context": "mathematician name"
+    },
+    {
+      "en": "Mi Luo",
+      "zh-cn": "罗米",
+      "context": "researcher name"
+    },
+    {
+      "en": "Michael Bruno",
+      "zh-cn": "迈克尔·布鲁诺",
+      "context": "economist name"
+    },
+    {
+      "en": "Milton Friedman",
+      "zh-cn": "米尔顿·弗里德曼",
+      "context": "economist name"
+    },
+    {
+      "en": "Neil Wallace",
+      "zh-cn": "尼尔·华莱士",
+      "context": "economist name"
+    },
+    {
+      "en": "Patrick Imam",
+      "zh-cn": "帕特里克·伊玛目",
+      "context": "economist name"
+    },
+    {
+      "en": "Paul Samuelson",
+      "zh-cn": "保罗·萨缪尔森",
+      "context": "economist name"
+    },
+    {
+      "en": "Phillip Cagan",
+      "zh-cn": "菲利普·凯根",
+      "context": "economist name"
+    },
+    {
+      "en": "Pythagoras",
+      "zh-cn": "毕达哥拉斯",
+      "context": "mathematician name"
+    },
+    {
+      "en": "Ragnar Frisch",
+      "zh-cn": "拉格纳·弗里希",
+      "context": "economist name"
+    },
+    {
+      "en": "Robert Solow",
+      "zh-cn": "罗伯特·索洛",
+      "context": "economist name"
+    },
+    {
+      "en": "Simon Kuznets",
+      "zh-cn": "西蒙·库兹涅茨",
+      "context": "economist name"
+    },
+    {
+      "en": "Thomas C. Schelling",
+      "zh-cn": "托马斯·C.·谢林",
+      "context": "economist name"
+    },
+    {
+      "en": "Thomas Sargent",
+      "zh-cn": "托马斯·萨金特",
+      "context": "economist name"
+    },
+    {
+      "en": "Trevor Swan",
+      "zh-cn": "特雷弗·斯旺",
+      "context": "economist name"
+    },
+    {
+      "en": "Vilfredo Pareto",
+      "zh-cn": "维尔弗雷多·帕累托",
+      "context": "economist name"
+    },
+    {
+      "en": "Xavier Gabaix",
+      "zh-cn": "泽维尔·加贝克斯",
+      "context": "economist name"
+    },
+    {
+      "en": "Xin Guo",
+      "zh-cn": "郭新",
+      "context": "researcher name"
+    },
+    {
+      "en": "Yoshi Fujiwara",
+      "zh-cn": "藤原义史",
+      "context": "researcher name"
+    },
+    {
+      "en": "Yunzhe Hu",
+      "zh-cn": "胡云哲",
+      "context": "researcher name"
+    }
+  ]
+}

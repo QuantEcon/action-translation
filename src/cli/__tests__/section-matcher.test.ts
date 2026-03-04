@@ -7,10 +7,10 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { MystParser } from '../../parser';
-import { extractHeadingMap } from '../../heading-map';
-import { matchSections, validateMatchesWithHeadingMap, getMatchingSummary } from '../section-matcher';
-import { Section } from '../../types';
+import { MystParser } from '../../parser.js';
+import { extractHeadingMap } from '../../heading-map.js';
+import { matchSections, validateMatchesWithHeadingMap, getMatchingSummary } from '../section-matcher.js';
+import { Section } from '../../types.js';
 
 const fixturesDir = path.join(__dirname, 'fixtures');
 

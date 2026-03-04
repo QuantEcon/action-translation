@@ -1,7 +1,7 @@
-import { MystParser } from '../parser';
-import { DiffDetector } from '../diff-detector';
-import { TranslationService } from '../translator';
-import { FileProcessor } from '../file-processor';
+import { MystParser } from '../parser.js';
+import { DiffDetector } from '../diff-detector.js';
+import { TranslationService } from '../translator.js';
+import { FileProcessor } from '../file-processor.js';
 import * as fs from 'fs';
 import * as path from 'path';
 

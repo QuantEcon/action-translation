@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
-import { ActionInputs, ReviewInputs } from './types';
-import { validateLanguageCode, getSupportedLanguages } from './language-config';
+import { ActionInputs, ReviewInputs } from './types.js';
+import { validateLanguageCode, getSupportedLanguages } from './language-config.js';
 
 /**
  * Known Claude model patterns for validation

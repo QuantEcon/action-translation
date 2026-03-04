@@ -11,6 +11,8 @@
  *           produced by `backward` since Phase 2.
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { z } from 'zod';
 
 // ============================================================================
@@ -267,12 +269,6 @@ export function loadResyncDirectory(resyncDir: string): {
   reports: BackwardReportData[];
   errors: Array<{ file: string; error: string }>;
 } {
-  // Dynamic import at call site — this module stays pure for testing
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const fs = require('fs');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const path = require('path');
-
   const reports: BackwardReportData[] = [];
   const errors: Array<{ file: string; error: string }> = [];
 

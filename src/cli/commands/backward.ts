@@ -23,16 +23,16 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import cliProgress from 'cli-progress';
-import { MystParser } from '../../parser';
-import { extractHeadingMap } from '../../heading-map';
-import { matchSections, getMatchingSummary, validateMatchesWithHeadingMap } from '../section-matcher';
-import { triageDocument } from '../document-comparator';
-import { evaluateFile } from '../backward-evaluator';
-import { getFileGitMetadata, getFileTimeline } from '../git-metadata';
-import { generateMarkdownReport, generateJsonReport, generateBulkMarkdownReport, generateBulkJsonReport } from '../report-generator';
-import { BackwardReport, BackwardOptions, BackportSuggestion, BulkBackwardReport } from '../types';
-import { SCHEMA_VERSION } from '../schema';
-import { discoverMarkdownFiles, resolveFilePairs, applyExcludes } from './status';
+import { MystParser } from '../../parser.js';
+import { extractHeadingMap } from '../../heading-map.js';
+import { matchSections, getMatchingSummary, validateMatchesWithHeadingMap } from '../section-matcher.js';
+import { triageDocument } from '../document-comparator.js';
+import { evaluateFile } from '../backward-evaluator.js';
+import { getFileGitMetadata, getFileTimeline } from '../git-metadata.js';
+import { generateMarkdownReport, generateJsonReport, generateBulkMarkdownReport, generateBulkJsonReport } from '../report-generator.js';
+import { BackwardReport, BackwardOptions, BackportSuggestion, BulkBackwardReport } from '../types.js';
+import { SCHEMA_VERSION } from '../schema.js';
+import { discoverMarkdownFiles, resolveFilePairs, applyExcludes } from './status.js';
 
 /**
  * Logger interface for backward command output

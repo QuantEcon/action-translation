@@ -4,8 +4,8 @@ import {
   serializeHeadingMap,
   lookupTargetHeading,
   injectHeadingMap
-} from '../heading-map';
-import { Section } from '../types';
+} from '../heading-map.js';
+import { Section } from '../types.js';
 
 describe('Heading Map System', () => {
   describe('extractHeadingMap', () => {

@@ -10,8 +10,8 @@
  * - No complex block matching or insertion point logic needed
  */
 
-import { MystParser } from './parser';
-import { Section, SectionChange } from './types';
+import { MystParser } from './parser.js';
+import { Section, SectionChange } from './types.js';
 import * as core from '@actions/core';
 
 export class DiffDetector {

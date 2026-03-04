@@ -5,8 +5,8 @@
  * reconstructs complete documents: CONFIG + TITLE + INTRO + SECTIONS
  */
 
-import { FileProcessor } from '../file-processor';
-import { TranslationService } from '../translator';
+import { FileProcessor } from '../file-processor.js';
+import { TranslationService } from '../translator.js';
 
 describe('Component-Based Reconstruction', () => {
   let processor: FileProcessor;

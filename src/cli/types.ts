@@ -7,7 +7,7 @@
  * - forward: Translate SOURCE changes to TARGET (Phase 3)
  */
 
-import { Section } from '../types';
+import { Section } from '../types.js';
 
 // ============================================================================
 // STAGE 1: DOCUMENT-LEVEL TRIAGE

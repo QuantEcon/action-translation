@@ -11,9 +11,9 @@
  * 3. Handle SOURCE_ONLY and TARGET_ONLY sections at boundaries
  */
 
-import { Section } from '../types';
-import { HeadingMap } from '../heading-map';
-import { SectionPair } from './types';
+import { Section } from '../types.js';
+import { HeadingMap } from '../heading-map.js';
+import { SectionPair } from './types.js';
 
 /**
  * Match sections between SOURCE and TARGET documents by position

@@ -24,9 +24,9 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { MystParser } from '../../parser';
-import { extractHeadingMap } from '../../heading-map';
-import { getFileGitMetadata } from '../git-metadata';
+import { MystParser } from '../../parser.js';
+import { extractHeadingMap } from '../../heading-map.js';
+import { getFileGitMetadata } from '../git-metadata.js';
 
 // ============================================================================
 // TYPES

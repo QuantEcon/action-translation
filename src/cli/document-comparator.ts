@@ -18,9 +18,9 @@ import {
   APIConnectionError,
   BadRequestError 
 } from '@anthropic-ai/sdk';
-import { TriageResult, TriageVerdict, FileGitMetadata, FileTimeline } from './types';
-import { formatDate, daysBetween, formatTimelineForPrompt } from './git-metadata';
-import { RETRY_CONFIG } from '../translator';
+import { TriageResult, TriageVerdict, FileGitMetadata, FileTimeline } from './types.js';
+import { formatDate, daysBetween, formatTimelineForPrompt } from './git-metadata.js';
+import { RETRY_CONFIG } from '../translator.js';
 
 /**
  * Maximum combined token estimate for Stage 1 triage.

@@ -1,13 +1,14 @@
 {
   "name": "action-translation",
   "version": "0.8.0",
+  "type": "module",
   "description": "GitHub Action to sync and review translations across repositories",
   "main": "dist/index.js",
   "bin": {
     "resync": "dist/cli/index.js"
   },
   "scripts": {
-    "build": "tsc && ncc build dist/index.js -o dist",
+    "build": "tsc && node build-action.mjs",
     "build:cli": "tsc",
     "test": "jest",
     "lint": "eslint src/**/*.ts",
@@ -33,7 +34,9 @@
     "@anthropic-ai/sdk": "^0.27.0",
     "cli-progress": "^3.12.0",
     "commander": "^14.0.3",
+    "ink": "^4.4.1",
     "js-yaml": "^4.1.0",
+    "react": "^18.3.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -41,9 +44,11 @@
     "@types/jest": "^29.5.10",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^20.10.0",
+    "@types/react": "^18.3.28",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
     "@vercel/ncc": "^0.38.1",
+    "esbuild": "^0.27.3",
     "eslint": "^8.54.0",
     "jest": "^29.7.0",
     "prettier": "^3.1.0",

@@ -7,8 +7,8 @@
  * - Review comment generation
  */
 
-import { identifyChangedSections } from '../reviewer';
-import { ChangedSection } from '../types';
+import { identifyChangedSections } from '../reviewer.js';
+import { ChangedSection } from '../types.js';
 
 // =============================================================================
 // HELPER FUNCTION TESTS

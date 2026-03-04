@@ -1,4 +1,4 @@
-import { Section } from '../types';
+import { Section } from '../types.js';
 
 /**
  * Tests for FileProcessor key methods

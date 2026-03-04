@@ -19,8 +19,8 @@ import {
   discoverBulkFiles,
   BulkProgress,
   BackwardLogger,
-} from '../commands/backward';
-import { BackwardOptions, BackwardReport } from '../types';
+} from '../commands/backward.js';
+import { BackwardOptions, BackwardReport } from '../types.js';
 
 // ============================================================================
 // HELPERS

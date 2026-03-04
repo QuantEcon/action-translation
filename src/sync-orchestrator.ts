@@ -11,9 +11,9 @@
  * Extracted from index.ts for reuse by both GitHub Action and CLI.
  */
 
-import { TranslationService } from './translator';
-import { FileProcessor } from './file-processor';
-import { Glossary, TranslatedFile } from './types';
+import { TranslationService } from './translator.js';
+import { FileProcessor } from './file-processor.js';
+import { Glossary, TranslatedFile } from './types.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 

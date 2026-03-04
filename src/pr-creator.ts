@@ -12,8 +12,8 @@
  * Extracted from index.ts for separation of concerns.
  */
 
-import { TranslatedFile } from './types';
-import { Logger } from './sync-orchestrator';
+import { TranslatedFile } from './types.js';
+import { Logger } from './sync-orchestrator.js';
 
 // =============================================================================
 // INTERFACES

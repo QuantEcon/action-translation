@@ -10,8 +10,8 @@
  * integration tests with the real GitHub Action workflow.
  */
 
-import { buildPrBody, buildPrTitle, buildLabelSet, PrCreatorConfig } from '../pr-creator';
-import { TranslatedFile } from '../types';
+import { buildPrBody, buildPrTitle, buildLabelSet, PrCreatorConfig } from '../pr-creator.js';
+import { TranslatedFile } from '../types.js';
 
 // =============================================================================
 // TEST HELPERS

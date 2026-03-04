@@ -12,8 +12,8 @@ import {
   buildFileEvaluationPrompt,
   parseFileEvaluationResponse,
   evaluateFile,
-} from '../backward-evaluator';
-import { FileGitMetadata, FileTimeline, SectionPair } from '../types';
+} from '../backward-evaluator.js';
+import { FileGitMetadata, FileTimeline, SectionPair } from '../types.js';
 
 describe('backward-evaluator', () => {
   const mockSourceMeta: FileGitMetadata = {

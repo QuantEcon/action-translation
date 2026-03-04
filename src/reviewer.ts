@@ -15,7 +15,7 @@ import {
   ReviewResult,
   ChangedSection,
   FileChange,
-} from './types';
+} from './types.js';
 
 // Default model for review (can be overridden)
 const DEFAULT_REVIEW_MODEL = 'claude-sonnet-4-6';

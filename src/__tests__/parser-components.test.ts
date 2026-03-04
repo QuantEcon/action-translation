@@ -2,7 +2,7 @@
  * Tests for parseDocumentComponents method
  */
 
-import { MystParser } from '../parser';
+import { MystParser } from '../parser.js';
 
 describe('MystParser.parseDocumentComponents', () => {
   let parser: MystParser;

@@ -11,7 +11,7 @@
  */
 
 import * as core from '@actions/core';
-import { getMode, getInputs, getReviewInputs, validatePREvent, validateReviewPREvent } from '../inputs';
+import { getMode, getInputs, getReviewInputs, validatePREvent, validateReviewPREvent } from '../inputs.js';
 
 // Mock @actions/core
 jest.mock('@actions/core');

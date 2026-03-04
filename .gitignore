@@ -1,8 +1,12 @@
 node_modules/
 
-# Build output - Keep dist/index.js for GitHub Actions (main action)
-dist/node_modules/
-dist/licenses.txt
+# Build output
+# dist/ — ESM build from tsc (not committed, rebuild with `npm run build:cli`)
+dist/
+# dist-action/ — ncc CJS bundle for GitHub Actions (committed, rebuild with `npm run build`)
+# Keep dist-action/ tracked; only ignore its node_modules and license noise
+dist-action/node_modules/
+dist-action/licenses.txt
 
 # Tool build outputs (standalone tools don't need committed builds)
 tool-bulk-translator/dist/

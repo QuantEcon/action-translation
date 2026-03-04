@@ -10,8 +10,8 @@ import {
   generateBulkMarkdownReport, 
   generateJsonReport,
   generateBulkJsonReport,
-} from '../report-generator';
-import { BackwardReport, BulkBackwardReport, FileTimeline } from '../types';
+} from '../report-generator.js';
+import { BackwardReport, BulkBackwardReport, FileTimeline } from '../types.js';
 
 describe('report-generator', () => {
   const baseReport: BackwardReport = {

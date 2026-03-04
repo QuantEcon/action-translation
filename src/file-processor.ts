@@ -12,10 +12,10 @@
  * This is much simpler than the old block-based approach!
  */
 
-import { MystParser } from './parser';
-import { DiffDetector } from './diff-detector';
-import { TranslationService } from './translator';
-import { Section, Glossary } from './types';
+import { MystParser } from './parser.js';
+import { DiffDetector } from './diff-detector.js';
+import { TranslationService } from './translator.js';
+import { Section, Glossary } from './types.js';
 import * as core from '@actions/core';
 import { 
   extractHeadingMap, 
@@ -23,7 +23,7 @@ import {
   lookupTargetHeading,
   injectHeadingMap,
   HeadingMap
-} from './heading-map';
+} from './heading-map.js';
 
 export class FileProcessor {
   private parser: MystParser;

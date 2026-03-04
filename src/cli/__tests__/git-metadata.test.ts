@@ -14,8 +14,8 @@ import {
   getRepoCommits,
   getFileTimeline,
   formatTimelineForPrompt,
-} from '../git-metadata';
-import { FileTimeline } from '../types';
+} from '../git-metadata.js';
+import { FileTimeline } from '../types.js';
 import * as path from 'path';
 
 describe('git-metadata', () => {

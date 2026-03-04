@@ -8,8 +8,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { runBackwardSingleFile, BackwardLogger } from '../commands/backward';
-import { BackwardOptions } from '../types';
+import { runBackwardSingleFile, BackwardLogger } from '../commands/backward.js';
+import { BackwardOptions } from '../types.js';
 
 const fixturesDir = path.join(__dirname, 'fixtures');
 

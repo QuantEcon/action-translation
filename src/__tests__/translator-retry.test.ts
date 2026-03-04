@@ -8,7 +8,7 @@
  * - Exponential backoff timing (1s, 2s, 4s)
  */
 
-import { TranslationService, RETRY_CONFIG } from '../translator';
+import { TranslationService, RETRY_CONFIG } from '../translator.js';
 
 // Mock @actions/core to avoid GitHub Action context errors
 jest.mock('@actions/core', () => ({

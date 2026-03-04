@@ -9,7 +9,7 @@
  * a cleaner section-based structure that's easier to work with for translations.
  */
 
-import { Section, ParsedSections, DocumentComponents } from './types';
+import { Section, ParsedSections, DocumentComponents } from './types.js';
 
 export class MystParser {
   /**
