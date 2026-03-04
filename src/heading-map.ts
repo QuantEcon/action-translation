@@ -1,5 +1,5 @@
 import * as yaml from 'js-yaml';
-import { Section } from './types';
+import { Section } from './types.js';
 
 /**
  * Path separator for hierarchical heading keys

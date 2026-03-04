@@ -11,8 +11,8 @@ import {
   buildTriagePrompt, 
   parseTriageResponse, 
   triageDocument,
-} from '../document-comparator';
-import { FileGitMetadata, FileTimeline } from '../types';
+} from '../document-comparator.js';
+import { FileGitMetadata, FileTimeline } from '../types.js';
 
 const fixturesDir = path.join(__dirname, 'fixtures');
 

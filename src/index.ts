@@ -1,11 +1,16 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { getMode, getInputs, getReviewInputs, validatePREvent, validateReviewPREvent } from './inputs';
-import { TranslationReviewer } from './reviewer';
-import { SyncOrchestrator, classifyChangedFiles, loadGlossary, FileToSync, Logger } from './sync-orchestrator';
-import { createTranslationPR, PrCreatorConfig, SourcePrInfo } from './pr-creator';
+import { getMode, getInputs, getReviewInputs, validatePREvent, validateReviewPREvent } from './inputs.js';
+import { TranslationReviewer } from './reviewer.js';
+import { SyncOrchestrator, classifyChangedFiles, loadGlossary, FileToSync, Logger } from './sync-orchestrator.js';
+import { createTranslationPR, PrCreatorConfig, SourcePrInfo } from './pr-creator.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+// ESM equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Main entry point for the GitHub Action

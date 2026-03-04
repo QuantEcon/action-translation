@@ -1,0 +1,1791 @@
+{
+  "version": "1.0",
+  "description": "Translation glossary for QuantEcon lectures (English to Persian/Farsi)",
+  "terms": [
+    {
+      "en": "Accessible state",
+      "fa": "حالت دست‌یافتنی",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Adaptive expectations",
+      "fa": "انتظارات تطبیقی",
+      "context": "economics"
+    },
+    {
+      "en": "Adjacency matrix",
+      "fa": "ماتریس مجاورت",
+      "context": "graph theory"
+    },
+    {
+      "en": "Aggregate consumption",
+      "fa": "مصرف کل",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Aggregate demand for capital",
+      "fa": "تقاضای کل سرمایه",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Aggregate production function",
+      "fa": "تابع تولید کل",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Aggregate supply of capital",
+      "fa": "عرضه کل سرمایه",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Angle sum identities",
+      "fa": "اتحادهای مجموع زاویه",
+      "context": "trigonometry"
+    },
+    {
+      "en": "Annuity",
+      "fa": "مستمری",
+      "context": "finance"
+    },
+    {
+      "en": "AR(1) processes",
+      "fa": "فرایندهای AR(1)",
+      "context": "time series"
+    },
+    {
+      "en": "Arrow securities",
+      "fa": "اوراق بهادار آرو",
+      "context": "finance"
+    },
+    {
+      "en": "Asymptotic stability",
+      "fa": "پایداری مجانبی",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Asymptotic stationarity",
+      "fa": "ایستایی مجانبی",
+      "context": "time series"
+    },
+    {
+      "en": "Authority centrality",
+      "fa": "مرکزیت اقتدار",
+      "context": "network science"
+    },
+    {
+      "en": "Autarky equilibrium",
+      "fa": "تعادل خودکفایی",
+      "context": "economics"
+    },
+    {
+      "en": "Autoregressive model",
+      "fa": "مدل خودرگرسیو",
+      "context": "time series"
+    },
+    {
+      "en": "Autoregressive representation",
+      "fa": "نمایش خودرگرسیو",
+      "context": "time series"
+    },
+    {
+      "en": "Balance sheet equation",
+      "fa": "معادله ترازنامه",
+      "context": "accounting"
+    },
+    {
+      "en": "Bandwidth",
+      "fa": "پهنای باند",
+      "context": "kernel density estimation"
+    },
+    {
+      "en": "Barrier option",
+      "fa": "اختیار معامله سدی",
+      "context": "finance"
+    },
+    {
+      "en": "Bellman operator",
+      "fa": "عملگر بلمن",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Beta distribution",
+      "fa": "توزیع بتا",
+      "context": "probability"
+    },
+    {
+      "en": "Bivariate uniform distribution",
+      "fa": "توزیع یکنواخت دومتغیره",
+      "context": "probability"
+    },
+    {
+      "en": "Budget constraint",
+      "fa": "محدودیت بودجه",
+      "context": "economics"
+    },
+    {
+      "en": "Business cycle",
+      "fa": "چرخه تجاری",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Calculus",
+      "fa": "حساب دیفرانسیل و انتگرال",
+      "context": "mathematics"
+    },
+    {
+      "en": "Capital depreciation",
+      "fa": "استهلاک سرمایه",
+      "context": "economics"
+    },
+    {
+      "en": "Capital dynamics",
+      "fa": "پویایی سرمایه",
+      "context": "economics"
+    },
+    {
+      "en": "Cauchy distribution",
+      "fa": "توزیع کوشی",
+      "context": "probability"
+    },
+    {
+      "en": "Central limit theorem",
+      "fa": "قضیه حد مرکزی",
+      "context": "probability"
+    },
+    {
+      "en": "Central moment",
+      "fa": "گشتاور مرکزی",
+      "context": "statistics"
+    },
+    {
+      "en": "Centrality measure",
+      "fa": "معیار مرکزیت",
+      "context": "network science"
+    },
+    {
+      "en": "Characteristic equation",
+      "fa": "معادله مشخصه",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Characteristic function",
+      "fa": "تابع مشخصه",
+      "context": "probability"
+    },
+    {
+      "en": "Characteristic polynomial",
+      "fa": "چندجمله‌ای مشخصه",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Closed economy",
+      "fa": "اقتصاد بسته",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Cobb-Douglas production function",
+      "fa": "تابع تولید کاب-داگلاس",
+      "context": "economics"
+    },
+    {
+      "en": "Cobweb model",
+      "fa": "مدل تار عنکبوتی",
+      "context": "economics"
+    },
+    {
+      "en": "Communicating states",
+      "fa": "حالات مرتبط",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Competitive equilibrium",
+      "fa": "تعادل رقابتی",
+      "context": "economics"
+    },
+    {
+      "en": "Complex conjugate",
+      "fa": "مزدوج مختلط",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Complex eigenvalues",
+      "fa": "مقادیر ویژه مختلط",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Complex number",
+      "fa": "عدد مختلط",
+      "context": "mathematics"
+    },
+    {
+      "en": "Complex plane",
+      "fa": "صفحه مختلط",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Conditional probability",
+      "fa": "احتمال شرطی",
+      "context": "probability"
+    },
+    {
+      "en": "Consumer sentiment index",
+      "fa": "شاخص احساسات مصرف‌کننده",
+      "context": "economics"
+    },
+    {
+      "en": "Consumer surplus",
+      "fa": "مازاد مصرف‌کننده",
+      "context": "economics"
+    },
+    {
+      "en": "Consumption-smoothing model",
+      "fa": "مدل هموارسازی مصرف",
+      "context": "economics"
+    },
+    {
+      "en": "Continuation value",
+      "fa": "ارزش ادامه",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Contractions",
+      "fa": "انقباضات",
+      "context": "functional analysis"
+    },
+    {
+      "en": "Convergence",
+      "fa": "همگرایی",
+      "context": "mathematics"
+    },
+    {
+      "en": "Convergence in distribution",
+      "fa": "همگرایی در توزیع",
+      "context": "probability"
+    },
+    {
+      "en": "Core consumer price index",
+      "fa": "شاخص قیمت مصرف‌کننده هسته‌ای",
+      "context": "economics"
+    },
+    {
+      "en": "CPI",
+      "fa": "شاخص قیمت مصرف‌کننده",
+      "context": "economics abbreviation"
+    },
+    {
+      "en": "Corporate bond",
+      "fa": "اوراق قرضه شرکتی",
+      "context": "finance"
+    },
+    {
+      "en": "Corporate tax rate",
+      "fa": "نرخ مالیات شرکتی",
+      "context": "public finance"
+    },
+    {
+      "en": "Cost function",
+      "fa": "تابع هزینه",
+      "context": "economics"
+    },
+    {
+      "en": "Cost-to-go function",
+      "fa": "تابع هزینه تا پایان",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Counter CDF",
+      "fa": "تابع توزیع تجمعی مکمل",
+      "context": "probability"
+    },
+    {
+      "en": "CCDF",
+      "fa": "تابع توزیع تجمعی مکمل",
+      "context": "probability abbreviation"
+    },
+    {
+      "en": "Cumulative distribution function",
+      "fa": "تابع توزیع تجمعی",
+      "context": "probability"
+    },
+    {
+      "en": "Cyclical price dynamics",
+      "fa": "پویایی قیمت چرخه‌ای",
+      "context": "economics"
+    },
+    {
+      "en": "de Moivre's theorem",
+      "fa": "قضیه دو موآور",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Degree centrality",
+      "fa": "مرکزیت درجه",
+      "context": "network science"
+    },
+    {
+      "en": "Deposit receipt",
+      "fa": "رسید سپرده",
+      "context": "banking"
+    },
+    {
+      "en": "Development economics",
+      "fa": "اقتصاد توسعه",
+      "context": "economics"
+    },
+    {
+      "en": "Discount factor",
+      "fa": "ضریب تنزیل",
+      "context": "economics"
+    },
+    {
+      "en": "Discounted payoff",
+      "fa": "بازده تنزیل‌شده",
+      "context": "economics"
+    },
+    {
+      "en": "Discounting",
+      "fa": "تنزیل",
+      "context": "finance"
+    },
+    {
+      "en": "Distance matrix",
+      "fa": "ماتریس فاصله",
+      "context": "graph theory"
+    },
+    {
+      "en": "Distribution dynamics",
+      "fa": "پویایی توزیع",
+      "context": "economics"
+    },
+    {
+      "en": "Domestic credit",
+      "fa": "اعتبار داخلی",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Dominant eigenvalue",
+      "fa": "مقدار ویژه غالب",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Dynamic Laffer curve",
+      "fa": "منحنی لافر پویا",
+      "context": "public finance"
+    },
+    {
+      "en": "Dynamic model",
+      "fa": "مدل پویا",
+      "context": "economics"
+    },
+    {
+      "en": "Dynamic process",
+      "fa": "فرایند پویا",
+      "context": "mathematics"
+    },
+    {
+      "en": "Dynamic programming",
+      "fa": "برنامه‌ریزی پویا",
+      "context": "optimization"
+    },
+    {
+      "en": "Eigenvector",
+      "fa": "بردار ویژه",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Eigenvector centrality",
+      "fa": "مرکزیت بردار ویژه",
+      "context": "network science"
+    },
+    {
+      "en": "Eigenvector decomposition",
+      "fa": "تجزیه بردار ویژه",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Elasticity of substitution",
+      "fa": "کشش جانشینی",
+      "context": "economics"
+    },
+    {
+      "en": "Empirical Distribution",
+      "fa": "توزیع تجربی",
+      "context": "statistics"
+    },
+    {
+      "en": "Equalizing Difference Model",
+      "fa": "مدل تفاوت متعادل‌کننده",
+      "context": "labor economics"
+    },
+    {
+      "en": "Equilibrium",
+      "fa": "تعادل",
+      "context": "economics"
+    },
+    {
+      "en": "Ergodicity",
+      "fa": "ارگودیسیته",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Euclidean distance",
+      "fa": "فاصله اقلیدسی",
+      "context": "mathematics"
+    },
+    {
+      "en": "Euler equation",
+      "fa": "معادله اویلر",
+      "context": "economics"
+    },
+    {
+      "en": "Euler's formula",
+      "fa": "فرمول اویلر",
+      "context": "complex analysis"
+    },
+    {
+      "en": "European call option",
+      "fa": "اختیار خرید اروپایی",
+      "context": "finance"
+    },
+    {
+      "en": "Exercise",
+      "fa": "تمرین",
+      "context": "educational content"
+    },
+    {
+      "en": "Exogenous",
+      "fa": "برون‌زا",
+      "context": "economics"
+    },
+    {
+      "en": "Exogenous initial capital stock",
+      "fa": "موجودی سرمایه اولیه برون‌زا",
+      "context": "economics"
+    },
+    {
+      "en": "Expansions",
+      "fa": "رونق",
+      "context": "business cycles"
+    },
+    {
+      "en": "Expiry date",
+      "fa": "تاریخ انقضا",
+      "context": "finance"
+    },
+    {
+      "en": "Exponential distribution",
+      "fa": "توزیع نمایی",
+      "context": "probability"
+    },
+    {
+      "en": "Fiat money",
+      "fa": "پول فیات",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Financial repression",
+      "fa": "سرکوب مالی",
+      "context": "economics"
+    },
+    {
+      "en": "Finite horizon",
+      "fa": "افق محدود",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "First fundamental welfare theorem",
+      "fa": "قضیه اول رفاه",
+      "context": "welfare economics"
+    },
+    {
+      "en": "First Moment",
+      "fa": "گشتاور اول",
+      "context": "statistics"
+    },
+    {
+      "en": "Fiscal policy multiplier",
+      "fa": "ضریب سیاست مالی",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Fiscal theory",
+      "fa": "نظریه مالی",
+      "context": "public finance"
+    },
+    {
+      "en": "Fiscal theory of price levels",
+      "fa": "نظریه مالی سطح قیمت‌ها",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Flow utility function",
+      "fa": "تابع مطلوبیت جریانی",
+      "context": "economics"
+    },
+    {
+      "en": "Folk theorem",
+      "fa": "قضیه فولک",
+      "context": "game theory"
+    },
+    {
+      "en": "Forcing variable",
+      "fa": "متغیر اجباری",
+      "context": "difference equations"
+    },
+    {
+      "en": "Forecast errors",
+      "fa": "خطاهای پیش‌بینی",
+      "context": "time series"
+    },
+    {
+      "en": "Forward-looking difference equation",
+      "fa": "معادله تفاضلی پیش‌نگر",
+      "context": "economics"
+    },
+    {
+      "en": "Fractional reserve banking",
+      "fa": "بانکداری ذخیره کسری",
+      "context": "banking"
+    },
+    {
+      "en": "FRED",
+      "fa": "داده‌های اقتصادی فدرال رزرو",
+      "context": "data source"
+    },
+    {
+      "en": "Federal Reserve Economic Data",
+      "fa": "داده‌های اقتصادی فدرال رزرو",
+      "context": "data source"
+    },
+    {
+      "en": "Gaussian kernel",
+      "fa": "هسته گاوسی",
+      "context": "kernel methods"
+    },
+    {
+      "en": "Geary–Khamis dollar",
+      "fa": "دلار گیری-خامیس",
+      "context": "international comparison"
+    },
+    {
+      "en": "Gershgorin Circle Theorem",
+      "fa": "قضیه دایره گرشگورین",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Global Financial Crisis",
+      "fa": "بحران مالی جهانی",
+      "context": "economic history"
+    },
+    {
+      "en": "GFC",
+      "fa": "بحران مالی جهانی",
+      "context": "economic history abbreviation"
+    },
+    {
+      "en": "Global stability",
+      "fa": "پایداری سراسری",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Golden Rule savings rate",
+      "fa": "نرخ پس‌انداز قاعده طلایی",
+      "context": "growth theory"
+    },
+    {
+      "en": "Gordon formula",
+      "fa": "فرمول گوردون",
+      "context": "finance"
+    },
+    {
+      "en": "Government budget constraint",
+      "fa": "محدودیت بودجه دولت",
+      "context": "public finance"
+    },
+    {
+      "en": "Government expenditures multiplier",
+      "fa": "ضریب مخارج دولت",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Greek debt crisis",
+      "fa": "بحران بدهی یونان",
+      "context": "economic history"
+    },
+    {
+      "en": "Gross Domestic Product",
+      "fa": "تولید ناخالص داخلی",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "GDP",
+      "fa": "تولید ناخالص داخلی",
+      "context": "macroeconomics abbreviation"
+    },
+    {
+      "en": "Gross nominal interest rate",
+      "fa": "نرخ بهره اسمی ناخالص",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Gross rate of return",
+      "fa": "نرخ بازده ناخالص",
+      "context": "finance"
+    },
+    {
+      "en": "Growth facts",
+      "fa": "حقایق رشد",
+      "context": "growth theory"
+    },
+    {
+      "en": "Grim trigger strategy",
+      "fa": "استراتژی ماشه سنگین",
+      "context": "game theory"
+    },
+    {
+      "en": "Heavy-tailed distribution",
+      "fa": "توزیع دنباله سنگین",
+      "context": "probability"
+    },
+    {
+      "en": "Hicksian demand curve",
+      "fa": "منحنی تقاضای هیکسی",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Histogram",
+      "fa": "هیستوگرام",
+      "context": "statistics"
+    },
+    {
+      "en": "Hub centrality",
+      "fa": "مرکزیت هاب",
+      "context": "network science"
+    },
+    {
+      "en": "Human wealth",
+      "fa": "ثروت انسانی",
+      "context": "economics"
+    },
+    {
+      "en": "Hyperinflation",
+      "fa": "ابرتورم",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Imaginary part",
+      "fa": "بخش موهومی",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Independent and identically distributed",
+      "fa": "مستقل و هم‌توزیع",
+      "context": "probability"
+    },
+    {
+      "en": "Indicator function",
+      "fa": "تابع شاخص",
+      "context": "mathematics"
+    },
+    {
+      "en": "Industrial output",
+      "fa": "تولید صنعتی",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Industrial Revolution",
+      "fa": "انقلاب صنعتی",
+      "context": "economic history"
+    },
+    {
+      "en": "Inflation tax",
+      "fa": "مالیات تورمی",
+      "context": "public finance"
+    },
+    {
+      "en": "Inflation-indexed bonds",
+      "fa": "اوراق قرضه شاخص‌بندی‌شده با تورم",
+      "context": "finance"
+    },
+    {
+      "en": "Inflation-tax theory",
+      "fa": "نظریه مالیات تورمی",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Initial condition",
+      "fa": "شرط اولیه",
+      "context": "differential equations"
+    },
+    {
+      "en": "Input-output model",
+      "fa": "مدل داده-ستانده",
+      "context": "economics"
+    },
+    {
+      "en": "Invariant subspace",
+      "fa": "زیرفضای پایا",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Investment multiplier",
+      "fa": "ضریب سرمایه‌گذاری",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Irreducible matrix",
+      "fa": "ماتریس تحویل‌ناپذیر",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Jump Chain Algorithm",
+      "fa": "الگوریتم زنجیره پرش",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Jump variable",
+      "fa": "متغیر پرشی",
+      "context": "economics"
+    },
+    {
+      "en": "Katz centrality",
+      "fa": "مرکزیت کاتز",
+      "context": "network science"
+    },
+    {
+      "en": "Kernel",
+      "fa": "هسته",
+      "context": "functional analysis"
+    },
+    {
+      "en": "Kernel density estimate",
+      "fa": "برآورد چگالی هسته‌ای",
+      "context": "statistics"
+    },
+    {
+      "en": "Kernel density estimator",
+      "fa": "برآوردگر چگالی هسته‌ای",
+      "context": "statistics"
+    },
+    {
+      "en": "Keynesian multiplier",
+      "fa": "ضریب کینزی",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Knockout barrier",
+      "fa": "سد حذفی",
+      "context": "options"
+    },
+    {
+      "en": "Kolmogorov-Smirnov test",
+      "fa": "آزمون کولموگروف-اسمیرنوف",
+      "context": "statistics"
+    },
+    {
+      "en": "Laffer curve",
+      "fa": "منحنی لافر",
+      "context": "public finance"
+    },
+    {
+      "en": "Lake model",
+      "fa": "مدل دریاچه",
+      "context": "labor economics"
+    },
+    {
+      "en": "Law of large numbers",
+      "fa": "قانون اعداد بزرگ",
+      "context": "probability"
+    },
+    {
+      "en": "Law of total probability",
+      "fa": "قانون احتمال کل",
+      "context": "probability"
+    },
+    {
+      "en": "Lecture",
+      "fa": "درس",
+      "context": "educational content"
+    },
+    {
+      "en": "Legal restrictions theory",
+      "fa": "نظریه محدودیت‌های قانونی",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Leontief Inverse",
+      "fa": "معکوس لئونتیف",
+      "context": "input-output economics"
+    },
+    {
+      "en": "Light-tailed distribution",
+      "fa": "توزیع دنباله سبک",
+      "context": "probability"
+    },
+    {
+      "en": "Linear algebra",
+      "fa": "جبر خطی",
+      "context": "mathematics"
+    },
+    {
+      "en": "Linear differential equation",
+      "fa": "معادله دیفرانسیل خطی",
+      "context": "mathematics"
+    },
+    {
+      "en": "Linear programming",
+      "fa": "برنامه‌ریزی خطی",
+      "context": "optimization"
+    },
+    {
+      "en": "Log likelihood function",
+      "fa": "تابع لگاریتم درستنمایی",
+      "context": "statistics"
+    },
+    {
+      "en": "Log transform",
+      "fa": "تبدیل لگاریتمی",
+      "context": "mathematics"
+    },
+    {
+      "en": "Log-normal distribution",
+      "fa": "توزیع لگاریتم نرمال",
+      "context": "probability"
+    },
+    {
+      "en": "Long-Run Growth",
+      "fa": "رشد بلندمدت",
+      "context": "growth theory"
+    },
+    {
+      "en": "Lorenz curve",
+      "fa": "منحنی لورنتس",
+      "context": "income distribution"
+    },
+    {
+      "en": "Marginal distribution",
+      "fa": "توزیع حاشیه‌ای",
+      "context": "probability"
+    },
+    {
+      "en": "Marginal product of capital",
+      "fa": "محصول نهایی سرمایه",
+      "context": "economics"
+    },
+    {
+      "en": "Marginal propensity to consume",
+      "fa": "تمایل نهایی به مصرف",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Marginal propensity to save",
+      "fa": "تمایل نهایی به پس‌انداز",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Marginal revenue",
+      "fa": "درآمد نهایی",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Marginal utility of wealth",
+      "fa": "مطلوبیت نهایی ثروت",
+      "context": "economics"
+    },
+    {
+      "en": "Market clearing",
+      "fa": "تسویه بازار",
+      "context": "economics"
+    },
+    {
+      "en": "Markov chain",
+      "fa": "زنجیره مارکوف",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Marshallian demand curve",
+      "fa": "منحنی تقاضای مارشالی",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Matrix inversion",
+      "fa": "وارون‌سازی ماتریس",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Matrix multiplication",
+      "fa": "ضرب ماتریسی",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Maximum likelihood estimation",
+      "fa": "برآورد حداکثر درستنمایی",
+      "context": "statistics"
+    },
+    {
+      "en": "Method of successive approximations",
+      "fa": "روش تقریب‌های متوالی",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Moment generating function",
+      "fa": "تابع مولد گشتاور",
+      "context": "probability"
+    },
+    {
+      "en": "Moments",
+      "fa": "گشتاورها",
+      "context": "probability"
+    },
+    {
+      "en": "Money demand",
+      "fa": "تقاضای پول",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Money multiplier",
+      "fa": "ضریب پولی",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Money supply",
+      "fa": "عرضه پول",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Money-financed government deficit",
+      "fa": "کسری بودجه دولت با تأمین مالی پولی",
+      "context": "public finance"
+    },
+    {
+      "en": "Monte Carlo",
+      "fa": "مونت‌کارلو",
+      "context": "simulation methods"
+    },
+    {
+      "en": "Moving average representation",
+      "fa": "نمایش میانگین متحرک",
+      "context": "time series"
+    },
+    {
+      "en": "Multiple consumer economy",
+      "fa": "اقتصاد چندمصرف‌کننده‌ای",
+      "context": "economics"
+    },
+    {
+      "en": "Multiplier-accelerator model",
+      "fa": "مدل ضریب-شتاب‌دهنده",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Multivariate normal distributions",
+      "fa": "توزیع‌های نرمال چندمتغیره",
+      "context": "probability"
+    },
+    {
+      "en": "Mutual fund",
+      "fa": "صندوق سرمایه‌گذاری مشترک",
+      "context": "finance"
+    },
+    {
+      "en": "Naive expectations",
+      "fa": "انتظارات ساده",
+      "context": "economics"
+    },
+    {
+      "en": "NBER",
+      "fa": "دفتر ملی تحقیقات اقتصادی",
+      "context": "institution"
+    },
+    {
+      "en": "National Bureau of Economic Research",
+      "fa": "دفتر ملی تحقیقات اقتصادی",
+      "context": "institution"
+    },
+    {
+      "en": "Net nominal interest rate",
+      "fa": "نرخ بهره اسمی خالص",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Network science",
+      "fa": "علم شبکه",
+      "context": "mathematics"
+    },
+    {
+      "en": "Neumann Series Lemma",
+      "fa": "لم سری نویمان",
+      "context": "functional analysis"
+    },
+    {
+      "en": "Newton's method",
+      "fa": "روش نیوتن",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Non-financial income",
+      "fa": "درآمد غیرمالی",
+      "context": "economics"
+    },
+    {
+      "en": "Non-satiation",
+      "fa": "عدم اشباع",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Non-stationary univariate time series",
+      "fa": "سری زمانی تک‌متغیره ناایستا",
+      "context": "time series"
+    },
+    {
+      "en": "Normal distribution",
+      "fa": "توزیع نرمال",
+      "context": "probability"
+    },
+    {
+      "en": "Numeraire",
+      "fa": "کالای مبنا",
+      "context": "economics"
+    },
+    {
+      "en": "Numerical integration",
+      "fa": "انتگرال‌گیری عددی",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Oil Crisis",
+      "fa": "بحران نفتی",
+      "context": "economic history"
+    },
+    {
+      "en": "Open market operations",
+      "fa": "عملیات بازار باز",
+      "context": "monetary policy"
+    },
+    {
+      "en": "Optimal path",
+      "fa": "مسیر بهینه",
+      "context": "optimization"
+    },
+    {
+      "en": "Optimal policy",
+      "fa": "سیاست بهینه",
+      "context": "optimization"
+    },
+    {
+      "en": "Ordinary Least Squares",
+      "fa": "حداقل مربعات معمولی",
+      "context": "econometrics"
+    },
+    {
+      "en": "OLS",
+      "fa": "حداقل مربعات معمولی",
+      "context": "econometrics abbreviation"
+    },
+    {
+      "en": "Output elasticity of capital",
+      "fa": "کشش تولید نسبت به سرمایه",
+      "context": "production economics"
+    },
+    {
+      "en": "Output multiplier",
+      "fa": "ضریب تولید",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Overlapping generations model",
+      "fa": "مدل نسل‌های هم‌پوشان",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "OLG model",
+      "fa": "مدل نسل‌های هم‌پوشان",
+      "context": "macroeconomics abbreviation"
+    },
+    {
+      "en": "PageRank algorithm",
+      "fa": "الگوریتم پیج‌رنک",
+      "context": "network science"
+    },
+    {
+      "en": "Pareto tail",
+      "fa": "دنباله پارتو",
+      "context": "probability"
+    },
+    {
+      "en": "Partial derivative",
+      "fa": "مشتق جزئی",
+      "context": "calculus"
+    },
+    {
+      "en": "Path simulation",
+      "fa": "شبیه‌سازی مسیر",
+      "context": "simulation"
+    },
+    {
+      "en": "Perfect foresight",
+      "fa": "پیش‌بینی کامل",
+      "context": "economics"
+    },
+    {
+      "en": "Perfect foresight model",
+      "fa": "مدل پیش‌بینی کامل",
+      "context": "economics"
+    },
+    {
+      "en": "Perron projection",
+      "fa": "تصویر پرون",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Perron-Frobenius theorem",
+      "fa": "قضیه پرون-فروبنیوس",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Power law",
+      "fa": "قانون توانی",
+      "context": "probability"
+    },
+    {
+      "en": "Present discounted value",
+      "fa": "ارزش فعلی تنزیل‌شده",
+      "context": "finance"
+    },
+    {
+      "en": "Present value",
+      "fa": "ارزش فعلی",
+      "context": "finance"
+    },
+    {
+      "en": "Present value model",
+      "fa": "مدل ارزش فعلی",
+      "context": "finance"
+    },
+    {
+      "en": "Price level",
+      "fa": "سطح قیمت",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Primitive matrix",
+      "fa": "ماتریس اولیه",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Probability density function",
+      "fa": "تابع چگالی احتمال",
+      "context": "probability"
+    },
+    {
+      "en": "Probability mass function",
+      "fa": "تابع جرم احتمال",
+      "context": "probability"
+    },
+    {
+      "en": "Producer surplus",
+      "fa": "مازاد تولیدکننده",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Projected corporate tax revenue",
+      "fa": "درآمد مالیات شرکتی پیش‌بینی‌شده",
+      "context": "public finance"
+    },
+    {
+      "en": "Purchasing power parity",
+      "fa": "برابری قدرت خرید",
+      "context": "international economics"
+    },
+    {
+      "en": "Quantity theory of money",
+      "fa": "نظریه مقداری پول",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Rational expectations",
+      "fa": "انتظارات عقلایی",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Real bills theory",
+      "fa": "نظریه اسناد واقعی",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Real money balances",
+      "fa": "مانده‌های پول واقعی",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Real part",
+      "fa": "بخش حقیقی",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Recessions",
+      "fa": "رکود",
+      "context": "business cycles"
+    },
+    {
+      "en": "Recursive expressions",
+      "fa": "عبارات بازگشتی",
+      "context": "mathematics"
+    },
+    {
+      "en": "Reform and liberalization",
+      "fa": "اصلاحات و آزادسازی",
+      "context": "economic policy"
+    },
+    {
+      "en": "Reserve-deposit ratio",
+      "fa": "نسبت ذخیره به سپرده",
+      "context": "banking"
+    },
+    {
+      "en": "Residuals",
+      "fa": "باقیمانده‌ها",
+      "context": "econometrics"
+    },
+    {
+      "en": "Risk-neutral pricing",
+      "fa": "قیمت‌گذاری ریسک خنثی",
+      "context": "finance"
+    },
+    {
+      "en": "Sample mean",
+      "fa": "میانگین نمونه",
+      "context": "statistics"
+    },
+    {
+      "en": "Sample variance",
+      "fa": "واریانس نمونه",
+      "context": "statistics"
+    },
+    {
+      "en": "Scatter plot",
+      "fa": "نمودار پراکندگی",
+      "context": "statistics"
+    },
+    {
+      "en": "Second fundamental welfare theorem",
+      "fa": "قضیه دوم رفاه",
+      "context": "welfare economics"
+    },
+    {
+      "en": "Second-order linear difference equation",
+      "fa": "معادله تفاضلی خطی مرتبه دوم",
+      "context": "difference equations"
+    },
+    {
+      "en": "Seigniorage",
+      "fa": "حق ضرب سکه",
+      "context": "public finance"
+    },
+    {
+      "en": "Silverman's rule",
+      "fa": "قاعده سیلورمن",
+      "context": "kernel density estimation"
+    },
+    {
+      "en": "Simple regression model",
+      "fa": "مدل رگرسیون ساده",
+      "context": "econometrics"
+    },
+    {
+      "en": "Social welfare",
+      "fa": "رفاه اجتماعی",
+      "context": "welfare economics"
+    },
+    {
+      "en": "Solow-Swan Growth Model",
+      "fa": "مدل رشد سولو-سوان",
+      "context": "growth theory"
+    },
+    {
+      "en": "Spectral gap",
+      "fa": "شکاف طیفی",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Spectral radius",
+      "fa": "شعاع طیفی",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Spectral theory",
+      "fa": "نظریه طیفی",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Spot price",
+      "fa": "قیمت نقدی",
+      "context": "finance"
+    },
+    {
+      "en": "Stable cycle",
+      "fa": "چرخه پایدار",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Stagflation",
+      "fa": "رکود تورمی",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "State space",
+      "fa": "فضای حالت",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "State transition matrix",
+      "fa": "ماتریس انتقال حالت",
+      "context": "Markov chains"
+    },
+    {
+      "en": "State variable",
+      "fa": "متغیر حالت",
+      "context": "dynamic systems"
+    },
+    {
+      "en": "State-contingent claims",
+      "fa": "مطالبات وابسته به حالت",
+      "context": "finance"
+    },
+    {
+      "en": "Stationary distribution",
+      "fa": "توزیع ایستا",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Stationarity",
+      "fa": "ایستایی",
+      "context": "time series"
+    },
+    {
+      "en": "Statistical stationarity",
+      "fa": "ایستایی آماری",
+      "context": "time series"
+    },
+    {
+      "en": "Steady state",
+      "fa": "حالت پایدار",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Stochastic difference equation",
+      "fa": "معادله تفاضلی تصادفی",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Stochastic linear difference equation",
+      "fa": "معادله تفاضلی خطی تصادفی",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Stochastic matrix",
+      "fa": "ماتریس تصادفی",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Stochastic productivity",
+      "fa": "بهره‌وری تصادفی",
+      "context": "economics"
+    },
+    {
+      "en": "Stochastic volatility",
+      "fa": "نوسان تصادفی",
+      "context": "finance"
+    },
+    {
+      "en": "Strike price",
+      "fa": "قیمت اعمال",
+      "context": "options"
+    },
+    {
+      "en": "Strong law of large numbers",
+      "fa": "قانون قوی اعداد بزرگ",
+      "context": "probability"
+    },
+    {
+      "en": "Strongly connected",
+      "fa": "قویاً همبند",
+      "context": "graph theory"
+    },
+    {
+      "en": "Successive approximation",
+      "fa": "تقریب متوالی",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Support",
+      "fa": "پایه",
+      "context": "probability"
+    },
+    {
+      "en": "Sum of the squared residuals",
+      "fa": "مجموع مربعات باقیمانده‌ها",
+      "context": "econometrics"
+    },
+    {
+      "en": "SSR",
+      "fa": "مجموع مربعات باقیمانده‌ها",
+      "context": "econometrics abbreviation"
+    },
+    {
+      "en": "Survey of Consumer Finances",
+      "fa": "پیمایش مالی مصرف‌کنندگان",
+      "context": "data source"
+    },
+    {
+      "en": "Tail index",
+      "fa": "شاخص دنباله",
+      "context": "probability"
+    },
+    {
+      "en": "Tax farming",
+      "fa": "مقاطعه مالیاتی",
+      "context": "public finance"
+    },
+    {
+      "en": "Tax-smoothing model",
+      "fa": "مدل هموارسازی مالیات",
+      "context": "public finance"
+    },
+    {
+      "en": "Taylor series",
+      "fa": "سری تیلور",
+      "context": "calculus"
+    },
+    {
+      "en": "Terminal condition",
+      "fa": "شرط پایانی",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Terminal price",
+      "fa": "قیمت پایانی",
+      "context": "finance"
+    },
+    {
+      "en": "Time series",
+      "fa": "سری زمانی",
+      "context": "statistics"
+    },
+    {
+      "en": "Time to build",
+      "fa": "زمان ساخت",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Transition probability",
+      "fa": "احتمال انتقال",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Trigonometric form",
+      "fa": "شکل مثلثاتی",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Trigonometric integrals",
+      "fa": "انتگرال‌های مثلثاتی",
+      "context": "calculus"
+    },
+    {
+      "en": "Underlying asset",
+      "fa": "دارایی پایه",
+      "context": "derivatives"
+    },
+    {
+      "en": "University of Michigan",
+      "fa": "دانشگاه میشیگان",
+      "context": "institution"
+    },
+    {
+      "en": "Unpleasant monetarist arithmetic",
+      "fa": "حساب پولی ناخوشایند",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Vector field",
+      "fa": "میدان برداری",
+      "context": "mathematics"
+    },
+    {
+      "en": "Vector linear difference equations",
+      "fa": "معادلات تفاضلی خطی برداری",
+      "context": "difference equations"
+    },
+    {
+      "en": "Vectorization",
+      "fa": "برداری‌سازی",
+      "context": "numerical computation"
+    },
+    {
+      "en": "Vertices",
+      "fa": "رأس‌ها",
+      "context": "graph theory"
+    },
+    {
+      "en": "Violin plot",
+      "fa": "نمودار ویولنی",
+      "context": "data visualization"
+    },
+    {
+      "en": "Volatility",
+      "fa": "نوسان",
+      "context": "finance"
+    },
+    {
+      "en": "Wage gap",
+      "fa": "شکاف دستمزد",
+      "context": "labor economics"
+    },
+    {
+      "en": "Weighted average",
+      "fa": "میانگین وزنی",
+      "context": "statistics"
+    },
+    {
+      "en": "Weighted directed graph",
+      "fa": "گراف جهت‌دار وزن‌دار",
+      "context": "graph theory"
+    },
+    {
+      "en": "Weight function",
+      "fa": "تابع وزن",
+      "context": "mathematics"
+    },
+    {
+      "en": "Welfare criterion",
+      "fa": "معیار رفاه",
+      "context": "welfare economics"
+    },
+    {
+      "en": "Welfare maximization problem",
+      "fa": "مسئله بیشینه‌سازی رفاه",
+      "context": "welfare economics"
+    },
+    {
+      "en": "World Bank",
+      "fa": "بانک جهانی",
+      "context": "institution"
+    },
+    {
+      "en": "Zero-sum game",
+      "fa": "بازی با جمع صفر",
+      "context": "game theory"
+    },
+    {
+      "en": "Abba Lerner",
+      "fa": "آبا لرنر",
+      "context": "economist name"
+    },
+    {
+      "en": "Adam Tooze",
+      "fa": "آدام توز",
+      "context": "historian name"
+    },
+    {
+      "en": "Albert Marcet",
+      "fa": "آلبرت مارست",
+      "context": "economist name"
+    },
+    {
+      "en": "Alberto Bisin",
+      "fa": "آلبرتو بیسین",
+      "context": "economist name"
+    },
+    {
+      "en": "Angus Maddison",
+      "fa": "آنگوس مدیسون",
+      "context": "economic historian name"
+    },
+    {
+      "en": "Brian Wright",
+      "fa": "برایان رایت",
+      "context": "economist name"
+    },
+    {
+      "en": "Christian Schluter",
+      "fa": "کریستین شلوتر",
+      "context": "economist name"
+    },
+    {
+      "en": "Dimitris Bertsimas",
+      "fa": "دیمیتریس برتسیماس",
+      "context": "mathematician name"
+    },
+    {
+      "en": "Eugene Slutsky",
+      "fa": "یوجین اسلوتسکی",
+      "context": "economist name"
+    },
+    {
+      "en": "Francis Ysidro Edgeworth",
+      "fa": "فرانسیس ایزیدرو اجورث",
+      "context": "economist name"
+    },
+    {
+      "en": "Gerard Debreu",
+      "fa": "ژرار دبرو",
+      "context": "economist name"
+    },
+    {
+      "en": "Guangming Zhao",
+      "fa": "گوانگ‌مینگ ژائو",
+      "context": "researcher name"
+    },
+    {
+      "en": "Harold Hotelling",
+      "fa": "هارولد هاتلینگ",
+      "context": "economist name"
+    },
+    {
+      "en": "Hiroki Kondo",
+      "fa": "هیروکی کوندو",
+      "context": "researcher name"
+    },
+    {
+      "en": "James Hamilton",
+      "fa": "جیمز همیلتون",
+      "context": "economist name"
+    },
+    {
+      "en": "Jennifer Burns",
+      "fa": "جنیفر برنز",
+      "context": "historian name"
+    },
+    {
+      "en": "Jess Benhabib",
+      "fa": "جس بن‌حبیب",
+      "context": "economist name"
+    },
+    {
+      "en": "John Tsitsiklis",
+      "fa": "جان تسیتسیکلیس",
+      "context": "mathematician name"
+    },
+    {
+      "en": "Jonathan Temple",
+      "fa": "جاناتان تمپل",
+      "context": "economist name"
+    },
+    {
+      "en": "José Scheinkman",
+      "fa": "خوزه شاینکمن",
+      "context": "economist name"
+    },
+    {
+      "en": "Kenneth Arrow",
+      "fa": "کنت آرو",
+      "context": "economist name"
+    },
+    {
+      "en": "Leon Walras",
+      "fa": "لئون والراس",
+      "context": "economist name"
+    },
+    {
+      "en": "Leonhard Euler",
+      "fa": "لئونارد اویلر",
+      "context": "mathematician name"
+    },
+    {
+      "en": "Mi Luo",
+      "fa": "می لوئو",
+      "context": "researcher name"
+    },
+    {
+      "en": "Michael Bruno",
+      "fa": "مایکل برونو",
+      "context": "economist name"
+    },
+    {
+      "en": "Milton Friedman",
+      "fa": "میلتون فریدمن",
+      "context": "economist name"
+    },
+    {
+      "en": "Neil Wallace",
+      "fa": "نیل والاس",
+      "context": "economist name"
+    },
+    {
+      "en": "Patrick Imam",
+      "fa": "پاتریک امام",
+      "context": "economist name"
+    },
+    {
+      "en": "Paul Samuelson",
+      "fa": "پل ساموئلسون",
+      "context": "economist name"
+    },
+    {
+      "en": "Phillip Cagan",
+      "fa": "فیلیپ کیگن",
+      "context": "economist name"
+    },
+    {
+      "en": "Pythagoras",
+      "fa": "فیثاغورس",
+      "context": "mathematician name"
+    },
+    {
+      "en": "Ragnar Frisch",
+      "fa": "راگنار فریش",
+      "context": "economist name"
+    },
+    {
+      "en": "Robert Solow",
+      "fa": "رابرت سولو",
+      "context": "economist name"
+    },
+    {
+      "en": "Simon Kuznets",
+      "fa": "سایمون کوزنتس",
+      "context": "economist name"
+    },
+    {
+      "en": "Thomas C. Schelling",
+      "fa": "توماس سی. شلینگ",
+      "context": "economist name"
+    },
+    {
+      "en": "Thomas Sargent",
+      "fa": "توماس سارجنت",
+      "context": "economist name"
+    },
+    {
+      "en": "Trevor Swan",
+      "fa": "ترور سوان",
+      "context": "economist name"
+    },
+    {
+      "en": "Vilfredo Pareto",
+      "fa": "ویلفردو پارتو",
+      "context": "economist name"
+    },
+    {
+      "en": "Xavier Gabaix",
+      "fa": "زاویه گابه",
+      "context": "economist name"
+    },
+    {
+      "en": "Xin Guo",
+      "fa": "شین گوئو",
+      "context": "researcher name"
+    },
+    {
+      "en": "Yoshi Fujiwara",
+      "fa": "یوشی فوجیوارا",
+      "context": "researcher name"
+    },
+    {
+      "en": "Yunzhe Hu",
+      "fa": "یون‌ژه هو",
+      "context": "researcher name"
+    }
+  ]
+}

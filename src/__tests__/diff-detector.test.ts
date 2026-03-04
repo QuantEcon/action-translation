@@ -1,5 +1,5 @@
-import { DiffDetector } from '../diff-detector';
-import { MystParser } from '../parser';
+import { DiffDetector } from '../diff-detector.js';
+import { MystParser } from '../parser.js';
 import * as fs from 'fs';
 import * as path from 'path';
 

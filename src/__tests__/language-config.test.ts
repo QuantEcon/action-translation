@@ -8,7 +8,7 @@ import {
   getSupportedLanguages,
   isLanguageSupported,
   validateLanguageCode 
-} from '../language-config';
+} from '../language-config.js';
 
 describe('Language Configuration', () => {
   describe('getLanguageConfig', () => {

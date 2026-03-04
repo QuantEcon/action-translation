@@ -7,8 +7,8 @@
  * Uses language like "The translation may have identified..." rather than "Fix this."
  */
 
-import { BackwardReport, BulkBackwardReport, BackportSuggestion } from './types';
-import { formatDate, formatTimelineForPrompt } from './git-metadata';
+import { BackwardReport, BulkBackwardReport, BackportSuggestion } from './types.js';
+import { formatDate, formatTimelineForPrompt } from './git-metadata.js';
 
 // ============================================================================
 // MARKDOWN REPORTS

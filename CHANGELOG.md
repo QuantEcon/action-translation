@@ -8,6 +8,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Backward report JSON schema** (`src/cli/schema.ts`): Formal Zod schemas for all backward report formats
+  - `SCHEMA_VERSION` constant (`1.0.0`) — semver for the report format
+  - `BackwardReportSchema`, `BulkBackwardReportSchema`, `ProgressCheckpointSchema`
+  - `parseBackwardReport()` / `parseProgressCheckpoint()` — safe parse with error messages
+  - `loadResyncDirectory()` — loads and validates all sidecar JSON from a `.resync/` dir
+  - `filterActionableSuggestions()` — filters BACKPORT suggestions by confidence threshold
+  - 41 tests including integration tests against real fixture data
+- **`schemaVersion` field** on `BackwardReport`, `BulkBackwardReport` (optional, backward-compatible)
+- **`zod`** runtime validation dependency
+
+### Changed
+- **ESM migration**: Entire codebase now compiles to ESM (`"module": "node16"`)
+  - All relative imports use `.js` extensions
+  - `package.json` has `"type": "module"`
+  - `tsconfig.json`: `module` → `node16`, `moduleResolution` → `node16`, `target` → `ES2022`
+  - `jest.config.js`: ts-jest compiles tests to CJS internally via tsconfig override
+- **Action bundle moved to `dist-action/`**: Uses esbuild (CJS format) instead of ncc
+  - `action.yml` entry point → `dist-action/index.js`
+  - `dist/` is now ESM build output (gitignored, rebuild with `npm run build:cli`)
+  - `dist-action/` has its own `package.json` with `"type": "commonjs"` for Actions runner compat
+  - Glossary files copied to `dist-action/glossary/`
+- **New dependencies**: `ink@^4`, `react@^18`, `@types/react@^18` (for Phase 3a review command)
+- **New dev dependency**: `esbuild` (replaced `@vercel/ncc` for action bundling)
+- **`src/index.ts`**: `__dirname` → `import.meta.url` + `fileURLToPath` (ESM compat)
+- **`src/cli/index.ts`**: `require('../../package.json')` → `createRequire(import.meta.url)`
+
+### Added (Phase 2)
 - **Resync CLI — Status Command** (`src/cli/commands/status.ts`): Fast, free diagnostic — no LLM calls
   - Per-file sync status: `ALIGNED`, `OUTDATED`, `SOURCE_AHEAD`, `TARGET_AHEAD`, `MISSING_HEADINGMAP`, `SOURCE_ONLY`, `TARGET_ONLY`
   - Console table output (`formatStatusTable`) — like `git status` for translations

@@ -18,9 +18,9 @@ import {
   APIConnectionError,
   BadRequestError 
 } from '@anthropic-ai/sdk';
-import { Glossary, SectionTranslationRequest, SectionTranslationResult, FullDocumentTranslationRequest } from './types';
+import { Glossary, SectionTranslationRequest, SectionTranslationResult, FullDocumentTranslationRequest } from './types.js';
 import * as core from '@actions/core';
-import { getLanguageConfig } from './language-config';
+import { getLanguageConfig } from './language-config.js';
 
 /**
  * Constants

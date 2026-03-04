@@ -10,12 +10,14 @@
  */
 
 import { Command } from 'commander';
-import { runBackwardSingleFile, runBackwardBulk } from './commands/backward';
-import { runStatus, formatStatusTable, formatStatusJson, StatusOptions } from './commands/status';
-import { BackwardOptions } from './types';
+import { runBackwardSingleFile, runBackwardBulk } from './commands/backward.js';
+import { runStatus, formatStatusTable, formatStatusJson, StatusOptions } from './commands/status.js';
+import { BackwardOptions } from './types.js';
 
-// Read version from package.json to stay in sync
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// Read version from package.json — use createRequire since JSON imports
+// need import assertions which aren't stable in all Node versions.
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
 const { version } = require('../../package.json');
 
 const program = new Command();

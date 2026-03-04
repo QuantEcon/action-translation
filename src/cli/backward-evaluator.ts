@@ -22,9 +22,9 @@ import {
   APIConnectionError,
   BadRequestError 
 } from '@anthropic-ai/sdk';
-import { BackportSuggestion, BackportCategory, SpecificChange, FileGitMetadata, FileTimeline, SectionPair } from './types';
-import { formatDate, daysBetween, formatTimelineForPrompt } from './git-metadata';
-import { RETRY_CONFIG } from '../translator';
+import { BackportSuggestion, BackportCategory, SpecificChange, FileGitMetadata, FileTimeline, SectionPair } from './types.js';
+import { formatDate, daysBetween, formatTimelineForPrompt } from './git-metadata.js';
+import { RETRY_CONFIG } from '../translator.js';
 
 /**
  * Build the Stage 2 section evaluation prompt

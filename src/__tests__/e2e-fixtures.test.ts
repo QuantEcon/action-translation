@@ -11,8 +11,8 @@
  * Tests use MOCKED translations for deterministic results.
  */
 
-import { FileProcessor } from '../file-processor';
-import { TranslationService } from '../translator';
+import { FileProcessor } from '../file-processor.js';
+import { TranslationService } from '../translator.js';
 import * as fs from 'fs';
 import * as path from 'path';
 

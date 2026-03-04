@@ -7,7 +7,7 @@
  * - forward: Translate SOURCE changes to TARGET (Phase 3)
  */
 
-import { Section } from '../types';
+import { Section } from '../types.js';
 
 // ============================================================================
 // STAGE 1: DOCUMENT-LEVEL TRIAGE
@@ -134,6 +134,7 @@ export interface FileTimeline {
  * Complete backward analysis report for a single file
  */
 export interface BackwardReport {
+  schemaVersion?: string;        // Added in v1.0.0; absent in pre-schema reports
   file: string;
   timestamp: string;
   model?: string;               // Claude model used for analysis
@@ -151,6 +152,7 @@ export interface BackwardReport {
  * Summary report across multiple files (bulk mode)
  */
 export interface BulkBackwardReport {
+  schemaVersion?: string;        // Added in v1.0.0
   timestamp: string;
   model?: string;               // Claude model used for analysis
   sourceRepo: string;

@@ -1,4 +1,4 @@
-import { MystParser } from '../parser';
+import { MystParser } from '../parser.js';
 import * as fs from 'fs';
 import * as path from 'path';
 

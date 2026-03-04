@@ -17,7 +17,7 @@ import {
   formatStatusTable,
   formatStatusJson,
   FileSyncStatus,
-} from '../commands/status';
+} from '../commands/status.js';
 
 // ============================================================================
 // HELPERS

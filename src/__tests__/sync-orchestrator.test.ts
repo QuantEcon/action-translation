@@ -13,7 +13,7 @@
  *   - Multi-file processing
  */
 
-import { classifyChangedFiles, loadGlossary, SyncOrchestrator, FileToSync, Logger } from '../sync-orchestrator';
+import { classifyChangedFiles, loadGlossary, SyncOrchestrator, FileToSync, Logger } from '../sync-orchestrator.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 
