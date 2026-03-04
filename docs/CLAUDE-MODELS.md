@@ -4,7 +4,7 @@ The `claude-model` parameter allows you to specify which Claude model to use for
 
 ## Default Model
 
-By default, the action uses **`claude-sonnet-4-5-20250929`** (Claude Sonnet 4.5).
+By default, the action uses **`claude-sonnet-4-6`** (Claude Sonnet 4.6).
 
 No configuration needed - it just works!
 
@@ -16,7 +16,7 @@ No configuration needed - it just works!
     target-language: 'zh-cn'
     anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
     github-token: ${{ secrets.GITHUB_TOKEN }}
-    # claude-model: 'claude-sonnet-4-5-20250929'  # This is the default
+    # claude-model: 'claude-sonnet-4-6'  # This is the default
 ```
 
 ## Using a Different Model
@@ -40,10 +40,10 @@ Check Anthropic's documentation for available models:
 https://docs.anthropic.com/en/docs/about-claude/models
 
 Common options:
-- `claude-sonnet-4-5-20250929` - **Recommended** (latest, balanced speed/quality)
-- `claude-sonnet-4-20250514` - Previous Sonnet 4 version
-- `claude-opus-4-20250514` - Highest quality (slower, more expensive)
-- `claude-haiku-4-20250514` - Fastest (lower quality, cheaper)
+- `claude-sonnet-4-6` - **Recommended** (latest Sonnet, balanced speed/quality)
+- `claude-opus-4-6` - Highest quality (slower, more expensive)
+- `claude-haiku-4-5-20251001` - Fastest (lower quality, cheaper)
+- `claude-sonnet-4-5-20250929` - Previous Sonnet 4.5 version
 
 ## When to Change Models
 
@@ -84,13 +84,13 @@ You can test different models on the same content to compare quality:
 
 ## Cost Comparison
 
-Approximate costs per 1M tokens (as of October 2025):
+Approximate costs per 1M tokens (as of March 2026):
 
 | Model | Input | Output | Use Case |
 |-------|-------|--------|----------|
-| Haiku | $0.25 | $1.25 | Fast, simple content |
-| Sonnet | $3.00 | $15.00 | **Recommended** - balanced |
-| Opus | $15.00 | $75.00 | Highest quality |
+| Haiku 4.5 | $1.00 | $5.00 | Fast, simple content |
+| Sonnet 4.6 | $3.00 | $15.00 | **Recommended** - balanced |
+| Opus 4.6 | $5.00 | $25.00 | Highest quality |
 
 *See https://www.anthropic.com/pricing for current pricing*
 
@@ -143,4 +143,4 @@ This parameter makes the action future-proof:
 
 ---
 
-**Recommendation**: Stick with the default `claude-sonnet-4-20250514` unless you have specific requirements.
+**Recommendation**: Stick with the default `claude-sonnet-4-6` unless you have specific requirements.

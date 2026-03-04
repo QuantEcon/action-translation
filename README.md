@@ -132,7 +132,7 @@ jobs:
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
 | `anthropic-api-key` | Yes | - | Anthropic API key for Claude |
-| `claude-model` | No | `claude-sonnet-4-5-20250929` | Claude model to use |
+| `claude-model` | No | `claude-sonnet-4-6` | Claude model to use |
 | `github-token` | Yes | - | GitHub token for API access |
 | `glossary-path` | No | - | Path to custom glossary (built-in used by default) |
 

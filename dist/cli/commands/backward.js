@@ -8,10 +8,17 @@
  *   - Determines if a file has substantive changes beyond translation
  *   - IN_SYNC files are skipped (cheap filter)
  *
- * Stage 2: Section-level analysis (one LLM call per section, flagged files only)
+ * Stage 2: Whole-file analysis (one LLM call per flagged file)
  *   - Matches sections by position with heading-map validation
- *   - Evaluates each section pair for backport potential
- *   - Produces structured suggestions with category/confidence
+ *   - Evaluates all section pairs in a single LLM call
+ *   - Produces structured per-section suggestions with category/confidence
+ *
+ * Supports two modes:
+ * - Single-file: `npx resync backward -f file.md`
+ * - Bulk: `npx resync backward` (all files in docs folder)
+ *   - Writes reports to a timestamped folder
+ *   - Incremental checkpointing via .resync/_progress.json
+ *   - Supports --resume to continue interrupted runs
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -46,10 +53,23 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.BufferedLogger = void 0;
 exports.runBackwardSingleFile = runBackwardSingleFile;
+exports.readProgress = readProgress;
+exports.writeProgress = writeProgress;
+exports.buildBulkOutputDir = buildBulkOutputDir;
+exports.estimateBulkCost = estimateBulkCost;
+exports.formatCostEstimate = formatCostEstimate;
+exports.discoverBulkFiles = discoverBulkFiles;
+exports.runBackwardBulk = runBackwardBulk;
+exports.buildBulkReport = buildBulkReport;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
+const cli_progress_1 = __importDefault(require("cli-progress"));
 const parser_1 = require("../../parser");
 const heading_map_1 = require("../../heading-map");
 const section_matcher_1 = require("../section-matcher");
@@ -57,11 +77,45 @@ const document_comparator_1 = require("../document-comparator");
 const backward_evaluator_1 = require("../backward-evaluator");
 const git_metadata_1 = require("../git-metadata");
 const report_generator_1 = require("../report-generator");
+const status_1 = require("./status");
 const defaultLogger = {
     info: (msg) => console.log(msg),
     warn: (msg) => console.warn(`⚠️  ${msg}`),
     error: (msg) => console.error(`❌ ${msg}`),
 };
+/**
+ * A logger that buffers all output, then flushes it in one block.
+ * Used for parallel processing so file outputs don't interleave.
+ */
+class BufferedLogger {
+    constructor() {
+        this.buffer = [];
+    }
+    info(message) {
+        this.buffer.push(message);
+    }
+    warn(message) {
+        this.buffer.push(`⚠️  ${message}`);
+    }
+    error(message) {
+        this.buffer.push(`❌ ${message}`);
+    }
+    /** Flush all buffered output to a parent logger (for console). */
+    flush(parent) {
+        for (const line of this.buffer) {
+            parent.info(line);
+        }
+        this.buffer = [];
+    }
+    /** Append all buffered output to a log file. */
+    flushToFile(logPath) {
+        if (this.buffer.length === 0)
+            return;
+        fs.appendFileSync(logPath, this.buffer.join('\n') + '\n', 'utf-8');
+        this.buffer = [];
+    }
+}
+exports.BufferedLogger = BufferedLogger;
 /**
  * Execute backward analysis for a single file
  *
@@ -112,6 +166,7 @@ async function runBackwardSingleFile(options, logger = defaultLogger) {
         }
     }
     // ─── Stage 1: Document-Level Triage ───
+    logger.info('');
     logger.info('  Stage 1: Document-level triage...');
     const triageResult = await (0, document_comparator_1.triageDocument)(file, sourceContent, targetContent, sourceMetadata, targetMetadata, timeline, {
         apiKey: options.apiKey,
@@ -130,6 +185,9 @@ async function runBackwardSingleFile(options, logger = defaultLogger) {
         const report = {
             file,
             timestamp: new Date().toISOString(),
+            model,
+            sourceRepo: path.basename(source),
+            targetRepo: path.basename(target),
             sourceMetadata,
             targetMetadata,
             timeline,
@@ -139,7 +197,8 @@ async function runBackwardSingleFile(options, logger = defaultLogger) {
         await writeReport(report, options, logger);
         return report;
     }
-    // ─── Stage 2: Section-Level Analysis ───
+    // ─── Stage 2: Whole-File Analysis ───
+    logger.info('');
     logger.info('  Stage 2: Section-level analysis...');
     const parser = new parser_1.MystParser();
     const sourceParsed = await parser.parseSections(sourceContent, sourceFilePath);
@@ -163,27 +222,18 @@ async function runBackwardSingleFile(options, logger = defaultLogger) {
             logger.warn(`Heading-map mismatch: ${warning}`);
         }
     }
-    // Evaluate each matched section pair
-    const suggestions = [];
-    for (const pair of pairs) {
-        if (pair.status !== 'MATCHED' || !pair.sourceSection || !pair.targetSection) {
-            continue; // Skip unmatched sections (reported separately)
-        }
-        const heading = pair.sourceHeading || 'Unknown Section';
-        logger.info(`  Evaluating: ${heading}`);
-        const suggestion = await (0, backward_evaluator_1.evaluateSection)(pair.sourceSection.content, pair.targetSection.content, heading, sourceMetadata, targetMetadata, triageResult.notes, timeline, {
-            apiKey: options.apiKey,
-            model,
-            sourceLanguage: 'en',
-            targetLanguage: language,
-            testMode,
-        });
-        suggestions.push(suggestion);
+    // Evaluate all matched sections in a single LLM call
+    logger.info(`  Evaluating ${summary.matched} sections (1 LLM call)...`);
+    const suggestions = await (0, backward_evaluator_1.evaluateFile)(pairs, sourceMetadata, targetMetadata, triageResult.notes, timeline, {
+        apiKey: options.apiKey,
+        model,
+        sourceLanguage: 'en',
+        targetLanguage: language,
+        testMode,
+    });
+    for (const suggestion of suggestions) {
         if (suggestion.recommendation === 'BACKPORT') {
-            logger.info(`    → BACKPORT (${suggestion.category}, confidence: ${suggestion.confidence.toFixed(2)})`);
-        }
-        else {
-            logger.info(`    → No backport (${suggestion.category})`);
+            logger.info(`    → BACKPORT: ${suggestion.sectionHeading} (${suggestion.category}, confidence: ${suggestion.confidence.toFixed(2)})`);
         }
     }
     // Filter suggestions by min-confidence
@@ -197,10 +247,14 @@ async function runBackwardSingleFile(options, logger = defaultLogger) {
     });
     // Build report
     const backportCount = filteredSuggestions.filter(s => s.recommendation === 'BACKPORT').length;
+    logger.info('');
     logger.info(`  Done: ${backportCount} suggestion(s) from ${filteredSuggestions.length} sections analyzed.`);
     const report = {
         file,
         timestamp: new Date().toISOString(),
+        model,
+        sourceRepo: path.basename(source),
+        targetRepo: path.basename(target),
         sourceMetadata,
         targetMetadata,
         timeline,
@@ -218,24 +272,409 @@ function resolveFilePath(repoPath, docsFolder, filename) {
     return path.join(repoPath, docsFolder, filename);
 }
 /**
- * Write report to output directory
+ * Write report to output path.
+ *
+ * In single-file mode, if `options.output` ends with `.md` or `.json` it is
+ * treated as a **file path** (the user chose the exact name).  Otherwise it is
+ * treated as a **directory** and a filename is generated from the source file.
  */
 async function writeReport(report, options, logger) {
-    const outputDir = options.output;
-    // Ensure output directory exists
+    const output = options.output;
+    const basename = path.basename(report.file, '.md');
+    // Detect whether the user specified a file path or a directory.
+    const looksLikeFile = /\.(md|json)$/i.test(output);
+    const isSingleFile = !!options.file;
+    if (isSingleFile && looksLikeFile) {
+        // Single-file mode with an explicit file path
+        const dir = path.dirname(output);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        const content = output.endsWith('.json')
+            ? (0, report_generator_1.generateJsonReport)(report)
+            : (0, report_generator_1.generateMarkdownReport)(report);
+        fs.writeFileSync(output, content, 'utf-8');
+        logger.info(`  Report written: ${output}`);
+        // Always write a JSON sidecar for resume reliability (in .resync/ subfolder)
+        if (!output.endsWith('.json')) {
+            const resyncDir = path.join(path.dirname(output), '.resync');
+            if (!fs.existsSync(resyncDir))
+                fs.mkdirSync(resyncDir, { recursive: true });
+            const jsonSidecar = path.join(resyncDir, path.basename(output).replace(/\.md$/i, '.json'));
+            fs.writeFileSync(jsonSidecar, (0, report_generator_1.generateJsonReport)(report), 'utf-8');
+        }
+    }
+    else {
+        // Directory mode (bulk, or single-file without extension)
+        if (!fs.existsSync(output)) {
+            fs.mkdirSync(output, { recursive: true });
+        }
+        if (options.json) {
+            const jsonPath = path.join(output, `${basename}.json`);
+            fs.writeFileSync(jsonPath, (0, report_generator_1.generateJsonReport)(report), 'utf-8');
+            logger.info(`  Report written: ${jsonPath}`);
+        }
+        else {
+            const mdPath = path.join(output, `${basename}.md`);
+            fs.writeFileSync(mdPath, (0, report_generator_1.generateMarkdownReport)(report), 'utf-8');
+            logger.info(`  Report written: ${mdPath}`);
+            // Always write a JSON sidecar for resume reliability (in .resync/ subfolder)
+            const resyncDir = path.join(output, '.resync');
+            if (!fs.existsSync(resyncDir))
+                fs.mkdirSync(resyncDir, { recursive: true });
+            const jsonSidecar = path.join(resyncDir, `${basename}.json`);
+            fs.writeFileSync(jsonSidecar, (0, report_generator_1.generateJsonReport)(report), 'utf-8');
+        }
+    }
+}
+/**
+ * Read existing progress from .resync/_progress.json, or return null if not found.
+ */
+function readProgress(outputDir) {
+    const progressPath = path.join(outputDir, '.resync', '_progress.json');
+    if (!fs.existsSync(progressPath)) {
+        return null;
+    }
+    try {
+        return JSON.parse(fs.readFileSync(progressPath, 'utf-8'));
+    }
+    catch {
+        return null;
+    }
+}
+/**
+ * Write progress to .resync/_progress.json.
+ */
+function writeProgress(outputDir, progress) {
+    const resyncDir = path.join(outputDir, '.resync');
+    if (!fs.existsSync(resyncDir))
+        fs.mkdirSync(resyncDir, { recursive: true });
+    const progressPath = path.join(resyncDir, '_progress.json');
+    fs.writeFileSync(progressPath, JSON.stringify(progress, null, 2), 'utf-8');
+}
+/**
+ * Build a date-stamped output folder name:
+ *   reports/backward-2026-03-03/
+ *
+ * Uses date only. Re-running on the same day overwrites the previous run.
+ */
+function buildBulkOutputDir(baseOutput) {
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0]; // "2026-03-03"
+    return path.join(baseOutput, `backward-${dateStr}`);
+}
+function estimateBulkCost(fileCount, avgSectionsPerFile = 8) {
+    // Stage 1: ~$0.01 per file (single triage call)
+    const stage1Calls = fileCount;
+    const stage1Cost = stage1Calls * 0.01;
+    // Estimate ~5-10% of files will be flagged
+    const flagRate = 0.075; // 7.5% middle estimate
+    const estimatedFlagged = Math.max(1, Math.round(fileCount * flagRate));
+    // Stage 2: 1 call per flagged file (whole-file evaluation)
+    const estimatedStage2Calls = estimatedFlagged;
+    const stage2Cost = estimatedStage2Calls * 0.03; // ~$0.03 per file (larger prompt)
+    // Time: ~3s per Stage 1 call + ~8s per Stage 2 call (larger response)
+    const estimatedTimeSeconds = (stage1Calls * 3) + (estimatedStage2Calls * 8);
+    return {
+        totalFiles: fileCount,
+        stage1Calls,
+        estimatedFlaggedFiles: estimatedFlagged,
+        estimatedStage2Calls,
+        estimatedCostUsd: Math.round((stage1Cost + stage2Cost) * 100) / 100,
+        estimatedTimeMinutes: Math.round(estimatedTimeSeconds / 60 * 10) / 10,
+    };
+}
+/**
+ * Format a cost estimate for console display.
+ */
+function formatCostEstimate(estimate) {
+    const lines = [];
+    lines.push('Cost Estimate:');
+    lines.push(`  Files to analyze:       ${estimate.totalFiles}`);
+    lines.push(`  Stage 1 triage calls:   ${estimate.stage1Calls}`);
+    lines.push(`  Est. flagged files:     ~${estimate.estimatedFlaggedFiles} (~7.5%)`);
+    lines.push(`  Est. Stage 2 calls:     ~${estimate.estimatedStage2Calls} (1 per flagged file)`);
+    lines.push(`  Est. API cost:          ~$${estimate.estimatedCostUsd.toFixed(2)}`);
+    lines.push(`  Est. time:              ~${estimate.estimatedTimeMinutes} min`);
+    return lines.join('\n');
+}
+/**
+ * Discover files to analyze in bulk mode.
+ * Uses both SOURCE and TARGET file lists, applies exclusions.
+ */
+function discoverBulkFiles(sourceRepoPath, targetRepoPath, docsFolder, exclude) {
+    const sourceFiles = (0, status_1.discoverMarkdownFiles)(sourceRepoPath, docsFolder);
+    const targetFiles = (0, status_1.discoverMarkdownFiles)(targetRepoPath, docsFolder);
+    let allFiles = (0, status_1.resolveFilePairs)(sourceFiles, targetFiles);
+    allFiles = (0, status_1.applyExcludes)(allFiles, exclude);
+    return allFiles;
+}
+/**
+ * Execute bulk backward analysis across all files.
+ *
+ * Reports are written incrementally to a timestamped folder.
+ * Supports --resume to skip already-completed files.
+ *
+ * @param options - Backward command options (file should be undefined for bulk)
+ * @param logger - Logger for console output
+ * @param exclude - Exclude patterns
+ * @param resume - Whether to resume from a previous run
+ * @returns BulkBackwardReport
+ */
+async function runBackwardBulk(options, logger = defaultLogger, exclude = [], resume = false) {
+    const { source, target, docsFolder, language } = options;
+    // Build output directory
+    const outputDir = resume
+        ? resolveResumeDir(options.output)
+        : buildBulkOutputDir(options.output);
+    // Fresh start: wipe the folder if not resuming
+    if (!resume && fs.existsSync(outputDir)) {
+        fs.rmSync(outputDir, { recursive: true, force: true });
+    }
     if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
     }
-    const basename = path.basename(report.file, '.md');
-    if (options.json) {
-        const jsonPath = path.join(outputDir, `${basename}-backward.json`);
-        fs.writeFileSync(jsonPath, (0, report_generator_1.generateJsonReport)(report), 'utf-8');
-        logger.info(`  Report written: ${jsonPath}`);
+    // Discover files
+    const allFiles = discoverBulkFiles(source, target, docsFolder, exclude);
+    logger.info(`Found ${allFiles.length} files to analyze.`);
+    if (allFiles.length === 0) {
+        logger.warn('No files found. Check --source, --target, and --docs-folder paths.');
+        return buildEmptyBulkReport(source, target, language, options.model);
+    }
+    // Cost estimate
+    if (options.estimate) {
+        const estimate = estimateBulkCost(allFiles.length);
+        logger.info('');
+        logger.info(formatCostEstimate(estimate));
+        return buildEmptyBulkReport(source, target, language, options.model);
+    }
+    // Check for resume
+    let progress;
+    const existingProgress = resume ? readProgress(outputDir) : null;
+    if (existingProgress) {
+        const doneSet = new Set([
+            ...existingProgress.completedFiles,
+            ...existingProgress.erroredFiles.map(e => e.file),
+        ]);
+        const remaining = allFiles.filter(f => !doneSet.has(f));
+        logger.info(`Resuming: ${existingProgress.completedFiles.length} already done, ${remaining.length} remaining.`);
+        progress = existingProgress;
     }
     else {
-        const mdPath = path.join(outputDir, `${basename}-backward.md`);
-        fs.writeFileSync(mdPath, (0, report_generator_1.generateMarkdownReport)(report), 'utf-8');
-        logger.info(`  Report written: ${mdPath}`);
+        progress = {
+            startedAt: new Date().toISOString(),
+            lastUpdated: new Date().toISOString(),
+            totalFiles: allFiles.length,
+            completedFiles: [],
+            erroredFiles: [],
+        };
     }
+    const doneSet = new Set([
+        ...progress.completedFiles,
+        ...progress.erroredFiles.map(e => e.file),
+    ]);
+    // Process files with concurrency
+    const fileReports = [];
+    const CONCURRENCY = 5;
+    // Load any already-written reports for the aggregate (always from JSON sidecar)
+    for (const doneFile of progress.completedFiles) {
+        const jsonPath = resolveReportPath(outputDir, doneFile, true);
+        if (fs.existsSync(jsonPath)) {
+            try {
+                const report = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+                fileReports.push(report);
+            }
+            catch {
+                // Skip corrupted reports
+            }
+        }
+    }
+    const filesToProcess = allFiles.filter(f => !doneSet.has(f));
+    /**
+     * Process a single file in the bulk pipeline.
+     * Uses a BufferedLogger so parallel output doesn't interleave.
+     * Returns { file, report? } so the caller can track progress.
+     */
+    async function processOneFile(file, logPath) {
+        const globalIdx = allFiles.indexOf(file) + 1;
+        const buffered = new BufferedLogger();
+        buffered.info(`\n[${globalIdx}/${allFiles.length}] ${file}`);
+        try {
+            const fileOptions = {
+                ...options,
+                file,
+                output: outputDir,
+            };
+            const report = await runBackwardSingleFile(fileOptions, buffered);
+            // Always write a JSON sidecar for resume reliability (in .resync/ subfolder)
+            if (!options.json) {
+                const jsonSidecarPath = resolveReportPath(outputDir, file, true);
+                const resyncDir = path.dirname(jsonSidecarPath);
+                if (!fs.existsSync(resyncDir))
+                    fs.mkdirSync(resyncDir, { recursive: true });
+                fs.writeFileSync(jsonSidecarPath, (0, report_generator_1.generateJsonReport)(report), 'utf-8');
+            }
+            // Write detailed output to log file
+            buffered.flushToFile(logPath);
+            return { file, report };
+        }
+        catch (error) {
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            buffered.error(`  Failed: ${errorMsg}`);
+            buffered.flushToFile(logPath);
+            return { file, error: errorMsg };
+        }
+    }
+    // Set up log file for detailed output
+    const resyncDir = path.join(outputDir, '.resync');
+    if (!fs.existsSync(resyncDir))
+        fs.mkdirSync(resyncDir, { recursive: true });
+    const logPath = path.join(resyncDir, '_log.txt');
+    fs.writeFileSync(logPath, `Backward analysis started: ${new Date().toISOString()}\n`, 'utf-8');
+    // Track running stats for progress bar
+    let completedCount = progress.completedFiles.length;
+    let inSyncCount = 0;
+    let suggestionsCount = 0;
+    let errorsCount = progress.erroredFiles.length;
+    // Set up progress bar (only for interactive TTY, skip in tests/piped output)
+    const isTTY = process.stderr.isTTY && logger === defaultLogger;
+    const bar = isTTY
+        ? new cli_progress_1.default.SingleBar({
+            format: '  {bar} {value}/{total} | ✓ {inSync} sync  📝 {suggestions} suggestions  ❌ {errors} errors | {currentFile}',
+            barCompleteChar: '█',
+            barIncompleteChar: '░',
+            hideCursor: true,
+            clearOnComplete: true,
+            stream: process.stderr,
+        })
+        : null;
+    logger.info(`Backward analysis: ${filesToProcess.length} files (${CONCURRENCY} parallel)`);
+    bar?.start(allFiles.length, completedCount, {
+        inSync: inSyncCount,
+        suggestions: suggestionsCount,
+        errors: errorsCount,
+        currentFile: filesToProcess[0] || '',
+    });
+    // Process in batches of CONCURRENCY
+    for (let i = 0; i < filesToProcess.length; i += CONCURRENCY) {
+        const batch = filesToProcess.slice(i, i + CONCURRENCY);
+        // Show first file in batch as current
+        bar?.update({ currentFile: batch[0] });
+        const results = await Promise.all(batch.map(f => processOneFile(f, logPath)));
+        for (const result of results) {
+            completedCount++;
+            if (result.report) {
+                fileReports.push(result.report);
+                progress.completedFiles.push(result.file);
+                // Update stats
+                if (result.report.triageResult.verdict === 'IN_SYNC') {
+                    inSyncCount++;
+                }
+                const backports = result.report.suggestions.filter(s => s.recommendation === 'BACKPORT').length;
+                suggestionsCount += backports;
+            }
+            else if (result.error) {
+                progress.erroredFiles.push({ file: result.file, error: result.error });
+                errorsCount++;
+            }
+            bar?.update(completedCount, {
+                inSync: inSyncCount,
+                suggestions: suggestionsCount,
+                errors: errorsCount,
+                currentFile: result.file,
+            });
+        }
+        // Update progress checkpoint after each batch
+        progress.lastUpdated = new Date().toISOString();
+        writeProgress(outputDir, progress);
+    }
+    bar?.stop();
+    // Build aggregate report
+    const bulkReport = buildBulkReport(source, target, language, fileReports, options.model);
+    // Write aggregate summary
+    if (options.json) {
+        const summaryPath = path.join(outputDir, '_summary.json');
+        fs.writeFileSync(summaryPath, (0, report_generator_1.generateBulkJsonReport)(bulkReport), 'utf-8');
+        logger.info(`\nAggregate report: ${summaryPath}`);
+    }
+    else {
+        const summaryPath = path.join(outputDir, '_summary.md');
+        fs.writeFileSync(summaryPath, (0, report_generator_1.generateBulkMarkdownReport)(bulkReport), 'utf-8');
+        logger.info(`\nAggregate report: ${summaryPath}`);
+    }
+    // Print console summary
+    const s = bulkReport;
+    logger.info('');
+    logger.info(`Done: ${s.filesAnalyzed} files analyzed.`);
+    logger.info(`  In sync: ${s.filesInSync}`);
+    logger.info(`  Suggestions: ${s.totalSuggestions} across ${s.filesFlagged} file(s)`);
+    if (s.filesSkipped > 0) {
+        logger.info(`  Skipped (too large): ${s.filesSkipped}`);
+    }
+    if (progress.erroredFiles.length > 0) {
+        logger.info(`  Errors: ${progress.erroredFiles.length}`);
+    }
+    logger.info(`\nReports: ${outputDir}`);
+    logger.info(`Log: ${logPath}`);
+    return bulkReport;
+}
+/**
+ * Build a BulkBackwardReport from individual file reports.
+ */
+function buildBulkReport(sourceRepo, targetRepo, language, fileReports, model) {
+    const allSuggestions = fileReports.flatMap(r => r.suggestions.filter(s => s.recommendation === 'BACKPORT'));
+    return {
+        timestamp: new Date().toISOString(),
+        model,
+        sourceRepo,
+        targetRepo,
+        language,
+        filesAnalyzed: fileReports.length,
+        filesInSync: fileReports.filter(r => r.triageResult.verdict === 'IN_SYNC').length,
+        filesFlagged: fileReports.filter(r => r.suggestions.some(s => s.recommendation === 'BACKPORT')).length,
+        filesSkipped: fileReports.filter(r => r.triageResult.verdict === 'SKIPPED_TOO_LARGE').length,
+        totalSuggestions: allSuggestions.length,
+        highConfidence: allSuggestions.filter(s => s.confidence >= 0.85).length,
+        mediumConfidence: allSuggestions.filter(s => s.confidence >= 0.6 && s.confidence < 0.85).length,
+        lowConfidence: allSuggestions.filter(s => s.confidence < 0.6).length,
+        fileReports,
+    };
+}
+function buildEmptyBulkReport(sourceRepo, targetRepo, language, model) {
+    return buildBulkReport(sourceRepo, targetRepo, language, [], model);
+}
+function resolveReportPath(outputDir, file, json) {
+    const basename = path.basename(file, '.md');
+    const ext = json ? '.json' : '.md';
+    // JSON sidecars live in .resync/ subfolder; markdown reports stay in outputDir
+    const dir = json ? path.join(outputDir, '.resync') : outputDir;
+    return path.join(dir, `${basename}${ext}`);
+}
+/**
+ * Find the correct output directory for --resume.
+ *
+ * Checks (in order):
+ * 1. If options.output itself contains .resync/_progress.json → use it directly
+ * 2. If options.output contains backward-* subdirs → use most recent with .resync/_progress.json
+ * 3. Otherwise → error (nothing to resume from)
+ */
+function resolveResumeDir(outputPath) {
+    // Case 1: Direct path to a run directory
+    if (fs.existsSync(path.join(outputPath, '.resync', '_progress.json'))) {
+        return outputPath;
+    }
+    // Case 2: Base output directory (e.g., ./reports) — find most recent run
+    if (fs.existsSync(outputPath)) {
+        const candidates = fs.readdirSync(outputPath)
+            .filter(d => d.startsWith('backward-'))
+            .filter(d => fs.existsSync(path.join(outputPath, d, '.resync', '_progress.json')))
+            .sort()
+            .reverse(); // Most recent first (lexicographic sort on timestamps)
+        if (candidates.length > 0) {
+            return path.join(outputPath, candidates[0]);
+        }
+    }
+    throw new Error(`No resumable run found in ${outputPath}. ` +
+        'Run without --resume first, or point --output to a specific backward-* folder.');
 }
 //# sourceMappingURL=backward.js.map

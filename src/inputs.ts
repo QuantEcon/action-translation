@@ -7,11 +7,14 @@ import { validateLanguageCode, getSupportedLanguages } from './language-config';
  * These are the model patterns that are valid for the Anthropic API
  */
 const VALID_MODEL_PATTERNS = [
-  /^claude-3-5-sonnet-\d{8}$/,      // claude-3-5-sonnet-20241022
+  /^claude-sonnet-4-6$/,             // claude-sonnet-4-6 (latest Sonnet)
+  /^claude-opus-4-6$/,               // claude-opus-4-6 (latest Opus)
   /^claude-sonnet-4-5-\d{8}$/,      // claude-sonnet-4-5-20250929
+  /^claude-opus-4-5-\d{8}$/,        // claude-opus-4-5-20251101
+  /^claude-haiku-4-5-\d{8}$/,       // claude-haiku-4-5-20251001
+  /^claude-3-5-sonnet-\d{8}$/,      // claude-3-5-sonnet-20241022
   /^claude-3-5-haiku-\d{8}$/,       // claude-3-5-haiku-20241022
   /^claude-3-opus-\d{8}$/,          // claude-3-opus-20240229
-  /^claude-opus-4-5-\d{8}$/,        // claude-opus-4-5-20251101
   /^claude-3-sonnet-\d{8}$/,        // claude-3-sonnet-20240229
   /^claude-3-haiku-\d{8}$/,         // claude-3-haiku-20240307
 ];
@@ -24,7 +27,7 @@ function validateClaudeModel(model: string): void {
   if (!isValid) {
     core.warning(
       `Unrecognized Claude model: '${model}'. ` +
-      `Expected patterns like 'claude-sonnet-4-5-YYYYMMDD' or 'claude-3-5-sonnet-YYYYMMDD'. ` +
+      `Expected patterns like 'claude-sonnet-4-6' or 'claude-sonnet-4-5-YYYYMMDD'. ` +
       `The model will still be used, but verify it's correct.`
     );
   }
@@ -57,7 +60,7 @@ export function getInputs(): ActionInputs {
   const glossaryPath = core.getInput('glossary-path', { required: false }) || '';  // Empty by default - uses built-in
   const tocFile = core.getInput('toc-file', { required: false }) || '_toc.yml';
   const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
-  const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4-5-20250929';
+  const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4-6';
   const githubToken = core.getInput('github-token', { required: true });
   
   const prLabelsRaw = core.getInput('pr-labels', { required: false }) || 'action-translation,automated';
@@ -123,7 +126,7 @@ export function getReviewInputs(): ReviewInputs {
   const sourceLanguage = core.getInput('source-language', { required: false }) || 'en';
   const glossaryPath = core.getInput('glossary-path', { required: false }) || '';
   const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
-  const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4-5-20250929';
+  const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4-6';
   const githubToken = core.getInput('github-token', { required: true });
 
   // Validate source repo format

@@ -69,7 +69,7 @@ describe('backward command', () => {
         docsFolder: '',
         language: 'zh-cn',
         output: path.join(tmpDir, 'reports'),
-        model: 'claude-sonnet-4-5-20250929',
+        model: 'claude-sonnet-4-6',
         json: false,
         test: true,
         minConfidence: 0.6,
@@ -108,11 +108,15 @@ describe('backward command', () => {
 
       await runBackwardSingleFile(options, silentLogger);
 
-      const reportPath = path.join(options.output, 'test-lecture-backward.md');
+      const reportPath = path.join(options.output, 'test-lecture.md');
       expect(fs.existsSync(reportPath)).toBe(true);
 
       const content = fs.readFileSync(reportPath, 'utf-8');
       expect(content).toContain('# Backward Analysis');
+
+      // JSON sidecar should be in .resync/ subfolder
+      const sidecar = path.join(options.output, '.resync', 'test-lecture.json');
+      expect(fs.existsSync(sidecar)).toBe(true);
     });
 
     it('should write JSON report when --json flag is set', async () => {
@@ -121,10 +125,39 @@ describe('backward command', () => {
 
       await runBackwardSingleFile(options, silentLogger);
 
-      const reportPath = path.join(options.output, 'test-lecture-backward.json');
+      const reportPath = path.join(options.output, 'test-lecture.json');
       expect(fs.existsSync(reportPath)).toBe(true);
 
       const content = fs.readFileSync(reportPath, 'utf-8');
+      const parsed = JSON.parse(content);
+      expect(parsed.file).toBe('test-lecture.md');
+    });
+
+    it('should write directly to .md file path in single-file mode', async () => {
+      const { options } = setupFixtureTest('bug-fix-in-target');
+      const filePath = path.join(tmpDir, 'custom-report.md');
+      options.output = filePath;
+
+      await runBackwardSingleFile(options, silentLogger);
+
+      expect(fs.existsSync(filePath)).toBe(true);
+      const content = fs.readFileSync(filePath, 'utf-8');
+      expect(content).toContain('# Backward Analysis');
+
+      // JSON sidecar should be in .resync/ subfolder
+      const sidecar = path.join(tmpDir, '.resync', 'custom-report.json');
+      expect(fs.existsSync(sidecar)).toBe(true);
+    });
+
+    it('should write directly to .json file path in single-file mode', async () => {
+      const { options } = setupFixtureTest('bug-fix-in-target');
+      const filePath = path.join(tmpDir, 'custom-report.json');
+      options.output = filePath;
+
+      await runBackwardSingleFile(options, silentLogger);
+
+      expect(fs.existsSync(filePath)).toBe(true);
+      const content = fs.readFileSync(filePath, 'utf-8');
       const parsed = JSON.parse(content);
       expect(parsed.file).toBe('test-lecture.md');
     });

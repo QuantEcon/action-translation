@@ -48,7 +48,7 @@ const core = __importStar(require("@actions/core"));
 const github = __importStar(require("@actions/github"));
 const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
 // Default model for review (can be overridden)
-const DEFAULT_REVIEW_MODEL = 'claude-sonnet-4-5-20250929';
+const DEFAULT_REVIEW_MODEL = 'claude-sonnet-4-6';
 /**
  * Extract preamble (content before first heading) from a markdown document
  */

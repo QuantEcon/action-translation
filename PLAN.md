@@ -1,10 +1,10 @@
 # PLAN: Development Roadmap
 
 **Created**: 2026-02-16  
-**Last Updated**: 2026-03-03  
+**Last Updated**: 2026-03-04  
 **Sources**: 2026-02-16-REVIEW.md, docs/DESIGN-RESYNC.md  
 **Current Version**: v0.8.0  
-**Test Status**: 409 tests passing (21 test suites)
+**Test Status**: 472 tests passing (23 test suites)
 
 ---
 
@@ -36,12 +36,23 @@ Stage 1: Document-Level Triage (every file, 1 LLM call each)
   NO  → skip file (vast majority)
   YES → brief notes on what looks different → proceed to Stage 2
 
-Stage 2: Section-Level Detail (flagged files only, 1 LLM call per section)
-  Matched section pairs → "What specifically changed? Suggest improvement."
+Stage 2: Whole-File Evaluation (flagged files only, 1 LLM call per file)
+  All matched section pairs in one prompt → per-section suggestions
   Per-section suggestions with category, confidence, reasoning
 ```
 
-**Why two stages**: Most translation changes improve the *translation*, not the *source content*. Backport candidates are rare. Stage 1 filters at ~$0.01/file, avoiding ~$0.10-0.50/file of unnecessary section analysis. For a 51-file repo with ~3 actual candidates: ~$0.60 total vs ~$5.00 with section-first approach.
+**Why two stages**: Most translation changes improve the *translation*, not the *source content*. Backport candidates are rare. Stage 1 filters at ~$0.01/file, avoiding unnecessary Stage 2 analysis.
+
+**Why whole-file Stage 2**: Originally Stage 2 made 1 LLM call per section (N calls per file). Refactored to 1 call per file with all sections in one prompt. Real-world comparison on 51-file repo:
+
+| Metric | Section-by-Section | Whole-File |
+|--------|-------------------|------------|
+| Stage 2 API calls | 182 | 32 |
+| High confidence findings | 6 | 7 |
+| Medium confidence (noise) | 25 | 17 |
+| Total suggestions | 31 | 24 |
+
+The whole-file approach is strictly better: ~6x fewer API calls, better signal-to-noise, and cross-section context helps the LLM make more accurate assessments.
 
 The plan is sequenced so that foundational improvements (especially `index.ts` refactoring) unblock the resync tool work.
 
@@ -230,54 +241,96 @@ Running against `solow.md` revealed a critical false positive: the LLM suggested
 
 ---
 
-## Phase 2: Resync CLI — Bulk Analysis & Status (2-3 days)
+## Phase 2: Resync CLI — Bulk Analysis & Status (2-3 days) ✅ COMPLETE
 
-**Goal**: Scale backward to full repository + quick diagnostic command
+**Goal**: Scale backward to full repository + quick diagnostic command  
+**Status**: Status command + bulk backward implemented, 45 new tests (456 total)  
+**Validated**: Full LLM bulk run on 51-file repo (49 analyzed, 20 suggestions found, 5 high-confidence BUG_FIX)
 
-### 2.1 Status Command (`src/cli/commands/status.ts`)
+### 2.1 Status Command (`src/cli/commands/status.ts`) ✅
 
-No LLM calls — fast and free diagnostic:
+No LLM calls — fast and free diagnostic. Output goes to the **CLI console** (like `git status`), not report files.
 
-- [ ] Check heading-map presence in each TARGET file
-- [ ] Detect structural differences (section count mismatch)
-- [ ] Compare file modification dates (git metadata)
-- [ ] Report per-file sync status:
-  - `ALIGNED` — structure matches, heading-map present
-  - `DRIFT` — structural differences detected
+- [x] Check heading-map presence in each TARGET file
+- [x] Detect structural differences (section count mismatch)
+- [x] Compare file modification dates (git metadata)
+- [x] Report per-file sync status:
+  - `ALIGNED` — structure matches, heading-map present, no newer SOURCE commits
+  - `SOURCE_AHEAD` — SOURCE has more sections than TARGET (sections added upstream)
+  - `TARGET_AHEAD` — TARGET has more sections than SOURCE (unexpected divergence)
+  - `OUTDATED` — SOURCE has newer commits than TARGET (needs forward sync)
   - `MISSING_HEADINGMAP` — no heading-map in TARGET
   - `SOURCE_ONLY` — file missing in TARGET
   - `TARGET_ONLY` — file missing in SOURCE
-- [ ] Output summary table
-- [ ] Support `--json` flag
-- [ ] Unit tests
+- [x] Print summary table to stdout (compact format with `↳` detail lines)
+- [x] Support `--file` flag (single file diagnostic)
+- [x] Support `--json` flag (prints JSON to stdout)
+- [x] Unit tests (21 tests)
 
-### 2.2 Bulk Backward Processing
+### 2.2 Bulk Backward Processing ✅
 
-- [ ] File discovery (find all `.md` files in docs folder)
-- [ ] Progress indicator (console output: `[12/51] triaging cobweb.md...`)
-- [ ] Two-stage bulk flow:
+Bulk mode writes reports into a **date-stamped folder** — the folder *is* the report:
+```
+reports/backward-2026-03-04/
+├── _summary.md           # Aggregate summary
+├── _summary.json         # (with --json)
+├── .resync/              # Hidden subfolder for machine-readable data
+│   ├── _progress.json    # Checkpoint manifest
+│   ├── _log.txt          # Detailed per-file processing log
+│   ├── cobweb.json       # Per-file JSON sidecar
+│   └── solow.json
+├── cobweb.md             # Per-file report
+├── solow.md
+└── ...
+```
+
+- [x] File discovery (find all `.md` files in docs folder)
+- [x] File filtering:
+  - `--exclude <glob>` option (e.g., `--exclude README.md`)
+  - Respect `_toc.yml` if present to discover the actual lecture list
+- [x] Progress bar (`cli-progress` library, TTY-only):
+  - Single updating line: `█████░░░ 24/51 | ✓ 8 sync 📝 5 suggestions ❌ 0 errors | current_file`
+  - Clears on completion, replaced by final summary
+  - Detailed per-file output goes to `.resync/_log.txt` log file
+- [x] Two-stage bulk flow:
   - Stage 1 triage on all files (fast, 1 call each)
   - Stage 2 section analysis only on flagged files
-  - Progress shows both stages: `Stage 1: [12/51]... Stage 2: [2/3]...`
-- [ ] Sequential processing (respect API rate limits)
-- [ ] Aggregate results across files
-- [ ] Cost estimation (`--estimate` flag)
+- [x] Parallel processing (5 concurrent files via `Promise.all` batching)
+- [x] Buffered logger (`BufferedLogger` class) — collects per-file output, flushes to log file atomically to prevent interleaving
+- [x] Fresh start on re-run — wipes output folder unless `--resume` flag is set
+- [x] Incremental checkpointing:
+  - Write each per-file report to disk as it completes
+  - Maintain `.resync/_progress.json` tracking which files are done
+  - Support `--resume` to skip already-completed files in the output folder
+- [x] Per-file reports (individual Markdown/JSON per analyzed file)
+- [x] Aggregate summary report across all files
+- [x] Cost estimation (`--estimate` flag)
   - Count files for Stage 1 triage
   - Estimate how many files will be flagged (~5-10% based on experience)
   - Estimate Stage 2 section calls for flagged files
   - Calculate estimated total API cost
   - Calculate estimated time
   - Prompt user to proceed (y/N)
-- [ ] Summary report across all files
+- [x] Robust LLM response parsing (3-strategy approach: code fence → greedy regex → keyword fallback)
+- [x] Default model upgrade to `claude-sonnet-4-6`
 
-### 2.3 Output Formats
+### 2.3 Output Formats ✅
 
-- [ ] `--json` flag for backward command
-- [ ] `--json` flag for status command
-- [ ] Define stable JSON schema
-- [ ] Document JSON output format
+- [x] Wire `--json` into bulk backward (per-file + aggregate)
+- [x] Wire `--json` into status command (stdout)
 
-**Phase 2 Deliverable**: `npx resync status` + full-repo `npx resync backward`
+> **Note**: Stable JSON schema definition and documentation deferred to Phase 4.
+
+**Phase 2 Deliverable**: `npx resync status` (console) + full-repo `npx resync backward` (report folder) ✅
+
+### Key Learnings from Phase 2 Real-World Testing
+
+- **Parallel output interleaving**: Running 5 files concurrently with direct console output was unreadable. Solved with `BufferedLogger` that collects per-file output and flushes atomically to a log file.
+- **Progress bar UX**: A single animated progress line (stderr, TTY-only) with counters (sync/suggestions/errors) is far better than scrolling file-by-file output. The log file preserves all detail for debugging.
+- **LLM response variability**: The same file can produce 0-2 suggestions across runs. Borderline confidence scores (~0.72) fluctuate. This is expected LLM behavior, not a bug.
+- **JSON parsing brittleness**: Claude wraps JSON in code fences, omits them, or returns partial JSON unpredictably. The 3-strategy parsing approach (code fence → greedy regex → keyword fallback) handles all observed formats.
+- **Cost validation**: Full 51-file run cost ~$0.85, completed in ~4 minutes with 5-way parallelism. Stage 1 flagged ~67% of files (higher than estimated 5-10%), but Stage 2 filtered effectively — only 20 actionable suggestions from 49 files.
+- **High-value findings**: 5 high-confidence BUG_FIX suggestions (confidence 0.85-0.97) represent genuine improvements made in the Chinese translation that should be backported to the English source.
 
 ---
 
@@ -632,6 +685,44 @@ npm run test:real-repos
 
 ---
 
+## Phase 7: Whole-File Translation Architecture (Future — Investigation)
+
+**Goal**: Evaluate whether the whole-file LLM evaluation pattern from backward analysis should be applied to the core forward translation pipeline
+
+**Background**: The backward command's Stage 2 was originally designed with 1 LLM call per section (matching the forward sync architecture in `translator.ts`). Refactoring to 1 LLM call per file with all sections in a single prompt produced strictly better results:
+
+| Metric | Per-Section | Per-File |
+|--------|------------|----------|
+| API calls (51-file repo) | 182 | 32 |
+| High-confidence findings | 6 | 7 |
+| Noise (medium-confidence) | 25 | 17 |
+
+This raises the question: should `translator.ts` (forward sync) also move to whole-file translation instead of section-by-section?
+
+### Considerations
+
+**Arguments for whole-file forward translation**:
+- Cross-section context (terminology consistency, narrative flow)
+- Fewer API calls (cost and latency reduction)
+- The LLM can see how terminology is used across the document
+
+**Arguments for keeping section-by-section forward translation**:
+- Section-level caching — only re-translate changed sections (UPDATE mode). Whole-file would re-translate everything on any change.
+- Granular error recovery — if one section fails, others succeed. Whole-file is all-or-nothing.
+- Token limits — large documents (30K+ tokens) may not fit source + target + instructions in one call.
+- Current architecture is battle-tested in production (GitHub Action sync mode).
+
+### Investigation Tasks
+
+- [ ] Measure current forward sync API call count for typical repos
+- [ ] Estimate cost/latency savings from whole-file approach
+- [ ] Design hybrid approach: whole-file for initial translation, section-level for UPDATE mode
+- [ ] Test whole-file translation quality vs section-by-section on real lectures
+- [ ] Determine if context window supports full document + translation + instructions
+- [ ] Prototype and compare translation quality
+
+---
+
 ## Success Metrics
 
 ### Quality
@@ -650,9 +741,9 @@ npm run test:real-repos
 | Metric | Target |
 |--------|--------|
 | Stage 1 triage per file | <5 seconds |
-| Stage 2 analysis per section | <10 seconds |
-| Full backward (51 files) | <5 minutes |
-| API cost — backward (51 files) | ~$0.60 (triage) + ~$0.30 (detail on ~3 flagged) |
+| Stage 2 analysis per file | <15 seconds |
+| Full backward (51 files, 5 parallel) | ~4 minutes |
+| API cost — backward (51 files) | ~$0.85 total (real measurement) |
 | API cost — backward-sync per file | ~$0.10 |
 | API cost — forward per file | ~$0.10 |
 | Status check | <5 seconds (no LLM) |
@@ -661,7 +752,7 @@ npm run test:real-repos
 
 | Metric | Current | Target |
 |--------|---------|--------|
-| Test count | 409 | 400+ |
+| Test count | 472 | 400+ |
 | `index.ts` lines | ~447 | ~447 (stable) |
 | Deprecated methods | 0 | 0 |
 | Dead tool directories | 2 | 0 |
@@ -674,31 +765,34 @@ npm run test:real-repos
 |-------|----------|--------------|-----------------|
 | **Phase 0**: Foundation | 3-4 days | None | `index.ts` refactored, retry logic |
 | **Phase 1**: Single-file backward | 3-4 days | Phase 0 ✅ | `npx resync backward -f file.md` (two-stage) |
-| **Phase 2**: Bulk + status | 2-3 days | Phase 1 | `npx resync status` + bulk backward |
+| **Phase 2**: Bulk + status | 2-3 days | Phase 1 ✅ | `npx resync status` + bulk backward |
 | **Phase 3**: Backward-sync + forward | 2-3 days | Phase 1 | `npx resync backward-sync` + `npx resync forward` |
 | **Phase 4**: Refinement | 2-3 days | Phase 2, 3 | Production-ready CLI |
 | **Phase 5**: Cleanup | 1 day | Any time | Clean repo |
 | **Phase 6**: Automation | 2-3 days | Phase 4 | Scheduled GitHub Actions |
+| **Phase 7**: Whole-file translation | TBD | Phase 4 | Evaluate whole-file approach for forward sync |
 
-**Total**: 13-20 days (Phase 0-4), +3-4 days (Phase 5-6)
+**Total**: 13-20 days (Phase 0-4), +3-4 days (Phase 5-6), +TBD (Phase 7)
 
 ---
 
 ## Open Questions
 
-1. **Stage 1 token limits**: Very large documents (30K+ tokens per side) may exceed context window for single-call triage. Fallback: skip Stage 1 and go direct to Stage 2 for oversized files. — Validate in Phase 1
-2. **Backport confidence threshold**: Default 0.6 — validate with real data in Phase 1
-3. **Multi-section changes**: Group in one suggestion or separate? — Decide in Phase 1
-4. **TARGET-only files**: Flag for addition to SOURCE, or just report? — Decide in Phase 2
+1. ~~**Stage 1 token limits**: Very large documents (30K+ tokens per side) may exceed context window for single-call triage.~~ **Resolved**: `SKIPPED_TOO_LARGE` verdict handles this. Only 2 files hit the limit in real testing (README.md, tax_smooth.md).
+2. ~~**Backport confidence threshold**: Default 0.6~~ **Validated**: 0.6 works well. Real BUG_FIX findings came in at 0.85-0.97. Lower-confidence suggestions (0.6-0.7) are borderline but worth flagging.
+3. ~~**Multi-section changes**: Group in one suggestion or separate?~~ **Resolved**: Separate per-section suggestions. Each gets its own category, confidence, and reasoning.
+4. ~~**TARGET-only files**: Flag for addition to SOURCE, or just report?~~ **Resolved**: `status` reports only (diagnostic tool). Action on `TARGET_ONLY` / `SOURCE_ONLY` belongs to Phase 3 commands.
 5. **Run frequency**: Monthly default, option for more frequent? — Decide in Phase 4
 6. **backward-sync PR format**: Should `backward-sync` create PRs directly, or write files for manual PR creation? — Decide in Phase 3
 7. **Report-driven backward-sync**: The `--from-report` flag reads a backward JSON report and syncs only marked suggestions. Exact UX for "marking accepted" TBD. — Decide in Phase 3
+8. **Stage 1 precision**: Flagging rate was ~67% vs estimated 5-10%. High recall is good, but Stage 1 could be tuned to reduce false positives and save Stage 2 costs. — Address in Phase 4 prompt tuning
+9. **Whole-file vs section-by-section translation**: Backward Stage 2 showed ~6x fewer API calls and better quality with whole-file evaluation. Should forward sync (`translator.ts`) adopt the same pattern? Trade-off: better context vs loss of section-level caching in UPDATE mode. — Investigate in Phase 7
 
 ---
 
 ## Next Steps
 
-Phase 0 and Phase 1 are complete. **Start Phase 2** with bulk backward processing (2.2) and status command (2.1). The timeline feature from Phase 1 should carry forward into bulk mode.
+Phase 0, Phase 1, and Phase 2 are complete. **Start Phase 3** with backward-sync and forward commands.
 
 ### Lessons from Phase 1 Real-World Testing
 
@@ -706,6 +800,16 @@ Phase 0 and Phase 1 are complete. **Start Phase 2** with bulk backward processin
 - **Two-stage design validated**: Stage 1 correctly flags differences; Stage 2 correctly filters non-actionable ones. The cost savings are real (~$0.01 triage vs ~$0.10-0.50 per-section analysis).
 - **Real repo names**: The zh-cn repo for `lecture-python-intro` is `lecture-intro.zh-cn` (not `lecture-python-intro.zh-cn`).
 
+### Lessons from Phase 2 Bulk Testing
+
+- **Whole-file evaluation wins**: Refactoring Stage 2 from per-section (182 calls) to per-file (32 calls) produced better results — more high-confidence findings, less noise, and ~6x fewer API calls. Cross-section context helps the LLM avoid false positives.
+- **5-way parallelism** is the sweet spot — fast enough to complete 51 files in ~4 minutes, without overwhelming the API.
+- **Buffered logging** is essential for parallel work — interleaved output from concurrent files is unreadable.
+- **Progress bar** provides much better UX than scrolling output — users see status at a glance, details go to log file.
+- **Fresh start by default** (wipe output folder) is more intuitive than accumulating stale results. `--resume` is the opt-in for incremental runs.
+- **Date-only folder naming** (`backward-2026-03-04`) is cleaner than timestamped (`backward-2026-03-04_01-38-48`). Same-day re-runs overwrite, which matches the fresh-start default.
+- **Stage 1 flagging rate** was ~67% (33/49 files flagged), much higher than the estimated 5-10%. This suggests the Stage 1 prompt has high recall (good — false negatives are worse than false positives) but precision could be improved. Stage 2 effectively filters: only 20 suggestions survived from 33 flagged files.
+
 ---
 
-*Last updated: 2026-03-03*
+*Last updated: 2026-03-04*

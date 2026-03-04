@@ -46,7 +46,7 @@ npm run translate -- \
 | `--anthropic-api-key` | No* | - | Anthropic API key (not needed for `--dry-run`) |
 | `--github-token` | No* | - | GitHub PAT (optional for public repos in `--dry-run`) |
 | `--glossary-path` | No | Built-in | Custom glossary file |
-| `--model` | No | `claude-sonnet-4-5-20250929` | AI model for translation |
+| `--model` | No | `claude-sonnet-4-6` | AI model for translation |
 | `--batch-delay` | No | `1000` | Delay between lectures in ms |
 | `--resume-from` | No | - | Resume from specific lecture file |
 | `--dry-run` | No | - | Preview lectures without translating |

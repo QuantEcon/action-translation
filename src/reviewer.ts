@@ -18,7 +18,7 @@ import {
 } from './types';
 
 // Default model for review (can be overridden)
-const DEFAULT_REVIEW_MODEL = 'claude-sonnet-4-5-20250929';
+const DEFAULT_REVIEW_MODEL = 'claude-sonnet-4-6';
 
 /**
  * Extract preamble (content before first heading) from a markdown document

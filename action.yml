@@ -52,7 +52,7 @@ inputs:
   claude-model:
     description: 'Claude model to use for translation'
     required: false
-    default: 'claude-sonnet-4-5-20250929'
+    default: 'claude-sonnet-4-6'
   github-token:
     description: 'GitHub token for API access'
     required: true

@@ -8,6 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Resync CLI — Status Command** (`src/cli/commands/status.ts`): Fast, free diagnostic — no LLM calls
+  - Per-file sync status: `ALIGNED`, `OUTDATED`, `SOURCE_AHEAD`, `TARGET_AHEAD`, `MISSING_HEADINGMAP`, `SOURCE_ONLY`, `TARGET_ONLY`
+  - Console table output (`formatStatusTable`) — like `git status` for translations
+  - JSON output via `--json` flag (prints to stdout)
+  - File discovery across SOURCE and TARGET repos with `--exclude` filtering
+  - `OUTDATED` detection: flags files where SOURCE has newer commits than TARGET
+- **Resync CLI — Bulk Backward** (`src/cli/commands/backward.ts`): Full-repo backward analysis
+  - Processes all `.md` files in docs folder with two-stage pipeline
+  - Timestamped output folder: `reports/backward-YYYY-MM-DD/` — the folder *is* the report
+  - Per-file reports + aggregate `_summary.md` / `_summary.json`
+  - Incremental checkpointing via `_progress.json` — survives interrupted runs
+  - `--resume` flag to continue from checkpoint
+  - `--estimate` flag for pre-run cost estimation
+  - `--exclude` flag for file filtering (exact match or `*` wildcard suffix)
+  - Parallel processing with bounded concurrency (5 concurrent files)
+  - TTY progress bar with live file name + stage counts (falls back to simple logging in non-TTY/CI)
+  - Buffered logger (`BufferedLogger`) — per-file output flushed atomically to `.resync/_log.txt`
+- 56 new tests (409 → 472 total, 21 → 23 suites)
+  - `status.test.ts`: 21 tests (file discovery, per-file status, console output)
+  - `bulk-backward.test.ts`: 19 tests (checkpointing, cost estimation, parallel orchestration, progress bar)
+  - `backward-evaluator.test.ts`: 16 new tests (whole-file evaluation prompt, parsing, test mode)
 - **Resync CLI** (`src/cli/`): New CLI tool for backward analysis of translations
   - `resync backward` command — two-stage pipeline to identify translation improvements worth backporting to SOURCE
   - **Stage 1** (`document-comparator.ts`): Whole-document LLM triage, recall-biased, one call per file
