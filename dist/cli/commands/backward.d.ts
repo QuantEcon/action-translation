@@ -16,7 +16,7 @@
  * - Single-file: `npx resync backward -f file.md`
  * - Bulk: `npx resync backward` (all files in docs folder)
  *   - Writes reports to a timestamped folder
- *   - Incremental checkpointing via _progress.json
+ *   - Incremental checkpointing via .resync/_progress.json
  *   - Supports --resume to continue interrupted runs
  */
 import { BackwardReport, BackwardOptions, BulkBackwardReport } from '../types';
@@ -40,7 +40,7 @@ export declare function runBackwardSingleFile(options: BackwardOptions & {
 }, logger?: BackwardLogger): Promise<BackwardReport>;
 /**
  * Progress manifest for incremental checkpointing.
- * Written to _progress.json in the output folder after each file completes.
+ * Written to .resync/_progress.json in the output folder after each file completes.
  */
 export interface BulkProgress {
     startedAt: string;
@@ -54,11 +54,11 @@ export interface BulkProgress {
     }[];
 }
 /**
- * Read existing progress from _progress.json, or return null if not found.
+ * Read existing progress from .resync/_progress.json, or return null if not found.
  */
 export declare function readProgress(outputDir: string): BulkProgress | null;
 /**
- * Write progress to _progress.json.
+ * Write progress to .resync/_progress.json.
  */
 export declare function writeProgress(outputDir: string, progress: BulkProgress): void;
 /**

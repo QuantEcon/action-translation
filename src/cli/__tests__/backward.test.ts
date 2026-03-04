@@ -113,6 +113,10 @@ describe('backward command', () => {
 
       const content = fs.readFileSync(reportPath, 'utf-8');
       expect(content).toContain('# Backward Analysis');
+
+      // JSON sidecar should be in .resync/ subfolder
+      const sidecar = path.join(options.output, '.resync', 'test-lecture-backward.json');
+      expect(fs.existsSync(sidecar)).toBe(true);
     });
 
     it('should write JSON report when --json flag is set', async () => {
@@ -139,6 +143,10 @@ describe('backward command', () => {
       expect(fs.existsSync(filePath)).toBe(true);
       const content = fs.readFileSync(filePath, 'utf-8');
       expect(content).toContain('# Backward Analysis');
+
+      // JSON sidecar should be in .resync/ subfolder
+      const sidecar = path.join(tmpDir, '.resync', 'custom-report.json');
+      expect(fs.existsSync(sidecar)).toBe(true);
     });
 
     it('should write directly to .json file path in single-file mode', async () => {

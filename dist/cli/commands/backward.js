@@ -17,7 +17,7 @@
  * - Single-file: `npx resync backward -f file.md`
  * - Bulk: `npx resync backward` (all files in docs folder)
  *   - Writes reports to a timestamped folder
- *   - Incremental checkpointing via _progress.json
+ *   - Incremental checkpointing via .resync/_progress.json
  *   - Supports --resume to continue interrupted runs
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
@@ -259,9 +259,12 @@ async function writeReport(report, options, logger) {
             : (0, report_generator_1.generateMarkdownReport)(report);
         fs.writeFileSync(output, content, 'utf-8');
         logger.info(`  Report written: ${output}`);
-        // Always write a JSON sidecar for resume reliability
+        // Always write a JSON sidecar for resume reliability (in .resync/ subfolder)
         if (!output.endsWith('.json')) {
-            const jsonSidecar = output.replace(/\.md$/i, '.json');
+            const resyncDir = path.join(path.dirname(output), '.resync');
+            if (!fs.existsSync(resyncDir))
+                fs.mkdirSync(resyncDir, { recursive: true });
+            const jsonSidecar = path.join(resyncDir, path.basename(output).replace(/\.md$/i, '.json'));
             fs.writeFileSync(jsonSidecar, (0, report_generator_1.generateJsonReport)(report), 'utf-8');
         }
     }
@@ -279,17 +282,20 @@ async function writeReport(report, options, logger) {
             const mdPath = path.join(output, `${basename}-backward.md`);
             fs.writeFileSync(mdPath, (0, report_generator_1.generateMarkdownReport)(report), 'utf-8');
             logger.info(`  Report written: ${mdPath}`);
-            // Always write a JSON sidecar for resume reliability
-            const jsonSidecar = path.join(output, `${basename}-backward.json`);
+            // Always write a JSON sidecar for resume reliability (in .resync/ subfolder)
+            const resyncDir = path.join(output, '.resync');
+            if (!fs.existsSync(resyncDir))
+                fs.mkdirSync(resyncDir, { recursive: true });
+            const jsonSidecar = path.join(resyncDir, `${basename}-backward.json`);
             fs.writeFileSync(jsonSidecar, (0, report_generator_1.generateJsonReport)(report), 'utf-8');
         }
     }
 }
 /**
- * Read existing progress from _progress.json, or return null if not found.
+ * Read existing progress from .resync/_progress.json, or return null if not found.
  */
 function readProgress(outputDir) {
-    const progressPath = path.join(outputDir, '_progress.json');
+    const progressPath = path.join(outputDir, '.resync', '_progress.json');
     if (!fs.existsSync(progressPath)) {
         return null;
     }
@@ -301,10 +307,13 @@ function readProgress(outputDir) {
     }
 }
 /**
- * Write progress to _progress.json.
+ * Write progress to .resync/_progress.json.
  */
 function writeProgress(outputDir, progress) {
-    const progressPath = path.join(outputDir, '_progress.json');
+    const resyncDir = path.join(outputDir, '.resync');
+    if (!fs.existsSync(resyncDir))
+        fs.mkdirSync(resyncDir, { recursive: true });
+    const progressPath = path.join(resyncDir, '_progress.json');
     fs.writeFileSync(progressPath, JSON.stringify(progress, null, 2), 'utf-8');
 }
 /**
@@ -456,9 +465,12 @@ async function runBackwardBulk(options, logger = defaultLogger, exclude = [], re
             };
             const report = await runBackwardSingleFile(fileOptions, logger);
             fileReports.push(report);
-            // Always write a JSON sidecar for resume reliability
+            // Always write a JSON sidecar for resume reliability (in .resync/ subfolder)
             if (!options.json) {
                 const jsonSidecarPath = resolveReportPath(outputDir, file, true);
+                const resyncDir = path.dirname(jsonSidecarPath);
+                if (!fs.existsSync(resyncDir))
+                    fs.mkdirSync(resyncDir, { recursive: true });
                 fs.writeFileSync(jsonSidecarPath, (0, report_generator_1.generateJsonReport)(report), 'utf-8');
             }
             progress.completedFiles.push(file);
@@ -528,26 +540,28 @@ function buildEmptyBulkReport(sourceRepo, targetRepo, language, model) {
 function resolveReportPath(outputDir, file, json) {
     const basename = path.basename(file, '.md');
     const ext = json ? '.json' : '.md';
-    return path.join(outputDir, `${basename}-backward${ext}`);
+    // JSON sidecars live in .resync/ subfolder; markdown reports stay in outputDir
+    const dir = json ? path.join(outputDir, '.resync') : outputDir;
+    return path.join(dir, `${basename}-backward${ext}`);
 }
 /**
  * Find the correct output directory for --resume.
  *
  * Checks (in order):
- * 1. If options.output itself contains _progress.json → use it directly
- * 2. If options.output contains backward-* subdirs → use most recent with _progress.json
+ * 1. If options.output itself contains .resync/_progress.json → use it directly
+ * 2. If options.output contains backward-* subdirs → use most recent with .resync/_progress.json
  * 3. Otherwise → error (nothing to resume from)
  */
 function resolveResumeDir(outputPath) {
     // Case 1: Direct path to a run directory
-    if (fs.existsSync(path.join(outputPath, '_progress.json'))) {
+    if (fs.existsSync(path.join(outputPath, '.resync', '_progress.json'))) {
         return outputPath;
     }
     // Case 2: Base output directory (e.g., ./reports) — find most recent run
     if (fs.existsSync(outputPath)) {
         const candidates = fs.readdirSync(outputPath)
             .filter(d => d.startsWith('backward-'))
-            .filter(d => fs.existsSync(path.join(outputPath, d, '_progress.json')))
+            .filter(d => fs.existsSync(path.join(outputPath, d, '.resync', '_progress.json')))
             .sort()
             .reverse(); // Most recent first (lexicographic sort on timestamps)
         if (candidates.length > 0) {

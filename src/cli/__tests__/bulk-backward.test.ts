@@ -220,7 +220,9 @@ describe('progress checkpointing', () => {
   });
 
   it('should return null for corrupted progress file', () => {
-    fs.writeFileSync(path.join(tmpDir, '_progress.json'), 'not json', 'utf-8');
+    const resyncDir = path.join(tmpDir, '.resync');
+    fs.mkdirSync(resyncDir, { recursive: true });
+    fs.writeFileSync(path.join(resyncDir, '_progress.json'), 'not json', 'utf-8');
     const read = readProgress(tmpDir);
     expect(read).toBeNull();
   });
@@ -357,7 +359,7 @@ describe('runBackwardBulk', () => {
     // Check aggregate summary was written
     const bulkDir = path.join(outputDir, bulkFolder!);
     expect(fs.existsSync(path.join(bulkDir, '_summary.md'))).toBe(true);
-    expect(fs.existsSync(path.join(bulkDir, '_progress.json'))).toBe(true);
+    expect(fs.existsSync(path.join(bulkDir, '.resync', '_progress.json'))).toBe(true);
   });
 
   it('should write per-file reports', async () => {
