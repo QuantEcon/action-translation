@@ -335,11 +335,10 @@ export function formatStatusTable(result: StatusResult): string {
     if (extraFlags.length > 0) {
       statusText += ` + ${extraFlags.map(f => STATUS_ICONS[f] + ' ' + f).join(' + ')}`;
     }
-    let line = `  ${entry.file.padEnd(maxFileLen)}  ${statusText}`;
+    lines.push(`  ${entry.file.padEnd(maxFileLen)}  ${statusText}`);
     if (entry.details) {
-      line += `  (${entry.details})`;
+      lines.push(`  ${''.padEnd(maxFileLen)}  ↳ ${entry.details}`);
     }
-    lines.push(line);
   }
 
   lines.push('');
