@@ -31,6 +31,7 @@ import { evaluateFile } from '../backward-evaluator';
 import { getFileGitMetadata, getFileTimeline } from '../git-metadata';
 import { generateMarkdownReport, generateJsonReport, generateBulkMarkdownReport, generateBulkJsonReport } from '../report-generator';
 import { BackwardReport, BackwardOptions, BackportSuggestion, BulkBackwardReport } from '../types';
+import { SCHEMA_VERSION } from '../schema';
 import { discoverMarkdownFiles, resolveFilePairs, applyExcludes } from './status';
 
 /**
@@ -172,6 +173,7 @@ export async function runBackwardSingleFile(
     logger.info('  ✓ File is in sync. No suggestions.');
     
     const report: BackwardReport = {
+      schemaVersion: SCHEMA_VERSION,
       file,
       timestamp: new Date().toISOString(),
       model,
@@ -262,6 +264,7 @@ export async function runBackwardSingleFile(
   logger.info(`  Done: ${backportCount} suggestion(s) from ${filteredSuggestions.length} sections analyzed.`);
 
   const report: BackwardReport = {
+    schemaVersion: SCHEMA_VERSION,
     file,
     timestamp: new Date().toISOString(),
     model,
@@ -730,6 +733,7 @@ export function buildBulkReport(
   );
 
   return {
+    schemaVersion: SCHEMA_VERSION,
     timestamp: new Date().toISOString(),
     model,
     sourceRepo,

@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Backward report JSON schema** (`src/cli/schema.ts`): Formal Zod schemas for all backward report formats
+  - `SCHEMA_VERSION` constant (`1.0.0`) — semver for the report format
+  - `BackwardReportSchema`, `BulkBackwardReportSchema`, `ProgressCheckpointSchema`
+  - `parseBackwardReport()` / `parseProgressCheckpoint()` — safe parse with error messages
+  - `loadResyncDirectory()` — loads and validates all sidecar JSON from a `.resync/` dir
+  - `filterActionableSuggestions()` — filters BACKPORT suggestions by confidence threshold
+  - 41 tests including integration tests against real fixture data
+- **`schemaVersion` field** on `BackwardReport`, `BulkBackwardReport` (optional, backward-compatible)
+- **`zod`** runtime validation dependency
+
+### Added
 - **Resync CLI — Status Command** (`src/cli/commands/status.ts`): Fast, free diagnostic — no LLM calls
   - Per-file sync status: `ALIGNED`, `OUTDATED`, `SOURCE_AHEAD`, `TARGET_AHEAD`, `MISSING_HEADINGMAP`, `SOURCE_ONLY`, `TARGET_ONLY`
   - Console table output (`formatStatusTable`) — like `git status` for translations
