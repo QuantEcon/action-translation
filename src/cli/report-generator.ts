@@ -27,6 +27,9 @@ export function generateMarkdownReport(report: BackwardReport): string {
   if (report.model) {
     lines.push(`**Model**: ${report.model}`);
   }
+  if (report.sourceRepo || report.targetRepo) {
+    lines.push(`**SOURCE**: ${report.sourceRepo || 'unknown'} | **TARGET**: ${report.targetRepo || 'unknown'}`);
+  }
 
   // Git metadata
   if (report.sourceMetadata) {

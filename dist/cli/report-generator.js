@@ -28,6 +28,9 @@ function generateMarkdownReport(report) {
     if (report.model) {
         lines.push(`**Model**: ${report.model}`);
     }
+    if (report.sourceRepo || report.targetRepo) {
+        lines.push(`**SOURCE**: ${report.sourceRepo || 'unknown'} | **TARGET**: ${report.targetRepo || 'unknown'}`);
+    }
     // Git metadata
     if (report.sourceMetadata) {
         lines.push(`**SOURCE last modified**: ${(0, git_metadata_1.formatDate)(report.sourceMetadata.lastModified)} by ${report.sourceMetadata.lastAuthor}`);

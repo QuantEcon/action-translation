@@ -97,6 +97,8 @@ export interface BackwardReport {
     file: string;
     timestamp: string;
     model?: string;
+    sourceRepo?: string;
+    targetRepo?: string;
     sourceMetadata: FileGitMetadata | null;
     targetMetadata: FileGitMetadata | null;
     timeline: FileTimeline | null;

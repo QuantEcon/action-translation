@@ -64,14 +64,14 @@ describe('report-generator', () => {
       };
       const report: BackwardReport = { ...baseReport, timeline };
       const md = generateMarkdownReport(report);
-      expect(md).toContain('## Commit Timeline');
+      expect(md).toContain('## Appendix: Commit Timeline');
       expect(md).toContain('abc123d');
       expect(md).toContain('SOURCE has 1 commit(s) AFTER');
     });
 
     it('should omit commit timeline when null', () => {
       const md = generateMarkdownReport(baseReport);
-      expect(md).not.toContain('## Commit Timeline');
+      expect(md).not.toContain('## Appendix: Commit Timeline');
     });
 
     it('should show NO ACTION NEEDED verdict when changes detected but no backports', () => {

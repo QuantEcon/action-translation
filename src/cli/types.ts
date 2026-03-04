@@ -137,6 +137,8 @@ export interface BackwardReport {
   file: string;
   timestamp: string;
   model?: string;               // Claude model used for analysis
+  sourceRepo?: string;          // Source repo name (basename of path)
+  targetRepo?: string;          // Target repo name (basename of path)
   sourceMetadata: FileGitMetadata | null;
   targetMetadata: FileGitMetadata | null;
   timeline: FileTimeline | null;
