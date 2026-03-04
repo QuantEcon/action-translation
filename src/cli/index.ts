@@ -54,7 +54,7 @@ program
   .option('-f, --file <filename>', 'Analyze a single file (relative to docs-folder)')
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
   .option('-l, --language <code>', 'Target language code', 'zh-cn')
-  .option('-o, --output <dir>', 'Output directory for reports', './reports')
+  .option('-o, --output <path>', 'Output directory (or .md/.json file path for single-file mode)', './reports')
   .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-6')
   .option('--json', 'Output reports as JSON', false)
   .option('--test', 'Use deterministic mock responses (no LLM calls)', false)
@@ -91,7 +91,8 @@ program
         const backportCount = report.suggestions.filter(s => s.recommendation === 'BACKPORT').length;
         
         if (backportCount > 0) {
-          console.log(`\n✅ Found ${backportCount} suggestion(s). Report written to ${opts.output}/`);
+          const outputLabel = /\.(md|json)$/i.test(opts.output) ? opts.output : `${opts.output}/`;
+          console.log(`\n✅ Found ${backportCount} suggestion(s). Report written to ${outputLabel}`);
         } else {
           console.log('\n✅ No backport suggestions found.');
         }

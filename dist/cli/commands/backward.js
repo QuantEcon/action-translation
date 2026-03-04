@@ -234,24 +234,53 @@ function resolveFilePath(repoPath, docsFolder, filename) {
     return path.join(repoPath, docsFolder, filename);
 }
 /**
- * Write report to output directory
+ * Write report to output path.
+ *
+ * In single-file mode, if `options.output` ends with `.md` or `.json` it is
+ * treated as a **file path** (the user chose the exact name).  Otherwise it is
+ * treated as a **directory** and a filename is generated from the source file.
  */
 async function writeReport(report, options, logger) {
-    const outputDir = options.output;
-    // Ensure output directory exists
-    if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-    }
+    const output = options.output;
     const basename = path.basename(report.file, '.md');
-    if (options.json) {
-        const jsonPath = path.join(outputDir, `${basename}-backward.json`);
-        fs.writeFileSync(jsonPath, (0, report_generator_1.generateJsonReport)(report), 'utf-8');
-        logger.info(`  Report written: ${jsonPath}`);
+    // Detect whether the user specified a file path or a directory.
+    const looksLikeFile = /\.(md|json)$/i.test(output);
+    const isSingleFile = !!options.file;
+    if (isSingleFile && looksLikeFile) {
+        // Single-file mode with an explicit file path
+        const dir = path.dirname(output);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        const content = output.endsWith('.json')
+            ? (0, report_generator_1.generateJsonReport)(report)
+            : (0, report_generator_1.generateMarkdownReport)(report);
+        fs.writeFileSync(output, content, 'utf-8');
+        logger.info(`  Report written: ${output}`);
+        // Always write a JSON sidecar for resume reliability
+        if (!output.endsWith('.json')) {
+            const jsonSidecar = output.replace(/\.md$/i, '.json');
+            fs.writeFileSync(jsonSidecar, (0, report_generator_1.generateJsonReport)(report), 'utf-8');
+        }
     }
     else {
-        const mdPath = path.join(outputDir, `${basename}-backward.md`);
-        fs.writeFileSync(mdPath, (0, report_generator_1.generateMarkdownReport)(report), 'utf-8');
-        logger.info(`  Report written: ${mdPath}`);
+        // Directory mode (bulk, or single-file without extension)
+        if (!fs.existsSync(output)) {
+            fs.mkdirSync(output, { recursive: true });
+        }
+        if (options.json) {
+            const jsonPath = path.join(output, `${basename}-backward.json`);
+            fs.writeFileSync(jsonPath, (0, report_generator_1.generateJsonReport)(report), 'utf-8');
+            logger.info(`  Report written: ${jsonPath}`);
+        }
+        else {
+            const mdPath = path.join(output, `${basename}-backward.md`);
+            fs.writeFileSync(mdPath, (0, report_generator_1.generateMarkdownReport)(report), 'utf-8');
+            logger.info(`  Report written: ${mdPath}`);
+            // Always write a JSON sidecar for resume reliability
+            const jsonSidecar = path.join(output, `${basename}-backward.json`);
+            fs.writeFileSync(jsonSidecar, (0, report_generator_1.generateJsonReport)(report), 'utf-8');
+        }
     }
 }
 /**

@@ -129,6 +129,31 @@ describe('backward command', () => {
       expect(parsed.file).toBe('test-lecture.md');
     });
 
+    it('should write directly to .md file path in single-file mode', async () => {
+      const { options } = setupFixtureTest('bug-fix-in-target');
+      const filePath = path.join(tmpDir, 'custom-report.md');
+      options.output = filePath;
+
+      await runBackwardSingleFile(options, silentLogger);
+
+      expect(fs.existsSync(filePath)).toBe(true);
+      const content = fs.readFileSync(filePath, 'utf-8');
+      expect(content).toContain('# Backward Analysis');
+    });
+
+    it('should write directly to .json file path in single-file mode', async () => {
+      const { options } = setupFixtureTest('bug-fix-in-target');
+      const filePath = path.join(tmpDir, 'custom-report.json');
+      options.output = filePath;
+
+      await runBackwardSingleFile(options, silentLogger);
+
+      expect(fs.existsSync(filePath)).toBe(true);
+      const content = fs.readFileSync(filePath, 'utf-8');
+      const parsed = JSON.parse(content);
+      expect(parsed.file).toBe('test-lecture.md');
+    });
+
     it('should handle section-count-mismatch', async () => {
       const { options } = setupFixtureTest('section-count-mismatch');
 

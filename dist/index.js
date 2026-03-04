@@ -1436,11 +1436,14 @@ const language_config_1 = __nccwpck_require__(2142);
  * These are the model patterns that are valid for the Anthropic API
  */
 const VALID_MODEL_PATTERNS = [
-    /^claude-3-5-sonnet-\d{8}$/, // claude-3-5-sonnet-20241022
+    /^claude-sonnet-4-6$/, // claude-sonnet-4-6 (latest Sonnet)
+    /^claude-opus-4-6$/, // claude-opus-4-6 (latest Opus)
     /^claude-sonnet-4-5-\d{8}$/, // claude-sonnet-4-5-20250929
+    /^claude-opus-4-5-\d{8}$/, // claude-opus-4-5-20251101
+    /^claude-haiku-4-5-\d{8}$/, // claude-haiku-4-5-20251001
+    /^claude-3-5-sonnet-\d{8}$/, // claude-3-5-sonnet-20241022
     /^claude-3-5-haiku-\d{8}$/, // claude-3-5-haiku-20241022
     /^claude-3-opus-\d{8}$/, // claude-3-opus-20240229
-    /^claude-opus-4-5-\d{8}$/, // claude-opus-4-5-20251101
     /^claude-3-sonnet-\d{8}$/, // claude-3-sonnet-20240229
     /^claude-3-haiku-\d{8}$/, // claude-3-haiku-20240307
 ];
@@ -1451,7 +1454,7 @@ function validateClaudeModel(model) {
     const isValid = VALID_MODEL_PATTERNS.some(pattern => pattern.test(model));
     if (!isValid) {
         core.warning(`Unrecognized Claude model: '${model}'. ` +
-            `Expected patterns like 'claude-sonnet-4-5-YYYYMMDD' or 'claude-3-5-sonnet-YYYYMMDD'. ` +
+            `Expected patterns like 'claude-sonnet-4-6' or 'claude-sonnet-4-5-YYYYMMDD'. ` +
             `The model will still be used, but verify it's correct.`);
     }
 }
@@ -1481,7 +1484,7 @@ function getInputs() {
     const glossaryPath = core.getInput('glossary-path', { required: false }) || ''; // Empty by default - uses built-in
     const tocFile = core.getInput('toc-file', { required: false }) || '_toc.yml';
     const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
-    const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4-5-20250929';
+    const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4-6';
     const githubToken = core.getInput('github-token', { required: true });
     const prLabelsRaw = core.getInput('pr-labels', { required: false }) || 'action-translation,automated';
     const prLabels = prLabelsRaw.split(',').map((l) => l.trim()).filter((l) => l.length > 0);
@@ -1534,7 +1537,7 @@ function getReviewInputs() {
     const sourceLanguage = core.getInput('source-language', { required: false }) || 'en';
     const glossaryPath = core.getInput('glossary-path', { required: false }) || '';
     const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
-    const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4-5-20250929';
+    const claudeModel = core.getInput('claude-model', { required: false }) || 'claude-sonnet-4-6';
     const githubToken = core.getInput('github-token', { required: true });
     // Validate source repo format
     if (!sourceRepo.includes('/')) {
@@ -2287,7 +2290,7 @@ const core = __importStar(__nccwpck_require__(7484));
 const github = __importStar(__nccwpck_require__(3228));
 const sdk_1 = __importDefault(__nccwpck_require__(121));
 // Default model for review (can be overridden)
-const DEFAULT_REVIEW_MODEL = 'claude-sonnet-4-5-20250929';
+const DEFAULT_REVIEW_MODEL = 'claude-sonnet-4-6';
 /**
  * Extract preamble (content before first heading) from a markdown document
  */
@@ -3545,7 +3548,7 @@ function formatApiError(error) {
     return 'Unknown translation error';
 }
 class TranslationService {
-    constructor(apiKey, model = 'claude-sonnet-4-5-20250929', debug = false) {
+    constructor(apiKey, model = 'claude-sonnet-4-6', debug = false) {
         this.client = new sdk_1.default({ apiKey });
         this.model = model;
         this.debug = debug;

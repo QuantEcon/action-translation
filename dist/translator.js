@@ -124,7 +124,7 @@ function formatApiError(error) {
     return 'Unknown translation error';
 }
 class TranslationService {
-    constructor(apiKey, model = 'claude-sonnet-4-5-20250929', debug = false) {
+    constructor(apiKey, model = 'claude-sonnet-4-6', debug = false) {
         this.client = new sdk_1.default({ apiKey });
         this.model = model;
         this.debug = debug;
