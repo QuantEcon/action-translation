@@ -7,10 +7,10 @@
  *   - Determines if a file has substantive changes beyond translation
  *   - IN_SYNC files are skipped (cheap filter)
  *   
- * Stage 2: Section-level analysis (one LLM call per section, flagged files only)
+ * Stage 2: Whole-file analysis (one LLM call per flagged file)
  *   - Matches sections by position with heading-map validation
- *   - Evaluates each section pair for backport potential
- *   - Produces structured suggestions with category/confidence
+ *   - Evaluates all section pairs in a single LLM call
+ *   - Produces structured per-section suggestions with category/confidence
  * 
  * Supports two modes:
  * - Single-file: `npx resync backward -f file.md`
@@ -27,7 +27,7 @@ import { MystParser } from '../../parser';
 import { extractHeadingMap } from '../../heading-map';
 import { matchSections, getMatchingSummary, validateMatchesWithHeadingMap } from '../section-matcher';
 import { triageDocument } from '../document-comparator';
-import { evaluateSection } from '../backward-evaluator';
+import { evaluateFile } from '../backward-evaluator';
 import { getFileGitMetadata, getFileTimeline } from '../git-metadata';
 import { generateMarkdownReport, generateJsonReport, generateBulkMarkdownReport, generateBulkJsonReport } from '../report-generator';
 import { BackwardReport, BackwardOptions, BackportSuggestion, BulkBackwardReport } from '../types';
@@ -188,7 +188,7 @@ export async function runBackwardSingleFile(
     return report;
   }
 
-  // ─── Stage 2: Section-Level Analysis ───
+  // ─── Stage 2: Whole-File Analysis ───
   logger.info('');
   logger.info('  Stage 2: Section-level analysis...');
 
@@ -222,40 +222,27 @@ export async function runBackwardSingleFile(
     }
   }
 
-  // Evaluate each matched section pair
-  const suggestions: BackportSuggestion[] = [];
+  // Evaluate all matched sections in a single LLM call
+  logger.info(`  Evaluating ${summary.matched} sections (1 LLM call)...`);
 
-  for (const pair of pairs) {
-    if (pair.status !== 'MATCHED' || !pair.sourceSection || !pair.targetSection) {
-      continue; // Skip unmatched sections (reported separately)
-    }
+  const suggestions = await evaluateFile(
+    pairs,
+    sourceMetadata,
+    targetMetadata,
+    triageResult.notes,
+    timeline,
+    {
+      apiKey: options.apiKey,
+      model,
+      sourceLanguage: 'en',
+      targetLanguage: language,
+      testMode,
+    },
+  );
 
-    const heading = pair.sourceHeading || 'Unknown Section';
-    logger.info(`  Evaluating: ${heading}`);
-
-    const suggestion = await evaluateSection(
-      pair.sourceSection.content,
-      pair.targetSection.content,
-      heading,
-      sourceMetadata,
-      targetMetadata,
-      triageResult.notes,
-      timeline,
-      {
-        apiKey: options.apiKey,
-        model,
-        sourceLanguage: 'en',
-        targetLanguage: language,
-        testMode,
-      },
-    );
-
-    suggestions.push(suggestion);
-
+  for (const suggestion of suggestions) {
     if (suggestion.recommendation === 'BACKPORT') {
-      logger.info(`    → BACKPORT (${suggestion.category}, confidence: ${suggestion.confidence.toFixed(2)})`);
-    } else {
-      logger.info(`    → No backport (${suggestion.category})`);
+      logger.info(`    → BACKPORT: ${suggestion.sectionHeading} (${suggestion.category}, confidence: ${suggestion.confidence.toFixed(2)})`);
     }
   }
 
@@ -437,12 +424,12 @@ export function estimateBulkCost(fileCount: number, avgSectionsPerFile: number =
   const flagRate = 0.075; // 7.5% middle estimate
   const estimatedFlagged = Math.max(1, Math.round(fileCount * flagRate));
 
-  // Stage 2: ~$0.01-0.02 per section for flagged files
-  const estimatedStage2Calls = estimatedFlagged * avgSectionsPerFile;
-  const stage2Cost = estimatedStage2Calls * 0.015;
+  // Stage 2: 1 call per flagged file (whole-file evaluation)
+  const estimatedStage2Calls = estimatedFlagged;
+  const stage2Cost = estimatedStage2Calls * 0.03; // ~$0.03 per file (larger prompt)
 
-  // Time: ~3s per Stage 1 call + ~5s per Stage 2 call
-  const estimatedTimeSeconds = (stage1Calls * 3) + (estimatedStage2Calls * 5);
+  // Time: ~3s per Stage 1 call + ~8s per Stage 2 call (larger response)
+  const estimatedTimeSeconds = (stage1Calls * 3) + (estimatedStage2Calls * 8);
 
   return {
     totalFiles: fileCount,
@@ -463,7 +450,7 @@ export function formatCostEstimate(estimate: CostEstimate): string {
   lines.push(`  Files to analyze:       ${estimate.totalFiles}`);
   lines.push(`  Stage 1 triage calls:   ${estimate.stage1Calls}`);
   lines.push(`  Est. flagged files:     ~${estimate.estimatedFlaggedFiles} (~7.5%)`);
-  lines.push(`  Est. Stage 2 calls:     ~${estimate.estimatedStage2Calls}`);
+  lines.push(`  Est. Stage 2 calls:     ~${estimate.estimatedStage2Calls} (1 per flagged file)`);
   lines.push(`  Est. API cost:          ~$${estimate.estimatedCostUsd.toFixed(2)}`);
   lines.push(`  Est. time:              ~${estimate.estimatedTimeMinutes} min`);
   return lines.join('\n');

@@ -191,6 +191,7 @@ describe('estimateBulkCost', () => {
     expect(output).toContain('50');
     expect(output).toContain('$');
     expect(output).toContain('min');
+    expect(output).toContain('1 per flagged file');
   });
 });
 

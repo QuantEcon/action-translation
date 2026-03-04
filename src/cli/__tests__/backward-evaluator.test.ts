@@ -9,8 +9,11 @@ import {
   buildEvaluationPrompt, 
   parseEvaluationResponse, 
   evaluateSection,
+  buildFileEvaluationPrompt,
+  parseFileEvaluationResponse,
+  evaluateFile,
 } from '../backward-evaluator';
-import { FileGitMetadata, FileTimeline } from '../types';
+import { FileGitMetadata, FileTimeline, SectionPair } from '../types';
 
 describe('backward-evaluator', () => {
   const mockSourceMeta: FileGitMetadata = {
@@ -269,6 +272,297 @@ describe('backward-evaluator', () => {
         '## 稳态', null, null, '', null, testOptions,
       );
       expect(result.sectionHeading).toBe('## 稳态');
+    });
+  });
+
+  // ===========================================================================
+  // WHOLE-FILE EVALUATION
+  // ===========================================================================
+
+  describe('buildFileEvaluationPrompt', () => {
+    const matchedPairs = [
+      { heading: '## Introduction', source: 'English intro', target: '中文介绍' },
+      { heading: '## Model', source: 'English model section', target: '中文模型部分' },
+      { heading: '## Conclusion', source: 'English conclusion', target: '中文结论' },
+    ];
+
+    it('should include all section pairs', () => {
+      const prompt = buildFileEvaluationPrompt(
+        matchedPairs, 'en', 'zh-cn', null, null, '', null,
+      );
+      expect(prompt).toContain('Section 1: ## Introduction');
+      expect(prompt).toContain('Section 2: ## Model');
+      expect(prompt).toContain('Section 3: ## Conclusion');
+      expect(prompt).toContain('English intro');
+      expect(prompt).toContain('中文介绍');
+      expect(prompt).toContain('English model section');
+      expect(prompt).toContain('中文模型部分');
+    });
+
+    it('should state the number of sections', () => {
+      const prompt = buildFileEvaluationPrompt(
+        matchedPairs, 'en', 'zh-cn', null, null, '', null,
+      );
+      expect(prompt).toContain('Number of sections: 3');
+      expect(prompt).toContain(`Include ALL 3 sections`);
+    });
+
+    it('should include timeline context', () => {
+      const prompt = buildFileEvaluationPrompt(
+        matchedPairs, 'en', 'zh-cn',
+        mockSourceMeta, mockTargetMeta, '', null,
+      );
+      expect(prompt).toContain('2024-06-01');
+      expect(prompt).toContain('2024-09-15');
+    });
+
+    it('should include triage notes', () => {
+      const prompt = buildFileEvaluationPrompt(
+        matchedPairs, 'en', 'zh-cn', null, null,
+        'Formula correction in section about steady state', null,
+      );
+      expect(prompt).toContain('Stage 1 Triage Notes');
+      expect(prompt).toContain('Formula correction in section about steady state');
+    });
+
+    it('should include commit history when timeline provided', () => {
+      const timeline: FileTimeline = {
+        entries: [
+          { date: '2025-12-23', fullDate: '2025-12-23 10:00:00 +0000', repo: 'SOURCE', sha: 'abc123d', message: 'Fix formula' },
+        ],
+        sourceCommitCount: 1,
+        targetCommitCount: 0,
+        estimatedSyncDate: '2024-07-22',
+        sourceCommitsAfterSync: 1,
+      };
+      const prompt = buildFileEvaluationPrompt(
+        matchedPairs, 'en', 'zh-cn',
+        mockSourceMeta, mockTargetMeta, '', timeline,
+      );
+      expect(prompt).toContain('## Commit History');
+      expect(prompt).toContain('expected divergences');
+    });
+
+    it('should include response format with sections array', () => {
+      const prompt = buildFileEvaluationPrompt(
+        matchedPairs, 'en', 'zh-cn', null, null, '', null,
+      );
+      expect(prompt).toContain('"sections"');
+      expect(prompt).toContain('"section_number"');
+      expect(prompt).toContain('"section_heading"');
+      expect(prompt).toContain('BACKPORT');
+      expect(prompt).toContain('NO_BACKPORT');
+    });
+
+    it('should include respectful suggestion framing', () => {
+      const prompt = buildFileEvaluationPrompt(
+        matchedPairs, 'en', 'zh-cn', null, null, '', null,
+      );
+      expect(prompt).toContain('SUGGESTIONS');
+      expect(prompt).toContain('source of truth');
+      expect(prompt).toContain('respectfully');
+    });
+  });
+
+  describe('parseFileEvaluationResponse', () => {
+    const matchedPairs = [
+      { heading: '## Introduction' },
+      { heading: '## Model' },
+      { heading: '## Conclusion' },
+    ];
+
+    it('should parse a multi-section response', () => {
+      const response = JSON.stringify({
+        sections: [
+          {
+            section_number: 1,
+            section_heading: '## Introduction',
+            recommendation: 'NO_BACKPORT',
+            category: 'NO_CHANGE',
+            confidence: 0.95,
+            summary: 'Faithful translation',
+            specific_changes: [],
+            reasoning: 'No changes needed',
+          },
+          {
+            section_number: 2,
+            section_heading: '## Model',
+            recommendation: 'BACKPORT',
+            category: 'BUG_FIX',
+            confidence: 0.92,
+            summary: 'Formula correction',
+            specific_changes: [{ type: 'fix', original: 'k*', improved: 'k* = sA/δ' }],
+            reasoning: 'Missing parameter A',
+          },
+          {
+            section_number: 3,
+            section_heading: '## Conclusion',
+            recommendation: 'NO_BACKPORT',
+            category: 'I18N_ONLY',
+            confidence: 0.88,
+            summary: 'Only formatting changes',
+            specific_changes: [],
+            reasoning: 'Locale-specific',
+          },
+        ],
+      });
+
+      const results = parseFileEvaluationResponse(response, matchedPairs);
+      expect(results).toHaveLength(3);
+      expect(results[0].sectionHeading).toBe('## Introduction');
+      expect(results[0].recommendation).toBe('NO_BACKPORT');
+      expect(results[1].sectionHeading).toBe('## Model');
+      expect(results[1].recommendation).toBe('BACKPORT');
+      expect(results[1].category).toBe('BUG_FIX');
+      expect(results[1].confidence).toBe(0.92);
+      expect(results[1].specificChanges).toHaveLength(1);
+      expect(results[2].category).toBe('I18N_ONLY');
+    });
+
+    it('should handle JSON in code fence', () => {
+      const response = `Here's my analysis:
+
+\`\`\`json
+{
+  "sections": [
+    { "recommendation": "NO_BACKPORT", "category": "NO_CHANGE", "confidence": 0.9, "summary": "ok", "specific_changes": [], "reasoning": "fine" },
+    { "recommendation": "BACKPORT", "category": "CLARIFICATION", "confidence": 0.75, "summary": "improved", "specific_changes": [], "reasoning": "better" },
+    { "recommendation": "NO_BACKPORT", "category": "NO_CHANGE", "confidence": 0.9, "summary": "ok", "specific_changes": [], "reasoning": "fine" }
+  ]
+}
+\`\`\``;
+
+      const results = parseFileEvaluationResponse(response, matchedPairs);
+      expect(results).toHaveLength(3);
+      expect(results[1].recommendation).toBe('BACKPORT');
+      expect(results[1].category).toBe('CLARIFICATION');
+    });
+
+    it('should handle fewer sections in response than expected', () => {
+      const response = JSON.stringify({
+        sections: [
+          { recommendation: 'NO_BACKPORT', category: 'NO_CHANGE', confidence: 0.9, summary: 'ok', specific_changes: [], reasoning: 'fine' },
+        ],
+      });
+
+      const results = parseFileEvaluationResponse(response, matchedPairs);
+      expect(results).toHaveLength(3);
+      expect(results[0].recommendation).toBe('NO_BACKPORT');
+      // Missing sections default to safe values
+      expect(results[1].recommendation).toBe('NO_BACKPORT');
+      expect(results[1].confidence).toBe(0.5);
+      expect(results[2].recommendation).toBe('NO_BACKPORT');
+    });
+
+    it('should handle completely unparseable response', () => {
+      const results = parseFileEvaluationResponse(
+        'I cannot process this request.', matchedPairs,
+      );
+      expect(results).toHaveLength(3);
+      expect(results[0].recommendation).toBe('NO_BACKPORT');
+      expect(results[0].confidence).toBe(0);
+      expect(results[0].summary).toContain('Unable to parse');
+    });
+
+    it('should clamp confidence values', () => {
+      const response = JSON.stringify({
+        sections: [
+          { recommendation: 'BACKPORT', category: 'BUG_FIX', confidence: 1.5, summary: 'test', specific_changes: [], reasoning: 'test' },
+          { recommendation: 'BACKPORT', category: 'BUG_FIX', confidence: -0.3, summary: 'test', specific_changes: [], reasoning: 'test' },
+          { recommendation: 'BACKPORT', category: 'BUG_FIX', confidence: 0.8, summary: 'test', specific_changes: [], reasoning: 'test' },
+        ],
+      });
+
+      const results = parseFileEvaluationResponse(response, matchedPairs);
+      expect(results[0].confidence).toBe(1.0);
+      expect(results[1].confidence).toBe(0.0);
+      expect(results[2].confidence).toBe(0.8);
+    });
+
+    it('should validate categories', () => {
+      const response = JSON.stringify({
+        sections: [
+          { recommendation: 'BACKPORT', category: 'INVALID', confidence: 0.8, summary: 'test', specific_changes: [], reasoning: 'test' },
+          { recommendation: 'BACKPORT', category: 'BUG_FIX', confidence: 0.8, summary: 'test', specific_changes: [], reasoning: 'test' },
+          { recommendation: 'BACKPORT', category: 'CLARIFICATION', confidence: 0.8, summary: 'test', specific_changes: [], reasoning: 'test' },
+        ],
+      });
+
+      const results = parseFileEvaluationResponse(response, matchedPairs);
+      expect(results[0].category).toBe('NO_CHANGE'); // invalid → default
+      expect(results[1].category).toBe('BUG_FIX');
+      expect(results[2].category).toBe('CLARIFICATION');
+    });
+  });
+
+  describe('evaluateFile (test mode)', () => {
+    const testOptions = {
+      apiKey: 'test-key',
+      model: 'claude-sonnet-4-6',
+      sourceLanguage: 'en',
+      targetLanguage: 'zh-cn',
+      testMode: true,
+    };
+
+    it('should return NO_BACKPORT for all sections in test mode', async () => {
+      const pairs: SectionPair[] = [
+        {
+          sourceSection: { heading: '## Intro', content: 'intro text', level: 2, id: 'intro', startLine: 1, endLine: 5, subsections: [] },
+          targetSection: { heading: '## 介绍', content: '介绍文本', level: 2, id: 'intro', startLine: 1, endLine: 5, subsections: [] },
+          status: 'MATCHED',
+          sourceHeading: '## Intro',
+          targetHeading: '## 介绍',
+        },
+        {
+          sourceSection: { heading: '## Model', content: 'model text', level: 2, id: 'model', startLine: 6, endLine: 15, subsections: [] },
+          targetSection: { heading: '## 模型', content: '模型文本', level: 2, id: 'model', startLine: 6, endLine: 15, subsections: [] },
+          status: 'MATCHED',
+          sourceHeading: '## Model',
+          targetHeading: '## 模型',
+        },
+      ];
+
+      const results = await evaluateFile(pairs, null, null, '', null, testOptions);
+      expect(results).toHaveLength(2);
+      expect(results[0].recommendation).toBe('NO_BACKPORT');
+      expect(results[0].sectionHeading).toBe('## Intro');
+      expect(results[1].recommendation).toBe('NO_BACKPORT');
+      expect(results[1].sectionHeading).toBe('## Model');
+    });
+
+    it('should skip non-matched pairs', async () => {
+      const pairs: SectionPair[] = [
+        {
+          sourceSection: { heading: '## Intro', content: 'intro text', level: 2, id: 'intro', startLine: 1, endLine: 5, subsections: [] },
+          targetSection: { heading: '## 介绍', content: '介绍文本', level: 2, id: 'intro', startLine: 1, endLine: 5, subsections: [] },
+          status: 'MATCHED',
+          sourceHeading: '## Intro',
+        },
+        {
+          sourceSection: { heading: '## Extra', content: 'extra text', level: 2, id: 'extra', startLine: 6, endLine: 15, subsections: [] },
+          targetSection: null,
+          status: 'SOURCE_ONLY',
+          sourceHeading: '## Extra',
+        },
+      ];
+
+      const results = await evaluateFile(pairs, null, null, '', null, testOptions);
+      expect(results).toHaveLength(1);
+      expect(results[0].sectionHeading).toBe('## Intro');
+    });
+
+    it('should return empty array when no matched pairs', async () => {
+      const pairs: SectionPair[] = [
+        {
+          sourceSection: { heading: '## Extra', content: 'extra text', level: 2, id: 'extra', startLine: 1, endLine: 5, subsections: [] },
+          targetSection: null,
+          status: 'SOURCE_ONLY',
+          sourceHeading: '## Extra',
+        },
+      ];
+
+      const results = await evaluateFile(pairs, null, null, '', null, testOptions);
+      expect(results).toHaveLength(0);
     });
   });
 });
