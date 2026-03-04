@@ -7,10 +7,10 @@
  *   - Determines if a file has substantive changes beyond translation
  *   - IN_SYNC files are skipped (cheap filter)
  *
- * Stage 2: Section-level analysis (one LLM call per section, flagged files only)
+ * Stage 2: Whole-file analysis (one LLM call per flagged file)
  *   - Matches sections by position with heading-map validation
- *   - Evaluates each section pair for backport potential
- *   - Produces structured suggestions with category/confidence
+ *   - Evaluates all section pairs in a single LLM call
+ *   - Produces structured per-section suggestions with category/confidence
  *
  * Supports two modes:
  * - Single-file: `npx resync backward -f file.md`
