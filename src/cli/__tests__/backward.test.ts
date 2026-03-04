@@ -108,14 +108,14 @@ describe('backward command', () => {
 
       await runBackwardSingleFile(options, silentLogger);
 
-      const reportPath = path.join(options.output, 'test-lecture-backward.md');
+      const reportPath = path.join(options.output, 'test-lecture.md');
       expect(fs.existsSync(reportPath)).toBe(true);
 
       const content = fs.readFileSync(reportPath, 'utf-8');
       expect(content).toContain('# Backward Analysis');
 
       // JSON sidecar should be in .resync/ subfolder
-      const sidecar = path.join(options.output, '.resync', 'test-lecture-backward.json');
+      const sidecar = path.join(options.output, '.resync', 'test-lecture.json');
       expect(fs.existsSync(sidecar)).toBe(true);
     });
 
@@ -125,7 +125,7 @@ describe('backward command', () => {
 
       await runBackwardSingleFile(options, silentLogger);
 
-      const reportPath = path.join(options.output, 'test-lecture-backward.json');
+      const reportPath = path.join(options.output, 'test-lecture.json');
       expect(fs.existsSync(reportPath)).toBe(true);
 
       const content = fs.readFileSync(reportPath, 'utf-8');

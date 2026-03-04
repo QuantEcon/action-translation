@@ -311,18 +311,18 @@ async function writeReport(
     }
 
     if (options.json) {
-      const jsonPath = path.join(output, `${basename}-backward.json`);
+      const jsonPath = path.join(output, `${basename}.json`);
       fs.writeFileSync(jsonPath, generateJsonReport(report), 'utf-8');
       logger.info(`  Report written: ${jsonPath}`);
     } else {
-      const mdPath = path.join(output, `${basename}-backward.md`);
+      const mdPath = path.join(output, `${basename}.md`);
       fs.writeFileSync(mdPath, generateMarkdownReport(report), 'utf-8');
       logger.info(`  Report written: ${mdPath}`);
 
       // Always write a JSON sidecar for resume reliability (in .resync/ subfolder)
       const resyncDir = path.join(output, '.resync');
       if (!fs.existsSync(resyncDir)) fs.mkdirSync(resyncDir, { recursive: true });
-      const jsonSidecar = path.join(resyncDir, `${basename}-backward.json`);
+      const jsonSidecar = path.join(resyncDir, `${basename}.json`);
       fs.writeFileSync(jsonSidecar, generateJsonReport(report), 'utf-8');
     }
   }
@@ -371,18 +371,15 @@ export function writeProgress(outputDir: string, progress: BulkProgress): void {
 }
 
 /**
- * Build a timestamped output folder name:
- *   reports/backward-2026-03-03_14-23-05/
+ * Build a date-stamped output folder name:
+ *   reports/backward-2026-03-03/
  *
- * Uses date + time (to the second) to avoid collisions between multiple
- * bulk runs on the same day.
+ * Uses date only. Re-running on the same day overwrites the previous run.
  */
 export function buildBulkOutputDir(baseOutput: string): string {
   const now = new Date();
-  const iso = now.toISOString(); // e.g. "2026-03-03T14:23:05.123Z"
-  const [dateStr, timeStr] = iso.split('T');
-  const timePart = timeStr.slice(0, 8).replace(/:/g, '-'); // "14-23-05"
-  return path.join(baseOutput, `backward-${dateStr}_${timePart}`);
+  const dateStr = now.toISOString().split('T')[0]; // "2026-03-03"
+  return path.join(baseOutput, `backward-${dateStr}`);
 }
 
 /**
@@ -480,6 +477,10 @@ export async function runBackwardBulk(
     ? resolveResumeDir(options.output)
     : buildBulkOutputDir(options.output);
 
+  // Fresh start: wipe the folder if not resuming
+  if (!resume && fs.existsSync(outputDir)) {
+    fs.rmSync(outputDir, { recursive: true, force: true });
+  }
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
@@ -527,8 +528,9 @@ export async function runBackwardBulk(
     ...progress.erroredFiles.map(e => e.file),
   ]);
 
-  // Process files sequentially
+  // Process files with concurrency
   const fileReports: BackwardReport[] = [];
+  const CONCURRENCY = 5;
 
   // Load any already-written reports for the aggregate (always from JSON sidecar)
   for (const doneFile of progress.completedFiles) {
@@ -545,13 +547,15 @@ export async function runBackwardBulk(
 
   const filesToProcess = allFiles.filter(f => !doneSet.has(f));
 
-  for (let i = 0; i < filesToProcess.length; i++) {
-    const file = filesToProcess[i];
+  /**
+   * Process a single file in the bulk pipeline.
+   * Returns { file, report? } so the caller can track progress.
+   */
+  async function processOneFile(file: string): Promise<{ file: string; report?: BackwardReport; error?: string }> {
     const globalIdx = allFiles.indexOf(file) + 1;
     logger.info(`\n[${globalIdx}/${allFiles.length}] ${file}`);
 
     try {
-      // Run single-file backward with output pointing to the bulk folder
       const fileOptions: BackwardOptions & { apiKey: string } = {
         ...options,
         file,
@@ -559,7 +563,6 @@ export async function runBackwardBulk(
       };
 
       const report = await runBackwardSingleFile(fileOptions, logger);
-      fileReports.push(report);
 
       // Always write a JSON sidecar for resume reliability (in .resync/ subfolder)
       if (!options.json) {
@@ -569,14 +572,29 @@ export async function runBackwardBulk(
         fs.writeFileSync(jsonSidecarPath, generateJsonReport(report), 'utf-8');
       }
 
-      progress.completedFiles.push(file);
+      return { file, report };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.error(`  Failed: ${errorMsg}`);
-      progress.erroredFiles.push({ file, error: errorMsg });
+      return { file, error: errorMsg };
+    }
+  }
+
+  // Process in batches of CONCURRENCY
+  for (let i = 0; i < filesToProcess.length; i += CONCURRENCY) {
+    const batch = filesToProcess.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(batch.map(processOneFile));
+
+    for (const result of results) {
+      if (result.report) {
+        fileReports.push(result.report);
+        progress.completedFiles.push(result.file);
+      } else if (result.error) {
+        progress.erroredFiles.push({ file: result.file, error: result.error });
+      }
     }
 
-    // Update progress checkpoint
+    // Update progress checkpoint after each batch
     progress.lastUpdated = new Date().toISOString();
     writeProgress(outputDir, progress);
   }
@@ -660,7 +678,7 @@ function resolveReportPath(outputDir: string, file: string, json: boolean): stri
   const ext = json ? '.json' : '.md';
   // JSON sidecars live in .resync/ subfolder; markdown reports stay in outputDir
   const dir = json ? path.join(outputDir, '.resync') : outputDir;
-  return path.join(dir, `${basename}-backward${ext}`);
+  return path.join(dir, `${basename}${ext}`);
 }
 
 /**

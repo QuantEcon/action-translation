@@ -62,11 +62,10 @@ export declare function readProgress(outputDir: string): BulkProgress | null;
  */
 export declare function writeProgress(outputDir: string, progress: BulkProgress): void;
 /**
- * Build a timestamped output folder name:
- *   reports/backward-2026-03-03_14-23-05/
+ * Build a date-stamped output folder name:
+ *   reports/backward-2026-03-03/
  *
- * Uses date + time (to the second) to avoid collisions between multiple
- * bulk runs on the same day.
+ * Uses date only. Re-running on the same day overwrites the previous run.
  */
 export declare function buildBulkOutputDir(baseOutput: string): string;
 /**

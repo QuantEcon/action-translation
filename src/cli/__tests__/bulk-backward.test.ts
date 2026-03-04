@@ -233,11 +233,11 @@ describe('progress checkpointing', () => {
 // ============================================================================
 
 describe('buildBulkOutputDir', () => {
-  it('should create a timestamped folder name with time component', () => {
+  it('should create a date-stamped folder name', () => {
     const dir = buildBulkOutputDir('./reports');
 
-    // Should be in the format: reports/backward-YYYY-MM-DD_HH-MM-SS
-    expect(dir).toMatch(/reports[/\\]backward-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}/);
+    // Should be in the format: reports/backward-YYYY-MM-DD
+    expect(dir).toMatch(/reports[/\\]backward-\d{4}-\d{2}-\d{2}$/);
   });
 });
 
@@ -374,9 +374,9 @@ describe('runBackwardBulk', () => {
     const bulkDir = path.join(outputDir, bulkFolder!);
 
     // Each file should have a report
-    expect(fs.existsSync(path.join(bulkDir, 'intro-backward.md'))).toBe(true);
-    expect(fs.existsSync(path.join(bulkDir, 'cobweb-backward.md'))).toBe(true);
-    expect(fs.existsSync(path.join(bulkDir, 'aligned-basics-backward.md'))).toBe(true);
+    expect(fs.existsSync(path.join(bulkDir, 'intro.md'))).toBe(true);
+    expect(fs.existsSync(path.join(bulkDir, 'cobweb.md'))).toBe(true);
+    expect(fs.existsSync(path.join(bulkDir, 'aligned-basics.md'))).toBe(true);
   });
 
   it('should write JSON reports when --json is set', async () => {
@@ -390,7 +390,7 @@ describe('runBackwardBulk', () => {
     const bulkDir = path.join(outputDir, bulkFolder!);
 
     expect(fs.existsSync(path.join(bulkDir, '_summary.json'))).toBe(true);
-    expect(fs.existsSync(path.join(bulkDir, 'cobweb-backward.json'))).toBe(true);
+    expect(fs.existsSync(path.join(bulkDir, 'cobweb.json'))).toBe(true);
 
     // Verify JSON is valid
     const summary = JSON.parse(fs.readFileSync(path.join(bulkDir, '_summary.json'), 'utf-8'));
