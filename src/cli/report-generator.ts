@@ -84,6 +84,17 @@ export function generateMarkdownReport(report: BackwardReport): string {
     lines.push('');
     lines.push('No backport suggestions found after detailed section analysis.');
     lines.push('');
+
+    // Still show per-section reasoning even when no backports
+    if (noBackportSuggestions.length > 0) {
+      lines.push('## Sections Reviewed');
+      lines.push('');
+      for (const s of noBackportSuggestions) {
+        lines.push(`- **${s.sectionHeading}**: ${s.category} — ${s.summary}`);
+      }
+      lines.push('');
+    }
+
     appendTimeline(lines, report);
     return lines.join('\n');
   }
@@ -105,9 +116,6 @@ export function generateMarkdownReport(report: BackwardReport): string {
     }
     lines.push('');
   }
-
-  lines.push('---');
-  lines.push('');
 
   appendTimeline(lines, report);
 
