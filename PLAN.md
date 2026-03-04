@@ -1,10 +1,10 @@
 # PLAN: Development Roadmap
 
 **Created**: 2026-02-16  
-**Last Updated**: 2026-03-03  
+**Last Updated**: 2026-03-04  
 **Sources**: 2026-02-16-REVIEW.md, docs/DESIGN-RESYNC.md  
 **Current Version**: v0.8.0  
-**Test Status**: 452 tests passing (23 test suites)
+**Test Status**: 456 tests passing (23 test suites)
 
 ---
 
@@ -232,8 +232,9 @@ Running against `solow.md` revealed a critical false positive: the LLM suggested
 
 ## Phase 2: Resync CLI — Bulk Analysis & Status (2-3 days) ✅ COMPLETE
 
-**Goal**: Scale backward to full repository + quick diagnostic command
-**Status**: Status command + bulk backward implemented, 41 new tests (450 total)
+**Goal**: Scale backward to full repository + quick diagnostic command  
+**Status**: Status command + bulk backward implemented, 45 new tests (456 total)  
+**Validated**: Full LLM bulk run on 51-file repo (49 analyzed, 20 suggestions found, 5 high-confidence BUG_FIX)
 
 ### 2.1 Status Command (`src/cli/commands/status.ts`) ✅
 
@@ -243,26 +244,33 @@ No LLM calls — fast and free diagnostic. Output goes to the **CLI console** (l
 - [x] Detect structural differences (section count mismatch)
 - [x] Compare file modification dates (git metadata)
 - [x] Report per-file sync status:
-  - `ALIGNED` — structure matches, heading-map present, no newer SOURCE commits
-  - `OUTDATED` — structure/heading-map OK, but SOURCE has newer commits than TARGET
+  - `ALIGNED` — structure matches, heading-map present, no newer commits either side
+  - `SOURCE_AHEAD` — SOURCE has newer commits than TARGET (needs forward sync)
+  - `TARGET_AHEAD` — TARGET has newer commits than SOURCE (possible backward candidate)
+  - `SOURCE_AHEAD | TARGET_AHEAD` — both sides have newer commits (compound flag)
   - `DRIFT` — structural differences detected (section count mismatch)
   - `MISSING_HEADINGMAP` — no heading-map in TARGET
   - `SOURCE_ONLY` — file missing in TARGET
   - `TARGET_ONLY` — file missing in SOURCE
-- [x] Print summary table to stdout
+- [x] Print summary table to stdout (compact format with `↳` detail lines)
+- [x] Support `--file` flag (single file diagnostic)
 - [x] Support `--json` flag (prints JSON to stdout)
 - [x] Unit tests (21 tests)
 
 ### 2.2 Bulk Backward Processing ✅
 
-Bulk mode writes reports into a **timestamped folder** — the folder *is* the report:
+Bulk mode writes reports into a **date-stamped folder** — the folder *is* the report:
 ```
-reports/backward-2026-03-03/
+reports/backward-2026-03-04/
 ├── _summary.md           # Aggregate summary
 ├── _summary.json         # (with --json)
-├── _progress.json        # Checkpoint manifest
-├── cobweb-backward.md    # Per-file report
-├── solow-backward.md
+├── .resync/              # Hidden subfolder for machine-readable data
+│   ├── _progress.json    # Checkpoint manifest
+│   ├── _log.txt          # Detailed per-file processing log
+│   ├── cobweb.json       # Per-file JSON sidecar
+│   └── solow.json
+├── cobweb.md             # Per-file report
+├── solow.md
 └── ...
 ```
 
@@ -270,15 +278,19 @@ reports/backward-2026-03-03/
 - [x] File filtering:
   - `--exclude <glob>` option (e.g., `--exclude README.md`)
   - Respect `_toc.yml` if present to discover the actual lecture list
-- [x] Progress indicator (console output: `[12/51] triaging cobweb.md...`)
+- [x] Progress bar (`cli-progress` library, TTY-only):
+  - Single updating line: `█████░░░ 24/51 | ✓ 8 sync 📝 5 suggestions ❌ 0 errors | current_file`
+  - Clears on completion, replaced by final summary
+  - Detailed per-file output goes to `.resync/_log.txt` log file
 - [x] Two-stage bulk flow:
   - Stage 1 triage on all files (fast, 1 call each)
   - Stage 2 section analysis only on flagged files
-  - Progress shows both stages: `Stage 1: [12/51]... Stage 2: [2/3]...`
-- [x] Sequential processing (respect API rate limits)
+- [x] Parallel processing (5 concurrent files via `Promise.all` batching)
+- [x] Buffered logger (`BufferedLogger` class) — collects per-file output, flushes to log file atomically to prevent interleaving
+- [x] Fresh start on re-run — wipes output folder unless `--resume` flag is set
 - [x] Incremental checkpointing:
   - Write each per-file report to disk as it completes
-  - Maintain `_progress.json` tracking which files are done
+  - Maintain `.resync/_progress.json` tracking which files are done
   - Support `--resume` to skip already-completed files in the output folder
 - [x] Per-file reports (individual Markdown/JSON per analyzed file)
 - [x] Aggregate summary report across all files
@@ -289,6 +301,8 @@ reports/backward-2026-03-03/
   - Calculate estimated total API cost
   - Calculate estimated time
   - Prompt user to proceed (y/N)
+- [x] Robust LLM response parsing (3-strategy approach: code fence → greedy regex → keyword fallback)
+- [x] Default model upgrade to `claude-sonnet-4-6`
 
 ### 2.3 Output Formats ✅
 
@@ -298,6 +312,15 @@ reports/backward-2026-03-03/
 > **Note**: Stable JSON schema definition and documentation deferred to Phase 4.
 
 **Phase 2 Deliverable**: `npx resync status` (console) + full-repo `npx resync backward` (report folder) ✅
+
+### Key Learnings from Phase 2 Real-World Testing
+
+- **Parallel output interleaving**: Running 5 files concurrently with direct console output was unreadable. Solved with `BufferedLogger` that collects per-file output and flushes atomically to a log file.
+- **Progress bar UX**: A single animated progress line (stderr, TTY-only) with counters (sync/suggestions/errors) is far better than scrolling file-by-file output. The log file preserves all detail for debugging.
+- **LLM response variability**: The same file can produce 0-2 suggestions across runs. Borderline confidence scores (~0.72) fluctuate. This is expected LLM behavior, not a bug.
+- **JSON parsing brittleness**: Claude wraps JSON in code fences, omits them, or returns partial JSON unpredictably. The 3-strategy parsing approach (code fence → greedy regex → keyword fallback) handles all observed formats.
+- **Cost validation**: Full 51-file run cost ~$0.85, completed in ~4 minutes with 5-way parallelism. Stage 1 flagged ~67% of files (higher than estimated 5-10%), but Stage 2 filtered effectively — only 20 actionable suggestions from 49 files.
+- **High-value findings**: 5 high-confidence BUG_FIX suggestions (confidence 0.85-0.97) represent genuine improvements made in the Chinese translation that should be backported to the English source.
 
 ---
 
@@ -671,8 +694,8 @@ npm run test:real-repos
 |--------|--------|
 | Stage 1 triage per file | <5 seconds |
 | Stage 2 analysis per section | <10 seconds |
-| Full backward (51 files) | <5 minutes |
-| API cost — backward (51 files) | ~$0.60 (triage) + ~$0.30 (detail on ~3 flagged) |
+| Full backward (51 files, 5 parallel) | ~4 minutes |
+| API cost — backward (51 files) | ~$0.85 total (real measurement) |
 | API cost — backward-sync per file | ~$0.10 |
 | API cost — forward per file | ~$0.10 |
 | Status check | <5 seconds (no LLM) |
@@ -681,7 +704,7 @@ npm run test:real-repos
 
 | Metric | Current | Target |
 |--------|---------|--------|
-| Test count | 450 | 400+ |
+| Test count | 456 | 400+ |
 | `index.ts` lines | ~447 | ~447 (stable) |
 | Deprecated methods | 0 | 0 |
 | Dead tool directories | 2 | 0 |
@@ -706,13 +729,14 @@ npm run test:real-repos
 
 ## Open Questions
 
-1. **Stage 1 token limits**: Very large documents (30K+ tokens per side) may exceed context window for single-call triage. Fallback: skip Stage 1 and go direct to Stage 2 for oversized files. — Validate in Phase 1
-2. **Backport confidence threshold**: Default 0.6 — validate with real data in Phase 1
-3. **Multi-section changes**: Group in one suggestion or separate? — Decide in Phase 1
+1. ~~**Stage 1 token limits**: Very large documents (30K+ tokens per side) may exceed context window for single-call triage.~~ **Resolved**: `SKIPPED_TOO_LARGE` verdict handles this. Only 2 files hit the limit in real testing (README.md, tax_smooth.md).
+2. ~~**Backport confidence threshold**: Default 0.6~~ **Validated**: 0.6 works well. Real BUG_FIX findings came in at 0.85-0.97. Lower-confidence suggestions (0.6-0.7) are borderline but worth flagging.
+3. ~~**Multi-section changes**: Group in one suggestion or separate?~~ **Resolved**: Separate per-section suggestions. Each gets its own category, confidence, and reasoning.
 4. ~~**TARGET-only files**: Flag for addition to SOURCE, or just report?~~ **Resolved**: `status` reports only (diagnostic tool). Action on `TARGET_ONLY` / `SOURCE_ONLY` belongs to Phase 3 commands.
 5. **Run frequency**: Monthly default, option for more frequent? — Decide in Phase 4
 6. **backward-sync PR format**: Should `backward-sync` create PRs directly, or write files for manual PR creation? — Decide in Phase 3
 7. **Report-driven backward-sync**: The `--from-report` flag reads a backward JSON report and syncs only marked suggestions. Exact UX for "marking accepted" TBD. — Decide in Phase 3
+8. **Stage 1 precision**: Flagging rate was ~67% vs estimated 5-10%. High recall is good, but Stage 1 could be tuned to reduce false positives and save Stage 2 costs. — Address in Phase 4 prompt tuning
 
 ---
 
@@ -726,6 +750,15 @@ Phase 0, Phase 1, and Phase 2 are complete. **Start Phase 3** with backward-sync
 - **Two-stage design validated**: Stage 1 correctly flags differences; Stage 2 correctly filters non-actionable ones. The cost savings are real (~$0.01 triage vs ~$0.10-0.50 per-section analysis).
 - **Real repo names**: The zh-cn repo for `lecture-python-intro` is `lecture-intro.zh-cn` (not `lecture-python-intro.zh-cn`).
 
+### Lessons from Phase 2 Bulk Testing
+
+- **5-way parallelism** is the sweet spot — fast enough to complete 51 files in ~4 minutes, without overwhelming the API.
+- **Buffered logging** is essential for parallel work — interleaved output from concurrent files is unreadable.
+- **Progress bar** provides much better UX than scrolling output — users see status at a glance, details go to log file.
+- **Fresh start by default** (wipe output folder) is more intuitive than accumulating stale results. `--resume` is the opt-in for incremental runs.
+- **Date-only folder naming** (`backward-2026-03-04`) is cleaner than timestamped (`backward-2026-03-04_01-38-48`). Same-day re-runs overwrite, which matches the fresh-start default.
+- **Stage 1 flagging rate** was ~67% (33/49 files flagged), much higher than the estimated 5-10%. This suggests the Stage 1 prompt has high recall (good — false negatives are worse than false positives) but precision could be improved. Stage 2 effectively filters: only 20 suggestions survived from 33 flagged files.
+
 ---
 
-*Last updated: 2026-03-03*
+*Last updated: 2026-03-04*
