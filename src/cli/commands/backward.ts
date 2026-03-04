@@ -109,6 +109,7 @@ export async function runBackwardSingleFile(
   }
 
   // ─── Stage 1: Document-Level Triage ───
+  logger.info('');
   logger.info('  Stage 1: Document-level triage...');
   
   const triageResult = await triageDocument(
@@ -152,6 +153,7 @@ export async function runBackwardSingleFile(
   }
 
   // ─── Stage 2: Section-Level Analysis ───
+  logger.info('');
   logger.info('  Stage 2: Section-level analysis...');
 
   const parser = new MystParser();
@@ -233,6 +235,7 @@ export async function runBackwardSingleFile(
 
   // Build report
   const backportCount = filteredSuggestions.filter(s => s.recommendation === 'BACKPORT').length;
+  logger.info('');
   logger.info(`  Done: ${backportCount} suggestion(s) from ${filteredSuggestions.length} sections analyzed.`);
 
   const report: BackwardReport = {

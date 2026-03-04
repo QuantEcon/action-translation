@@ -128,6 +128,7 @@ async function runBackwardSingleFile(options, logger = defaultLogger) {
         }
     }
     // ─── Stage 1: Document-Level Triage ───
+    logger.info('');
     logger.info('  Stage 1: Document-level triage...');
     const triageResult = await (0, document_comparator_1.triageDocument)(file, sourceContent, targetContent, sourceMetadata, targetMetadata, timeline, {
         apiKey: options.apiKey,
@@ -157,6 +158,7 @@ async function runBackwardSingleFile(options, logger = defaultLogger) {
         return report;
     }
     // ─── Stage 2: Section-Level Analysis ───
+    logger.info('');
     logger.info('  Stage 2: Section-level analysis...');
     const parser = new parser_1.MystParser();
     const sourceParsed = await parser.parseSections(sourceContent, sourceFilePath);
@@ -214,6 +216,7 @@ async function runBackwardSingleFile(options, logger = defaultLogger) {
     });
     // Build report
     const backportCount = filteredSuggestions.filter(s => s.recommendation === 'BACKPORT').length;
+    logger.info('');
     logger.info(`  Done: ${backportCount} suggestion(s) from ${filteredSuggestions.length} sections analyzed.`);
     const report = {
         file,
