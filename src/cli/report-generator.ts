@@ -24,6 +24,9 @@ export function generateMarkdownReport(report: BackwardReport): string {
   lines.push(`# Backward Analysis: ${report.file}`);
   lines.push('');
   lines.push(`**Generated**: ${report.timestamp}`);
+  if (report.model) {
+    lines.push(`**Model**: ${report.model}`);
+  }
 
   // Git metadata
   if (report.sourceMetadata) {
@@ -168,6 +171,9 @@ export function generateBulkMarkdownReport(report: BulkBackwardReport): string {
   lines.push('# Backward Analysis Report');
   lines.push('');
   lines.push(`**Generated**: ${report.timestamp}`);
+  if (report.model) {
+    lines.push(`**Model**: ${report.model}`);
+  }
   lines.push(`**Source**: ${report.sourceRepo}`);
   lines.push(`**Target**: ${report.targetRepo} (${report.language})`);
   lines.push('');

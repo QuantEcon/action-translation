@@ -139,6 +139,7 @@ export async function runBackwardSingleFile(
     const report: BackwardReport = {
       file,
       timestamp: new Date().toISOString(),
+      model,
       sourceMetadata,
       targetMetadata,
       timeline,
@@ -237,6 +238,7 @@ export async function runBackwardSingleFile(
   const report: BackwardReport = {
     file,
     timestamp: new Date().toISOString(),
+    model,
     sourceMetadata,
     targetMetadata,
     timeline,
@@ -475,7 +477,7 @@ export async function runBackwardBulk(
 
   if (allFiles.length === 0) {
     logger.warn('No files found. Check --source, --target, and --docs-folder paths.');
-    return buildEmptyBulkReport(source, target, language);
+    return buildEmptyBulkReport(source, target, language, options.model);
   }
 
   // Cost estimate
@@ -483,7 +485,7 @@ export async function runBackwardBulk(
     const estimate = estimateBulkCost(allFiles.length);
     logger.info('');
     logger.info(formatCostEstimate(estimate));
-    return buildEmptyBulkReport(source, target, language);
+    return buildEmptyBulkReport(source, target, language, options.model);
   }
 
   // Check for resume
@@ -565,7 +567,7 @@ export async function runBackwardBulk(
   }
 
   // Build aggregate report
-  const bulkReport = buildBulkReport(source, target, language, fileReports);
+  const bulkReport = buildBulkReport(source, target, language, fileReports, options.model);
 
   // Write aggregate summary
   if (options.json) {
@@ -603,6 +605,7 @@ export function buildBulkReport(
   targetRepo: string,
   language: string,
   fileReports: BackwardReport[],
+  model?: string,
 ): BulkBackwardReport {
   const allSuggestions = fileReports.flatMap(r =>
     r.suggestions.filter(s => s.recommendation === 'BACKPORT'),
@@ -610,6 +613,7 @@ export function buildBulkReport(
 
   return {
     timestamp: new Date().toISOString(),
+    model,
     sourceRepo,
     targetRepo,
     language,
@@ -631,8 +635,9 @@ function buildEmptyBulkReport(
   sourceRepo: string,
   targetRepo: string,
   language: string,
+  model?: string,
 ): BulkBackwardReport {
-  return buildBulkReport(sourceRepo, targetRepo, language, []);
+  return buildBulkReport(sourceRepo, targetRepo, language, [], model);
 }
 
 function resolveReportPath(outputDir: string, file: string, json: boolean): string {

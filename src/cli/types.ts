@@ -136,6 +136,7 @@ export interface FileTimeline {
 export interface BackwardReport {
   file: string;
   timestamp: string;
+  model?: string;               // Claude model used for analysis
   sourceMetadata: FileGitMetadata | null;
   targetMetadata: FileGitMetadata | null;
   timeline: FileTimeline | null;
@@ -149,6 +150,7 @@ export interface BackwardReport {
  */
 export interface BulkBackwardReport {
   timestamp: string;
+  model?: string;               // Claude model used for analysis
   sourceRepo: string;
   targetRepo: string;
   language: string;
