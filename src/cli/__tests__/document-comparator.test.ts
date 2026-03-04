@@ -137,18 +137,34 @@ Let me know if you need more details.`;
       expect(result.verdict).toBe('IN_SYNC');
     });
 
-    it('should default to CHANGES_DETECTED when unparseable (recall-biased)', () => {
-      const response = 'I cannot determine the relationship between these.';
-      const result = parseTriageResponse(response);
-      expect(result.verdict).toBe('CHANGES_DETECTED');
-      expect(result.notes).toContain('Unable to parse');
-    });
-
     it('should not accept invalid verdict values', () => {
       const response = '{"verdict": "MAYBE", "notes": "unclear"}';
       const result = parseTriageResponse(response);
       // Non-IN_SYNC values default to CHANGES_DETECTED
       expect(result.verdict).toBe('CHANGES_DETECTED');
+    });
+
+    it('should parse JSON in code fence when notes contain curly braces', () => {
+      const response = `Here's my analysis:
+
+\`\`\`json
+{
+  "verdict": "CHANGES_DETECTED",
+  "notes": "The translation corrects the formula from $\\pi_{0}$ to $\\pi$ in the vector definition {eq:eq1}."
+}
+\`\`\`
+
+This change appears to fix a typo.`;
+      const result = parseTriageResponse(response);
+      expect(result.verdict).toBe('CHANGES_DETECTED');
+      expect(result.notes).toContain('corrects the formula');
+    });
+
+    it('should include raw response snippet when all parsing fails', () => {
+      const response = 'I cannot determine the relationship between these documents at all.';
+      const result = parseTriageResponse(response);
+      expect(result.verdict).toBe('CHANGES_DETECTED');
+      expect(result.notes).toContain('Raw:');
     });
   });
 

@@ -121,8 +121,21 @@ Respond with a JSON object:
  * Robust: handles cases where Claude doesn't return clean JSON
  */
 export function parseTriageResponse(responseText: string): { verdict: TriageVerdict; notes: string } {
-  // Try to extract JSON from the response
-  const jsonMatch = responseText.match(/\{[\s\S]*?\}/);
+  // Strategy 1: Extract JSON from a code fence (most reliable)
+  const fenceMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+  if (fenceMatch) {
+    try {
+      const parsed = JSON.parse(fenceMatch[1]);
+      const verdict = parsed.verdict === 'IN_SYNC' ? 'IN_SYNC' : 'CHANGES_DETECTED';
+      const notes = typeof parsed.notes === 'string' ? parsed.notes : '';
+      return { verdict: verdict as TriageVerdict, notes };
+    } catch {
+      // JSON parse failed, fall through
+    }
+  }
+
+  // Strategy 2: Greedy match for the outermost {...} block
+  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (jsonMatch) {
     try {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -134,7 +147,7 @@ export function parseTriageResponse(responseText: string): { verdict: TriageVerd
     }
   }
 
-  // Fallback: look for keywords in the response
+  // Strategy 3: Look for keywords in the response
   const lower = responseText.toLowerCase();
   if (lower.includes('in_sync') || lower.includes('in sync') || lower.includes('no substantive')) {
     return { verdict: 'IN_SYNC', notes: '' };
@@ -143,7 +156,7 @@ export function parseTriageResponse(responseText: string): { verdict: TriageVerd
   // Default to CHANGES_DETECTED (recall-biased: when in doubt, flag it)
   return { 
     verdict: 'CHANGES_DETECTED', 
-    notes: 'Unable to parse LLM response cleanly; flagging for detailed review.' 
+    notes: `Unable to parse LLM response cleanly; flagging for detailed review. Raw: ${responseText.slice(0, 200)}` 
   };
 }
 

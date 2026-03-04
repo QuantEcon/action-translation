@@ -137,11 +137,17 @@ export function parseEvaluationResponse(
   responseText: string,
   sectionHeading: string,
 ): BackportSuggestion {
-  // Try to extract JSON from the response
-  const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
+  // Strategy 1: Extract JSON from a code fence (most reliable)
+  const fenceMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+  const jsonText = fenceMatch ? fenceMatch[1] : null;
+
+  // Strategy 2: Greedy match for the outermost {...} block
+  const fallbackMatch = responseText.match(/\{[\s\S]*\}/);
+  const candidates = [jsonText, fallbackMatch?.[0]].filter(Boolean) as string[];
+
+  for (const candidate of candidates) {
     try {
-      const parsed = JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(candidate);
       return {
         sectionHeading,
         recommendation: parsed.recommendation === 'BACKPORT' ? 'BACKPORT' : 'NO_BACKPORT',
@@ -154,7 +160,7 @@ export function parseEvaluationResponse(
         reasoning: typeof parsed.reasoning === 'string' ? parsed.reasoning : '',
       };
     } catch {
-      // JSON parse failed, fall through
+      // Try next candidate
     }
   }
 
