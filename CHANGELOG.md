@@ -34,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`src/index.ts`**: `__dirname` → `import.meta.url` + `fileURLToPath` (ESM compat)
 - **`src/cli/index.ts`**: `require('../../package.json')` → `createRequire(import.meta.url)`
 
-### Added
+### Added (Phase 2)
 - **Resync CLI — Status Command** (`src/cli/commands/status.ts`): Fast, free diagnostic — no LLM calls
   - Per-file sync status: `ALIGNED`, `OUTDATED`, `SOURCE_AHEAD`, `TARGET_AHEAD`, `MISSING_HEADINGMAP`, `SOURCE_ONLY`, `TARGET_ONLY`
   - Console table output (`formatStatusTable`) — like `git status` for translations
