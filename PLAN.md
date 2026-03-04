@@ -16,15 +16,16 @@ This plan combines three work streams into a single prioritized roadmap:
 2. **Resync CLI** — Build the CLI tool with three commands: `backward`, `backward-sync`, and `forward`
 3. **Cleanup** — Remove deprecated tools and improve repo hygiene
 
-### Three-Command Architecture
+### Four-Command Architecture
 
 | Command | Direction | Purpose | Output | Modifies files? |
-|---------|-----------|---------|--------|-----------------|
-| `backward` | TARGET → SOURCE | Identify improvements worth considering | Suggestion report | No |
-| `backward-sync` | TARGET → SOURCE | Apply accepted improvements to SOURCE | Updated English files | Yes |
-| `forward` | SOURCE → TARGET | Translate changes to TARGET | Updated translated files | Yes |
+|---------|-----------|---------|--------|------------------|
+| `status` | — | Fast structural diagnostic | Console table | No |
+| `backward` | TARGET → SOURCE | Identify improvements worth considering | Suggestion report folder | No |
+| `review` | — | Interactive human review of backward suggestions | GitHub Issues | No (creates Issues) |
+| `forward` | SOURCE → TARGET | Resync TARGET after drift or failed propagation | Updated translated files | Yes |
 
-**Workflow**: `backward` (discover) → human review → `backward-sync` (apply selected) → `forward` (propagate to all targets)
+**Workflow**: `status` (quick check) → `backward` (discover suggestions) → `review` (human decides, creates Issues) → human edits SOURCE → Action translates forward (incremental) *or* `forward` CLI (drift recovery)
 
 ### Two-Stage Backward Architecture
 
@@ -334,72 +335,172 @@ reports/backward-2026-03-04/
 
 ---
 
-## Phase 3: Resync CLI — Backward-Sync & Forward (2-3 days)
+## Phase 3a: Resync CLI — Interactive Review (3-4 days)
 
-**Goal**: Implement both sync directions via CLI
+**Goal**: Interactive human review of backward suggestions with GitHub Issue creation  
+**Key insight from Phase 2**: Backward suggestions are rare (5 high-confidence out of 51 files) and need human judgment. Automating backward-sync via LLM is over-engineered — the value is in making the human review loop fast and pleasant.
 
-### 3.1 Backward-Sync Command (`src/cli/commands/backward-sync.ts`)
+### Design Decisions
 
-Applies accepted backward suggestions by reverse-translating TARGET improvements into SOURCE English. Reuses the forward sync machinery with swapped inputs.
+**`backward-sync` deferred**: Originally planned as an LLM reverse-translation step. Deferred because:
+- Backport candidates are rare — each gets careful human attention
+- Edits are typically small (fix a formula, add a sentence)
+- A human reading the backward report can edit SOURCE directly, often faster and higher quality than an LLM round-trip
+- Risk of the LLM misunderstanding *why* the translation diverged
+- If LLM assistance is needed for a specific edit, it can be done ad-hoc outside this tool
 
-- [ ] Parse CLI arguments (reuse common options)
-- [ ] Support `--dry-run` flag
-- [ ] Support single-file mode (`-f`) with optional section filter (`--section`)
-- [ ] Support report-driven mode (`--from-report <report.json>`)
-  - Reads a backward report JSON and syncs only accepted suggestions
-  - User marks suggestions as accepted before running
+**`review` command (new)**: Interactive CLI that walks through backward report suggestions, lets a human accept/skip/reject each one, and creates GitHub Issues for accepted suggestions. This bridges the gap between "discovery" (backward) and "action" (human edits SOURCE).
 
-### 3.2 Backward-Sync Logic
+**`forward` command — RESYNC mode**: Different from the GitHub Action's forward sync. The Action handles incremental updates triggered by PRs (UPDATE mode with old/new SOURCE diff). The forward CLI handles **drift recovery** — when repos are out of sync due to failed propagation, manual edits, or initial onboarding. Uses a new RESYNC prompt that preserves translation nuances.
 
-Reuse modules from action-translation with swapped SOURCE/TARGET roles:
+### CLI Framework: `ink` v4 (React for CLI)
 
-- [ ] Parse TARGET (as source of changes) and SOURCE (as target to update)
-- [ ] Match sections (via `section-matcher.ts`)
-- [ ] For sections with accepted suggestions:
-  - Get current English from SOURCE
-  - Translate improvement from TARGET back to English using UPDATE mode (via `translator.ts`)
-  - Prompt tone: "Improve this English section based on changes found in the translation"
-  - Replace section in SOURCE
-- [ ] Preserve frontmatter and document structure
-- [ ] **Suggestion PR mode**: Generate output suitable for a suggestion PR
-  - PR title: `[Suggestion] {filename}: {brief summary}`
-  - PR body: explains what the translation improved and why
-  - Respectful tone — these are suggestions, SOURCE is truth
+The `review` command needs rich terminal rendering: syntax-highlighted MyST markdown, panels, interactive prompts. **Decision: `ink` v4** — React-based CLI framework in Node.js, ESM module system.
 
-### 3.3 Forward Command (`src/cli/commands/forward.ts`)
+**Why `ink`**:
+- **Unified codebase** — Everything stays TypeScript. The `forward` command imports `translator.ts`, `parser.ts`, `section-matcher.ts` directly. No IPC, no subprocess, no duplication.
+- **Component model** — `<SuggestionCard>`, `<MystBlock>`, `<ActionPrompt>` map naturally to the review UI
+- `ink-syntax-highlight` for code blocks, custom components for MyST directives
+- Testable via `ink-testing-library` (renders to string, asserts output)
+- No new runtime dependency — users already need Node.js for the existing CLI
+- Production precedent: Gatsby, Prisma, Shopify CLIs
 
-Standard SOURCE → TARGET sync (the normal direction):
+**Why v4 (ESM)**: ink v4 is ESM-only. The existing CLI compiles to CommonJS, but the Node.js ecosystem is firmly moving to ESM. Migrating now avoids a later migration. Requires `tsconfig.json` module changes and import path adjustments for the CLI build.
 
-- [ ] Parse CLI arguments (reuse common options)
-- [ ] Support `--dry-run` flag
-- [ ] Support single-file mode (`-f`)
-- [ ] Support full directory mode
+**Rendering approach**: Custom `<MystRenderer>` component using `chalk` + `cli-highlight` for syntax highlighting, `<Box>` for directive panels, styled `<Text>` for headers/math. Gets ~80% of `rich`'s rendering quality. See "Future: Python Rewrite" section for the path to best-in-class rendering.
 
-### 3.4 Forward Sync Logic
+**Rejected alternative**: Python with `rich` — superior rendering but requires a full rewrite of the entire CLI to avoid a mixed-language project. Documented in the Future section as a long-term option.
 
-Reuse modules from action-translation:
+### 3a.0 Prerequisites
 
-- [ ] Parse SOURCE and TARGET sections (via `parser.ts`)
-- [ ] Match sections (via `section-matcher.ts`)
-- [ ] For `SOURCE_CHANGED` sections:
-  - Get old translation from TARGET
-  - Translate using UPDATE mode (via `translator.ts`)
-  - Replace section in TARGET
-- [ ] For `SOURCE_ONLY` sections:
-  - Translate using NEW mode
-  - Insert at correct position
-- [ ] For `TARGET_ONLY` sections (deleted in SOURCE):
-  - Remove from TARGET
+#### Formalize Backward Report JSON Schema
+
+The `review` command reads `.resync/*.json` sidecars produced by `backward`. Define the schema contract before building the consumer.
+
+- [ ] Document the JSON schema for per-file sidecar files (`.resync/<file>.json`)
+- [ ] Document the JSON schema for `_summary.json`
+- [ ] Document the JSON schema for `_progress.json`
+- [ ] Add TypeScript types or Zod schema for runtime validation
+- [ ] Add schema version field for future compatibility
+
+#### ESM Migration for CLI Build
+
+- [ ] Update `tsconfig.json` (or create CLI-specific config) for ESM output
+- [ ] Update import paths to include `.js` extensions where needed
+- [ ] Install `ink` v4, `ink-testing-library`, `react`
+- [ ] Verify existing CLI commands (`backward`, `status`) still work after migration
+- [ ] Update `build:cli` script
+
+### 3a.1 Review Command (`review`)
+
+Interactive CLI that reads a backward report folder and walks through each suggestion:
+
+```
+npx resync backward ...          # Phase 2 (done) — generates report folder
+npx resync review <report-dir>   # Phase 3 (new) — interactive walk-through
+```
+
+**Per-suggestion display**:
+- File name + section heading
+- Category badge + confidence score (e.g., `BUG_FIX 0.92`)
+- LLM reasoning (why this was flagged)
+- Syntax-highlighted SOURCE and TARGET excerpts for the relevant section
+- Suggested change description
+
+**Actions per suggestion**: **[A]ccept** → create Issue · **[S]kip** → move on · **[R]eject** → mark as false positive
+
+**End-of-session summary**: N accepted / N skipped / N rejected, with links to created Issues
+
+#### 3a.1.1 Review Command Implementation
+
+- [ ] Parse CLI arguments: `<report-dir>`, `--repo <owner/repo>` (SOURCE repo for Issues), `--dry-run`
+- [ ] Load report folder: read `_summary.json` + per-file JSON sidecars from `.resync/`
+- [ ] Filter to actionable suggestions (skip `IN_SYNC` / `NO_CHANGE` files)
+- [ ] Sort suggestions by confidence (highest first) or by file
+- [ ] Interactive loop: display each suggestion, prompt for action
+- [ ] Track session state (accepted/skipped/rejected counts)
+- [ ] Print end-of-session summary
+
+#### 3a.1.2 GitHub Issue Creation
+
+Build `--dry-run` first (Issue preview without creating). Then add real Issue creation targeting the `test-action-translation` test repos for validation.
+
+- [ ] Create Issue in SOURCE repo via `gh` CLI (or GitHub API)
+- [ ] Issue title format: `[filename] brief description of suggestion`
+- [ ] Issue body includes:
+  - Category + confidence
+  - Section heading and location in file
+  - Full LLM reasoning
+  - SOURCE and TARGET excerpts
+  - "Generated by `resync backward` on YYYY-MM-DD" footer
+- [ ] Labels: `backward-suggestion`, category label (e.g., `bug-fix`), confidence tier
+- [ ] Support `--dry-run` (show Issue preview without creating)
+
+#### 3a.1.3 MyST-Aware Terminal Rendering
+
+- [ ] Code blocks → syntax-highlighted (language-aware)
+- [ ] Math blocks → styled LaTeX source (with optional Unicode symbol substitution: α, β, ∑)
+- [ ] Directives (`{note}`, `{code-cell}`) → colored/boxed panels with directive name as header
+- [ ] Headers/lists/links → standard markdown styling
+- [ ] Frontmatter → YAML syntax highlighting
+- [ ] Side-by-side or sequential SOURCE/TARGET display
+
+#### 3a.1.4 Review Tests
+
+- [ ] Unit tests for suggestion loading and filtering
+- [ ] Unit tests for Issue body generation
+- [ ] Rendering component tests (framework-dependent)
+- [ ] Interactive flow tests with mocked input
+- [ ] `--dry-run` end-to-end test
+
+### 3b.1 Forward Command (`src/cli/commands/forward.ts`)
+
+Drift recovery: resync TARGET to match current SOURCE, preserving translation quality.
+
+```
+npx resync status                    # identify drifted files (OUTDATED, SOURCE_AHEAD)
+npx resync forward -f cobweb.md      # resync specific file
+npx resync forward                   # resync all OUTDATED files
+```
+
+- [ ] Parse CLI arguments: `-f <file>`, `-s <source-dir>`, `-t <target-dir>`, `-l <language>`, `--dry-run`
+- [ ] Support single-file mode (`-f`) and full directory mode
+- [ ] Integrate with `status` to auto-detect OUTDATED files (when no `-f` given)
+- [ ] Support `--dry-run` flag (diff-style preview without file modification)
+- [ ] Cost estimation + confirmation prompt (like bulk backward)
+
+### 3b.2 RESYNC Translation Mode
+
+New translation mode distinct from NEW and UPDATE:
+
+| Mode | Inputs | Use case |
+|------|--------|----------|
+| **NEW** | SOURCE only | Fresh translation (no prior work) |
+| **UPDATE** | Old SOURCE + New SOURCE + Current TARGET | Incremental change (PR-driven, Action) |
+| **RESYNC** | Current SOURCE + Current TARGET | Drift recovery (no baseline available) |
+
+RESYNC preserves translation nuances because the LLM sees the existing translation:
+- Maintains translator's style, terminology choices, localization decisions
+- Only changes what the SOURCE actually changed
+- Far less churn than re-translating from scratch
+
+- [ ] Add RESYNC mode to `translator.ts`
+- [ ] RESYNC prompt: "Update this translation to accurately reflect the current source. Preserve existing translation style, terminology, and localization wherever the meaning hasn't changed."
+- [ ] Per-section processing: parse both sides, match sections, RESYNC each pair
+- [ ] Handle `SOURCE_ONLY` sections (new — translate with NEW mode)
+- [ ] Handle `TARGET_ONLY` sections (deleted in SOURCE — flag for removal, require confirmation)
 - [ ] Preserve heading-map (via `heading-map.ts`)
 - [ ] Preserve frontmatter
+- [ ] Unit tests for RESYNC mode
 
-### 3.5 Output
+### 3b.3 Forward Output
 
-- [ ] Write updated files to disk (SOURCE for backward-sync, TARGET for forward)
-- [ ] Sync summary report (sections translated, unchanged, errors)
+- [ ] Write updated TARGET files to disk
+- [ ] Sync summary: sections resynced / unchanged / new / removed / errors
 - [ ] Dry-run mode: diff-style preview without file modification
+- [ ] Per-section confidence/change markers in output
 
-**Phase 3 Deliverable**: Working `npx resync backward-sync` + `npx resync forward`
+**Phase 3b Deliverable**: Working `npx resync forward` with RESYNC mode
 
 ---
 
@@ -409,11 +510,23 @@ Reuse modules from action-translation:
 
 ### 4.1 Integration Testing
 
-- [ ] Test with `lecture-python-intro` ↔ `lecture-intro.zh-cn`
-- [ ] Test with `lecture-python` ↔ `lecture-python.zh-cn`
+**Phase 3a Deliverable**: Working `npx resync review <report-dir>` with `--dry-run` and Issue creation
+
+---
+
+## Phase 3b: Resync CLI — Forward Resync (2-3 days)
+
+**Goal**: Drift recovery via forward resync with RESYNC translation mode
+
+### 3b.1 Forward Command (`src/cli/commands/forward.ts`)
+
+- [ ] Test `backward` + `review` workflow with `lecture-python-intro` ↔ `lecture-intro.zh-cn`
+- [ ] Test `forward` resync with `lecture-python` ↔ `lecture-python.zh-cn`
+- [ ] Validate RESYNC translation quality (preserves nuances vs full re-translation)
 - [ ] Add CLI smoke tests (invoke commands as external processes)
 - [ ] Add LLM prompt snapshot tests (catch unintended prompt drift)
 - [ ] Validate two-stage triage accuracy (Stage 1 recall ≥95%)
+- [ ] Test review → Issue creation end-to-end
 - [ ] Document edge cases found
 - [ ] Fix bugs discovered
 
@@ -424,7 +537,7 @@ Reuse modules from action-translation:
 - [ ] Identify false positives and false negatives
 - [ ] Tune Stage 1 prompt for recall (bias toward flagging)
 - [ ] Tune Stage 2 prompt for precision (reduce noise in suggestions)
-- [ ] Validate backward-sync output quality (translated English reads naturally)
+- [ ] Tune RESYNC prompt for translation preservation quality
 - [ ] Re-run validation tests
 
 ### 4.3 Error Handling
@@ -434,15 +547,75 @@ Reuse modules from action-translation:
 - [ ] API timeout/rate limit
 - [ ] Invalid heading-map
 - [ ] Oversized documents (Stage 1 token limit exceeded)
+- [ ] `gh` CLI not available (review command: graceful error)
 - [ ] Graceful degradation with warnings
 
-### 4.4 Documentation
+### 4.4 Documentation — Restructure into User & Developer Guides
 
-- [ ] CLI README (`src/cli/README.md`)
-- [ ] Update main README with resync CLI section
-- [ ] Update `docs/INDEX.md`
-- [ ] Update `docs/DESIGN-RESYNC.md` to reflect two-stage architecture
+Restructure `docs/` into two clear audiences and deploy via GitHub Pages for easy access.
+
+#### Documentation Structure
+
+```
+docs/
+├── index.md                    # Landing page (replaces INDEX.md)
+├── user/                       # For users of the Action and CLI
+│   ├── quickstart.md           # Getting started (Action setup)
+│   ├── action-reference.md     # GitHub Action inputs, modes, examples
+│   ├── cli-reference.md        # CLI commands: status, backward, review, forward
+│   ├── glossary.md             # Glossary system usage
+│   ├── heading-maps.md         # Heading-map explanation for users
+│   ├── language-config.md      # Language-specific rules
+│   └── faq.md                  # Common questions and troubleshooting
+├── developer/                  # For contributors and maintainers
+│   ├── architecture.md         # System design and module map
+│   ├── sync-workflow.md        # Sync lifecycle internals
+│   ├── implementation.md       # Technical deep-dive
+│   ├── testing.md              # Test suite design, how to write tests
+│   ├── test-repositories.md    # GitHub integration test setup
+│   ├── design-resync.md        # Resync CLI design decisions
+│   └── claude-models.md        # Model selection internals
+└── _config/                    # Site generation config
+    └── ...
+```
+
+#### User Documentation
+
+- [ ] **Quick Start** — streamlined Action setup for new users
+- [ ] **Action Reference** — inputs, outputs, modes (sync/review), examples
+- [ ] **CLI Reference** — `status`, `backward`, `review`, `forward` with usage examples and options
+- [ ] **Glossary Guide** — how to use and extend the translation glossary
+- [ ] **Heading Maps** — user-friendly explanation (what they are, when to edit manually)
+- [ ] **FAQ** — common issues, troubleshooting, "how do I..." answers
+
+#### Developer Documentation
+
+- [ ] **Architecture** — module map, data flow diagrams, key design constraints
+- [ ] **Sync Workflow** — internal lifecycle, UPDATE/NEW/RESYNC modes
+- [ ] **Implementation** — technical reference (parser, diff-detector, translator internals)
+- [ ] **Testing Guide** — test pyramid, fixtures, how to add tests
+- [ ] **Design: Resync CLI** — two-stage architecture, review workflow, CLI framework decision
+- [ ] **Claude Models** — model selection, token limits, retry logic
+
+#### GitHub Pages Deployment
+
+- [ ] Use **mystmd** as the static site generator
+  - Natural fit: the project processes MyST Markdown — dogfood the format
+  - QuantEcon already uses mystmd for lecture sites
+  - Native rendering of all MyST directives, math, code cells — no preprocessing
+  - Documentation examples use the same syntax the tool translates
+- [ ] Configure `docs/` with `myst.yml`
+- [ ] Add GitHub Actions workflow: auto-deploy docs on push to `main`
+- [ ] Landing page with navigation to User / Developer sections
+- [ ] Ensure existing doc links remain functional (redirects or path mapping)
+- [ ] Add docs site URL to repo About section and README
+
+#### General
+
+- [ ] Update main README with link to docs site
 - [ ] Update CHANGELOG.md
+- [ ] Migrate content from existing `docs/*.md` files into new structure
+- [ ] Remove or redirect old `INDEX.md`
 
 ### 4.5 Additional Review Actions (from 2026-02-16-REVIEW)
 
@@ -625,7 +798,7 @@ src/cli/__tests__/
 ├── report-generator.test.ts     # Layer 3: snapshot tests
 ├── status.test.ts               # Layer 2: fixture integration
 ├── backward.test.ts             # Layer 2: fixture integration + Layer 5: CLI smoke
-├── backward-sync.test.ts        # Layer 2: fixture integration + Layer 5: CLI smoke
+├── review.test.ts               # Layer 2: interactive flow tests + Issue generation
 ├── forward.test.ts              # Layer 2: fixture integration + Layer 5: CLI smoke
 ├── prompt-regression.test.ts    # Layer 7b: golden responses (separate suite, --test-llm flag)
 └── fixtures/
@@ -668,20 +841,19 @@ npm run test:real-repos
 
 ---
 
-## Phase 6: GitHub Action Automation (Future — 2-3 days)
+## Phase 6: GitHub Action Automation (Future — 1-2 days)
 
-**Goal**: Scheduled automation of resync via GitHub Actions  
+**Goal**: Scheduled backward analysis via GitHub Actions  
 **Prerequisite**: Phase 4 (validated CLI)
 
-- [ ] Freeze JSON schema for automation
-- [ ] Create workflow template: monthly backward report (two-stage)
-- [ ] Create workflow template: monthly status check
-- [ ] Confidence-based actions:
-  - HIGH (≥0.85): Auto-create suggestion PR in SOURCE via `backward-sync`
-  - MEDIUM (0.6-0.85): Create issue for review
-  - LOW (<0.6): Report only
-- [ ] GitHub trigger for translators: Issue template "Suggest upstream improvement"
-- [ ] Documentation: "Setting up automated resync"
+**Scope reduced**: Originally planned auto-PR creation from backward-sync. With the revised approach (human review via `resync review`), automation is limited to running the analysis and notifying maintainers.
+
+- [ ] Create workflow template: monthly `backward` analysis (two-stage)
+- [ ] Create workflow template: monthly `status` check
+- [ ] Store backward report as workflow artifact
+- [ ] Notification: comment on a tracking Issue or Slack webhook with summary
+- [ ] Maintainer runs `resync review` locally on the downloaded report
+- [ ] Documentation: "Setting up automated backward analysis"
 
 ---
 
@@ -766,13 +938,14 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 | **Phase 0**: Foundation | 3-4 days | None | `index.ts` refactored, retry logic |
 | **Phase 1**: Single-file backward | 3-4 days | Phase 0 ✅ | `npx resync backward -f file.md` (two-stage) |
 | **Phase 2**: Bulk + status | 2-3 days | Phase 1 ✅ | `npx resync status` + bulk backward |
-| **Phase 3**: Backward-sync + forward | 2-3 days | Phase 1 | `npx resync backward-sync` + `npx resync forward` |
-| **Phase 4**: Refinement | 2-3 days | Phase 2, 3 | Production-ready CLI |
+| **Phase 3a**: Interactive review | 3-4 days | Phase 2 | `npx resync review` with Issue creation |
+| **Phase 3b**: Forward resync | 2-3 days | Phase 3a | `npx resync forward` with RESYNC mode |
+| **Phase 4**: Refinement | 2-3 days | Phase 3b | Production-ready CLI |
 | **Phase 5**: Cleanup | 1 day | Any time | Clean repo |
-| **Phase 6**: Automation | 2-3 days | Phase 4 | Scheduled GitHub Actions |
+| **Phase 6**: Automation | 1-2 days | Phase 4 | Scheduled backward analysis |
 | **Phase 7**: Whole-file translation | TBD | Phase 4 | Evaluate whole-file approach for forward sync |
 
-**Total**: 13-20 days (Phase 0-4), +3-4 days (Phase 5-6), +TBD (Phase 7)
+**Total**: 15-23 days (Phase 0-4), +2-3 days (Phase 5-6), +TBD (Phase 7)
 
 ---
 
@@ -783,16 +956,25 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 3. ~~**Multi-section changes**: Group in one suggestion or separate?~~ **Resolved**: Separate per-section suggestions. Each gets its own category, confidence, and reasoning.
 4. ~~**TARGET-only files**: Flag for addition to SOURCE, or just report?~~ **Resolved**: `status` reports only (diagnostic tool). Action on `TARGET_ONLY` / `SOURCE_ONLY` belongs to Phase 3 commands.
 5. **Run frequency**: Monthly default, option for more frequent? — Decide in Phase 4
-6. **backward-sync PR format**: Should `backward-sync` create PRs directly, or write files for manual PR creation? — Decide in Phase 3
-7. **Report-driven backward-sync**: The `--from-report` flag reads a backward JSON report and syncs only marked suggestions. Exact UX for "marking accepted" TBD. — Decide in Phase 3
+6. ~~**backward-sync PR format**: Should `backward-sync` create PRs directly, or write files for manual PR creation?~~ **Resolved**: `backward-sync` deferred. The `review` command creates GitHub Issues instead. Human edits SOURCE directly.
+7. ~~**Report-driven backward-sync**: The `--from-report` flag reads a backward JSON report and syncs only marked suggestions.~~ **Resolved**: Replaced by interactive `review` command that reads the report folder and walks through suggestions with accept/skip/reject.
 8. **Stage 1 precision**: Flagging rate was ~67% vs estimated 5-10%. High recall is good, but Stage 1 could be tuned to reduce false positives and save Stage 2 costs. — Address in Phase 4 prompt tuning
 9. **Whole-file vs section-by-section translation**: Backward Stage 2 showed ~6x fewer API calls and better quality with whole-file evaluation. Should forward sync (`translator.ts`) adopt the same pattern? Trade-off: better context vs loss of section-level caching in UPDATE mode. — Investigate in Phase 7
+10. ~~**CLI framework**: `ink` (Node.js) vs `rich` (Python) for the `review` command's terminal rendering.~~ **Resolved**: `ink` (Node.js). Keeps unified codebase, direct module imports for `forward` command. Python `rich` rewrite documented as a future option (see Future section).
 
 ---
 
 ## Next Steps
 
-Phase 0, Phase 1, and Phase 2 are complete. **Start Phase 3** with backward-sync and forward commands.
+Phase 0, Phase 1, and Phase 2 are complete. **Start Phase 3a** with interactive review command.
+
+### Phase 3a Priorities (ordered)
+
+1. **Formalize backward JSON schema** — Document the contract between `backward` and `review`. Add TypeScript types or Zod validation.
+2. **ESM migration + `ink` v4 scaffolding** — Migrate CLI build to ESM, install ink v4, verify existing commands still work.
+3. **`review` command with `--dry-run`** — Load reports, walk through suggestions interactively, display Issue previews.
+4. **MyST-aware rendering** — `<MystRenderer>` component for syntax-highlighted code, math, directives.
+5. **Issue creation** — `gh` CLI integration, test against `test-action-translation` repos.
 
 ### Lessons from Phase 1 Real-World Testing
 
@@ -812,4 +994,48 @@ Phase 0, Phase 1, and Phase 2 are complete. **Start Phase 3** with backward-sync
 
 ---
 
-*Last updated: 2026-03-04*
+---
+
+## Future: Python Rewrite with `rich`
+
+If the `ink`-based CLI proves limiting for MyST rendering quality, the long-term path is a **full rewrite of the CLI in Python** — not a mixed-language project.
+
+### Motivation
+
+`rich` (Python) is the gold standard for terminal rendering: native Markdown, Pygments-powered syntax highlighting, panels, tables, columns, and tree views — all built-in. A `MystRenderable` subclass could provide directive-aware rendering (`{note}`, `{code-cell}` as styled panels). `textual` (built on `rich`) offers a full TUI framework for scrolling, mouse support, and complex interaction.
+
+Python is also a natural fit for the QuantEcon ecosystem — users are Python developers, and a `pip install`-able CLI published to PyPI would feel native.
+
+### What a rewrite involves
+
+To avoid a mixed-language project (two runtimes, two package managers, fragmented testing), a Python rewrite would port **the entire CLI**:
+
+| Module | Lines | Complexity |
+|--------|-------|------------|
+| `parser.ts` | ~280 | Stack-based MyST parser, battle-tested edge cases |
+| `section-matcher.ts` | ~150 | Position-based matching with heading-map |
+| `heading-map.ts` | ~250 | Extract/update/inject heading maps |
+| `translator.ts` | ~460 | Claude API calls, NEW/UPDATE/RESYNC modes, retry logic |
+| `file-processor.ts` | ~670 | Document reconstruction, subsection handling |
+| `language-config.ts` | ~100 | Language-specific translation rules |
+| `diff-detector.ts` | ~195 | Change detection, recursive subsection comparison |
+| CLI commands + types | ~1,500 | backward, status, review, forward, report generator |
+| **Total** | **~3,600** | Plus duplicate test suites |
+
+### When to consider this
+
+- If `ink` rendering proves insufficient for reviewing MyST content (math, directives, side-by-side)
+- If the QuantEcon team wants to maintain the CLI in Python long-term
+- If `textual` TUI capabilities become important (scrollable diff views, etc.)
+
+The GitHub Action itself would remain Node.js (Actions require JavaScript). Only the CLI tool would move to Python.
+
+### Prerequisites
+
+- Phase 4 complete (stable CLI interfaces and JSON schemas)
+- Clear rendering gaps identified in `ink` that justify the rewrite cost
+- Decision on whether to publish to PyPI
+
+---
+
+*Last updated: 2026-03-04 (Phase 3 revised: backward-sync deferred, review command + forward resync added, ink selected as CLI framework)*
