@@ -4,7 +4,7 @@
 **Last Updated**: 2026-03-03  
 **Sources**: 2026-02-16-REVIEW.md, docs/DESIGN-RESYNC.md  
 **Current Version**: v0.8.0  
-**Test Status**: 448 tests passing (23 test suites)
+**Test Status**: 450 tests passing (23 test suites)
 
 ---
 
@@ -233,7 +233,7 @@ Running against `solow.md` revealed a critical false positive: the LLM suggested
 ## Phase 2: Resync CLI — Bulk Analysis & Status (2-3 days) ✅ COMPLETE
 
 **Goal**: Scale backward to full repository + quick diagnostic command
-**Status**: Status command + bulk backward implemented, 39 new tests (448 total)
+**Status**: Status command + bulk backward implemented, 41 new tests (450 total)
 
 ### 2.1 Status Command (`src/cli/commands/status.ts`) ✅
 
@@ -681,7 +681,7 @@ npm run test:real-repos
 
 | Metric | Current | Target |
 |--------|---------|--------|
-| Test count | 448 | 400+ |
+| Test count | 450 | 400+ |
 | `index.ts` lines | ~447 | ~447 (stable) |
 | Deprecated methods | 0 | 0 |
 | Dead tool directories | 2 | 0 |
