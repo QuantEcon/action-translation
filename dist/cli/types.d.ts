@@ -96,6 +96,7 @@ export interface FileTimeline {
 export interface BackwardReport {
     file: string;
     timestamp: string;
+    model?: string;
     sourceMetadata: FileGitMetadata | null;
     targetMetadata: FileGitMetadata | null;
     timeline: FileTimeline | null;
@@ -108,6 +109,7 @@ export interface BackwardReport {
  */
 export interface BulkBackwardReport {
     timestamp: string;
+    model?: string;
     sourceRepo: string;
     targetRepo: string;
     language: string;

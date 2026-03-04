@@ -200,13 +200,20 @@ async function checkFileStatus(file, sourceRepoPath, targetRepoPath, docsFolder)
  * @returns StatusResult with per-file entries and summary
  */
 async function runStatus(options) {
-    const { source, target, docsFolder, language, exclude } = options;
-    // Discover files
-    const sourceFiles = discoverMarkdownFiles(source, docsFolder);
-    const targetFiles = discoverMarkdownFiles(target, docsFolder);
-    let allFiles = resolveFilePairs(sourceFiles, targetFiles);
-    // Apply exclusions
-    allFiles = applyExcludes(allFiles, exclude);
+    const { source, target, docsFolder, language, exclude, file } = options;
+    let allFiles;
+    if (file) {
+        // Single-file mode — skip discovery
+        allFiles = [file];
+    }
+    else {
+        // Discover files
+        const sourceFiles = discoverMarkdownFiles(source, docsFolder);
+        const targetFiles = discoverMarkdownFiles(target, docsFolder);
+        allFiles = resolveFilePairs(sourceFiles, targetFiles);
+        // Apply exclusions
+        allFiles = applyExcludes(allFiles, exclude);
+    }
     // Check each file
     const entries = [];
     for (const file of allFiles) {

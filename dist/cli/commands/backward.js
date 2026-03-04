@@ -146,6 +146,7 @@ async function runBackwardSingleFile(options, logger = defaultLogger) {
         const report = {
             file,
             timestamp: new Date().toISOString(),
+            model,
             sourceMetadata,
             targetMetadata,
             timeline,
@@ -217,6 +218,7 @@ async function runBackwardSingleFile(options, logger = defaultLogger) {
     const report = {
         file,
         timestamp: new Date().toISOString(),
+        model,
         sourceMetadata,
         targetMetadata,
         timeline,
@@ -391,14 +393,14 @@ async function runBackwardBulk(options, logger = defaultLogger, exclude = [], re
     logger.info(`Found ${allFiles.length} files to analyze.`);
     if (allFiles.length === 0) {
         logger.warn('No files found. Check --source, --target, and --docs-folder paths.');
-        return buildEmptyBulkReport(source, target, language);
+        return buildEmptyBulkReport(source, target, language, options.model);
     }
     // Cost estimate
     if (options.estimate) {
         const estimate = estimateBulkCost(allFiles.length);
         logger.info('');
         logger.info(formatCostEstimate(estimate));
-        return buildEmptyBulkReport(source, target, language);
+        return buildEmptyBulkReport(source, target, language, options.model);
     }
     // Check for resume
     let progress;
@@ -471,7 +473,7 @@ async function runBackwardBulk(options, logger = defaultLogger, exclude = [], re
         writeProgress(outputDir, progress);
     }
     // Build aggregate report
-    const bulkReport = buildBulkReport(source, target, language, fileReports);
+    const bulkReport = buildBulkReport(source, target, language, fileReports, options.model);
     // Write aggregate summary
     if (options.json) {
         const summaryPath = path.join(outputDir, '_summary.json');
@@ -501,10 +503,11 @@ async function runBackwardBulk(options, logger = defaultLogger, exclude = [], re
 /**
  * Build a BulkBackwardReport from individual file reports.
  */
-function buildBulkReport(sourceRepo, targetRepo, language, fileReports) {
+function buildBulkReport(sourceRepo, targetRepo, language, fileReports, model) {
     const allSuggestions = fileReports.flatMap(r => r.suggestions.filter(s => s.recommendation === 'BACKPORT'));
     return {
         timestamp: new Date().toISOString(),
+        model,
         sourceRepo,
         targetRepo,
         language,
@@ -519,8 +522,8 @@ function buildBulkReport(sourceRepo, targetRepo, language, fileReports) {
         fileReports,
     };
 }
-function buildEmptyBulkReport(sourceRepo, targetRepo, language) {
-    return buildBulkReport(sourceRepo, targetRepo, language, []);
+function buildEmptyBulkReport(sourceRepo, targetRepo, language, model) {
+    return buildBulkReport(sourceRepo, targetRepo, language, [], model);
 }
 function resolveReportPath(outputDir, file, json) {
     const basename = path.basename(file, '.md');

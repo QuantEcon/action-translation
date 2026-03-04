@@ -45,6 +45,7 @@ export interface StatusOptions {
     docsFolder: string;
     language: string;
     exclude: string[];
+    file?: string;
 }
 /**
  * Find all .md files in a docs folder (non-recursive, flat list).

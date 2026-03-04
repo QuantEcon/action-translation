@@ -25,6 +25,9 @@ function generateMarkdownReport(report) {
     lines.push(`# Backward Analysis: ${report.file}`);
     lines.push('');
     lines.push(`**Generated**: ${report.timestamp}`);
+    if (report.model) {
+        lines.push(`**Model**: ${report.model}`);
+    }
     // Git metadata
     if (report.sourceMetadata) {
         lines.push(`**SOURCE last modified**: ${(0, git_metadata_1.formatDate)(report.sourceMetadata.lastModified)} by ${report.sourceMetadata.lastAuthor}`);
@@ -150,6 +153,9 @@ function generateBulkMarkdownReport(report) {
     lines.push('# Backward Analysis Report');
     lines.push('');
     lines.push(`**Generated**: ${report.timestamp}`);
+    if (report.model) {
+        lines.push(`**Model**: ${report.model}`);
+    }
     lines.push(`**Source**: ${report.sourceRepo}`);
     lines.push(`**Target**: ${report.targetRepo} (${report.language})`);
     lines.push('');

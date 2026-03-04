@@ -373,6 +373,32 @@ describe('runStatus', () => {
     expect(result.entries).toHaveLength(0);
     expect(result.summary.total).toBe(0);
   });
+
+  it('should check a single file when --file is provided', async () => {
+    const sourceDir = path.join(tmpDir, 'source', 'lectures');
+    const targetDir = path.join(tmpDir, 'target', 'lectures');
+
+    // Create multiple files
+    writeMd(path.join(sourceDir, 'aligned.md'), SOURCE_2_SECTIONS);
+    writeMd(path.join(targetDir, 'aligned.md'), TARGET_2_SECTIONS_WITH_MAP);
+    writeMd(path.join(sourceDir, 'drift.md'), SOURCE_2_SECTIONS);
+    writeMd(path.join(targetDir, 'drift.md'), TARGET_3_SECTIONS);
+
+    const result = await runStatus({
+      source: path.join(tmpDir, 'source'),
+      target: path.join(tmpDir, 'target'),
+      docsFolder: 'lectures',
+      language: 'zh-cn',
+      exclude: [],
+      file: 'drift.md',
+    });
+
+    // Should only contain the single requested file
+    expect(result.entries).toHaveLength(1);
+    expect(result.entries[0].file).toBe('drift.md');
+    expect(result.entries[0].status).toBe('DRIFT');
+    expect(result.summary.total).toBe(1);
+  });
 });
 
 // ============================================================================

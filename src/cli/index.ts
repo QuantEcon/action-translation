@@ -118,6 +118,7 @@ program
   .description('Show sync status overview (no LLM calls)')
   .requiredOption('-s, --source <path>', 'Path to SOURCE (English) repository')
   .requiredOption('-t, --target <path>', 'Path to TARGET (translated) repository')
+  .option('-f, --file <filename>', 'Check a single file (relative to docs-folder)')
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
   .option('-l, --language <code>', 'Target language code', 'zh-cn')
   .option('--exclude <pattern>', 'Exclude files matching pattern (repeatable, comma-separated)', collectExclude, [])
@@ -126,6 +127,7 @@ program
     const statusOptions: StatusOptions = {
       source: opts.source,
       target: opts.target,
+      file: opts.file,
       docsFolder: opts.docsFolder,
       language: opts.language,
       exclude: opts.exclude,

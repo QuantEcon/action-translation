@@ -65,6 +65,7 @@ export interface StatusOptions {
   docsFolder: string;
   language: string;
   exclude: string[];    // Glob patterns to exclude
+  file?: string;        // Single file to check (relative to docs-folder)
 }
 
 // ============================================================================
@@ -234,15 +235,22 @@ export async function checkFileStatus(
  * @returns StatusResult with per-file entries and summary
  */
 export async function runStatus(options: StatusOptions): Promise<StatusResult> {
-  const { source, target, docsFolder, language, exclude } = options;
+  const { source, target, docsFolder, language, exclude, file } = options;
 
-  // Discover files
-  const sourceFiles = discoverMarkdownFiles(source, docsFolder);
-  const targetFiles = discoverMarkdownFiles(target, docsFolder);
-  let allFiles = resolveFilePairs(sourceFiles, targetFiles);
+  let allFiles: string[];
 
-  // Apply exclusions
-  allFiles = applyExcludes(allFiles, exclude);
+  if (file) {
+    // Single-file mode — skip discovery
+    allFiles = [file];
+  } else {
+    // Discover files
+    const sourceFiles = discoverMarkdownFiles(source, docsFolder);
+    const targetFiles = discoverMarkdownFiles(target, docsFolder);
+    allFiles = resolveFilePairs(sourceFiles, targetFiles);
+
+    // Apply exclusions
+    allFiles = applyExcludes(allFiles, exclude);
+  }
 
   // Check each file
   const entries: FileStatusEntry[] = [];

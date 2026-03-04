@@ -108,5 +108,5 @@ export declare function runBackwardBulk(options: BackwardOptions & {
 /**
  * Build a BulkBackwardReport from individual file reports.
  */
-export declare function buildBulkReport(sourceRepo: string, targetRepo: string, language: string, fileReports: BackwardReport[]): BulkBackwardReport;
+export declare function buildBulkReport(sourceRepo: string, targetRepo: string, language: string, fileReports: BackwardReport[], model?: string): BulkBackwardReport;
 //# sourceMappingURL=backward.d.ts.map
