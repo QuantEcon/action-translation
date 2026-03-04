@@ -373,23 +373,27 @@ The `review` command needs rich terminal rendering: syntax-highlighted MyST mark
 
 ### 3a.0 Prerequisites
 
-#### Formalize Backward Report JSON Schema
+#### Formalize Backward Report JSON Schema ✅
 
 The `review` command reads `.resync/*.json` sidecars produced by `backward`. Define the schema contract before building the consumer.
 
-- [ ] Document the JSON schema for per-file sidecar files (`.resync/<file>.json`)
-- [ ] Document the JSON schema for `_summary.json`
-- [ ] Document the JSON schema for `_progress.json`
-- [ ] Add TypeScript types or Zod schema for runtime validation
-- [ ] Add schema version field for future compatibility
+- [x] Document the JSON schema for per-file sidecar files (`.resync/<file>.json`)
+- [x] Document the JSON schema for `_summary.json`
+- [x] Document the JSON schema for `_progress.json`
+- [x] Add TypeScript types or Zod schema for runtime validation — `src/cli/schema.ts` with Zod
+- [x] Add schema version field for future compatibility — `SCHEMA_VERSION` constant (`1.0.0`)
 
-#### ESM Migration for CLI Build
+Implemented in `src/cli/schema.ts` (Zod schemas, parse/load/filter utilities) with 41 tests. PR #17.
 
-- [ ] Update `tsconfig.json` (or create CLI-specific config) for ESM output
-- [ ] Update import paths to include `.js` extensions where needed
-- [ ] Install `ink` v4, `ink-testing-library`, `react`
-- [ ] Verify existing CLI commands (`backward`, `status`) still work after migration
-- [ ] Update `build:cli` script
+#### ESM Migration for CLI Build ✅
+
+- [x] Update `tsconfig.json` for ESM output — `module: node16`, `moduleResolution: node16`, `target: ES2022`
+- [x] Update import paths to include `.js` extensions where needed — all ~50 source + test files
+- [x] Install `ink` v4, `react` 18 — installed as runtime deps
+- [x] Verify existing CLI commands (`backward`, `status`) still work after migration — 515 tests pass
+- [x] Update `build:cli` script — `tsc` for ESM, `esbuild` for CJS action bundle (`dist-action/`)
+
+Also replaced `@vercel/ncc` with `esbuild` for action bundling (CJS format). PR #17.
 
 ### 3a.1 Review Command (`review`)
 
@@ -938,7 +942,7 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 | **Phase 0**: Foundation | 3-4 days | None | `index.ts` refactored, retry logic |
 | **Phase 1**: Single-file backward | 3-4 days | Phase 0 ✅ | `npx resync backward -f file.md` (two-stage) |
 | **Phase 2**: Bulk + status | 2-3 days | Phase 1 ✅ | `npx resync status` + bulk backward |
-| **Phase 3a**: Interactive review | 3-4 days | Phase 2 | `npx resync review` with Issue creation |
+| **Phase 3a**: Interactive review | 3-4 days | Phase 2 ✅ | `npx resync review` with Issue creation |
 | **Phase 3b**: Forward resync | 2-3 days | Phase 3a | `npx resync forward` with RESYNC mode |
 | **Phase 4**: Refinement | 2-3 days | Phase 3b | Production-ready CLI |
 | **Phase 5**: Cleanup | 1 day | Any time | Clean repo |
@@ -966,12 +970,12 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 
 ## Next Steps
 
-Phase 0, Phase 1, and Phase 2 are complete. **Start Phase 3a** with interactive review command.
+Phase 0, Phase 1, Phase 2, and Phase 3a foundations are complete. **Continue Phase 3a** with the `review` command.
 
 ### Phase 3a Priorities (ordered)
 
-1. **Formalize backward JSON schema** — Document the contract between `backward` and `review`. Add TypeScript types or Zod validation.
-2. **ESM migration + `ink` v4 scaffolding** — Migrate CLI build to ESM, install ink v4, verify existing commands still work.
+1. ~~**Formalize backward JSON schema**~~ ✅ — `src/cli/schema.ts` with Zod validation, 41 tests (PR #17)
+2. ~~**ESM migration + `ink` v4 scaffolding**~~ ✅ — ESM build, ink v4 + React 18 installed, esbuild CJS bundle, 515 tests pass (PR #17)
 3. **`review` command with `--dry-run`** — Load reports, walk through suggestions interactively, display Issue previews.
 4. **MyST-aware rendering** — `<MystRenderer>` component for syntax-highlighted code, math, directives.
 5. **Issue creation** — `gh` CLI integration, test against `test-action-translation` repos.
@@ -1038,4 +1042,4 @@ The GitHub Action itself would remain Node.js (Actions require JavaScript). Only
 
 ---
 
-*Last updated: 2026-03-04 (Phase 3 revised: backward-sync deferred, review command + forward resync added, ink selected as CLI framework)*
+*Last updated: 2026-03-04 (Phase 3a foundations complete: JSON schema + ESM migration + ink v4, PR #17)*

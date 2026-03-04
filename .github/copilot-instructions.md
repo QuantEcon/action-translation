@@ -8,7 +8,7 @@
 - **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
-**Current Version**: v0.8.0 | **Tests**: 474 (23 suites) | **Glossary**: 357 terms (zh-cn, fa)
+**Current Version**: v0.8.0 | **Tests**: 515 (24 suites) | **Glossary**: 357 terms (zh-cn, fa)
 
 ---
 
@@ -31,6 +31,7 @@ src/
 ├── cli/
 │   ├── index.ts              # CLI entry point (commander.js)
 │   ├── types.ts              # CLI-specific types (~195 lines)
+│   ├── schema.ts             # Zod schemas for backward report JSON + load/filter utils (~310 lines)
 │   ├── document-comparator.ts # Stage 1: whole-document LLM triage (~270 lines)
 │   ├── backward-evaluator.ts  # Stage 2: per-section LLM evaluation (~300 lines)
 │   ├── section-matcher.ts     # Cross-language section matching (~150 lines)
