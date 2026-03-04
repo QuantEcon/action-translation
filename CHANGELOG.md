@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--exclude` flag for file filtering (exact match or `*` wildcard suffix)
   - Progress indicator: `[12/51] triaging cobweb.md...`
   - Sequential processing to respect API rate limits
-- 41 new tests (409 → 452 total, 21 → 23 suites)
+- 41 new tests (409 → 455 total, 21 → 23 suites)
   - `status.test.ts`: 21 tests (file discovery, per-file status, console output)
   - `bulk-backward.test.ts`: 18 tests (checkpointing, cost estimation, bulk orchestration)
 - **Resync CLI** (`src/cli/`): New CLI tool for backward analysis of translations

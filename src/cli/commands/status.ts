@@ -6,13 +6,19 @@
  * 
  * Output goes to the CLI console (like `git status`), not report files.
  * 
- * Statuses:
+ * Primary status (most significant issue):
  * - ALIGNED:            Structure matches, heading-map present, no newer SOURCE commits
  * - OUTDATED:           Structure/heading-map OK, but SOURCE has newer commits than TARGET
- * - DRIFT:              Structural differences detected (section count mismatch)
+ * - SOURCE_AHEAD:       SOURCE has more sections than TARGET (sections added upstream)
+ * - TARGET_AHEAD:       TARGET has more sections than SOURCE (unexpected divergence)
  * - MISSING_HEADINGMAP: No heading-map in TARGET file
  * - SOURCE_ONLY:        File exists in SOURCE but not TARGET
  * - TARGET_ONLY:        File exists in TARGET but not SOURCE
+ * 
+ * Flags (compound conditions — a file may have multiple):
+ * - SOURCE_AHEAD / TARGET_AHEAD: section count mismatch
+ * - MISSING_HEADINGMAP: no heading-map in TARGET
+ * - OUTDATED: SOURCE modified after TARGET
  */
 
 import * as fs from 'fs';
@@ -28,19 +34,21 @@ import { getFileGitMetadata } from '../git-metadata';
 export type FileSyncStatus =
   | 'ALIGNED'
   | 'OUTDATED'
-  | 'DRIFT'
+  | 'SOURCE_AHEAD'
+  | 'TARGET_AHEAD'
   | 'MISSING_HEADINGMAP'
   | 'SOURCE_ONLY'
   | 'TARGET_ONLY';
 
 export interface FileStatusEntry {
   file: string;
-  status: FileSyncStatus;
-  details?: string;           // Human-readable detail (e.g., "3 vs 5 sections")
+  status: FileSyncStatus;       // Primary (most significant) status
+  flags: FileSyncStatus[];      // All conditions that apply (compound)
+  details?: string;             // Human-readable detail (e.g., "7 source vs 6 target sections")
   sourceSections?: number;
   targetSections?: number;
-  sourceLastModified?: string; // ISO date
-  targetLastModified?: string; // ISO date
+  sourceLastModified?: string;  // ISO date
+  targetLastModified?: string;  // ISO date
 }
 
 export interface StatusResult {
@@ -52,7 +60,8 @@ export interface StatusResult {
     total: number;
     aligned: number;
     outdated: number;
-    drift: number;
+    sourceAhead: number;
+    targetAhead: number;
     missingHeadingMap: number;
     sourceOnly: number;
     targetOnly: number;
@@ -127,11 +136,8 @@ export function applyExcludes(files: string[], excludes: string[]): string[] {
 /**
  * Determine the sync status of a single file.
  * 
- * Checks (in order):
- * 1. Does the file exist in both repos?
- * 2. Does the TARGET have a heading-map?
- * 3. Do section counts match?
- * 4. Is SOURCE newer than TARGET? (git dates)
+ * Builds a list of all applicable flags, then picks the most significant
+ * as the primary status. Priority: SOURCE_AHEAD/TARGET_AHEAD > MISSING_HEADINGMAP > OUTDATED > ALIGNED.
  */
 export async function checkFileStatus(
   file: string,
@@ -145,25 +151,24 @@ export async function checkFileStatus(
   const sourceExists = fs.existsSync(sourceFilePath);
   const targetExists = fs.existsSync(targetFilePath);
 
-  // Existence checks
+  // Existence checks — these are exclusive, no compound flags
   if (!sourceExists && targetExists) {
-    return { file, status: 'TARGET_ONLY' };
+    return { file, status: 'TARGET_ONLY', flags: ['TARGET_ONLY'] };
   }
   if (sourceExists && !targetExists) {
-    return { file, status: 'SOURCE_ONLY' };
+    return { file, status: 'SOURCE_ONLY', flags: ['SOURCE_ONLY'] };
   }
   if (!sourceExists && !targetExists) {
-    // Shouldn't happen (we discovered from at least one repo), but handle gracefully
-    return { file, status: 'SOURCE_ONLY', details: 'File not found in either repo' };
+    return { file, status: 'SOURCE_ONLY', flags: ['SOURCE_ONLY'], details: 'File not found in either repo' };
   }
 
-  // Both exist — read content
+  // Both exist — collect all flags
+  const flags: FileSyncStatus[] = [];
+  const details: string[] = [];
+
+  // Read content
   const sourceContent = fs.readFileSync(sourceFilePath, 'utf-8');
   const targetContent = fs.readFileSync(targetFilePath, 'utf-8');
-
-  // Check heading-map
-  const headingMap = extractHeadingMap(targetContent);
-  const hasHeadingMap = headingMap.size > 0;
 
   // Parse sections
   const parser = new MystParser();
@@ -173,28 +178,22 @@ export async function checkFileStatus(
   const sourceSectionCount = sourceParsed.sections.length;
   const targetSectionCount = targetParsed.sections.length;
 
-  // Check for structural drift (section count mismatch)
-  if (sourceSectionCount !== targetSectionCount) {
-    return {
-      file,
-      status: 'DRIFT',
-      details: `Section count: ${sourceSectionCount} (source) vs ${targetSectionCount} (target)`,
-      sourceSections: sourceSectionCount,
-      targetSections: targetSectionCount,
-    };
+  // Check section count mismatch
+  if (sourceSectionCount > targetSectionCount) {
+    flags.push('SOURCE_AHEAD');
+    details.push(`${sourceSectionCount} source vs ${targetSectionCount} target sections`);
+  } else if (targetSectionCount > sourceSectionCount) {
+    flags.push('TARGET_AHEAD');
+    details.push(`${targetSectionCount} target vs ${sourceSectionCount} source sections`);
   }
 
-  // Check heading-map presence
-  if (!hasHeadingMap) {
-    return {
-      file,
-      status: 'MISSING_HEADINGMAP',
-      sourceSections: sourceSectionCount,
-      targetSections: targetSectionCount,
-    };
+  // Check heading-map
+  const headingMap = extractHeadingMap(targetContent);
+  if (headingMap.size === 0) {
+    flags.push('MISSING_HEADINGMAP');
   }
 
-  // Check git dates — is SOURCE newer?
+  // Check git dates
   const docsRelPath = docsFolder ? path.join(docsFolder, file) : file;
   const sourceMetadata = await getFileGitMetadata(sourceRepoPath, docsRelPath);
   const targetMetadata = await getFileGitMetadata(targetRepoPath, docsRelPath);
@@ -202,26 +201,38 @@ export async function checkFileStatus(
   const sourceDate = sourceMetadata?.lastModified;
   const targetDate = targetMetadata?.lastModified;
 
-  const entry: FileStatusEntry = {
-    file,
-    status: 'ALIGNED',
-    sourceSections: sourceSectionCount,
-    targetSections: targetSectionCount,
-  };
+  let sourceLastModified: string | undefined;
+  let targetLastModified: string | undefined;
 
   if (sourceDate) {
-    entry.sourceLastModified = sourceDate.toISOString().split('T')[0];
+    sourceLastModified = sourceDate.toISOString().split('T')[0];
   }
   if (targetDate) {
-    entry.targetLastModified = targetDate.toISOString().split('T')[0];
+    targetLastModified = targetDate.toISOString().split('T')[0];
   }
 
   if (sourceDate && targetDate && sourceDate > targetDate) {
-    entry.status = 'OUTDATED';
-    entry.details = `SOURCE modified ${entry.sourceLastModified}, TARGET modified ${entry.targetLastModified}`;
+    flags.push('OUTDATED');
+    details.push(`SOURCE modified ${sourceLastModified}, TARGET modified ${targetLastModified}`);
   }
 
-  return entry;
+  // Pick primary status (highest priority flag, or ALIGNED if no flags)
+  const PRIORITY: FileSyncStatus[] = ['SOURCE_AHEAD', 'TARGET_AHEAD', 'MISSING_HEADINGMAP', 'OUTDATED'];
+  const primary = PRIORITY.find(s => flags.includes(s)) ?? 'ALIGNED';
+  if (primary === 'ALIGNED') {
+    flags.push('ALIGNED');
+  }
+
+  return {
+    file,
+    status: primary,
+    flags,
+    details: details.length > 0 ? details.join('; ') : undefined,
+    sourceSections: sourceSectionCount,
+    targetSections: targetSectionCount,
+    sourceLastModified,
+    targetLastModified,
+  };
 }
 
 // ============================================================================
@@ -259,12 +270,13 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
     entries.push(entry);
   }
 
-  // Build summary
+  // Build summary (count by primary status)
   const summary = {
     total: entries.length,
     aligned: entries.filter(e => e.status === 'ALIGNED').length,
     outdated: entries.filter(e => e.status === 'OUTDATED').length,
-    drift: entries.filter(e => e.status === 'DRIFT').length,
+    sourceAhead: entries.filter(e => e.status === 'SOURCE_AHEAD').length,
+    targetAhead: entries.filter(e => e.status === 'TARGET_AHEAD').length,
     missingHeadingMap: entries.filter(e => e.status === 'MISSING_HEADINGMAP').length,
     sourceOnly: entries.filter(e => e.status === 'SOURCE_ONLY').length,
     targetOnly: entries.filter(e => e.status === 'TARGET_ONLY').length,
@@ -287,7 +299,8 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
 const STATUS_ICONS: Record<FileSyncStatus, string> = {
   ALIGNED: '✅',
   OUTDATED: '⏳',
-  DRIFT: '⚠️',
+  SOURCE_AHEAD: '⚠️',
+  TARGET_AHEAD: '⚠️',
   MISSING_HEADINGMAP: '📋',
   SOURCE_ONLY: '➕',
   TARGET_ONLY: '🔸',
@@ -316,7 +329,13 @@ export function formatStatusTable(result: StatusResult): string {
 
   for (const entry of result.entries) {
     const icon = STATUS_ICONS[entry.status];
-    let line = `  ${entry.file.padEnd(maxFileLen)}  ${icon} ${entry.status}`;
+    // Show compound flags if there are additional conditions beyond the primary
+    const extraFlags = entry.flags.filter(f => f !== entry.status);
+    let statusText = `${icon} ${entry.status}`;
+    if (extraFlags.length > 0) {
+      statusText += ` + ${extraFlags.map(f => STATUS_ICONS[f] + ' ' + f).join(' + ')}`;
+    }
+    let line = `  ${entry.file.padEnd(maxFileLen)}  ${statusText}`;
     if (entry.details) {
       line += `  (${entry.details})`;
     }
@@ -331,7 +350,8 @@ export function formatStatusTable(result: StatusResult): string {
   lines.push(`  ${s.total} files total`);
   if (s.aligned > 0)           lines.push(`  ${STATUS_ICONS.ALIGNED} ${s.aligned} aligned`);
   if (s.outdated > 0)          lines.push(`  ${STATUS_ICONS.OUTDATED} ${s.outdated} outdated (SOURCE newer)`);
-  if (s.drift > 0)             lines.push(`  ${STATUS_ICONS.DRIFT} ${s.drift} structural drift`);
+  if (s.sourceAhead > 0)       lines.push(`  ${STATUS_ICONS.SOURCE_AHEAD} ${s.sourceAhead} source ahead (sections added upstream)`);
+  if (s.targetAhead > 0)       lines.push(`  ${STATUS_ICONS.TARGET_AHEAD} ${s.targetAhead} target ahead (extra sections in translation)`);
   if (s.missingHeadingMap > 0) lines.push(`  ${STATUS_ICONS.MISSING_HEADINGMAP} ${s.missingHeadingMap} missing heading-map`);
   if (s.sourceOnly > 0)        lines.push(`  ${STATUS_ICONS.SOURCE_ONLY} ${s.sourceOnly} source only (not yet translated)`);
   if (s.targetOnly > 0)        lines.push(`  ${STATUS_ICONS.TARGET_ONLY} ${s.targetOnly} target only (not in source)`);

@@ -246,7 +246,7 @@ describe('checkFileStatus', () => {
     expect(result.status).toBe('TARGET_ONLY');
   });
 
-  it('should return DRIFT when section counts differ', async () => {
+  it('should return TARGET_AHEAD when target has more sections', async () => {
     const sourceDir = path.join(tmpDir, 'source', 'lectures');
     const targetDir = path.join(tmpDir, 'target', 'lectures');
     writeMd(path.join(sourceDir, 'intro.md'), SOURCE_2_SECTIONS);
@@ -259,11 +259,52 @@ describe('checkFileStatus', () => {
       'lectures',
     );
 
-    expect(result.status).toBe('DRIFT');
+    expect(result.status).toBe('TARGET_AHEAD');
+    expect(result.flags).toContain('TARGET_AHEAD');
     expect(result.sourceSections).toBe(2);
     expect(result.targetSections).toBe(3);
-    expect(result.details).toContain('2');
-    expect(result.details).toContain('3');
+    expect(result.details).toContain('3 target vs 2 source');
+  });
+
+  it('should return SOURCE_AHEAD when source has more sections', async () => {
+    const sourceDir = path.join(tmpDir, 'source', 'lectures');
+    const targetDir = path.join(tmpDir, 'target', 'lectures');
+    writeMd(path.join(sourceDir, 'intro.md'), TARGET_3_SECTIONS); // 3 sections as source
+    writeMd(path.join(targetDir, 'intro.md'), SOURCE_2_SECTIONS); // 2 sections as target (fewer)
+
+    const result = await checkFileStatus(
+      'intro.md',
+      path.join(tmpDir, 'source'),
+      path.join(tmpDir, 'target'),
+      'lectures',
+    );
+
+    expect(result.status).toBe('SOURCE_AHEAD');
+    expect(result.flags).toContain('SOURCE_AHEAD');
+    expect(result.sourceSections).toBe(3);
+    expect(result.targetSections).toBe(2);
+    expect(result.details).toContain('3 source vs 2 target');
+  });
+
+  it('should report compound flags (section mismatch + missing heading-map)', async () => {
+    const sourceDir = path.join(tmpDir, 'source', 'lectures');
+    const targetDir = path.join(tmpDir, 'target', 'lectures');
+    writeMd(path.join(sourceDir, 'intro.md'), SOURCE_2_SECTIONS);
+    // Target with 3 sections and no heading-map
+    writeMd(path.join(targetDir, 'intro.md'), TARGET_NO_HEADINGMAP + '\n## 额外的部分\n\n额外的内容。\n');
+
+    const result = await checkFileStatus(
+      'intro.md',
+      path.join(tmpDir, 'source'),
+      path.join(tmpDir, 'target'),
+      'lectures',
+    );
+
+    // Primary status is TARGET_AHEAD (highest priority)
+    expect(result.status).toBe('TARGET_AHEAD');
+    // Both flags should be present
+    expect(result.flags).toContain('TARGET_AHEAD');
+    expect(result.flags).toContain('MISSING_HEADINGMAP');
   });
 
   it('should return MISSING_HEADINGMAP when target has no heading-map', async () => {
@@ -336,7 +377,7 @@ describe('runStatus', () => {
     expect(result.entries).toHaveLength(4);
     expect(result.summary.total).toBe(4);
     expect(result.summary.aligned).toBe(1);
-    expect(result.summary.drift).toBe(1);
+    expect(result.summary.targetAhead).toBe(1);
     expect(result.summary.sourceOnly).toBe(1);
     expect(result.summary.targetOnly).toBe(1);
   });
@@ -396,7 +437,7 @@ describe('runStatus', () => {
     // Should only contain the single requested file
     expect(result.entries).toHaveLength(1);
     expect(result.entries[0].file).toBe('drift.md');
-    expect(result.entries[0].status).toBe('DRIFT');
+    expect(result.entries[0].status).toBe('TARGET_AHEAD');
     expect(result.summary.total).toBe(1);
   });
 });
@@ -412,11 +453,11 @@ describe('formatStatusTable', () => {
       targetRepo: '/path/to/target',
       language: 'zh-cn',
       entries: [
-        { file: 'intro.md', status: 'ALIGNED' as FileSyncStatus },
-        { file: 'cobweb.md', status: 'OUTDATED' as FileSyncStatus, details: 'SOURCE modified 2026-03-01, TARGET modified 2026-02-15' },
-        { file: 'new.md', status: 'SOURCE_ONLY' as FileSyncStatus },
+        { file: 'intro.md', status: 'ALIGNED' as FileSyncStatus, flags: ['ALIGNED' as FileSyncStatus] },
+        { file: 'cobweb.md', status: 'OUTDATED' as FileSyncStatus, flags: ['OUTDATED' as FileSyncStatus], details: 'SOURCE modified 2026-03-01, TARGET modified 2026-02-15' },
+        { file: 'new.md', status: 'SOURCE_ONLY' as FileSyncStatus, flags: ['SOURCE_ONLY' as FileSyncStatus] },
       ],
-      summary: { total: 3, aligned: 1, outdated: 1, drift: 0, missingHeadingMap: 0, sourceOnly: 1, targetOnly: 0 },
+      summary: { total: 3, aligned: 1, outdated: 1, sourceAhead: 0, targetAhead: 0, missingHeadingMap: 0, sourceOnly: 1, targetOnly: 0 },
     };
 
     const output = formatStatusTable(result);
@@ -441,16 +482,16 @@ describe('formatStatusTable', () => {
       targetRepo: '/path/to/target',
       language: 'zh-cn',
       entries: [
-        { file: 'intro.md', status: 'ALIGNED' as FileSyncStatus },
+        { file: 'intro.md', status: 'ALIGNED' as FileSyncStatus, flags: ['ALIGNED' as FileSyncStatus] },
       ],
-      summary: { total: 1, aligned: 1, outdated: 0, drift: 0, missingHeadingMap: 0, sourceOnly: 0, targetOnly: 0 },
+      summary: { total: 1, aligned: 1, outdated: 0, sourceAhead: 0, targetAhead: 0, missingHeadingMap: 0, sourceOnly: 0, targetOnly: 0 },
     };
 
     const output = formatStatusTable(result);
 
     expect(output).toContain('1 aligned');
     expect(output).not.toContain('outdated');
-    expect(output).not.toContain('drift');
+    expect(output).not.toContain('source ahead');
     expect(output).not.toContain('source only');
     expect(output).not.toContain('target only');
   });
@@ -463,9 +504,9 @@ describe('formatStatusJson', () => {
       targetRepo: '/path/to/target',
       language: 'zh-cn',
       entries: [
-        { file: 'intro.md', status: 'ALIGNED' as FileSyncStatus },
+        { file: 'intro.md', status: 'ALIGNED' as FileSyncStatus, flags: ['ALIGNED' as FileSyncStatus] },
       ],
-      summary: { total: 1, aligned: 1, outdated: 0, drift: 0, missingHeadingMap: 0, sourceOnly: 0, targetOnly: 0 },
+      summary: { total: 1, aligned: 1, outdated: 0, sourceAhead: 0, targetAhead: 0, missingHeadingMap: 0, sourceOnly: 0, targetOnly: 0 },
     };
 
     const json = formatStatusJson(result);

@@ -7,13 +7,19 @@
  *
  * Output goes to the CLI console (like `git status`), not report files.
  *
- * Statuses:
+ * Primary status (most significant issue):
  * - ALIGNED:            Structure matches, heading-map present, no newer SOURCE commits
  * - OUTDATED:           Structure/heading-map OK, but SOURCE has newer commits than TARGET
- * - DRIFT:              Structural differences detected (section count mismatch)
+ * - SOURCE_AHEAD:       SOURCE has more sections than TARGET (sections added upstream)
+ * - TARGET_AHEAD:       TARGET has more sections than SOURCE (unexpected divergence)
  * - MISSING_HEADINGMAP: No heading-map in TARGET file
  * - SOURCE_ONLY:        File exists in SOURCE but not TARGET
  * - TARGET_ONLY:        File exists in TARGET but not SOURCE
+ *
+ * Flags (compound conditions — a file may have multiple):
+ * - SOURCE_AHEAD / TARGET_AHEAD: section count mismatch
+ * - MISSING_HEADINGMAP: no heading-map in TARGET
+ * - OUTDATED: SOURCE modified after TARGET
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -113,82 +119,84 @@ function applyExcludes(files, excludes) {
 /**
  * Determine the sync status of a single file.
  *
- * Checks (in order):
- * 1. Does the file exist in both repos?
- * 2. Does the TARGET have a heading-map?
- * 3. Do section counts match?
- * 4. Is SOURCE newer than TARGET? (git dates)
+ * Builds a list of all applicable flags, then picks the most significant
+ * as the primary status. Priority: SOURCE_AHEAD/TARGET_AHEAD > MISSING_HEADINGMAP > OUTDATED > ALIGNED.
  */
 async function checkFileStatus(file, sourceRepoPath, targetRepoPath, docsFolder) {
     const sourceFilePath = path.join(sourceRepoPath, docsFolder, file);
     const targetFilePath = path.join(targetRepoPath, docsFolder, file);
     const sourceExists = fs.existsSync(sourceFilePath);
     const targetExists = fs.existsSync(targetFilePath);
-    // Existence checks
+    // Existence checks — these are exclusive, no compound flags
     if (!sourceExists && targetExists) {
-        return { file, status: 'TARGET_ONLY' };
+        return { file, status: 'TARGET_ONLY', flags: ['TARGET_ONLY'] };
     }
     if (sourceExists && !targetExists) {
-        return { file, status: 'SOURCE_ONLY' };
+        return { file, status: 'SOURCE_ONLY', flags: ['SOURCE_ONLY'] };
     }
     if (!sourceExists && !targetExists) {
-        // Shouldn't happen (we discovered from at least one repo), but handle gracefully
-        return { file, status: 'SOURCE_ONLY', details: 'File not found in either repo' };
+        return { file, status: 'SOURCE_ONLY', flags: ['SOURCE_ONLY'], details: 'File not found in either repo' };
     }
-    // Both exist — read content
+    // Both exist — collect all flags
+    const flags = [];
+    const details = [];
+    // Read content
     const sourceContent = fs.readFileSync(sourceFilePath, 'utf-8');
     const targetContent = fs.readFileSync(targetFilePath, 'utf-8');
-    // Check heading-map
-    const headingMap = (0, heading_map_1.extractHeadingMap)(targetContent);
-    const hasHeadingMap = headingMap.size > 0;
     // Parse sections
     const parser = new parser_1.MystParser();
     const sourceParsed = await parser.parseSections(sourceContent, sourceFilePath);
     const targetParsed = await parser.parseSections(targetContent, targetFilePath);
     const sourceSectionCount = sourceParsed.sections.length;
     const targetSectionCount = targetParsed.sections.length;
-    // Check for structural drift (section count mismatch)
-    if (sourceSectionCount !== targetSectionCount) {
-        return {
-            file,
-            status: 'DRIFT',
-            details: `Section count: ${sourceSectionCount} (source) vs ${targetSectionCount} (target)`,
-            sourceSections: sourceSectionCount,
-            targetSections: targetSectionCount,
-        };
+    // Check section count mismatch
+    if (sourceSectionCount > targetSectionCount) {
+        flags.push('SOURCE_AHEAD');
+        details.push(`${sourceSectionCount} source vs ${targetSectionCount} target sections`);
     }
-    // Check heading-map presence
-    if (!hasHeadingMap) {
-        return {
-            file,
-            status: 'MISSING_HEADINGMAP',
-            sourceSections: sourceSectionCount,
-            targetSections: targetSectionCount,
-        };
+    else if (targetSectionCount > sourceSectionCount) {
+        flags.push('TARGET_AHEAD');
+        details.push(`${targetSectionCount} target vs ${sourceSectionCount} source sections`);
     }
-    // Check git dates — is SOURCE newer?
+    // Check heading-map
+    const headingMap = (0, heading_map_1.extractHeadingMap)(targetContent);
+    if (headingMap.size === 0) {
+        flags.push('MISSING_HEADINGMAP');
+    }
+    // Check git dates
     const docsRelPath = docsFolder ? path.join(docsFolder, file) : file;
     const sourceMetadata = await (0, git_metadata_1.getFileGitMetadata)(sourceRepoPath, docsRelPath);
     const targetMetadata = await (0, git_metadata_1.getFileGitMetadata)(targetRepoPath, docsRelPath);
     const sourceDate = sourceMetadata?.lastModified;
     const targetDate = targetMetadata?.lastModified;
-    const entry = {
-        file,
-        status: 'ALIGNED',
-        sourceSections: sourceSectionCount,
-        targetSections: targetSectionCount,
-    };
+    let sourceLastModified;
+    let targetLastModified;
     if (sourceDate) {
-        entry.sourceLastModified = sourceDate.toISOString().split('T')[0];
+        sourceLastModified = sourceDate.toISOString().split('T')[0];
     }
     if (targetDate) {
-        entry.targetLastModified = targetDate.toISOString().split('T')[0];
+        targetLastModified = targetDate.toISOString().split('T')[0];
     }
     if (sourceDate && targetDate && sourceDate > targetDate) {
-        entry.status = 'OUTDATED';
-        entry.details = `SOURCE modified ${entry.sourceLastModified}, TARGET modified ${entry.targetLastModified}`;
+        flags.push('OUTDATED');
+        details.push(`SOURCE modified ${sourceLastModified}, TARGET modified ${targetLastModified}`);
     }
-    return entry;
+    // Pick primary status (highest priority flag, or ALIGNED if no flags)
+    const PRIORITY = ['SOURCE_AHEAD', 'TARGET_AHEAD', 'MISSING_HEADINGMAP', 'OUTDATED'];
+    const primary = PRIORITY.find(s => flags.includes(s)) ?? 'ALIGNED';
+    if (primary === 'ALIGNED') {
+        flags.push('ALIGNED');
+    }
+    return {
+        file,
+        status: primary,
+        flags,
+        details: details.length > 0 ? details.join('; ') : undefined,
+        sourceSections: sourceSectionCount,
+        targetSections: targetSectionCount,
+        sourceLastModified,
+        targetLastModified,
+    };
 }
 // ============================================================================
 // FULL STATUS RUN
@@ -220,12 +228,13 @@ async function runStatus(options) {
         const entry = await checkFileStatus(file, source, target, docsFolder);
         entries.push(entry);
     }
-    // Build summary
+    // Build summary (count by primary status)
     const summary = {
         total: entries.length,
         aligned: entries.filter(e => e.status === 'ALIGNED').length,
         outdated: entries.filter(e => e.status === 'OUTDATED').length,
-        drift: entries.filter(e => e.status === 'DRIFT').length,
+        sourceAhead: entries.filter(e => e.status === 'SOURCE_AHEAD').length,
+        targetAhead: entries.filter(e => e.status === 'TARGET_AHEAD').length,
         missingHeadingMap: entries.filter(e => e.status === 'MISSING_HEADINGMAP').length,
         sourceOnly: entries.filter(e => e.status === 'SOURCE_ONLY').length,
         targetOnly: entries.filter(e => e.status === 'TARGET_ONLY').length,
@@ -245,7 +254,8 @@ async function runStatus(options) {
 const STATUS_ICONS = {
     ALIGNED: '✅',
     OUTDATED: '⏳',
-    DRIFT: '⚠️',
+    SOURCE_AHEAD: '⚠️',
+    TARGET_AHEAD: '⚠️',
     MISSING_HEADINGMAP: '📋',
     SOURCE_ONLY: '➕',
     TARGET_ONLY: '🔸',
@@ -266,7 +276,13 @@ function formatStatusTable(result) {
     lines.push(separator);
     for (const entry of result.entries) {
         const icon = STATUS_ICONS[entry.status];
-        let line = `  ${entry.file.padEnd(maxFileLen)}  ${icon} ${entry.status}`;
+        // Show compound flags if there are additional conditions beyond the primary
+        const extraFlags = entry.flags.filter(f => f !== entry.status);
+        let statusText = `${icon} ${entry.status}`;
+        if (extraFlags.length > 0) {
+            statusText += ` + ${extraFlags.map(f => STATUS_ICONS[f] + ' ' + f).join(' + ')}`;
+        }
+        let line = `  ${entry.file.padEnd(maxFileLen)}  ${statusText}`;
         if (entry.details) {
             line += `  (${entry.details})`;
         }
@@ -281,8 +297,10 @@ function formatStatusTable(result) {
         lines.push(`  ${STATUS_ICONS.ALIGNED} ${s.aligned} aligned`);
     if (s.outdated > 0)
         lines.push(`  ${STATUS_ICONS.OUTDATED} ${s.outdated} outdated (SOURCE newer)`);
-    if (s.drift > 0)
-        lines.push(`  ${STATUS_ICONS.DRIFT} ${s.drift} structural drift`);
+    if (s.sourceAhead > 0)
+        lines.push(`  ${STATUS_ICONS.SOURCE_AHEAD} ${s.sourceAhead} source ahead (sections added upstream)`);
+    if (s.targetAhead > 0)
+        lines.push(`  ${STATUS_ICONS.TARGET_AHEAD} ${s.targetAhead} target ahead (extra sections in translation)`);
     if (s.missingHeadingMap > 0)
         lines.push(`  ${STATUS_ICONS.MISSING_HEADINGMAP} ${s.missingHeadingMap} missing heading-map`);
     if (s.sourceOnly > 0)

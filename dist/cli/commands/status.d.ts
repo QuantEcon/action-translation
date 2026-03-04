@@ -6,18 +6,25 @@
  *
  * Output goes to the CLI console (like `git status`), not report files.
  *
- * Statuses:
+ * Primary status (most significant issue):
  * - ALIGNED:            Structure matches, heading-map present, no newer SOURCE commits
  * - OUTDATED:           Structure/heading-map OK, but SOURCE has newer commits than TARGET
- * - DRIFT:              Structural differences detected (section count mismatch)
+ * - SOURCE_AHEAD:       SOURCE has more sections than TARGET (sections added upstream)
+ * - TARGET_AHEAD:       TARGET has more sections than SOURCE (unexpected divergence)
  * - MISSING_HEADINGMAP: No heading-map in TARGET file
  * - SOURCE_ONLY:        File exists in SOURCE but not TARGET
  * - TARGET_ONLY:        File exists in TARGET but not SOURCE
+ *
+ * Flags (compound conditions — a file may have multiple):
+ * - SOURCE_AHEAD / TARGET_AHEAD: section count mismatch
+ * - MISSING_HEADINGMAP: no heading-map in TARGET
+ * - OUTDATED: SOURCE modified after TARGET
  */
-export type FileSyncStatus = 'ALIGNED' | 'OUTDATED' | 'DRIFT' | 'MISSING_HEADINGMAP' | 'SOURCE_ONLY' | 'TARGET_ONLY';
+export type FileSyncStatus = 'ALIGNED' | 'OUTDATED' | 'SOURCE_AHEAD' | 'TARGET_AHEAD' | 'MISSING_HEADINGMAP' | 'SOURCE_ONLY' | 'TARGET_ONLY';
 export interface FileStatusEntry {
     file: string;
     status: FileSyncStatus;
+    flags: FileSyncStatus[];
     details?: string;
     sourceSections?: number;
     targetSections?: number;
@@ -33,7 +40,8 @@ export interface StatusResult {
         total: number;
         aligned: number;
         outdated: number;
-        drift: number;
+        sourceAhead: number;
+        targetAhead: number;
         missingHeadingMap: number;
         sourceOnly: number;
         targetOnly: number;
@@ -65,11 +73,8 @@ export declare function applyExcludes(files: string[], excludes: string[]): stri
 /**
  * Determine the sync status of a single file.
  *
- * Checks (in order):
- * 1. Does the file exist in both repos?
- * 2. Does the TARGET have a heading-map?
- * 3. Do section counts match?
- * 4. Is SOURCE newer than TARGET? (git dates)
+ * Builds a list of all applicable flags, then picks the most significant
+ * as the primary status. Priority: SOURCE_AHEAD/TARGET_AHEAD > MISSING_HEADINGMAP > OUTDATED > ALIGNED.
  */
 export declare function checkFileStatus(file: string, sourceRepoPath: string, targetRepoPath: string, docsFolder: string): Promise<FileStatusEntry>;
 /**
