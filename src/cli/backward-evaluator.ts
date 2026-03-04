@@ -471,9 +471,18 @@ export function parseFileEvaluationResponse(
       const parsed = JSON.parse(candidate);
       const sections = Array.isArray(parsed.sections) ? parsed.sections : [];
 
-      // Map parsed sections back to headings
+      // Build a lookup by section_number (1-based) for robust mapping.
+      // Falls back to array index if section_number is missing or out of range.
+      const byNumber = new Map<number, typeof sections[0]>();
+      for (const s of sections) {
+        if (typeof s.section_number === 'number') {
+          byNumber.set(s.section_number, s);
+        }
+      }
+
       return matchedPairs.map((pair, i) => {
-        const section = sections[i] || {};
+        // Prefer section_number lookup (1-based), fall back to array index
+        const section = byNumber.get(i + 1) || sections[i] || {};
         return {
           sectionHeading: pair.heading,
           recommendation: section.recommendation === 'BACKPORT' ? 'BACKPORT' as const : 'NO_BACKPORT' as const,

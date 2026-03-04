@@ -14,13 +14,14 @@
  * - MISSING_HEADINGMAP: No heading-map in TARGET file
  * - SOURCE_ONLY:        File exists in SOURCE but not TARGET
  * - TARGET_ONLY:        File exists in TARGET but not SOURCE
+ * - NOT_FOUND:          File not found in either repo (only with --file)
  *
  * Flags (compound conditions — a file may have multiple):
- * - SOURCE_AHEAD / TARGET_AHEAD: section count mismatch
+ * - SOURCE_AHEAD / TARGET_AHEAD: section count mismatch (more sections in one side)
  * - MISSING_HEADINGMAP: no heading-map in TARGET
- * - OUTDATED: SOURCE modified after TARGET
+ * - OUTDATED: SOURCE has newer commits than TARGET (commit-date comparison)
  */
-export type FileSyncStatus = 'ALIGNED' | 'OUTDATED' | 'SOURCE_AHEAD' | 'TARGET_AHEAD' | 'MISSING_HEADINGMAP' | 'SOURCE_ONLY' | 'TARGET_ONLY';
+export type FileSyncStatus = 'ALIGNED' | 'OUTDATED' | 'SOURCE_AHEAD' | 'TARGET_AHEAD' | 'MISSING_HEADINGMAP' | 'SOURCE_ONLY' | 'TARGET_ONLY' | 'NOT_FOUND';
 export interface FileStatusEntry {
     file: string;
     status: FileSyncStatus;
@@ -45,6 +46,7 @@ export interface StatusResult {
         missingHeadingMap: number;
         sourceOnly: number;
         targetOnly: number;
+        notFound: number;
     };
 }
 export interface StatusOptions {

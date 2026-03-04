@@ -341,6 +341,20 @@ describe('checkFileStatus', () => {
     expect(result.sourceSections).toBe(2);
     expect(result.targetSections).toBe(2);
   });
+
+  it('should return NOT_FOUND when file is missing from both repos', async () => {
+    // Neither source nor target directories have the file
+    const result = await checkFileStatus(
+      'nonexistent.md',
+      path.join(tmpDir, 'source'),
+      path.join(tmpDir, 'target'),
+      'lectures',
+    );
+
+    expect(result.status).toBe('NOT_FOUND');
+    expect(result.flags).toContain('NOT_FOUND');
+    expect(result.details).toContain('not found in either repo');
+  });
 });
 
 // ============================================================================
@@ -457,7 +471,7 @@ describe('formatStatusTable', () => {
         { file: 'cobweb.md', status: 'OUTDATED' as FileSyncStatus, flags: ['OUTDATED' as FileSyncStatus], details: 'SOURCE modified 2026-03-01, TARGET modified 2026-02-15' },
         { file: 'new.md', status: 'SOURCE_ONLY' as FileSyncStatus, flags: ['SOURCE_ONLY' as FileSyncStatus] },
       ],
-      summary: { total: 3, aligned: 1, outdated: 1, sourceAhead: 0, targetAhead: 0, missingHeadingMap: 0, sourceOnly: 1, targetOnly: 0 },
+      summary: { total: 3, aligned: 1, outdated: 1, sourceAhead: 0, targetAhead: 0, missingHeadingMap: 0, sourceOnly: 1, targetOnly: 0, notFound: 0 },
     };
 
     const output = formatStatusTable(result);
@@ -484,7 +498,7 @@ describe('formatStatusTable', () => {
       entries: [
         { file: 'intro.md', status: 'ALIGNED' as FileSyncStatus, flags: ['ALIGNED' as FileSyncStatus] },
       ],
-      summary: { total: 1, aligned: 1, outdated: 0, sourceAhead: 0, targetAhead: 0, missingHeadingMap: 0, sourceOnly: 0, targetOnly: 0 },
+      summary: { total: 1, aligned: 1, outdated: 0, sourceAhead: 0, targetAhead: 0, missingHeadingMap: 0, sourceOnly: 0, targetOnly: 0, notFound: 0 },
     };
 
     const output = formatStatusTable(result);
@@ -506,7 +520,7 @@ describe('formatStatusJson', () => {
       entries: [
         { file: 'intro.md', status: 'ALIGNED' as FileSyncStatus, flags: ['ALIGNED' as FileSyncStatus] },
       ],
-      summary: { total: 1, aligned: 1, outdated: 0, sourceAhead: 0, targetAhead: 0, missingHeadingMap: 0, sourceOnly: 0, targetOnly: 0 },
+      summary: { total: 1, aligned: 1, outdated: 0, sourceAhead: 0, targetAhead: 0, missingHeadingMap: 0, sourceOnly: 0, targetOnly: 0, notFound: 0 },
     };
 
     const json = formatStatusJson(result);

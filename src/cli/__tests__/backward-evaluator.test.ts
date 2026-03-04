@@ -493,6 +493,30 @@ describe('backward-evaluator', () => {
       expect(results[1].category).toBe('BUG_FIX');
       expect(results[2].category).toBe('CLARIFICATION');
     });
+
+    it('should map sections by section_number when available', () => {
+      // LLM returns sections out of order — section_number should be used for mapping
+      const response = JSON.stringify({
+        sections: [
+          { section_number: 3, section_heading: 'Section Three', recommendation: 'NO_BACKPORT', category: 'NO_CHANGE', confidence: 0.9, summary: 'third', specific_changes: [], reasoning: 'ok' },
+          { section_number: 1, section_heading: 'Section One', recommendation: 'BACKPORT', category: 'BUG_FIX', confidence: 0.85, summary: 'first', specific_changes: [], reasoning: 'important' },
+          { section_number: 2, section_heading: 'Section Two', recommendation: 'NO_BACKPORT', category: 'NO_CHANGE', confidence: 0.7, summary: 'second', specific_changes: [], reasoning: 'fine' },
+        ],
+      });
+
+      const results = parseFileEvaluationResponse(response, matchedPairs);
+      expect(results).toHaveLength(3);
+      // Section 1 maps to matchedPairs[0]
+      expect(results[0].recommendation).toBe('BACKPORT');
+      expect(results[0].category).toBe('BUG_FIX');
+      expect(results[0].summary).toBe('first');
+      // Section 2 maps to matchedPairs[1]
+      expect(results[1].recommendation).toBe('NO_BACKPORT');
+      expect(results[1].summary).toBe('second');
+      // Section 3 maps to matchedPairs[2]
+      expect(results[2].recommendation).toBe('NO_BACKPORT');
+      expect(results[2].summary).toBe('third');
+    });
   });
 
   describe('evaluateFile (test mode)', () => {

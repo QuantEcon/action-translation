@@ -255,11 +255,10 @@ No LLM calls — fast and free diagnostic. Output goes to the **CLI console** (l
 - [x] Detect structural differences (section count mismatch)
 - [x] Compare file modification dates (git metadata)
 - [x] Report per-file sync status:
-  - `ALIGNED` — structure matches, heading-map present, no newer commits either side
-  - `SOURCE_AHEAD` — SOURCE has newer commits than TARGET (needs forward sync)
-  - `TARGET_AHEAD` — TARGET has newer commits than SOURCE (possible backward candidate)
-  - `SOURCE_AHEAD | TARGET_AHEAD` — both sides have newer commits (compound flag)
-  - `DRIFT` — structural differences detected (section count mismatch)
+  - `ALIGNED` — structure matches, heading-map present, no newer SOURCE commits
+  - `SOURCE_AHEAD` — SOURCE has more sections than TARGET (sections added upstream)
+  - `TARGET_AHEAD` — TARGET has more sections than SOURCE (unexpected divergence)
+  - `OUTDATED` — SOURCE has newer commits than TARGET (needs forward sync)
   - `MISSING_HEADINGMAP` — no heading-map in TARGET
   - `SOURCE_ONLY` — file missing in TARGET
   - `TARGET_ONLY` — file missing in SOURCE

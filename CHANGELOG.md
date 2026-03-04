@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Resync CLI — Status Command** (`src/cli/commands/status.ts`): Fast, free diagnostic — no LLM calls
-  - Per-file sync status: `ALIGNED`, `OUTDATED`, `DRIFT`, `MISSING_HEADINGMAP`, `SOURCE_ONLY`, `TARGET_ONLY`
+  - Per-file sync status: `ALIGNED`, `OUTDATED`, `SOURCE_AHEAD`, `TARGET_AHEAD`, `MISSING_HEADINGMAP`, `SOURCE_ONLY`, `TARGET_ONLY`
   - Console table output (`formatStatusTable`) — like `git status` for translations
   - JSON output via `--json` flag (prints to stdout)
   - File discovery across SOURCE and TARGET repos with `--exclude` filtering
@@ -22,11 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--resume` flag to continue from checkpoint
   - `--estimate` flag for pre-run cost estimation
   - `--exclude` flag for file filtering (exact match or `*` wildcard suffix)
-  - Progress indicator: `[12/51] triaging cobweb.md...`
-  - Sequential processing to respect API rate limits
-- 41 new tests (409 → 455 total, 21 → 23 suites)
+  - Parallel processing with bounded concurrency (5 concurrent files)
+  - TTY progress bar with live file name + stage counts (falls back to simple logging in non-TTY/CI)
+  - Buffered logger (`BufferedLogger`) — per-file output flushed atomically to `.resync/_log.txt`
+- 56 new tests (409 → 472 total, 21 → 23 suites)
   - `status.test.ts`: 21 tests (file discovery, per-file status, console output)
-  - `bulk-backward.test.ts`: 18 tests (checkpointing, cost estimation, bulk orchestration)
+  - `bulk-backward.test.ts`: 19 tests (checkpointing, cost estimation, parallel orchestration, progress bar)
+  - `backward-evaluator.test.ts`: 16 new tests (whole-file evaluation prompt, parsing, test mode)
 - **Resync CLI** (`src/cli/`): New CLI tool for backward analysis of translations
   - `resync backward` command — two-stage pipeline to identify translation improvements worth backporting to SOURCE
   - **Stage 1** (`document-comparator.ts`): Whole-document LLM triage, recall-biased, one call per file

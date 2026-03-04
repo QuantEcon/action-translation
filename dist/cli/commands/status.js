@@ -15,11 +15,12 @@
  * - MISSING_HEADINGMAP: No heading-map in TARGET file
  * - SOURCE_ONLY:        File exists in SOURCE but not TARGET
  * - TARGET_ONLY:        File exists in TARGET but not SOURCE
+ * - NOT_FOUND:          File not found in either repo (only with --file)
  *
  * Flags (compound conditions — a file may have multiple):
- * - SOURCE_AHEAD / TARGET_AHEAD: section count mismatch
+ * - SOURCE_AHEAD / TARGET_AHEAD: section count mismatch (more sections in one side)
  * - MISSING_HEADINGMAP: no heading-map in TARGET
- * - OUTDATED: SOURCE modified after TARGET
+ * - OUTDATED: SOURCE has newer commits than TARGET (commit-date comparison)
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -135,7 +136,7 @@ async function checkFileStatus(file, sourceRepoPath, targetRepoPath, docsFolder)
         return { file, status: 'SOURCE_ONLY', flags: ['SOURCE_ONLY'] };
     }
     if (!sourceExists && !targetExists) {
-        return { file, status: 'SOURCE_ONLY', flags: ['SOURCE_ONLY'], details: 'File not found in either repo' };
+        return { file, status: 'NOT_FOUND', flags: ['NOT_FOUND'], details: 'File not found in either repo' };
     }
     // Both exist — collect all flags
     const flags = [];
@@ -238,6 +239,7 @@ async function runStatus(options) {
         missingHeadingMap: entries.filter(e => e.status === 'MISSING_HEADINGMAP').length,
         sourceOnly: entries.filter(e => e.status === 'SOURCE_ONLY').length,
         targetOnly: entries.filter(e => e.status === 'TARGET_ONLY').length,
+        notFound: entries.filter(e => e.status === 'NOT_FOUND').length,
     };
     return {
         sourceRepo: source,
@@ -259,6 +261,7 @@ const STATUS_ICONS = {
     MISSING_HEADINGMAP: '📋',
     SOURCE_ONLY: '➕',
     TARGET_ONLY: '🔸',
+    NOT_FOUND: '❌',
 };
 /**
  * Format a StatusResult as a console-friendly table string.
@@ -306,6 +309,8 @@ function formatStatusTable(result) {
         lines.push(`  ${STATUS_ICONS.SOURCE_ONLY} ${s.sourceOnly} source only (not yet translated)`);
     if (s.targetOnly > 0)
         lines.push(`  ${STATUS_ICONS.TARGET_ONLY} ${s.targetOnly} target only (not in source)`);
+    if (s.notFound > 0)
+        lines.push(`  ${STATUS_ICONS.NOT_FOUND} ${s.notFound} not found (missing from both repos)`);
     return lines.join('\n');
 }
 /**

@@ -14,11 +14,12 @@
  * - MISSING_HEADINGMAP: No heading-map in TARGET file
  * - SOURCE_ONLY:        File exists in SOURCE but not TARGET
  * - TARGET_ONLY:        File exists in TARGET but not SOURCE
+ * - NOT_FOUND:          File not found in either repo (only with --file)
  * 
  * Flags (compound conditions — a file may have multiple):
- * - SOURCE_AHEAD / TARGET_AHEAD: section count mismatch
+ * - SOURCE_AHEAD / TARGET_AHEAD: section count mismatch (more sections in one side)
  * - MISSING_HEADINGMAP: no heading-map in TARGET
- * - OUTDATED: SOURCE modified after TARGET
+ * - OUTDATED: SOURCE has newer commits than TARGET (commit-date comparison)
  */
 
 import * as fs from 'fs';
@@ -38,7 +39,8 @@ export type FileSyncStatus =
   | 'TARGET_AHEAD'
   | 'MISSING_HEADINGMAP'
   | 'SOURCE_ONLY'
-  | 'TARGET_ONLY';
+  | 'TARGET_ONLY'
+  | 'NOT_FOUND';
 
 export interface FileStatusEntry {
   file: string;
@@ -65,6 +67,7 @@ export interface StatusResult {
     missingHeadingMap: number;
     sourceOnly: number;
     targetOnly: number;
+    notFound: number;
   };
 }
 
@@ -159,7 +162,7 @@ export async function checkFileStatus(
     return { file, status: 'SOURCE_ONLY', flags: ['SOURCE_ONLY'] };
   }
   if (!sourceExists && !targetExists) {
-    return { file, status: 'SOURCE_ONLY', flags: ['SOURCE_ONLY'], details: 'File not found in either repo' };
+    return { file, status: 'NOT_FOUND', flags: ['NOT_FOUND'], details: 'File not found in either repo' };
   }
 
   // Both exist — collect all flags
@@ -280,6 +283,7 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
     missingHeadingMap: entries.filter(e => e.status === 'MISSING_HEADINGMAP').length,
     sourceOnly: entries.filter(e => e.status === 'SOURCE_ONLY').length,
     targetOnly: entries.filter(e => e.status === 'TARGET_ONLY').length,
+    notFound: entries.filter(e => e.status === 'NOT_FOUND').length,
   };
 
   return {
@@ -304,6 +308,7 @@ const STATUS_ICONS: Record<FileSyncStatus, string> = {
   MISSING_HEADINGMAP: '📋',
   SOURCE_ONLY: '➕',
   TARGET_ONLY: '🔸',
+  NOT_FOUND: '❌',
 };
 
 /**
@@ -354,6 +359,7 @@ export function formatStatusTable(result: StatusResult): string {
   if (s.missingHeadingMap > 0) lines.push(`  ${STATUS_ICONS.MISSING_HEADINGMAP} ${s.missingHeadingMap} missing heading-map`);
   if (s.sourceOnly > 0)        lines.push(`  ${STATUS_ICONS.SOURCE_ONLY} ${s.sourceOnly} source only (not yet translated)`);
   if (s.targetOnly > 0)        lines.push(`  ${STATUS_ICONS.TARGET_ONLY} ${s.targetOnly} target only (not in source)`);
+  if (s.notFound > 0)           lines.push(`  ${STATUS_ICONS.NOT_FOUND} ${s.notFound} not found (missing from both repos)`);
 
   return lines.join('\n');
 }
