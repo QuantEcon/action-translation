@@ -494,17 +494,80 @@ Start with basic chalk styling, add richer rendering as needed:
 
 **Goal**: Drift recovery via forward resync with RESYNC translation mode + optional GitHub PR creation
 
-### 3b.1 Forward Command (`src/cli/commands/forward.ts`)
+**Status**: Triage (Stage 1) implemented and tested on real data. RESYNC translation approach under evaluation — see §3b.5 below.
 
-Drift recovery: resync TARGET to match current SOURCE, preserving translation quality.
-Only resyncs files with **content** differences — skips files where only i18n differences exist.
+### 3b.0 Triage Experiment Results (5 March 2026)
+
+Ran forward triage on all 49 file pairs between `lecture-python-intro` and `lecture-intro.zh-cn`:
+
+| Verdict | Count | % |
+|---------|-------|---|
+| 🔄 CONTENT_CHANGES | 9 | 18% |
+| 🌐 I18N_ONLY | 36 | 74% |
+| ✅ IDENTICAL | 4 | 8% |
+
+**Cost**: ~$2.26 (754K tokens) for 49 files. Higher than the $0.01/file estimate because full documents are sent to the LLM as context.
+
+**The 9 content-change files with LLM-identified reasons**:
+
+| File | Issue |
+|------|-------|
+| about.md | Missing contributors in Credits section |
+| business_cycle.md | Missing developed economies comparison section |
+| cagan_adaptive.md | Missing section + different function names + code restructuring |
+| equalizing_difference.md | Major code rewrite (namedtuple → class approach) |
+| heavy_tails.md | Different API usage (pandas_datareader → wbgapi) |
+| intro.md | Added author info in Chinese version |
+| pv.md | Incomplete formulas + incorrect vector definition |
+| supply_demand_heterogeneity.md | Formula error (^T rendered as ^2) |
+| troubleshooting.md | Extra content in Chinese + different issue tracker URL |
+
+**Key findings**:
+1. **Triage accuracy is high** — reasons are specific (formula errors, missing sections, API changes), no obvious false positives
+2. **The triage reasons alone are valuable** — pv.md formula error and supply_demand_heterogeneity.md ^T→^2 are essentially bug reports
+3. **82% of files can be skipped** — massive cost savings by filtering before translation
+4. **Cost was 4× estimate** — real documents are large; actual triage cost is ~$0.05/file, not $0.01
+
+### 3b.5 Design Decision: Whole-File vs Section-by-Section RESYNC
+
+**Context**: The current implementation uses section-by-section RESYNC (parse → match sections → translate each changed section → reconstruct). This approach was inherited from SYNC mode design. After the triage experiment and backward analysis experience, we're evaluating whole-file RESYNC as an alternative.
+
+**Why section-by-section works for SYNC mode (PR-driven)**:
+- Git diff tells us *exactly* which sections changed
+- Only 1-3 sections change per PR — very targeted
+- Heading-map is fresh (just updated by previous sync)
+- Unchanged sections stay bit-identical — clean diffs
+- Cost scales with change size, not document size
+
+**Why section-by-section is problematic for forward RESYNC**:
+- **No precise change signal** — we don't know which sections drifted, that's the whole question
+- **Section matching is fragile** — heading-maps may be stale or missing; sections may have been reorganized (e.g., equalizing_difference.md was completely restructured)
+- **Reconstruction is the most fragile step** — reassembling a document from pieces risks formatting issues, spacing errors, heading-map injection bugs (~300 lines of code)
+- **Context is lost** — each section is translated in isolation; cross-section references, shared variables, and narrative flow are invisible
+- **Error surface is large** — N LLM calls per file means N chances to fail, plus the reconstruction step
+
+**Why whole-file RESYNC may be better for forward**:
+- **Simpler pipeline**: triage → whole-file RESYNC → write. Eliminates parse, match, reconstruct entirely
+- **Full context**: LLM sees the entire document — cross-references, narrative flow, consistent terminology
+- **Handles structural changes**: Documents like equalizing_difference.md (restructured code) and cagan_adaptive.md (reorganized sections) work naturally
+- **Single point of failure**: One LLM call succeeds or fails — no partial reconstruction artifacts
+- **Natural output**: The LLM produces the complete file — no stitching artifacts
+
+**Risks of whole-file**:
+- **Unwanted edits to good sections** — LLM might "improve" sections that were already correct. Mitigation: strong prompt instruction ("only modify sections where SOURCE content has meaningfully changed")
+- **Cost per file** — one large LLM call vs N smaller ones. Actually similar or lower cost since triage already sized the documents
+- **All-or-nothing** — if the call fails, we get nothing (vs section-by-section where partial results are usable). Mitigation: retry logic
+- **Output verification** — harder to confirm only intended changes were made. Mitigation: `git diff` review before committing
+
+**Proposed approach**: Implement whole-file RESYNC for the `forward` command as the primary mode. The existing section-by-section infrastructure remains available for SYNC mode (where it's the right design).
+
+**Next step**: Run a whole-file RESYNC test on 2-3 of the 9 content-change files (e.g., pv.md, business_cycle.md, cagan_adaptive.md) and compare output quality against the section-by-section approach.
 
 ```
 npx resync status                    # identify drifted files (OUTDATED, SOURCE_AHEAD)
 npx resync forward -f cobweb.md      # resync specific file (local)
 npx resync forward                   # resync all OUTDATED files (local)
 npx resync forward --github          # resync all, create one PR per file in TARGET repo
-npx resync forward --dry-run         # preview only, no writes or PRs
 ```
 
 **Two execution modes**:
@@ -515,20 +578,19 @@ npx resync forward --dry-run         # preview only, no writes or PRs
 - Default — write updated TARGET files to local disk
 - `--github` — create one PR per file in TARGET repo's default branch via `gh`
 
-**Per-file pipeline**:
-1. **Forward triage** (LLM, ~$0.01/file) — "Content changes or i18n only?"
+**Per-file pipeline** (proposed whole-file approach — see §3b.5):
+1. **Forward triage** (LLM, ~$0.05/file) — "Content changes or i18n only?"
    - Content changes → proceed to RESYNC
    - i18n only → skip with brief reason (e.g., "punctuation and terminology style")
-2. Parse + match sections via heading-map
-3. RESYNC translate changed sections (preserving translation style)
-4. Output: write to disk or create PR
+2. **Whole-file RESYNC translation** — send current SOURCE + current TARGET → get back updated TARGET
+3. Output: write to disk or create PR
 
-- [ ] Parse CLI arguments: `-f <file>`, `-s <source-dir>`, `-t <target-dir>`, `-l <language>`, `--dry-run`, `--github`
-- [ ] Support single-file mode (`-f`) and full directory mode
-- [ ] Integrate with `status` to auto-detect OUTDATED files (when no `-f` given)
-- [ ] Support `--dry-run` flag (diff-style preview without file modification or PRs)
-- [ ] Cost estimation + confirmation prompt (like bulk backward)
-- [ ] `--github` mode: one PR per file, branch `resync/{filename}`, labels `action-translation-sync`, `resync`
+- [x] Parse CLI arguments: `-f <file>`, `-s <source-dir>`, `-t <target-dir>`, `-l <language>`, `--github`
+- [x] Support single-file mode (`-f`) and full directory mode
+- [x] Integrate with `status` to auto-detect OUTDATED files (when no `-f` given)
+- [x] Cost estimation via `--estimate`
+- [x] `--github` mode: one PR per file, branch `resync/{filename}`, labels `action-translation-sync`, `resync`
+- [ ] **Refactor to whole-file RESYNC** (pending §3b.5 evaluation)
 
 ### 3b.2 Forward Triage (`src/cli/forward-triage.ts`)
 
@@ -539,11 +601,12 @@ cobweb.md: RESYNCED (3 sections updated, 1 new, 8 unchanged)
 solow.md:  SKIPPED (i18n only — terminology style, full-width punctuation)
 ```
 
-- [ ] `triageForward()` — single LLM call per file, returns verdict + brief reason
-- [ ] Verdicts: `CONTENT_CHANGES` (proceed), `I18N_ONLY` (skip), `IDENTICAL` (skip)
-- [ ] Prompt: "Compare SOURCE and TARGET. Are there substantive content differences (structure, formulas, examples, code logic), or only internationalisation differences (punctuation, word choice, terminology style)?"
-- [ ] Report skip reason in summary (e.g., "punctuation and terminology style differences")
-- [ ] Unit tests + prompt snapshot tests
+- [x] `triageForward()` — single LLM call per file, returns verdict + brief reason
+- [x] Verdicts: `CONTENT_CHANGES` (proceed), `I18N_ONLY` (skip), `IDENTICAL` (skip)
+- [x] Prompt: "Compare SOURCE and TARGET. Are there substantive content differences (structure, formulas, examples, code logic), or only internationalisation differences (punctuation, word choice, terminology style)?"
+- [x] Report skip reason in summary (e.g., "punctuation and terminology style differences")
+- [x] Unit tests + prompt snapshot tests
+- [x] **Validated on real data** — 49 file pairs, results in §3b.0 above
 
 ### 3b.3 RESYNC Translation Mode
 
@@ -560,31 +623,35 @@ RESYNC preserves translation nuances because the LLM sees the existing translati
 - Only changes what the SOURCE actually changed
 - Far less churn than re-translating from scratch
 
-- [ ] Add RESYNC mode to `translator.ts`
-- [ ] RESYNC prompt: "Update this translation to accurately reflect the current source. Preserve existing translation style, terminology, and localization wherever the meaning hasn't changed."
-- [ ] Per-section processing: parse both sides, match sections, RESYNC each pair
-- [ ] Handle `SOURCE_ONLY` sections (new — translate with NEW mode)
-- [ ] Handle `TARGET_ONLY` sections (deleted in SOURCE — flag for removal, require confirmation)
-- [ ] Preserve heading-map (via `heading-map.ts`)
-- [ ] Preserve frontmatter
-- [ ] Unit tests for RESYNC mode
+- [x] Add RESYNC mode to `translator.ts` (`translateSectionResync()` method)
+- [x] RESYNC prompt: "Update this translation to accurately reflect the current source. Preserve existing translation style, terminology, and localization wherever the meaning hasn't changed."
+- [x] Section-by-section implementation (working, tested)
+- [x] Handle `SOURCE_ONLY` sections (new — translate with NEW mode)
+- [x] Handle `TARGET_ONLY` sections (deleted in SOURCE — flag for removal)
+- [x] Preserve heading-map (via `heading-map.ts`)
+- [x] Preserve frontmatter
+- [x] Unit tests for RESYNC mode (4 tests)
+- [ ] **Evaluate whole-file RESYNC** as alternative to section-by-section (see §3b.5)
+- [ ] If whole-file wins: add `translateDocumentResync()` method, simplify forward pipeline
 
 ### 3b.4 Forward Output
 
 **Local mode** (default):
-- [ ] Write updated TARGET files to disk
-- [ ] Sync summary: sections resynced / unchanged / new / removed / errors / skipped (i18n)
-- [ ] Dry-run mode: diff-style preview without file modification
+- [x] Write updated TARGET files to disk
+- [x] Sync summary: sections resynced / unchanged / new / removed / errors / skipped (i18n)
+- [x] No `--dry-run` — use git workflow: run forward, `git diff`, `git restore .`
 
 **GitHub mode** (`--github`):
-- [ ] Create branch `resync/{filename}` in TARGET repo
-- [ ] Commit updated file
-- [ ] Create PR: title `🔄 [resync] filename.md`, body with section change summary
-- [ ] Labels: `action-translation-sync`, `resync`
-- [ ] Print PR URL per file
-- [ ] Injectable `GhRunner` for testability (same pattern as `issue-creator.ts`)
+- [x] Create branch `resync/{filename}` in TARGET repo
+- [x] Commit updated file
+- [x] Create PR: title `🔄 [resync] filename.md`, body with section change summary
+- [x] Labels: `action-translation-sync`, `resync`
+- [x] Print PR URL per file
+- [x] Injectable `GhRunner` for testability (same pattern as `issue-creator.ts`)
 
 **Phase 3b Deliverable**: Working `npx resync forward` with RESYNC mode, local + `--github` output
+
+**Remaining**: Evaluate and potentially refactor to whole-file approach (§3b.5)
 
 ---
 
