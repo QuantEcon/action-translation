@@ -306,6 +306,7 @@ describe('formatLoadSummary', () => {
 describe('loadAndFlattenSuggestions — integration with real fixtures', () => {
   const fixtureReportDir = path.join(
     __dirname, '..', '..', '..', 'reports',
+    'lecture-python-intro',
     'backward-2026-03-04-section-by-section',
   );
   const hasFixtures = fs.existsSync(path.join(fixtureReportDir, '.resync'));

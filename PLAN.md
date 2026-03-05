@@ -437,7 +437,7 @@ Chalk-styled stdout output — no ink yet. Fast iteration on what information ma
 
 - [x] Per-suggestion display: file name, section heading, category badge + confidence, LLM reasoning, suggested change
 - [x] End-of-run summary: total suggestions, breakdown by category/confidence
-- [x] Test with real report data from `reports/backward-2026-03-04-section-by-section/`
+- [x] Test with real report data from `reports/lecture-python-intro/backward-2026-03-04-section-by-section/`
 - [x] Unit tests for formatter output (`review-formatter.test.ts`, 37 tests)
 
 #### Step 3: Issue body generator ✅

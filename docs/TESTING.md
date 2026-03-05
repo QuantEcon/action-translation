@@ -41,7 +41,7 @@ The repo ships with real backward-analysis reports in `reports/`. Use these to t
 
 ```bash
 # Preview all 31 suggestions from the section-by-section report
-node dist/cli/index.js review reports/backward-2026-03-04-section-by-section --dry-run
+node dist/cli/index.js review reports/lecture-python-intro/backward-2026-03-04-section-by-section --dry-run
 ```
 
 **What you should see:**
@@ -51,7 +51,7 @@ node dist/cli/index.js review reports/backward-2026-03-04-section-by-section --d
 
 ```bash
 # Raise the confidence floor to see only the strongest suggestions
-node dist/cli/index.js review reports/backward-2026-03-04-section-by-section --dry-run --min-confidence 0.8
+node dist/cli/index.js review reports/lecture-python-intro/backward-2026-03-04-section-by-section --dry-run --min-confidence 0.8
 ```
 
 ### 2. Interactive mode (accept / skip / reject)
@@ -59,7 +59,7 @@ node dist/cli/index.js review reports/backward-2026-03-04-section-by-section --d
 Without `--dry-run` the command enters full interactive mode:
 
 ```bash
-node dist/cli/index.js review reports/backward-2026-03-04-section-by-section
+node dist/cli/index.js review reports/lecture-python-intro/backward-2026-03-04-section-by-section
 ```
 
 **Controls:**
@@ -82,7 +82,7 @@ node dist/cli/index.js review reports/backward-2026-03-04-section-by-section
 To test the full pipeline including actual GitHub Issue creation:
 
 ```bash
-node dist/cli/index.js review reports/backward-2026-03-04-section-by-section \
+node dist/cli/index.js review reports/lecture-python-intro/backward-2026-03-04-section-by-section \
   --repo QuantEcon/lecture-python-intro \
   --min-confidence 0.8
 ```
