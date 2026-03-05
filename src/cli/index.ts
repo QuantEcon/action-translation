@@ -12,6 +12,7 @@
 import { Command } from 'commander';
 import { runBackwardSingleFile, runBackwardBulk } from './commands/backward.js';
 import { runStatus, formatStatusTable, formatStatusJson, StatusOptions } from './commands/status.js';
+import { runReview, ReviewOptions } from './commands/review.js';
 import { BackwardOptions } from './types.js';
 
 // Read version from package.json — use createRequire since JSON imports
@@ -143,6 +144,30 @@ program
       } else {
         console.log(formatStatusTable(result));
       }
+    } catch (error) {
+      console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
+  });
+
+// ─── review command ─────────────────────────────────────────────────────────
+
+program
+  .command('review')
+  .description('Interactively review backward suggestions and create GitHub Issues')
+  .argument('<report-dir>', 'Path to the backward report directory (must contain a .resync/ subfolder)')
+  .option('--repo <owner/repo>', 'SOURCE repository for Issue creation (e.g. QuantEcon/lecture-python-intro)')
+  .option('--dry-run', 'Preview Issues without creating them', false)
+  .option('--min-confidence <number>', 'Minimum confidence threshold for suggestions', '0.6')
+  .action(async (reportDir: string, opts) => {
+    const options: ReviewOptions = {
+      reportDir,
+      repo: opts.repo,
+      dryRun: opts.dryRun,
+      minConfidence: validateMinConfidence(opts.minConfidence),
+    };
+    try {
+      await runReview(options);
     } catch (error) {
       console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
       process.exit(1);

@@ -234,11 +234,11 @@ describe('progress checkpointing', () => {
 // ============================================================================
 
 describe('buildBulkOutputDir', () => {
-  it('should create a date-stamped folder name', () => {
-    const dir = buildBulkOutputDir('./reports');
+  it('should create a repo-scoped date-stamped folder name', () => {
+    const dir = buildBulkOutputDir('./reports', 'lecture-python-intro');
 
-    // Should be in the format: reports/backward-YYYY-MM-DD
-    expect(dir).toMatch(/reports[/\\]backward-\d{4}-\d{2}-\d{2}$/);
+    // Should be in the format: reports/lecture-python-intro/backward-YYYY-MM-DD
+    expect(dir).toMatch(/reports[/\\]lecture-python-intro[/\\]backward-\d{4}-\d{2}-\d{2}$/);
   });
 });
 
@@ -351,14 +351,15 @@ describe('runBackwardBulk', () => {
     // In test mode: "intro" and "aligned-basics" → IN_SYNC; "cobweb" → CHANGES_DETECTED
     expect(result.filesInSync).toBe(2);
 
-    // Check that output folder was created (timestamped)
-    const outputContents = fs.readdirSync(outputDir);
-    expect(outputContents.length).toBeGreaterThan(0);
-    const bulkFolder = outputContents.find(f => f.startsWith('backward-'));
+    // Check that output folder was created under the source repo name subfolder
+    const sourceName = path.basename(sourceDir); // 'source'
+    const repoScopedDir = path.join(outputDir, sourceName);
+    expect(fs.existsSync(repoScopedDir)).toBe(true);
+    const bulkFolder = fs.readdirSync(repoScopedDir).find(f => f.startsWith('backward-'));
     expect(bulkFolder).toBeDefined();
 
     // Check aggregate summary was written
-    const bulkDir = path.join(outputDir, bulkFolder!);
+    const bulkDir = path.join(repoScopedDir, bulkFolder!);
     expect(fs.existsSync(path.join(bulkDir, '_summary.md'))).toBe(true);
     expect(fs.existsSync(path.join(bulkDir, '.resync', '_progress.json'))).toBe(true);
   });
@@ -370,9 +371,10 @@ describe('runBackwardBulk', () => {
     const options = buildBulkOptions(sourceDir, targetDir, outputDir);
     await runBackwardBulk(options, silentLogger);
 
-    // Find the timestamped folder
-    const bulkFolder = fs.readdirSync(outputDir).find(f => f.startsWith('backward-'));
-    const bulkDir = path.join(outputDir, bulkFolder!);
+    // Find the timestamped folder under the source repo subfolder
+    const repoScopedDir = path.join(outputDir, path.basename(sourceDir));
+    const bulkFolder = fs.readdirSync(repoScopedDir).find(f => f.startsWith('backward-'));
+    const bulkDir = path.join(repoScopedDir, bulkFolder!);
 
     // Each file should have a report
     expect(fs.existsSync(path.join(bulkDir, 'intro.md'))).toBe(true);
@@ -387,8 +389,9 @@ describe('runBackwardBulk', () => {
     const options = buildBulkOptions(sourceDir, targetDir, outputDir, { json: true });
     await runBackwardBulk(options, silentLogger);
 
-    const bulkFolder = fs.readdirSync(outputDir).find(f => f.startsWith('backward-'));
-    const bulkDir = path.join(outputDir, bulkFolder!);
+    const repoScopedDir = path.join(outputDir, path.basename(sourceDir));
+    const bulkFolder = fs.readdirSync(repoScopedDir).find(f => f.startsWith('backward-'));
+    const bulkDir = path.join(repoScopedDir, bulkFolder!);
 
     expect(fs.existsSync(path.join(bulkDir, '_summary.json'))).toBe(true);
     expect(fs.existsSync(path.join(bulkDir, 'cobweb.json'))).toBe(true);
@@ -459,9 +462,10 @@ describe('runBackwardBulk with resume', () => {
     const firstResult = await runBackwardBulk(options, silentLogger);
     expect(firstResult.filesAnalyzed).toBe(3);
 
-    // Find the bulk folder
-    const bulkFolder = fs.readdirSync(outputDir).find(f => f.startsWith('backward-'));
-    const bulkDir = path.join(outputDir, bulkFolder!);
+    // Find the bulk folder under the source repo subfolder
+    const repoScopedDir = path.join(outputDir, path.basename(sourceDir));
+    const bulkFolder = fs.readdirSync(repoScopedDir).find(f => f.startsWith('backward-'));
+    const bulkDir = path.join(repoScopedDir, bulkFolder!);
 
     // Read progress
     const progress = readProgress(bulkDir);
