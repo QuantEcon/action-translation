@@ -1,7 +1,7 @@
 # System Architecture: action-translation
 
 **Last Updated**: 5 March 2026  
-**Version**: v0.9 (Phase 3b Complete — Forward Resync)
+**Version**: v0.8.0 (Phase 3b Complete — Forward Resync)
 
 This document provides a complete architectural overview of the translation sync system, including all operational modes and how they work together.
 

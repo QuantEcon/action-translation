@@ -218,6 +218,14 @@ export async function resyncSingleFile(
         logger.info(`  ✅ PR created: ${prUrl}`);
       } else {
         logger.error(`  Failed to create PR for ${file}: ${prResult.error}`);
+        return {
+          file,
+          triageResult,
+          sections: [],
+          outputContent,
+          tokensUsed,
+          summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
+        };
       }
     } else {
       // Write to local disk
@@ -313,6 +321,7 @@ export async function runForwardBulk(
         gitRunner,
       );
       results.push(result);
+      bar.update(results.length, { filename: file });
     } catch (error) {
       logger.error(`Failed to resync ${file}: ${error instanceof Error ? error.message : String(error)}`);
       results.push({

@@ -8,7 +8,7 @@
 - **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
-**Current Version**: v0.9.0 | **Tests**: 723 (32 suites) | **Glossary**: 357 terms (zh-cn, fa)
+**Current Version**: v0.8.0 | **Tests**: 724 (32 suites) | **Glossary**: 357 terms (zh-cn, fa)
 
 ---
 
@@ -91,7 +91,7 @@ Maps are flat (no nesting), include all heading levels, auto-populated on first 
 
 ### Running Tests
 ```bash
-npm test                          # All 723 tests
+npm test                          # All 724 tests
 npm test -- parser.test.ts        # Single file
 npm test -- --watch               # Watch mode
 npm test -- --coverage            # Coverage report

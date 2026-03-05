@@ -380,6 +380,53 @@ describe('resyncSingleFile', () => {
         fixture.cleanup();
       }
     });
+
+    it('reports error when PR creation fails', async () => {
+      const fixture = createTempFixture({
+        sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## Section\n\nContent here.',
+        targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## 部分\n\n翻译内容。',
+        filename: 'pr-fail.md',
+      });
+
+      try {
+        const failGhRunner = (_args: string[], _stdin: string) => {
+          return { stdout: '', stderr: 'permission denied', status: 1 };
+        };
+
+        const mockGitRunner = (args: string[], _cwd: string) => {
+          if (args[0] === 'rev-parse' && args[1] === '--abbrev-ref') {
+            return { stdout: 'main', stderr: '', status: 0 };
+          }
+          if (args[0] === 'rev-parse' && args[1] === '--verify') {
+            return { stdout: '', stderr: '', status: 1 };
+          }
+          return { stdout: '', stderr: '', status: 0 };
+        };
+
+        const options = makeOptions({
+          source: fixture.sourceRepo,
+          target: fixture.targetRepo,
+          github: 'Org/Repo',
+          test: true,
+        });
+        const result = await resyncSingleFile(
+          fixture.filename,
+          fixture.sourceRepo,
+          fixture.targetRepo,
+          'lectures',
+          options,
+          silentLogger,
+          failGhRunner,
+          mockGitRunner,
+        );
+
+        expect(result.summary.errors).toBe(1);
+        expect(result.summary.resynced).toBe(0);
+        expect(result.prUrl).toBeUndefined();
+      } finally {
+        fixture.cleanup();
+      }
+    });
   });
 
   describe('summary counts', () => {

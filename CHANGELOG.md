@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added (Phase 3b — Forward Resync Command)
-- **Forward command** (`src/cli/commands/forward.ts`, ~370 lines): Resync TARGET translations to match current SOURCE
+- **Forward command** (`src/cli/commands/forward.ts`): Resync TARGET translations to match current SOURCE
   - `resync forward -f cobweb.md` — single file resync
   - `resync forward` — bulk resync of all OUTDATED files (via status)
   - `--github <owner/repo>` flag: creates one PR per file in TARGET repo
@@ -17,13 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--exclude <pattern>` flag: skip files matching pattern
   - Pipeline: triage → whole-file RESYNC → output (simplified from section-by-section after experiment)
   - Progress bar for bulk mode, summary table with file counts
-- **Forward triage** (`src/cli/forward-triage.ts`, ~245 lines): LLM content-vs-i18n filter (~$0.01/file)
+- **Forward triage** (`src/cli/forward-triage.ts`): LLM content-vs-i18n filter (~$0.01/file)
   - `triageForward()`: classifies file pairs as `CONTENT_CHANGES`, `I18N_ONLY`, or `IDENTICAL`
   - Byte-identical shortcut skips LLM entirely
   - Test mode returns deterministic verdicts based on filename patterns
-- **Forward PR creator** (`src/cli/forward-pr-creator.ts`, ~215 lines): One PR per file via `gh` CLI
+- **Forward PR creator** (`src/cli/forward-pr-creator.ts`): Git ops + PR creation via `gh` CLI
   - Branch naming: `resync/{filename}` (e.g., `resync/cobweb`)
-  - PR title: `🔄 [resync] cobweb.md`
+  - PR title: `[action-translation] resync: cobweb.md`
+  - PR body includes source repo link, source file link, and triage reason
   - Labels: `action-translation-sync`, `resync`
   - Injectable `GhRunner` pattern for testing
 - **Whole-file RESYNC translation** (`src/translator.ts`): New `translateDocumentResync()` method
@@ -36,10 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Preserves existing translation style while updating content to match SOURCE
   - Uses `[CURRENT SOURCE]` + `[EXISTING TRANSLATION]` prompt markers
   - `SectionTranslationRequest.mode` extended: `'update' | 'new' | 'resync'`
-- **56 new tests** (640 → 696 total, 29 → 32 suites)
-  - `forward.test.ts` (11 tests) — triage, whole-file resync, errors, github mode, summary
+- **84 new tests** (640 → 724 total, 29 → 32 suites)
+  - `forward.test.ts` (12 tests) — triage, whole-file resync, errors, github mode, PR failure, summary
   - `forward-triage.test.ts` (21 tests) — prompt, parsing, test mode, byte-identical
-  - `forward-pr-creator.test.ts` (32 tests) — naming, args, body, creation, git operations
+  - `forward-pr-creator.test.ts` (47 tests) — naming, args, body, creation, git operations, parseGitHubRepo, detectSourceRepo
   - `translator.test.ts` (+4 tests) — RESYNC mode
 - **Git operations for --github mode** (`src/cli/forward-pr-creator.ts`): `gitPrepareAndPush()` function
   - Creates branch, writes resynced file, stages, commits, pushes with --force
