@@ -17,6 +17,7 @@ import * as path from 'path';
 import { loadResyncDirectory, filterActionableSuggestions, BackwardReportData, BackportSuggestionData } from '../schema.js';
 import { formatSuggestionCard, formatSessionSummary } from '../review-formatter.js';
 import { formatIssuePreview } from '../issue-generator.js';
+import type { SessionSummary } from '../review-session.js';
 
 // ============================================================================
 // TYPES
@@ -175,8 +176,51 @@ export async function runReview(options: ReviewOptions): Promise<void> {
     parts.push(formatSessionSummary(suggestions));
     process.stdout.write(parts.join(''));
   } else {
-    // Step 4 placeholder — interactive ink mode not yet implemented
-    console.log(`\n📋 ${suggestions.length} suggestion(s) queued for review`);
-    console.log('   Interactive mode coming in Step 4. Use --dry-run to preview now.');
+    // Step 4: ink interactive mode — [A]ccept / [S]kip / [R]eject per suggestion
+    // Dynamic imports keep ink/React out of the CJS Jest environment (ink is ESM-only)
+    const [{ default: React }, { render }, { ReviewSession }] = await Promise.all([
+      import('react'),
+      import('ink'),
+      import('../components/ReviewSession.js'),
+    ]);
+
+    let sessionSummary: SessionSummary | null = null;
+
+    const { waitUntilExit } = render(
+      React.createElement(ReviewSession, {
+        suggestions,
+        onDone: (summary: SessionSummary) => {
+          sessionSummary = summary;
+        },
+      }),
+    );
+
+    await waitUntilExit();
+
+    // Step 5: create GitHub Issues for accepted suggestions (wired below)
+    if (sessionSummary !== null && options.repo) {
+      await createIssuesForAccepted((sessionSummary as SessionSummary).accepted, options.repo);
+    }
   }
+}
+
+// ============================================================================
+// STEP 5 STUB: Issue creation (implemented in Step 5)
+// ============================================================================
+
+/**
+ * Create GitHub Issues for a list of accepted suggestions.
+ * Step 5 will replace this stub with the real `gh issue create` implementation.
+ *
+ * @param accepted  Suggestions the user accepted during interactive review
+ * @param repo      SOURCE repo in `owner/repo` format
+ */
+async function createIssuesForAccepted(
+  accepted: SuggestionWithContext[],
+  repo: string,
+): Promise<void> {
+  if (accepted.length === 0) return;
+  // Step 5: wire gh issue create here
+  console.log(`\n  📋 ${accepted.length} Issue(s) queued for creation in ${repo}`);
+  console.log('     Issue creation coming in Step 5 — run with --dry-run to preview now.');
 }

@@ -454,16 +454,18 @@ Chalk-styled stdout output — no ink yet. Fast iteration on what information ma
 - [x] `--dry-run` shows Issue preview (title + body + labels) without creating anything
 - [x] Unit tests for Issue body generation (`issue-generator.test.ts`, 30 tests)
 
-#### Step 4: Ink interactive mode
+#### Step 4: Ink interactive mode ✅
 
 Layer ink on top of the dry-run formatter.
 
-- [ ] `<SuggestionCard>` component renders each suggestion
-- [ ] [A]ccept / [S]kip / [R]eject keypresses per suggestion
-- [ ] Accept queues suggestion for Issue creation
-- [ ] Track session state (accepted/skipped/rejected counts)
-- [ ] End-of-session summary with counts + links to created Issues
-- [ ] Interactive flow tests with mocked input
+- [x] `<ReviewSession>` ink component renders each suggestion with card + Issue preview
+- [x] [A]ccept / [S]kip / [R]eject keypresses per suggestion
+- [x] Accept queues suggestion for Issue creation
+- [x] Track session state (accepted/skipped/rejected counts) in `review-session.ts`
+- [x] End-of-session summary with counts + list of accepted suggestions
+- [x] Pure state machine `review-session.ts` tested independently of ink rendering
+- [x] State machine tests (`review-session.test.ts`, 20 tests)
+- [x] Dynamic imports for `ink`/`react` to keep ESM modules out of Jest CJS environment
 
 #### Step 5: `gh` Issue creation
 
