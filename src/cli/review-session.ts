@@ -114,15 +114,27 @@ export function formatTallies(state: SessionState): string {
 
 /**
  * End-of-session summary lines (plain text for chalk display or ink).
+ *
+ * @param dryRun  When true, the accepted-items note reads "(dry run)" instead of
+ *                "→ will create GitHub Issues" so the output is accurate.
  */
-export function formatEndSummary(summary: SessionSummary, totalSuggestions: number): string[] {
+export function formatEndSummary(
+  summary: SessionSummary,
+  totalSuggestions: number,
+  dryRun = false,
+): string[] {
   const { accepted, skipped, rejected } = summary;
+  const acceptedNote = accepted.length > 0
+    ? dryRun
+      ? '  (dry run — no Issues will be created)'
+      : '  → will create GitHub Issues'
+    : '';
   const lines: string[] = [
     '',
     '── Review complete ──────────────────────────────────────────────────────',
     '',
     `  Reviewed ${totalSuggestions} suggestion(s)`,
-    `  [A] Accepted :  ${accepted.length}${accepted.length > 0 ? '  → will create GitHub Issues' : ''}`,
+    `  [A] Accepted :  ${accepted.length}${acceptedNote}`,
     `  [S] Skipped  :  ${skipped.length}`,
     `  [R] Rejected :  ${rejected.length}`,
     '',

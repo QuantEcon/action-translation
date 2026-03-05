@@ -1,22 +1,17 @@
 /**
- * Review Command — Step 1: Command scaffold + report loading
+ * Review Command
  *
  * Loads backward analysis reports from a `.resync/` directory,
- * filters to actionable BACKPORT suggestions, and flattens them
- * into a single sorted list for the interactive review session.
+ * filters to actionable BACKPORT suggestions, flattens them into
+ * a sorted list, then runs an ink interactive session where the
+ * user accepts, skips, or rejects each suggestion one at a time.
  *
- * Architecture:
- * - Step 1 (this file): scaffold + loading pipeline
- * - Step 2: `--dry-run` chalk formatter
- * - Step 3: Issue body generator
- * - Step 4: Ink interactive mode
- * - Step 5: `gh` Issue creation
+ * --dry-run uses the identical ink session; Issue creation is
+ * simply skipped at the end so the flow is the same in both modes.
  */
 
 import * as path from 'path';
 import { loadResyncDirectory, filterActionableSuggestions, BackwardReportData, BackportSuggestionData } from '../schema.js';
-import { formatSuggestionCard, formatSessionSummary } from '../review-formatter.js';
-import { formatIssuePreview } from '../issue-generator.js';
 import { createIssuesForAccepted } from '../issue-creator.js';
 import type { SessionSummary } from '../review-session.js';
 
@@ -168,41 +163,41 @@ export async function runReview(options: ReviewOptions): Promise<void> {
   }
 
   if (options.dryRun) {
-    // Steps 2 + 3: chalk suggestion card + Issue preview for every suggestion
-    const parts: string[] = [];
-    for (let i = 0; i < suggestions.length; i++) {
-      parts.push(formatSuggestionCard(suggestions[i], i + 1, suggestions.length));
-      parts.push(formatIssuePreview(suggestions[i]));
-    }
-    parts.push(formatSessionSummary(suggestions));
-    process.stdout.write(parts.join(''));
-  } else {
-    // Step 4: ink interactive mode — [A]ccept / [S]kip / [R]eject per suggestion
-    // Dynamic imports keep ink/React out of the CJS Jest environment (ink is ESM-only)
-    const [{ default: React }, { render }, { ReviewSession }] = await Promise.all([
-      import('react'),
-      import('ink'),
-      import('../components/ReviewSession.js'),
-    ]);
+    console.log('  Dry run — suggestions will be shown but no GitHub Issues will be created.\n');
+  }
 
-    let sessionSummary: SessionSummary | null = null;
+  // Both dry-run and normal mode use the same ink session.
+  // Dynamic imports keep ink/React out of the CJS Jest environment (ink is ESM-only).
+  const [{ default: React }, { render }, { ReviewSession }] = await Promise.all([
+    import('react'),
+    import('ink'),
+    import('../components/ReviewSession.js'),
+  ]);
 
-    const { waitUntilExit } = render(
-      React.createElement(ReviewSession, {
-        suggestions,
-        onDone: (summary: SessionSummary) => {
-          sessionSummary = summary;
-        },
-      }),
-    );
+  let sessionSummary: SessionSummary | null = null;
 
-    await waitUntilExit();
+  const { waitUntilExit } = render(
+    React.createElement(ReviewSession, {
+      suggestions,
+      dryRun: options.dryRun,
+      onDone: (summary: SessionSummary) => {
+        sessionSummary = summary;
+      },
+    }),
+  );
 
-    // Step 5: create GitHub Issues for accepted suggestions (wired below)
-    if (sessionSummary !== null && options.repo) {
-      await createIssuesForAccepted((sessionSummary as SessionSummary).accepted, options.repo);
+  await waitUntilExit();
+
+  if (sessionSummary !== null) {
+    const accepted = (sessionSummary as SessionSummary).accepted;
+    if (options.dryRun) {
+      if (accepted.length > 0) {
+        console.log(`\n  Dry run complete. Would have created ${accepted.length} GitHub Issue(s).`);
+      }
+    } else if (options.repo) {
+      await createIssuesForAccepted(accepted, options.repo);
+    } else if (accepted.length > 0) {
+      console.log(`\n  ${accepted.length} suggestion(s) accepted. Use --repo <owner/repo> to create GitHub Issues.`);
     }
   }
 }
-
-// End of review command

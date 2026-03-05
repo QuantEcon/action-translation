@@ -21,12 +21,7 @@ import {
   formatEndSummary,
   SessionSummary,
 } from '../review-session.js';
-import {
-  formatSuggestionCard,
-  formatConfidence,
-} from '../review-formatter.js';
-import { CATEGORY_STYLES } from '../review-formatter.js';
-import { formatIssuePreview } from '../issue-generator.js';
+import { formatSuggestionCard } from '../review-formatter.js';
 
 // ============================================================================
 // PROPS
@@ -34,6 +29,8 @@ import { formatIssuePreview } from '../issue-generator.js';
 
 export interface ReviewSessionProps {
   suggestions: SuggestionWithContext[];
+  /** When true the session runs identically but Issue creation is skipped at the end. */
+  dryRun?: boolean;
   /**
    * Called when the session ends (all suggestions reviewed).
    * Receives the full session summary.
@@ -45,7 +42,7 @@ export interface ReviewSessionProps {
 // COMPONENT
 // ============================================================================
 
-export function ReviewSession({ suggestions, onDone }: ReviewSessionProps): React.ReactElement {
+export function ReviewSession({ suggestions, dryRun = false, onDone }: ReviewSessionProps): React.ReactElement {
   const { exit } = useApp();
   const [state, setState] = useState(() => initialState(suggestions.length));
 
@@ -61,8 +58,7 @@ export function ReviewSession({ suggestions, onDone }: ReviewSessionProps): Reac
       if (next.done) {
         const summary = resolveSummary(next, suggestions);
         onDone(summary);
-        // Print plain-text end summary to stdout before exiting
-        const lines = formatEndSummary(summary, suggestions.length);
+        const lines = formatEndSummary(summary, suggestions.length, dryRun);
         process.stdout.write(lines.join('\n') + '\n');
         exit();
       }
@@ -78,15 +74,11 @@ export function ReviewSession({ suggestions, onDone }: ReviewSessionProps): Reac
 
   const current = suggestions[state.currentIndex];
   const cardText = formatSuggestionCard(current, state.currentIndex + 1, suggestions.length);
-  const issuePreviewText = formatIssuePreview(current);
 
   return (
     <Box flexDirection="column">
-      {/* Card */}
+      {/* Suggestion card */}
       <Text>{cardText}</Text>
-
-      {/* Issue preview */}
-      <Text>{issuePreviewText}</Text>
 
       {/* Controls bar */}
       <Box marginTop={1} paddingX={2}>
