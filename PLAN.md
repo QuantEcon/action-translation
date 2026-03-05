@@ -467,13 +467,14 @@ Layer ink on top of the dry-run formatter.
 - [x] State machine tests (`review-session.test.ts`, 20 tests)
 - [x] Dynamic imports for `ink`/`react` to keep ESM modules out of Jest CJS environment
 
-#### Step 5: `gh` Issue creation
+#### Step 5: `gh` Issue creation ✅
 
-- [ ] Wire accepted suggestions to `gh issue create` on SOURCE repo (`--repo` flag)
-- [ ] Labels: `backward-suggestion`, category label, confidence tier
-- [ ] Print Issue URLs in end-of-session summary
-- [ ] Test against `test-action-translation` repos
-- [ ] `--dry-run` end-to-end test (full pipeline, no Issue creation)
+- [x] Wire accepted suggestions to `gh issue create` on SOURCE repo (`--repo` flag)
+- [x] Labels: `backward-suggestion`, category label, confidence tier
+- [x] Print Issue URLs in end-of-session summary
+- [x] Injectable `GhRunner` type for testability — no subprocess in tests
+- [x] `--dry-run` end-to-end shows Issue preview (title + body + labels) without creating
+- [x] Unit tests for arg building, single Issue creation, batch creation (`issue-creator.test.ts`, 17 tests)
 
 #### MyST-Aware Terminal Rendering (incremental, across steps 2-4)
 

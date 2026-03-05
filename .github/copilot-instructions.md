@@ -8,7 +8,7 @@
 - **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
-**Current Version**: v0.8.0 | **Tests**: 535 (25 suites) | **Glossary**: 357 terms (zh-cn, fa)
+**Current Version**: v0.8.0 | **Tests**: 639 (29 suites) | **Glossary**: 357 terms (zh-cn, fa)
 
 ---
 
@@ -37,9 +37,15 @@ src/
 │   ├── section-matcher.ts     # Cross-language section matching (~150 lines)
 │   ├── git-metadata.ts        # File-level git metadata + commit timeline (~235 lines)
 │   ├── report-generator.ts    # Markdown/JSON report formatting (~235 lines)
+│   ├── review-formatter.ts    # Chalk dry-run formatter for review command
+│   ├── review-session.ts      # Pure session state machine (accept/skip/reject)
+│   ├── issue-generator.ts     # GitHub Issue title/body/label generator
+│   ├── issue-creator.ts       # gh issue create runner with injectable GhRunner
+│   ├── components/
+│   │   └── ReviewSession.tsx  # Ink interactive review UI component
 │   └── commands/
 │       ├── backward.ts        # Backward command orchestrator — single + bulk (~530 lines)
-│       ├── review.ts          # Review command — load/flatten pipeline + scaffold (~150 lines)
+│       ├── review.ts          # Review command — full pipeline (Steps 1–5)
 │       └── status.ts          # Status command — fast sync diagnostic (~280 lines)
 ```
 
@@ -82,7 +88,7 @@ Maps are flat (no nesting), include all heading levels, auto-populated on first 
 
 ### Running Tests
 ```bash
-npm test                          # All 450 tests
+npm test                          # All 639 tests
 npm test -- parser.test.ts        # Single file
 npm test -- --watch               # Watch mode
 npm test -- --coverage            # Coverage report

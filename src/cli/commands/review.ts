@@ -17,6 +17,7 @@ import * as path from 'path';
 import { loadResyncDirectory, filterActionableSuggestions, BackwardReportData, BackportSuggestionData } from '../schema.js';
 import { formatSuggestionCard, formatSessionSummary } from '../review-formatter.js';
 import { formatIssuePreview } from '../issue-generator.js';
+import { createIssuesForAccepted } from '../issue-creator.js';
 import type { SessionSummary } from '../review-session.js';
 
 // ============================================================================
@@ -204,23 +205,4 @@ export async function runReview(options: ReviewOptions): Promise<void> {
   }
 }
 
-// ============================================================================
-// STEP 5 STUB: Issue creation (implemented in Step 5)
-// ============================================================================
-
-/**
- * Create GitHub Issues for a list of accepted suggestions.
- * Step 5 will replace this stub with the real `gh issue create` implementation.
- *
- * @param accepted  Suggestions the user accepted during interactive review
- * @param repo      SOURCE repo in `owner/repo` format
- */
-async function createIssuesForAccepted(
-  accepted: SuggestionWithContext[],
-  repo: string,
-): Promise<void> {
-  if (accepted.length === 0) return;
-  // Step 5: wire gh issue create here
-  console.log(`\n  📋 ${accepted.length} Issue(s) queued for creation in ${repo}`);
-  console.log('     Issue creation coming in Step 5 — run with --dry-run to preview now.');
-}
+// End of review command
