@@ -179,7 +179,10 @@ export function formatSuggestionCard(
   // ── Reasoning ─────────────────────────────────────────────────────────────
   if (showReasoning) {
     lines.push(`${INDENT}${chalk.bold('Reasoning:')}`);
-    lines.push(wrapText(chalk.dim(suggestion.reasoning), CARD_WIDTH, INDENT + '  '));
+    const wrapped = wrapText(suggestion.reasoning, CARD_WIDTH, INDENT + '  ');
+    for (const line of wrapped.split('\n')) {
+      lines.push(chalk.dim(line));
+    }
     lines.push('');
   } else {
     lines.push(`${INDENT}${chalk.dim('Press [D] to show reasoning')}`);
