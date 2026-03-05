@@ -136,9 +136,10 @@ export interface SectionChange {
  * Request to translate a section
  * - 'update' mode: Claude sees old/new English + current translation → produces updated translation
  * - 'new' mode: Claude sees new English → produces new translation
+ * - 'resync' mode: Claude sees current English + current translation → drift recovery (no baseline)
  */
 export interface SectionTranslationRequest {
-  mode: 'update' | 'new';
+  mode: 'update' | 'new' | 'resync';
   sourceLanguage: string;
   targetLanguage: string;
   glossary?: Glossary;
@@ -148,6 +149,7 @@ export interface SectionTranslationRequest {
   currentTranslation?: string;  // Current translation (generalized from currentChinese)
   // For new mode
   englishSection?: string;  // New English section to translate
+  // For resync mode (uses newEnglish + currentTranslation)
 }
 
 export interface SectionTranslationResult {

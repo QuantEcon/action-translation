@@ -180,12 +180,14 @@ export class TranslationService {
   }
 
   /**
-   * Translate a section (update or new)
+   * Translate a section (update, new, or resync)
    */
   async translateSection(request: SectionTranslationRequest): Promise<SectionTranslationResult> {
     try {
       if (request.mode === 'update') {
         return await this.translateSectionUpdate(request);
+      } else if (request.mode === 'resync') {
+        return await this.translateSectionResync(request);
       } else {
         return await this.translateNewSection(request);
       }
@@ -272,6 +274,87 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
     }
 
     this.log(`Translated section length: ${content.text.length}`);
+
+    return {
+      success: true,
+      translatedSection: content.text.trim(),
+      tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
+    };
+  }
+
+  /**
+   * Resync existing section (mode='resync')
+   * Claude sees: current English + current translation → produces resynced translation
+   *
+   * Used for drift recovery when no baseline (old English) is available.
+   * Preserves existing translation style, terminology, and localization
+   * wherever the meaning hasn't changed.
+   */
+  private async translateSectionResync(request: SectionTranslationRequest): Promise<SectionTranslationResult> {
+    const { newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } = request;
+
+    if (!newEnglish || !currentTranslation) {
+      return {
+        success: false,
+        error: 'Resync mode requires newEnglish (current source) and currentTranslation',
+      };
+    }
+
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0
+      ? languageConfig.additionalRules.map((rule, i) => `${7 + i}. ${rule}`).join('\n')
+      : '';
+
+    const prompt = `You are resyncing a ${targetLanguage} translation to match the current ${sourceLanguage} source.
+
+TASK: The ${sourceLanguage} source may have changed since the translation was made. Update the ${targetLanguage} translation to accurately reflect the current source content.
+
+CRITICAL RULES:
+1. Preserve the existing ${targetLanguage} translation style, terminology choices, and localization decisions wherever the meaning hasn't changed
+2. Only modify parts of the translation where the ${sourceLanguage} source has different content
+3. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
+4. DO NOT translate code, math, URLs, or technical identifiers
+5. Use the glossary for consistent terminology
+6. MARKDOWN SYNTAX: Ensure proper markdown syntax:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters
+   - Math blocks must have matching $$ delimiters
+   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
+${additionalRules}
+${additionalRules ? '' : '7. '}Return ONLY the updated ${targetLanguage} section, no explanations
+
+${glossarySection}
+
+[CURRENT ${sourceLanguage} SOURCE]
+${newEnglish}
+[/CURRENT ${sourceLanguage} SOURCE]
+
+[EXISTING ${targetLanguage} TRANSLATION]
+${currentTranslation}
+[/EXISTING ${targetLanguage} TRANSLATION]
+
+Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing translation's style and only change what's needed to match the current source. Do not include any markers, explanations, or comments.`;
+
+    this.log(`Translating section resync, mode=resync`);
+    this.log(`Current ${sourceLanguage} length: ${newEnglish.length}`);
+    this.log(`Existing ${targetLanguage} length: ${currentTranslation.length}`);
+
+    const response = await this.callWithRetry({
+      model: this.model,
+      max_tokens: 8192,
+      messages: [{ role: 'user', content: prompt }],
+    }, 'translateSectionResync');
+
+    const content = response.content[0];
+    if (content.type !== 'text') {
+      return {
+        success: false,
+        error: 'Unexpected response format from Claude',
+      };
+    }
+
+    this.log(`Resynced section length: ${content.text.length}`);
 
     return {
       success: true,

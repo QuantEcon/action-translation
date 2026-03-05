@@ -13,7 +13,8 @@ import { Command } from 'commander';
 import { runBackwardSingleFile, runBackwardBulk } from './commands/backward.js';
 import { runStatus, formatStatusTable, formatStatusJson, StatusOptions } from './commands/status.js';
 import { runReview, ReviewOptions } from './commands/review.js';
-import { BackwardOptions } from './types.js';
+import { resyncSingleFile, runForwardBulk } from './commands/forward.js';
+import { BackwardOptions, ForwardOptions } from './types.js';
 
 // Read version from package.json — use createRequire since JSON imports
 // need import assertions which aren't stable in all Node versions.
@@ -168,6 +169,71 @@ program
     };
     try {
       await runReview(options);
+    } catch (error) {
+      console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
+  });
+
+// ─── forward command ────────────────────────────────────────────────────────
+
+program
+  .command('forward')
+  .description('Resync TARGET translations to match current SOURCE (forward resync)')
+  .requiredOption('-s, --source <path>', 'Path to SOURCE (English) repository')
+  .requiredOption('-t, --target <path>', 'Path to TARGET (translated) repository')
+  .option('-f, --file <filename>', 'Resync a single file (relative to docs-folder)')
+  .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
+  .option('-l, --language <code>', 'Target language code', 'zh-cn')
+  .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-6')
+  .option('--test', 'Use deterministic mock responses (no LLM calls)', false)
+  .option('--dry-run', 'Preview changes without writing files or creating PRs', false)
+  .option('--github <owner/repo>', 'Create one PR per file in TARGET repo')
+  .option('--exclude <pattern>', 'Exclude files matching pattern (repeatable, comma-separated)', collectExclude, [])
+  .option('--estimate', 'Show cost estimate without running', false)
+  .action(async (opts) => {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey && !opts.test && !opts.estimate) {
+      console.error('❌ ANTHROPIC_API_KEY environment variable is required (or use --test)');
+      process.exit(1);
+    }
+
+    const options: ForwardOptions = {
+      source: opts.source,
+      target: opts.target,
+      file: opts.file,
+      docsFolder: opts.docsFolder,
+      language: opts.language,
+      model: opts.model,
+      test: opts.test,
+      dryRun: opts.dryRun,
+      github: opts.github,
+      estimate: opts.estimate,
+      apiKey: apiKey || 'test-key',
+    };
+
+    try {
+      if (opts.file) {
+        // Single file mode
+        const result = await resyncSingleFile(
+          opts.file,
+          opts.source,
+          opts.target,
+          opts.docsFolder,
+          options,
+        );
+
+        const { summary } = result;
+        if (result.triageResult.verdict !== 'CONTENT_CHANGES') {
+          const label = result.triageResult.verdict === 'IDENTICAL' ? 'identical' : 'i18n only';
+          console.log(`\n  ${opts.file}: SKIPPED (${label})`);
+        } else {
+          console.log(`\n  ${opts.file}: ${summary.resynced} resynced, ${summary.new} new, ${summary.removed} removed, ${summary.unchanged} unchanged${summary.errors > 0 ? `, ${summary.errors} errors` : ''}`);
+        }
+      } else {
+        // Bulk mode
+        await runForwardBulk(options, undefined, opts.exclude);
+      }
     } catch (error) {
       console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
       process.exit(1);

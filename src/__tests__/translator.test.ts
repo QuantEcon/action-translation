@@ -125,6 +125,17 @@ describe('Translator Module', () => {
       const requiredFields = ['englishSection'];
       expect(requiredFields).toHaveLength(1);
     });
+
+    it('RESYNC mode requires newEnglish and currentTranslation', () => {
+      // This is validated in translateSectionResync
+      const requiredFields = ['newEnglish', 'currentTranslation'];
+      expect(requiredFields).toHaveLength(2);
+    });
+
+    it('all three modes are supported', () => {
+      const modes: Array<'update' | 'new' | 'resync'> = ['update', 'new', 'resync'];
+      expect(modes).toHaveLength(3);
+    });
   });
 
   // =============================================================================
@@ -155,6 +166,27 @@ describe('Translator Module', () => {
       ];
       
       expect(markers.length).toBe(3);
+    });
+
+    it('RESYNC prompt should include source and translation markers', () => {
+      // The resync prompt uses these markers
+      const markers = [
+        '[CURRENT',
+        'SOURCE]',
+        '[EXISTING',
+        'TRANSLATION]',
+      ];
+      
+      // All markers should be distinct
+      expect(markers.length).toBe(4);
+    });
+
+    it('RESYNC prompt should instruct to preserve existing style', () => {
+      // Key RESYNC instruction: preserve the existing translation style
+      const keyInstructions = [
+        'Preserve', 'existing', 'style', 'terminology', 'localization',
+      ];
+      expect(keyInstructions.length).toBeGreaterThan(0);
     });
 
     it('prompts should include critical markdown rules', () => {

@@ -195,3 +195,81 @@ export interface BackwardOptions extends CommonOptions {
   minConfidence: number;     // Minimum confidence for reporting (default: 0.6)
   estimate: boolean;         // Show cost estimate without running
 }
+
+// ============================================================================
+// FORWARD RESYNC TYPES
+// ============================================================================
+
+/**
+ * Forward triage verdict: content change vs i18n-only differences
+ */
+export type ForwardTriageVerdict =
+  | 'CONTENT_CHANGES'      // Substantive content differences — proceed to RESYNC
+  | 'I18N_ONLY'            // Only internationalisation differences — skip
+  | 'IDENTICAL';           // Files are equivalent — skip
+
+/**
+ * Result of forward triage for a single file
+ */
+export interface ForwardTriageResult {
+  file: string;
+  verdict: ForwardTriageVerdict;
+  reason: string;           // Brief explanation (e.g., "punctuation and terminology style")
+  tokenCount?: number;      // Approximate tokens used for the triage call
+}
+
+/**
+ * Per-section RESYNC result
+ */
+export type ResyncSectionAction =
+  | 'RESYNCED'              // Section content updated to match SOURCE
+  | 'UNCHANGED'             // Section already in sync
+  | 'NEW'                   // New section (SOURCE_ONLY) — translated fresh
+  | 'REMOVED'               // Section deleted in SOURCE (TARGET_ONLY)
+  | 'ERROR';                // Translation failed for this section
+
+/**
+ * Result of resyncing a single section
+ */
+export interface ResyncSectionResult {
+  sectionHeading: string;
+  action: ResyncSectionAction;
+  translatedContent?: string;    // The resynced content (undefined for REMOVED/ERROR)
+  error?: string;                // Error message if action is ERROR
+  tokensUsed?: number;
+}
+
+/**
+ * Result of forward resync for a single file
+ */
+export interface ForwardFileResult {
+  file: string;
+  triageResult: ForwardTriageResult;
+  sections: ResyncSectionResult[];
+  outputContent?: string;        // Full reconstructed TARGET file (undefined if skipped/errored)
+  prUrl?: string;                // PR URL if --github mode
+  summary: {
+    resynced: number;
+    unchanged: number;
+    new: number;
+    removed: number;
+    errors: number;
+  };
+}
+
+/**
+ * Forward command options
+ */
+export interface ForwardOptions {
+  source: string;            // Source repository path
+  target: string;            // Target repository path
+  file?: string;             // Single file mode
+  docsFolder: string;        // Documentation folder (default: "lectures")
+  language: string;          // Target language code (default: "zh-cn")
+  model: string;             // Claude model (default: "claude-sonnet-4-6")
+  test: boolean;             // Use deterministic mock responses (no LLM calls)
+  dryRun: boolean;           // Preview only, no writes or PRs
+  github?: string;           // TARGET repo in owner/repo format for PR creation
+  estimate: boolean;         // Show cost estimate without running
+  apiKey: string;            // Anthropic API key
+}
