@@ -35,9 +35,12 @@ import {
 } from './status.js';
 import {
   createForwardPR,
+  gitPrepareAndPush,
   ForwardPRResult,
   GhRunner,
+  GitRunner,
   realGhRunner,
+  realGitRunner,
 } from '../forward-pr-creator.js';
 
 // ============================================================================
@@ -94,6 +97,7 @@ export async function resyncSingleFile(
   options: ForwardOptions,
   logger: ForwardLogger = defaultLogger,
   ghRunner?: GhRunner,
+  gitRunner?: GitRunner,
 ): Promise<ForwardFileResult> {
   const sourceFilePath = path.join(sourceRepoPath, docsFolder, file);
   const targetFilePath = path.join(targetRepoPath, docsFolder, file);
@@ -177,7 +181,23 @@ export async function resyncSingleFile(
 
   if (outputContent) {
     if (options.github) {
-      // Create PR in TARGET repo
+      // Git: create branch, write file, commit, push
+      const gRunner = gitRunner ?? realGitRunner;
+      const gitResult = gitPrepareAndPush(file, outputContent, targetRepoPath, docsFolder, gRunner);
+      if (!gitResult.success) {
+        logger.error(`  Git failed for ${file}: ${gitResult.error}`);
+        return {
+          file,
+          triageResult,
+          sections: [],
+          outputContent,
+          tokensUsed,
+          summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
+        };
+      }
+      logger.info(`  Branch ${gitResult.branchName} pushed to origin`);
+
+      // Create PR in TARGET repo via gh CLI
       const runner = ghRunner ?? realGhRunner;
       const prResult = createForwardPR(
         file,
@@ -190,7 +210,7 @@ export async function resyncSingleFile(
         prUrl = prResult.url;
         logger.info(`  ✅ PR created: ${prUrl}`);
       } else {
-        logger.error(`Failed to create PR for ${file}: ${prResult.error}`);
+        logger.error(`  Failed to create PR for ${file}: ${prResult.error}`);
       }
     } else {
       // Write to local disk
@@ -222,6 +242,7 @@ export async function runForwardBulk(
   logger: ForwardLogger = defaultLogger,
   exclude: string[] = [],
   ghRunner?: GhRunner,
+  gitRunner?: GitRunner,
 ): Promise<ForwardFileResult[]> {
   const { source, target, docsFolder, language } = options;
 
@@ -282,6 +303,7 @@ export async function runForwardBulk(
         options,
         logger,
         ghRunner,
+        gitRunner,
       );
       results.push(result);
     } catch (error) {

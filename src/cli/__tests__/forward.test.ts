@@ -324,10 +324,26 @@ describe('resyncSingleFile', () => {
       });
 
       try {
-        let capturedArgs: string[] = [];
-        const mockRunner = (args: string[], _stdin: string) => {
-          capturedArgs = args;
+        let capturedGhArgs: string[] = [];
+        const mockGhRunner = (args: string[], _stdin: string) => {
+          capturedGhArgs = args;
           return { stdout: 'https://github.com/Org/Repo/pull/1', stderr: '', status: 0 };
+        };
+
+        // Mock git runner — returns success for all operations
+        const gitCalls: string[][] = [];
+        const mockGitRunner = (args: string[], _cwd: string) => {
+          gitCalls.push(args);
+          // rev-parse --abbrev-ref HEAD → return branch name
+          if (args[0] === 'rev-parse' && args[1] === '--abbrev-ref') {
+            return { stdout: 'main', stderr: '', status: 0 };
+          }
+          // rev-parse --verify branchName → branch doesn't exist
+          if (args[0] === 'rev-parse' && args[1] === '--verify') {
+            return { stdout: '', stderr: '', status: 1 };
+          }
+          // All other git commands succeed
+          return { stdout: '', stderr: '', status: 0 };
         };
 
         const options = makeOptions({
@@ -343,14 +359,23 @@ describe('resyncSingleFile', () => {
           'lectures',
           options,
           silentLogger,
-          mockRunner,
+          mockGhRunner,
+          mockGitRunner,
         );
 
         // In test mode the file triggers CONTENT_CHANGES and whole-file resync
         // produces output, so PR should be created.
         expect(result.outputContent).toBeDefined();
         expect(result.prUrl).toBe('https://github.com/Org/Repo/pull/1');
-        expect(capturedArgs).toContain('Org/Repo');
+        expect(capturedGhArgs).toContain('Org/Repo');
+
+        // Verify git operations were called
+        const gitOps = gitCalls.map(c => c[0]);
+        expect(gitOps).toContain('rev-parse');    // detect branch
+        expect(gitOps).toContain('checkout');      // create branch + switch back
+        expect(gitOps).toContain('add');           // stage
+        expect(gitOps).toContain('commit');        // commit
+        expect(gitOps).toContain('push');          // push
       } finally {
         fixture.cleanup();
       }

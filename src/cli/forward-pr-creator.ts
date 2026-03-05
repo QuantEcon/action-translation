@@ -2,14 +2,19 @@
  * Forward PR Creator
  *
  * Creates one PR per file in the TARGET repository after forward resync.
- * Uses `gh` CLI for PR creation, following the same injectable GhRunner
- * pattern as `issue-creator.ts`.
+ * Two-phase process:
+ * 1. gitPrepareAndPush — creates branch, writes file, commits, pushes
+ * 2. createForwardPR — creates the PR via `gh` CLI
+ *
+ * Both phases use injectable runners (GitRunner / GhRunner) for testability.
  *
  * Branch: `resync/{filename}` (e.g., `resync/cobweb`)
  * Title: `🔄 [resync] cobweb.md`
  * Labels: `action-translation-sync`, `resync`
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { spawnSync, SpawnSyncOptions } from 'child_process';
 import { ResyncSectionResult } from './types.js';
 
@@ -63,6 +68,144 @@ export function realGhRunner(args: string[], stdin: string): ReturnType<GhRunner
     stderr: (result.stderr ?? '').trim(),
     status: result.status ?? 1,
   };
+}
+
+// ============================================================================
+// GIT RUNNER (I/O)
+// ============================================================================
+
+/**
+ * Injectable git runner for testability.
+ * Runs `git` commands in a specified cwd.
+ */
+export type GitRunner = (
+  args: string[],
+  cwd: string,
+) => { stdout: string; stderr: string; status: number | null };
+
+/**
+ * Real git runner using spawnSync.
+ */
+export function realGitRunner(args: string[], cwd: string): ReturnType<GitRunner> {
+  const opts: SpawnSyncOptions = {
+    cwd,
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024,
+  };
+
+  const result = spawnSync('git', args, opts) as {
+    stdout: string;
+    stderr: string;
+    status: number | null;
+    error?: Error;
+  };
+
+  if (result.error) {
+    return { stdout: '', stderr: result.error.message, status: 1 };
+  }
+
+  return {
+    stdout: (result.stdout ?? '').trim(),
+    stderr: (result.stderr ?? '').trim(),
+    status: result.status ?? 1,
+  };
+}
+
+// ============================================================================
+// GIT PREPARE & PUSH
+// ============================================================================
+
+export interface GitPrepareResult {
+  success: boolean;
+  branchName: string;
+  originalBranch: string;
+  error?: string;
+}
+
+/**
+ * Prepare a git branch with the resynced file and push to remote.
+ *
+ * Steps:
+ * 1. Record current branch
+ * 2. Create and switch to `resync/{filename}` branch
+ * 3. Write the resynced file content
+ * 4. Stage, commit, push
+ * 5. Switch back to the original branch
+ *
+ * On failure, attempts to switch back to the original branch.
+ *
+ * @param file           Filename relative to docsFolder (e.g., "pv.md")
+ * @param content        Updated file content
+ * @param targetRepoPath Absolute path to TARGET repository root
+ * @param docsFolder     Docs folder within repo (e.g., "lectures")
+ * @param runner         Injectable git runner (default: realGitRunner)
+ */
+export function gitPrepareAndPush(
+  file: string,
+  content: string,
+  targetRepoPath: string,
+  docsFolder: string,
+  runner: GitRunner = realGitRunner,
+): GitPrepareResult {
+  const branchName = buildBranchName(file);
+
+  // 1. Record current branch
+  const branchResult = runner(['rev-parse', '--abbrev-ref', 'HEAD'], targetRepoPath);
+  if (branchResult.status !== 0) {
+    return { success: false, branchName, originalBranch: '', error: `Failed to detect current branch: ${branchResult.stderr}` };
+  }
+  const originalBranch = branchResult.stdout.trim();
+
+  // Helper: switch back on failure
+  const switchBack = () => runner(['checkout', originalBranch], targetRepoPath);
+
+  // 2. Create and switch to the resync branch (from current HEAD)
+  //    Delete existing branch if present (from a prior run)
+  const existsResult = runner(['rev-parse', '--verify', branchName], targetRepoPath);
+  if (existsResult.status === 0) {
+    // Branch exists — delete it first
+    runner(['branch', '-D', branchName], targetRepoPath);
+  }
+
+  const checkoutResult = runner(['checkout', '-b', branchName], targetRepoPath);
+  if (checkoutResult.status !== 0) {
+    switchBack();
+    return { success: false, branchName, originalBranch, error: `Failed to create branch: ${checkoutResult.stderr}` };
+  }
+
+  // 3. Write file
+  const filePath = path.join(targetRepoPath, docsFolder, file);
+  try {
+    fs.writeFileSync(filePath, content, 'utf-8');
+  } catch (err) {
+    switchBack();
+    return { success: false, branchName, originalBranch, error: `Failed to write file: ${err}` };
+  }
+
+  // 4. Stage and commit
+  const addResult = runner(['add', path.join(docsFolder, file)], targetRepoPath);
+  if (addResult.status !== 0) {
+    switchBack();
+    return { success: false, branchName, originalBranch, error: `Failed to stage file: ${addResult.stderr}` };
+  }
+
+  const commitResult = runner(['commit', '-m', `🔄 resync ${file}`], targetRepoPath);
+  if (commitResult.status !== 0) {
+    switchBack();
+    return { success: false, branchName, originalBranch, error: `Failed to commit: ${commitResult.stderr}` };
+  }
+
+  // 5. Push (force to handle re-runs)
+  const pushResult = runner(['push', '-u', 'origin', branchName, '--force'], targetRepoPath);
+  if (pushResult.status !== 0) {
+    switchBack();
+    return { success: false, branchName, originalBranch, error: `Failed to push: ${pushResult.stderr}` };
+  }
+
+  // 6. Switch back to original branch
+  switchBack();
+
+  return { success: true, branchName, originalBranch };
 }
 
 // ============================================================================
@@ -189,17 +332,12 @@ export function buildGhArgs(file: string, repo: string): string[] {
 /**
  * Create a PR in the TARGET repo for a single forward-resynced file.
  *
- * This function:
- * 1. Creates a branch in the TARGET repo
- * 2. Commits the updated file
- * 3. Creates a PR
- *
- * Note: The actual git operations (branch, commit, push) need to happen
- * before calling this function. This function only creates the PR via `gh`.
+ * Prerequisite: `gitPrepareAndPush()` must have been called first
+ * to create the branch with the committed file.
  *
  * @param file           Filename (e.g., "cobweb.md")
- * @param content        Updated file content
- * @param sectionResults Section-level results for PR body
+ * @param content        Updated file content (currently unused, kept for API compat)
+ * @param sectionResults Section-level results for PR body (empty for whole-file)
  * @param repo           TARGET repo in `owner/repo` format
  * @param runner         Injectable gh runner
  */
