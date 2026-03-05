@@ -488,23 +488,64 @@ Start with basic chalk styling, add richer rendering as needed:
 - [ ] Frontmatter → YAML syntax highlighting
 - [ ] Side-by-side or sequential SOURCE/TARGET display
 
+---
+
+## Phase 3b: Resync CLI — Forward Resync (2-3 days)
+
+**Goal**: Drift recovery via forward resync with RESYNC translation mode + optional GitHub PR creation
+
 ### 3b.1 Forward Command (`src/cli/commands/forward.ts`)
 
 Drift recovery: resync TARGET to match current SOURCE, preserving translation quality.
+Only resyncs files with **content** differences — skips files where only i18n differences exist.
 
 ```
 npx resync status                    # identify drifted files (OUTDATED, SOURCE_AHEAD)
-npx resync forward -f cobweb.md      # resync specific file
-npx resync forward                   # resync all OUTDATED files
+npx resync forward -f cobweb.md      # resync specific file (local)
+npx resync forward                   # resync all OUTDATED files (local)
+npx resync forward --github          # resync all, create one PR per file in TARGET repo
+npx resync forward --dry-run         # preview only, no writes or PRs
 ```
 
-- [ ] Parse CLI arguments: `-f <file>`, `-s <source-dir>`, `-t <target-dir>`, `-l <language>`, `--dry-run`
+**Two execution modes**:
+- `-f <file>` — single file
+- *(none)* — bulk: all OUTDATED files detected by `status`
+
+**Two output modes**:
+- Default — write updated TARGET files to local disk
+- `--github` — create one PR per file in TARGET repo's default branch via `gh`
+
+**Per-file pipeline**:
+1. **Forward triage** (LLM, ~$0.01/file) — "Content changes or i18n only?"
+   - Content changes → proceed to RESYNC
+   - i18n only → skip with brief reason (e.g., "punctuation and terminology style")
+2. Parse + match sections via heading-map
+3. RESYNC translate changed sections (preserving translation style)
+4. Output: write to disk or create PR
+
+- [ ] Parse CLI arguments: `-f <file>`, `-s <source-dir>`, `-t <target-dir>`, `-l <language>`, `--dry-run`, `--github`
 - [ ] Support single-file mode (`-f`) and full directory mode
 - [ ] Integrate with `status` to auto-detect OUTDATED files (when no `-f` given)
-- [ ] Support `--dry-run` flag (diff-style preview without file modification)
+- [ ] Support `--dry-run` flag (diff-style preview without file modification or PRs)
 - [ ] Cost estimation + confirmation prompt (like bulk backward)
+- [ ] `--github` mode: one PR per file, branch `resync/{filename}`, labels `action-translation-sync`, `resync`
 
-### 3b.2 RESYNC Translation Mode
+### 3b.2 Forward Triage (`src/cli/forward-triage.ts`)
+
+LLM-based content-vs-i18n filter. Runs on every file before RESYNC to avoid noise.
+
+```
+cobweb.md: RESYNCED (3 sections updated, 1 new, 8 unchanged)
+solow.md:  SKIPPED (i18n only — terminology style, full-width punctuation)
+```
+
+- [ ] `triageForward()` — single LLM call per file, returns verdict + brief reason
+- [ ] Verdicts: `CONTENT_CHANGES` (proceed), `I18N_ONLY` (skip), `IDENTICAL` (skip)
+- [ ] Prompt: "Compare SOURCE and TARGET. Are there substantive content differences (structure, formulas, examples, code logic), or only internationalisation differences (punctuation, word choice, terminology style)?"
+- [ ] Report skip reason in summary (e.g., "punctuation and terminology style differences")
+- [ ] Unit tests + prompt snapshot tests
+
+### 3b.3 RESYNC Translation Mode
 
 New translation mode distinct from NEW and UPDATE:
 
@@ -528,14 +569,22 @@ RESYNC preserves translation nuances because the LLM sees the existing translati
 - [ ] Preserve frontmatter
 - [ ] Unit tests for RESYNC mode
 
-### 3b.3 Forward Output
+### 3b.4 Forward Output
 
+**Local mode** (default):
 - [ ] Write updated TARGET files to disk
-- [ ] Sync summary: sections resynced / unchanged / new / removed / errors
+- [ ] Sync summary: sections resynced / unchanged / new / removed / errors / skipped (i18n)
 - [ ] Dry-run mode: diff-style preview without file modification
-- [ ] Per-section confidence/change markers in output
 
-**Phase 3b Deliverable**: Working `npx resync forward` with RESYNC mode
+**GitHub mode** (`--github`):
+- [ ] Create branch `resync/{filename}` in TARGET repo
+- [ ] Commit updated file
+- [ ] Create PR: title `🔄 [resync] filename.md`, body with section change summary
+- [ ] Labels: `action-translation-sync`, `resync`
+- [ ] Print PR URL per file
+- [ ] Injectable `GhRunner` for testability (same pattern as `issue-creator.ts`)
+
+**Phase 3b Deliverable**: Working `npx resync forward` with RESYNC mode, local + `--github` output
 
 ---
 
@@ -545,19 +594,10 @@ RESYNC preserves translation nuances because the LLM sees the existing translati
 
 ### 4.1 Integration Testing
 
-**Phase 3a Deliverable**: Working `npx resync review <report-dir>` with `--dry-run` and Issue creation
-
----
-
-## Phase 3b: Resync CLI — Forward Resync (2-3 days)
-
-**Goal**: Drift recovery via forward resync with RESYNC translation mode
-
-### 3b.1 Forward Command (`src/cli/commands/forward.ts`)
-
 - [ ] Test `backward` + `review` workflow with `lecture-python-intro` ↔ `lecture-intro.zh-cn`
 - [ ] Test `forward` resync with `lecture-python` ↔ `lecture-python.zh-cn`
 - [ ] Validate RESYNC translation quality (preserves nuances vs full re-translation)
+- [ ] Validate forward triage accuracy (content vs i18n classification)
 - [ ] Add CLI smoke tests (invoke commands as external processes)
 - [ ] Add LLM prompt snapshot tests (catch unintended prompt drift)
 - [ ] Validate two-stage triage accuracy (Stage 1 recall ≥95%)
