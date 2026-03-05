@@ -139,11 +139,6 @@ export function formatSuggestionCard(
   lines.push(`${INDENT}${chalk.bold('Summary:')} ${suggestion.summary}`);
   lines.push('');
 
-  // ── Reasoning ─────────────────────────────────────────────────────────────
-  lines.push(`${INDENT}${chalk.bold('Reasoning:')}`);
-  lines.push(wrapText(chalk.dim(suggestion.reasoning), CARD_WIDTH, INDENT + '  '));
-  lines.push('');
-
   // ── Specific Changes ──────────────────────────────────────────────────────
   if (suggestion.specificChanges.length > 0) {
     lines.push(`${INDENT}${chalk.bold('Suggested change' + (suggestion.specificChanges.length > 1 ? 's' : '') + ':')}`);
@@ -152,14 +147,19 @@ export function formatSuggestionCard(
       const num = chalk.bold(`${i + 1}.`);
       lines.push(`${INDENT}  ${num} ${chalk.italic(change.type)}`);
       if (change.original) {
-        lines.push(`${INDENT}     ${chalk.dim('Before:')} ${change.original}`);
+        lines.push(`${INDENT}     ${chalk.yellow('Before:')} ${chalk.yellow(change.original)}`);
       }
       if (change.improved) {
-        lines.push(`${INDENT}     ${chalk.green('After: ')} ${change.improved}`);
+        lines.push(`${INDENT}     ${chalk.green('After: ')} ${chalk.green(change.improved)}`);
       }
+      lines.push('');
     }
-    lines.push('');
   }
+
+  // ── Reasoning ─────────────────────────────────────────────────────────────
+  lines.push(`${INDENT}${chalk.bold('Reasoning:')}`);
+  lines.push(wrapText(chalk.dim(suggestion.reasoning), CARD_WIDTH, INDENT + '  '));
+  lines.push('');
 
   return lines.join('\n');
 }

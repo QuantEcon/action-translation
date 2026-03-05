@@ -222,6 +222,15 @@ describe('formatSuggestionCard', () => {
     expect(card).not.toContain('Before:');
   });
 
+  it('places suggested changes before reasoning', () => {
+    const card = strip(formatSuggestionCard(item, 1, 5));
+    const changesIdx = card.indexOf('Suggested change');
+    const reasoningIdx = card.indexOf('Reasoning:');
+    expect(changesIdx).toBeGreaterThan(-1);
+    expect(reasoningIdx).toBeGreaterThan(-1);
+    expect(changesIdx).toBeLessThan(reasoningIdx);
+  });
+
   it('renders all categories without throwing', () => {
     const cats = ['BUG_FIX', 'CLARIFICATION', 'EXAMPLE', 'CODE_IMPROVEMENT', 'I18N_ONLY', 'NO_CHANGE'] as const;
     for (const cat of cats) {
