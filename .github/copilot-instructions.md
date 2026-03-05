@@ -8,7 +8,7 @@
 - **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
-**Current Version**: v0.8.0 | **Tests**: 640 (29 suites) | **Glossary**: 357 terms (zh-cn, fa)
+**Current Version**: v0.9.0 | **Tests**: 697 (32 suites) | **Glossary**: 357 terms (zh-cn, fa)
 
 ---
 
@@ -41,10 +41,13 @@ src/
 │   ├── review-session.ts      # Pure session state machine (accept/skip/reject, ~150 lines)
 │   ├── issue-generator.ts     # GitHub Issue title/body/label generator (~200 lines)
 │   ├── issue-creator.ts       # gh issue create runner with injectable GhRunner (~180 lines)
+│   ├── forward-triage.ts      # Forward: content-vs-i18n LLM filter (~245 lines)
+│   ├── forward-pr-creator.ts  # Forward: one PR per file via gh CLI (~215 lines)
 │   ├── components/
 │   │   └── ReviewSession.tsx  # Ink interactive review UI component (~110 lines)
 │   └── commands/
 │       ├── backward.ts        # Backward command orchestrator — single + bulk (~530 lines)
+│       ├── forward.ts         # Forward command — resync TARGET to SOURCE (~570 lines)
 │       ├── review.ts          # Review command — full pipeline, Steps 1–5 (~210 lines)
 │       └── status.ts          # Status command — fast sync diagnostic (~280 lines)
 ```
@@ -88,7 +91,7 @@ Maps are flat (no nesting), include all heading levels, auto-populated on first 
 
 ### Running Tests
 ```bash
-npm test                          # All 640 tests
+npm test                          # All 697 tests
 npm test -- parser.test.ts        # Single file
 npm test -- --watch               # Watch mode
 npm test -- --coverage            # Coverage report
@@ -151,12 +154,15 @@ Docs live in `docs/` — see `docs/INDEX.md` for the full structure.
 | Task | File → Symbol |
 |---|---|
 | Subsection reconstruction | `file-processor.ts` → `parseTranslatedSubsections` |
-| Translation prompts | `translator.ts` → `translateSection` / `translateNewSection` |
+| Translation prompts | `translator.ts` → `translateSection` / `translateNewSection` / `translateSectionResync` |
 | Review logic | `reviewer.ts` → `TranslationReviewer` |
 | Parsing | `parser.ts` → `parseSections` |
 | Change detection | `diff-detector.ts` → `detectSectionChanges` |
 | Heading-maps | `heading-map.ts` → `updateHeadingMap` |
 | File classification | `sync-orchestrator.ts` → `classifyChangedFiles` |
 | PR creation | `pr-creator.ts` → `createTranslationPR` |
+| Forward resync | `commands/forward.ts` → `resyncSingleFile` / `runForwardBulk` |
+| Forward triage | `forward-triage.ts` → `triageForward` |
+| Forward PR creation | `forward-pr-creator.ts` → `createForwardPR` |
 | Input validation | `inputs.ts` → `getInputs` / `getReviewInputs` |
 
