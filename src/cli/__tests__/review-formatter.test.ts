@@ -180,9 +180,16 @@ describe('formatSuggestionCard', () => {
     expect(card).toContain('The translation improves the explanation');
   });
 
-  it('contains the reasoning text', () => {
+  it('hides reasoning by default, shows hint', () => {
     const card = strip(formatSuggestionCard(item, 1, 5));
+    expect(card).not.toContain('The target adds context about matrix dimensions');
+    expect(card).toContain('Press [D] to show reasoning');
+  });
+
+  it('shows reasoning when showReasoning is true', () => {
+    const card = strip(formatSuggestionCard(item, 1, 5, { showReasoning: true }));
     expect(card).toContain('The target adds context about matrix dimensions');
+    expect(card).not.toContain('Press [D] to show reasoning');
   });
 
   it('contains the "Before:" and "After:" labels for specific changes', () => {
@@ -222,8 +229,8 @@ describe('formatSuggestionCard', () => {
     expect(card).not.toContain('Before:');
   });
 
-  it('places suggested changes before reasoning', () => {
-    const card = strip(formatSuggestionCard(item, 1, 5));
+  it('places suggested changes before reasoning when expanded', () => {
+    const card = strip(formatSuggestionCard(item, 1, 5, { showReasoning: true }));
     const changesIdx = card.indexOf('Suggested change');
     const reasoningIdx = card.indexOf('Reasoning:');
     expect(changesIdx).toBeGreaterThan(-1);

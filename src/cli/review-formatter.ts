@@ -110,12 +110,15 @@ export function wrapText(text: string, width: number, prefix: string): string {
  * @param item    The suggestion with its file context
  * @param index   1-based position in the session (for "[1/N]" header)
  * @param total   Total suggestion count in the session
+ * @param options.showReasoning  Whether to show the reasoning section (default: false)
  */
 export function formatSuggestionCard(
   item: SuggestionWithContext,
   index: number,
   total: number,
+  options: { showReasoning?: boolean } = {},
 ): string {
+  const { showReasoning = false } = options;
   const { file, suggestion } = item;
   const lines: string[] = [];
 
@@ -147,19 +150,24 @@ export function formatSuggestionCard(
       const num = chalk.bold(`${i + 1}.`);
       lines.push(`${INDENT}  ${num} ${chalk.italic(change.type)}`);
       if (change.original) {
-        lines.push(`${INDENT}     ${chalk.yellow('Before:')} ${chalk.yellow(change.original)}`);
+        lines.push(`${INDENT}     ${chalk.yellow('Before:')} ${change.original}`);
       }
       if (change.improved) {
-        lines.push(`${INDENT}     ${chalk.green('After: ')} ${chalk.green(change.improved)}`);
+        lines.push(`${INDENT}     ${chalk.green('After: ')} ${change.improved}`);
       }
       lines.push('');
     }
   }
 
   // ── Reasoning ─────────────────────────────────────────────────────────────
-  lines.push(`${INDENT}${chalk.bold('Reasoning:')}`);
-  lines.push(wrapText(chalk.dim(suggestion.reasoning), CARD_WIDTH, INDENT + '  '));
-  lines.push('');
+  if (showReasoning) {
+    lines.push(`${INDENT}${chalk.bold('Reasoning:')}`);
+    lines.push(wrapText(chalk.dim(suggestion.reasoning), CARD_WIDTH, INDENT + '  '));
+    lines.push('');
+  } else {
+    lines.push(`${INDENT}${chalk.dim('Press [D] to show reasoning')}`);
+    lines.push('');
+  }
 
   return lines.join('\n');
 }

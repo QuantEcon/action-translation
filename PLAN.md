@@ -584,7 +584,19 @@ RESYNC preserves translation nuances because the LLM sees the existing translati
 - [ ] `gh` CLI not available (review command: graceful error)
 - [ ] Graceful degradation with warnings
 
-### 4.4 Documentation — Restructure into User & Developer Guides
+### 4.4 Review Command UX Polish
+
+The interactive review session works but long suggestion cards (e.g. 5 changes with
+code blocks) can overflow terminal height. Current mitigation: reasoning is collapsible
+via `[D]` toggle. Further improvements to explore:
+
+- [ ] Scroll viewport — fixed-height card area with up/down arrow scrolling
+- [ ] Truncate long Before/After blocks — show first N lines, `[E]xpand` to see full
+- [ ] Syntax highlighting in Before/After code blocks (chalk + cli-highlight)
+- [ ] MyST-aware rendering — styled directives, math, headers in card output
+- [ ] Colour-coded inline diff (word-level Before→After highlighting)
+
+### 4.5 Documentation — Restructure into User & Developer Guides
 
 Restructure `docs/` into two clear audiences and deploy via GitHub Pages for easy access.
 
@@ -651,7 +663,7 @@ docs/
 - [ ] Migrate content from existing `docs/*.md` files into new structure
 - [ ] Remove or redirect old `INDEX.md`
 
-### 4.5 Additional Review Actions (from 2026-02-16-REVIEW)
+### 4.6 Additional Review Actions (from 2026-02-16-REVIEW)
 
 These can be addressed opportunistically during refinement:
 

@@ -44,15 +44,22 @@ export interface ReviewSessionProps {
 export function ReviewSession({ suggestions, dryRun = false, onDone }: ReviewSessionProps): React.ReactElement {
   const { exit } = useApp();
   const [state, setState] = useState(() => initialState(suggestions.length));
+  const [showReasoning, setShowReasoning] = useState(false);
 
   useInput((input, key) => {
     if (state.done) return;
 
     const lower = input.toLowerCase();
+    if (lower === 'd') {
+      setShowReasoning(prev => !prev);
+      return;
+    }
     if (lower === 'a' || lower === 's' || lower === 'r') {
       const action = lower === 'a' ? 'accept' : lower === 's' ? 'skip' : 'reject';
       const next = applyAction(state, action, suggestions.length);
       setState(next);
+      // Reset reasoning toggle for the next card
+      setShowReasoning(false);
 
       if (next.done) {
         const summary = resolveSummary(next, suggestions);
@@ -72,7 +79,7 @@ export function ReviewSession({ suggestions, dryRun = false, onDone }: ReviewSes
   }
 
   const current = suggestions[state.currentIndex];
-  const cardText = formatSuggestionCard(current, state.currentIndex + 1, suggestions.length);
+  const cardText = formatSuggestionCard(current, state.currentIndex + 1, suggestions.length, { showReasoning });
 
   return (
     <Box flexDirection="column">
@@ -94,6 +101,8 @@ export function ReviewSession({ suggestions, dryRun = false, onDone }: ReviewSes
           <Text dimColor>kip  </Text>
           <Text color="red">[R]</Text>
           <Text dimColor>eject  </Text>
+          <Text color="cyan">[D]</Text>
+          <Text dimColor>etails  </Text>
           <Text dimColor>Ctrl+C to abort</Text>
         </Text>
       </Box>
