@@ -395,15 +395,17 @@ export function writeProgress(outputDir: string, progress: BulkProgress): void {
 }
 
 /**
- * Build a date-stamped output folder name:
- *   reports/backward-2026-03-03/
+ * Build a date-stamped output folder name scoped to the source repo:
+ *   reports/lecture-python-intro/backward-2026-03-03/
  *
- * Uses date only. Re-running on the same day overwrites the previous run.
+ * Grouping by sourceName means multiple repos never collide and all
+ * historical runs for a repo are discoverable under one subfolder.
+ * Re-running on the same day for the same repo overwrites that day's run.
  */
-export function buildBulkOutputDir(baseOutput: string): string {
+export function buildBulkOutputDir(baseOutput: string, sourceName: string): string {
   const now = new Date();
   const dateStr = now.toISOString().split('T')[0]; // "2026-03-03"
-  return path.join(baseOutput, `backward-${dateStr}`);
+  return path.join(baseOutput, sourceName, `backward-${dateStr}`);
 }
 
 /**
@@ -496,10 +498,11 @@ export async function runBackwardBulk(
 ): Promise<BulkBackwardReport> {
   const { source, target, docsFolder, language } = options;
 
-  // Build output directory
+  // Build output directory — scoped to source repo name
+  const sourceName = path.basename(source);
   const outputDir = resume
-    ? resolveResumeDir(options.output)
-    : buildBulkOutputDir(options.output);
+    ? resolveResumeDir(options.output, sourceName)
+    : buildBulkOutputDir(options.output, sourceName);
 
   // Fresh start: wipe the folder if not resuming
   if (!resume && fs.existsSync(outputDir)) {
@@ -778,22 +781,25 @@ function resolveReportPath(outputDir: string, file: string, json: boolean): stri
  * 2. If options.output contains backward-* subdirs → use most recent with .resync/_progress.json
  * 3. Otherwise → error (nothing to resume from)
  */
-function resolveResumeDir(outputPath: string): string {
-  // Case 1: Direct path to a run directory
+function resolveResumeDir(outputPath: string, sourceName: string): string {
+  // Case 1: Direct path to a run directory (user pointed --output at the backward-DATE folder)
   if (fs.existsSync(path.join(outputPath, '.resync', '_progress.json'))) {
     return outputPath;
   }
 
-  // Case 2: Base output directory (e.g., ./reports) — find most recent run
-  if (fs.existsSync(outputPath)) {
-    const candidates = fs.readdirSync(outputPath)
+  // Case 2: Repo-scoped subfolder (e.g., ./reports/lecture-python-intro) — find most recent run
+  const repoScopedPath = path.join(outputPath, sourceName);
+  const searchPath = fs.existsSync(repoScopedPath) ? repoScopedPath : outputPath;
+
+  if (fs.existsSync(searchPath)) {
+    const candidates = fs.readdirSync(searchPath)
       .filter(d => d.startsWith('backward-'))
-      .filter(d => fs.existsSync(path.join(outputPath, d, '.resync', '_progress.json')))
+      .filter(d => fs.existsSync(path.join(searchPath, d, '.resync', '_progress.json')))
       .sort()
       .reverse(); // Most recent first (lexicographic sort on timestamps)
 
     if (candidates.length > 0) {
-      return path.join(outputPath, candidates[0]);
+      return path.join(searchPath, candidates[0]);
     }
   }
 
