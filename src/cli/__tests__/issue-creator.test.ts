@@ -93,9 +93,9 @@ describe('buildGhArgs', () => {
     }
     expect(labelIndices).toHaveLength(3);
     const labels = labelIndices.map(i => args[i]);
-    expect(labels).toContain('backward-suggestion');
-    expect(labels).toContain('bug-fix');
-    expect(labels).toContain('confidence-high');
+    expect(labels).toContain('translate');
+    expect(labels).toContain('translate:bug-fix');
+    expect(labels).toContain('translate:zh-cn');
   });
 
   it('does not include shell-unsafe chars in the arg list itself', () => {

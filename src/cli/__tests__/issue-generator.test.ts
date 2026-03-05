@@ -6,6 +6,7 @@ import {
   formatIssueTitle,
   formatIssueBody,
   getIssueLabels,
+  extractLanguage,
 } from '../issue-generator.js';
 import { SuggestionWithContext } from '../commands/review.js';
 
@@ -74,40 +75,74 @@ describe('formatIssueTitle', () => {
 });
 
 // =============================================================================
+// extractLanguage
+// =============================================================================
+
+describe('extractLanguage', () => {
+  it('extracts "zh-cn" from "lecture-intro.zh-cn"', () => {
+    expect(extractLanguage('lecture-intro.zh-cn')).toBe('zh-cn');
+  });
+
+  it('extracts "fa" from "lecture-intro.fa"', () => {
+    expect(extractLanguage('lecture-intro.fa')).toBe('fa');
+  });
+
+  it('falls back to full string when no dot', () => {
+    expect(extractLanguage('some-repo')).toBe('some-repo');
+  });
+
+  it('takes everything after the first dot', () => {
+    expect(extractLanguage('my.repo.zh-cn')).toBe('repo.zh-cn');
+  });
+});
+
+// =============================================================================
 // getIssueLabels
 // =============================================================================
 
 describe('getIssueLabels', () => {
-  it('always includes "backward-suggestion"', () => {
-    expect(getIssueLabels(makeSuggestion())).toContain('backward-suggestion');
+  it('always includes "translate"', () => {
+    expect(getIssueLabels(makeSuggestion())).toContain('translate');
   });
 
-  it('includes the category label for CLARIFICATION', () => {
-    expect(getIssueLabels(makeSuggestion())).toContain('clarification');
+  it('returns "translate:narrative" for CLARIFICATION', () => {
+    expect(getIssueLabels(makeSuggestion())).toContain('translate:narrative');
   });
 
-  it('includes the confidence tier label (medium for 0.72)', () => {
-    expect(getIssueLabels(makeSuggestion())).toContain('confidence-medium');
+  it('returns "translate:narrative" for EXAMPLE too', () => {
+    const item = makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, category: 'EXAMPLE' } });
+    expect(getIssueLabels(item)).toContain('translate:narrative');
   });
 
-  it('returns "bug-fix" for BUG_FIX category', () => {
-    const item = makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, category: 'BUG_FIX', confidence: 0.9 } });
-    expect(getIssueLabels(item)).toContain('bug-fix');
-    expect(getIssueLabels(item)).toContain('confidence-high');
+  it('returns "translate:bug-fix" for BUG_FIX category', () => {
+    const item = makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, category: 'BUG_FIX' } });
+    expect(getIssueLabels(item)).toContain('translate:bug-fix');
   });
 
-  it('returns "code-improvement" for CODE_IMPROVEMENT category', () => {
+  it('returns "translate:code" for CODE_IMPROVEMENT category', () => {
     const item = makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, category: 'CODE_IMPROVEMENT' } });
-    expect(getIssueLabels(item)).toContain('code-improvement');
+    expect(getIssueLabels(item)).toContain('translate:code');
   });
 
-  it('returns low confidence label for confidence < 0.6', () => {
-    const item = makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, confidence: 0.3 } });
-    expect(getIssueLabels(item)).toContain('confidence-low');
+  it('includes the language label extracted from targetRepo', () => {
+    expect(getIssueLabels(makeSuggestion())).toContain('translate:zh-cn');
   });
 
-  it('returns exactly 3 labels', () => {
+  it('returns exactly 3 labels when targetRepo is present', () => {
     expect(getIssueLabels(makeSuggestion())).toHaveLength(3);
+  });
+
+  it('returns 2 labels when targetRepo is absent', () => {
+    const item = makeSuggestion({ targetRepo: undefined });
+    expect(getIssueLabels(item)).toHaveLength(2);
+    expect(getIssueLabels(item)).not.toEqual(
+      expect.arrayContaining([expect.stringMatching(/^translate:zh/)])
+    );
+  });
+
+  it('falls back gracefully for unknown categories', () => {
+    const item = makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, category: 'CUSTOM_THING' as any } });
+    expect(getIssueLabels(item)).toContain('translate:custom-thing');
   });
 });
 
@@ -122,6 +157,12 @@ describe('formatIssueBody', () => {
   it('contains a Summary section', () => {
     expect(body).toContain('## Summary');
     expect(body).toContain('The translation improves the explanation');
+  });
+
+  it('summary is plain text, not a blockquote', () => {
+    expect(body).not.toContain('> The translation');
+    // Should be plain text directly after the heading
+    expect(body).toMatch(/## Summary\n\nThe translation/);
   });
 
   it('contains a Details table with file', () => {
@@ -197,6 +238,26 @@ describe('formatIssueBody', () => {
       },
     });
     expect(formatIssueBody(multi)).toContain('## Suggested Changes');
+  });
+
+  it('uses longer fence when content contains triple backticks', () => {
+    const nested = makeSuggestion({
+      suggestion: {
+        ...item.suggestion,
+        specificChanges: [
+          {
+            type: 'Add code block',
+            original: '(none)',
+            improved: 'Add this:\n\n```python\nprint("hello")\n```',
+          },
+        ],
+      },
+    });
+    const b = formatIssueBody(nested);
+    // The outer fence must be longer than 3 backticks to avoid collision
+    expect(b).toContain('````');
+    // The inner ``` should still be present as content
+    expect(b).toContain('```python');
   });
 });
 

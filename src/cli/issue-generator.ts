@@ -15,43 +15,85 @@ import { CATEGORY_STYLES, confidenceTier } from './review-formatter.js';
 // LABEL HELPERS
 // ============================================================================
 
-/** Map BackportCategory enum value → kebab-case GitHub label */
+/**
+ * Map BackportCategory enum value → namespaced GitHub label.
+ *
+ * Categories are consolidated:
+ * - BUG_FIX         → translate:bug-fix
+ * - CLARIFICATION   → translate:narrative  (prose/pedagogical)
+ * - EXAMPLE         → translate:narrative  (prose/pedagogical)
+ * - CODE_IMPROVEMENT → translate:code
+ *
+ * I18N_ONLY and NO_CHANGE never reach the review stage
+ * (filtered out by filterActionableSuggestions), so they are omitted.
+ */
 const CATEGORY_LABEL: Record<string, string> = {
-  BUG_FIX:          'bug-fix',
-  CLARIFICATION:    'clarification',
-  EXAMPLE:          'example',
-  CODE_IMPROVEMENT: 'code-improvement',
-  I18N_ONLY:        'i18n-only',
-  NO_CHANGE:        'no-change',
+  BUG_FIX:          'translate:bug-fix',
+  CLARIFICATION:    'translate:narrative',
+  EXAMPLE:          'translate:narrative',
+  CODE_IMPROVEMENT: 'translate:code',
 };
 
-/** Map confidence tier → GitHub label */
-const TIER_LABEL: Record<string, string> = {
-  high:   'confidence-high',
-  medium: 'confidence-medium',
-  low:    'confidence-low',
-};
+/**
+ * Extract the language code from a targetRepo name.
+ *
+ * Convention: `{repo-name}.{language}` → e.g. "lecture-intro.zh-cn" → "zh-cn"
+ * Falls back to the full targetRepo string if no dot is found.
+ */
+export function extractLanguage(targetRepo: string): string {
+  const dotIdx = targetRepo.indexOf('.');
+  return dotIdx >= 0 ? targetRepo.slice(dotIdx + 1) : targetRepo;
+}
 
 /**
  * Returns labels to attach to the created GitHub Issue.
  *
- * Always includes:
- * - `backward-suggestion`
- * - category-specific label (e.g. `bug-fix`)
- * - confidence-tier label  (e.g. `confidence-high`)
+ * Every issue gets exactly 3 labels:
+ * - `translate`                  — common tag for all translation-sourced issues
+ * - `translate:{category}`       — e.g. `translate:bug-fix`
+ * - `translate:{language}`       — e.g. `translate:zh-cn`
+ *
+ * If targetRepo is absent the language label is omitted (2 labels).
  */
 export function getIssueLabels(item: SuggestionWithContext): string[] {
-  const { category, confidence } = item.suggestion;
-  return [
-    'backward-suggestion',
-    CATEGORY_LABEL[category] ?? category.toLowerCase().replace(/_/g, '-'),
-    TIER_LABEL[confidenceTier(confidence)] ?? 'confidence-low',
+  const { category } = item.suggestion;
+  const labels = [
+    'translate',
+    CATEGORY_LABEL[category] ?? `translate:${category.toLowerCase().replace(/_/g, '-')}`,
   ];
+
+  if (item.targetRepo) {
+    labels.push(`translate:${extractLanguage(item.targetRepo)}`);
+  }
+
+  return labels;
 }
 
 // ============================================================================
 // TITLE
 // ============================================================================
+
+/**
+ * Push a fenced code block onto `lines`, using enough backticks to avoid
+ * collision with any backtick runs inside `content`.
+ *
+ * If `content` contains ``` the outer fence uses ``````, etc.
+ */
+function pushFencedBlock(lines: string[], content: string): void {
+  // Find the longest run of consecutive backticks in content
+  let maxRun = 0;
+  const matches = content.match(/`+/g);
+  if (matches) {
+    for (const m of matches) {
+      if (m.length > maxRun) maxRun = m.length;
+    }
+  }
+  // Outer fence must be at least maxRun + 1 backticks, minimum 3
+  const fence = '`'.repeat(Math.max(3, maxRun + 1));
+  lines.push(fence);
+  lines.push(content);
+  lines.push(fence);
+}
 
 /** Maximum characters for the suggestion summary in the title */
 const MAX_TITLE_SUMMARY_CHARS = 80;
@@ -98,7 +140,7 @@ export function formatIssueBody(item: SuggestionWithContext): string {
   // ── Summary block ─────────────────────────────────────────────────────────
   lines.push('## Summary');
   lines.push('');
-  lines.push(`> ${summary}`);
+  lines.push(summary);
   lines.push('');
 
   // ── Metadata table ────────────────────────────────────────────────────────
@@ -137,18 +179,14 @@ export function formatIssueBody(item: SuggestionWithContext): string {
       if (change.original) {
         lines.push('**Before:**');
         lines.push('');
-        lines.push('```');
-        lines.push(change.original.trim());
-        lines.push('```');
+        pushFencedBlock(lines, change.original.trim());
         lines.push('');
       }
 
       if (change.improved) {
         lines.push('**After:**');
         lines.push('');
-        lines.push('```');
-        lines.push(change.improved.trim());
-        lines.push('```');
+        pushFencedBlock(lines, change.improved.trim());
         lines.push('');
       }
     }
