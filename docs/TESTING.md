@@ -1,6 +1,6 @@
 # Testing Guide
 
-**Current Test Status**: ✅ 266 tests passing | 0 failing | ~4s execution time
+**Current Test Status**: ✅ 639 tests passing | 0 failing | ~2s execution time
 
 ---
 
@@ -19,6 +19,106 @@ npm test -- --coverage
 # Watch mode (development)
 npm test -- --watch
 ```
+
+---
+
+## Testing the `review` Command
+
+The `review` command is the interactive part of the backward-suggestion workflow.
+It loads reports produced by `backward`, shows you each suggestion, and (optionally) creates GitHub Issues.
+
+### Prerequisites
+
+Build the CLI first (needed whenever you change TypeScript source):
+
+```bash
+npm run build
+```
+
+### 1. Dry-run with real fixture data
+
+The repo ships with real backward-analysis reports in `reports/`. Use these to test without running the LLM:
+
+```bash
+# Preview all 31 suggestions from the section-by-section report
+node dist/cli/index.js review reports/backward-2026-03-04-section-by-section --dry-run
+```
+
+**What you should see:**
+- For each suggestion: a chalk-styled card showing file name, section heading, category badge (colour-coded), confidence percentage, LLM reasoning, and Before/After changes
+- Below each card: a "GitHub Issue Preview" block with the Issue title, labels, and full Markdown body that *would* be created
+- An end-of-run summary table: suggestion count, breakdown by category and by confidence tier (High/Medium/Low)
+
+```bash
+# Raise the confidence floor to see only the strongest suggestions
+node dist/cli/index.js review reports/backward-2026-03-04-section-by-section --dry-run --min-confidence 0.8
+```
+
+### 2. Interactive mode (accept / skip / reject)
+
+Without `--dry-run` the command enters full interactive mode:
+
+```bash
+node dist/cli/index.js review reports/backward-2026-03-04-section-by-section
+```
+
+**Controls:**
+| Key | Action |
+|-----|--------|
+| `A` | Accept — queues this suggestion for Issue creation |
+| `S` | Skip — move on, no action |
+| `R` | Reject — explicitly mark as not worth acting on |
+| `Ctrl+C` | Abort session |
+
+**What you should see:**
+- Each suggestion rendered as a card + Issue preview (same as dry-run)
+- A footer bar showing `X / N` progress and running `✓ A  ~ S  ✗ R` tallies
+- After the last suggestion: an end-of-session summary listing accepted files
+
+> **Note**: Without `--repo`, accepted suggestions are printed to the console but no Issues are created. This is safe for exploratory testing.
+
+### 3. Issue creation (requires `gh` + repo access)
+
+To test the full pipeline including actual GitHub Issue creation:
+
+```bash
+node dist/cli/index.js review reports/backward-2026-03-04-section-by-section \
+  --repo QuantEcon/lecture-python-intro \
+  --min-confidence 0.8
+```
+
+Accept one or two suggestions (`A`), then finish the session. Each accepted suggestion should produce a GitHub Issue URL printed to the terminal. Verify the Issues appear at `https://github.com/QuantEcon/lecture-python-intro/issues` with the correct labels (`backward-suggestion`, category, confidence tier).
+
+### 4. Running the backward → review pipeline end-to-end
+
+If you have local checkouts of the lecture repos:
+
+```bash
+# Step 1: generate reports (uses Claude — costs ~$0.10 for a few files)
+node dist/cli/index.js backward \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-intro.zh-cn \
+  -f ar1_processes.md \
+  -o /tmp/my-report
+
+# Step 2: review the output
+node dist/cli/index.js review /tmp/my-report --dry-run
+
+# Step 3: interactive with Issue creation
+node dist/cli/index.js review /tmp/my-report --repo QuantEcon/lecture-python-intro
+```
+
+### 5. What to check
+
+| Scenario | Expected behaviour |
+|----------|--------------------|
+| Good report dir (has `.resync/`) | Loads reports, shows suggestion count |
+| Report dir exists but no `.resync/` | Error: "does not contain a .resync/ subdirectory" |
+| All suggestions below `--min-confidence` | "Nothing to review." message |
+| Report dir doesn't exist | Error with path |
+| `--repo` not set + accepts | Session summary prints; no gh call made |
+| `--repo` set + `--dry-run` | Issue previews shown; `gh issue create` never called |
+| `--repo` set + interactive accept | `gh issue create` called; URL printed |
 
 ---
 
@@ -427,4 +527,4 @@ Update tests when:
 
 ---
 
-**Last Updated**: October 24, 2025 (v0.4.6)
+**Last Updated**: March 5, 2026 (v0.8.0 — review command)
