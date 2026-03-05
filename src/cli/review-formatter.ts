@@ -149,11 +149,28 @@ export function formatSuggestionCard(
       const change = suggestion.specificChanges[i];
       const num = chalk.bold(`${i + 1}.`);
       lines.push(`${INDENT}  ${num} ${chalk.italic(change.type)}`);
+      const contentIndent = INDENT + '       ';
       if (change.original) {
-        lines.push(`${INDENT}     ${chalk.yellow('Before:')} ${change.original}`);
+        const isMultiline = change.original.includes('\n');
+        if (isMultiline) {
+          lines.push(`${INDENT}     ${chalk.yellow('Before:')}`);
+          for (const line of change.original.split('\n')) {
+            lines.push(`${contentIndent}${line}`);
+          }
+        } else {
+          lines.push(`${INDENT}     ${chalk.yellow('Before:')} ${change.original}`);
+        }
       }
       if (change.improved) {
-        lines.push(`${INDENT}     ${chalk.green('After: ')} ${change.improved}`);
+        const isMultiline = change.improved.includes('\n');
+        if (isMultiline) {
+          lines.push(`${INDENT}     ${chalk.green('After:')}`);
+          for (const line of change.improved.split('\n')) {
+            lines.push(`${contentIndent}${line}`);
+          }
+        } else {
+          lines.push(`${INDENT}     ${chalk.green('After: ')} ${change.improved}`);
+        }
       }
       lines.push('');
     }
