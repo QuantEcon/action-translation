@@ -36,6 +36,7 @@ import {
 import {
   createForwardPR,
   gitPrepareAndPush,
+  detectSourceRepo,
   ForwardPRResult,
   GhRunner,
   GitRunner,
@@ -197,6 +198,9 @@ export async function resyncSingleFile(
       }
       logger.info(`  Branch ${gitResult.branchName} pushed to origin`);
 
+      // Detect source repo's GitHub identity for the PR body
+      const sourceGitHub = detectSourceRepo(sourceRepoPath, gRunner);
+
       // Create PR in TARGET repo via gh CLI
       const runner = ghRunner ?? realGhRunner;
       const prResult = createForwardPR(
@@ -205,6 +209,9 @@ export async function resyncSingleFile(
         [],  // No per-section results in whole-file mode
         options.github,
         runner,
+        sourceGitHub,
+        docsFolder,
+        triageResult.reason,
       );
       if (prResult.success) {
         prUrl = prResult.url;

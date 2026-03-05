@@ -14,6 +14,8 @@ import {
   buildForwardPRBody,
   createForwardPR,
   gitPrepareAndPush,
+  parseGitHubRepo,
+  detectSourceRepo,
   GhRunner,
   GitRunner,
 } from '../forward-pr-creator.js';
@@ -67,8 +69,8 @@ describe('buildBranchName', () => {
 // =============================================================================
 
 describe('buildPRTitle', () => {
-  it('includes emoji prefix and filename', () => {
-    expect(buildPRTitle('cobweb.md')).toBe('🔄 [resync] cobweb.md');
+  it('returns action-translation resync format', () => {
+    expect(buildPRTitle('cobweb.md')).toBe('[action-translation] resync: cobweb.md');
   });
 });
 
@@ -167,6 +169,34 @@ describe('buildForwardPRBody', () => {
     expect(emptyBody).not.toContain('Resynced');
     expect(emptyBody).not.toContain('Errors');
   });
+
+  it('includes source repo link when provided', () => {
+    const bodyWithSource = buildForwardPRBody('cobweb.md', [], 'QuantEcon/lecture-python', 'lectures');
+    expect(bodyWithSource).toContain('**Source**: [QuantEcon/lecture-python](https://github.com/QuantEcon/lecture-python)');
+    expect(bodyWithSource).toContain('[lectures/cobweb.md](https://github.com/QuantEcon/lecture-python/blob/main/lectures/cobweb.md)');
+  });
+
+  it('builds source path without docsFolder when not provided', () => {
+    const bodyNoFolder = buildForwardPRBody('cobweb.md', [], 'Org/Repo');
+    expect(bodyNoFolder).toContain('[cobweb.md](https://github.com/Org/Repo/blob/main/cobweb.md)');
+  });
+
+  it('treats docsFolder "." as root (no prefix)', () => {
+    const bodyDot = buildForwardPRBody('cobweb.md', [], 'Org/Repo', '.');
+    expect(bodyDot).toContain('[cobweb.md](https://github.com/Org/Repo/blob/main/cobweb.md)');
+    expect(bodyDot).not.toContain('./');
+  });
+
+  it('includes triage reason when provided', () => {
+    const bodyWithReason = buildForwardPRBody('cobweb.md', [], undefined, undefined, 'New section added and formula updated');
+    expect(bodyWithReason).toContain('**Reason**: New section added and formula updated');
+  });
+
+  it('omits source and reason when not provided', () => {
+    const plainBody = buildForwardPRBody('cobweb.md', []);
+    expect(plainBody).not.toContain('**Source**');
+    expect(plainBody).not.toContain('**Reason**');
+  });
 });
 
 // =============================================================================
@@ -218,6 +248,22 @@ describe('createForwardPR', () => {
     expect(capturedArgs).toContain('create');
     expect(capturedArgs).toContain('Org/Repo');
     expect(capturedArgs).toContain('resync/solow');
+  });
+
+  it('passes sourceRepo and triageReason to body', () => {
+    let capturedStdin = '';
+    const spyRunner: GhRunner = (_args, stdin) => {
+      capturedStdin = stdin;
+      return { stdout: 'https://example.com/pr/1', stderr: '', status: 0 };
+    };
+
+    createForwardPR(
+      'cobweb.md', '# content', [], 'Org/Target', spyRunner,
+      'Org/Source', 'lectures', 'Content changes detected',
+    );
+    expect(capturedStdin).toContain('Org/Source');
+    expect(capturedStdin).toContain('lectures/cobweb.md');
+    expect(capturedStdin).toContain('Content changes detected');
   });
 });
 
@@ -368,5 +414,68 @@ describe('gitPrepareAndPush', () => {
     const pushCall = calls.find(c => c.args[0] === 'push');
     expect(pushCall).toBeDefined();
     expect(pushCall!.args).toContain('--force');
+  });
+});
+
+// =============================================================================
+// parseGitHubRepo
+// =============================================================================
+
+describe('parseGitHubRepo', () => {
+  it('parses HTTPS URL with .git suffix', () => {
+    expect(parseGitHubRepo('https://github.com/QuantEcon/lecture-python.git')).toBe('QuantEcon/lecture-python');
+  });
+
+  it('parses HTTPS URL without .git suffix', () => {
+    expect(parseGitHubRepo('https://github.com/QuantEcon/lecture-python')).toBe('QuantEcon/lecture-python');
+  });
+
+  it('parses SSH URL with .git suffix', () => {
+    expect(parseGitHubRepo('git@github.com:QuantEcon/lecture-python.git')).toBe('QuantEcon/lecture-python');
+  });
+
+  it('parses SSH URL without .git suffix', () => {
+    expect(parseGitHubRepo('git@github.com:QuantEcon/lecture-python')).toBe('QuantEcon/lecture-python');
+  });
+
+  it('returns undefined for non-GitHub URLs', () => {
+    expect(parseGitHubRepo('https://gitlab.com/org/repo.git')).toBeUndefined();
+  });
+
+  it('returns undefined for empty string', () => {
+    expect(parseGitHubRepo('')).toBeUndefined();
+  });
+});
+
+// =============================================================================
+// detectSourceRepo
+// =============================================================================
+
+describe('detectSourceRepo', () => {
+  it('returns owner/repo when git remote succeeds', () => {
+    const runner: GitRunner = (_args, _cwd) => ({
+      stdout: 'https://github.com/QuantEcon/lecture-python.git',
+      stderr: '',
+      status: 0,
+    });
+    expect(detectSourceRepo('/some/path', runner)).toBe('QuantEcon/lecture-python');
+  });
+
+  it('returns undefined when git remote fails', () => {
+    const runner: GitRunner = (_args, _cwd) => ({
+      stdout: '',
+      stderr: 'not a git repo',
+      status: 128,
+    });
+    expect(detectSourceRepo('/some/path', runner)).toBeUndefined();
+  });
+
+  it('returns undefined for non-GitHub remote', () => {
+    const runner: GitRunner = (_args, _cwd) => ({
+      stdout: 'https://gitlab.com/org/repo.git',
+      stderr: '',
+      status: 0,
+    });
+    expect(detectSourceRepo('/some/path', runner)).toBeUndefined();
   });
 });

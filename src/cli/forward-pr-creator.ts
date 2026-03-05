@@ -213,6 +213,36 @@ export function gitPrepareAndPush(
 // ============================================================================
 
 /**
+ * Extract GitHub owner/repo from a git remote URL.
+ * Handles both HTTPS and SSH formats.
+ * Returns undefined if the URL can't be parsed.
+ */
+export function parseGitHubRepo(remoteUrl: string): string | undefined {
+  // HTTPS: https://github.com/owner/repo.git or https://github.com/owner/repo
+  const httpsMatch = remoteUrl.match(/github\.com\/([^/]+\/[^/]+?)(?:\.git)?\s*$/);
+  if (httpsMatch) return httpsMatch[1];
+
+  // SSH: git@github.com:owner/repo.git
+  const sshMatch = remoteUrl.match(/github\.com:([^/]+\/[^/]+?)(?:\.git)?\s*$/);
+  if (sshMatch) return sshMatch[1];
+
+  return undefined;
+}
+
+/**
+ * Detect the GitHub owner/repo for a local repository.
+ * Uses `git remote get-url origin`.
+ */
+export function detectSourceRepo(
+  sourceRepoPath: string,
+  runner: GitRunner = realGitRunner,
+): string | undefined {
+  const result = runner(['remote', 'get-url', 'origin'], sourceRepoPath);
+  if (result.status !== 0 || !result.stdout) return undefined;
+  return parseGitHubRepo(result.stdout);
+}
+
+/**
  * Build the PR body summarizing the resync changes.
  *
  * Supports both whole-file resync (sectionResults empty) and legacy
@@ -223,13 +253,30 @@ export function gitPrepareAndPush(
 export function buildForwardPRBody(
   file: string,
   sectionResults: ResyncSectionResult[],
+  sourceRepo?: string,
+  docsFolder?: string,
+  triageReason?: string,
 ): string {
   const lines: string[] = [];
 
   lines.push(`## Forward Resync: ${file}`);
   lines.push('');
-  lines.push('This PR resyncs the TARGET translation to match the current SOURCE content.');
+
+  // Source reference
+  if (sourceRepo) {
+    const effectiveFolder = (docsFolder && docsFolder !== '.' && docsFolder !== '/') ? docsFolder : '';
+    const sourcePath = effectiveFolder ? `${effectiveFolder}/${file}` : file;
+    const sourceUrl = `https://github.com/${sourceRepo}/blob/main/${sourcePath}`;
+    lines.push(`**Source**: [${sourceRepo}](https://github.com/${sourceRepo}) — [${sourcePath}](${sourceUrl})`);
+  }
+  lines.push('This PR resyncs the translation to match the current source document.');
   lines.push('');
+
+  // Triage reason
+  if (triageReason) {
+    lines.push(`**Reason**: ${triageReason}`);
+    lines.push('');
+  }
 
   if (sectionResults.length === 0) {
     // Whole-file resync — no per-section breakdown
@@ -304,7 +351,7 @@ export function buildBranchName(file: string): string {
  * Exported for testing.
  */
 export function buildPRTitle(file: string): string {
-  return `🔄 [resync] ${file}`;
+  return `[action-translation] resync: ${file}`;
 }
 
 // ============================================================================
@@ -340,6 +387,9 @@ export function buildGhArgs(file: string, repo: string): string[] {
  * @param sectionResults Section-level results for PR body (empty for whole-file)
  * @param repo           TARGET repo in `owner/repo` format
  * @param runner         Injectable gh runner
+ * @param sourceRepo     SOURCE repo in `owner/repo` format (optional, for PR body)
+ * @param docsFolder     Docs folder path (optional, for source file link)
+ * @param triageReason   Triage explanation (optional, for PR body)
  */
 export function createForwardPR(
   file: string,
@@ -347,9 +397,12 @@ export function createForwardPR(
   sectionResults: ResyncSectionResult[],
   repo: string,
   runner: GhRunner = realGhRunner,
+  sourceRepo?: string,
+  docsFolder?: string,
+  triageReason?: string,
 ): ForwardPRResult {
   const args = buildGhArgs(file, repo);
-  const body = buildForwardPRBody(file, sectionResults);
+  const body = buildForwardPRBody(file, sectionResults, sourceRepo, docsFolder, triageReason);
   const result = runner(args, body);
 
   if (result.status === 0 && result.stdout) {
