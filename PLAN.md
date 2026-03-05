@@ -431,14 +431,14 @@ npx resync review <report-dir>   # Phase 3 (new) — interactive walk-through
 - [x] Flatten to a sorted list of suggestions across all files (highest confidence first)
 - [x] Unit tests for loading + filtering pipeline — 20 tests (PR #18)
 
-#### Step 2: `--dry-run` formatter (non-interactive)
+#### Step 2: `--dry-run` formatter (non-interactive) ✅
 
 Chalk-styled stdout output — no ink yet. Fast iteration on what information matters.
 
-- [ ] Per-suggestion display: file name, section heading, category badge + confidence, LLM reasoning, suggested change
-- [ ] End-of-run summary: total suggestions, breakdown by category/confidence
-- [ ] Test with real report data from `reports/backward-2026-03-04-section-by-section/`
-- [ ] Unit tests for formatter output
+- [x] Per-suggestion display: file name, section heading, category badge + confidence, LLM reasoning, suggested change
+- [x] End-of-run summary: total suggestions, breakdown by category/confidence
+- [x] Test with real report data from `reports/backward-2026-03-04-section-by-section/`
+- [x] Unit tests for formatter output (`review-formatter.test.ts`, 37 tests)
 
 #### Step 3: Issue body generator
 

@@ -15,6 +15,7 @@
 
 import * as path from 'path';
 import { loadResyncDirectory, filterActionableSuggestions, BackwardReportData, BackportSuggestionData } from '../schema.js';
+import { printDryRun } from '../review-formatter.js';
 
 // ============================================================================
 // TYPES
@@ -163,7 +164,12 @@ export async function runReview(options: ReviewOptions): Promise<void> {
     return;
   }
 
-  // Placeholder — Step 2 will render suggestions with chalk
-  console.log(`\n📋 ${suggestions.length} suggestion(s) queued for review`);
-  console.log('   (Display formatter coming in Step 2 — use --dry-run to preview)');
+  if (options.dryRun) {
+    // Step 2: chalk-styled preview — no prompting
+    printDryRun(suggestions);
+  } else {
+    // Step 4 placeholder — interactive ink mode not yet implemented
+    console.log(`\n📋 ${suggestions.length} suggestion(s) queued for review`);
+    console.log('   Interactive mode coming in Step 4. Use --dry-run to preview now.');
+  }
 }
