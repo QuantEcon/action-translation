@@ -15,7 +15,8 @@
 
 import * as path from 'path';
 import { loadResyncDirectory, filterActionableSuggestions, BackwardReportData, BackportSuggestionData } from '../schema.js';
-import { printDryRun } from '../review-formatter.js';
+import { formatSuggestionCard, formatSessionSummary } from '../review-formatter.js';
+import { formatIssuePreview } from '../issue-generator.js';
 
 // ============================================================================
 // TYPES
@@ -165,8 +166,14 @@ export async function runReview(options: ReviewOptions): Promise<void> {
   }
 
   if (options.dryRun) {
-    // Step 2: chalk-styled preview — no prompting
-    printDryRun(suggestions);
+    // Steps 2 + 3: chalk suggestion card + Issue preview for every suggestion
+    const parts: string[] = [];
+    for (let i = 0; i < suggestions.length; i++) {
+      parts.push(formatSuggestionCard(suggestions[i], i + 1, suggestions.length));
+      parts.push(formatIssuePreview(suggestions[i]));
+    }
+    parts.push(formatSessionSummary(suggestions));
+    process.stdout.write(parts.join(''));
   } else {
     // Step 4 placeholder — interactive ink mode not yet implemented
     console.log(`\n📋 ${suggestions.length} suggestion(s) queued for review`);
