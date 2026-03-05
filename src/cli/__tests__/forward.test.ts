@@ -3,6 +3,9 @@
  *
  * Uses --test mode (no real LLM calls) and temp directories
  * for file I/O tests.
+ *
+ * The forward command uses whole-file RESYNC: triage → whole-file RESYNC → output.
+ * Section-level matching and reconstruction are no longer performed.
  */
 
 import * as fs from 'fs';
@@ -148,26 +151,27 @@ describe('resyncSingleFile', () => {
         );
 
         expect(result.triageResult.verdict).toBe('CONTENT_CHANGES');
-        expect(result.sections.length).toBeGreaterThan(0);
+        // Whole-file resync: output should contain the test marker
+        expect(result.outputContent).toBeDefined();
+        expect(result.outputContent).toContain('[TEST RESYNC]');
       } finally {
         fixture.cleanup();
       }
     });
   });
 
-  describe('section matching', () => {
-    it('identifies SOURCE_ONLY sections (new)', async () => {
+  describe('whole-file resync', () => {
+    it('produces output content in test mode', async () => {
       const fixture = createTempFixture({
         sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## Section A\n\nContent A\n\n## Section B\n\nContent B',
-        targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## 部分A\n\n翻译A',
-        filename: 'extra-section.md',
+        targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## A翻译\n\n翻译A\n\n## B翻译\n\n翻译B',
+        filename: 'multi-section.md',
       });
 
       try {
         const options = makeOptions({
           source: fixture.sourceRepo,
           target: fixture.targetRepo,
-          test: true,
         });
         const result = await resyncSingleFile(
           fixture.filename,
@@ -178,27 +182,28 @@ describe('resyncSingleFile', () => {
           silentLogger,
         );
 
-        // Should have a NEW section for Section B
-        const newSections = result.sections.filter(s => s.action === 'NEW');
-        expect(newSections.length).toBe(1);
-        expect(newSections[0].sectionHeading).toContain('Section B');
+        expect(result.triageResult.verdict).toBe('CONTENT_CHANGES');
+        expect(result.outputContent).toBeDefined();
+        // Test mode wraps target content with [TEST RESYNC] marker
+        expect(result.outputContent).toContain('[TEST RESYNC]');
+        expect(result.outputContent).toContain('翻译A');
+        expect(result.outputContent).toContain('翻译B');
       } finally {
         fixture.cleanup();
       }
     });
 
-    it('identifies TARGET_ONLY sections (removed)', async () => {
+    it('writes output to target file on disk', async () => {
       const fixture = createTempFixture({
-        sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## Section A\n\nContent A',
-        targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## 部分A\n\n翻译A\n\n## 附加部分\n\n附加内容',
-        filename: 'removed-section.md',
+        sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## Section\n\nNew content.',
+        targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## 部分\n\n旧内容。',
+        filename: 'disk-write.md',
       });
 
       try {
         const options = makeOptions({
           source: fixture.sourceRepo,
           target: fixture.targetRepo,
-          test: true,
         });
         const result = await resyncSingleFile(
           fixture.filename,
@@ -209,8 +214,40 @@ describe('resyncSingleFile', () => {
           silentLogger,
         );
 
-        const removed = result.sections.filter(s => s.action === 'REMOVED');
-        expect(removed.length).toBe(1);
+        expect(result.outputContent).toBeDefined();
+
+        // Verify file was written to disk
+        const targetPath = path.join(fixture.targetRepo, 'lectures', fixture.filename);
+        const written = fs.readFileSync(targetPath, 'utf-8');
+        expect(written).toContain('[TEST RESYNC]');
+      } finally {
+        fixture.cleanup();
+      }
+    });
+
+    it('returns empty sections array (whole-file mode)', async () => {
+      const fixture = createTempFixture({
+        sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## A\n\nContent A\n\n## B\n\nContent B',
+        targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## A翻译\n\n翻译A',
+        filename: 'sections-empty.md',
+      });
+
+      try {
+        const options = makeOptions({
+          source: fixture.sourceRepo,
+          target: fixture.targetRepo,
+        });
+        const result = await resyncSingleFile(
+          fixture.filename,
+          fixture.sourceRepo,
+          fixture.targetRepo,
+          'lectures',
+          options,
+          silentLogger,
+        );
+
+        // Whole-file mode: sections array is always empty
+        expect(result.sections).toHaveLength(0);
       } finally {
         fixture.cleanup();
       }
@@ -309,14 +346,11 @@ describe('resyncSingleFile', () => {
           mockRunner,
         );
 
-        // In test mode the file triggers CONTENT_CHANGES, but the
-        // translator runs in test mode — it will fail (no mock translator).
-        // The important thing is the overall pipeline structure is correct.
-        // For files that produce output, prUrl should be set.
-        if (result.outputContent) {
-          expect(result.prUrl).toBe('https://github.com/Org/Repo/pull/1');
-          expect(capturedArgs).toContain('Org/Repo');
-        }
+        // In test mode the file triggers CONTENT_CHANGES and whole-file resync
+        // produces output, so PR should be created.
+        expect(result.outputContent).toBeDefined();
+        expect(result.prUrl).toBe('https://github.com/Org/Repo/pull/1');
+        expect(capturedArgs).toContain('Org/Repo');
       } finally {
         fixture.cleanup();
       }
@@ -324,7 +358,7 @@ describe('resyncSingleFile', () => {
   });
 
   describe('summary counts', () => {
-    it('counts section actions correctly', async () => {
+    it('reports resynced=1 for successful whole-file resync', async () => {
       const fixture = createTempFixture({
         sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## A\n\nContent A\n\n## B\n\nContent B\n\n## C\n\nContent C',
         targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## A翻译\n\n翻译A\n\n## B翻译\n\n翻译B\n\n## 附加\n\n附加内容',
@@ -345,12 +379,41 @@ describe('resyncSingleFile', () => {
           silentLogger,
         );
 
-        // 3 source sections matched to 3 target sections by position
-        // Sections A, B matched (RESYNC or UNCHANGED); section C ↔ 附加 matched
-        // No SOURCE_ONLY or TARGET_ONLY because equal count
-        const { summary } = result;
-        expect(summary.resynced + summary.unchanged + summary.new + summary.removed + summary.errors)
-          .toBeGreaterThan(0);
+        // Whole-file mode: summary shows 1 resynced file
+        expect(result.summary.resynced).toBe(1);
+        expect(result.summary.errors).toBe(0);
+        expect(result.summary.unchanged).toBe(0);
+        expect(result.summary.new).toBe(0);
+        expect(result.summary.removed).toBe(0);
+      } finally {
+        fixture.cleanup();
+      }
+    });
+
+    it('reports resynced=0 for skipped files', async () => {
+      const fixture = createTempFixture({
+        sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## Section\n\nContent',
+        targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## 部分\n\n内容',
+        filename: 'aligned-skip.md',
+      });
+
+      try {
+        const options = makeOptions({
+          source: fixture.sourceRepo,
+          target: fixture.targetRepo,
+        });
+        const result = await resyncSingleFile(
+          fixture.filename,
+          fixture.sourceRepo,
+          fixture.targetRepo,
+          'lectures',
+          options,
+          silentLogger,
+        );
+
+        expect(result.triageResult.verdict).toBe('IDENTICAL');
+        expect(result.summary.resynced).toBe(0);
+        expect(result.summary.errors).toBe(0);
       } finally {
         fixture.cleanup();
       }

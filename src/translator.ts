@@ -18,7 +18,7 @@ import {
   APIConnectionError,
   BadRequestError 
 } from '@anthropic-ai/sdk';
-import { Glossary, SectionTranslationRequest, SectionTranslationResult, FullDocumentTranslationRequest } from './types.js';
+import { Glossary, SectionTranslationRequest, SectionTranslationResult, FullDocumentTranslationRequest, DocumentResyncRequest } from './types.js';
 import * as core from '@actions/core';
 import { getLanguageConfig } from './language-config.js';
 
@@ -523,6 +523,118 @@ Provide the complete translated document maintaining exact MyST structure.`;
       translatedSection: translatedText,
       tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
     };
+  }
+
+  /**
+   * Resync a full document (whole-file RESYNC for forward command).
+   *
+   * Claude sees the complete SOURCE document and the complete existing TARGET
+   * translation, and produces an updated translation that faithfully reflects
+   * the current source while preserving the existing translation's style,
+   * terminology choices, and localization additions.
+   *
+   * This is the recommended approach over section-by-section RESYNC because:
+   * - Preserves cross-section context (localized plot labels, font config)
+   * - 2-3× cheaper (glossary sent once, not per-section)
+   * - Fewer diff lines (more surgical changes)
+   */
+  async translateDocumentResync(request: DocumentResyncRequest): Promise<SectionTranslationResult> {
+    const { sourceContent, targetContent, sourceLanguage, targetLanguage, glossary } = request;
+
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0
+      ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join('\n')
+      : '';
+
+    const prompt = `You are a professional translator specialising in quantitative economics.
+
+You are given:
+1. The **current ${sourceLanguage} source** document (authoritative)
+2. The **current ${targetLanguage} translation** (may be outdated or have errors)
+
+Your task: produce an **updated ${targetLanguage} translation** that accurately reflects the current ${sourceLanguage} source.
+
+## Critical rules
+
+1. **Preserve the existing translation's style, terminology, and localization choices** wherever the meaning hasn't changed. Do NOT re-translate sections that are already correct — keep them exactly as-is.
+2. **Fix any errors** in the translation — missing content, incorrect formulas, wrong code, structural differences.
+3. **Add any missing content** that exists in the source but not in the translation.
+4. **Remove any content** that exists in the translation but not in the source (unless it's appropriate localization like font configuration or locale-specific links).
+5. **Preserve all MyST Markdown syntax** exactly — directives, roles, code blocks, math blocks, cross-references, frontmatter.
+6. **Preserve localization additions** that are appropriate for the target language:
+   - Font configuration in matplotlib (e.g., \`plt.rcParams['font.family']\`)
+   - Locale-appropriate reference links
+   - Full-width punctuation where conventionally used
+7. **Preserve the frontmatter (YAML between --- markers) from the TARGET translation** — do not replace it with the source frontmatter. Only update the heading-map if section headings changed.
+8. **Use the glossary below for consistent terminology** — when a term from the glossary appears, use the specified translation.
+${additionalRules}
+
+${glossarySection}
+
+## Output format
+
+Return ONLY the complete updated ${targetLanguage} document. No explanations, no commentary, no code fences wrapping the document. Start directly with the frontmatter \`---\` marker.
+
+## Current ${sourceLanguage} Source
+
+${sourceContent}
+
+## Current ${targetLanguage} Translation
+
+${targetContent}`;
+
+    // Pre-flight check: verify document is within API limits
+    const sizeError = checkDocumentSize(sourceContent.length + targetContent.length, targetLanguage);
+    if (sizeError) {
+      throw new Error(sizeError);
+    }
+
+    const maxTokens = 32768;
+
+    this.log(`Resyncing full document`);
+    this.log(`Source length: ${sourceContent.length} chars`);
+    this.log(`Target length: ${targetContent.length} chars`);
+
+    try {
+      const response = await this.callWithRetry({
+        model: this.model,
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+      }, 'translateDocumentResync');
+
+      const result = response.content[0];
+      if (result.type !== 'text') {
+        return {
+          success: false,
+          error: 'Unexpected response format from Claude',
+        };
+      }
+
+      const translatedText = result.text.trim();
+
+      // Check for incomplete translation marker
+      if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
+        return {
+          success: false,
+          error: `Document exceeded token limits and was truncated. ` +
+                 `This document may need a simpler resync approach.`,
+        };
+      }
+
+      this.log(`Resync complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
+
+      return {
+        success: true,
+        translatedSection: translatedText,
+        tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: formatApiError(error),
+      };
+    }
   }
 
   /**

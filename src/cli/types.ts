@@ -219,7 +219,7 @@ export interface ForwardTriageResult {
 }
 
 /**
- * Per-section RESYNC result
+ * Per-section RESYNC result (legacy — retained for PR body formatting)
  */
 export type ResyncSectionAction =
   | 'RESYNCED'              // Section content updated to match SOURCE
@@ -229,7 +229,7 @@ export type ResyncSectionAction =
   | 'ERROR';                // Translation failed for this section
 
 /**
- * Result of resyncing a single section
+ * Result of resyncing a single section (legacy — retained for PR body formatting)
  */
 export interface ResyncSectionResult {
   sectionHeading: string;
@@ -240,20 +240,25 @@ export interface ResyncSectionResult {
 }
 
 /**
- * Result of forward resync for a single file
+ * Result of forward resync for a single file.
+ *
+ * Uses whole-file RESYNC: the entire document is sent to Claude in one call.
+ * The `sections` field is kept for backward compatibility with PR body
+ * formatting (it's always empty for whole-file resync).
  */
 export interface ForwardFileResult {
   file: string;
   triageResult: ForwardTriageResult;
-  sections: ResyncSectionResult[];
-  outputContent?: string;        // Full reconstructed TARGET file (undefined if skipped/errored)
-  prUrl?: string;                // PR URL if --github mode
+  sections: ResyncSectionResult[];   // Empty for whole-file resync; kept for PR body compat
+  outputContent?: string;            // Full resynced TARGET file (undefined if skipped/errored)
+  prUrl?: string;                    // PR URL if --github mode
+  tokensUsed?: number;               // Total tokens used for the RESYNC call
   summary: {
-    resynced: number;
-    unchanged: number;
-    new: number;
-    removed: number;
-    errors: number;
+    resynced: number;                // 1 if whole-file resync succeeded, 0 otherwise
+    unchanged: number;               // Not used in whole-file mode
+    new: number;                     // Not used in whole-file mode
+    removed: number;                 // Not used in whole-file mode
+    errors: number;                  // 1 if resync failed, 0 otherwise
   };
 }
 

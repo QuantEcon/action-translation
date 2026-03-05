@@ -169,6 +169,20 @@ export interface FullDocumentTranslationRequest {
   content: string;
 }
 
+/**
+ * Request to resync a full document (whole-file RESYNC for forward command).
+ * Claude sees the complete source + complete existing translation and produces
+ * an updated translation that faithfully reflects the current source while
+ * preserving the existing translation's style and localization.
+ */
+export interface DocumentResyncRequest {
+  sourceLanguage: string;
+  targetLanguage: string;
+  glossary?: Glossary;
+  sourceContent: string;      // Current authoritative source document
+  targetContent: string;      // Existing translation (may be outdated)
+}
+
 // ============================================================================
 // FILE PROCESSING & GITHUB
 // ============================================================================

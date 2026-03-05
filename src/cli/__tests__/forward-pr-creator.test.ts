@@ -155,9 +155,10 @@ describe('buildForwardPRBody', () => {
     expect(body).toContain('action-translation');
   });
 
-  it('handles empty results gracefully', () => {
+  it('handles empty results as whole-file resync', () => {
     const emptyBody = buildForwardPRBody('empty.md', []);
     expect(emptyBody).toContain('## Forward Resync: empty.md');
+    expect(emptyBody).toContain('Whole-file resync applied');
     expect(emptyBody).not.toContain('Resynced');
     expect(emptyBody).not.toContain('Errors');
   });

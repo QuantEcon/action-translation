@@ -3,10 +3,15 @@
  *
  * Pipeline per file:
  * 1. Forward triage (LLM) — content changes or i18n only?
- * 2. Parse + match sections via heading-map
- * 3. RESYNC translate changed sections
- * 4. Reconstruct TARGET document
- * 5. Output: write to disk or create PR (--github)
+ * 2. Whole-file RESYNC translate (LLM) — entire document in one pass
+ * 3. Output: write to disk or create PR (--github)
+ *
+ * Uses whole-file RESYNC (decided after experiment — see
+ * experiments/forward/whole-file-vs-section-by-section/REPORT.md).
+ * Benefits over section-by-section:
+ * - Preserves cross-section context (localized plot labels, font config)
+ * - 2-3× cheaper (glossary sent once, not per section)
+ * - Fewer diff lines (more surgical updates)
  *
  * Supports:
  * - Single file: `npx resync forward -f cobweb.md`
@@ -17,28 +22,15 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import cliProgress from 'cli-progress';
-import { MystParser } from '../../parser.js';
-import {
-  extractHeadingMap,
-  updateHeadingMap,
-  injectHeadingMap,
-} from '../../heading-map.js';
 import { TranslationService } from '../../translator.js';
-import { Glossary, Section } from '../../types.js';
-import { matchSections, getMatchingSummary } from '../section-matcher.js';
+import { Glossary } from '../../types.js';
 import { triageForward } from '../forward-triage.js';
 import {
   ForwardOptions,
   ForwardFileResult,
-  ForwardTriageResult,
-  ResyncSectionResult,
-  ResyncSectionAction,
 } from '../types.js';
 import {
   runStatus,
-  discoverMarkdownFiles,
-  resolveFilePairs,
-  applyExcludes,
   StatusOptions,
 } from './status.js';
 import {
@@ -69,19 +61,18 @@ const defaultLogger: ForwardLogger = {
 // ============================================================================
 
 /**
- * Estimate cost for forward resync.
- * Triage: ~$0.01/file, RESYNC: ~$0.05/section
+ * Estimate cost for forward resync (whole-file approach).
+ * Triage: ~$0.01/file, Whole-file RESYNC: ~$0.12/file
  */
-function estimateCost(fileCount: number, avgSectionsPerFile: number = 8): {
+function estimateCost(fileCount: number): {
   triageCost: number;
   resyncCost: number;
   totalCost: number;
 } {
   const triageCost = fileCount * 0.01;
-  // Assume ~60% of files pass triage, ~40% of sections need resync
+  // Assume ~60% of files pass triage, whole-file RESYNC ~$0.12 each
   const resyncFiles = Math.ceil(fileCount * 0.6);
-  const resyncSections = resyncFiles * Math.ceil(avgSectionsPerFile * 0.4);
-  const resyncCost = resyncSections * 0.05;
+  const resyncCost = resyncFiles * 0.12;
   const totalCost = triageCost + resyncCost;
   return { triageCost, resyncCost, totalCost };
 }
@@ -91,7 +82,7 @@ function estimateCost(fileCount: number, avgSectionsPerFile: number = 8): {
 // ============================================================================
 
 /**
- * Resync a single file: triage → parse → match → RESYNC → reconstruct.
+ * Resync a single file: triage → whole-file RESYNC → output.
  *
  * Exported for direct testing.
  */
@@ -145,153 +136,43 @@ export async function resyncSingleFile(
     };
   }
 
-  logger.info(`  Content changes detected — resyncing…`);
+  logger.info(`  Content changes detected — resyncing (whole-file)…`);
 
-  // ──── Step 2: Parse both documents ───────────────────────────────────────
-  const parser = new MystParser();
-  const sourceParsed = await parser.parseDocumentComponents(sourceContent, sourceFilePath);
-  const targetParsed = await parser.parseDocumentComponents(targetContent, targetFilePath);
-
-  // ──── Step 3: Match sections by position ─────────────────────────────────
-  const headingMap = extractHeadingMap(targetContent);
-  const pairs = matchSections(sourceParsed.sections, targetParsed.sections, headingMap);
-  const matchSummary = getMatchingSummary(pairs);
-
-  logger.info(`  Sections: ${matchSummary.matched} matched, ${matchSummary.sourceOnly} new, ${matchSummary.targetOnly} removed`);
-
-  // ──── Step 4: RESYNC translate each section ──────────────────────────────
-  const translator = options.test ? null : new TranslationService(options.apiKey, options.model, false);
+  // ──── Step 2: Whole-file RESYNC ──────────────────────────────────────────
   const glossary = loadGlossary(options.language);
+  let outputContent: string | undefined;
+  let tokensUsed: number | undefined;
 
-  const sectionResults: ResyncSectionResult[] = [];
-  const translatedSections: (Section | null)[] = [];
-
-  for (const pair of pairs) {
-    if (pair.status === 'SOURCE_ONLY') {
-      // New section: translate fresh
-      const heading = pair.sourceSection!.heading;
-      logger.info(`    + NEW: ${heading}`);
-
-      if (options.test) {
-        // Test mode: mock translation — use source content as-is
-        sectionResults.push({
-          sectionHeading: heading,
-          action: 'NEW',
-          translatedContent: `[TEST TRANSLATION] ${pair.sourceSection!.content}`,
-        });
-        translatedSections.push({
-          ...pair.sourceSection!,
-          content: `[TEST TRANSLATION] ${pair.sourceSection!.content}`,
-        });
-        continue;
-      }
-
-      const result = await translator!.translateSection({
-        mode: 'new',
-        sourceLanguage: 'English',
-        targetLanguage: options.language,
-        glossary,
-        englishSection: pair.sourceSection!.content,
-      });
-
-      if (result.success && result.translatedSection) {
-        sectionResults.push({
-          sectionHeading: heading,
-          action: 'NEW',
-          translatedContent: result.translatedSection,
-          tokensUsed: result.tokensUsed,
-        });
-        // Create a synthetic section from the translated content
-        translatedSections.push({
-          ...pair.sourceSection!,
-          content: result.translatedSection,
-        });
-      } else {
-        sectionResults.push({ sectionHeading: heading, action: 'ERROR', error: result.error });
-        translatedSections.push(null);
-      }
-      continue;
-    }
-
-    if (pair.status === 'TARGET_ONLY') {
-      // Section removed from SOURCE — mark for removal
-      const heading = pair.targetSection!.heading;
-      logger.info(`    - REMOVED: ${heading}`);
-      sectionResults.push({ sectionHeading: heading, action: 'REMOVED' });
-      translatedSections.push(null); // Will be excluded from reconstruction
-      continue;
-    }
-
-    // MATCHED — RESYNC if content differs meaningfully
-    const sourceSection = pair.sourceSection!;
-    const targetSection = pair.targetSection!;
-    const heading = sourceSection.heading;
-
-    // Quick content comparison (strip whitespace for fuzzy check)
-    const sourceNorm = sourceSection.content.replace(/\s+/g, ' ').trim();
-    const targetNorm = targetSection.content.replace(/\s+/g, ' ').trim();
-
-    if (sourceNorm === targetNorm) {
-      // Content is essentially identical (same language — shouldn't happen often
-      // for cross-language pairs, but handle gracefully)
-      sectionResults.push({ sectionHeading: heading, action: 'UNCHANGED' });
-      translatedSections.push(targetSection);
-      continue;
-    }
-
-    // RESYNC this section
-    logger.info(`    ↻ RESYNC: ${heading}`);
-
-    if (options.test) {
-      // Test mode: mock resync — keep target content with marker
-      const mockContent = `[TEST RESYNC] ${targetSection.content}`;
-      sectionResults.push({
-        sectionHeading: heading,
-        action: 'RESYNCED',
-        translatedContent: mockContent,
-      });
-      translatedSections.push({ ...targetSection, content: mockContent });
-      continue;
-    }
-
-    const result = await translator!.translateSection({
-      mode: 'resync',
+  if (options.test) {
+    // Test mode: mock resync — prefix target content with marker
+    outputContent = `[TEST RESYNC]\n${targetContent}`;
+    logger.info(`  ✅ Test mode — mock resync applied`);
+  } else {
+    const translator = new TranslationService(options.apiKey, options.model, false);
+    const result = await translator.translateDocumentResync({
       sourceLanguage: 'English',
       targetLanguage: options.language,
       glossary,
-      newEnglish: sourceSection.content,
-      currentTranslation: targetSection.content,
+      sourceContent,
+      targetContent,
     });
 
     if (result.success && result.translatedSection) {
-      sectionResults.push({
-        sectionHeading: heading,
-        action: 'RESYNCED',
-        translatedContent: result.translatedSection,
-        tokensUsed: result.tokensUsed,
-      });
-      translatedSections.push({
-        ...targetSection,
-        content: result.translatedSection,
-      });
+      outputContent = result.translatedSection;
+      tokensUsed = result.tokensUsed;
+      logger.info(`  ✅ Resync complete (${tokensUsed?.toLocaleString()} tokens)`);
     } else {
-      logger.warn(`Failed to resync section "${heading}": ${result.error}`);
-      sectionResults.push({ sectionHeading: heading, action: 'ERROR', error: result.error });
-      translatedSections.push(targetSection); // Keep existing on error
+      logger.error(`  Failed to resync ${file}: ${result.error}`);
+      return {
+        file,
+        triageResult,
+        sections: [],
+        summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
+      };
     }
   }
 
-  // ──── Step 5: Reconstruct TARGET document ────────────────────────────────
-  const outputContent = reconstructDocument(
-    sourceParsed,
-    targetParsed,
-    pairs,
-    translatedSections,
-    headingMap,
-    targetContent,
-  );
-
-  // ──── Step 6: Output ─────────────────────────────────────────────────────
+  // ──── Step 3: Output ─────────────────────────────────────────────────────
   let prUrl: string | undefined;
 
   if (outputContent) {
@@ -301,7 +182,7 @@ export async function resyncSingleFile(
       const prResult = createForwardPR(
         file,
         outputContent,
-        sectionResults,
+        [],  // No per-section results in whole-file mode
         options.github,
         runner,
       );
@@ -318,91 +199,15 @@ export async function resyncSingleFile(
     }
   }
 
-  // Build summary counts
-  const summary = {
-    resynced: sectionResults.filter(r => r.action === 'RESYNCED').length,
-    unchanged: sectionResults.filter(r => r.action === 'UNCHANGED').length,
-    new: sectionResults.filter(r => r.action === 'NEW').length,
-    removed: sectionResults.filter(r => r.action === 'REMOVED').length,
-    errors: sectionResults.filter(r => r.action === 'ERROR').length,
+  return {
+    file,
+    triageResult,
+    sections: [],  // Whole-file mode — no per-section tracking
+    outputContent,
+    prUrl,
+    tokensUsed,
+    summary: { resynced: 1, unchanged: 0, new: 0, removed: 0, errors: 0 },
   };
-
-  return { file, triageResult, sections: sectionResults, outputContent, prUrl, summary };
-}
-
-// ============================================================================
-// DOCUMENT RECONSTRUCTION
-// ============================================================================
-
-/**
- * Reconstruct the TARGET document from resynced sections.
- *
- * Layout: CONFIG (frontmatter) + PREAMBLE (title + intro) + SECTIONS
- * Heading-map is updated to reflect new section headings.
- */
-function reconstructDocument(
-  sourceParsed: { config: string; title: string; titleText: string; intro: string; sections: Section[] },
-  targetParsed: { config: string; title: string; titleText: string; intro: string; sections: Section[] },
-  pairs: { status: string; sourceSection: Section | null; targetSection: Section | null }[],
-  translatedSections: (Section | null)[],
-  existingHeadingMap: Map<string, string>,
-  originalTargetContent: string,
-): string {
-  const parts: string[] = [];
-
-  // CONFIG: keep target's frontmatter (will be updated with heading-map later)
-  // We'll inject heading-map at the end
-
-  // PREAMBLE: keep target's title and intro
-  parts.push(targetParsed.title);
-  if (targetParsed.intro) {
-    parts.push('');
-    parts.push(targetParsed.intro);
-  }
-
-  // SECTIONS: use translated sections, skip REMOVED
-  const sectionParts: string[] = [];
-  for (let i = 0; i < pairs.length; i++) {
-    const pair = pairs[i];
-    const translated = translatedSections[i];
-
-    if (pair.status === 'TARGET_ONLY') {
-      // Removed from source — skip
-      continue;
-    }
-
-    if (translated) {
-      sectionParts.push(translated.content);
-    } else if (pair.targetSection) {
-      // Fallback to existing target section
-      sectionParts.push(pair.targetSection.content);
-    }
-  }
-
-  if (sectionParts.length > 0) {
-    parts.push('');
-    parts.push(sectionParts.join('\n\n'));
-  }
-
-  // Combine body
-  let body = parts.join('\n');
-
-  // Update heading-map
-  const activeSections = pairs
-    .filter(p => p.status !== 'TARGET_ONLY')
-    .map((p, i) => translatedSections[i] ?? p.targetSection)
-    .filter((s): s is Section => s !== null);
-
-  const newHeadingMap = updateHeadingMap(
-    existingHeadingMap,
-    sourceParsed.sections,
-    activeSections,
-    sourceParsed.titleText,
-  );
-
-  // Inject heading-map into frontmatter
-  const fullContent = `${targetParsed.config}\n${body}`;
-  return injectHeadingMap(fullContent, newHeadingMap);
 }
 
 // ============================================================================
@@ -452,7 +257,7 @@ export async function runForwardBulk(
     const est = estimateCost(candidates.length);
     logger.info(`Estimated cost:`);
     logger.info(`  Triage:  ~$${est.triageCost.toFixed(2)} (${candidates.length} files × $0.01)`);
-    logger.info(`  RESYNC:  ~$${est.resyncCost.toFixed(2)} (est. sections)`);
+    logger.info(`  RESYNC:  ~$${est.resyncCost.toFixed(2)} (est. ~${Math.ceil(candidates.length * 0.6)} files × $0.12)`);
     logger.info(`  Total:   ~$${est.totalCost.toFixed(2)}`);
     return [];
   }
@@ -509,21 +314,18 @@ function printBulkSummary(results: ForwardFileResult[], logger: ForwardLogger): 
   const processed = results.filter(r => r.triageResult.verdict === 'CONTENT_CHANGES');
 
   let totalResynced = 0;
-  let totalNew = 0;
-  let totalRemoved = 0;
-  let totalUnchanged = 0;
   let totalErrors = 0;
+  let totalTokens = 0;
 
   for (const r of processed) {
     totalResynced += r.summary.resynced;
-    totalNew += r.summary.new;
-    totalRemoved += r.summary.removed;
-    totalUnchanged += r.summary.unchanged;
     totalErrors += r.summary.errors;
+    if (r.tokensUsed) totalTokens += r.tokensUsed;
   }
 
   logger.info('─── Forward Resync Summary ───────────────────────────');
   logger.info(`  Files processed: ${processed.length}`);
+  logger.info(`  Files resynced:  ${totalResynced}`);
   logger.info(`  Files skipped:   ${skipped.length}`);
 
   if (skipped.length > 0) {
@@ -534,13 +336,11 @@ function printBulkSummary(results: ForwardFileResult[], logger: ForwardLogger): 
     }
   }
 
-  logger.info('');
-  logger.info(`  Sections resynced:  ${totalResynced}`);
-  logger.info(`  Sections new:       ${totalNew}`);
-  logger.info(`  Sections removed:   ${totalRemoved}`);
-  logger.info(`  Sections unchanged: ${totalUnchanged}`);
   if (totalErrors > 0) {
-    logger.info(`  Sections errored:   ${totalErrors}`);
+    logger.info(`  Files errored:   ${totalErrors}`);
+  }
+  if (totalTokens > 0) {
+    logger.info(`  Total tokens:    ${totalTokens.toLocaleString()}`);
   }
   logger.info('─────────────────────────────────────────────────────');
 }

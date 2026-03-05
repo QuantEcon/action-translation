@@ -8,15 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added (Phase 3b — Forward Resync Command)
-- **Forward command** (`src/cli/commands/forward.ts`, ~570 lines): Resync TARGET translations to match current SOURCE
+- **Forward command** (`src/cli/commands/forward.ts`, ~370 lines): Resync TARGET translations to match current SOURCE
   - `resync forward -f cobweb.md` — single file resync
   - `resync forward` — bulk resync of all OUTDATED files (via status)
   - `--github <owner/repo>` flag: creates one PR per file in TARGET repo
   - `--estimate` flag: pre-run cost estimation without LLM calls
   - `--test` flag: deterministic mock responses for CI/testing
   - `--exclude <pattern>` flag: skip files matching pattern
-  - Pipeline: triage → parse → section match → RESYNC/NEW translate → reconstruct → output
-  - Progress bar for bulk mode, summary table with section counts
+  - Pipeline: triage → whole-file RESYNC → output (simplified from section-by-section after experiment)
+  - Progress bar for bulk mode, summary table with file counts
 - **Forward triage** (`src/cli/forward-triage.ts`, ~245 lines): LLM content-vs-i18n filter (~$0.01/file)
   - `triageForward()`: classifies file pairs as `CONTENT_CHANGES`, `I18N_ONLY`, or `IDENTICAL`
   - Byte-identical shortcut skips LLM entirely
@@ -26,12 +26,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - PR title: `🔄 [resync] cobweb.md`
   - Labels: `action-translation-sync`, `resync`
   - Injectable `GhRunner` pattern for testing
-- **RESYNC translation mode** (`src/translator.ts`): New `translateSectionResync()` method
+- **Whole-file RESYNC translation** (`src/translator.ts`): New `translateDocumentResync()` method
+  - Sends entire SOURCE + TARGET + glossary in one call (~$0.12/file)
+  - Preserves cross-section context (localized plot labels, font config)
+  - 2-3× cheaper than section-by-section (glossary sent once, not per section)
+  - Prompt preserves existing style, terminology, localization wherever meaning hasn't changed
+  - `DocumentResyncRequest` type in `src/types.ts`
+- **Section RESYNC mode** (`src/translator.ts`): `translateSectionResync()` (retained for SYNC mode)
   - Preserves existing translation style while updating content to match SOURCE
   - Uses `[CURRENT SOURCE]` + `[EXISTING TRANSLATION]` prompt markers
   - `SectionTranslationRequest.mode` extended: `'update' | 'new' | 'resync'`
-- **57 new tests** (640 → 697 total, 29 → 32 suites)
-  - `forward.test.ts` (9 tests) — triage, matching, errors, github mode, summary
+- **56 new tests** (640 → 696 total, 29 → 32 suites)
+  - `forward.test.ts` (11 tests) — triage, whole-file resync, errors, github mode, summary
   - `forward-triage.test.ts` (21 tests) — prompt, parsing, test mode, byte-identical
   - `forward-pr-creator.test.ts` (23 tests) — naming, args, body, creation
   - `translator.test.ts` (+4 tests) — RESYNC mode

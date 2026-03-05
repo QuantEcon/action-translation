@@ -72,6 +72,9 @@ export function realGhRunner(args: string[], stdin: string): ReturnType<GhRunner
 /**
  * Build the PR body summarizing the resync changes.
  *
+ * Supports both whole-file resync (sectionResults empty) and legacy
+ * section-by-section mode (sectionResults populated).
+ *
  * Exported for testing.
  */
 export function buildForwardPRBody(
@@ -85,46 +88,54 @@ export function buildForwardPRBody(
   lines.push('This PR resyncs the TARGET translation to match the current SOURCE content.');
   lines.push('');
 
-  // Section summary table
-  const resynced = sectionResults.filter(r => r.action === 'RESYNCED');
-  const newSections = sectionResults.filter(r => r.action === 'NEW');
-  const removed = sectionResults.filter(r => r.action === 'REMOVED');
-  const unchanged = sectionResults.filter(r => r.action === 'UNCHANGED');
-  const errors = sectionResults.filter(r => r.action === 'ERROR');
+  if (sectionResults.length === 0) {
+    // Whole-file resync — no per-section breakdown
+    lines.push('### Changes');
+    lines.push('');
+    lines.push('Whole-file resync applied. The entire document was resynced in a single pass.');
+    lines.push('');
+  } else {
+    // Legacy section-by-section breakdown
+    const resynced = sectionResults.filter(r => r.action === 'RESYNCED');
+    const newSections = sectionResults.filter(r => r.action === 'NEW');
+    const removed = sectionResults.filter(r => r.action === 'REMOVED');
+    const unchanged = sectionResults.filter(r => r.action === 'UNCHANGED');
+    const errors = sectionResults.filter(r => r.action === 'ERROR');
 
-  lines.push('### Changes');
-  lines.push('');
-  if (resynced.length > 0) {
-    lines.push(`**↻ Resynced** (${resynced.length}):`);
-    for (const s of resynced) {
-      lines.push(`- ${s.sectionHeading}`);
+    lines.push('### Changes');
+    lines.push('');
+    if (resynced.length > 0) {
+      lines.push(`**↻ Resynced** (${resynced.length}):`);
+      for (const s of resynced) {
+        lines.push(`- ${s.sectionHeading}`);
+      }
+      lines.push('');
     }
-    lines.push('');
-  }
-  if (newSections.length > 0) {
-    lines.push(`**+ New** (${newSections.length}):`);
-    for (const s of newSections) {
-      lines.push(`- ${s.sectionHeading}`);
+    if (newSections.length > 0) {
+      lines.push(`**+ New** (${newSections.length}):`);
+      for (const s of newSections) {
+        lines.push(`- ${s.sectionHeading}`);
+      }
+      lines.push('');
     }
-    lines.push('');
-  }
-  if (removed.length > 0) {
-    lines.push(`**- Removed** (${removed.length}):`);
-    for (const s of removed) {
-      lines.push(`- ${s.sectionHeading}`);
+    if (removed.length > 0) {
+      lines.push(`**- Removed** (${removed.length}):`);
+      for (const s of removed) {
+        lines.push(`- ${s.sectionHeading}`);
+      }
+      lines.push('');
     }
-    lines.push('');
-  }
-  if (unchanged.length > 0) {
-    lines.push(`**= Unchanged**: ${unchanged.length} section(s)`);
-    lines.push('');
-  }
-  if (errors.length > 0) {
-    lines.push(`**⚠️ Errors** (${errors.length}):`);
-    for (const s of errors) {
-      lines.push(`- ${s.sectionHeading}: ${s.error}`);
+    if (unchanged.length > 0) {
+      lines.push(`**= Unchanged**: ${unchanged.length} section(s)`);
+      lines.push('');
     }
-    lines.push('');
+    if (errors.length > 0) {
+      lines.push(`**⚠️ Errors** (${errors.length}):`);
+      for (const s of errors) {
+        lines.push(`- ${s.sectionHeading}: ${s.error}`);
+      }
+      lines.push('');
+    }
   }
 
   lines.push('---');

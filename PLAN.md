@@ -494,7 +494,7 @@ Start with basic chalk styling, add richer rendering as needed:
 
 **Goal**: Drift recovery via forward resync with RESYNC translation mode + optional GitHub PR creation
 
-**Status**: Triage validated on real data. Whole-file RESYNC chosen over section-by-section (§3b.5). Refactor pending.
+**Status**: ✅ Complete. Whole-file RESYNC implemented (§3b.5). Triage validated on real data.
 
 ### 3b.0 Triage Experiment Results (5 March 2026)
 
@@ -594,7 +594,7 @@ npx resync forward --github          # resync all, create one PR per file in TAR
 - [x] Integrate with `status` to auto-detect OUTDATED files (when no `-f` given)
 - [x] Cost estimation via `--estimate`
 - [x] `--github` mode: one PR per file, branch `resync/{filename}`, labels `action-translation-sync`, `resync`
-- [ ] **Refactor to whole-file RESYNC** — add `translateDocumentResync()`, simplify forward pipeline
+- [x] **Refactor to whole-file RESYNC** — added `translateDocumentResync()`, simplified forward pipeline (572→371 lines)
 
 ### 3b.2 Forward Triage (`src/cli/forward-triage.ts`)
 
@@ -636,8 +636,8 @@ RESYNC preserves translation nuances because the LLM sees the existing translati
 - [x] Preserve frontmatter
 - [x] Unit tests for RESYNC mode (4 tests)
 - [x] **Evaluate whole-file RESYNC** — experiment completed, whole-file wins (see §3b.5)
-- [ ] Add `translateDocumentResync()` method to `translator.ts`
-- [ ] Refactor `forward.ts` to use whole-file RESYNC (eliminate parse/match/reconstruct)
+- [x] Add `translateDocumentResync()` method to `translator.ts`
+- [x] Refactor `forward.ts` to use whole-file RESYNC (eliminate parse/match/reconstruct)
 
 ### 3b.4 Forward Output
 
@@ -656,7 +656,7 @@ RESYNC preserves translation nuances because the LLM sees the existing translati
 
 **Phase 3b Deliverable**: Working `npx resync forward` with whole-file RESYNC mode, local + `--github` output
 
-**Remaining**: Refactor forward pipeline from section-by-section to whole-file RESYNC (§3b.5 ✅ decided)
+**Remaining**: None — Phase 3b complete.
 
 ---
 
