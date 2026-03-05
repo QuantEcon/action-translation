@@ -1,7 +1,7 @@
 # System Architecture: action-translation
 
-**Last Updated**: 18 December 2025  
-**Version**: v0.8 (ONBOARD Design)
+**Last Updated**: 5 March 2026  
+**Version**: v0.8 (Phase 3a Complete)
 
 This document provides a complete architectural overview of the translation sync system, including all operational modes and how they work together.
 
@@ -636,13 +636,21 @@ npm run resync -- --all ...
 │  action-translation/src/cli/                                                │
 │  ├── index.ts              CLI entry point (commander.js)                   │
 │  ├── types.ts              CLI-specific types (~195 lines)                  │
+│  ├── schema.ts             Zod schemas for backward reports (~310 lines)    │
 │  ├── document-comparator.ts  Stage 1: document triage (~270 lines)          │
 │  ├── backward-evaluator.ts   Stage 2: section evaluation (~300 lines)       │
 │  ├── section-matcher.ts    Cross-language section matching (~150 lines)      │
 │  ├── git-metadata.ts       File-level git metadata (~235 lines)             │
 │  ├── report-generator.ts   Markdown/JSON reports (~235 lines)               │
+│  ├── review-formatter.ts   Chalk-styled card renderer (~230 lines)          │
+│  ├── review-session.ts     Pure state machine for A/S/R (~150 lines)        │
+│  ├── issue-generator.ts    GitHub Issue title/body/labels (~200 lines)      │
+│  ├── issue-creator.ts      gh issue create runner (~180 lines)              │
+│  ├── components/                                                             │
+│  │   └── ReviewSession.tsx Ink interactive review UI (~110 lines)            │
 │  └── commands/                                                               │
 │      ├── backward.ts       Backward: single + bulk (~530 lines)             │
+│      ├── review.ts         Review: interactive suggestion review (~210 lines)│
 │      └── status.ts         Status: fast sync diagnostic (~280 lines)        │
 │                                                                              │
 │  tool-alignment/src/                                                        │

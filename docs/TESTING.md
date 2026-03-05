@@ -1,6 +1,6 @@
 # Testing Guide
 
-**Current Test Status**: ✅ 639 tests passing | 0 failing | ~2s execution time
+**Current Test Status**: ✅ 640 tests passing | 0 failing | ~2s execution time
 
 ---
 
@@ -68,6 +68,7 @@ node dist/cli/index.js review reports/lecture-python-intro/backward-2026-03-04-s
 | `A` | Accept — queues this suggestion for Issue creation |
 | `S` | Skip — move on, no action |
 | `R` | Reject — explicitly mark as not worth acting on |
+| `D` | Details — toggle reasoning section visibility |
 | `Ctrl+C` | Abort session |
 
 **What you should see:**
@@ -87,7 +88,7 @@ node dist/cli/index.js review reports/lecture-python-intro/backward-2026-03-04-s
   --min-confidence 0.8
 ```
 
-Accept one or two suggestions (`A`), then finish the session. Each accepted suggestion should produce a GitHub Issue URL printed to the terminal. Verify the Issues appear at `https://github.com/QuantEcon/lecture-python-intro/issues` with the correct labels (`backward-suggestion`, category, confidence tier).
+Accept one or two suggestions (`A`), then finish the session. Each accepted suggestion should produce a GitHub Issue URL printed to the terminal. Verify the Issues appear at `https://github.com/QuantEcon/lecture-python-intro/issues` with the correct labels (`translate`, `translate:bug-fix`, `translate:zh-cn`).
 
 ### 4. Running the backward → review pipeline end-to-end
 
@@ -138,9 +139,27 @@ src/__tests__/
 ├── reviewer.test.ts            # Review mode functionality
 ├── translator.test.ts          # Translation service (prompts, validation)
 └── inputs.test.ts              # Action input validation
+
+src/cli/__tests__/
+├── document-comparator.test.ts # Stage 1 triage
+├── backward-evaluator.test.ts  # Stage 2 evaluation
+├── section-matcher.test.ts     # Cross-language section matching
+├── git-metadata.test.ts        # Git metadata extraction
+├── report-generator.test.ts    # Markdown/JSON report generation
+├── schema.test.ts              # Zod schema validation
+├── backward.test.ts            # Backward command integration
+├── bulk-backward.test.ts       # Bulk backward processing
+├── status.test.ts              # Status command
+├── review.test.ts              # Review command loading + pipeline
+├── review-formatter.test.ts    # Chalk card rendering
+├── review-session.test.ts      # A/S/R state machine
+├── issue-generator.test.ts     # Issue title/body/labels
+└── issue-creator.test.ts       # gh issue create
 ```
 
-**Test Breakdown**:
+**Test Breakdown** (640 total, 29 suites):
+
+Core Action tests (267 tests, 12 suites):
 - Parser: 15 tests
 - Parser Components: 5 tests
 - Diff Detector: 24 tests (including v0.4.6 section comparison tests)
@@ -153,6 +172,27 @@ src/__tests__/
 - Reviewer: 28 tests (v0.7.0 review mode)
 - Translator: 28 tests (prompt structure, token estimation)
 - Inputs: 55 tests (mode validation, PR events, input parsing)
+
+CLI tests — Backward / Status (248 tests, 12 suites):
+- Sync Orchestrator: 26 tests
+- PR Creator: 12 tests
+- Translator Retry: 12 tests
+- Document Comparator: 19 tests
+- Backward Evaluator: 28 tests
+- Section Matcher: 13 tests
+- Git Metadata: 10 tests
+- Report Generator: 19 tests
+- Schema: 41 tests
+- Backward: 30 tests
+- Bulk Backward: 19 tests
+- Status: 21 tests
+
+CLI tests — Review (125 tests, 5 suites):
+- Review: 20 tests (command loading, filtering, pipeline)
+- Review Formatter: 33 tests (card rendering, categories, wrapping)
+- Review Session: 22 tests (state machine, decisions, summary)
+- Issue Generator: 33 tests (title, body, labels, language extraction)
+- Issue Creator: 17 tests (gh arg building, batch creation)
 
 ---
 

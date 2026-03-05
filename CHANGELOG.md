@@ -34,6 +34,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`src/index.ts`**: `__dirname` → `import.meta.url` + `fileURLToPath` (ESM compat)
 - **`src/cli/index.ts`**: `require('../../package.json')` → `createRequire(import.meta.url)`
 
+### Added (Phase 3a — Review Command)
+- **Review command** (`src/cli/commands/review.ts`, ~210 lines): Interactive human review of backward suggestions
+  - `resync review <report-dir>` — walks through each suggestion from a backward report
+  - `--dry-run` flag: preview all suggestions without creating Issues
+  - `--repo <owner/repo>` flag: target SOURCE repo for GitHub Issue creation
+  - `--min-confidence <0-1>` flag: filter suggestions by confidence threshold (default: 0.5)
+  - Loads and validates report data via `loadResyncDirectory()` + `filterActionableSuggestions()`
+  - Sorts suggestions by confidence (highest first)
+- **Chalk-styled card formatter** (`src/cli/review-formatter.ts`, ~230 lines)
+  - Category badges (colour-coded: red=BUG_FIX, blue=CLARIFICATION, green=EXAMPLE, yellow=CODE_IMPROVEMENT)
+  - Confidence scores with tier labels (high/medium/low)
+  - Before/After change display with yellow/green labels
+  - Multiline content rendered as indented blocks below labels
+  - Collapsible reasoning section (hidden by default, `[D]` to expand)
+  - Text wrapping at 72 characters
+- **Ink interactive review session** (`src/cli/components/ReviewSession.tsx`, ~110 lines)
+  - Card-by-card review with `[A]ccept` / `[S]kip` / `[R]eject` / `[D]etails` keypresses
+  - Running tally in status bar: `✓ accepted  ~ skipped  ✗ rejected`
+  - Unified session for both `--dry-run` and interactive modes
+  - Dynamic import of ink/react to keep ESM out of Jest CJS environment
+- **Pure state machine** (`src/cli/review-session.ts`, ~150 lines)
+  - `ReviewSession` class tracks accept/skip/reject decisions
+  - `toSummary()` returns final counts and accepted suggestion list
+  - Tested independently of ink rendering
+- **GitHub Issue generator** (`src/cli/issue-generator.ts`, ~200 lines)
+  - `getIssueTitle()`: `[filename § section] summary`
+  - `getIssueBody()`: Category, confidence, section location, reasoning, specific changes, SOURCE/TARGET excerpts, generation footer
+  - `getIssueLabels()`: `translate` namespace — `translate`, `translate:{category}`, `translate:{language}`
+  - `extractLanguage()`: extracts language code from target repo name (e.g., `lecture-intro.zh-cn` → `zh-cn`)
+  - Adaptive code fences (`pushFencedBlock()`): counts longest backtick run in content, uses fence of `maxRun+1`
+- **GitHub Issue creator** (`src/cli/issue-creator.ts`, ~180 lines)
+  - `createIssue()`: shells out to `gh issue create` with injectable `GhRunner` for testing
+  - `createAcceptedIssues()`: batch creation for all accepted suggestions
+  - Graceful fallback when `--repo` not provided (prints to console only)
+- **Backward report path scoping**: Reports now saved under `reports/{source-repo}/backward-DATE/`
+- **125 new tests** (515 → 640 total, 24 → 29 suites)
+  - `review.test.ts` (20 tests) — command loading, filtering, pipeline
+  - `review-formatter.test.ts` (33 tests) — card rendering, categories, wrapping
+  - `review-session.test.ts` (22 tests) — state machine, decisions, summary
+  - `issue-generator.test.ts` (33 tests) — title, body, labels, language extraction
+  - `issue-creator.test.ts` (17 tests) — gh arg building, batch creation, error handling
+
 ### Added (Phase 2)
 - **Resync CLI — Status Command** (`src/cli/commands/status.ts`): Fast, free diagnostic — no LLM calls
   - Per-file sync status: `ALIGNED`, `OUTDATED`, `SOURCE_AHEAD`, `TARGET_AHEAD`, `MISSING_HEADINGMAP`, `SOURCE_ONLY`, `TARGET_ONLY`
