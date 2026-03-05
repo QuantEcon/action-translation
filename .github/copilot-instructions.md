@@ -8,7 +8,7 @@
 - **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
-**Current Version**: v0.8.0 | **Tests**: 515 (24 suites) | **Glossary**: 357 terms (zh-cn, fa)
+**Current Version**: v0.8.0 | **Tests**: 535 (25 suites) | **Glossary**: 357 terms (zh-cn, fa)
 
 ---
 
@@ -39,6 +39,7 @@ src/
 │   ├── report-generator.ts    # Markdown/JSON report formatting (~235 lines)
 │   └── commands/
 │       ├── backward.ts        # Backward command orchestrator — single + bulk (~530 lines)
+│       ├── review.ts          # Review command — load/flatten pipeline + scaffold (~150 lines)
 │       └── status.ts          # Status command — fast sync diagnostic (~280 lines)
 ```
 

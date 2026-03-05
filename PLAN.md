@@ -422,14 +422,14 @@ npx resync review <report-dir>   # Phase 3 (new) — interactive walk-through
 - Start with basic `chalk`-styled output, add rich rendering incrementally
 - Issues target the SOURCE repo (e.g., `lecture-python-intro`), since suggestions are about improving the English source
 
-#### Step 1: Command scaffold + report loading
+#### Step 1: Command scaffold + report loading ✅
 
-- [ ] Register `resync review <report-dir>` in commander.js (`src/cli/commands/review.ts`)
-- [ ] Parse CLI arguments: `<report-dir>`, `--repo <owner/repo>` (SOURCE repo for Issues), `--dry-run`
-- [ ] Load report folder using `loadResyncDirectory()` from `schema.ts`
-- [ ] Filter to actionable suggestions using `filterActionableSuggestions()` from `schema.ts`
-- [ ] Flatten to a sorted list of suggestions across all files (highest confidence first)
-- [ ] Unit tests for loading + filtering pipeline
+- [x] Register `resync review <report-dir>` in commander.js (`src/cli/commands/review.ts`)
+- [x] Parse CLI arguments: `<report-dir>`, `--repo <owner/repo>` (SOURCE repo for Issues), `--dry-run`
+- [x] Load report folder using `loadResyncDirectory()` from `schema.ts`
+- [x] Filter to actionable suggestions using `filterActionableSuggestions()` from `schema.ts`
+- [x] Flatten to a sorted list of suggestions across all files (highest confidence first)
+- [x] Unit tests for loading + filtering pipeline — 20 tests (PR #18)
 
 #### Step 2: `--dry-run` formatter (non-interactive)
 
