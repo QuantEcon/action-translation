@@ -39,8 +39,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **56 new tests** (640 → 696 total, 29 → 32 suites)
   - `forward.test.ts` (11 tests) — triage, whole-file resync, errors, github mode, summary
   - `forward-triage.test.ts` (21 tests) — prompt, parsing, test mode, byte-identical
-  - `forward-pr-creator.test.ts` (23 tests) — naming, args, body, creation
+  - `forward-pr-creator.test.ts` (32 tests) — naming, args, body, creation, git operations
   - `translator.test.ts` (+4 tests) — RESYNC mode
+- **Git operations for --github mode** (`src/cli/forward-pr-creator.ts`): `gitPrepareAndPush()` function
+  - Creates branch, writes resynced file, stages, commits, pushes with --force
+  - Injectable `GitRunner` pattern for testing (parallels `GhRunner`)
+  - Full error handling: switches back to original branch on any failure
+  - 9 tests for git operations (success, branch cleanup, push failure, etc.)
+
+### Changed
+- **Strengthened i18n code preservation in all translation prompts** (`src/translator.ts`)
+  - All three translation modes (UPDATE, section RESYNC, whole-file RESYNC) now include explicit
+    rules to NEVER remove i18n/localization code from code cells
+  - Specific examples: `font_manager`, `FontProperties`, `SimHei`, `rcParams`, `# i18n` markers
+  - Resolves issue where whole-file RESYNC removed Chinese font configuration from `pv.md` despite
+    existing preservation instructions (rules 4 and 6 were in tension; now unambiguous)
 
 ### Added
 - **Backward report JSON schema** (`src/cli/schema.ts`): Formal Zod schemas for all backward report formats

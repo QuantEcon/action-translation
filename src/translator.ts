@@ -216,7 +216,7 @@ export class TranslationService {
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
     const languageConfig = getLanguageConfig(targetLanguage);
     const additionalRules = languageConfig.additionalRules.length > 0
-      ? languageConfig.additionalRules.map((rule, i) => `${7 + i}. ${rule}`).join('\n')
+      ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join('\n')
       : '';
 
     const prompt = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
@@ -229,14 +229,15 @@ CRITICAL RULES:
 3. Maintain consistency with the existing ${targetLanguage} style and terminology
 4. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
 5. DO NOT translate code, math, URLs, or technical identifiers
-6. Use the glossary for consistent terminology
-7. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
+6. **NEVER remove i18n/localization code from code cells.** The translation may contain extra code inside code cells that does NOT exist in the source — this is intentional localization (e.g., font configuration like \`from matplotlib import font_manager\`, \`fontP.set_family('SimHei')\`, \`plt.rcParams\` settings, or lines marked \`# i18n\`). Always preserve these.
+7. Use the glossary for consistent terminology
+8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
    - Headings MUST have a space after # (e.g., "## Title" not "##Title")
    - Code blocks must have matching \`\`\` delimiters
    - Math blocks must have matching $$ delimiters
    - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
 ${additionalRules}
-${additionalRules ? '' : '8. '}Return ONLY the updated ${targetLanguage} section, no explanations
+${additionalRules ? '' : '9. '}Return ONLY the updated ${targetLanguage} section, no explanations
 
 ${glossarySection}
 
@@ -303,7 +304,7 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
     const languageConfig = getLanguageConfig(targetLanguage);
     const additionalRules = languageConfig.additionalRules.length > 0
-      ? languageConfig.additionalRules.map((rule, i) => `${7 + i}. ${rule}`).join('\n')
+      ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join('\n')
       : '';
 
     const prompt = `You are resyncing a ${targetLanguage} translation to match the current ${sourceLanguage} source.
@@ -315,14 +316,15 @@ CRITICAL RULES:
 2. Only modify parts of the translation where the ${sourceLanguage} source has different content
 3. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
 4. DO NOT translate code, math, URLs, or technical identifiers
-5. Use the glossary for consistent terminology
-6. MARKDOWN SYNTAX: Ensure proper markdown syntax:
+5. **NEVER remove i18n/localization code from code cells.** The translation may contain extra code inside code cells that does NOT exist in the source — this is intentional localization (e.g., font configuration like \`from matplotlib import font_manager\`, \`fontP.set_family('SimHei')\`, \`plt.rcParams\` settings, or lines marked \`# i18n\`). Always preserve these.
+6. Use the glossary for consistent terminology
+7. MARKDOWN SYNTAX: Ensure proper markdown syntax:
    - Headings MUST have a space after # (e.g., "## Title" not "##Title")
    - Code blocks must have matching \`\`\` delimiters
    - Math blocks must have matching $$ delimiters
    - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
 ${additionalRules}
-${additionalRules ? '' : '7. '}Return ONLY the updated ${targetLanguage} section, no explanations
+${additionalRules ? '' : '8. '}Return ONLY the updated ${targetLanguage} section, no explanations
 
 ${glossarySection}
 
@@ -560,12 +562,16 @@ Your task: produce an **updated ${targetLanguage} translation** that accurately 
 1. **Preserve the existing translation's style, terminology, and localization choices** wherever the meaning hasn't changed. Do NOT re-translate sections that are already correct — keep them exactly as-is.
 2. **Fix any errors** in the translation — missing content, incorrect formulas, wrong code, structural differences.
 3. **Add any missing content** that exists in the source but not in the translation.
-4. **Remove any content** that exists in the translation but not in the source (unless it's appropriate localization like font configuration or locale-specific links).
+4. **Remove any content** that exists in the translation but not in the source — EXCEPT for i18n/localization additions (see rule 6).
 5. **Preserve all MyST Markdown syntax** exactly — directives, roles, code blocks, math blocks, cross-references, frontmatter.
-6. **Preserve localization additions** that are appropriate for the target language:
-   - Font configuration in matplotlib (e.g., \`plt.rcParams['font.family']\`)
+6. **NEVER remove i18n/localization code from code cells.** Translated documents often contain extra code inside \`\`\`{code-cell}\`\`\` blocks that does NOT exist in the source — this is intentional localization and MUST be preserved. Common patterns include:
+   - Font configuration: \`from matplotlib import font_manager\`, \`fontP = font_manager.FontProperties()\`, \`fontP.set_family('SimHei')\`, \`fontP.set_size(14)\`
+   - rcParams: \`plt.rcParams['font.sans-serif'] = ['SimHei']\`, \`plt.rcParams['axes.unicode_minus'] = False\`
+   - Any imports, variable assignments, or configuration lines that appear in the translation's code cells but not in the source's code cells
    - Locale-appropriate reference links
    - Full-width punctuation where conventionally used
+   - Lines marked with \`# i18n\` comments
+   When in doubt about whether extra code in a code cell is localization, **keep it**.
 7. **Preserve the frontmatter (YAML between --- markers) from the TARGET translation** — do not replace it with the source frontmatter. Only update the heading-map if section headings changed.
 8. **Use the glossary below for consistent terminology** — when a term from the glossary appears, use the specified translation.
 ${additionalRules}
