@@ -268,7 +268,6 @@ export interface ForwardOptions {
   language: string;          // Target language code (default: "zh-cn")
   model: string;             // Claude model (default: "claude-sonnet-4-6")
   test: boolean;             // Use deterministic mock responses (no LLM calls)
-  dryRun: boolean;           // Preview only, no writes or PRs
   github?: string;           // TARGET repo in owner/repo format for PR creation
   estimate: boolean;         // Show cost estimate without running
   apiKey: string;            // Anthropic API key

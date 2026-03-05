@@ -11,7 +11,6 @@
  * Supports:
  * - Single file: `npx resync forward -f cobweb.md`
  * - Bulk: `npx resync forward` (all OUTDATED files via status)
- * - Dry run: `--dry-run` (preview without writing)
  * - GitHub: `--github owner/repo` (one PR per file in TARGET repo)
  */
 
@@ -173,12 +172,6 @@ export async function resyncSingleFile(
       const heading = pair.sourceSection!.heading;
       logger.info(`    + NEW: ${heading}`);
 
-      if (options.dryRun) {
-        sectionResults.push({ sectionHeading: heading, action: 'NEW' });
-        translatedSections.push(null);
-        continue;
-      }
-
       if (options.test) {
         // Test mode: mock translation — use source content as-is
         sectionResults.push({
@@ -249,12 +242,6 @@ export async function resyncSingleFile(
     // RESYNC this section
     logger.info(`    ↻ RESYNC: ${heading}`);
 
-    if (options.dryRun) {
-      sectionResults.push({ sectionHeading: heading, action: 'RESYNCED' });
-      translatedSections.push(targetSection); // Keep existing in dry-run
-      continue;
-    }
-
     if (options.test) {
       // Test mode: mock resync — keep target content with marker
       const mockContent = `[TEST RESYNC] ${targetSection.content}`;
@@ -295,23 +282,19 @@ export async function resyncSingleFile(
   }
 
   // ──── Step 5: Reconstruct TARGET document ────────────────────────────────
-  let outputContent: string | undefined;
-
-  if (!options.dryRun) {
-    outputContent = reconstructDocument(
-      sourceParsed,
-      targetParsed,
-      pairs,
-      translatedSections,
-      headingMap,
-      targetContent,
-    );
-  }
+  const outputContent = reconstructDocument(
+    sourceParsed,
+    targetParsed,
+    pairs,
+    translatedSections,
+    headingMap,
+    targetContent,
+  );
 
   // ──── Step 6: Output ─────────────────────────────────────────────────────
   let prUrl: string | undefined;
 
-  if (outputContent && !options.dryRun) {
+  if (outputContent) {
     if (options.github) {
       // Create PR in TARGET repo
       const runner = ghRunner ?? realGhRunner;

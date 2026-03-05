@@ -21,7 +21,6 @@ function makeOptions(overrides: Partial<ForwardOptions> = {}): ForwardOptions {
     language: 'zh-cn',
     model: 'claude-sonnet-4-6',
     test: true,
-    dryRun: false,
     estimate: false,
     apiKey: 'test-key',
     ...overrides,
@@ -218,42 +217,6 @@ describe('resyncSingleFile', () => {
     });
   });
 
-  describe('dry-run mode', () => {
-    it('does not write files in dry-run mode', async () => {
-      const fixture = createTempFixture({
-        sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## Section\n\nNew content',
-        targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## 部分\n\n旧内容',
-        filename: 'dryrun-test.md',
-      });
-
-      try {
-        const targetFile = path.join(fixture.targetRepo, 'lectures', fixture.filename);
-        const originalContent = fs.readFileSync(targetFile, 'utf-8');
-
-        const options = makeOptions({
-          source: fixture.sourceRepo,
-          target: fixture.targetRepo,
-          dryRun: true,
-        });
-        const result = await resyncSingleFile(
-          fixture.filename,
-          fixture.sourceRepo,
-          fixture.targetRepo,
-          'lectures',
-          options,
-          silentLogger,
-        );
-
-        // File should not have been modified
-        const afterContent = fs.readFileSync(targetFile, 'utf-8');
-        expect(afterContent).toBe(originalContent);
-        expect(result.outputContent).toBeUndefined();
-      } finally {
-        fixture.cleanup();
-      }
-    });
-  });
-
   describe('error handling', () => {
     it('throws on missing source file', async () => {
       const fixture = createTempFixture({
@@ -372,7 +335,6 @@ describe('resyncSingleFile', () => {
         const options = makeOptions({
           source: fixture.sourceRepo,
           target: fixture.targetRepo,
-          dryRun: true, // Dry-run to avoid needing real translator
         });
         const result = await resyncSingleFile(
           fixture.filename,

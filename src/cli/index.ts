@@ -187,7 +187,6 @@ program
   .option('-l, --language <code>', 'Target language code', 'zh-cn')
   .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-6')
   .option('--test', 'Use deterministic mock responses (no LLM calls)', false)
-  .option('--dry-run', 'Preview changes without writing files or creating PRs', false)
   .option('--github <owner/repo>', 'Create one PR per file in TARGET repo')
   .option('--exclude <pattern>', 'Exclude files matching pattern (repeatable, comma-separated)', collectExclude, [])
   .option('--estimate', 'Show cost estimate without running', false)
@@ -206,7 +205,6 @@ program
       language: opts.language,
       model: opts.model,
       test: opts.test,
-      dryRun: opts.dryRun,
       github: opts.github,
       estimate: opts.estimate,
       apiKey: apiKey || 'test-key',
