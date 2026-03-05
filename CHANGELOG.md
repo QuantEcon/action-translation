@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Phase 3b — Forward Resync Command)
+- **Forward command** (`src/cli/commands/forward.ts`): Resync TARGET translations to match current SOURCE
+  - `resync forward -f cobweb.md` — single file resync
+  - `resync forward` — bulk resync of all OUTDATED files (via status)
+  - `--github <owner/repo>` flag: creates one PR per file in TARGET repo
+  - `--estimate` flag: pre-run cost estimation without LLM calls
+  - `--test` flag: deterministic mock responses for CI/testing
+  - `--exclude <pattern>` flag: skip files matching pattern
+  - Pipeline: triage → whole-file RESYNC → output (simplified from section-by-section after experiment)
+  - Progress bar for bulk mode, summary table with file counts
+- **Forward triage** (`src/cli/forward-triage.ts`): LLM content-vs-i18n filter (~$0.01/file)
+  - `triageForward()`: classifies file pairs as `CONTENT_CHANGES`, `I18N_ONLY`, or `IDENTICAL`
+  - Byte-identical shortcut skips LLM entirely
+  - Test mode returns deterministic verdicts based on filename patterns
+- **Forward PR creator** (`src/cli/forward-pr-creator.ts`): Git ops + PR creation via `gh` CLI
+  - Branch naming: `resync/{filename}` (e.g., `resync/cobweb`)
+  - PR title: `[action-translation] resync: cobweb.md`
+  - PR body includes source repo link, source file link, and triage reason
+  - Labels: `action-translation-sync`, `resync`
+  - Injectable `GhRunner` pattern for testing
+- **Whole-file RESYNC translation** (`src/translator.ts`): New `translateDocumentResync()` method
+  - Sends entire SOURCE + TARGET + glossary in one call (~$0.12/file)
+  - Preserves cross-section context (localized plot labels, font config)
+  - 2-3× cheaper than section-by-section (glossary sent once, not per section)
+  - Prompt preserves existing style, terminology, localization wherever meaning hasn't changed
+  - `DocumentResyncRequest` type in `src/types.ts`
+- **Section RESYNC mode** (`src/translator.ts`): `translateSectionResync()` (retained for SYNC mode)
+  - Preserves existing translation style while updating content to match SOURCE
+  - Uses `[CURRENT SOURCE]` + `[EXISTING TRANSLATION]` prompt markers
+  - `SectionTranslationRequest.mode` extended: `'update' | 'new' | 'resync'`
+- **84 new tests** (640 → 724 total, 29 → 32 suites)
+  - `forward.test.ts` (12 tests) — triage, whole-file resync, errors, github mode, PR failure, summary
+  - `forward-triage.test.ts` (21 tests) — prompt, parsing, test mode, byte-identical
+  - `forward-pr-creator.test.ts` (47 tests) — naming, args, body, creation, git operations, parseGitHubRepo, detectSourceRepo
+  - `translator.test.ts` (+4 tests) — RESYNC mode
+- **Git operations for --github mode** (`src/cli/forward-pr-creator.ts`): `gitPrepareAndPush()` function
+  - Creates branch, writes resynced file, stages, commits, pushes with --force
+  - Injectable `GitRunner` pattern for testing (parallels `GhRunner`)
+  - Full error handling: switches back to original branch on any failure
+  - 9 tests for git operations (success, branch cleanup, push failure, etc.)
+
+### Changed
+- **Strengthened i18n code preservation in all translation prompts** (`src/translator.ts`)
+  - All three translation modes (UPDATE, section RESYNC, whole-file RESYNC) now include explicit
+    rules to NEVER remove i18n/localization code from code cells
+  - Specific examples: `font_manager`, `FontProperties`, `SimHei`, `rcParams`, `# i18n` markers
+  - Resolves issue where whole-file RESYNC removed Chinese font configuration from `pv.md` despite
+    existing preservation instructions (rules 4 and 6 were in tension; now unambiguous)
+
 ### Added
 - **Backward report JSON schema** (`src/cli/schema.ts`): Formal Zod schemas for all backward report formats
   - `SCHEMA_VERSION` constant (`1.0.0`) — semver for the report format

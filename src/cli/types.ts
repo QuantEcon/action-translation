@@ -195,3 +195,85 @@ export interface BackwardOptions extends CommonOptions {
   minConfidence: number;     // Minimum confidence for reporting (default: 0.6)
   estimate: boolean;         // Show cost estimate without running
 }
+
+// ============================================================================
+// FORWARD RESYNC TYPES
+// ============================================================================
+
+/**
+ * Forward triage verdict: content change vs i18n-only differences
+ */
+export type ForwardTriageVerdict =
+  | 'CONTENT_CHANGES'      // Substantive content differences — proceed to RESYNC
+  | 'I18N_ONLY'            // Only internationalisation differences — skip
+  | 'IDENTICAL';           // Files are equivalent — skip
+
+/**
+ * Result of forward triage for a single file
+ */
+export interface ForwardTriageResult {
+  file: string;
+  verdict: ForwardTriageVerdict;
+  reason: string;           // Brief explanation (e.g., "punctuation and terminology style")
+  tokenCount?: number;      // Approximate tokens used for the triage call
+}
+
+/**
+ * Per-section RESYNC result (legacy — retained for PR body formatting)
+ */
+export type ResyncSectionAction =
+  | 'RESYNCED'              // Section content updated to match SOURCE
+  | 'UNCHANGED'             // Section already in sync
+  | 'NEW'                   // New section (SOURCE_ONLY) — translated fresh
+  | 'REMOVED'               // Section deleted in SOURCE (TARGET_ONLY)
+  | 'ERROR';                // Translation failed for this section
+
+/**
+ * Result of resyncing a single section (legacy — retained for PR body formatting)
+ */
+export interface ResyncSectionResult {
+  sectionHeading: string;
+  action: ResyncSectionAction;
+  translatedContent?: string;    // The resynced content (undefined for REMOVED/ERROR)
+  error?: string;                // Error message if action is ERROR
+  tokensUsed?: number;
+}
+
+/**
+ * Result of forward resync for a single file.
+ *
+ * Uses whole-file RESYNC: the entire document is sent to Claude in one call.
+ * The `sections` field is kept for backward compatibility with PR body
+ * formatting (it's always empty for whole-file resync).
+ */
+export interface ForwardFileResult {
+  file: string;
+  triageResult: ForwardTriageResult;
+  sections: ResyncSectionResult[];   // Empty for whole-file resync; kept for PR body compat
+  outputContent?: string;            // Full resynced TARGET file (undefined if skipped/errored)
+  prUrl?: string;                    // PR URL if --github mode
+  tokensUsed?: number;               // Total tokens used for the RESYNC call
+  summary: {
+    resynced: number;                // 1 if whole-file resync succeeded, 0 otherwise
+    unchanged: number;               // Not used in whole-file mode
+    new: number;                     // Not used in whole-file mode
+    removed: number;                 // Not used in whole-file mode
+    errors: number;                  // 1 if resync failed, 0 otherwise
+  };
+}
+
+/**
+ * Forward command options
+ */
+export interface ForwardOptions {
+  source: string;            // Source repository path
+  target: string;            // Target repository path
+  file?: string;             // Single file mode
+  docsFolder: string;        // Documentation folder (default: "lectures")
+  language: string;          // Target language code (default: "zh-cn")
+  model: string;             // Claude model (default: "claude-sonnet-4-6")
+  test: boolean;             // Use deterministic mock responses (no LLM calls)
+  github?: string;           // TARGET repo in owner/repo format for PR creation
+  estimate: boolean;         // Show cost estimate without running
+  apiKey: string;            // Anthropic API key
+}

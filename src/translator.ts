@@ -18,7 +18,7 @@ import {
   APIConnectionError,
   BadRequestError 
 } from '@anthropic-ai/sdk';
-import { Glossary, SectionTranslationRequest, SectionTranslationResult, FullDocumentTranslationRequest } from './types.js';
+import { Glossary, SectionTranslationRequest, SectionTranslationResult, FullDocumentTranslationRequest, DocumentResyncRequest } from './types.js';
 import * as core from '@actions/core';
 import { getLanguageConfig } from './language-config.js';
 
@@ -180,12 +180,14 @@ export class TranslationService {
   }
 
   /**
-   * Translate a section (update or new)
+   * Translate a section (update, new, or resync)
    */
   async translateSection(request: SectionTranslationRequest): Promise<SectionTranslationResult> {
     try {
       if (request.mode === 'update') {
         return await this.translateSectionUpdate(request);
+      } else if (request.mode === 'resync') {
+        return await this.translateSectionResync(request);
       } else {
         return await this.translateNewSection(request);
       }
@@ -214,7 +216,7 @@ export class TranslationService {
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
     const languageConfig = getLanguageConfig(targetLanguage);
     const additionalRules = languageConfig.additionalRules.length > 0
-      ? languageConfig.additionalRules.map((rule, i) => `${7 + i}. ${rule}`).join('\n')
+      ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join('\n')
       : '';
 
     const prompt = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
@@ -227,14 +229,15 @@ CRITICAL RULES:
 3. Maintain consistency with the existing ${targetLanguage} style and terminology
 4. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
 5. DO NOT translate code, math, URLs, or technical identifiers
-6. Use the glossary for consistent terminology
-7. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
+6. **NEVER remove i18n/localization code from code cells.** The translation may contain extra code inside code cells that does NOT exist in the source — this is intentional localization (e.g., font configuration like \`from matplotlib import font_manager\`, \`fontP.set_family('SimHei')\`, \`plt.rcParams\` settings, or lines marked \`# i18n\`). Always preserve these.
+7. Use the glossary for consistent terminology
+8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
    - Headings MUST have a space after # (e.g., "## Title" not "##Title")
    - Code blocks must have matching \`\`\` delimiters
    - Math blocks must have matching $$ delimiters
    - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
 ${additionalRules}
-${additionalRules ? '' : '8. '}Return ONLY the updated ${targetLanguage} section, no explanations
+${additionalRules ? '' : '9. '}Return ONLY the updated ${targetLanguage} section, no explanations
 
 ${glossarySection}
 
@@ -272,6 +275,88 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
     }
 
     this.log(`Translated section length: ${content.text.length}`);
+
+    return {
+      success: true,
+      translatedSection: content.text.trim(),
+      tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
+    };
+  }
+
+  /**
+   * Resync existing section (mode='resync')
+   * Claude sees: current English + current translation → produces resynced translation
+   *
+   * Used for drift recovery when no baseline (old English) is available.
+   * Preserves existing translation style, terminology, and localization
+   * wherever the meaning hasn't changed.
+   */
+  private async translateSectionResync(request: SectionTranslationRequest): Promise<SectionTranslationResult> {
+    const { newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } = request;
+
+    if (!newEnglish || !currentTranslation) {
+      return {
+        success: false,
+        error: 'Resync mode requires newEnglish (current source) and currentTranslation',
+      };
+    }
+
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0
+      ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join('\n')
+      : '';
+
+    const prompt = `You are resyncing a ${targetLanguage} translation to match the current ${sourceLanguage} source.
+
+TASK: The ${sourceLanguage} source may have changed since the translation was made. Update the ${targetLanguage} translation to accurately reflect the current source content.
+
+CRITICAL RULES:
+1. Preserve the existing ${targetLanguage} translation style, terminology choices, and localization decisions wherever the meaning hasn't changed
+2. Only modify parts of the translation where the ${sourceLanguage} source has different content
+3. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
+4. DO NOT translate code, math, URLs, or technical identifiers
+5. **NEVER remove i18n/localization code from code cells.** The translation may contain extra code inside code cells that does NOT exist in the source — this is intentional localization (e.g., font configuration like \`from matplotlib import font_manager\`, \`fontP.set_family('SimHei')\`, \`plt.rcParams\` settings, or lines marked \`# i18n\`). Always preserve these.
+6. Use the glossary for consistent terminology
+7. MARKDOWN SYNTAX: Ensure proper markdown syntax:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters
+   - Math blocks must have matching $$ delimiters
+   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
+${additionalRules}
+${additionalRules ? '' : '8. '}Return ONLY the updated ${targetLanguage} section, no explanations
+
+${glossarySection}
+
+[CURRENT ${sourceLanguage} SOURCE]
+${newEnglish}
+[/CURRENT ${sourceLanguage} SOURCE]
+
+[EXISTING ${targetLanguage} TRANSLATION]
+${currentTranslation}
+[/EXISTING ${targetLanguage} TRANSLATION]
+
+Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing translation's style and only change what's needed to match the current source. Do not include any markers, explanations, or comments.`;
+
+    this.log(`Translating section resync, mode=resync`);
+    this.log(`Current ${sourceLanguage} length: ${newEnglish.length}`);
+    this.log(`Existing ${targetLanguage} length: ${currentTranslation.length}`);
+
+    const response = await this.callWithRetry({
+      model: this.model,
+      max_tokens: 8192,
+      messages: [{ role: 'user', content: prompt }],
+    }, 'translateSectionResync');
+
+    const content = response.content[0];
+    if (content.type !== 'text') {
+      return {
+        success: false,
+        error: 'Unexpected response format from Claude',
+      };
+    }
+
+    this.log(`Resynced section length: ${content.text.length}`);
 
     return {
       success: true,
@@ -440,6 +525,122 @@ Provide the complete translated document maintaining exact MyST structure.`;
       translatedSection: translatedText,
       tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
     };
+  }
+
+  /**
+   * Resync a full document (whole-file RESYNC for forward command).
+   *
+   * Claude sees the complete SOURCE document and the complete existing TARGET
+   * translation, and produces an updated translation that faithfully reflects
+   * the current source while preserving the existing translation's style,
+   * terminology choices, and localization additions.
+   *
+   * This is the recommended approach over section-by-section RESYNC because:
+   * - Preserves cross-section context (localized plot labels, font config)
+   * - 2-3× cheaper (glossary sent once, not per-section)
+   * - Fewer diff lines (more surgical changes)
+   */
+  async translateDocumentResync(request: DocumentResyncRequest): Promise<SectionTranslationResult> {
+    const { sourceContent, targetContent, sourceLanguage, targetLanguage, glossary } = request;
+
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0
+      ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join('\n')
+      : '';
+
+    const prompt = `You are a professional translator specialising in quantitative economics.
+
+You are given:
+1. The **current ${sourceLanguage} source** document (authoritative)
+2. The **current ${targetLanguage} translation** (may be outdated or have errors)
+
+Your task: produce an **updated ${targetLanguage} translation** that accurately reflects the current ${sourceLanguage} source.
+
+## Critical rules
+
+1. **Preserve the existing translation's style, terminology, and localization choices** wherever the meaning hasn't changed. Do NOT re-translate sections that are already correct — keep them exactly as-is.
+2. **Fix any errors** in the translation — missing content, incorrect formulas, wrong code, structural differences.
+3. **Add any missing content** that exists in the source but not in the translation.
+4. **Remove any content** that exists in the translation but not in the source — EXCEPT for i18n/localization additions (see rule 6).
+5. **Preserve all MyST Markdown syntax** exactly — directives, roles, code blocks, math blocks, cross-references, frontmatter.
+6. **NEVER remove i18n/localization code from code cells.** Translated documents often contain extra code inside \`\`\`{code-cell}\`\`\` blocks that does NOT exist in the source — this is intentional localization and MUST be preserved. Common patterns include:
+   - Font configuration: \`from matplotlib import font_manager\`, \`fontP = font_manager.FontProperties()\`, \`fontP.set_family('SimHei')\`, \`fontP.set_size(14)\`
+   - rcParams: \`plt.rcParams['font.sans-serif'] = ['SimHei']\`, \`plt.rcParams['axes.unicode_minus'] = False\`
+   - Any imports, variable assignments, or configuration lines that appear in the translation's code cells but not in the source's code cells
+   - Locale-appropriate reference links
+   - Full-width punctuation where conventionally used
+   - Lines marked with \`# i18n\` comments
+   When in doubt about whether extra code in a code cell is localization, **keep it**.
+7. **Preserve the frontmatter (YAML between --- markers) from the TARGET translation** — do not replace it with the source frontmatter. Only update the heading-map if section headings changed.
+8. **Use the glossary below for consistent terminology** — when a term from the glossary appears, use the specified translation.
+${additionalRules}
+
+${glossarySection}
+
+## Output format
+
+Return ONLY the complete updated ${targetLanguage} document. No explanations, no commentary, no code fences wrapping the document. Start directly with the frontmatter \`---\` marker.
+
+## Current ${sourceLanguage} Source
+
+${sourceContent}
+
+## Current ${targetLanguage} Translation
+
+${targetContent}`;
+
+    // Pre-flight check: verify document is within API limits
+    const sizeError = checkDocumentSize(sourceContent.length + targetContent.length, targetLanguage);
+    if (sizeError) {
+      throw new Error(sizeError);
+    }
+
+    const maxTokens = 32768;
+
+    this.log(`Resyncing full document`);
+    this.log(`Source length: ${sourceContent.length} chars`);
+    this.log(`Target length: ${targetContent.length} chars`);
+
+    try {
+      const response = await this.callWithRetry({
+        model: this.model,
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+      }, 'translateDocumentResync');
+
+      const result = response.content[0];
+      if (result.type !== 'text') {
+        return {
+          success: false,
+          error: 'Unexpected response format from Claude',
+        };
+      }
+
+      const translatedText = result.text.trim();
+
+      // Check for incomplete translation marker
+      if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
+        return {
+          success: false,
+          error: `Document exceeded token limits and was truncated. ` +
+                 `This document may need a simpler resync approach.`,
+        };
+      }
+
+      this.log(`Resync complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
+
+      return {
+        success: true,
+        translatedSection: translatedText,
+        tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: formatApiError(error),
+      };
+    }
   }
 
   /**

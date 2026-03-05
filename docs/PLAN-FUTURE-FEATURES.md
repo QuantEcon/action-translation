@@ -25,6 +25,9 @@ This document outlines potential future features for the `action-translation` sy
 4. [Bidirectional Sync / Upstream Suggestions](#4-bidirectional-sync--upstream-suggestions)  
    *Enable translators to suggest improvements to English source*
 
+5. [i18n Code Annotation Convention](#5-i18n-code-annotation-convention)  
+   *Deterministic preservation of localization code in code cells*
+
 ---
 
 ## 1. Resync Workflow / Tool
@@ -1303,12 +1306,113 @@ jobs:
 
 ---
 
+## 5. i18n Code Annotation Convention
+
+### Problem Statement
+
+Translated documents often contain **extra code inside code cells** that doesn't exist in the English source. This is intentional localization — for example, Chinese translations add matplotlib font configuration so CJK characters render correctly in plot labels, titles, and legends:
+
+```python
+# In Chinese translation's code cell (NOT in English source):
+from matplotlib import font_manager
+fontP = font_manager.FontProperties()
+fontP.set_family('SimHei')
+fontP.set_size(14)
+```
+
+or:
+
+```python
+plt.rcParams['font.sans-serif'] = ['SimHei']
+plt.rcParams['axes.unicode_minus'] = False
+```
+
+During translation sync (both UPDATE and RESYNC modes), the LLM sees that these lines exist in the target but not in the source. Despite prompt instructions to preserve localization, the LLM sometimes removes them — interpreting the lines as "content to clean up" rather than "localization to keep".
+
+**Real example**: PR [QuantEcon/lecture-intro.zh-cn#202](https://github.com/QuantEcon/lecture-intro.zh-cn/pull/202) — the whole-file RESYNC on `pv.md` removed the `font_manager` / SimHei configuration despite explicit preservation rules in the prompt.
+
+### Current Mitigation: Prompt-Based (Option A)
+
+As of v0.9.0, all three translation prompts (UPDATE, section RESYNC, whole-file RESYNC) include an explicit rule:
+
+> **NEVER remove i18n/localization code from code cells.** The translation may contain extra code inside code cells that does NOT exist in the source — this is intentional localization. Always preserve these.
+
+With specific examples of font_manager, rcParams, and SimHei patterns.
+
+**Limitation**: This relies on LLM compliance. The LLM may still remove i18n code for unfamiliar patterns or when the removal rule ("remove content not in source") competes with the preservation rule.
+
+### Proposed Solution: `# i18n` Comment Convention (Option D)
+
+Adopt a convention where translators mark localization code with `# i18n` comments:
+
+```python
+from matplotlib import font_manager  # i18n
+fontP = font_manager.FontProperties()  # i18n
+fontP.set_family('SimHei')  # i18n
+fontP.set_size(14)  # i18n
+```
+
+or as a block:
+
+```python
+# i18n: CJK font configuration
+from matplotlib import font_manager
+fontP = font_manager.FontProperties()
+fontP.set_family('SimHei')
+fontP.set_size(14)
+```
+
+**Benefits**:
+- **Deterministic**: The system can pre-extract and re-inject marked lines without relying on LLM judgment
+- **Language-agnostic**: Works for any target language, any type of localization code
+- **Self-documenting**: Makes it clear to human translators which lines are localization additions
+- **Composable**: Works alongside the prompt-based approach as a fallback
+
+### Implementation Plan
+
+#### Phase 1: Convention & Documentation
+- Define the `# i18n` comment convention in user documentation
+- Document common patterns per language (zh-cn: SimHei fonts; ja: IPAGothic; ko: NanumGothic)
+- Provide a contributor guide section explaining when and how to use `# i18n` markers
+
+#### Phase 2: Pre-extraction / Re-injection
+- Before sending code cells to the LLM, scan for `# i18n` marked lines
+- Store them with their position (which code cell, which line offset)
+- After receiving LLM output, verify marked lines are preserved; re-inject if missing
+- This could be implemented in `file-processor.ts` or as a new `i18n-code.ts` module
+
+#### Phase 3: Retroactive Annotation
+- Audit existing translations for i18n code patterns
+- Script to auto-detect likely i18n code (font config, rcParams, locale imports) and add `# i18n` comments
+- Submit as PRs to each translation repository
+
+### Patterns to Detect (for Phase 3 auto-annotation)
+
+| Pattern | Language | Purpose |
+|---|---|---|
+| `font_manager.FontProperties()` | zh-cn, ja, ko | CJK font setup |
+| `fontP.set_family('SimHei')` | zh-cn | Chinese font |
+| `plt.rcParams['font.sans-serif']` | zh-cn, ja, ko | Matplotlib CJK |
+| `plt.rcParams['axes.unicode_minus']` | zh-cn, ja, ko | Minus sign fix |
+| `plt.rcParams['font.family']` | any | Font override |
+| `locale.setlocale(...)` | any | Locale setup |
+| `matplotlib.font_manager.fontManager.addfont(...)` | any | Custom font |
+
+### Priority & Timeline
+
+- **Phase 1**: Include in v0.10.0 user/developer documentation
+- **Phase 2**: Medium priority — implement after forward resync stabilizes
+- **Phase 3**: Low priority — can be done incrementally per repository
+
+---
+
 ## Summary & Prioritization
 
 | Feature | Priority | Effort | Value | Status |
 |---------|----------|--------|-------|--------|
 | **Initial Alignment Agent** | **High** | **High** | **Critical** | **Planned** |
 | Hub-Spoke Setup Documentation | High | Low | High | **Ready to implement** |
+| **i18n Code Annotation (`# i18n`)** | **Medium** | **Low–Medium** | **High** | **Phase 1 planned** |
 | Resync Monitoring | Medium | Low | Medium | Planned |
 | Upstream Suggestions (Manual) | Medium | Low | Medium | Planned |
 | Resync Auto-fix | Low | Medium | Medium | Future |

@@ -1,7 +1,7 @@
 # System Architecture: action-translation
 
 **Last Updated**: 5 March 2026  
-**Version**: v0.8 (Phase 3a Complete)
+**Version**: v0.8.0 (Phase 3b Complete — Forward Resync)
 
 This document provides a complete architectural overview of the translation sync system, including all operational modes and how they work together.
 
@@ -646,10 +646,13 @@ npm run resync -- --all ...
 │  ├── review-session.ts     Pure state machine for A/S/R (~150 lines)        │
 │  ├── issue-generator.ts    GitHub Issue title/body/labels (~200 lines)      │
 │  ├── issue-creator.ts      gh issue create runner (~180 lines)              │
+│  ├── forward-triage.ts     Forward: content-vs-i18n LLM filter (~245 lines) │
+│  ├── forward-pr-creator.ts Forward: one PR per file via gh (~215 lines)     │
 │  ├── components/                                                             │
 │  │   └── ReviewSession.tsx Ink interactive review UI (~110 lines)            │
 │  └── commands/                                                               │
 │      ├── backward.ts       Backward: single + bulk (~530 lines)             │
+│      ├── forward.ts        Forward: resync TARGET to SOURCE (~570 lines)    │
 │      ├── review.ts         Review: interactive suggestion review (~210 lines)│
 │      └── status.ts         Status: fast sync diagnostic (~280 lines)        │
 │                                                                              │
@@ -675,7 +678,7 @@ npm run resync -- --all ...
 |-----------|------|------|--------|---------|--------|
 | parser.ts | ✅ | ✅ | ✅ | ✅ | ✅ |
 | diff-detector.ts | - | ✅ | ✅ | ✅ | ✅ |
-| translator.ts | ✅ NEW | ✅ UPDATE | - | - | ✅ UPDATE |
+| translator.ts | ✅ NEW | ✅ UPDATE | - | - | ✅ RESYNC |
 | reviewer.ts | - | - | ✅ | - | - |
 | heading-map.ts | ✅ | ✅ | - | ✅ | ✅ |
 | file-processor.ts | ✅ | ✅ | - | - | ✅ |
