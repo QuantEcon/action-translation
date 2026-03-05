@@ -8,7 +8,7 @@
 - **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
-**Current Version**: v0.9.0 | **Tests**: 696 (32 suites) | **Glossary**: 357 terms (zh-cn, fa)
+**Current Version**: v0.9.0 | **Tests**: 723 (32 suites) | **Glossary**: 357 terms (zh-cn, fa)
 
 ---
 
@@ -16,40 +16,40 @@
 
 ```
 src/
-├── index.ts             # GitHub Actions entry point + mode routing (~450 lines)
-├── sync-orchestrator.ts # Sync processing pipeline — reusable by future CLI (~420 lines)
-├── pr-creator.ts        # PR creation in target repo (~320 lines)
-├── parser.ts            # MyST Markdown parser, stack-based, no AST (282 lines)
-├── diff-detector.ts     # Change detection, recursive subsection comparison (195 lines)
-├── translator.ts        # Claude API — UPDATE/NEW modes, retry logic (~660 lines)
-├── reviewer.ts          # Claude API — review mode (~700 lines)
-├── file-processor.ts    # Document reconstruction, subsection handling (~670 lines)
-├── heading-map.ts       # Heading-map extract/update/inject (246 lines)
-├── language-config.ts   # Language-specific translation rules (102 lines)
-├── inputs.ts            # Action inputs + validation (~200 lines)
-├── types.ts             # TypeScript types (~250 lines)
+├── index.ts             # GitHub Actions entry point + mode routing
+├── sync-orchestrator.ts # Sync processing pipeline — reusable by future CLI
+├── pr-creator.ts        # PR creation in target repo
+├── parser.ts            # MyST Markdown parser, stack-based, no AST
+├── diff-detector.ts     # Change detection, recursive subsection comparison
+├── translator.ts        # Claude API — UPDATE/NEW/RESYNC modes, retry logic
+├── reviewer.ts          # Claude API — review mode
+├── file-processor.ts    # Document reconstruction, subsection handling
+├── heading-map.ts       # Heading-map extract/update/inject
+├── language-config.ts   # Language-specific translation rules
+├── inputs.ts            # Action inputs + validation
+├── types.ts             # TypeScript types
 ├── cli/
 │   ├── index.ts              # CLI entry point (commander.js)
-│   ├── types.ts              # CLI-specific types (~195 lines)
-│   ├── schema.ts             # Zod schemas for backward report JSON + load/filter utils (~310 lines)
-│   ├── document-comparator.ts # Stage 1: whole-document LLM triage (~270 lines)
-│   ├── backward-evaluator.ts  # Stage 2: per-section LLM evaluation (~300 lines)
-│   ├── section-matcher.ts     # Cross-language section matching (~150 lines)
-│   ├── git-metadata.ts        # File-level git metadata + commit timeline (~235 lines)
-│   ├── report-generator.ts    # Markdown/JSON report formatting (~235 lines)
-│   ├── review-formatter.ts    # Chalk card renderer for review command (~230 lines)
-│   ├── review-session.ts      # Pure session state machine (accept/skip/reject, ~150 lines)
-│   ├── issue-generator.ts     # GitHub Issue title/body/label generator (~200 lines)
-│   ├── issue-creator.ts       # gh issue create runner with injectable GhRunner (~180 lines)
-│   ├── forward-triage.ts      # Forward: content-vs-i18n LLM filter (~245 lines)
-│   ├── forward-pr-creator.ts  # Forward: one PR per file via gh CLI (~215 lines)
+│   ├── types.ts              # CLI-specific types
+│   ├── schema.ts             # Zod schemas for backward report JSON + load/filter utils
+│   ├── document-comparator.ts # Stage 1: whole-document LLM triage
+│   ├── backward-evaluator.ts  # Stage 2: per-section LLM evaluation
+│   ├── section-matcher.ts     # Cross-language section matching
+│   ├── git-metadata.ts        # File-level git metadata + commit timeline
+│   ├── report-generator.ts    # Markdown/JSON report formatting
+│   ├── review-formatter.ts    # Chalk card renderer for review command
+│   ├── review-session.ts      # Pure session state machine (accept/skip/reject)
+│   ├── issue-generator.ts     # GitHub Issue title/body/label generator
+│   ├── issue-creator.ts       # gh issue create runner with injectable GhRunner
+│   ├── forward-triage.ts      # Forward: content-vs-i18n LLM filter
+│   ├── forward-pr-creator.ts  # Forward: git ops + PR creation via gh CLI
 │   ├── components/
-│   │   └── ReviewSession.tsx  # Ink interactive review UI component (~110 lines)
+│   │   └── ReviewSession.tsx  # Ink interactive review UI component
 │   └── commands/
-│       ├── backward.ts        # Backward command orchestrator — single + bulk (~530 lines)
-│       ├── forward.ts         # Forward command — whole-file resync TARGET to SOURCE (~370 lines)
-│       ├── review.ts          # Review command — full pipeline, Steps 1–5 (~210 lines)
-│       └── status.ts          # Status command — fast sync diagnostic (~280 lines)
+│       ├── backward.ts        # Backward command orchestrator — single + bulk
+│       ├── forward.ts         # Forward command — whole-file resync TARGET to SOURCE
+│       ├── review.ts          # Review command — full pipeline, Steps 1–5
+│       └── status.ts          # Status command — fast sync diagnostic
 ```
 
 Full module responsibilities: `docs/ARCHITECTURE.md`
@@ -91,7 +91,7 @@ Maps are flat (no nesting), include all heading levels, auto-populated on first 
 
 ### Running Tests
 ```bash
-npm test                          # All 696 tests
+npm test                          # All 723 tests
 npm test -- parser.test.ts        # Single file
 npm test -- --watch               # Watch mode
 npm test -- --coverage            # Coverage report
