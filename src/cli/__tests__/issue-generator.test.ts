@@ -6,7 +6,6 @@ import {
   formatIssueTitle,
   formatIssueBody,
   getIssueLabels,
-  formatIssuePreview,
 } from '../issue-generator.js';
 import { SuggestionWithContext } from '../commands/review.js';
 
@@ -201,37 +200,4 @@ describe('formatIssueBody', () => {
   });
 });
 
-// =============================================================================
-// formatIssuePreview
-// =============================================================================
 
-describe('formatIssuePreview', () => {
-  const item = makeSuggestion();
-
-  it('contains the Issue title', () => {
-    const preview = strip(formatIssuePreview(item));
-    expect(preview).toContain('[ar1_processes.md]');
-    expect(preview).toContain('The translation improves');
-  });
-
-  it('contains all labels', () => {
-    const preview = strip(formatIssuePreview(item));
-    expect(preview).toContain('backward-suggestion');
-    expect(preview).toContain('clarification');
-    expect(preview).toContain('confidence-medium');
-  });
-
-  it('contains the Issue body preview section header', () => {
-    const preview = strip(formatIssuePreview(item));
-    expect(preview).toContain('GitHub Issue Preview');
-  });
-
-  it('contains the body content (Summary heading)', () => {
-    const preview = strip(formatIssuePreview(item));
-    expect(preview).toContain('## Summary');
-  });
-
-  it('returns a non-empty string', () => {
-    expect(formatIssuePreview(item).length).toBeGreaterThan(0);
-  });
-});

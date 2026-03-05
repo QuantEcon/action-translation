@@ -18,7 +18,6 @@ import {
   resolveSummary,
   formatProgress,
   formatTallies,
-  formatEndSummary,
   SessionSummary,
 } from '../review-session.js';
 import { formatSuggestionCard } from '../review-formatter.js';
@@ -58,11 +57,11 @@ export function ReviewSession({ suggestions, dryRun = false, onDone }: ReviewSes
       if (next.done) {
         const summary = resolveSummary(next, suggestions);
         onDone(summary);
-        const lines = formatEndSummary(summary, suggestions.length, dryRun);
-        process.stdout.write(lines.join('\n') + '\n');
         exit();
       }
     } else if (key.ctrl && input === 'c') {
+      // Intentionally do NOT call onDone — abort means "do nothing".
+      // sessionSummary stays null in runReview, so no Issues are created.
       process.stdout.write('\n  Session interrupted.\n');
       exit();
     }

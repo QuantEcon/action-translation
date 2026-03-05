@@ -8,9 +8,8 @@
  * suggestions are about improving the English source material.
  */
 
-import chalk from 'chalk';
 import { SuggestionWithContext } from './commands/review.js';
-import { CATEGORY_STYLES, confidenceTier, formatConfidence } from './review-formatter.js';
+import { CATEGORY_STYLES, confidenceTier } from './review-formatter.js';
 
 // ============================================================================
 // LABEL HELPERS
@@ -164,40 +163,4 @@ export function formatIssueBody(item: SuggestionWithContext): string {
   return lines.join('\n');
 }
 
-// ============================================================================
-// DRY-RUN PREVIEW
-// ============================================================================
 
-const PREVIEW_WIDTH = 72;
-
-/**
- * Chalk-styled preview of the Issue that would be created.
- * Shown in --dry-run mode alongside the suggestion card.
- */
-export function formatIssuePreview(item: SuggestionWithContext): string {
-  const title  = formatIssueTitle(item);
-  const labels = getIssueLabels(item);
-  const body   = formatIssueBody(item);
-
-  const lines: string[] = [];
-  const border = chalk.dim('┄'.repeat(PREVIEW_WIDTH));
-
-  lines.push(border);
-  lines.push(chalk.bold.dim('  GitHub Issue Preview'));
-  lines.push(border);
-  lines.push('');
-  lines.push(`  ${chalk.bold('Title:')}  ${chalk.cyan(title)}`);
-  lines.push(`  ${chalk.bold('Labels:')} ${labels.map(l => chalk.magenta(l)).join(', ')}`);
-  lines.push('');
-  lines.push(chalk.dim('  --- Issue body ---'));
-  lines.push('');
-
-  // Indent body lines for nested display
-  for (const line of body.split('\n')) {
-    lines.push(`  ${chalk.dim(line)}`);
-  }
-
-  lines.push('');
-
-  return lines.join('\n');
-}

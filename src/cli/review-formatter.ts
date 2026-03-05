@@ -1,11 +1,13 @@
 /**
- * Chalk-styled formatter for the `review` command dry-run output.
+ * Chalk-styled formatters for the `review` command.
+ *
+ * Provides the suggestion card renderer used by both the ink interactive
+ * session and any future non-interactive output.
  *
  * All functions are pure (return strings, no console.log side effects)
  * so they can be unit-tested without mocking stdout.
  *
  * Design decisions:
- * - No ink yet — plain chalk for fast iteration on what information matters
  * - Category badges use colour + letter prefix, not emoji, for terminal compat
  * - Long text (reasoning, specific changes) is wrapped at 80 chars
  * - Works at chalk.level=0 (plain text) so tests don't need colour stripping
@@ -196,67 +198,4 @@ export function computeSummaryStats(suggestions: SuggestionWithContext[]): Summa
   };
 }
 
-/**
- * Format the end-of-session summary line.
- */
-export function formatSessionSummary(suggestions: SuggestionWithContext[]): string {
-  if (suggestions.length === 0) {
-    return chalk.green('\n✅  No actionable suggestions found.');
-  }
 
-  const stats = computeSummaryStats(suggestions);
-  const lines: string[] = [];
-
-  lines.push('');
-  lines.push(chalk.bold('─'.repeat(CARD_WIDTH)));
-  lines.push(chalk.bold(`  Dry-run summary`));
-  lines.push(chalk.bold('─'.repeat(CARD_WIDTH)));
-  lines.push('');
-  lines.push(`${INDENT}${chalk.bold(String(stats.total))} suggestion(s) across ${chalk.bold(String(stats.filesWithSuggestions))} file(s)`);
-  lines.push('');
-
-  // By category
-  if (Object.keys(stats.byCategory).length > 0) {
-    lines.push(`${INDENT}${chalk.bold('By category:')}`);
-    for (const [cat, count] of Object.entries(stats.byCategory).sort((a, b) => b[1] - a[1])) {
-      const style = CATEGORY_STYLES[cat] ?? { label: cat, badge: (t: string) => t };
-      const badge = style.badge(`${style.label}`);
-      lines.push(`${INDENT}  ${badge.padEnd(24)}  ${count}`);
-    }
-    lines.push('');
-  }
-
-  // By confidence tier
-  lines.push(`${INDENT}${chalk.bold('By confidence:')}`);
-  lines.push(`${INDENT}  ${chalk.green('High   (≥85%)')}   ${stats.byTier.high}`);
-  lines.push(`${INDENT}  ${chalk.yellow('Medium (60-85%)')}  ${stats.byTier.medium}`);
-  lines.push(`${INDENT}  ${chalk.dim('Low    (<60%)')}   ${stats.byTier.low}`);
-  lines.push('');
-
-  lines.push(chalk.dim(`  Use the interactive mode (without --dry-run) to accept/skip/reject.`));
-  lines.push('');
-
-  return lines.join('\n');
-}
-
-// ============================================================================
-// DRY-RUN RUNNER
-// ============================================================================
-
-/**
- * Stream all suggestions to stdout as chalk-styled cards, then print summary.
- * Returns the formatted output for testability.
- */
-export function printDryRun(suggestions: SuggestionWithContext[]): string {
-  const parts: string[] = [];
-
-  for (let i = 0; i < suggestions.length; i++) {
-    parts.push(formatSuggestionCard(suggestions[i], i + 1, suggestions.length));
-  }
-
-  parts.push(formatSessionSummary(suggestions));
-
-  const output = parts.join('');
-  process.stdout.write(output);
-  return output;
-}

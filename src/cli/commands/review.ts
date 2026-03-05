@@ -14,6 +14,7 @@ import * as path from 'path';
 import { loadResyncDirectory, filterActionableSuggestions, BackwardReportData, BackportSuggestionData } from '../schema.js';
 import { createIssuesForAccepted } from '../issue-creator.js';
 import type { SessionSummary } from '../review-session.js';
+import { formatEndSummary } from '../review-session.js';
 
 // ============================================================================
 // TYPES
@@ -188,16 +189,23 @@ export async function runReview(options: ReviewOptions): Promise<void> {
 
   await waitUntilExit();
 
-  if (sessionSummary !== null) {
-    const accepted = (sessionSummary as SessionSummary).accepted;
-    if (options.dryRun) {
-      if (accepted.length > 0) {
-        console.log(`\n  Dry run complete. Would have created ${accepted.length} GitHub Issue(s).`);
-      }
-    } else if (options.repo) {
-      await createIssuesForAccepted(accepted, options.repo);
-    } else if (accepted.length > 0) {
-      console.log(`\n  ${accepted.length} suggestion(s) accepted. Use --repo <owner/repo> to create GitHub Issues.`);
+  // sessionSummary is null when the user aborted with Ctrl+C — do nothing.
+  if (sessionSummary === null) return;
+  const finalSummary = sessionSummary as SessionSummary;
+
+  // Print the end-of-session summary (moved here from the ink component
+  // so it runs after ink's stdout is fully flushed).
+  const summaryLines = formatEndSummary(finalSummary, suggestions.length, options.dryRun);
+  console.log(summaryLines.join('\n'));
+
+  const { accepted } = finalSummary;
+  if (options.dryRun) {
+    if (accepted.length > 0) {
+      console.log(`  Dry run complete. Would have created ${accepted.length} GitHub Issue(s).`);
     }
+  } else if (options.repo) {
+    await createIssuesForAccepted(accepted, options.repo);
+  } else if (accepted.length > 0) {
+    console.log(`  ${accepted.length} suggestion(s) accepted. Use --repo <owner/repo> to create GitHub Issues.`);
   }
 }

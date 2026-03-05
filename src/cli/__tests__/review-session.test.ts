@@ -247,4 +247,25 @@ describe('formatEndSummary', () => {
     const lines = formatEndSummary(summary, 5);
     expect(lines.join('\n')).toContain('5 suggestion(s)');
   });
+
+  it('shows dry-run note when dryRun=true and items accepted', () => {
+    let s = initialState(3);
+    s = applyAction(s, 'accept', 3);
+    s = applyAction(s, 'skip', 3);
+    s = applyAction(s, 'skip', 3);
+    const summary = resolveSummary(s, THREE);
+    const text = formatEndSummary(summary, 3, true).join('\n');
+    expect(text).toContain('dry run');
+    expect(text).not.toContain('→ will create GitHub Issues');
+  });
+
+  it('omits dry-run note when nothing accepted (dryRun=true)', () => {
+    let s = initialState(2);
+    s = applyAction(s, 'skip', 2);
+    s = applyAction(s, 'reject', 2);
+    const summary = resolveSummary(s, THREE.slice(0, 2));
+    const text = formatEndSummary(summary, 2, true).join('\n');
+    expect(text).toContain('Accepted :  0');
+    expect(text).not.toContain('dry run');
+  });
 });

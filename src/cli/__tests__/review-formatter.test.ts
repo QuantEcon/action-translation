@@ -10,7 +10,6 @@ import {
   confidenceTier,
   formatConfidence,
   formatSuggestionCard,
-  formatSessionSummary,
   computeSummaryStats,
   CATEGORY_STYLES,
 } from '../review-formatter.js';
@@ -281,51 +280,4 @@ describe('computeSummaryStats', () => {
   });
 });
 
-// ============================================================================
-// formatSessionSummary
-// ============================================================================
 
-describe('formatSessionSummary', () => {
-  it('returns a "no suggestions" message for empty list', () => {
-    const result = strip(formatSessionSummary([]));
-    expect(result).toContain('No actionable suggestions');
-  });
-
-  it('contains total suggestion count', () => {
-    const items = [makeSuggestion(), makeSuggestion({ file: 'b.md' })];
-    const result = strip(formatSessionSummary(items));
-    expect(result).toContain('2');
-  });
-
-  it('contains file count', () => {
-    const items = [makeSuggestion({ file: 'a.md' }), makeSuggestion({ file: 'b.md' }), makeSuggestion({ file: 'a.md' })];
-    const result = strip(formatSessionSummary(items));
-    expect(result).toContain('2 file(s)');
-  });
-
-  it('contains category breakdown', () => {
-    const items = [
-      makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, category: 'BUG_FIX', confidence: 0.9 } }),
-      makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, category: 'CLARIFICATION', confidence: 0.7 } }),
-    ];
-    const result = strip(formatSessionSummary(items));
-    expect(result).toContain('BUG FIX');
-    expect(result).toContain('CLARIFICATION');
-  });
-
-  it('contains confidence tier breakdown', () => {
-    const items = [
-      makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, confidence: 0.9 } }),
-      makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, confidence: 0.7 } }),
-    ];
-    const result = strip(formatSessionSummary(items));
-    expect(result).toContain('High');
-    expect(result).toContain('Medium');
-  });
-
-  it('includes hint about interactive mode', () => {
-    const items = [makeSuggestion()];
-    const result = strip(formatSessionSummary(items));
-    expect(result).toContain('--dry-run');
-  });
-});
