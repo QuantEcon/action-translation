@@ -30,7 +30,7 @@ jobs:
         run: npm install -g mystmd
 
       - name: Build documentation
-        run: myst build --html
+        run: myst build --html --base-url /action-translation/
         working-directory: docs
 
       - name: Upload artifact
