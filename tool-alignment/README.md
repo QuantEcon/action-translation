@@ -2,15 +2,17 @@
 
 > ⚠️ **DEPRECATED - FOR REFERENCE ONLY**
 >
-> This tool is no longer actively developed. Development has moved to **`tool-onboarding`**, which provides:
-> - Hybrid analysis (deterministic code + Claude prose)
-> - Simpler architecture (single file, ~830 lines)
-> - Better accuracy (no code hallucinations)
-> - i18n detection (CJK font config recognized)
+> This tool is no longer actively developed. Its functionality has been superseded by the
+> **`translate` CLI** built into action-translation (`src/cli/`), which provides:
+> - **Section-based analysis** with LLM evaluation of whole sections
+> - **Integrated CLI** — `translate backward`, `translate forward`, `translate status`
+> - **Shared modules** — reuses parser.ts, heading-map.ts from action-translation
 >
-> See `tool-onboarding/README.md` for the active tool.
+> This tool was the first attempt at alignment checking (purely deterministic), followed by
+> `tool-onboarding` (hybrid deterministic + Claude), before the current section-based CLI.
 >
-> This repository is retained for **reference** - it contains useful learnings about structural analysis that informed tool-onboarding.
+> For a detailed record of approaches tried and lessons learned, see
+> [docs/developer/legacy-tools.md](../docs/developer/legacy-tools.md).
 
 ---
 

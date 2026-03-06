@@ -987,15 +987,90 @@ npm run test:real-repos
 
 ---
 
-## Phase 5: Cleanup & Repo Hygiene (1 day)
+## Phase 5: CLI Rename & Init Command
+
+**Goal**: Rename CLI from `resync` to `translate`, integrate bulk translation as `init` command, simplify flags  
+**Status**: In progress
+
+### Design Decisions (6 March 2026)
+
+**CLI rename `resync` → `translate`**: The tool's domain is translation management. `translate` is immediately understandable and works naturally as a prefix for all subcommands: `translate init`, `translate forward`, `translate backward`, `translate status`, `translate review`.
+
+**`init` command**: Incorporates `tool-bulk-translator` functionality directly into the CLI. One-time bulk translation of an entire lecture series from a local source repo. Uses `translateFullDocument()` from `translator.ts` (same as bulk-translator), reads `_toc.yml` for lecture discovery, generates heading-maps, produces a translation report.
+
+**Local paths only**: Unlike `tool-bulk-translator` which fetched from GitHub via Octokit, `init` uses local paths (`-s`/`-t`) consistent with all other CLI commands. No `@octokit/rest` dependency needed. User clones repos first.
+
+**`--dry-run` over `--estimate`**: These tools run infrequently. `--dry-run` (lists what would be done, no API calls, no file writes) is more useful for understanding and debugging than a cost estimate. Remove `--estimate` from `backward` and `forward` commands; add `--dry-run` to `init`.
+
+**Future `setup` command**: Scaffold a new target repo by appending language code to source repo name and using `gh` CLI. Separate from `init` (which does translation). Not implemented yet.
+
+### 5.1 CLI Rename (`resync` → `translate`)
+
+- [ ] Update `package.json` `bin` entry: `resync` → `translate`
+- [ ] Update `src/cli/index.ts` `.name('resync')` → `.name('translate')`
+- [ ] Update `src/cli/index.ts` description
+- [ ] Update all `npx resync` references in docs (`cli-reference.md`, `README.md`, etc.)
+- [ ] Update `copilot-instructions.md` CLI references
+- [ ] Update PLAN.md `npx resync` references
+
+### 5.2 Init Command (`src/cli/commands/init.ts`)
+
+Adapted from `tool-bulk-translator/src/bulk-translate.ts` with local-path approach.
+
+```
+translate init -s /path/to/source -t /path/to/target \
+  --target-language zh-cn \
+  [--docs-folder lectures] \
+  [--model claude-sonnet-4-6] \
+  [--batch-delay 1000] \
+  [--resume-from cobweb.md] \
+  [--dry-run]
+```
+
+**Pipeline** (7 phases from bulk-translator, adapted):
+1. Load glossary (built-in `glossary/<lang>.json`)
+2. Setup target folder
+3. Copy non-markdown files from local source (replaces GitHub API fetch)
+4. Parse `_toc.yml` from local source for lecture list
+5. Translate lectures sequentially (with retry, batch delay)
+6. Generate heading-maps per file
+7. Generate `TRANSLATION-REPORT.md`
+
+- [ ] Create `src/cli/commands/init.ts`
+- [ ] Register `init` command in `src/cli/index.ts`
+- [ ] Add `InitOptions` to `src/cli/types.ts`
+- [ ] Implement local file copy (no Octokit)
+- [ ] Implement local `_toc.yml` parsing
+- [ ] Implement sequential translation with progress bar
+- [ ] Implement heading-map generation (reuse from bulk-translator)
+- [ ] Implement report generation
+- [ ] `--dry-run` mode (list lectures, no API calls, no file writes)
+- [ ] `--resume-from` support
+- [ ] Add tests
+
+### 5.3 Remove `--estimate` Flag
+
+- [ ] Remove `--estimate` from `backward` command in `index.ts`
+- [ ] Remove `--estimate` from `forward` command in `index.ts`
+- [ ] Remove `estimate` from `BackwardOptions` and `ForwardOptions` in `types.ts`
+- [ ] Remove `estimateBulkCost()` from `backward.ts`
+- [ ] Remove `estimateCost()` from `forward.ts`
+- [ ] Update tests that reference `--estimate`
+- [ ] Update `cli-reference.md`
+
+---
+
+## Phase 5b: Cleanup & Repo Hygiene
 
 **Goal**: Clean up deprecated tools and repo structure
 
-- [ ] Archive `tool-onboarding/` (move to separate branch or remove from main)
-- [ ] Archive `tool-alignment/` (already deprecated)
+- [x] Document `tool-onboarding` and `tool-alignment` in `docs/developer/legacy-tools.md`
+- [ ] Deprecate `tool-onboarding/` (add deprecation notice to README)
+- [ ] Deprecate `tool-alignment/` (add deprecation notice to README)
+- [ ] Remove `tool-bulk-translator/` (functionality moved to `translate init`)
 - [ ] Ensure `.gitignore` covers `node_modules/` in all tool dirs
 - [ ] Remove `coverage/` from tracked files
-- [ ] Clean up `dist/` build output (ncc bundle only)
+- [ ] Clean up `dist/` build output
 - [ ] Update `copilot-instructions.md` to reflect new CLI structure
 
 ---
@@ -1098,13 +1173,14 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 | **Phase 1**: Single-file backward | 3-4 days | Phase 0 ✅ | `npx resync backward -f file.md` (two-stage) |
 | **Phase 2**: Bulk + status | 2-3 days | Phase 1 ✅ | `npx resync status` + bulk backward |
 | **Phase 3a**: Interactive review | 3-4 days | Phase 2 ✅ | `npx resync review` with Issue creation |
-| **Phase 3b**: Forward resync | 2-3 days | Phase 3a | `npx resync forward` with RESYNC mode |
+| **Phase 3b**: Forward resync | 2-3 days | Phase 3a ✅ | `npx resync forward` with RESYNC mode |
 | **Phase 4**: Refinement | 2-3 days | Phase 3b | Production-ready CLI |
-| **Phase 5**: Cleanup | 1 day | Any time | Clean repo |
+| **Phase 5**: CLI rename + init | 2-3 days | Phase 3b ✅ | `translate init`, rename resync→translate |
+| **Phase 5b**: Cleanup | 1 day | Phase 5 | Legacy tool deprecation, repo hygiene |
 | **Phase 6**: Automation | 1-2 days | Phase 4 | Scheduled backward analysis |
 | **Phase 7**: Whole-file translation | TBD | Phase 4 | Evaluate whole-file approach for forward sync |
 
-**Total**: 15-23 days (Phase 0-4), +2-3 days (Phase 5-6), +TBD (Phase 7)
+**Total**: 15-23 days (Phase 0-4), +3-4 days (Phase 5-5b), +2 days (Phase 6), +TBD (Phase 7)
 
 ---
 

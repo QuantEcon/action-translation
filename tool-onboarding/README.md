@@ -2,15 +2,18 @@
 
 > ⚠️ **DEPRECATED - FOR REFERENCE ONLY**
 >
-> This tool is no longer actively developed. Development has moved to **`tool-resync`** (see [DESIGN-RESYNC.md](../docs/DESIGN-RESYNC.md)), which provides:
+> This tool is no longer actively developed. Its functionality has been superseded by the
+> **`translate` CLI** built into action-translation (`src/cli/`), which provides:
 > - **Section-based analysis** instead of block-by-block matching
-> - **Simpler architecture** - integrated CLI in action-translation
-> - **Better accuracy** - LLM evaluates whole sections, not individual code blocks
-> - **Shared modules** - reuses parser.ts, heading-map.ts from action-translation
+> - **Integrated CLI** — `translate backward`, `translate forward`, `translate status`
+> - **Better accuracy** — LLM evaluates whole sections, not individual code blocks
+> - **Shared modules** — reuses parser.ts, heading-map.ts from action-translation
 >
-> **Why deprecated**: The code block matching approach is fundamentally flawed - it breaks when code cells are added or deleted in the target. See [feedback in issue #677](https://github.com/QuantEcon/lecture-python-intro/issues/677).
+> **Why deprecated**: The block-level divergence mapping approach breaks when code blocks
+> are added or deleted in the target. See [feedback in issue #677](https://github.com/QuantEcon/lecture-python-intro/issues/677).
 >
-> This repository is retained for **reference only**.
+> For a detailed record of approaches tried and lessons learned, see
+> [docs/developer/legacy-tools.md](../docs/developer/legacy-tools.md).
 
 ---
 
