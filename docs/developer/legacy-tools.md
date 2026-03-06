@@ -14,16 +14,23 @@ translate CLI backward/forward/status/init (current)
 
 ### How the current CLI differs
 
-The key insight that emerged from both tools: **work at the section level, not the block level**. Instead of trying to match individual code blocks or paragraphs across languages (which breaks when structure changes), the current CLI treats each `##` section as an atomic unit — compare whole sections, re-translate whole sections.
+The key insight that emerged from both tools: **work at higher granularity, not block-by-block**. Instead of trying to match individual code blocks or paragraphs across languages (which breaks when structure changes), the current CLI mostly works at the **whole-file** level — and where it does use sections (`##` headings), they're matched by position, not content.
 
 | | tool-alignment (v1) | tool-onboarding (v2) | translate CLI (current) |
 |---|---|---|---|
-| **Analysis unit** | Blocks (code, math, prose) | Blocks with look-ahead | Sections (`##` headings) |
+| **Analysis unit** | Blocks (code, math, prose) | Blocks with look-ahead | Whole-file (forward, backward, init) or sections (Action sync) |
 | **Matching strategy** | Count-based scoring | Sequential walk with divergence mapping | Position-based (section 1 ↔ section 1) |
-| **LLM usage** | Optional (bolt-on quality scoring) | Hybrid (prose only) | Core (all translation + backward analysis) |
-| **Translation approach** | N/A (diagnostic only) | N/A (diagnostic only) | Whole-section re-translate via Claude |
+| **LLM usage** | Optional (bolt-on quality scoring) | Hybrid (prose only) | Core (all translation + analysis) |
+| **Translation approach** | N/A (diagnostic only) | N/A (diagnostic only) | Whole-file re-translate (`forward`, `init`); section-level update (Action sync of existing files) |
 | **Failure mode** | False positives from threshold miscalibration | Cascading misalignment when blocks added/deleted | Over-translates if section boundaries shift (rare) |
 | **Scope** | One-time diagnostic | One-time onboarding assessment | Ongoing sync (forward, backward, init) |
+
+**Translation granularity by mode:**
+- **`init`** — whole-file (`translateFullDocument`) — bulk-translating new projects
+- **`forward`** — whole-file (`translateDocumentResync`) — resyncing existing translations to match updated source
+- **`backward`** — whole-file analysis — evaluates all sections in one LLM call for cross-section context
+- **GitHub Action (new files)** — whole-file (`translateFullDocument`)
+- **GitHub Action (existing files)** — section-by-section (`translateSection`) — only changed sections are re-translated for cost efficiency
 
 ---
 
