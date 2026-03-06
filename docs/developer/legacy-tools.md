@@ -12,6 +12,19 @@ translate CLI backward/forward/status/init (current)
     → section-based analysis, whole-section re-translate
 ```
 
+### How the current CLI differs
+
+The key insight that emerged from both tools: **work at the section level, not the block level**. Instead of trying to match individual code blocks or paragraphs across languages (which breaks when structure changes), the current CLI treats each `##` section as an atomic unit — compare whole sections, re-translate whole sections.
+
+| | tool-alignment (v1) | tool-onboarding (v2) | translate CLI (current) |
+|---|---|---|---|
+| **Analysis unit** | Blocks (code, math, prose) | Blocks with look-ahead | Sections (`##` headings) |
+| **Matching strategy** | Count-based scoring | Sequential walk with divergence mapping | Position-based (section 1 ↔ section 1) |
+| **LLM usage** | Optional (bolt-on quality scoring) | Hybrid (prose only) | Core (all translation + backward analysis) |
+| **Translation approach** | N/A (diagnostic only) | N/A (diagnostic only) | Whole-section re-translate via Claude |
+| **Failure mode** | False positives from threshold miscalibration | Cascading misalignment when blocks added/deleted | Over-translates if section boundaries shift (rare) |
+| **Scope** | One-time diagnostic | One-time onboarding assessment | Ongoing sync (forward, backward, init) |
+
 ---
 
 ## tool-alignment (v1 — Deterministic Structural Analysis)
