@@ -52,7 +52,7 @@ src/
 │       └── status.ts          # Status command — fast sync diagnostic
 ```
 
-Full module responsibilities: `docs/ARCHITECTURE.md`
+Full module responsibilities: `docs/developer/architecture.md`
 
 ---
 
@@ -133,7 +133,7 @@ The `.tmp/` folder is committed (via `.gitkeep`) but its contents are git-ignore
 ```bash
 ./tool-test-action-on-github/test-action-on-github.sh
 ```
-Uses TEST mode (no Claude API calls). See `docs/TEST-REPOSITORIES.md`.
+Uses TEST mode (no Claude API calls). See `docs/developer/testing.md`.
 
 ---
 
@@ -145,7 +145,7 @@ Uses TEST mode (no Claude API calls). See `docs/TEST-REPOSITORIES.md`.
 ✅ Clean up any `.backup` or `-old` files before committing
 ❌ Never create standalone summary/notes markdown files for individual changes
 
-Docs live in `docs/` — see `docs/INDEX.md` for the full structure.
+Docs live in `docs/` — see `docs/index.md` for the full structure.
 
 ---
 

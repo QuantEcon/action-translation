@@ -1,0 +1,27 @@
+version: 1
+
+project:
+  title: action-translation
+  subtitle: Automated MyST Markdown translation using Claude AI
+  github: https://github.com/QuantEcon/action-translation
+  license: MIT
+
+  toc:
+    - file: index.md
+    - title: User Guide
+      children:
+        - file: user/quickstart.md
+        - file: user/action-reference.md
+        - file: user/cli-reference.md
+        - file: user/glossary.md
+        - file: user/heading-maps.md
+        - file: user/language-config.md
+        - file: user/faq.md
+    - title: Developer Guide
+      children:
+        - file: developer/architecture.md
+        - file: developer/testing.md
+        - file: developer/roadmap.md
+
+site:
+  template: book-theme
