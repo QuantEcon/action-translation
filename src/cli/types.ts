@@ -193,7 +193,6 @@ export interface CommonOptions {
 export interface BackwardOptions extends CommonOptions {
   file?: string;             // Single file mode
   minConfidence: number;     // Minimum confidence for reporting (default: 0.6)
-  estimate: boolean;         // Show cost estimate without running
 }
 
 // ============================================================================
@@ -274,6 +273,5 @@ export interface ForwardOptions {
   model: string;             // Claude model (default: "claude-sonnet-4-6")
   test: boolean;             // Use deterministic mock responses (no LLM calls)
   github?: string;           // TARGET repo in owner/repo format for PR creation
-  estimate: boolean;         // Show cost estimate without running
   apiKey: string;            // Anthropic API key
 }

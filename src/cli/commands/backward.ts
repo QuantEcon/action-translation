@@ -409,59 +409,6 @@ export function buildBulkOutputDir(baseOutput: string, sourceName: string): stri
 }
 
 /**
- * Estimate the cost of a bulk backward run.
- */
-export interface CostEstimate {
-  totalFiles: number;
-  stage1Calls: number;
-  estimatedFlaggedFiles: number;
-  estimatedStage2Calls: number;
-  estimatedCostUsd: number;
-  estimatedTimeMinutes: number;
-}
-
-export function estimateBulkCost(fileCount: number, avgSectionsPerFile: number = 8): CostEstimate {
-  // Stage 1: ~$0.01 per file (single triage call)
-  const stage1Calls = fileCount;
-  const stage1Cost = stage1Calls * 0.01;
-
-  // Estimate ~5-10% of files will be flagged
-  const flagRate = 0.075; // 7.5% middle estimate
-  const estimatedFlagged = Math.max(1, Math.round(fileCount * flagRate));
-
-  // Stage 2: 1 call per flagged file (whole-file evaluation)
-  const estimatedStage2Calls = estimatedFlagged;
-  const stage2Cost = estimatedStage2Calls * 0.03; // ~$0.03 per file (larger prompt)
-
-  // Time: ~3s per Stage 1 call + ~8s per Stage 2 call (larger response)
-  const estimatedTimeSeconds = (stage1Calls * 3) + (estimatedStage2Calls * 8);
-
-  return {
-    totalFiles: fileCount,
-    stage1Calls,
-    estimatedFlaggedFiles: estimatedFlagged,
-    estimatedStage2Calls,
-    estimatedCostUsd: Math.round((stage1Cost + stage2Cost) * 100) / 100,
-    estimatedTimeMinutes: Math.round(estimatedTimeSeconds / 60 * 10) / 10,
-  };
-}
-
-/**
- * Format a cost estimate for console display.
- */
-export function formatCostEstimate(estimate: CostEstimate): string {
-  const lines: string[] = [];
-  lines.push('Cost Estimate:');
-  lines.push(`  Files to analyze:       ${estimate.totalFiles}`);
-  lines.push(`  Stage 1 triage calls:   ${estimate.stage1Calls}`);
-  lines.push(`  Est. flagged files:     ~${estimate.estimatedFlaggedFiles} (~7.5%)`);
-  lines.push(`  Est. Stage 2 calls:     ~${estimate.estimatedStage2Calls} (1 per flagged file)`);
-  lines.push(`  Est. API cost:          ~$${estimate.estimatedCostUsd.toFixed(2)}`);
-  lines.push(`  Est. time:              ~${estimate.estimatedTimeMinutes} min`);
-  return lines.join('\n');
-}
-
-/**
  * Discover files to analyze in bulk mode.
  * Uses both SOURCE and TARGET file lists, applies exclusions.
  */
@@ -518,14 +465,6 @@ export async function runBackwardBulk(
 
   if (allFiles.length === 0) {
     logger.warn('No files found. Check --source, --target, and --docs-folder paths.');
-    return buildEmptyBulkReport(source, target, language, options.model);
-  }
-
-  // Cost estimate
-  if (options.estimate) {
-    const estimate = estimateBulkCost(allFiles.length);
-    logger.info('');
-    logger.info(formatCostEstimate(estimate));
     return buildEmptyBulkReport(source, target, language, options.model);
   }
 

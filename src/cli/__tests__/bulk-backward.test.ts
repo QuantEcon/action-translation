@@ -12,8 +12,6 @@ import {
   runBackwardBulk,
   buildBulkReport,
   buildBulkOutputDir,
-  estimateBulkCost,
-  formatCostEstimate,
   readProgress,
   writeProgress,
   discoverBulkFiles,
@@ -156,44 +154,10 @@ function buildBulkOptions(
     json: false,
     test: true,
     minConfidence: 0.6,
-    estimate: false,
     apiKey: 'test-key',
     ...overrides,
   };
 }
-
-// ============================================================================
-// COST ESTIMATION
-// ============================================================================
-
-describe('estimateBulkCost', () => {
-  it('should estimate cost for a medium repo', () => {
-    const estimate = estimateBulkCost(50);
-
-    expect(estimate.totalFiles).toBe(50);
-    expect(estimate.stage1Calls).toBe(50);
-    expect(estimate.estimatedFlaggedFiles).toBeGreaterThan(0);
-    expect(estimate.estimatedFlaggedFiles).toBeLessThanOrEqual(10);
-    expect(estimate.estimatedCostUsd).toBeGreaterThan(0);
-    expect(estimate.estimatedTimeMinutes).toBeGreaterThan(0);
-  });
-
-  it('should estimate at least 1 flagged file', () => {
-    const estimate = estimateBulkCost(1);
-    expect(estimate.estimatedFlaggedFiles).toBe(1);
-  });
-
-  it('should format cost estimate as readable string', () => {
-    const estimate = estimateBulkCost(50);
-    const output = formatCostEstimate(estimate);
-
-    expect(output).toContain('Cost Estimate');
-    expect(output).toContain('50');
-    expect(output).toContain('$');
-    expect(output).toContain('min');
-    expect(output).toContain('1 per flagged file');
-  });
-});
 
 // ============================================================================
 // PROGRESS CHECKPOINTING
@@ -410,28 +374,6 @@ describe('runBackwardBulk', () => {
 
     // Should have processed 2 files (excluded intro.md)
     expect(result.filesAnalyzed).toBe(2);
-  });
-
-  it('should return immediately for --estimate', async () => {
-    const { sourceDir, targetDir } = setupMultiFileFixture();
-    const outputDir = path.join(tmpDir, 'reports');
-
-    const logged: string[] = [];
-    const captureLogger: BackwardLogger = {
-      info: (msg) => logged.push(msg),
-      warn: () => {},
-      error: () => {},
-    };
-
-    const options = buildBulkOptions(sourceDir, targetDir, outputDir, { estimate: true });
-    const result = await runBackwardBulk(options, captureLogger);
-
-    // Should not have processed any files
-    expect(result.filesAnalyzed).toBe(0);
-
-    // Should have printed cost estimate
-    const allOutput = logged.join('\n');
-    expect(allOutput).toContain('Cost Estimate');
   });
 
   it('should handle empty docs folder gracefully', async () => {

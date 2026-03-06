@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 /**
- * Resync CLI — Entry Point
+ * Translate CLI — Entry Point
  * 
  * Commands:
- * - backward:      Two-stage analysis → suggestion reports (Phase 1-2)
- * - backward-sync: Apply accepted suggestions to SOURCE (Phase 3)
- * - forward:       Translate SOURCE changes to TARGET (Phase 3)
- * - status:        Show sync status overview (Phase 2)
+ * - init:          Bulk-translate a new project (Phase 5)
+ * - backward:      Two-stage analysis → suggestion reports
+ * - forward:       Translate SOURCE changes to TARGET
+ * - status:        Show sync status overview
+ * - review:        Interactive review of backward suggestions
  */
 
 import { Command } from 'commander';
@@ -25,8 +26,8 @@ const { version } = require('../../package.json');
 const program = new Command();
 
 program
-  .name('resync')
-  .description('Analyze and sync translations between source and target repositories')
+  .name('translate')
+  .description('Translate and sync documentation between source and target repositories')
   .version(version);
 
 /**
@@ -64,11 +65,10 @@ program
   .option('--test', 'Use deterministic mock responses (no LLM calls)', false)
   .option('--min-confidence <number>', 'Minimum confidence for reporting', '0.6')
   .option('--exclude <pattern>', 'Exclude files matching pattern (repeatable, comma-separated)', collectExclude, [])
-  .option('--estimate', 'Show cost estimate without running', false)
   .option('--resume', 'Resume a previous bulk run from checkpoint', false)
   .action(async (opts) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey && !opts.test && !opts.estimate) {
+    if (!apiKey && !opts.test) {
       console.error('❌ ANTHROPIC_API_KEY environment variable is required (or use --test)');
       process.exit(1);
     }
@@ -84,7 +84,6 @@ program
       json: opts.json,
       test: opts.test,
       minConfidence: validateMinConfidence(opts.minConfidence),
-      estimate: opts.estimate,
       apiKey: apiKey || 'test-key',
     };
 
@@ -189,10 +188,9 @@ program
   .option('--test', 'Use deterministic mock responses (no LLM calls)', false)
   .option('--github <owner/repo>', 'Create one PR per file in TARGET repo')
   .option('--exclude <pattern>', 'Exclude files matching pattern (repeatable, comma-separated)', collectExclude, [])
-  .option('--estimate', 'Show cost estimate without running', false)
   .action(async (opts) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey && !opts.test && !opts.estimate) {
+    if (!apiKey && !opts.test) {
       console.error('❌ ANTHROPIC_API_KEY environment variable is required (or use --test)');
       process.exit(1);
     }
@@ -206,7 +204,6 @@ program
       model: opts.model,
       test: opts.test,
       github: opts.github,
-      estimate: opts.estimate,
       apiKey: apiKey || 'test-key',
     };
 
