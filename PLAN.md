@@ -1157,22 +1157,23 @@ section-count: 5             # Source section count at sync time
 
 ### Bootstrap / Migration
 
-For existing paired projects that predate `.translate/`, a new command bootstraps state from git history:
+For existing paired projects that predate `.translate/`, bootstrap state via the `status` command:
 
 ```bash
-translate sync-state \
+translate status \
   -s /path/to/source \
   -t /path/to/target \
-  --target-language zh-cn
+  --target-language zh-cn \
+  --write-state
 ```
 
-This would:
+`--write-state` adds a one-time side effect to the normal `status` run:
 1. Create `.translate/config.yml` from the provided flags
 2. For each translated file, find the most recent target commit and use it as `synced-at`
 3. Record the source SHA at that point as a best-effort `source-sha`
 4. Mark `model: unknown` (not recoverable from history)
 
-This is a one-time operation. After bootstrap, normal commands maintain state automatically.
+After bootstrap, normal commands (`init`, `forward`, Action) maintain state automatically. No new command needed — `status` already walks both repos and compares structure, so it has all the information required.
 
 ### Tasks
 
@@ -1184,10 +1185,10 @@ This is a one-time operation. After bootstrap, normal commands maintain state au
   - `writeConfig(targetPath, config)` → void
 - [ ] Update `translate init` to write config + per-file state after each lecture
 - [ ] Update `translate status` to use source-sha when available
+- [ ] Add `--write-state` flag to `translate status` for bootstrap / migration
 - [ ] Update `translate backward` to skip unchanged files (source-sha check)
 - [ ] Update `translate forward` to write state after resync
-- [ ] Implement `translate sync-state` bootstrap command
-- [ ] Add tests for state read/write, skip logic, bootstrap
+- [ ] Add tests for state read/write, skip logic, bootstrap via `--write-state`
 - [ ] Add `.translate/` section to `cli-reference.md`
 
 ---
