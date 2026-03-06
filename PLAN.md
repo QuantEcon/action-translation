@@ -1188,6 +1188,7 @@ After bootstrap, normal commands (`init`, `forward`, Action) maintain state auto
 - [ ] Add `--write-state` flag to `translate status` for bootstrap / migration
 - [ ] Update `translate backward` to skip unchanged files (source-sha check)
 - [ ] Update `translate forward` to write state after resync
+- [ ] Update GitHub Action sync mode to write/update state after successful translation
 - [ ] Add tests for state read/write, skip logic, bootstrap via `--write-state`
 - [ ] Add `.translate/` section to `cli-reference.md`
 
