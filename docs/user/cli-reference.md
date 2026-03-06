@@ -4,7 +4,7 @@ title: CLI Reference
 
 # CLI Reference
 
-The `resync` CLI tool provides local analysis and recovery capabilities for translation repositories. It complements the GitHub Action by handling tasks that require interactive use or don't fit a CI/CD pipeline.
+The `translate` CLI tool provides local analysis and recovery capabilities for translation repositories. It complements the GitHub Action by handling tasks that require interactive use or don't fit a CI/CD pipeline.
 
 ## Installation
 
@@ -15,13 +15,13 @@ npm install
 npm run build:cli
 ```
 
-The CLI is available as `npx resync` from within the repository.
+The CLI is available as `npx translate` from within the repository.
 
 ## Environment variables
 
 | Variable | Required for | Description |
 |----------|-------------|-------------|
-| `ANTHROPIC_API_KEY` | `backward`, `forward` | Anthropic API key for Claude. Not needed with `--test` or `--estimate` flags. |
+| `ANTHROPIC_API_KEY` | `backward`, `forward`, `init` | Anthropic API key for Claude. Not needed with `--test` or `--dry-run` flags. |
 
 ## Commands
 
@@ -30,7 +30,7 @@ The CLI is available as `npx resync` from within the repository.
 Fast structural check with no LLM calls. Compares source and target repositories and reports per-file sync status.
 
 ```bash
-npx resync status -s <source-path> -t <target-path> [options]
+npx translate status -s <source-path> -t <target-path> [options]
 ```
 
 **Options:**
@@ -60,7 +60,7 @@ npx resync status -s <source-path> -t <target-path> [options]
 **Example:**
 
 ```bash
-npx resync status \
+npx translate status \
   -s ~/repos/lecture-python-intro \
   -t ~/repos/lecture-intro.zh-cn
 ```
@@ -91,7 +91,7 @@ Two-stage analysis that finds improvements in translations worth backporting to 
 **Stage 2 (evaluation):** Detailed LLM analysis of flagged files — per-section comparison producing categorised suggestions with confidence scores.
 
 ```bash
-npx resync backward -s <source-path> -t <target-path> [options]
+npx translate backward -s <source-path> -t <target-path> [options]
 ```
 
 **Options:**
@@ -109,13 +109,12 @@ npx resync backward -s <source-path> -t <target-path> [options]
 | `--test` | `false` | Use deterministic mock responses (no LLM) |
 | `--min-confidence <n>` | `0.6` | Minimum confidence threshold for reporting |
 | `--exclude <pattern>` | *(none)* | Exclude files matching pattern |
-| `--estimate` | `false` | Show cost estimate without running |
 | `--resume` | `false` | Resume a previous bulk run from checkpoint |
 
 **Single-file example:**
 
 ```bash
-npx resync backward \
+npx translate backward \
   -s ~/repos/lecture-python-intro \
   -t ~/repos/lecture-intro.zh-cn \
   -f cobweb.md \
@@ -125,10 +124,9 @@ npx resync backward \
 **Bulk example (all files):**
 
 ```bash
-npx resync backward \
+npx translate backward \
   -s ~/repos/lecture-python-intro \
-  -t ~/repos/lecture-intro.zh-cn \
-  --estimate  # Preview cost first
+  -t ~/repos/lecture-intro.zh-cn
 ```
 
 **Output structure (bulk mode):**
@@ -164,7 +162,7 @@ reports/backward-2026-03-06/
 Walks through backward analysis suggestions interactively, letting you accept, skip, or reject each one. Accepted suggestions become GitHub Issues in the source repository.
 
 ```bash
-npx resync review <report-dir> [options]
+npx translate review <report-dir> [options]
 ```
 
 **Arguments:**
@@ -185,10 +183,10 @@ npx resync review <report-dir> [options]
 
 ```bash
 # Dry run — preview what Issues would look like
-npx resync review reports/backward-2026-03-06 --dry-run
+npx translate review reports/backward-2026-03-06 --dry-run
 
 # Create Issues in the source repo
-npx resync review reports/backward-2026-03-06 \
+npx translate review reports/backward-2026-03-06 \
   --repo QuantEcon/lecture-python-intro
 ```
 
@@ -217,7 +215,7 @@ The forward pipeline:
 3. **Write** the updated file locally, or create a PR
 
 ```bash
-npx resync forward -s <source-path> -t <target-path> [options]
+npx translate forward -s <source-path> -t <target-path> [options]
 ```
 
 **Options:**
@@ -233,12 +231,11 @@ npx resync forward -s <source-path> -t <target-path> [options]
 | `--test` | `false` | Use deterministic mock responses (no LLM) |
 | `--github <owner/repo>` | *(none)* | Create one PR per file in the target repo |
 | `--exclude <pattern>` | *(none)* | Exclude files matching pattern |
-| `--estimate` | `false` | Show cost estimate without running |
 
 **Single-file example:**
 
 ```bash
-npx resync forward \
+npx translate forward \
   -s ~/repos/lecture-python-intro \
   -t ~/repos/lecture-intro.zh-cn \
   -f cobweb.md
@@ -249,14 +246,8 @@ After running, review the changes with `git diff` in the target repo. Use `git r
 **Bulk example (all outdated files):**
 
 ```bash
-# See what would be resynced
-npx resync forward \
-  -s ~/repos/lecture-python-intro \
-  -t ~/repos/lecture-intro.zh-cn \
-  --estimate
-
 # Run the resync
-npx resync forward \
+npx translate forward \
   -s ~/repos/lecture-python-intro \
   -t ~/repos/lecture-intro.zh-cn
 ```
@@ -264,7 +255,7 @@ npx resync forward \
 **GitHub PR mode:**
 
 ```bash
-npx resync forward \
+npx translate forward \
   -s ~/repos/lecture-python-intro \
   -t ~/repos/lecture-intro.zh-cn \
   --github QuantEcon/lecture-intro.zh-cn
@@ -282,25 +273,129 @@ Creates one PR per file in the target repo with branch `resync/{filename}` and l
 
 ---
 
+### `init` — Bulk-translate a new project
+
+One-time bulk translation of an entire lecture series from a local source repository. Reads `_toc.yml` for lecture discovery, translates each lecture sequentially with `translateFullDocument()`, generates heading-maps, and produces a translation report.
+
+This is intended for onboarding a new project — use `forward` for incremental updates after the initial translation.
+
+```bash
+npx translate init -s <source-path> -t <target-path> --target-language <code> [options]
+```
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `-s, --source <path>` | *(required)* | Path to source (English) repository |
+| `-t, --target <path>` | *(required)* | Path to target directory (will be created) |
+| `--target-language <code>` | *(required)* | Target language code (e.g., `zh-cn`, `fa`) |
+| `--source-language <code>` | `en` | Source language code |
+| `-d, --docs-folder <folder>` | `lectures` | Documentation folder within repos |
+| `-m, --model <model>` | `claude-sonnet-4-6` | Claude model |
+| `--batch-delay <ms>` | `1000` | Delay between lectures in ms (rate limiting) |
+| `--resume-from <file>` | *(none)* | Resume from a specific lecture file |
+| `--dry-run` | `false` | Preview lectures without translating |
+
+**7-phase pipeline:**
+
+1. **Load glossary** — looks for `glossary/<lang>.json` in the current working directory
+2. **Parse `_toc.yml`** — discovers lectures from the source repo's table of contents
+3. **Setup target folder** — creates the target directory structure
+4. **Copy non-markdown files** — images, config, data files, CSS (preserves directory structure)
+5. **Translate lectures** — sequentially with retry + progress bar
+6. **Generate heading-maps** — position-based section matching, injected into frontmatter
+7. **Write report** — `TRANSLATION-REPORT.md` with stats, config, and failure details
+
+**Dry run example (preview without API calls):**
+
+```bash
+npx translate init \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  --target-language zh-cn \
+  --dry-run
+```
+
+Output:
+```
+🔍 DRY RUN — No changes will be made
+
+Source:   /Users/you/repos/lecture-python-intro
+Target:   /Users/you/repos/lecture-python-intro.zh-cn
+Language: en → zh-cn
+Model:    claude-sonnet-4-6
+Glossary: 181 terms
+
+Found 51 lectures in _toc.yml
+
+Would translate the following lectures:
+  1. intro.md ✓
+  2. getting_started.md ✓
+  3. cobweb.md ✓
+  ...
+
+Would copy 24 non-markdown file(s)
+
+Run without --dry-run to translate.
+```
+
+**Full translation example:**
+
+```bash
+npx translate init \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  --target-language zh-cn
+```
+
+**Resume from a specific lecture (after a failure or interruption):**
+
+```bash
+npx translate init \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  --target-language zh-cn \
+  --resume-from cobweb.md
+```
+
+Partial filename matches are supported — `--resume-from cobweb` will also work.
+
+**Output:**
+
+A `TRANSLATION-REPORT.md` file is written to the target directory with:
+- Total lectures, success/failure counts
+- Total tokens used, total time
+- Configuration details
+- List of any failures with error messages
+
+---
+
 ## Typical workflow
 
 A complete translation maintenance workflow using the CLI:
 
 ```bash
 # 1. Check sync status (free, instant)
-npx resync status -s ~/source -t ~/target
+npx translate status -s ~/source -t ~/target
 
 # 2. Run backward analysis to find improvements (LLM, ~$0.85 for 51 files)
-npx resync backward -s ~/source -t ~/target --estimate
-npx resync backward -s ~/source -t ~/target
+npx translate backward -s ~/source -t ~/target
 
 # 3. Review suggestions interactively, create Issues for accepted ones
-npx resync review reports/backward-2026-03-06 --repo QuantEcon/lecture-python-intro
+npx translate review reports/backward-2026-03-06 --repo QuantEcon/lecture-python-intro
 
 # 4. Forward resync any outdated files (LLM, ~$0.12/file)
-npx resync forward -s ~/source -t ~/target --estimate
-npx resync forward -s ~/source -t ~/target
+npx translate forward -s ~/source -t ~/target
 cd ~/target && git diff  # Review changes
+```
+
+For initial project onboarding, use `init` first:
+
+```bash
+# Translate entire project from scratch
+npx translate init -s ~/source -t ~/target --target-language zh-cn --dry-run
+npx translate init -s ~/source -t ~/target --target-language zh-cn
 ```
 
 ## Cost estimates
@@ -315,4 +410,5 @@ Approximate costs using `claude-sonnet-4-6` (March 2026 pricing):
 | `backward` full run (51 files) | ~$0.85 total | Stage 1 filters ~80% of files |
 | `forward` triage | ~$0.05/file | 1 LLM call per file |
 | `forward` RESYNC | ~$0.12/file | 1 LLM call per file (whole-file) |
+| `init` (bulk translate) | ~$0.12/file | 1 LLM call per lecture (whole-file) |
 | `review` | Free | Reads existing reports, no LLM calls |

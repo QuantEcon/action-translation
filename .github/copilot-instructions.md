@@ -8,7 +8,7 @@
 - **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
-**Current Version**: v0.8.0 | **Tests**: 724 (32 suites) | **Glossary**: 357 terms (zh-cn, fa)
+**Current Version**: v0.8.0 | **Tests**: 736 (33 suites) | **Glossary**: 357 terms (zh-cn, fa)
 
 ---
 
@@ -49,6 +49,7 @@ src/
 │       ├── backward.ts        # Backward command orchestrator — single + bulk
 │       ├── forward.ts         # Forward command — whole-file resync TARGET to SOURCE
 │       ├── review.ts          # Review command — full pipeline, Steps 1–5
+│       ├── init.ts            # Init command — bulk-translate new projects
 │       └── status.ts          # Status command — fast sync diagnostic
 ```
 
@@ -91,7 +92,7 @@ Maps are flat (no nesting), include all heading levels, auto-populated on first 
 
 ### Running Tests
 ```bash
-npm test                          # All 724 tests
+npm test                          # All 736 tests
 npm test -- parser.test.ts        # Single file
 npm test -- --watch               # Watch mode
 npm test -- --coverage            # Coverage report
@@ -164,6 +165,7 @@ Docs live in `docs/` — see `docs/index.md` for the full structure.
 | Forward resync | `commands/forward.ts` → `resyncSingleFile` / `runForwardBulk` |
 | Forward triage | `forward-triage.ts` → `triageForward` |
 | Forward PR creation | `forward-pr-creator.ts` → `createForwardPR` |
+| Init (bulk translate) | `commands/init.ts` → `runInit` |
 | Whole-file RESYNC | `translator.ts` → `translateDocumentResync` |
 | Input validation | `inputs.ts` → `getInputs` / `getReviewInputs` |
 

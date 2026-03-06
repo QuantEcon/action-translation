@@ -49,10 +49,11 @@ jobs:
 ### CLI
 
 ```bash
-npx resync status -s ~/repos/lecture-python-intro -t ~/repos/lecture-intro.zh-cn
-npx resync backward -s SOURCE -t TARGET -o reports/
-npx resync review reports/my-report --dry-run
-npx resync forward -s SOURCE -t TARGET -f intro.md
+npx translate status -s ~/repos/lecture-python-intro -t ~/repos/lecture-intro.zh-cn
+npx translate backward -s SOURCE -t TARGET -o reports/
+npx translate review reports/my-report --dry-run
+npx translate forward -s SOURCE -t TARGET -f intro.md
+npx translate init -s SOURCE -t TARGET --target-language zh-cn --dry-run
 ```
 
 See the [Quickstart guide](docs/user/quickstart.md) for full setup instructions.
