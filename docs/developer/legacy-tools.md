@@ -1,6 +1,6 @@
 # Legacy Tools
 
-Tools that informed the current `resync` CLI design. Both are deprecated but retained in-tree for reference. This document captures the approaches tried, what worked, and what didn't — so we don't reinvent things we've already explored.
+Tools that informed the current `translate` CLI design. Both have been removed from the tree but are preserved in git history. This document captures the approaches tried, what worked, and what didn't — so we don't reinvent things we've already explored.
 
 **Evolution**:
 ```
@@ -8,7 +8,7 @@ tool-alignment (v1 — purely deterministic)
     ↓  replaced: too complex, hard to calibrate thresholds
 tool-onboarding (v2 — hybrid deterministic + Claude)
     ↓  replaced: block-level divergence mapping broke on structural changes
-resync CLI backward/forward/status (current)
+translate CLI backward/forward/status/init (current)
     → section-based analysis, whole-section re-translate
 ```
 
@@ -157,7 +157,7 @@ Curated list of approaches from both tools that could enhance the current CLI:
 |------|--------|----------------|
 | Position-based section matching | Both | Core to heading-map design and section pairing |
 | Hybrid human-AI workflow | tool-onboarding | `review` command (tool suggests, human decides) |
-| Cost estimation | Both | `forward --estimate` |
+| Cost estimation | Both | Replaced by `--dry-run` pattern (lists what would be done without API calls) |
 | Date-aware direction logic | tool-onboarding | `status` command (OUTDATED based on commit dates) |
 | Document-order presentation | tool-onboarding | All report output sorted by position |
 

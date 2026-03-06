@@ -1065,8 +1065,9 @@ translate init -s /path/to/source -t /path/to/target \
 **Goal**: Clean up deprecated tools and repo structure
 
 - [x] Document `tool-onboarding` and `tool-alignment` in `docs/developer/legacy-tools.md`
-- [ ] Deprecate `tool-onboarding/` (add deprecation notice to README)
-- [ ] Deprecate `tool-alignment/` (add deprecation notice to README)
+- [x] Deprecate `tool-onboarding/` (add deprecation notice to README)
+- [x] Deprecate `tool-alignment/` (add deprecation notice to README)
+- [x] Remove `tool-onboarding/` and `tool-alignment/` from tree (preserved in git history)
 - [ ] Remove `tool-bulk-translator/` (functionality moved to `translate init`)
 - [ ] Ensure `.gitignore` covers `node_modules/` in all tool dirs
 - [ ] Remove `coverage/` from tracked files
