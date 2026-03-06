@@ -24,7 +24,6 @@ function makeOptions(overrides: Partial<ForwardOptions> = {}): ForwardOptions {
     language: 'zh-cn',
     model: 'claude-sonnet-4-6',
     test: true,
-    estimate: false,
     apiKey: 'test-key',
     ...overrides,
   };

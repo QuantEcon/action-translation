@@ -1,7 +1,7 @@
 # PLAN: Development Roadmap
 
 **Created**: 2026-02-16  
-**Last Updated**: 2026-03-05  
+**Last Updated**: 2026-03-06  
 **Sources**: 2026-02-16-REVIEW.md, docs/DESIGN-RESYNC.md  
 **Current Version**: v0.8.0  
 **Test Status**: 640 tests passing (29 test suites)
@@ -990,7 +990,7 @@ npm run test:real-repos
 ## Phase 5: CLI Rename & Init Command
 
 **Goal**: Rename CLI from `resync` to `translate`, integrate bulk translation as `init` command, simplify flags  
-**Status**: In progress
+**Status**: ✅ Complete (PR #23)
 
 ### Design Decisions (6 March 2026)
 
@@ -1002,18 +1002,18 @@ npm run test:real-repos
 
 **`--dry-run` over `--estimate`**: These tools run infrequently. `--dry-run` (lists what would be done, no API calls, no file writes) is more useful for understanding and debugging than a cost estimate. Remove `--estimate` from `backward` and `forward` commands; add `--dry-run` to `init`.
 
-**Future `setup` command**: Scaffold a new target repo by appending language code to source repo name and using `gh` CLI. Separate from `init` (which does translation). Not implemented yet.
+**`setup` command (Phase 5c)**: Scaffold a new target repo by appending language code to source repo name and using `gh` CLI. Separate from `init` (which does translation). Kept as a follow-up PR to keep Phase 5 scope focused.
 
-### 5.1 CLI Rename (`resync` → `translate`)
+### 5.1 CLI Rename (`resync` → `translate`) ✅
 
-- [ ] Update `package.json` `bin` entry: `resync` → `translate`
-- [ ] Update `src/cli/index.ts` `.name('resync')` → `.name('translate')`
-- [ ] Update `src/cli/index.ts` description
-- [ ] Update all `npx resync` references in docs (`cli-reference.md`, `README.md`, etc.)
-- [ ] Update `copilot-instructions.md` CLI references
-- [ ] Update PLAN.md `npx resync` references
+- [x] Update `package.json` `bin` entry: `resync` → `translate`
+- [x] Update `src/cli/index.ts` `.name('resync')` → `.name('translate')`
+- [x] Update `src/cli/index.ts` description
+- [x] Update all `npx resync` references in docs (`cli-reference.md`, `README.md`, etc.)
+- [x] Update `copilot-instructions.md` CLI references
+- [ ] Update PLAN.md `npx resync` references (historical — left as-is in earlier phases)
 
-### 5.2 Init Command (`src/cli/commands/init.ts`)
+### 5.2 Init Command (`src/cli/commands/init.ts`) ✅
 
 Adapted from `tool-bulk-translator/src/bulk-translate.ts` with local-path approach.
 
@@ -1036,27 +1036,36 @@ translate init -s /path/to/source -t /path/to/target \
 6. Generate heading-maps per file
 7. Generate `TRANSLATION-REPORT.md`
 
-- [ ] Create `src/cli/commands/init.ts`
-- [ ] Register `init` command in `src/cli/index.ts`
-- [ ] Add `InitOptions` to `src/cli/types.ts`
-- [ ] Implement local file copy (no Octokit)
-- [ ] Implement local `_toc.yml` parsing
-- [ ] Implement sequential translation with progress bar
-- [ ] Implement heading-map generation (reuse from bulk-translator)
-- [ ] Implement report generation
-- [ ] `--dry-run` mode (list lectures, no API calls, no file writes)
-- [ ] `--resume-from` support
-- [ ] Add tests
+- [x] Create `src/cli/commands/init.ts`
+- [x] Register `init` command in `src/cli/index.ts`
+- [x] Add `InitOptions` in `src/cli/commands/init.ts`
+- [x] Implement local file copy (no Octokit)
+- [x] Implement local `_toc.yml` parsing
+- [x] Implement sequential translation with progress bar
+- [x] Implement heading-map generation (reuse from bulk-translator)
+- [x] Implement report generation
+- [x] `--dry-run` mode (list lectures, no API calls, no file writes)
+- [x] `--resume-from` support
+- [x] Add tests (16 tests: `parseTocLectures`, `copyNonMarkdownFiles`)
 
-### 5.3 Remove `--estimate` Flag
+### 5.3 Remove `--estimate` Flag ✅
 
-- [ ] Remove `--estimate` from `backward` command in `index.ts`
-- [ ] Remove `--estimate` from `forward` command in `index.ts`
-- [ ] Remove `estimate` from `BackwardOptions` and `ForwardOptions` in `types.ts`
-- [ ] Remove `estimateBulkCost()` from `backward.ts`
-- [ ] Remove `estimateCost()` from `forward.ts`
-- [ ] Update tests that reference `--estimate`
-- [ ] Update `cli-reference.md`
+- [x] Remove `--estimate` from `backward` command in `index.ts`
+- [x] Remove `--estimate` from `forward` command in `index.ts`
+- [x] Remove `estimate` from `BackwardOptions` and `ForwardOptions` in `types.ts`
+- [x] Remove `estimateBulkCost()` from `backward.ts`
+- [x] Remove `estimateCost()` from `forward.ts`
+- [x] Update tests that reference `--estimate`
+- [x] Update `cli-reference.md`
+
+### 5.4 Documentation ✅
+
+- [x] `cli-reference.md`: full `init` command section with options, pipeline, examples
+- [x] `cli-reference.md`: rename all `resync` → `translate`, remove `--estimate`
+- [x] `README.md`: update CLI examples
+- [x] `quickstart.md`: update CLI references
+- [x] `architecture.md`: add `init.ts` to module tree, update CLI references
+- [x] `CHANGELOG.md`: Phase 5 entries
 
 ---
 
@@ -1076,7 +1085,160 @@ translate init -s /path/to/source -t /path/to/target \
 
 ---
 
-## Phase 6: GitHub Action Automation (Future — 1-2 days)
+## Phase 6: `.translate/` Metadata Folder
+
+**Goal**: Add minimal persistent metadata to the target repo so the CLI can make exact staleness decisions, skip redundant work, and record translation provenance — without adding complexity.  
+**Status**: Not started  
+**Prerequisite**: Phase 5 (PR #23)
+
+### Motivation
+
+Today all sync state is either ephemeral (recomputed every run) or approximated from git history. This has three pain points:
+
+1. **Staleness is a guess** — `status` and `backward` estimate sync state from commit timestamps, which breaks if someone edits a target file for non-translation reasons (formatting fix, typo).
+2. **No skip optimisation** — `backward` evaluates every file every run, even when source hasn't changed since last evaluation. For a 51-file repo at ~$0.01/file, that's wasted cost on repeated runs.
+3. **No provenance** — after translation you can't tell what model produced it, or what source state it was translated from.
+
+### Design Principles
+
+- **Minimum viable metadata** — track only what enables concrete decisions. No speculative fields.
+- **Lives in TARGET repo only** — source repo stays untouched.
+- **Committed to git** — metadata is part of the translation record (not ephemeral cache).
+- **Heading-map stays in frontmatter** — it travels with the document and serves as a quick structural verifier. `.translate/` complements it, doesn't replace it.
+- **Graceful absence** — if `.translate/` doesn't exist, all commands work exactly as today (git-heuristic fallback). Existing projects are unaffected.
+
+### Structure
+
+```
+.translate/
+├── config.yml              # Project-level settings
+└── state/
+    ├── intro.md.yml        # Per-file sync metadata
+    ├── cobweb.md.yml
+    └── solow.md.yml
+```
+
+**Project config** (`.translate/config.yml`):
+```yaml
+source-language: en
+target-language: zh-cn
+docs-folder: lectures
+```
+
+This replaces the need to pass `--source-language`, `--target-language`, `--docs-folder` on every CLI invocation. Commands read config as defaults, flags override.
+
+**Per-file state** (`.translate/state/<filename>.yml`):
+```yaml
+source-sha: abc1234f         # Source file's commit SHA at time of sync
+synced-at: 2026-03-06        # Explicit sync timestamp (ISO date)
+model: claude-sonnet-4-6   # Model used for translation
+mode: RESYNC                 # Translation mode: NEW / UPDATE / RESYNC
+section-count: 5             # Source section count at sync time
+```
+
+### What this enables
+
+| Capability | Today | With `.translate/` |
+|---|---|---|
+| "Is this file stale?" | Git timestamp heuristic | Exact: `git log --since` on source-sha |
+| "Skip unchanged files" | Can't — re-evaluates all | Compare source-sha to HEAD, skip if unchanged |
+| "What model translated this?" | Unknown | Recorded per-file |
+| Default CLI flags | Must pass every time | Read from `config.yml` |
+| "Translation coverage" | Computed live each run | Instant: count files with state entries |
+
+### How each command uses `.translate/`
+
+- **`translate init`** — Creates `.translate/config.yml` + per-file state entries after each lecture is translated. Natural first producer.
+- **`translate status`** — If state exists, uses source-sha for exact comparison instead of git heuristic. Falls back to current behaviour if absent.
+- **`translate backward`** — Skips files where source-sha matches current HEAD (source unchanged since last sync). Saves LLM cost on repeated runs.
+- **`translate forward`** — Updates state entry after successful resync.
+- **GitHub Action (sync mode)** — Reads config for defaults. Updates state after successful translation PR.
+- **`translate setup`** — Creates `.translate/config.yml` as part of repo scaffolding.
+
+### Bootstrap / Migration
+
+For existing paired projects that predate `.translate/`, bootstrap state via the `status` command:
+
+```bash
+translate status \
+  -s /path/to/source \
+  -t /path/to/target \
+  --target-language zh-cn \
+  --write-state
+```
+
+`--write-state` adds a one-time side effect to the normal `status` run:
+1. Create `.translate/config.yml` from the provided flags
+2. For each translated file, find the most recent target commit and use it as `synced-at`
+3. Record the source SHA at that point as a best-effort `source-sha`
+4. Mark `model: unknown` (not recoverable from history)
+
+After bootstrap, normal commands (`init`, `forward`, Action) maintain state automatically. No new command needed — `status` already walks both repos and compares structure, so it has all the information required.
+
+### Tasks
+
+- [ ] Define `TranslateConfig` and `FileState` types in `src/cli/types.ts`
+- [ ] Create `src/cli/translate-state.ts` — read/write `.translate/` config and state
+  - `readConfig(targetPath)` → `TranslateConfig | undefined`
+  - `readFileState(targetPath, filename)` → `FileState | undefined`
+  - `writeFileState(targetPath, filename, state)` → void
+  - `writeConfig(targetPath, config)` → void
+- [ ] Update `translate init` to write config + per-file state after each lecture
+- [ ] Update `translate status` to use source-sha when available
+- [ ] Add `--write-state` flag to `translate status` for bootstrap / migration
+- [ ] Update `translate backward` to skip unchanged files (source-sha check)
+- [ ] Update `translate forward` to write state after resync
+- [ ] Update GitHub Action sync mode to write/update state after successful translation
+- [ ] Add tests for state read/write, skip logic, bootstrap via `--write-state`
+- [ ] Add `.translate/` section to `cli-reference.md`
+
+---
+
+## Phase 6b: Setup Command (Future PR)
+
+**Goal**: Scaffold a new target repo so `translate init` has somewhere to translate into  
+**Status**: Not started  
+**Prerequisite**: Phase 5 (PR #23)
+
+**Concept**: `translate setup` creates and initialises a target translation repository. It pairs with `init` to provide the complete onboarding workflow: `setup` → `init` → push → configure Action.
+
+```bash
+# Create target repo and local clone
+translate setup \
+  --source QuantEcon/lecture-python-intro \
+  --target-language zh-cn
+
+# Then translate into it
+translate init \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  --target-language zh-cn
+```
+
+### What `setup` would do
+
+1. **Derive target repo name**: `{source-repo}.{lang}` (e.g., `lecture-python-intro.zh-cn`)
+2. **Create GitHub repo**: `gh repo create {owner}/{target-name} --public --clone`
+3. **Copy repo scaffolding**: `.github/workflows/`, `LICENSE`, `.gitignore`
+4. **Create initial `_config.yml`**: Set title, language metadata
+5. **Create translation workflow file**: Pre-configured `action-translation` sync workflow
+6. **Initial commit and push**
+
+### Tasks
+
+- [ ] Create `src/cli/commands/setup.ts`
+- [ ] Register `setup` command in `src/cli/index.ts`
+- [ ] Implement repo name derivation
+- [ ] Implement `gh repo create` integration (injectable `GhRunner` for testing)
+- [ ] Implement scaffolding file generation
+- [ ] Implement workflow template generation
+- [ ] `--dry-run` mode (show what would be created)
+- [ ] Add tests
+- [ ] Add docs to `cli-reference.md`
+
+---
+
+## Phase 7: GitHub Action Automation (Future — 1-2 days)
 
 **Goal**: Scheduled backward analysis via GitHub Actions  
 **Prerequisite**: Phase 4 (validated CLI)
@@ -1087,12 +1249,12 @@ translate init -s /path/to/source -t /path/to/target \
 - [ ] Create workflow template: monthly `status` check
 - [ ] Store backward report as workflow artifact
 - [ ] Notification: comment on a tracking Issue or Slack webhook with summary
-- [ ] Maintainer runs `resync review` locally on the downloaded report
+- [ ] Maintainer runs `translate review` locally on the downloaded report
 - [ ] Documentation: "Setting up automated backward analysis"
 
 ---
 
-## Phase 7: Whole-File Translation Architecture (Future — Investigation)
+## Phase 8: Whole-File Translation Architecture (Future — Investigation)
 
 **Goal**: Evaluate whether the whole-file LLM evaluation pattern from backward analysis should be applied to the core forward translation pipeline
 
@@ -1176,12 +1338,14 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 | **Phase 3a**: Interactive review | 3-4 days | Phase 2 ✅ | `npx resync review` with Issue creation |
 | **Phase 3b**: Forward resync | 2-3 days | Phase 3a ✅ | `npx resync forward` with RESYNC mode |
 | **Phase 4**: Refinement | 2-3 days | Phase 3b | Production-ready CLI |
-| **Phase 5**: CLI rename + init | 2-3 days | Phase 3b ✅ | `translate init`, rename resync→translate |
+| **Phase 5**: CLI rename + init | 2-3 days | Phase 3b ✅ | `translate init`, rename resync→translate ✅ |
 | **Phase 5b**: Cleanup | 1 day | Phase 5 | Legacy tool deprecation, repo hygiene |
-| **Phase 6**: Automation | 1-2 days | Phase 4 | Scheduled backward analysis |
-| **Phase 7**: Whole-file translation | TBD | Phase 4 | Evaluate whole-file approach for forward sync |
+| **Phase 6**: `.translate/` metadata | 2-3 days | Phase 5 ✅ | Exact staleness, skip optimisation, provenance |
+| **Phase 6b**: Setup command | 1-2 days | Phase 6 | `translate setup` — scaffold target repo |
+| **Phase 7**: Automation | 1-2 days | Phase 4 | Scheduled backward analysis |
+| **Phase 8**: Whole-file translation | TBD | Phase 4 | Evaluate whole-file approach for forward sync |
 
-**Total**: 15-23 days (Phase 0-4), +3-4 days (Phase 5-5b), +2 days (Phase 6), +TBD (Phase 7)
+**Total**: 15-23 days (Phase 0-4), +3-4 days (Phase 5-5b), +2-3 days (Phase 6), +2 days (Phase 7), +TBD (Phase 8)
 
 ---
 
@@ -1195,7 +1359,7 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 6. ~~**backward-sync PR format**: Should `backward-sync` create PRs directly, or write files for manual PR creation?~~ **Resolved**: `backward-sync` deferred. The `review` command creates GitHub Issues instead. Human edits SOURCE directly.
 7. ~~**Report-driven backward-sync**: The `--from-report` flag reads a backward JSON report and syncs only marked suggestions.~~ **Resolved**: Replaced by interactive `review` command that reads the report folder and walks through suggestions with accept/skip/reject.
 8. **Stage 1 precision**: Flagging rate was ~67% vs estimated 5-10%. High recall is good, but Stage 1 could be tuned to reduce false positives and save Stage 2 costs. — Address in Phase 4 prompt tuning
-9. **Whole-file vs section-by-section translation**: Backward Stage 2 showed ~6x fewer API calls and better quality with whole-file evaluation. Should forward sync (`translator.ts`) adopt the same pattern? Trade-off: better context vs loss of section-level caching in UPDATE mode. — Investigate in Phase 7
+9. **Whole-file vs section-by-section translation**: Backward Stage 2 showed ~6x fewer API calls and better quality with whole-file evaluation. Should forward sync (`translator.ts`) adopt the same pattern? Trade-off: better context vs loss of section-level caching in UPDATE mode. — Investigate in Phase 8
 10. ~~**CLI framework**: `ink` (Node.js) vs `rich` (Python) for the `review` command's terminal rendering.~~ **Resolved**: `ink` (Node.js). Keeps unified codebase, direct module imports for `forward` command. Python `rich` rewrite documented as a future option (see Future section).
 
 ---

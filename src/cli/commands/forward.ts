@@ -61,27 +61,6 @@ const defaultLogger: ForwardLogger = {
 };
 
 // ============================================================================
-// COST ESTIMATION
-// ============================================================================
-
-/**
- * Estimate cost for forward resync (whole-file approach).
- * Triage: ~$0.01/file, Whole-file RESYNC: ~$0.12/file
- */
-function estimateCost(fileCount: number): {
-  triageCost: number;
-  resyncCost: number;
-  totalCost: number;
-} {
-  const triageCost = fileCount * 0.01;
-  // Assume ~60% of files pass triage, whole-file RESYNC ~$0.12 each
-  const resyncFiles = Math.ceil(fileCount * 0.6);
-  const resyncCost = resyncFiles * 0.12;
-  const totalCost = triageCost + resyncCost;
-  return { triageCost, resyncCost, totalCost };
-}
-
-// ============================================================================
 // SINGLE FILE RESYNC
 // ============================================================================
 
@@ -287,16 +266,6 @@ export async function runForwardBulk(
     logger.info(`  • ${f}`);
   }
   logger.info('');
-
-  // Cost estimate
-  if (options.estimate) {
-    const est = estimateCost(candidates.length);
-    logger.info(`Estimated cost:`);
-    logger.info(`  Triage:  ~$${est.triageCost.toFixed(2)} (${candidates.length} files × $0.01)`);
-    logger.info(`  RESYNC:  ~$${est.resyncCost.toFixed(2)} (est. ~${Math.ceil(candidates.length * 0.6)} files × $0.12)`);
-    logger.info(`  Total:   ~$${est.totalCost.toFixed(2)}`);
-    return [];
-  }
 
   // Process each file
   const results: ForwardFileResult[] = [];

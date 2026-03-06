@@ -16,6 +16,7 @@ tool-test-action-on-github/evaluate/dist/
 .env
 .DS_Store
 coverage/
+docs/_build/
 *.test.ts.snap
 .vscode/
 .idea/

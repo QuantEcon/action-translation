@@ -113,14 +113,14 @@ npm install
 npm run build:cli
 
 # Check sync status (no API key needed)
-npx resync status -s ~/source-repo -t ~/target-repo
+npx translate status -s ~/source-repo -t ~/target-repo
 
 # Run backward analysis (finds improvements in translations)
 export ANTHROPIC_API_KEY=your-key
-npx resync backward -s ~/source-repo -t ~/target-repo
+npx translate backward -s ~/source-repo -t ~/target-repo
 
 # Forward resync (updates translations to match source)
-npx resync forward -s ~/source-repo -t ~/target-repo -f cobweb.md
+npx translate forward -s ~/source-repo -t ~/target-repo -f cobweb.md
 ```
 
 See the [CLI Reference](cli-reference.md) for full command documentation.
