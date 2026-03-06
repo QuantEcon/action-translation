@@ -21,7 +21,7 @@ import cliProgress from 'cli-progress';
 import { TranslationService } from '../../translator.js';
 import { MystParser } from '../../parser.js';
 import { Glossary } from '../../types.js';
-import { injectHeadingMap } from '../../heading-map.js';
+import { updateHeadingMap, injectHeadingMap } from '../../heading-map.js';
 
 // ============================================================================
 // TYPES
@@ -101,7 +101,7 @@ export function parseTocLectures(sourceRepoPath: string, docsFolder: string): st
     if (!entries) return;
     for (const entry of entries) {
       if (entry.file) {
-        lectures.push(`${entry.file}.md`);
+        lectures.push(entry.file.endsWith('.md') ? entry.file : `${entry.file}.md`);
       }
       if (entry.sections) extractFiles(entry.sections);
       if (entry.chapters) extractFiles(entry.chapters);
@@ -119,7 +119,7 @@ export function parseTocLectures(sourceRepoPath: string, docsFolder: string): st
   }
   // Also check for root-level file (intro page)
   if (toc.root) {
-    lectures.unshift(`${toc.root}.md`);
+    lectures.unshift(toc.root.endsWith('.md') ? toc.root : `${toc.root}.md`);
   }
 
   return lectures;
@@ -174,7 +174,7 @@ export function copyNonMarkdownFiles(
 
 /**
  * Generate heading-map by parsing source and translated sections.
- * Matches sections by position, builds map: sourceHeadingId → translatedHeadingText.
+ * Uses updateHeadingMap() for correct path-based keys (Parent::Child).
  */
 async function generateHeadingMap(
   sourceContent: string,
@@ -183,26 +183,12 @@ async function generateHeadingMap(
   const parser = new MystParser();
   const sourceParsed = await parser.parseSections(sourceContent, 'temp.md');
   const translatedParsed = await parser.parseSections(translatedContent, 'temp.md');
-  const headingMap = new Map<string, string>();
 
-  function matchSections(sourceSections: any[], translatedSections: any[]) {
-    for (let i = 0; i < Math.min(sourceSections.length, translatedSections.length); i++) {
-      const src = sourceSections[i];
-      const tgt = translatedSections[i];
-
-      if (src.id && tgt.heading) {
-        const translatedHeading = tgt.heading.replace(/^#+\s*/, '');
-        headingMap.set(src.id, translatedHeading);
-      }
-
-      if (src.subsections && tgt.subsections) {
-        matchSections(src.subsections, tgt.subsections);
-      }
-    }
-  }
-
-  matchSections(sourceParsed.sections, translatedParsed.sections);
-  return headingMap;
+  return updateHeadingMap(
+    new Map(),
+    sourceParsed.sections,
+    translatedParsed.sections,
+  );
 }
 
 // ============================================================================
@@ -223,65 +209,53 @@ async function translateLecture(
   glossary: Glossary | undefined,
 ): Promise<{ tokensUsed: number; elapsedMs: number }> {
   const startTime = Date.now();
-  const maxRetries = 3;
-  const baseDelayMs = 2000;
 
-  const sourceFilePath = path.join(sourceRepoPath, docsFolder, lectureFile);
+  // Validate lecture path doesn't escape docs folder (path traversal protection)
+  const sourceBaseDir = path.resolve(sourceRepoPath, docsFolder);
+  const sourceFilePath = path.resolve(sourceRepoPath, docsFolder, lectureFile);
+  if (!sourceFilePath.startsWith(sourceBaseDir + path.sep) && sourceFilePath !== sourceBaseDir) {
+    throw new Error(`Invalid lecture path (path traversal detected): ${lectureFile}`);
+  }
   if (!fs.existsSync(sourceFilePath)) {
     throw new Error(`Source file not found: ${sourceFilePath}`);
   }
 
   const sourceContent = fs.readFileSync(sourceFilePath, 'utf-8');
 
-  let lastError: Error | undefined;
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const result = await translator.translateFullDocument({
-        content: sourceContent,
-        sourceLanguage: options.sourceLanguage,
-        targetLanguage: options.targetLanguage,
-        glossary,
-      });
+  // TranslationService.callWithRetry() handles retries internally (3 attempts, exponential backoff)
+  const result = await translator.translateFullDocument({
+    content: sourceContent,
+    sourceLanguage: options.sourceLanguage,
+    targetLanguage: options.targetLanguage,
+    glossary,
+  });
 
-      if (!result.success || !result.translatedSection) {
-        throw new Error(result.error || 'Translation failed');
-      }
-
-      const translatedContent = result.translatedSection;
-
-      // Generate heading-map
-      const headingMap = await generateHeadingMap(sourceContent, translatedContent);
-
-      // Inject heading-map into frontmatter
-      const finalContent = injectHeadingMap(translatedContent, headingMap);
-
-      // Write to target folder
-      const targetFilePath = path.join(targetPath, docsFolder, lectureFile);
-      fs.mkdirSync(path.dirname(targetFilePath), { recursive: true });
-      fs.writeFileSync(targetFilePath, finalContent, 'utf-8');
-
-      const elapsedMs = Date.now() - startTime;
-      return {
-        tokensUsed: result.tokensUsed || 0,
-        elapsedMs,
-      };
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      const msg = lastError.message;
-
-      // Don't retry permanent failures
-      if (msg.includes('Document too large') || msg.includes('exceeded token limits')) {
-        throw lastError;
-      }
-
-      if (attempt < maxRetries) {
-        const delayMs = baseDelayMs * Math.pow(2, attempt - 1);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-      }
-    }
+  if (!result.success || !result.translatedSection) {
+    throw new Error(result.error || 'Translation failed');
   }
 
-  throw lastError || new Error('Translation failed after retries');
+  const translatedContent = result.translatedSection;
+
+  // Generate heading-map
+  const headingMap = await generateHeadingMap(sourceContent, translatedContent);
+
+  // Inject heading-map into frontmatter
+  const finalContent = injectHeadingMap(translatedContent, headingMap);
+
+  // Write to target folder
+  const targetBaseDir = path.resolve(targetPath, docsFolder);
+  const targetFilePath = path.resolve(targetPath, docsFolder, lectureFile);
+  if (!targetFilePath.startsWith(targetBaseDir + path.sep) && targetFilePath !== targetBaseDir) {
+    throw new Error(`Invalid target path (path traversal detected): ${lectureFile}`);
+  }
+  fs.mkdirSync(path.dirname(targetFilePath), { recursive: true });
+  fs.writeFileSync(targetFilePath, finalContent, 'utf-8');
+
+  const elapsedMs = Date.now() - startTime;
+  return {
+    tokensUsed: result.tokensUsed || 0,
+    elapsedMs,
+  };
 }
 
 // ============================================================================
@@ -422,7 +396,7 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   console.log(chalk.green(`Copied ${copiedCount} non-markdown file(s)\n`));
 
   // Phase 5: Translate lectures
-  const translator = new TranslationService(options.apiKey, options.model, true);
+  const translator = new TranslationService(options.apiKey, options.model, false);
 
   // Handle resume
   let startIndex = 0;

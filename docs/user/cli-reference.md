@@ -21,7 +21,7 @@ The CLI is available as `npx translate` from within the repository.
 
 | Variable | Required for | Description |
 |----------|-------------|-------------|
-| `ANTHROPIC_API_KEY` | `backward`, `forward`, `init` | Anthropic API key for Claude. Not needed with `--test` or `--dry-run` flags. |
+| `ANTHROPIC_API_KEY` | `backward`, `forward`, `init` | Anthropic API key for Claude. Not needed with `--test` (`backward`/`forward`) or `--dry-run` (`init`). |
 
 ## Commands
 

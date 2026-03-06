@@ -172,6 +172,20 @@ chapters:
     const lectures = parseTocLectures(sourceDir, 'lectures');
     expect(lectures).toEqual(['top.md', 'mid.md', 'deep.md']);
   });
+
+  it('should not double-append .md if entry already has extension', () => {
+    const sourceDir = path.join(tmpDir, 'source');
+    writeFile(path.join(sourceDir, 'lectures', '_toc.yml'), `
+format: jb-book
+root: intro.md
+chapters:
+  - file: chapter1.md
+  - file: chapter2
+`);
+
+    const lectures = parseTocLectures(sourceDir, 'lectures');
+    expect(lectures).toEqual(['intro.md', 'chapter1.md', 'chapter2.md']);
+  });
 });
 
 // ============================================================================

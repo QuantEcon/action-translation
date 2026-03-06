@@ -257,6 +257,12 @@ program
       process.exit(1);
     }
 
+    const batchDelay = parseInt(opts.batchDelay, 10);
+    if (!Number.isFinite(batchDelay) || batchDelay < 0) {
+      console.error('❌ --batch-delay must be a non-negative integer');
+      process.exit(1);
+    }
+
     const options: InitOptions = {
       source: opts.source,
       target: opts.target,
@@ -264,7 +270,7 @@ program
       sourceLanguage: opts.sourceLanguage,
       docsFolder: opts.docsFolder,
       model: opts.model,
-      batchDelay: parseInt(opts.batchDelay, 10),
+      batchDelay,
       resumeFrom: opts.resumeFrom,
       dryRun: opts.dryRun,
       apiKey: apiKey || '',
