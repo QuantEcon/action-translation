@@ -15,6 +15,7 @@ import { runBackwardSingleFile, runBackwardBulk } from './commands/backward.js';
 import { runStatus, formatStatusTable, formatStatusJson, StatusOptions } from './commands/status.js';
 import { runReview, ReviewOptions } from './commands/review.js';
 import { resyncSingleFile, runForwardBulk } from './commands/forward.js';
+import { runInit, InitOptions } from './commands/init.js';
 import { BackwardOptions, ForwardOptions } from './types.js';
 
 // Read version from package.json — use createRequire since JSON imports
@@ -228,6 +229,51 @@ program
       } else {
         // Bulk mode
         await runForwardBulk(options, undefined, opts.exclude);
+      }
+    } catch (error) {
+      console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
+  });
+
+// ─── init command ───────────────────────────────────────────────────────────
+
+program
+  .command('init')
+  .description('Bulk-translate a new project from a local source repository')
+  .requiredOption('-s, --source <path>', 'Path to SOURCE (English) repository')
+  .requiredOption('-t, --target <path>', 'Path to TARGET directory (will be created)')
+  .requiredOption('--target-language <code>', 'Target language code (e.g., zh-cn, fa)')
+  .option('--source-language <code>', 'Source language code', 'en')
+  .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
+  .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-6')
+  .option('--batch-delay <ms>', 'Delay between lectures in ms (rate limiting)', '1000')
+  .option('--resume-from <file>', 'Resume from a specific lecture file (e.g., cobweb.md)')
+  .option('--dry-run', 'Preview lectures without translating', false)
+  .action(async (opts) => {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey && !opts.dryRun) {
+      console.error('❌ ANTHROPIC_API_KEY environment variable is required (or use --dry-run)');
+      process.exit(1);
+    }
+
+    const options: InitOptions = {
+      source: opts.source,
+      target: opts.target,
+      targetLanguage: opts.targetLanguage,
+      sourceLanguage: opts.sourceLanguage,
+      docsFolder: opts.docsFolder,
+      model: opts.model,
+      batchDelay: parseInt(opts.batchDelay, 10),
+      resumeFrom: opts.resumeFrom,
+      dryRun: opts.dryRun,
+      apiKey: apiKey || '',
+    };
+
+    try {
+      const stats = await runInit(options);
+      if (stats.failureCount > 0) {
+        process.exit(1);
       }
     } catch (error) {
       console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
