@@ -115,7 +115,7 @@ Output: Per-file markdown reports with action checkboxes for human review.
 
 ### Key Algorithms
 
-**Block-Level Divergence Mapping** — The main innovation. An O(n) algorithm that walked through source and target code blocks simultaneously:
+**Block-Level Divergence Mapping** — The main innovation. A sequential algorithm that walked through source and target code blocks simultaneously (O(n) best case, O(n²) worst case due to look-ahead scanning):
 
 ```
 while (srcIdx < source.length || tgtIdx < target.length):
@@ -129,7 +129,7 @@ while (srcIdx < source.length || tgtIdx < target.length):
     if not found → mark as MODIFIED
 ```
 
-This handled code block reordering and renames well. But the look-ahead had a finite window, so when blocks were added or deleted, it couldn't recover alignment — leading to cascading false positives.
+This handled code block reordering and renames well. But when blocks were added or deleted in either repo, the look-ahead couldn't reliably recover alignment — subsequent blocks would cascade into false INSERTED/MISSING/MODIFIED classifications.
 
 **Hybrid Human-AI Workflow** — Tool generated analysis + recommendations with checkboxes. Humans made final decisions. The tool never auto-synced anything.
 
