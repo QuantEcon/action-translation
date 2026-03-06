@@ -25,6 +25,3 @@ project:
 
 site:
   template: book-theme
-  options:
-    favicon: _static/favicon.ico
-    logo: _static/logo.svg

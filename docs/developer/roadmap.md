@@ -6,7 +6,7 @@ title: Roadmap
 
 Future features under consideration. Items here are **not committed** — they represent design thinking and possible directions.
 
-For completed work, see the [Changelog](../CHANGELOG.md).
+For completed work, see the [Changelog](../../CHANGELOG.md).
 
 ## Multi-language hub-spoke documentation
 
@@ -88,4 +88,4 @@ The **Translation Quality Benchmark Tool** is tracked as a separate project:
 
 **Scope**: Gold-standard EN-ZH dataset, multi-model benchmarking (Claude, GPT, Gemini), GitHub Pages dashboard.
 
-See [PROJECT-BENCHMARK.md](projects/PROJECT-BENCHMARK.md) for the full plan.
+See [PROJECT-BENCHMARK.md](../projects/PROJECT-BENCHMARK.md) for the full plan.

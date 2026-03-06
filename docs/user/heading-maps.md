@@ -91,6 +91,6 @@ The heading-map key is generated from the English heading text:
 | `## Model Description` | `model-description` |
 | `## Equilibrium Conditions` | `equilibrium-conditions` |
 | `### The Bellman Equation` | `the-bellman-equation` |
-| `## Exercise 1.1` | `exercise-1.1` |
+| `## Exercise 1.1` | `exercise-11` |
 
 Special characters are removed, spaces become hyphens, everything is lowercased.

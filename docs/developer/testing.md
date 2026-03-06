@@ -201,7 +201,7 @@ gh run list --repo QuantEcon/test-translation-sync
 gh run view <run-id> --log
 ```
 
-For full details on the test harness, see the [test script README](../tool-test-action-on-github/README.md).
+For full details on the test harness, see the [test script README](../../tool-test-action-on-github/README.md).
 
 ## Coverage
 
