@@ -990,7 +990,7 @@ npm run test:real-repos
 ## Phase 5: CLI Rename & Init Command
 
 **Goal**: Rename CLI from `resync` to `translate`, integrate bulk translation as `init` command, simplify flags  
-**Status**: In progress
+**Status**: ✅ Complete (PR #23)
 
 ### Design Decisions (6 March 2026)
 
@@ -1002,18 +1002,18 @@ npm run test:real-repos
 
 **`--dry-run` over `--estimate`**: These tools run infrequently. `--dry-run` (lists what would be done, no API calls, no file writes) is more useful for understanding and debugging than a cost estimate. Remove `--estimate` from `backward` and `forward` commands; add `--dry-run` to `init`.
 
-**Future `setup` command**: Scaffold a new target repo by appending language code to source repo name and using `gh` CLI. Separate from `init` (which does translation). Not implemented yet.
+**`setup` command (Phase 5c)**: Scaffold a new target repo by appending language code to source repo name and using `gh` CLI. Separate from `init` (which does translation). Kept as a follow-up PR to keep Phase 5 scope focused.
 
-### 5.1 CLI Rename (`resync` → `translate`)
+### 5.1 CLI Rename (`resync` → `translate`) ✅
 
-- [ ] Update `package.json` `bin` entry: `resync` → `translate`
-- [ ] Update `src/cli/index.ts` `.name('resync')` → `.name('translate')`
-- [ ] Update `src/cli/index.ts` description
-- [ ] Update all `npx resync` references in docs (`cli-reference.md`, `README.md`, etc.)
-- [ ] Update `copilot-instructions.md` CLI references
-- [ ] Update PLAN.md `npx resync` references
+- [x] Update `package.json` `bin` entry: `resync` → `translate`
+- [x] Update `src/cli/index.ts` `.name('resync')` → `.name('translate')`
+- [x] Update `src/cli/index.ts` description
+- [x] Update all `npx resync` references in docs (`cli-reference.md`, `README.md`, etc.)
+- [x] Update `copilot-instructions.md` CLI references
+- [ ] Update PLAN.md `npx resync` references (historical — left as-is in earlier phases)
 
-### 5.2 Init Command (`src/cli/commands/init.ts`)
+### 5.2 Init Command (`src/cli/commands/init.ts`) ✅
 
 Adapted from `tool-bulk-translator/src/bulk-translate.ts` with local-path approach.
 
@@ -1036,27 +1036,36 @@ translate init -s /path/to/source -t /path/to/target \
 6. Generate heading-maps per file
 7. Generate `TRANSLATION-REPORT.md`
 
-- [ ] Create `src/cli/commands/init.ts`
-- [ ] Register `init` command in `src/cli/index.ts`
-- [ ] Add `InitOptions` to `src/cli/types.ts`
-- [ ] Implement local file copy (no Octokit)
-- [ ] Implement local `_toc.yml` parsing
-- [ ] Implement sequential translation with progress bar
-- [ ] Implement heading-map generation (reuse from bulk-translator)
-- [ ] Implement report generation
-- [ ] `--dry-run` mode (list lectures, no API calls, no file writes)
-- [ ] `--resume-from` support
-- [ ] Add tests
+- [x] Create `src/cli/commands/init.ts`
+- [x] Register `init` command in `src/cli/index.ts`
+- [x] Add `InitOptions` in `src/cli/commands/init.ts`
+- [x] Implement local file copy (no Octokit)
+- [x] Implement local `_toc.yml` parsing
+- [x] Implement sequential translation with progress bar
+- [x] Implement heading-map generation (reuse from bulk-translator)
+- [x] Implement report generation
+- [x] `--dry-run` mode (list lectures, no API calls, no file writes)
+- [x] `--resume-from` support
+- [x] Add tests (16 tests: `parseTocLectures`, `copyNonMarkdownFiles`)
 
-### 5.3 Remove `--estimate` Flag
+### 5.3 Remove `--estimate` Flag ✅
 
-- [ ] Remove `--estimate` from `backward` command in `index.ts`
-- [ ] Remove `--estimate` from `forward` command in `index.ts`
-- [ ] Remove `estimate` from `BackwardOptions` and `ForwardOptions` in `types.ts`
-- [ ] Remove `estimateBulkCost()` from `backward.ts`
-- [ ] Remove `estimateCost()` from `forward.ts`
-- [ ] Update tests that reference `--estimate`
-- [ ] Update `cli-reference.md`
+- [x] Remove `--estimate` from `backward` command in `index.ts`
+- [x] Remove `--estimate` from `forward` command in `index.ts`
+- [x] Remove `estimate` from `BackwardOptions` and `ForwardOptions` in `types.ts`
+- [x] Remove `estimateBulkCost()` from `backward.ts`
+- [x] Remove `estimateCost()` from `forward.ts`
+- [x] Update tests that reference `--estimate`
+- [x] Update `cli-reference.md`
+
+### 5.4 Documentation ✅
+
+- [x] `cli-reference.md`: full `init` command section with options, pipeline, examples
+- [x] `cli-reference.md`: rename all `resync` → `translate`, remove `--estimate`
+- [x] `README.md`: update CLI examples
+- [x] `quickstart.md`: update CLI references
+- [x] `architecture.md`: add `init.ts` to module tree, update CLI references
+- [x] `CHANGELOG.md`: Phase 5 entries
 
 ---
 
@@ -1076,6 +1085,50 @@ translate init -s /path/to/source -t /path/to/target \
 
 ---
 
+## Phase 5c: Setup Command (Next PR)
+
+**Goal**: Scaffold a new target repo so `translate init` has somewhere to translate into  
+**Status**: Not started  
+**Prerequisite**: Phase 5 (PR #23)
+
+**Concept**: `translate setup` creates and initialises a target translation repository. It pairs with `init` to provide the complete onboarding workflow: `setup` → `init` → push → configure Action.
+
+```bash
+# Create target repo and local clone
+translate setup \
+  --source QuantEcon/lecture-python-intro \
+  --target-language zh-cn
+
+# Then translate into it
+translate init \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  --target-language zh-cn
+```
+
+### What `setup` would do
+
+1. **Derive target repo name**: `{source-repo}.{lang}` (e.g., `lecture-python-intro.zh-cn`)
+2. **Create GitHub repo**: `gh repo create {owner}/{target-name} --public --clone`
+3. **Copy repo scaffolding**: `.github/workflows/`, `LICENSE`, `.gitignore`
+4. **Create initial `_config.yml`**: Set title, language metadata
+5. **Create translation workflow file**: Pre-configured `action-translation` sync workflow
+6. **Initial commit and push**
+
+### Tasks
+
+- [ ] Create `src/cli/commands/setup.ts`
+- [ ] Register `setup` command in `src/cli/index.ts`
+- [ ] Implement repo name derivation
+- [ ] Implement `gh repo create` integration (injectable `GhRunner` for testing)
+- [ ] Implement scaffolding file generation
+- [ ] Implement workflow template generation
+- [ ] `--dry-run` mode (show what would be created)
+- [ ] Add tests
+- [ ] Add docs to `cli-reference.md`
+
+---
+
 ## Phase 6: GitHub Action Automation (Future — 1-2 days)
 
 **Goal**: Scheduled backward analysis via GitHub Actions  
@@ -1087,7 +1140,7 @@ translate init -s /path/to/source -t /path/to/target \
 - [ ] Create workflow template: monthly `status` check
 - [ ] Store backward report as workflow artifact
 - [ ] Notification: comment on a tracking Issue or Slack webhook with summary
-- [ ] Maintainer runs `resync review` locally on the downloaded report
+- [ ] Maintainer runs `translate review` locally on the downloaded report
 - [ ] Documentation: "Setting up automated backward analysis"
 
 ---
@@ -1176,8 +1229,9 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 | **Phase 3a**: Interactive review | 3-4 days | Phase 2 ✅ | `npx resync review` with Issue creation |
 | **Phase 3b**: Forward resync | 2-3 days | Phase 3a ✅ | `npx resync forward` with RESYNC mode |
 | **Phase 4**: Refinement | 2-3 days | Phase 3b | Production-ready CLI |
-| **Phase 5**: CLI rename + init | 2-3 days | Phase 3b ✅ | `translate init`, rename resync→translate |
+| **Phase 5**: CLI rename + init | 2-3 days | Phase 3b ✅ | `translate init`, rename resync→translate ✅ |
 | **Phase 5b**: Cleanup | 1 day | Phase 5 | Legacy tool deprecation, repo hygiene |
+| **Phase 5c**: Setup command | 1-2 days | Phase 5 ✅ | `translate setup` — scaffold target repo |
 | **Phase 6**: Automation | 1-2 days | Phase 4 | Scheduled backward analysis |
 | **Phase 7**: Whole-file translation | TBD | Phase 4 | Evaluate whole-file approach for forward sync |
 
