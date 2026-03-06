@@ -32,14 +32,9 @@ docs/_build/
 
 # Generated reports (output of CLI tools)
 reports/
-tool-onboarding/reports/
 
 # Test repositories (cloned locally for testing)
 test-translation-sync/
 test-translation-sync.zh-cn/
 tool-test-action-on-github/test-translation-sync/
 tool-test-action-on-github/test-translation-sync.zh-cn/
-
-# Generated status reports
-tool-alignment/status/
-tool-alignment/reports/
