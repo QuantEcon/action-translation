@@ -249,6 +249,7 @@ program
   .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-6')
   .option('--batch-delay <ms>', 'Delay between lectures in ms (rate limiting)', '1000')
   .option('--resume-from <file>', 'Resume from a specific lecture file (e.g., cobweb.md)')
+  .option('--glossary <path>', 'Path to glossary JSON file (default: glossary/<lang>.json)')
   .option('--dry-run', 'Preview lectures without translating', false)
   .action(async (opts) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -272,6 +273,7 @@ program
       model: opts.model,
       batchDelay,
       resumeFrom: opts.resumeFrom,
+      glossaryPath: opts.glossary,
       dryRun: opts.dryRun,
       apiKey: apiKey || '',
     };

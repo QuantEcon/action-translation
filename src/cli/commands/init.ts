@@ -36,6 +36,7 @@ export interface InitOptions {
   model: string;             // Claude model (default: "claude-sonnet-4-6")
   batchDelay: number;        // Delay between lectures in ms (default: 1000)
   resumeFrom?: string;       // Resume from specific lecture file
+  glossaryPath?: string;     // Explicit path to glossary JSON file
   dryRun: boolean;           // Preview without API calls or file writes
   apiKey: string;            // Anthropic API key
 }
@@ -60,11 +61,13 @@ interface TocEntry {
 // GLOSSARY LOADER
 // ============================================================================
 
-function loadGlossary(language: string): Glossary | undefined {
-  const candidates = [
-    path.join(process.cwd(), 'glossary', `${language}.json`),
-    path.join(process.cwd(), `glossary-${language}.json`),
-  ];
+function loadGlossary(language: string, glossaryPath?: string): Glossary | undefined {
+  const candidates = glossaryPath
+    ? [glossaryPath]
+    : [
+        path.join(process.cwd(), 'glossary', `${language}.json`),
+        path.join(process.cwd(), `glossary-${language}.json`),
+      ];
 
   for (const candidate of candidates) {
     if (fs.existsSync(candidate)) {
@@ -305,9 +308,13 @@ function generateReport(
   report += `\n## Next Steps
 
 1. Review translated lectures in \`${options.target}\`
-2. Build to verify: \`jupyter-book build ${options.target}\`
-3. Push to GitHub repository
-4. Configure \`action-translation\` for incremental updates
+2. Set up repo-level files if not already present:
+   - \`.github/workflows/\` — CI/CD and \`action-translation\` sync workflow
+   - \`environment.yml\` or \`requirements.txt\` — Python dependencies
+   - \`LICENSE\`
+3. Build to verify: \`jupyter-book build ${options.target}\`
+4. Push to GitHub repository
+5. Configure \`action-translation\` for incremental updates
 
 ---
 
@@ -338,7 +345,7 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   console.log(chalk.gray(`Model:    ${options.model}`));
 
   // Phase 1: Load glossary
-  const glossary = loadGlossary(options.targetLanguage);
+  const glossary = loadGlossary(options.targetLanguage, options.glossaryPath);
   const termCount = glossary?.terms?.length || 0;
   if (termCount > 0) {
     console.log(chalk.green(`Glossary: ${termCount} terms`));
@@ -385,6 +392,8 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     }
 
     console.log(chalk.yellow('\nRun without --dry-run to translate.'));
+    console.log(chalk.gray(`\nNote: This command translates content in the ${options.docsFolder}/ folder only.`));
+    console.log(chalk.gray('You may also need to set up: .github/workflows/, environment.yml, requirements.txt, LICENSE'));
     return stats;
   }
 

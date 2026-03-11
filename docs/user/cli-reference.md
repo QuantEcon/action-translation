@@ -295,6 +295,7 @@ npx translate init -s <source-path> -t <target-path> --target-language <code> [o
 | `-m, --model <model>` | `claude-sonnet-4-6` | Claude model |
 | `--batch-delay <ms>` | `1000` | Delay between lectures in ms (rate limiting) |
 | `--resume-from <file>` | *(none)* | Resume from a specific lecture file |
+| `--glossary <path>` | *(auto)* | Path to glossary JSON file (default: `glossary/<lang>.json`) |
 | `--dry-run` | `false` | Preview lectures without translating |
 
 **7-phase pipeline:**
