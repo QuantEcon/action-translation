@@ -2,7 +2,7 @@
 
 A GitHub Action and CLI tool for managing translations of MyST Markdown documents using Claude AI.
 
-**Version**: v0.8.0 | **Tests**: 724 (32 suites) | [Full Documentation](docs/)
+**Version**: v0.8.0 | **Tests**: 761 (34 suites) | [Full Documentation](docs/)
 
 ## What it does
 
@@ -10,11 +10,12 @@ A GitHub Action and CLI tool for managing translations of MyST Markdown document
 - **Sync mode**: When a PR is merged in the English source repo, automatically translates changed sections and opens a PR in the target language repo.
 - **Review mode**: When a translation PR is opened, posts an AI quality review with scores and suggestions.
 
-**CLI tool (`resync`)** — Four commands for manual translation management:
+**CLI tool (`translate`)** — Five commands for translation management:
 - `status` — Fast structural diagnostic (no LLM)
 - `backward` — Discover improvements in translations worth backporting to the source
 - `review` — Interactive walk-through of backward suggestions, creates GitHub Issues
 - `forward` — Recover from drift via whole-file RESYNC
+- `init` — Bulk-translate an entire project from scratch
 
 ## Quick start
 
@@ -49,10 +50,11 @@ jobs:
 ### CLI
 
 ```bash
-npx resync status -s ~/repos/lecture-python-intro -t ~/repos/lecture-intro.zh-cn
-npx resync backward -s SOURCE -t TARGET -o reports/
-npx resync review reports/my-report --dry-run
-npx resync forward -s SOURCE -t TARGET -f intro.md
+npx translate status -s ~/repos/lecture-python-intro -t ~/repos/lecture-intro.zh-cn
+npx translate backward -s SOURCE -t TARGET -o reports/
+npx translate review reports/my-report --dry-run
+npx translate forward -s SOURCE -t TARGET -f intro.md
+npx translate init -s SOURCE -t TARGET --target-language zh-cn --dry-run
 ```
 
 See the [Quickstart guide](docs/user/quickstart.md) for full setup instructions.
@@ -76,7 +78,7 @@ See the [Quickstart guide](docs/user/quickstart.md) for full setup instructions.
 
 ```bash
 npm install          # Install dependencies
-npm test             # Run all 724 tests
+npm test             # Run all 761 tests
 npm run build        # Compile TypeScript
 npm run package      # Bundle for distribution
 ```

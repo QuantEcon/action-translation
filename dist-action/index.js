@@ -34362,7 +34362,7 @@ CRITICAL RULES:
    - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
 ${additionalRules}
 ${additionalRules ? "" : "9. "}Return ONLY the updated ${targetLanguage} section, no explanations
-
+${request.customInstructions || ""}
 ${glossarySection}
 
 [OLD ${sourceLanguage} VERSION]
@@ -34438,7 +34438,7 @@ CRITICAL RULES:
    - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
 ${additionalRules}
 ${additionalRules ? "" : "8. "}Return ONLY the updated ${targetLanguage} section, no explanations
-
+${request.customInstructions || ""}
 ${glossarySection}
 
 [CURRENT ${sourceLanguage} SOURCE]
@@ -34504,7 +34504,7 @@ RULES:
    - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
 ${additionalRules}
 ${additionalRules ? "" : "9. "}Return ONLY the translated section, no explanations
-
+${request.customInstructions || ""}
 ${glossarySection}
 
 [${sourceLanguage} SECTION TO TRANSLATE]
@@ -34561,7 +34561,7 @@ RULES:
    - Every \`\`\`{solution-start} MUST have matching \`\`\`{solution-end}
    - Every \`\`\`{code-cell} MUST have closing \`\`\`
 ${additionalRules}
-
+${request.customInstructions || ""}
 ${glossarySection}
 
 IMPORTANT: You MUST translate the ENTIRE document. Do not stop mid-sentence or mid-code.
@@ -34649,7 +34649,7 @@ Your task: produce an **updated ${targetLanguage} translation** that accurately 
 7. **Preserve the frontmatter (YAML between --- markers) from the TARGET translation** \u2014 do not replace it with the source frontmatter. Only update the heading-map if section headings changed.
 8. **Use the glossary below for consistent terminology** \u2014 when a term from the glossary appears, use the specified translation.
 ${additionalRules}
-
+${request.customInstructions || ""}
 ${glossarySection}
 
 ## Output format

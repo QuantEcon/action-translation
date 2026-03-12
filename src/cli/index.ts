@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 /**
- * Resync CLI — Entry Point
+ * Translate CLI — Entry Point
  * 
  * Commands:
- * - backward:      Two-stage analysis → suggestion reports (Phase 1-2)
- * - backward-sync: Apply accepted suggestions to SOURCE (Phase 3)
- * - forward:       Translate SOURCE changes to TARGET (Phase 3)
- * - status:        Show sync status overview (Phase 2)
+ * - init:          Bulk-translate a new project (Phase 5)
+ * - backward:      Two-stage analysis → suggestion reports
+ * - forward:       Translate SOURCE changes to TARGET
+ * - status:        Show sync status overview
+ * - review:        Interactive review of backward suggestions
  */
 
 import { Command } from 'commander';
@@ -14,7 +15,9 @@ import { runBackwardSingleFile, runBackwardBulk } from './commands/backward.js';
 import { runStatus, formatStatusTable, formatStatusJson, StatusOptions } from './commands/status.js';
 import { runReview, ReviewOptions } from './commands/review.js';
 import { resyncSingleFile, runForwardBulk } from './commands/forward.js';
+import { runInit, InitOptions } from './commands/init.js';
 import { BackwardOptions, ForwardOptions } from './types.js';
+import { DEFAULT_RULES, parseLocalizationRules } from '../localization-rules.js';
 
 // Read version from package.json — use createRequire since JSON imports
 // need import assertions which aren't stable in all Node versions.
@@ -25,8 +28,8 @@ const { version } = require('../../package.json');
 const program = new Command();
 
 program
-  .name('resync')
-  .description('Analyze and sync translations between source and target repositories')
+  .name('translate')
+  .description('Translate and sync documentation between source and target repositories')
   .version(version);
 
 /**
@@ -64,11 +67,10 @@ program
   .option('--test', 'Use deterministic mock responses (no LLM calls)', false)
   .option('--min-confidence <number>', 'Minimum confidence for reporting', '0.6')
   .option('--exclude <pattern>', 'Exclude files matching pattern (repeatable, comma-separated)', collectExclude, [])
-  .option('--estimate', 'Show cost estimate without running', false)
   .option('--resume', 'Resume a previous bulk run from checkpoint', false)
   .action(async (opts) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey && !opts.test && !opts.estimate) {
+    if (!apiKey && !opts.test) {
       console.error('❌ ANTHROPIC_API_KEY environment variable is required (or use --test)');
       process.exit(1);
     }
@@ -84,7 +86,6 @@ program
       json: opts.json,
       test: opts.test,
       minConfidence: validateMinConfidence(opts.minConfidence),
-      estimate: opts.estimate,
       apiKey: apiKey || 'test-key',
     };
 
@@ -189,10 +190,9 @@ program
   .option('--test', 'Use deterministic mock responses (no LLM calls)', false)
   .option('--github <owner/repo>', 'Create one PR per file in TARGET repo')
   .option('--exclude <pattern>', 'Exclude files matching pattern (repeatable, comma-separated)', collectExclude, [])
-  .option('--estimate', 'Show cost estimate without running', false)
   .action(async (opts) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey && !opts.test && !opts.estimate) {
+    if (!apiKey && !opts.test) {
       console.error('❌ ANTHROPIC_API_KEY environment variable is required (or use --test)');
       process.exit(1);
     }
@@ -206,7 +206,6 @@ program
       model: opts.model,
       test: opts.test,
       github: opts.github,
-      estimate: opts.estimate,
       apiKey: apiKey || 'test-key',
     };
 
@@ -231,6 +230,71 @@ program
       } else {
         // Bulk mode
         await runForwardBulk(options, undefined, opts.exclude);
+      }
+    } catch (error) {
+      console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
+  });
+
+// ─── init command ───────────────────────────────────────────────────────────
+
+program
+  .command('init')
+  .description('Bulk-translate a new project from a local source repository')
+  .requiredOption('-s, --source <path>', 'Path to SOURCE (English) repository')
+  .requiredOption('-t, --target <path>', 'Path to TARGET directory (will be created)')
+  .requiredOption('--target-language <code>', 'Target language code (e.g., zh-cn, fa)')
+  .option('--source-language <code>', 'Source language code', 'en')
+  .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
+  .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-6')
+  .option('--batch-delay <ms>', 'Delay between lectures in ms (rate limiting)', '1000')
+  .option('-f, --file <file>', 'Translate a single lecture file (e.g., cobweb.md)')
+  .option('--resume-from <file>', 'Resume from a specific lecture file (e.g., cobweb.md)')
+  .option('--glossary <path>', 'Path to glossary JSON file (default: glossary/<lang>.json)')
+  .option('--localize <rules>', `Localization rules for code cells (use "none" to disable)`, DEFAULT_RULES.join(','))
+  .option('--dry-run', 'Preview lectures without translating', false)
+  .action(async (opts) => {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey && !opts.dryRun) {
+      console.error('❌ ANTHROPIC_API_KEY environment variable is required (or use --dry-run)');
+      process.exit(1);
+    }
+
+    const batchDelay = parseInt(opts.batchDelay, 10);
+    if (!Number.isFinite(batchDelay) || batchDelay < 0) {
+      console.error('❌ --batch-delay must be a non-negative integer');
+      process.exit(1);
+    }
+
+    let localizeRules;
+    try {
+      localizeRules = parseLocalizationRules(opts.localize);
+    } catch (error) {
+      console.error(`❌ ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
+
+    const options: InitOptions = {
+      source: opts.source,
+      target: opts.target,
+      targetLanguage: opts.targetLanguage,
+      sourceLanguage: opts.sourceLanguage,
+      docsFolder: opts.docsFolder,
+      model: opts.model,
+      batchDelay,
+      file: opts.file,
+      resumeFrom: opts.resumeFrom,
+      glossaryPath: opts.glossary,
+      localize: localizeRules,
+      dryRun: opts.dryRun,
+      apiKey: apiKey || '',
+    };
+
+    try {
+      const stats = await runInit(options);
+      if (stats.failureCount > 0) {
+        process.exit(1);
       }
     } catch (error) {
       console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);

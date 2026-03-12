@@ -132,6 +132,7 @@ src/cli/
 └── commands/
     ├── backward.ts        # Backward command orchestrator
     ├── forward.ts         # Forward command — whole-file resync
+    ├── init.ts            # Init command — bulk-translate new projects
     ├── review.ts          # Review command — interactive walk-through
     └── status.ts          # Status command — fast diagnostic
 ```
@@ -188,7 +189,7 @@ PR merged in SOURCE repo
 ### BACKWARD analysis (CLI)
 
 ```
-npx resync backward -s SOURCE -t TARGET
+npx translate backward -s SOURCE -t TARGET
        │
        ▼
 ┌─────────────────────────────────────┐
@@ -218,7 +219,7 @@ npx resync backward -s SOURCE -t TARGET
 ### FORWARD resync (CLI)
 
 ```
-npx resync forward -s SOURCE -t TARGET
+npx translate forward -s SOURCE -t TARGET
        │
        ▼
 ┌─────────────────────────────────────┐

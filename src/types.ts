@@ -143,6 +143,7 @@ export interface SectionTranslationRequest {
   sourceLanguage: string;
   targetLanguage: string;
   glossary?: Glossary;
+  customInstructions?: string;
   // For update mode
   oldEnglish?: string;      // Current English section
   newEnglish?: string;      // Updated English section
@@ -166,6 +167,7 @@ export interface FullDocumentTranslationRequest {
   sourceLanguage: string;
   targetLanguage: string;
   glossary?: Glossary;
+  customInstructions?: string;
   content: string;
 }
 
@@ -179,6 +181,7 @@ export interface DocumentResyncRequest {
   sourceLanguage: string;
   targetLanguage: string;
   glossary?: Glossary;
+  customInstructions?: string;
   sourceContent: string;      // Current authoritative source document
   targetContent: string;      // Existing translation (may be outdated)
 }

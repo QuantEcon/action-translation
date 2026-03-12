@@ -5,7 +5,7 @@
   "description": "GitHub Action to sync and review translations across repositories",
   "main": "dist/index.js",
   "bin": {
-    "resync": "dist/cli/index.js"
+    "translate": "dist/cli/index.js"
   },
   "scripts": {
     "build": "tsc && node build-action.mjs",

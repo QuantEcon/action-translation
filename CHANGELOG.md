@@ -7,12 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Phase 5 — CLI Rename + Init Command)
+- **CLI renamed**: `resync` → `translate` (`package.json` bin entry, `src/cli/index.ts`)
+  - All commands: `npx translate backward`, `npx translate forward`, `npx translate status`, etc.
+- **Init command** (`src/cli/commands/init.ts`): Bulk-translate an entire project from a local source repo
+  - `npx translate init -s <source> -t <target> --target-language zh-cn`
+  - 7-phase pipeline: glossary → TOC parse → setup → copy non-md → translate → heading-maps → report
+  - `--dry-run` flag: preview lectures and non-md files without API calls
+  - `--resume-from <file>` flag: resume from a specific lecture (partial match supported)
+  - `-f, --file <file>` flag: translate a single lecture file (e.g., `cobweb.md`)
+  - `--batch-delay <ms>` flag: rate limiting between lectures (default: 1000ms)
+  - `--glossary <path>` flag: explicit glossary JSON path (default: `glossary/<lang>.json`)
+  - `--localize <rules>` flag: control code-cell localization (default: `code-comments,figure-labels,i18n-font-config`)
+  - Reads `_toc.yml` for lecture discovery (supports `chapters`, `parts`, `root`)
+  - Copies all non-markdown files (images, config, data) preserving directory structure
+  - Generates heading-maps via position-based section matching
+  - Produces `TRANSLATION-REPORT.md` with stats, config, and failure details
+  - Retry logic: 3 attempts with exponential backoff, skips permanent failures
+  - Progress bar for bulk translation
+- **Localization rules** (`src/localization-rules.ts`): Code-cell localization system for `init`
+  - `code-comments`: translate Python comments (`# ...`) in code cells
+  - `figure-labels`: translate matplotlib plot labels, axis titles, legend entries
+  - `i18n-font-config`: inject CJK font configuration into first matplotlib cell (`zh-cn` only)
+  - All rules ON by default; disable with `--localize none`
+  - Font setup guidance printed after translation completes (creates `_fonts/` dir, prints download instructions)
+  - Language-specific: Farsi silently skips font config (no special fonts needed)
+
+### Removed
+- **`--estimate` flag** removed from both `backward` and `forward` commands
+  - `--dry-run` is the preferred pattern for preview
+  - Removed `estimateBulkCost()`, `estimateCost()`, `formatCostEstimate()`, and `CostEstimate` interface
+
+### Added (Phase 5 — Tests)
+- **41 new tests** (720 → 761 total, 32 → 34 suites)
+  - `init.test.ts` (16 tests) — `parseTocLectures` (9 tests), `copyNonMarkdownFiles` (7 tests)
+  - `localization-rules.test.ts` (23 tests) — rule parsing, prompt building, font requirements, constants
+
 ### Added (Phase 3b — Forward Resync Command)
 - **Forward command** (`src/cli/commands/forward.ts`): Resync TARGET translations to match current SOURCE
-  - `resync forward -f cobweb.md` — single file resync
-  - `resync forward` — bulk resync of all OUTDATED files (via status)
+  - `translate forward -f cobweb.md` — single file resync
+  - `translate forward` — bulk resync of all OUTDATED files (via status)
   - `--github <owner/repo>` flag: creates one PR per file in TARGET repo
-  - `--estimate` flag: pre-run cost estimation without LLM calls
   - `--test` flag: deterministic mock responses for CI/testing
   - `--exclude <pattern>` flag: skip files matching pattern
   - Pipeline: triage → whole-file RESYNC → output (simplified from section-by-section after experiment)
@@ -85,7 +120,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added (Phase 3a — Review Command)
 - **Review command** (`src/cli/commands/review.ts`, ~210 lines): Interactive human review of backward suggestions
-  - `resync review <report-dir>` — walks through each suggestion from a backward report
+  - `translate review <report-dir>` — walks through each suggestion from a backward report
   - `--dry-run` flag: preview all suggestions without creating Issues
   - `--repo <owner/repo>` flag: target SOURCE repo for GitHub Issue creation
   - `--min-confidence <0-1>` flag: filter suggestions by confidence threshold (default: 0.5)
@@ -138,7 +173,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Per-file reports + aggregate `_summary.md` / `_summary.json`
   - Incremental checkpointing via `_progress.json` — survives interrupted runs
   - `--resume` flag to continue from checkpoint
-  - `--estimate` flag for pre-run cost estimation
   - `--exclude` flag for file filtering (exact match or `*` wildcard suffix)
   - Parallel processing with bounded concurrency (5 concurrent files)
   - TTY progress bar with live file name + stage counts (falls back to simple logging in non-TTY/CI)
