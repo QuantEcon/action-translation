@@ -296,6 +296,7 @@ npx translate init -s <source-path> -t <target-path> --target-language <code> [o
 | `--batch-delay <ms>` | `1000` | Delay between lectures in ms (rate limiting) |
 | `--resume-from <file>` | *(none)* | Resume from a specific lecture file |
 | `--glossary <path>` | *(auto)* | Path to glossary JSON file (default: `glossary/<lang>.json`) |
+| `--localize <rules>` | `code-comments,figure-labels` | Localization rules for code cells (use `none` to disable) |
 | `--dry-run` | `false` | Preview lectures without translating |
 
 **7-phase pipeline:**

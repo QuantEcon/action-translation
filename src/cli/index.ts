@@ -17,6 +17,7 @@ import { runReview, ReviewOptions } from './commands/review.js';
 import { resyncSingleFile, runForwardBulk } from './commands/forward.js';
 import { runInit, InitOptions } from './commands/init.js';
 import { BackwardOptions, ForwardOptions } from './types.js';
+import { DEFAULT_RULES, ALL_RULE_IDS, parseLocalizationRules } from '../localization-rules.js';
 
 // Read version from package.json — use createRequire since JSON imports
 // need import assertions which aren't stable in all Node versions.
@@ -248,8 +249,10 @@ program
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
   .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-6')
   .option('--batch-delay <ms>', 'Delay between lectures in ms (rate limiting)', '1000')
+  .option('-f, --file <file>', 'Translate a single lecture file (e.g., cobweb.md)')
   .option('--resume-from <file>', 'Resume from a specific lecture file (e.g., cobweb.md)')
   .option('--glossary <path>', 'Path to glossary JSON file (default: glossary/<lang>.json)')
+  .option('--localize <rules>', `Localization rules for code cells (use "none" to disable)`, DEFAULT_RULES.join(','))
   .option('--dry-run', 'Preview lectures without translating', false)
   .action(async (opts) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -264,6 +267,14 @@ program
       process.exit(1);
     }
 
+    let localizeRules;
+    try {
+      localizeRules = parseLocalizationRules(opts.localize);
+    } catch (error) {
+      console.error(`❌ ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
+
     const options: InitOptions = {
       source: opts.source,
       target: opts.target,
@@ -272,8 +283,10 @@ program
       docsFolder: opts.docsFolder,
       model: opts.model,
       batchDelay,
+      file: opts.file,
       resumeFrom: opts.resumeFrom,
       glossaryPath: opts.glossary,
+      localize: localizeRules,
       dryRun: opts.dryRun,
       apiKey: apiKey || '',
     };

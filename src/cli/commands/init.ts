@@ -22,6 +22,7 @@ import { TranslationService } from '../../translator.js';
 import { MystParser } from '../../parser.js';
 import { Glossary } from '../../types.js';
 import { updateHeadingMap, injectHeadingMap } from '../../heading-map.js';
+import { RuleId, buildLocalizationPrompt, DEFAULT_RULES } from '../../localization-rules.js';
 
 // ============================================================================
 // TYPES
@@ -35,8 +36,10 @@ export interface InitOptions {
   docsFolder: string;        // Documentation folder within repos (default: "lectures")
   model: string;             // Claude model (default: "claude-sonnet-4-6")
   batchDelay: number;        // Delay between lectures in ms (default: 1000)
+  file?: string;             // Single file to translate (for testing)
   resumeFrom?: string;       // Resume from specific lecture file
   glossaryPath?: string;     // Explicit path to glossary JSON file
+  localize: RuleId[];        // Active localization rules (default: all)
   dryRun: boolean;           // Preview without API calls or file writes
   apiKey: string;            // Anthropic API key
 }
@@ -225,12 +228,16 @@ async function translateLecture(
 
   const sourceContent = fs.readFileSync(sourceFilePath, 'utf-8');
 
+  // Build localization prompt from active rules
+  const customInstructions = buildLocalizationPrompt(options.localize, options.targetLanguage);
+
   // TranslationService.callWithRetry() handles retries internally (3 attempts, exponential backoff)
   const result = await translator.translateFullDocument({
     content: sourceContent,
     sourceLanguage: options.sourceLanguage,
     targetLanguage: options.targetLanguage,
     glossary,
+    customInstructions: customInstructions || undefined,
   });
 
   if (!result.success || !result.translatedSection) {
@@ -295,6 +302,7 @@ function generateReport(
 - **Source Language**: ${options.sourceLanguage}
 - **Target Language**: ${options.targetLanguage}
 - **Model**: ${options.model}
+- **Localization Rules**: ${options.localize.length > 0 ? options.localize.join(', ') : 'none'}
 - **Glossary Terms**: ${glossaryTermCount}
 `;
 
@@ -343,6 +351,9 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   console.log(chalk.gray(`Target:   ${options.target}`));
   console.log(chalk.gray(`Language: ${options.sourceLanguage} → ${options.targetLanguage}`));
   console.log(chalk.gray(`Model:    ${options.model}`));
+  if (options.localize.length > 0) {
+    console.log(chalk.gray(`Localize: ${options.localize.join(', ')}`));
+  }
 
   // Phase 1: Load glossary
   const glossary = loadGlossary(options.targetLanguage, options.glossaryPath);
@@ -354,8 +365,7 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   }
 
   // Phase 2: Parse TOC for lecture list
-  const lectures = parseTocLectures(options.source, options.docsFolder);
-  console.log(chalk.bold(`\nFound ${lectures.length} lectures in _toc.yml\n`));
+  let lectures = parseTocLectures(options.source, options.docsFolder);
 
   const stats: TranslationStats = {
     totalLectures: lectures.length,
@@ -365,6 +375,23 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     totalTimeMs: 0,
     failures: [],
   };
+
+  // Filter to single file if specified
+  if (options.file) {
+    const target = options.file.endsWith('.md') ? options.file : `${options.file}.md`;
+    const found = lectures.find(l => l === target || l.includes(options.file!));
+    if (found) {
+      lectures = [found];
+      stats.totalLectures = 1;
+      console.log(chalk.bold(`Translating single file: ${found}\n`));
+    } else {
+      console.log(chalk.red(`File not found in _toc.yml: ${options.file}`));
+      console.log(chalk.gray(`Available lectures: ${lectures.slice(0, 5).join(', ')}${lectures.length > 5 ? ', ...' : ''}`));
+      return stats;
+    }
+  } else {
+    console.log(chalk.bold(`\nFound ${lectures.length} lectures in _toc.yml\n`));
+  }
 
   if (options.dryRun) {
     console.log(chalk.yellow('Would translate the following lectures:'));
