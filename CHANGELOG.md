@@ -39,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed `estimateBulkCost()`, `estimateCost()`, `formatCostEstimate()`, and `CostEstimate` interface
 
 ### Added (Phase 5 — Tests)
-- **40 new tests** (720 → 760 total, 32 → 34 suites)
+- **41 new tests** (720 → 761 total, 32 → 34 suites)
   - `init.test.ts` (16 tests) — `parseTocLectures` (9 tests), `copyNonMarkdownFiles` (7 tests)
   - `localization-rules.test.ts` (23 tests) — rule parsing, prompt building, font requirements, constants
 

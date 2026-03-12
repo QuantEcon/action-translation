@@ -2,7 +2,7 @@
 
 A GitHub Action and CLI tool for managing translations of MyST Markdown documents using Claude AI.
 
-**Version**: v0.8.0 | **Tests**: 760 (34 suites) | [Full Documentation](docs/)
+**Version**: v0.8.0 | **Tests**: 761 (34 suites) | [Full Documentation](docs/)
 
 ## What it does
 
@@ -78,7 +78,7 @@ See the [Quickstart guide](docs/user/quickstart.md) for full setup instructions.
 
 ```bash
 npm install          # Install dependencies
-npm test             # Run all 760 tests
+npm test             # Run all 761 tests
 npm run build        # Compile TypeScript
 npm run package      # Bundle for distribution
 ```
