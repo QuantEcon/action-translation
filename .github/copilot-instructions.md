@@ -8,7 +8,7 @@
 - **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
-**Current Version**: v0.8.0 | **Tests**: 737 (33 suites) | **Glossary**: 357 terms (zh-cn, fa)
+**Current Version**: v0.8.0 | **Tests**: 760 (34 suites) | **Glossary**: 357 terms (zh-cn, fa)
 
 ---
 
@@ -26,6 +26,7 @@ src/
 ├── file-processor.ts    # Document reconstruction, subsection handling
 ├── heading-map.ts       # Heading-map extract/update/inject
 ├── language-config.ts   # Language-specific translation rules
+├── localization-rules.ts # Code-cell localization rules for init command
 ├── inputs.ts            # Action inputs + validation
 ├── types.ts             # TypeScript types
 ├── cli/
@@ -92,7 +93,7 @@ Maps are flat (no nesting), include all heading levels, auto-populated on first 
 
 ### Running Tests
 ```bash
-npm test                          # All 736 tests
+npm test                          # All 760 tests
 npm test -- parser.test.ts        # Single file
 npm test -- --watch               # Watch mode
 npm test -- --coverage            # Coverage report
@@ -166,6 +167,7 @@ Docs live in `docs/` — see `docs/index.md` for the full structure.
 | Forward triage | `forward-triage.ts` → `triageForward` |
 | Forward PR creation | `forward-pr-creator.ts` → `createForwardPR` |
 | Init (bulk translate) | `commands/init.ts` → `runInit` |
+| Localization rules | `localization-rules.ts` → `buildLocalizationPrompt` / `getFontRequirements` |
 | Whole-file RESYNC | `translator.ts` → `translateDocumentResync` |
 | Input validation | `inputs.ts` → `getInputs` / `getReviewInputs` |
 

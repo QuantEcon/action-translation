@@ -2,7 +2,7 @@
 
 A GitHub Action and CLI tool for managing translations of MyST Markdown documents using Claude AI.
 
-**Version**: v0.8.0 | **Tests**: 724 (32 suites) | [Full Documentation](docs/)
+**Version**: v0.8.0 | **Tests**: 760 (34 suites) | [Full Documentation](docs/)
 
 ## What it does
 
@@ -10,11 +10,12 @@ A GitHub Action and CLI tool for managing translations of MyST Markdown document
 - **Sync mode**: When a PR is merged in the English source repo, automatically translates changed sections and opens a PR in the target language repo.
 - **Review mode**: When a translation PR is opened, posts an AI quality review with scores and suggestions.
 
-**CLI tool (`resync`)** — Four commands for manual translation management:
+**CLI tool (`translate`)** — Five commands for translation management:
 - `status` — Fast structural diagnostic (no LLM)
 - `backward` — Discover improvements in translations worth backporting to the source
 - `review` — Interactive walk-through of backward suggestions, creates GitHub Issues
 - `forward` — Recover from drift via whole-file RESYNC
+- `init` — Bulk-translate an entire project from scratch
 
 ## Quick start
 
@@ -77,7 +78,7 @@ See the [Quickstart guide](docs/user/quickstart.md) for full setup instructions.
 
 ```bash
 npm install          # Install dependencies
-npm test             # Run all 724 tests
+npm test             # Run all 760 tests
 npm run build        # Compile TypeScript
 npm run package      # Bundle for distribution
 ```

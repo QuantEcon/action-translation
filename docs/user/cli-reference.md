@@ -293,6 +293,7 @@ npx translate init -s <source-path> -t <target-path> --target-language <code> [o
 | `--source-language <code>` | `en` | Source language code |
 | `-d, --docs-folder <folder>` | `lectures` | Documentation folder within repos |
 | `-m, --model <model>` | `claude-sonnet-4-6` | Claude model |
+| `-f, --file <file>` | *(all lectures)* | Translate a single lecture file (e.g., `cobweb.md`) |
 | `--batch-delay <ms>` | `1000` | Delay between lectures in ms (rate limiting) |
 | `--resume-from <file>` | *(none)* | Resume from a specific lecture file |
 | `--glossary <path>` | *(auto)* | Path to glossary JSON file (default: `glossary/<lang>.json`) |

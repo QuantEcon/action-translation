@@ -15,13 +15,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 7-phase pipeline: glossary → TOC parse → setup → copy non-md → translate → heading-maps → report
   - `--dry-run` flag: preview lectures and non-md files without API calls
   - `--resume-from <file>` flag: resume from a specific lecture (partial match supported)
+  - `-f, --file <file>` flag: translate a single lecture file (e.g., `cobweb.md`)
   - `--batch-delay <ms>` flag: rate limiting between lectures (default: 1000ms)
+  - `--glossary <path>` flag: explicit glossary JSON path (default: `glossary/<lang>.json`)
+  - `--localize <rules>` flag: control code-cell localization (default: `code-comments,figure-labels,i18n-font-config`)
   - Reads `_toc.yml` for lecture discovery (supports `chapters`, `parts`, `root`)
   - Copies all non-markdown files (images, config, data) preserving directory structure
   - Generates heading-maps via position-based section matching
   - Produces `TRANSLATION-REPORT.md` with stats, config, and failure details
   - Retry logic: 3 attempts with exponential backoff, skips permanent failures
   - Progress bar for bulk translation
+- **Localization rules** (`src/localization-rules.ts`): Code-cell localization system for `init`
+  - `code-comments`: translate Python comments (`# ...`) in code cells
+  - `figure-labels`: translate matplotlib plot labels, axis titles, legend entries
+  - `i18n-font-config`: inject CJK font configuration into first matplotlib cell (`zh-cn` only)
+  - All rules ON by default; disable with `--localize none`
+  - Font setup guidance printed after translation completes (creates `_fonts/` dir, prints download instructions)
+  - Language-specific: Farsi silently skips font config (no special fonts needed)
 
 ### Removed
 - **`--estimate` flag** removed from both `backward` and `forward` commands
@@ -29,8 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed `estimateBulkCost()`, `estimateCost()`, `formatCostEstimate()`, and `CostEstimate` interface
 
 ### Added (Phase 5 — Tests)
-- **16 new tests** (720 → 736 total, 32 → 33 suites)
+- **40 new tests** (720 → 760 total, 32 → 34 suites)
   - `init.test.ts` (16 tests) — `parseTocLectures` (9 tests), `copyNonMarkdownFiles` (7 tests)
+  - `localization-rules.test.ts` (23 tests) — rule parsing, prompt building, font requirements, constants
 
 ### Added (Phase 3b — Forward Resync Command)
 - **Forward command** (`src/cli/commands/forward.ts`): Resync TARGET translations to match current SOURCE
