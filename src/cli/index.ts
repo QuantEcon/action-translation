@@ -17,7 +17,7 @@ import { runReview, ReviewOptions } from './commands/review.js';
 import { resyncSingleFile, runForwardBulk } from './commands/forward.js';
 import { runInit, InitOptions } from './commands/init.js';
 import { BackwardOptions, ForwardOptions } from './types.js';
-import { DEFAULT_RULES, ALL_RULE_IDS, parseLocalizationRules } from '../localization-rules.js';
+import { DEFAULT_RULES, parseLocalizationRules } from '../localization-rules.js';
 
 // Read version from package.json — use createRequire since JSON imports
 // need import assertions which aren't stable in all Node versions.

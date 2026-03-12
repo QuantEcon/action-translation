@@ -287,4 +287,23 @@ describe('copyNonMarkdownFiles', () => {
     const result = fs.readFileSync(path.join(targetDir, 'lectures', 'data.txt'), 'utf-8');
     expect(result).toBe(content);
   });
+
+  it('should skip symbolic links', () => {
+    const sourceDir = path.join(tmpDir, 'source');
+    const targetDir = path.join(tmpDir, 'target');
+
+    // Create a real file and a symlink
+    writeFile(path.join(sourceDir, 'lectures', 'real.txt'), 'real');
+    writeFile(path.join(tmpDir, 'outside.txt'), 'outside');
+    fs.symlinkSync(
+      path.join(tmpDir, 'outside.txt'),
+      path.join(sourceDir, 'lectures', 'link.txt'),
+    );
+
+    const count = copyNonMarkdownFiles(sourceDir, targetDir, 'lectures');
+
+    expect(count).toBe(1); // Only real.txt
+    expect(fs.existsSync(path.join(targetDir, 'lectures', 'real.txt'))).toBe(true);
+    expect(fs.existsSync(path.join(targetDir, 'lectures', 'link.txt'))).toBe(false);
+  });
 });

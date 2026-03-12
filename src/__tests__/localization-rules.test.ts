@@ -84,6 +84,9 @@ describe('localization-rules', () => {
       expect(prompt).toContain('SourceHanSerifSC-SemiBold.otf');
       expect(prompt).toContain('Source Han Serif SC');
       expect(prompt).toContain('# i18n');
+      // Uses mpl.rcParams (not plt.rcParams) since snippet imports matplotlib as mpl
+      expect(prompt).toContain('mpl.rcParams');
+      expect(prompt).not.toContain('plt.rcParams');
     });
 
     it('skips i18n-font-config for fa (no special fonts needed)', () => {

@@ -22,7 +22,7 @@ import { TranslationService } from '../../translator.js';
 import { MystParser } from '../../parser.js';
 import { Glossary } from '../../types.js';
 import { updateHeadingMap, injectHeadingMap } from '../../heading-map.js';
-import { RuleId, buildLocalizationPrompt, DEFAULT_RULES, getFontRequirements } from '../../localization-rules.js';
+import { RuleId, buildLocalizationPrompt, getFontRequirements } from '../../localization-rules.js';
 
 // ============================================================================
 // TYPES
@@ -158,6 +158,7 @@ export function copyNonMarkdownFiles(
       const relativePath = path.relative(sourceDocsDir, fullPath);
 
       if (entry.name.startsWith('.git')) continue;
+      if (entry.isSymbolicLink()) continue;
 
       if (entry.isDirectory()) {
         walkAndCopy(fullPath);
@@ -385,9 +386,10 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
       stats.totalLectures = 1;
       console.log(chalk.bold(`Translating single file: ${found}\n`));
     } else {
-      console.log(chalk.red(`File not found in _toc.yml: ${options.file}`));
-      console.log(chalk.gray(`Available lectures: ${lectures.slice(0, 5).join(', ')}${lectures.length > 5 ? ', ...' : ''}`));
-      return stats;
+      throw new Error(
+        `File not found in _toc.yml: ${options.file}\n` +
+        `Available lectures: ${lectures.slice(0, 5).join(', ')}${lectures.length > 5 ? ', ...' : ''}`
+      );
     }
   } else {
     console.log(chalk.bold(`\nFound ${lectures.length} lectures in _toc.yml\n`));
