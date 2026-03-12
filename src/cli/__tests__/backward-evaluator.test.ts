@@ -590,3 +590,35 @@ describe('backward-evaluator', () => {
     });
   });
 });
+
+// =============================================================================
+// Prompt snapshots
+// =============================================================================
+
+describe('evaluation prompt snapshots', () => {
+  it('section evaluation prompt matches snapshot', () => {
+    const prompt = buildEvaluationPrompt(
+      '## Introduction\n\nThis is the introduction to the model.',
+      '## 介绍\n\n这是模型的介绍。',
+      '## Introduction',
+      'English', 'zh-cn',
+      null, null, 'Target may contain clarifications.', null,
+    );
+    expect(prompt).toMatchSnapshot();
+  });
+
+  it('file evaluation prompt matches snapshot', () => {
+    const pairs = [
+      {
+        sourceSection: { heading: '## Intro', content: 'Source intro.', level: 2, id: 'intro', startLine: 1, endLine: 3, subsections: [] },
+        targetSection: { heading: '## 介绍', content: '翻译介绍。', level: 2, id: '介绍', startLine: 1, endLine: 3, subsections: [] },
+        status: 'MATCHED' as const,
+        sourceHeading: '## Intro',
+      },
+    ];
+    const prompt = buildFileEvaluationPrompt(
+      pairs, 'English', 'zh-cn', null, null, 'Some triage notes.', null,
+    );
+    expect(prompt).toMatchSnapshot();
+  });
+});

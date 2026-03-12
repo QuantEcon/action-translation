@@ -1,0 +1,144 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`evaluation prompt snapshots file evaluation prompt matches snapshot 1`] = `
+"You are analyzing a translated document to determine if any sections contain improvements worth suggesting back to the English source.
+
+## Context
+- Source language: English
+- Target language: zh-cn
+- Number of sections: 1
+
+
+## Stage 1 Triage Notes
+The document-level triage identified these potential changes:
+Some triage notes.
+
+## Matched Section Pairs
+
+### Section 1: undefined
+
+**SOURCE:**
+\`\`\`
+undefined
+\`\`\`
+
+**TARGET:**
+\`\`\`
+undefined
+\`\`\`
+
+## Task
+Analyze ALL sections above. For each section, determine if the TARGET contains improvements worth **suggesting** back to the SOURCE.
+
+Consider:
+1. **Bug fixes**: Errors corrected in the translation (wrong formulas, incorrect code, factual errors)
+2. **Clarifications**: Better explanations or wording that could improve the English
+3. **Additional examples**: New examples or context added by the translator
+4. **Code improvements**: Non-cosmetic code changes (not i18n fonts/locale adjustments)
+
+Ignore (these are normal translation work):
+- Language-specific formatting (Chinese punctuation, etc.)
+- i18n code changes (fonts, figure size adjustments, locale settings)
+- Translation variations that don't improve meaning
+- Sentence restructuring for target language flow
+
+## Response Format
+Respond with a JSON object containing a "sections" array. Include an entry for EVERY section, even those with no changes:
+\`\`\`json
+{
+  "sections": [
+    {
+      "section_number": 1,
+      "section_heading": "Section heading text",
+      "recommendation": "BACKPORT" or "NO_BACKPORT",
+      "category": "BUG_FIX" | "CLARIFICATION" | "EXAMPLE" | "CODE_IMPROVEMENT" | "I18N_ONLY" | "NO_CHANGE",
+      "confidence": 0.0 to 1.0,
+      "summary": "Brief description of the improvement found (or why no backport needed)",
+      "specific_changes": [
+        {
+          "type": "description of the change type",
+          "original": "what was in SOURCE (English)",
+          "improved": "suggested improvement for SOURCE (in English)"
+        }
+      ],
+      "reasoning": "Why this should or shouldn't be suggested back to the source"
+    }
+  ]
+}
+\`\`\`
+
+**Important**: 
+- These are SUGGESTIONS for the source maintainers, not corrections.
+- The English source is the source of truth — frame improvements respectfully.
+- For "specific_changes", translate any target-language improvements back to English.
+- Only recommend BACKPORT for genuine content improvements, not translation quality.
+- Include ALL 1 sections in your response, in order."
+`;
+
+exports[`evaluation prompt snapshots section evaluation prompt matches snapshot 1`] = `
+"You are analyzing a section from a translated document to determine if it contains improvements worth suggesting back to the English source.
+
+## Context
+- Source language: English
+- Target language: zh-cn
+- Section: ## Introduction
+
+
+## Stage 1 Triage Notes
+The document-level triage identified these potential changes:
+Target may contain clarifications.
+
+## Source Section (English)
+\`\`\`
+## Introduction
+
+This is the introduction to the model.
+\`\`\`
+
+## Target Section (zh-cn)
+\`\`\`
+## 介绍
+
+这是模型的介绍。
+\`\`\`
+
+## Task
+Analyze if the TARGET section contains improvements worth **suggesting** back to the SOURCE.
+
+Consider:
+1. **Bug fixes**: Errors corrected in the translation (wrong formulas, incorrect code, factual errors)
+2. **Clarifications**: Better explanations or wording that could improve the English
+3. **Additional examples**: New examples or context added by the translator
+4. **Code improvements**: Non-cosmetic code changes (not i18n fonts/locale adjustments)
+
+Ignore (these are normal translation work):
+- Language-specific formatting (Chinese punctuation, etc.)
+- i18n code changes (fonts, figure size adjustments, locale settings)
+- Translation variations that don't improve meaning
+- Sentence restructuring for target language flow
+
+## Response Format
+Respond with a JSON object:
+\`\`\`json
+{
+  "recommendation": "BACKPORT" or "NO_BACKPORT",
+  "category": "BUG_FIX" | "CLARIFICATION" | "EXAMPLE" | "CODE_IMPROVEMENT" | "I18N_ONLY" | "NO_CHANGE",
+  "confidence": 0.0 to 1.0,
+  "summary": "Brief description of the improvement found (or why no backport needed)",
+  "specific_changes": [
+    {
+      "type": "description of the change type",
+      "original": "what was in SOURCE (English)",
+      "improved": "suggested improvement for SOURCE (in English)"
+    }
+  ],
+  "reasoning": "Why this should or shouldn't be suggested back to the source"
+}
+\`\`\`
+
+**Important**: 
+- These are SUGGESTIONS for the source maintainers, not corrections.
+- The English source is the source of truth — frame improvements respectfully.
+- For "specific_changes", translate any target-language improvements back to English.
+- Only recommend BACKPORT for genuine content improvements, not translation quality."
+`;

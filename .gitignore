@@ -9,7 +9,6 @@ dist-action/node_modules/
 dist-action/licenses.txt
 
 # Tool build outputs (standalone tools don't need committed builds)
-tool-bulk-translator/dist/
 tool-test-action-on-github/evaluate/dist/
 
 *.log
@@ -17,7 +16,6 @@ tool-test-action-on-github/evaluate/dist/
 .DS_Store
 coverage/
 docs/_build/
-*.test.ts.snap
 .vscode/
 .idea/
 

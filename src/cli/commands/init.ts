@@ -100,7 +100,19 @@ export function parseTocLectures(sourceRepoPath: string, docsFolder: string): st
   }
 
   const tocContent = fs.readFileSync(tocPath, 'utf-8');
-  const toc = yaml.load(tocContent) as any;
+  let toc: any;
+  try {
+    toc = yaml.load(tocContent);
+  } catch (e) {
+    throw new Error(
+      `Malformed _toc.yml at ${tocPath}: ${e instanceof Error ? e.message : String(e)}`
+    );
+  }
+
+  if (!toc || typeof toc !== 'object') {
+    throw new Error(`_toc.yml at ${tocPath} is empty or not a valid YAML mapping`);
+  }
+
   const lectures: string[] = [];
 
   const extractFiles = (entries: TocEntry[] | undefined) => {

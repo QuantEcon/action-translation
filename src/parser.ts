@@ -153,12 +153,14 @@ export class MystParser {
   
   /**
    * Generate heading ID/anchor from heading text
-   * Follows the same rules as MyST/Sphinx for consistency
+   * Follows the same rules as MyST/Sphinx for consistency.
+   * Uses Unicode-aware matching to preserve non-Latin scripts
+   * (Chinese, Arabic, Japanese, etc.) in heading IDs.
    */
   private generateHeadingId(text: string): string {
     return text
       .toLowerCase()
-      .replace(/[^\w\s-]/g, '')
+      .replace(/[^\p{L}\p{N}\s-]/gu, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .trim();

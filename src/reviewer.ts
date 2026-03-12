@@ -79,13 +79,14 @@ function extractSections(content: string): Array<{ heading: string; content: str
 }
 
 /**
- * Generate a simple ID from heading text for matching
+ * Generate a simple ID from heading text for matching.
+ * Uses Unicode-aware matching to preserve non-Latin scripts.
  */
 function headingToId(heading: string): string {
   return heading
     .replace(/^#{2,6}\s+/, '')
     .toLowerCase()
-    .replace(/[^a-z0-9\u4e00-\u9fff\u0600-\u06FF]+/g, '-')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
     .replace(/^-|-$/g, '');
 }
 

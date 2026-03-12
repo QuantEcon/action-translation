@@ -133,6 +133,24 @@ chapters:
     expect(() => parseTocLectures(sourceDir, 'lectures')).toThrow('_toc.yml not found');
   });
 
+  it('should throw with details on malformed YAML', () => {
+    const sourceDir = path.join(tmpDir, 'source');
+    writeFile(path.join(sourceDir, 'lectures', '_toc.yml'), `
+format: jb-book
+chapters:
+  - file: intro
+  bad indentation here
+  : broken
+`);
+    expect(() => parseTocLectures(sourceDir, 'lectures')).toThrow(/Malformed _toc\.yml/);
+  });
+
+  it('should throw if _toc.yml is empty', () => {
+    const sourceDir = path.join(tmpDir, 'source');
+    writeFile(path.join(sourceDir, 'lectures', '_toc.yml'), '');
+    expect(() => parseTocLectures(sourceDir, 'lectures')).toThrow(/empty or not a valid YAML/);
+  });
+
   it('should handle custom docs folder', () => {
     const sourceDir = path.join(tmpDir, 'source');
     writeFile(path.join(sourceDir, 'docs', '_toc.yml'), `

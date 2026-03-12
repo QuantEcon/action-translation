@@ -4,7 +4,7 @@
 **Last Updated**: 2026-03-06  
 **Sources**: 2026-02-16-REVIEW.md, docs/DESIGN-RESYNC.md  
 **Current Version**: v0.8.0  
-**Test Status**: 640 tests passing (29 test suites)
+**Test Status**: 782 tests passing (35 test suites, 5 snapshots)
 
 ---
 
@@ -670,8 +670,8 @@ RESYNC preserves translation nuances because the LLM sees the existing translati
 - [ ] Test `forward` resync with `lecture-python` ↔ `lecture-python.zh-cn`
 - [ ] Validate RESYNC translation quality (preserves nuances vs full re-translation)
 - [ ] Validate forward triage accuracy (content vs i18n classification)
-- [ ] Add CLI smoke tests (invoke commands as external processes)
-- [ ] Add LLM prompt snapshot tests (catch unintended prompt drift)
+- [x] Add CLI smoke tests (invoke commands as external processes) — 11 tests in `cli-smoke.test.ts`
+- [x] Add LLM prompt snapshot tests (catch unintended prompt drift) — 5 snapshots across 3 suites
 - [ ] Validate two-stage triage accuracy (Stage 1 recall ≥95%)
 - [ ] Test review → Issue creation end-to-end
 - [ ] Document edge cases found
@@ -690,11 +690,11 @@ RESYNC preserves translation nuances because the LLM sees the existing translati
 ### 4.3 Error Handling
 
 - [ ] Missing source/target files
-- [ ] Malformed frontmatter
+- [x] Malformed frontmatter — `parseTocLectures()` catches YAML parse errors and empty files
 - [ ] API timeout/rate limit
 - [ ] Invalid heading-map
 - [ ] Oversized documents (Stage 1 token limit exceeded)
-- [ ] `gh` CLI not available (review command: graceful error)
+- [x] `gh` CLI not available — `checkGhAvailable()` pre-flight in review + forward --github
 - [ ] Graceful degradation with warnings
 
 ### 4.4 Review Command UX Polish
@@ -784,8 +784,8 @@ These can be addressed opportunistically during refinement:
 - [ ] Add pre-flight check for section-level translation token limits
 - [ ] Refactor `reviewer.ts` to reuse `MystParser` instead of local parsing
 - [ ] Simplify `parseTranslatedSubsections()` wrapper approach
-- [ ] Update `@anthropic-ai/sdk` to latest version
-- [ ] Add Unicode heading ID test case
+- [x] Update `@anthropic-ai/sdk` to latest version — 0.27.0 → 0.78.0
+- [x] Add Unicode heading ID test case — `\p{L}\p{N}` in parser.ts and reviewer.ts
 
 ---
 
@@ -1077,8 +1077,8 @@ translate init -s /path/to/source -t /path/to/target \
 - [x] Deprecate `tool-onboarding/` (add deprecation notice to README)
 - [x] Deprecate `tool-alignment/` (add deprecation notice to README)
 - [x] Remove `tool-onboarding/` and `tool-alignment/` from tree (preserved in git history)
-- [ ] Remove `tool-bulk-translator/` (functionality moved to `translate init`)
-- [ ] Ensure `.gitignore` covers `node_modules/` in all tool dirs
+- [x] Remove `tool-bulk-translator/` (functionality moved to `translate init`) — git rm -r, preserved in history
+- [x] Clean up `.gitignore` — removed stale `tool-bulk-translator/dist/` entry, removed `*.test.ts.snap` (snapshots tracked for CI)
 - [ ] Remove `coverage/` from tracked files
 - [ ] Clean up `dist/` build output
 - [ ] Update `copilot-instructions.md` to reflect new CLI structure
@@ -1321,10 +1321,12 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 
 | Metric | Current | Target |
 |--------|---------|--------|
-| Test count | 472 | 400+ |
+| Test count | 782 | 400+ |
+| Test suites | 35 | — |
+| Snapshots | 5 | — |
 | `index.ts` lines | ~447 | ~447 (stable) |
 | Deprecated methods | 0 | 0 |
-| Dead tool directories | 2 | 0 |
+| Dead tool directories | 0 | 0 |
 
 ---
 
