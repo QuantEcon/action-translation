@@ -8,6 +8,7 @@ import {
   buildGhArgs,
   createIssue,
   createIssuesForAccepted,
+  checkGhAvailable,
   GhRunner,
   IssueResult,
 } from '../issue-creator.js';
@@ -205,5 +206,26 @@ describe('createIssuesForAccepted', () => {
     expect(callCount).toBe(2);
     expect(results[0].success).toBe(false);
     expect(results[1].success).toBe(true);
+  });
+});
+
+// =============================================================================
+// checkGhAvailable
+// =============================================================================
+
+describe('checkGhAvailable', () => {
+  it('does not throw when gh is installed and authenticated', () => {
+    const runner = () => ({ status: 0, stderr: '' });
+    expect(() => checkGhAvailable(runner)).not.toThrow();
+  });
+
+  it('throws when gh is not installed (ENOENT)', () => {
+    const runner = () => ({ status: null, error: new Error('spawnSync gh ENOENT'), stderr: '' });
+    expect(() => checkGhAvailable(runner)).toThrow(/not installed/);
+  });
+
+  it('throws when gh is not authenticated', () => {
+    const runner = () => ({ status: 1, stderr: 'You are not logged into any GitHub hosts.' });
+    expect(() => checkGhAvailable(runner)).toThrow(/not authenticated/);
   });
 });

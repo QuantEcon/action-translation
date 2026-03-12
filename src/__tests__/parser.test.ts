@@ -187,6 +187,33 @@ Content.
       expect(sections[0].id).toBe('section-with-quotes-and-apostrophes');
       expect(sections[1].id).toBe('section-with-parentheses-and-brackets');
     });
+
+    it('should preserve Unicode characters in heading IDs', async () => {
+      const content = `## 介绍
+
+Chinese heading content.
+
+## Cobweb 模型
+
+Mixed Latin and Chinese.
+
+## المقدمة
+
+Arabic heading content.
+
+## はじめに
+
+Japanese heading content.
+`;
+      const result = await parser.parseSections(content, 'test.md');
+      const sections = result.sections;
+
+      expect(sections).toHaveLength(4);
+      expect(sections[0].id).toBe('介绍');
+      expect(sections[1].id).toBe('cobweb-模型');
+      expect(sections[2].id).toBe('المقدمة');
+      expect(sections[3].id).toBe('はじめに');
+    });
   });
 
   describe('Frontmatter and Preamble Extraction', () => {

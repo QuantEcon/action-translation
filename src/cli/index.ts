@@ -18,6 +18,7 @@ import { resyncSingleFile, runForwardBulk } from './commands/forward.js';
 import { runInit, InitOptions } from './commands/init.js';
 import { BackwardOptions, ForwardOptions } from './types.js';
 import { DEFAULT_RULES, parseLocalizationRules } from '../localization-rules.js';
+import { checkGhAvailable } from './issue-creator.js';
 
 // Read version from package.json — use createRequire since JSON imports
 // need import assertions which aren't stable in all Node versions.
@@ -208,6 +209,11 @@ program
       github: opts.github,
       apiKey: apiKey || 'test-key',
     };
+
+    // Pre-flight: check `gh` CLI before doing any work
+    if (opts.github) {
+      checkGhAvailable();
+    }
 
     try {
       if (opts.file) {

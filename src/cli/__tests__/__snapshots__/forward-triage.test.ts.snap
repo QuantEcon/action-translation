@@ -1,0 +1,39 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`forward triage prompt snapshot matches snapshot 1`] = `
+"You are comparing an English source document with its zh-cn translation to determine if there are substantive content differences that require re-translation.
+
+## Source Content (English)
+\`\`\`
+## Introduction
+
+This is an intro.
+\`\`\`
+
+## Target Content (zh-cn)
+\`\`\`
+## 介绍
+
+这是一个介绍。
+\`\`\`
+
+## Task
+Classify the differences between SOURCE and TARGET into one of three categories:
+
+1. **CONTENT_CHANGES**: Substantive differences that affect meaning — different structure, missing/added sections, changed formulas, updated code logic, modified examples, new explanations. These require re-translation.
+
+2. **I18N_ONLY**: Only internationalisation differences — punctuation style (full-width vs half-width), terminology/word choices that don't change meaning, formatting conventions, locale-specific adjustments (figure sizes, fonts). These do NOT require re-translation.
+
+3. **IDENTICAL**: The documents are equivalent in content (translation is faithful and complete).
+
+**Focus on content, not style.** A different Chinese word for "function" that means the same thing is I18N_ONLY. A missing paragraph or changed formula is CONTENT_CHANGES.
+
+## Response Format
+Respond with a JSON object:
+\`\`\`json
+{
+  "verdict": "CONTENT_CHANGES" or "I18N_ONLY" or "IDENTICAL",
+  "reason": "Brief description of the key differences (or 'no differences' if IDENTICAL)"
+}
+\`\`\`"
+`;

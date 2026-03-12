@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Phase 4 — Refinement)
+- **CLI smoke tests** (`src/cli/__tests__/cli-smoke.test.ts`): 11 tests invoking the CLI binary as an external process
+  - `--version`, `--help`, all 5 commands (status, init, backward, forward, review)
+  - `--dry-run` end-to-end, error exit codes
+- **Prompt snapshot tests**: 5 snapshots across 3 test suites
+  - `document-comparator.test.ts`: 2 triage prompt snapshots
+  - `backward-evaluator.test.ts`: 2 evaluation prompt snapshots
+  - `forward-triage.test.ts`: 1 forward triage prompt snapshot
+- **Unicode heading ID support** (`src/parser.ts`, `src/reviewer.ts`)
+  - `generateHeadingId()` now uses `\p{L}\p{N}` Unicode property escapes instead of `\w`
+  - Correctly generates IDs for Chinese (`## 介绍` → `介绍`), Arabic, Japanese, mixed-script headings
+  - Same fix applied to `headingToId()` in `reviewer.ts` (replaced hardcoded CJK/Arabic ranges)
+- **`gh` CLI pre-flight check** (`src/cli/issue-creator.ts`): `checkGhAvailable()` with injectable `AuthCheckRunner`
+  - Fails fast with actionable error messages for "not installed" (ENOENT) and "not authenticated"
+  - Wired into `review` command (before interactive session) and `forward --github` path
+- **Malformed YAML handling** (`src/cli/commands/init.ts`): `parseTocLectures()` now catches YAML parse errors and empty files with descriptive messages
+- **21 new tests** (761 → 782 total, 34 → 35 suites, 5 snapshots)
+
+### Changed (Phase 4)
+- **`@anthropic-ai/sdk`** updated from `0.27.0` to `0.78.0` — build clean, all tests pass
+- **`.gitignore`**: removed `*.test.ts.snap` so prompt snapshots are tracked in git (CI regression detection)
+
+### Removed (Phase 5b — Cleanup)
+- **`tool-bulk-translator/`** directory removed — functionality superseded by `translate init` (preserved in git history)
+- **`.gitignore`**: removed stale `tool-bulk-translator/dist/` entry
+
 ### Added (Phase 5 — CLI Rename + Init Command)
 - **CLI renamed**: `resync` → `translate` (`package.json` bin entry, `src/cli/index.ts`)
   - All commands: `npx translate backward`, `npx translate forward`, `npx translate status`, etc.

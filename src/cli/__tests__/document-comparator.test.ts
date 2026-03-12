@@ -219,3 +219,31 @@ This change appears to fix a typo.`;
     });
   });
 });
+
+// =============================================================================
+// Prompt snapshot
+// =============================================================================
+
+describe('triage prompt snapshot', () => {
+  it('matches snapshot without timeline', () => {
+    const prompt = buildTriagePrompt(
+      '## Introduction\n\nThis is an intro.',
+      '## 介绍\n\n这是一个介绍。',
+      'English', 'zh-cn',
+      null, null, null,
+    );
+    expect(prompt).toMatchSnapshot();
+  });
+
+  it('matches snapshot with metadata', () => {
+    const prompt = buildTriagePrompt(
+      '## Introduction\n\nThis is an intro.',
+      '## 介绍\n\n这是一个介绍。',
+      'English', 'zh-cn',
+      { lastModified: new Date('2026-01-15'), lastCommit: 'abc1234', lastAuthor: 'alice' },
+      { lastModified: new Date('2026-02-20'), lastCommit: 'def5678', lastAuthor: 'bob' },
+      null,
+    );
+    expect(prompt).toMatchSnapshot();
+  });
+});

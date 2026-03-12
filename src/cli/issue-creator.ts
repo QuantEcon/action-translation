@@ -17,6 +17,41 @@ import { SuggestionWithContext } from './commands/review.js';
 import { formatIssueTitle, formatIssueBody, getIssueLabels } from './issue-generator.js';
 
 // ============================================================================
+// GH CLI PRE-FLIGHT
+// ============================================================================
+
+/** Simple runner for auth check (injectable for testing) */
+export type AuthCheckRunner = () => { status: number | null; error?: Error; stderr: string };
+
+function defaultAuthCheckRunner(): ReturnType<AuthCheckRunner> {
+  const result = spawnSync('gh', ['auth', 'status'], {
+    encoding: 'utf8',
+    timeout: 10_000,
+  }) as { status: number | null; error?: Error; stderr: string };
+  return { status: result.status, error: result.error, stderr: result.stderr ?? '' };
+}
+
+/**
+ * Check whether the `gh` CLI is available and authenticated.
+ * Throws a user-friendly error if not.
+ */
+export function checkGhAvailable(runner: AuthCheckRunner = defaultAuthCheckRunner): void {
+  const result = runner();
+
+  if (result.error) {
+    throw new Error(
+      'The `gh` CLI is not installed. Install it from https://cli.github.com/ and run `gh auth login`.'
+    );
+  }
+  if (result.status !== 0) {
+    throw new Error(
+      'The `gh` CLI is not authenticated. Run `gh auth login` first.\n' +
+      (result.stderr || '').trim()
+    );
+  }
+}
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
