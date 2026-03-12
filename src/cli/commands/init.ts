@@ -22,7 +22,7 @@ import { TranslationService } from '../../translator.js';
 import { MystParser } from '../../parser.js';
 import { Glossary } from '../../types.js';
 import { updateHeadingMap, injectHeadingMap } from '../../heading-map.js';
-import { RuleId, buildLocalizationPrompt, DEFAULT_RULES } from '../../localization-rules.js';
+import { RuleId, buildLocalizationPrompt, DEFAULT_RULES, getFontRequirements } from '../../localization-rules.js';
 
 // ============================================================================
 // TYPES
@@ -505,6 +505,25 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   console.log(chalk.gray(`  Tokens: ${stats.totalTokens.toLocaleString()}`));
   console.log(chalk.gray(`  Time: ${(stats.totalTimeMs / 1000 / 60).toFixed(1)} minutes`));
   console.log(chalk.bold.cyan('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'));
+
+  // Font setup guidance — shown after translation so the user sees it last
+  if (stats.successCount > 0 && options.localize.includes('i18n-font-config')) {
+    const fontReqs = getFontRequirements(options.targetLanguage);
+    if (fontReqs.length > 0) {
+      const fontsDir = path.join(options.target, options.docsFolder, '_fonts');
+      fs.mkdirSync(fontsDir, { recursive: true });
+      console.log(chalk.yellow('⚠ Font setup required'));
+      console.log(chalk.gray(`  The translated code cells reference fonts in _fonts/.`));
+      console.log(chalk.gray(`  Please download and place the following file(s):\n`));
+      for (const req of fontReqs) {
+        console.log(chalk.white(`  ${req.description}`));
+        console.log(chalk.gray(`    File: ${req.filename}`));
+        console.log(chalk.gray(`    Place at: ${path.join(fontsDir, req.filename)}`));
+        console.log(chalk.blue(`    Download: ${req.url}`));
+      }
+      console.log('');
+    }
+  }
 
   return stats;
 }

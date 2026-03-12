@@ -296,8 +296,41 @@ npx translate init -s <source-path> -t <target-path> --target-language <code> [o
 | `--batch-delay <ms>` | `1000` | Delay between lectures in ms (rate limiting) |
 | `--resume-from <file>` | *(none)* | Resume from a specific lecture file |
 | `--glossary <path>` | *(auto)* | Path to glossary JSON file (default: `glossary/<lang>.json`) |
-| `--localize <rules>` | `code-comments,figure-labels` | Localization rules for code cells (use `none` to disable) |
+| `--localize <rules>` | `code-comments,figure-labels,i18n-font-config` | Localization rules for code cells (use `none` to disable) |
 | `--dry-run` | `false` | Preview lectures without translating |
+
+### Localization rules
+
+The `--localize` flag controls what gets localized *inside* code cells (which are normally preserved as-is). Each rule can be individually enabled or disabled via a comma-separated list.
+
+| Rule | Description |
+|------|-------------|
+| `code-comments` | Translate Python comments (`# ...`) to the target language |
+| `figure-labels` | Translate plot strings — `plt.title()`, `ax.set_xlabel()`, `label=` kwargs, etc. |
+| `i18n-font-config` | Inject font configuration for CJK scripts into the first matplotlib code cell |
+
+All rules are **ON by default**. To disable all localization: `--localize none`. To use a subset: `--localize code-comments,figure-labels`.
+
+#### Font configuration (`i18n-font-config`)
+
+When `i18n-font-config` is active and the target language requires special fonts (currently `zh-cn`), the LLM is instructed to inject font setup code into the first code cell that imports matplotlib. The injected code references a font file at a **hard-coded path**: `_fonts/<fontfile>`.
+
+**`zh-cn` (Simplified Chinese):**
+
+The translated code cells will contain:
+
+```python
+import matplotlib as mpl  # i18n
+FONTPATH = "_fonts/SourceHanSerifSC-SemiBold.otf"  # i18n
+mpl.font_manager.fontManager.addfont(FONTPATH)  # i18n
+plt.rcParams['font.family'] = ['Source Han Serif SC']  # i18n
+```
+
+You must manually place the font file at `<docs-folder>/_fonts/SourceHanSerifSC-SemiBold.otf` in your target repository. The `init` command creates the `_fonts/` directory and prints download instructions.
+
+Download: [Source Han Serif SC](https://github.com/adobe-fonts/source-han-serif/releases) — use the `SourceHanSerifSC-SemiBold.otf` file from the release assets.
+
+**Other languages:** `fa` (Farsi) does not require special font configuration. Languages without a font config entry silently skip this rule.
 
 **7-phase pipeline:**
 
