@@ -15,16 +15,16 @@ Some triage notes.
 
 ## Matched Section Pairs
 
-### Section 1: undefined
+### Section 1: ## Intro
 
 **SOURCE:**
 \`\`\`
-undefined
+Source intro.
 \`\`\`
 
 **TARGET:**
 \`\`\`
-undefined
+翻译介绍。
 \`\`\`
 
 ## Task

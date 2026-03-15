@@ -18,6 +18,14 @@ import * as os from 'os';
 
 const CLI = path.resolve(__dirname, '../../../dist/cli/index.js');
 
+beforeAll(() => {
+  if (!fs.existsSync(CLI)) {
+    throw new Error(
+      `CLI binary not found at ${CLI}. Run \`npm run build\` before running smoke tests.`
+    );
+  }
+});
+
 function run(args: string[]): Promise<{ stdout: string; stderr: string; code: number | null }> {
   return new Promise((resolve) => {
     execFile('node', [CLI, ...args], { timeout: 10_000 }, (error, stdout, stderr) => {

@@ -210,12 +210,11 @@ program
       apiKey: apiKey || 'test-key',
     };
 
-    // Pre-flight: check `gh` CLI before doing any work
-    if (opts.github) {
-      checkGhAvailable();
-    }
-
     try {
+      // Pre-flight: check `gh` CLI before doing any work
+      if (opts.github) {
+        checkGhAvailable();
+      }
       if (opts.file) {
         // Single file mode
         const result = await resyncSingleFile(

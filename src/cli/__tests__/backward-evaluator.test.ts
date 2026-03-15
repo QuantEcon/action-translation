@@ -608,16 +608,15 @@ describe('evaluation prompt snapshots', () => {
   });
 
   it('file evaluation prompt matches snapshot', () => {
-    const pairs = [
+    const matchedPairs = [
       {
-        sourceSection: { heading: '## Intro', content: 'Source intro.', level: 2, id: 'intro', startLine: 1, endLine: 3, subsections: [] },
-        targetSection: { heading: '## 介绍', content: '翻译介绍。', level: 2, id: '介绍', startLine: 1, endLine: 3, subsections: [] },
-        status: 'MATCHED' as const,
-        sourceHeading: '## Intro',
+        heading: '## Intro',
+        source: 'Source intro.',
+        target: '翻译介绍。',
       },
     ];
     const prompt = buildFileEvaluationPrompt(
-      pairs, 'English', 'zh-cn', null, null, 'Some triage notes.', null,
+      matchedPairs, 'English', 'zh-cn', null, null, 'Some triage notes.', null,
     );
     expect(prompt).toMatchSnapshot();
   });

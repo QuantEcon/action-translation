@@ -220,8 +220,16 @@ describe('checkGhAvailable', () => {
   });
 
   it('throws when gh is not installed (ENOENT)', () => {
-    const runner = () => ({ status: null, error: new Error('spawnSync gh ENOENT'), stderr: '' });
+    const err = Object.assign(new Error('spawnSync gh ENOENT'), { code: 'ENOENT' });
+    const runner = () => ({ status: null, error: err, stderr: '' });
     expect(() => checkGhAvailable(runner)).toThrow(/not installed/);
+  });
+
+  it('throws with details for non-ENOENT spawn errors', () => {
+    const err = Object.assign(new Error('spawnSync gh ETIMEDOUT'), { code: 'ETIMEDOUT' });
+    const runner = () => ({ status: null, error: err, stderr: '' });
+    expect(() => checkGhAvailable(runner)).toThrow(/Failed to run/);
+    expect(() => checkGhAvailable(runner)).toThrow(/ETIMEDOUT/);
   });
 
   it('throws when gh is not authenticated', () => {

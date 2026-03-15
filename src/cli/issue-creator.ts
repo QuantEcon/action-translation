@@ -39,9 +39,24 @@ export function checkGhAvailable(runner: AuthCheckRunner = defaultAuthCheckRunne
   const result = runner();
 
   if (result.error) {
-    throw new Error(
-      'The `gh` CLI is not installed. Install it from https://cli.github.com/ and run `gh auth login`.'
-    );
+    const err = result.error as NodeJS.ErrnoException;
+    const code = err?.code;
+
+    if (code === 'ENOENT') {
+      throw new Error(
+        'The `gh` CLI is not installed. Install it from https://cli.github.com/ and run `gh auth login`.'
+      );
+    }
+
+    // Timeout, permission error, or other spawn failure
+    const stderr = (result.stderr || '').trim();
+    const parts = [
+      'Failed to run `gh auth status`.',
+      err.message ? `Error: ${err.message}` : undefined,
+      code ? `Code: ${code}` : undefined,
+      stderr ? `stderr:\n${stderr}` : undefined,
+    ].filter(Boolean);
+    throw new Error(parts.join('\n'));
   }
   if (result.status !== 0) {
     throw new Error(
