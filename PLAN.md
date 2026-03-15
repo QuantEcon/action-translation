@@ -1,10 +1,10 @@
 # PLAN: Development Roadmap
 
 **Created**: 2026-02-16  
-**Last Updated**: 2026-03-06  
+**Last Updated**: 2026-03-16  
 **Sources**: 2026-02-16-REVIEW.md, docs/DESIGN-RESYNC.md  
 **Current Version**: v0.8.0  
-**Test Status**: 782 tests passing (35 test suites, 5 snapshots)
+**Test Status**: 783 tests passing (35 test suites, 5 snapshots)
 
 ---
 
@@ -1079,9 +1079,9 @@ translate init -s /path/to/source -t /path/to/target \
 - [x] Remove `tool-onboarding/` and `tool-alignment/` from tree (preserved in git history)
 - [x] Remove `tool-bulk-translator/` (functionality moved to `translate init`) — git rm -r, preserved in history
 - [x] Clean up `.gitignore` — removed stale `tool-bulk-translator/dist/` entry, removed `*.test.ts.snap` (snapshots tracked for CI)
-- [ ] Remove `coverage/` from tracked files
+- [x] Remove `coverage/` from tracked files — already untracked (in `.gitignore`, 0 files in git index)
 - [ ] Clean up `dist/` build output
-- [ ] Update `copilot-instructions.md` to reflect new CLI structure
+- [x] Update `copilot-instructions.md` to reflect new CLI structure — test counts updated in PR #24
 
 ---
 
@@ -1321,7 +1321,7 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 
 | Metric | Current | Target |
 |--------|---------|--------|
-| Test count | 782 | 400+ |
+| Test count | 783 | 400+ |
 | Test suites | 35 | — |
 | Snapshots | 5 | — |
 | `index.ts` lines | ~447 | ~447 (stable) |

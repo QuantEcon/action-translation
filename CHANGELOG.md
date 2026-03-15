@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fails fast with actionable error messages for "not installed" (ENOENT) and "not authenticated"
   - Wired into `review` command (before interactive session) and `forward --github` path
 - **Malformed YAML handling** (`src/cli/commands/init.ts`): `parseTocLectures()` now catches YAML parse errors and empty files with descriptive messages
-- **21 new tests** (761 → 782 total, 34 → 35 suites, 5 snapshots)
+- **22 new tests** (761 → 783 total, 34 → 35 suites, 5 snapshots)
 
 ### Changed (Phase 4)
 - **`@anthropic-ai/sdk`** updated from `0.27.0` to `0.78.0` — build clean, all tests pass
