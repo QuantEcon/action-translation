@@ -12,7 +12,7 @@
 
 import * as path from 'path';
 import { loadResyncDirectory, filterActionableSuggestions, BackwardReportData, BackportSuggestionData } from '../schema.js';
-import { createIssuesForAccepted } from '../issue-creator.js';
+import { createIssuesForAccepted, checkGhAvailable } from '../issue-creator.js';
 import type { SessionSummary } from '../review-session.js';
 import { formatEndSummary } from '../review-session.js';
 
@@ -161,6 +161,11 @@ export async function runReview(options: ReviewOptions): Promise<void> {
   if (suggestions.length === 0) {
     console.log('\n✅ Nothing to review.');
     return;
+  }
+
+  // Pre-flight: check `gh` CLI is available before starting interactive session
+  if (options.repo && !options.dryRun) {
+    checkGhAvailable();
   }
 
   if (options.dryRun) {

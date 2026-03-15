@@ -17,6 +17,56 @@ import { SuggestionWithContext } from './commands/review.js';
 import { formatIssueTitle, formatIssueBody, getIssueLabels } from './issue-generator.js';
 
 // ============================================================================
+// GH CLI PRE-FLIGHT
+// ============================================================================
+
+/** Simple runner for auth check (injectable for testing) */
+export type AuthCheckRunner = () => { status: number | null; error?: Error; stderr: string };
+
+function defaultAuthCheckRunner(): ReturnType<AuthCheckRunner> {
+  const result = spawnSync('gh', ['auth', 'status'], {
+    encoding: 'utf8',
+    timeout: 10_000,
+  }) as { status: number | null; error?: Error; stderr: string };
+  return { status: result.status, error: result.error, stderr: result.stderr ?? '' };
+}
+
+/**
+ * Check whether the `gh` CLI is available and authenticated.
+ * Throws a user-friendly error if not.
+ */
+export function checkGhAvailable(runner: AuthCheckRunner = defaultAuthCheckRunner): void {
+  const result = runner();
+
+  if (result.error) {
+    const err = result.error as NodeJS.ErrnoException;
+    const code = err?.code;
+
+    if (code === 'ENOENT') {
+      throw new Error(
+        'The `gh` CLI is not installed. Install it from https://cli.github.com/ and run `gh auth login`.'
+      );
+    }
+
+    // Timeout, permission error, or other spawn failure
+    const stderr = (result.stderr || '').trim();
+    const parts = [
+      'Failed to run `gh auth status`.',
+      err.message ? `Error: ${err.message}` : undefined,
+      code ? `Code: ${code}` : undefined,
+      stderr ? `stderr:\n${stderr}` : undefined,
+    ].filter(Boolean);
+    throw new Error(parts.join('\n'));
+  }
+  if (result.status !== 0) {
+    throw new Error(
+      'The `gh` CLI is not authenticated. Run `gh auth login` first.\n' +
+      (result.stderr || '').trim()
+    );
+  }
+}
+
+// ============================================================================
 // TYPES
 // ============================================================================
 

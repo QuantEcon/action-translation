@@ -1,0 +1,101 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`triage prompt snapshot matches snapshot with metadata 1`] = `
+"You are comparing an English source document with its zh-cn translation to determine if the translation contains substantive changes beyond normal translation work.
+
+## Context
+- Source language: English
+- Target language: zh-cn
+
+## Timeline
+- SOURCE last modified: 2026-01-15 by alice
+- TARGET last modified: 2026-02-20 by bob
+- TARGET is 36 days newer than SOURCE
+
+## Source Content (English)
+\`\`\`
+## Introduction
+
+This is an intro.
+\`\`\`
+
+## Target Content (zh-cn)
+\`\`\`
+## 介绍
+
+这是一个介绍。
+\`\`\`
+
+## Task
+Determine if the TARGET translation contains **substantive changes** that go beyond normal translation work. We are looking for:
+
+1. **Bug fixes**: Errors corrected in the translation (wrong formulas, incorrect code, factual errors)
+2. **Clarifications**: Explanations made clearer or more precise
+3. **Additional content**: New examples, explanations, or code added
+4. **Code improvements**: Non-cosmetic code changes (beyond i18n adjustments like fonts/locale)
+
+**Ignore** (these are normal translation work, NOT backport candidates):
+- Language-specific formatting (punctuation, writing style)
+- i18n code changes (figure sizes, fonts, locale settings)
+- Translation style variations that don't change meaning
+- Restructured sentences for better flow in the target language
+
+## Response Format
+Respond with a JSON object:
+\`\`\`json
+{
+  "verdict": "CHANGES_DETECTED" or "IN_SYNC",
+  "notes": "Brief description of what substantive changes were found, or empty string if in sync"
+}
+\`\`\`
+
+**Important**: When in doubt, use "CHANGES_DETECTED". It is much better to flag a file for closer inspection than to miss a genuine improvement. Only use "IN_SYNC" when you are confident the translation is faithful with no substantive additions or corrections."
+`;
+
+exports[`triage prompt snapshot matches snapshot without timeline 1`] = `
+"You are comparing an English source document with its zh-cn translation to determine if the translation contains substantive changes beyond normal translation work.
+
+## Context
+- Source language: English
+- Target language: zh-cn
+
+
+## Source Content (English)
+\`\`\`
+## Introduction
+
+This is an intro.
+\`\`\`
+
+## Target Content (zh-cn)
+\`\`\`
+## 介绍
+
+这是一个介绍。
+\`\`\`
+
+## Task
+Determine if the TARGET translation contains **substantive changes** that go beyond normal translation work. We are looking for:
+
+1. **Bug fixes**: Errors corrected in the translation (wrong formulas, incorrect code, factual errors)
+2. **Clarifications**: Explanations made clearer or more precise
+3. **Additional content**: New examples, explanations, or code added
+4. **Code improvements**: Non-cosmetic code changes (beyond i18n adjustments like fonts/locale)
+
+**Ignore** (these are normal translation work, NOT backport candidates):
+- Language-specific formatting (punctuation, writing style)
+- i18n code changes (figure sizes, fonts, locale settings)
+- Translation style variations that don't change meaning
+- Restructured sentences for better flow in the target language
+
+## Response Format
+Respond with a JSON object:
+\`\`\`json
+{
+  "verdict": "CHANGES_DETECTED" or "IN_SYNC",
+  "notes": "Brief description of what substantive changes were found, or empty string if in sync"
+}
+\`\`\`
+
+**Important**: When in doubt, use "CHANGES_DETECTED". It is much better to flag a file for closer inspection than to miss a genuine improvement. Only use "IN_SYNC" when you are confident the translation is faithful with no substantive additions or corrections."
+`;

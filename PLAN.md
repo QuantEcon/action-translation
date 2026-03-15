@@ -1,10 +1,10 @@
 # PLAN: Development Roadmap
 
 **Created**: 2026-02-16  
-**Last Updated**: 2026-03-06  
+**Last Updated**: 2026-03-16  
 **Sources**: 2026-02-16-REVIEW.md, docs/DESIGN-RESYNC.md  
 **Current Version**: v0.8.0  
-**Test Status**: 640 tests passing (29 test suites)
+**Test Status**: 783 tests passing (35 test suites, 5 snapshots)
 
 ---
 
@@ -660,132 +660,25 @@ RESYNC preserves translation nuances because the LLM sees the existing translati
 
 ---
 
-## Phase 4: Refinement & Documentation (2-3 days)
+## Phase 4: Refinement & Documentation ✅
 
-**Goal**: Production-ready CLI
+**Goal**: Production-ready CLI  
+**Status**: Core refinement complete (PR #24). Remaining items moved to Future Work.
 
-### 4.1 Integration Testing
+### 4.1 Testing (completed)
 
-- [ ] Test `backward` + `review` workflow with `lecture-python-intro` ↔ `lecture-intro.zh-cn`
-- [ ] Test `forward` resync with `lecture-python` ↔ `lecture-python.zh-cn`
-- [ ] Validate RESYNC translation quality (preserves nuances vs full re-translation)
-- [ ] Validate forward triage accuracy (content vs i18n classification)
-- [ ] Add CLI smoke tests (invoke commands as external processes)
-- [ ] Add LLM prompt snapshot tests (catch unintended prompt drift)
-- [ ] Validate two-stage triage accuracy (Stage 1 recall ≥95%)
-- [ ] Test review → Issue creation end-to-end
-- [ ] Document edge cases found
-- [ ] Fix bugs discovered
+- [x] Add CLI smoke tests (invoke commands as external processes) — 11 tests in `cli-smoke.test.ts`
+- [x] Add LLM prompt snapshot tests (catch unintended prompt drift) — 5 snapshots across 3 suites
 
-### 4.2 Prompt Tuning
+### 4.3 Error Handling (completed)
 
-- [ ] Review Stage 1 triage accuracy (false negatives are critical failures)
-- [ ] Review Stage 2 suggestions from Phase 1-2 runs
-- [ ] Identify false positives and false negatives
-- [ ] Tune Stage 1 prompt for recall (bias toward flagging)
-- [ ] Tune Stage 2 prompt for precision (reduce noise in suggestions)
-- [ ] Tune RESYNC prompt for translation preservation quality
-- [ ] Re-run validation tests
+- [x] Malformed frontmatter — `parseTocLectures()` catches YAML parse errors and empty files
+- [x] `gh` CLI not available — `checkGhAvailable()` pre-flight in review + forward --github, differentiates ENOENT/ETIMEDOUT/other
 
-### 4.3 Error Handling
+### 4.6 Review Actions (completed)
 
-- [ ] Missing source/target files
-- [ ] Malformed frontmatter
-- [ ] API timeout/rate limit
-- [ ] Invalid heading-map
-- [ ] Oversized documents (Stage 1 token limit exceeded)
-- [ ] `gh` CLI not available (review command: graceful error)
-- [ ] Graceful degradation with warnings
-
-### 4.4 Review Command UX Polish
-
-The interactive review session works but long suggestion cards (e.g. 5 changes with
-code blocks) can overflow terminal height. Current mitigation: reasoning is collapsible
-via `[D]` toggle. Further improvements to explore:
-
-- [ ] Scroll viewport — fixed-height card area with up/down arrow scrolling
-- [ ] Truncate long Before/After blocks — show first N lines, `[E]xpand` to see full
-- [ ] Syntax highlighting in Before/After code blocks (chalk + cli-highlight)
-- [ ] MyST-aware rendering — styled directives, math, headers in card output
-- [ ] Colour-coded inline diff (word-level Before→After highlighting)
-
-### 4.5 Documentation — Restructure into User & Developer Guides
-
-Restructure `docs/` into two clear audiences and deploy via GitHub Pages for easy access.
-
-#### Documentation Structure
-
-```
-docs/
-├── index.md                    # Landing page (replaces INDEX.md)
-├── user/                       # For users of the Action and CLI
-│   ├── quickstart.md           # Getting started (Action setup)
-│   ├── action-reference.md     # GitHub Action inputs, modes, examples
-│   ├── cli-reference.md        # CLI commands: status, backward, review, forward
-│   ├── glossary.md             # Glossary system usage
-│   ├── heading-maps.md         # Heading-map explanation for users
-│   ├── language-config.md      # Language-specific rules
-│   └── faq.md                  # Common questions and troubleshooting
-├── developer/                  # For contributors and maintainers
-│   ├── architecture.md         # System design and module map
-│   ├── sync-workflow.md        # Sync lifecycle internals
-│   ├── implementation.md       # Technical deep-dive
-│   ├── testing.md              # Test suite design, how to write tests
-│   ├── test-repositories.md    # GitHub integration test setup
-│   ├── design-resync.md        # Resync CLI design decisions
-│   └── claude-models.md        # Model selection internals
-└── _config/                    # Site generation config
-    └── ...
-```
-
-#### User Documentation
-
-- [ ] **Quick Start** — streamlined Action setup for new users
-- [ ] **Action Reference** — inputs, outputs, modes (sync/review), examples
-- [ ] **CLI Reference** — `status`, `backward`, `review`, `forward` with usage examples and options
-- [ ] **Glossary Guide** — how to use and extend the translation glossary
-- [ ] **Heading Maps** — user-friendly explanation (what they are, when to edit manually)
-- [ ] **FAQ** — common issues, troubleshooting, "how do I..." answers
-
-#### Developer Documentation
-
-- [ ] **Architecture** — module map, data flow diagrams, key design constraints
-- [ ] **Sync Workflow** — internal lifecycle, UPDATE/NEW/RESYNC modes
-- [ ] **Implementation** — technical reference (parser, diff-detector, translator internals)
-- [ ] **Testing Guide** — test pyramid, fixtures, how to add tests
-- [ ] **Design: Resync CLI** — two-stage architecture, review workflow, CLI framework decision
-- [ ] **Claude Models** — model selection, token limits, retry logic
-
-#### GitHub Pages Deployment
-
-- [ ] Use **mystmd** as the static site generator
-  - Natural fit: the project processes MyST Markdown — dogfood the format
-  - QuantEcon already uses mystmd for lecture sites
-  - Native rendering of all MyST directives, math, code cells — no preprocessing
-  - Documentation examples use the same syntax the tool translates
-- [ ] Configure `docs/` with `myst.yml`
-- [ ] Add GitHub Actions workflow: auto-deploy docs on push to `main`
-- [ ] Landing page with navigation to User / Developer sections
-- [ ] Ensure existing doc links remain functional (redirects or path mapping)
-- [ ] Add docs site URL to repo About section and README
-
-#### General
-
-- [ ] Update main README with link to docs site
-- [ ] Update CHANGELOG.md
-- [ ] Migrate content from existing `docs/*.md` files into new structure
-- [ ] Remove or redirect old `INDEX.md`
-
-### 4.6 Additional Review Actions (from 2026-02-16-REVIEW)
-
-These can be addressed opportunistically during refinement:
-
-- [ ] Use atomic Git commits (Tree API) for multi-file PRs in sync mode
-- [ ] Add pre-flight check for section-level translation token limits
-- [ ] Refactor `reviewer.ts` to reuse `MystParser` instead of local parsing
-- [ ] Simplify `parseTranslatedSubsections()` wrapper approach
-- [ ] Update `@anthropic-ai/sdk` to latest version
-- [ ] Add Unicode heading ID test case
+- [x] Update `@anthropic-ai/sdk` to latest version — 0.27.0 → 0.78.0
+- [x] Add Unicode heading ID test case — `\p{L}\p{N}` in parser.ts and reviewer.ts
 
 ---
 
@@ -1069,7 +962,7 @@ translate init -s /path/to/source -t /path/to/target \
 
 ---
 
-## Phase 5b: Cleanup & Repo Hygiene
+## Phase 5b: Cleanup & Repo Hygiene ✅
 
 **Goal**: Clean up deprecated tools and repo structure
 
@@ -1077,11 +970,11 @@ translate init -s /path/to/source -t /path/to/target \
 - [x] Deprecate `tool-onboarding/` (add deprecation notice to README)
 - [x] Deprecate `tool-alignment/` (add deprecation notice to README)
 - [x] Remove `tool-onboarding/` and `tool-alignment/` from tree (preserved in git history)
-- [ ] Remove `tool-bulk-translator/` (functionality moved to `translate init`)
-- [ ] Ensure `.gitignore` covers `node_modules/` in all tool dirs
-- [ ] Remove `coverage/` from tracked files
-- [ ] Clean up `dist/` build output
-- [ ] Update `copilot-instructions.md` to reflect new CLI structure
+- [x] Remove `tool-bulk-translator/` (functionality moved to `translate init`) — git rm -r, preserved in history
+- [x] Clean up `.gitignore` — removed stale `tool-bulk-translator/dist/` entry, removed `*.test.ts.snap` (snapshots tracked for CI)
+- [x] Remove `coverage/` from tracked files — already untracked (in `.gitignore`, 0 files in git index)
+- [x] ~~Clean up `dist/` build output~~ — N/A: `dist-action/` must be committed (GitHub Action entry point)
+- [x] Update `copilot-instructions.md` to reflect new CLI structure — test counts updated in PR #24
 
 ---
 
@@ -1321,10 +1214,12 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 
 | Metric | Current | Target |
 |--------|---------|--------|
-| Test count | 472 | 400+ |
+| Test count | 783 | 400+ |
+| Test suites | 35 | — |
+| Snapshots | 5 | — |
 | `index.ts` lines | ~447 | ~447 (stable) |
 | Deprecated methods | 0 | 0 |
-| Dead tool directories | 2 | 0 |
+| Dead tool directories | 0 | 0 |
 
 ---
 
@@ -1337,9 +1232,9 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 | **Phase 2**: Bulk + status | 2-3 days | Phase 1 ✅ | `npx resync status` + bulk backward |
 | **Phase 3a**: Interactive review | 3-4 days | Phase 2 ✅ | `npx resync review` with Issue creation |
 | **Phase 3b**: Forward resync | 2-3 days | Phase 3a ✅ | `npx resync forward` with RESYNC mode |
-| **Phase 4**: Refinement | 2-3 days | Phase 3b | Production-ready CLI |
+| **Phase 4**: Refinement | 2-3 days | Phase 3b ✅ | Production-ready CLI ✅ |
 | **Phase 5**: CLI rename + init | 2-3 days | Phase 3b ✅ | `translate init`, rename resync→translate ✅ |
-| **Phase 5b**: Cleanup | 1 day | Phase 5 | Legacy tool deprecation, repo hygiene |
+| **Phase 5b**: Cleanup | 1 day | Phase 5 ✅ | Legacy tool deprecation, repo hygiene ✅ |
 | **Phase 6**: `.translate/` metadata | 2-3 days | Phase 5 ✅ | Exact staleness, skip optimisation, provenance |
 | **Phase 6b**: Setup command | 1-2 days | Phase 6 | `translate setup` — scaffold target repo |
 | **Phase 7**: Automation | 1-2 days | Phase 4 | Scheduled backward analysis |
@@ -1364,25 +1259,15 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 
 ---
 
-## Next Steps
+## Lessons Learned
 
-Phase 0, Phase 1, Phase 2, and Phase 3a foundations are complete. **Continue Phase 3a** with the `review` command.
-
-### Phase 3a Priorities (ordered)
-
-1. ~~**Formalize backward JSON schema**~~ ✅ — `src/cli/schema.ts` with Zod validation, 41 tests (PR #17)
-2. ~~**ESM migration + `ink` v4 scaffolding**~~ ✅ — ESM build, ink v4 + React 18 installed, esbuild CJS bundle, 515 tests pass (PR #17)
-3. **`review` command with `--dry-run`** — Load reports, walk through suggestions interactively, display Issue previews.
-4. **MyST-aware rendering** — `<MystRenderer>` component for syntax-highlighted code, math, directives.
-5. **Issue creation** — `gh` CLI integration, test against `test-action-translation` repos.
-
-### Lessons from Phase 1 Real-World Testing
+### From Phase 1 Real-World Testing
 
 - **Temporal context is critical**: Without the interleaved commit timeline, the LLM makes directional errors (flagging SOURCE's newer code as a TARGET improvement). Adding timeline to prompts eliminated this class of false positive.
 - **Two-stage design validated**: Stage 1 correctly flags differences; Stage 2 correctly filters non-actionable ones. The cost savings are real (~$0.01 triage vs ~$0.10-0.50 per-section analysis).
 - **Real repo names**: The zh-cn repo for `lecture-python-intro` is `lecture-intro.zh-cn` (not `lecture-python-intro.zh-cn`).
 
-### Lessons from Phase 2 Bulk Testing
+### From Phase 2 Bulk Testing
 
 - **Whole-file evaluation wins**: Refactoring Stage 2 from per-section (182 calls) to per-file (32 calls) produced better results — more high-confidence findings, less noise, and ~6x fewer API calls. Cross-section context helps the LLM avoid false positives.
 - **5-way parallelism** is the sweet spot — fast enough to complete 51 files in ~4 minutes, without overwhelming the API.
@@ -1393,6 +1278,90 @@ Phase 0, Phase 1, Phase 2, and Phase 3a foundations are complete. **Continue Pha
 - **Stage 1 flagging rate** was ~67% (33/49 files flagged), much higher than the estimated 5-10%. This suggests the Stage 1 prompt has high recall (good — false negatives are worse than false positives) but precision could be improved. Stage 2 effectively filters: only 20 suggestions survived from 33 flagged files.
 
 ---
+
+## Future Work
+
+Items moved from completed phases. These are candidates for future development, not committed work.
+
+### Integration Testing
+
+- [ ] Test `backward` + `review` workflow with `lecture-python-intro` ↔ `lecture-intro.zh-cn`
+- [ ] Test `forward` resync with `lecture-python` ↔ `lecture-python.zh-cn`
+- [ ] Validate RESYNC translation quality (preserves nuances vs full re-translation)
+- [ ] Validate forward triage accuracy (content vs i18n classification)
+- [ ] Validate two-stage triage accuracy (Stage 1 recall ≥95%)
+- [ ] Test review → Issue creation end-to-end
+- [ ] Document edge cases found
+- [ ] Fix bugs discovered
+
+### Prompt Tuning
+
+- [ ] Review Stage 1 triage accuracy (false negatives are critical failures)
+- [ ] Review Stage 2 suggestions from Phase 1-2 runs
+- [ ] Identify false positives and false negatives
+- [ ] Tune Stage 1 prompt for recall (bias toward flagging)
+- [ ] Tune Stage 2 prompt for precision (reduce noise in suggestions)
+- [ ] Tune RESYNC prompt for translation preservation quality
+- [ ] Re-run validation tests
+
+### Error Handling
+
+- [ ] Missing source/target files
+- [ ] API timeout/rate limit
+- [ ] Invalid heading-map
+- [ ] Oversized documents (Stage 1 token limit exceeded)
+- [ ] Graceful degradation with warnings
+
+### Review Command UX Polish
+
+- [ ] Scroll viewport — fixed-height card area with up/down arrow scrolling
+- [ ] Truncate long Before/After blocks — show first N lines, `[E]xpand` to see full
+- [ ] Syntax highlighting in Before/After code blocks (chalk + cli-highlight)
+- [ ] MyST-aware rendering — styled directives, math, headers in card output
+- [ ] Colour-coded inline diff (word-level Before→After highlighting)
+
+### Documentation — Restructure into User & Developer Guides
+
+Restructure `docs/` into two clear audiences and deploy via GitHub Pages.
+
+#### User Documentation
+
+- [ ] **Quick Start** — streamlined Action setup for new users
+- [ ] **Action Reference** — inputs, outputs, modes (sync/review), examples
+- [ ] **CLI Reference** — `status`, `backward`, `review`, `forward` with usage examples and options
+- [ ] **Glossary Guide** — how to use and extend the translation glossary
+- [ ] **Heading Maps** — user-friendly explanation (what they are, when to edit manually)
+- [ ] **FAQ** — common issues, troubleshooting, "how do I..." answers
+
+#### Developer Documentation
+
+- [ ] **Architecture** — module map, data flow diagrams, key design constraints
+- [ ] **Sync Workflow** — internal lifecycle, UPDATE/NEW/RESYNC modes
+- [ ] **Implementation** — technical reference (parser, diff-detector, translator internals)
+- [ ] **Testing Guide** — test pyramid, fixtures, how to add tests
+- [ ] **Design: Resync CLI** — two-stage architecture, review workflow, CLI framework decision
+- [ ] **Claude Models** — model selection, token limits, retry logic
+
+#### GitHub Pages Deployment
+
+- [ ] Use **mystmd** as the static site generator
+- [ ] Configure `docs/` with `mst.yml`
+- [ ] Add GitHub Actions workflow: auto-deploy docs on push to `main`
+- [ ] Landing page with navigation to User / Developer sections
+- [ ] Ensure existing doc links remain functional (redirects or path mapping)
+- [ ] Add docs site URL to repo About section and README
+
+#### General
+
+- [ ] Update main README with link to docs site
+- [ ] Migrate content from existing `docs/*.md` files into new structure
+
+### Additional Review Actions
+
+- [ ] Use atomic Git commits (Tree API) for multi-file PRs in sync mode
+- [ ] Add pre-flight check for section-level translation token limits
+- [ ] Refactor `reviewer.ts` to reuse `MystParser` instead of local parsing
+- [ ] Simplify `parseTranslatedSubsections()` wrapper approach
 
 ---
 
@@ -1438,4 +1407,4 @@ The GitHub Action itself would remain Node.js (Actions require JavaScript). Only
 
 ---
 
-*Last updated: 2026-03-04 (Phase 3a foundations complete: JSON schema + ESM migration + ink v4, PR #17)*
+*Last updated: 2026-03-06 (Phase 4 + 5b closed out, future work reorganized, PR #24)*

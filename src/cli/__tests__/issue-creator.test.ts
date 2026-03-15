@@ -8,6 +8,7 @@ import {
   buildGhArgs,
   createIssue,
   createIssuesForAccepted,
+  checkGhAvailable,
   GhRunner,
   IssueResult,
 } from '../issue-creator.js';
@@ -205,5 +206,34 @@ describe('createIssuesForAccepted', () => {
     expect(callCount).toBe(2);
     expect(results[0].success).toBe(false);
     expect(results[1].success).toBe(true);
+  });
+});
+
+// =============================================================================
+// checkGhAvailable
+// =============================================================================
+
+describe('checkGhAvailable', () => {
+  it('does not throw when gh is installed and authenticated', () => {
+    const runner = () => ({ status: 0, stderr: '' });
+    expect(() => checkGhAvailable(runner)).not.toThrow();
+  });
+
+  it('throws when gh is not installed (ENOENT)', () => {
+    const err = Object.assign(new Error('spawnSync gh ENOENT'), { code: 'ENOENT' });
+    const runner = () => ({ status: null, error: err, stderr: '' });
+    expect(() => checkGhAvailable(runner)).toThrow(/not installed/);
+  });
+
+  it('throws with details for non-ENOENT spawn errors', () => {
+    const err = Object.assign(new Error('spawnSync gh ETIMEDOUT'), { code: 'ETIMEDOUT' });
+    const runner = () => ({ status: null, error: err, stderr: '' });
+    expect(() => checkGhAvailable(runner)).toThrow(/Failed to run/);
+    expect(() => checkGhAvailable(runner)).toThrow(/ETIMEDOUT/);
+  });
+
+  it('throws when gh is not authenticated', () => {
+    const runner = () => ({ status: 1, stderr: 'You are not logged into any GitHub hosts.' });
+    expect(() => checkGhAvailable(runner)).toThrow(/not authenticated/);
   });
 });
