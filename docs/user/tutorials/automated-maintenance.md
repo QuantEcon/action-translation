@@ -97,9 +97,9 @@ jobs:
           echo "" >> /tmp/status-comment.md
 
           # Count statuses from JSON
-          ALIGNED=$(jq '[.files[] | select(.status == "ALIGNED")] | length' /tmp/status.json)
-          OUTDATED=$(jq '[.files[] | select(.status == "OUTDATED")] | length' /tmp/status.json)
-          TOTAL=$(jq '.files | length' /tmp/status.json)
+          ALIGNED=$(jq '[.entries[] | select(.status == "ALIGNED")] | length' /tmp/status.json)
+          OUTDATED=$(jq '[.entries[] | select(.status == "OUTDATED")] | length' /tmp/status.json)
+          TOTAL=$(jq '.entries | length' /tmp/status.json)
           echo "aligned=$ALIGNED" >> "$GITHUB_OUTPUT"
           echo "outdated=$OUTDATED" >> "$GITHUB_OUTPUT"
           echo "total=$TOTAL" >> "$GITHUB_OUTPUT"
@@ -125,17 +125,16 @@ Every Monday, the tracking Issue receives a comment like:
 > ## Translation Status — 2026-03-16
 >
 > ```
->  Status Summary: lecture-python-intro ↔ lecture-intro.zh-cn
-> ┌──────────────────────────────────┬──────────────────┐
-> │ File                             │ Status           │
-> ├──────────────────────────────────┼──────────────────┤
-> │ cobweb.md                        │ ✅ ALIGNED       │
-> │ solow.md                         │ ✅ ALIGNED       │
-> │ cagan_adaptive.md                │ ⚠️  OUTDATED     │
-> └──────────────────────────────────┴──────────────────┘
+> Sync Status: lecture-python-intro ↔ lecture-intro.zh-cn (zh-cn)
+>
+>   File                              Status
+>   ────────────────────────────────  ────────────────────
+>   cobweb.md                         ✅ ALIGNED
+>   solow.md                          ✅ ALIGNED
+>   cagan_adaptive.md                 ⏳ OUTDATED
 > ```
 >
-> ⚠️ **1 of 3 files are outdated.** Consider running `translate forward` to resync.
+> ⏳ **1 of 3 files are outdated.** Consider running `translate forward` to resync.
 
 ---
 

@@ -100,7 +100,7 @@ Or use `--test` for development without API calls.
 ### My heading map is missing or incomplete
 
 The `status` command reports missing heading maps. To fix:
-1. Run `npx resync forward -f <file>` to regenerate the translation (heading map is included automatically)
+1. Run `npx translate forward -f <file>` to regenerate the translation (heading map is included automatically)
 2. Or manually add the heading-map to the target file's frontmatter (see [Heading Maps](heading-maps.md))
 
 ### I changed a heading in the translation — do I need to update the heading map?

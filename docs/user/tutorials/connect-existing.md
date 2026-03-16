@@ -52,18 +52,17 @@ npx translate status \
 Example output:
 
 ```
- Status Summary: lecture-python-intro ↔ lecture-python-intro.zh-cn
-┌──────────────────────────────────┬──────────────────────┐
-│ File                             │ Status               │
-├──────────────────────────────────┼──────────────────────┤
-│ intro.md                         │ ✅ ALIGNED            │
-│ cobweb.md                        │ ⚠️  MISSING_HEADINGMAP │
-│ solow.md                         │ ⚠️  MISSING_HEADINGMAP │
-│ cagan_adaptive.md                │ ⚠️  OUTDATED           │
-│ pv.md                            │ ⚠️  SOURCE_AHEAD       │
-│ new_lecture.md                   │ 📄 SOURCE_ONLY        │
-│ old_removed.md                   │ 📄 TARGET_ONLY        │
-└──────────────────────────────────┴──────────────────────┘
+Sync Status: lecture-python-intro ↔ lecture-python-intro.zh-cn (zh-cn)
+
+  File                              Status
+  ────────────────────────────────  ────────────────────
+  intro.md                          ✅ ALIGNED
+  cobweb.md                         📋 MISSING_HEADINGMAP
+  solow.md                          📋 MISSING_HEADINGMAP
+  cagan_adaptive.md                 ⏳ OUTDATED
+  pv.md                             ⚠️ SOURCE_AHEAD
+  new_lecture.md                    ➕ SOURCE_ONLY
+  old_removed.md                    🔸 TARGET_ONLY
 ```
 
 **What to look for:**
@@ -319,7 +318,7 @@ npx translate status \
 
 **What "ready" looks like:**
 
-- All files show `✅ ALIGNED` or `⚠️ OUTDATED` (OUTDATED is OK — it just means the source has newer changes)
+- All files show `✅ ALIGNED` or `⏳ OUTDATED` (OUTDATED is OK — it just means the source has newer changes)
 - No `MISSING_HEADINGMAP` warnings
 - `.translate/config.yml` exists in the target repo
 - `.translate/state/*.yml` files exist for each translated file

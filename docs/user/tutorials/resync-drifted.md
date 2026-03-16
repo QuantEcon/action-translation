@@ -46,20 +46,19 @@ npx translate status \
 Example output:
 
 ```
- Status Summary: lecture-python-intro ↔ lecture-python-intro.zh-cn
-┌──────────────────────────────────┬──────────────────────┐
-│ File                             │ Status               │
-├──────────────────────────────────┼──────────────────────┤
-│ intro.md                         │ ✅ ALIGNED            │
-│ cobweb.md                        │ ✅ ALIGNED            │
-│ solow.md                         │ ⚠️  OUTDATED           │
-│   ↳ SOURCE has 3 newer commits   │                      │
-│ cagan_adaptive.md                │ ⚠️  OUTDATED           │
-│   ↳ SOURCE has 1 newer commit    │                      │
-│ pv.md                            │ ⚠️  SOURCE_AHEAD       │
-│   ↳ SOURCE: 8 sections, TARGET: 7│                      │
-│ new_lecture.md                   │ 📄 SOURCE_ONLY        │
-└──────────────────────────────────┴──────────────────────┘
+Sync Status: lecture-python-intro ↔ lecture-python-intro.zh-cn (zh-cn)
+
+  File                              Status
+  ────────────────────────────────  ────────────────────
+  intro.md                          ✅ ALIGNED
+  cobweb.md                         ✅ ALIGNED
+  solow.md                          ⏳ OUTDATED
+    ↳ SOURCE has 3 newer commits
+  cagan_adaptive.md                 ⏳ OUTDATED
+    ↳ SOURCE has 1 newer commit
+  pv.md                             ⚠️ SOURCE_AHEAD
+    ↳ SOURCE: 8 sections, TARGET: 7
+  new_lecture.md                    ➕ SOURCE_ONLY
 ```
 
 **Understanding the drift categories:**
