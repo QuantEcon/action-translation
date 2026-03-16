@@ -18,7 +18,10 @@ jest.mock('@actions/core', () => ({
 }));
 
 // Mock the Anthropic SDK
-const mockCreate = jest.fn();
+const mockFinalMessage = jest.fn();
+const mockStream = jest.fn().mockImplementation(() => ({
+  finalMessage: mockFinalMessage,
+}));
 
 jest.mock('@anthropic-ai/sdk', () => {
   // Create error classes matching real SDK signatures
@@ -69,7 +72,7 @@ jest.mock('@anthropic-ai/sdk', () => {
 
   const MockAnthropic = jest.fn().mockImplementation(() => ({
     messages: {
-      create: mockCreate,
+      stream: mockStream,
     },
   }));
 
@@ -151,7 +154,7 @@ describe('TranslationService - Retry Logic', () => {
 
   describe('successful calls', () => {
     it('should succeed on first attempt', async () => {
-      mockCreate.mockResolvedValueOnce(createSuccessResponse());
+      mockFinalMessage.mockResolvedValueOnce(createSuccessResponse());
 
       const result = await service.translateSection({
         mode: 'new',
@@ -162,13 +165,13 @@ describe('TranslationService - Retry Logic', () => {
 
       expect(result.success).toBe(true);
       expect(result.translatedSection).toBe('Translated text');
-      expect(mockCreate).toHaveBeenCalledTimes(1);
+      expect(mockStream).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('retryable errors', () => {
     it('should retry on RateLimitError and succeed', async () => {
-      mockCreate
+      mockFinalMessage
         .mockRejectedValueOnce(rateLimitError('Rate limit exceeded'))
         .mockResolvedValueOnce(createSuccessResponse());
 
@@ -180,11 +183,11 @@ describe('TranslationService - Retry Logic', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(mockCreate).toHaveBeenCalledTimes(2);
+      expect(mockStream).toHaveBeenCalledTimes(2);
     });
 
     it('should retry on APIConnectionError and succeed', async () => {
-      mockCreate
+      mockFinalMessage
         .mockRejectedValueOnce(connectionError('Connection refused'))
         .mockResolvedValueOnce(createSuccessResponse());
 
@@ -196,11 +199,11 @@ describe('TranslationService - Retry Logic', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(mockCreate).toHaveBeenCalledTimes(2);
+      expect(mockStream).toHaveBeenCalledTimes(2);
     });
 
     it('should retry on 5xx APIError and succeed', async () => {
-      mockCreate
+      mockFinalMessage
         .mockRejectedValueOnce(serverError(500, 'Internal Server Error'))
         .mockResolvedValueOnce(createSuccessResponse());
 
@@ -212,11 +215,11 @@ describe('TranslationService - Retry Logic', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(mockCreate).toHaveBeenCalledTimes(2);
+      expect(mockStream).toHaveBeenCalledTimes(2);
     });
 
     it('should retry on 503 APIError and succeed', async () => {
-      mockCreate
+      mockFinalMessage
         .mockRejectedValueOnce(serverError(503, 'Service Unavailable'))
         .mockResolvedValueOnce(createSuccessResponse());
 
@@ -228,11 +231,11 @@ describe('TranslationService - Retry Logic', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(mockCreate).toHaveBeenCalledTimes(2);
+      expect(mockStream).toHaveBeenCalledTimes(2);
     });
 
     it('should retry up to maxRetries times then fail', async () => {
-      mockCreate
+      mockFinalMessage
         .mockRejectedValueOnce(rateLimitError('Rate limit 1'))
         .mockRejectedValueOnce(rateLimitError('Rate limit 2'))
         .mockRejectedValueOnce(rateLimitError('Rate limit 3'));
@@ -247,11 +250,11 @@ describe('TranslationService - Retry Logic', () => {
       // translateSection catches the error and returns failure
       expect(result.success).toBe(false);
       expect(result.error).toContain('Rate limit');
-      expect(mockCreate).toHaveBeenCalledTimes(3);
+      expect(mockStream).toHaveBeenCalledTimes(3);
     });
 
     it('should succeed on third attempt after two failures', async () => {
-      mockCreate
+      mockFinalMessage
         .mockRejectedValueOnce(rateLimitError('Rate limit'))
         .mockRejectedValueOnce(connectionError('Connection reset'))
         .mockResolvedValueOnce(createSuccessResponse('Third time lucky'));
@@ -265,13 +268,13 @@ describe('TranslationService - Retry Logic', () => {
 
       expect(result.success).toBe(true);
       expect(result.translatedSection).toBe('Third time lucky');
-      expect(mockCreate).toHaveBeenCalledTimes(3);
+      expect(mockStream).toHaveBeenCalledTimes(3);
     });
   });
 
   describe('non-retryable errors', () => {
     it('should NOT retry on AuthenticationError', async () => {
-      mockCreate.mockRejectedValueOnce(authError('Invalid API key'));
+      mockFinalMessage.mockRejectedValueOnce(authError('Invalid API key'));
 
       const result = await service.translateSection({
         mode: 'new',
@@ -282,11 +285,11 @@ describe('TranslationService - Retry Logic', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Authentication');
-      expect(mockCreate).toHaveBeenCalledTimes(1); // No retry
+      expect(mockStream).toHaveBeenCalledTimes(1); // No retry
     });
 
     it('should NOT retry on BadRequestError', async () => {
-      mockCreate.mockRejectedValueOnce(badRequestError('Invalid request'));
+      mockFinalMessage.mockRejectedValueOnce(badRequestError('Invalid request'));
 
       const result = await service.translateSection({
         mode: 'new',
@@ -296,13 +299,13 @@ describe('TranslationService - Retry Logic', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(mockCreate).toHaveBeenCalledTimes(1); // No retry
+      expect(mockStream).toHaveBeenCalledTimes(1); // No retry
     });
   });
 
   describe('retry with different translation modes', () => {
     it('should retry for update mode translations', async () => {
-      mockCreate
+      mockFinalMessage
         .mockRejectedValueOnce(rateLimitError('Rate limit'))
         .mockResolvedValueOnce(createSuccessResponse('Updated translation'));
 
@@ -317,11 +320,11 @@ describe('TranslationService - Retry Logic', () => {
 
       expect(result.success).toBe(true);
       expect(result.translatedSection).toBe('Updated translation');
-      expect(mockCreate).toHaveBeenCalledTimes(2);
+      expect(mockStream).toHaveBeenCalledTimes(2);
     });
 
     it('should retry for full document translations', async () => {
-      mockCreate
+      mockFinalMessage
         .mockRejectedValueOnce(connectionError('Timeout'))
         .mockResolvedValueOnce(createSuccessResponse('Full document translated'));
 
@@ -333,7 +336,7 @@ describe('TranslationService - Retry Logic', () => {
 
       expect(result.success).toBe(true);
       expect(result.translatedSection).toBe('Full document translated');
-      expect(mockCreate).toHaveBeenCalledTimes(2);
+      expect(mockStream).toHaveBeenCalledTimes(2);
     });
   });
 

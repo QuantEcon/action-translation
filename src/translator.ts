@@ -152,7 +152,8 @@ export class TranslationService {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        return await this.client.messages.create(createParams as Anthropic.MessageCreateParamsNonStreaming);
+        const stream = this.client.messages.stream(createParams as Anthropic.MessageStreamParams);
+        return await stream.finalMessage();
       } catch (error) {
         // Don't retry on non-transient errors
         if (error instanceof AuthenticationError || error instanceof BadRequestError) {
