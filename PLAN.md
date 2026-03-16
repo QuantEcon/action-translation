@@ -1315,22 +1315,46 @@ Using `lecture-python-intro` as the source repo and a new `lecture-python-intro.
 
 **Test Plan: Connect Existing Target**
 
-Using `lecture-python-intro` ↔ `lecture-intro.zh-cn` (real production pair):
+Primary test pair: `lecture-python-programming.myst` ↔ `lecture-python-programming.fa` (Farsi, not yet launched)
 
-1. **Headingmap** — `translate headingmap -s ... -t ...`
-   - [ ] Verify heading-maps generated/updated for all files
-   - [ ] Verify existing heading-maps preserved where correct
-   - [ ] Spot-check 2-3 files for correct heading alignment
+**0. Repo Assessment (2026-03-16)** ✅
 
-2. **Status with --write-state** — Bootstrap `.translate/` metadata
-   - [ ] Verify `config.yml` created with correct settings
-   - [ ] Verify state files created with best-effort `source-sha`
+| Dimension | State |
+|-----------|-------|
+| File coverage | 25 files — perfect 1:1 match, no gaps |
+| Translation state | All 25 files contain Farsi content (previously translated) |
+| Heading-maps | 19 of 25 files have heading-maps |
+| Missing heading-maps | `about_py.md`, `functions.md`, `getting_started.md`, `intro.md`, `python_by_example.md`, `status.md` |
+| `.translate/` state | Does not exist — no sync metadata |
+| Sync workflows | None — only build/publish workflows (`cache.yml`, `ci.yml`, `publish.yml`) |
+| docs-folder | `lectures` |
+
+1. **Status** — `translate status -s ~/work/quantecon/lecture-python-programming.myst -t ~/work/quantecon/lecture-python-programming.fa --docs-folder lectures`
+   - [ ] Run initial status diagnostic (no `.translate/` state — uses git heuristic)
+   - [ ] Verify it reports 6 files as MISSING_HEADINGMAP
+   - [ ] Record which files are OUTDATED vs ALIGNED
+
+2. **Bootstrap `.translate/` state** — `translate status ... --write-state`
+   - [ ] Verify `config.yml` created with correct settings (source-repo, target-language: fa, docs-folder: lectures)
+   - [ ] Verify state files created with best-effort `source-sha` for all 25 files
    - [ ] Verify `translate status` now shows exact staleness (not git heuristic)
 
-3. **Forward selective resync** — Pick 2-3 stale files, resync
+3. **Fix missing heading-maps** — either `translate headingmap` (if 7.2 built) or manual
+   - [ ] Generate heading-maps for the 6 missing files
+   - [ ] Verify existing 19 heading-maps preserved where correct
+   - [ ] Spot-check 2-3 files for correct heading alignment
+
+4. **Forward selective resync** — Pick 2-3 stale files, resync
    - [ ] Verify translations updated correctly
+   - [ ] Verify heading-maps regenerated
    - [ ] Verify state entries updated
    - [ ] Verify no regression in non-resynced files
+
+5. **Add sync workflows** — Add SOURCE workflow to `.myst` repo, review workflow to `.fa` repo
+   - [ ] Verify Action triggers correctly on test PR
+   - [ ] Verify translation PR appears in target
+
+Secondary test pair (stretch): `lecture-python-intro` ↔ `lecture-intro.zh-cn` (Chinese, production)
 
 ---
 
