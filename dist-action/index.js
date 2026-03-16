@@ -33649,6 +33649,18 @@ ${translatedContent}`;
 // dist/sync-orchestrator.js
 var import_fs = require("fs");
 var path2 = __toESM(require("path"), 1);
+
+// dist/cli/translate-state.js
+var TRANSLATE_DIR = ".translate";
+var STATE_DIR = "state";
+function serializeFileState(state) {
+  return dump(state, { lineWidth: -1, quotingType: '"' });
+}
+function stateFileRelativePath(filename) {
+  return `${TRANSLATE_DIR}/${STATE_DIR}/${filename}.yml`;
+}
+
+// dist/sync-orchestrator.js
 async function loadGlossary(targetLanguage, builtInGlossaryDir, customGlossaryPath, logger) {
   const builtInPath = path2.join(builtInGlossaryDir, `${targetLanguage}.json`);
   try {
@@ -33702,14 +33714,18 @@ function classifyChangedFiles(files, docsFolder) {
 var SyncOrchestrator = class {
   translator;
   processor;
+  parser;
   logger;
   config;
-  constructor(config, logger) {
+  stateConfig;
+  constructor(config, logger, stateConfig) {
     this.config = config;
     this.logger = logger;
+    this.stateConfig = stateConfig;
     const debugMode = config.debugMode ?? false;
     this.translator = new TranslationService(config.anthropicApiKey, config.claudeModel, debugMode);
     this.processor = new FileProcessor(this.translator, debugMode);
+    this.parser = new MystParser();
   }
   /**
    * Process all files through the translation pipeline.
@@ -33781,6 +33797,7 @@ var SyncOrchestrator = class {
       content: translatedContent,
       sha: file.existingFileSha
     });
+    await this.maybeGenerateStateFile(file.filename, file.newContent, file.sourceCommitSha, file.isNewFile ? "NEW" : "UPDATE", result);
   }
   /**
    * Process a renamed markdown file.
@@ -33813,6 +33830,18 @@ var SyncOrchestrator = class {
         sha: file.oldFileSha
       });
       this.logger.info(`Marked ${file.previousFilename} for deletion (renamed to ${file.filename})`);
+      if (this.stateConfig) {
+        const oldDocsRelName = this.toDocsRelative(file.previousFilename);
+        const oldStatePath = stateFileRelativePath(oldDocsRelName);
+        const oldStateSha = this.stateConfig.existingStateShas.get(oldStatePath);
+        if (oldStateSha) {
+          result.filesToDelete.push({ path: oldStatePath, sha: oldStateSha });
+          this.logger.info(`Marked old state file for deletion: ${oldStatePath}`);
+        }
+      }
+    }
+    if (file.newContent) {
+      await this.maybeGenerateStateFile(file.filename, file.newContent, file.sourceCommitSha, file.targetContent ? "UPDATE" : "NEW", result);
     }
   }
   /**
@@ -33842,9 +33871,65 @@ var SyncOrchestrator = class {
       });
       result.processedFiles.push(file.filename);
       this.logger.info(`Marked ${file.filename} for deletion`);
+      if (this.stateConfig) {
+        const docsRelName = this.toDocsRelative(file.filename);
+        const statePath = stateFileRelativePath(docsRelName);
+        const stateSha = this.stateConfig.existingStateShas.get(statePath);
+        if (stateSha) {
+          result.filesToDelete.push({ path: statePath, sha: stateSha });
+          this.logger.info(`Marked state file for deletion: ${statePath}`);
+        }
+      }
     } else {
       this.logger.info(`${file.filename} does not exist in target repo - skipping deletion`);
     }
+  }
+  // ---------------------------------------------------------------------------
+  // Private: State file generation
+  // ---------------------------------------------------------------------------
+  /**
+   * Generate a .translate/state/ file for a processed markdown file.
+   * Only generates when stateConfig is provided (opt-in).
+   */
+  async maybeGenerateStateFile(filename, sourceContent, perFileCommitSha, mode, result) {
+    if (!this.stateConfig)
+      return;
+    const commitSha = perFileCommitSha || this.stateConfig.sourceCommitSha;
+    try {
+      const parsed = await this.parser.parseSections(sourceContent, filename);
+      const sectionCount = parsed.sections.length;
+      const state = {
+        "source-sha": commitSha,
+        "synced-at": (/* @__PURE__ */ new Date()).toISOString().slice(0, 10),
+        model: this.config.claudeModel,
+        mode,
+        "section-count": sectionCount
+      };
+      const docsRelName = this.toDocsRelative(filename);
+      const statePath = stateFileRelativePath(docsRelName);
+      const existingSha = this.stateConfig.existingStateShas.get(statePath);
+      result.translatedFiles.push({
+        path: statePath,
+        content: serializeFileState(state),
+        sha: existingSha
+      });
+      this.logger.info(`Generated state file: ${statePath}`);
+    } catch (error3) {
+      this.logger.warning(`Could not generate state for ${filename}: ${error3}`);
+    }
+  }
+  /**
+   * Strip docsFolder prefix from a repo-relative filename to get docs-relative path.
+   * e.g., 'lectures/intro.md' with docsFolder 'lectures/' → 'intro.md'
+   */
+  toDocsRelative(filename) {
+    if (!this.stateConfig?.docsFolder)
+      return filename;
+    const prefix = this.stateConfig.docsFolder;
+    if (filename.startsWith(prefix)) {
+      return filename.slice(prefix.length);
+    }
+    return filename;
   }
 };
 
@@ -34103,13 +34188,19 @@ async function runSync() {
   const glossary = await loadGlossary(inputs.targetLanguage, builtInGlossaryDir, inputs.glossaryPath || void 0, coreLogger);
   const [targetOwner, targetRepo] = inputs.targetRepo.split("/");
   const filesToSync = await fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo);
+  const existingStateShas = await fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToSync, inputs.docsFolder);
+  const stateConfig = {
+    sourceCommitSha: github2.context.sha,
+    existingStateShas,
+    docsFolder: inputs.docsFolder
+  };
   const orchestrator = new SyncOrchestrator({
     sourceLanguage: inputs.sourceLanguage,
     targetLanguage: inputs.targetLanguage,
     claudeModel: inputs.claudeModel,
     anthropicApiKey: inputs.anthropicApiKey,
     debugMode: true
-  }, coreLogger);
+  }, coreLogger, stateConfig);
   const result = await orchestrator.processFiles(filesToSync, glossary);
   if (result.errors.length > 0) {
     core7.setFailed(`Translation completed with ${result.errors.length} errors`);
@@ -34192,7 +34283,8 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
         oldContent,
         targetContent,
         existingFileSha,
-        isNewFile
+        isNewFile,
+        sourceCommitSha: sha
       });
     } catch (error3) {
       core7.error(`Error fetching content for ${file.filename}: ${error3}`);
@@ -34231,7 +34323,8 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
         targetContent,
         previousFilename,
         oldFileSha,
-        isNewFile: !targetContent
+        isNewFile: !targetContent,
+        sourceCommitSha: sha
       });
     } catch (error3) {
       core7.error(`Error fetching content for renamed file ${file.filename}: ${error3}`);
@@ -34296,6 +34389,44 @@ async function fetchSourcePrInfo(octokit, prNumber) {
     core7.warning(`Could not fetch source PR details: ${error3}`);
     return void 0;
   }
+}
+async function fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToSync, docsFolder) {
+  const shas = /* @__PURE__ */ new Map();
+  const markdownFiles = filesToSync.filter((f) => f.type === "markdown" || f.type === "renamed" || f.type === "removed");
+  for (const file of markdownFiles) {
+    const docsRelName = docsFolder && file.filename.startsWith(docsFolder) ? file.filename.slice(docsFolder.length) : file.filename;
+    const statePath = stateFileRelativePath(docsRelName);
+    try {
+      const { data } = await octokit.rest.repos.getContent({
+        owner: targetOwner,
+        repo: targetRepo,
+        path: statePath
+      });
+      if ("sha" in data) {
+        shas.set(statePath, data.sha);
+      }
+    } catch {
+    }
+    if (file.type === "renamed" && file.previousFilename) {
+      const oldDocsRelName = docsFolder && file.previousFilename.startsWith(docsFolder) ? file.previousFilename.slice(docsFolder.length) : file.previousFilename;
+      const oldStatePath = stateFileRelativePath(oldDocsRelName);
+      try {
+        const { data } = await octokit.rest.repos.getContent({
+          owner: targetOwner,
+          repo: targetRepo,
+          path: oldStatePath
+        });
+        if ("sha" in data) {
+          shas.set(oldStatePath, data.sha);
+        }
+      } catch {
+      }
+    }
+  }
+  if (shas.size > 0) {
+    core7.info(`Found ${shas.size} existing state file(s) in target repo`);
+  }
+  return shas;
 }
 run();
 /*! Bundled license information:

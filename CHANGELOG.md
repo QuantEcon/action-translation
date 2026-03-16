@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (Phase 6 — `.translate/` Metadata)
+- **`translate-state.ts` module** (`src/cli/translate-state.ts`): read/write `.translate/config.yml` and per-file state YAML
+  - Pure serializers (`serializeFileState`, `serializeConfig`, `stateFileRelativePath`, `configRelativePath`) shared between CLI and Action
+- **`setup` command** (`src/cli/commands/setup.ts`): scaffold target translation repositories
+  - Generates GitHub Actions workflow, `.translate/config.yml`, README, `.gitignore`
+  - Configurable source repo, target language, docs folder, branch
+- **GitHub Action integration**: state files included in translation PRs alongside translated content
+  - `StateGenerationConfig` interface in `sync-orchestrator.ts` (opt-in)
+  - After translating each file, generates `.translate/state/<file>.yml` and adds to `translatedFiles`
+  - `index.ts` fetches existing state file SHAs from target repo for Octokit updates
+  - Renamed/removed files clean up their corresponding state files
+  - Docs-folder prefix stripped so CLI and Action produce identical state paths
+- **`status` command**: uses `source-sha` for exact staleness detection (replaces git date heuristic)
+  - `--write-state` flag: bootstrap state for existing projects
+- **`backward` command**: skips unchanged files via `source-sha` comparison
+- **`forward` command**: writes state after resync
+- **41 new tests** (783 → 824 total, 37 suites, 5 snapshots)
+
 ### Added (Phase 4 — Refinement)
 - **CLI smoke tests** (`src/cli/__tests__/cli-smoke.test.ts`): 11 tests invoking the CLI binary as an external process
   - `--version`, `--help`, all 5 commands (status, init, backward, forward, review)
