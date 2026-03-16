@@ -27,6 +27,7 @@ import * as path from 'path';
 import { MystParser } from '../../parser.js';
 import { extractHeadingMap } from '../../heading-map.js';
 import { getFileGitMetadata } from '../git-metadata.js';
+import { readFileState, writeFileState, writeConfig } from '../translate-state.js';
 
 // ============================================================================
 // TYPES
@@ -78,6 +79,8 @@ export interface StatusOptions {
   language: string;
   exclude: string[];    // Glob patterns to exclude
   file?: string;        // Single file to check (relative to docs-folder)
+  writeState?: boolean; // Bootstrap .translate/ metadata from current state
+  sourceLanguage?: string; // Required when writeState is true
 }
 
 // ============================================================================
@@ -147,6 +150,7 @@ export async function checkFileStatus(
   sourceRepoPath: string,
   targetRepoPath: string,
   docsFolder: string,
+  stateAware: boolean = false,
 ): Promise<FileStatusEntry> {
   const sourceFilePath = path.join(sourceRepoPath, docsFolder, file);
   const targetFilePath = path.join(targetRepoPath, docsFolder, file);
@@ -219,6 +223,26 @@ export async function checkFileStatus(
     details.push(`SOURCE modified ${sourceLastModified}, TARGET modified ${targetLastModified}`);
   }
 
+  // If state exists, use source-sha for exact staleness check
+  if (stateAware) {
+    const fileState = readFileState(targetRepoPath, file);
+    if (fileState && sourceMetadata) {
+      // Exact comparison: has the source file changed since last sync?
+      const isStale = sourceMetadata.lastCommit !== fileState['source-sha'];
+      if (isStale && !flags.includes('OUTDATED')) {
+        flags.push('OUTDATED');
+        details.push(`source-sha changed since last sync`);
+      } else if (!isStale && flags.includes('OUTDATED')) {
+        // Git dates said OUTDATED but source-sha matches — not actually stale
+        const idx = flags.indexOf('OUTDATED');
+        flags.splice(idx, 1);
+        // Remove the date-based detail
+        const detailIdx = details.findIndex(d => d.includes('SOURCE modified'));
+        if (detailIdx >= 0) details.splice(detailIdx, 1);
+      }
+    }
+  }
+
   // Pick primary status (highest priority flag, or ALIGNED if no flags)
   const PRIORITY: FileSyncStatus[] = ['SOURCE_AHEAD', 'TARGET_AHEAD', 'MISSING_HEADINGMAP', 'OUTDATED'];
   const primary = PRIORITY.find(s => flags.includes(s)) ?? 'ALIGNED';
@@ -251,6 +275,9 @@ export async function checkFileStatus(
 export async function runStatus(options: StatusOptions): Promise<StatusResult> {
   const { source, target, docsFolder, language, exclude, file } = options;
 
+  // Detect if .translate/state/ exists — enables exact staleness checks
+  const stateAware = fs.existsSync(path.join(target, '.translate', 'state'));
+
   let allFiles: string[];
 
   if (file) {
@@ -268,9 +295,49 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
 
   // Check each file
   const entries: FileStatusEntry[] = [];
-  for (const file of allFiles) {
-    const entry = await checkFileStatus(file, source, target, docsFolder);
+  for (const f of allFiles) {
+    const entry = await checkFileStatus(f, source, target, docsFolder, stateAware);
     entries.push(entry);
+  }
+
+  // --write-state: bootstrap .translate/ metadata
+  if (options.writeState) {
+    const srcLang = options.sourceLanguage ?? 'en';
+    writeConfig(target, {
+      'source-language': srcLang,
+      'target-language': language,
+      'docs-folder': docsFolder,
+    });
+
+    const parser = new MystParser();
+    for (const entry of entries) {
+      // Only bootstrap state for files that exist in both repos
+      if (entry.status === 'SOURCE_ONLY' || entry.status === 'TARGET_ONLY' || entry.status === 'NOT_FOUND') {
+        continue;
+      }
+
+      try {
+        const docsRelPath = docsFolder ? path.join(docsFolder, entry.file) : entry.file;
+
+        // Best-effort source-sha: use the source commit at TARGET's last sync time
+        const sourceGit = await getFileGitMetadata(source, docsRelPath);
+        const targetGit = await getFileGitMetadata(target, docsRelPath);
+
+        const sourceFilePath = path.join(source, docsFolder, entry.file);
+        const sourceContent = fs.readFileSync(sourceFilePath, 'utf-8');
+        const parsed = await parser.parseSections(sourceContent, sourceFilePath);
+
+        writeFileState(target, entry.file, {
+          'source-sha': sourceGit?.lastCommit ?? 'unknown',
+          'synced-at': targetGit?.lastModified?.toISOString().split('T')[0] ?? new Date().toISOString().split('T')[0],
+          model: 'unknown',
+          mode: 'RESYNC',
+          'section-count': parsed.sections.length,
+        });
+      } catch {
+        // Non-fatal: skip files where state can't be determined
+      }
+    }
   }
 
   // Build summary (count by primary status)

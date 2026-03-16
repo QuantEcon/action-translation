@@ -4,7 +4,7 @@
 **Last Updated**: 2026-03-16  
 **Sources**: 2026-02-16-REVIEW.md, docs/DESIGN-RESYNC.md  
 **Current Version**: v0.8.0  
-**Test Status**: 783 tests passing (35 test suites, 5 snapshots)
+**Test Status**: 823 tests passing (37 test suites, 5 snapshots)
 
 ---
 
@@ -981,7 +981,7 @@ translate init -s /path/to/source -t /path/to/target \
 ## Phase 6: `.translate/` Metadata Folder
 
 **Goal**: Add minimal persistent metadata to the target repo so the CLI can make exact staleness decisions, skip redundant work, and record translation provenance — without adding complexity.  
-**Status**: Not started  
+**Status**: In progress (PR pending)  
 **Prerequisite**: Phase 5 (PR #23)
 
 ### Motivation
@@ -1070,27 +1070,27 @@ After bootstrap, normal commands (`init`, `forward`, Action) maintain state auto
 
 ### Tasks
 
-- [ ] Define `TranslateConfig` and `FileState` types in `src/cli/types.ts`
-- [ ] Create `src/cli/translate-state.ts` — read/write `.translate/` config and state
+- [x] Define `TranslateConfig` and `FileState` types in `src/cli/types.ts`
+- [x] Create `src/cli/translate-state.ts` — read/write `.translate/` config and state
   - `readConfig(targetPath)` → `TranslateConfig | undefined`
   - `readFileState(targetPath, filename)` → `FileState | undefined`
   - `writeFileState(targetPath, filename, state)` → void
   - `writeConfig(targetPath, config)` → void
-- [ ] Update `translate init` to write config + per-file state after each lecture
-- [ ] Update `translate status` to use source-sha when available
-- [ ] Add `--write-state` flag to `translate status` for bootstrap / migration
-- [ ] Update `translate backward` to skip unchanged files (source-sha check)
-- [ ] Update `translate forward` to write state after resync
-- [ ] Update GitHub Action sync mode to write/update state after successful translation
-- [ ] Add tests for state read/write, skip logic, bootstrap via `--write-state`
-- [ ] Add `.translate/` section to `cli-reference.md`
+- [x] Update `translate init` to write config + per-file state after each lecture
+- [x] Update `translate status` to use source-sha when available
+- [x] Add `--write-state` flag to `translate status` for bootstrap / migration
+- [x] Update `translate backward` to skip unchanged files (source-sha check)
+- [x] Update `translate forward` to write state after resync
+- [x] Update GitHub Action sync mode to write/update state after successful translation
+- [x] Add tests for state read/write, skip logic, bootstrap via `--write-state`
+- [x] Add `.translate/` section to `cli-reference.md`
 
 ---
 
 ## Phase 6b: Setup Command (Future PR)
 
 **Goal**: Scaffold a new target repo so `translate init` has somewhere to translate into  
-**Status**: Not started  
+**Status**: In progress (PR pending)  
 **Prerequisite**: Phase 5 (PR #23)
 
 **Concept**: `translate setup` creates and initialises a target translation repository. It pairs with `init` to provide the complete onboarding workflow: `setup` → `init` → push → configure Action.
@@ -1119,15 +1119,15 @@ translate init \
 
 ### Tasks
 
-- [ ] Create `src/cli/commands/setup.ts`
-- [ ] Register `setup` command in `src/cli/index.ts`
-- [ ] Implement repo name derivation
-- [ ] Implement `gh repo create` integration (injectable `GhRunner` for testing)
-- [ ] Implement scaffolding file generation
-- [ ] Implement workflow template generation
-- [ ] `--dry-run` mode (show what would be created)
-- [ ] Add tests
-- [ ] Add docs to `cli-reference.md`
+- [x] Create `src/cli/commands/setup.ts`
+- [x] Register `setup` command in `src/cli/index.ts`
+- [x] Implement repo name derivation
+- [x] Implement `gh repo create` integration (injectable `GhRunner` for testing)
+- [x] Implement scaffolding file generation
+- [x] Implement workflow template generation
+- [x] `--dry-run` mode (show what would be created)
+- [x] Add tests
+- [x] Add docs to `cli-reference.md`
 
 ---
 
