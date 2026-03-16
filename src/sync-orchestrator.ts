@@ -13,9 +13,12 @@
 
 import { TranslationService } from './translator.js';
 import { FileProcessor } from './file-processor.js';
+import { MystParser } from './parser.js';
 import { Glossary, TranslatedFile } from './types.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import { serializeFileState, stateFileRelativePath } from './cli/translate-state.js';
+import { FileState } from './cli/types.js';
 
 // =============================================================================
 // INTERFACES
@@ -43,6 +46,19 @@ export interface SyncConfig {
 }
 
 /**
+ * Optional configuration for generating .translate/state/ files.
+ * When provided, state files are included in translatedFiles alongside translations.
+ */
+export interface StateGenerationConfig {
+  /** Commit SHA in the source repo that triggered this sync */
+  sourceCommitSha: string;
+  /** Map from state file path → existing git blob SHA (for updates via Octokit) */
+  existingStateShas: Map<string, string>;
+  /** Docs folder prefix to strip from filenames (e.g. 'lectures/') so state paths are docs-relative */
+  docsFolder: string;
+}
+
+/**
  * A file to be processed by the sync orchestrator.
  * Content should be pre-fetched by the caller (GitHub API or local filesystem).
  */
@@ -56,6 +72,8 @@ export interface FileToSync {
   existingFileSha?: string;    // SHA of existing target file (for updates)
   oldFileSha?: string;         // SHA of old target file to delete (renamed files)
   isNewFile: boolean;          // No existing translation in target repo
+  /** Per-file source commit SHA (overrides StateGenerationConfig.sourceCommitSha) */
+  sourceCommitSha?: string;
 }
 
 /**
@@ -204,15 +222,19 @@ export function classifyChangedFiles(
 export class SyncOrchestrator {
   private translator: TranslationService;
   private processor: FileProcessor;
+  private parser: MystParser;
   private logger: Logger;
   private config: SyncConfig;
+  private stateConfig?: StateGenerationConfig;
 
-  constructor(config: SyncConfig, logger: Logger) {
+  constructor(config: SyncConfig, logger: Logger, stateConfig?: StateGenerationConfig) {
     this.config = config;
     this.logger = logger;
+    this.stateConfig = stateConfig;
     const debugMode = config.debugMode ?? false;
     this.translator = new TranslationService(config.anthropicApiKey, config.claudeModel, debugMode);
     this.processor = new FileProcessor(this.translator, debugMode);
+    this.parser = new MystParser();
   }
 
   /**
@@ -315,6 +337,15 @@ export class SyncOrchestrator {
       content: translatedContent,
       sha: file.existingFileSha,
     });
+
+    // Generate state file if state generation is enabled
+    await this.maybeGenerateStateFile(
+      file.filename,
+      file.newContent,
+      file.sourceCommitSha,
+      file.isNewFile ? 'NEW' : 'UPDATE',
+      result,
+    );
   }
 
   /**
@@ -377,6 +408,28 @@ export class SyncOrchestrator {
         sha: file.oldFileSha,
       });
       this.logger.info(`Marked ${file.previousFilename} for deletion (renamed to ${file.filename})`);
+
+      // Also delete old state file if it exists
+      if (this.stateConfig) {
+        const oldDocsRelName = this.toDocsRelative(file.previousFilename);
+        const oldStatePath = stateFileRelativePath(oldDocsRelName);
+        const oldStateSha = this.stateConfig.existingStateShas.get(oldStatePath);
+        if (oldStateSha) {
+          result.filesToDelete.push({ path: oldStatePath, sha: oldStateSha });
+          this.logger.info(`Marked old state file for deletion: ${oldStatePath}`);
+        }
+      }
+    }
+
+    // Generate state file for the new filename
+    if (file.newContent) {
+      await this.maybeGenerateStateFile(
+        file.filename,
+        file.newContent,
+        file.sourceCommitSha,
+        file.targetContent ? 'UPDATE' : 'NEW',
+        result,
+      );
     }
   }
 
@@ -417,8 +470,81 @@ export class SyncOrchestrator {
       });
       result.processedFiles.push(file.filename);
       this.logger.info(`Marked ${file.filename} for deletion`);
+
+      // Also delete the corresponding state file
+      if (this.stateConfig) {
+        const docsRelName = this.toDocsRelative(file.filename);
+        const statePath = stateFileRelativePath(docsRelName);
+        const stateSha = this.stateConfig.existingStateShas.get(statePath);
+        if (stateSha) {
+          result.filesToDelete.push({ path: statePath, sha: stateSha });
+          this.logger.info(`Marked state file for deletion: ${statePath}`);
+        }
+      }
     } else {
       this.logger.info(`${file.filename} does not exist in target repo - skipping deletion`);
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Private: State file generation
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Generate a .translate/state/ file for a processed markdown file.
+   * Only generates when stateConfig is provided (opt-in).
+   */
+  private async maybeGenerateStateFile(
+    filename: string,
+    sourceContent: string,
+    perFileCommitSha: string | undefined,
+    mode: 'NEW' | 'UPDATE',
+    result: SyncProcessingResult,
+  ): Promise<void> {
+    if (!this.stateConfig) return;
+
+    const commitSha = perFileCommitSha || this.stateConfig.sourceCommitSha;
+
+    try {
+      // Count sections in the source content
+      const parsed = await this.parser.parseSections(sourceContent, filename);
+      const sectionCount = parsed.sections.length;
+
+      const state: FileState = {
+        'source-sha': commitSha,
+        'synced-at': new Date().toISOString().slice(0, 10),
+        model: this.config.claudeModel,
+        mode,
+        'section-count': sectionCount,
+      };
+
+      const docsRelName = this.toDocsRelative(filename);
+      const statePath = stateFileRelativePath(docsRelName);
+      const existingSha = this.stateConfig.existingStateShas.get(statePath);
+
+      result.translatedFiles.push({
+        path: statePath,
+        content: serializeFileState(state),
+        sha: existingSha,
+      });
+
+      this.logger.info(`Generated state file: ${statePath}`);
+    } catch (error) {
+      // State generation is non-fatal
+      this.logger.warning(`Could not generate state for ${filename}: ${error}`);
+    }
+  }
+
+  /**
+   * Strip docsFolder prefix from a repo-relative filename to get docs-relative path.
+   * e.g., 'lectures/intro.md' with docsFolder 'lectures/' → 'intro.md'
+   */
+  private toDocsRelative(filename: string): string {
+    if (!this.stateConfig?.docsFolder) return filename;
+    const prefix = this.stateConfig.docsFolder;
+    if (filename.startsWith(prefix)) {
+      return filename.slice(prefix.length);
+    }
+    return filename;
   }
 }

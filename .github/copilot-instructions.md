@@ -8,7 +8,7 @@
 - **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
-**Current Version**: v0.8.0 | **Tests**: 783 (35 suites) | **Glossary**: 357 terms (zh-cn, fa)
+**Current Version**: v0.8.0 | **Tests**: 824 (37 suites) | **Glossary**: 357 terms (zh-cn, fa)
 
 ---
 
@@ -44,6 +44,7 @@ src/
 │   ├── issue-creator.ts       # gh issue create runner with injectable GhRunner
 │   ├── forward-triage.ts      # Forward: content-vs-i18n LLM filter
 │   ├── forward-pr-creator.ts  # Forward: git ops + PR creation via gh CLI
+│   ├── translate-state.ts     # .translate/ config + per-file state read/write + pure serializers
 │   ├── components/
 │   │   └── ReviewSession.tsx  # Ink interactive review UI component
 │   └── commands/
@@ -51,6 +52,7 @@ src/
 │       ├── forward.ts         # Forward command — whole-file resync TARGET to SOURCE
 │       ├── review.ts          # Review command — full pipeline, Steps 1–5
 │       ├── init.ts            # Init command — bulk-translate new projects
+│       ├── setup.ts           # Setup command — scaffold target translation repo
 │       └── status.ts          # Status command — fast sync diagnostic
 ```
 
@@ -93,7 +95,7 @@ Maps are flat (no nesting), include all heading levels, auto-populated on first 
 
 ### Running Tests
 ```bash
-npm test                          # All 761 tests
+npm test                          # All 824 tests
 npm test -- parser.test.ts        # Single file
 npm test -- --watch               # Watch mode
 npm test -- --coverage            # Coverage report
@@ -161,11 +163,13 @@ Docs live in `docs/` — see `docs/index.md` for the full structure.
 | Parsing | `parser.ts` → `parseSections` |
 | Change detection | `diff-detector.ts` → `detectSectionChanges` |
 | Heading-maps | `heading-map.ts` → `updateHeadingMap` |
-| File classification | `sync-orchestrator.ts` → `classifyChangedFiles` |
+| File classification | `sync-orchestrator.ts` → `classifyChangedFiles` + `StateGenerationConfig` |
 | PR creation | `pr-creator.ts` → `createTranslationPR` |
 | Forward resync | `commands/forward.ts` → `resyncSingleFile` / `runForwardBulk` |
 | Forward triage | `forward-triage.ts` → `triageForward` |
 | Forward PR creation | `forward-pr-creator.ts` → `createForwardPR` |
+| .translate/ state | `translate-state.ts` → `readConfig` / `writeFileState` / `isSourceChanged` / `serializeFileState` / `stateFileRelativePath` |
+| Repo scaffolding | `commands/setup.ts` → `runSetup` |
 | Init (bulk translate) | `commands/init.ts` → `runInit` |
 | Localization rules | `localization-rules.ts` → `buildLocalizationPrompt` / `getFontRequirements` |
 | Whole-file RESYNC | `translator.ts` → `translateDocumentResync` |

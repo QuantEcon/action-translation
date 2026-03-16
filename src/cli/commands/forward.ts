@@ -33,6 +33,9 @@ import {
   runStatus,
   StatusOptions,
 } from './status.js';
+import { writeFileState } from '../translate-state.js';
+import { getFileGitMetadata } from '../git-metadata.js';
+import { MystParser } from '../../parser.js';
 import {
   createForwardPR,
   gitPrepareAndPush,
@@ -210,6 +213,26 @@ export async function resyncSingleFile(
       // Write to local disk
       fs.writeFileSync(targetFilePath, outputContent, 'utf-8');
       logger.info(`  ✅ Written to ${targetFilePath}`);
+    }
+  }
+
+  // Write per-file state after successful resync
+  if (outputContent) {
+    try {
+      const docsRelPath = docsFolder ? path.join(docsFolder, file) : file;
+      const sourceGit = await getFileGitMetadata(sourceRepoPath, docsRelPath);
+      const parser = new MystParser();
+      const sourceContent = fs.readFileSync(path.join(sourceRepoPath, docsFolder, file), 'utf-8');
+      const parsed = await parser.parseSections(sourceContent, file);
+      writeFileState(targetRepoPath, file, {
+        'source-sha': sourceGit?.lastCommit ?? 'unknown',
+        'synced-at': new Date().toISOString().split('T')[0],
+        model: options.model,
+        mode: 'RESYNC',
+        'section-count': parsed.sections.length,
+      });
+    } catch {
+      // State write failure is non-fatal
     }
   }
 

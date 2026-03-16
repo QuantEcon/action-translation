@@ -33,6 +33,7 @@ import { generateMarkdownReport, generateJsonReport, generateBulkMarkdownReport,
 import { BackwardReport, BackwardOptions, BackportSuggestion, BulkBackwardReport } from '../types.js';
 import { SCHEMA_VERSION } from '../schema.js';
 import { discoverMarkdownFiles, resolveFilePairs, applyExcludes } from './status.js';
+import { readFileState, isSourceChanged } from '../translate-state.js';
 
 /**
  * Logger interface for backward command output
@@ -460,7 +461,25 @@ export async function runBackwardBulk(
   }
 
   // Discover files
-  const allFiles = discoverBulkFiles(source, target, docsFolder, exclude);
+  let allFiles = discoverBulkFiles(source, target, docsFolder, exclude);
+
+  // Skip files where source hasn't changed since last sync (source-sha optimisation)
+  let skippedByState = 0;
+  const filesToAnalyze: string[] = [];
+  for (const file of allFiles) {
+    const state = readFileState(target, file);
+    const changed = await isSourceChanged(source, docsFolder, file, state);
+    if (!changed) {
+      skippedByState++;
+    } else {
+      filesToAnalyze.push(file);
+    }
+  }
+
+  if (skippedByState > 0) {
+    logger.info(`Skipped ${skippedByState} file(s) — source unchanged since last sync.`);
+  }
+  allFiles = filesToAnalyze;
   logger.info(`Found ${allFiles.length} files to analyze.`);
 
   if (allFiles.length === 0) {

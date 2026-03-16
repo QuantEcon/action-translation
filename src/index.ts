@@ -2,8 +2,9 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 import { getMode, getInputs, getReviewInputs, validatePREvent, validateReviewPREvent } from './inputs.js';
 import { TranslationReviewer } from './reviewer.js';
-import { SyncOrchestrator, classifyChangedFiles, loadGlossary, FileToSync, Logger } from './sync-orchestrator.js';
+import { SyncOrchestrator, classifyChangedFiles, loadGlossary, FileToSync, Logger, StateGenerationConfig } from './sync-orchestrator.js';
 import { createTranslationPR, PrCreatorConfig, SourcePrInfo } from './pr-creator.js';
+import { stateFileRelativePath } from './cli/translate-state.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
@@ -171,6 +172,17 @@ async function runSync(): Promise<void> {
       octokit, classified, inputs, targetOwner, targetRepo,
     );
 
+    // Fetch existing state file SHAs from target repo for state generation
+    const existingStateShas = await fetchExistingStateShas(
+      octokit, targetOwner, targetRepo, filesToSync, inputs.docsFolder,
+    );
+
+    const stateConfig: StateGenerationConfig = {
+      sourceCommitSha: github.context.sha,
+      existingStateShas,
+      docsFolder: inputs.docsFolder,
+    };
+
     // Process files through the orchestrator
     const orchestrator = new SyncOrchestrator({
       sourceLanguage: inputs.sourceLanguage,
@@ -178,7 +190,7 @@ async function runSync(): Promise<void> {
       claudeModel: inputs.claudeModel,
       anthropicApiKey: inputs.anthropicApiKey,
       debugMode: true,
-    }, coreLogger);
+    }, coreLogger, stateConfig);
 
     const result = await orchestrator.processFiles(filesToSync, glossary);
 
@@ -318,6 +330,7 @@ async function fetchAllFileContents(
         targetContent,
         existingFileSha,
         isNewFile,
+        sourceCommitSha: sha,
       });
     } catch (error) {
       core.error(`Error fetching content for ${file.filename}: ${error}`);
@@ -363,6 +376,7 @@ async function fetchAllFileContents(
         previousFilename,
         oldFileSha,
         isNewFile: !targetContent,
+        sourceCommitSha: sha,
       });
     } catch (error) {
       core.error(`Error fetching content for renamed file ${file.filename}: ${error}`);
@@ -446,6 +460,71 @@ async function fetchSourcePrInfo(
     core.warning(`Could not fetch source PR details: ${error}`);
     return undefined;
   }
+}
+
+/**
+ * Fetch existing .translate/state/ file SHAs from the target repo.
+ * These SHAs are needed so Octokit can update (rather than create) state files.
+ * Missing state files are silently skipped — they'll be created as new files.
+ */
+async function fetchExistingStateShas(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  octokit: any,
+  targetOwner: string,
+  targetRepo: string,
+  filesToSync: FileToSync[],
+  docsFolder: string,
+): Promise<Map<string, string>> {
+  const shas = new Map<string, string>();
+
+  // Only need state SHAs for markdown and renamed files (ones that generate state)
+  const markdownFiles = filesToSync.filter(f => f.type === 'markdown' || f.type === 'renamed' || f.type === 'removed');
+
+  // Compute docs-folder-relative filenames for state paths (CLI uses docs-relative)
+  for (const file of markdownFiles) {
+    const docsRelName = docsFolder && file.filename.startsWith(docsFolder)
+      ? file.filename.slice(docsFolder.length)
+      : file.filename;
+    const statePath = stateFileRelativePath(docsRelName);
+    try {
+      const { data } = await octokit.rest.repos.getContent({
+        owner: targetOwner,
+        repo: targetRepo,
+        path: statePath,
+      });
+      if ('sha' in data) {
+        shas.set(statePath, data.sha);
+      }
+    } catch {
+      // State file doesn't exist yet — will be created
+    }
+
+    // For renamed files, also fetch the old state file SHA (for deletion)
+    if (file.type === 'renamed' && file.previousFilename) {
+      const oldDocsRelName = docsFolder && file.previousFilename.startsWith(docsFolder)
+        ? file.previousFilename.slice(docsFolder.length)
+        : file.previousFilename;
+      const oldStatePath = stateFileRelativePath(oldDocsRelName);
+      try {
+        const { data } = await octokit.rest.repos.getContent({
+          owner: targetOwner,
+          repo: targetRepo,
+          path: oldStatePath,
+        });
+        if ('sha' in data) {
+          shas.set(oldStatePath, data.sha);
+        }
+      } catch {
+        // Old state file doesn't exist — nothing to delete
+      }
+    }
+  }
+
+  if (shas.size > 0) {
+    core.info(`Found ${shas.size} existing state file(s) in target repo`);
+  }
+
+  return shas;
 }
 
 // Run the action

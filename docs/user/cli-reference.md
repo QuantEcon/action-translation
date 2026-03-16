@@ -42,8 +42,10 @@ npx translate status -s <source-path> -t <target-path> [options]
 | `-f, --file <name>` | *(all files)* | Check a single file (relative to docs folder) |
 | `-d, --docs-folder <folder>` | `lectures` | Documentation folder within repos |
 | `-l, --language <code>` | `zh-cn` | Target language code |
+| `--source-language <code>` | `en` | Source language code (used with `--write-state`) |
 | `--exclude <pattern>` | *(none)* | Exclude files matching pattern (repeatable) |
 | `--json` | `false` | Output as JSON |
+| `--write-state` | `false` | Bootstrap `.translate/` metadata from current state |
 
 **Status categories:**
 
@@ -426,12 +428,22 @@ npx translate forward -s ~/source -t ~/target
 cd ~/target && git diff  # Review changes
 ```
 
-For initial project onboarding, use `init` first:
+For initial project onboarding, use `setup` + `init`:
 
 ```bash
+# Scaffold a new target repository
+npx translate setup --source QuantEcon/lecture-python-intro --target-language zh-cn
+
 # Translate entire project from scratch
 npx translate init -s ~/source -t ~/target --target-language zh-cn --dry-run
 npx translate init -s ~/source -t ~/target --target-language zh-cn
+```
+
+For existing paired projects, bootstrap `.translate/` metadata:
+
+```bash
+# One-time: write .translate/ config + per-file state
+npx translate status -s ~/source -t ~/target -l zh-cn --write-state
 ```
 
 ## Cost estimates
@@ -448,3 +460,114 @@ Approximate costs using `claude-sonnet-4-6` (March 2026 pricing):
 | `forward` RESYNC | ~$0.12/file | 1 LLM call per file (whole-file) |
 | `init` (bulk translate) | ~$0.12/file | 1 LLM call per lecture (whole-file) |
 | `review` | Free | Reads existing reports, no LLM calls |
+| `setup` | Free | Creates GitHub repo (no LLM calls) |
+
+---
+
+## `.translate/` metadata folder
+
+The `.translate/` folder in the target repo stores persistent sync metadata. It enables exact staleness detection, skip optimisation for backward analysis, and translation provenance.
+
+### Structure
+
+```
+.translate/
+├── config.yml              # Project-level settings
+└── state/
+    ├── intro.md.yml        # Per-file sync metadata
+    ├── cobweb.md.yml
+    └── advanced/
+        └── topic.md.yml    # Mirrors docs-folder subdirectories
+```
+
+### `config.yml`
+
+```yaml
+source-language: en
+target-language: zh-cn
+docs-folder: lectures
+```
+
+Provides defaults so CLI flags don't need to be repeated every invocation.
+
+### Per-file state (`state/<file>.yml`)
+
+```yaml
+source-sha: abc1234f           # Commit SHA that last touched the source file
+synced-at: "2026-03-06"        # ISO date of last sync
+model: claude-sonnet-4-6     # Model used for translation
+mode: NEW                      # Translation mode: NEW / UPDATE / RESYNC
+section-count: 5               # Source section count at sync time
+```
+
+### How each command uses `.translate/`
+
+| Command | Reads | Writes |
+|---------|-------|--------|
+| `status` | Uses `source-sha` for exact staleness | `--write-state` bootstraps config + state |
+| `backward` | Skips files where `source-sha` is unchanged | — |
+| `forward` | — | Updates state after successful resync |
+| `init` | — | Creates config + state for each lecture |
+| `setup` | — | Creates config as part of scaffolding |
+
+### Graceful absence
+
+If `.translate/` doesn't exist, all commands work exactly as before (git-heuristic fallback). Existing projects are unaffected.
+
+### Bootstrapping existing projects
+
+For projects that predate `.translate/`, bootstrap state with `status --write-state`:
+
+```bash
+npx translate status \
+  -s /path/to/source \
+  -t /path/to/target \
+  -l zh-cn \
+  --write-state
+```
+
+This:
+1. Creates `.translate/config.yml` from the provided flags
+2. For each translated file, records the current source commit as `source-sha`
+3. Uses the target file's last commit date as `synced-at`
+4. Marks `model: unknown` (not recoverable from history)
+
+---
+
+## `setup` — Scaffold a target repository
+
+Creates a new GitHub repository for hosting translations. Pairs with `init` for the complete onboarding workflow: `setup` → `init` → push → configure Action.
+
+```bash
+npx translate setup --source <owner/repo> --target-language <code> [options]
+```
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--source <owner/repo>` | *(required)* | Source repository (e.g., `QuantEcon/lecture-python-intro`) |
+| `--target-language <code>` | *(required)* | Target language code (e.g., `zh-cn`, `fa`) |
+| `--source-language <code>` | `en` | Source language code |
+| `-d, --docs-folder <folder>` | `lectures` | Documentation folder within repos |
+| `--visibility <type>` | `public` | Repository visibility (`public` or `private`) |
+| `--dry-run` | `false` | Preview what would be created |
+
+**What it does:**
+
+1. Derives target repo name: `{source-repo}.{lang}` (e.g., `lecture-python-intro.zh-cn`)
+2. Creates GitHub repo via `gh repo create` and clones it locally
+3. Writes `.translate/config.yml`, `.github/workflows/translation-sync.yml`, `.gitignore`, `README.md`
+4. Makes initial commit and pushes
+
+**Requirements:** The `gh` CLI must be installed and authenticated (`gh auth login`).
+
+**Example:**
+
+```bash
+# Scaffold and clone a new target repo
+npx translate setup --source QuantEcon/lecture-python-intro --target-language zh-cn
+
+# Preview without creating
+npx translate setup --source QuantEcon/lecture-python-intro --target-language zh-cn --dry-run
+```

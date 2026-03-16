@@ -8,6 +8,7 @@
  * - forward:       Translate SOURCE changes to TARGET
  * - status:        Show sync status overview
  * - review:        Interactive review of backward suggestions
+ * - setup:         Scaffold a new target translation repository
  */
 
 import { Command } from 'commander';
@@ -16,6 +17,7 @@ import { runStatus, formatStatusTable, formatStatusJson, StatusOptions } from '.
 import { runReview, ReviewOptions } from './commands/review.js';
 import { resyncSingleFile, runForwardBulk } from './commands/forward.js';
 import { runInit, InitOptions } from './commands/init.js';
+import { runSetup, SetupOptions } from './commands/setup.js';
 import { BackwardOptions, ForwardOptions } from './types.js';
 import { DEFAULT_RULES, parseLocalizationRules } from '../localization-rules.js';
 import { checkGhAvailable } from './issue-creator.js';
@@ -127,8 +129,10 @@ program
   .option('-f, --file <filename>', 'Check a single file (relative to docs-folder)')
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
   .option('-l, --language <code>', 'Target language code', 'zh-cn')
+  .option('--source-language <code>', 'Source language code (required with --write-state)', 'en')
   .option('--exclude <pattern>', 'Exclude files matching pattern (repeatable, comma-separated)', collectExclude, [])
   .option('--json', 'Output as JSON', false)
+  .option('--write-state', 'Bootstrap .translate/ metadata from current state', false)
   .action(async (opts) => {
     const statusOptions: StatusOptions = {
       source: opts.source,
@@ -137,6 +141,8 @@ program
       docsFolder: opts.docsFolder,
       language: opts.language,
       exclude: opts.exclude,
+      writeState: opts.writeState,
+      sourceLanguage: opts.sourceLanguage,
     };
 
     try {
@@ -146,6 +152,10 @@ program
         console.log(formatStatusJson(result));
       } else {
         console.log(formatStatusTable(result));
+      }
+
+      if (opts.writeState) {
+        console.log(`\n📁 .translate/ metadata written to ${opts.target}`);
       }
     } catch (error) {
       console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
@@ -299,6 +309,49 @@ program
     try {
       const stats = await runInit(options);
       if (stats.failureCount > 0) {
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
+  });
+
+// ─── setup command ──────────────────────────────────────────────────────────
+
+program
+  .command('setup')
+  .description('Scaffold a new target translation repository')
+  .requiredOption('--source <owner/repo>', 'Source repository (e.g., QuantEcon/lecture-python-intro)')
+  .requiredOption('--target-language <code>', 'Target language code (e.g., zh-cn, fa)')
+  .option('--source-language <code>', 'Source language code', 'en')
+  .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
+  .option('--visibility <type>', 'Repository visibility (public or private)', 'public')
+  .option('--dry-run', 'Preview what would be created without doing it', false)
+  .action(async (opts) => {
+    // Pre-flight: check gh CLI
+    if (!opts.dryRun) {
+      checkGhAvailable();
+    }
+
+    if (opts.visibility !== 'public' && opts.visibility !== 'private') {
+      console.error('❌ --visibility must be "public" or "private"');
+      process.exit(1);
+    }
+
+    const setupOptions: SetupOptions = {
+      source: opts.source,
+      targetLanguage: opts.targetLanguage,
+      sourceLanguage: opts.sourceLanguage,
+      docsFolder: opts.docsFolder,
+      visibility: opts.visibility,
+      dryRun: opts.dryRun,
+    };
+
+    try {
+      const result = await runSetup(setupOptions);
+      if (!result.success) {
+        console.error(`\n❌ ${result.error}`);
         process.exit(1);
       }
     } catch (error) {

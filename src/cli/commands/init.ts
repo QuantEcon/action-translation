@@ -23,6 +23,8 @@ import { MystParser } from '../../parser.js';
 import { Glossary } from '../../types.js';
 import { updateHeadingMap, injectHeadingMap } from '../../heading-map.js';
 import { RuleId, buildLocalizationPrompt, getFontRequirements } from '../../localization-rules.js';
+import { writeConfig, writeFileState } from '../translate-state.js';
+import { getFileGitMetadata } from '../git-metadata.js';
 
 // ============================================================================
 // TYPES
@@ -441,6 +443,13 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   // Phase 3: Setup target folder
   fs.mkdirSync(path.join(options.target, options.docsFolder), { recursive: true });
 
+  // Write .translate/config.yml
+  writeConfig(options.target, {
+    'source-language': options.sourceLanguage,
+    'target-language': options.targetLanguage,
+    'docs-folder': options.docsFolder,
+  });
+
   // Phase 4: Copy non-markdown files
   const copiedCount = copyNonMarkdownFiles(options.source, options.target, options.docsFolder);
   console.log(chalk.green(`Copied ${copiedCount} non-markdown file(s)\n`));
@@ -473,6 +482,8 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   );
   bar.start(lectures.length - startIndex, 0, { status: '' });
 
+  const stateParser = new MystParser();
+
   for (let i = startIndex; i < lectures.length; i++) {
     const lecture = lectures[i];
     bar.update(i - startIndex, { status: lecture });
@@ -491,6 +502,24 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
       stats.successCount++;
       stats.totalTokens += result.tokensUsed;
       stats.totalTimeMs += result.elapsedMs;
+
+      // Write per-file state
+      try {
+        const docsRelPath = options.docsFolder ? path.join(options.docsFolder, lecture) : lecture;
+        const sourceGit = await getFileGitMetadata(options.source, docsRelPath);
+        const sourceFile = path.join(options.source, options.docsFolder, lecture);
+        const sourceContent = fs.readFileSync(sourceFile, 'utf-8');
+        const parsed = await stateParser.parseSections(sourceContent, sourceFile);
+        writeFileState(options.target, lecture, {
+          'source-sha': sourceGit?.lastCommit ?? 'unknown',
+          'synced-at': new Date().toISOString().split('T')[0],
+          model: options.model,
+          mode: 'NEW',
+          'section-count': parsed.sections.length,
+        });
+      } catch {
+        // State write failure is non-fatal
+      }
 
       // Delay between lectures for rate limiting
       if (i < lectures.length - 1) {

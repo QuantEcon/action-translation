@@ -275,3 +275,29 @@ export interface ForwardOptions {
   github?: string;           // TARGET repo in owner/repo format for PR creation
   apiKey: string;            // Anthropic API key
 }
+
+// ============================================================================
+// .translate/ METADATA (Phase 6)
+// ============================================================================
+
+/**
+ * Project-level configuration stored in .translate/config.yml
+ * Provides defaults so CLI flags don't need to be repeated every invocation.
+ */
+export interface TranslateConfig {
+  'source-language': string;    // e.g., "en"
+  'target-language': string;    // e.g., "zh-cn"
+  'docs-folder': string;       // e.g., "lectures"
+}
+
+/**
+ * Per-file sync metadata stored in .translate/state/<file>.yml
+ * Records the exact state at the last translation/sync operation.
+ */
+export interface FileState {
+  'source-sha': string;         // Commit SHA that last touched the source file
+  'synced-at': string;          // ISO date (YYYY-MM-DD)
+  model: string;                // Claude model used (e.g., "claude-sonnet-4-6")
+  mode: 'NEW' | 'UPDATE' | 'RESYNC';  // Translation mode used
+  'section-count': number;      // Source section count at sync time
+}
