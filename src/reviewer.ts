@@ -629,11 +629,12 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
 
 **CRITICAL**: The "issues" array MUST contain suggestions that relate ONLY to the sections that were changed in this PR. Do not suggest improvements for unchanged parts of the document.`;
 
-    const response = await this.anthropic.messages.create({
+    const stream = this.anthropic.messages.stream({
       model: this.model,
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }],
     });
+    const response = await stream.finalMessage();
 
     const content = response.content[0];
     if (content.type !== 'text') {
@@ -756,11 +757,12 @@ Respond with ONLY valid JSON:
   "structureDetails": "Brief explanation of structure check"
 }`;
 
-    const response = await this.anthropic.messages.create({
+    const stream = this.anthropic.messages.stream({
       model: this.model,
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }],
     });
+    const response = await stream.finalMessage();
 
     const content = response.content[0];
     if (content.type !== 'text') {
