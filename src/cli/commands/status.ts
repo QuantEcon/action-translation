@@ -319,7 +319,8 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
       try {
         const docsRelPath = docsFolder ? path.join(docsFolder, entry.file) : entry.file;
 
-        // Best-effort source-sha: use the source commit at TARGET's last sync time
+        // Best-effort source-sha: use the current HEAD commit for the source file
+        // and use the target's last-modified date for synced-at
         const sourceGit = await getFileGitMetadata(source, docsRelPath);
         const targetGit = await getFileGitMetadata(target, docsRelPath);
 

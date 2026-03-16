@@ -443,6 +443,7 @@ describe('SyncOrchestrator', () => {
     const stateConfig: StateGenerationConfig = {
       sourceCommitSha: 'abc123def456',
       existingStateShas: new Map(),
+      docsFolder: 'lectures/',
     };
 
     beforeEach(() => {
@@ -470,7 +471,7 @@ describe('SyncOrchestrator', () => {
       expect(result.translatedFiles).toHaveLength(2);
       const stateFile = result.translatedFiles.find(f => f.path.startsWith('.translate/'));
       expect(stateFile).toBeDefined();
-      expect(stateFile!.path).toBe('.translate/state/lectures/intro.md.yml');
+      expect(stateFile!.path).toBe('.translate/state/intro.md.yml');
 
       // Parse and check state content
       const state = yaml.load(stateFile!.content) as Record<string, unknown>;
@@ -519,14 +520,14 @@ describe('SyncOrchestrator', () => {
 
     it('should use existing state SHA when updating state file', async () => {
       const existingShas = new Map([
-        ['.translate/state/lectures/intro.md.yml', 'existing-state-blob-sha'],
+        ['.translate/state/intro.md.yml', 'existing-state-blob-sha'],
       ]);
       const orchWithExisting = new SyncOrchestrator({
         sourceLanguage: 'en',
         targetLanguage: 'zh-cn',
         claudeModel: 'claude-sonnet-4-20250514',
         anthropicApiKey: 'test-key',
-      }, stateLogger, { sourceCommitSha: 'abc123', existingStateShas: existingShas });
+      }, stateLogger, { sourceCommitSha: 'abc123', existingStateShas: existingShas, docsFolder: 'lectures/' });
 
       const files: FileToSync[] = [{
         filename: 'lectures/intro.md',
@@ -562,14 +563,14 @@ describe('SyncOrchestrator', () => {
 
     it('should generate state for renamed files and delete old state', async () => {
       const existingShas = new Map([
-        ['.translate/state/lectures/old-name.md.yml', 'old-state-sha'],
+        ['.translate/state/old-name.md.yml', 'old-state-sha'],
       ]);
       const orchWithExisting = new SyncOrchestrator({
         sourceLanguage: 'en',
         targetLanguage: 'zh-cn',
         claudeModel: 'claude-sonnet-4-20250514',
         anthropicApiKey: 'test-key',
-      }, stateLogger, { sourceCommitSha: 'abc123', existingStateShas: existingShas });
+      }, stateLogger, { sourceCommitSha: 'abc123', existingStateShas: existingShas, docsFolder: 'lectures/' });
 
       const files: FileToSync[] = [{
         filename: 'lectures/new-name.md',
@@ -587,24 +588,24 @@ describe('SyncOrchestrator', () => {
       // Should have: translated file + new state file
       const stateFile = result.translatedFiles.find(f => f.path.startsWith('.translate/'));
       expect(stateFile).toBeDefined();
-      expect(stateFile!.path).toBe('.translate/state/lectures/new-name.md.yml');
+      expect(stateFile!.path).toBe('.translate/state/new-name.md.yml');
 
       // Should delete old file AND old state file
       expect(result.filesToDelete).toHaveLength(2);
       expect(result.filesToDelete.map(f => f.path)).toContain('lectures/old-name.md');
-      expect(result.filesToDelete.map(f => f.path)).toContain('.translate/state/lectures/old-name.md.yml');
+      expect(result.filesToDelete.map(f => f.path)).toContain('.translate/state/old-name.md.yml');
     });
 
     it('should delete state file when source file is removed', async () => {
       const existingShas = new Map([
-        ['.translate/state/lectures/removed.md.yml', 'state-sha-to-delete'],
+        ['.translate/state/removed.md.yml', 'state-sha-to-delete'],
       ]);
       const orchWithExisting = new SyncOrchestrator({
         sourceLanguage: 'en',
         targetLanguage: 'zh-cn',
         claudeModel: 'claude-sonnet-4-20250514',
         anthropicApiKey: 'test-key',
-      }, stateLogger, { sourceCommitSha: 'abc123', existingStateShas: existingShas });
+      }, stateLogger, { sourceCommitSha: 'abc123', existingStateShas: existingShas, docsFolder: 'lectures/' });
 
       const files: FileToSync[] = [{
         filename: 'lectures/removed.md',
@@ -618,7 +619,7 @@ describe('SyncOrchestrator', () => {
       // Should delete both the translated file and its state file
       expect(result.filesToDelete).toHaveLength(2);
       expect(result.filesToDelete.map(f => f.path)).toContain('lectures/removed.md');
-      expect(result.filesToDelete.map(f => f.path)).toContain('.translate/state/lectures/removed.md.yml');
+      expect(result.filesToDelete.map(f => f.path)).toContain('.translate/state/removed.md.yml');
     });
 
     it('should not generate state for TOC files', async () => {

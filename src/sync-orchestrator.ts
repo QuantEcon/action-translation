@@ -54,6 +54,8 @@ export interface StateGenerationConfig {
   sourceCommitSha: string;
   /** Map from state file path → existing git blob SHA (for updates via Octokit) */
   existingStateShas: Map<string, string>;
+  /** Docs folder prefix to strip from filenames (e.g. 'lectures/') so state paths are docs-relative */
+  docsFolder: string;
 }
 
 /**
@@ -409,7 +411,8 @@ export class SyncOrchestrator {
 
       // Also delete old state file if it exists
       if (this.stateConfig) {
-        const oldStatePath = stateFileRelativePath(file.previousFilename);
+        const oldDocsRelName = this.toDocsRelative(file.previousFilename);
+        const oldStatePath = stateFileRelativePath(oldDocsRelName);
         const oldStateSha = this.stateConfig.existingStateShas.get(oldStatePath);
         if (oldStateSha) {
           result.filesToDelete.push({ path: oldStatePath, sha: oldStateSha });
@@ -470,7 +473,8 @@ export class SyncOrchestrator {
 
       // Also delete the corresponding state file
       if (this.stateConfig) {
-        const statePath = stateFileRelativePath(file.filename);
+        const docsRelName = this.toDocsRelative(file.filename);
+        const statePath = stateFileRelativePath(docsRelName);
         const stateSha = this.stateConfig.existingStateShas.get(statePath);
         if (stateSha) {
           result.filesToDelete.push({ path: statePath, sha: stateSha });
@@ -514,7 +518,8 @@ export class SyncOrchestrator {
         'section-count': sectionCount,
       };
 
-      const statePath = stateFileRelativePath(filename);
+      const docsRelName = this.toDocsRelative(filename);
+      const statePath = stateFileRelativePath(docsRelName);
       const existingSha = this.stateConfig.existingStateShas.get(statePath);
 
       result.translatedFiles.push({
@@ -528,5 +533,18 @@ export class SyncOrchestrator {
       // State generation is non-fatal
       this.logger.warning(`Could not generate state for ${filename}: ${error}`);
     }
+  }
+
+  /**
+   * Strip docsFolder prefix from a repo-relative filename to get docs-relative path.
+   * e.g., 'lectures/intro.md' with docsFolder 'lectures/' → 'intro.md'
+   */
+  private toDocsRelative(filename: string): string {
+    if (!this.stateConfig?.docsFolder) return filename;
+    const prefix = this.stateConfig.docsFolder;
+    if (filename.startsWith(prefix)) {
+      return filename.slice(prefix.length);
+    }
+    return filename;
   }
 }

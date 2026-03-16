@@ -209,4 +209,35 @@ describe('runSetup with mock runners', () => {
       process.chdir(origCwd);
     }
   });
+
+  test('returns success: false when git push fails', async () => {
+    const repoDir = path.join(tmpDir, 'lecture-python-intro.zh-cn');
+
+    const options: SetupOptions = {
+      source: 'QuantEcon/lecture-python-intro',
+      targetLanguage: 'zh-cn',
+      sourceLanguage: 'en',
+      docsFolder: 'lectures',
+      visibility: 'public',
+      dryRun: false,
+    };
+
+    const origCwd = process.cwd();
+    process.chdir(tmpDir);
+
+    // Git runner that fails on push commands
+    const failPushGitRunner: GitRunner = (args: string[]) => {
+      if (args[0] === 'push') {
+        return { stdout: '', stderr: 'push failed', status: 1 };
+      }
+      return { stdout: '', stderr: '', status: 0 };
+    };
+
+    try {
+      const result = await runSetup(options, mockGhRunner(repoDir), failPushGitRunner);
+      expect(result.success).toBe(false);
+    } finally {
+      process.chdir(origCwd);
+    }
+  });
 });

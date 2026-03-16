@@ -482,6 +482,8 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   );
   bar.start(lectures.length - startIndex, 0, { status: '' });
 
+  const stateParser = new MystParser();
+
   for (let i = startIndex; i < lectures.length; i++) {
     const lecture = lectures[i];
     bar.update(i - startIndex, { status: lecture });
@@ -507,8 +509,7 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
         const sourceGit = await getFileGitMetadata(options.source, docsRelPath);
         const sourceFile = path.join(options.source, options.docsFolder, lecture);
         const sourceContent = fs.readFileSync(sourceFile, 'utf-8');
-        const parser = new MystParser();
-        const parsed = await parser.parseSections(sourceContent, sourceFile);
+        const parsed = await stateParser.parseSections(sourceContent, sourceFile);
         writeFileState(options.target, lecture, {
           'source-sha': sourceGit?.lastCommit ?? 'unknown',
           'synced-at': new Date().toISOString().split('T')[0],

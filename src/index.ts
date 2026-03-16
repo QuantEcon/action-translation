@@ -174,12 +174,13 @@ async function runSync(): Promise<void> {
 
     // Fetch existing state file SHAs from target repo for state generation
     const existingStateShas = await fetchExistingStateShas(
-      octokit, targetOwner, targetRepo, filesToSync,
+      octokit, targetOwner, targetRepo, filesToSync, inputs.docsFolder,
     );
 
     const stateConfig: StateGenerationConfig = {
       sourceCommitSha: github.context.sha,
       existingStateShas,
+      docsFolder: inputs.docsFolder,
     };
 
     // Process files through the orchestrator
@@ -472,14 +473,19 @@ async function fetchExistingStateShas(
   targetOwner: string,
   targetRepo: string,
   filesToSync: FileToSync[],
+  docsFolder: string,
 ): Promise<Map<string, string>> {
   const shas = new Map<string, string>();
 
   // Only need state SHAs for markdown and renamed files (ones that generate state)
   const markdownFiles = filesToSync.filter(f => f.type === 'markdown' || f.type === 'renamed' || f.type === 'removed');
 
+  // Compute docs-folder-relative filenames for state paths (CLI uses docs-relative)
   for (const file of markdownFiles) {
-    const statePath = stateFileRelativePath(file.filename);
+    const docsRelName = docsFolder && file.filename.startsWith(docsFolder)
+      ? file.filename.slice(docsFolder.length)
+      : file.filename;
+    const statePath = stateFileRelativePath(docsRelName);
     try {
       const { data } = await octokit.rest.repos.getContent({
         owner: targetOwner,
@@ -495,7 +501,10 @@ async function fetchExistingStateShas(
 
     // For renamed files, also fetch the old state file SHA (for deletion)
     if (file.type === 'renamed' && file.previousFilename) {
-      const oldStatePath = stateFileRelativePath(file.previousFilename);
+      const oldDocsRelName = docsFolder && file.previousFilename.startsWith(docsFolder)
+        ? file.previousFilename.slice(docsFolder.length)
+        : file.previousFilename;
+      const oldStatePath = stateFileRelativePath(oldDocsRelName);
       try {
         const { data } = await octokit.rest.repos.getContent({
           owner: targetOwner,

@@ -266,7 +266,17 @@ export async function runSetup(
   const pushResult = gitRunner(['push', '-u', 'origin', 'main'], { cwd: localPath });
   if (pushResult.status !== 0) {
     // Try HEAD (in case default branch isn't main)
-    gitRunner(['push', '-u', 'origin', 'HEAD'], { cwd: localPath });
+    const fallbackResult = gitRunner(['push', '-u', 'origin', 'HEAD'], { cwd: localPath });
+    if (fallbackResult.status !== 0) {
+      console.error(`❌ Push failed. You may need to push manually from ${localPath}`);
+      return {
+        repoName: targetRepoName,
+        repoFullName: targetFullName,
+        localPath,
+        filesCreated,
+        success: false,
+      };
+    }
   }
 
   console.log(`\n✅ Repository created: ${targetFullName}`);
