@@ -21,7 +21,7 @@ Costs depend on document size and the Claude model used. With `claude-sonnet-4-6
 - **Backward analysis** (51 files): ~$0.85 total
 - **Forward resync** (per file): ~$0.12–0.17
 
-Use `--estimate` with CLI commands to preview costs before running.
+Use `--dry-run` with CLI commands to preview what would be done without making API calls.
 
 ### Is an Anthropic API key required?
 
@@ -93,7 +93,7 @@ Set the environment variable before running CLI commands:
 export ANTHROPIC_API_KEY=your-key-here
 ```
 
-Or use `--test` for development without API calls, or `--estimate` to preview costs.
+Or use `--test` for development without API calls.
 
 ## Heading maps
 
