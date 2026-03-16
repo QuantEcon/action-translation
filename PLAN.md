@@ -1131,10 +1131,213 @@ translate init \
 
 ---
 
-## Phase 7: GitHub Action Automation (Future — 1-2 days)
+## Phase 7: Real-World Readiness
+
+**Goal**: Close gaps identified during full lifecycle review, fix documentation drift, create tutorials, fix `setup` workflow generation, add missing CLI commands, and validate the full lifecycle with end-to-end testing against real repositories.
+**Status**: In progress
+**Prerequisite**: Phase 6 + Phase 6b
+
+### Context — Lifecycle Review (2026-03-16)
+
+A full review of the SOURCE ↔ TARGET lifecycle identified seven gaps in tooling and documentation. The complete tool lifecycle is:
+
+```
+SETUP              INIT                ONGOING SYNC            MAINTENANCE
+(scaffold target)  (bulk translate)    (automated pipeline)    (CLI analysis)
+
+translate setup    translate init      GitHub Action            translate status
+                                       (sync mode on merge)     translate backward
+                                       (review mode on PR)      translate review
+                                                                translate forward
+```
+
+The `.translate/state/` directory links all phases — `setup` plants the config, `init` writes per-file state, `status` reads/bootstraps it, `backward` uses it to skip unchanged files, and `forward` updates it after resyncing.
+
+### Gap Analysis
+
+| # | Gap | Severity | Resolution |
+|---|---|---|---|
+| 1 | **`setup` only scaffolds TARGET workflow** — no SOURCE workflow generated | Medium | Add `--source-workflow` flag to `setup` (7.1) |
+| 2 | **`setup` workflow uses `repository_dispatch`** but quickstart shows `pull_request: closed` — inconsistent trigger architectures | Medium | Standardise on `pull_request: closed` pattern (7.1) |
+| 3 | **No standalone heading-map generation** — connecting existing repos requires either `forward` (re-translates, expensive) or manual heading-map creation | Medium | Add `translate headingmap` command (7.2) |
+| 4 | **FAQ references removed `--estimate` flag** | Low | Fixed (2026-03-16) ✅ |
+| 5 | **`docs/index.md` referenced old CLI name `resync`** | Low | Fixed (2026-03-16) ✅ |
+| 6 | **Test counts stale in `docs/index.md`** (724 → 824) | Low | Fixed (2026-03-16) ✅ |
+| 7 | **No validation/health-check command** to verify target repo is fully configured | Low | Add `translate doctor` command (7.3) |
+
+### 7.1 Improve `setup` Workflow Generation
+
+The current `setup` command generates a `repository_dispatch` workflow in the TARGET repo. But the actual sync trigger runs from the SOURCE repo (on `pull_request: closed`). This means:
+
+- The user must still manually create the SOURCE workflow — the most confusing step for new users
+- The TARGET workflow template uses a different trigger architecture than the documented quickstart
+
+**Tasks:**
+
+- [ ] Change `setup` to generate the SOURCE workflow file (`sync-translations.yml`) as a local file that the user can copy to their source repo, or print it to console with copy instructions
+- [ ] Change the TARGET workflow to use the standard `pull_request: closed` trigger pattern (matching quickstart docs)
+- [ ] Add `--source-workflow <path>` flag: write the source workflow YAML to a file (e.g., `--source-workflow ~/repos/source/.github/workflows/sync-translations.yml`)
+- [ ] Print clear post-setup instructions for both repos (secrets, workflow placement)
+- [ ] Update `setup` tests
+- [ ] Update `cli-reference.md` for `setup`
+
+### 7.2 Standalone Heading-Map Generation (`translate headingmap`)
+
+Currently, the only ways to get heading-maps are:
+- `init` (generates them during bulk translation — new projects only)
+- `forward` (generates them during RESYNC — re-translates the whole file, ~$0.12)
+- Manual creation (tedious and error-prone)
+
+For **connecting existing targets** (Scenario 2), we need a free, local-only tool that generates heading-maps by comparing source and target section headings by position — no LLM calls needed.
+
+**Tasks:**
+
+- [ ] Create `src/cli/commands/headingmap.ts`
+- [ ] `translate headingmap -s <source> -t <target>` — bulk generate heading-maps for all files
+- [ ] `translate headingmap -s <source> -t <target> -f <file>` — single file mode
+- [ ] Pipeline: parse both files → match sections by position → build heading-map → inject into target frontmatter
+- [ ] `--dry-run` flag: show what heading-maps would be generated (print to console without modifying files)
+- [ ] Handle mismatched section counts: warn and generate partial map for matched sections
+- [ ] Register in `src/cli/index.ts`
+- [ ] Add tests (section matching, mismatch handling, frontmatter injection, existing heading-map update)
+- [ ] Add to `cli-reference.md`
+- [ ] Update connect-existing tutorial to reference this command
+
+### 7.3 Health Check (`translate doctor`)
+
+A diagnostic command that verifies a target repo is fully configured for action-translation. Like `brew doctor` or `flutter doctor`.
+
+**Tasks:**
+
+- [ ] Create `src/cli/commands/doctor.ts`
+- [ ] `translate doctor -t <target>` — check target repo health
+- [ ] Checks:
+  - [ ] `.translate/config.yml` exists and is valid
+  - [ ] `.translate/state/` has entries for all target `.md` files
+  - [ ] All target files have `heading-map` in frontmatter
+  - [ ] Source repo is accessible (if `-s <source>` provided)
+  - [ ] Section counts match between source and target
+  - [ ] GitHub workflow file exists (`.github/workflows/`)
+  - [ ] `gh` CLI is available and authenticated (if `--github` mode)
+- [ ] Traffic-light output: ✅ pass, ⚠️ warning, ❌ fail for each check
+- [ ] `--json` flag for CI/scripting
+- [ ] Register in `src/cli/index.ts`
+- [ ] Add tests
+- [ ] Add to `cli-reference.md`
+
+### 7.4 Fix `setup` Workflow Trigger Architecture
+
+The `generateWorkflowYaml()` function in `setup.ts` generates a `repository_dispatch` trigger. This should be updated to generate the `pull_request: closed` trigger (consistent with quickstart and tutorials). The `repository_dispatch` pattern is an internal implementation detail that adds confusion.
+
+**Tasks:**
+
+- [ ] Update `generateWorkflowYaml()` to produce `pull_request: closed` trigger with `paths` filter
+- [ ] Requires `source-repo` to know the docs-folder path pattern
+- [ ] Update test snapshots
+- [ ] Verify the generated workflow against the quickstart template
+
+### 7.5 Tutorials
+
+Three tutorials created (2026-03-16): `docs/user/tutorials/`
+
+- [x] **Fresh Setup** (`fresh-setup.md`): `setup` → `init` → configure workflows → test pipeline
+- [x] **Connect Existing Target** (`connect-existing.md`): assess → bootstrap `.translate/` → fix heading-maps → configure workflows
+- [x] **Resync Drifted Target** (`resync-drifted.md`): diagnose → understand changes → resync → review → verify
+
+Additional tutorials:
+
+- [x] **Backward Analysis & Review** (`backward-review.md`): Full workflow — run backward → review suggestions → create Issues → fix source → verify sync
+- [x] **Adding a New Language** (`add-language.md`): Create glossary + language config + target repo + workflows for a new language (e.g., Japanese)
+- [x] **Automated Maintenance** (`automated-maintenance.md`): Set up scheduled `status` and `backward` runs via GitHub Actions (ties into Phase 8)
+
+### 7.6 Documentation Consistency Pass
+
+- [x] Fix FAQ `--estimate` references (removed in Phase 5)
+- [x] Fix `docs/index.md` CLI name (`resync` → `translate`)
+- [x] Fix `docs/index.md` test counts (724 → 824, 32 → 37)
+- [x] Add tutorials section to `docs/index.md`
+- [ ] Update `copilot-instructions.md` test counts to 824 / 37 suites
+- [ ] Audit all docs for `resync` → `translate` rename consistency
+- [ ] Update `docs/index.md` CLI description to include `init` and `setup`
+- [ ] Verify all cross-references between tutorials and CLI reference
+
+### 7.7 End-to-End Smoke Test
+
+Validate the complete lifecycle against real GitHub repositories. This is the definitive test that all phases work together.
+
+**Test Plan: Full Lifecycle (Fresh Setup)**
+
+Using `lecture-python-intro` as the source repo and a new `lecture-python-intro.test-zh-cn` as a throwaway target:
+
+1. **Setup** — `translate setup --source QuantEcon/lecture-python-intro --target-language zh-cn`
+   - [ ] Verify target repo created on GitHub
+   - [ ] Verify `.translate/config.yml` generated correctly
+   - [ ] Verify workflow files generated (both SOURCE and TARGET)
+   - [ ] Verify `_config.yml` has correct language metadata
+
+2. **Init** — `translate init -s ~/repos/lecture-python-intro -t ~/repos/lecture-python-intro.test-zh-cn --target-language zh-cn`
+   - [ ] Verify all lectures translated (check for non-empty `.md` files)
+   - [ ] Verify heading-maps generated in every file's frontmatter
+   - [ ] Verify `.translate/state/` entries created for each file
+   - [ ] Verify `TRANSLATION-REPORT.md` generated
+   - [ ] Spot-check 2-3 translations for quality
+
+3. **Push + Action trigger** — Push target repo, make a small edit to source, open and merge a PR
+   - [ ] Verify the sync Action triggers on PR merge
+   - [ ] Verify a translation PR appears in the target repo
+   - [ ] Verify the PR contains only the changed sections (UPDATE mode)
+   - [ ] Verify heading-map updated if headings changed
+   - [ ] Verify `.translate/state/` updated in the PR
+
+4. **Status** — `translate status -s ~/repos/lecture-python-intro -t ~/repos/lecture-python-intro.test-zh-cn`
+   - [ ] Verify status correctly reports ALIGNED for files that haven't changed
+   - [ ] Verify status correctly reports OUTDATED for files edited in source since last sync
+   - [ ] Verify `--write-state` bootstrap works (delete `.translate/state/`, re-bootstrap)
+
+5. **Backward + Review** — `translate backward -s ... -t ... -o ./reports` then `translate review ./reports/lecture-python-intro.test-zh-cn/backward-YYYY-MM-DD --repo QuantEcon/lecture-python-intro`
+   - [ ] Verify backward report generated under `reports/<source>/backward-<date>/`
+   - [ ] Verify review interactive UI launches and displays suggestions
+   - [ ] Verify Issue creation works (if suggestions accepted)
+
+6. **Forward** — Make a manual edit to target, then `translate forward -s ... -t ... -f <file>`
+   - [ ] Verify RESYNC re-translates the file
+   - [ ] Verify heading-map regenerated
+   - [ ] Verify `.translate/state/` updated
+
+7. **Doctor** — `translate doctor -t ~/repos/lecture-python-intro.test-zh-cn`
+   - [ ] Verify all checks pass on the fully-configured target repo
+   - [ ] Intentionally break something (delete a state file) and verify doctor catches it
+
+**Cleanup:**
+- [ ] Delete test target repo after validation (`gh repo delete`)
+- [ ] Document any bugs found → open Issues
+- [ ] Record any prompt improvements needed
+
+**Test Plan: Connect Existing Target**
+
+Using `lecture-python-intro` ↔ `lecture-intro.zh-cn` (real production pair):
+
+1. **Headingmap** — `translate headingmap -s ... -t ...`
+   - [ ] Verify heading-maps generated/updated for all files
+   - [ ] Verify existing heading-maps preserved where correct
+   - [ ] Spot-check 2-3 files for correct heading alignment
+
+2. **Status with --write-state** — Bootstrap `.translate/` metadata
+   - [ ] Verify `config.yml` created with correct settings
+   - [ ] Verify state files created with best-effort `source-sha`
+   - [ ] Verify `translate status` now shows exact staleness (not git heuristic)
+
+3. **Forward selective resync** — Pick 2-3 stale files, resync
+   - [ ] Verify translations updated correctly
+   - [ ] Verify state entries updated
+   - [ ] Verify no regression in non-resynced files
+
+---
+
+## Phase 8: GitHub Action Automation (Future — 1-2 days)
 
 **Goal**: Scheduled backward analysis via GitHub Actions  
-**Prerequisite**: Phase 4 (validated CLI)
+**Prerequisite**: Phase 7 (real-world validated CLI)
 
 **Scope reduced**: Originally planned auto-PR creation from backward-sync. With the revised approach (human review via `resync review`), automation is limited to running the analysis and notifying maintainers.
 
@@ -1147,7 +1350,7 @@ translate init \
 
 ---
 
-## Phase 8: Whole-File Translation Architecture (Future — Investigation)
+## Phase 9: Whole-File Translation Architecture (Future — Investigation)
 
 **Goal**: Evaluate whether the whole-file LLM evaluation pattern from backward analysis should be applied to the core forward translation pipeline
 
@@ -1237,10 +1440,11 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 | **Phase 5b**: Cleanup | 1 day | Phase 5 ✅ | Legacy tool deprecation, repo hygiene ✅ |
 | **Phase 6**: `.translate/` metadata | 2-3 days | Phase 5 ✅ | Exact staleness, skip optimisation, provenance |
 | **Phase 6b**: Setup command | 1-2 days | Phase 6 | `translate setup` — scaffold target repo |
-| **Phase 7**: Automation | 1-2 days | Phase 4 | Scheduled backward analysis |
-| **Phase 8**: Whole-file translation | TBD | Phase 4 | Evaluate whole-file approach for forward sync |
+| **Phase 7**: Real-World Readiness | 3-5 days | Phase 6b ✅ | Fix setup workflows, headingmap + doctor commands, e2e testing |
+| **Phase 8**: Automation | 1-2 days | Phase 7 | Scheduled backward analysis |
+| **Phase 9**: Whole-file translation | TBD | Phase 7 | Evaluate whole-file approach for forward sync |
 
-**Total**: 15-23 days (Phase 0-4), +3-4 days (Phase 5-5b), +2-3 days (Phase 6), +2 days (Phase 7), +TBD (Phase 8)
+**Total**: 15-23 days (Phase 0-4), +3-4 days (Phase 5-5b), +2-3 days (Phase 6), +3-5 days (Phase 7), +2 days (Phase 8), +TBD (Phase 9)
 
 ---
 
@@ -1254,7 +1458,7 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 6. ~~**backward-sync PR format**: Should `backward-sync` create PRs directly, or write files for manual PR creation?~~ **Resolved**: `backward-sync` deferred. The `review` command creates GitHub Issues instead. Human edits SOURCE directly.
 7. ~~**Report-driven backward-sync**: The `--from-report` flag reads a backward JSON report and syncs only marked suggestions.~~ **Resolved**: Replaced by interactive `review` command that reads the report folder and walks through suggestions with accept/skip/reject.
 8. **Stage 1 precision**: Flagging rate was ~67% vs estimated 5-10%. High recall is good, but Stage 1 could be tuned to reduce false positives and save Stage 2 costs. — Address in Phase 4 prompt tuning
-9. **Whole-file vs section-by-section translation**: Backward Stage 2 showed ~6x fewer API calls and better quality with whole-file evaluation. Should forward sync (`translator.ts`) adopt the same pattern? Trade-off: better context vs loss of section-level caching in UPDATE mode. — Investigate in Phase 8
+9. **Whole-file vs section-by-section translation**: Backward Stage 2 showed ~6x fewer API calls and better quality with whole-file evaluation. Should forward sync (`translator.ts`) adopt the same pattern? Trade-off: better context vs loss of section-level caching in UPDATE mode. — Investigate in Phase 9
 10. ~~**CLI framework**: `ink` (Node.js) vs `rich` (Python) for the `review` command's terminal rendering.~~ **Resolved**: `ink` (Node.js). Keeps unified codebase, direct module imports for `forward` command. Python `rich` rewrite documented as a future option (see Future section).
 
 ---
