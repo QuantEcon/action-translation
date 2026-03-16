@@ -1356,6 +1356,21 @@ Primary test pair: `lecture-python-programming.myst` ↔ `lecture-python-program
 
 Secondary test pair (stretch): `lecture-python-intro` ↔ `lecture-intro.zh-cn` (Chinese, production)
 
+### 7.8 Track Tool Version in `.translate/` Metadata
+
+The `.translate/` schema currently has no record of which version of action-translation created or last managed the project. Adding a `tool-version` field enables schema migration, version mismatch warnings, and audit trails.
+
+**Tasks:**
+
+- [ ] Add `tool-version` to `TranslateConfig` interface (`config.yml`) — records the version that last wrote the config
+- [ ] Add `tool-version` to `FileState` interface (per-file state) — records the version that performed each translation
+- [ ] Read version from `package.json` at runtime (single source of truth)
+- [ ] Update `writeConfig()` and `writeFileState()` to include `tool-version` automatically
+- [ ] Update `readConfig()` / `readFileState()` validation — `tool-version` should be optional for backward compatibility with existing `.translate/` directories
+- [ ] Future: `doctor` command can warn if config `tool-version` is older than installed version
+- [ ] Update `translate-state.ts` tests
+- [ ] Update CLI reference docs
+
 ---
 
 ## Phase 8: GitHub Action Automation (Future — 1-2 days)
