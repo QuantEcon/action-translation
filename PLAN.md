@@ -1290,12 +1290,12 @@ Using `lecture-python-intro` as the source repo and a new `lecture-python-intro.
    - [ ] Verify `.translate/state/` updated in the PR
 
 4. **Status** — `translate status -s ~/repos/lecture-python-intro -t ~/repos/lecture-python-intro.test-zh-cn`
-   - [ ] Verify status correctly reports SYNCED for files that haven't changed
-   - [ ] Verify status correctly reports STALE for files edited in source since last sync
+   - [ ] Verify status correctly reports ALIGNED for files that haven't changed
+   - [ ] Verify status correctly reports OUTDATED for files edited in source since last sync
    - [ ] Verify `--write-state` bootstrap works (delete `.translate/state/`, re-bootstrap)
 
-5. **Backward + Review** — `translate backward -s ... -t ...` then `translate review -t ...`
-   - [ ] Verify backward report generated
+5. **Backward + Review** — `translate backward -s ... -t ... -o ./reports` then `translate review ./reports/lecture-python-intro.test-zh-cn/backward-YYYY-MM-DD --repo QuantEcon/lecture-python-intro`
+   - [ ] Verify backward report generated under `reports/<source>/backward-<date>/`
    - [ ] Verify review interactive UI launches and displays suggestions
    - [ ] Verify Issue creation works (if suggestions accepted)
 

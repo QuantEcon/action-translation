@@ -21,6 +21,7 @@ This tutorial sets up two maintenance workflows:
 | Source and target repos connected via action-translation | Sync workflow active |
 | `.translate/` metadata bootstrapped | `translate status --write-state` done |
 | `ANTHROPIC_API_KEY` secret set | In the repo running the workflows |
+| `TRANSLATION_PAT` secret set | A GitHub PAT with access to the target repo (needed to checkout private/cross-repo targets) |
 
 ---
 
@@ -204,8 +205,8 @@ jobs:
 
       - name: Post summary to tracking Issue
         run: |
-          if [ -f /tmp/backward-report/*/_summary.md ]; then
-            SUMMARY_DIR=$(ls -d /tmp/backward-report/*/backward-* | head -1)
+          SUMMARY_DIR=$(ls -d /tmp/backward-report/*/backward-* 2>/dev/null | head -1)
+          if [ -n "$SUMMARY_DIR" ] && [ -f "$SUMMARY_DIR/_summary.md" ]; then
             SUGGESTIONS=$(grep -c "SUGGESTION" "$SUMMARY_DIR/_summary.md" || echo "0")
             echo "## Backward Analysis — $(date -u +%Y-%m-%d)" > /tmp/backward-comment.md
             echo "" >> /tmp/backward-comment.md
@@ -272,9 +273,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - target-repo: QuantEcon/lecture-intro.zh-cn
+          - target-repo: QuantEcon/lecture-intro.zh-cn       # Real repo name (predates setup convention)
             language: zh-cn
-          - target-repo: QuantEcon/lecture-python-intro.ja
+          - target-repo: QuantEcon/lecture-python-intro.ja  # setup-derived name
             language: ja
     runs-on: ubuntu-latest
     steps:

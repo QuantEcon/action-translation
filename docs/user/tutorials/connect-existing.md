@@ -149,7 +149,7 @@ Review the changes:
 
 ```bash
 cd ~/repos/lecture-python-intro.zh-cn
-git diff cobweb.md
+git diff lectures/cobweb.md
 ```
 
 The diff should show the heading-map added to the frontmatter. The translation content should be largely preserved (the RESYNC mode is designed to maintain existing style).

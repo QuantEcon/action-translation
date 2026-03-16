@@ -46,6 +46,10 @@ npx translate status \
 
 This gives you context on which files are aligned, outdated, or structurally different. Backward analysis works best on files that are `ALIGNED` or `OUTDATED` — it's comparing *content* across languages, not sync state.
 
+:::{note}
+This tutorial uses `lecture-intro.zh-cn` as the target repo name. This is the *actual* name of the QuantEcon Chinese translation repo — it doesn't follow the `{source}.{lang}` convention that `translate setup` uses (which would produce `lecture-python-intro.zh-cn`). Real-world repo names may vary from the setup default.
+:::
+
 ---
 
 ## Step 2: Run backward analysis

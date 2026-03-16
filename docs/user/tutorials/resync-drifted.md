@@ -324,7 +324,7 @@ npx translate backward \
 If the backward analysis finds valuable additions, create Issues in the source repo:
 
 ```bash
-npx translate review reports/backward-2026-03-16 \
+npx translate review reports/lecture-python-intro/backward-2026-03-16 \
   --repo QuantEcon/lecture-python-intro
 ```
 
