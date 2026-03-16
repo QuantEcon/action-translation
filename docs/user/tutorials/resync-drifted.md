@@ -175,18 +175,13 @@ This automatically:
 Example output:
 
 ```
- Forward Resync Summary
-┌──────────────────────────┬──────────────┬──────────┐
-│ File                     │ Result       │ Tokens   │
-├──────────────────────────┼──────────────┼──────────┤
-│ solow.md                 │ ✅ RESYNCED   │ 12,340   │
-│ cagan_adaptive.md        │ ✅ RESYNCED   │ 8,920    │
-│ pv.md                    │ ✅ RESYNCED   │ 15,100   │
-│ intro.md                 │ ⏭️  I18N_ONLY │ —        │
-└──────────────────────────┴──────────────┴──────────┘
-
-3 resynced, 1 skipped (i18n only), 0 errors
-Total tokens: 36,360
+─── Forward Resync Summary ───────────────────────────
+  Files processed: 4
+  Files resynced:  3
+  Files skipped:   1
+    intro.md: i18n only
+  Total tokens:    36,360
+─────────────────────────────────────────────────────
 ```
 
 ### Excluding files
