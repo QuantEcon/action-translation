@@ -288,6 +288,7 @@ export interface TranslateConfig {
   'source-language': string;    // e.g., "en"
   'target-language': string;    // e.g., "zh-cn"
   'docs-folder': string;       // e.g., "lectures"
+  'tool-version'?: string;     // Version of action-translation that last wrote this config
 }
 
 /**
@@ -300,4 +301,5 @@ export interface FileState {
   model: string;                // Claude model used (e.g., "claude-sonnet-4-6")
   mode: 'NEW' | 'UPDATE' | 'RESYNC';  // Translation mode used
   'section-count': number;      // Source section count at sync time
+  'tool-version'?: string;     // Version of action-translation that performed this sync
 }

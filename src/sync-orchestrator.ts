@@ -17,7 +17,7 @@ import { MystParser } from './parser.js';
 import { Glossary, TranslatedFile } from './types.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { serializeFileState, stateFileRelativePath } from './cli/translate-state.js';
+import { serializeFileState, stateFileRelativePath, getToolVersion } from './cli/translate-state.js';
 import { FileState } from './cli/types.js';
 
 // =============================================================================
@@ -516,6 +516,7 @@ export class SyncOrchestrator {
         model: this.config.claudeModel,
         mode,
         'section-count': sectionCount,
+        'tool-version': getToolVersion(),
       };
 
       const docsRelName = this.toDocsRelative(filename);

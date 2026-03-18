@@ -23,6 +23,42 @@ const CONFIG_FILE = 'config.yml';
 const STATE_DIR = 'state';
 
 // ============================================================================
+// TOOL VERSION
+// ============================================================================
+
+/**
+ * Read the tool version from package.json (single source of truth).
+ * Works in both CJS (Jest, `__dirname` available) and ESM (CLI runtime).
+ * Falls back to 'unknown' if package.json cannot be located.
+ */
+export function getToolVersion(): string {
+  // Strategy 1: CJS context — __dirname available (Jest / esbuild bundle)
+  if (typeof __dirname === 'string') {
+    try {
+      const pkgPath = path.resolve(__dirname, '../../package.json');
+      return JSON.parse(fs.readFileSync(pkgPath, 'utf-8')).version;
+    } catch { /* fall through */ }
+  }
+
+  // Strategy 2: walk up from process.argv[1] (ESM / CLI runtime)
+  try {
+    let dir = path.dirname(process.argv[1]);
+    for (let i = 0; i < 5; i++) {
+      const pkgPath = path.join(dir, 'package.json');
+      if (fs.existsSync(pkgPath)) {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        if (pkg.name === 'action-translation') return pkg.version;
+      }
+      const parent = path.dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
+  } catch { /* fall through */ }
+
+  return 'unknown';
+}
+
+// ============================================================================
 // CONFIG
 // ============================================================================
 
@@ -61,7 +97,8 @@ export function writeConfig(targetPath: string, config: TranslateConfig): void {
   const dir = path.join(targetPath, TRANSLATE_DIR);
   fs.mkdirSync(dir, { recursive: true });
   const configPath = path.join(dir, CONFIG_FILE);
-  const content = yaml.dump(config, { lineWidth: -1, quotingType: '"' });
+  const withVersion = { ...config, 'tool-version': getToolVersion() };
+  const content = yaml.dump(withVersion, { lineWidth: -1, quotingType: '"' });
   fs.writeFileSync(configPath, content, 'utf-8');
 }
 
@@ -114,7 +151,8 @@ export function readFileState(targetPath: string, filename: string): FileState |
 export function writeFileState(targetPath: string, filename: string, state: FileState): void {
   const filePath = stateFilePath(targetPath, filename);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  const content = serializeFileState(state);
+  const withVersion = { ...state, 'tool-version': getToolVersion() };
+  const content = serializeFileState(withVersion);
   fs.writeFileSync(filePath, content, 'utf-8');
 }
 

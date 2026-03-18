@@ -10,7 +10,8 @@ import * as path from 'path';
 import * as os from 'os';
 import {
   deriveTargetRepoName,
-  generateWorkflowYaml,
+  generateSourceWorkflowYaml,
+  generateTargetWorkflowYaml,
   runSetup,
   SetupOptions,
   GhRunner,
@@ -57,32 +58,59 @@ describe('deriveTargetRepoName', () => {
 // WORKFLOW TEMPLATE
 // ============================================================================
 
-describe('generateWorkflowYaml', () => {
-  test('generates valid workflow YAML', () => {
-    const yaml = generateWorkflowYaml(
+describe('generateSourceWorkflowYaml', () => {
+  test('generates pull_request:closed trigger for source repo', () => {
+    const yaml = generateSourceWorkflowYaml(
+      'QuantEcon/lecture-python-intro.zh-cn',
+      'zh-cn',
+      'lectures',
+      '0.8.0',
+    );
+
+    expect(yaml).toContain('name: Sync Translations');
+    expect(yaml).toContain('pull_request:');
+    expect(yaml).toContain('types: [closed]');
+    expect(yaml).toContain("paths:");
+    expect(yaml).toContain("'lectures/**/*.md'");
+    expect(yaml).toContain('target-repo: QuantEcon/lecture-python-intro.zh-cn');
+    expect(yaml).toContain('target-language: zh-cn');
+    expect(yaml).toContain('docs-folder: lectures');
+    expect(yaml).toContain('QuantEcon/action-translation@v0.8.0');
+    expect(yaml).toContain('mode: sync');
+    expect(yaml).toContain('${{ secrets.TRANSLATION_PAT }}');
+    expect(yaml).not.toContain('repository_dispatch');
+  });
+
+  test('uses custom docs-folder in paths filter', () => {
+    const yaml = generateSourceWorkflowYaml('Owner/repo.fa', 'fa', 'docs', '1.0.0');
+    expect(yaml).toContain("'docs/**/*.md'");
+    expect(yaml).toContain('docs-folder: docs');
+  });
+});
+
+describe('generateTargetWorkflowYaml', () => {
+  test('generates review workflow for target repo', () => {
+    const yaml = generateTargetWorkflowYaml(
       'QuantEcon/lecture-python-intro',
       'zh-cn',
       'lectures',
       '0.8.0',
     );
 
-    expect(yaml).toContain('name: Translation Sync');
+    expect(yaml).toContain('name: Review Translations');
+    expect(yaml).toContain('pull_request:');
+    expect(yaml).toContain('action-translation');
+    expect(yaml).toContain('mode: review');
     expect(yaml).toContain('source-repo: QuantEcon/lecture-python-intro');
     expect(yaml).toContain('target-language: zh-cn');
-    expect(yaml).toContain('docs-folder: lectures');
     expect(yaml).toContain('QuantEcon/action-translation@v0.8.0');
-    expect(yaml).toContain('repository_dispatch');
+    expect(yaml).toContain('${{ secrets.ANTHROPIC_API_KEY }}');
+    expect(yaml).toContain('${{ secrets.GITHUB_TOKEN }}');
   });
 
   test('uses custom docs-folder', () => {
-    const yaml = generateWorkflowYaml('Owner/repo', 'fa', 'docs', '1.0.0');
+    const yaml = generateTargetWorkflowYaml('Owner/repo', 'fa', 'docs', '1.0.0');
     expect(yaml).toContain('docs-folder: docs');
-  });
-
-  test('uses template variables for secrets', () => {
-    const yaml = generateWorkflowYaml('Owner/repo', 'zh-cn', 'lectures', '0.8.0');
-    expect(yaml).toContain('${{ secrets.ANTHROPIC_API_KEY }}');
-    expect(yaml).toContain('${{ secrets.GITHUB_TOKEN }}');
   });
 });
 
@@ -107,7 +135,7 @@ describe('runSetup dry-run', () => {
     expect(result.repoName).toBe('lecture-python-intro.zh-cn');
     expect(result.repoFullName).toBe('QuantEcon/lecture-python-intro.zh-cn');
     expect(result.filesCreated).toContain('.translate/config.yml');
-    expect(result.filesCreated).toContain('.github/workflows/translation-sync.yml');
+    expect(result.filesCreated).toContain('.github/workflows/review-translations.yml');
 
     // No actual files created in dry run
     expect(fs.existsSync(path.join(result.localPath, '.translate'))).toBe(false);
@@ -163,11 +191,12 @@ describe('runSetup with mock runners', () => {
       expect(config?.['target-language']).toBe('zh-cn');
       expect(config?.['docs-folder']).toBe('lectures');
 
-      // Check workflow file
-      const workflowPath = path.join(repoDir, '.github', 'workflows', 'translation-sync.yml');
+      // Check workflow file (review workflow in target repo)
+      const workflowPath = path.join(repoDir, '.github', 'workflows', 'review-translations.yml');
       expect(fs.existsSync(workflowPath)).toBe(true);
       const workflowContent = fs.readFileSync(workflowPath, 'utf-8');
-      expect(workflowContent).toContain('QuantEcon/lecture-python-intro');
+      expect(workflowContent).toContain('source-repo: QuantEcon/lecture-python-intro');
+      expect(workflowContent).toContain('mode: review');
 
       // Check .gitignore
       expect(fs.existsSync(path.join(repoDir, '.gitignore'))).toBe(true);
@@ -236,6 +265,41 @@ describe('runSetup with mock runners', () => {
     try {
       const result = await runSetup(options, mockGhRunner(repoDir), failPushGitRunner);
       expect(result.success).toBe(false);
+    } finally {
+      process.chdir(origCwd);
+    }
+  });
+
+  test('writes source workflow when --source-workflow is set', async () => {
+    const repoDir = path.join(tmpDir, 'lecture-python-intro.zh-cn');
+    const sourceWorkflowPath = path.join(tmpDir, 'source-repo', '.github', 'workflows', 'sync-translations.yml');
+
+    const options: SetupOptions = {
+      source: 'QuantEcon/lecture-python-intro',
+      targetLanguage: 'zh-cn',
+      sourceLanguage: 'en',
+      docsFolder: 'lectures',
+      visibility: 'public',
+      dryRun: false,
+      sourceWorkflow: sourceWorkflowPath,
+    };
+
+    const origCwd = process.cwd();
+    process.chdir(tmpDir);
+
+    try {
+      const result = await runSetup(options, mockGhRunner(repoDir), mockGitRunner);
+
+      expect(result.success).toBe(true);
+
+      // Check source workflow was written
+      expect(fs.existsSync(sourceWorkflowPath)).toBe(true);
+      const content = fs.readFileSync(sourceWorkflowPath, 'utf-8');
+      expect(content).toContain('name: Sync Translations');
+      expect(content).toContain('pull_request:');
+      expect(content).toContain('types: [closed]');
+      expect(content).toContain('target-repo: QuantEcon/lecture-python-intro.zh-cn');
+      expect(content).toContain('mode: sync');
     } finally {
       process.chdir(origCwd);
     }

@@ -18,6 +18,8 @@ import { runReview, ReviewOptions } from './commands/review.js';
 import { resyncSingleFile, runForwardBulk } from './commands/forward.js';
 import { runInit, InitOptions } from './commands/init.js';
 import { runSetup, SetupOptions } from './commands/setup.js';
+import { runHeadingmap, formatHeadingmapTable, formatHeadingmapJson, HeadingmapOptions } from './commands/headingmap.js';
+import { runDoctor, formatDoctorTable, formatDoctorJson, DoctorOptions } from './commands/doctor.js';
 import { BackwardOptions, ForwardOptions } from './types.js';
 import { DEFAULT_RULES, parseLocalizationRules } from '../localization-rules.js';
 import { checkGhAvailable } from './issue-creator.js';
@@ -317,6 +319,80 @@ program
     }
   });
 
+// ─── doctor command ─────────────────────────────────────────────────────────
+
+program
+  .command('doctor')
+  .description('Check health of a target translation repository')
+  .requiredOption('-t, --target <path>', 'Path to TARGET (translated) repository')
+  .option('-s, --source <path>', 'Path to SOURCE (English) repository (enables cross-repo checks)')
+  .option('-d, --docs-folder <folder>', 'Documentation folder (overrides .translate/config.yml)')
+  .option('--check-gh', 'Check gh CLI availability and authentication', false)
+  .option('--json', 'Output as JSON', false)
+  .action(async (opts) => {
+    const doctorOptions: DoctorOptions = {
+      target: opts.target,
+      source: opts.source,
+      docsFolder: opts.docsFolder,
+      checkGh: opts.checkGh,
+      json: opts.json,
+    };
+
+    try {
+      const result = await runDoctor(doctorOptions);
+
+      if (opts.json) {
+        console.log(formatDoctorJson(result));
+      } else {
+        console.log(formatDoctorTable(result));
+      }
+
+      // Exit 1 if any check failed (for CI/scripting)
+      if (result.summary.fail > 0) {
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
+  });
+
+// ─── headingmap command ─────────────────────────────────────────────────────
+
+program
+  .command('headingmap')
+  .description('Generate heading-maps by comparing source and target section headings (no LLM calls)')
+  .requiredOption('-s, --source <path>', 'Path to SOURCE (English) repository')
+  .requiredOption('-t, --target <path>', 'Path to TARGET (translated) repository')
+  .option('-f, --file <filename>', 'Generate heading-map for a single file (relative to docs-folder)')
+  .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
+  .option('--exclude <pattern>', 'Exclude files matching pattern (repeatable, comma-separated)', collectExclude, [])
+  .option('--json', 'Output as JSON', false)
+  .option('--dry-run', 'Show what heading-maps would be generated without modifying files', false)
+  .action(async (opts) => {
+    const options: HeadingmapOptions = {
+      source: opts.source,
+      target: opts.target,
+      docsFolder: opts.docsFolder,
+      file: opts.file,
+      exclude: opts.exclude,
+      dryRun: opts.dryRun,
+    };
+
+    try {
+      const result = await runHeadingmap(options);
+
+      if (opts.json) {
+        console.log(formatHeadingmapJson(result));
+      } else {
+        console.log(formatHeadingmapTable(result, opts.dryRun));
+      }
+    } catch (error) {
+      console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
+  });
+
 // ─── setup command ──────────────────────────────────────────────────────────
 
 program
@@ -327,6 +403,7 @@ program
   .option('--source-language <code>', 'Source language code', 'en')
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
   .option('--visibility <type>', 'Repository visibility (public or private)', 'public')
+  .option('--source-workflow <path>', 'Write the source repo sync workflow to this file path')
   .option('--dry-run', 'Preview what would be created without doing it', false)
   .action(async (opts) => {
     // Pre-flight: check gh CLI
@@ -346,6 +423,7 @@ program
       docsFolder: opts.docsFolder,
       visibility: opts.visibility,
       dryRun: opts.dryRun,
+      sourceWorkflow: opts.sourceWorkflow,
     };
 
     try {
