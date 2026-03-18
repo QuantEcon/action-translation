@@ -70,6 +70,21 @@ Sync Status: lecture-python-intro ↔ lecture-python-intro.zh-cn (zh-cn)
 | `SOURCE_ONLY` | Entirely new file in source | `forward -f <file>` |
 | `TARGET_AHEAD` | Target has more sections than source | Investigate manually |
 
+Before resyncing, run a health check to verify the target repo is properly configured:
+
+```bash
+npx translate doctor \
+  -t ~/repos/lecture-python-intro.zh-cn
+```
+
+Fix any ❌ failures before proceeding — for example, missing heading-maps can be fixed with:
+
+```bash
+npx translate headingmap \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn
+```
+
 For JSON output (useful for scripting):
 
 ```bash

@@ -78,6 +78,15 @@ Sync Status: lecture-python-intro ↔ lecture-python-intro.zh-cn (zh-cn)
 
 At this stage, we're focused on getting the connection established. Don't worry about OUTDATED or SOURCE_AHEAD files yet — handle those after the workflows are in place.
 
+For a more comprehensive assessment including workflow and state file verification, run:
+
+```bash
+npx translate doctor \
+  -t ~/repos/lecture-python-intro.zh-cn
+```
+
+This reports configuration health across all dimensions. All items should be ✅ by the end of Step 5.
+
 ---
 
 ## Step 2: Bootstrap `.translate/` metadata
@@ -132,9 +141,48 @@ The `model: unknown` and `mode: RESYNC` values are expected for bootstrapped sta
 
 Heading-maps are essential for reliable section matching. If Step 1 showed `MISSING_HEADINGMAP` for some files, you need to add them.
 
-### Option A: Use `forward` to regenerate (recommended)
+### Option A: Use `headingmap` to generate maps (recommended)
 
-The `forward` command does a whole-file RESYNC, which generates heading-maps as part of the process. This also updates the translation to match the current source:
+The `headingmap` command generates heading-maps by matching source and target headings by position — no LLM calls needed, and no changes to translations:
+
+```bash
+# Generate heading-map for a single file
+npx translate headingmap \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  -f cobweb.md
+```
+
+This:
+1. Parses both files to extract section headings
+2. Matches them by position (1st source → 1st target, etc.)
+3. Injects the `heading-map` into the target file's YAML frontmatter
+4. Makes **no changes to the translation content**
+
+For all files missing heading-maps:
+
+```bash
+npx translate headingmap \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn
+```
+
+Preview first with `--dry-run`:
+
+```bash
+npx translate headingmap \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  --dry-run
+```
+
+:::{tip}
+This approach is ideal for repos with carefully reviewed human translations — it adds the heading-map metadata without touching any content.
+:::
+
+### Option B: Use `forward` to regenerate (also adds heading-maps)
+
+The `forward` command does a whole-file RESYNC, which generates heading-maps as part of the process. This also **updates the translation** to match the current source:
 
 ```bash
 # Resync a single file (generates heading-map + updates translation)
@@ -166,7 +214,7 @@ npx translate forward \
 After running `forward`, review changes carefully with `git diff`. If a file was changed more than expected, use `git restore <file>` to undo and try a different approach.
 :::
 
-### Option B: Add heading-maps manually
+### Option C: Add heading-maps manually
 
 If you don't want to re-translate files (e.g., they've been carefully reviewed by human translators), you can add heading-maps by hand.
 
@@ -323,7 +371,15 @@ npx translate status \
 - `.translate/config.yml` exists in the target repo
 - `.translate/state/*.yml` files exist for each translated file
 
-If some files show `OUTDATED` or `SOURCE_AHEAD`, you can address those now or wait for the automated pipeline to handle them on the next PR merge. For immediate catch-up, see [Tutorial: Resync a Drifted Target](resync-drifted.md).
+Run a final health check:
+
+```bash
+npx translate doctor \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  -s ~/repos/lecture-python-intro
+```
+
+All checks should pass ✅. If some files show `OUTDATED` or `SOURCE_AHEAD`, you can address those now or wait for the automated pipeline to handle them on the next PR merge. For immediate catch-up, see [Tutorial: Resync a Drifted Target](resync-drifted.md).
 
 ---
 
@@ -331,7 +387,15 @@ If some files show `OUTDATED` or `SOURCE_AHEAD`, you can address those now or wa
 
 ### Many files show MISSING_HEADINGMAP
 
-This is expected for repos translated before action-translation. Use `forward` to bulk-regenerate:
+This is expected for repos translated before action-translation. Use `headingmap` to fix without changing translations:
+
+```bash
+npx translate headingmap \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn
+```
+
+Or use `forward` if you also want to update the translations:
 
 ```bash
 npx translate forward \
