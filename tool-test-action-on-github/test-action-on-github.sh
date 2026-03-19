@@ -217,7 +217,7 @@ else
 
     # Reset to base state
     echo "Resetting to base state..."
-    rm -rf *.md *.yml lectures/
+    rm -rf *.md *.yml lectures/ .translate/
     cp "$DATA_DIR/base-minimal-zh-cn.md" "$TEST_FILE_MINIMAL"
     cp "$DATA_DIR/base-lecture-zh-cn.md" "$TEST_FILE_LECTURE"
     cp "$DATA_DIR/base-toc-zh-cn.yml" "_toc.yml"

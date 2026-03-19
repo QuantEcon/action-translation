@@ -8,6 +8,7 @@ kernelspec:
   language: python
   name: python3
 heading-map:
+  Introduction to Economics: مقدمه‌ای بر اقتصاد
   Supply and Demand: عرضه و تقاضا
   Economic Models: مدل‌های اقتصادی
 ---

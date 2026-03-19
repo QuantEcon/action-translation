@@ -34,12 +34,10 @@ jobs:
         id: mode
         run: |
           if [[ "${{ github.event.pull_request.merged }}" == "true" ]]; then
-            echo "mode=production" >> $GITHUB_OUTPUT
-            echo "commit_sha=${{ github.event.pull_request.merge_commit_sha }}" >> $GITHUB_OUTPUT
+            echo "test-mode=false" >> $GITHUB_OUTPUT
             echo "🚀 Running in PRODUCTION mode (merged PR)"
           else
-            echo "mode=test" >> $GITHUB_OUTPUT
-            echo "commit_sha=${{ github.event.pull_request.head.sha }}" >> $GITHUB_OUTPUT
+            echo "test-mode=true" >> $GITHUB_OUTPUT
             echo "🧪 Running in TEST mode (test-translation label)"
           fi
       
@@ -53,4 +51,4 @@ jobs:
           docs-folder: '.'
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           github-token: ${{ secrets.QUANTECON_SERVICES_PAT }}
-          test-mode: ${{ steps.mode.outputs.mode == 'test' }}
+          test-mode: ${{ steps.mode.outputs.test-mode }}
