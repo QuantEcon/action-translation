@@ -1,10 +1,10 @@
 # PLAN: Development Roadmap
 
 **Created**: 2026-02-16  
-**Last Updated**: 2026-03-16  
+**Last Updated**: 2026-03-19  
 **Sources**: 2026-02-16-REVIEW.md, docs/DESIGN-RESYNC.md  
-**Current Version**: v0.8.0  
-**Test Status**: 823 tests passing (37 test suites, 5 snapshots)
+**Current Version**: v0.9.0  
+**Test Status**: 879 tests passing (39 test suites, 5 snapshots)
 
 ---
 
@@ -1134,8 +1134,9 @@ translate init \
 ## Phase 7: Real-World Readiness
 
 **Goal**: Close gaps identified during full lifecycle review, fix documentation drift, create tutorials, fix `setup` workflow generation, add missing CLI commands, and validate the full lifecycle with end-to-end testing against real repositories.
-**Status**: Complete (PR #30 + PR #31) — All sub-phases done including 7.7 E2E testing.
+**Status**: Complete (PR #30 + PR #31 + PR #32) — All sub-phases done including 7.7 E2E testing and GitHub Action integration testing.
 **E2E Testing**: Test Plan 2 (lecture-python-programming, 2026-03-18) + Test Plan 3 (test-translation-sync, 2026-03-19) validated. 5 bugs fixed (PR #31), 879 tests passing.
+**GitHub Action Integration**: Both zh-cn and Farsi workflows pass end-to-end on test repos (2026-03-19). `tool-test-action-on-github` extended with Farsi support (commit 85afafa) + QA fixes (PR #32).
 **Prerequisite**: Phase 6 + Phase 6b
 
 ### Context — Lifecycle Review (2026-03-16)
@@ -1392,6 +1393,14 @@ Using dedicated test repos: `test-translation-sync` (source, 2 lectures) ↔ `te
 4. **Status** on source ↔ fa ✅ — 2 ALIGNED, 2 TARGET_ONLY (README, report)
 5. **Doctor** on fa ✅ — 4 pass, 2 warnings (expected: README/report not tracked)
 6. **Push** ✅ — Translations pushed to main, source workflow as [PR #592](https://github.com/QuantEcon/test-translation-sync/pull/592)
+7. **GitHub Action testing** ✅ (2026-03-19)
+   - [x] PR #592 (Farsi sync workflow) merged — updated to `@v0.9.0`, `QUANTECON_SERVICES_PAT`, `types: [closed, labeled]` + `test-translation` label trigger
+   - [x] `tool-test-action-on-github` extended with Farsi support: `workflow-template-fa.yml`, `base-minimal-fa.md`, `base-lecture-fa.md`, `base-toc-fa.yml`, step 2b reset, step 3 PR close, README table updated
+   - [x] Created test PR #594 (`lecture-minimal.md` edit, `test-translation` label)
+   - [x] **Translation Sync (Farsi)** — ✅ SUCCESS (22s, run 23281110629) → created PR #1 on `test-translation-sync.fa`
+   - [x] **Translation Sync (zh-cn)** — ✅ SUCCESS (1m12s, run 23281110636) → created PR #559 on `test-translation-sync.zh-cn`
+   - [x] Both PRs verified: correct translation content, `action-translation`+`automated` labels, `.translate/state/` updated with `tool-version: 0.9.0`
+   - [x] QA fixes committed (PR #32): missing heading-map entries in Farsi base files, zh-cn reset now clears `.translate/`, `workflow-template.yml` test-mode pattern aligned with fa template
 
 ### 7.8 Track Tool Version in `.translate/` Metadata
 
@@ -1518,6 +1527,7 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 | **Phase 6b**: Setup command | 1-2 days | Phase 6 | `translate setup` — scaffold target repo |
 | **Phase 7**: Real-World Readiness | 3-5 days | Phase 6b ✅ | Fix setup workflows, headingmap + doctor commands, e2e testing ✅ |
 | **Phase 7.7**: E2E Testing | 2 days | Phase 7 ✅ | Real-world testing, 5 bugs fixed, v0.9.0 release ✅ |
+| **Phase 7 GitHub Action Test** | 1 day | Phase 7.7 ✅ | Both zh-cn + fa workflows pass end-to-end on test repos ✅ |
 | **Phase 8**: Automation | 1-2 days | Phase 7 ✅ | Scheduled backward analysis |
 | **Phase 9**: Whole-file translation | TBD | Phase 7 ✅ | Evaluate whole-file approach for forward sync |
 
