@@ -238,6 +238,15 @@ npx translate status \
 
 All files should show `✅ ALIGNED`.
 
+Run a health check to confirm everything is properly configured:
+
+```bash
+npx translate doctor \
+  -t ~/repos/lecture-python-intro.zh-cn
+```
+
+All checks should pass (✅) before proceeding to workflow configuration.
+
 ---
 
 ## Step 4: Configure workflows and secrets

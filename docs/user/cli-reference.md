@@ -461,6 +461,8 @@ Approximate costs using `claude-sonnet-4-6` (March 2026 pricing):
 | `init` (bulk translate) | ~$0.12/file | 1 LLM call per lecture (whole-file) |
 | `review` | Free | Reads existing reports, no LLM calls |
 | `setup` | Free | Creates GitHub repo (no LLM calls) |
+| `doctor` | Free | No LLM calls |
+| `headingmap` | Free | No LLM calls |
 
 ---
 
@@ -486,6 +488,7 @@ The `.translate/` folder in the target repo stores persistent sync metadata. It 
 source-language: en
 target-language: zh-cn
 docs-folder: lectures
+tool-version: 0.8.0             # Version that last wrote this config
 ```
 
 Provides defaults so CLI flags don't need to be repeated every invocation.
@@ -498,6 +501,7 @@ synced-at: "2026-03-06"        # ISO date of last sync
 model: claude-sonnet-4-6     # Model used for translation
 mode: NEW                      # Translation mode: NEW / UPDATE / RESYNC
 section-count: 5               # Source section count at sync time
+tool-version: 0.8.0            # Version that performed this sync
 ```
 
 ### How each command uses `.translate/`
@@ -509,6 +513,8 @@ section-count: 5               # Source section count at sync time
 | `forward` | — | Updates state after successful resync |
 | `init` | — | Creates config + state for each lecture |
 | `setup` | — | Creates config as part of scaffolding |
+| `doctor` | Reads config, checks state files | — |
+| `headingmap` | — | Injects heading-maps into target files |
 
 ### Graceful absence
 
@@ -570,4 +576,89 @@ npx translate setup --source QuantEcon/lecture-python-intro --target-language zh
 
 # Preview without creating
 npx translate setup --source QuantEcon/lecture-python-intro --target-language zh-cn --dry-run
+```
+
+## `doctor` — Health check for target repos
+
+Validates that a target translation repository is properly configured. Like `brew doctor` or `flutter doctor` — traffic-light output.
+
+```bash
+npx translate doctor -t <target-path> [options]
+```
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `-t, --target <path>` | *(required)* | Target repository path |
+| `-s, --source <path>` | *(optional)* | Source repository path (enables cross-repo checks) |
+| `-d, --docs-folder <folder>` | from config | Documentation folder (reads from `.translate/config.yml` if not provided) |
+| `--check-gh` | `false` | Also check `gh` CLI availability and authentication |
+| `--json` | `false` | Output as JSON |
+
+**What it checks:**
+
+| Check | Description |
+|-------|-------------|
+| `.translate/config.yml` | Config exists and has required fields |
+| `.translate/state/` | All target `.md` files have state entries |
+| Heading maps | All target files have `heading-map` in frontmatter |
+| Workflow | `.github/workflows/` has a translation workflow |
+| Source repo | Source path is accessible with `.md` files (if `-s` provided) |
+| Section alignment | Section counts match between source and target (if `-s` provided) |
+| `gh` CLI | `gh` is installed and authenticated (if `--check-gh`) |
+
+Exits with code 1 if any check fails — suitable for CI.
+
+**Example:**
+
+```bash
+# Check a target repo
+npx translate doctor -t ~/repos/lecture-python-intro.zh-cn
+
+# Include source cross-checks
+npx translate doctor -t ~/repos/lecture-python-intro.zh-cn -s ~/repos/lecture-python-intro
+
+# JSON output for scripting
+npx translate doctor -t ~/repos/lecture-python-intro.zh-cn --json
+```
+
+## `headingmap` — Generate heading-maps
+
+Generates heading-maps by comparing source and target section headings by position. No LLM calls required — a pure structural comparison.
+
+```bash
+npx translate headingmap -s <source-path> -t <target-path> [options]
+```
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `-s, --source <path>` | *(required)* | Source repository path |
+| `-t, --target <path>` | *(required)* | Target repository path |
+| `-f, --file <filename>` | *(optional)* | Single file to process |
+| `-d, --docs-folder <folder>` | `lectures` | Documentation folder |
+| `--exclude <glob>` | *(optional)* | Exclude pattern (repeatable) |
+| `--json` | `false` | Output as JSON |
+| `--dry-run` | `false` | Show what would be generated without writing |
+
+**What it does:**
+
+1. Parses both source and target files to extract section headings
+2. Matches sections by position (first source section → first target section)
+3. Builds a `heading-map` mapping source headings → target headings
+4. Injects the `heading-map` into the target file's YAML frontmatter
+
+**Example:**
+
+```bash
+# Generate heading-maps for all files
+npx translate headingmap -s ~/repos/lecture-python-intro -t ~/repos/lecture-python-intro.zh-cn
+
+# Single file, preview only
+npx translate headingmap -s ~/source -t ~/target -f intro.md --dry-run
+
+# Exclude specific files
+npx translate headingmap -s ~/source -t ~/target --exclude status.md --exclude about.md
 ```

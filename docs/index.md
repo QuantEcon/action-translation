@@ -26,6 +26,8 @@ The system has two main components:
 - **`forward`**: Resyncs drifted translations to match current source content
 - **`init`**: Bulk-translates an entire project from scratch
 - **`setup`**: Scaffolds a new target translation repository
+- **`doctor`**: Checks health of a target translation repository
+- **`headingmap`**: Generates heading-maps by comparing source/target headings (no LLM)
 
 ## Key features
 
@@ -73,13 +75,13 @@ Step-by-step guides for common scenarios:
 |----------|-------------|
 | [Quick Start](user/quickstart.md) | Set up the Action in 10 minutes |
 | [Action Reference](user/action-reference.md) | All GitHub Action inputs and outputs |
-| [CLI Reference](user/cli-reference.md) | `status`, `backward`, `review`, `forward`, `init`, `setup` commands |
+| [CLI Reference](user/cli-reference.md) | `status`, `backward`, `review`, `forward`, `init`, `setup`, `doctor`, `headingmap` commands |
 | [Architecture](developer/architecture.md) | System design and module map |
 | [GitHub Repository](https://github.com/QuantEcon/action-translation) | Source code and issue tracker |
 
 ## Current status
 
 **Version**: v0.8.0  
-**Tests**: 824 (37 suites)  
+**Tests**: 873 (39 suites)  
 **Glossary**: 357 terms (zh-cn, fa)  
 **Languages**: English → Simplified Chinese, Farsi (more planned)

@@ -8,7 +8,7 @@
 - **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
-**Current Version**: v0.8.0 | **Tests**: 824 (37 suites) | **Glossary**: 357 terms (zh-cn, fa)
+**Current Version**: v0.8.0 | **Tests**: 873 (39 suites) | **Glossary**: 357 terms (zh-cn, fa)
 
 ---
 
@@ -49,9 +49,11 @@ src/
 │   │   └── ReviewSession.tsx  # Ink interactive review UI component
 │   └── commands/
 │       ├── backward.ts        # Backward command orchestrator — single + bulk
+│       ├── doctor.ts          # Doctor command — health check for target repos
 │       ├── forward.ts         # Forward command — whole-file resync TARGET to SOURCE
-│       ├── review.ts          # Review command — full pipeline, Steps 1–5
+│       ├── headingmap.ts      # Headingmap command — generate heading-maps (no LLM)
 │       ├── init.ts            # Init command — bulk-translate new projects
+│       ├── review.ts          # Review command — full pipeline, Steps 1–5
 │       ├── setup.ts           # Setup command — scaffold target translation repo
 │       └── status.ts          # Status command — fast sync diagnostic
 ```
@@ -95,7 +97,7 @@ Maps are flat (no nesting), include all heading levels, auto-populated on first 
 
 ### Running Tests
 ```bash
-npm test                          # All 824 tests
+npm test                          # All 873 tests
 npm test -- parser.test.ts        # Single file
 npm test -- --watch               # Watch mode
 npm test -- --coverage            # Coverage report
@@ -171,6 +173,8 @@ Docs live in `docs/` — see `docs/index.md` for the full structure.
 | .translate/ state | `translate-state.ts` → `readConfig` / `writeFileState` / `isSourceChanged` / `serializeFileState` / `stateFileRelativePath` |
 | Repo scaffolding | `commands/setup.ts` → `runSetup` |
 | Init (bulk translate) | `commands/init.ts` → `runInit` |
+| Health check | `commands/doctor.ts` → `runDoctor` |
+| Heading-map generation | `commands/headingmap.ts` → `runHeadingmap` / `buildHeadingMap` |
 | Localization rules | `localization-rules.ts` → `buildLocalizationPrompt` / `getFontRequirements` |
 | Whole-file RESYNC | `translator.ts` → `translateDocumentResync` |
 | Input validation | `inputs.ts` → `getInputs` / `getReviewInputs` |

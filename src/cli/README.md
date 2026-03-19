@@ -1,4 +1,4 @@
-# Resync CLI
+# Translate CLI
 
 Analyze translated documents for improvements worth backporting to the English source.
 

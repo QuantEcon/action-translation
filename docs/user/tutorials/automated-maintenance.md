@@ -23,6 +23,14 @@ This tutorial sets up two maintenance workflows:
 | `ANTHROPIC_API_KEY` secret set | In the repo running the workflows |
 | `TRANSLATION_PAT` secret set | A GitHub PAT with access to the target repo (needed to checkout private/cross-repo targets) |
 
+Before setting up automated workflows, verify the repos are properly configured:
+
+```bash
+npx translate doctor -t ~/repos/lecture-intro.zh-cn
+```
+
+All checks should pass (✅). Fix any issues before configuring GitHub Actions.
+
 ---
 
 ## Workflow 1: Weekly status check

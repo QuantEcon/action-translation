@@ -327,6 +327,17 @@ npx translate status \
 
 All files should show `✅ ALIGNED`.
 
+### Health check
+
+For a comprehensive verification that covers configuration, state, workflows, and heading-maps:
+
+```bash
+npx translate doctor \
+  -t ~/repos/lecture-python-intro.ja
+```
+
+Any ❌ items should be addressed before moving to production.
+
 ### Test the pipeline
 
 1. Make a small edit in the source repo

@@ -15,6 +15,7 @@ import {
   serializeConfig,
   stateFileRelativePath,
   configRelativePath,
+  getToolVersion,
 } from '../translate-state.js';
 import { TranslateConfig, FileState } from '../types.js';
 
@@ -63,7 +64,8 @@ describe('config read/write', () => {
     writeConfig(tmpDir, config);
 
     const result = readConfig(tmpDir);
-    expect(result).toEqual(config);
+    expect(result).toMatchObject(config);
+    expect(result?.['tool-version']).toBe(getToolVersion());
   });
 
   test('readConfig returns undefined when no .translate/ exists', () => {
@@ -133,7 +135,8 @@ describe('file state read/write', () => {
     writeFileState(tmpDir, 'intro.md', sampleState);
 
     const result = readFileState(tmpDir, 'intro.md');
-    expect(result).toEqual(sampleState);
+    expect(result).toMatchObject(sampleState);
+    expect(result?.['tool-version']).toBe(getToolVersion());
   });
 
   test('readFileState returns undefined when file does not exist', () => {
@@ -147,14 +150,14 @@ describe('file state read/write', () => {
     expect(fs.existsSync(statePath)).toBe(true);
 
     const result = readFileState(tmpDir, 'advanced/cobweb.md');
-    expect(result).toEqual(sampleState);
+    expect(result).toMatchObject(sampleState);
   });
 
   test('handles deeply nested paths', () => {
     writeFileState(tmpDir, 'a/b/c.md', sampleState);
 
     const result = readFileState(tmpDir, 'a/b/c.md');
-    expect(result).toEqual(sampleState);
+    expect(result).toMatchObject(sampleState);
   });
 
   test('different modes are preserved', () => {
@@ -250,7 +253,8 @@ describe('serializeFileState', () => {
     // Round-trip via writeFileState/readFileState
     writeFileState(tmpDir, 'test.md', state);
     const roundTripped = readFileState(tmpDir, 'test.md');
-    expect(roundTripped).toEqual(state);
+    expect(roundTripped).toMatchObject(state);
+    expect(roundTripped?.['tool-version']).toBe(getToolVersion());
   });
 });
 
