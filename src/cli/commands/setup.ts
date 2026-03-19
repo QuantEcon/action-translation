@@ -300,7 +300,7 @@ export async function runSetup(
     options.source,
     options.targetLanguage,
     options.docsFolder,
-    '0.8.0',
+    '0.9.0',
     options.sourceLanguage,
   );
   fs.writeFileSync(path.join(workflowDir, 'review-translations.yml'), targetWorkflowContent, 'utf-8');
@@ -347,7 +347,7 @@ export async function runSetup(
       targetFullName,
       options.targetLanguage,
       options.docsFolder,
-      '0.8.0',
+      '0.9.0',
     );
     const sourceWorkflowPath = path.resolve(options.sourceWorkflow);
     fs.mkdirSync(path.dirname(sourceWorkflowPath), { recursive: true });
