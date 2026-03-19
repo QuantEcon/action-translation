@@ -1,7 +1,7 @@
 # PLAN: Development Roadmap
 
 **Created**: 2026-02-16  
-**Last Updated**: 2026-03-19  
+**Last Updated**: 2026-03-19 (comprehensive evaluation)  
 **Sources**: 2026-02-16-REVIEW.md, docs/DESIGN-RESYNC.md  
 **Current Version**: v0.9.0  
 **Test Status**: 879 tests passing (39 test suites, 5 snapshots)
@@ -1137,6 +1137,7 @@ translate init \
 **Status**: Complete (PR #30 + PR #31 + PR #32) — All sub-phases done including 7.7 E2E testing and GitHub Action integration testing.
 **E2E Testing**: Test Plan 2 (lecture-python-programming, 2026-03-18) + Test Plan 3 (test-translation-sync, 2026-03-19) validated. 5 bugs fixed (PR #31), 879 tests passing.
 **GitHub Action Integration**: Both zh-cn and Farsi workflows pass end-to-end on test repos (2026-03-19). `tool-test-action-on-github` extended with Farsi support (commit 85afafa) + QA fixes (PR #32).
+**Comprehensive Evaluation (2026-03-19)**: 24-scenario test plan across 3 repos (source + zh-cn + fa) — 48 target PRs, 100% trigger reliability, 100% diff correspondence, zh-cn quality ~9.6/10, fa quality ~9.3/10. Full report: `translation-sync-evaluation-report.md`.
 **Prerequisite**: Phase 6 + Phase 6b
 
 ### Context — Lifecycle Review (2026-03-16)
@@ -1401,6 +1402,45 @@ Using dedicated test repos: `test-translation-sync` (source, 2 lectures) ↔ `te
    - [x] **Translation Sync (zh-cn)** — ✅ SUCCESS (1m12s, run 23281110636) → created PR #559 on `test-translation-sync.zh-cn`
    - [x] Both PRs verified: correct translation content, `action-translation`+`automated` labels, `.translate/state/` updated with `tool-version: 0.9.0`
    - [x] QA fixes committed (PR #32): missing heading-map entries in Farsi base files, zh-cn reset now clears `.translate/`, `workflow-template.yml` test-mode pattern aligned with fa template
+
+### Comprehensive Evaluation — 24-Scenario Test (2026-03-19)
+
+Full structured evaluation of v0.9.0 across 24 source PRs (#595–#618), each triggering translation PRs in both zh-cn and fa target repos — **48 target PRs total**.
+
+**Test repos**: `QuantEcon/test-translation-sync` (source) → `QuantEcon/test-translation-sync.zh-cn` + `QuantEcon/test-translation-sync.fa`
+
+**Scenario coverage** (24 tests):
+
+| Category | Tests | Scenarios |
+|----------|-------|-----------|
+| Minimal document | 01–08, 16, 21, 24 | Intro/title/section edits, reorder, add/remove section, subsection, multiple elements, preamble, empty sections |
+| Lecture document | 09–15, 22, 23 | Real-world update, sub-subsection add/edit/delete, code comments, math equations, deep nesting (##### ######), special characters |
+| Structural | 17–20 | New document + TOC, document deleted + TOC, multi-file, rename + TOC |
+
+**Results scorecard**:
+
+| Category | Score |
+|----------|-------|
+| Trigger reliability | 24/24 (100%) — every source PR generated both target PRs |
+| PR mapping accuracy | 48/48 (100%) — all target PRs correctly reference source |
+| Diff intent match | 48/48 (100%) — all target diffs match source operation type |
+| Label consistency | 47/48 (97.9%) — fa PR #16 missing labels (reorder-only edge case) |
+| Metadata completeness | 48/48 (100%) — SHA, model, version, date, mode all present |
+| zh-cn translation quality | ~9.6/10 — one terminology concern at deep nesting (test 22: 8.4/10) |
+| fa translation quality | ~9.3/10 — natural Farsi phrasing, correct economic terminology |
+| State file tracking | 48/48 (100%) — `.translate/state/*.yml` in every PR |
+
+**Key observations**:
+- Math (LaTeX, display equations) preserved verbatim in all 48 PRs
+- Code blocks untouched; only comments and markdown titles translated
+- TOC operations (add, delete, rename) propagate correctly to both targets
+- Frontmatter-only changes handled without unnecessary content retranslation
+- Multi-file changes (test 19) handled in a single target PR with separate state files
+- Line count variations between languages are expected (translated text length differs)
+
+**Minor issue**: fa PR #16 (pure section reorder) missing `action-translation` and `automated` labels — possible race condition with reorder-only changes. Does not affect translation correctness.
+
+**Overall assessment: PASS** — action functioning as designed across all tested scenarios.
 
 ### 7.8 Track Tool Version in `.translate/` Metadata
 
@@ -1700,4 +1740,4 @@ The GitHub Action itself would remain Node.js (Actions require JavaScript). Only
 
 ---
 
-*Last updated: 2026-03-06 (Phase 4 + 5b closed out, future work reorganized, PR #24)*
+*Last updated: 2026-03-19 (Phase 7 comprehensive evaluation — 24-scenario test, 48 target PRs, all pass)*
