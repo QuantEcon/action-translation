@@ -16,7 +16,7 @@ The test script creates and manages test PRs in source and target repositories t
 
 - GitHub CLI (`gh`) installed and authenticated
 - Push access to test repositories
-- Action configured in source repository
+- Action configured in source repository (zh-cn and fa workflows)
 - For evaluation: `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` environment variables
 
 ## Test Repositories
@@ -24,9 +24,10 @@ The test script creates and manages test PRs in source and target repositories t
 | Repository | Purpose | URL |
 |------------|---------|-----|
 | **Source** | English content, triggers sync | `QuantEcon/test-translation-sync` |
-| **Target** | Chinese translations | `QuantEcon/test-translation-sync.zh-cn` |
+| **Target (zh-cn)** | Chinese translations (built from source) | `QuantEcon/test-translation-sync.zh-cn` |
+| **Target (fa)** | Farsi translations (uses published action) | `QuantEcon/test-translation-sync.fa` |
 
-**Note**: These repositories retain their original names (`test-translation-sync`) even though the action was renamed to `action-translation`. This avoids disrupting existing GitHub configurations, Netlify deployments, and secrets. The names remain descriptive of their purpose (testing the translation sync workflow).
+**Note**: The zh-cn workflow checks out & builds `action-translation` from source (for development testing). The fa workflow uses the published action (`@v0.9.0`) to validate the real deployment path. Each test PR triggers **both** workflows.
 
 ## Usage
 
@@ -41,7 +42,7 @@ The script will:
 1. Reset test repositories to clean state
 2. Run 24 automated test scenarios
 3. Create PRs in source repository with `test-translation` label
-4. Label triggers action → creates translation PRs in target repository
+4. Label triggers action → creates translation PRs in **both** target repositories
 5. Report results
 
 Both source and target PRs remain **open** for evaluation.

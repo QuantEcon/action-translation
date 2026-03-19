@@ -34,5 +34,7 @@ reports/
 # Test repositories (cloned locally for testing)
 test-translation-sync/
 test-translation-sync.zh-cn/
+test-translation-sync.fa/
 tool-test-action-on-github/test-translation-sync/
 tool-test-action-on-github/test-translation-sync.zh-cn/
+tool-test-action-on-github/test-translation-sync.fa/

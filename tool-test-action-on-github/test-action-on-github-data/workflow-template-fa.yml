@@ -1,0 +1,43 @@
+name: Translation Sync (Farsi)
+
+on:
+  pull_request:
+    types: [closed, labeled]
+
+jobs:
+  sync-translation-fa:
+    # Run on merge (production) OR when test-translation label added (test mode)
+    if: |
+      (github.event.pull_request.merged == true) ||
+      (github.event.action == 'labeled' && github.event.label.name == 'test-translation')
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Determine mode
+        id: mode
+        run: |
+          if [[ "${{ github.event.pull_request.merged }}" == "true" ]]; then
+            echo "test-mode=false" >> $GITHUB_OUTPUT
+            echo "🚀 Running in PRODUCTION mode (merged PR)"
+          else
+            echo "test-mode=true" >> $GITHUB_OUTPUT
+            echo "🧪 Running in TEST mode (test-translation label)"
+          fi
+
+      - name: Run translation sync
+        uses: QuantEcon/action-translation@v0.9.0
+        with:
+          mode: sync
+          target-repo: ${{ github.repository }}.fa
+          target-language: fa
+          source-language: en
+          docs-folder: '.'
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github-token: ${{ secrets.QUANTECON_SERVICES_PAT }}
+          test-mode: ${{ steps.mode.outputs.test-mode }}

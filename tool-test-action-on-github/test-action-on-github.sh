@@ -15,6 +15,7 @@
 # - Repositories must already exist on GitHub:
 #   - QuantEcon/test-translation-sync
 #   - QuantEcon/test-translation-sync.zh-cn
+#   - QuantEcon/test-translation-sync.fa
 # - ANTHROPIC_API_KEY secret must be configured in test-translation-sync
 #
 # What this script does:
@@ -38,6 +39,7 @@ fi
 OWNER="QuantEcon"
 SOURCE_REPO="test-translation-sync"
 TARGET_REPO="test-translation-sync.zh-cn"
+TARGET_REPO_FA="test-translation-sync.fa"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DATA_DIR="$SCRIPT_DIR/test-action-on-github-data"
 WORK_DIR="."  # Clone to current directory
@@ -90,6 +92,12 @@ if ! gh repo view "$OWNER/$TARGET_REPO" &> /dev/null; then
     exit 1
 fi
 
+if ! gh repo view "$OWNER/$TARGET_REPO_FA" &> /dev/null; then
+    echo -e "${RED}Error: Repository $OWNER/$TARGET_REPO_FA does not exist.${NC}"
+    echo "Please create it first on GitHub."
+    exit 1
+fi
+
 echo -e "${GREEN}✓${NC} Prerequisites check passed"
 echo ""
 
@@ -114,6 +122,17 @@ if ! gh repo view "$OWNER/$TARGET_REPO" &> /dev/null; then
     else
         REPOS_EXIST=false
         echo -e "${YELLOW}Note: Repository $OWNER/$TARGET_REPO does not exist yet.${NC}"
+    fi
+fi
+
+if ! gh repo view "$OWNER/$TARGET_REPO_FA" &> /dev/null; then
+    if [ "$DRY_RUN" = false ]; then
+        echo -e "${RED}Error: Repository $OWNER/$TARGET_REPO_FA does not exist.${NC}"
+        echo "Please create it first on GitHub."
+        exit 1
+    else
+        REPOS_EXIST=false
+        echo -e "${YELLOW}Note: Repository $OWNER/$TARGET_REPO_FA does not exist yet.${NC}"
     fi
 fi
 
@@ -158,6 +177,7 @@ else
     # Ensure workflow exists
     mkdir -p .github/workflows
     cp "$DATA_DIR/workflow-template.yml" .github/workflows/translation-sync.yml
+    cp "$DATA_DIR/workflow-template-fa.yml" .github/workflows/sync-translations-fa.yml
 
     # Force push to main
     git add -A
@@ -208,6 +228,51 @@ else
     git push -f origin main
 
     echo -e "${GREEN}✓${NC} Target repo reset to base state"
+
+    cd "../$SOURCE_REPO"
+fi
+
+echo ""
+
+#
+# STEP 2b: Clone or update Farsi target repository
+#
+echo -e "${BLUE}Step 2b: Preparing Farsi target repository...${NC}"
+
+if [ "$DRY_RUN" = true ]; then
+    echo -e "${CYAN}[DRY RUN] Would clone/update $OWNER/$TARGET_REPO_FA${NC}"
+    echo -e "${CYAN}[DRY RUN] Would reset to two base Farsi files:${NC}"
+    echo -e "${CYAN}  - lecture-minimal.md (from base-minimal-fa.md)${NC}"
+    echo -e "${CYAN}  - lecture.md (from base-lecture-fa.md)${NC}"
+    echo -e "${CYAN}[DRY RUN] Would force push to main${NC}"
+else
+    if [ -d "$TARGET_REPO_FA" ]; then
+        echo "Repository already cloned, updating..."
+        cd "$TARGET_REPO_FA"
+        git fetch origin
+        git checkout main
+        git reset --hard origin/main
+        cd ..
+    else
+        echo "Cloning Farsi target repository..."
+        git clone "https://github.com/$OWNER/$TARGET_REPO_FA.git"
+    fi
+
+    cd "$TARGET_REPO_FA"
+
+    # Reset to base state
+    echo "Resetting to base state..."
+    rm -rf *.md *.yml lectures/ .translate/ .github/
+    cp "$DATA_DIR/base-minimal-fa.md" "$TEST_FILE_MINIMAL"
+    cp "$DATA_DIR/base-lecture-fa.md" "$TEST_FILE_LECTURE"
+    cp "$DATA_DIR/base-toc-fa.yml" "_toc.yml"
+
+    # Force push to main
+    git add -A
+    git commit -m "Reset: base state for testing (Farsi)" || echo "No changes to commit"
+    git push -f origin main
+
+    echo -e "${GREEN}✓${NC} Farsi target repo reset to base state"
 
     cd "../$SOURCE_REPO"
 fi
@@ -268,6 +333,30 @@ else
         for pr_number in $TARGET_PRS; do
             gh pr close "$pr_number" --repo "$OWNER/$TARGET_REPO" --comment "Closing for test reset"
             echo -e "${GREEN}✓${NC} Closed PR #${pr_number} on target repo"
+        done
+    fi
+fi
+
+# Close PRs on Farsi target repo
+if [ "$DRY_RUN" = true ]; then
+    FA_PRS=$(gh pr list --repo "$OWNER/$TARGET_REPO_FA" --state open --json number --jq '.[].number' 2>/dev/null || echo "")
+    if [ -z "$FA_PRS" ]; then
+        echo -e "${CYAN}[DRY RUN] No open PRs to close on Farsi target repo${NC}"
+    else
+        echo -e "${CYAN}[DRY RUN] Would close the following PRs on Farsi target repo:${NC}"
+        for pr_number in $FA_PRS; do
+            echo -e "${CYAN}  - PR #${pr_number}${NC}"
+        done
+    fi
+else
+    FA_PRS=$(gh pr list --repo "$OWNER/$TARGET_REPO_FA" --state open --json number --jq '.[].number')
+
+    if [ -z "$FA_PRS" ]; then
+        echo "No open PRs to close on Farsi target repo"
+    else
+        for pr_number in $FA_PRS; do
+            gh pr close "$pr_number" --repo "$OWNER/$TARGET_REPO_FA" --comment "Closing for test reset"
+            echo -e "${GREEN}✓${NC} Closed PR #${pr_number} on Farsi target repo"
         done
     fi
 fi
@@ -445,8 +534,8 @@ echo ""
 if [ "$DRY_RUN" = true ]; then
     echo -e "${CYAN}Summary of what would be done:${NC}"
     echo ""
-    echo "1. Reset both repositories to base state (with _toc.yml)"
-    echo "2. Close all open PRs on source and target repos"
+    echo "1. Reset all three repositories to base state (with _toc.yml)"
+    echo "2. Close all open PRs on source, zh-cn target, and fa target repos"
     echo "3. Create 24 new test PRs:"
     echo "   Basic Tests (01-08):"
     echo "     - 01: Intro text updated"
@@ -492,13 +581,16 @@ else
     echo "Next steps:"
     echo "1. Each PR has the 'test-translation' label"
     echo "2. The GitHub Action should trigger automatically"
-    echo "3. Check ${TARGET_REPO} for translation PRs"
+    echo "3. Check ${TARGET_REPO} and ${TARGET_REPO_FA} for translation PRs"
     echo ""
     echo "View all PRs:"
     echo "  gh pr list --repo $OWNER/$SOURCE_REPO"
     echo ""
-    echo "Monitor translation PRs:"
+    echo "Monitor translation PRs (Chinese):"
     echo "  gh pr list --repo $OWNER/$TARGET_REPO"
+    echo ""
+    echo "Monitor translation PRs (Farsi):"
+    echo "  gh pr list --repo $OWNER/$TARGET_REPO_FA"
     echo ""
     echo "To reset and run again, just execute this script again!"
 fi
