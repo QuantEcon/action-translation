@@ -52,14 +52,15 @@ function validateMinConfidence(raw: string): number {
 
 /**
  * Resolve source language: CLI flag > .translate/config.yml > default ('en').
+ * @param cliValue - The value from the CLI flag, or undefined if not explicitly set.
  */
-function resolveSourceLanguage(cliValue: string, targetPath: string): string {
-  // If user explicitly set a non-default value, use it
-  if (cliValue !== 'en') return cliValue;
+function resolveSourceLanguage(cliValue: string | undefined, targetPath: string): string {
+  // If user explicitly set a value, use it
+  if (cliValue !== undefined) return cliValue;
   // Check .translate/config.yml
   const config = readConfig(targetPath);
   if (config?.['source-language']) return config['source-language'];
-  return cliValue;
+  return 'en';
 }
 
 /**
@@ -79,7 +80,7 @@ program
   .option('-f, --file <filename>', 'Analyze a single file (relative to docs-folder)')
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
   .option('-l, --language <code>', 'Target language code', 'zh-cn')
-  .option('--source-language <code>', 'Source language code', 'en')
+  .option('--source-language <code>', 'Source language code')
   .option('-o, --output <path>', 'Output directory (or .md/.json file path for single-file mode)', './reports')
   .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-6')
   .option('--json', 'Output reports as JSON', false)
@@ -214,7 +215,7 @@ program
   .option('-f, --file <filename>', 'Resync a single file (relative to docs-folder)')
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
   .option('-l, --language <code>', 'Target language code', 'zh-cn')
-  .option('--source-language <code>', 'Source language code', 'en')
+  .option('--source-language <code>', 'Source language code')
   .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-6')
   .option('--test', 'Use deterministic mock responses (no LLM calls)', false)
   .option('--github <owner/repo>', 'Create one PR per file in TARGET repo')

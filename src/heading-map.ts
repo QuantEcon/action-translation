@@ -248,27 +248,25 @@ export function injectHeadingMap(
         // When YAML is malformed (e.g., unquoted colons), some heading-map entries
         // may be parsed as top-level keys. Strip the heading-map: block AND any
         // orphaned lines between it and the next known top-level YAML key.
-        // Strategy: keep only lines that are part of known YAML blocks (jupytext:, kernelspec:, etc.)
+        // Strategy: strip only the old heading-map block and preserve all other frontmatter lines.
         const lines = existingYaml.split('\n');
         const keptLines: string[] = [];
         let inHeadingMap = false;
         for (const line of lines) {
           if (/^heading-map:/.test(line)) {
+            // Drop the old heading-map key; a fresh one will be written below.
             inHeadingMap = true;
             continue;
           }
           if (inHeadingMap) {
-            // Still inside heading-map block — skip indented lines
+            // Still inside heading-map block — skip indented or blank lines.
             if (/^[ \t]/.test(line) || line.trim() === '') {
               continue;
             }
-            // Hit a non-indented line — could be a known key or an orphaned heading-map entry.
-            // Known frontmatter keys start with a recognized prefix.
-            if (/^(jupytext|kernelspec|title|description|substitutions|myst|html_meta|numbering):/.test(line)) {
-              inHeadingMap = false;
-              keptLines.push(line);
-            }
-            // Otherwise skip (orphaned heading-map entry)
+            // Hit a non-indented, non-blank line — this marks the end of the heading-map block.
+            // Treat it as a regular top-level frontmatter key and keep it.
+            inHeadingMap = false;
+            keptLines.push(line);
             continue;
           }
           keptLines.push(line);

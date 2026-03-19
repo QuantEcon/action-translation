@@ -529,6 +529,36 @@ describe('runHeadingmap', () => {
     // Section Three has no match, so it's not in the map
     expect(map.has('Section Three')).toBe(false);
   });
+
+  test('updates section-count in .translate/state/ when state exists', async () => {
+    const sourceDir = path.join(tmpDir, 'source');
+    const targetDir = path.join(tmpDir, 'target');
+    writeMd(path.join(sourceDir, 'lectures', 'intro.md'), SOURCE_2_SECTIONS);
+    writeMd(path.join(targetDir, 'lectures', 'intro.md'), TARGET_2_SECTIONS_NO_MAP);
+
+    // Seed a .translate/state/ entry with an outdated section-count
+    const stateDir = path.join(targetDir, '.translate', 'state');
+    fs.mkdirSync(stateDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(stateDir, 'intro.md.yml'),
+      'source-sha: abc123\nsynced-at: "2026-01-01"\nmodel: claude-sonnet-4-6\nmode: NEW\nsection-count: 99\ntool-version: 0.8.0\n',
+    );
+
+    const options: HeadingmapOptions = {
+      source: sourceDir,
+      target: targetDir,
+      docsFolder: 'lectures',
+      exclude: [],
+      dryRun: false,
+    };
+
+    await runHeadingmap(options);
+
+    // Verify section-count was updated
+    const stateContent = fs.readFileSync(path.join(stateDir, 'intro.md.yml'), 'utf-8');
+    expect(stateContent).toContain('section-count: 2');
+    expect(stateContent).not.toContain('section-count: 99');
+  });
 });
 
 // ============================================================================
