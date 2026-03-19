@@ -68,6 +68,7 @@ describe('backward command', () => {
         file: 'test-lecture.md',
         docsFolder: '',
         language: 'zh-cn',
+        sourceLanguage: 'en',
         output: path.join(tmpDir, 'reports'),
         model: 'claude-sonnet-4-6',
         json: false,

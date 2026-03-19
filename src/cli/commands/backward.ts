@@ -34,6 +34,7 @@ import { BackwardReport, BackwardOptions, BackportSuggestion, BulkBackwardReport
 import { SCHEMA_VERSION } from '../schema.js';
 import { discoverMarkdownFiles, resolveFilePairs, applyExcludes } from './status.js';
 import { readFileState, isSourceChanged } from '../translate-state.js';
+import { languageLabel } from '../../language-config.js';
 
 /**
  * Logger interface for backward command output
@@ -158,8 +159,8 @@ export async function runBackwardSingleFile(
     {
       apiKey: options.apiKey,
       model,
-      sourceLanguage: 'en',
-      targetLanguage: language,
+      sourceLanguage: languageLabel(options.sourceLanguage),
+      targetLanguage: languageLabel(language),
       testMode,
     },
   );
@@ -237,8 +238,8 @@ export async function runBackwardSingleFile(
     {
       apiKey: options.apiKey,
       model,
-      sourceLanguage: 'en',
-      targetLanguage: language,
+      sourceLanguage: languageLabel(options.sourceLanguage),
+      targetLanguage: languageLabel(language),
       testMode,
     },
   );

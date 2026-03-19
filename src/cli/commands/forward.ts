@@ -25,6 +25,7 @@ import cliProgress from 'cli-progress';
 import { TranslationService } from '../../translator.js';
 import { Glossary } from '../../types.js';
 import { triageForward } from '../forward-triage.js';
+import { languageLabel } from '../../language-config.js';
 import {
   ForwardOptions,
   ForwardFileResult,
@@ -106,8 +107,8 @@ export async function resyncSingleFile(
     {
       apiKey: options.apiKey,
       model: options.model,
-      sourceLanguage: 'English',
-      targetLanguage: options.language,
+      sourceLanguage: languageLabel(options.sourceLanguage),
+      targetLanguage: languageLabel(options.language),
       testMode: options.test,
     },
   );
@@ -137,8 +138,8 @@ export async function resyncSingleFile(
   } else {
     const translator = new TranslationService(options.apiKey, options.model, false);
     const result = await translator.translateDocumentResync({
-      sourceLanguage: 'English',
-      targetLanguage: options.language,
+      sourceLanguage: languageLabel(options.sourceLanguage),
+      targetLanguage: languageLabel(options.language),
       glossary,
       sourceContent,
       targetContent,

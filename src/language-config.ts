@@ -23,6 +23,11 @@ export interface LanguageConfig {
  * 3. The language will automatically be available for use
  */
 export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
+  'en': {
+    code: 'en',
+    name: 'English',
+    additionalRules: [],
+  },
   'zh-cn': {
     code: 'zh-cn',
     name: 'Chinese (Simplified)',
@@ -67,6 +72,15 @@ export function getLanguageConfig(languageCode: string): LanguageConfig {
     name: languageCode,
     additionalRules: [],
   };
+}
+
+/**
+ * Format a language as "Name (code)" for LLM prompts.
+ * e.g. languageLabel('en') → 'English (en)', languageLabel('fa') → 'Persian (Farsi) (fa)'
+ */
+export function languageLabel(languageCode: string): string {
+  const config = getLanguageConfig(languageCode);
+  return `${config.name} (${config.code})`;
 }
 
 /**

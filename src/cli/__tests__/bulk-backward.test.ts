@@ -149,6 +149,7 @@ function buildBulkOptions(
     file: undefined,
     docsFolder: 'lectures',
     language: 'zh-cn',
+    sourceLanguage: 'en',
     output: outputDir,
     model: 'claude-sonnet-4-6',
     json: false,

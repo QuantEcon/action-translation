@@ -7,7 +7,8 @@ import {
   formatAdditionalRules, 
   getSupportedLanguages,
   isLanguageSupported,
-  validateLanguageCode 
+  validateLanguageCode,
+  languageLabel,
 } from '../language-config.js';
 
 describe('Language Configuration', () => {
@@ -102,6 +103,24 @@ describe('Language Configuration', () => {
 
     it('should suggest updating LANGUAGE_CONFIGS in error', () => {
       expect(() => validateLanguageCode('es')).toThrow(/LANGUAGE_CONFIGS/);
+    });
+  });
+
+  describe('languageLabel', () => {
+    it('should format known language as Name (code)', () => {
+      expect(languageLabel('en')).toBe('English (en)');
+      expect(languageLabel('zh-cn')).toBe('Chinese (Simplified) (zh-cn)');
+      expect(languageLabel('fa')).toBe('Persian (Farsi) (fa)');
+    });
+
+    it('should handle case insensitive codes', () => {
+      expect(languageLabel('EN')).toBe('English (en)');
+      expect(languageLabel('ZH-CN')).toBe('Chinese (Simplified) (zh-cn)');
+    });
+
+    it('should fall back to code for unknown languages', () => {
+      expect(languageLabel('ja')).toBe('ja (ja)');
+      expect(languageLabel('es')).toBe('es (es)');
     });
   });
 });
