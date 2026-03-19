@@ -1134,7 +1134,7 @@ translate init \
 ## Phase 7: Real-World Readiness
 
 **Goal**: Close gaps identified during full lifecycle review, fix documentation drift, create tutorials, fix `setup` workflow generation, add missing CLI commands, and validate the full lifecycle with end-to-end testing against real repositories.
-**Status**: In progress
+**Status**: Complete (PR #30) — 7.1, 7.2, 7.3, 7.4, 7.6, 7.8 done. 7.7 deferred (manual E2E testing).
 **Prerequisite**: Phase 6 + Phase 6b
 
 ### Context — Lifecycle Review (2026-03-16)
@@ -1174,12 +1174,12 @@ The current `setup` command generates a `repository_dispatch` workflow in the TA
 
 **Tasks:**
 
-- [ ] Change `setup` to generate the SOURCE workflow file (`sync-translations.yml`) as a local file that the user can copy to their source repo, or print it to console with copy instructions
-- [ ] Change the TARGET workflow to use the standard `pull_request: closed` trigger pattern (matching quickstart docs)
-- [ ] Add `--source-workflow <path>` flag: write the source workflow YAML to a file (e.g., `--source-workflow ~/repos/source/.github/workflows/sync-translations.yml`)
-- [ ] Print clear post-setup instructions for both repos (secrets, workflow placement)
-- [ ] Update `setup` tests
-- [ ] Update `cli-reference.md` for `setup`
+- [x] Change `setup` to generate the SOURCE workflow file (`sync-translations.yml`) as a local file that the user can copy to their source repo, or print it to console with copy instructions
+- [x] Change the TARGET workflow to use the standard `pull_request: closed` trigger pattern (matching quickstart docs)
+- [x] Add `--source-workflow <path>` flag: write the source workflow YAML to a file (e.g., `--source-workflow ~/repos/source/.github/workflows/sync-translations.yml`)
+- [x] Print clear post-setup instructions for both repos (secrets, workflow placement)
+- [x] Update `setup` tests
+- [x] Update `cli-reference.md` for `setup`
 
 ### 7.2 Standalone Heading-Map Generation (`translate headingmap`)
 
@@ -1192,16 +1192,16 @@ For **connecting existing targets** (Scenario 2), we need a free, local-only too
 
 **Tasks:**
 
-- [ ] Create `src/cli/commands/headingmap.ts`
-- [ ] `translate headingmap -s <source> -t <target>` — bulk generate heading-maps for all files
-- [ ] `translate headingmap -s <source> -t <target> -f <file>` — single file mode
-- [ ] Pipeline: parse both files → match sections by position → build heading-map → inject into target frontmatter
-- [ ] `--dry-run` flag: show what heading-maps would be generated (print to console without modifying files)
-- [ ] Handle mismatched section counts: warn and generate partial map for matched sections
-- [ ] Register in `src/cli/index.ts`
-- [ ] Add tests (section matching, mismatch handling, frontmatter injection, existing heading-map update)
-- [ ] Add to `cli-reference.md`
-- [ ] Update connect-existing tutorial to reference this command
+- [x] Create `src/cli/commands/headingmap.ts`
+- [x] `translate headingmap -s <source> -t <target>` — bulk generate heading-maps for all files
+- [x] `translate headingmap -s <source> -t <target> -f <file>` — single file mode
+- [x] Pipeline: parse both files → match sections by position → build heading-map → inject into target frontmatter
+- [x] `--dry-run` flag: show what heading-maps would be generated (print to console without modifying files)
+- [x] Handle mismatched section counts: warn and generate partial map for matched sections
+- [x] Register in `src/cli/index.ts`
+- [x] Add tests (section matching, mismatch handling, frontmatter injection, existing heading-map update)
+- [x] Add to `cli-reference.md`
+- [x] Update connect-existing tutorial to reference this command
 
 ### 7.3 Health Check (`translate doctor`)
 
@@ -1209,21 +1209,21 @@ A diagnostic command that verifies a target repo is fully configured for action-
 
 **Tasks:**
 
-- [ ] Create `src/cli/commands/doctor.ts`
-- [ ] `translate doctor -t <target>` — check target repo health
-- [ ] Checks:
-  - [ ] `.translate/config.yml` exists and is valid
-  - [ ] `.translate/state/` has entries for all target `.md` files
-  - [ ] All target files have `heading-map` in frontmatter
-  - [ ] Source repo is accessible (if `-s <source>` provided)
-  - [ ] Section counts match between source and target
-  - [ ] GitHub workflow file exists (`.github/workflows/`)
-  - [ ] `gh` CLI is available and authenticated (if `--github` mode)
-- [ ] Traffic-light output: ✅ pass, ⚠️ warning, ❌ fail for each check
-- [ ] `--json` flag for CI/scripting
-- [ ] Register in `src/cli/index.ts`
-- [ ] Add tests
-- [ ] Add to `cli-reference.md`
+- [x] Create `src/cli/commands/doctor.ts`
+- [x] `translate doctor -t <target>` — check target repo health
+- [x] Checks:
+  - [x] `.translate/config.yml` exists and is valid
+  - [x] `.translate/state/` has entries for all target `.md` files
+  - [x] All target files have `heading-map` in frontmatter
+  - [x] Source repo is accessible (if `-s <source>` provided)
+  - [x] Section counts match between source and target
+  - [x] GitHub workflow file exists (`.github/workflows/`)
+  - [x] `gh` CLI is available and authenticated (if `--github` mode)
+- [x] Traffic-light output: ✅ pass, ⚠️ warning, ❌ fail for each check
+- [x] `--json` flag for CI/scripting
+- [x] Register in `src/cli/index.ts`
+- [x] Add tests
+- [x] Add to `cli-reference.md`
 
 ### 7.4 Fix `setup` Workflow Trigger Architecture
 
@@ -1231,10 +1231,10 @@ The `generateWorkflowYaml()` function in `setup.ts` generates a `repository_disp
 
 **Tasks:**
 
-- [ ] Update `generateWorkflowYaml()` to produce `pull_request: closed` trigger with `paths` filter
-- [ ] Requires `source-repo` to know the docs-folder path pattern
-- [ ] Update test snapshots
-- [ ] Verify the generated workflow against the quickstart template
+- [x] Update `generateWorkflowYaml()` to produce `pull_request: closed` trigger with `paths` filter
+- [x] Requires `source-repo` to know the docs-folder path pattern
+- [x] Update test snapshots
+- [x] Verify the generated workflow against the quickstart template
 
 ### 7.5 Tutorials
 
@@ -1256,10 +1256,10 @@ Additional tutorials:
 - [x] Fix `docs/index.md` CLI name (`resync` → `translate`)
 - [x] Fix `docs/index.md` test counts (724 → 824, 32 → 37)
 - [x] Add tutorials section to `docs/index.md`
-- [ ] Update `copilot-instructions.md` test counts to 824 / 37 suites
-- [ ] Audit all docs for `resync` → `translate` rename consistency
-- [ ] Update `docs/index.md` CLI description to include `init` and `setup`
-- [ ] Verify all cross-references between tutorials and CLI reference
+- [x] Update `copilot-instructions.md` test counts to 824 / 37 suites
+- [x] Audit all docs for `resync` → `translate` rename consistency
+- [x] Update `docs/index.md` CLI description to include `init` and `setup`
+- [x] Verify all cross-references between tutorials and CLI reference
 
 ### 7.7 End-to-End Smoke Test
 
@@ -1362,14 +1362,14 @@ The `.translate/` schema currently has no record of which version of action-tran
 
 **Tasks:**
 
-- [ ] Add `tool-version` to `TranslateConfig` interface (`config.yml`) — records the version that last wrote the config
-- [ ] Add `tool-version` to `FileState` interface (per-file state) — records the version that performed each translation
-- [ ] Read version from `package.json` at runtime (single source of truth)
-- [ ] Update `writeConfig()` and `writeFileState()` to include `tool-version` automatically
-- [ ] Update `readConfig()` / `readFileState()` validation — `tool-version` should be optional for backward compatibility with existing `.translate/` directories
+- [x] Add `tool-version` to `TranslateConfig` interface (`config.yml`) — records the version that last wrote the config
+- [x] Add `tool-version` to `FileState` interface (per-file state) — records the version that performed each translation
+- [x] Read version from `package.json` at runtime (single source of truth)
+- [x] Update `writeConfig()` and `writeFileState()` to include `tool-version` automatically
+- [x] Update `readConfig()` / `readFileState()` validation — `tool-version` should be optional for backward compatibility with existing `.translate/` directories
 - [ ] Future: `doctor` command can warn if config `tool-version` is older than installed version
-- [ ] Update `translate-state.ts` tests
-- [ ] Update CLI reference docs
+- [x] Update `translate-state.ts` tests
+- [x] Update CLI reference docs
 
 ---
 
