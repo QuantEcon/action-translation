@@ -240,6 +240,57 @@ export function injectHeadingMap(
     
     return `---\n${newYaml}\n---\n${bodyContent}`;
   } catch (error) {
+    // Existing frontmatter has malformed YAML (e.g., unquoted colons in heading-map values).
+    // Strip the old heading-map block via regex and rebuild with proper YAML serialization.
+    if (headingMap.size > 0) {
+      try {
+        // Remove existing heading-map block from frontmatter.
+        // When YAML is malformed (e.g., unquoted colons), some heading-map entries
+        // may be parsed as top-level keys. Strip the heading-map: block AND any
+        // orphaned lines between it and the next known top-level YAML key.
+        // Strategy: strip only the old heading-map block and preserve all other frontmatter lines.
+        const lines = existingYaml.split('\n');
+        const keptLines: string[] = [];
+        let inHeadingMap = false;
+        for (const line of lines) {
+          if (/^heading-map:/.test(line)) {
+            // Drop the old heading-map key; a fresh one will be written below.
+            inHeadingMap = true;
+            continue;
+          }
+          if (inHeadingMap) {
+            // Still inside heading-map block — skip indented or blank lines.
+            if (/^[ \t]/.test(line) || line.trim() === '') {
+              continue;
+            }
+            // Hit a non-indented, non-blank line — this marks the end of the heading-map block.
+            // Treat it as a regular top-level frontmatter key and keep it.
+            inHeadingMap = false;
+            keptLines.push(line);
+            continue;
+          }
+          keptLines.push(line);
+        }
+        const strippedYaml = keptLines.join('\n').trim();
+        
+        // Serialize the new heading-map
+        const mapObj: Record<string, string> = {};
+        headingMap.forEach((value, key) => {
+          mapObj[key] = value;
+        });
+        const mapYaml = yaml.dump({ 'heading-map': mapObj }, {
+          indent: 2,
+          lineWidth: -1,
+          noRefs: true,
+        }).trim();
+        
+        const newYaml = strippedYaml ? `${strippedYaml}\n${mapYaml}` : mapYaml;
+        return `---\n${newYaml}\n---\n${bodyContent}`;
+      } catch (fallbackError) {
+        console.error('Failed to update frontmatter with heading-map:', fallbackError);
+        return content;
+      }
+    }
     console.error('Failed to update frontmatter with heading-map:', error);
     return content;
   }

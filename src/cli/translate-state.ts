@@ -41,8 +41,8 @@ export function getToolVersion(): string {
   if (typeof __dirname === 'string') {
     try {
       const pkgPath = path.resolve(__dirname, '../../package.json');
-      _cachedVersion = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')).version;
-      return _cachedVersion;
+      _cachedVersion = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')).version as string;
+      return _cachedVersion!;
     } catch { /* fall through */ }
   }
 
@@ -53,7 +53,22 @@ export function getToolVersion(): string {
       const pkgPath = path.join(dir, 'package.json');
       if (fs.existsSync(pkgPath)) {
         const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-        if (pkg.name === 'action-translation') { _cachedVersion = pkg.version; return _cachedVersion; }
+        if (pkg.name === 'action-translation') { _cachedVersion = pkg.version as string; return _cachedVersion!; }
+      }
+      const parent = path.dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
+  } catch { /* fall through */ }
+
+  // Strategy 3: walk up from cwd (works with npx bin shims where argv[1] is a wrapper)
+  try {
+    let dir = process.cwd();
+    for (let i = 0; i < 5; i++) {
+      const pkgPath = path.join(dir, 'package.json');
+      if (fs.existsSync(pkgPath)) {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        if (pkg.name === 'action-translation') { _cachedVersion = pkg.version as string; return _cachedVersion!; }
       }
       const parent = path.dirname(dir);
       if (parent === dir) break;

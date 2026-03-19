@@ -21,6 +21,7 @@ import {
   PATH_SEPARATOR,
 } from '../../heading-map.js';
 import { discoverMarkdownFiles, resolveFilePairs, applyExcludes } from './status.js';
+import { readFileState, writeFileState } from '../translate-state.js';
 
 // ============================================================================
 // TYPES
@@ -250,6 +251,15 @@ export async function runHeadingmap(options: HeadingmapOptions): Promise<Heading
       const targetContent = fs.readFileSync(targetFilePath, 'utf-8');
       const updatedContent = injectHeadingMap(targetContent, result.generatedMap);
       fs.writeFileSync(targetFilePath, updatedContent, 'utf-8');
+
+      // Update section-count in .translate/state/ if state exists
+      const existingState = readFileState(target, f);
+      if (existingState) {
+        writeFileState(target, f, {
+          ...existingState,
+          'section-count': result.totalSourceSections,
+        });
+      }
     }
   }
 

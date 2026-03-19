@@ -23,6 +23,7 @@ import { runDoctor, formatDoctorTable, formatDoctorJson, DoctorOptions } from '.
 import { BackwardOptions, ForwardOptions } from './types.js';
 import { DEFAULT_RULES, parseLocalizationRules } from '../localization-rules.js';
 import { checkGhAvailable } from './issue-creator.js';
+import { readConfig } from './translate-state.js';
 
 // Read version from package.json — use createRequire since JSON imports
 // need import assertions which aren't stable in all Node versions.
@@ -50,6 +51,19 @@ function validateMinConfidence(raw: string): number {
 }
 
 /**
+ * Resolve source language: CLI flag > .translate/config.yml > default ('en').
+ * @param cliValue - The value from the CLI flag, or undefined if not explicitly set.
+ */
+function resolveSourceLanguage(cliValue: string | undefined, targetPath: string): string {
+  // If user explicitly set a value, use it
+  if (cliValue !== undefined) return cliValue;
+  // Check .translate/config.yml
+  const config = readConfig(targetPath);
+  if (config?.['source-language']) return config['source-language'];
+  return 'en';
+}
+
+/**
  * Parse --exclude into an array. Supports comma-separated and repeated flags.
  */
 function collectExclude(value: string, previous: string[]): string[] {
@@ -66,6 +80,7 @@ program
   .option('-f, --file <filename>', 'Analyze a single file (relative to docs-folder)')
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
   .option('-l, --language <code>', 'Target language code', 'zh-cn')
+  .option('--source-language <code>', 'Source language code')
   .option('-o, --output <path>', 'Output directory (or .md/.json file path for single-file mode)', './reports')
   .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-6')
   .option('--json', 'Output reports as JSON', false)
@@ -86,6 +101,7 @@ program
       file: opts.file,
       docsFolder: opts.docsFolder,
       language: opts.language,
+      sourceLanguage: resolveSourceLanguage(opts.sourceLanguage, opts.target),
       output: opts.output,
       model: opts.model,
       json: opts.json,
@@ -199,6 +215,7 @@ program
   .option('-f, --file <filename>', 'Resync a single file (relative to docs-folder)')
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
   .option('-l, --language <code>', 'Target language code', 'zh-cn')
+  .option('--source-language <code>', 'Source language code')
   .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-6')
   .option('--test', 'Use deterministic mock responses (no LLM calls)', false)
   .option('--github <owner/repo>', 'Create one PR per file in TARGET repo')
@@ -216,6 +233,7 @@ program
       file: opts.file,
       docsFolder: opts.docsFolder,
       language: opts.language,
+      sourceLanguage: resolveSourceLanguage(opts.sourceLanguage, opts.target),
       model: opts.model,
       test: opts.test,
       github: opts.github,

@@ -20,13 +20,29 @@ This is an intro.
 ## Task
 Classify the differences between SOURCE and TARGET into one of three categories:
 
-1. **CONTENT_CHANGES**: Substantive differences that affect meaning — different structure, missing/added sections, changed formulas, updated code logic, modified examples, new explanations. These require re-translation.
+1. **CONTENT_CHANGES**: Differences that affect meaning or completeness. Examples:
+   - Missing or added sections, paragraphs, or sentences
+   - Missing or added figures, images, or diagrams
+   - Different file paths for images, figures, or includes (e.g. \`/_static/img.png\` vs \`images/img.png\`)
+   - Changed formulas, updated code logic, modified examples
+   - New explanations or removed explanations
+   - Different URL targets (not just formatting of the same URL)
+   These require re-translation.
 
-2. **I18N_ONLY**: Only internationalisation differences — punctuation style (full-width vs half-width), terminology/word choices that don't change meaning, formatting conventions, locale-specific adjustments (figure sizes, fonts). These do NOT require re-translation.
+2. **I18N_ONLY**: Differences that are purely stylistic or locale-specific. Examples:
+   - Punctuation style (full-width vs half-width characters)
+   - Terminology/word choices that convey the same meaning
+   - Whitespace, indentation, or line-wrapping differences
+   - Equivalent markup for the same content (e.g. \`{figure}\` directive vs \`![alt]()\` syntax showing the same image)
+   - Locale-specific number or date formatting
+   These do NOT require re-translation.
 
 3. **IDENTICAL**: The documents are equivalent in content (translation is faithful and complete).
 
-**Focus on content, not style.** A different Chinese word for "function" that means the same thing is I18N_ONLY. A missing paragraph or changed formula is CONTENT_CHANGES.
+**Rules:**
+- Focus on content, not style. A different word for "function" that means the same thing is I18N_ONLY. A missing paragraph or changed formula is CONTENT_CHANGES.
+- If text present in SOURCE is absent from TARGET (even a single sentence), that is CONTENT_CHANGES, not a "formatting convention."
+- When in doubt, choose CONTENT_CHANGES. It is safer to re-translate than to miss a real change.
 
 ## Response Format
 Respond with a JSON object:

@@ -181,6 +181,7 @@ export interface CommonOptions {
   target: string;            // Target repository path
   docsFolder: string;        // Documentation folder (default: "lectures")
   language: string;          // Target language code (default: "zh-cn")
+  sourceLanguage: string;    // Source language code (default: "en")
   output: string;            // Output directory for reports (default: "./reports")
   model: string;             // Claude model (default: "claude-sonnet-4-6")
   json: boolean;             // Output as JSON
@@ -270,6 +271,7 @@ export interface ForwardOptions {
   file?: string;             // Single file mode
   docsFolder: string;        // Documentation folder (default: "lectures")
   language: string;          // Target language code (default: "zh-cn")
+  sourceLanguage: string;    // Source language code (default: "en")
   model: string;             // Claude model (default: "claude-sonnet-4-6")
   test: boolean;             // Use deterministic mock responses (no LLM calls)
   github?: string;           // TARGET repo in owner/repo format for PR creation

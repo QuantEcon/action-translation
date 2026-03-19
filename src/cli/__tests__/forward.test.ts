@@ -22,6 +22,7 @@ function makeOptions(overrides: Partial<ForwardOptions> = {}): ForwardOptions {
     target: '/tmp/target',
     docsFolder: 'lectures',
     language: 'zh-cn',
+    sourceLanguage: 'en',
     model: 'claude-sonnet-4-6',
     test: true,
     apiKey: 'test-key',
