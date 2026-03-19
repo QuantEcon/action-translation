@@ -8,6 +8,7 @@ kernelspec:
   language: python
   name: python3
 heading-map:
+  Linear Algebra Foundations: مبانی جبر خطی
   Vector Spaces: فضاهای برداری
   Vector Spaces::Basic Properties: ویژگی‌های اساسی
   Vector Spaces::Basic Properties::Applications in Economics: کاربردها در اقتصاد
