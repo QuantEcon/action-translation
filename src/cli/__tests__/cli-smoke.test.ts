@@ -133,6 +133,7 @@ chapters:
       expect(stdout).toContain('--localize');
       expect(stdout).toContain('--dry-run');
       expect(stdout).toContain('--glossary');
+      expect(stdout).toContain('--parallel');
     });
   });
 
@@ -147,6 +148,7 @@ chapters:
       expect(stdout).toContain('--source');
       expect(stdout).toContain('--target');
       expect(stdout).toContain('--file');
+      expect(stdout).toContain('--parallel');
     });
 
     it('backward exits with error when api key missing and not --test', async () => {
@@ -166,6 +168,7 @@ chapters:
       expect(stdout).toContain('--source');
       expect(stdout).toContain('--target');
       expect(stdout).toContain('--github');
+      expect(stdout).toContain('--parallel');
     });
   });
 

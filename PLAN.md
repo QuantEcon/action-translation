@@ -1137,7 +1137,7 @@ translate init \
 **Status**: Complete (PR #30 + PR #31 + PR #32) — All sub-phases done including 7.7 E2E testing and GitHub Action integration testing.
 **E2E Testing**: Test Plan 2 (lecture-python-programming, 2026-03-18) + Test Plan 3 (test-translation-sync, 2026-03-19) validated. 5 bugs fixed (PR #31), 879 tests passing.
 **GitHub Action Integration**: Both zh-cn and Farsi workflows pass end-to-end on test repos (2026-03-19). `tool-test-action-on-github` extended with Farsi support (commit 85afafa) + QA fixes (PR #32).
-**Comprehensive Evaluation (2026-03-19)**: 24-scenario test plan across 3 repos (source + zh-cn + fa) — 48 target PRs, 100% trigger reliability, 100% diff correspondence, zh-cn quality ~9.6/10, fa quality ~9.3/10. Full report: `translation-sync-evaluation-report.md`.
+**Comprehensive Evaluation (2026-03-19)**: 24-scenario test plan across 3 repos (source + zh-cn + fa) — 48 target PRs, 100% trigger reliability, 100% diff correspondence, zh-cn quality ~9.6/10, fa quality ~9.3/10. Full report: `reports/test-translation-sync/evaluation-2026-03-19.md`.
 **Prerequisite**: Phase 6 + Phase 6b
 
 ### Context — Lifecycle Review (2026-03-16)

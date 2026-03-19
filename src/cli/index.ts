@@ -51,6 +51,18 @@ function validateMinConfidence(raw: string): number {
 }
 
 /**
+ * Validate --parallel value: must be an integer in [1, 10].
+ */
+function validateParallel(raw: string): number {
+  const value = parseInt(raw, 10);
+  if (!Number.isFinite(value) || value < 1 || value > 10) {
+    console.error('❌ --parallel must be between 1 and 10');
+    process.exit(1);
+  }
+  return value;
+}
+
+/**
  * Resolve source language: CLI flag > .translate/config.yml > default ('en').
  * @param cliValue - The value from the CLI flag, or undefined if not explicitly set.
  */
@@ -96,11 +108,7 @@ program
       process.exit(1);
     }
 
-    const parallel = parseInt(opts.parallel, 10);
-    if (!Number.isFinite(parallel) || parallel < 1 || parallel > 10) {
-      console.error('❌ --parallel must be between 1 and 10');
-      process.exit(1);
-    }
+    const parallel = validateParallel(opts.parallel);
 
     const options: BackwardOptions & { apiKey: string } = {
       source: opts.source,
@@ -236,11 +244,7 @@ program
       process.exit(1);
     }
 
-    const parallel = parseInt(opts.parallel, 10);
-    if (!Number.isFinite(parallel) || parallel < 1 || parallel > 10) {
-      console.error('❌ --parallel must be between 1 and 10');
-      process.exit(1);
-    }
+    const parallel = validateParallel(opts.parallel);
 
     const options: ForwardOptions = {
       source: opts.source,
@@ -300,7 +304,7 @@ program
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
   .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-6')
   .option('--batch-delay <ms>', 'Delay between batches in ms (rate limiting)', '1000')
-    .option('-j, --parallel <n>', 'Number of parallel translations (default: 1)', '1')
+  .option('-j, --parallel <n>', 'Number of parallel translations (default: 1)', '1')
   .option('-f, --file <file>', 'Translate a single lecture file (e.g., cobweb.md)')
   .option('--resume-from <file>', 'Resume from a specific lecture file (e.g., cobweb.md)')
   .option('--glossary <path>', 'Path to glossary JSON file (default: glossary/<lang>.json)')
@@ -319,11 +323,7 @@ program
       process.exit(1);
     }
 
-    const parallel = parseInt(opts.parallel, 10);
-    if (!Number.isFinite(parallel) || parallel < 1 || parallel > 10) {
-      console.error('❌ --parallel must be between 1 and 10');
-      process.exit(1);
-    }
+    const parallel = validateParallel(opts.parallel);
 
     let localizeRules;
     try {

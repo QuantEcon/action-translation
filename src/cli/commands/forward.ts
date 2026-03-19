@@ -299,7 +299,9 @@ export async function runForwardBulk(
   );
   bar.start(candidates.length, 0, { filename: '' });
 
-  const CONCURRENCY = options.parallel ?? 5;
+  // Force sequential when --github is set: parallel git ops in the same
+  // worktree would race and corrupt branches/commits.
+  const CONCURRENCY = options.github ? 1 : (options.parallel ?? 5);
 
   for (let i = 0; i < candidates.length; i += CONCURRENCY) {
     const batch = candidates.slice(i, i + CONCURRENCY);
