@@ -23,7 +23,7 @@ import { MystParser } from '../../parser.js';
 import { Glossary } from '../../types.js';
 import { updateHeadingMap, injectHeadingMap } from '../../heading-map.js';
 import { RuleId, buildLocalizationPrompt, getFontRequirements } from '../../localization-rules.js';
-import { writeConfig, writeFileState } from '../translate-state.js';
+import { readFileState, writeConfig, writeFileState } from '../translate-state.js';
 import { getFileGitMetadata } from '../git-metadata.js';
 
 // ============================================================================
@@ -41,6 +41,7 @@ export interface InitOptions {
   parallel: number;          // Number of parallel translations (default: 1)
   file?: string;             // Single file to translate (for testing)
   resumeFrom?: string;       // Resume from specific lecture file
+  skipExisting?: boolean;     // Skip lectures that already have .translate/state entries
   glossaryPath?: string;     // Explicit path to glossary JSON file
   localize: RuleId[];        // Active localization rules (default: all)
   dryRun: boolean;           // Preview without API calls or file writes
@@ -481,7 +482,24 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   }
 
   const CONCURRENCY = options.parallel;
-  const remaining = lectures.slice(startIndex);
+  let remaining = lectures.slice(startIndex);
+
+  // Handle --skip-existing: filter out lectures that already have state
+  if (options.skipExisting) {
+    const before = remaining.length;
+    const skipped: string[] = [];
+    for (let j = remaining.length - 1; j >= 0; j--) {
+      const state = readFileState(options.target, remaining[j]);
+      if (state) {
+        skipped.push(remaining[j]);
+        remaining.splice(j, 1);
+      }
+    }
+    if (skipped.length > 0) {
+      stats.successCount += skipped.length;
+      console.log(chalk.yellow(`Skipping ${skipped.length} already-translated lecture(s) (of ${before})\n`));
+    }
+  }
 
   const bar = new cliProgress.SingleBar(
     { format: '  {bar} {percentage}% | {value}/{total} | {status}' },

@@ -307,6 +307,7 @@ program
   .option('-j, --parallel <n>', 'Number of parallel translations (default: 1)', '1')
   .option('-f, --file <file>', 'Translate a single lecture file (e.g., cobweb.md)')
   .option('--resume-from <file>', 'Resume from a specific lecture file (e.g., cobweb.md)')
+  .option('--skip-existing', 'Skip lectures already translated (reads .translate/state)', false)
   .option('--glossary <path>', 'Path to glossary JSON file (default: glossary/<lang>.json)')
   .option('--localize <rules>', `Localization rules for code cells (use "none" to disable)`, DEFAULT_RULES.join(','))
   .option('--dry-run', 'Preview lectures without translating', false)
@@ -344,6 +345,7 @@ program
       parallel,
       file: opts.file,
       resumeFrom: opts.resumeFrom,
+      skipExisting: opts.skipExisting,
       glossaryPath: opts.glossary,
       localize: localizeRules,
       dryRun: opts.dryRun,

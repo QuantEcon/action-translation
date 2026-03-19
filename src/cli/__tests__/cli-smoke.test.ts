@@ -134,6 +134,7 @@ chapters:
       expect(stdout).toContain('--dry-run');
       expect(stdout).toContain('--glossary');
       expect(stdout).toContain('--parallel');
+      expect(stdout).toContain('--skip-existing');
     });
   });
 
