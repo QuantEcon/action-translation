@@ -29700,7 +29700,9 @@ function checkDocumentSize(sourceLength, targetLanguage) {
   if (estimated > API_MAX_TOKENS) {
     return `Document too large: estimated ${estimated} tokens exceeds API maximum of ${API_MAX_TOKENS} tokens. This document needs section-by-section translation rather than bulk translation.`;
   }
-  console.log(`Pre-flight check: source=${sourceLength} chars, estimated output=${estimated} tokens, using max_tokens=${API_MAX_TOKENS}`);
+  if (process.env.TRANSLATE_DEBUG) {
+    console.log(`Pre-flight check: source=${sourceLength} chars, estimated output=${estimated} tokens, using max_tokens=${API_MAX_TOKENS}`);
+  }
   return null;
 }
 function formatApiError(error3) {

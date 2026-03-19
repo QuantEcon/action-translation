@@ -299,31 +299,39 @@ export async function runForwardBulk(
   );
   bar.start(candidates.length, 0, { filename: '' });
 
-  for (const file of candidates) {
-    bar.update(results.length, { filename: file });
+  // Force sequential when --github is set: parallel git ops in the same
+  // worktree would race and corrupt branches/commits.
+  const CONCURRENCY = options.github ? 1 : (options.parallel ?? 5);
 
-    try {
-      const result = await resyncSingleFile(
-        file,
-        source,
-        target,
-        docsFolder,
-        options,
-        logger,
-        ghRunner,
-        gitRunner,
-      );
-      results.push(result);
-      bar.update(results.length, { filename: file });
-    } catch (error) {
-      logger.error(`Failed to resync ${file}: ${error instanceof Error ? error.message : String(error)}`);
-      results.push({
-        file,
-        triageResult: { file, verdict: 'CONTENT_CHANGES', reason: 'Error during processing' },
-        sections: [],
-        summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
-      });
-    }
+  for (let i = 0; i < candidates.length; i += CONCURRENCY) {
+    const batch = candidates.slice(i, i + CONCURRENCY);
+    bar.update(results.length, { filename: batch[0] });
+
+    const batchResults = await Promise.all(batch.map(async (file) => {
+      try {
+        return await resyncSingleFile(
+          file,
+          source,
+          target,
+          docsFolder,
+          options,
+          logger,
+          ghRunner,
+          gitRunner,
+        );
+      } catch (error) {
+        logger.error(`Failed to resync ${file}: ${error instanceof Error ? error.message : String(error)}`);
+        return {
+          file,
+          triageResult: { file, verdict: 'CONTENT_CHANGES' as const, reason: 'Error during processing' },
+          sections: [],
+          summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
+        };
+      }
+    }));
+
+    results.push(...batchResults);
+    bar.update(results.length, { filename: batch[batch.length - 1] });
   }
 
   bar.update(candidates.length, { filename: 'done' });
