@@ -76,8 +76,10 @@ function checkDocumentSize(sourceLength: number, targetLanguage: string): string
            `This document needs section-by-section translation rather than bulk translation.`;
   }
   
-  // Log estimation for monitoring
-  console.log(`Pre-flight check: source=${sourceLength} chars, estimated output=${estimated} tokens, using max_tokens=${API_MAX_TOKENS}`);
+  // Log estimation for monitoring (debug-level, not shown unless TRANSLATE_DEBUG is set)
+  if (process.env.TRANSLATE_DEBUG) {
+    console.log(`Pre-flight check: source=${sourceLength} chars, estimated output=${estimated} tokens, using max_tokens=${API_MAX_TOKENS}`);
+  }
   
   return null;
 }

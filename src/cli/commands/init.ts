@@ -38,6 +38,7 @@ export interface InitOptions {
   docsFolder: string;        // Documentation folder within repos (default: "lectures")
   model: string;             // Claude model (default: "claude-sonnet-4-6")
   batchDelay: number;        // Delay between lectures in ms (default: 1000)
+  parallel: number;          // Number of parallel translations (default: 1)
   file?: string;             // Single file to translate (for testing)
   resumeFrom?: string;       // Resume from specific lecture file
   glossaryPath?: string;     // Explicit path to glossary JSON file
@@ -366,6 +367,9 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   console.log(chalk.gray(`Target:   ${options.target}`));
   console.log(chalk.gray(`Language: ${options.sourceLanguage} → ${options.targetLanguage}`));
   console.log(chalk.gray(`Model:    ${options.model}`));
+  if (options.parallel > 1) {
+    console.log(chalk.gray(`Parallel: ${options.parallel} concurrent`));
+  }
   if (options.localize.length > 0) {
     console.log(chalk.gray(`Localize: ${options.localize.join(', ')}`));
   }
@@ -476,18 +480,19 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     }
   }
 
+  const CONCURRENCY = options.parallel;
+  const remaining = lectures.slice(startIndex);
+
   const bar = new cliProgress.SingleBar(
     { format: '  {bar} {percentage}% | {value}/{total} | {status}' },
     cliProgress.Presets.shades_classic,
   );
-  bar.start(lectures.length - startIndex, 0, { status: '' });
+  bar.start(remaining.length, 0, { status: '' });
 
   const stateParser = new MystParser();
 
-  for (let i = startIndex; i < lectures.length; i++) {
-    const lecture = lectures[i];
-    bar.update(i - startIndex, { status: lecture });
-
+  // Process a single lecture — used by both sequential and parallel paths
+  async function processOne(lecture: string): Promise<void> {
     try {
       const result = await translateLecture(
         lecture,
@@ -520,11 +525,6 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
       } catch {
         // State write failure is non-fatal
       }
-
-      // Delay between lectures for rate limiting
-      if (i < lectures.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, options.batchDelay));
-      }
     } catch (error) {
       stats.failureCount++;
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -532,7 +532,23 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     }
   }
 
-  bar.update(lectures.length - startIndex, { status: 'done' });
+  let completed = 0;
+
+  // Process in batches of CONCURRENCY
+  for (let i = 0; i < remaining.length; i += CONCURRENCY) {
+    const batch = remaining.slice(i, i + CONCURRENCY);
+    bar.update(completed, { status: batch.length > 1 ? `${batch[0]} (+${batch.length - 1})` : batch[0] });
+
+    await Promise.all(batch.map(lecture => processOne(lecture)));
+    completed += batch.length;
+
+    // Delay between batches for rate limiting (skip after last batch)
+    if (i + CONCURRENCY < remaining.length && options.batchDelay > 0) {
+      await new Promise(resolve => setTimeout(resolve, options.batchDelay));
+    }
+  }
+
+  bar.update(remaining.length, { status: 'done' });
   bar.stop();
 
   // Phase 6: Generate report

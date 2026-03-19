@@ -516,7 +516,7 @@ export async function runBackwardBulk(
 
   // Process files with concurrency
   const fileReports: BackwardReport[] = [];
-  const CONCURRENCY = 5;
+  const CONCURRENCY = options.parallel ?? 5;
 
   // Load any already-written reports for the aggregate (always from JSON sidecar)
   for (const doneFile of progress.completedFiles) {
@@ -599,7 +599,7 @@ export async function runBackwardBulk(
       })
     : null;
 
-  logger.info(`Backward analysis: ${filesToProcess.length} files (${CONCURRENCY} parallel)`);
+  logger.info(`Backward analysis: ${filesToProcess.length} files${CONCURRENCY > 1 ? ` (${CONCURRENCY} parallel)` : ''}`);
   bar?.start(allFiles.length, completedCount, {
     inSync: inSyncCount,
     suggestions: suggestionsCount,

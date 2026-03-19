@@ -88,10 +88,17 @@ program
   .option('--min-confidence <number>', 'Minimum confidence for reporting', '0.6')
   .option('--exclude <pattern>', 'Exclude files matching pattern (repeatable, comma-separated)', collectExclude, [])
   .option('--resume', 'Resume a previous bulk run from checkpoint', false)
+  .option('-j, --parallel <n>', 'Number of parallel translations (default: 5)', '5')
   .action(async (opts) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey && !opts.test) {
       console.error('❌ ANTHROPIC_API_KEY environment variable is required (or use --test)');
+      process.exit(1);
+    }
+
+    const parallel = parseInt(opts.parallel, 10);
+    if (!Number.isFinite(parallel) || parallel < 1 || parallel > 10) {
+      console.error('❌ --parallel must be between 1 and 10');
       process.exit(1);
     }
 
@@ -107,6 +114,7 @@ program
       json: opts.json,
       test: opts.test,
       minConfidence: validateMinConfidence(opts.minConfidence),
+      parallel,
       apiKey: apiKey || 'test-key',
     };
 
@@ -220,10 +228,17 @@ program
   .option('--test', 'Use deterministic mock responses (no LLM calls)', false)
   .option('--github <owner/repo>', 'Create one PR per file in TARGET repo')
   .option('--exclude <pattern>', 'Exclude files matching pattern (repeatable, comma-separated)', collectExclude, [])
+  .option('-j, --parallel <n>', 'Number of parallel translations (default: 5)', '5')
   .action(async (opts) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey && !opts.test) {
       console.error('❌ ANTHROPIC_API_KEY environment variable is required (or use --test)');
+      process.exit(1);
+    }
+
+    const parallel = parseInt(opts.parallel, 10);
+    if (!Number.isFinite(parallel) || parallel < 1 || parallel > 10) {
+      console.error('❌ --parallel must be between 1 and 10');
       process.exit(1);
     }
 
@@ -237,6 +252,7 @@ program
       model: opts.model,
       test: opts.test,
       github: opts.github,
+      parallel,
       apiKey: apiKey || 'test-key',
     };
 
@@ -283,7 +299,8 @@ program
   .option('--source-language <code>', 'Source language code', 'en')
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
   .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-6')
-  .option('--batch-delay <ms>', 'Delay between lectures in ms (rate limiting)', '1000')
+  .option('--batch-delay <ms>', 'Delay between batches in ms (rate limiting)', '1000')
+    .option('-j, --parallel <n>', 'Number of parallel translations (default: 1)', '1')
   .option('-f, --file <file>', 'Translate a single lecture file (e.g., cobweb.md)')
   .option('--resume-from <file>', 'Resume from a specific lecture file (e.g., cobweb.md)')
   .option('--glossary <path>', 'Path to glossary JSON file (default: glossary/<lang>.json)')
@@ -299,6 +316,12 @@ program
     const batchDelay = parseInt(opts.batchDelay, 10);
     if (!Number.isFinite(batchDelay) || batchDelay < 0) {
       console.error('❌ --batch-delay must be a non-negative integer');
+      process.exit(1);
+    }
+
+    const parallel = parseInt(opts.parallel, 10);
+    if (!Number.isFinite(parallel) || parallel < 1 || parallel > 10) {
+      console.error('❌ --parallel must be between 1 and 10');
       process.exit(1);
     }
 
@@ -318,6 +341,7 @@ program
       docsFolder: opts.docsFolder,
       model: opts.model,
       batchDelay,
+      parallel,
       file: opts.file,
       resumeFrom: opts.resumeFrom,
       glossaryPath: opts.glossary,

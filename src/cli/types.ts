@@ -194,6 +194,7 @@ export interface CommonOptions {
 export interface BackwardOptions extends CommonOptions {
   file?: string;             // Single file mode
   minConfidence: number;     // Minimum confidence for reporting (default: 0.6)
+  parallel?: number;         // Number of parallel translations (default: 5)
 }
 
 // ============================================================================
@@ -276,6 +277,7 @@ export interface ForwardOptions {
   test: boolean;             // Use deterministic mock responses (no LLM calls)
   github?: string;           // TARGET repo in owner/repo format for PR creation
   apiKey: string;            // Anthropic API key
+  parallel?: number;         // Number of parallel translations (default: 5)
 }
 
 // ============================================================================
