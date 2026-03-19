@@ -246,6 +246,9 @@ if [ "$DRY_RUN" = true ]; then
     echo -e "${CYAN}  - lecture.md (from base-lecture-fa.md)${NC}"
     echo -e "${CYAN}[DRY RUN] Would force push to main${NC}"
 else
+    # Step 2 left us inside the source repo — go back to parent first
+    cd ..
+
     if [ -d "$TARGET_REPO_FA" ]; then
         echo "Repository already cloned, updating..."
         cd "$TARGET_REPO_FA"
@@ -274,7 +277,8 @@ else
 
     echo -e "${GREEN}✓${NC} Farsi target repo reset to base state"
 
-    cd "../$SOURCE_REPO"
+    cd ..
+    cd "$SOURCE_REPO"
 fi
 
 echo ""
