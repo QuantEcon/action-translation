@@ -26,17 +26,23 @@ const STATE_DIR = 'state';
 // TOOL VERSION
 // ============================================================================
 
+let _cachedVersion: string | undefined;
+
 /**
  * Read the tool version from package.json (single source of truth).
  * Works in both CJS (Jest, `__dirname` available) and ESM (CLI runtime).
  * Falls back to 'unknown' if package.json cannot be located.
+ * Result is memoized to avoid repeated filesystem reads.
  */
 export function getToolVersion(): string {
+  if (_cachedVersion !== undefined) return _cachedVersion;
+
   // Strategy 1: CJS context — __dirname available (Jest / esbuild bundle)
   if (typeof __dirname === 'string') {
     try {
       const pkgPath = path.resolve(__dirname, '../../package.json');
-      return JSON.parse(fs.readFileSync(pkgPath, 'utf-8')).version;
+      _cachedVersion = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')).version;
+      return _cachedVersion;
     } catch { /* fall through */ }
   }
 
@@ -47,7 +53,7 @@ export function getToolVersion(): string {
       const pkgPath = path.join(dir, 'package.json');
       if (fs.existsSync(pkgPath)) {
         const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-        if (pkg.name === 'action-translation') return pkg.version;
+        if (pkg.name === 'action-translation') { _cachedVersion = pkg.version; return _cachedVersion; }
       }
       const parent = path.dirname(dir);
       if (parent === dir) break;
@@ -55,7 +61,8 @@ export function getToolVersion(): string {
     }
   } catch { /* fall through */ }
 
-  return 'unknown';
+  _cachedVersion = 'unknown';
+  return _cachedVersion;
 }
 
 // ============================================================================

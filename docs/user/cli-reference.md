@@ -590,7 +590,7 @@ npx translate doctor -t <target-path> [options]
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `-t, --target <path>` | `.` | Target repository path |
+| `-t, --target <path>` | *(required)* | Target repository path |
 | `-s, --source <path>` | *(optional)* | Source repository path (enables cross-repo checks) |
 | `-d, --docs-folder <folder>` | from config | Documentation folder (reads from `.translate/config.yml` if not provided) |
 | `--check-gh` | `false` | Also check `gh` CLI availability and authentication |

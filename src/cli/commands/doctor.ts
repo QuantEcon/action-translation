@@ -16,6 +16,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { spawnSync } from 'child_process';
 import { MystParser } from '../../parser.js';
 import { extractHeadingMap } from '../../heading-map.js';
 import { readConfig, readFileState } from '../translate-state.js';
@@ -327,8 +328,6 @@ export function checkSourceAccess(sourcePath: string, docsFolder: string): Check
  */
 export function checkGhCli(): CheckResult {
   try {
-    // Dynamic import to avoid pulling in child_process for basic checks
-    const { spawnSync } = require('child_process');
     const result = spawnSync('gh', ['auth', 'status'], {
       encoding: 'utf8',
       timeout: 10_000,

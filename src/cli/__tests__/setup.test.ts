@@ -86,6 +86,15 @@ describe('generateSourceWorkflowYaml', () => {
     expect(yaml).toContain("'docs/**/*.md'");
     expect(yaml).toContain('docs-folder: docs');
   });
+
+  test('normalizes root-level docs-folder in paths filter', () => {
+    const yaml1 = generateSourceWorkflowYaml('Owner/repo.fa', 'fa', '.', '1.0.0');
+    expect(yaml1).toContain("'**/*.md'");
+    expect(yaml1).not.toContain("'./**/*.md'");
+
+    const yaml2 = generateSourceWorkflowYaml('Owner/repo.fa', 'fa', '/', '1.0.0');
+    expect(yaml2).toContain("'**/*.md'");
+  });
 });
 
 describe('generateTargetWorkflowYaml', () => {
@@ -102,6 +111,7 @@ describe('generateTargetWorkflowYaml', () => {
     expect(yaml).toContain('action-translation');
     expect(yaml).toContain('mode: review');
     expect(yaml).toContain('source-repo: QuantEcon/lecture-python-intro');
+    expect(yaml).toContain('source-language: en');
     expect(yaml).toContain('target-language: zh-cn');
     expect(yaml).toContain('QuantEcon/action-translation@v0.8.0');
     expect(yaml).toContain('${{ secrets.ANTHROPIC_API_KEY }}');
@@ -111,6 +121,12 @@ describe('generateTargetWorkflowYaml', () => {
   test('uses custom docs-folder', () => {
     const yaml = generateTargetWorkflowYaml('Owner/repo', 'fa', 'docs', '1.0.0');
     expect(yaml).toContain('docs-folder: docs');
+  });
+
+  test('uses provided source-language', () => {
+    const yaml = generateTargetWorkflowYaml('Owner/repo', 'zh-cn', 'lectures', '1.0.0', 'ja');
+    expect(yaml).toContain('source-language: ja');
+    expect(yaml).not.toContain('source-language: en');
   });
 });
 

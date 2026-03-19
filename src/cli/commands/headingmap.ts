@@ -42,6 +42,8 @@ export interface HeadingmapFileResult {
   totalSourceSections: number;
   totalTargetSections: number;
   warnings: string[];
+  /** The generated heading-map (present when status is generated/updated/mismatch) */
+  generatedMap?: HeadingMap;
 }
 
 export interface HeadingmapResult {
@@ -200,8 +202,7 @@ export async function generateHeadingmapForFile(
     totalSourceSections: totalSource,
     totalTargetSections: totalTarget,
     warnings,
-    // Attach the new map so the caller can write it
-    ...(map.size > 0 ? { _map: map } as any : {}),
+    generatedMap: map.size > 0 ? map : undefined,
   };
 }
 
@@ -244,24 +245,11 @@ export async function runHeadingmap(options: HeadingmapOptions): Promise<Heading
     results.push(result);
 
     // Write the heading-map to the target file (unless dry-run or skipped/unchanged)
-    if (!dryRun && result.status !== 'skipped' && result.status !== 'unchanged') {
+    if (!dryRun && result.status !== 'skipped' && result.status !== 'unchanged' && result.generatedMap && result.generatedMap.size > 0) {
       const targetFilePath = path.join(target, docsFolder, f);
-      const sourceFilePath = path.join(source, docsFolder, f);
-
-      // Regenerate the map (generateHeadingmapForFile doesn't return it directly to keep the interface clean)
-      const sourceContent = fs.readFileSync(sourceFilePath, 'utf-8');
       const targetContent = fs.readFileSync(targetFilePath, 'utf-8');
-
-      const parser = new MystParser();
-      const sourceParsed = await parser.parseSections(sourceContent, sourceFilePath);
-      const targetParsed = await parser.parseSections(targetContent, targetFilePath);
-
-      const { map } = buildHeadingMap(sourceParsed.sections, targetParsed.sections);
-
-      if (map.size > 0) {
-        const updatedContent = injectHeadingMap(targetContent, map);
-        fs.writeFileSync(targetFilePath, updatedContent, 'utf-8');
-      }
+      const updatedContent = injectHeadingMap(targetContent, result.generatedMap);
+      fs.writeFileSync(targetFilePath, updatedContent, 'utf-8');
     }
   }
 
