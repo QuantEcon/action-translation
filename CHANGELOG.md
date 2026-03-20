@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-03-20
+
 ### Added
 - **`--skip-existing` flag** for `translate init`: Skip lectures that already have `.translate/state/` entries, enabling idempotent re-runs after partial failures (PR #34)
 - **`-j, --parallel <n>` flag** for `translate init`, `backward`, `forward`: Concurrent processing with configurable worker count (PR #33)
@@ -17,7 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Init reporting**: Skipped lectures no longer inflate "Successfully Translated" count or distort average time per lecture
 
-### Added (Phase 6 — `.translate/` Metadata)
+## [0.9.0] - 2026-03-19
+
+Full CLI tool suite, `.translate/` metadata system, GitHub Action state integration, and comprehensive E2E testing across 24 scenarios with 48 target PRs.
+
+### Added
+
+#### Phase 6 — `.translate/` Metadata
 - **`translate-state.ts` module** (`src/cli/translate-state.ts`): read/write `.translate/config.yml` and per-file state YAML
   - Pure serializers (`serializeFileState`, `serializeConfig`, `stateFileRelativePath`, `configRelativePath`) shared between CLI and Action
 - **`setup` command** (`src/cli/commands/setup.ts`): scaffold target translation repositories
@@ -33,231 +41,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--write-state` flag: bootstrap state for existing projects
 - **`backward` command**: skips unchanged files via `source-sha` comparison
 - **`forward` command**: writes state after resync
-- **41 new tests** (783 → 824 total, 37 suites, 5 snapshots)
 
-### Added (Phase 4 — Refinement)
-- **CLI smoke tests** (`src/cli/__tests__/cli-smoke.test.ts`): 11 tests invoking the CLI binary as an external process
-  - `--version`, `--help`, all 5 commands (status, init, backward, forward, review)
-  - `--dry-run` end-to-end, error exit codes
-- **Prompt snapshot tests**: 5 snapshots across 3 test suites
-  - `document-comparator.test.ts`: 2 triage prompt snapshots
-  - `backward-evaluator.test.ts`: 2 evaluation prompt snapshots
-  - `forward-triage.test.ts`: 1 forward triage prompt snapshot
-- **Unicode heading ID support** (`src/parser.ts`, `src/reviewer.ts`)
-  - `generateHeadingId()` now uses `\p{L}\p{N}` Unicode property escapes instead of `\w`
-  - Correctly generates IDs for Chinese (`## 介绍` → `介绍`), Arabic, Japanese, mixed-script headings
-  - Same fix applied to `headingToId()` in `reviewer.ts` (replaced hardcoded CJK/Arabic ranges)
-- **`gh` CLI pre-flight check** (`src/cli/issue-creator.ts`): `checkGhAvailable()` with injectable `AuthCheckRunner`
-  - Fails fast with actionable error messages for "not installed" (ENOENT) and "not authenticated"
-  - Wired into `review` command (before interactive session) and `forward --github` path
-- **Malformed YAML handling** (`src/cli/commands/init.ts`): `parseTocLectures()` now catches YAML parse errors and empty files with descriptive messages
-- **22 new tests** (761 → 783 total, 34 → 35 suites, 5 snapshots)
-
-### Changed (Phase 4)
-- **`@anthropic-ai/sdk`** updated from `0.27.0` to `0.78.0` — build clean, all tests pass
-- **`.gitignore`**: removed `*.test.ts.snap` so prompt snapshots are tracked in git (CI regression detection)
-
-### Removed (Phase 5b — Cleanup)
-- **`tool-bulk-translator/`** directory removed — functionality superseded by `translate init` (preserved in git history)
-- **`.gitignore`**: removed stale `tool-bulk-translator/dist/` entry
-
-### Added (Phase 5 — CLI Rename + Init Command)
+#### Phase 5 — CLI Rename + Init Command
 - **CLI renamed**: `resync` → `translate` (`package.json` bin entry, `src/cli/index.ts`)
   - All commands: `npx translate backward`, `npx translate forward`, `npx translate status`, etc.
 - **Init command** (`src/cli/commands/init.ts`): Bulk-translate an entire project from a local source repo
   - `npx translate init -s <source> -t <target> --target-language zh-cn`
   - 7-phase pipeline: glossary → TOC parse → setup → copy non-md → translate → heading-maps → report
-  - `--dry-run` flag: preview lectures and non-md files without API calls
-  - `--resume-from <file>` flag: resume from a specific lecture (partial match supported)
-  - `-f, --file <file>` flag: translate a single lecture file (e.g., `cobweb.md`)
-  - `--batch-delay <ms>` flag: rate limiting between lectures (default: 1000ms)
-  - `--glossary <path>` flag: explicit glossary JSON path (default: `glossary/<lang>.json`)
-  - `--localize <rules>` flag: control code-cell localization (default: `code-comments,figure-labels,i18n-font-config`)
+  - `--dry-run`, `--resume-from`, `-f, --file`, `--batch-delay`, `--glossary`, `--localize` flags
   - Reads `_toc.yml` for lecture discovery (supports `chapters`, `parts`, `root`)
-  - Copies all non-markdown files (images, config, data) preserving directory structure
-  - Generates heading-maps via position-based section matching
   - Produces `TRANSLATION-REPORT.md` with stats, config, and failure details
   - Retry logic: 3 attempts with exponential backoff, skips permanent failures
   - Progress bar for bulk translation
 - **Localization rules** (`src/localization-rules.ts`): Code-cell localization system for `init`
-  - `code-comments`: translate Python comments (`# ...`) in code cells
+  - `code-comments`: translate Python comments in code cells
   - `figure-labels`: translate matplotlib plot labels, axis titles, legend entries
   - `i18n-font-config`: inject CJK font configuration into first matplotlib cell (`zh-cn` only)
   - All rules ON by default; disable with `--localize none`
-  - Font setup guidance printed after translation completes (creates `_fonts/` dir, prints download instructions)
-  - Language-specific: Farsi silently skips font config (no special fonts needed)
 
-### Removed
-- **`--estimate` flag** removed from both `backward` and `forward` commands
-  - `--dry-run` is the preferred pattern for preview
-  - Removed `estimateBulkCost()`, `estimateCost()`, `formatCostEstimate()`, and `CostEstimate` interface
+#### Phase 4 — Refinement
+- **CLI smoke tests**: 11 tests invoking the CLI binary as an external process
+- **Prompt snapshot tests**: 5 snapshots across 3 test suites
+- **Unicode heading ID support** (`src/parser.ts`, `src/reviewer.ts`): `\p{L}\p{N}` Unicode property escapes for CJK, Arabic, Japanese headings
+- **`gh` CLI pre-flight check**: `checkGhAvailable()` with injectable `AuthCheckRunner`
+- **Malformed YAML handling**: `parseTocLectures()` catches YAML parse errors with descriptive messages
 
-### Added (Phase 5 — Tests)
-- **41 new tests** (720 → 761 total, 32 → 34 suites)
-  - `init.test.ts` (16 tests) — `parseTocLectures` (9 tests), `copyNonMarkdownFiles` (7 tests)
-  - `localization-rules.test.ts` (23 tests) — rule parsing, prompt building, font requirements, constants
-
-### Added (Phase 3b — Forward Resync Command)
+#### Phase 3b — Forward Resync Command
 - **Forward command** (`src/cli/commands/forward.ts`): Resync TARGET translations to match current SOURCE
   - `translate forward -f cobweb.md` — single file resync
   - `translate forward` — bulk resync of all OUTDATED files (via status)
   - `--github <owner/repo>` flag: creates one PR per file in TARGET repo
-  - `--test` flag: deterministic mock responses for CI/testing
-  - `--exclude <pattern>` flag: skip files matching pattern
-  - Pipeline: triage → whole-file RESYNC → output (simplified from section-by-section after experiment)
-  - Progress bar for bulk mode, summary table with file counts
+  - Pipeline: triage → whole-file RESYNC → output
 - **Forward triage** (`src/cli/forward-triage.ts`): LLM content-vs-i18n filter (~$0.01/file)
-  - `triageForward()`: classifies file pairs as `CONTENT_CHANGES`, `I18N_ONLY`, or `IDENTICAL`
-  - Byte-identical shortcut skips LLM entirely
-  - Test mode returns deterministic verdicts based on filename patterns
 - **Forward PR creator** (`src/cli/forward-pr-creator.ts`): Git ops + PR creation via `gh` CLI
-  - Branch naming: `resync/{filename}` (e.g., `resync/cobweb`)
-  - PR title: `[action-translation] resync: cobweb.md`
-  - PR body includes source repo link, source file link, and triage reason
-  - Labels: `action-translation-sync`, `resync`
-  - Injectable `GhRunner` pattern for testing
 - **Whole-file RESYNC translation** (`src/translator.ts`): New `translateDocumentResync()` method
   - Sends entire SOURCE + TARGET + glossary in one call (~$0.12/file)
-  - Preserves cross-section context (localized plot labels, font config)
   - 2-3× cheaper than section-by-section (glossary sent once, not per section)
-  - Prompt preserves existing style, terminology, localization wherever meaning hasn't changed
-  - `DocumentResyncRequest` type in `src/types.ts`
 - **Section RESYNC mode** (`src/translator.ts`): `translateSectionResync()` (retained for SYNC mode)
-  - Preserves existing translation style while updating content to match SOURCE
-  - Uses `[CURRENT SOURCE]` + `[EXISTING TRANSLATION]` prompt markers
-  - `SectionTranslationRequest.mode` extended: `'update' | 'new' | 'resync'`
-- **84 new tests** (640 → 724 total, 29 → 32 suites)
-  - `forward.test.ts` (12 tests) — triage, whole-file resync, errors, github mode, PR failure, summary
-  - `forward-triage.test.ts` (21 tests) — prompt, parsing, test mode, byte-identical
-  - `forward-pr-creator.test.ts` (47 tests) — naming, args, body, creation, git operations, parseGitHubRepo, detectSourceRepo
-  - `translator.test.ts` (+4 tests) — RESYNC mode
-- **Git operations for --github mode** (`src/cli/forward-pr-creator.ts`): `gitPrepareAndPush()` function
-  - Creates branch, writes resynced file, stages, commits, pushes with --force
-  - Injectable `GitRunner` pattern for testing (parallels `GhRunner`)
-  - Full error handling: switches back to original branch on any failure
-  - 9 tests for git operations (success, branch cleanup, push failure, etc.)
 
-### Changed
-- **Strengthened i18n code preservation in all translation prompts** (`src/translator.ts`)
-  - All three translation modes (UPDATE, section RESYNC, whole-file RESYNC) now include explicit
-    rules to NEVER remove i18n/localization code from code cells
-  - Specific examples: `font_manager`, `FontProperties`, `SimHei`, `rcParams`, `# i18n` markers
-  - Resolves issue where whole-file RESYNC removed Chinese font configuration from `pv.md` despite
-    existing preservation instructions (rules 4 and 6 were in tension; now unambiguous)
+#### Phase 3a — Review Command
+- **Review command** (`src/cli/commands/review.ts`): Interactive human review of backward suggestions
+  - `translate review <report-dir>` with `--dry-run`, `--repo`, `--min-confidence` flags
+- **Chalk-styled card formatter** (`src/cli/review-formatter.ts`): Category badges, confidence tiers, Before/After display
+- **Ink interactive review session** (`src/cli/components/ReviewSession.tsx`): Accept/Skip/Reject keypresses
+- **GitHub Issue generator** (`src/cli/issue-generator.ts`): `[filename § section] summary` titles, structured bodies
+- **GitHub Issue creator** (`src/cli/issue-creator.ts`): `gh issue create` with injectable `GhRunner`
 
-### Added
-- **Backward report JSON schema** (`src/cli/schema.ts`): Formal Zod schemas for all backward report formats
-  - `SCHEMA_VERSION` constant (`1.0.0`) — semver for the report format
-  - `BackwardReportSchema`, `BulkBackwardReportSchema`, `ProgressCheckpointSchema`
-  - `parseBackwardReport()` / `parseProgressCheckpoint()` — safe parse with error messages
-  - `loadResyncDirectory()` — loads and validates all sidecar JSON from a `.resync/` dir
-  - `filterActionableSuggestions()` — filters BACKPORT suggestions by confidence threshold
-  - 41 tests including integration tests against real fixture data
-- **`schemaVersion` field** on `BackwardReport`, `BulkBackwardReport` (optional, backward-compatible)
-- **`zod`** runtime validation dependency
+#### Phase 2 — Backward Analysis + Status
+- **Status command** (`src/cli/commands/status.ts`): Fast, free diagnostic — no LLM calls
+  - Per-file sync status: `ALIGNED`, `OUTDATED`, `SOURCE_AHEAD`, `TARGET_AHEAD`, `MISSING_HEADINGMAP`, `SOURCE_ONLY`, `TARGET_ONLY`
+  - Console table and JSON output
+- **Bulk backward** (`src/cli/commands/backward.ts`): Full-repo backward analysis
+  - Two-stage pipeline: Stage 1 triage → Stage 2 per-section evaluation
+  - Parallel processing (5 concurrent files), checkpointing, `--resume` flag
+  - Per-file reports + aggregate `_summary.md` / `_summary.json`
+- **Backward report JSON schema** (`src/cli/schema.ts`): Formal Zod schemas, `loadResyncDirectory()`, `filterActionableSuggestions()`
+- **Interleaved commit timeline** (`git-metadata.ts`): SOURCE/TARGET commit history for temporal context in prompts
+
+#### Tests
+- **879 tests** (39 suites, 5 snapshots) — up from 316 in v0.8.0
 
 ### Changed
 - **ESM migration**: Entire codebase now compiles to ESM (`"module": "node16"`)
-  - All relative imports use `.js` extensions
-  - `package.json` has `"type": "module"`
-  - `tsconfig.json`: `module` → `node16`, `moduleResolution` → `node16`, `target` → `ES2022`
-  - `jest.config.js`: ts-jest compiles tests to CJS internally via tsconfig override
 - **Action bundle moved to `dist-action/`**: Uses esbuild (CJS format) instead of ncc
-  - `action.yml` entry point → `dist-action/index.js`
-  - `dist/` is now ESM build output (gitignored, rebuild with `npm run build:cli`)
-  - `dist-action/` has its own `package.json` with `"type": "commonjs"` for Actions runner compat
-  - Glossary files copied to `dist-action/glossary/`
-- **New dependencies**: `ink@^4`, `react@^18`, `@types/react@^18` (for Phase 3a review command)
-- **New dev dependency**: `esbuild` (replaced `@vercel/ncc` for action bundling)
-- **`src/index.ts`**: `__dirname` → `import.meta.url` + `fileURLToPath` (ESM compat)
-- **`src/cli/index.ts`**: `require('../../package.json')` → `createRequire(import.meta.url)`
+- **`@anthropic-ai/sdk`** updated from `0.27.0` to `0.78.0`
+- **Strengthened i18n code preservation** in all translation prompts (UPDATE, section RESYNC, whole-file RESYNC)
+- **New dependencies**: `ink@^4`, `react@^18`, `commander@^14`, `zod`, `esbuild`
 
-### Added (Phase 3a — Review Command)
-- **Review command** (`src/cli/commands/review.ts`, ~210 lines): Interactive human review of backward suggestions
-  - `translate review <report-dir>` — walks through each suggestion from a backward report
-  - `--dry-run` flag: preview all suggestions without creating Issues
-  - `--repo <owner/repo>` flag: target SOURCE repo for GitHub Issue creation
-  - `--min-confidence <0-1>` flag: filter suggestions by confidence threshold (default: 0.5)
-  - Loads and validates report data via `loadResyncDirectory()` + `filterActionableSuggestions()`
-  - Sorts suggestions by confidence (highest first)
-- **Chalk-styled card formatter** (`src/cli/review-formatter.ts`, ~230 lines)
-  - Category badges (colour-coded: red=BUG_FIX, blue=CLARIFICATION, green=EXAMPLE, yellow=CODE_IMPROVEMENT)
-  - Confidence scores with tier labels (high/medium/low)
-  - Before/After change display with yellow/green labels
-  - Multiline content rendered as indented blocks below labels
-  - Collapsible reasoning section (hidden by default, `[D]` to expand)
-  - Text wrapping at 72 characters
-- **Ink interactive review session** (`src/cli/components/ReviewSession.tsx`, ~110 lines)
-  - Card-by-card review with `[A]ccept` / `[S]kip` / `[R]eject` / `[D]etails` keypresses
-  - Running tally in status bar: `✓ accepted  ~ skipped  ✗ rejected`
-  - Unified session for both `--dry-run` and interactive modes
-  - Dynamic import of ink/react to keep ESM out of Jest CJS environment
-- **Pure state machine** (`src/cli/review-session.ts`, ~150 lines)
-  - `ReviewSession` class tracks accept/skip/reject decisions
-  - `toSummary()` returns final counts and accepted suggestion list
-  - Tested independently of ink rendering
-- **GitHub Issue generator** (`src/cli/issue-generator.ts`, ~200 lines)
-  - `getIssueTitle()`: `[filename § section] summary`
-  - `getIssueBody()`: Category, confidence, section location, reasoning, specific changes, SOURCE/TARGET excerpts, generation footer
-  - `getIssueLabels()`: `translate` namespace — `translate`, `translate:{category}`, `translate:{language}`
-  - `extractLanguage()`: extracts language code from target repo name (e.g., `lecture-intro.zh-cn` → `zh-cn`)
-  - Adaptive code fences (`pushFencedBlock()`): counts longest backtick run in content, uses fence of `maxRun+1`
-- **GitHub Issue creator** (`src/cli/issue-creator.ts`, ~180 lines)
-  - `createIssue()`: shells out to `gh issue create` with injectable `GhRunner` for testing
-  - `createAcceptedIssues()`: batch creation for all accepted suggestions
-  - Graceful fallback when `--repo` not provided (prints to console only)
-- **Backward report path scoping**: Reports now saved under `reports/{source-repo}/backward-DATE/`
-- **125 new tests** (515 → 640 total, 24 → 29 suites)
-  - `review.test.ts` (20 tests) — command loading, filtering, pipeline
-  - `review-formatter.test.ts` (33 tests) — card rendering, categories, wrapping
-  - `review-session.test.ts` (22 tests) — state machine, decisions, summary
-  - `issue-generator.test.ts` (33 tests) — title, body, labels, language extraction
-  - `issue-creator.test.ts` (17 tests) — gh arg building, batch creation, error handling
-
-### Added (Phase 2)
-- **Resync CLI — Status Command** (`src/cli/commands/status.ts`): Fast, free diagnostic — no LLM calls
-  - Per-file sync status: `ALIGNED`, `OUTDATED`, `SOURCE_AHEAD`, `TARGET_AHEAD`, `MISSING_HEADINGMAP`, `SOURCE_ONLY`, `TARGET_ONLY`
-  - Console table output (`formatStatusTable`) — like `git status` for translations
-  - JSON output via `--json` flag (prints to stdout)
-  - File discovery across SOURCE and TARGET repos with `--exclude` filtering
-  - `OUTDATED` detection: flags files where SOURCE has newer commits than TARGET
-- **Resync CLI — Bulk Backward** (`src/cli/commands/backward.ts`): Full-repo backward analysis
-  - Processes all `.md` files in docs folder with two-stage pipeline
-  - Timestamped output folder: `reports/backward-YYYY-MM-DD/` — the folder *is* the report
-  - Per-file reports + aggregate `_summary.md` / `_summary.json`
-  - Incremental checkpointing via `_progress.json` — survives interrupted runs
-  - `--resume` flag to continue from checkpoint
-  - `--exclude` flag for file filtering (exact match or `*` wildcard suffix)
-  - Parallel processing with bounded concurrency (5 concurrent files)
-  - TTY progress bar with live file name + stage counts (falls back to simple logging in non-TTY/CI)
-  - Buffered logger (`BufferedLogger`) — per-file output flushed atomically to `.resync/_log.txt`
-- 56 new tests (409 → 472 total, 21 → 23 suites)
-  - `status.test.ts`: 21 tests (file discovery, per-file status, console output)
-  - `bulk-backward.test.ts`: 19 tests (checkpointing, cost estimation, parallel orchestration, progress bar)
-  - `backward-evaluator.test.ts`: 16 new tests (whole-file evaluation prompt, parsing, test mode)
-- **Resync CLI** (`src/cli/`): New CLI tool for backward analysis of translations
-  - `resync backward` command — two-stage pipeline to identify translation improvements worth backporting to SOURCE
-  - **Stage 1** (`document-comparator.ts`): Whole-document LLM triage, recall-biased, one call per file
-  - **Stage 2** (`backward-evaluator.ts`): Per-section LLM evaluation with structured JSON suggestions
-  - `section-matcher.ts`: Cross-language position-based section matching with heading-map validation
-  - `git-metadata.ts`: File-level git date/author/SHA extraction for temporal context
-  - `report-generator.ts`: Markdown and JSON report formatting with confidence labels
-  - **Result verdict**: Top-level report status — `✅ IN SYNC`, `📋 N SUGGESTION(S)`, `✅ NO ACTION NEEDED`, `⚠️ SKIPPED`
-  - `commands/backward.ts`: Full pipeline orchestrator (read → triage → parse → match → evaluate → report)
-  - `types.ts`: CLI-specific types (TriageResult, SectionPair, BackportSuggestion, etc.)
-  - `index.ts`: Commander.js entry point with `--test` mode for deterministic mock responses
-  - `--test` flag for all commands — no LLM calls, deterministic responses for CI/testing
-  - 6 test fixture pairs (aligned, bug-fix, clarification, i18n-only, section-mismatch, no-heading-map)
-  - 93 new tests (316 → 409 total, 15 → 21 suites)
-- **Interleaved commit timeline** (`git-metadata.ts`): Builds interleaved SOURCE/TARGET commit history
-  - `getFileTimeline()` — fetches commit logs from both repos, interleaves by date
-  - `formatTimelineForPrompt()` — compact format for inclusion in LLM prompts
-  - Timeline identifies estimated sync point (earliest TARGET commit) and counts post-sync SOURCE commits
-  - Included in both Stage 1 triage and Stage 2 evaluation prompts to prevent directional reasoning errors
-  - Included in Markdown reports under "Commit Timeline" section
-  - New types: `TimelineEntry`, `FileTimeline`
-- **CLI build**: `npm run build:cli` script, `bin.resync` entry in package.json
-- **commander.js** dependency (^14.0.3)
+### Removed
+- **`--estimate` flag** removed from `backward` and `forward` commands (replaced by `--dry-run`)
+- **`tool-bulk-translator/`** directory removed — functionality superseded by `translate init`
 
 ## [0.8.0] - 2026-02-18
 

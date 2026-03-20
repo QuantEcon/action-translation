@@ -8,7 +8,7 @@
 - **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
-**Current Version**: v0.9.0 | **Tests**: 882 (39 suites) | **Glossary**: 357 terms (zh-cn, fa)
+**Current Version**: v0.10.0 | **Tests**: 882 (39 suites) | **Glossary**: 357 terms (zh-cn, fa)
 
 ---
 
@@ -105,8 +105,7 @@ npm test -- --coverage            # Coverage report
 
 ### Build
 ```bash
-npm run build    # Compile TypeScript
-npm run package  # Bundle for distribution
+npm run build    # Compile TypeScript + bundle dist-action/index.js
 ```
 
 ### Branch & PR Process
@@ -152,6 +151,17 @@ Uses TEST mode (no Claude API calls). See `docs/developer/testing.md`.
 ❌ Never create standalone summary/notes markdown files for individual changes
 
 Docs live in `docs/` — see `docs/index.md` for the full structure.
+
+### Release Checklist
+
+Before creating a release, verify the following:
+
+1. **CHANGELOG is up to date** — all merged PRs and features are listed under `[Unreleased]`; promote `[Unreleased]` → `[X.Y.Z] - YYYY-MM-DD`
+2. **Version bumped** — update `package.json`, this file (`copilot-instructions.md`), and `PLAN.md`
+3. **Tests pass** — run `npm test` and confirm all tests pass
+4. **Build succeeds** — run `npm run build` to compile TypeScript and update `dist-action/`
+5. **Commit, tag, push** — commit all changes, create git tag `vX.Y.Z`, push with `--tags`
+6. **Create GitHub release** — `gh release create vX.Y.Z --title "..." --notes-file .tmp/release-notes.md`
 
 ---
 
