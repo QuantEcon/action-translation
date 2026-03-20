@@ -113,7 +113,7 @@ export async function resyncSingleFile(
     },
   );
 
-  if (triageResult.verdict !== 'CONTENT_CHANGES') {
+  if (triageResult.verdict !== 'CONTENT_CHANGES' && triageResult.verdict !== 'TARGET_HAS_ADDITIONS') {
     const label = triageResult.verdict === 'IDENTICAL' ? 'identical' : 'i18n only';
     logger.info(`  SKIPPED — ${label}${triageResult.reason ? ` (${triageResult.reason})` : ''}`);
     return {
@@ -122,6 +122,14 @@ export async function resyncSingleFile(
       sections: [],
       summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 0 },
     };
+  }
+
+  if (triageResult.verdict === 'TARGET_HAS_ADDITIONS') {
+    logger.warn(`${file}: TARGET has content not in SOURCE that will be lost during resync.`);
+    logger.warn(`Consider running 'translate backward' first to capture improvements.`);
+    if (triageResult.reason) {
+      logger.warn(`Reason: ${triageResult.reason}`);
+    }
   }
 
   logger.info(`  Content changes detected — resyncing (whole-file)…`);

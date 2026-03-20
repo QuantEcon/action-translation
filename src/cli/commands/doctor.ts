@@ -150,6 +150,7 @@ export function checkStateFiles(targetPath: string, docsFolder: string): CheckRe
 
 /**
  * Check: All target .md files have heading-map in frontmatter.
+ * Files with 0 sections (no ## headings) are expected to have no heading-map.
  */
 export function checkHeadingMaps(targetPath: string, docsFolder: string): CheckResult {
   const targetFiles = discoverMarkdownFiles(targetPath, docsFolder);
@@ -163,27 +164,49 @@ export function checkHeadingMaps(targetPath: string, docsFolder: string): CheckR
   }
 
   const missing: string[] = [];
+  let sectionlessCount = 0;
   for (const file of targetFiles) {
     const filePath = path.join(targetPath, docsFolder, file);
     const content = fs.readFileSync(filePath, 'utf-8');
+
+    // Count ## sections — files with no sections don't need heading-maps
+    const sectionCount = (content.match(/^## /gm) || []).length;
+    if (sectionCount === 0) {
+      sectionlessCount++;
+      continue;
+    }
+
     const map = extractHeadingMap(content);
     if (map.size === 0) {
       missing.push(file);
     }
   }
 
-  if (missing.length === 0) {
+  const filesWithSections = targetFiles.length - sectionlessCount;
+
+  if (filesWithSections === 0) {
     return {
       name: 'Heading maps',
       status: 'pass',
-      message: `All ${targetFiles.length} files have heading-maps`,
+      message: `All ${targetFiles.length} files have 0 sections (no heading-maps needed)`,
+    };
+  }
+
+  if (missing.length === 0) {
+    const note = sectionlessCount > 0
+      ? ` (${sectionlessCount} section-less files skipped)`
+      : '';
+    return {
+      name: 'Heading maps',
+      status: 'pass',
+      message: `All ${filesWithSections} files with sections have heading-maps${note}`,
     };
   }
 
   return {
     name: 'Heading maps',
-    status: missing.length === targetFiles.length ? 'fail' : 'warn',
-    message: `${targetFiles.length - missing.length}/${targetFiles.length} files have heading-maps (${missing.length} missing)`,
+    status: missing.length === filesWithSections ? 'fail' : 'warn',
+    message: `${filesWithSections - missing.length}/${filesWithSections} files with sections have heading-maps (${missing.length} missing)${sectionlessCount > 0 ? ` — ${sectionlessCount} section-less files skipped` : ''}`,
     details: missing.slice(0, 5).map(f => `Missing: ${f}`).concat(
       missing.length > 5 ? [`…and ${missing.length - 5} more`] : [],
     ),

@@ -50,18 +50,22 @@ ${targetContent}
 \`\`\`
 
 ## Task
-Classify the differences between SOURCE and TARGET into one of three categories:
+Classify the differences between SOURCE and TARGET into one of four categories:
 
-1. **CONTENT_CHANGES**: Differences that affect meaning or completeness. Examples:
-   - Missing or added sections, paragraphs, or sentences
-   - Missing or added figures, images, or diagrams
-   - Different file paths for images, figures, or includes (e.g. \`/_static/img.png\` vs \`images/img.png\`)
-   - Changed formulas, updated code logic, modified examples
-   - New explanations or removed explanations
-   - Different URL targets (not just formatting of the same URL)
-   These require re-translation.
+1. **CONTENT_CHANGES**: SOURCE has content that is missing from TARGET, or SOURCE content has been updated. Examples:
+   - Missing sections, paragraphs, or sentences in TARGET that exist in SOURCE
+   - Changed formulas, updated code logic, modified examples in SOURCE
+   - New explanations in SOURCE not yet in TARGET
+   - Different URL targets or file paths
+   These require re-translation (SOURCE → TARGET).
 
-2. **I18N_ONLY**: Differences that are purely stylistic or locale-specific. Examples:
+2. **TARGET_HAS_ADDITIONS**: TARGET has substantive content (paragraphs, sections, examples, explanations) that does NOT exist in SOURCE. Examples:
+   - Extra sections or paragraphs added in the translation that aren't in SOURCE
+   - Additional examples, figures, or explanations unique to TARGET
+   - Expanded code blocks or formulas in TARGET beyond what SOURCE has
+   This content would be LOST if we re-translate from SOURCE. Use this verdict even if there are also CONTENT_CHANGES.
+
+3. **I18N_ONLY**: Differences that are purely stylistic or locale-specific. Examples:
    - Punctuation style (full-width vs half-width characters)
    - Terminology/word choices that convey the same meaning
    - Whitespace, indentation, or line-wrapping differences
@@ -69,18 +73,20 @@ Classify the differences between SOURCE and TARGET into one of three categories:
    - Locale-specific number or date formatting
    These do NOT require re-translation.
 
-3. **IDENTICAL**: The documents are equivalent in content (translation is faithful and complete).
+4. **IDENTICAL**: The documents are equivalent in content (translation is faithful and complete).
 
 **Rules:**
 - Focus on content, not style. A different word for "function" that means the same thing is I18N_ONLY. A missing paragraph or changed formula is CONTENT_CHANGES.
 - If text present in SOURCE is absent from TARGET (even a single sentence), that is CONTENT_CHANGES, not a "formatting convention."
-- When in doubt, choose CONTENT_CHANGES. It is safer to re-translate than to miss a real change.
+- If text present in TARGET is absent from SOURCE (paragraphs, sections, examples), that is TARGET_HAS_ADDITIONS. i18n-specific code (font config, RTL adjustments, locale-specific comments) does NOT count as additions.
+- TARGET_HAS_ADDITIONS takes priority over CONTENT_CHANGES if both are true.
+- When in doubt between CONTENT_CHANGES and TARGET_HAS_ADDITIONS, choose TARGET_HAS_ADDITIONS. It is safer to warn about potential data loss.
 
 ## Response Format
 Respond with a JSON object:
 \`\`\`json
 {
-  "verdict": "CONTENT_CHANGES" or "I18N_ONLY" or "IDENTICAL",
+  "verdict": "CONTENT_CHANGES" or "TARGET_HAS_ADDITIONS" or "I18N_ONLY" or "IDENTICAL",
   "reason": "Brief description of the key differences (or 'no differences' if IDENTICAL)"
 }
 \`\`\``;
@@ -122,13 +128,16 @@ export function parseForwardTriageResponse(responseText: string): {
     }
   }
 
-  // Strategy 3: Keyword detection
+  // Strategy 3: Keyword detection (order: most specific first)
   const lower = responseText.toLowerCase();
-  if (lower.includes('identical')) {
-    return { verdict: 'IDENTICAL', reason: '' };
+  if (lower.includes('target_has_additions') || lower.includes('target has additions')) {
+    return { verdict: 'TARGET_HAS_ADDITIONS', reason: 'Detected via keyword in response' };
   }
   if (lower.includes('i18n_only') || lower.includes('i18n only')) {
     return { verdict: 'I18N_ONLY', reason: 'Detected via keyword in response' };
+  }
+  if (/\bidentical\b/.test(lower) && !/\bnot\s+identical\b/.test(lower)) {
+    return { verdict: 'IDENTICAL', reason: '' };
   }
 
   // Default to CONTENT_CHANGES (safe: will proceed to RESYNC)
@@ -146,6 +155,8 @@ function normalizeVerdict(parsed: any): { verdict: ForwardTriageVerdict; reason:
     verdict = 'IDENTICAL';
   } else if (raw === 'I18N_ONLY') {
     verdict = 'I18N_ONLY';
+  } else if (raw === 'TARGET_HAS_ADDITIONS') {
+    verdict = 'TARGET_HAS_ADDITIONS';
   } else {
     verdict = 'CONTENT_CHANGES';
   }
@@ -164,6 +175,9 @@ function mockForwardTriage(file: string): { verdict: ForwardTriageVerdict; reaso
   }
   if (file.includes('i18n') || file.includes('style')) {
     return { verdict: 'I18N_ONLY', reason: 'Test mode: i18n-only differences' };
+  }
+  if (file.includes('additions') || file.includes('target-extra')) {
+    return { verdict: 'TARGET_HAS_ADDITIONS', reason: 'Test mode: target has extra content' };
   }
   return { verdict: 'CONTENT_CHANGES', reason: 'Test mode: content changes detected' };
 }

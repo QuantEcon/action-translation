@@ -237,6 +237,35 @@ describe('checkHeadingMaps', () => {
     expect(result.status).toBe('fail');
     expect(result.message).toContain('0/1');
   });
+
+  test('skips section-less files (no ## headings)', () => {
+    // File with sections + heading-map → pass
+    writeMd(path.join(tmpDir, 'lectures', 'intro.md'), TARGET_WITH_MAP);
+    // File with no sections → should be skipped, not flagged
+    writeMd(path.join(tmpDir, 'lectures', 'status.md'), `---
+jupytext:
+  text_representation:
+    extension: .md
+---
+
+# Status Page
+
+This file has no ## sections at all.
+Just a title and some text.
+`);
+
+    const result = checkHeadingMaps(tmpDir, 'lectures');
+    expect(result.status).toBe('pass');
+    expect(result.message).toContain('section-less');
+  });
+
+  test('passes when all files are section-less', () => {
+    writeMd(path.join(tmpDir, 'lectures', 'readme.md'), `# Just a title\n\nNo sections.\n`);
+
+    const result = checkHeadingMaps(tmpDir, 'lectures');
+    expect(result.status).toBe('pass');
+    expect(result.message).toContain('0 sections');
+  });
 });
 
 // ============================================================================

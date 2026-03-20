@@ -21,7 +21,7 @@ The CLI is available as `npx translate` from within the repository.
 
 | Variable | Required for | Description |
 |----------|-------------|-------------|
-| `ANTHROPIC_API_KEY` | `backward`, `forward`, `init` | Anthropic API key for Claude. Not needed with `--test` (`backward`/`forward`) or `--dry-run` (`init`). |
+| `ANTHROPIC_API_KEY` | `backward`, `forward`, `init`, `status --check-sync` | Anthropic API key for Claude. Not needed with `--test` or `--dry-run`. |
 
 ## Commands
 
@@ -46,6 +46,9 @@ npx translate status -s <source-path> -t <target-path> [options]
 | `--exclude <pattern>` | *(none)* | Exclude files matching pattern (repeatable) |
 | `--json` | `false` | Output as JSON |
 | `--write-state` | `false` | Bootstrap `.translate/` metadata from current state |
+| `--force` | `false` | Skip sync-date safety check for `--write-state` |
+| `--check-sync` | `false` | LLM-based content sync check (requires `ANTHROPIC_API_KEY`) |
+| `--test` | `false` | Use mock triage responses for `--check-sync` (no LLM calls) |
 
 **Status categories:**
 
@@ -270,6 +273,7 @@ Creates one PR per file in the target repo with branch `resync/{filename}` and l
 | Verdict | Action | Description |
 |---------|--------|-------------|
 | `CONTENT_CHANGES` | Proceeds to RESYNC | Real structural or content differences found |
+| `TARGET_HAS_ADDITIONS` | Proceeds with warning | Target contains additions not in source (potential data loss on resync) |
 | `I18N_ONLY` | Skipped | Only internationalisation differences (punctuation, terminology style) |
 | `IDENTICAL` | Skipped | Files are byte-identical |
 

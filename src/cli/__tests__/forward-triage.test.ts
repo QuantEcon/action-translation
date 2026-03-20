@@ -26,9 +26,10 @@ describe('buildForwardTriagePrompt', () => {
     expect(prompt).toContain('zh-cn');
   });
 
-  it('mentions all three verdicts', () => {
+  it('mentions all four verdicts', () => {
     const prompt = buildForwardTriagePrompt('src', 'tgt', 'English', 'zh-cn');
     expect(prompt).toContain('CONTENT_CHANGES');
+    expect(prompt).toContain('TARGET_HAS_ADDITIONS');
     expect(prompt).toContain('I18N_ONLY');
     expect(prompt).toContain('IDENTICAL');
   });
@@ -78,6 +79,12 @@ describe('parseForwardTriageResponse', () => {
     expect(result.verdict).toBe('IDENTICAL');
   });
 
+  it('does not match "not identical" as IDENTICAL', () => {
+    const response = 'The documents are not identical — there are content differences.';
+    const result = parseForwardTriageResponse(response);
+    expect(result.verdict).toBe('CONTENT_CHANGES');
+  });
+
   it('falls back to keyword detection for "i18n_only"', () => {
     const response = 'These are i18n only differences.';
     const result = parseForwardTriageResponse(response);
@@ -116,6 +123,25 @@ describe('parseForwardTriageResponse', () => {
     const response = '{"verdict": "MAYBE_CHANGES", "reason": "unclear"}';
     const result = parseForwardTriageResponse(response);
     expect(result.verdict).toBe('CONTENT_CHANGES');
+  });
+
+  it('parses TARGET_HAS_ADDITIONS verdict', () => {
+    const response = '```json\n{"verdict": "TARGET_HAS_ADDITIONS", "reason": "Target has extra examples"}\n```';
+    const result = parseForwardTriageResponse(response);
+    expect(result.verdict).toBe('TARGET_HAS_ADDITIONS');
+    expect(result.reason).toBe('Target has extra examples');
+  });
+
+  it('normalizes case-insensitive TARGET_HAS_ADDITIONS', () => {
+    const response = '{"verdict": "target_has_additions", "reason": "extra section"}';
+    const result = parseForwardTriageResponse(response);
+    expect(result.verdict).toBe('TARGET_HAS_ADDITIONS');
+  });
+
+  it('falls back to keyword detection for "target_has_additions"', () => {
+    const response = 'The target_has_additions beyond what source provides.';
+    const result = parseForwardTriageResponse(response);
+    expect(result.verdict).toBe('TARGET_HAS_ADDITIONS');
   });
 });
 
@@ -156,6 +182,16 @@ describe('triageForward (test mode)', () => {
   it('returns CONTENT_CHANGES for other files', async () => {
     const result = await triageForward('cobweb.md', 'src', 'tgt', baseOptions);
     expect(result.verdict).toBe('CONTENT_CHANGES');
+  });
+
+  it('returns TARGET_HAS_ADDITIONS for files with "additions" in name', async () => {
+    const result = await triageForward('additions-test.md', 'src', 'tgt', baseOptions);
+    expect(result.verdict).toBe('TARGET_HAS_ADDITIONS');
+  });
+
+  it('returns TARGET_HAS_ADDITIONS for files with "target-extra" in name', async () => {
+    const result = await triageForward('target-extra.md', 'src', 'tgt', baseOptions);
+    expect(result.verdict).toBe('TARGET_HAS_ADDITIONS');
   });
 
   it('returns IDENTICAL when source === target (even without testMode)', async () => {

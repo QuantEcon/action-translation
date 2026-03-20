@@ -167,7 +167,16 @@ program
   .option('--exclude <pattern>', 'Exclude files matching pattern (repeatable, comma-separated)', collectExclude, [])
   .option('--json', 'Output as JSON', false)
   .option('--write-state', 'Bootstrap .translate/ metadata from current state', false)
+  .option('--force', 'Skip sync-date safety check for --write-state', false)
+  .option('--check-sync', 'LLM-based content sync check (requires ANTHROPIC_API_KEY)', false)
+  .option('--test', 'Use mock triage responses for --check-sync (no LLM calls)', false)
   .action(async (opts) => {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (opts.checkSync && !apiKey && !opts.test) {
+      console.error('❌ ANTHROPIC_API_KEY environment variable is required for --check-sync (or use --test)');
+      process.exit(1);
+    }
+
     const statusOptions: StatusOptions = {
       source: opts.source,
       target: opts.target,
@@ -177,6 +186,11 @@ program
       exclude: opts.exclude,
       writeState: opts.writeState,
       sourceLanguage: opts.sourceLanguage,
+      force: opts.force,
+      checkSync: opts.checkSync,
+      apiKey: apiKey || 'test-key',
+      model: 'claude-sonnet-4-6',
+      testMode: opts.test,
     };
 
     try {
@@ -276,10 +290,13 @@ program
         );
 
         const { summary } = result;
-        if (result.triageResult.verdict !== 'CONTENT_CHANGES') {
+        if (result.triageResult.verdict !== 'CONTENT_CHANGES' && result.triageResult.verdict !== 'TARGET_HAS_ADDITIONS') {
           const label = result.triageResult.verdict === 'IDENTICAL' ? 'identical' : 'i18n only';
           console.log(`\n  ${opts.file}: SKIPPED (${label})`);
         } else {
+          if (result.triageResult.verdict === 'TARGET_HAS_ADDITIONS') {
+            console.log(`\n  ⚠️  ${opts.file}: TARGET has additions that were lost during resync`);
+          }
           console.log(`\n  ${opts.file}: ${summary.resynced} resynced, ${summary.new} new, ${summary.removed} removed, ${summary.unchanged} unchanged${summary.errors > 0 ? `, ${summary.errors} errors` : ''}`);
         }
       } else {

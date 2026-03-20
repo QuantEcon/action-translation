@@ -28,6 +28,8 @@ import { MystParser } from '../../parser.js';
 import { extractHeadingMap } from '../../heading-map.js';
 import { getFileGitMetadata } from '../git-metadata.js';
 import { readFileState, writeFileState, writeConfig } from '../translate-state.js';
+import { triageForward } from '../forward-triage.js';
+import { languageLabel } from '../../language-config.js';
 
 // ============================================================================
 // TYPES
@@ -52,6 +54,8 @@ export interface FileStatusEntry {
   targetSections?: number;
   sourceLastModified?: string;  // ISO date
   targetLastModified?: string;  // ISO date
+  contentSync?: string;         // Forward triage verdict (only with --check-sync)
+  contentSyncReason?: string;   // Reason from triage (only with --check-sync)
 }
 
 export interface StatusResult {
@@ -81,6 +85,11 @@ export interface StatusOptions {
   file?: string;        // Single file to check (relative to docs-folder)
   writeState?: boolean; // Bootstrap .translate/ metadata from current state
   sourceLanguage?: string; // Required when writeState is true
+  force?: boolean;      // Skip sync-date safety check for --write-state
+  checkSync?: boolean;  // LLM-based content sync check (requires ANTHROPIC_API_KEY)
+  apiKey?: string;      // Anthropic API key (required for --check-sync)
+  model?: string;       // Claude model (default: claude-sonnet-4-6)
+  testMode?: boolean;   // Use mock triage responses (for --check-sync)
 }
 
 // ============================================================================
@@ -300,8 +309,44 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
     entries.push(entry);
   }
 
+  // Reject incompatible flag combination
+  if (options.writeState && options.checkSync) {
+    throw new Error(
+      '--write-state and --check-sync cannot be used together.\n' +
+      'Run --check-sync first, then --write-state once you\'re satisfied.',
+    );
+  }
+
   // --write-state: bootstrap .translate/ metadata
   if (options.writeState) {
+    // Safety check: warn if SOURCE files are newer than TARGET files
+    if (!options.force) {
+      const staleFiles: { file: string; sourceDate: string; targetDate: string }[] = [];
+      for (const entry of entries) {
+        if (entry.sourceLastModified && entry.targetLastModified && entry.sourceLastModified > entry.targetLastModified) {
+          staleFiles.push({
+            file: entry.file,
+            sourceDate: entry.sourceLastModified,
+            targetDate: entry.targetLastModified,
+          });
+        }
+      }
+      if (staleFiles.length > 0) {
+        const lines = staleFiles.map(
+          f => `  ${f.file}  (source: ${f.sourceDate}, target: ${f.targetDate})`,
+        );
+        throw new Error(
+          `--write-state blocked: ${staleFiles.length} file(s) have SOURCE commits newer than TARGET.\n` +
+          `This means the current SOURCE content may not match what was translated.\n` +
+          `Recording current HEAD as baseline would mask this divergence.\n\n` +
+          lines.join('\n') + '\n\n' +
+          `Options:\n` +
+          `  1. Run 'translate forward' first to bring TARGET up to date\n` +
+          `  2. Use --force to write state anyway (if you're sure translations are current)`,
+        );
+      }
+    }
+
     const srcLang = options.sourceLanguage ?? 'en';
     writeConfig(target, {
       'source-language': srcLang,
@@ -337,6 +382,43 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
         });
       } catch {
         // Non-fatal: skip files where state can't be determined
+      }
+    }
+  }
+
+  // --check-sync: LLM-based content sync check
+  if (options.checkSync && options.apiKey) {
+    const srcLang = options.sourceLanguage ?? 'en';
+    for (const entry of entries) {
+      // Only triage files that exist in both repos
+      if (entry.status === 'SOURCE_ONLY' || entry.status === 'TARGET_ONLY' || entry.status === 'NOT_FOUND') {
+        continue;
+      }
+
+      try {
+        const sourceFilePath = path.join(source, docsFolder, entry.file);
+        const targetFilePath = path.join(target, docsFolder, entry.file);
+        const sourceContent = fs.readFileSync(sourceFilePath, 'utf-8');
+        const targetContent = fs.readFileSync(targetFilePath, 'utf-8');
+
+        const triageResult = await triageForward(
+          entry.file,
+          sourceContent,
+          targetContent,
+          {
+            apiKey: options.apiKey,
+            model: options.model ?? 'claude-sonnet-4-6',
+            sourceLanguage: languageLabel(srcLang),
+            targetLanguage: languageLabel(options.language),
+            testMode: options.testMode ?? false,
+          },
+        );
+
+        entry.contentSync = triageResult.verdict;
+        entry.contentSyncReason = triageResult.reason;
+      } catch {
+        entry.contentSync = 'ERROR';
+        entry.contentSyncReason = 'Triage failed';
       }
     }
   }
@@ -408,9 +490,20 @@ export function formatStatusTable(result: StatusResult): string {
     if (extraFlags.length > 0) {
       statusText += ` + ${extraFlags.map(f => STATUS_ICONS[f] + ' ' + f).join(' + ')}`;
     }
+    if (entry.contentSync) {
+      const syncIcon = entry.contentSync === 'IDENTICAL' ? '🟢'
+        : entry.contentSync === 'I18N_ONLY' ? '🔵'
+        : entry.contentSync === 'TARGET_HAS_ADDITIONS' ? '🟡'
+        : entry.contentSync === 'CONTENT_CHANGES' ? '🔴'
+        : '⚪';
+      statusText += `  ${syncIcon} ${entry.contentSync}`;
+    }
     lines.push(`  ${entry.file.padEnd(maxFileLen)}  ${statusText}`);
     if (entry.details) {
       lines.push(`  ${''.padEnd(maxFileLen)}  ↳ ${entry.details}`);
+    }
+    if (entry.contentSyncReason) {
+      lines.push(`  ${''.padEnd(maxFileLen)}  ↳ ${entry.contentSyncReason}`);
     }
   }
 
