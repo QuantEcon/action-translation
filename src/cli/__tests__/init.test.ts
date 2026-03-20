@@ -8,7 +8,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { parseTocLectures, copyNonMarkdownFiles } from '../commands/init.js';
+import { parseTocLectures, copyNonMarkdownFiles, filterSkipExisting } from '../commands/init.js';
+import { writeFileState } from '../translate-state.js';
 
 // ============================================================================
 // HELPERS
@@ -323,5 +324,66 @@ describe('copyNonMarkdownFiles', () => {
     expect(count).toBe(1); // Only real.txt
     expect(fs.existsSync(path.join(targetDir, 'lectures', 'real.txt'))).toBe(true);
     expect(fs.existsSync(path.join(targetDir, 'lectures', 'link.txt'))).toBe(false);
+  });
+});
+
+// ============================================================================
+// filterSkipExisting
+// ============================================================================
+
+describe('filterSkipExisting', () => {
+  it('should skip lectures that have .translate/state entries', () => {
+    const targetDir = path.join(tmpDir, 'target');
+    fs.mkdirSync(targetDir, { recursive: true });
+
+    // Create state for two of three lectures
+    writeFileState(targetDir, 'cobweb.md', {
+      'source-sha': 'abc123',
+      'synced-at': '2026-03-20',
+      model: 'claude-sonnet-4-6',
+      mode: 'NEW',
+      'section-count': 5,
+    });
+    writeFileState(targetDir, 'solow.md', {
+      'source-sha': 'def456',
+      'synced-at': '2026-03-20',
+      model: 'claude-sonnet-4-6',
+      mode: 'NEW',
+      'section-count': 3,
+    });
+
+    const result = filterSkipExisting(targetDir, ['intro.md', 'cobweb.md', 'solow.md', 'lake_model.md']);
+
+    expect(result.skippedCount).toBe(2);
+    expect(result.remaining).toEqual(['intro.md', 'lake_model.md']);
+  });
+
+  it('should return all lectures when none have state', () => {
+    const targetDir = path.join(tmpDir, 'target');
+    fs.mkdirSync(targetDir, { recursive: true });
+
+    const lectures = ['intro.md', 'cobweb.md'];
+    const result = filterSkipExisting(targetDir, lectures);
+
+    expect(result.skippedCount).toBe(0);
+    expect(result.remaining).toEqual(['intro.md', 'cobweb.md']);
+  });
+
+  it('should return empty when all lectures have state', () => {
+    const targetDir = path.join(tmpDir, 'target');
+    fs.mkdirSync(targetDir, { recursive: true });
+
+    writeFileState(targetDir, 'intro.md', {
+      'source-sha': 'aaa',
+      'synced-at': '2026-03-20',
+      model: 'claude-sonnet-4-6',
+      mode: 'NEW',
+      'section-count': 1,
+    });
+
+    const result = filterSkipExisting(targetDir, ['intro.md']);
+
+    expect(result.skippedCount).toBe(1);
+    expect(result.remaining).toEqual([]);
   });
 });

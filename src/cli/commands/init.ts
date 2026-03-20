@@ -23,7 +23,7 @@ import { MystParser } from '../../parser.js';
 import { Glossary } from '../../types.js';
 import { updateHeadingMap, injectHeadingMap } from '../../heading-map.js';
 import { RuleId, buildLocalizationPrompt, getFontRequirements } from '../../localization-rules.js';
-import { writeConfig, writeFileState } from '../translate-state.js';
+import { readFileState, writeConfig, writeFileState } from '../translate-state.js';
 import { getFileGitMetadata } from '../git-metadata.js';
 
 // ============================================================================
@@ -41,6 +41,7 @@ export interface InitOptions {
   parallel: number;          // Number of parallel translations (default: 1)
   file?: string;             // Single file to translate (for testing)
   resumeFrom?: string;       // Resume from specific lecture file
+  skipExisting?: boolean;     // Skip lectures that already have .translate/state entries
   glossaryPath?: string;     // Explicit path to glossary JSON file
   localize: RuleId[];        // Active localization rules (default: all)
   dryRun: boolean;           // Preview without API calls or file writes
@@ -50,6 +51,7 @@ export interface InitOptions {
 interface TranslationStats {
   totalLectures: number;
   successCount: number;
+  skippedCount: number;
   failureCount: number;
   totalTokens: number;
   totalTimeMs: number;
@@ -149,6 +151,26 @@ export function parseTocLectures(sourceRepoPath: string, docsFolder: string): st
 // ============================================================================
 // FILE COPY (NON-MARKDOWN)
 // ============================================================================
+
+/**
+ * Filter out lectures that already have .translate/state entries.
+ * Returns the remaining (untranslated) lectures and the count of skipped ones.
+ */
+export function filterSkipExisting(
+  targetPath: string,
+  lectures: string[],
+): { remaining: string[]; skippedCount: number } {
+  const remaining: string[] = [];
+  let skippedCount = 0;
+  for (const lecture of lectures) {
+    if (readFileState(targetPath, lecture)) {
+      skippedCount++;
+    } else {
+      remaining.push(lecture);
+    }
+  }
+  return { remaining, skippedCount };
+}
 
 /**
  * Copy all non-.md files from source docs folder to target.
@@ -305,7 +327,7 @@ function generateReport(
 ## Summary
 
 - **Total Lectures**: ${stats.totalLectures}
-- **Successfully Translated**: ${stats.successCount}
+- **Successfully Translated**: ${stats.successCount}${stats.skippedCount > 0 ? `\n- **Skipped (already translated)**: ${stats.skippedCount}` : ''}
 - **Failed**: ${stats.failureCount}
 - **Total Tokens Used**: ${stats.totalTokens.toLocaleString()}
 - **Total Time**: ${(stats.totalTimeMs / 1000 / 60).toFixed(1)} minutes
@@ -389,6 +411,7 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   const stats: TranslationStats = {
     totalLectures: lectures.length,
     successCount: 0,
+    skippedCount: 0,
     failureCount: 0,
     totalTokens: 0,
     totalTimeMs: 0,
@@ -481,7 +504,17 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   }
 
   const CONCURRENCY = options.parallel;
-  const remaining = lectures.slice(startIndex);
+  let remaining = lectures.slice(startIndex);
+
+  // Handle --skip-existing: filter out lectures that already have state
+  if (options.skipExisting) {
+    const result = filterSkipExisting(options.target, remaining);
+    remaining = result.remaining;
+    if (result.skippedCount > 0) {
+      stats.skippedCount = result.skippedCount;
+      console.log(chalk.yellow(`Skipping ${result.skippedCount} already-translated lecture(s) (of ${result.skippedCount + remaining.length})\n`));
+    }
+  }
 
   const bar = new cliProgress.SingleBar(
     { format: '  {bar} {percentage}% | {value}/{total} | {status}' },
@@ -558,6 +591,9 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   // Phase 7: Summary
   console.log(chalk.bold.cyan('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));
   console.log(chalk.bold(`  ✓ Translated: ${stats.successCount}/${stats.totalLectures}`));
+  if (stats.skippedCount > 0) {
+    console.log(chalk.yellow(`  ⊘ Skipped (already translated): ${stats.skippedCount}`));
+  }
   if (stats.failureCount > 0) {
     console.log(chalk.red(`  ✗ Failed: ${stats.failureCount}`));
   }

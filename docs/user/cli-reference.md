@@ -298,6 +298,8 @@ npx translate init -s <source-path> -t <target-path> --target-language <code> [o
 | `-f, --file <file>` | *(all lectures)* | Translate a single lecture file (e.g., `cobweb.md`) |
 | `--batch-delay <ms>` | `1000` | Delay between lectures in ms (rate limiting) |
 | `--resume-from <file>` | *(none)* | Resume from a specific lecture file |
+| `--skip-existing` | `false` | Skip lectures already translated (reads `.translate/state/`) |
+| `-j, --parallel <n>` | `1` | Number of parallel translations |
 | `--glossary <path>` | *(auto)* | Path to glossary JSON file (default: `glossary/<lang>.json`) |
 | `--localize <rules>` | `code-comments,figure-labels,i18n-font-config` | Localization rules for code cells (use `none` to disable) |
 | `--dry-run` | `false` | Preview lectures without translating |
@@ -399,10 +401,32 @@ npx translate init \
 
 Partial filename matches are supported — `--resume-from cobweb` will also work.
 
+**Re-run after partial failure (skip already-translated files):**
+
+```bash
+npx translate init \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  --target-language zh-cn \
+  --skip-existing
+```
+
+This reads `.translate/state/` entries and skips lectures that were already translated. Unlike `--resume-from` (which is linear), `--skip-existing` handles scattered failures across the TOC.
+
+**Parallel translation (4 concurrent workers):**
+
+```bash
+npx translate init \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  --target-language zh-cn \
+  -j 4
+```
+
 **Output:**
 
 A `TRANSLATION-REPORT.md` file is written to the target directory with:
-- Total lectures, success/failure counts
+- Total lectures, success/failure/skipped counts
 - Total tokens used, total time
 - Configuration details
 - List of any failures with error messages
