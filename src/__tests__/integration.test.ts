@@ -22,7 +22,7 @@ import * as path from 'path';
 class MockTranslationService extends TranslationService {
   constructor() {
     // Use dummy values - we'll override the methods
-    super('test-api-key', 'claude-sonnet-4.5-20241022', false);
+    super('test-api-key', 'claude-sonnet-4-6', false);
   }
   
   /**

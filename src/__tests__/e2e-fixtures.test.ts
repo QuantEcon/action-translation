@@ -19,7 +19,7 @@ import * as path from 'path';
 // Mock translator that returns predictable Chinese
 class MockTranslator extends TranslationService {
   constructor() {
-    super('test-key', 'claude-sonnet-4.5-20241022', false);
+    super('test-key', 'claude-sonnet-4-6', false);
   }
 
   async translateSection(request: any): Promise<any> {

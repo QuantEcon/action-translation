@@ -18,6 +18,7 @@ import {
   formatStatusJson,
   FileSyncStatus,
 } from '../commands/status.js';
+import { readFileState, writeFileState } from '../translate-state.js';
 
 // ============================================================================
 // HELPERS
@@ -616,6 +617,55 @@ describe('--write-state safeguard', () => {
       apiKey: 'test-key',
       testMode: true,
     })).rejects.toThrow('cannot be used together');
+  });
+
+  it('should preserve model from existing state file instead of overwriting with unknown', async () => {
+    const sourceDir = path.join(tmpDir, 'source', 'lectures');
+    const targetDir = path.join(tmpDir, 'target', 'lectures');
+    writeMd(path.join(sourceDir, 'intro.md'), SOURCE_2_SECTIONS);
+    writeMd(path.join(targetDir, 'intro.md'), TARGET_2_SECTIONS_WITH_MAP);
+
+    // Pre-seed a state file (as forward would)
+    writeFileState(path.join(tmpDir, 'target'), 'intro.md', {
+      'source-sha': 'abc123',
+      'synced-at': '2026-03-01',
+      model: 'claude-sonnet-4-20250514',
+      mode: 'RESYNC',
+      'section-count': 2,
+    });
+
+    // --write-state should preserve the existing model
+    await runStatus({
+      source: path.join(tmpDir, 'source'),
+      target: path.join(tmpDir, 'target'),
+      docsFolder: 'lectures',
+      language: 'zh-cn',
+      exclude: [],
+      writeState: true,
+    });
+
+    const state = readFileState(path.join(tmpDir, 'target'), 'intro.md');
+    expect(state?.model).toBe('claude-sonnet-4-20250514');
+  });
+
+  it('should write unknown model when no existing state file exists', async () => {
+    const sourceDir = path.join(tmpDir, 'source', 'lectures');
+    const targetDir = path.join(tmpDir, 'target', 'lectures');
+    writeMd(path.join(sourceDir, 'intro.md'), SOURCE_2_SECTIONS);
+    writeMd(path.join(targetDir, 'intro.md'), TARGET_2_SECTIONS_WITH_MAP);
+
+    // No pre-existing state file
+    await runStatus({
+      source: path.join(tmpDir, 'source'),
+      target: path.join(tmpDir, 'target'),
+      docsFolder: 'lectures',
+      language: 'zh-cn',
+      exclude: [],
+      writeState: true,
+    });
+
+    const state = readFileState(path.join(tmpDir, 'target'), 'intro.md');
+    expect(state?.model).toBe('unknown');
   });
 });
 
