@@ -1,10 +1,10 @@
 # PLAN: Development Roadmap
 
 **Created**: 2026-02-16  
-**Last Updated**: 2026-03-20 (CLI safeguards: write-state protection, doctor fix, triage additions, check-sync)  
-**Sources**: 2026-02-16-REVIEW.md, docs/DESIGN-RESYNC.md  
+**Last Updated**: 2026-03-20 (v0.11.1 release, production deployment of fa + zh-cn for lecture-python-programming)  
+**Sources**: docs/DESIGN-RESYNC.md  
 **Current Version**: v0.11.1  
-**Test Status**: 898 tests passing (39 test suites, 5 snapshots)
+**Test Status**: 900 tests passing (39 test suites, 5 snapshots)
 
 ---
 
@@ -1502,6 +1502,61 @@ The `.translate/` schema currently has no record of which version of action-tran
 
 ---
 
+## Production Deployments
+
+### v0.11.1 Release (2026-03-20)
+
+Bugfix release addressing `--write-state` model preservation:
+
+- **Fix**: `translate status --write-state` now reads existing state files via `readFileState()` and preserves the `model` field if previously set by `forward` or `init`, instead of always overwriting with `unknown`
+- **Fix**: Stale mock model names in `integration.test.ts` and `e2e-fixtures.test.ts` updated from `claude-sonnet-4.5-20241022` to `claude-sonnet-4-6`
+- **Tests**: 898 → 900 (2 new tests for model preservation)
+- **PR**: #38 (merged)
+- **Release**: https://github.com/QuantEcon/action-translation/releases/tag/v0.11.1
+
+### Farsi — `lecture-python-programming.fa` (2026-03-20)
+
+Connected existing Farsi translation of `QuantEcon/lecture-python-programming` using the connect-existing workflow:
+
+1. **Status diagnostic**: `translate status` → 18 ALIGNED, 7 MISSING_HEADINGMAP
+2. **Check-sync triage**: `translate status --check-sync` → identified 2 files needing forward resync
+3. **Forward resync**: `translate forward -f status.md -f python_by_example.md` → content resynced
+4. **Heading-maps**: `translate headingmap` → all heading-maps generated/updated
+5. **Doctor**: `translate doctor` → all checks pass
+6. **Write-state bootstrap**: `translate status --write-state` → 25 state files created
+7. **Push**: PR #67 merged on target repo
+8. **Source workflow**: PR #486 merged on source repo — `sync-translations-fa.yml` (v0.11.0)
+
+**Result**: Repos fully linked. Merged PRs on source auto-create translation PRs on fa target.
+
+### Simplified Chinese — `lecture-python-programming.zh-cn` (2026-03-20)
+
+Fresh setup of Simplified Chinese translation using the fresh-setup tutorial workflow:
+
+1. **Scaffold**: `translate setup --source QuantEcon/lecture-python-programming --target-language zh-cn --docs-folder lectures`
+   - Created repo on GitHub with `.translate/config.yml`, review workflow, README
+2. **Bulk translate**: `translate init -j 5` (5 parallel workers)
+   - 25/25 lectures translated, 504,954 tokens, 41.7 minutes
+   - Glossary: 357 terms (zh-cn)
+   - Font needed: `SourceHanSerifSC-SemiBold.otf` for CJK matplotlib labels
+3. **Verify**: `translate status` → 23 ALIGNED, 2 MISSING_HEADINGMAP (section-less: `intro.md`, `status.md`)
+   - `translate doctor` → all 4 checks pass
+4. **Push**: 132 files committed and pushed (25 lectures, 25 state files, 81 non-markdown assets, TRANSLATION-REPORT.md)
+5. **Source workflow**: PR #487 merged on source repo — `sync-translations-zh-cn.yml` (v0.11.1)
+   - Also bumped fa workflow from v0.11.0 → v0.11.1
+
+**Result**: Repos fully linked. Both fa and zh-cn sync workflows trigger on merged PRs touching `lectures/**/*.md`.
+
+### Deployment Summary
+
+| Repo | Role | Workflows | Status |
+|------|------|-----------|--------|
+| `QuantEcon/lecture-python-programming` | SOURCE | `sync-translations-fa.yml` (v0.11.1), `sync-translations-zh-cn.yml` (v0.11.1) | ✅ Active |
+| `QuantEcon/lecture-python-programming.fa` | TARGET (Farsi) | `review-translations.yml` | ✅ Linked |
+| `QuantEcon/lecture-python-programming.zh-cn` | TARGET (zh-cn) | `review-translations.yml` | ✅ Linked |
+
+---
+
 ## Phase 8: GitHub Action Automation (Future — 1-2 days)
 
 **Goal**: Scheduled backward analysis via GitHub Actions  
@@ -1585,7 +1640,7 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 
 | Metric | Current | Target |
 |--------|---------|--------|
-| Test count | 882 | 400+ |
+| Test count | 900 | 400+ |
 | Test suites | 39 | — |
 | Snapshots | 5 | — |
 | `index.ts` lines | ~447 | ~447 (stable) |
@@ -1792,4 +1847,4 @@ The GitHub Action itself would remain Node.js (Actions require JavaScript). Only
 
 ---
 
-*Last updated: 2026-03-20 (Init testing on lecture-python-intro — 50/50, --skip-existing PR #34, --parallel PR #33)*
+*Last updated: 2026-03-20 (v0.11.1 release, production deployment: lecture-python-programming → fa + zh-cn)*
