@@ -373,10 +373,16 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
         const sourceContent = fs.readFileSync(sourceFilePath, 'utf-8');
         const parsed = await parser.parseSections(sourceContent, sourceFilePath);
 
+        // Preserve model from existing state if it was set by a prior command (e.g. forward)
+        const existingState = readFileState(target, entry.file);
+        const model = (existingState?.model && existingState.model !== 'unknown')
+          ? existingState.model
+          : 'unknown';
+
         writeFileState(target, entry.file, {
           'source-sha': sourceGit?.lastCommit ?? 'unknown',
           'synced-at': targetGit?.lastModified?.toISOString().split('T')[0] ?? new Date().toISOString().split('T')[0],
-          model: 'unknown',
+          model,
           mode: 'RESYNC',
           'section-count': parsed.sections.length,
         });
