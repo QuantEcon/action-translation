@@ -1,10 +1,10 @@
 # PLAN: Development Roadmap
 
 **Created**: 2026-02-16  
-**Last Updated**: 2026-03-19 (comprehensive evaluation)  
+**Last Updated**: 2026-03-20 (init testing on lecture-python-intro, --parallel & --skip-existing)  
 **Sources**: 2026-02-16-REVIEW.md, docs/DESIGN-RESYNC.md  
 **Current Version**: v0.9.0  
-**Test Status**: 879 tests passing (39 test suites, 5 snapshots)
+**Test Status**: 882 tests passing (39 test suites, 5 snapshots)
 
 ---
 
@@ -939,6 +939,8 @@ translate init -s /path/to/source -t /path/to/target \
 - [x] Implement report generation
 - [x] `--dry-run` mode (list lectures, no API calls, no file writes)
 - [x] `--resume-from` support
+- [x] `--skip-existing` — skip lectures already in `.translate/state/`, enabling idempotent re-runs (PR #34)
+- [x] `-j, --parallel` — concurrent translation with configurable worker count (PR #33)
 - [x] Add tests (16 tests: `parseTocLectures`, `copyNonMarkdownFiles`)
 
 ### 5.3 Remove `--estimate` Flag ✅
@@ -1442,6 +1444,47 @@ Full structured evaluation of v0.9.0 across 24 source PRs (#595–#618), each tr
 
 **Overall assessment: PASS** — action functioning as designed across all tested scenarios.
 
+### Test Plan 4: Init on lecture-python-intro (2026-03-20)
+
+Full-scale `translate init` test on the production `lecture-python-intro` source repo (50 lectures) → fresh `test-lecture-intro.zh-cn` target, compared against the real human-curated `lecture-intro.zh-cn`.
+
+**Source**: `QuantEcon/lecture-python-intro` (50 lectures in `lectures/`)
+**Target**: Fresh clone, `--target-language zh-cn`, model `claude-sonnet-4-6`
+
+**Run 1 — Sequential init** (2026-03-19):
+- 47/50 lectures translated successfully
+- 3 failures: `solow.md`, `input_output.md`, `lake_model.md` — network timeouts (undici fetch layer), NOT token limits (mid-sized 16-17KB files; 38KB files succeeded)
+- 1,104,392 tokens, 94.9 minutes sequential
+- All `.translate/state/` entries and heading-maps generated for successful files
+
+**Run 2 — Recovery with `--skip-existing`** (2026-03-20):
+- `translate init --skip-existing` → skipped 47 already-translated lectures
+- 3 remaining lectures translated successfully
+- **Final result: 50/50 (100%)**
+
+**Structural integrity (50 files)**:
+
+| Check | Result |
+|-------|--------|
+| Code-cell count match (source vs target) | 50/50 (0 mismatches) |
+| Heading structure match | 50/50 |
+| Heading-maps present | 47/50 (3 section-less files: `index.md`, `troubleshooting.md`, `status.md`) |
+| Font config (`mpl.rcParams`) | 40/42 applicable files |
+| `.translate/state/` entries | 50/50 |
+
+**Quality comparison vs real `lecture-intro.zh-cn`**:
+- Terminology and phrasing comparable to human-curated translations
+- Math (LaTeX) preserved verbatim in all files
+- Code blocks untouched; only comments and markdown translated
+- Font configuration (`SimHei`/`STFangsong`) correctly injected in matplotlib cells
+- Minor differences: AI translations slightly more literal; human repo has some editorial embellishments
+
+**New features validated**:
+- `--skip-existing` (PR #34): Reads `.translate/state/` to skip already-translated files, enabling idempotent re-runs after partial failures
+- `-j, --parallel` (PR #33): Concurrent translation with configurable worker count (not used in this test — validated separately)
+
+**Report**: `reports/lecture-python-intro/init-2026-03-19/README.md`
+
 ### 7.8 Track Tool Version in `.translate/` Metadata
 
 The `.translate/` schema currently has no record of which version of action-translation created or last managed the project. Adding a `tool-version` field enables schema migration, version mismatch warnings, and audit trails.
@@ -1542,7 +1585,7 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 
 | Metric | Current | Target |
 |--------|---------|--------|
-| Test count | 879 | 400+ |
+| Test count | 882 | 400+ |
 | Test suites | 39 | — |
 | Snapshots | 5 | — |
 | `index.ts` lines | ~447 | ~447 (stable) |
@@ -1568,6 +1611,7 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 | **Phase 7**: Real-World Readiness | 3-5 days | Phase 6b ✅ | Fix setup workflows, headingmap + doctor commands, e2e testing ✅ |
 | **Phase 7.7**: E2E Testing | 2 days | Phase 7 ✅ | Real-world testing, 5 bugs fixed, v0.9.0 release ✅ |
 | **Phase 7 GitHub Action Test** | 1 day | Phase 7.7 ✅ | Both zh-cn + fa workflows pass end-to-end on test repos ✅ |
+| **Phase 7 Init Testing** | 1 day | Phase 7.7 ✅ | Init 50/50 on lecture-python-intro, --skip-existing + --parallel (PRs #33, #34) ✅ |
 | **Phase 8**: Automation | 1-2 days | Phase 7 ✅ | Scheduled backward analysis |
 | **Phase 9**: Whole-file translation | TBD | Phase 7 ✅ | Evaluate whole-file approach for forward sync |
 
@@ -1608,6 +1652,13 @@ This raises the question: should `translator.ts` (forward sync) also move to who
 - **Date-only folder naming** (`backward-2026-03-04`) is cleaner than timestamped (`backward-2026-03-04_01-38-48`). Same-day re-runs overwrite, which matches the fresh-start default.
 - **Stage 1 flagging rate** was ~67% (33/49 files flagged), much higher than the estimated 5-10%. This suggests the Stage 1 prompt has high recall (good — false negatives are worse than false positives) but precision could be improved. Stage 2 effectively filters: only 20 suggestions survived from 33 flagged files.
 
+### From Init Testing (lecture-python-intro, 50 lectures)
+
+- **Network failures are transient, not size-correlated**: 3 failures were mid-sized files (16-17KB) while 38KB files succeeded. Caused by undici fetch layer timeouts, not Claude token limits.
+- **Idempotent re-runs are essential**: `--skip-existing` (reads `.translate/state/`) enables safe recovery from partial failures without re-translating completed work. Linear `--resume-from` is insufficient when failures are scattered.
+- **Structural integrity is near-perfect**: Zero code-cell mismatches across 50 files. Heading-maps generated correctly. Font configuration injected in matplotlib cells. The init pipeline is production-ready.
+- **AI vs human translation quality**: AI translations are slightly more literal than human-curated versions, but terminology and technical accuracy are comparable. No hallucinated content or structural corruption observed.
+
 ---
 
 ## Future Work
@@ -1619,6 +1670,7 @@ Items moved from completed phases. These are candidates for future development, 
 - [x] Test `backward` + `review` workflow with `lecture-python-programming.myst` ↔ `lecture-python-programming.fa` (2026-03-18)
 - [x] Test `forward` resync with `lecture-python-programming.myst` ↔ `lecture-python-programming.fa` (2026-03-18)
 - [x] Test `setup` + `init` with `test-translation-sync` → `test-translation-sync.fa` (2026-03-19)
+- [x] Test `init` on production repo: `lecture-python-intro` → 50/50 lectures translated (2026-03-20)
 - [x] Validate RESYNC translation quality — about_py.md resynced correctly
 - [x] Validate forward triage accuracy — fixed: about_py.md CONTENT_CHANGES, scipy.md IDENTICAL
 - [x] Test review → dry-run with real reports (2026-03-18)
@@ -1740,4 +1792,4 @@ The GitHub Action itself would remain Node.js (Actions require JavaScript). Only
 
 ---
 
-*Last updated: 2026-03-19 (Phase 7 comprehensive evaluation — 24-scenario test, 48 target PRs, all pass)*
+*Last updated: 2026-03-20 (Init testing on lecture-python-intro — 50/50, --skip-existing PR #34, --parallel PR #33)*

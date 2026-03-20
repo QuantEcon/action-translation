@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`--skip-existing` flag** for `translate init`: Skip lectures that already have `.translate/state/` entries, enabling idempotent re-runs after partial failures (PR #34)
+- **`-j, --parallel <n>` flag** for `translate init`, `backward`, `forward`: Concurrent processing with configurable worker count (PR #33)
+- **`filterSkipExisting()` helper** (`src/cli/commands/init.ts`): Exported pure function for skip-existing filtering logic
+- **`skippedCount` field** in `TranslationStats`: Separate tracking for skipped vs translated files in init reports
+- **3 new tests** for `filterSkipExisting` (879 → 882 total)
+
+### Changed
+- **Init reporting**: Skipped lectures no longer inflate "Successfully Translated" count or distort average time per lecture
+
 ### Added (Phase 6 — `.translate/` Metadata)
 - **`translate-state.ts` module** (`src/cli/translate-state.ts`): read/write `.translate/config.yml` and per-file state YAML
   - Pure serializers (`serializeFileState`, `serializeConfig`, `stateFileRelativePath`, `configRelativePath`) shared between CLI and Action
