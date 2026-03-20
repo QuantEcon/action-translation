@@ -206,6 +206,7 @@ export interface BackwardOptions extends CommonOptions {
  */
 export type ForwardTriageVerdict =
   | 'CONTENT_CHANGES'      // Substantive content differences — proceed to RESYNC
+  | 'TARGET_HAS_ADDITIONS' // TARGET has content not in SOURCE — warn before RESYNC
   | 'I18N_ONLY'            // Only internationalisation differences — skip
   | 'IDENTICAL';           // Files are equivalent — skip
 

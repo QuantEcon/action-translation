@@ -13,8 +13,8 @@ By the end, you'll have:
 - Heading-maps generated for all translated files
 - Automated sync and review workflows configured
 
-**Time:** ~20 minutes (mostly manual verification)
-**Cost:** Free if heading-maps already exist. ~$0.12/file if heading-maps need generation via `forward`.
+**Time:** ~30 minutes (includes sync verification)
+**Cost:** Free for status/heading-maps. ~$0.02/file for sync check. ~$0.12/file if resync needed.
 
 ## When to use this tutorial
 
@@ -31,10 +31,12 @@ If you're starting from scratch with no translations, see [Tutorial: Fresh Setup
 
 ```
 Step 1: Assess the current state          (translate status)
-Step 2: Bootstrap .translate/ metadata     (translate status --write-state)
-Step 3: Fix missing heading-maps           (translate forward or manual)
-Step 4: Configure workflows and secrets    (manual GitHub setup)
-Step 5: Verify the connection              (translate status)
+Step 2: Check sync before bootstrapping    (translate status --check-sync)
+Step 3: Catch up stale translations        (translate forward, if needed)
+Step 4: Bootstrap .translate/ metadata     (translate status --write-state)
+Step 5: Fix missing heading-maps           (translate headingmap)
+Step 6: Configure workflows and secrets    (manual GitHub setup)
+Step 7: Verify the connection              (translate doctor)
 ```
 
 ---
@@ -76,7 +78,7 @@ Sync Status: lecture-python-intro ↔ lecture-python-intro.zh-cn (zh-cn)
 | `SOURCE_ONLY` | File exists only in source | Translate new file later |
 | `TARGET_ONLY` | File exists only in target | Investigate (orphaned?) |
 
-At this stage, we're focused on getting the connection established. Don't worry about OUTDATED or SOURCE_AHEAD files yet — handle those after the workflows are in place.
+At this stage, you're gathering information. Pay attention to `OUTDATED` and `SOURCE_AHEAD` statuses — these indicate the translations may have fallen behind the source. We'll address those in Step 2 before bootstrapping.
 
 For a more comprehensive assessment including workflow and state file verification, run:
 
@@ -89,9 +91,82 @@ This reports configuration health across all dimensions. All items should be ✅
 
 ---
 
-## Step 2: Bootstrap `.translate/` metadata
+## Step 2: Check sync before bootstrapping
 
-The `.translate/` folder is how the system tracks which source commit each translation is synced to. For new connections, bootstrap it from the current state:
+:::{warning}
+**Critical step.** Before bootstrapping state, verify that your translations actually match the current source. The `--write-state` flag records the current source commit as the baseline — if translations are stale, this creates a false "everything is synced" state and future changes to already-stale content will be invisible.
+:::
+
+Run the sync check to compare source and target content:
+
+```bash
+npx translate status \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  --check-sync
+```
+
+This uses a lightweight LLM comparison (like `forward --dry-run`) to classify each file:
+
+| Result | Meaning | Action |
+|---|---|---|
+| `CONTENT_IN_SYNC` | Translation matches current source | Safe to bootstrap |
+| `CONTENT_STALE` | Source has content changes not in translation | Resync first (Step 3) |
+| `I18N_ONLY` | Differences are localization-only (fonts, RTL, etc.) | Safe to bootstrap |
+
+If all files show `CONTENT_IN_SYNC` or `I18N_ONLY`, skip to Step 4. Otherwise, proceed to Step 3 to catch up stale files.
+
+:::{tip}
+If you're confident the translations are current (e.g., they were just completed), you can skip this step. But for repos where the source has been actively developed since the translations were done, this check can save significant debugging later.
+:::
+
+---
+
+## Step 3: Catch up stale translations
+
+For files flagged as `CONTENT_STALE`, use the `forward` command to bring them up to date. The `forward` command preserves existing localization (RTL adaptations, font configuration, `# i18n` code, locale-specific links) while updating the translation to match the current source content.
+
+```bash
+# Dry run first — see what would change
+npx translate forward \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  --dry-run
+
+# Resync all stale files
+npx translate forward \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn
+```
+
+For a single file:
+
+```bash
+npx translate forward \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  -f solow.md
+```
+
+Review and commit the changes:
+
+```bash
+cd ~/repos/lecture-python-intro.zh-cn
+git diff lectures/  # Review all changes
+git add lectures/
+git commit -m "Resync translations to current source via forward"
+git push
+```
+
+:::{note}
+The `forward` command uses whole-file RESYNC mode. It sends both the source document and existing translation to Claude, with explicit instructions to preserve the translation's style, terminology, and localization choices — only updating parts where the source content has actually changed.
+:::
+
+---
+
+## Step 4: Bootstrap `.translate/` metadata
+
+Now that translations are current, bootstrap the state tracking. The `.translate/` folder records which source commit each translation is synced to:
 
 ```bash
 npx translate status \
@@ -137,9 +212,13 @@ The `model: unknown` and `mode: RESYNC` values are expected for bootstrapped sta
 
 ---
 
-## Step 3: Fix missing heading-maps
+## Step 5: Fix missing heading-maps
 
 Heading-maps are essential for reliable section matching. If Step 1 showed `MISSING_HEADINGMAP` for some files, you need to add them.
+
+:::{note}
+Files with zero sections (no `##` headings, like a simple `intro.md` or `status.md`) correctly have no heading-map. The `doctor` command will not warn about these.
+:::
 
 ### Option A: Use `headingmap` to generate maps (recommended)
 
@@ -182,21 +261,13 @@ This approach is ideal for repos with carefully reviewed human translations — 
 
 ### Option B: Use `forward` to regenerate (also adds heading-maps)
 
-The `forward` command does a whole-file RESYNC, which generates heading-maps as part of the process. This also **updates the translation** to match the current source:
+If you already ran `forward` in Step 3, heading-maps were generated as part of that process. Check if any files still need them:
 
 ```bash
-# Resync a single file (generates heading-map + updates translation)
-npx translate forward \
+npx translate headingmap \
   -s ~/repos/lecture-python-intro \
   -t ~/repos/lecture-python-intro.zh-cn \
-  -f cobweb.md
-```
-
-Review the changes:
-
-```bash
-cd ~/repos/lecture-python-intro.zh-cn
-git diff lectures/cobweb.md
+  --dry-run
 ```
 
 The diff should show the heading-map added to the frontmatter. The translation content should be largely preserved (the RESYNC mode is designed to maintain existing style).
@@ -247,16 +318,14 @@ Add this to the target's frontmatter:
 ---
 title: 蛛网模型
 heading-map:
-  overview: "概述"
-  the-cobweb-model: "蛛网模型"
-  equilibrium: "均衡"
-  exercises: "练习"
+  Overview: "概述"
+  The Cobweb Model: "蛛网模型"
+  The Cobweb Model::Equilibrium: "均衡"
+  Exercises: "练习"
 ---
 ```
 
-The heading-map key is the English heading ID (lowercased, spaces → hyphens, punctuation removed). The value is the exact translated heading text as it appears in the document.
-
-See [Heading Maps](../heading-maps.md) for complete format rules and ID generation details.
+Heading-map keys use the full heading text with `::` nesting for subsections. See [Heading Maps](../heading-maps.md) for complete format rules.
 
 ### Commit the heading-maps
 
@@ -269,11 +338,11 @@ git push origin main
 
 ---
 
-## Step 4: Configure workflows and secrets
+## Step 6: Configure workflows and secrets
 
-Now set up the automated pipeline. You need a workflow in the **source** repo and optionally one in the **target** repo.
+Now set up the automated pipeline. You need a workflow in the **source** repo and one in the **target** repo.
 
-### 4a: Source repo — Sync workflow
+### 6a: Source repo — Sync workflow
 
 Create `.github/workflows/sync-translations.yml` in the **source** repository:
 
@@ -285,36 +354,41 @@ on:
     types: [closed]
     paths:
       - 'lectures/**/*.md'
-      - '_toc.yml'
+      - 'lectures/_toc.yml'
 
 jobs:
-  sync-to-chinese:
+  sync:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
-      - uses: QuantEcon/action-translation@v0.8
+      - uses: QuantEcon/action-translation@v0.10.0
         with:
           mode: sync
           target-repo: 'QuantEcon/lecture-python-intro.zh-cn'
+          source-language: 'en'
           target-language: 'zh-cn'
           docs-folder: 'lectures'
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           github-token: ${{ secrets.TRANSLATION_PAT }}
 ```
 
-### 4b: Source repo — Secrets
+:::{note}
+Make sure the `paths` filter matches your actual file locations. For example, if your TOC is at `lectures/_toc.yml`, use that — not `_toc.yml` at the repo root.
+:::
+
+### 6b: Source repo — Secrets
 
 | Secret | Value | Purpose |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | Your Anthropic API key | Pays for Claude translations |
 | `TRANSLATION_PAT` | GitHub PAT with `repo` scope | Creates PRs in the target repo |
 
-### 4c: Target repo — Review workflow (optional)
+### 6c: Target repo — Review workflow
 
 Create `.github/workflows/review-translations.yml` in the **target** repository:
 
@@ -323,7 +397,7 @@ name: Review Translations
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, labeled, reopened]
 
 jobs:
   review:
@@ -331,11 +405,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
-      - uses: QuantEcon/action-translation@v0.8
+      - uses: QuantEcon/action-translation@v0.10.0
         with:
           mode: review
           source-repo: 'QuantEcon/lecture-python-intro'
@@ -346,7 +420,11 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-### 4d: Target repo — Secret
+:::{tip}
+The `labeled` event type is important — without it, the workflow won't trigger if the `action-translation` label is added after the PR is opened.
+:::
+
+### 6d: Target repo — Secret
 
 | Secret | Value |
 |---|---|
@@ -354,7 +432,13 @@ jobs:
 
 ---
 
-## Step 5: Verify the connection
+### 6e: Merge order
+
+Merge the **target repo** changes first (`.translate/`, heading-maps, review workflow), then the **source repo** sync workflow. This ensures the target is ready to receive translation PRs when the sync workflow activates.
+
+---
+
+## Step 7: Verify the connection
 
 Run `status` again to confirm everything is properly connected:
 
@@ -379,7 +463,7 @@ npx translate doctor \
   -s ~/repos/lecture-python-intro
 ```
 
-All checks should pass ✅. If some files show `OUTDATED` or `SOURCE_AHEAD`, you can address those now or wait for the automated pipeline to handle them on the next PR merge. For immediate catch-up, see [Tutorial: Resync a Drifted Target](resync-drifted.md).
+All checks should pass ✅. If some files show `OUTDATED` or `SOURCE_AHEAD`, address them with `forward` before considering the connection complete — otherwise those files will be silently out of date.
 
 ---
 
