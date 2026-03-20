@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-03-20
+
 ### Added
 - **`--check-sync` flag** for `translate status`: LLM-based content sync check using forward triage, reports per-file `IDENTICAL`/`CONTENT_CHANGES`/`TARGET_HAS_ADDITIONS`/`I18N_ONLY` verdicts (PR #37, closes #35)
 - **`--force` flag** for `translate status --write-state`: Override the sync-date safety check that blocks writing state when source has newer commits
