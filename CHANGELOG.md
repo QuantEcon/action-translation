@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`--check-sync` flag** for `translate status`: LLM-based content sync check using forward triage, reports per-file `IDENTICAL`/`CONTENT_CHANGES`/`TARGET_HAS_ADDITIONS`/`I18N_ONLY` verdicts (PR #37, closes #35)
+- **`--force` flag** for `translate status --write-state`: Override the sync-date safety check that blocks writing state when source has newer commits
+- **`TARGET_HAS_ADDITIONS` verdict** for forward triage: 4th category distinguishing target-side additions from content changes or i18n-only differences (PR #37)
+- **16 new tests** for write-state safeguard, check-sync, doctor section-less fix, TARGET_HAS_ADDITIONS parsing (882 → 898 total)
+
+### Fixed
+- **Doctor section-less fix**: `translate doctor` no longer warns about missing heading-maps for files with zero `##` sections (e.g. `index.md`, `intro.md`) (PR #37, closes #36)
+- **`--write-state` safeguard**: Blocks `--write-state` when source has newer commits than target, preventing silent divergence. Use `--force` to override.
+
 ## [0.10.0] - 2026-03-20
 
 ### Added

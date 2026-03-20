@@ -4,7 +4,7 @@
 **Last Updated**: 2026-03-20 (init testing on lecture-python-intro, --parallel & --skip-existing)  
 **Sources**: 2026-02-16-REVIEW.md, docs/DESIGN-RESYNC.md  
 **Current Version**: v0.10.0  
-**Test Status**: 882 tests passing (39 test suites, 5 snapshots)
+**Test Status**: 898 tests passing (39 test suites, 5 snapshots)
 
 ---
 
