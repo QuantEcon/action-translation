@@ -581,14 +581,9 @@ describe('--write-state safeguard', () => {
     expect(fs.existsSync(path.join(tmpDir, 'target', '.translate', 'config.yml'))).toBe(true);
   });
 
-  it('should throw when entries have sourceLastModified > targetLastModified without --force', async () => {
-    // We'll test the safeguard logic directly by mocking entries
-    // Since we can't create git history in tmpDir, we test via the entry data path.
-    // The safeguard checks entry.sourceLastModified > entry.targetLastModified.
-    // We can verify the check exists by inspecting the code path; for a proper
-    // integration test we'd need a git repo.
-    //
-    // For now, verify that --write-state with all-ALIGNED files proceeds (no dates).
+  it('should allow --write-state when files are aligned and have no git dates', async () => {
+    // Without git history in tmpDir, sourceLastModified/targetLastModified are
+    // both undefined → no stale files → write-state proceeds.
     const sourceDir = path.join(tmpDir, 'source', 'lectures');
     const targetDir = path.join(tmpDir, 'target', 'lectures');
     writeMd(path.join(sourceDir, 'intro.md'), SOURCE_2_SECTIONS);
@@ -602,6 +597,25 @@ describe('--write-state safeguard', () => {
       exclude: [],
       writeState: true,
     })).resolves.toBeDefined();
+  });
+
+  it('should reject --write-state combined with --check-sync', async () => {
+    const sourceDir = path.join(tmpDir, 'source', 'lectures');
+    const targetDir = path.join(tmpDir, 'target', 'lectures');
+    writeMd(path.join(sourceDir, 'intro.md'), SOURCE_2_SECTIONS);
+    writeMd(path.join(targetDir, 'intro.md'), TARGET_2_SECTIONS_WITH_MAP);
+
+    await expect(runStatus({
+      source: path.join(tmpDir, 'source'),
+      target: path.join(tmpDir, 'target'),
+      docsFolder: 'lectures',
+      language: 'zh-cn',
+      exclude: [],
+      writeState: true,
+      checkSync: true,
+      apiKey: 'test-key',
+      testMode: true,
+    })).rejects.toThrow('cannot be used together');
   });
 });
 

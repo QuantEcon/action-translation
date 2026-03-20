@@ -163,7 +163,6 @@ export function checkHeadingMaps(targetPath: string, docsFolder: string): CheckR
     };
   }
 
-  const parser = new MystParser();
   const missing: string[] = [];
   let sectionlessCount = 0;
   for (const file of targetFiles) {

@@ -309,6 +309,14 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
     entries.push(entry);
   }
 
+  // Reject incompatible flag combination
+  if (options.writeState && options.checkSync) {
+    throw new Error(
+      '--write-state and --check-sync cannot be used together.\n' +
+      'Run --check-sync first, then --write-state once you\'re satisfied.',
+    );
+  }
+
   // --write-state: bootstrap .translate/ metadata
   if (options.writeState) {
     // Safety check: warn if SOURCE files are newer than TARGET files

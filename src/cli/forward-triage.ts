@@ -128,16 +128,16 @@ export function parseForwardTriageResponse(responseText: string): {
     }
   }
 
-  // Strategy 3: Keyword detection
+  // Strategy 3: Keyword detection (order: most specific first)
   const lower = responseText.toLowerCase();
-  if (lower.includes('identical')) {
-    return { verdict: 'IDENTICAL', reason: '' };
-  }
   if (lower.includes('target_has_additions') || lower.includes('target has additions')) {
     return { verdict: 'TARGET_HAS_ADDITIONS', reason: 'Detected via keyword in response' };
   }
   if (lower.includes('i18n_only') || lower.includes('i18n only')) {
     return { verdict: 'I18N_ONLY', reason: 'Detected via keyword in response' };
+  }
+  if (/\bidentical\b/.test(lower) && !/\bnot\s+identical\b/.test(lower)) {
+    return { verdict: 'IDENTICAL', reason: '' };
   }
 
   // Default to CONTENT_CHANGES (safe: will proceed to RESYNC)

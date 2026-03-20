@@ -106,15 +106,16 @@ npx translate status \
   --check-sync
 ```
 
-This uses a lightweight LLM comparison (like `forward --dry-run`) to classify each file:
+This uses a lightweight LLM comparison to classify each file:
 
 | Result | Meaning | Action |
 |---|---|---|
-| `CONTENT_IN_SYNC` | Translation matches current source | Safe to bootstrap |
-| `CONTENT_STALE` | Source has content changes not in translation | Resync first (Step 3) |
+| `IDENTICAL` | Translation matches current source | Safe to bootstrap |
 | `I18N_ONLY` | Differences are localization-only (fonts, RTL, etc.) | Safe to bootstrap |
+| `CONTENT_CHANGES` | Source has content changes not in translation | Resync first (Step 3) |
+| `TARGET_HAS_ADDITIONS` | Target has extra content not in source | Run `backward` to capture, then resync |
 
-If all files show `CONTENT_IN_SYNC` or `I18N_ONLY`, skip to Step 4. Otherwise, proceed to Step 3 to catch up stale files.
+If all files show `IDENTICAL` or `I18N_ONLY`, skip to Step 4. If any show `CONTENT_CHANGES`, proceed to Step 3. If any show `TARGET_HAS_ADDITIONS`, consider running `translate backward` first to capture improvements before resyncing.
 
 :::{tip}
 If you're confident the translations are current (e.g., they were just completed), you can skip this step. But for repos where the source has been actively developed since the translations were done, this check can save significant debugging later.

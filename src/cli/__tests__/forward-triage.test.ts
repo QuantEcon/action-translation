@@ -79,6 +79,12 @@ describe('parseForwardTriageResponse', () => {
     expect(result.verdict).toBe('IDENTICAL');
   });
 
+  it('does not match "not identical" as IDENTICAL', () => {
+    const response = 'The documents are not identical — there are content differences.';
+    const result = parseForwardTriageResponse(response);
+    expect(result.verdict).toBe('CONTENT_CHANGES');
+  });
+
   it('falls back to keyword detection for "i18n_only"', () => {
     const response = 'These are i18n only differences.';
     const result = parseForwardTriageResponse(response);
