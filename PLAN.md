@@ -3,7 +3,7 @@
 **Created**: 2026-02-16  
 **Last Updated**: 2026-03-20 (CLI safeguards: write-state protection, doctor fix, triage additions, check-sync)  
 **Sources**: 2026-02-16-REVIEW.md, docs/DESIGN-RESYNC.md  
-**Current Version**: v0.11.0  
+**Current Version**: v0.11.1  
 **Test Status**: 898 tests passing (39 test suites, 5 snapshots)
 
 ---

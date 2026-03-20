@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-03-20
+
+### Fixed
+- **`--write-state` model preservation**: Bootstrap now reads existing state files and preserves the `model` field if it was set by a prior command (e.g. `forward`), instead of always overwriting with `unknown` (PR #38)
+- **Stale model names in tests**: Updated mock model references from `claude-sonnet-4.5-20241022` to `claude-sonnet-4-6` for consistency with production defaults
+
+### Added
+- **2 new tests** for `--write-state` model preservation (898 → 900 total)
+
 ## [0.11.0] - 2026-03-20
 
 ### Added
