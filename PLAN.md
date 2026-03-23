@@ -1,10 +1,10 @@
 # PLAN: Development Roadmap
 
 **Created**: 2026-02-16  
-**Last Updated**: 2026-03-20 (v0.11.1 release, production deployment of fa + zh-cn for lecture-python-programming)  
+**Last Updated**: 2026-03-23 (v0.12.0 release, sync notifications + \\translate-resync)  
 **Sources**: docs/DESIGN-RESYNC.md  
-**Current Version**: v0.11.2  
-**Test Status**: 900 tests passing (39 test suites, 5 snapshots)
+**Current Version**: v0.12.0  
+**Test Status**: 909 tests passing (39 test suites, 5 snapshots)
 
 ---
 
