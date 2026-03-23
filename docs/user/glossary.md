@@ -63,7 +63,7 @@ Each term has:
 To use your own glossary instead of (or in addition to) the built-in one, specify the `glossary-path` input:
 
 ```yaml
-- uses: QuantEcon/action-translation@v0.8
+- uses: QuantEcon/action-translation@v0.11
   with:
     mode: sync
     glossary-path: 'glossary/my-custom-glossary.json'
