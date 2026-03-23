@@ -34149,13 +34149,17 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
   logger.info(`Created PR: ${pr.html_url}`);
   const labelsToAdd = buildLabelSet(config.prLabels, sourcePrInfo?.labels);
   if (labelsToAdd.length > 0) {
-    await octokit.rest.issues.addLabels({
-      owner: targetOwner,
-      repo: targetRepo,
-      issue_number: pr.number,
-      labels: labelsToAdd
-    });
-    logger.info(`Added labels: ${labelsToAdd.join(", ")}`);
+    try {
+      await octokit.rest.issues.addLabels({
+        owner: targetOwner,
+        repo: targetRepo,
+        issue_number: pr.number,
+        labels: labelsToAdd
+      });
+      logger.info(`Added labels: ${labelsToAdd.join(", ")}`);
+    } catch (labelError) {
+      logger.warning(`Could not add labels to PR #${pr.number}: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
+    }
   }
   await requestReviewers(octokit, targetOwner, targetRepo, pr.number, config, logger);
   return {
