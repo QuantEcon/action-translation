@@ -383,7 +383,7 @@ Only sections detected as changed are sent to Claude for translation. This typic
 npm run build        # TypeScript compilation
 npm run build:cli    # CLI ESM build
 npm run package      # Action CJS bundle (dist-action/index.js)
-npm test             # Run all 908 tests
+npm test             # Run all 909 tests
 ```
 
 The action is distributed as a single bundled file (`dist-action/index.js`) with no external dependencies at runtime. Glossary files are included in `dist-action/glossary/`.

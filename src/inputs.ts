@@ -218,25 +218,44 @@ export function validatePREvent(context: any, testMode: boolean): PREventResult 
   return { merged, prNumber, isTestMode: false, isResync: false };
 }
 
+/** Trusted author associations that can trigger resync */
+const TRUSTED_ASSOCIATIONS = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
+
 /**
  * Validate an issue_comment event as a \translate-resync trigger.
- * Must be on a merged PR and contain the resync command.
+ * Returns merged=false (no-op) for non-matching comments so the workflow exits cleanly.
+ * Only throws for truly unexpected states (missing PR number).
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function validateResyncComment(payload: any): PREventResult {
+  const noOp: PREventResult = { merged: false, prNumber: 0, isTestMode: false, isResync: false };
+
   // Only respond to newly created comments
   if (payload.action !== 'created') {
-    throw new Error(`Ignoring issue_comment action: ${payload.action}. Only 'created' is supported.`);
+    core.info(`Ignoring issue_comment action: ${payload.action}. Only 'created' is supported for resync.`);
+    return noOp;
   }
 
   // Must be a PR (issues have no pull_request key)
   if (!payload.issue?.pull_request) {
-    throw new Error('Comment is on an issue, not a pull request. Resync only works on PRs.');
+    core.info('Ignoring issue_comment on an issue (not a pull request). Resync only works on PRs.');
+    return noOp;
   }
 
   const commentBody = (payload.comment?.body || '').trim();
   if (!commentBody.startsWith(RESYNC_COMMAND)) {
-    throw new Error(`Comment does not contain resync command. Expected: ${RESYNC_COMMAND}`);
+    core.info('Ignoring issue_comment without resync command.');
+    return noOp;
+  }
+
+  // Authorization: only trusted actors can trigger resync
+  const association = payload.comment?.author_association || '';
+  if (!TRUSTED_ASSOCIATIONS.has(association)) {
+    core.warning(
+      `Ignoring \\translate-resync from user with association '${association}'. ` +
+      `Only OWNER, MEMBER, and COLLABORATOR can trigger resync.`
+    );
+    return noOp;
   }
 
   const prNumber = payload.issue?.number;

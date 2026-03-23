@@ -11,7 +11,7 @@
  */
 
 import * as core from '@actions/core';
-import { getMode, getInputs, getReviewInputs, validatePREvent, validateReviewPREvent, RESYNC_COMMAND } from '../inputs.js';
+import { getMode, getInputs, getReviewInputs, validatePREvent, validateReviewPREvent } from '../inputs.js';
 
 // Mock @actions/core
 jest.mock('@actions/core');
@@ -406,6 +406,7 @@ describe('validatePREvent (sync mode)', () => {
           },
           comment: {
             body: '\\translate-resync',
+            author_association: 'MEMBER',
           },
         },
       };
@@ -428,6 +429,7 @@ describe('validatePREvent (sync mode)', () => {
           },
           comment: {
             body: '\\translate-resync please retry this',
+            author_association: 'OWNER',
           },
         },
       };
@@ -437,7 +439,7 @@ describe('validatePREvent (sync mode)', () => {
       expect(result.prNumber).toBe(42);
     });
 
-    it('should reject comments not starting with \\translate-resync', () => {
+    it('should ignore comments not starting with \\translate-resync (no-op)', () => {
       const context = {
         eventName: 'issue_comment',
         payload: {
@@ -448,14 +450,17 @@ describe('validatePREvent (sync mode)', () => {
           },
           comment: {
             body: 'Please resync this translation',
+            author_association: 'MEMBER',
           },
         },
       };
 
-      expect(() => validatePREvent(context, false)).toThrow(/does not contain resync command/);
+      const result = validatePREvent(context, false);
+      expect(result.merged).toBe(false);
+      expect(result.isResync).toBe(false);
     });
 
-    it('should reject comments on issues (not PRs)', () => {
+    it('should ignore comments on issues (not PRs) (no-op)', () => {
       const context = {
         eventName: 'issue_comment',
         payload: {
@@ -466,14 +471,17 @@ describe('validatePREvent (sync mode)', () => {
           },
           comment: {
             body: '\\translate-resync',
+            author_association: 'MEMBER',
           },
         },
       };
 
-      expect(() => validatePREvent(context, false)).toThrow(/not a pull request/);
+      const result = validatePREvent(context, false);
+      expect(result.merged).toBe(false);
+      expect(result.isResync).toBe(false);
     });
 
-    it('should reject non-created comment actions', () => {
+    it('should ignore non-created comment actions (no-op)', () => {
       const context = {
         eventName: 'issue_comment',
         payload: {
@@ -484,11 +492,35 @@ describe('validatePREvent (sync mode)', () => {
           },
           comment: {
             body: '\\translate-resync',
+            author_association: 'MEMBER',
           },
         },
       };
 
-      expect(() => validatePREvent(context, false)).toThrow(/Only 'created' is supported/);
+      const result = validatePREvent(context, false);
+      expect(result.merged).toBe(false);
+      expect(result.isResync).toBe(false);
+    });
+
+    it('should ignore resync from untrusted users (no-op)', () => {
+      const context = {
+        eventName: 'issue_comment',
+        payload: {
+          action: 'created',
+          issue: {
+            number: 42,
+            pull_request: { url: 'https://api.github.com/repos/owner/repo/pulls/42' },
+          },
+          comment: {
+            body: '\\translate-resync',
+            author_association: 'NONE',
+          },
+        },
+      };
+
+      const result = validatePREvent(context, false);
+      expect(result.merged).toBe(false);
+      expect(result.isResync).toBe(false);
     });
   });
 });

@@ -24087,16 +24087,26 @@ function validatePREvent(context2, testMode) {
   core.info(`\u{1F680} Running in PRODUCTION mode for merged PR #${prNumber}`);
   return { merged, prNumber, isTestMode: false, isResync: false };
 }
+var TRUSTED_ASSOCIATIONS = /* @__PURE__ */ new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
 function validateResyncComment(payload) {
+  const noOp = { merged: false, prNumber: 0, isTestMode: false, isResync: false };
   if (payload.action !== "created") {
-    throw new Error(`Ignoring issue_comment action: ${payload.action}. Only 'created' is supported.`);
+    core.info(`Ignoring issue_comment action: ${payload.action}. Only 'created' is supported for resync.`);
+    return noOp;
   }
   if (!payload.issue?.pull_request) {
-    throw new Error("Comment is on an issue, not a pull request. Resync only works on PRs.");
+    core.info("Ignoring issue_comment on an issue (not a pull request). Resync only works on PRs.");
+    return noOp;
   }
   const commentBody = (payload.comment?.body || "").trim();
   if (!commentBody.startsWith(RESYNC_COMMAND)) {
-    throw new Error(`Comment does not contain resync command. Expected: ${RESYNC_COMMAND}`);
+    core.info("Ignoring issue_comment without resync command.");
+    return noOp;
+  }
+  const association = payload.comment?.author_association || "";
+  if (!TRUSTED_ASSOCIATIONS.has(association)) {
+    core.warning(`Ignoring \\translate-resync from user with association '${association}'. Only OWNER, MEMBER, and COLLABORATOR can trigger resync.`);
+    return noOp;
   }
   const prNumber = payload.issue?.number;
   if (!prNumber) {
@@ -34390,12 +34400,12 @@ async function runSync() {
       core7.setOutput("files-synced", result.processedFiles.length.toString());
     } catch (prError) {
       core7.setFailed(`Failed to create PR: ${prError instanceof Error ? prError.message : String(prError)}`);
+      result.errors.push(`PR creation failed: ${prError instanceof Error ? prError.message : String(prError)}`);
     }
   }
   if (!isTestMode) {
-    const sourceRepo = `${github2.context.repo.owner}/${github2.context.repo.repo}`;
-    if (hasErrors) {
-      await createFailureIssue(octokit, sourceRepo, prNumber, inputs.targetLanguage, inputs.targetRepo, result.errors);
+    if (result.errors.length > 0) {
+      await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, result.errors);
     } else if (prUrl) {
       await postSuccessComment(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, prUrl, result.processedFiles);
     }
@@ -34619,7 +34629,7 @@ async function postSuccessComment(octokit, prNumber, targetLanguage, targetRepo,
     core7.warning(`Could not post success comment on PR #${prNumber}: ${error3}`);
   }
 }
-async function createFailureIssue(octokit, sourceRepo, prNumber, targetLanguage, targetRepo, errors) {
+async function createFailureIssue(octokit, prNumber, targetLanguage, targetRepo, errors) {
   try {
     const errorList = errors.map((e) => `- ${e}`).join("\n");
     const title = `Translation sync failed for PR #${prNumber} (${targetLanguage})`;

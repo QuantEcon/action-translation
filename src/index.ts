@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { getMode, getInputs, getReviewInputs, validatePREvent, validateReviewPREvent, RESYNC_COMMAND } from './inputs.js';
+import { getMode, getInputs, getReviewInputs, validatePREvent, validateReviewPREvent } from './inputs.js';
 import { TranslationReviewer } from './reviewer.js';
 import { SyncOrchestrator, classifyChangedFiles, loadGlossary, FileToSync, Logger, StateGenerationConfig } from './sync-orchestrator.js';
 import { createTranslationPR, PrCreatorConfig, SourcePrInfo } from './pr-creator.js';
@@ -255,17 +255,16 @@ async function runSync(): Promise<void> {
 
       } catch (prError) {
         core.setFailed(`Failed to create PR: ${prError instanceof Error ? prError.message : String(prError)}`);
+        result.errors.push(`PR creation failed: ${prError instanceof Error ? prError.message : String(prError)}`);
       }
     }
 
     // Post-sync notifications (skip in test mode)
     if (!isTestMode) {
-      const sourceRepo = `${github.context.repo.owner}/${github.context.repo.repo}`;
-
-      if (hasErrors) {
+      if (result.errors.length > 0) {
         // On failure: open an Issue linked to the source PR
         await createFailureIssue(
-          octokit, sourceRepo, prNumber, inputs.targetLanguage, inputs.targetRepo, result.errors,
+          octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, result.errors,
         );
       } else if (prUrl) {
         // On success: comment on the source PR
@@ -607,7 +606,6 @@ async function postSuccessComment(
 async function createFailureIssue(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   octokit: any,
-  sourceRepo: string,
   prNumber: number,
   targetLanguage: string,
   targetRepo: string,
