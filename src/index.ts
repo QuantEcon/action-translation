@@ -635,8 +635,20 @@ async function createFailureIssue(
       repo: github.context.repo.repo,
       title,
       body,
-      labels: ['translation-sync-failure'],
     });
+
+    // Best-effort label — may fail if label doesn't exist in the repo
+    try {
+      await octokit.rest.issues.addLabels({
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        issue_number: issue.number,
+        labels: ['translation-sync-failure'],
+      });
+    } catch (labelError) {
+      core.warning(`Could not add label to failure issue #${issue.number}: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
+    }
+
     core.info(`Created failure issue #${issue.number}: ${issue.html_url}`);
   } catch (error) {
     core.warning(`Could not create failure issue: ${error}`);

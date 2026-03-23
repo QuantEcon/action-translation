@@ -104,7 +104,7 @@ jobs:
   sync-to-chinese:
     if: >
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\\translate-resync'))
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -142,7 +142,7 @@ jobs:
   sync-to-chinese:
     if: >
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\\translate-resync'))
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -159,7 +159,7 @@ jobs:
   sync-to-farsi:
     if: >
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\\translate-resync'))
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

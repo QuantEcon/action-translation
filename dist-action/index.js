@@ -34656,9 +34656,18 @@ async function createFailureIssue(octokit, prNumber, targetLanguage, targetRepo,
       owner: github2.context.repo.owner,
       repo: github2.context.repo.repo,
       title,
-      body,
-      labels: ["translation-sync-failure"]
+      body
     });
+    try {
+      await octokit.rest.issues.addLabels({
+        owner: github2.context.repo.owner,
+        repo: github2.context.repo.repo,
+        issue_number: issue.number,
+        labels: ["translation-sync-failure"]
+      });
+    } catch (labelError) {
+      core7.warning(`Could not add label to failure issue #${issue.number}: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
+    }
     core7.info(`Created failure issue #${issue.number}: ${issue.html_url}`);
   } catch (error3) {
     core7.warning(`Could not create failure issue: ${error3}`);
