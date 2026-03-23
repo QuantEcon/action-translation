@@ -8,7 +8,7 @@
 - **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
-**Current Version**: v0.11.2 | **Tests**: 903 (39 suites) | **Glossary**: 357 terms (zh-cn, fa)
+**Current Version**: v0.11.2 | **Tests**: 908 (39 suites) | **Glossary**: 357 terms (zh-cn, fa)
 
 ---
 
@@ -16,7 +16,7 @@
 
 ```
 src/
-├── index.ts             # GitHub Actions entry point + mode routing
+├── index.ts             # GitHub Actions entry point + mode routing + sync notifications
 ├── sync-orchestrator.ts # Sync processing pipeline — reusable by future CLI
 ├── pr-creator.ts        # PR creation in target repo
 ├── parser.ts            # MyST Markdown parser, stack-based, no AST
@@ -90,6 +90,8 @@ heading-map:
 Maps are flat (no nesting), include all heading levels, auto-populated on first translation.
 
 **Retry logic** (`translator.ts`) — retries `RateLimitError`, `APIConnectionError`, 5xx; never retries `AuthenticationError` or `BadRequestError`.
+
+**Sync notifications** (`index.ts`) — On success, posts a confirmation comment on the source PR. On failure, opens a GitHub Issue with error details and recovery instructions. Comment `\translate-resync` on a merged PR to re-trigger sync.
 
 ---
 
@@ -188,4 +190,6 @@ Before creating a release, verify the following:
 | Localization rules | `localization-rules.ts` → `buildLocalizationPrompt` / `getFontRequirements` |
 | Whole-file RESYNC | `translator.ts` → `translateDocumentResync` |
 | Input validation | `inputs.ts` → `getInputs` / `getReviewInputs` |
+| Resync trigger | `inputs.ts` → `validatePREvent` (handles `issue_comment` events) |
+| Sync notifications | `index.ts` → `postSuccessComment` / `createFailureIssue` |
 
