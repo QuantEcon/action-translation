@@ -215,4 +215,49 @@ Content.`;
     expect(result.preTitle).toBe('');
     expect(result.title).toBe('# Title');
   });
+
+  it('should not include pre-title content or title in intro (regression: duplicate preamble)', async () => {
+    const content = `---
+jupytext:
+  text_representation:
+    extension: .md
+kernelspec:
+  display_name: Python 3
+  name: python3
+---
+
+(pd)=
+\`\`\`{raw} jupyter
+<div id="qe-notebook-header" align="right" style="text-align:right;">
+        <a href="https://quantecon.org/">QuantEcon</a>
+</div>
+\`\`\`
+
+# {index}\`Pandas <single: Pandas>\`
+
+\`\`\`{index} single: Python; Pandas
+\`\`\`
+
+This lecture introduces pandas.
+
+## Overview
+
+Pandas is a data library.`;
+
+    const result = await parser.parseDocumentComponents(content, 'test.md');
+
+    // preTitle should have anchor + raw block only
+    expect(result.preTitle).toContain('(pd)=');
+    expect(result.preTitle).toContain('qe-notebook-header');
+
+    // title should be the # heading
+    expect(result.title).toBe('# {index}`Pandas <single: Pandas>`');
+
+    // intro should NOT contain any pre-title content or the title
+    expect(result.intro).not.toContain('(pd)=');
+    expect(result.intro).not.toContain('qe-notebook-header');
+    expect(result.intro).not.toContain('# {index}');
+    expect(result.intro).toContain('This lecture introduces pandas');
+    expect(result.intro).toContain('{index} single: Python; Pandas');
+  });
 });

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Duplicate preamble regression**: Fixed intro extraction in `parseDocumentComponents` that included pre-title content and title in the intro when documents had content before `# title` (e.g. `(label)=` anchors, `{raw}` blocks). This caused duplicated preamble in reconstructed translations. Now extracts intro by slicing lines from `titleEndIndex` to first `##` section. (regression from v0.11.2)
+
+### Added
+- **Test fixture #25**: Added pre-title content scenario (`25-pre-title-content-lecture`) to E2E test suite for `test-translation-sync`
+
 ## [0.12.0] - 2026-03-23
 
 ### Added

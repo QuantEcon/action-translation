@@ -40,7 +40,7 @@ cd /path/to/action-translation/tool-test-action-on-github
 
 The script will:
 1. Reset test repositories to clean state
-2. Run 24 automated test scenarios
+2. Run 25 automated test scenarios
 3. Create PRs in source repository with `test-translation` label
 4. Label triggers action → creates translation PRs in **both** target repositories
 5. Report results
@@ -64,28 +64,50 @@ Evaluation uses **Claude Opus 4.5** to assess:
 
 Reports are saved to `reports/evaluation-<date>.md`.
 
-## Test Scenarios
+## Test Scenarios (25 total)
 
-The tool tests various translation scenarios:
+The tool tests translation scenarios across four phases:
 
-1. **New section added** - Adding new content
-2. **Section removed** - Deleting content
-3. **Subsection updated** - Modifying nested content
-4. **Multiple elements changed** - Complex updates
-5. **Real-world lecture** - Realistic content changes
-6. **Sub-subsection operations** - Deep nesting (####, #####)
-7. **Code cell changes** - Comments and titles
-8. **Display math changes** - LaTeX equation updates
-9. **Section deletions** - Removing subsections
-10. **Pure reordering** - Structure-only changes
-11. **New document** - Adding complete files
-12. **Document deletion** - Removing files
-13. **Multiple files** - Multi-file changes
-14. **Document rename** - File renaming
-15. **Preamble only** - Metadata changes
-16. **Deep nesting** - Complex hierarchies
-17. **Special characters** - Edge cases in headings
-18. **Empty sections** - Placeholder headings
+### Phase 1: Basic Structure (Tests 01–08, minimal doc)
+| # | Scenario | Description |
+|---|----------|-------------|
+| 01 | Intro change | Intro text updated |
+| 02 | Title change | Title changed |
+| 03 | Section content | Section content updated |
+| 04 | Section reorder | Sections reordered and content changed |
+| 05 | Add section | New section added |
+| 06 | Delete section | Section removed |
+| 07 | Subsection change | Subsection content updated |
+| 08 | Multi-element | Multiple elements changed |
+
+### Phase 2: Scientific Content (Tests 09–16)
+| # | Scenario | Description |
+|---|----------|-------------|
+| 09 | Real-world lecture | Realistic lecture update |
+| 10 | Add `####` | Sub-subsection added |
+| 11 | Change `####` | Sub-subsection content changed |
+| 12 | Code cells | Code cell comments/titles changed |
+| 13 | Display math | Math equations changed |
+| 14 | Delete `###` | Subsection deleted (Matrix Operations) |
+| 15 | Delete `####` | Sub-subsection deleted (Closure Property) |
+| 16 | Pure reorder | Pure section reorder (no content change) |
+
+### Phase 3: Document Lifecycle (Tests 17–20)
+| # | Scenario | Description |
+|---|----------|-------------|
+| 17 | New document | New document added (game-theory.md + TOC) |
+| 18 | Delete document | Document deleted (lecture.md + TOC) |
+| 19 | Multi-file | Multiple files changed (minimal + lecture) |
+| 20 | Rename document | Document renamed (lecture.md → linear-algebra.md + TOC) |
+
+### Phase 4: Edge Cases (Tests 21–25)
+| # | Scenario | Description |
+|---|----------|-------------|
+| 21 | Preamble only | Only frontmatter changed, no content |
+| 22 | Deep nesting | `#####` and `######` level subsections |
+| 23 | Special characters | Headings with `code`, **bold**, [links], $math$ |
+| 24 | Empty sections | Sections with headings but no content |
+| 25 | Pre-title content | Anchor (`(label)=`) + `{raw}` block before `# title` |
 
 ## Directory Structure
 
