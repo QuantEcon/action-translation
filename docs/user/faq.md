@@ -72,6 +72,10 @@ Yes. On successful sync, the action posts a **confirmation comment** on the sour
 
 This gives visibility to the PR author and reviewers that the translation was created.
 
+:::{note}
+Because success comments are posted via the GitHub API on the source PR, they trigger the `issue_comment` event again. This causes the sync workflows to start, but the `if:` condition correctly skips them (the comment body doesn't contain `\translate-resync`). These skipped runs use no compute and complete in ~1 second. This is a known GitHub Actions limitation — `issue_comment` cannot filter by comment body at the trigger level.
+:::
+
 ### How do I add a new language?
 
 1. Create a target repository (e.g., `your-repo.ja` for Japanese)
