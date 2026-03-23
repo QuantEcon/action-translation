@@ -3,7 +3,7 @@
 **Created**: 2026-02-16  
 **Last Updated**: 2026-03-20 (v0.11.1 release, production deployment of fa + zh-cn for lecture-python-programming)  
 **Sources**: docs/DESIGN-RESYNC.md  
-**Current Version**: v0.11.1  
+**Current Version**: v0.11.2  
 **Test Status**: 900 tests passing (39 test suites, 5 snapshots)
 
 ---

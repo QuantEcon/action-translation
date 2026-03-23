@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-03-23
+
+### Fixed
+- **Pre-title content handling**: Parser now scans past MyST cross-reference targets (`(label)=`) and directive blocks (e.g. `{raw} jupyter`) that appear before the `# title` heading, fixing `Expected # title heading` errors for files like `lectures/python_advanced_features.md` in `lecture-python-programming`
+
+### Added
+- **`preTitle` field** in `DocumentComponents`: New field captures content between frontmatter and `# title` (cross-ref targets, raw blocks) and preserves it during reconstruction
+- **3 new tests** for pre-title content parsing (900 → 903 total)
+
 ## [0.11.1] - 2026-03-20
 
 ### Fixed

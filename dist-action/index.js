@@ -30358,21 +30358,34 @@ var MystParser = class {
     }
     let title = "";
     let titleText = "";
+    let preTitleLines = [];
     let titleEndIndex = contentStartIndex;
-    while (titleEndIndex < lines.length && lines[titleEndIndex].trim() === "") {
-      titleEndIndex++;
-    }
-    if (titleEndIndex < lines.length) {
-      const titleLine = lines[titleEndIndex];
-      const titleMatch = titleLine.match(/^#\s+(.+)$/);
+    let insideFence = false;
+    while (titleEndIndex < lines.length) {
+      const line = lines[titleEndIndex];
+      if (line.match(/^(`{3,}|~{3,})/)) {
+        insideFence = !insideFence;
+        preTitleLines.push(line);
+        titleEndIndex++;
+        continue;
+      }
+      if (insideFence) {
+        preTitleLines.push(line);
+        titleEndIndex++;
+        continue;
+      }
+      const titleMatch = line.match(/^#\s+(.+)$/);
       if (titleMatch) {
-        title = titleLine;
+        title = line;
         titleText = titleMatch[1];
         titleEndIndex++;
-      } else {
-        throw new Error(`Expected # title heading at line ${titleEndIndex + 1}, found: ${titleLine}`);
+        break;
       }
-    } else {
+      preTitleLines.push(line);
+      titleEndIndex++;
+    }
+    const preTitle = preTitleLines.join("\n").trim();
+    if (!title) {
       throw new Error("Document must have a # title heading");
     }
     let intro = "";
@@ -30384,6 +30397,7 @@ var MystParser = class {
     const sections = parsed.sections;
     return {
       config,
+      preTitle,
       title,
       titleText,
       intro,
@@ -33326,6 +33340,7 @@ var FileProcessor = class {
     const headingMap = extractHeadingMap(targetContent);
     this.log(`Loaded heading map with ${headingMap.size} entries`);
     const resultConfig = newSource.config;
+    const resultPreTitle = newSource.preTitle;
     let resultTitle = target.title;
     if (oldSource.title !== newSource.title) {
       this.log(`TITLE changed: "${oldSource.titleText}" -> "${newSource.titleText}"`);
@@ -33513,7 +33528,7 @@ ${bodyLines.join("\n")}`;
     );
     this.log(`Updated heading map to ${finalHeadingMap.size} entries`);
     this.log(`Reconstructing complete document`);
-    const reconstructed = this.reconstructFromComponents(resultConfig, resultTitle, resultIntro, resultSections);
+    const reconstructed = this.reconstructFromComponents(resultConfig, resultPreTitle, resultTitle, resultIntro, resultSections);
     return injectHeadingMap(reconstructed, finalHeadingMap);
   }
   /**
@@ -33548,10 +33563,14 @@ ${bodyLines.join("\n")}`;
    * Reconstruct document from components: CONFIG + TITLE + INTRO + SECTIONS
    * This ensures we always produce a complete, valid document
    */
-  reconstructFromComponents(config, title, intro, sections) {
+  reconstructFromComponents(config, preTitle, title, intro, sections) {
     const parts = [];
     if (config) {
       parts.push(config);
+      parts.push("");
+    }
+    if (preTitle) {
+      parts.push(preTitle);
       parts.push("");
     }
     parts.push(title);

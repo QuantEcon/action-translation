@@ -230,28 +230,51 @@ export class MystParser {
       contentStartIndex = configLines.length;
     }
     
-    // 2. Extract TITLE (# heading)
+    // 2. Extract TITLE (# heading), collecting any pre-title content
+    // Pre-title content includes MyST cross-ref targets like (label)= and
+    // directive blocks like ```{raw} jupyter ... ``` that appear before the title
     let title = '';
     let titleText = '';
+    let preTitleLines: string[] = [];
     let titleEndIndex = contentStartIndex;
+    let insideFence = false;
     
-    // Skip empty lines after frontmatter
-    while (titleEndIndex < lines.length && lines[titleEndIndex].trim() === '') {
+    // Scan forward to find the # title heading, collecting pre-title content
+    while (titleEndIndex < lines.length) {
+      const line = lines[titleEndIndex];
+      
+      // Track code fence boundaries
+      if (line.match(/^(`{3,}|~{3,})/)) {
+        insideFence = !insideFence;
+        preTitleLines.push(line);
+        titleEndIndex++;
+        continue;
+      }
+      
+      // Inside a fence, skip everything
+      if (insideFence) {
+        preTitleLines.push(line);
+        titleEndIndex++;
+        continue;
+      }
+      
+      // Check for # title heading
+      const titleMatch = line.match(/^#\s+(.+)$/);
+      if (titleMatch) {
+        title = line;
+        titleText = titleMatch[1];
+        titleEndIndex++;
+        break;
+      }
+      
+      // Not a title — collect as pre-title content
+      preTitleLines.push(line);
       titleEndIndex++;
     }
     
-    // Find the # heading
-    if (titleEndIndex < lines.length) {
-      const titleLine = lines[titleEndIndex];
-      const titleMatch = titleLine.match(/^#\s+(.+)$/);
-      if (titleMatch) {
-        title = titleLine;
-        titleText = titleMatch[1];
-        titleEndIndex++;
-      } else {
-        throw new Error(`Expected # title heading at line ${titleEndIndex + 1}, found: ${titleLine}`);
-      }
-    } else {
+    const preTitle = preTitleLines.join('\n').trim();
+    
+    if (!title) {
       throw new Error('Document must have a # title heading');
     }
     
@@ -270,6 +293,7 @@ export class MystParser {
     
     return {
       config,
+      preTitle,
       title,
       titleText,
       intro,

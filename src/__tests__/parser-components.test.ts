@@ -123,7 +123,7 @@ This is invalid.`;
 
     await expect(
       parser.parseDocumentComponents(content, 'test.md')
-    ).rejects.toThrow('Expected # title heading');
+    ).rejects.toThrow('Document must have a # title heading');
   });
 
   it('should handle title with special characters', async () => {
@@ -137,5 +137,82 @@ Intro text.
 
     expect(result.title).toBe('# Introduction to Economics: Theory & Practice');
     expect(result.titleText).toBe('Introduction to Economics: Theory & Practice');
+  });
+
+  it('should handle MyST cross-ref target before title', async () => {
+    const content = `---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+kernelspec:
+  display_name: Python 3
+  language: python
+  name: python3
+---
+
+(python_advanced_features)=
+
+# More Language Features
+
+## Overview
+
+Some intro content here.`;
+
+    const result = await parser.parseDocumentComponents(content, 'test.md');
+
+    expect(result.preTitle).toBe('(python_advanced_features)=');
+    expect(result.title).toBe('# More Language Features');
+    expect(result.titleText).toBe('More Language Features');
+    expect(result.sections).toHaveLength(1);
+    expect(result.sections[0].heading).toBe('## Overview');
+  });
+
+  it('should handle cross-ref target and raw block before title', async () => {
+    const content = `---
+config: test
+---
+
+(my_label)=
+\`\`\`{raw} jupyter
+<div id="qe-notebook-header" align="right" style="text-align:right;">
+        <a href="https://quantecon.org/">QuantEcon</a>
+</div>
+\`\`\`
+
+# My Title
+
+Intro text.
+
+## First Section
+
+Content.`;
+
+    const result = await parser.parseDocumentComponents(content, 'test.md');
+
+    expect(result.preTitle).toContain('(my_label)=');
+    expect(result.preTitle).toContain('{raw} jupyter');
+    expect(result.preTitle).toContain('qe-notebook-header');
+    expect(result.title).toBe('# My Title');
+    expect(result.titleText).toBe('My Title');
+    expect(result.intro).toContain('Intro text');
+    expect(result.sections).toHaveLength(1);
+  });
+
+  it('should set preTitle to empty string when no pre-title content', async () => {
+    const content = `---
+config: test
+---
+
+# Title
+
+## Section One
+
+Content.`;
+
+    const result = await parser.parseDocumentComponents(content, 'test.md');
+
+    expect(result.preTitle).toBe('');
+    expect(result.title).toBe('# Title');
   });
 });

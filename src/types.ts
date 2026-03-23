@@ -97,6 +97,7 @@ export interface ParsedSections {
  */
 export interface DocumentComponents {
   config: string;           // YAML frontmatter (always present, even if empty)
+  preTitle: string;         // Content between frontmatter and # title (cross-ref targets, raw blocks, etc.)
   title: string;            // The # heading line (e.g., "# Introduction to Economics")
   titleText: string;        // Just the heading text (e.g., "Introduction to Economics")
   intro: string;            // Content between # title and first ## (can be empty)

@@ -2,7 +2,7 @@
 
 A GitHub Action and CLI tool for managing translations of MyST Markdown documents using Claude AI.
 
-**Version**: v0.11.1 | **Tests**: 900 (39 suites) | [Full Documentation](docs/)
+**Version**: v0.11.2 | **Tests**: 903 (39 suites) | [Full Documentation](docs/)
 
 ## What it does
 

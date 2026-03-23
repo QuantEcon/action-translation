@@ -78,6 +78,9 @@ export class FileProcessor {
     // CONFIG: Always use new source config (doesn't get translated)
     const resultConfig = newSource.config;
     
+    // PRE-TITLE: Always use new source pre-title content (cross-ref targets, raw blocks - not translated)
+    const resultPreTitle = newSource.preTitle;
+    
     // TITLE: Translate if changed, otherwise keep target
     let resultTitle = target.title;
     if (oldSource.title !== newSource.title) {
@@ -379,6 +382,7 @@ export class FileProcessor {
     this.log(`Reconstructing complete document`);
     const reconstructed = this.reconstructFromComponents(
       resultConfig,
+      resultPreTitle,
       resultTitle,
       resultIntro,
       resultSections
@@ -436,6 +440,7 @@ export class FileProcessor {
    */
   private reconstructFromComponents(
     config: string,
+    preTitle: string,
     title: string,
     intro: string,
     sections: Section[]
@@ -448,17 +453,23 @@ export class FileProcessor {
       parts.push(''); // Empty line after frontmatter
     }
 
-    // 2. TITLE
+    // 2. PRE-TITLE (cross-ref targets, raw blocks before title)
+    if (preTitle) {
+      parts.push(preTitle);
+      parts.push(''); // Empty line after pre-title content
+    }
+
+    // 3. TITLE
     parts.push(title);
     parts.push(''); // Empty line after title
 
-    // 3. INTRO (can be empty)
+    // 4. INTRO (can be empty)
     if (intro) {
       parts.push(intro);
       parts.push(''); // Empty line after intro
     }
 
-    // 4. SECTIONS (can be empty array) - includes subsections
+    // 5. SECTIONS (can be empty array) - includes subsections
     for (const section of sections) {
       // Use serializeSection to include subsections
       parts.push(this.serializeSection(section));
