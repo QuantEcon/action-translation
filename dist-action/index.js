@@ -24056,10 +24056,14 @@ function getReviewInputs() {
     githubToken
   };
 }
+var RESYNC_COMMAND = "\\translate-resync";
 function validatePREvent(context2, testMode) {
   const { eventName, payload } = context2;
+  if (eventName === "issue_comment") {
+    return validateResyncComment(payload);
+  }
   if (eventName !== "pull_request") {
-    throw new Error(`This action only works on pull_request events. Got: ${eventName}. For manual testing, add the 'test-translation' label to a PR instead of using workflow_dispatch.`);
+    throw new Error(`This action only works on pull_request or issue_comment events. Got: ${eventName}. For manual testing, add the 'test-translation' label to a PR instead of using workflow_dispatch.`);
   }
   if (testMode || payload.action === "labeled" && payload.label?.name === "test-translation") {
     const prNumber2 = payload.pull_request?.number;
@@ -24067,7 +24071,7 @@ function validatePREvent(context2, testMode) {
       throw new Error("Could not determine PR number from event payload");
     }
     core.info(`\u{1F9EA} Running in TEST mode for PR #${prNumber2} (using PR head commit, not merge)`);
-    return { merged: true, prNumber: prNumber2, isTestMode: true };
+    return { merged: true, prNumber: prNumber2, isTestMode: true, isResync: false };
   }
   if (payload.action !== "closed") {
     throw new Error(`This action only runs when PRs are closed or labeled with test-translation. Got action: ${payload.action}`);
@@ -24081,7 +24085,35 @@ function validatePREvent(context2, testMode) {
     throw new Error("Could not determine PR number from event payload");
   }
   core.info(`\u{1F680} Running in PRODUCTION mode for merged PR #${prNumber}`);
-  return { merged, prNumber, isTestMode: false };
+  return { merged, prNumber, isTestMode: false, isResync: false };
+}
+var TRUSTED_ASSOCIATIONS = /* @__PURE__ */ new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
+function validateResyncComment(payload) {
+  const noOp = { merged: false, prNumber: 0, isTestMode: false, isResync: false };
+  if (payload.action !== "created") {
+    core.info(`Ignoring issue_comment action: ${payload.action}. Only 'created' is supported for resync.`);
+    return noOp;
+  }
+  if (!payload.issue?.pull_request) {
+    core.info("Ignoring issue_comment on an issue (not a pull request). Resync only works on PRs.");
+    return noOp;
+  }
+  const commentBody = (payload.comment?.body || "").trim();
+  if (!commentBody.startsWith(RESYNC_COMMAND)) {
+    core.info("Ignoring issue_comment without resync command.");
+    return noOp;
+  }
+  const association = payload.comment?.author_association || "";
+  if (!TRUSTED_ASSOCIATIONS.has(association)) {
+    core.warning(`Ignoring \\translate-resync from user with association '${association}'. Only OWNER, MEMBER, and COLLABORATOR can trigger resync.`);
+    return noOp;
+  }
+  const prNumber = payload.issue?.number;
+  if (!prNumber) {
+    throw new Error("Could not determine PR number from issue_comment payload");
+  }
+  core.info(`\u{1F504} RESYNC triggered by comment on PR #${prNumber}`);
+  return { merged: true, prNumber, isTestMode: false, isResync: true };
 }
 function validateReviewPREvent(context2) {
   const { eventName, payload } = context2;
@@ -34117,13 +34149,17 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
   logger.info(`Created PR: ${pr.html_url}`);
   const labelsToAdd = buildLabelSet(config.prLabels, sourcePrInfo?.labels);
   if (labelsToAdd.length > 0) {
-    await octokit.rest.issues.addLabels({
-      owner: targetOwner,
-      repo: targetRepo,
-      issue_number: pr.number,
-      labels: labelsToAdd
-    });
-    logger.info(`Added labels: ${labelsToAdd.join(", ")}`);
+    try {
+      await octokit.rest.issues.addLabels({
+        owner: targetOwner,
+        repo: targetRepo,
+        issue_number: pr.number,
+        labels: labelsToAdd
+      });
+      logger.info(`Added labels: ${labelsToAdd.join(", ")}`);
+    } catch (labelError) {
+      logger.warning(`Could not add labels to PR #${pr.number}: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
+    }
   }
   await requestReviewers(octokit, targetOwner, targetRepo, pr.number, config, logger);
   return {
@@ -34282,17 +34318,29 @@ async function runSync() {
   core7.info("Getting action inputs...");
   const inputs = getInputs();
   core7.info("Validating PR event...");
-  const { merged, prNumber, isTestMode } = validatePREvent(github2.context, inputs.testMode);
+  const { merged, prNumber, isTestMode, isResync } = validatePREvent(github2.context, inputs.testMode);
   if (!merged) {
     core7.info("PR was not merged. Exiting.");
     return;
   }
+  const octokit = github2.getOctokit(inputs.githubToken);
+  if (isResync) {
+    const { data: pr } = await octokit.rest.pulls.get({
+      owner: github2.context.repo.owner,
+      repo: github2.context.repo.repo,
+      pull_number: prNumber
+    });
+    if (!pr.merged) {
+      core7.info(`PR #${prNumber} is not merged. Resync only works on merged PRs.`);
+      return;
+    }
+    core7.info(`\u{1F504} RESYNC: PR #${prNumber} is merged \u2014 proceeding with translation sync`);
+  }
   if (isTestMode) {
     core7.info(`\u{1F9EA} TEST MODE: Processing PR #${prNumber} (using head commit)`);
-  } else {
+  } else if (!isResync) {
     core7.info(`Processing merged PR #${prNumber}`);
   }
-  const octokit = github2.getOctokit(inputs.githubToken);
   const { data: files } = await octokit.rest.pulls.listFiles({
     owner: github2.context.repo.owner,
     repo: github2.context.repo.repo,
@@ -34326,11 +34374,13 @@ async function runSync() {
     debugMode: true
   }, coreLogger, stateConfig);
   const result = await orchestrator.processFiles(filesToSync, glossary);
-  if (result.errors.length > 0) {
+  const hasErrors = result.errors.length > 0;
+  if (hasErrors) {
     core7.setFailed(`Translation completed with ${result.errors.length} errors`);
   } else {
     core7.info(`Successfully processed ${result.processedFiles.length} files`);
   }
+  let prUrl;
   if (result.translatedFiles.length > 0 || result.filesToDelete.length > 0) {
     try {
       core7.info("Creating PR in target repository...");
@@ -34349,10 +34399,19 @@ async function runSync() {
         prTeamReviewers: inputs.prTeamReviewers
       };
       const prResult = await createTranslationPR(octokit, result.translatedFiles, result.filesToDelete, prConfig, coreLogger, sourcePrInfo);
+      prUrl = prResult.prUrl;
       core7.setOutput("pr-url", prResult.prUrl);
       core7.setOutput("files-synced", result.processedFiles.length.toString());
     } catch (prError) {
       core7.setFailed(`Failed to create PR: ${prError instanceof Error ? prError.message : String(prError)}`);
+      result.errors.push(`PR creation failed: ${prError instanceof Error ? prError.message : String(prError)}`);
+    }
+  }
+  if (!isTestMode) {
+    if (result.errors.length > 0) {
+      await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, result.errors);
+    } else if (prUrl) {
+      await postSuccessComment(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, prUrl, result.processedFiles);
     }
   }
 }
@@ -34551,6 +34610,68 @@ async function fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToS
     core7.info(`Found ${shas.size} existing state file(s) in target repo`);
   }
   return shas;
+}
+async function postSuccessComment(octokit, prNumber, targetLanguage, targetRepo, prUrl, processedFiles) {
+  try {
+    const fileList = processedFiles.map((f) => `- \`${f}\``).join("\n");
+    const body = [
+      `### \u2705 Translation sync completed (${targetLanguage})`,
+      "",
+      `**Target repo**: ${targetRepo}`,
+      `**Translation PR**: ${prUrl}`,
+      `**Files synced** (${processedFiles.length}):`,
+      fileList
+    ].join("\n");
+    await octokit.rest.issues.createComment({
+      owner: github2.context.repo.owner,
+      repo: github2.context.repo.repo,
+      issue_number: prNumber,
+      body
+    });
+    core7.info(`Posted success comment on PR #${prNumber}`);
+  } catch (error3) {
+    core7.warning(`Could not post success comment on PR #${prNumber}: ${error3}`);
+  }
+}
+async function createFailureIssue(octokit, prNumber, targetLanguage, targetRepo, errors) {
+  try {
+    const errorList = errors.map((e) => `- ${e}`).join("\n");
+    const title = `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
+    const body = [
+      `### Translation sync failure`,
+      "",
+      `**Source PR**: #${prNumber}`,
+      `**Target repo**: ${targetRepo}`,
+      `**Target language**: ${targetLanguage}`,
+      "",
+      `### Errors`,
+      "",
+      errorList,
+      "",
+      `### Recovery`,
+      "",
+      `Once the issue is resolved, comment \`\\translate-resync\` on PR #${prNumber} to retry.`
+    ].join("\n");
+    const { data: issue } = await octokit.rest.issues.create({
+      owner: github2.context.repo.owner,
+      repo: github2.context.repo.repo,
+      title,
+      body
+    });
+    try {
+      await octokit.rest.issues.addLabels({
+        owner: github2.context.repo.owner,
+        repo: github2.context.repo.repo,
+        issue_number: issue.number,
+        labels: ["translation-sync-failure"]
+      });
+    } catch (labelError) {
+      core7.warning(`Could not add label to failure issue #${issue.number}: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
+    }
+    core7.info(`Created failure issue #${issue.number}: ${issue.html_url}`);
+  } catch (error3) {
+    core7.warning(`Could not create failure issue: ${error3}`);
+  }
 }
 run();
 /*! Bundled license information:

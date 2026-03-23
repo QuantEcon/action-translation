@@ -18,6 +18,9 @@ Runs in the **source** (English) repository. When a PR is merged that changes Ma
 2. Translates only the changed sections using Claude
 3. Reconstructs the target document, preserving unchanged sections
 4. Creates a PR in the target repository with the updated translations
+5. Posts a confirmation comment on the source PR
+
+If sync fails, it automatically opens a GitHub Issue with error details and recovery instructions.
 
 ### Review mode
 
@@ -94,17 +97,21 @@ on:
     paths:
       - 'lectures/**/*.md'
       - '_toc.yml'
+  issue_comment:
+    types: [created]
 
 jobs:
   sync-to-chinese:
-    if: github.event.pull_request.merged == true
+    if: >
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
 
-      - uses: QuantEcon/action-translation@v0.8
+      - uses: QuantEcon/action-translation@v0.11
         with:
           mode: sync
           target-repo: 'QuantEcon/lecture-intro.zh-cn'
@@ -113,6 +120,8 @@ jobs:
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           github-token: ${{ secrets.TRANSLATION_PAT }}
 ```
+
+The `issue_comment` trigger enables the `\translate-resync` command — comment it on any merged PR to retry a failed sync.
 
 ### Multi-language sync
 
@@ -126,16 +135,20 @@ on:
     types: [closed]
     paths:
       - 'lectures/**/*.md'
+  issue_comment:
+    types: [created]
 
 jobs:
   sync-to-chinese:
-    if: github.event.pull_request.merged == true
+    if: >
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      - uses: QuantEcon/action-translation@v0.8
+      - uses: QuantEcon/action-translation@v0.11
         with:
           mode: sync
           target-repo: 'QuantEcon/lecture-intro.zh-cn'
@@ -144,13 +157,15 @@ jobs:
           github-token: ${{ secrets.TRANSLATION_PAT }}
 
   sync-to-farsi:
-    if: github.event.pull_request.merged == true
+    if: >
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      - uses: QuantEcon/action-translation@v0.8
+      - uses: QuantEcon/action-translation@v0.11
         with:
           mode: sync
           target-repo: 'QuantEcon/lecture-intro.fa'
@@ -177,7 +192,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      - uses: QuantEcon/action-translation@v0.8
+      - uses: QuantEcon/action-translation@v0.11
         with:
           mode: review
           source-repo: 'QuantEcon/lecture-python-intro'
@@ -192,7 +207,7 @@ jobs:
 ### Using outputs
 
 ```yaml
-- uses: QuantEcon/action-translation@v0.8
+- uses: QuantEcon/action-translation@v0.11
   id: translate
   with:
     mode: sync
@@ -217,6 +232,9 @@ When a PR is merged, sync mode:
 6. **Reconstructs the document** — Merges translated sections back with unchanged content
 7. **Updates heading-map** — Refreshes the section ID mapping in the target frontmatter
 8. **Creates a PR** — Commits all updated files to a branch in the target repo
+9. **Posts a success comment** — Confirms sync completion on the source PR with a link to the translation PR
+
+If any files fail to process, the action opens a GitHub Issue with error details and a link to the source PR. Comment `\translate-resync` on the merged PR to retry.
 
 For new files, the entire document is translated in a single call (NEW mode).
 

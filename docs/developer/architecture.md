@@ -4,7 +4,7 @@ title: Architecture
 
 # Architecture
 
-**Last Updated**: 6 March 2026 — v0.8.0  
+**Last Updated**: 6 March 2026 — v0.11.2  
 
 This document covers the complete system architecture: design philosophy, operational modes, module structure, data flow, and key design decisions.
 
@@ -95,7 +95,7 @@ The translator (`translator.ts`) supports three translation modes, each with dif
 
 ```
 src/
-├── index.ts             # GitHub Actions entry point + mode routing
+├── index.ts             # GitHub Actions entry point + mode routing + sync notifications
 ├── sync-orchestrator.ts # Sync processing pipeline
 ├── pr-creator.ts        # PR creation in target repo
 ├── parser.ts            # MyST Markdown parser (stack-based, line-by-line)
@@ -105,7 +105,7 @@ src/
 ├── file-processor.ts    # Document reconstruction + subsection handling
 ├── heading-map.ts       # Heading-map extract/update/inject
 ├── language-config.ts   # Language-specific translation rules
-├── inputs.ts            # Action input validation
+├── inputs.ts            # Action input validation + resync trigger
 └── types.ts             # TypeScript type definitions
 ```
 
@@ -127,13 +127,17 @@ src/cli/
 ├── issue-creator.ts       # gh issue create runner
 ├── forward-triage.ts      # Forward: content-vs-i18n LLM filter
 ├── forward-pr-creator.ts  # Forward: git ops + PR creation via gh CLI
+├── translate-state.ts     # .translate/ config + per-file state
 ├── components/
 │   └── ReviewSession.tsx  # Ink interactive review UI component
 └── commands/
     ├── backward.ts        # Backward command orchestrator
+    ├── doctor.ts          # Doctor command — health check
     ├── forward.ts         # Forward command — whole-file resync
+    ├── headingmap.ts      # Headingmap command — generate heading-maps
     ├── init.ts            # Init command — bulk-translate new projects
     ├── review.ts          # Review command — interactive walk-through
+    ├── setup.ts           # Setup command — scaffold target repo
     └── status.ts          # Status command — fast diagnostic
 ```
 
@@ -183,6 +187,13 @@ PR merged in SOURCE repo
 ┌─────────────────────────┐
 │ pr-creator.ts           │  Create branch, commit files, open PR
 │                         │  in TARGET repo
+└───────────┬─────────────┘
+            │
+            ▼
+┌─────────────────────────┐
+│ index.ts                │  On success: post comment on source PR
+│ (sync notifications)    │  On failure: open Issue with error details
+│                         │  + recovery instructions
 └─────────────────────────┘
 ```
 
@@ -372,7 +383,7 @@ Only sections detected as changed are sent to Claude for translation. This typic
 npm run build        # TypeScript compilation
 npm run build:cli    # CLI ESM build
 npm run package      # Action CJS bundle (dist-action/index.js)
-npm test             # Run all 724 tests
+npm test             # Run all 909 tests
 ```
 
 The action is distributed as a single bundled file (`dist-action/index.js`) with no external dependencies at runtime. Glossary files are included in `dist-action/glossary/`.

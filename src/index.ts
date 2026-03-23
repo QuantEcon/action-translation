@@ -118,23 +118,38 @@ async function runSync(): Promise<void> {
     core.info('Getting action inputs...');
     const inputs = getInputs();
 
-    // Validate this is a merged PR event, test mode, or manual dispatch
+    // Validate this is a merged PR event, test mode, or resync comment
     core.info('Validating PR event...');
-    const { merged, prNumber, isTestMode } = validatePREvent(github.context, inputs.testMode);
+    const { merged, prNumber, isTestMode, isResync } = validatePREvent(github.context, inputs.testMode);
 
     if (!merged) {
       core.info('PR was not merged. Exiting.');
       return;
     }
 
+    const octokit = github.getOctokit(inputs.githubToken);
+
+    // For resync: verify PR is actually merged (issue_comment payload doesn't include merged status)
+    if (isResync) {
+      const { data: pr } = await octokit.rest.pulls.get({
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        pull_number: prNumber,
+      });
+      if (!pr.merged) {
+        core.info(`PR #${prNumber} is not merged. Resync only works on merged PRs.`);
+        return;
+      }
+      core.info(`🔄 RESYNC: PR #${prNumber} is merged — proceeding with translation sync`);
+    }
+
     if (isTestMode) {
       core.info(`🧪 TEST MODE: Processing PR #${prNumber} (using head commit)`);
-    } else {
+    } else if (!isResync) {
       core.info(`Processing merged PR #${prNumber}`);
     }
 
     // Get changed files from PR
-    const octokit = github.getOctokit(inputs.githubToken);
     const { data: files } = await octokit.rest.pulls.listFiles({
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
@@ -195,13 +210,15 @@ async function runSync(): Promise<void> {
     const result = await orchestrator.processFiles(filesToSync, glossary);
 
     // Report results
-    if (result.errors.length > 0) {
+    const hasErrors = result.errors.length > 0;
+    if (hasErrors) {
       core.setFailed(`Translation completed with ${result.errors.length} errors`);
     } else {
       core.info(`Successfully processed ${result.processedFiles.length} files`);
     }
 
     // Create PR in target repo with translated content
+    let prUrl: string | undefined;
     if (result.translatedFiles.length > 0 || result.filesToDelete.length > 0) {
       try {
         core.info('Creating PR in target repository...');
@@ -232,11 +249,28 @@ async function runSync(): Promise<void> {
           sourcePrInfo,
         );
 
+        prUrl = prResult.prUrl;
         core.setOutput('pr-url', prResult.prUrl);
         core.setOutput('files-synced', result.processedFiles.length.toString());
 
       } catch (prError) {
         core.setFailed(`Failed to create PR: ${prError instanceof Error ? prError.message : String(prError)}`);
+        result.errors.push(`PR creation failed: ${prError instanceof Error ? prError.message : String(prError)}`);
+      }
+    }
+
+    // Post-sync notifications (skip in test mode)
+    if (!isTestMode) {
+      if (result.errors.length > 0) {
+        // On failure: open an Issue linked to the source PR
+        await createFailureIssue(
+          octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, result.errors,
+        );
+      } else if (prUrl) {
+        // On success: comment on the source PR
+        await postSuccessComment(
+          octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, prUrl, result.processedFiles,
+        );
       }
     }
 }
@@ -525,6 +559,100 @@ async function fetchExistingStateShas(
   }
 
   return shas;
+}
+
+// =============================================================================
+// HELPERS - Post-sync notifications
+// =============================================================================
+
+/**
+ * Post a success comment on the source PR after sync completes.
+ */
+async function postSuccessComment(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  octokit: any,
+  prNumber: number,
+  targetLanguage: string,
+  targetRepo: string,
+  prUrl: string,
+  processedFiles: string[],
+): Promise<void> {
+  try {
+    const fileList = processedFiles.map(f => `- \`${f}\``).join('\n');
+    const body = [
+      `### ✅ Translation sync completed (${targetLanguage})`,
+      '',
+      `**Target repo**: ${targetRepo}`,
+      `**Translation PR**: ${prUrl}`,
+      `**Files synced** (${processedFiles.length}):`,
+      fileList,
+    ].join('\n');
+
+    await octokit.rest.issues.createComment({
+      owner: github.context.repo.owner,
+      repo: github.context.repo.repo,
+      issue_number: prNumber,
+      body,
+    });
+    core.info(`Posted success comment on PR #${prNumber}`);
+  } catch (error) {
+    core.warning(`Could not post success comment on PR #${prNumber}: ${error}`);
+  }
+}
+
+/**
+ * Create a GitHub Issue when sync fails, linked to the source PR.
+ */
+async function createFailureIssue(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  octokit: any,
+  prNumber: number,
+  targetLanguage: string,
+  targetRepo: string,
+  errors: string[],
+): Promise<void> {
+  try {
+    const errorList = errors.map(e => `- ${e}`).join('\n');
+    const title = `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
+    const body = [
+      `### Translation sync failure`,
+      '',
+      `**Source PR**: #${prNumber}`,
+      `**Target repo**: ${targetRepo}`,
+      `**Target language**: ${targetLanguage}`,
+      '',
+      `### Errors`,
+      '',
+      errorList,
+      '',
+      `### Recovery`,
+      '',
+      `Once the issue is resolved, comment \`\\translate-resync\` on PR #${prNumber} to retry.`,
+    ].join('\n');
+
+    const { data: issue } = await octokit.rest.issues.create({
+      owner: github.context.repo.owner,
+      repo: github.context.repo.repo,
+      title,
+      body,
+    });
+
+    // Best-effort label — may fail if label doesn't exist in the repo
+    try {
+      await octokit.rest.issues.addLabels({
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        issue_number: issue.number,
+        labels: ['translation-sync-failure'],
+      });
+    } catch (labelError) {
+      core.warning(`Could not add label to failure issue #${issue.number}: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
+    }
+
+    core.info(`Created failure issue #${issue.number}: ${issue.html_url}`);
+  } catch (error) {
+    core.warning(`Could not create failure issue: ${error}`);
+  }
 }
 
 // Run the action

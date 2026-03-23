@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`\translate-resync` comment trigger**: Comment `\translate-resync` on a merged PR to re-trigger translation sync for that PR's files. Supports recovery from transient failures without re-opening PRs. Workflows need `issue_comment` trigger added.
+- **Success comments on PRs**: After a successful sync, the action posts a comment on the source PR confirming completion with the target repo, translation PR link, and list of synced files
+- **Failure issue creation**: When sync fails, the action automatically opens a GitHub Issue with error details linked to the source PR, with instructions to use `\translate-resync` for recovery
+- **6 new tests** for `\translate-resync` comment validation including authorization check (903 → 909 total)
+
+### Fixed
+- **Label-adding race condition**: Wrapped `addLabels` call in try/catch so that a GitHub API race condition when adding labels to a newly-created PR no longer fails the entire sync. The PR is already created at that point; label failure is now a non-fatal warning (fixes fa sync failure on `lecture-python-programming` PR #491)
+
 ## [0.11.2] - 2026-03-23
 
 ### Fixed

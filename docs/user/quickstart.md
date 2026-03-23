@@ -35,10 +35,14 @@ on:
     paths:
       - 'lectures/**/*.md'
       - '_toc.yml'
+  issue_comment:
+    types: [created]
 
 jobs:
   sync-to-chinese:
-    if: github.event.pull_request.merged == true
+    if: >
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
     runs-on: ubuntu-latest
 
     steps:
@@ -46,7 +50,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      - uses: QuantEcon/action-translation@v0.8
+      - uses: QuantEcon/action-translation@v0.11
         with:
           mode: sync
           target-repo: 'YourOrg/your-repo.zh-cn'
@@ -56,7 +60,7 @@ jobs:
           github-token: ${{ secrets.TRANSLATION_PAT }}
 ```
 
-This workflow triggers whenever a PR that touches Markdown files in `lectures/` is merged. It detects which sections changed and creates a translation PR in the target repository.
+This workflow triggers whenever a PR that touches Markdown files in `lectures/` is merged. It detects which sections changed and creates a translation PR in the target repository. The `issue_comment` trigger enables re-syncing by commenting `\translate-resync` on a merged PR.
 
 ## Step 3: Add the review workflow (optional)
 
@@ -79,7 +83,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      - uses: QuantEcon/action-translation@v0.8
+      - uses: QuantEcon/action-translation@v0.11
         with:
           mode: review
           source-repo: 'YourOrg/your-source-repo'
@@ -96,8 +100,11 @@ This posts an AI-generated quality review comment on each translation PR, includ
 
 1. **You merge a PR** in the source repo that changes `lectures/cobweb.md`
 2. **The sync workflow** detects the changed sections, translates them with Claude, and creates a PR in the target repo
-3. **The review workflow** (if configured) automatically reviews the translation PR and posts quality feedback
-4. **A human reviewer** approves and merges the translation PR
+3. **The action posts a confirmation comment** on the source PR with a link to the translation PR
+4. **The review workflow** (if configured) automatically reviews the translation PR and posts quality feedback
+5. **A human reviewer** approves and merges the translation PR
+
+If the sync fails, the action automatically opens a GitHub Issue with error details and recovery instructions. You can re-run the sync by commenting `\translate-resync` on the merged PR.
 
 Only changed sections are translated — the rest of the document is preserved exactly as-is.
 

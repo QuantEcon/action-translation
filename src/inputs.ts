@@ -152,18 +152,38 @@ export function getReviewInputs(): ReviewInputs {
   };
 }
 
+/** Result of PR event validation */
+export interface PREventResult {
+  merged: boolean;
+  prNumber: number;
+  isTestMode: boolean;
+  isResync: boolean;
+}
+
+/** The magic comment that triggers a resync */
+export const RESYNC_COMMAND = '\\translate-resync';
+
 /**
- * Validate that the event is a merged PR or test mode label (SYNC mode)
- * Note: workflow_dispatch is NOT supported - use test-translation label for manual testing
+ * Validate that the event is a merged PR, test mode label, or resync comment (SYNC mode)
+ * 
+ * Supported triggers:
+ * - pull_request[closed] + merged — normal sync
+ * - pull_request[labeled] with test-translation — test mode
+ * - issue_comment[created] with \translate-resync — resync on merged PR
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function validatePREvent(context: any, testMode: boolean): { merged: boolean; prNumber: number; isTestMode: boolean } {
+export function validatePREvent(context: any, testMode: boolean): PREventResult {
   const { eventName, payload } = context;
+
+  // Handle issue_comment events (resync trigger)
+  if (eventName === 'issue_comment') {
+    return validateResyncComment(payload);
+  }
 
   // Handle pull_request events only
   if (eventName !== 'pull_request') {
     throw new Error(
-      `This action only works on pull_request events. Got: ${eventName}. ` +
+      `This action only works on pull_request or issue_comment events. Got: ${eventName}. ` +
       `For manual testing, add the 'test-translation' label to a PR instead of using workflow_dispatch.`
     );
   }
@@ -175,7 +195,7 @@ export function validatePREvent(context: any, testMode: boolean): { merged: bool
       throw new Error('Could not determine PR number from event payload');
     }
     core.info(`🧪 Running in TEST mode for PR #${prNumber} (using PR head commit, not merge)`);
-    return { merged: true, prNumber, isTestMode: true };  // merged=true to continue processing
+    return { merged: true, prNumber, isTestMode: true, isResync: false };  // merged=true to continue processing
   }
 
   // Production mode: must be closed and merged
@@ -195,7 +215,58 @@ export function validatePREvent(context: any, testMode: boolean): { merged: bool
   }
 
   core.info(`🚀 Running in PRODUCTION mode for merged PR #${prNumber}`);
-  return { merged, prNumber, isTestMode: false };
+  return { merged, prNumber, isTestMode: false, isResync: false };
+}
+
+/** Trusted author associations that can trigger resync */
+const TRUSTED_ASSOCIATIONS = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
+
+/**
+ * Validate an issue_comment event as a \translate-resync trigger.
+ * Returns merged=false (no-op) for non-matching comments so the workflow exits cleanly.
+ * Only throws for truly unexpected states (missing PR number).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function validateResyncComment(payload: any): PREventResult {
+  const noOp: PREventResult = { merged: false, prNumber: 0, isTestMode: false, isResync: false };
+
+  // Only respond to newly created comments
+  if (payload.action !== 'created') {
+    core.info(`Ignoring issue_comment action: ${payload.action}. Only 'created' is supported for resync.`);
+    return noOp;
+  }
+
+  // Must be a PR (issues have no pull_request key)
+  if (!payload.issue?.pull_request) {
+    core.info('Ignoring issue_comment on an issue (not a pull request). Resync only works on PRs.');
+    return noOp;
+  }
+
+  const commentBody = (payload.comment?.body || '').trim();
+  if (!commentBody.startsWith(RESYNC_COMMAND)) {
+    core.info('Ignoring issue_comment without resync command.');
+    return noOp;
+  }
+
+  // Authorization: only trusted actors can trigger resync
+  const association = payload.comment?.author_association || '';
+  if (!TRUSTED_ASSOCIATIONS.has(association)) {
+    core.warning(
+      `Ignoring \\translate-resync from user with association '${association}'. ` +
+      `Only OWNER, MEMBER, and COLLABORATOR can trigger resync.`
+    );
+    return noOp;
+  }
+
+  const prNumber = payload.issue?.number;
+  if (!prNumber) {
+    throw new Error('Could not determine PR number from issue_comment payload');
+  }
+
+  // Note: issue_comment payload doesn't include merged status directly.
+  // The caller (runSync) will verify the PR is merged via API.
+  core.info(`🔄 RESYNC triggered by comment on PR #${prNumber}`);
+  return { merged: true, prNumber, isTestMode: false, isResync: true };
 }
 
 /**

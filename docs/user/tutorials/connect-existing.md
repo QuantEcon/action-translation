@@ -356,10 +356,14 @@ on:
     paths:
       - 'lectures/**/*.md'
       - 'lectures/_toc.yml'
+  issue_comment:
+    types: [created]
 
 jobs:
   sync:
-    if: github.event.pull_request.merged == true
+    if: >
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
     runs-on: ubuntu-latest
 
     steps:
@@ -367,7 +371,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      - uses: QuantEcon/action-translation@v0.10.0
+      - uses: QuantEcon/action-translation@v0.11
         with:
           mode: sync
           target-repo: 'QuantEcon/lecture-python-intro.zh-cn'
@@ -410,7 +414,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      - uses: QuantEcon/action-translation@v0.10.0
+      - uses: QuantEcon/action-translation@v0.11
         with:
           mode: review
           source-repo: 'QuantEcon/lecture-python-intro'

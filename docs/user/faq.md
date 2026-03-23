@@ -45,9 +45,32 @@ Check that:
 
 ### Can I retrigger the action for a specific PR?
 
-The action triggers on `pull_request: closed` events when the PR is merged. To retrigger, you would need to close and reopen the PR, or manually run the sync workflow via `workflow_dispatch`.
+Yes. Comment `\translate-resync` on the **merged** PR in the source repo. The workflow will re-run the sync for that PR's changed files.
 
-For drift recovery, use the CLI `forward` command instead — it works on any file regardless of PR history.
+Requirements:
+- The workflow must include the `issue_comment` trigger (see [Action Reference](action-reference.md) for the YAML)
+- The PR must be merged (resync on open PRs is ignored)
+- The comment body must start with `\translate-resync`
+
+For drift recovery beyond a single PR, use the CLI `forward` command instead — it works on any file regardless of PR history.
+
+### What happens when the sync workflow fails?
+
+When the sync workflow encounters an error (API failure, parsing error, etc.), it automatically opens a **GitHub Issue** in the source repository with:
+- The title `Translation sync failed for PR #N (language)`
+- A list of errors encountered
+- Recovery instructions including the `\translate-resync` command
+- The label `translation-sync-failure`
+
+To recover, fix the underlying issue and comment `\translate-resync` on the original merged PR.
+
+### Does the action post any status updates?
+
+Yes. On successful sync, the action posts a **confirmation comment** on the source PR with:
+- A link to the translation PR in the target repo
+- A list of translated files
+
+This gives visibility to the PR author and reviewers that the translation was created.
 
 ### How do I add a new language?
 

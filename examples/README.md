@@ -14,15 +14,19 @@ on:
     types: [closed]
     paths:
       - 'lectures/**/*.md'
+  issue_comment:
+    types: [created]
 
 jobs:
   sync-to-chinese:
-    if: github.event.pull_request.merged == true
+    if: >
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
     runs-on: ubuntu-latest
     
     steps:
       - name: Sync translations
-        uses: quantecon/action-translation@v0.7
+        uses: quantecon/action-translation@v0.11
         with:
           mode: sync
           target-repo: 'quantecon/lecture-python.zh-cn'
@@ -49,13 +53,17 @@ on:
     types: [closed]
     paths:
       - 'lectures/**/*.md'
+  issue_comment:
+    types: [created]
 
 jobs:
   sync-to-chinese:
-    if: github.event.pull_request.merged == true
+    if: >
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
     runs-on: ubuntu-latest
     steps:
-      - uses: quantecon/action-translation@v0.7
+      - uses: quantecon/action-translation@v0.11
         with:
           mode: sync
           target-repo: 'quantecon/lecture-python.zh-cn'
@@ -66,10 +74,12 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
   
   sync-to-japanese:
-    if: github.event.pull_request.merged == true
+    if: >
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
     runs-on: ubuntu-latest
     steps:
-      - uses: quantecon/action-translation@v0.7
+      - uses: quantecon/action-translation@v0.11
         with:
           mode: sync
           target-repo: 'quantecon/lecture-python.ja'

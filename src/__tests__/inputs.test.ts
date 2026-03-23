@@ -314,6 +314,7 @@ describe('validatePREvent (sync mode)', () => {
     expect(result.merged).toBe(true);
     expect(result.prNumber).toBe(123);
     expect(result.isTestMode).toBe(false);
+    expect(result.isResync).toBe(false);
   });
 
   it('should handle closed but not merged PR', () => {
@@ -333,13 +334,13 @@ describe('validatePREvent (sync mode)', () => {
     expect(result.prNumber).toBe(123);
   });
 
-  it('should reject non-pull_request events', () => {
+  it('should reject non-pull_request events (except issue_comment)', () => {
     const context = {
       eventName: 'push',
       payload: {},
     };
 
-    expect(() => validatePREvent(context, false)).toThrow(/only works on pull_request events/);
+    expect(() => validatePREvent(context, false)).toThrow(/only works on pull_request or issue_comment events/);
   });
 
   it('should reject non-closed actions without test mode', () => {
@@ -372,6 +373,7 @@ describe('validatePREvent (sync mode)', () => {
       const result = validatePREvent(context, false);
       expect(result.merged).toBe(true); // treated as merged for processing
       expect(result.isTestMode).toBe(true);
+      expect(result.isResync).toBe(false);
     });
 
     it('should accept testMode=true parameter', () => {
@@ -388,6 +390,137 @@ describe('validatePREvent (sync mode)', () => {
       const result = validatePREvent(context, true);
       expect(result.merged).toBe(true);
       expect(result.isTestMode).toBe(true);
+      expect(result.isResync).toBe(false);
+    });
+  });
+
+  describe('resync via issue_comment', () => {
+    it('should accept \\translate-resync comment on a PR', () => {
+      const context = {
+        eventName: 'issue_comment',
+        payload: {
+          action: 'created',
+          issue: {
+            number: 42,
+            pull_request: { url: 'https://api.github.com/repos/owner/repo/pulls/42' },
+          },
+          comment: {
+            body: '\\translate-resync',
+            author_association: 'MEMBER',
+          },
+        },
+      };
+
+      const result = validatePREvent(context, false);
+      expect(result.merged).toBe(true);
+      expect(result.prNumber).toBe(42);
+      expect(result.isTestMode).toBe(false);
+      expect(result.isResync).toBe(true);
+    });
+
+    it('should accept \\translate-resync with trailing text', () => {
+      const context = {
+        eventName: 'issue_comment',
+        payload: {
+          action: 'created',
+          issue: {
+            number: 42,
+            pull_request: { url: 'https://api.github.com/repos/owner/repo/pulls/42' },
+          },
+          comment: {
+            body: '\\translate-resync please retry this',
+            author_association: 'OWNER',
+          },
+        },
+      };
+
+      const result = validatePREvent(context, false);
+      expect(result.isResync).toBe(true);
+      expect(result.prNumber).toBe(42);
+    });
+
+    it('should ignore comments not starting with \\translate-resync (no-op)', () => {
+      const context = {
+        eventName: 'issue_comment',
+        payload: {
+          action: 'created',
+          issue: {
+            number: 42,
+            pull_request: { url: 'https://api.github.com/repos/owner/repo/pulls/42' },
+          },
+          comment: {
+            body: 'Please resync this translation',
+            author_association: 'MEMBER',
+          },
+        },
+      };
+
+      const result = validatePREvent(context, false);
+      expect(result.merged).toBe(false);
+      expect(result.isResync).toBe(false);
+    });
+
+    it('should ignore comments on issues (not PRs) (no-op)', () => {
+      const context = {
+        eventName: 'issue_comment',
+        payload: {
+          action: 'created',
+          issue: {
+            number: 42,
+            // no pull_request key — this is a plain issue
+          },
+          comment: {
+            body: '\\translate-resync',
+            author_association: 'MEMBER',
+          },
+        },
+      };
+
+      const result = validatePREvent(context, false);
+      expect(result.merged).toBe(false);
+      expect(result.isResync).toBe(false);
+    });
+
+    it('should ignore non-created comment actions (no-op)', () => {
+      const context = {
+        eventName: 'issue_comment',
+        payload: {
+          action: 'edited',
+          issue: {
+            number: 42,
+            pull_request: { url: 'https://api.github.com/repos/owner/repo/pulls/42' },
+          },
+          comment: {
+            body: '\\translate-resync',
+            author_association: 'MEMBER',
+          },
+        },
+      };
+
+      const result = validatePREvent(context, false);
+      expect(result.merged).toBe(false);
+      expect(result.isResync).toBe(false);
+    });
+
+    it('should ignore resync from untrusted users (no-op)', () => {
+      const context = {
+        eventName: 'issue_comment',
+        payload: {
+          action: 'created',
+          issue: {
+            number: 42,
+            pull_request: { url: 'https://api.github.com/repos/owner/repo/pulls/42' },
+          },
+          comment: {
+            body: '\\translate-resync',
+            author_association: 'NONE',
+          },
+        },
+      };
+
+      const result = validatePREvent(context, false);
+      expect(result.merged).toBe(false);
+      expect(result.isResync).toBe(false);
     });
   });
 });

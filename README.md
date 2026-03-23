@@ -2,7 +2,7 @@
 
 A GitHub Action and CLI tool for managing translations of MyST Markdown documents using Claude AI.
 
-**Version**: v0.11.2 | **Tests**: 903 (39 suites) | [Full Documentation](docs/)
+**Version**: v0.11.2 | **Tests**: 909 (39 suites) | [Full Documentation](docs/)
 
 ## What it does
 
@@ -31,16 +31,20 @@ on:
   pull_request:
     types: [closed]
     paths: ['lectures/**/*.md']
+  issue_comment:
+    types: [created]
 
 jobs:
   sync:
-    if: github.event.pull_request.merged == true
+    if: >
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      - uses: quantecon/action-translation@v0.10
+      - uses: quantecon/action-translation@v0.11
         with:
           mode: sync
           target-repo: 'quantecon/lecture-python.zh-cn'
@@ -49,6 +53,8 @@ jobs:
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           github-token: ${{ secrets.TRANSLATION_PAT }}
 ```
+
+The `issue_comment` trigger enables the `\translate-resync` command — comment it on any merged PR to re-trigger sync (useful for recovering from failures).
 
 ### CLI
 
@@ -81,7 +87,7 @@ See the [Quickstart guide](docs/user/quickstart.md) for full setup instructions.
 
 ```bash
 npm install          # Install dependencies
-npm test             # Run all 898 tests
+npm test             # Run all 909 tests
 npm run build        # Compile TypeScript
 npm run package      # Bundle for distribution
 ```
