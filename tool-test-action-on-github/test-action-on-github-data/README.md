@@ -12,7 +12,7 @@ This directory contains test scenarios for validating the translation action aga
   - `game-theory.md` - New document for testing NEW document mode
   - `linear-algebra.md` - Copy of base-lecture for rename testing
 
-- **Test scenarios**: Modified versions for testing specific changes (25 total)
+- **Test scenarios**: Modified versions for testing specific changes (26 total)
   - **Basic Tests (01-08)**:
     - `01-intro-change-minimal.md` - Intro text modified
     - `02-title-change-minimal.md` - Title modified
@@ -39,12 +39,13 @@ This directory contains test scenarios for validating the translation action aga
     - `19-multi-file-minimal.md` + `19-multi-file-lecture.md` - Multiple files
     - `20-rename-document-toc.yml` - Document renamed + TOC updated
   
-  - **Edge Cases (21-25)**:
+  - **Edge Cases (21-26)**:
     - `21-preamble-only-minimal.md` - Only frontmatter changed
     - `22-deep-nesting-lecture.md` - ##### and ###### nesting
     - `23-special-chars-lecture.md` - Special characters in headings
     - `24-empty-sections-minimal.md` - Sections with no content
     - `25-pre-title-content-lecture.md` - Anchor + raw block before title
+    - `26-heading-case-change-lecture.md` - Heading case change (title → sentence)
 
 ## File Structure
 
@@ -89,12 +90,13 @@ The test script (`test-action-on-github.sh`) uses these files to:
 19. **Multiple Files** - Modify both lecture-minimal.md and lecture.md in single PR
 20. **RENAME Document** - Rename lecture.md → linear-algebra.md + update _toc.yml
 
-### Phase 4: Edge Cases (Tests 21-25)
+### Phase 4: Edge Cases (Tests 21-26)
 21. **Preamble Only** - Only YAML frontmatter changed, no content
 22. **Deep Nesting** - ##### and ###### level subsections
 23. **Special Characters** - Headings with `code`, **bold**, [links], $math$
 24. **Empty Sections** - Sections with headings but no content
 25. **Pre-title Content** - `(label)=` anchor + `{raw} jupyter` block before `# title`
+26. **Heading Case Change** - Title-case → sentence-case headings (tests heading-map case-insensitive lookup)
 
 ## Notes
 

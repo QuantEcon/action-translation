@@ -190,7 +190,23 @@ export function lookupTargetHeading(
   }
   
   // Fallback: Try simple heading lookup (for backwards compatibility with old maps)
-  return headingMap.get(clean);
+  const simple = headingMap.get(clean);
+  if (simple) {
+    return simple;
+  }
+
+  // Fallback: Case-insensitive lookup — handles heading case changes
+  // (e.g., "Iterables and Iterators" → "Iterables and iterators")
+  const pathLower = path.toLowerCase();
+  const cleanLower = clean.toLowerCase();
+  for (const [key, value] of headingMap) {
+    const keyLower = key.toLowerCase();
+    if (keyLower === pathLower || keyLower === cleanLower) {
+      return value;
+    }
+  }
+
+  return undefined;
 }
 
 /**

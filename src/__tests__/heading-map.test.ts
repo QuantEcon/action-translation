@@ -373,6 +373,39 @@ Content`;
 
       expect(result).toBeUndefined();
     });
+
+    it('should find match with different case (case-insensitive fallback)', () => {
+      const map = new Map([
+        ['Iterables and Iterators', '可迭代对象和迭代器'],
+        ['Overview', '概述']
+      ]);
+
+      // Source heading changed case: "Iterators" → "iterators"
+      const result = lookupTargetHeading('## Iterables and iterators', map);
+
+      expect(result).toBe('可迭代对象和迭代器');
+    });
+
+    it('should prefer exact match over case-insensitive match', () => {
+      const map = new Map([
+        ['Setup', '设置-exact'],
+        ['setup', '设置-lower']
+      ]);
+
+      const result = lookupTargetHeading('## Setup', map);
+
+      expect(result).toBe('设置-exact');
+    });
+
+    it('should find case-insensitive match with path-based keys', () => {
+      const map = new Map([
+        ['Vector Spaces::Basic Properties', '向量空间::基本性质']
+      ]);
+
+      const result = lookupTargetHeading('### Basic properties', map, 'Vector spaces');
+
+      expect(result).toBe('向量空间::基本性质');
+    });
   });
 
   describe('injectHeadingMap', () => {

@@ -33253,7 +33253,19 @@ function lookupTargetHeading(sourceHeading, headingMap, parentPath) {
   if (translation) {
     return translation;
   }
-  return headingMap.get(clean);
+  const simple = headingMap.get(clean);
+  if (simple) {
+    return simple;
+  }
+  const pathLower = path5.toLowerCase();
+  const cleanLower = clean.toLowerCase();
+  for (const [key, value] of headingMap) {
+    const keyLower = key.toLowerCase();
+    if (keyLower === pathLower || keyLower === cleanLower) {
+      return value;
+    }
+  }
+  return void 0;
 }
 function injectHeadingMap(content, headingMap) {
   const frontmatterMatch = content.match(/^---\n(.*?)\n---\n(.*)/s);
@@ -33714,9 +33726,9 @@ ${translatedContent}`;
     if (targetSections.length <= 10) {
       this.log(`  Available target IDs: ${targetSections.map((s) => s.id).join(", ")}`);
     }
-    if (headingMap.size === 0 && positionHint !== void 0) {
-      this.log(`  Strategy 3: Heading map empty, using position-based fallback`);
+    if (positionHint !== void 0) {
       if (positionHint >= 0 && positionHint < targetSections.length) {
+        this.log(`  Strategy 3: Using position-based fallback`);
         this.log(`  \u2713 Found by position: index ${positionHint}`);
         return targetSections[positionHint];
       }
