@@ -79,6 +79,8 @@ You generally don't need to edit heading maps by hand. However, manual editing i
 
 If a target document has no heading-map, the action falls back to **position-based matching** — section 1 in English maps to section 1 in the translation. This works when both documents have the same number of sections in the same order, but is fragile.
 
+**Safety guard:** Position-based fallback is only used when the source and target have the **same number of sections**. When section counts differ (e.g., a new section was added to the source but the translation PR hasn't been merged yet), positions are shifted and the fallback is disabled. Unmatched sections are treated as new and translated from scratch.
+
 The `status` CLI command reports files with missing heading maps as `MISSING_HEADINGMAP`.
 
 ## ID generation rules
