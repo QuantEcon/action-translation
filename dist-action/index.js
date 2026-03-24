@@ -33465,13 +33465,8 @@ var FileProcessor = class {
       const newSection = newSource.sections[i];
       const change = changes.find((c) => c.newSection?.id === newSection.id);
       if (!change) {
-        const targetSection = this.findTargetSectionByHeadingMap(
-          newSection,
-          target.sections,
-          headingMap,
-          i
-          // Position hint for fallback
-        );
+        const positionHint = newSource.sections.length === target.sections.length ? i : void 0;
+        const targetSection = this.findTargetSectionByHeadingMap(newSection, target.sections, headingMap, positionHint);
         if (targetSection) {
           resultSections.push(targetSection);
           this.log(`Keeping unchanged section: ${newSection.heading}`);
@@ -33488,7 +33483,8 @@ var FileProcessor = class {
         resultSections.push(translatedSection);
       } else if (change.type === "modified") {
         this.log(`Processing MODIFIED section: ${newSection.heading}`);
-        const targetSection = this.findTargetSectionByHeadingMap(change.oldSection, target.sections, headingMap, i);
+        const positionHint = newSource.sections.length === target.sections.length ? i : void 0;
+        const targetSection = this.findTargetSectionByHeadingMap(change.oldSection, target.sections, headingMap, positionHint);
         if (!targetSection) {
           this.log(`Warning: Could not find target for modified section, treating as new`);
           const translatedSection = await this.translateNewSection(newSection, sourceLanguage, targetLanguage, glossary);

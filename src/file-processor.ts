@@ -148,11 +148,15 @@ export class FileProcessor {
 
       if (!change) {
         // Section unchanged - copy from target
+        // Only use position fallback when section counts match (positions are aligned).
+        // When counts differ (section added/deleted in source), positions are shifted
+        // and fallback would grab the wrong target section.
+        const positionHint = (newSource.sections.length === target.sections.length) ? i : undefined;
         const targetSection = this.findTargetSectionByHeadingMap(
           newSection,
           target.sections,
           headingMap,
-          i  // Position hint for fallback
+          positionHint
         );
         
         if (targetSection) {
@@ -187,11 +191,12 @@ export class FileProcessor {
         this.log(`Processing MODIFIED section: ${newSection.heading}`);
         
         // Find matching target section
+        const positionHint = (newSource.sections.length === target.sections.length) ? i : undefined;
         const targetSection = this.findTargetSectionByHeadingMap(
           change.oldSection!,
           target.sections,
           headingMap,
-          i
+          positionHint
         );
         
         if (!targetSection) {

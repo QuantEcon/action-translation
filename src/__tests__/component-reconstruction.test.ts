@@ -1308,3 +1308,224 @@ config: test
     });
   });
 });
+
+/**
+ * Position Fallback Guard Tests
+ *
+ * When source has more sections than target (new section added but target
+ * hasn't received it yet), position-based fallback must be disabled.
+ * Otherwise the wrong target section is picked via shifted positions.
+ */
+describe('Position Fallback Guard', () => {
+  let processor: FileProcessor;
+  let mockTranslator: jest.Mocked<TranslationService>;
+
+  beforeEach(() => {
+    mockTranslator = {
+      translateSection: jest.fn(),
+      translateFullDocument: jest.fn(),
+    } as any;
+
+    processor = new FileProcessor(mockTranslator, true);
+  });
+
+  it('should not use position fallback when source has more sections than target', async () => {
+    // Scenario: Source added "Type hints" section between existing sections.
+    // oldContent === newContent (simulates resync where diff detector sees no changes).
+    // Target still has only the old sections (translation PR not merged yet).
+    //
+    // BUG (before fix): position fallback maps "Type hints" (source pos 2)
+    // to "Decorators" (target pos 2) — the wrong section!
+    //
+    // FIX: When section counts differ, skip position fallback and treat
+    // the unmatched section as new (translate from scratch).
+
+    const sourceContent = `---
+config: test
+---
+
+# Advanced Features
+
+Intro.
+
+## Operators
+
+Operator content.
+
+## Type hints
+
+Type hints content.
+
+## Decorators
+
+Decorator content.`;
+
+    // Target has only 2 sections (no Type hints yet)
+    const targetContent = `---
+config: test
+heading-map:
+  Advanced Features: 高级特性
+  Operators: 运算符
+  Decorators: 装饰器
+---
+
+# 高级特性
+
+介绍。
+
+## 运算符
+
+运算符内容。
+
+## 装饰器
+
+装饰器内容。`;
+
+    // Mock: translateNewSection will be called for "Type hints" (no target match)
+    mockTranslator.translateSection.mockResolvedValue({
+      success: true,
+      translatedSection: '## 类型提示\n\n类型提示内容。',
+    });
+
+    const result = await processor.processSectionBased(
+      sourceContent,  // oldContent === newContent (no diff detected)
+      sourceContent,
+      targetContent,
+      'test.md',
+      'en',
+      'zh-cn'
+    );
+
+    // Type hints should be translated as new, NOT copied from Decorators
+    expect(result).toContain('## 类型提示');
+    expect(result).toContain('类型提示内容');
+
+    // Existing sections should be preserved from target
+    expect(result).toContain('## 运算符');
+    expect(result).toContain('运算符内容');
+    expect(result).toContain('## 装饰器');
+    expect(result).toContain('装饰器内容');
+
+    // Should have 3 sections total
+    const sectionMatches = result.match(/^## /gm);
+    expect(sectionMatches).toHaveLength(3);
+
+    // Only one translation call (for the new Type hints section)
+    expect(mockTranslator.translateSection).toHaveBeenCalledTimes(1);
+
+    // Heading map should have correct values
+    expect(result).toContain('Type hints: 类型提示');  // NOT 装饰器
+  });
+
+  it('should not use position fallback when source has fewer sections than target', async () => {
+    // Scenario: Source deleted a section, target still has it.
+    // Without the guard, position fallback could map wrong sections.
+
+    const sourceContent = `---
+config: test
+---
+
+# Title
+
+Intro.
+
+## Section B
+
+Content B.`;
+
+    // Target has 2 sections — Section A was deleted from source
+    const targetContent = `---
+config: test
+heading-map:
+  Section A: 部分A
+  Section B: 部分B
+---
+
+# 标题
+
+介绍。
+
+## 部分A
+
+内容A。
+
+## 部分B
+
+内容B。`;
+
+    const result = await processor.processSectionBased(
+      sourceContent,  // oldContent === newContent (no diff)
+      sourceContent,
+      targetContent,
+      'test.md',
+      'en',
+      'zh-cn'
+    );
+
+    // Section B should be found by heading-map (not by position fallback)
+    expect(result).toContain('## 部分B');
+    expect(result).toContain('内容B');
+
+    // Section A should be gone
+    expect(result).not.toContain('## 部分A');
+    expect(result).not.toContain('内容A');
+
+    // No translation calls needed
+    expect(mockTranslator.translateSection).not.toHaveBeenCalled();
+  });
+
+  it('should still use position fallback when section counts match', async () => {
+    // Scenario: Initial translation with empty heading map.
+    // Section counts match, so position fallback should work.
+
+    const sourceContent = `---
+config: test
+---
+
+# Title
+
+Intro.
+
+## Section One
+
+Content one.
+
+## Section Two
+
+Content two.`;
+
+    const targetContent = `---
+config: test
+---
+
+# 标题
+
+介绍。
+
+## 第一部分
+
+内容一。
+
+## 第二部分
+
+内容二。`;
+
+    const result = await processor.processSectionBased(
+      sourceContent,  // oldContent === newContent
+      sourceContent,
+      targetContent,
+      'test.md',
+      'en',
+      'zh-cn'
+    );
+
+    // Both sections preserved via position fallback (no heading map)
+    expect(result).toContain('## 第一部分');
+    expect(result).toContain('内容一');
+    expect(result).toContain('## 第二部分');
+    expect(result).toContain('内容二');
+
+    // No translation calls (all unchanged, found by position)
+    expect(mockTranslator.translateSection).not.toHaveBeenCalled();
+  });
+});
