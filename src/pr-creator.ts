@@ -156,18 +156,35 @@ export async function createTranslationPR(
   logger.info(`Created PR: ${pr.html_url}`);
 
   // Add labels (non-fatal — PR is already created)
+  // Retry up to 3 times with delay to handle GitHub API propagation delays
+  // (newly-created PR node IDs may not be immediately resolvable)
   const labelsToAdd = buildLabelSet(config.prLabels, sourcePrInfo?.labels);
   if (labelsToAdd.length > 0) {
-    try {
-      await octokit.rest.issues.addLabels({
-        owner: targetOwner,
-        repo: targetRepo,
-        issue_number: pr.number,
-        labels: labelsToAdd,
-      });
-      logger.info(`Added labels: ${labelsToAdd.join(', ')}`);
-    } catch (labelError) {
-      logger.warning(`Could not add labels to PR #${pr.number}: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
+    const maxAttempts = 3;
+    const delayMs = 2000;
+    let labeled = false;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await octokit.rest.issues.addLabels({
+          owner: targetOwner,
+          repo: targetRepo,
+          issue_number: pr.number,
+          labels: labelsToAdd,
+        });
+        logger.info(`Added labels: ${labelsToAdd.join(', ')}`);
+        labeled = true;
+        break;
+      } catch (labelError) {
+        if (attempt < maxAttempts) {
+          logger.info(`Label attempt ${attempt}/${maxAttempts} failed, retrying in ${delayMs}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        } else {
+          logger.warning(`Could not add labels to PR #${pr.number} after ${maxAttempts} attempts: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
+        }
+      }
+    }
+    if (!labeled) {
+      logger.warning(`PR #${pr.number} created successfully but labels could not be applied. Downstream workflows that filter by label may not trigger.`);
     }
   }
 
