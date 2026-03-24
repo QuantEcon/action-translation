@@ -237,7 +237,8 @@ export function buildPrBody(
   if (skippedSections && skippedSections.size > 0) {
     const lines: string[] = [];
     for (const [file, headings] of skippedSections) {
-      lines.push(`- \`${file}\`: ${headings.map(h => `"${h}"`).join(', ')}`);
+      // Wrap each heading in backticks (escaped) to neutralize any Markdown syntax
+      lines.push(`- \`${file}\`: ${headings.map(h => `\`${h.replace(/`/g, '\\`')}\``).join(', ')}`);
     }
     skippedNotice = `\n\n### ⚠️ Sections Pending Earlier Translation PR\n\nThe following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. If that PR is abandoned, run \`/translate-resync\` to recover.\n\n${lines.join('\n')}`;
   }

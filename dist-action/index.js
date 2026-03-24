@@ -33461,6 +33461,7 @@ var FileProcessor = class {
     const changes = await this.diffDetector.detectSectionChanges(oldContent, newContent, filepath);
     this.log(`Detected ${changes.length} section-level changes`);
     const resultSections = [];
+    const includedSourceSections = [];
     for (let i = 0; i < newSource.sections.length; i++) {
       const newSection = newSource.sections[i];
       const change = changes.find((c) => c.newSection?.id === newSection.id);
@@ -33469,6 +33470,7 @@ var FileProcessor = class {
         const targetSection = this.findTargetSectionByHeadingMap(newSection, target.sections, headingMap, positionHint);
         if (targetSection) {
           resultSections.push(targetSection);
+          includedSourceSections.push(newSection);
           this.log(`Keeping unchanged section: ${newSection.heading}`);
         } else {
           const headingText = newSection.heading.replace(/^#+\s+/, "");
@@ -33481,6 +33483,7 @@ var FileProcessor = class {
         this.log(`Processing ADDED section: ${newSection.heading}`);
         const translatedSection = await this.translateNewSection(newSection, sourceLanguage, targetLanguage, glossary);
         resultSections.push(translatedSection);
+        includedSourceSections.push(newSection);
       } else if (change.type === "modified") {
         this.log(`Processing MODIFIED section: ${newSection.heading}`);
         const positionHint = newSource.sections.length === target.sections.length ? i : void 0;
@@ -33489,6 +33492,7 @@ var FileProcessor = class {
           this.log(`Warning: Could not find target for modified section, treating as new`);
           const translatedSection = await this.translateNewSection(newSection, sourceLanguage, targetLanguage, glossary);
           resultSections.push(translatedSection);
+          includedSourceSections.push(newSection);
           continue;
         }
         const oldFullContent = this.serializeSection(change.oldSection);
@@ -33584,6 +33588,7 @@ ${bodyLines.join("\n")}`;
           content: finalContent,
           subsections: finalSubsections
         });
+        includedSourceSections.push(newSection);
         this.log(`Updated section at position ${i}`);
       }
     }
@@ -33594,7 +33599,7 @@ ${bodyLines.join("\n")}`;
     updatedHeadingMap.set(newTitleText, resultTitleText);
     const finalHeadingMap = updateHeadingMap(
       updatedHeadingMap,
-      newSource.sections,
+      includedSourceSections,
       resultSections,
       newTitleText
       // Pass title to prevent it from being deleted
@@ -34258,7 +34263,7 @@ function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skipp
   if (skippedSections && skippedSections.size > 0) {
     const lines = [];
     for (const [file, headings] of skippedSections) {
-      lines.push(`- \`${file}\`: ${headings.map((h) => `"${h}"`).join(", ")}`);
+      lines.push(`- \`${file}\`: ${headings.map((h) => `\`${h.replace(/`/g, "\\`")}\``).join(", ")}`);
     }
     skippedNotice = `
 

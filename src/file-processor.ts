@@ -137,6 +137,7 @@ export class FileProcessor {
     this.log(`Detected ${changes.length} section-level changes`);
     
     const resultSections: Section[] = [];
+    const includedSourceSections: Section[] = [];  // Tracks which source sections map to resultSections (keeps heading-map aligned)
     
     // Process each section from new source (ensures proper order)
     for (let i = 0; i < newSource.sections.length; i++) {
@@ -162,6 +163,7 @@ export class FileProcessor {
         
         if (targetSection) {
           resultSections.push(targetSection);
+          includedSourceSections.push(newSection);
           this.log(`Keeping unchanged section: ${newSection.heading}`);
         } else {
           // Section is unchanged in source diff but missing from target.
@@ -187,6 +189,7 @@ export class FileProcessor {
           glossary
         );
         resultSections.push(translatedSection);
+        includedSourceSections.push(newSection);
         
       } else if (change.type === 'modified') {
         this.log(`Processing MODIFIED section: ${newSection.heading}`);
@@ -209,6 +212,7 @@ export class FileProcessor {
             glossary
           );
           resultSections.push(translatedSection);
+          includedSourceSections.push(newSection);
           continue;
         }
 
@@ -361,6 +365,7 @@ export class FileProcessor {
           content: finalContent,
           subsections: finalSubsections,
         });
+        includedSourceSections.push(newSection);
 
         this.log(`Updated section at position ${i}`);
       }
@@ -376,9 +381,11 @@ export class FileProcessor {
     updatedHeadingMap.set(newTitleText, resultTitleText);
     
     // Add sections to heading map (pass title so it's preserved)
+    // Use includedSourceSections (not newSource.sections) so indices stay aligned
+    // with resultSections — skipped sections are excluded from both arrays.
     const finalHeadingMap = updateHeadingMap(
       updatedHeadingMap,
-      newSource.sections,
+      includedSourceSections,
       resultSections,
       newTitleText  // Pass title to prevent it from being deleted
     );

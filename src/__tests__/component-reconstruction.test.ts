@@ -1407,6 +1407,12 @@ heading-map:
 
     // No translation calls — skipped section is not translated
     expect(mockTranslator.translateSection).not.toHaveBeenCalled();
+
+    // Heading-map should preserve existing mappings and NOT create an entry
+    // for the skipped "Type hints" section (would be index-misaligned corruption)
+    expect(result).toContain('Operators: 运算符');
+    expect(result).toContain('Decorators: 装饰器');
+    expect(result).not.toContain('Type hints:');
   });
 
   it('should not use position fallback when source has fewer sections than target', async () => {
@@ -1603,5 +1609,10 @@ heading-map:
 
     // Translator called only once (for modified Section B), not for Section A
     expect(mockTranslator.translateSection).toHaveBeenCalledTimes(1);
+
+    // Heading-map should map Section B correctly and NOT have Section A
+    // (skipped sections must not corrupt the heading-map via index misalignment)
+    expect(result).toContain('Section B: B部分');
+    expect(result).not.toContain('Section A:');
   });
 });
