@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.12.1] - 2026-03-24
 
 ### Fixed
 - **Duplicate preamble regression**: Fixed intro extraction in `parseDocumentComponents` that included pre-title content and title in the intro when documents had content before `# title` (e.g. `(label)=` anchors, `{raw}` blocks). This caused duplicated preamble in reconstructed translations. Now extracts intro by slicing lines from `titleEndIndex` to first `##` section. (regression from v0.11.2)

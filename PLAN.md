@@ -1,9 +1,9 @@
 # PLAN: Development Roadmap
 
 **Created**: 2026-02-16  
-**Last Updated**: 2026-03-23 (v0.12.0 release, sync notifications + \\translate-resync)  
+**Last Updated**: 2026-03-24 (v0.12.1 release, bug fixes from sync evaluation)  
 **Sources**: docs/DESIGN-RESYNC.md  
-**Current Version**: v0.12.0  
+**Current Version**: v0.12.1  
 **Test Status**: 909 tests passing (39 test suites, 5 snapshots)
 
 ---
