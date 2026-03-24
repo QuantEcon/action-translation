@@ -278,15 +278,14 @@ export class MystParser {
       throw new Error('Document must have a # title heading');
     }
     
-    // 3. Extract INTRO (content after title, before first ##)
-    // parseSections.preamble includes the title line, so we need to strip it
+    // 3. Extract INTRO (content after title, before first ## section)
+    // Use parsed.sections[0].startLine (1-based) from parseSections to avoid
+    // re-scanning lines — keeps section-boundary logic centralized.
     let intro = '';
-    if (parsed.preamble) {
-      const preambleLines = parsed.preamble.split('\n');
-      // Skip the first line if it's the title
-      const startIndex = preambleLines[0].match(/^#\s+/) ? 1 : 0;
-      intro = preambleLines.slice(startIndex).join('\n').trim();
-    }
+    const introEndIndex = parsed.sections.length > 0
+      ? parsed.sections[0].startLine - 1   // convert 1-based to 0-based
+      : lines.length;
+    intro = lines.slice(titleEndIndex, introEndIndex).join('\n').trim();
     
     // 4. Use sections from parseSections (includes full recursive structure)
     const sections = parsed.sections;

@@ -412,6 +412,7 @@ declare -a scenarios=(
     "22-deep-nesting-lecture:Deep nesting (##### and ######):lecture"
     "23-special-chars-lecture:Special characters in headings:lecture"
     "24-empty-sections-minimal:Empty sections (heading only):minimal"
+    "25-pre-title-content-lecture:Pre-title content (anchor + raw block):lecture"
 )
 
 # Note: Tests 01-08 modify lecture-minimal.md, tests 09-15 modify lecture.md, test 16 tests pure reordering

@@ -5,14 +5,14 @@ This directory contains test scenarios for validating the translation action aga
 ## Structure
 
 - **workflow-template.yml**: GitHub Actions workflow file for test repositories
-- **Base documents**: Starting point for all tests (identical between EN and ZH repos)
-  - `base-minimal.md` / `base-minimal-zh-cn.md` - Simple 2-section document
-  - `base-lecture.md` / `base-lecture-zh-cn.md` - Realistic lecture example
-  - `base-toc.yml` / `base-toc-zh-cn.yml` - Table of contents with 2 files
+- **Base documents**: Starting point for all tests (identical between EN, ZH-CN, and FA repos)
+  - `base-minimal.md` / `base-minimal-zh-cn.md` / `base-minimal-fa.md` - Simple 2-section document
+  - `base-lecture.md` / `base-lecture-zh-cn.md` / `base-lecture-fa.md` - Realistic lecture example
+  - `base-toc.yml` / `base-toc-zh-cn.yml` / `base-toc-fa.yml` - Table of contents with 2 files
   - `game-theory.md` - New document for testing NEW document mode
   - `linear-algebra.md` - Copy of base-lecture for rename testing
 
-- **Test scenarios**: Modified versions for testing specific changes (24 total)
+- **Test scenarios**: Modified versions for testing specific changes (25 total)
   - **Basic Tests (01-08)**:
     - `01-intro-change-minimal.md` - Intro text modified
     - `02-title-change-minimal.md` - Title modified
@@ -42,8 +42,9 @@ This directory contains test scenarios for validating the translation action aga
   - **Edge Cases (21-25)**:
     - `21-preamble-only-minimal.md` - Only frontmatter changed
     - `22-deep-nesting-lecture.md` - ##### and ###### nesting
-    - `24-special-chars-lecture.md` - Special characters in headings
-    - `25-empty-sections-minimal.md` - Sections with no content
+    - `23-special-chars-lecture.md` - Special characters in headings
+    - `24-empty-sections-minimal.md` - Sections with no content
+    - `25-pre-title-content-lecture.md` - Anchor + raw block before title
 
 ## File Structure
 
@@ -82,17 +83,18 @@ The test script (`test-action-on-github.sh`) uses these files to:
 15. **Delete ####** - Sub-subsection removed
 16. **Pure Reorder** - Sections reordered without content changes
 
-### Phase 3: Document Lifecycle (Tests 17-20) - NEW!
+### Phase 3: Document Lifecycle (Tests 17-20)
 17. **NEW Document** - Add new document (game-theory.md) + update _toc.yml
 18. **DELETE Document** - Remove lecture.md + update _toc.yml
 19. **Multiple Files** - Modify both lecture-minimal.md and lecture.md in single PR
 20. **RENAME Document** - Rename lecture.md → linear-algebra.md + update _toc.yml
 
-### Phase 4: Edge Cases (Tests 21-25) - NEW!
+### Phase 4: Edge Cases (Tests 21-25)
 21. **Preamble Only** - Only YAML frontmatter changed, no content
 22. **Deep Nesting** - ##### and ###### level subsections
-24. **Special Characters** - Headings with `code`, **bold**, [links], $math$
-25. **Empty Sections** - Sections with headings but no content
+23. **Special Characters** - Headings with `code`, **bold**, [links], $math$
+24. **Empty Sections** - Sections with headings but no content
+25. **Pre-title Content** - `(label)=` anchor + `{raw} jupyter` block before `# title`
 
 ## Notes
 

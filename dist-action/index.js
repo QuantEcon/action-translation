@@ -30421,11 +30421,8 @@ var MystParser = class {
       throw new Error("Document must have a # title heading");
     }
     let intro = "";
-    if (parsed.preamble) {
-      const preambleLines = parsed.preamble.split("\n");
-      const startIndex = preambleLines[0].match(/^#\s+/) ? 1 : 0;
-      intro = preambleLines.slice(startIndex).join("\n").trim();
-    }
+    const introEndIndex = parsed.sections.length > 0 ? parsed.sections[0].startLine - 1 : lines.length;
+    intro = lines.slice(titleEndIndex, introEndIndex).join("\n").trim();
     const sections = parsed.sections;
     return {
       config,
