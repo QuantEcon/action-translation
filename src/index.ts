@@ -129,6 +129,12 @@ async function runSync(): Promise<void> {
 
     const octokit = github.getOctokit(inputs.githubToken);
 
+    // Determine effective SHA for fetching file content.
+    // For issue_comment events (resync), github.context.sha is HEAD of default branch,
+    // NOT the PR's merge commit. Use the PR's merge_commit_sha instead so that
+    // oldContent (sha^) and newContent (sha) reflect the actual PR changes.
+    let effectiveSha = github.context.sha;
+
     // For resync: verify PR is actually merged (issue_comment payload doesn't include merged status)
     if (isResync) {
       const { data: pr } = await octokit.rest.pulls.get({
@@ -140,7 +146,13 @@ async function runSync(): Promise<void> {
         core.info(`PR #${prNumber} is not merged. Resync only works on merged PRs.`);
         return;
       }
-      core.info(`🔄 RESYNC: PR #${prNumber} is merged — proceeding with translation sync`);
+      if (pr.merge_commit_sha) {
+        effectiveSha = pr.merge_commit_sha;
+        core.info(`🔄 RESYNC: PR #${prNumber} is merged — using merge commit ${effectiveSha}`);
+      } else {
+        core.warning(`PR #${prNumber} has no merge_commit_sha, falling back to context.sha`);
+        core.info(`🔄 RESYNC: PR #${prNumber} is merged — proceeding with translation sync`);
+      }
     }
 
     if (isTestMode) {
@@ -184,7 +196,7 @@ async function runSync(): Promise<void> {
     // Fetch content and build FileToSync array
     const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
     const filesToSync = await fetchAllFileContents(
-      octokit, classified, inputs, targetOwner, targetRepo,
+      octokit, classified, inputs, targetOwner, targetRepo, effectiveSha,
     );
 
     // Fetch existing state file SHAs from target repo for state generation
@@ -193,7 +205,7 @@ async function runSync(): Promise<void> {
     );
 
     const stateConfig: StateGenerationConfig = {
-      sourceCommitSha: github.context.sha,
+      sourceCommitSha: effectiveSha,
       existingStateShas,
       docsFolder: inputs.docsFolder,
     };
@@ -324,11 +336,12 @@ async function fetchAllFileContents(
   inputs: ReturnType<typeof getInputs>,
   targetOwner: string,
   targetRepo: string,
+  commitSha?: string,
 ): Promise<FileToSync[]> {
   const filesToSync: FileToSync[] = [];
   const sourceOwner = github.context.repo.owner;
   const sourceRepo = github.context.repo.repo;
-  const sha = github.context.sha;
+  const sha = commitSha || github.context.sha;
 
   // Changed markdown files
   for (const file of classified.changedMarkdownFiles) {

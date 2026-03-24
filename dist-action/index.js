@@ -34380,6 +34380,7 @@ async function runSync() {
     return;
   }
   const octokit = github2.getOctokit(inputs.githubToken);
+  let effectiveSha = github2.context.sha;
   if (isResync) {
     const { data: pr } = await octokit.rest.pulls.get({
       owner: github2.context.repo.owner,
@@ -34390,7 +34391,13 @@ async function runSync() {
       core7.info(`PR #${prNumber} is not merged. Resync only works on merged PRs.`);
       return;
     }
-    core7.info(`\u{1F504} RESYNC: PR #${prNumber} is merged \u2014 proceeding with translation sync`);
+    if (pr.merge_commit_sha) {
+      effectiveSha = pr.merge_commit_sha;
+      core7.info(`\u{1F504} RESYNC: PR #${prNumber} is merged \u2014 using merge commit ${effectiveSha}`);
+    } else {
+      core7.warning(`PR #${prNumber} has no merge_commit_sha, falling back to context.sha`);
+      core7.info(`\u{1F504} RESYNC: PR #${prNumber} is merged \u2014 proceeding with translation sync`);
+    }
   }
   if (isTestMode) {
     core7.info(`\u{1F9EA} TEST MODE: Processing PR #${prNumber} (using head commit)`);
@@ -34415,10 +34422,10 @@ async function runSync() {
   const builtInGlossaryDir = path4.join(__dirname2, "..", "glossary");
   const glossary = await loadGlossary(inputs.targetLanguage, builtInGlossaryDir, inputs.glossaryPath || void 0, coreLogger);
   const [targetOwner, targetRepo] = inputs.targetRepo.split("/");
-  const filesToSync = await fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo);
+  const filesToSync = await fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo, effectiveSha);
   const existingStateShas = await fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToSync, inputs.docsFolder);
   const stateConfig = {
-    sourceCommitSha: github2.context.sha,
+    sourceCommitSha: effectiveSha,
     existingStateShas,
     docsFolder: inputs.docsFolder
   };
@@ -34489,11 +34496,11 @@ async function fetchFileContent(octokit, owner, repo, filepath, ref) {
     sha: data.sha
   };
 }
-async function fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo) {
+async function fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo, commitSha) {
   const filesToSync = [];
   const sourceOwner = github2.context.repo.owner;
   const sourceRepo = github2.context.repo.repo;
-  const sha = github2.context.sha;
+  const sha = commitSha || github2.context.sha;
   for (const file of classified.changedMarkdownFiles) {
     try {
       const { content: newContent } = await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, sha);
