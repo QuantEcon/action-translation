@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Position fallback guard for mismatched section counts**: `findTargetSectionByHeadingMap` no longer uses position-based fallback when source and target have different section counts. Previously, when a new section was added to source but the translation PR hadn't been merged yet, the position fallback would grab the wrong target section (shifted positions), producing incorrect heading-map values (e.g. `Type hints: 装饰器与描述符`). Now unmatched sections fall through to `translateNewSection` instead.
+
+### Added
+- **3 tests for position fallback guard**: Covers source-has-more-sections, source-has-fewer-sections, and equal-counts-still-works scenarios (927 → 930 total)
+
 ## [0.12.1] - 2026-03-24
 
 ### Fixed
