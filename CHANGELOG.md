@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Position fallback guard for mismatched section counts**: `findTargetSectionByHeadingMap` no longer uses position-based fallback when source and target have different section counts. Previously, when a new section was added to source but the translation PR hadn't been merged yet, the position fallback would grab the wrong target section (shifted positions), producing incorrect heading-map values (e.g. `Type hints: 装饰器与描述符`). Now unmatched sections fall through to `translateNewSection` instead.
+- **Resync uses PR merge commit SHA**: `\translate-resync` now uses the PR's `merge_commit_sha` instead of `github.context.sha` (which points to HEAD of main for `issue_comment` events). Previously, `oldContent` and `newContent` could both reference the current main tip, causing the diff detector to miss the PR's actual changes. Now `oldContent = merge_commit^` and `newContent = merge_commit` correctly reflect the PR's changes.
 
 ### Added
 - **3 tests for position fallback guard**: Covers source-has-more-sections, source-has-fewer-sections, and equal-counts-still-works scenarios (927 → 930 total)
