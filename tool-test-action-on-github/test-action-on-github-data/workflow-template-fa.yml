@@ -14,10 +14,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source
+      - name: Checkout action repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          repository: QuantEcon/action-translation
+          path: action
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd action
+          npm ci
 
       - name: Determine mode
         id: mode
@@ -31,7 +42,7 @@ jobs:
           fi
 
       - name: Run translation sync
-        uses: QuantEcon/action-translation@v0.9.0
+        uses: ./action
         with:
           mode: sync
           target-repo: ${{ github.repository }}.fa

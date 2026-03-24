@@ -27,7 +27,7 @@ The test script creates and manages test PRs in source and target repositories t
 | **Target (zh-cn)** | Chinese translations (built from source) | `QuantEcon/test-translation-sync.zh-cn` |
 | **Target (fa)** | Farsi translations (uses published action) | `QuantEcon/test-translation-sync.fa` |
 
-**Note**: The zh-cn workflow checks out & builds `action-translation` from source (for development testing). The fa workflow uses the published action (`@v0.9.0`) to validate the real deployment path. Each test PR triggers **both** workflows.
+**Note**: Both workflows check out & build `action-translation` from source (`main` branch) for development testing. Each test PR triggers **both** workflows.
 
 ## Usage
 
