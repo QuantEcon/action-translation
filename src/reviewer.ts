@@ -36,32 +36,49 @@ const REVIEW_RETRY_CONFIG = {
 /**
  * Extract JSON from an LLM response string.
  * Tries multiple strategies: raw parse, markdown code block extraction, greedy regex.
+ * Returns a non-null object (throws if the parsed value is not an object).
  */
-export function parseJsonResponse(text: string): unknown {
+export function parseJsonResponse(text: string): Record<string, unknown> {
+  let parsed: unknown;
+
   // Strategy 1: Direct parse (response is pure JSON)
   try {
-    return JSON.parse(text);
+    parsed = JSON.parse(text);
   } catch {
     // Continue to next strategy
   }
 
   // Strategy 2: Extract from markdown code block (```json ... ``` or ``` ... ```)
-  const codeBlockMatch = text.match(/```(?:json)?\s*\n?(\{[\s\S]*?\})\s*\n?```/);
-  if (codeBlockMatch) {
-    try {
-      return JSON.parse(codeBlockMatch[1]);
-    } catch {
-      // Continue to next strategy
+  if (parsed === undefined) {
+    const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+    if (codeBlockMatch) {
+      const content = codeBlockMatch[1].trim();
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        // Continue to next strategy
+      }
     }
   }
 
   // Strategy 3: Greedy regex to find outermost JSON object
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    return JSON.parse(jsonMatch[0]);
+  if (parsed === undefined) {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      parsed = JSON.parse(jsonMatch[0]);
+    }
   }
 
-  throw new Error('No JSON object found in response');
+  if (parsed === undefined) {
+    throw new Error('No JSON object found in response');
+  }
+
+  // Validate that the result is a non-null object (not a number, string, array, etc.)
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error('Response JSON is not an object');
+  }
+
+  return parsed as Record<string, unknown>;
 }
 
 /**
@@ -265,7 +282,7 @@ export class TranslationReviewer {
     prompt: string,
     maxTokens: number,
     operationName: string,
-  ): Promise<unknown> {
+  ): Promise<Record<string, unknown>> {
     const { maxRetries, baseDelayMs } = REVIEW_RETRY_CONFIG;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {

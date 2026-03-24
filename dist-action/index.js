@@ -28983,22 +28983,34 @@ var REVIEW_RETRY_CONFIG = {
   // 1s, 2s, 4s with exponential backoff
 };
 function parseJsonResponse(text) {
+  let parsed;
   try {
-    return JSON.parse(text);
+    parsed = JSON.parse(text);
   } catch {
   }
-  const codeBlockMatch = text.match(/```(?:json)?\s*\n?(\{[\s\S]*?\})\s*\n?```/);
-  if (codeBlockMatch) {
-    try {
-      return JSON.parse(codeBlockMatch[1]);
-    } catch {
+  if (parsed === void 0) {
+    const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+    if (codeBlockMatch) {
+      const content = codeBlockMatch[1].trim();
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+      }
     }
   }
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    return JSON.parse(jsonMatch[0]);
+  if (parsed === void 0) {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      parsed = JSON.parse(jsonMatch[0]);
+    }
   }
-  throw new Error("No JSON object found in response");
+  if (parsed === void 0) {
+    throw new Error("No JSON object found in response");
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error("Response JSON is not an object");
+  }
+  return parsed;
 }
 function extractPreamble(content) {
   const lines = content.split("\n");

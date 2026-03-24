@@ -157,7 +157,7 @@ export async function createTranslationPR(
 
   // Add labels (non-fatal — PR is already created)
   // Retry up to 3 times with delay to handle GitHub API propagation delays
-  // (newly-created PR node IDs may not be immediately resolvable)
+  // (newly-created PRs may temporarily return 404/validation errors when adding labels)
   const labelsToAdd = buildLabelSet(config.prLabels, sourcePrInfo?.labels);
   if (labelsToAdd.length > 0) {
     const maxAttempts = 3;

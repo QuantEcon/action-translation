@@ -1010,4 +1010,23 @@ describe('parseJsonResponse', () => {
     const result = parseJsonResponse(response) as { accuracy: number };
     expect(result.accuracy).toBe(9);
   });
+
+  it('should handle nested objects inside a markdown code block', () => {
+    const response = '```json\n{"outer": {"inner": 1}, "list": [{"a": 2}]}\n```';
+    const result = parseJsonResponse(response) as { outer: { inner: number }; list: Array<{ a: number }> };
+    expect(result.outer.inner).toBe(1);
+    expect(result.list[0].a).toBe(2);
+  });
+
+  it('should throw on JSON null', () => {
+    expect(() => parseJsonResponse('null')).toThrow('Response JSON is not an object');
+  });
+
+  it('should throw on JSON array', () => {
+    expect(() => parseJsonResponse('[1, 2, 3]')).toThrow('Response JSON is not an object');
+  });
+
+  it('should throw on JSON number', () => {
+    expect(() => parseJsonResponse('42')).toThrow('Response JSON is not an object');
+  });
 });

@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Test fixture #25**: Added pre-title content scenario (`25-pre-title-content-lecture`) to E2E test suite for `test-translation-sync`
 - **Test fixture #26**: Added heading case change scenario (`26-heading-case-change-lecture`) — title-case → sentence-case headings to validate case-insensitive heading-map lookup
-- **10 tests for `parseJsonResponse`**: Covers pure JSON, markdown code blocks, multiline, nested objects, leading/trailing text, and error cases (920 → 923 total, excluding skipped)
+- **10 tests for `parseJsonResponse`**: Covers pure JSON, markdown code blocks, multiline, nested objects, leading/trailing text, and error cases (924 → 927 total, excluding skipped)
 
 ## [0.12.0] - 2026-03-23
 
