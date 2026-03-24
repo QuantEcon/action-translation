@@ -136,11 +136,54 @@ gh release create vX.Y.Z --title "..." --notes-file .tmp/release-notes.md > .tmp
 
 The `.tmp/` folder is committed (via `.gitkeep`) but its contents are git-ignored.
 
-### GitHub Testing (real PR workflow)
+---
+
+## E2E Testing Tool (`tool-test-action-on-github/`)
+
+End-to-end testing against real GitHub repos. Creates test PRs that trigger the action workflow.
+
+### Test Repos
+
+| Repo | Role |
+|------|------|
+| `QuantEcon/test-translation-sync` | Source (English) — PRs created here |
+| `QuantEcon/test-translation-sync.zh-cn` | Target (Chinese) — translation PRs land here |
+| `QuantEcon/test-translation-sync.fa` | Target (Farsi) — translation PRs land here |
+
+Both target workflows checkout & build `action-translation` from `main` (not a pinned release), so tests always exercise the latest code.
+
+### Running
+
 ```bash
-./tool-test-action-on-github/test-action-on-github.sh
+./tool-test-action-on-github/test-action-on-github.sh          # Full run (26 test PRs)
+./tool-test-action-on-github/test-action-on-github.sh --dry-run # Preview only
 ```
-Uses TEST mode (no Claude API calls). See `docs/developer/testing.md`.
+
+**What the script does**: resets all 3 repos to clean state (force-push `main`), closes all open PRs, creates 26 draft PRs with `test-translation` label. The label triggers both zh-cn and fa workflows in TEST mode (no Claude API calls).
+
+**⚠ Terminal timeout**: The script creates 26 PRs sequentially and can take 5+ minutes. Set a generous timeout (≥ 600000ms) or run without one.
+
+### Folder Structure
+
+```
+tool-test-action-on-github/
+├── test-action-on-github.sh           # Main test script
+├── README.md                          # Detailed docs (scenarios, evaluation)
+├── test-action-on-github-data/        # Test fixtures + workflow templates
+│   ├── workflow-template.yml          # zh-cn workflow (checkout from main)
+│   ├── workflow-template-fa.yml       # fa workflow (checkout from main)
+│   ├── base-*.md / base-*.yml        # Base state files for source + targets
+│   └── 01-*.md ... 26-*.md           # Test scenario files (26 total)
+├── evaluate/                          # Phase 2: LLM-based quality evaluation
+└── reports/                           # Saved evaluation reports
+```
+
+### Test Scenarios (26 total, 4 phases)
+
+- **Phase 1 (01–08)**: Basic structure — intro, title, section content, reorder, add/delete section, subsection, multi-element (minimal doc)
+- **Phase 2 (09–15)**: Complex structure — real-world lecture, sub-subsections, code cells, math, delete subsection/sub-subsection (lecture doc)
+- **Phase 3 (16–20)**: Structural changes — pure reorder, new/deleted/renamed document + TOC, multi-file
+- **Phase 4 (21–26)**: Edge cases — preamble-only, deep nesting, special chars, empty sections, pre-title content, heading case change
 
 ---
 
