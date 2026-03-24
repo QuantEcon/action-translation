@@ -9,9 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Duplicate preamble regression**: Fixed intro extraction in `parseDocumentComponents` that included pre-title content and title in the intro when documents had content before `# title` (e.g. `(label)=` anchors, `{raw}` blocks). This caused duplicated preamble in reconstructed translations. Now extracts intro by slicing lines from `titleEndIndex` to first `##` section. (regression from v0.11.2)
+- **Case-insensitive heading-map lookup**: `lookupTargetHeading` now falls back to case-insensitive key matching when exact lookup fails. Prevents heading case changes (e.g. "Iterables and Iterators" → "Iterables and iterators") from breaking section matching and causing full re-translations.
+- **Position-based section fallback**: `findTargetSectionByHeadingMap` Strategy 3 (position-based matching) now activates whenever heading-map and ID lookups both fail, not only when the heading-map is empty. Provides defense-in-depth for translated-heading ID mismatches.
 
 ### Added
 - **Test fixture #25**: Added pre-title content scenario (`25-pre-title-content-lecture`) to E2E test suite for `test-translation-sync`
+- **Test fixture #26**: Added heading case change scenario (`26-heading-case-change-lecture`) — title-case → sentence-case headings to validate case-insensitive heading-map lookup
 
 ## [0.12.0] - 2026-03-23
 

@@ -40,7 +40,7 @@ cd /path/to/action-translation/tool-test-action-on-github
 
 The script will:
 1. Reset test repositories to clean state
-2. Run 25 automated test scenarios
+2. Run 26 automated test scenarios
 3. Create PRs in source repository with `test-translation` label
 4. Label triggers action → creates translation PRs in **both** target repositories
 5. Report results
@@ -64,7 +64,7 @@ Evaluation uses **Claude Opus 4.5** to assess:
 
 Reports are saved to `reports/evaluation-<date>.md`.
 
-## Test Scenarios (25 total)
+## Test Scenarios (26 total)
 
 The tool tests translation scenarios across four phases:
 
@@ -100,7 +100,7 @@ The tool tests translation scenarios across four phases:
 | 19 | Multi-file | Multiple files changed (minimal + lecture) |
 | 20 | Rename document | Document renamed (lecture.md → linear-algebra.md + TOC) |
 
-### Phase 4: Edge Cases (Tests 21–25)
+### Phase 4: Edge Cases (Tests 21–26)
 | # | Scenario | Description |
 |---|----------|-------------|
 | 21 | Preamble only | Only frontmatter changed, no content |
@@ -108,6 +108,7 @@ The tool tests translation scenarios across four phases:
 | 23 | Special characters | Headings with `code`, **bold**, [links], $math$ |
 | 24 | Empty sections | Sections with headings but no content |
 | 25 | Pre-title content | Anchor (`(label)=`) + `{raw}` block before `# title` |
+| 26 | Heading case change | Title-case → sentence-case headings (heading-map lookup) |
 
 ## Directory Structure
 

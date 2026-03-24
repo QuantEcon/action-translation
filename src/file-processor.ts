@@ -625,11 +625,12 @@ ${translatedContent}`;
       this.log(`  Available target IDs: ${targetSections.map(s => s.id).join(', ')}`);
     }
 
-    // Strategy 3: Fall back to position-based matching if heading map is empty
-    // This handles initial translations where no heading-map exists yet
-    if (headingMap.size === 0 && positionHint !== undefined) {
-      this.log(`  Strategy 3: Heading map empty, using position-based fallback`);
+    // Strategy 3: Fall back to position-based matching when heading map and ID both fail.
+    // This handles initial translations (empty heading-map) AND cases where
+    // heading text changed (e.g., case changes) and translated IDs don't match.
+    if (positionHint !== undefined) {
       if (positionHint >= 0 && positionHint < targetSections.length) {
+        this.log(`  Strategy 3: Using position-based fallback`);
         this.log(`  ✓ Found by position: index ${positionHint}`);
         return targetSections[positionHint];
       }
