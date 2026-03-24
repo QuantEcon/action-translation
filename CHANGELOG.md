@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.3] - 2026-03-24
+
 ### Fixed
 - **Scope translation PRs to source PR's actual changes**: When a section is unchanged in the source diff but missing from the target (because an earlier translation PR hasn't merged yet), it is now skipped instead of re-translated as new. This prevents each subsequent translation PR from accumulating unmerged content from earlier PRs. Git's 3-way merge combines the PRs when they're merged independently. Recovery via `/translate-resync` if an earlier PR is abandoned.
 - **Heading-map corruption when sections are skipped**: Introduced `includedSourceSections` array that stays index-aligned with `resultSections` so `updateHeadingMap()` pairs sections correctly even when some are skipped. Previously, skipping could cause source section A to be mapped to section B's translated heading.
