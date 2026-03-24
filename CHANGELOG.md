@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Scope translation PRs to source PR's actual changes**: When a section is unchanged in the source diff but missing from the target (because an earlier translation PR hasn't merged yet), it is now skipped instead of re-translated as new. This prevents each subsequent translation PR from accumulating unmerged content from earlier PRs. Git's 3-way merge combines the PRs when they're merged independently. Recovery via `/translate-resync` if an earlier PR is abandoned.
+- **Heading-map corruption when sections are skipped**: Introduced `includedSourceSections` array that stays index-aligned with `resultSections` so `updateHeadingMap()` pairs sections correctly even when some are skipped. Previously, skipping could cause source section A to be mapped to section B's translated heading.
+- **Markdown injection in PR body skipped-section headings**: Skipped section headings are now wrapped in backticks (with inner backtick escaping) instead of double quotes to neutralize Markdown syntax.
+
+### Added
+- **Skipped sections notice in translation PRs**: When sections are skipped (pending earlier translation PR), the PR body includes a `⚠️ Sections Pending Earlier Translation PR` notice with file/heading list and `/translate-resync` recovery instructions
+- **`onSkippedSection` callback in `processSectionBased`**: Optional callback parameter for callers to collect skipped section headings
+- **`skippedSections` in `SyncProcessingResult`**: Tracks skipped sections per file through the sync pipeline
+- **4 tests**: 1 for superset PR prevention, 3 for `buildPrBody` skipped sections rendering (930 → 934 total)
+
 ## [0.12.2] - 2026-03-24
 
 ### Fixed

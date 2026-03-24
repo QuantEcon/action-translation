@@ -56,7 +56,8 @@ export class FileProcessor {
     filepath: string,
     sourceLanguage: string,
     targetLanguage: string,
-    glossary?: Glossary
+    glossary?: Glossary,
+    onSkippedSection?: (heading: string) => void
   ): Promise<string> {
     this.log(`Processing file using component-based approach: ${filepath}`);
 
@@ -136,6 +137,7 @@ export class FileProcessor {
     this.log(`Detected ${changes.length} section-level changes`);
     
     const resultSections: Section[] = [];
+    const includedSourceSections: Section[] = [];  // Tracks which source sections map to resultSections (keeps heading-map aligned)
     
     // Process each section from new source (ensures proper order)
     for (let i = 0; i < newSource.sections.length; i++) {
@@ -161,17 +163,18 @@ export class FileProcessor {
         
         if (targetSection) {
           resultSections.push(targetSection);
+          includedSourceSections.push(newSection);
           this.log(`Keeping unchanged section: ${newSection.heading}`);
         } else {
-          // If we can't find target section, treat as new
-          this.log(`Warning: No target found for section: ${newSection.heading}, treating as new`);
-          const translatedSection = await this.translateNewSection(
-            newSection,
-            sourceLanguage,
-            targetLanguage,
-            glossary
-          );
-          resultSections.push(translatedSection);
+          // Section is unchanged in source diff but missing from target.
+          // This happens when an earlier translation PR hasn't been merged yet.
+          // Skip rather than re-translate: keeps this PR scoped to the actual
+          // changes in the source PR. Git's 3-way merge will combine this PR
+          // with earlier translation PRs that introduce the missing sections.
+          // If the earlier PR is abandoned, a /translate-resync will recover this.
+          const headingText = newSection.heading.replace(/^#+\s+/, '');
+          this.log(`Section "${headingText}" unchanged in source but missing from target — skipping (pending earlier translation PR)`);
+          onSkippedSection?.(headingText);
         }
         continue;
       }
@@ -186,6 +189,7 @@ export class FileProcessor {
           glossary
         );
         resultSections.push(translatedSection);
+        includedSourceSections.push(newSection);
         
       } else if (change.type === 'modified') {
         this.log(`Processing MODIFIED section: ${newSection.heading}`);
@@ -208,6 +212,7 @@ export class FileProcessor {
             glossary
           );
           resultSections.push(translatedSection);
+          includedSourceSections.push(newSection);
           continue;
         }
 
@@ -360,6 +365,7 @@ export class FileProcessor {
           content: finalContent,
           subsections: finalSubsections,
         });
+        includedSourceSections.push(newSection);
 
         this.log(`Updated section at position ${i}`);
       }
@@ -375,9 +381,11 @@ export class FileProcessor {
     updatedHeadingMap.set(newTitleText, resultTitleText);
     
     // Add sections to heading map (pass title so it's preserved)
+    // Use includedSourceSections (not newSource.sections) so indices stay aligned
+    // with resultSections — skipped sections are excluded from both arrays.
     const finalHeadingMap = updateHeadingMap(
       updatedHeadingMap,
-      newSource.sections,
+      includedSourceSections,
       resultSections,
       newTitleText  // Pass title to prevent it from being deleted
     );

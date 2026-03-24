@@ -259,6 +259,7 @@ async function runSync(): Promise<void> {
           prConfig,
           coreLogger,
           sourcePrInfo,
+          result.skippedSections,
         );
 
         prUrl = prResult.prUrl;

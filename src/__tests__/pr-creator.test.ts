@@ -145,6 +145,35 @@ describe('buildPrBody', () => {
     expect(body).toContain('### Files Updated');
     expect(body).toContain('### Files Deleted');
   });
+
+  it('should include skipped sections notice when provided', () => {
+    const skipped = new Map<string, string[]>([
+      ['lectures/intro.md', ['Type Hints', 'Advanced Topics']],
+    ]);
+    const body = buildPrBody([], [], baseConfig, undefined, skipped);
+
+    expect(body).toContain('### ⚠️ Sections Pending Earlier Translation PR');
+    expect(body).toContain('`lectures/intro.md`');
+    expect(body).toContain('`Type Hints`');
+    expect(body).toContain('`Advanced Topics`');
+    expect(body).toContain('/translate-resync');
+  });
+
+  it('should not include skipped sections notice when empty', () => {
+    const body = buildPrBody([], [], baseConfig, undefined, new Map());
+
+    expect(body).not.toContain('Sections Pending');
+  });
+
+  it('should escape backticks in skipped section headings', () => {
+    const skipped = new Map<string, string[]>([
+      ['test.md', ['Code `example` section']],
+    ]);
+    const body = buildPrBody([], [], baseConfig, undefined, skipped);
+
+    // Heading should be wrapped in backticks with inner backticks escaped
+    expect(body).toContain('`Code \\`example\\` section`');
+  });
 });
 
 // =============================================================================

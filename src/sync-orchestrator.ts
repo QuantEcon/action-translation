@@ -84,6 +84,8 @@ export interface SyncProcessingResult {
   filesToDelete: Array<{ path: string; sha: string }>;
   processedFiles: string[];
   errors: string[];
+  /** Sections skipped per file: unchanged in source diff but missing from target (pending earlier translation PR). */
+  skippedSections: Map<string, string[]>;
 }
 
 // =============================================================================
@@ -256,6 +258,7 @@ export class SyncOrchestrator {
       filesToDelete: [],
       processedFiles: [],
       errors: [],
+      skippedSections: new Map(),
     };
 
     for (const file of files) {
@@ -313,6 +316,7 @@ export class SyncOrchestrator {
         glossary,
       );
     } else {
+      const skipped: string[] = [];
       translatedContent = await this.processor.processSectionBased(
         file.oldContent || '',
         file.newContent,
@@ -321,7 +325,12 @@ export class SyncOrchestrator {
         this.config.sourceLanguage,
         this.config.targetLanguage,
         glossary,
+        (heading) => skipped.push(heading),
       );
+      if (skipped.length > 0) {
+        result.skippedSections.set(file.filename, skipped);
+        this.logger.warning(`${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target — pending earlier translation PR`);
+      }
     }
 
     // Validate translated content
@@ -366,6 +375,7 @@ export class SyncOrchestrator {
     let translatedContent: string;
     if (file.targetContent) {
       // Existing translation — use section-based processing to update
+      const skipped: string[] = [];
       translatedContent = await this.processor.processSectionBased(
         file.oldContent || '',
         file.newContent,
@@ -374,7 +384,12 @@ export class SyncOrchestrator {
         this.config.sourceLanguage,
         this.config.targetLanguage,
         glossary,
+        (heading) => skipped.push(heading),
       );
+      if (skipped.length > 0) {
+        result.skippedSections.set(file.filename, skipped);
+        this.logger.warning(`${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target — pending earlier translation PR`);
+      }
     } else {
       // No existing translation — full translation
       translatedContent = await this.processor.processFull(
