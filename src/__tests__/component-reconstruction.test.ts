@@ -1337,8 +1337,9 @@ describe('Position Fallback Guard', () => {
     // BUG (before fix): position fallback maps "Type hints" (source pos 2)
     // to "Decorators" (target pos 2) — the wrong section!
     //
-    // FIX: When section counts differ, skip position fallback and treat
-    // the unmatched section as new (translate from scratch).
+    // FIX: When section counts differ, skip position fallback. Since "Type hints"
+    // is UNCHANGED in the diff and missing from target, it is skipped entirely
+    // (not re-translated), keeping this sync scoped to actual source changes.
 
     const sourceContent = `---
 config: test
@@ -1381,12 +1382,6 @@ heading-map:
 
 装饰器内容。`;
 
-    // Mock: translateNewSection will be called for "Type hints" (no target match)
-    mockTranslator.translateSection.mockResolvedValue({
-      success: true,
-      translatedSection: '## 类型提示\n\n类型提示内容。',
-    });
-
     const result = await processor.processSectionBased(
       sourceContent,  // oldContent === newContent (no diff detected)
       sourceContent,
@@ -1396,25 +1391,22 @@ heading-map:
       'zh-cn'
     );
 
-    // Type hints should be translated as new, NOT copied from Decorators
-    expect(result).toContain('## 类型提示');
-    expect(result).toContain('类型提示内容');
+    // Type hints is UNCHANGED in source diff and missing from target — skipped
+    expect(result).not.toContain('## Type hints');
+    expect(result).not.toContain('类型提示');
 
-    // Existing sections should be preserved from target
+    // Existing sections should be preserved from target (not grabbed by wrong position)
     expect(result).toContain('## 运算符');
     expect(result).toContain('运算符内容');
     expect(result).toContain('## 装饰器');
     expect(result).toContain('装饰器内容');
 
-    // Should have 3 sections total
+    // Should have 2 sections (Type hints skipped)
     const sectionMatches = result.match(/^## /gm);
-    expect(sectionMatches).toHaveLength(3);
+    expect(sectionMatches).toHaveLength(2);
 
-    // Only one translation call (for the new Type hints section)
-    expect(mockTranslator.translateSection).toHaveBeenCalledTimes(1);
-
-    // Heading map should have correct values
-    expect(result).toContain('Type hints: 类型提示');  // NOT 装饰器
+    // No translation calls — skipped section is not translated
+    expect(mockTranslator.translateSection).not.toHaveBeenCalled();
   });
 
   it('should not use position fallback when source has fewer sections than target', async () => {
@@ -1527,5 +1519,89 @@ config: test
 
     // No translation calls (all unchanged, found by position)
     expect(mockTranslator.translateSection).not.toHaveBeenCalled();
+  });
+
+  it('should skip unchanged sections missing from target (superset PR prevention)', async () => {
+    // Scenario: source PR #491 only changed URLs in Section B.
+    // Section A (Type Hints) was added by a previous source PR but its translation PR
+    // hasn't been merged yet. Section A is UNCHANGED in this source diff but missing
+    // from the target. It should be skipped, not re-translated.
+    const oldContent = `---
+config: test
+---
+
+# Document
+
+Intro.
+
+## Section A
+
+Type hints content.
+
+## Section B
+
+Old URL content.`;
+
+    const newContent = `---
+config: test
+---
+
+# Document
+
+Intro.
+
+## Section A
+
+Type hints content.
+
+## Section B
+
+New URL content.`;
+
+    // Target is missing Section A (pending earlier translation PR)
+    const targetContent = `---
+config: test
+heading-map:
+  Document: 文档
+  Section B: B部分
+---
+
+# 文档
+
+介绍。
+
+## B部分
+
+旧链接内容。`;
+
+    mockTranslator.translateSection.mockResolvedValue({
+      success: true,
+      translatedSection: '## B部分\n\n新链接内容。',
+    });
+
+    const skipped: string[] = [];
+    const result = await processor.processSectionBased(
+      oldContent,
+      newContent,
+      targetContent,
+      'test.md',
+      'en',
+      'zh-cn',
+      undefined,
+      (heading) => skipped.push(heading),
+    );
+
+    // Section A should be absent — it was unchanged in source and missing from target
+    expect(result).not.toContain('## Section A');
+    expect(result).not.toContain('Type hints content');
+
+    // Section B should be present (it was modified by the source PR)
+    expect(result).toContain('B部分');
+
+    // Callback should have been called for the skipped section
+    expect(skipped).toEqual(['Section A']);
+
+    // Translator called only once (for modified Section B), not for Section A
+    expect(mockTranslator.translateSection).toHaveBeenCalledTimes(1);
   });
 });

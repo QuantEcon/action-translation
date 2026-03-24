@@ -56,7 +56,8 @@ export class FileProcessor {
     filepath: string,
     sourceLanguage: string,
     targetLanguage: string,
-    glossary?: Glossary
+    glossary?: Glossary,
+    onSkippedSection?: (heading: string) => void
   ): Promise<string> {
     this.log(`Processing file using component-based approach: ${filepath}`);
 
@@ -163,15 +164,15 @@ export class FileProcessor {
           resultSections.push(targetSection);
           this.log(`Keeping unchanged section: ${newSection.heading}`);
         } else {
-          // If we can't find target section, treat as new
-          this.log(`Warning: No target found for section: ${newSection.heading}, treating as new`);
-          const translatedSection = await this.translateNewSection(
-            newSection,
-            sourceLanguage,
-            targetLanguage,
-            glossary
-          );
-          resultSections.push(translatedSection);
+          // Section is unchanged in source diff but missing from target.
+          // This happens when an earlier translation PR hasn't been merged yet.
+          // Skip rather than re-translate: keeps this PR scoped to the actual
+          // changes in the source PR. Git's 3-way merge will combine this PR
+          // with earlier translation PRs that introduce the missing sections.
+          // If the earlier PR is abandoned, a /translate-resync will recover this.
+          const headingText = newSection.heading.replace(/^#+\s+/, '');
+          this.log(`Section "${headingText}" unchanged in source but missing from target — skipping (pending earlier translation PR)`);
+          onSkippedSection?.(headingText);
         }
         continue;
       }

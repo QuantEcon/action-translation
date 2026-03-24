@@ -79,6 +79,7 @@ export async function createTranslationPR(
   config: PrCreatorConfig,
   logger: Logger,
   sourcePrInfo?: SourcePrInfo,
+  skippedSections?: Map<string, string[]>,
 ): Promise<PrCreationResult> {
   const { targetOwner, targetRepo } = config;
 
@@ -138,7 +139,7 @@ export async function createTranslationPR(
   }
 
   // Build PR body
-  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo);
+  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections);
 
   // Build PR title
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
@@ -210,6 +211,7 @@ export function buildPrBody(
   filesToDelete: Array<{ path: string; sha: string }>,
   config: PrCreatorConfig,
   sourcePrInfo?: SourcePrInfo,
+  skippedSections?: Map<string, string[]>,
 ): string {
   const newFiles = translatedFiles.filter(f => !f.sha);
   const updatedFiles = translatedFiles.filter(f => f.sha);
@@ -230,6 +232,16 @@ export function buildPrBody(
   const sourcePrTitle = sourcePrInfo?.title || '';
   const { sourceRepoOwner, sourceRepoName, prNumber } = config;
 
+  // Build skipped sections notice (present when earlier translation PRs are unmerged)
+  let skippedNotice = '';
+  if (skippedSections && skippedSections.size > 0) {
+    const lines: string[] = [];
+    for (const [file, headings] of skippedSections) {
+      lines.push(`- \`${file}\`: ${headings.map(h => `"${h}"`).join(', ')}`);
+    }
+    skippedNotice = `\n\n### ⚠️ Sections Pending Earlier Translation PR\n\nThe following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. If that PR is abandoned, run \`/translate-resync\` to recover.\n\n${lines.join('\n')}`;
+  }
+
   return `## Automated Translation Sync
 
 This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoName}](https://github.com/${sourceRepoOwner}/${sourceRepoName}).
@@ -237,7 +249,7 @@ This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoNam
 ### Source PR
 **[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ''}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
 
-${filesChangedSection}
+${filesChangedSection}${skippedNotice}
 
 ### Details
 - **Source Language**: ${config.sourceLanguage}
