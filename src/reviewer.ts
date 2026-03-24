@@ -9,6 +9,13 @@ import * as core from '@actions/core';
 import * as github from '@actions/github';
 import Anthropic from '@anthropic-ai/sdk';
 import {
+  APIError,
+  AuthenticationError,
+  RateLimitError,
+  APIConnectionError,
+  BadRequestError
+} from '@anthropic-ai/sdk';
+import {
   ReviewInputs,
   TranslationQualityResult,
   DiffQualityResult,
@@ -19,6 +26,60 @@ import {
 
 // Default model for review (can be overridden)
 const DEFAULT_REVIEW_MODEL = 'claude-sonnet-4-6';
+
+/** Retry configuration for review API calls */
+const REVIEW_RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 1000,  // 1s, 2s, 4s with exponential backoff
+};
+
+/**
+ * Extract JSON from an LLM response string.
+ * Tries multiple strategies: raw parse, markdown code block extraction, greedy regex.
+ * Returns a non-null object (throws if the parsed value is not an object).
+ */
+export function parseJsonResponse(text: string): Record<string, unknown> {
+  let parsed: unknown;
+
+  // Strategy 1: Direct parse (response is pure JSON)
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    // Continue to next strategy
+  }
+
+  // Strategy 2: Extract from markdown code block (```json ... ``` or ``` ... ```)
+  if (parsed === undefined) {
+    const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+    if (codeBlockMatch) {
+      const content = codeBlockMatch[1].trim();
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+        // Continue to next strategy
+      }
+    }
+  }
+
+  // Strategy 3: Greedy regex to find outermost JSON object
+  if (parsed === undefined) {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      parsed = JSON.parse(jsonMatch[0]);
+    }
+  }
+
+  if (parsed === undefined) {
+    throw new Error('No JSON object found in response');
+  }
+
+  // Validate that the result is a non-null object (not a number, string, array, etc.)
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error('Response JSON is not an object');
+  }
+
+  return parsed as Record<string, unknown>;
+}
 
 /**
  * Extract preamble (content before first heading) from a markdown document
@@ -207,6 +268,65 @@ export class TranslationReviewer {
     this.octokit = github.getOctokit(githubToken);
     this.model = model;
     this.maxSuggestions = maxSuggestions;
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Call Claude API with retry logic and exponential backoff.
+   * Retries on transient API errors and parse failures.
+   */
+  private async callWithRetry(
+    prompt: string,
+    maxTokens: number,
+    operationName: string,
+  ): Promise<Record<string, unknown>> {
+    const { maxRetries, baseDelayMs } = REVIEW_RETRY_CONFIG;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const stream = this.anthropic.messages.stream({
+          model: this.model,
+          max_tokens: maxTokens,
+          messages: [{ role: 'user', content: prompt }],
+        });
+        const response = await stream.finalMessage();
+
+        const content = response.content[0];
+        if (content.type !== 'text') {
+          throw new Error('Unexpected response type from Claude');
+        }
+
+        return parseJsonResponse(content.text);
+      } catch (error) {
+        // Don't retry on non-transient API errors
+        if (error instanceof AuthenticationError || error instanceof BadRequestError) {
+          throw error;
+        }
+
+        // Retry on transient API errors or parse failures
+        const isApiRetryable =
+          error instanceof RateLimitError ||
+          error instanceof APIConnectionError ||
+          (error instanceof APIError && error.status !== undefined && error.status >= 500);
+        const isParseFailure = error instanceof SyntaxError || (error instanceof Error && error.message.includes('No JSON object'));
+
+        if ((!isApiRetryable && !isParseFailure) || attempt === maxRetries) {
+          if (isParseFailure) {
+            core.error(`${operationName}: Failed to parse response after ${maxRetries} attempts`);
+          }
+          throw error;
+        }
+
+        const delay = baseDelayMs * Math.pow(2, attempt - 1);
+        core.info(`${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error instanceof Error ? error.message : error}. Retrying in ${delay}ms...`);
+        await this.sleep(delay);
+      }
+    }
+
+    throw new Error('Unexpected: retry loop completed without result');
   }
 
   /**
@@ -629,48 +749,26 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
 
 **CRITICAL**: The "issues" array MUST contain suggestions that relate ONLY to the sections that were changed in this PR. Do not suggest improvements for unchanged parts of the document.`;
 
-    const stream = this.anthropic.messages.stream({
-      model: this.model,
-      max_tokens: 1500,
-      messages: [{ role: 'user', content: prompt }],
-    });
-    const response = await stream.finalMessage();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result: any = await this.callWithRetry(prompt, 1500, 'evaluateTranslation');
+    const score = (
+      result.accuracy * 0.35 +
+      result.fluency * 0.25 +
+      result.terminology * 0.25 +
+      result.formatting * 0.15
+    );
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
-    }
-
-    try {
-      let jsonStr = content.text;
-      const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        jsonStr = jsonMatch[0];
-      }
-
-      const result = JSON.parse(jsonStr);
-      const score = (
-        result.accuracy * 0.35 +
-        result.fluency * 0.25 +
-        result.terminology * 0.25 +
-        result.formatting * 0.15
-      );
-
-      return {
-        score: Math.round(score * 10) / 10,
-        accuracy: result.accuracy,
-        fluency: result.fluency,
-        terminology: result.terminology,
-        formatting: result.formatting,
-        syntaxErrors: result.syntaxErrors || [],
-        issues: this.normalizeIssues(result.issues || []),
-        strengths: result.strengths || [],
-        summary: result.summary || '',
-      };
-    } catch (error) {
-      core.error(`Failed to parse evaluation response: ${content.text}`);
-      throw new Error('Failed to parse translation quality evaluation');
-    }
+    return {
+      score: Math.round(score * 10) / 10,
+      accuracy: result.accuracy,
+      fluency: result.fluency,
+      terminology: result.terminology,
+      formatting: result.formatting,
+      syntaxErrors: result.syntaxErrors || [],
+      issues: this.normalizeIssues(result.issues || []),
+      strengths: result.strengths || [],
+      summary: result.summary || '',
+    };
   }
 
   /**
@@ -757,51 +855,29 @@ Respond with ONLY valid JSON:
   "structureDetails": "Brief explanation of structure check"
 }`;
 
-    const stream = this.anthropic.messages.stream({
-      model: this.model,
-      max_tokens: 1500,
-      messages: [{ role: 'user', content: prompt }],
-    });
-    const response = await stream.finalMessage();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result: any = await this.callWithRetry(prompt, 1500, 'evaluateDiff');
+    const checks = [
+      result.scopeCorrect,
+      result.positionCorrect,
+      result.structurePreserved,
+      result.headingMapCorrect,
+    ];
+    const passedChecks = checks.filter(Boolean).length;
+    const score = (passedChecks / checks.length) * 10;
 
-    const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
-    }
-
-    try {
-      let jsonStr = content.text;
-      const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        jsonStr = jsonMatch[0];
-      }
-
-      const result = JSON.parse(jsonStr);
-      const checks = [
-        result.scopeCorrect,
-        result.positionCorrect,
-        result.structurePreserved,
-        result.headingMapCorrect,
-      ];
-      const passedChecks = checks.filter(Boolean).length;
-      const score = (passedChecks / checks.length) * 10;
-
-      return {
-        score: Math.round(score * 10) / 10,
-        scopeCorrect: result.scopeCorrect,
-        positionCorrect: result.positionCorrect,
-        structurePreserved: result.structurePreserved,
-        headingMapCorrect: result.headingMapCorrect,
-        issues: result.issues || [],
-        summary: result.summary || '',
-        scopeDetails: result.scopeDetails || '',
-        positionDetails: result.positionDetails || '',
-        structureDetails: result.structureDetails || '',
-      };
-    } catch (error) {
-      core.error(`Failed to parse diff evaluation response: ${content.text}`);
-      throw new Error('Failed to parse diff quality evaluation');
-    }
+    return {
+      score: Math.round(score * 10) / 10,
+      scopeCorrect: result.scopeCorrect,
+      positionCorrect: result.positionCorrect,
+      structurePreserved: result.structurePreserved,
+      headingMapCorrect: result.headingMapCorrect,
+      issues: result.issues || [],
+      summary: result.summary || '',
+      scopeDetails: result.scopeDetails || '',
+      positionDetails: result.positionDetails || '',
+      structureDetails: result.structureDetails || '',
+    };
   }
 
   /**

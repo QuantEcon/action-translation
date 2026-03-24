@@ -7,7 +7,7 @@
  * - Review comment generation
  */
 
-import { identifyChangedSections } from '../reviewer.js';
+import { identifyChangedSections, parseJsonResponse } from '../reviewer.js';
 import { ChangedSection } from '../types.js';
 
 // =============================================================================
@@ -934,5 +934,99 @@ x = np.array([1, 2, 3])
       const setupChange = changes.find(c => c.heading.includes('Setup'));
       expect(setupChange?.changeType).toBe('modified');
     });
+  });
+});
+
+// =============================================================================
+// parseJsonResponse TESTS
+// =============================================================================
+
+describe('parseJsonResponse', () => {
+  it('should parse pure JSON response', () => {
+    const json = '{"accuracy": 9, "fluency": 8}';
+    const result = parseJsonResponse(json) as { accuracy: number; fluency: number };
+    expect(result.accuracy).toBe(9);
+    expect(result.fluency).toBe(8);
+  });
+
+  it('should extract JSON from markdown code block', () => {
+    const response = 'Here is my evaluation:\n```json\n{"accuracy": 9, "fluency": 8}\n```\nThat is my assessment.';
+    const result = parseJsonResponse(response) as { accuracy: number; fluency: number };
+    expect(result.accuracy).toBe(9);
+    expect(result.fluency).toBe(8);
+  });
+
+  it('should extract JSON from code block without json label', () => {
+    const response = '```\n{"scopeCorrect": true, "summary": "All good"}\n```';
+    const result = parseJsonResponse(response) as { scopeCorrect: boolean };
+    expect(result.scopeCorrect).toBe(true);
+  });
+
+  it('should extract JSON with leading/trailing text via greedy regex', () => {
+    const response = 'Based on my analysis:\n\n{"accuracy": 7, "issues": ["minor issue"]}\n\nLet me know if you need more details.';
+    const result = parseJsonResponse(response) as { accuracy: number; issues: string[] };
+    expect(result.accuracy).toBe(7);
+    expect(result.issues).toEqual(['minor issue']);
+  });
+
+  it('should handle multiline JSON', () => {
+    const response = `{
+  "accuracy": 9,
+  "fluency": 8,
+  "issues": [
+    "Issue 1",
+    "Issue 2"
+  ]
+}`;
+    const result = parseJsonResponse(response) as { accuracy: number; issues: string[] };
+    expect(result.accuracy).toBe(9);
+    expect(result.issues).toHaveLength(2);
+  });
+
+  it('should handle JSON in markdown code block with extra whitespace', () => {
+    const response = '```json\n\n  {"scopeCorrect": true}\n\n```';
+    const result = parseJsonResponse(response) as { scopeCorrect: boolean };
+    expect(result.scopeCorrect).toBe(true);
+  });
+
+  it('should throw on response with no JSON', () => {
+    expect(() => parseJsonResponse('No JSON here, just text')).toThrow();
+  });
+
+  it('should throw on empty string', () => {
+    expect(() => parseJsonResponse('')).toThrow();
+  });
+
+  it('should handle nested objects in JSON', () => {
+    const response = '{"outer": {"inner": "value"}, "list": [1, 2, 3]}';
+    const result = parseJsonResponse(response) as { outer: { inner: string }; list: number[] };
+    expect(result.outer.inner).toBe('value');
+    expect(result.list).toEqual([1, 2, 3]);
+  });
+
+  it('should prefer code block extraction over greedy regex when both present', () => {
+    // Code block has the correct JSON, trailing text has partial JSON
+    const response = '```json\n{"accuracy": 9}\n```\nSome text with {invalid json}';
+    const result = parseJsonResponse(response) as { accuracy: number };
+    expect(result.accuracy).toBe(9);
+  });
+
+  it('should handle nested objects inside a markdown code block', () => {
+    const response = '```json\n{"outer": {"inner": 1}, "list": [{"a": 2}]}\n```';
+    const result = parseJsonResponse(response) as { outer: { inner: number }; list: Array<{ a: number }> };
+    expect(result.outer.inner).toBe(1);
+    expect(result.list[0].a).toBe(2);
+  });
+
+  it('should throw on JSON null', () => {
+    expect(() => parseJsonResponse('null')).toThrow('Response JSON is not an object');
+  });
+
+  it('should throw on JSON array', () => {
+    expect(() => parseJsonResponse('[1, 2, 3]')).toThrow('Response JSON is not an object');
+  });
+
+  it('should throw on JSON number', () => {
+    expect(() => parseJsonResponse('42')).toThrow('Response JSON is not an object');
   });
 });

@@ -28977,6 +28977,41 @@ Anthropic.Beta = Beta;
 
 // dist/reviewer.js
 var DEFAULT_REVIEW_MODEL = "claude-sonnet-4-6";
+var REVIEW_RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 1e3
+  // 1s, 2s, 4s with exponential backoff
+};
+function parseJsonResponse(text) {
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+  }
+  if (parsed === void 0) {
+    const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+    if (codeBlockMatch) {
+      const content = codeBlockMatch[1].trim();
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+      }
+    }
+  }
+  if (parsed === void 0) {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      parsed = JSON.parse(jsonMatch[0]);
+    }
+  }
+  if (parsed === void 0) {
+    throw new Error("No JSON object found in response");
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error("Response JSON is not an object");
+  }
+  return parsed;
+}
 function extractPreamble(content) {
   const lines = content.split("\n");
   const preambleLines = [];
@@ -29100,6 +29135,47 @@ var TranslationReviewer = class {
     this.octokit = github.getOctokit(githubToken);
     this.model = model;
     this.maxSuggestions = maxSuggestions;
+  }
+  sleep(ms) {
+    return new Promise((resolve2) => setTimeout(resolve2, ms));
+  }
+  /**
+   * Call Claude API with retry logic and exponential backoff.
+   * Retries on transient API errors and parse failures.
+   */
+  async callWithRetry(prompt, maxTokens, operationName) {
+    const { maxRetries, baseDelayMs } = REVIEW_RETRY_CONFIG;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const stream = this.anthropic.messages.stream({
+          model: this.model,
+          max_tokens: maxTokens,
+          messages: [{ role: "user", content: prompt }]
+        });
+        const response = await stream.finalMessage();
+        const content = response.content[0];
+        if (content.type !== "text") {
+          throw new Error("Unexpected response type from Claude");
+        }
+        return parseJsonResponse(content.text);
+      } catch (error3) {
+        if (error3 instanceof AuthenticationError || error3 instanceof BadRequestError) {
+          throw error3;
+        }
+        const isApiRetryable = error3 instanceof RateLimitError || error3 instanceof APIConnectionError || error3 instanceof APIError && error3.status !== void 0 && error3.status >= 500;
+        const isParseFailure = error3 instanceof SyntaxError || error3 instanceof Error && error3.message.includes("No JSON object");
+        if (!isApiRetryable && !isParseFailure || attempt === maxRetries) {
+          if (isParseFailure) {
+            core2.error(`${operationName}: Failed to parse response after ${maxRetries} attempts`);
+          }
+          throw error3;
+        }
+        const delay = baseDelayMs * Math.pow(2, attempt - 1);
+        core2.info(`${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error3 instanceof Error ? error3.message : error3}. Retrying in ${delay}ms...`);
+        await this.sleep(delay);
+      }
+    }
+    throw new Error("Unexpected: retry loop completed without result");
   }
   /**
    * Parse source PR number from translation PR body
@@ -29404,39 +29480,19 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
 - Do NOT invent issues just to fill the array - quality over quantity
 
 **CRITICAL**: The "issues" array MUST contain suggestions that relate ONLY to the sections that were changed in this PR. Do not suggest improvements for unchanged parts of the document.`;
-    const stream = this.anthropic.messages.stream({
-      model: this.model,
-      max_tokens: 1500,
-      messages: [{ role: "user", content: prompt }]
-    });
-    const response = await stream.finalMessage();
-    const content = response.content[0];
-    if (content.type !== "text") {
-      throw new Error("Unexpected response type from Claude");
-    }
-    try {
-      let jsonStr = content.text;
-      const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        jsonStr = jsonMatch[0];
-      }
-      const result = JSON.parse(jsonStr);
-      const score = result.accuracy * 0.35 + result.fluency * 0.25 + result.terminology * 0.25 + result.formatting * 0.15;
-      return {
-        score: Math.round(score * 10) / 10,
-        accuracy: result.accuracy,
-        fluency: result.fluency,
-        terminology: result.terminology,
-        formatting: result.formatting,
-        syntaxErrors: result.syntaxErrors || [],
-        issues: this.normalizeIssues(result.issues || []),
-        strengths: result.strengths || [],
-        summary: result.summary || ""
-      };
-    } catch (error3) {
-      core2.error(`Failed to parse evaluation response: ${content.text}`);
-      throw new Error("Failed to parse translation quality evaluation");
-    }
+    const result = await this.callWithRetry(prompt, 1500, "evaluateTranslation");
+    const score = result.accuracy * 0.35 + result.fluency * 0.25 + result.terminology * 0.25 + result.formatting * 0.15;
+    return {
+      score: Math.round(score * 10) / 10,
+      accuracy: result.accuracy,
+      fluency: result.fluency,
+      terminology: result.terminology,
+      formatting: result.formatting,
+      syntaxErrors: result.syntaxErrors || [],
+      issues: this.normalizeIssues(result.issues || []),
+      strengths: result.strengths || [],
+      summary: result.summary || ""
+    };
   }
   /**
    * Evaluate diff quality using Claude
@@ -29515,47 +29571,27 @@ Respond with ONLY valid JSON:
   "positionDetails": "Brief explanation of position check",
   "structureDetails": "Brief explanation of structure check"
 }`;
-    const stream = this.anthropic.messages.stream({
-      model: this.model,
-      max_tokens: 1500,
-      messages: [{ role: "user", content: prompt }]
-    });
-    const response = await stream.finalMessage();
-    const content = response.content[0];
-    if (content.type !== "text") {
-      throw new Error("Unexpected response type from Claude");
-    }
-    try {
-      let jsonStr = content.text;
-      const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        jsonStr = jsonMatch[0];
-      }
-      const result = JSON.parse(jsonStr);
-      const checks = [
-        result.scopeCorrect,
-        result.positionCorrect,
-        result.structurePreserved,
-        result.headingMapCorrect
-      ];
-      const passedChecks = checks.filter(Boolean).length;
-      const score = passedChecks / checks.length * 10;
-      return {
-        score: Math.round(score * 10) / 10,
-        scopeCorrect: result.scopeCorrect,
-        positionCorrect: result.positionCorrect,
-        structurePreserved: result.structurePreserved,
-        headingMapCorrect: result.headingMapCorrect,
-        issues: result.issues || [],
-        summary: result.summary || "",
-        scopeDetails: result.scopeDetails || "",
-        positionDetails: result.positionDetails || "",
-        structureDetails: result.structureDetails || ""
-      };
-    } catch (error3) {
-      core2.error(`Failed to parse diff evaluation response: ${content.text}`);
-      throw new Error("Failed to parse diff quality evaluation");
-    }
+    const result = await this.callWithRetry(prompt, 1500, "evaluateDiff");
+    const checks = [
+      result.scopeCorrect,
+      result.positionCorrect,
+      result.structurePreserved,
+      result.headingMapCorrect
+    ];
+    const passedChecks = checks.filter(Boolean).length;
+    const score = passedChecks / checks.length * 10;
+    return {
+      score: Math.round(score * 10) / 10,
+      scopeCorrect: result.scopeCorrect,
+      positionCorrect: result.positionCorrect,
+      structurePreserved: result.structurePreserved,
+      headingMapCorrect: result.headingMapCorrect,
+      issues: result.issues || [],
+      summary: result.summary || "",
+      scopeDetails: result.scopeDetails || "",
+      positionDetails: result.positionDetails || "",
+      structureDetails: result.structureDetails || ""
+    };
   }
   /**
    * Format changed sections for the prompt
@@ -34158,16 +34194,31 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
   logger.info(`Created PR: ${pr.html_url}`);
   const labelsToAdd = buildLabelSet(config.prLabels, sourcePrInfo?.labels);
   if (labelsToAdd.length > 0) {
-    try {
-      await octokit.rest.issues.addLabels({
-        owner: targetOwner,
-        repo: targetRepo,
-        issue_number: pr.number,
-        labels: labelsToAdd
-      });
-      logger.info(`Added labels: ${labelsToAdd.join(", ")}`);
-    } catch (labelError) {
-      logger.warning(`Could not add labels to PR #${pr.number}: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
+    const maxAttempts = 3;
+    const delayMs = 2e3;
+    let labeled = false;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await octokit.rest.issues.addLabels({
+          owner: targetOwner,
+          repo: targetRepo,
+          issue_number: pr.number,
+          labels: labelsToAdd
+        });
+        logger.info(`Added labels: ${labelsToAdd.join(", ")}`);
+        labeled = true;
+        break;
+      } catch (labelError) {
+        if (attempt < maxAttempts) {
+          logger.info(`Label attempt ${attempt}/${maxAttempts} failed, retrying in ${delayMs}ms...`);
+          await new Promise((resolve2) => setTimeout(resolve2, delayMs));
+        } else {
+          logger.warning(`Could not add labels to PR #${pr.number} after ${maxAttempts} attempts: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
+        }
+      }
+    }
+    if (!labeled) {
+      logger.warning(`PR #${pr.number} created successfully but labels could not be applied. Downstream workflows that filter by label may not trigger.`);
     }
   }
   await requestReviewers(octokit, targetOwner, targetRepo, pr.number, config, logger);
