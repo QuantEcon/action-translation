@@ -377,7 +377,7 @@ export class FileProcessor {
     // Add title to heading map
     const updatedHeadingMap = new Map(headingMap);
     const newTitleText = newSource.titleText;
-    const resultTitleText = resultTitle.replace(/^#\s+/, '').trim();
+    const resultTitleText = MystParser.stripMystRoles(resultTitle.replace(/^#\s+/, '').trim());
     updatedHeadingMap.set(newTitleText, resultTitleText);
     
     // Add sections to heading map (pass title so it's preserved)

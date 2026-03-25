@@ -152,6 +152,33 @@ export class MystParser {
   }
   
   /**
+   * Strip MyST inline roles from heading text to extract display text.
+   * Handles single roles, multiple roles, and mixed role+text headings.
+   * e.g. "{index}`Pandas <single: Pandas>`" → "Pandas"
+   *      "{role}`Simple Text`" → "Simple Text"
+   *      "The {index}`Newton-Raphson Method <single: Newton-Raphson Method>`" → "The Newton-Raphson Method"
+   *      "{index}`Mutable <single: Mutable>` Versus {index}`Immutable <single: Immutable>` Parameters" → "Mutable Versus Immutable Parameters"
+   *      "Plain Heading" → "Plain Heading"
+   */
+  static stripMystRoles(text: string): string {
+    let result = text;
+
+    // Strip {role}`Display Text <...>` patterns, keeping only "Display Text"
+    result = result.replace(
+      /\{[^}]+\}`([^`]+?)\s*<[^>]+>`/g,
+      (_match, display: string) => display.trim(),
+    );
+
+    // Strip {role}`Simple Text` patterns, keeping only "Simple Text"
+    result = result.replace(
+      /\{[^}]+\}`([^`]+?)`/g,
+      (_match, display: string) => display.trim(),
+    );
+
+    return result.trim();
+  }
+
+  /**
    * Generate heading ID/anchor from heading text
    * Follows the same rules as MyST/Sphinx for consistency.
    * Uses Unicode-aware matching to preserve non-Latin scripts
@@ -262,7 +289,7 @@ export class MystParser {
       const titleMatch = line.match(/^#\s+(.+)$/);
       if (titleMatch) {
         title = line;
-        titleText = titleMatch[1];
+        titleText = MystParser.stripMystRoles(titleMatch[1]);
         titleEndIndex++;
         break;
       }
