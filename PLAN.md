@@ -1,10 +1,10 @@
 # PLAN: Development Roadmap
 
 **Created**: 2026-02-16  
-**Last Updated**: 2026-03-24 (v0.12.3 release, scoped translation PRs to source PR changes)  
+**Last Updated**: 2026-03-25 (v0.12.4 release, CJK–MyST spacing + target-label cleanup)  
 **Sources**: docs/DESIGN-RESYNC.md  
-**Current Version**: v0.12.3  
-**Test Status**: 930 tests passing (39 test suites, 5 snapshots)
+**Current Version**: v0.12.4  
+**Test Status**: 935 tests passing (39 test suites, 5 snapshots)
 
 ---
 

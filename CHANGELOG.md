@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.4] - 2026-03-25
+
 ### Added
 - **CJK–MyST spacing rule for zh-cn**: New language-config rule instructs Claude to insert a space between Chinese characters and inline MyST directives (`{doc}`, `{ref}`, etc.) or Markdown links, preventing rendering failures (e.g. `请参阅 {doc}` not `请参阅{doc}`)
 - **MyST target-label blank-line cleanup**: `reconstructFromComponents` now strips blank lines between MyST target labels (`(label)=`) and headings in post-processing, so targets always attach to their heading correctly

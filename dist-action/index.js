@@ -23896,7 +23896,8 @@ var LANGUAGE_CONFIGS = {
     code: "zh-cn",
     name: "Chinese (Simplified)",
     additionalRules: [
-      "Use proper full-width Chinese punctuation marks (\uFF0C\uFF1A\u3002\uFF01\uFF1F) not ASCII punctuation (,.!?) in prose text"
+      "Use proper full-width Chinese punctuation marks (\uFF0C\uFF1A\u3002\uFF01\uFF1F) not ASCII punctuation (,.!?) in prose text",
+      'Always insert a space between Chinese characters and inline MyST directives ({doc}, {ref}, {any}, {term}, etc.) or Markdown links ([text](url)), e.g., "\u8BF7\u53C2\u9605 {doc}`\u4ECB\u7ECD <intro>`" not "\u8BF7\u53C2\u9605{doc}`\u4ECB\u7ECD <intro>`"'
     ]
   },
   "fa": {
@@ -33661,7 +33662,8 @@ ${bodyLines.join("\n")}`;
       parts.push(this.serializeSection(section));
       parts.push("");
     }
-    return parts.join("\n").trim() + "\n";
+    const joined = parts.join("\n").trim() + "\n";
+    return joined.replace(/(\([a-zA-Z0-9_.:-]+\)=)\n\n(#+\s)/g, "$1\n$2");
   }
   /**
    * Process a full document (for new files)
