@@ -17,8 +17,9 @@ describe('Language Configuration', () => {
       const config = getLanguageConfig('zh-cn');
       expect(config.code).toBe('zh-cn');
       expect(config.name).toBe('Chinese (Simplified)');
-      expect(config.additionalRules).toHaveLength(1);
+      expect(config.additionalRules).toHaveLength(2);
       expect(config.additionalRules[0]).toContain('full-width Chinese punctuation');
+      expect(config.additionalRules[1]).toContain('space between Chinese characters and inline MyST directives');
     });
 
     it('should handle case insensitive language codes', () => {

@@ -1615,4 +1615,93 @@ heading-map:
     expect(result).toContain('Section B: B部分');
     expect(result).not.toContain('Section A:');
   });
+
+  it('should remove blank lines between MyST target labels and headings', async () => {
+    const oldContent = `---
+config: test
+---
+
+# Advanced Features
+
+Overview paragraph.
+
+## Iterables
+
+Content about iterables.
+
+(iterators)=
+### Iterators
+
+Iterator details.
+
+(descriptors)=
+## Decorators
+
+Decorator content.`;
+
+    const newContent = `---
+config: test
+---
+
+# Advanced Features
+
+Overview paragraph updated.
+
+## Iterables
+
+Content about iterables.
+
+(iterators)=
+### Iterators
+
+Iterator details.
+
+(descriptors)=
+## Decorators
+
+Decorator content.`;
+
+    const targetContent = `---
+config: test
+---
+
+# 高级特性
+
+概述段落。
+
+## 可迭代对象
+
+关于可迭代对象的内容。
+
+(iterators)=
+### 迭代器
+
+迭代器详情。
+
+(descriptors)=
+## 装饰器
+
+装饰器内容。`;
+
+    // Mock translation for intro change
+    mockTranslator.translateSection.mockResolvedValue({
+      success: true,
+      translatedSection: '概述段落已更新。',
+    });
+
+    const result = await processor.processSectionBased(
+      oldContent,
+      newContent,
+      targetContent,
+      'test.md',
+      'en',
+      'zh-cn'
+    );
+
+    // Target labels should be directly above headings with no blank line
+    expect(result).toContain('(iterators)=\n### 迭代器');
+    expect(result).not.toContain('(iterators)=\n\n### 迭代器');
+    expect(result).toContain('(descriptors)=\n## 装饰器');
+    expect(result).not.toContain('(descriptors)=\n\n## 装饰器');
+  });
 });
