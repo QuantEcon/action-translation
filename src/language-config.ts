@@ -33,6 +33,7 @@ export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
     name: 'Chinese (Simplified)',
     additionalRules: [
       'Use proper full-width Chinese punctuation marks (，：。！？) not ASCII punctuation (,.!?) in prose text',
+      'Always insert a space between Chinese characters and inline MyST directives ({doc}, {ref}, {any}, {term}, etc.) or Markdown links ([text](url)), e.g., "请参阅 {doc}\`介绍 <intro>\`" not "请参阅{doc}\`介绍 <intro>\`"',
     ],
   },
   'fa': {

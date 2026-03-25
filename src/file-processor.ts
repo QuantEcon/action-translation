@@ -489,7 +489,12 @@ export class FileProcessor {
       parts.push(''); // Empty line between sections
     }
 
-    return parts.join('\n').trim() + '\n';
+    const joined = parts.join('\n').trim() + '\n';
+
+    // Post-process: remove blank lines between MyST target labels and headings.
+    // Target labels like (some_id)= must be directly above their heading with no
+    // intervening blank line, otherwise MyST won't attach the target to the heading.
+    return joined.replace(/(\([a-zA-Z0-9_.:-]+\)=)\n\n(#+\s)/g, '$1\n$2');
   }
 
   /**
