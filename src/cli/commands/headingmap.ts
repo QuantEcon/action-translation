@@ -166,15 +166,12 @@ export async function generateHeadingmapForFile(
   const targetParsed = await parser.parseSections(targetContent, targetFilePath);
   
   // Extract titles using parseDocumentComponents
-  let sourceTitle: string | undefined;
   let targetTitle: string | undefined;
   try {
-    const sourceComponents = await parser.parseDocumentComponents(sourceContent, sourceFilePath);
     const targetComponents = await parser.parseDocumentComponents(targetContent, targetFilePath);
-    sourceTitle = sourceComponents.titleText;
     targetTitle = targetComponents.titleText;
   } catch {
-    // Documents without # title — title will be undefined
+    // Document without # title — title will be undefined
   }
 
   const totalSource = sourceParsed.sections.length;
