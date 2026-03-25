@@ -190,10 +190,12 @@ After translation, each lecture file contains:
 ```yaml
 ---
 title: 蛛网模型
-heading-map:
-  overview: "概述"
-  equilibrium: "均衡"
-  exercises: "练习"
+translation:
+  title: 蛛网模型
+  headings:
+    overview: "概述"
+    equilibrium: "均衡"
+    exercises: "练习"
 ---
 ```
 

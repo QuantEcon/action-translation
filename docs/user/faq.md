@@ -132,11 +132,12 @@ The `status` command reports missing heading maps. To fix:
 
 ### I changed a heading in the translation — do I need to update the heading map?
 
-Yes. The heading-map value must exactly match the heading text in the document. If you change `## 介绍` to `## 引言`, update the heading-map entry:
+Yes. The `translation.headings` value must exactly match the heading text in the document. If you change `## 介绍` to `## 引言`, update the entry:
 
 ```yaml
-heading-map:
-  introduction: "引言"  # was "介绍"
+translation:
+  headings:
+    introduction: "引言"  # was "介绍"
 ```
 
 ## Troubleshooting
