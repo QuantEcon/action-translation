@@ -894,4 +894,56 @@ heading-map:
       expect(correctMap.get('Section::Subsection')).toBe('子部分');  // Present!
     });
   });
+
+  describe('MyST role stripping in heading-map', () => {
+    it('should strip {index} roles from section headings in updateHeadingMap', () => {
+      const sourceSections = [
+        { heading: '## {index}`Pandas <single: Pandas>`', level: 2, id: 'pandas', content: '', startLine: 1, endLine: 2, subsections: [] },
+        { heading: '## Plain Section', level: 2, id: 'plain-section', content: '', startLine: 3, endLine: 4, subsections: [] },
+      ];
+      const targetSections = [
+        { heading: '## Pandas', level: 2, id: 'pandas', content: '', startLine: 1, endLine: 2, subsections: [] },
+        { heading: '## 普通部分', level: 2, id: 'plain-section', content: '', startLine: 3, endLine: 4, subsections: [] },
+      ];
+      const result = updateHeadingMap(new Map(), sourceSections, targetSections);
+      expect(result.get('Pandas')).toBe('Pandas');
+      expect(result.get('Plain Section')).toBe('普通部分');
+      // Should NOT have the raw role syntax as a key
+      expect(result.has('{index}`Pandas <single: Pandas>`')).toBe(false);
+    });
+
+    it('should strip {index} roles from subsection headings', () => {
+      const sourceSections = [
+        {
+          heading: '## Overview', level: 2, id: 'overview', content: '', startLine: 1, endLine: 4,
+          subsections: [
+            { heading: '### {index}`DataFrames <single: DataFrames>`', level: 3, id: 'dataframes', content: '', startLine: 3, endLine: 4, subsections: [] },
+          ],
+        },
+      ];
+      const targetSections = [
+        {
+          heading: '## 概述', level: 2, id: 'overview', content: '', startLine: 1, endLine: 4,
+          subsections: [
+            { heading: '### DataFrames', level: 3, id: 'dataframes', content: '', startLine: 3, endLine: 4, subsections: [] },
+          ],
+        },
+      ];
+      const result = updateHeadingMap(new Map(), sourceSections, targetSections);
+      expect(result.get('Overview::DataFrames')).toBe('DataFrames');
+    });
+
+    it('should strip MyST roles in lookupTargetHeading', () => {
+      const map = new Map([['Pandas', 'Pandas数据分析']]);
+      // Lookup with raw role syntax should find the clean key
+      const result = lookupTargetHeading('## {index}`Pandas <single: Pandas>`', map);
+      expect(result).toBe('Pandas数据分析');
+    });
+
+    it('should strip simple MyST roles in lookupTargetHeading', () => {
+      const map = new Map([['SymPy', 'SymPy符号计算']]);
+      const result = lookupTargetHeading('## {index}`SymPy`', map);
+      expect(result).toBe('SymPy符号计算');
+    });
+  });
 });

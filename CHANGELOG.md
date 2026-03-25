@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Heading-map MyST role pollution**: Headings with MyST inline roles like `{index}\`Pandas <single: Pandas>\`` were stored verbatim as heading-map keys/values instead of the clean display text (`Pandas`). Added `MystParser.stripMystRoles()` static method and applied it across all heading-map paths: parser title extraction, file-processor heading-map updates, `cleanHeading` in `updateHeadingMap`, and `lookupTargetHeading`. Covers `#` titles and `##`+ section/subsection headings. Affects 7 lectures in lecture-python-programming that use `{index}` roles in titles.
+
+### Added
+- **14 tests** for MyST role stripping — unit tests for `stripMystRoles`, title extraction integration, and heading-map operations with role syntax (935 → 949 total)
+
 ## [0.12.4] - 2026-03-25
 
 ### Added

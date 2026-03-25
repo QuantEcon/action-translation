@@ -359,4 +359,88 @@ Content.
       expect(result.preamble).toBeUndefined();
     });
   });
+
+  describe('stripMystRoles', () => {
+    it('should strip {index} role with angle-bracket syntax', () => {
+      expect(MystParser.stripMystRoles('{index}`Pandas <single: Pandas>`')).toBe('Pandas');
+    });
+
+    it('should strip {index} role with complex angle-bracket content', () => {
+      expect(MystParser.stripMystRoles('{index}`SymPy <single: SymPy>`')).toBe('SymPy');
+    });
+
+    it('should strip simple MyST role syntax', () => {
+      expect(MystParser.stripMystRoles('{math}`x^2`')).toBe('x^2');
+    });
+
+    it('should return plain text unchanged', () => {
+      expect(MystParser.stripMystRoles('Plain Heading')).toBe('Plain Heading');
+    });
+
+    it('should return empty string unchanged', () => {
+      expect(MystParser.stripMystRoles('')).toBe('');
+    });
+
+    it('should handle role with spaces in display text', () => {
+      expect(MystParser.stripMystRoles('{index}`NumPy Arrays <single: NumPy Arrays>`')).toBe('NumPy Arrays');
+    });
+
+    it('should not strip partial role syntax', () => {
+      expect(MystParser.stripMystRoles('{incomplete')).toBe('{incomplete');
+    });
+  });
+
+  describe('Title extraction with MyST roles', () => {
+    it('should extract clean title text from {index} role heading', async () => {
+      const content = `---
+jupytext:
+  format_name: myst
+---
+# {index}\`Pandas <single: Pandas>\`
+
+Introduction to Pandas.
+
+## Section One
+
+Content here.
+`;
+      const components = await parser.parseDocumentComponents(content, 'test.md');
+      expect(components.titleText).toBe('Pandas');
+      expect(components.title).toBe('# {index}`Pandas <single: Pandas>`');
+    });
+
+    it('should extract clean title text from simple role heading', async () => {
+      const content = `---
+jupytext:
+  format_name: myst
+---
+# {index}\`SymPy\`
+
+Introduction.
+
+## Section One
+
+Content here.
+`;
+      const components = await parser.parseDocumentComponents(content, 'test.md');
+      expect(components.titleText).toBe('SymPy');
+    });
+
+    it('should extract plain title text unchanged', async () => {
+      const content = `---
+jupytext:
+  format_name: myst
+---
+# Regular Title
+
+Introduction.
+
+## Section One
+
+Content here.
+`;
+      const components = await parser.parseDocumentComponents(content, 'test.md');
+      expect(components.titleText).toBe('Regular Title');
+    });
+  });
 });

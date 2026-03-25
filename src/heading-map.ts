@@ -1,5 +1,6 @@
 import * as yaml from 'js-yaml';
 import { Section } from './types.js';
+import { MystParser } from './parser.js';
 
 /**
  * Path separator for hierarchical heading keys
@@ -66,9 +67,9 @@ export function updateHeadingMap(
   // Build new map in document order (title first, then sections)
   const updated = new Map<string, string>();
   
-  // Helper to extract clean heading text (without ## markers)
+  // Helper to extract clean heading text (without ## markers or MyST roles)
   const cleanHeading = (heading: string): string => {
-    return heading.replace(/^#+\s+/, '').trim();
+    return MystParser.stripMystRoles(heading.replace(/^#+\s+/, '').trim());
   };
   
   // Build set of current source paths (for cleanup)
@@ -177,8 +178,8 @@ export function lookupTargetHeading(
   headingMap: HeadingMap,
   parentPath?: string
 ): string | undefined {
-  // Clean the source heading (remove ## markers)
-  const clean = sourceHeading.replace(/^#+\s+/, '').trim();
+  // Clean the source heading (remove ## markers and MyST roles)
+  const clean = MystParser.stripMystRoles(sourceHeading.replace(/^#+\s+/, '').trim());
   
   // Build full path: either "Section" or "Parent::Child"
   const path = parentPath ? `${parentPath}${PATH_SEPARATOR}${clean}` : clean;

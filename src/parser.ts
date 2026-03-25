@@ -152,6 +152,24 @@ export class MystParser {
   }
   
   /**
+   * Strip MyST inline roles from heading text to extract display text.
+   * e.g. "{index}`Pandas <single: Pandas>`" → "Pandas"
+   *      "{role}`Simple Text`" → "Simple Text"
+   *      "Plain Heading" → "Plain Heading"
+   */
+  static stripMystRoles(text: string): string {
+    // Match {role}`Display Text <...>` → Display Text
+    const withAngle = text.match(/^\{[^}]+\}`(.+?)\s*<[^>]+>`$/);
+    if (withAngle) return withAngle[1].trim();
+
+    // Match {role}`Simple Text` → Simple Text
+    const simple = text.match(/^\{[^}]+\}`([^`]+)`$/);
+    if (simple) return simple[1].trim();
+
+    return text;
+  }
+
+  /**
    * Generate heading ID/anchor from heading text
    * Follows the same rules as MyST/Sphinx for consistency.
    * Uses Unicode-aware matching to preserve non-Latin scripts
@@ -262,7 +280,7 @@ export class MystParser {
       const titleMatch = line.match(/^#\s+(.+)$/);
       if (titleMatch) {
         title = line;
-        titleText = titleMatch[1];
+        titleText = MystParser.stripMystRoles(titleMatch[1]);
         titleEndIndex++;
         break;
       }
