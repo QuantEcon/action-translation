@@ -1,9 +1,9 @@
 # PLAN: Development Roadmap
 
 **Created**: 2026-02-16  
-**Last Updated**: 2026-03-25 (v0.12.4 release, CJK–MyST spacing + target-label cleanup)  
+**Last Updated**: 2026-03-26 (v0.12.5 release, heading-map MyST role fix)  
 **Sources**: docs/DESIGN-RESYNC.md  
-**Current Version**: v0.12.4  
+**Current Version**: v0.12.5  
 **Test Status**: 935 tests passing (39 test suites, 5 snapshots)
 
 ---

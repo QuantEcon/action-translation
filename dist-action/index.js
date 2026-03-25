@@ -30263,7 +30263,7 @@ ${terms}
 };
 
 // dist/parser.js
-var MystParser = class {
+var MystParser = class _MystParser {
   /**
    * Parse markdown content into sections based on ## headings
    * Each section includes all content until the next ## heading
@@ -30362,6 +30362,21 @@ var MystParser = class {
     };
   }
   /**
+   * Strip MyST inline roles from heading text to extract display text.
+   * Handles single roles, multiple roles, and mixed role+text headings.
+   * e.g. "{index}`Pandas <single: Pandas>`" → "Pandas"
+   *      "{role}`Simple Text`" → "Simple Text"
+   *      "The {index}`Newton-Raphson Method <single: Newton-Raphson Method>`" → "The Newton-Raphson Method"
+   *      "{index}`Mutable <single: Mutable>` Versus {index}`Immutable <single: Immutable>` Parameters" → "Mutable Versus Immutable Parameters"
+   *      "Plain Heading" → "Plain Heading"
+   */
+  static stripMystRoles(text) {
+    let result = text;
+    result = result.replace(/\{[^}]+\}`([^`]+?)\s*<[^>]+>`/g, (_match, display) => display.trim());
+    result = result.replace(/\{[^}]+\}`([^`]+?)`/g, (_match, display) => display.trim());
+    return result.trim();
+  }
+  /**
    * Generate heading ID/anchor from heading text
    * Follows the same rules as MyST/Sphinx for consistency.
    * Uses Unicode-aware matching to preserve non-Latin scripts
@@ -30446,7 +30461,7 @@ var MystParser = class {
       const titleMatch = line.match(/^#\s+(.+)$/);
       if (titleMatch) {
         title = line;
-        titleText = titleMatch[1];
+        titleText = _MystParser.stripMystRoles(titleMatch[1]);
         titleEndIndex++;
         break;
       }
@@ -33223,7 +33238,7 @@ function extractHeadingMap(content) {
 function updateHeadingMap(existingMap, sourceSections, targetSections, titleHeading) {
   const updated = /* @__PURE__ */ new Map();
   const cleanHeading = (heading) => {
-    return heading.replace(/^#+\s+/, "").trim();
+    return MystParser.stripMystRoles(heading.replace(/^#+\s+/, "").trim());
   };
   const currentSourcePaths = /* @__PURE__ */ new Set();
   if (titleHeading) {
@@ -33284,7 +33299,7 @@ function serializeHeadingMap(map2) {
   });
 }
 function lookupTargetHeading(sourceHeading, headingMap, parentPath) {
-  const clean = sourceHeading.replace(/^#+\s+/, "").trim();
+  const clean = MystParser.stripMystRoles(sourceHeading.replace(/^#+\s+/, "").trim());
   const path5 = parentPath ? `${parentPath}${PATH_SEPARATOR}${clean}` : clean;
   const translation = headingMap.get(path5);
   if (translation) {
@@ -33596,7 +33611,7 @@ ${bodyLines.join("\n")}`;
     this.log(`Updating heading map`);
     const updatedHeadingMap = new Map(headingMap);
     const newTitleText = newSource.titleText;
-    const resultTitleText = resultTitle.replace(/^#\s+/, "").trim();
+    const resultTitleText = MystParser.stripMystRoles(resultTitle.replace(/^#\s+/, "").trim());
     updatedHeadingMap.set(newTitleText, resultTitleText);
     const finalHeadingMap = updateHeadingMap(
       updatedHeadingMap,
