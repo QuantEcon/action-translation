@@ -371,23 +371,17 @@ export class FileProcessor {
       }
     }
 
-    // 4. Update heading map with all sections (including title)
+    // 4. Update heading map with sections (title tracked separately)
     this.log(`Updating heading map`);
     
-    // Add title to heading map
-    const updatedHeadingMap = new Map(headingMap);
-    const newTitleText = newSource.titleText;
     const resultTitleText = MystParser.stripMystRoles(resultTitle.replace(/^#\s+/, '').trim());
-    updatedHeadingMap.set(newTitleText, resultTitleText);
     
-    // Add sections to heading map (pass title so it's preserved)
     // Use includedSourceSections (not newSource.sections) so indices stay aligned
     // with resultSections — skipped sections are excluded from both arrays.
     const finalHeadingMap = updateHeadingMap(
-      updatedHeadingMap,
+      new Map(headingMap),
       includedSourceSections,
       resultSections,
-      newTitleText  // Pass title to prevent it from being deleted
     );
     this.log(`Updated heading map to ${finalHeadingMap.size} entries`);
     
@@ -401,8 +395,8 @@ export class FileProcessor {
       resultSections
     );
     
-    // 6. Inject updated heading map into frontmatter
-    return injectHeadingMap(reconstructed, finalHeadingMap);
+    // 6. Inject updated translation metadata (title + headings) into frontmatter
+    return injectHeadingMap(reconstructed, finalHeadingMap, resultTitleText);
   }
 
   /**

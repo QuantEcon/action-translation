@@ -217,22 +217,33 @@ export function copyNonMarkdownFiles(
 // ============================================================================
 
 /**
- * Generate heading-map by parsing source and translated sections.
+ * Generate heading-map and extract title by parsing source and translated sections.
  * Uses updateHeadingMap() for correct path-based keys (Parent::Child).
  */
 async function generateHeadingMap(
   sourceContent: string,
   translatedContent: string,
-): Promise<Map<string, string>> {
+): Promise<{ map: Map<string, string>; title?: string }> {
   const parser = new MystParser();
   const sourceParsed = await parser.parseSections(sourceContent, 'temp.md');
   const translatedParsed = await parser.parseSections(translatedContent, 'temp.md');
 
-  return updateHeadingMap(
+  const map = updateHeadingMap(
     new Map(),
     sourceParsed.sections,
     translatedParsed.sections,
   );
+  
+  // Extract translated title
+  let title: string | undefined;
+  try {
+    const targetComponents = await parser.parseDocumentComponents(translatedContent, 'temp.md');
+    title = targetComponents.titleText;
+  } catch {
+    // No title found
+  }
+  
+  return { map, title };
 }
 
 // ============================================================================
@@ -285,10 +296,10 @@ async function translateLecture(
   const translatedContent = result.translatedSection;
 
   // Generate heading-map
-  const headingMap = await generateHeadingMap(sourceContent, translatedContent);
+  const { map: headingMap, title: translatedTitle } = await generateHeadingMap(sourceContent, translatedContent);
 
-  // Inject heading-map into frontmatter
-  const finalContent = injectHeadingMap(translatedContent, headingMap);
+  // Inject translation metadata into frontmatter
+  const finalContent = injectHeadingMap(translatedContent, headingMap, translatedTitle);
 
   // Write to target folder
   const targetBaseDir = path.resolve(targetPath, docsFolder);

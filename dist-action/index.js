@@ -29411,19 +29411,21 @@ ${sourceEnglish}
 ${targetTranslation}
 \`\`\`
 ${glossarySection}
-## IMPORTANT: About the Heading-Map
+## IMPORTANT: About the Translation Metadata
 
-The ${targetLangName} translation contains a \`heading-map\` section in the YAML frontmatter that is NOT present in the English source. This is CORRECT and EXPECTED behavior:
+The ${targetLangName} translation contains a \`translation\` section in the YAML frontmatter that is NOT present in the English source. This is CORRECT and EXPECTED behavior:
 
 \`\`\`yaml
-heading-map:
-  introduction: "\u4ECB\u7ECD"
-  background: "\u80CC\u666F"
+translation:
+  title: "\u4ECB\u7ECD"
+  headings:
+    introduction: "\u4ECB\u7ECD"
+    background: "\u80CC\u666F"
 \`\`\`
 
-This is a feature of the translation sync system that maps English heading IDs to ${targetLangName} headings for section matching across languages. Do NOT flag this as an issue or formatting problem - it is intentional and does not affect Jupyter Book compilation.
+This is a feature of the translation sync system that maps English heading IDs to ${targetLangName} headings for section matching across languages. The \`title\` field tracks the translated document title. Do NOT flag this as an issue or formatting problem - it is intentional and does not affect Jupyter Book compilation.
 
-**Note on double-colon notation**: The heading-map may use \`section::subsection\` notation (e.g., \`supply-and-demand::market-dynamics\`) to represent hierarchical headings. This double-colon \`::\` syntax is intentional and valid - it represents the relationship between a section and its nested subsection. This is safe in YAML because YAML only treats \`:\` as a key-value separator when followed by a space.
+**Note on double-colon notation**: The headings may use \`section::subsection\` notation (e.g., \`supply-and-demand::market-dynamics\`) to represent hierarchical headings. This double-colon \`::\` syntax is intentional and valid - it represents the relationship between a section and its nested subsection. This is safe in YAML because YAML only treats \`:\` as a key-value separator when followed by a space.
 
 ## Evaluation Criteria
 Rate each criterion from 1-10:
@@ -29507,24 +29509,26 @@ A translation sync action detected changes in an English source document and cre
 1. **Scope**: Only the correct files were modified
 2. **Position**: Changes appear in the same relative positions
 3. **Structure**: Document structure is preserved
-4. **Heading-map**: The heading-map in frontmatter is correctly updated
+4. **Translation metadata**: The translation metadata in frontmatter is correctly updated
 
-## IMPORTANT: About the Heading-Map System
+## IMPORTANT: About the Translation Metadata System
 
-The \`heading-map\` in the frontmatter is a CRITICAL feature of this translation system, NOT a bug. Here's how it works:
+The \`translation\` section in the frontmatter is a CRITICAL feature of this translation system, NOT a bug. Here's how it works:
 
 - English headings generate IDs from English text: \`## Introduction\` \u2192 ID: \`introduction\`
 - Translated headings generate IDs from translated text: \`## \u4ECB\u7ECD\` \u2192 ID: \`\u4ECB\u7ECD\`
-- The heading-map bridges this gap by mapping English IDs to translated headings
+- The translation headings bridge this gap by mapping English IDs to translated headings
 
 Example:
 \`\`\`yaml
-heading-map:
-  introduction: "\u4ECB\u7ECD"
-  supply-and-demand: "\u4F9B\u9700\u5206\u6790"
+translation:
+  title: "\u4ECB\u7ECD"
+  headings:
+    introduction: "\u4ECB\u7ECD"
+    supply-and-demand: "\u4F9B\u9700\u5206\u6790"
 \`\`\`
 
-**Note on double-colon notation**: The heading-map may use \`section::subsection\` notation to represent hierarchical headings. This is intentional and valid YAML.
+**Note on double-colon notation**: The headings may use \`section::subsection\` notation to represent hierarchical headings. This is intentional and valid YAML.
 
 ## Source Document (English)
 ### Before:
@@ -33222,7 +33226,7 @@ function extractHeadingMap(content) {
   }
   try {
     const frontmatter = load(frontmatterMatch[1]);
-    const headingMapData = frontmatter?.["heading-map"];
+    const headingMapData = frontmatter?.translation?.headings ?? frontmatter?.["heading-map"];
     if (headingMapData && typeof headingMapData === "object") {
       Object.entries(headingMapData).forEach(([key, value]) => {
         if (typeof value === "string") {
@@ -33283,15 +33287,22 @@ function updateHeadingMap(existingMap, sourceSections, targetSections, titleHead
   }
   return updated;
 }
-function serializeHeadingMap(map2) {
-  if (map2.size === 0) {
+function serializeHeadingMap(map2, title) {
+  if (map2.size === 0 && !title) {
     return "";
   }
-  const obj = {};
-  map2.forEach((value, key) => {
-    obj[key] = value;
-  });
-  return dump({ "heading-map": obj }, {
+  const translation = {};
+  if (title) {
+    translation.title = title;
+  }
+  if (map2.size > 0) {
+    const headings = {};
+    map2.forEach((value, key) => {
+      headings[key] = value;
+    });
+    translation.headings = headings;
+  }
+  return dump({ translation }, {
     indent: 2,
     lineWidth: -1,
     // No line wrapping
@@ -33319,13 +33330,13 @@ function lookupTargetHeading(sourceHeading, headingMap, parentPath) {
   }
   return void 0;
 }
-function injectHeadingMap(content, headingMap) {
+function injectHeadingMap(content, headingMap, title) {
   const frontmatterMatch = content.match(/^---\n(.*?)\n---\n(.*)/s);
   if (!frontmatterMatch) {
-    if (headingMap.size === 0) {
+    if (headingMap.size === 0 && !title) {
       return content;
     }
-    const mapYaml = serializeHeadingMap(headingMap).trim();
+    const mapYaml = serializeHeadingMap(headingMap, title).trim();
     return `---
 ${mapYaml}
 ---
@@ -33335,14 +33346,22 @@ ${content}`;
   const [, existingYaml, bodyContent] = frontmatterMatch;
   try {
     const frontmatter = load(existingYaml) || {};
-    if (headingMap.size > 0) {
-      const mapObj = {};
-      headingMap.forEach((value, key) => {
-        mapObj[key] = value;
-      });
-      frontmatter["heading-map"] = mapObj;
+    delete frontmatter["heading-map"];
+    if (headingMap.size > 0 || title) {
+      const translationObj = {};
+      if (title) {
+        translationObj.title = title;
+      }
+      if (headingMap.size > 0) {
+        const headings = {};
+        headingMap.forEach((value, key) => {
+          headings[key] = value;
+        });
+        translationObj.headings = headings;
+      }
+      frontmatter.translation = translationObj;
     } else {
-      delete frontmatter["heading-map"];
+      delete frontmatter.translation;
     }
     const newYaml = dump(frontmatter, {
       indent: 2,
@@ -33354,36 +33373,28 @@ ${newYaml}
 ---
 ${bodyContent}`;
   } catch (error3) {
-    if (headingMap.size > 0) {
+    if (headingMap.size > 0 || title) {
       try {
         const lines = existingYaml.split("\n");
         const keptLines = [];
-        let inHeadingMap = false;
+        let inBlock = false;
         for (const line of lines) {
-          if (/^heading-map:/.test(line)) {
-            inHeadingMap = true;
+          if (/^(heading-map|translation):/.test(line)) {
+            inBlock = true;
             continue;
           }
-          if (inHeadingMap) {
+          if (inBlock) {
             if (/^[ \t]/.test(line) || line.trim() === "") {
               continue;
             }
-            inHeadingMap = false;
+            inBlock = false;
             keptLines.push(line);
             continue;
           }
           keptLines.push(line);
         }
         const strippedYaml = keptLines.join("\n").trim();
-        const mapObj = {};
-        headingMap.forEach((value, key) => {
-          mapObj[key] = value;
-        });
-        const mapYaml = dump({ "heading-map": mapObj }, {
-          indent: 2,
-          lineWidth: -1,
-          noRefs: true
-        }).trim();
+        const mapYaml = serializeHeadingMap(headingMap, title).trim();
         const newYaml = strippedYaml ? `${strippedYaml}
 ${mapYaml}` : mapYaml;
         return `---
@@ -33391,11 +33402,11 @@ ${newYaml}
 ---
 ${bodyContent}`;
       } catch (fallbackError) {
-        console.error("Failed to update frontmatter with heading-map:", fallbackError);
+        console.error("Failed to update frontmatter with translation:", fallbackError);
         return content;
       }
     }
-    console.error("Failed to update frontmatter with heading-map:", error3);
+    console.error("Failed to update frontmatter with translation:", error3);
     return content;
   }
 }
@@ -33609,21 +33620,12 @@ ${bodyLines.join("\n")}`;
       }
     }
     this.log(`Updating heading map`);
-    const updatedHeadingMap = new Map(headingMap);
-    const newTitleText = newSource.titleText;
     const resultTitleText = MystParser.stripMystRoles(resultTitle.replace(/^#\s+/, "").trim());
-    updatedHeadingMap.set(newTitleText, resultTitleText);
-    const finalHeadingMap = updateHeadingMap(
-      updatedHeadingMap,
-      includedSourceSections,
-      resultSections,
-      newTitleText
-      // Pass title to prevent it from being deleted
-    );
+    const finalHeadingMap = updateHeadingMap(new Map(headingMap), includedSourceSections, resultSections);
     this.log(`Updated heading map to ${finalHeadingMap.size} entries`);
     this.log(`Reconstructing complete document`);
     const reconstructed = this.reconstructFromComponents(resultConfig, resultPreTitle, resultTitle, resultIntro, resultSections);
-    return injectHeadingMap(reconstructed, finalHeadingMap);
+    return injectHeadingMap(reconstructed, finalHeadingMap, resultTitleText);
   }
   /**
    * Helper: Translate a new section

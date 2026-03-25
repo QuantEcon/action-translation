@@ -8,7 +8,7 @@
 - **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
-**Current Version**: v0.12.5 | **Tests**: 954 (39 suites) | **Glossary**: 357 terms (zh-cn, fa)
+**Current Version**: v0.12.5 | **Tests**: 966 (39 suites) | **Glossary**: 357 terms (zh-cn, fa)
 
 ---
 
@@ -82,12 +82,14 @@ if (docsFolder === '.' || docsFolder === '/') docsFolder = '';
 // Then filter: file.endsWith('.md') && !file.includes('/')
 ```
 
-**Heading-maps** — required because translated headings have different IDs:
+**Translation metadata** — required because translated headings have different IDs:
 ```yaml
-heading-map:
-  introduction: "介绍"   # English ID → translated heading
+translation:
+  title: 经济学导论
+  headings:
+    introduction: "介绍"   # English ID → translated heading
 ```
-Maps are flat (no nesting), include all heading levels, auto-populated on first translation.
+Title is stored explicitly; headings are flat (no nesting), include all heading levels, auto-populated on first translation. Reads legacy `heading-map:` format, always writes `translation:` format.
 
 **Retry logic** (`translator.ts`) — retries `RateLimitError`, `APIConnectionError`, 5xx; never retries `AuthenticationError` or `BadRequestError`.
 

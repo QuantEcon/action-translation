@@ -104,8 +104,8 @@ describe('E2E Fixture-Based Tests', () => {
       expect(result).toContain('### 市场均衡'); // Subsection preserved
       expect(result).toContain('## 经济模型'); // Section 2 preserved
 
-      // Verify heading map exists
-      expect(result).toContain('heading-map:');
+      // Verify translation metadata exists
+      expect(result).toContain('translation:');
 
       // Count sections - should have 2
       const sectionMatches = result.match(/^## /gm);
@@ -300,8 +300,8 @@ describe('E2E Fixture-Based Tests', () => {
       const sectionMatches = result.match(/^## /gm);
       expect(sectionMatches).toHaveLength(3);
 
-      // Heading map should exist
-      expect(result).toContain('heading-map:');
+      // Translation metadata should exist
+      expect(result).toContain('translation:');
     });
   });
 });

@@ -318,15 +318,17 @@ Add this to the target's frontmatter:
 ```yaml
 ---
 title: 蛛网模型
-heading-map:
-  Overview: "概述"
-  The Cobweb Model: "蛛网模型"
-  The Cobweb Model::Equilibrium: "均衡"
-  Exercises: "练习"
+translation:
+  title: 蛛网模型
+  headings:
+    Overview: "概述"
+    The Cobweb Model: "蛛网模型"
+    The Cobweb Model::Equilibrium: "均衡"
+    Exercises: "练习"
 ---
 ```
 
-Heading-map keys use the full heading text with `::` nesting for subsections. See [Heading Maps](../heading-maps.md) for complete format rules.
+Heading keys use the full heading text with `::` nesting for subsections. See [Heading Maps](../heading-maps.md) for complete format rules.
 
 ### Commit the heading-maps
 
