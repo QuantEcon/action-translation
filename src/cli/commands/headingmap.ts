@@ -17,6 +17,7 @@ import { Section } from '../../types.js';
 import {
   HeadingMap,
   extractHeadingMap,
+  extractTranslationTitle,
   injectHeadingMap,
   PATH_SEPARATOR,
 } from '../../heading-map.js';
@@ -45,6 +46,8 @@ export interface HeadingmapFileResult {
   warnings: string[];
   /** The generated heading-map (present when status is generated/updated/mismatch) */
   generatedMap?: HeadingMap;
+  /** Translated title text (present when status is generated/updated/mismatch) */
+  generatedTitle?: string;
 }
 
 export interface HeadingmapResult {
@@ -157,10 +160,22 @@ export async function generateHeadingmapForFile(
   const sourceContent = fs.readFileSync(sourceFilePath, 'utf-8');
   const targetContent = fs.readFileSync(targetFilePath, 'utf-8');
 
-  // Parse sections
+  // Parse sections and extract title
   const parser = new MystParser();
   const sourceParsed = await parser.parseSections(sourceContent, sourceFilePath);
   const targetParsed = await parser.parseSections(targetContent, targetFilePath);
+  
+  // Extract titles using parseDocumentComponents
+  let sourceTitle: string | undefined;
+  let targetTitle: string | undefined;
+  try {
+    const sourceComponents = await parser.parseDocumentComponents(sourceContent, sourceFilePath);
+    const targetComponents = await parser.parseDocumentComponents(targetContent, targetFilePath);
+    sourceTitle = sourceComponents.titleText;
+    targetTitle = targetComponents.titleText;
+  } catch {
+    // Documents without # title — title will be undefined
+  }
 
   const totalSource = sourceParsed.sections.length;
   const totalTarget = targetParsed.sections.length;
@@ -174,9 +189,10 @@ export async function generateHeadingmapForFile(
     warnings.unshift(`Section count mismatch: ${totalSource} source vs ${totalTarget} target`);
   }
 
-  // Compare with existing heading-map
+  // Compare with existing heading-map and title
   const existingMap = extractHeadingMap(targetContent);
-  const mapsAreEqual = areMapsEqual(existingMap, map);
+  const existingTitle = extractTranslationTitle(targetContent);
+  const mapsAreEqual = areMapsEqual(existingMap, map) && existingTitle === targetTitle;
 
   if (mapsAreEqual) {
     return {
@@ -204,6 +220,7 @@ export async function generateHeadingmapForFile(
     totalTargetSections: totalTarget,
     warnings,
     generatedMap: map.size > 0 ? map : undefined,
+    generatedTitle: targetTitle,
   };
 }
 
@@ -246,10 +263,10 @@ export async function runHeadingmap(options: HeadingmapOptions): Promise<Heading
     results.push(result);
 
     // Write the heading-map to the target file (unless dry-run or skipped/unchanged)
-    if (!dryRun && result.status !== 'skipped' && result.status !== 'unchanged' && result.generatedMap && result.generatedMap.size > 0) {
+    if (!dryRun && result.status !== 'skipped' && result.status !== 'unchanged' && (result.generatedMap?.size ?? 0) > 0) {
       const targetFilePath = path.join(target, docsFolder, f);
       const targetContent = fs.readFileSync(targetFilePath, 'utf-8');
-      const updatedContent = injectHeadingMap(targetContent, result.generatedMap);
+      const updatedContent = injectHeadingMap(targetContent, result.generatedMap!, result.generatedTitle);
       fs.writeFileSync(targetFilePath, updatedContent, 'utf-8');
 
       // Update section-count in .translate/state/ if state exists

@@ -86,9 +86,11 @@ jupytext:
   text_representation:
     extension: .md
     format_name: myst
-heading-map:
-  Section One: 第一节
-  Section Two: 第二节
+translation:
+  title: 测试讲座
+  headings:
+    Section One: 第一节
+    Section Two: 第二节
 ---
 
 # 测试讲座

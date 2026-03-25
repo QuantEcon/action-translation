@@ -589,8 +589,9 @@ heading-map:
       // Title updated
       expect(result).toContain('# 经济学导论');
       
-      // Heading map contains section heading
-      expect(result).toContain('heading-map:');
+      // Translation metadata contains section heading and title
+      expect(result).toContain('translation:');
+      expect(result).toContain('title: 经济学导论');
       expect(result).toMatch(/Section:\s+部分/);
     });
   });

@@ -21,7 +21,8 @@ export const PATH_SEPARATOR = '::';
 export type HeadingMap = Map<string, string>;
 
 /**
- * Extract heading map from target document frontmatter
+ * Extract heading map from target document frontmatter.
+ * Reads from `translation.headings` (new format) with `heading-map` fallback (legacy).
  */
 export function extractHeadingMap(content: string): HeadingMap {
   const map = new Map<string, string>();
@@ -34,7 +35,10 @@ export function extractHeadingMap(content: string): HeadingMap {
   
   try {
     const frontmatter = yaml.load(frontmatterMatch[1]) as any;
-    const headingMapData = frontmatter?.['heading-map'];
+    
+    // New format: translation.headings
+    const headingMapData = frontmatter?.translation?.headings
+      ?? frontmatter?.['heading-map'];
     
     if (headingMapData && typeof headingMapData === 'object') {
       // Convert YAML object to Map
@@ -49,6 +53,23 @@ export function extractHeadingMap(content: string): HeadingMap {
   }
   
   return map;
+}
+
+/**
+ * Extract translated title from target document frontmatter.
+ * Reads from `translation.title` (new format only).
+ */
+export function extractTranslationTitle(content: string): string | undefined {
+  const frontmatterMatch = content.match(/^---\n(.*?)\n---/s);
+  if (!frontmatterMatch) return undefined;
+  
+  try {
+    const frontmatter = yaml.load(frontmatterMatch[1]) as any;
+    const title = frontmatter?.translation?.title;
+    return typeof title === 'string' ? title : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -147,18 +168,27 @@ export function updateHeadingMap(
 /**
  * Serialize heading map to YAML string for frontmatter
  */
-export function serializeHeadingMap(map: HeadingMap): string {
-  if (map.size === 0) {
+export function serializeHeadingMap(map: HeadingMap, title?: string): string {
+  if (map.size === 0 && !title) {
     return '';
   }
   
-  // Convert Map to plain object for YAML
-  const obj: Record<string, string> = {};
-  map.forEach((value, key) => {
-    obj[key] = value;
-  });
+  // Build translation object
+  const translation: Record<string, any> = {};
   
-  return yaml.dump({ 'heading-map': obj }, {
+  if (title) {
+    translation.title = title;
+  }
+  
+  if (map.size > 0) {
+    const headings: Record<string, string> = {};
+    map.forEach((value, key) => {
+      headings[key] = value;
+    });
+    translation.headings = headings;
+  }
+  
+  return yaml.dump({ translation }, {
     indent: 2,
     lineWidth: -1, // No line wrapping
     noRefs: true,
@@ -211,23 +241,26 @@ export function lookupTargetHeading(
 }
 
 /**
- * Inject or update heading-map in frontmatter
- * Preserves all existing frontmatter fields
+ * Inject or update translation metadata in frontmatter.
+ * Writes new `translation:` format with `title` and `headings` fields.
+ * Removes legacy `heading-map:` key if present.
+ * Preserves all other existing frontmatter fields.
  */
 export function injectHeadingMap(
   content: string,
-  headingMap: HeadingMap
+  headingMap: HeadingMap,
+  title?: string
 ): string {
   // Extract existing frontmatter
   const frontmatterMatch = content.match(/^---\n(.*?)\n---\n(.*)/s);
   
   if (!frontmatterMatch) {
     // No frontmatter exists - add it
-    if (headingMap.size === 0) {
+    if (headingMap.size === 0 && !title) {
       return content;
     }
     
-    const mapYaml = serializeHeadingMap(headingMap).trim();
+    const mapYaml = serializeHeadingMap(headingMap, title).trim();
     return `---\n${mapYaml}\n---\n\n${content}`;
   }
   
@@ -237,15 +270,25 @@ export function injectHeadingMap(
     // Parse existing frontmatter
     const frontmatter = yaml.load(existingYaml) as any || {};
     
-    // Update or remove heading-map
-    if (headingMap.size > 0) {
-      const mapObj: Record<string, string> = {};
-      headingMap.forEach((value, key) => {
-        mapObj[key] = value;
-      });
-      frontmatter['heading-map'] = mapObj;
+    // Remove legacy heading-map key
+    delete frontmatter['heading-map'];
+    
+    // Build translation object
+    if (headingMap.size > 0 || title) {
+      const translationObj: Record<string, any> = {};
+      if (title) {
+        translationObj.title = title;
+      }
+      if (headingMap.size > 0) {
+        const headings: Record<string, string> = {};
+        headingMap.forEach((value, key) => {
+          headings[key] = value;
+        });
+        translationObj.headings = headings;
+      }
+      frontmatter.translation = translationObj;
     } else {
-      delete frontmatter['heading-map'];
+      delete frontmatter.translation;
     }
     
     // Serialize back to YAML
@@ -257,32 +300,23 @@ export function injectHeadingMap(
     
     return `---\n${newYaml}\n---\n${bodyContent}`;
   } catch (error) {
-    // Existing frontmatter has malformed YAML (e.g., unquoted colons in heading-map values).
-    // Strip the old heading-map block via regex and rebuild with proper YAML serialization.
-    if (headingMap.size > 0) {
+    // Existing frontmatter has malformed YAML.
+    // Strip old heading-map and translation blocks via regex and rebuild.
+    if (headingMap.size > 0 || title) {
       try {
-        // Remove existing heading-map block from frontmatter.
-        // When YAML is malformed (e.g., unquoted colons), some heading-map entries
-        // may be parsed as top-level keys. Strip the heading-map: block AND any
-        // orphaned lines between it and the next known top-level YAML key.
-        // Strategy: strip only the old heading-map block and preserve all other frontmatter lines.
         const lines = existingYaml.split('\n');
         const keptLines: string[] = [];
-        let inHeadingMap = false;
+        let inBlock = false;
         for (const line of lines) {
-          if (/^heading-map:/.test(line)) {
-            // Drop the old heading-map key; a fresh one will be written below.
-            inHeadingMap = true;
+          if (/^(heading-map|translation):/.test(line)) {
+            inBlock = true;
             continue;
           }
-          if (inHeadingMap) {
-            // Still inside heading-map block — skip indented or blank lines.
+          if (inBlock) {
             if (/^[ \t]/.test(line) || line.trim() === '') {
               continue;
             }
-            // Hit a non-indented, non-blank line — this marks the end of the heading-map block.
-            // Treat it as a regular top-level frontmatter key and keep it.
-            inHeadingMap = false;
+            inBlock = false;
             keptLines.push(line);
             continue;
           }
@@ -290,25 +324,16 @@ export function injectHeadingMap(
         }
         const strippedYaml = keptLines.join('\n').trim();
         
-        // Serialize the new heading-map
-        const mapObj: Record<string, string> = {};
-        headingMap.forEach((value, key) => {
-          mapObj[key] = value;
-        });
-        const mapYaml = yaml.dump({ 'heading-map': mapObj }, {
-          indent: 2,
-          lineWidth: -1,
-          noRefs: true,
-        }).trim();
+        const mapYaml = serializeHeadingMap(headingMap, title).trim();
         
         const newYaml = strippedYaml ? `${strippedYaml}\n${mapYaml}` : mapYaml;
         return `---\n${newYaml}\n---\n${bodyContent}`;
       } catch (fallbackError) {
-        console.error('Failed to update frontmatter with heading-map:', fallbackError);
+        console.error('Failed to update frontmatter with translation:', fallbackError);
         return content;
       }
     }
-    console.error('Failed to update frontmatter with heading-map:', error);
+    console.error('Failed to update frontmatter with translation:', error);
     return content;
   }
 }

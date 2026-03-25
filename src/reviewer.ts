@@ -678,19 +678,21 @@ ${sourceEnglish}
 ${targetTranslation}
 \`\`\`
 ${glossarySection}
-## IMPORTANT: About the Heading-Map
+## IMPORTANT: About the Translation Metadata
 
-The ${targetLangName} translation contains a \`heading-map\` section in the YAML frontmatter that is NOT present in the English source. This is CORRECT and EXPECTED behavior:
+The ${targetLangName} translation contains a \`translation\` section in the YAML frontmatter that is NOT present in the English source. This is CORRECT and EXPECTED behavior:
 
 \`\`\`yaml
-heading-map:
-  introduction: "介绍"
-  background: "背景"
+translation:
+  title: "介绍"
+  headings:
+    introduction: "介绍"
+    background: "背景"
 \`\`\`
 
-This is a feature of the translation sync system that maps English heading IDs to ${targetLangName} headings for section matching across languages. Do NOT flag this as an issue or formatting problem - it is intentional and does not affect Jupyter Book compilation.
+This is a feature of the translation sync system that maps English heading IDs to ${targetLangName} headings for section matching across languages. The \`title\` field tracks the translated document title. Do NOT flag this as an issue or formatting problem - it is intentional and does not affect Jupyter Book compilation.
 
-**Note on double-colon notation**: The heading-map may use \`section::subsection\` notation (e.g., \`supply-and-demand::market-dynamics\`) to represent hierarchical headings. This double-colon \`::\` syntax is intentional and valid - it represents the relationship between a section and its nested subsection. This is safe in YAML because YAML only treats \`:\` as a key-value separator when followed by a space.
+**Note on double-colon notation**: The headings may use \`section::subsection\` notation (e.g., \`supply-and-demand::market-dynamics\`) to represent hierarchical headings. This double-colon \`::\` syntax is intentional and valid - it represents the relationship between a section and its nested subsection. This is safe in YAML because YAML only treats \`:\` as a key-value separator when followed by a space.
 
 ## Evaluation Criteria
 Rate each criterion from 1-10:
@@ -789,24 +791,26 @@ A translation sync action detected changes in an English source document and cre
 1. **Scope**: Only the correct files were modified
 2. **Position**: Changes appear in the same relative positions
 3. **Structure**: Document structure is preserved
-4. **Heading-map**: The heading-map in frontmatter is correctly updated
+4. **Translation metadata**: The translation metadata in frontmatter is correctly updated
 
-## IMPORTANT: About the Heading-Map System
+## IMPORTANT: About the Translation Metadata System
 
-The \`heading-map\` in the frontmatter is a CRITICAL feature of this translation system, NOT a bug. Here's how it works:
+The \`translation\` section in the frontmatter is a CRITICAL feature of this translation system, NOT a bug. Here's how it works:
 
 - English headings generate IDs from English text: \`## Introduction\` → ID: \`introduction\`
 - Translated headings generate IDs from translated text: \`## 介绍\` → ID: \`介绍\`
-- The heading-map bridges this gap by mapping English IDs to translated headings
+- The translation headings bridge this gap by mapping English IDs to translated headings
 
 Example:
 \`\`\`yaml
-heading-map:
-  introduction: "介绍"
-  supply-and-demand: "供需分析"
+translation:
+  title: "介绍"
+  headings:
+    introduction: "介绍"
+    supply-and-demand: "供需分析"
 \`\`\`
 
-**Note on double-colon notation**: The heading-map may use \`section::subsection\` notation to represent hierarchical headings. This is intentional and valid YAML.
+**Note on double-colon notation**: The headings may use \`section::subsection\` notation to represent hierarchical headings. This is intentional and valid YAML.
 
 ## Source Document (English)
 ### Before:

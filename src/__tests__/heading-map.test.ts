@@ -409,7 +409,7 @@ Content`;
   });
 
   describe('injectHeadingMap', () => {
-    it('should add heading-map to existing frontmatter', () => {
+    it('should add translation metadata to existing frontmatter', () => {
       const content = `---
 title: Test
 author: Someone
@@ -428,7 +428,8 @@ Content here`;
 
       expect(result).toContain('title: Test');
       expect(result).toContain('author: Someone');
-      expect(result).toContain('heading-map:');
+      expect(result).toContain('translation:');
+      expect(result).toContain('headings:');
       expect(result).toContain('Introduction: 简介');
       expect(result).toContain('Overview: 概述');
       expect(result).toContain('## Introduction');
@@ -466,7 +467,8 @@ Content here`;
       const result = injectHeadingMap(content, map);
 
       expect(result).toContain('---');
-      expect(result).toContain('heading-map:');
+      expect(result).toContain('translation:');
+      expect(result).toContain('headings:');
       expect(result).toContain('Introduction: 简介');
       expect(result).toContain('## Introduction');
     });
@@ -514,8 +516,8 @@ Content 2`;
       const result = injectHeadingMap(content, map);
 
       expect(result.indexOf('kernelspec:')).toBeLessThan(result.indexOf('title:'));
-      expect(result.indexOf('title:')).toBeLessThan(result.indexOf('heading-map:'));
-      expect(result.indexOf('heading-map:')).toBeLessThan(result.indexOf('Preamble content'));
+      expect(result.indexOf('title:')).toBeLessThan(result.indexOf('translation:'));
+      expect(result.indexOf('translation:')).toBeLessThan(result.indexOf('Preamble content'));
       expect(result.indexOf('Preamble content')).toBeLessThan(result.indexOf('## Section 1'));
     });
 
@@ -542,7 +544,8 @@ Content`;
       expect(result).toContain('kernelspec:');
       expect(result).toContain('display_name: Python 3');
       expect(result).toContain('jupytext:');
-      expect(result).toContain('heading-map:');
+      expect(result).toContain('translation:');
+      expect(result).toContain('headings:');
       expect(result).toContain('Introduction: 简介');
     });
   });
@@ -616,9 +619,10 @@ title: Test
       expect(updatedMap.get('Introduction')).toBe('简介');
       expect(updatedMap.get('Overview')).toBe('概述');
 
-      // Inject (should add heading-map to frontmatter)
+      // Inject (should add translation metadata to frontmatter)
       const result = injectHeadingMap(targetContent, updatedMap);
-      expect(result).toContain('heading-map:');
+      expect(result).toContain('translation:');
+      expect(result).toContain('headings:');
       expect(result).toContain('Introduction: 简介');
       expect(result).toContain('Overview: 概述');
 
