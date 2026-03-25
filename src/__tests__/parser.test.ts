@@ -388,6 +388,26 @@ Content.
     it('should not strip partial role syntax', () => {
       expect(MystParser.stripMystRoles('{incomplete')).toBe('{incomplete');
     });
+
+    it('should handle mixed role and text: text before role', () => {
+      expect(MystParser.stripMystRoles('The {index}`Newton-Raphson Method <single: Newton-Raphson Method>`')).toBe('The Newton-Raphson Method');
+    });
+
+    it('should handle mixed role and text: text after role', () => {
+      expect(MystParser.stripMystRoles('{index}`Mutable <single: Mutable>` Versus Immutable Parameters')).toBe('Mutable Versus Immutable Parameters');
+    });
+
+    it('should handle multiple roles in one heading', () => {
+      expect(MystParser.stripMystRoles('{index}`Mutable <single: Mutable>` Versus {index}`Immutable <single: Immutable>` Parameters')).toBe('Mutable Versus Immutable Parameters');
+    });
+
+    it('should handle two simple roles with text between', () => {
+      expect(MystParser.stripMystRoles('{index}`SciPy` versus {index}`NumPy`')).toBe('SciPy versus NumPy');
+    });
+
+    it('should handle role followed by plain text', () => {
+      expect(MystParser.stripMystRoles('Accessing Data with {index}`requests <single: requests>`')).toBe('Accessing Data with requests');
+    });
   });
 
   describe('Title extraction with MyST roles', () => {
