@@ -1,5 +1,6 @@
 import {
   extractHeadingMap,
+  extractTranslationTitle,
   updateHeadingMap,
   serializeHeadingMap,
   lookupTargetHeading,
@@ -948,6 +949,105 @@ heading-map:
       const map = new Map([['SymPy', 'SymPy符号计算']]);
       const result = lookupTargetHeading('## {index}`SymPy`', map);
       expect(result).toBe('SymPy符号计算');
+    });
+  });
+
+  describe('extractTranslationTitle', () => {
+    it('should extract title from translation frontmatter', () => {
+      const content = `---
+translation:
+  title: 经济学导论
+  headings:
+    Section One: 第一节
+---
+
+# 经济学导论`;
+
+      const title = extractTranslationTitle(content);
+      expect(title).toBe('经济学导论');
+    });
+
+    it('should return undefined when no translation block', () => {
+      const content = `---
+title: Test
+---
+
+# Test`;
+
+      const title = extractTranslationTitle(content);
+      expect(title).toBeUndefined();
+    });
+
+    it('should return undefined when no frontmatter', () => {
+      const content = `# Test\n\nContent`;
+
+      const title = extractTranslationTitle(content);
+      expect(title).toBeUndefined();
+    });
+
+    it('should return undefined when translation has no title', () => {
+      const content = `---
+translation:
+  headings:
+    Section: 部分
+---
+
+Content`;
+
+      const title = extractTranslationTitle(content);
+      expect(title).toBeUndefined();
+    });
+
+    it('should not read from legacy heading-map format', () => {
+      const content = `---
+heading-map:
+  Title: 标题
+---
+
+Content`;
+
+      const title = extractTranslationTitle(content);
+      expect(title).toBeUndefined();
+    });
+  });
+
+  describe('title-only serialization', () => {
+    it('should serialize title-only translation block', () => {
+      const map = new Map<string, string>();
+      const yaml = serializeHeadingMap(map, '经济学导论');
+
+      expect(yaml).toContain('translation:');
+      expect(yaml).toContain('title: 经济学导论');
+      expect(yaml).not.toContain('headings:');
+    });
+
+    it('should inject title-only translation into existing frontmatter', () => {
+      const content = `---
+title: Test
+---
+
+# 经济学导论
+
+Content`;
+
+      const map = new Map<string, string>();
+      const result = injectHeadingMap(content, map, '经济学导论');
+
+      expect(result).toContain('translation:');
+      expect(result).toContain('title: 经济学导论');
+      expect(result).not.toContain('headings:');
+      expect(result).toContain('# 经济学导论');
+    });
+
+    it('should inject title-only translation when no frontmatter exists', () => {
+      const content = `# 经济学导论\n\nContent`;
+
+      const map = new Map<string, string>();
+      const result = injectHeadingMap(content, map, '经济学导论');
+
+      expect(result).toContain('---');
+      expect(result).toContain('translation:');
+      expect(result).toContain('title: 经济学导论');
     });
   });
 });

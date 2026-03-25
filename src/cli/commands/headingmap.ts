@@ -219,7 +219,7 @@ export async function generateHeadingmapForFile(
     totalSourceSections: totalSource,
     totalTargetSections: totalTarget,
     warnings,
-    generatedMap: map.size > 0 ? map : undefined,
+    generatedMap: map,
     generatedTitle: targetTitle,
   };
 }
@@ -262,11 +262,11 @@ export async function runHeadingmap(options: HeadingmapOptions): Promise<Heading
     const result = await generateHeadingmapForFile(f, source, target, docsFolder);
     results.push(result);
 
-    // Write the heading-map to the target file (unless dry-run or skipped/unchanged)
-    if (!dryRun && result.status !== 'skipped' && result.status !== 'unchanged' && (result.generatedMap?.size ?? 0) > 0) {
+    // Write the translation metadata to the target file (unless dry-run or skipped/unchanged)
+    if (!dryRun && result.status !== 'skipped' && result.status !== 'unchanged' && (result.generatedMap || result.generatedTitle)) {
       const targetFilePath = path.join(target, docsFolder, f);
       const targetContent = fs.readFileSync(targetFilePath, 'utf-8');
-      const updatedContent = injectHeadingMap(targetContent, result.generatedMap!, result.generatedTitle);
+      const updatedContent = injectHeadingMap(targetContent, result.generatedMap ?? new Map(), result.generatedTitle);
       fs.writeFileSync(targetFilePath, updatedContent, 'utf-8');
 
       // Update section-count in .translate/state/ if state exists

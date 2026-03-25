@@ -631,3 +631,114 @@ describe('formatHeadingmapJson', () => {
     expect(parsed.summary.generated).toBe(1);
   });
 });
+
+// ============================================================================
+// TITLE-ONLY AND IDEMPOTENCE TESTS
+// ============================================================================
+
+const SOURCE_TITLE_ONLY = `---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+---
+
+# Preamble Lecture
+
+This lecture has a title but no ## sections.
+`;
+
+const TARGET_TITLE_ONLY_NO_MAP = `---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+---
+
+# 前言讲座
+
+本讲座有标题但没有章节。
+`;
+
+const TARGET_TITLE_ONLY_WITH_MAP = `---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+translation:
+  title: 前言讲座
+---
+
+# 前言讲座
+
+本讲座有标题但没有章节。
+`;
+
+describe('Title-only files', () => {
+  test('generates translation metadata for title-only file', async () => {
+    const sourceDir = path.join(tmpDir, 'source');
+    const targetDir = path.join(tmpDir, 'target');
+    writeMd(path.join(sourceDir, 'lectures', 'preamble.md'), SOURCE_TITLE_ONLY);
+    writeMd(path.join(targetDir, 'lectures', 'preamble.md'), TARGET_TITLE_ONLY_NO_MAP);
+
+    const result = await generateHeadingmapForFile('preamble.md', sourceDir, targetDir, 'lectures');
+
+    expect(result.status).toBe('generated');
+    expect(result.generatedTitle).toBe('前言讲座');
+  });
+
+  test('writes title-only translation metadata to file', async () => {
+    const sourceDir = path.join(tmpDir, 'source');
+    const targetDir = path.join(tmpDir, 'target');
+    writeMd(path.join(sourceDir, 'lectures', 'preamble.md'), SOURCE_TITLE_ONLY);
+    writeMd(path.join(targetDir, 'lectures', 'preamble.md'), TARGET_TITLE_ONLY_NO_MAP);
+
+    const options: HeadingmapOptions = {
+      source: sourceDir,
+      target: targetDir,
+      docsFolder: 'lectures',
+      exclude: [],
+      dryRun: false,
+    };
+
+    await runHeadingmap(options);
+
+    const updatedContent = fs.readFileSync(path.join(targetDir, 'lectures', 'preamble.md'), 'utf-8');
+    expect(updatedContent).toContain('translation:');
+    expect(updatedContent).toContain('title: 前言讲座');
+  });
+
+  test('reports unchanged on second run (idempotence)', async () => {
+    const sourceDir = path.join(tmpDir, 'source');
+    const targetDir = path.join(tmpDir, 'target');
+    writeMd(path.join(sourceDir, 'lectures', 'preamble.md'), SOURCE_TITLE_ONLY);
+    writeMd(path.join(targetDir, 'lectures', 'preamble.md'), TARGET_TITLE_ONLY_WITH_MAP);
+
+    const result = await generateHeadingmapForFile('preamble.md', sourceDir, targetDir, 'lectures');
+
+    expect(result.status).toBe('unchanged');
+  });
+
+  test('idempotence: run twice, second is unchanged', async () => {
+    const sourceDir = path.join(tmpDir, 'source');
+    const targetDir = path.join(tmpDir, 'target');
+    writeMd(path.join(sourceDir, 'lectures', 'preamble.md'), SOURCE_TITLE_ONLY);
+    writeMd(path.join(targetDir, 'lectures', 'preamble.md'), TARGET_TITLE_ONLY_NO_MAP);
+
+    const options: HeadingmapOptions = {
+      source: sourceDir,
+      target: targetDir,
+      docsFolder: 'lectures',
+      exclude: [],
+      dryRun: false,
+    };
+
+    // First run — should generate
+    const first = await runHeadingmap(options);
+    expect(first.summary.generated).toBe(1);
+
+    // Second run — should be unchanged
+    const second = await runHeadingmap(options);
+    expect(second.summary.unchanged).toBe(1);
+  });
+});
