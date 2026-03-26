@@ -277,6 +277,25 @@ describe('buildHeadingMap', () => {
     expect(map.size).toBe(0);
     expect(warnings).toHaveLength(0);
   });
+
+  test('strips MyST roles from heading-map keys and values', () => {
+    const source = [
+      { heading: '## Name Resolution', level: 2, id: 'name-resolution', content: '', startLine: 1, endLine: 2, subsections: [
+        { heading: '### {index}`Mutable <single: Mutable>` Versus {index}`Immutable <single: Immutable>` Parameters', level: 3, id: 'mutable-vs-immutable', content: '', startLine: 3, endLine: 4, subsections: [] },
+      ] },
+    ];
+    const target = [
+      { heading: '## 名称解析', level: 2, id: '名称解析', content: '', startLine: 1, endLine: 2, subsections: [
+        { heading: '### {index}`可变 <single: Mutable>` 与 {index}`不可变 <single: Immutable>` 参数', level: 3, id: '可变与不可变', content: '', startLine: 3, endLine: 4, subsections: [] },
+      ] },
+    ];
+
+    const { map, warnings } = buildHeadingMap(source, target);
+    expect(map.get('Name Resolution')).toBe('名称解析');
+    // Key and value should have MyST roles stripped
+    expect(map.get('Name Resolution::Mutable Versus Immutable Parameters')).toBe('可变 与 不可变 参数');
+    expect(warnings).toHaveLength(0);
+  });
 });
 
 // ============================================================================
