@@ -67,7 +67,7 @@ export interface HeadingmapResult {
 // ============================================================================
 
 /**
- * Clean heading text by removing ## markers
+ * Clean heading text by removing ## markers and stripping MyST inline roles.
  */
 function cleanHeading(heading: string): string {
   return MystParser.stripMystRoles(heading.replace(/^#+\s+/, '').trim());
