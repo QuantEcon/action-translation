@@ -70,7 +70,7 @@ export interface HeadingmapResult {
  * Clean heading text by removing ## markers
  */
 function cleanHeading(heading: string): string {
-  return heading.replace(/^#+\s+/, '').trim();
+  return MystParser.stripMystRoles(heading.replace(/^#+\s+/, '').trim());
 }
 
 /**
