@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-03-26
+
+### Fixed
+- **Headingmap CLI MyST role stripping**: `cleanHeading()` in the `headingmap` CLI now strips MyST inline roles via `MystParser.stripMystRoles()`, matching the sync pipeline behavior from v0.12.5. Previously, roles like `` {index}`Mutable <single: Mutable>` `` appeared verbatim in heading-map keys/values when running `npx translate headingmap`.
+
+### Added
+- **1 test** for MyST role stripping in `buildHeadingMap` (966 → 967 total)
+
 ## [0.13.0] - 2026-03-26
 
 ### Changed
