@@ -3,7 +3,7 @@
 > **Type**: Domain expertise, bilingual curation  
 > **Ideal RA profile**: Strong economics background, bilingual fluency (English + Chinese), familiarity with Chinese academic textbooks  
 > **Time**: 4–7 hrs/week for 12 weeks  
-> **Repository**: Glossary lives in `QuantEcon/action-translation` (`glossary/zh-cn.json`); extended dataset in `QuantEcon/project-translation-benchmark`
+> **Repository**: Glossary lives in `QuantEcon/action-translation` (`glossary/zh-cn.json`); extended dataset in `QuantEcon/benchmark.translate-zh-cn`
 
 ## Goal
 
@@ -87,7 +87,7 @@ Go beyond single terms. Capture common academic phrases and their standard Chine
 | in steady state | 在稳态下 | dynamic models |
 | the budget constraint | 预算约束 | consumer theory |
 
-Store these in a separate JSON file in the benchmark repo:
+Store these in a separate JSON file in `benchmark.translate-zh-cn`:
 
 ```json
 {
@@ -179,17 +179,19 @@ This doesn't mean reading entire textbooks — skim the table of contents and ke
 
 ## How Your Work Connects to the Other Projects
 
-- **→ Project A**: Your terms become part of the benchmark test dataset. Glossary compliance scoring uses your terms as ground truth.
-- **→ Project B**: When the PR reviewer finds mistranslated terms, they'll flag them for you to add. When you add terms, future translations improve.
-- **← Project B**: The PR reviewer will identify commonly mistranslated terms that need glossary entries — check in regularly.
+- **-> Project A (Benchmark)**: Your terms are the seed data for the benchmark dataset. The `qebench` CLI uses your glossary entries as ground truth for glossary compliance scoring. New terms you add immediately improve benchmark accuracy. Your academic phrase database feeds into the sentence-level test data.
+- **-> Project B (Lecture Review)**: When the AI review script checks terminology in `lecture-python-programming.zh-cn`, it uses your glossary entries as the reference. Better glossary coverage means more thorough automated review.
+- **<- Project B (Lecture Review)**: The lecture reviewer will identify commonly mistranslated terms and flag them for you to add. Their concurrence data shows which terms the AI gets wrong most often -- prioritize adding those.
+- **<- Project A (Benchmark)**: The benchmark results reveal which domains have weak glossary coverage (models score poorly on terms not in the glossary). Use the coverage map on the benchmark website to target your expansion efforts.
 
 ## Optional Coding Extensions
 
 If you want to do some programming:
 
 - Write a **glossary coverage checker** — given a QuantEcon lecture, report which technical terms appear in it and which are/aren't in the glossary
-- Build a **term frequency analyser** — scan all QuantEcon lectures and rank terms by frequency to prioritise which to add first
-- Create a **glossary lookup tool** — a simple web page or CLI that searches the glossary
+- Build a **term frequency analyser** -- scan all QuantEcon lectures and rank terms by frequency to prioritise which to add first
+- Create a **glossary lookup tool** -- a simple web page or CLI that searches the glossary
+- Contribute to the **benchmark dataset** -- add sentence-level entries using `qebench add` in the Project A repo
 
 ## Getting Started
 
