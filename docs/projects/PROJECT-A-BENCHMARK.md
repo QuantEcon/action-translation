@@ -4,6 +4,7 @@
 > **Ideal RA profile**: Comfortable with Python or TypeScript, interested in building tools, APIs, and data visualization
 > **Time**: 4-7 hrs/week for 12 weeks; potential summer extension
 > **Repository**: `QuantEcon/benchmark.translate-zh-cn` (new, separate repo)
+> **Language**: TypeScript (recommended -- aligns with `action-translation`). Python is also fine if that's your strength.
 
 ## Goal
 
@@ -226,7 +227,7 @@ $ qebench stats
 
 #### Utility: `qebench run`
 
-Runs the benchmark programmatically against LLM APIs:
+Sends test data to LLM APIs and collects their translations. "Model" here just means which AI service to use (Claude, GPT-4o, etc.).
 
 ```bash
 # Run all terms against Claude Sonnet
@@ -239,7 +240,7 @@ qebench run --model claude-sonnet,gpt-4o --level sentences
 qebench run --model claude-sonnet --prompt prompts/v2-glossary-emphasis.txt
 ```
 
-This is the command used for systematic model comparison and prompt A/B testing.
+This is the command used for systematic model comparison and prompt A/B testing. You'll need an API key for each model you want to test (we'll provide keys for the project).
 
 ### 3. Results Website (GitHub Pages)
 
@@ -306,7 +307,7 @@ XP drives the leaderboard on the website.
 
 #### Elo Ratings for Models
 
-Models get Elo ratings based on head-to-head comparisons in "judge" mode. Each judgment updates the Elo using the standard formula. This gives a dynamic, intuitive ranking that reflects human preference.
+[Elo](https://en.wikipedia.org/wiki/Elo_rating_system) is a rating system originally designed for chess -- each player (here, each model) has a numeric rating that goes up when they win a head-to-head comparison and down when they lose. The amount of change depends on whether the result was expected (beating a weak opponent gains less than beating a strong one). This gives a dynamic, intuitive ranking that reflects human preference over time.
 
 #### Coverage Milestones
 
@@ -496,6 +497,13 @@ These side-projects produce results that feed into the main website and dataset.
 - **Data engineering**: Designing schemas, validating data, managing JSON datasets
 - **CI/CD**: GitHub Actions for validation and deployment
 - **Scientific methodology**: Controlled comparisons, Elo rating systems, reproducible experiments
+
+## Prerequisites
+
+- **Node.js** (v20+) and npm -- for building the CLI and website
+- **Git** and a **GitHub** account with access to the QuantEcon org
+- **API keys** -- we'll provide Anthropic and OpenAI keys for the project
+- **VS Code** (recommended) -- for editing JSON data and TypeScript
 
 ## Getting Started
 

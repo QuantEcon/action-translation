@@ -7,7 +7,7 @@
 
 ## Goal
 
-Expand the translation glossary from 357 terms to 1,000+ and build a structured database of academic economics language — not just single terms, but the phrases, expressions, and conventions that characterise technical writing in economics and mathematics.
+Expand the translation glossary from 357 terms to 1,000+ and build a structured database of academic economics language -- not just single terms, but the phrases, expressions, and conventions that characterise technical writing in economics and mathematics.
 
 ## Why This Matters
 
@@ -113,18 +113,18 @@ Standardise translations of economist/mathematician names that appear in QuantEc
 | Thomas Sargent | 托马斯·萨金特 | Macroeconomics |
 | Robert Lucas | 罗伯特·卢卡斯 | Rational expectations |
 
-Some names have multiple accepted transliterations — document the most standard one and note alternatives.
+Some names have multiple accepted transliterations -- document the most standard one and note alternatives.
 
 ### 4. Cross-Reference with Chinese Textbooks
 
 To ensure your translations match what students actually encounter, cross-reference with standard Chinese economics and mathematics textbooks:
 
-- 高级宏观经济学 (Advanced Macroeconomics) — Romer / 戴维·罗默
-- 微观经济学：现代观点 (Microeconomics) — Varian / 范里安
-- 概率论与数理统计 (Probability and Statistics) — standard university textbooks
-- 高等数学 (Advanced Mathematics) — standard university textbooks
+- 高级宏观经济学 (Advanced Macroeconomics) -- Romer / 戴维·罗默
+- 微观经济学：现代观点 (Microeconomics) -- Varian / 范里安
+- 概率论与数理统计 (Probability and Statistics) -- standard university textbooks
+- 高等数学 (Advanced Mathematics) -- standard university textbooks
 
-This doesn't mean reading entire textbooks — skim the table of contents and key term definitions to verify that your translations match the accepted Chinese academic standard.
+This doesn't mean reading entire textbooks -- skim the table of contents and key term definitions to verify that your translations match the accepted Chinese academic standard.
 
 ## Week-by-Week Plan
 
@@ -146,7 +146,7 @@ This doesn't mean reading entire textbooks — skim the table of contents and ke
 
 - [ ] Build the academic phrase database (100+ phrases)
 - [ ] Compile economist/mathematician name translations (50+)
-- [ ] Store in `project-translation-benchmark` data files
+- [ ] Store in `benchmark.translate-zh-cn` data files
 - [ ] Continue adding terms (target: 700 total)
 
 ### Weeks 9–10: Cross-Reference & Validation
@@ -164,18 +164,18 @@ This doesn't mean reading entire textbooks — skim the table of contents and ke
 
 ## Deliverables
 
-1. **Expanded glossary** — `glossary/zh-cn.json` grown from 357 to 1,000+ terms via PRs to `action-translation`
-2. **Academic phrase database** — JSON file with 100+ standard academic phrases and their Chinese equivalents
-3. **Economist names list** — Standardised name translations for economists/mathematicians in QuantEcon content
-4. **Domain coverage report** — Which topic areas have good coverage, which need more work
-5. **Textbook cross-reference notes** — Documentation of which Chinese textbooks were consulted and any translation conflicts found
+1. **Expanded glossary** -- `glossary/zh-cn.json` grown from 357 to 1,000+ terms via PRs to `action-translation`
+2. **Academic phrase database** -- JSON file with 100+ standard academic phrases and their Chinese equivalents
+3. **Economist names list** -- Standardised name translations for economists/mathematicians in QuantEcon content
+4. **Domain coverage report** -- Which topic areas have good coverage, which need more work
+5. **Textbook cross-reference notes** -- Documentation of which Chinese textbooks were consulted and any translation conflicts found
 
 ## Quality Standards
 
 - **Every term** must include a `context` field indicating the domain
 - **Alternatives** should be noted when multiple translations exist (e.g., 最优化 vs. 优化)
-- **Source** — note where you found or verified the translation (textbook, standard usage, etc.)
-- **Peer review** — all PRs reviewed by at least one other bilingual team member before merge
+- **Source** -- note where you found or verified the translation (textbook, standard usage, etc.)
+- **Peer review** -- all PRs reviewed by at least one other bilingual team member before merge
 
 ## How Your Work Connects to the Other Projects
 
@@ -188,7 +188,7 @@ This doesn't mean reading entire textbooks — skim the table of contents and ke
 
 If you want to do some programming:
 
-- Write a **glossary coverage checker** — given a QuantEcon lecture, report which technical terms appear in it and which are/aren't in the glossary
+- Write a **glossary coverage checker** -- given a QuantEcon lecture, report which technical terms appear in it and which are/aren't in the glossary
 - Build a **term frequency analyser** -- scan all QuantEcon lectures and rank terms by frequency to prioritise which to add first
 - Create a **glossary lookup tool** -- a simple web page or CLI that searches the glossary
 - Contribute to the **benchmark dataset** -- add sentence-level entries using `qebench add` in the Project A repo
@@ -203,8 +203,8 @@ If you want to do some programming:
 
 ## Resources
 
-- [QuantEcon Lectures (Python)](https://python.quantecon.org/) — source content
-- [QuantEcon Lectures (Advanced)](https://python-advanced.quantecon.org/) — more advanced topics
+- [QuantEcon Lectures (Python)](https://python.quantecon.org/) -- source content
+- [QuantEcon Lectures (Advanced)](https://python-advanced.quantecon.org/) -- more advanced topics
 - Current glossary: `glossary/zh-cn.json` in this repository
-- [Glossary README](../../glossary/README.md) — format documentation
+- [Glossary README](../../glossary/README.md) -- format documentation
 - Standard Chinese economics textbooks (see cross-reference section above)

@@ -77,9 +77,9 @@ The concurrence data is especially valuable: when humans consistently disagree w
 
 ## What You'll Do
 
-### 1. AI Review Script
+### 1. AI Review Script (pre-built for you)
 
-A script (in `action-translation` or the lecture repo) that compares each English source lecture against its Chinese translation and produces structured findings. The script checks:
+The project lead will build and maintain a review script that compares each English source lecture against its Chinese translation and produces structured findings. **You don't need to build this** -- you'll run it and then review its output. The script checks:
 
 | Category | What the AI Checks | Example |
 |---|---|---|
@@ -219,9 +219,9 @@ Human review recommended for nuance.
 For each pre-populated issue, the RA:
 
 1. **Opens the English and Chinese files side-by-side** (VS Code diff or GitHub compare)
-2. **Reads through each AI finding** and checks the appropriate box
-3. **Adds notes** where they disagree or want to elaborate
-4. **Records additional findings** the AI missed (these are especially valuable)
+2. **Reads through each AI finding** and checks **exactly one** of the three boxes (Concur, Non-concur, or Needs fix)
+3. **Adds notes** where they disagree or want to elaborate -- especially important for Non-concur and Needs fix
+4. **Records additional findings** the AI missed (these are especially valuable -- they show us what to improve in the review script)
 5. **Gives an overall assessment** and quality score
 6. **Signs off** when done
 
@@ -323,8 +323,9 @@ This data feeds directly into:
 - [ ] Read the `action-translation` [README](../../README.md) and [architecture docs](../developer/architecture.md)
 - [ ] Get familiar with the review workflow: read this document end-to-end
 - [ ] Learn the test tool: review 2-3 test PRs in `test-translation-sync.zh-cn` for practice
-- [ ] Run the AI review script on 2-3 lectures to generate initial issues
+- [ ] Run the AI review script on 2-3 lectures to generate initial issues (the script will be ready for you -- just follow the instructions in its README)
 - [ ] Complete your first full lecture review to calibrate your workflow
+- [ ] Share your first completed review for feedback before scaling up
 - [ ] Estimate: ~30 min per lecture for straightforward ones, ~60 min for complex ones
 
 ### Weeks 3-6: Systematic Lecture Reviews
