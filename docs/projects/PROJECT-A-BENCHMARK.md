@@ -1,10 +1,11 @@
 # Project A: Benchmark Dataset, CLI Tool & Results Website
 
 > **Type**: Coding + data curation, gamified
-> **Ideal RA profile**: Comfortable with Python or TypeScript, interested in building tools, APIs, and data visualization
+> **Ideal RA profile**: Comfortable with Python, interested in building tools, APIs, and data visualization
 > **Time**: 4-7 hrs/week for 12 weeks; potential summer extension
 > **Repository**: `QuantEcon/benchmark.translate-zh-cn` (new, separate repo)
-> **Language**: TypeScript (recommended -- aligns with `action-translation`). Python is also fine if that's your strength.
+> **Language**: Python
+> **Stack**: Typer (CLI framework) · Rich (terminal UI) · questionary (interactive prompts) · Pydantic (data validation) · uv (package management)
 
 ## Goal
 
@@ -234,7 +235,7 @@ Sends test data to LLM APIs and collects their translations. "Model" here just m
 qebench run --model claude-sonnet --level terms
 
 # Compare two models on sentences
-qebench run --model claude-sonnet,gpt-4o --level sentences
+qebench run --model claude-sonnet --model gpt-4o --level sentences
 
 # Run with a specific prompt variation
 qebench run --model claude-sonnet --prompt prompts/v2-glossary-emphasis.txt
@@ -339,28 +340,40 @@ benchmark.translate-zh-cn/
 │   │   └── theorems.json
 │   ├── paragraphs/
 │   │   └── quantecon-extracts.json
-│   └── schema/
-│       └── schema.json              # JSON Schema for validation
-├── src/                              # CLI tool source
-│   ├── cli.ts                        # CLI entry point & command routing
-│   ├── translate.ts                  # "translate" mode
-│   ├── judge.ts                      # "judge" mode
-│   ├── add.ts                        # "add" mode
-│   ├── run.ts                        # benchmark runner
-│   ├── stats.ts                      # stats display
-│   ├── export.ts                     # export for website
-│   ├── providers/                    # LLM API wrappers
-│   │   ├── base.ts
-│   │   ├── claude.ts
-│   │   ├── openai.ts
-│   │   └── local.ts                  # Ollama/local LLM support
-│   ├── scoring/
-│   │   ├── glossary.ts               # Glossary compliance check
-│   │   ├── elo.ts                    # Elo rating calculations
-│   │   └── xp.ts                     # XP calculations
-│   └── utils/
-│       ├── display.ts                # Terminal UI formatting
-│       └── dataset.ts                # Data loading/saving
+│   └── schema/                       # Pydantic models (auto-generate JSON Schema)
+│       └── models.py
+├── src/
+│   └── qebench/                      # Python package
+│       ├── __init__.py
+│       ├── cli.py                    # Typer app — command routing
+│       ├── commands/
+│       │   ├── __init__.py
+│       │   ├── translate.py          # "translate" mode
+│       │   ├── judge.py              # "judge" mode
+│       │   ├── add.py                # "add" mode
+│       │   ├── run.py                # benchmark runner
+│       │   ├── stats.py              # stats display (Rich tables/panels)
+│       │   └── export.py             # export for website
+│       ├── providers/                # LLM API wrappers
+│       │   ├── __init__.py
+│       │   ├── base.py               # Abstract provider interface
+│       │   ├── claude.py             # Anthropic SDK
+│       │   ├── openai.py             # OpenAI SDK
+│       │   └── local.py              # Ollama/local LLM support
+│       ├── scoring/
+│       │   ├── __init__.py
+│       │   ├── glossary.py           # Glossary compliance check
+│       │   ├── elo.py                # Elo rating calculations
+│       │   └── xp.py                 # XP calculations
+│       └── utils/
+│           ├── __init__.py
+│           ├── display.py            # Rich console helpers
+│           └── dataset.py            # Data loading/saving (Pydantic)
+├── tests/                            # pytest test suite
+│   ├── conftest.py
+│   ├── test_dataset.py
+│   ├── test_scoring.py
+│   └── test_providers.py
 ├── results/
 │   ├── translations/                 # Human translations from "translate" mode
 │   │   └── {username}-{date}.json
@@ -390,23 +403,27 @@ benchmark.translate-zh-cn/
 │       └── (symlink or copy of results/)
 ├── .github/
 │   └── workflows/
-│       ├── validate.yml              # PR validation (schema check)
+│       ├── validate.yml              # PR validation (schema check, pytest)
 │       └── deploy-site.yml           # Build + deploy site on push
+├── config.yaml                       # Language-specific settings (glossary, domains)
 ├── CONTRIBUTING.md
-├── package.json
+├── pyproject.toml                    # Project metadata, dependencies, [tool.uv]
 └── README.md
 ```
+
+> **Design note**: The tool code lives in `src/qebench/` and the zh-cn dataset lives in `data/`. This separation means the CLI tool can be extracted into a standalone `tools-benchmark` package later if the project is successful — `data/` stays here, `src/qebench/` moves to the new repo, and this repo installs it as a dependency. A `config.yaml` at the root holds language-specific settings (glossary path, language pair, domain list) so the tool itself stays language-agnostic in design.
 
 ## Week-by-Week Plan
 
 ### Weeks 1-2: Repo Setup, Schema & Seed Data
 
 - [ ] Create the `benchmark.translate-zh-cn` repository
-- [ ] Design JSON schemas for terms, sentences, paragraphs
+- [ ] Set up Python project: `pyproject.toml`, uv, pytest, linting
+- [ ] Define Pydantic models for terms, sentences, paragraphs (auto-generates JSON Schema)
 - [ ] Write a schema validation script
 - [ ] Set up CI to validate data on every PR
 - [ ] Seed 50 terms from the existing `glossary/zh-cn.json` (357 terms)
-- [ ] Scaffold the CLI tool with `qebench stats` (read-only, shows dataset state)
+- [ ] Scaffold the CLI tool with Typer: `qebench stats` (read-only, shows dataset state with Rich tables)
 
 ### Weeks 3-5: CLI Core & First Dataset
 
@@ -448,10 +465,11 @@ benchmark.translate-zh-cn/
 
 - Scale dataset to 1,000+ terms, 500+ sentences, 100+ paragraphs
 - Systematic whole-doc vs. section-by-section translation testing across full lecture files
-- Add automated metrics (BLEU, COMET/XCOMET via Python)
+- Add automated metrics (BLEU via `sacrebleu`, COMET/XCOMET via `unbabel-comet`)
 - Full 4+ model comparison (including local LLMs via Ollama)
 - Prompt optimization experiments: glossary injection, domain context, instruction style
 - Interactive dashboard with historical trend tracking
+- Extract `qebench` into a standalone `tools-benchmark` package for reuse across language pairs
 - Possible academic paper draft on benchmark results
 
 ## Coding Side-Projects
@@ -463,7 +481,7 @@ These are optional explorations for technically-inclined RAs. They use the bench
 | **Model comparison** | Add new providers to `qebench run` (Gemini, DeepSeek, Mistral) | API integration |
 | **Context experiments** | Compare sentence vs. section vs. whole-document translation quality | Experiment design |
 | **Local LLM testing** | Add Ollama/llama.cpp support, benchmark open-weight models | DevOps, ML |
-| **Automated metrics** | Implement BLEU/COMET scoring alongside human judgments | Python ML |
+| **Automated metrics** | Implement BLEU/COMET scoring alongside human judgments | Python, `sacrebleu`, `unbabel-comet` |
 | **Prompt A/B testing** | Design experiments varying glossary injection, domain context, instruction style | Prompt engineering |
 | **Git reproducibility** | Test how different translation strategies affect diff quality for version control | Git, analysis |
 
@@ -491,35 +509,51 @@ These side-projects produce results that feed into the main website and dataset.
 
 ## Skills You'll Practice
 
-- **CLI development**: Building an interactive command-line tool
+- **Python CLI development**: Building an interactive command-line tool with Typer, Rich, and questionary
 - **API integration**: Working with LLM APIs (Anthropic, OpenAI, Google)
+- **Data modelling**: Pydantic schemas, JSON data validation, dataset management
 - **Web development**: Static site generation, data visualization with Chart.js
-- **Data engineering**: Designing schemas, validating data, managing JSON datasets
 - **CI/CD**: GitHub Actions for validation and deployment
 - **Scientific methodology**: Controlled comparisons, Elo rating systems, reproducible experiments
 
 ## Prerequisites
 
-- **Node.js** (v20+) and npm -- for building the CLI and website
+- **Python** (3.11+) and [**uv**](https://docs.astral.sh/uv/) -- for package management and running the CLI
 - **Git** and a **GitHub** account with access to the QuantEcon org
 - **API keys** -- we'll provide Anthropic and OpenAI keys for the project
-- **VS Code** (recommended) -- for editing JSON data and TypeScript
+- **VS Code** (recommended) -- for editing JSON data and Python
 
 ## Getting Started
 
 1. Read the `action-translation` [README](../../README.md) to understand what the tool does
 2. Look at the existing glossary: `glossary/zh-cn.json` (357 terms) -- this is your seed data
 3. Browse a QuantEcon lecture series and pick one that interests you
-4. Set up the new repo and start with the schema design
-5. Build `qebench stats` first (simplest command, proves the data layer works)
-6. Then build `qebench translate` (the main fun loop)
+4. Set up the new repo: `uv init`, add dependencies (`typer`, `rich`, `questionary`, `pydantic`)
+5. Define Pydantic models for terms/sentences/paragraphs and write the seed script
+6. Build `qebench stats` first (simplest command, proves the data layer works)
+7. Then build `qebench translate` (the main fun loop)
+
+## Technology Stack
+
+| Role | Library | Why |
+|---|---|---|
+| CLI framework | [Typer](https://typer.tiangolo.com/) | Type-hint driven, auto help/completion, built on Click |
+| Terminal UI | [Rich](https://rich.readthedocs.io/) | Panels, tables, progress bars, styled text — all the mockup layouts |
+| Interactive prompts | [questionary](https://questionary.readthedocs.io/) | Select, input, confirm — mature, used by 20k+ projects |
+| Data validation | [Pydantic](https://docs.pydantic.dev/) | Type-safe models, auto JSON Schema generation |
+| LLM providers | `anthropic`, `openai` | First-class Python SDKs |
+| Testing | [pytest](https://pytest.org/) | Standard Python test framework |
+| Package management | [uv](https://docs.astral.sh/uv/) | Fast, modern Python packaging |
 
 ## Resources
 
+- [Typer docs](https://typer.tiangolo.com/) -- CLI framework (tutorial is excellent)
+- [Rich docs](https://rich.readthedocs.io/) -- terminal formatting library
+- [questionary docs](https://questionary.readthedocs.io/) -- interactive prompts
+- [Pydantic docs](https://docs.pydantic.dev/) -- data validation and JSON Schema
 - [Anthropic API docs](https://docs.anthropic.com/)
 - [OpenAI API docs](https://platform.openai.com/docs/)
 - [Chart.js](https://www.chartjs.org/) -- charts for the website
-- [JSON Schema](https://json-schema.org/) -- data validation
 - [Elo rating system](https://en.wikipedia.org/wiki/Elo_rating_system) -- for model rankings
 - [COMET metric](https://github.com/Unbabel/COMET) -- for summer phase
-- [Ink (React for CLI)](https://github.com/vadimdemedes/ink) -- optional: rich terminal UI
+- [uv docs](https://docs.astral.sh/uv/) -- Python package management
