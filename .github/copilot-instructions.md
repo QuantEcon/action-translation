@@ -138,6 +138,24 @@ gh release create vX.Y.Z --title "..." --notes-file .tmp/release-notes.md > .tmp
 
 The `.tmp/` folder is committed (via `.gitkeep`) but its contents are git-ignored.
 
+### Addressing Copilot PR Review Comments
+
+After pushing a PR, Copilot may leave review comments. To address them:
+
+1. **Fetch review comments** — get comment IDs:
+   ```bash
+   gh api repos/QuantEcon/action-translation/pulls/PR_NUM/comments \
+     --jq '.[] | {id, path, line, body: (.body | split("\n")[0])}' \
+     > .tmp/pr-comments.txt && cat .tmp/pr-comments.txt
+   ```
+2. **Push fixes** to the PR branch addressing the feedback
+3. **Reply to each comment** — write reply to a file, then post:
+   ```bash
+   gh api repos/QuantEcon/action-translation/pulls/PR_NUM/comments/COMMENT_ID/replies \
+     -f body="$(cat .tmp/reply.txt)" 2>&1 | jq -r '.html_url'
+   ```
+4. **Resolve threads** on the GitHub web interface
+
 ---
 
 ## E2E Testing Tool (`tool-test-action-on-github/`)
