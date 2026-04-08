@@ -102,7 +102,7 @@ function formatApiError(error: unknown): string {
   }
   if (error instanceof APIError) {
     if (error.message?.includes('overloaded')) {
-      return 'Anthropic API is temporarily overloaded. The action will retry automatically.';
+      return 'Anthropic API is temporarily overloaded. Retries exhausted — please try again later.';
     }
     return `API error (${error.status}): ${error.message}`;
   }
@@ -143,6 +143,7 @@ export class TranslationService {
    * - RateLimitError (429)
    * - APIConnectionError (network issues)
    * - APIError with 5xx status (server errors)
+   * - APIError with overloaded_error (status undefined)
    *
    * Does NOT retry on:
    * - AuthenticationError (invalid API key)
@@ -171,7 +172,7 @@ export class TranslationService {
           error instanceof APIConnectionError ||
           (error instanceof APIError && (
             (error.status !== undefined && error.status >= 500) ||
-            error.status === undefined  // overloaded_error has no HTTP status
+            (error.status === undefined && error.message?.includes('overloaded'))  // overloaded_error
           ));
 
         if (!isRetryable || attempt === maxRetries) {
