@@ -128,6 +128,15 @@ function badRequestError(msg: string) {
 function serverError(status: number, msg: string) {
   return new APIError(status, undefined, msg, null as any);
 }
+
+function overloadedError() {
+  return new APIError(
+    undefined,
+    { type: 'error', error: { type: 'overloaded_error', message: 'Overloaded' } },
+    '{"type":"error","error":{"details":null,"type":"overloaded_error","message":"Overloaded"}}',
+    null as any,
+  );
+}
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 // Speed up tests by reducing retry delays
@@ -232,6 +241,40 @@ describe('TranslationService - Retry Logic', () => {
 
       expect(result.success).toBe(true);
       expect(mockStream).toHaveBeenCalledTimes(2);
+    });
+
+    it('should retry on overloaded_error (APIError with undefined status) and succeed', async () => {
+      mockFinalMessage
+        .mockRejectedValueOnce(overloadedError())
+        .mockResolvedValueOnce(createSuccessResponse());
+
+      const result = await service.translateSection({
+        mode: 'new',
+        sourceLanguage: 'en',
+        targetLanguage: 'zh-cn',
+        englishSection: '## Test\n\nContent',
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockStream).toHaveBeenCalledTimes(2);
+    });
+
+    it('should fail after max retries on persistent overloaded_error', async () => {
+      mockFinalMessage
+        .mockRejectedValueOnce(overloadedError())
+        .mockRejectedValueOnce(overloadedError())
+        .mockRejectedValueOnce(overloadedError());
+
+      const result = await service.translateSection({
+        mode: 'new',
+        sourceLanguage: 'en',
+        targetLanguage: 'zh-cn',
+        englishSection: '## Test\n\nContent',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('overloaded');
+      expect(mockStream).toHaveBeenCalledTimes(3);
     });
 
     it('should retry up to maxRetries times then fail', async () => {

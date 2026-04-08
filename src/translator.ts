@@ -101,6 +101,9 @@ function formatApiError(error: unknown): string {
     return `Bad request: ${error.message}. This may indicate an issue with the prompt or content.`;
   }
   if (error instanceof APIError) {
+    if (error.message?.includes('overloaded')) {
+      return 'Anthropic API is temporarily overloaded. The action will retry automatically.';
+    }
     return `API error (${error.status}): ${error.message}`;
   }
   if (error instanceof Error) {
@@ -166,7 +169,10 @@ export class TranslationService {
         const isRetryable =
           error instanceof RateLimitError ||
           error instanceof APIConnectionError ||
-          (error instanceof APIError && error.status !== undefined && error.status >= 500);
+          (error instanceof APIError && (
+            (error.status !== undefined && error.status >= 500) ||
+            error.status === undefined  // overloaded_error has no HTTP status
+          ));
 
         if (!isRetryable || attempt === maxRetries) {
           throw error;
