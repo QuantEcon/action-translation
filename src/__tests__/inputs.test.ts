@@ -418,7 +418,7 @@ describe('validatePREvent (sync mode)', () => {
       expect(result.isResync).toBe(true);
     });
 
-    it('should accept \\translate-resync with trailing text', () => {
+    it('should accept \translate-resync with trailing text as language argument', () => {
       const context = {
         eventName: 'issue_comment',
         payload: {
@@ -437,6 +437,71 @@ describe('validatePREvent (sync mode)', () => {
       const result = validatePREvent(context, false);
       expect(result.isResync).toBe(true);
       expect(result.prNumber).toBe(42);
+      expect(result.resyncLanguage).toBe('please');
+    });
+
+    it('should parse language target from \translate-resync fa', () => {
+      const context = {
+        eventName: 'issue_comment',
+        payload: {
+          action: 'created',
+          issue: {
+            number: 42,
+            pull_request: { url: 'https://api.github.com/repos/owner/repo/pulls/42' },
+          },
+          comment: {
+            body: '\\translate-resync fa',
+            author_association: 'COLLABORATOR',
+          },
+        },
+      };
+
+      const result = validatePREvent(context, false);
+      expect(result.isResync).toBe(true);
+      expect(result.prNumber).toBe(42);
+      expect(result.resyncLanguage).toBe('fa');
+    });
+
+    it('should parse language target from \translate-resync zh-cn', () => {
+      const context = {
+        eventName: 'issue_comment',
+        payload: {
+          action: 'created',
+          issue: {
+            number: 42,
+            pull_request: { url: 'https://api.github.com/repos/owner/repo/pulls/42' },
+          },
+          comment: {
+            body: '\\translate-resync zh-cn',
+            author_association: 'MEMBER',
+          },
+        },
+      };
+
+      const result = validatePREvent(context, false);
+      expect(result.isResync).toBe(true);
+      expect(result.resyncLanguage).toBe('zh-cn');
+    });
+
+    it('should lowercase the language argument', () => {
+      const context = {
+        eventName: 'issue_comment',
+        payload: {
+          action: 'created',
+          issue: {
+            number: 42,
+            pull_request: { url: 'https://api.github.com/repos/owner/repo/pulls/42' },
+          },
+          comment: {
+            body: '\\translate-resync FA',
+            author_association: 'MEMBER',
+          },
+        },
+      };
+
+      const result = validatePREvent(context, false);
+      expect(result.isResync).toBe(true);
+      expect(result.resyncLanguage).toBe('fa');
     });
 
     it('should ignore comments not starting with \\translate-resync (no-op)', () => {
