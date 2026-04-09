@@ -54,7 +54,7 @@ jobs:
           github-token: ${{ secrets.TRANSLATION_PAT }}
 ```
 
-The `issue_comment` trigger enables the `\translate-resync` command — comment it on any merged PR to re-trigger sync (useful for recovering from failures).
+The `issue_comment` trigger enables the `\translate-resync` command — comment it on any merged PR to re-trigger sync (useful for recovering from failures). To retrigger only one language, add the code: `\translate-resync fa` or `\translate-resync zh-cn`.
 
 ### CLI
 

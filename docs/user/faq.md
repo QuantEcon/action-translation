@@ -47,10 +47,19 @@ Check that:
 
 Yes. Comment `\translate-resync` on the **merged** PR in the source repo. The workflow will re-run the sync for that PR's changed files.
 
+To retrigger only a specific language, add the language code:
+
+```
+\translate-resync fa        # retrigger Farsi only
+\translate-resync zh-cn     # retrigger Chinese only
+\translate-resync            # retrigger all languages (default)
+```
+
 Requirements:
 - The workflow must include the `issue_comment` trigger (see [Action Reference](action-reference.md) for the YAML)
 - The PR must be merged (resync on open PRs is ignored)
 - The comment body must start with `\translate-resync`
+- The language code (if provided) must match a supported language; unsupported values are ignored with a warning and fall back to all-language resync
 
 For drift recovery beyond a single PR, use the CLI `forward` command instead — it works on any file regardless of PR history.
 
@@ -62,7 +71,7 @@ When the sync workflow encounters an error (API failure, parsing error, etc.), i
 - Recovery instructions including the `\translate-resync` command
 - The label `translation-sync-failure`
 
-To recover, fix the underlying issue and comment `\translate-resync` on the original merged PR.
+To recover, fix the underlying issue and comment `\translate-resync` on the original merged PR. To retry only a specific language, use `\translate-resync zh-cn` or `\translate-resync fa`.
 
 ### Does the action post any status updates?
 
