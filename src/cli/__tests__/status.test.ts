@@ -356,6 +356,52 @@ describe('checkFileStatus', () => {
     expect(result.flags).toContain('NOT_FOUND');
     expect(result.details).toContain('not found in either repo');
   });
+
+  it('should NOT flag MISSING_HEADINGMAP for title-only files (no ## sections)', async () => {
+    const sourceDir = path.join(tmpDir, 'source', 'lectures');
+    const targetDir = path.join(tmpDir, 'target', 'lectures');
+
+    // Title-only source (no ## headings)
+    const titleOnlySource = `---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+---
+
+# Status
+
+This file has only a title, no sections.
+`;
+
+    // Title-only target (no ## headings, no heading-map needed)
+    const titleOnlyTarget = `---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+---
+
+# 状态
+
+这个文件只有标题，没有章节。
+`;
+
+    writeMd(path.join(sourceDir, 'status.md'), titleOnlySource);
+    writeMd(path.join(targetDir, 'status.md'), titleOnlyTarget);
+
+    const result = await checkFileStatus(
+      'status.md',
+      path.join(tmpDir, 'source'),
+      path.join(tmpDir, 'target'),
+      'lectures',
+    );
+
+    expect(result.status).toBe('ALIGNED');
+    expect(result.flags).not.toContain('MISSING_HEADINGMAP');
+    expect(result.sourceSections).toBe(0);
+    expect(result.targetSections).toBe(0);
+  });
 });
 
 // ============================================================================

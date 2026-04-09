@@ -121,7 +121,7 @@ jobs:
           github-token: ${{ secrets.TRANSLATION_PAT }}
 ```
 
-The `issue_comment` trigger enables the `\translate-resync` command — comment it on any merged PR to retry a failed sync.
+The `issue_comment` trigger enables the `\translate-resync` command — comment it on any merged PR to retry a failed sync. To retrigger only one language, add the language code: `\translate-resync fa` or `\translate-resync zh-cn`. Bare `\translate-resync` retriggers all languages.
 
 ### Multi-language sync
 
@@ -234,7 +234,7 @@ When a PR is merged, sync mode:
 8. **Creates a PR** — Commits all updated files to a branch in the target repo
 9. **Posts a success comment** — Confirms sync completion on the source PR with a link to the translation PR
 
-If any files fail to process, the action opens a GitHub Issue with error details and a link to the source PR. Comment `\translate-resync` on the merged PR to retry.
+If any files fail to process, the action opens a GitHub Issue with error details and a link to the source PR. Comment `\translate-resync` on the merged PR to retry all languages, or `\translate-resync fa` to retry a specific language.
 
 For new files, the entire document is translated in a single call (NEW mode).
 

@@ -22,6 +22,7 @@ import {
   updateHeadingMap, 
   lookupTargetHeading,
   injectHeadingMap,
+  buildHeadingMap,
   HeadingMap
 } from './heading-map.js';
 
@@ -514,7 +515,33 @@ export class FileProcessor {
       throw new Error(`Full translation failed: ${result.error}`);
     }
 
-    return result.translatedSection || '';
+    const translatedContent = result.translatedSection || '';
+
+    // Build heading-map from source and translated sections.
+    // Wrapped in try/catch so a malformed translation (e.g. missing # title)
+    // doesn't fail the entire sync — we fall back to the raw translated content.
+    try {
+      const sourceParsed = await this.parser.parseDocumentComponents(content, filepath);
+      const translatedParsed = await this.parser.parseDocumentComponents(translatedContent, filepath);
+
+      const { map: headingMap } = buildHeadingMap(
+        sourceParsed.sections,
+        translatedParsed.sections,
+      );
+
+      const translatedTitle = translatedParsed.titleText || '';
+
+      // Inject heading-map into translated content
+      if (headingMap.size > 0 || translatedTitle) {
+        this.log(`Injecting heading-map with ${headingMap.size} entries and title "${translatedTitle}"`);
+        return injectHeadingMap(translatedContent, headingMap, translatedTitle);
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      core.warning(`Failed to build heading-map for ${filepath}: ${msg}. Returning translated content without heading-map.`);
+    }
+
+    return translatedContent;
   }
 
   /**

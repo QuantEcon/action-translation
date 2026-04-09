@@ -1,4 +1,7 @@
 import { Section } from '../types.js';
+import { FileProcessor } from '../file-processor.js';
+import { TranslationService } from '../translator.js';
+import { extractHeadingMap, extractTranslationTitle } from '../heading-map.js';
 
 /**
  * Tests for FileProcessor key methods
@@ -1239,5 +1242,186 @@ Market equilibrium occurs when supply equals demand.
       expect(merged[0].subsections[0].heading).toBe('#### 四级');
       expect(merged[0].subsections[0].subsections[0].heading).toBe('##### 五级');
     });
+  });
+});
+
+// ============================================================================
+// processFull — Heading-Map Injection
+// ============================================================================
+
+describe('FileProcessor.processFull — heading-map injection', () => {
+  let processor: FileProcessor;
+  let mockTranslator: jest.Mocked<TranslationService>;
+
+  beforeEach(() => {
+    mockTranslator = {
+      translateSection: jest.fn(),
+      translateFullDocument: jest.fn(),
+    } as any;
+    processor = new FileProcessor(mockTranslator, false);
+  });
+
+  it('should inject heading-map into translated new file with sections', async () => {
+    const sourceContent = `---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+---
+
+# Introduction
+
+Intro text.
+
+## Getting Started
+
+Content here.
+
+## Advanced Topics
+
+More content.
+`;
+
+    const translatedContent = `---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+---
+
+# 介绍
+
+介绍文字。
+
+## 入门指南
+
+内容在这里。
+
+## 高级主题
+
+更多内容。
+`;
+
+    mockTranslator.translateFullDocument.mockResolvedValue({
+      success: true,
+      translatedSection: translatedContent,
+    });
+
+    const result = await processor.processFull(
+      sourceContent,
+      'test.md',
+      'en',
+      'zh-cn',
+    );
+
+    // Should contain translation metadata
+    const headingMap = extractHeadingMap(result);
+    expect(headingMap.size).toBe(2);
+    expect(headingMap.get('Getting Started')).toBe('入门指南');
+    expect(headingMap.get('Advanced Topics')).toBe('高级主题');
+
+    // Should contain translated title
+    const title = extractTranslationTitle(result);
+    expect(title).toBe('介绍');
+  });
+
+  it('should handle title-only files (no sections) without error', async () => {
+    const sourceContent = `---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+---
+
+# Status
+
+This file has no sections.
+`;
+
+    const translatedContent = `---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+---
+
+# 状态
+
+这个文件没有章节。
+`;
+
+    mockTranslator.translateFullDocument.mockResolvedValue({
+      success: true,
+      translatedSection: translatedContent,
+    });
+
+    const result = await processor.processFull(
+      sourceContent,
+      'status.md',
+      'en',
+      'zh-cn',
+    );
+
+    // Title-only file: title should still be injected
+    const title = extractTranslationTitle(result);
+    expect(title).toBe('状态');
+
+    // No sections → no heading entries
+    const headingMap = extractHeadingMap(result);
+    expect(headingMap.size).toBe(0);
+  });
+
+  it('should handle subsections in heading-map', async () => {
+    const sourceContent = `---
+config: test
+---
+
+# Lecture
+
+Intro.
+
+## Main Section
+
+Content.
+
+### Subsection A
+
+Sub content.
+`;
+
+    const translatedContent = `---
+config: test
+---
+
+# 讲座
+
+简介。
+
+## 主要部分
+
+内容。
+
+### 子节 A
+
+子内容。
+`;
+
+    mockTranslator.translateFullDocument.mockResolvedValue({
+      success: true,
+      translatedSection: translatedContent,
+    });
+
+    const result = await processor.processFull(
+      sourceContent,
+      'lecture.md',
+      'en',
+      'zh-cn',
+    );
+
+    const headingMap = extractHeadingMap(result);
+    expect(headingMap.size).toBe(2);
+    expect(headingMap.get('Main Section')).toBe('主要部分');
+    // Subsection uses path-based key
+    expect(headingMap.get('Main Section::Subsection A')).toBe('子节 A');
   });
 });

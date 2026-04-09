@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Heading-map injection for new files**: `processFull()` now builds and injects a `translation:` frontmatter block (heading-map + title) into newly translated files. Previously, only section-based updates via `processSectionBased` got heading-maps; new files were missing them.
+- **`MISSING_HEADINGMAP` false positive for title-only files**: `translate status` no longer flags files with no `##` sections as missing a heading-map. These files have only a title — an empty heading-map is expected.
+
+### Added
+- **4 tests**: 3 for `processFull` heading-map injection, 1 for title-only status check (972 → 976 total)
+
 ## [0.14.0] - 2026-04-09
 
 ### Fixed

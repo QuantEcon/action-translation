@@ -60,7 +60,7 @@ jobs:
           github-token: ${{ secrets.TRANSLATION_PAT }}
 ```
 
-This workflow triggers whenever a PR that touches Markdown files in `lectures/` is merged. It detects which sections changed and creates a translation PR in the target repository. The `issue_comment` trigger enables re-syncing by commenting `\translate-resync` on a merged PR.
+This workflow triggers whenever a PR that touches Markdown files in `lectures/` is merged. It detects which sections changed and creates a translation PR in the target repository. The `issue_comment` trigger enables re-syncing by commenting `\translate-resync` on a merged PR. To retrigger only one language, add the language code (e.g., `\translate-resync zh-cn`).
 
 ## Step 3: Add the review workflow (optional)
 
@@ -104,7 +104,7 @@ This posts an AI-generated quality review comment on each translation PR, includ
 4. **The review workflow** (if configured) automatically reviews the translation PR and posts quality feedback
 5. **A human reviewer** approves and merges the translation PR
 
-If the sync fails, the action automatically opens a GitHub Issue with error details and recovery instructions. You can re-run the sync by commenting `\translate-resync` on the merged PR.
+If the sync fails, the action automatically opens a GitHub Issue with error details and recovery instructions. You can re-run the sync by commenting `\translate-resync` on the merged PR, or target a specific language with `\translate-resync fa`.
 
 Only changed sections are translated — the rest of the document is preserved exactly as-is.
 
