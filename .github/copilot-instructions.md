@@ -8,7 +8,7 @@
 - **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 
-**Current Version**: v0.14.0 | **Tests**: 976 (39 suites) | **Glossary**: 357 terms (zh-cn, fa)
+**Current Version**: v0.14.1 | **Tests**: 976 (39 suites) | **Glossary**: 357 terms (zh-cn, fa)
 
 ---
 

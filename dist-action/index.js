@@ -19736,10 +19736,10 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
       (0, command_1.issueCommand)("error", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
     exports2.error = error3;
-    function warning4(message, properties = {}) {
+    function warning5(message, properties = {}) {
       (0, command_1.issueCommand)("warning", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
-    exports2.warning = warning4;
+    exports2.warning = warning5;
     function notice(message, properties = {}) {
       (0, command_1.issueCommand)("notice", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
@@ -33425,6 +33425,37 @@ ${bodyContent}`;
     return content;
   }
 }
+function buildHeadingMap(sourceSections, targetSections) {
+  const map2 = /* @__PURE__ */ new Map();
+  const warnings = [];
+  const cleanHeading = (heading) => {
+    return MystParser.stripMystRoles(heading.replace(/^#+\s+/, "").trim());
+  };
+  function processLevel(sourceSecs, targetSecs, parentPath) {
+    const maxLen = Math.max(sourceSecs.length, targetSecs.length);
+    for (let i = 0; i < maxLen; i++) {
+      const source = i < sourceSecs.length ? sourceSecs[i] : null;
+      const target = i < targetSecs.length ? targetSecs[i] : null;
+      if (source && target) {
+        const sourceText = cleanHeading(source.heading);
+        const targetText = cleanHeading(target.heading);
+        const key = parentPath ? `${parentPath}${PATH_SEPARATOR}${sourceText}` : sourceText;
+        map2.set(key, targetText);
+        if (source.subsections.length > 0 || target.subsections.length > 0) {
+          processLevel(source.subsections, target.subsections, key);
+        }
+      } else if (source && !target) {
+        const sourceText = cleanHeading(source.heading);
+        warnings.push(`SOURCE_ONLY: "${sourceText}" (position ${i + 1}) has no matching target section`);
+      } else if (!source && target) {
+        const targetText = cleanHeading(target.heading);
+        warnings.push(`TARGET_ONLY: "${targetText}" (position ${i + 1}) has no matching source section`);
+      }
+    }
+  }
+  processLevel(sourceSections, targetSections, "");
+  return { map: map2, warnings };
+}
 
 // dist/file-processor.js
 var FileProcessor = class {
@@ -33711,7 +33742,21 @@ ${bodyLines.join("\n")}`;
     if (!result.success) {
       throw new Error(`Full translation failed: ${result.error}`);
     }
-    return result.translatedSection || "";
+    const translatedContent = result.translatedSection || "";
+    try {
+      const sourceParsed = await this.parser.parseDocumentComponents(content, filepath);
+      const translatedParsed = await this.parser.parseDocumentComponents(translatedContent, filepath);
+      const { map: headingMap } = buildHeadingMap(sourceParsed.sections, translatedParsed.sections);
+      const translatedTitle = translatedParsed.titleText || "";
+      if (headingMap.size > 0 || translatedTitle) {
+        this.log(`Injecting heading-map with ${headingMap.size} entries and title "${translatedTitle}"`);
+        return injectHeadingMap(translatedContent, headingMap, translatedTitle);
+      }
+    } catch (error3) {
+      const msg = error3 instanceof Error ? error3.message : String(error3);
+      core6.warning(`Failed to build heading-map for ${filepath}: ${msg}. Returning translated content without heading-map.`);
+    }
+    return translatedContent;
   }
   /**
    * Parse translated content to extract subsections and strip them from parent content
