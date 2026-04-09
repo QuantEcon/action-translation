@@ -120,10 +120,16 @@ async function runSync(): Promise<void> {
 
     // Validate this is a merged PR event, test mode, or resync comment
     core.info('Validating PR event...');
-    const { merged, prNumber, isTestMode, isResync } = validatePREvent(github.context, inputs.testMode);
+    const { merged, prNumber, isTestMode, isResync, resyncLanguage } = validatePREvent(github.context, inputs.testMode);
 
     if (!merged) {
       core.info('PR was not merged. Exiting.');
+      return;
+    }
+
+    // If resync targets a specific language, skip if this workflow doesn't match
+    if (isResync && resyncLanguage && resyncLanguage !== inputs.targetLanguage) {
+      core.info(`Resync requested for '${resyncLanguage}', skipping (this workflow targets '${inputs.targetLanguage}').`);
       return;
     }
 

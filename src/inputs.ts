@@ -158,6 +158,7 @@ export interface PREventResult {
   prNumber: number;
   isTestMode: boolean;
   isResync: boolean;
+  resyncLanguage?: string;
 }
 
 /** The magic comment that triggers a resync */
@@ -248,6 +249,19 @@ function validateResyncComment(payload: any): PREventResult {
     return noOp;
   }
 
+  // Parse optional language argument: \translate-resync fa
+  const parts = commentBody.split(/\s+/);
+  const requestedLang = parts.length > 1 ? parts[1].toLowerCase() : undefined;
+  const supportedLanguages = new Set(getSupportedLanguages());
+  const resyncLanguage = requestedLang && supportedLanguages.has(requestedLang) ? requestedLang : undefined;
+
+  if (requestedLang && !resyncLanguage) {
+    core.warning(
+      `Ignoring unsupported language '${requestedLang}' in ${RESYNC_COMMAND}. ` +
+      'Proceeding with resync for all languages.'
+    );
+  }
+
   // Authorization: only trusted actors can trigger resync
   const association = payload.comment?.author_association || '';
   if (!TRUSTED_ASSOCIATIONS.has(association)) {
@@ -265,8 +279,12 @@ function validateResyncComment(payload: any): PREventResult {
 
   // Note: issue_comment payload doesn't include merged status directly.
   // The caller (runSync) will verify the PR is merged via API.
-  core.info(`🔄 RESYNC triggered by comment on PR #${prNumber}`);
-  return { merged: true, prNumber, isTestMode: false, isResync: true };
+  if (resyncLanguage) {
+    core.info(`🔄 RESYNC triggered by comment on PR #${prNumber} for language '${resyncLanguage}'`);
+  } else {
+    core.info(`🔄 RESYNC triggered by comment on PR #${prNumber} (all languages)`);
+  }
+  return { merged: true, prNumber, isTestMode: false, isResync: true, resyncLanguage };
 }
 
 /**
