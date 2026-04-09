@@ -251,7 +251,16 @@ function validateResyncComment(payload: any): PREventResult {
 
   // Parse optional language argument: \translate-resync fa
   const parts = commentBody.split(/\s+/);
-  const resyncLanguage = parts.length > 1 ? parts[1].toLowerCase() : undefined;
+  const requestedLang = parts.length > 1 ? parts[1].toLowerCase() : undefined;
+  const supportedLanguages = new Set(getSupportedLanguages());
+  const resyncLanguage = requestedLang && supportedLanguages.has(requestedLang) ? requestedLang : undefined;
+
+  if (requestedLang && !resyncLanguage) {
+    core.warning(
+      `Ignoring unsupported language '${requestedLang}' in ${RESYNC_COMMAND}. ` +
+      'Proceeding with resync for all languages.'
+    );
+  }
 
   // Authorization: only trusted actors can trigger resync
   const association = payload.comment?.author_association || '';

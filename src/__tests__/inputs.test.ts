@@ -416,9 +416,10 @@ describe('validatePREvent (sync mode)', () => {
       expect(result.prNumber).toBe(42);
       expect(result.isTestMode).toBe(false);
       expect(result.isResync).toBe(true);
+      expect(result.resyncLanguage).toBeUndefined();
     });
 
-    it('should accept \translate-resync with trailing text as language argument', () => {
+    it('should ignore unsupported language in trailing text (all-language resync)', () => {
       const context = {
         eventName: 'issue_comment',
         payload: {
@@ -437,7 +438,7 @@ describe('validatePREvent (sync mode)', () => {
       const result = validatePREvent(context, false);
       expect(result.isResync).toBe(true);
       expect(result.prNumber).toBe(42);
-      expect(result.resyncLanguage).toBe('please');
+      expect(result.resyncLanguage).toBeUndefined();
     });
 
     it('should parse language target from \translate-resync fa', () => {
