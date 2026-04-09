@@ -203,9 +203,9 @@ export async function checkFileStatus(
     details.push(`${targetSectionCount} target vs ${sourceSectionCount} source sections`);
   }
 
-  // Check heading-map
+  // Check heading-map (only flag if the document actually has sections to map)
   const headingMap = extractHeadingMap(targetContent);
-  if (headingMap.size === 0) {
+  if (headingMap.size === 0 && sourceSectionCount > 0) {
     flags.push('MISSING_HEADINGMAP');
   }
 

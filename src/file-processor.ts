@@ -24,6 +24,7 @@ import {
   injectHeadingMap,
   HeadingMap
 } from './heading-map.js';
+import { buildHeadingMap } from './cli/commands/headingmap.js';
 
 export class FileProcessor {
   private parser: MystParser;
@@ -514,7 +515,26 @@ export class FileProcessor {
       throw new Error(`Full translation failed: ${result.error}`);
     }
 
-    return result.translatedSection || '';
+    const translatedContent = result.translatedSection || '';
+
+    // Build heading-map from source and translated sections
+    const sourceParsed = await this.parser.parseDocumentComponents(content, filepath);
+    const translatedParsed = await this.parser.parseDocumentComponents(translatedContent, filepath);
+
+    const { map: headingMap } = buildHeadingMap(
+      sourceParsed.sections,
+      translatedParsed.sections,
+    );
+
+    const translatedTitle = translatedParsed.titleText || '';
+
+    // Inject heading-map into translated content
+    if (headingMap.size > 0 || translatedTitle) {
+      this.log(`Injecting heading-map with ${headingMap.size} entries and title "${translatedTitle}"`);
+      return injectHeadingMap(translatedContent, headingMap, translatedTitle);
+    }
+
+    return translatedContent;
   }
 
   /**
