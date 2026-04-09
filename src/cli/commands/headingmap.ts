@@ -19,8 +19,9 @@ import {
   extractHeadingMap,
   extractTranslationTitle,
   injectHeadingMap,
-  PATH_SEPARATOR,
+  buildHeadingMap,
 } from '../../heading-map.js';
+export { buildHeadingMap } from '../../heading-map.js';
 import { discoverMarkdownFiles, resolveFilePairs, applyExcludes } from './status.js';
 import { readFileState, writeFileState } from '../translate-state.js';
 
@@ -65,63 +66,6 @@ export interface HeadingmapResult {
 // ============================================================================
 // HEADING-MAP GENERATION
 // ============================================================================
-
-/**
- * Clean heading text by removing ## markers and stripping MyST inline roles.
- */
-function cleanHeading(heading: string): string {
-  return MystParser.stripMystRoles(heading.replace(/^#+\s+/, '').trim());
-}
-
-/**
- * Build a heading-map from matched source and target sections.
- * Uses position-based matching (same as section-matcher.ts).
- * Handles subsections recursively with path-based keys.
- */
-export function buildHeadingMap(
-  sourceSections: Section[],
-  targetSections: Section[],
-): { map: HeadingMap; warnings: string[] } {
-  const map: HeadingMap = new Map();
-  const warnings: string[] = [];
-
-  function processLevel(
-    sourceSecs: Section[],
-    targetSecs: Section[],
-    parentPath: string,
-  ): void {
-    const maxLen = Math.max(sourceSecs.length, targetSecs.length);
-
-    for (let i = 0; i < maxLen; i++) {
-      const source = i < sourceSecs.length ? sourceSecs[i] : null;
-      const target = i < targetSecs.length ? targetSecs[i] : null;
-
-      if (source && target) {
-        const sourceText = cleanHeading(source.heading);
-        const targetText = cleanHeading(target.heading);
-        const key = parentPath
-          ? `${parentPath}${PATH_SEPARATOR}${sourceText}`
-          : sourceText;
-
-        map.set(key, targetText);
-
-        // Recurse into subsections
-        if (source.subsections.length > 0 || target.subsections.length > 0) {
-          processLevel(source.subsections, target.subsections, key);
-        }
-      } else if (source && !target) {
-        const sourceText = cleanHeading(source.heading);
-        warnings.push(`SOURCE_ONLY: "${sourceText}" (position ${i + 1}) has no matching target section`);
-      } else if (!source && target) {
-        const targetText = cleanHeading(target.heading);
-        warnings.push(`TARGET_ONLY: "${targetText}" (position ${i + 1}) has no matching source section`);
-      }
-    }
-  }
-
-  processLevel(sourceSections, targetSections, '');
-  return { map, warnings };
-}
 
 /**
  * Generate or update heading-map for a single file pair.

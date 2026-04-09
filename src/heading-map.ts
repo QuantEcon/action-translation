@@ -337,3 +337,57 @@ export function injectHeadingMap(
     return content;
   }
 }
+
+/**
+ * Build a heading-map from matched source and target sections.
+ * Uses position-based matching (same as section-matcher.ts).
+ * Handles subsections recursively with path-based keys.
+ */
+export function buildHeadingMap(
+  sourceSections: Section[],
+  targetSections: Section[],
+): { map: HeadingMap; warnings: string[] } {
+  const map: HeadingMap = new Map();
+  const warnings: string[] = [];
+
+  const cleanHeading = (heading: string): string => {
+    return MystParser.stripMystRoles(heading.replace(/^#+\s+/, '').trim());
+  };
+
+  function processLevel(
+    sourceSecs: Section[],
+    targetSecs: Section[],
+    parentPath: string,
+  ): void {
+    const maxLen = Math.max(sourceSecs.length, targetSecs.length);
+
+    for (let i = 0; i < maxLen; i++) {
+      const source = i < sourceSecs.length ? sourceSecs[i] : null;
+      const target = i < targetSecs.length ? targetSecs[i] : null;
+
+      if (source && target) {
+        const sourceText = cleanHeading(source.heading);
+        const targetText = cleanHeading(target.heading);
+        const key = parentPath
+          ? `${parentPath}${PATH_SEPARATOR}${sourceText}`
+          : sourceText;
+
+        map.set(key, targetText);
+
+        // Recurse into subsections
+        if (source.subsections.length > 0 || target.subsections.length > 0) {
+          processLevel(source.subsections, target.subsections, key);
+        }
+      } else if (source && !target) {
+        const sourceText = cleanHeading(source.heading);
+        warnings.push(`SOURCE_ONLY: "${sourceText}" (position ${i + 1}) has no matching target section`);
+      } else if (!source && target) {
+        const targetText = cleanHeading(target.heading);
+        warnings.push(`TARGET_ONLY: "${targetText}" (position ${i + 1}) has no matching source section`);
+      }
+    }
+  }
+
+  processLevel(sourceSections, targetSections, '');
+  return { map, warnings };
+}
