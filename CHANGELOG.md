@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-04-09
+
+### Fixed
+- **Retry on Anthropic `overloaded_error`**: The `overloaded_error` (APIError with `status: undefined`) is now retried with exponential backoff instead of failing immediately. Narrowed to match `overloaded` in the error message so unrelated status-less errors are not retried. Improved `formatApiError` to show a clear message when retries are exhausted. Updated JSDoc to document the new retry case. Fixes #57
+
+### Added
+- **Language-targeted `\translate-resync` command**: `\translate-resync fa` triggers only the Farsi workflow; `\translate-resync zh-cn` triggers only zh-cn. Bare `\translate-resync` (no argument) still triggers all languages for backward compatibility. Language argument is validated against supported languages; unsupported values are ignored with a warning and fall back to all-language resync. Fixes #58
+- **Copilot PR review workflow** in `copilot-instructions.md`: Documented the fetch → fix → reply → resolve process for addressing Copilot review comments
+- **5 tests**: 2 for overloaded_error retry, 3 for language-targeted resync parsing (967 → 972 total)
+
 ## [0.13.1] - 2026-03-26
 
 ### Fixed

@@ -24104,6 +24104,13 @@ function validateResyncComment(payload) {
     core.info("Ignoring issue_comment without resync command.");
     return noOp;
   }
+  const parts = commentBody.split(/\s+/);
+  const requestedLang = parts.length > 1 ? parts[1].toLowerCase() : void 0;
+  const supportedLanguages = new Set(getSupportedLanguages());
+  const resyncLanguage = requestedLang && supportedLanguages.has(requestedLang) ? requestedLang : void 0;
+  if (requestedLang && !resyncLanguage) {
+    core.warning(`Ignoring unsupported language '${requestedLang}' in ${RESYNC_COMMAND}. Proceeding with resync for all languages.`);
+  }
   const association = payload.comment?.author_association || "";
   if (!TRUSTED_ASSOCIATIONS.has(association)) {
     core.warning(`Ignoring \\translate-resync from user with association '${association}'. Only OWNER, MEMBER, and COLLABORATOR can trigger resync.`);
@@ -24113,8 +24120,12 @@ function validateResyncComment(payload) {
   if (!prNumber) {
     throw new Error("Could not determine PR number from issue_comment payload");
   }
-  core.info(`\u{1F504} RESYNC triggered by comment on PR #${prNumber}`);
-  return { merged: true, prNumber, isTestMode: false, isResync: true };
+  if (resyncLanguage) {
+    core.info(`\u{1F504} RESYNC triggered by comment on PR #${prNumber} for language '${resyncLanguage}'`);
+  } else {
+    core.info(`\u{1F504} RESYNC triggered by comment on PR #${prNumber} (all languages)`);
+  }
+  return { merged: true, prNumber, isTestMode: false, isResync: true, resyncLanguage };
 }
 function validateReviewPREvent(context2) {
   const { eventName, payload } = context2;
@@ -29792,6 +29803,9 @@ function formatApiError(error3) {
     return `Bad request: ${error3.message}. This may indicate an issue with the prompt or content.`;
   }
   if (error3 instanceof APIError) {
+    if (error3.message?.includes("overloaded")) {
+      return "Anthropic API is temporarily overloaded. Retries exhausted \u2014 please try again later.";
+    }
     return `API error (${error3.status}): ${error3.message}`;
   }
   if (error3 instanceof Error) {
@@ -29826,6 +29840,7 @@ var TranslationService = class {
    * - RateLimitError (429)
    * - APIConnectionError (network issues)
    * - APIError with 5xx status (server errors)
+   * - APIError with overloaded_error (status undefined)
    *
    * Does NOT retry on:
    * - AuthenticationError (invalid API key)
@@ -29842,7 +29857,7 @@ var TranslationService = class {
         if (error3 instanceof AuthenticationError || error3 instanceof BadRequestError) {
           throw error3;
         }
-        const isRetryable = error3 instanceof RateLimitError || error3 instanceof APIConnectionError || error3 instanceof APIError && error3.status !== void 0 && error3.status >= 500;
+        const isRetryable = error3 instanceof RateLimitError || error3 instanceof APIConnectionError || error3 instanceof APIError && (error3.status !== void 0 && error3.status >= 500 || error3.status === void 0 && error3.message?.includes("overloaded"));
         if (!isRetryable || attempt === maxRetries) {
           throw error3;
         }
@@ -34423,9 +34438,13 @@ async function runSync() {
   core7.info("Getting action inputs...");
   const inputs = getInputs();
   core7.info("Validating PR event...");
-  const { merged, prNumber, isTestMode, isResync } = validatePREvent(github2.context, inputs.testMode);
+  const { merged, prNumber, isTestMode, isResync, resyncLanguage } = validatePREvent(github2.context, inputs.testMode);
   if (!merged) {
     core7.info("PR was not merged. Exiting.");
+    return;
+  }
+  if (isResync && resyncLanguage && resyncLanguage !== inputs.targetLanguage) {
+    core7.info(`Resync requested for '${resyncLanguage}', skipping (this workflow targets '${inputs.targetLanguage}').`);
     return;
   }
   const octokit = github2.getOctokit(inputs.githubToken);
