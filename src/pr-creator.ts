@@ -31,9 +31,24 @@ export interface PrCreatorConfig {
   sourceRepoOwner: string;
   sourceRepoName: string;
   prNumber: number;
+  sourceCommitSha: string;
   prLabels: string[];
   prReviewers: string[];
   prTeamReviewers: string[];
+}
+
+/**
+ * Machine-readable metadata embedded in translation sync PR bodies.
+ * Used by rebase mode to reconstruct pipeline inputs.
+ */
+export interface TranslationSyncMetadata {
+  sourceRepo: string;
+  sourcePR: number;
+  sourceCommitSha: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  claudeModel: string;
+  files: Array<{ path: string }>;
 }
 
 /**
@@ -243,6 +258,24 @@ export function buildPrBody(
     skippedNotice = `\n\n### ⚠️ Sections Pending Earlier Translation PR\n\nThe following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. If that PR is abandoned, run \`/translate-resync\` to recover.\n\n${lines.join('\n')}`;
   }
 
+  // Build machine-readable metadata for rebase mode
+  const allFilePaths = [
+    ...translatedFiles.map(f => ({ path: f.path })),
+    ...filesToDelete.map(f => ({ path: f.path })),
+  ];
+
+  const metadata: TranslationSyncMetadata = {
+    sourceRepo: `${sourceRepoOwner}/${sourceRepoName}`,
+    sourcePR: prNumber,
+    sourceCommitSha: config.sourceCommitSha,
+    sourceLanguage: config.sourceLanguage,
+    targetLanguage: config.targetLanguage,
+    claudeModel: config.claudeModel,
+    files: allFilePaths,
+  };
+
+  const metadataBlock = `<!-- translation-sync-metadata\n${JSON.stringify(metadata, null, 2)}\n-->`;
+
   return `## Automated Translation Sync
 
 This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoName}](https://github.com/${sourceRepoOwner}/${sourceRepoName}).
@@ -258,7 +291,9 @@ ${filesChangedSection}${skippedNotice}
 - **Model**: ${config.claudeModel}
 
 ---
-*This PR was created automatically by the [translation action](https://github.com/quantecon/action-translation).*`;
+*This PR was created automatically by the [translation action](https://github.com/quantecon/action-translation).*
+
+${metadataBlock}`;
 }
 
 /**
@@ -353,5 +388,41 @@ async function requestReviewers(
   } catch (reviewerError) {
     // Don't fail the entire action if reviewer request fails
     logger.warning(`Could not request reviewers: ${reviewerError instanceof Error ? reviewerError.message : String(reviewerError)}`);
+  }
+}
+
+// =============================================================================
+// METADATA PARSER
+// =============================================================================
+
+/**
+ * Parse machine-readable translation sync metadata from a PR body.
+ * Returns undefined if no metadata block is found or parsing fails.
+ *
+ * Used by rebase mode to reconstruct pipeline inputs from existing PRs.
+ */
+export function parseTranslationSyncMetadata(prBody: string): TranslationSyncMetadata | undefined {
+  const match = prBody.match(/<!-- translation-sync-metadata\n([\s\S]*?)\n-->/);
+  if (!match) return undefined;
+
+  try {
+    const parsed = JSON.parse(match[1]);
+
+    // Validate required fields
+    if (
+      typeof parsed.sourceRepo !== 'string' ||
+      typeof parsed.sourcePR !== 'number' ||
+      typeof parsed.sourceCommitSha !== 'string' ||
+      typeof parsed.sourceLanguage !== 'string' ||
+      typeof parsed.targetLanguage !== 'string' ||
+      typeof parsed.claudeModel !== 'string' ||
+      !Array.isArray(parsed.files)
+    ) {
+      return undefined;
+    }
+
+    return parsed as TranslationSyncMetadata;
+  } catch {
+    return undefined;
   }
 }

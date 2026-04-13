@@ -253,6 +253,7 @@ async function runSync(): Promise<void> {
           sourceRepoOwner: github.context.repo.owner,
           sourceRepoName: github.context.repo.repo,
           prNumber,
+          sourceCommitSha: effectiveSha,
           prLabels: inputs.prLabels,
           prReviewers: inputs.prReviewers,
           prTeamReviewers: inputs.prTeamReviewers,

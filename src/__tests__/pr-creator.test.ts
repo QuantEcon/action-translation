@@ -10,7 +10,7 @@
  * integration tests with the real GitHub Action workflow.
  */
 
-import { buildPrBody, buildPrTitle, buildLabelSet, PrCreatorConfig } from '../pr-creator.js';
+import { buildPrBody, buildPrTitle, buildLabelSet, parseTranslationSyncMetadata, PrCreatorConfig } from '../pr-creator.js';
 import { TranslatedFile } from '../types.js';
 
 // =============================================================================
@@ -26,6 +26,7 @@ const baseConfig: PrCreatorConfig = {
   sourceRepoOwner: 'QuantEcon',
   sourceRepoName: 'lecture-python',
   prNumber: 42,
+  sourceCommitSha: 'abc123def456',
   prLabels: ['action-translation', 'automated'],
   prReviewers: [],
   prTeamReviewers: [],
@@ -212,5 +213,118 @@ describe('buildLabelSet', () => {
   it('should handle undefined source labels', () => {
     const labels = buildLabelSet(['action-translation']);
     expect(labels).toEqual(['action-translation']);
+  });
+});
+
+// =============================================================================
+// METADATA BLOCK TESTS
+// =============================================================================
+
+describe('buildPrBody metadata block', () => {
+  it('should embed translation-sync-metadata HTML comment', () => {
+    const files: TranslatedFile[] = [{ path: 'lectures/intro.md', content: 'content' }];
+    const body = buildPrBody(files, [], baseConfig);
+
+    expect(body).toContain('<!-- translation-sync-metadata');
+    expect(body).toContain('-->');
+  });
+
+  it('should include sourceCommitSha in metadata', () => {
+    const files: TranslatedFile[] = [{ path: 'lectures/intro.md', content: 'content' }];
+    const body = buildPrBody(files, [], baseConfig);
+
+    expect(body).toContain('"sourceCommitSha": "abc123def456"');
+  });
+
+  it('should include source repo and PR number in metadata', () => {
+    const files: TranslatedFile[] = [{ path: 'lectures/intro.md', content: 'content' }];
+    const body = buildPrBody(files, [], baseConfig);
+
+    expect(body).toContain('"sourceRepo": "QuantEcon/lecture-python"');
+    expect(body).toContain('"sourcePR": 42');
+  });
+
+  it('should include all file paths in metadata', () => {
+    const files: TranslatedFile[] = [
+      { path: 'lectures/intro.md', content: 'c1' },
+      { path: 'lectures/ch1.md', content: 'c2' },
+    ];
+    const deleted = [{ path: 'lectures/old.md', sha: 'sha1' }];
+    const body = buildPrBody(files, deleted, baseConfig);
+
+    expect(body).toContain('"path": "lectures/intro.md"');
+    expect(body).toContain('"path": "lectures/ch1.md"');
+    expect(body).toContain('"path": "lectures/old.md"');
+  });
+
+  it('should produce parseable metadata', () => {
+    const files: TranslatedFile[] = [{ path: 'lectures/intro.md', content: 'content' }];
+    const body = buildPrBody(files, [], baseConfig, { title: 'Test', labels: [] });
+    const metadata = parseTranslationSyncMetadata(body);
+
+    expect(metadata).toBeDefined();
+    expect(metadata!.sourceRepo).toBe('QuantEcon/lecture-python');
+    expect(metadata!.sourcePR).toBe(42);
+    expect(metadata!.sourceCommitSha).toBe('abc123def456');
+    expect(metadata!.sourceLanguage).toBe('en');
+    expect(metadata!.targetLanguage).toBe('zh-cn');
+    expect(metadata!.claudeModel).toBe('claude-sonnet-4-20250514');
+    expect(metadata!.files).toEqual([{ path: 'lectures/intro.md' }]);
+  });
+});
+
+// =============================================================================
+// parseTranslationSyncMetadata TESTS
+// =============================================================================
+
+describe('parseTranslationSyncMetadata', () => {
+  it('should return undefined for body without metadata block', () => {
+    const result = parseTranslationSyncMetadata('Just a normal PR body');
+    expect(result).toBeUndefined();
+  });
+
+  it('should return undefined for malformed JSON', () => {
+    const body = '<!-- translation-sync-metadata\n{invalid json}\n-->';
+    const result = parseTranslationSyncMetadata(body);
+    expect(result).toBeUndefined();
+  });
+
+  it('should return undefined for missing required fields', () => {
+    const body = '<!-- translation-sync-metadata\n{"sourceRepo": "foo/bar"}\n-->';
+    const result = parseTranslationSyncMetadata(body);
+    expect(result).toBeUndefined();
+  });
+
+  it('should parse valid metadata block', () => {
+    const metadata = {
+      sourceRepo: 'QuantEcon/lecture-python',
+      sourcePR: 100,
+      sourceCommitSha: 'deadbeef',
+      sourceLanguage: 'en',
+      targetLanguage: 'fa',
+      claudeModel: 'claude-sonnet-4-20250514',
+      files: [{ path: 'lectures/intro.md' }],
+    };
+    const body = `Some PR text\n<!-- translation-sync-metadata\n${JSON.stringify(metadata, null, 2)}\n-->\nMore text`;
+    const result = parseTranslationSyncMetadata(body);
+
+    expect(result).toEqual(metadata);
+  });
+
+  it('should handle metadata block surrounded by other content', () => {
+    const metadata = {
+      sourceRepo: 'Org/repo',
+      sourcePR: 5,
+      sourceCommitSha: 'aaa111',
+      sourceLanguage: 'en',
+      targetLanguage: 'zh-cn',
+      claudeModel: 'claude-sonnet-4-20250514',
+      files: [],
+    };
+    const body = `## Title\nLots of text here\n\n<!-- translation-sync-metadata\n${JSON.stringify(metadata)}\n-->\n\n*Footer*`;
+    const result = parseTranslationSyncMetadata(body);
+
+    expect(result).toBeDefined();
+    expect(result!.sourcePR).toBe(5);
   });
 });
