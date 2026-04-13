@@ -39,6 +39,13 @@ export interface ReviewInputs {
   githubToken: string;      // GitHub token for API access
 }
 
+export interface RebaseInputs {
+  docsFolder: string;       // Documentation folder pattern
+  glossaryPath: string;     // Path to custom glossary
+  anthropicApiKey: string;  // Anthropic API key for Claude
+  githubToken: string;      // GitHub token for API access
+}
+
 // ============================================================================
 // GLOSSARY
 // ============================================================================
