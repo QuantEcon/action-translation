@@ -149,11 +149,11 @@ async function runRebase(): Promise<void> {
   const octokit = github.getOctokit(inputs.githubToken);
   const { owner, repo } = github.context.repo;
 
-  // Find files touched by the merged PR
-  const { data: mergedPrFiles } = await octokit.rest.pulls.listFiles({
-    owner, repo, pull_number: mergedPrNumber,
+  // Find files touched by the merged PR (paginate — PRs can touch >30 files)
+  const mergedPrFiles = await octokit.paginate(octokit.rest.pulls.listFiles, {
+    owner, repo, pull_number: mergedPrNumber, per_page: 100,
   });
-  const mergedFilePaths = new Set(mergedPrFiles.map(f => f.filename));
+  const mergedFilePaths = new Set(mergedPrFiles.map((f: { filename: string }) => f.filename));
 
   // List all open PRs in this repo
   const { data: openPRs } = await octokit.rest.pulls.list({
@@ -344,8 +344,11 @@ async function rebaseSinglePR(
     core.info('No targetBaseSha in metadata — rebase cache unavailable (pre-cache PR)');
   }
 
-  // Fetch existing state file SHAs for the PR branch (not main)
-  const existingStateShas = new Map<string, string>();
+  // Fetch existing state file SHAs — the branch was reset to main, so state files
+  // from main exist and need their SHAs for createOrUpdateFileContents to succeed
+  const existingStateShas = await fetchExistingStateShas(
+    octokit, owner, repo, filesToSync, inputs.docsFolder,
+  );
   const stateConfig: StateGenerationConfig = {
     sourceCommitSha,
     existingStateShas,

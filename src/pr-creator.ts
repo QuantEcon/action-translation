@@ -405,7 +405,7 @@ async function requestReviewers(
  * Used by rebase mode to reconstruct pipeline inputs from existing PRs.
  */
 export function parseTranslationSyncMetadata(prBody: string): TranslationSyncMetadata | undefined {
-  const match = prBody.match(/<!-- translation-sync-metadata\n([\s\S]*?)\n-->/);
+  const match = prBody.match(/<!-- translation-sync-metadata\r?\n([\s\S]*?)\r?\n-->/);
   if (!match) return undefined;
 
   try {

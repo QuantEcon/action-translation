@@ -33599,10 +33599,10 @@ var FileProcessor = class {
       if (change.type === "added") {
         this.log(`Processing ADDED section: ${newSection.heading}`);
         if (cachedParsed && cachedHeadingMap) {
-          const sourceHeading = newSection.heading.replace(/^#+\s+/, "");
+          const sourceHeading = MystParser.stripMystRoles(newSection.heading.replace(/^#+\s+/, "").trim());
           const translatedHeading = cachedHeadingMap.get(sourceHeading);
           if (translatedHeading) {
-            const cachedSection = cachedParsed.sections.find((s) => s.heading.replace(/^#+\s+/, "") === translatedHeading);
+            const cachedSection = cachedParsed.sections.find((s) => MystParser.stripMystRoles(s.heading.replace(/^#+\s+/, "").trim()) === translatedHeading);
             if (cachedSection) {
               resultSections.push(cachedSection);
               includedSourceSections.push(newSection);
@@ -34517,7 +34517,7 @@ async function requestReviewers(octokit, targetOwner, targetRepo, prNumber, conf
   }
 }
 function parseTranslationSyncMetadata(prBody) {
-  const match = prBody.match(/<!-- translation-sync-metadata\n([\s\S]*?)\n-->/);
+  const match = prBody.match(/<!-- translation-sync-metadata\r?\n([\s\S]*?)\r?\n-->/);
   if (!match)
     return void 0;
   try {
@@ -34605,10 +34605,11 @@ async function runRebase() {
   core7.info(`\u267B\uFE0F Translation-sync PR #${mergedPrNumber} was merged. Checking for conflicted sibling PRs...`);
   const octokit = github2.getOctokit(inputs.githubToken);
   const { owner, repo } = github2.context.repo;
-  const { data: mergedPrFiles } = await octokit.rest.pulls.listFiles({
+  const mergedPrFiles = await octokit.paginate(octokit.rest.pulls.listFiles, {
     owner,
     repo,
-    pull_number: mergedPrNumber
+    pull_number: mergedPrNumber,
+    per_page: 100
   });
   const mergedFilePaths = new Set(mergedPrFiles.map((f) => f.filename));
   const { data: openPRs } = await octokit.rest.pulls.list({
@@ -34752,7 +34753,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
   } else {
     core7.info("No targetBaseSha in metadata \u2014 rebase cache unavailable (pre-cache PR)");
   }
-  const existingStateShas = /* @__PURE__ */ new Map();
+  const existingStateShas = await fetchExistingStateShas(octokit, owner, repo, filesToSync, inputs.docsFolder);
   const stateConfig = {
     sourceCommitSha,
     existingStateShas,

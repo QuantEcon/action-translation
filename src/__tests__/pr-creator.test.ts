@@ -355,4 +355,23 @@ describe('parseTranslationSyncMetadata', () => {
     expect(result).toBeDefined();
     expect(result!.sourcePR).toBe(5);
   });
+
+  it('should parse metadata with CRLF line endings', () => {
+    const metadata = {
+      sourceRepo: 'Org/repo',
+      sourcePR: 10,
+      sourceCommitSha: 'crlf123',
+      sourceLanguage: 'en',
+      targetLanguage: 'zh-cn',
+      claudeModel: 'claude-sonnet-4-20250514',
+      targetBaseSha: 'base456',
+      files: [{ path: 'intro.md' }],
+    };
+    const body = `## Title\r\n\r\n<!-- translation-sync-metadata\r\n${JSON.stringify(metadata)}\r\n-->\r\n`;
+    const result = parseTranslationSyncMetadata(body);
+
+    expect(result).toBeDefined();
+    expect(result!.sourcePR).toBe(10);
+    expect(result!.targetBaseSha).toBe('base456');
+  });
 });

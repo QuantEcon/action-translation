@@ -223,11 +223,11 @@ export class FileProcessor {
         // Rebase cache: for added sections, use heading map from cached translation
         // to find the corresponding cached section (IDs differ across languages)
         if (cachedParsed && cachedHeadingMap) {
-          const sourceHeading = newSection.heading.replace(/^#+\s+/, '');
+          const sourceHeading = MystParser.stripMystRoles(newSection.heading.replace(/^#+\s+/, '').trim());
           const translatedHeading = cachedHeadingMap.get(sourceHeading);
           if (translatedHeading) {
             const cachedSection = cachedParsed.sections.find(s =>
-              s.heading.replace(/^#+\s+/, '') === translatedHeading
+              MystParser.stripMystRoles(s.heading.replace(/^#+\s+/, '').trim()) === translatedHeading
             );
             if (cachedSection) {
               resultSections.push(cachedSection);
