@@ -97,6 +97,16 @@ Add these secrets to your repository settings:
 - `ANTHROPIC_API_KEY`: Your Anthropic API key for Claude
 - `GITHUB_TOKEN`: Automatically provided by GitHub Actions
 
+## Rebase Workflow (Conflict Prevention)
+
+Install this workflow in each **target** (translated) repository to automatically rebase
+open translation-sync PRs when another translation PR is merged. This eliminates the
+merge conflicts described in [issue #63](https://github.com/QuantEcon/action-translation/issues/63).
+
+See [`rebase-translations.yml`](rebase-translations.yml) for the ready-to-use template.
+
+Place it at `.github/workflows/rebase-translations.yml` in the target repo.
+
 ## Glossary File
 
 Create `.github/translation-glossary.json`:
