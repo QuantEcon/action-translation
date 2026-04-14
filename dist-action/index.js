@@ -23979,10 +23979,10 @@ function validateClaudeModel(model) {
 function getMode() {
   const mode = core.getInput("mode", { required: true });
   if (!mode) {
-    throw new Error(`Missing required input: 'mode'. Expected 'sync' or 'review'.`);
+    throw new Error(`Missing required input: 'mode'. Expected 'sync', 'review', or 'rebase'.`);
   }
-  if (mode !== "sync" && mode !== "review") {
-    throw new Error(`Invalid mode: '${mode}'. Expected 'sync' or 'review'.`);
+  if (mode !== "sync" && mode !== "review" && mode !== "rebase") {
+    throw new Error(`Invalid mode: '${mode}'. Expected 'sync', 'review', or 'rebase'.`);
   }
   return mode;
 }
@@ -24025,6 +24025,20 @@ function getInputs() {
     prReviewers,
     prTeamReviewers,
     testMode
+  };
+}
+function getRebaseInputs() {
+  const docsFolderInput = core.getInput("docs-folder", { required: false });
+  const docsFolder = docsFolderInput === "." || docsFolderInput === "/" ? "" : docsFolderInput;
+  const glossaryPath = core.getInput("glossary-path", { required: false }) || "";
+  const anthropicApiKey = core.getInput("anthropic-api-key", { required: true });
+  const githubToken = core.getInput("github-token", { required: true });
+  const normalizedDocsFolder = docsFolder === "" ? "" : docsFolder.endsWith("/") ? docsFolder : `${docsFolder}/`;
+  return {
+    docsFolder: normalizedDocsFolder,
+    glossaryPath,
+    anthropicApiKey,
+    githubToken
   };
 }
 function getReviewInputs() {
@@ -33479,7 +33493,7 @@ var FileProcessor = class {
    * Always reconstructs complete document: CONFIG + TITLE + INTRO + SECTIONS
    * This ensures no components get lost during translation updates
    */
-  async processSectionBased(oldContent, newContent, targetContent, filepath, sourceLanguage, targetLanguage, glossary, onSkippedSection) {
+  async processSectionBased(oldContent, newContent, targetContent, filepath, sourceLanguage, targetLanguage, glossary, onSkippedSection, rebaseCache) {
     this.log(`Processing file using component-based approach: ${filepath}`);
     const oldSource = await this.parser.parseDocumentComponents(oldContent, filepath);
     const newSource = await this.parser.parseDocumentComponents(newContent, filepath);
@@ -33489,45 +33503,75 @@ var FileProcessor = class {
     this.log(`Target: ${target.sections.length} sections`);
     const headingMap = extractHeadingMap(targetContent);
     this.log(`Loaded heading map with ${headingMap.size} entries`);
+    let cachedParsed;
+    let oldTargetParsed;
+    let oldTargetSectionById;
+    let cachedSectionById;
+    let cachedHeadingMap;
+    if (rebaseCache) {
+      try {
+        cachedParsed = await this.parser.parseDocumentComponents(rebaseCache.previousTranslation, filepath);
+        oldTargetParsed = await this.parser.parseDocumentComponents(rebaseCache.oldTargetContent, filepath);
+        oldTargetSectionById = new Map(oldTargetParsed.sections.map((s) => [s.id, s]));
+        cachedSectionById = new Map(cachedParsed.sections.map((s) => [s.id, s]));
+        cachedHeadingMap = extractHeadingMap(rebaseCache.previousTranslation);
+        this.log(`Rebase cache loaded: ${cachedParsed.sections.length} cached sections, ${oldTargetParsed.sections.length} old target sections`);
+      } catch (error3) {
+        const msg = error3 instanceof Error ? error3.message : String(error3);
+        this.log(`Rebase cache parse failed \u2014 will re-translate: ${msg}`);
+        cachedParsed = void 0;
+        oldTargetParsed = void 0;
+      }
+    }
     const resultConfig = newSource.config;
     const resultPreTitle = newSource.preTitle;
     let resultTitle = target.title;
     if (oldSource.title !== newSource.title) {
       this.log(`TITLE changed: "${oldSource.titleText}" -> "${newSource.titleText}"`);
-      const result = await this.translator.translateSection({
-        mode: "update",
-        sourceLanguage,
-        targetLanguage,
-        glossary,
-        oldEnglish: oldSource.title,
-        newEnglish: newSource.title,
-        currentTranslation: target.title
-      });
-      if (!result.success) {
-        throw new Error(`Translation failed for title: ${result.error}`);
+      if (cachedParsed && oldTargetParsed && oldTargetParsed.title === target.title) {
+        resultTitle = cachedParsed.title;
+        this.log(`Cache hit for title \u2014 skipping Claude call`);
+      } else {
+        const result = await this.translator.translateSection({
+          mode: "update",
+          sourceLanguage,
+          targetLanguage,
+          glossary,
+          oldEnglish: oldSource.title,
+          newEnglish: newSource.title,
+          currentTranslation: target.title
+        });
+        if (!result.success) {
+          throw new Error(`Translation failed for title: ${result.error}`);
+        }
+        resultTitle = result.translatedSection || target.title;
+        this.log(`Translated title to: "${resultTitle}"`);
       }
-      resultTitle = result.translatedSection || target.title;
-      this.log(`Translated title to: "${resultTitle}"`);
     } else {
       this.log(`TITLE unchanged, keeping target: "${target.title}"`);
     }
     let resultIntro = target.intro;
     if (oldSource.intro !== newSource.intro) {
       this.log(`INTRO changed (${oldSource.intro.length} -> ${newSource.intro.length} chars)`);
-      const result = await this.translator.translateSection({
-        mode: "update",
-        sourceLanguage,
-        targetLanguage,
-        glossary,
-        oldEnglish: oldSource.intro,
-        newEnglish: newSource.intro,
-        currentTranslation: target.intro
-      });
-      if (!result.success) {
-        throw new Error(`Translation failed for intro: ${result.error}`);
+      if (cachedParsed && oldTargetParsed && oldTargetParsed.intro === target.intro) {
+        resultIntro = cachedParsed.intro;
+        this.log(`Cache hit for intro \u2014 skipping Claude call`);
+      } else {
+        const result = await this.translator.translateSection({
+          mode: "update",
+          sourceLanguage,
+          targetLanguage,
+          glossary,
+          oldEnglish: oldSource.intro,
+          newEnglish: newSource.intro,
+          currentTranslation: target.intro
+        });
+        if (!result.success) {
+          throw new Error(`Translation failed for intro: ${result.error}`);
+        }
+        resultIntro = result.translatedSection || target.intro;
+        this.log(`Translated intro (${resultIntro.length} chars)`);
       }
-      resultIntro = result.translatedSection || target.intro;
-      this.log(`Translated intro (${resultIntro.length} chars)`);
     } else {
       this.log(`INTRO unchanged, keeping target`);
     }
@@ -33554,6 +33598,19 @@ var FileProcessor = class {
       }
       if (change.type === "added") {
         this.log(`Processing ADDED section: ${newSection.heading}`);
+        if (cachedParsed && cachedHeadingMap) {
+          const sourceHeading = newSection.heading.replace(/^#+\s+/, "");
+          const translatedHeading = cachedHeadingMap.get(sourceHeading);
+          if (translatedHeading) {
+            const cachedSection = cachedParsed.sections.find((s) => s.heading.replace(/^#+\s+/, "") === translatedHeading);
+            if (cachedSection) {
+              resultSections.push(cachedSection);
+              includedSourceSections.push(newSection);
+              this.log(`Cache hit for added section: ${newSection.heading} \u2192 ${cachedSection.heading} \u2014 skipping Claude call`);
+              continue;
+            }
+          }
+        }
         const translatedSection = await this.translateNewSection(newSection, sourceLanguage, targetLanguage, glossary);
         resultSections.push(translatedSection);
         includedSourceSections.push(newSection);
@@ -33567,6 +33624,20 @@ var FileProcessor = class {
           resultSections.push(translatedSection);
           includedSourceSections.push(newSection);
           continue;
+        }
+        if (oldTargetSectionById && cachedSectionById) {
+          const oldTargetMatch = oldTargetSectionById.get(targetSection.id);
+          const cachedMatch = cachedSectionById.get(targetSection.id);
+          if (oldTargetMatch && cachedMatch) {
+            const oldTargetSerialized = this.serializeSection(oldTargetMatch);
+            const currentTargetSerialized = this.serializeSection(targetSection);
+            if (oldTargetSerialized === currentTargetSerialized) {
+              resultSections.push(cachedMatch);
+              includedSourceSections.push(newSection);
+              this.log(`Cache hit for modified section: ${newSection.heading} \u2014 skipping Claude call`);
+              continue;
+            }
+          }
         }
         const oldFullContent = this.serializeSection(change.oldSection);
         const newFullContent = this.serializeSection(newSection);
@@ -34017,7 +34088,7 @@ var SyncOrchestrator = class {
    * @param glossary - Optional glossary for translation
    * @returns Aggregated results across all files
    */
-  async processFiles(files, glossary) {
+  async processFiles(files, glossary, rebaseCache) {
     const result = {
       translatedFiles: [],
       filesToDelete: [],
@@ -34029,10 +34100,10 @@ var SyncOrchestrator = class {
       try {
         switch (file.type) {
           case "markdown":
-            await this.processMarkdownFile(file, glossary, result);
+            await this.processMarkdownFile(file, glossary, result, rebaseCache?.get(file.filename));
             break;
           case "renamed":
-            await this.processRenamedFile(file, glossary, result);
+            await this.processRenamedFile(file, glossary, result, rebaseCache?.get(file.filename));
             break;
           case "toc":
             this.processTocFile(file, result);
@@ -34056,7 +34127,7 @@ var SyncOrchestrator = class {
    * Process a markdown file (added or modified).
    * New files get full translation; existing files get section-based updates.
    */
-  async processMarkdownFile(file, glossary, result) {
+  async processMarkdownFile(file, glossary, result, fileRebaseCache) {
     this.logger.info(`Processing ${file.filename}...`);
     if (!file.newContent) {
       throw new Error(`No content provided for ${file.filename}`);
@@ -34066,7 +34137,7 @@ var SyncOrchestrator = class {
       translatedContent = await this.processor.processFull(file.newContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary);
     } else {
       const skipped = [];
-      translatedContent = await this.processor.processSectionBased(file.oldContent || "", file.newContent, file.targetContent || "", file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary, (heading) => skipped.push(heading));
+      translatedContent = await this.processor.processSectionBased(file.oldContent || "", file.newContent, file.targetContent || "", file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary, (heading) => skipped.push(heading), fileRebaseCache);
       if (skipped.length > 0) {
         result.skippedSections.set(file.filename, skipped);
         this.logger.warning(`${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target \u2014 pending earlier translation PR`);
@@ -34089,7 +34160,7 @@ var SyncOrchestrator = class {
    * Process a renamed markdown file.
    * Preserves existing translation at new path, deletes old path.
    */
-  async processRenamedFile(file, glossary, result) {
+  async processRenamedFile(file, glossary, result, fileRebaseCache) {
     this.logger.info(`Processing renamed file: ${file.previousFilename} \u2192 ${file.filename}...`);
     if (!file.newContent) {
       throw new Error(`No content provided for ${file.filename}`);
@@ -34097,7 +34168,7 @@ var SyncOrchestrator = class {
     let translatedContent;
     if (file.targetContent) {
       const skipped = [];
-      translatedContent = await this.processor.processSectionBased(file.oldContent || "", file.newContent, file.targetContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary, (heading) => skipped.push(heading));
+      translatedContent = await this.processor.processSectionBased(file.oldContent || "", file.newContent, file.targetContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary, (heading) => skipped.push(heading), fileRebaseCache);
       if (skipped.length > 0) {
         result.skippedSections.set(file.filename, skipped);
         this.logger.warning(`${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target \u2014 pending earlier translation PR`);
@@ -34272,7 +34343,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     });
     logger.info(`Deleted: ${file.path}`);
   }
-  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections);
+  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha);
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
   const { data: pr } = await octokit.rest.pulls.create({
     owner: targetOwner,
@@ -34319,7 +34390,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     prNumber: pr.number
   };
 }
-function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections) {
+function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha) {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);
   let filesChangedSection = "";
@@ -34352,6 +34423,23 @@ The following sections were **not modified by this source PR** and are missing f
 
 ${lines.join("\n")}`;
   }
+  const allFilePaths = [
+    ...translatedFiles.map((f) => ({ path: f.path })),
+    ...filesToDelete.map((f) => ({ path: f.path }))
+  ];
+  const metadata = {
+    sourceRepo: `${sourceRepoOwner}/${sourceRepoName}`,
+    sourcePR: prNumber,
+    sourceCommitSha: config.sourceCommitSha,
+    targetBaseSha: targetBaseSha || "",
+    sourceLanguage: config.sourceLanguage,
+    targetLanguage: config.targetLanguage,
+    claudeModel: config.claudeModel,
+    files: allFilePaths
+  };
+  const metadataBlock = `<!-- translation-sync-metadata
+${JSON.stringify(metadata, null, 2)}
+-->`;
   return `## Automated Translation Sync
 
 This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoName}](https://github.com/${sourceRepoOwner}/${sourceRepoName}).
@@ -34367,7 +34455,9 @@ ${filesChangedSection}${skippedNotice}
 - **Model**: ${config.claudeModel}
 
 ---
-*This PR was created automatically by the [translation action](https://github.com/quantecon/action-translation).*`;
+*This PR was created automatically by the [translation action](https://github.com/quantecon/action-translation).*
+
+${metadataBlock}`;
 }
 function buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo) {
   if (sourcePrInfo?.title) {
@@ -34426,6 +34516,23 @@ async function requestReviewers(octokit, targetOwner, targetRepo, prNumber, conf
     logger.warning(`Could not request reviewers: ${reviewerError instanceof Error ? reviewerError.message : String(reviewerError)}`);
   }
 }
+function parseTranslationSyncMetadata(prBody) {
+  const match = prBody.match(/<!-- translation-sync-metadata\n([\s\S]*?)\n-->/);
+  if (!match)
+    return void 0;
+  try {
+    const parsed = JSON.parse(match[1]);
+    if (typeof parsed.sourceRepo !== "string" || typeof parsed.sourcePR !== "number" || typeof parsed.sourceCommitSha !== "string" || typeof parsed.sourceLanguage !== "string" || typeof parsed.targetLanguage !== "string" || typeof parsed.claudeModel !== "string" || !Array.isArray(parsed.files)) {
+      return void 0;
+    }
+    if (!parsed.targetBaseSha) {
+      parsed.targetBaseSha = "";
+    }
+    return parsed;
+  } catch {
+    return void 0;
+  }
+}
 
 // dist/index.js
 var import_fs2 = require("fs");
@@ -34439,6 +34546,8 @@ async function run() {
     core7.info(`\u{1F680} Running in ${mode.toUpperCase()} mode`);
     if (mode === "sync") {
       await runSync();
+    } else if (mode === "rebase") {
+      await runRebase();
     } else {
       await runReview();
     }
@@ -34478,6 +34587,238 @@ function detectTargetLanguage() {
   const repoName = github2.context.repo.repo;
   const match = repoName.match(/\.([a-z]{2}(?:-[a-z]{2})?)$/);
   return match ? match[1] : void 0;
+}
+async function runRebase() {
+  core7.info("Getting rebase mode inputs...");
+  const inputs = getRebaseInputs();
+  const { eventName, payload } = github2.context;
+  if (eventName !== "pull_request" || payload.action !== "closed" || !payload.pull_request?.merged) {
+    core7.info("Rebase mode requires a merged pull_request event. Exiting.");
+    return;
+  }
+  const mergedPrNumber = payload.pull_request.number;
+  const mergedBranch = payload.pull_request.head?.ref || "";
+  if (!mergedBranch.startsWith("translation-sync-")) {
+    core7.info(`Merged PR #${mergedPrNumber} is not a translation-sync PR (branch: ${mergedBranch}). Exiting.`);
+    return;
+  }
+  core7.info(`\u267B\uFE0F Translation-sync PR #${mergedPrNumber} was merged. Checking for conflicted sibling PRs...`);
+  const octokit = github2.getOctokit(inputs.githubToken);
+  const { owner, repo } = github2.context.repo;
+  const { data: mergedPrFiles } = await octokit.rest.pulls.listFiles({
+    owner,
+    repo,
+    pull_number: mergedPrNumber
+  });
+  const mergedFilePaths = new Set(mergedPrFiles.map((f) => f.filename));
+  const { data: openPRs } = await octokit.rest.pulls.list({
+    owner,
+    repo,
+    state: "open",
+    per_page: 100
+  });
+  const siblingPRs = openPRs.filter((pr) => pr.head.ref.startsWith("translation-sync-") && pr.number !== mergedPrNumber);
+  if (siblingPRs.length === 0) {
+    core7.info("No other open translation-sync PRs found. Nothing to rebase.");
+    return;
+  }
+  core7.info(`Found ${siblingPRs.length} open translation-sync PR(s). Checking for file overlaps...`);
+  let rebasedCount = 0;
+  let skippedCount = 0;
+  let errorCount = 0;
+  for (const pr of siblingPRs) {
+    try {
+      const metadata = parseTranslationSyncMetadata(pr.body || "");
+      if (!metadata) {
+        core7.info(`PR #${pr.number}: No translation-sync metadata found \u2014 skipping (pre-metadata PR).`);
+        skippedCount++;
+        continue;
+      }
+      const prFilePaths = metadata.files.map((f) => f.path);
+      const overlapping = prFilePaths.filter((p) => mergedFilePaths.has(p));
+      if (overlapping.length === 0) {
+        core7.info(`PR #${pr.number}: No file overlap with merged PR \u2014 skipping.`);
+        skippedCount++;
+        continue;
+      }
+      core7.info(`PR #${pr.number}: ${overlapping.length} overlapping file(s) \u2014 rebasing...`);
+      await rebaseSinglePR(octokit, pr, metadata, inputs);
+      rebasedCount++;
+      await octokit.rest.issues.createComment({
+        owner,
+        repo,
+        issue_number: pr.number,
+        body: `\u267B\uFE0F **Automatically rebased** after #${mergedPrNumber} was merged.
+
+Overlapping files: ${overlapping.map((f) => `\`${f}\``).join(", ")}
+
+The translation content is preserved; only unchanged sections were updated to match the current \`main\` branch. Please re-review if needed.`
+      });
+    } catch (error3) {
+      const msg = error3 instanceof Error ? error3.message : String(error3);
+      core7.error(`PR #${pr.number}: Rebase failed \u2014 ${msg}`);
+      errorCount++;
+      try {
+        await octokit.rest.issues.createComment({
+          owner,
+          repo,
+          issue_number: pr.number,
+          body: `\u26A0\uFE0F **Automatic rebase failed** after #${mergedPrNumber} was merged.
+
+Error: ${msg}
+
+You may need to manually resolve conflicts or run \`/translate-resync\` on the source PR.`
+        });
+      } catch {
+        core7.warning(`Could not post error comment on PR #${pr.number}`);
+      }
+    }
+  }
+  core7.info(`\u267B\uFE0F Rebase complete: ${rebasedCount} rebased, ${skippedCount} skipped, ${errorCount} errors.`);
+}
+async function rebaseSinglePR(octokit, pr, metadata, inputs) {
+  const { owner, repo } = github2.context.repo;
+  const [sourceOwner, sourceRepoName] = metadata.sourceRepo.split("/");
+  const sourceCommitSha = metadata.sourceCommitSha;
+  const filesToSync = [];
+  for (const file of metadata.files) {
+    try {
+      let newContent = "";
+      try {
+        const { content } = await fetchFileContent(octokit, sourceOwner, sourceRepoName, file.path, sourceCommitSha);
+        newContent = content;
+      } catch {
+        core7.info(`${file.path}: Could not fetch source content at ${sourceCommitSha} \u2014 file may have been deleted`);
+        continue;
+      }
+      let oldContent = "";
+      try {
+        const result2 = await fetchFileContent(octokit, sourceOwner, sourceRepoName, file.path, `${sourceCommitSha}^`);
+        oldContent = result2.content;
+      } catch {
+        core7.info(`${file.path}: New file (no parent commit content)`);
+      }
+      let targetContent = "";
+      let existingFileSha;
+      let isNewFile = false;
+      try {
+        const result2 = await fetchFileContent(octokit, owner, repo, file.path);
+        targetContent = result2.content;
+        existingFileSha = result2.sha;
+      } catch {
+        isNewFile = true;
+        core7.info(`${file.path}: Not found in target repo \u2014 treating as new file`);
+      }
+      filesToSync.push({
+        filename: file.path,
+        type: "markdown",
+        newContent,
+        oldContent,
+        targetContent,
+        existingFileSha,
+        isNewFile,
+        sourceCommitSha
+      });
+    } catch (error3) {
+      core7.error(`Error fetching content for ${file.path}: ${error3}`);
+    }
+  }
+  if (filesToSync.length === 0) {
+    core7.info(`PR #${pr.number}: No files to process after content fetch. Skipping.`);
+    return;
+  }
+  const builtInGlossaryDir = path4.join(__dirname2, "..", "glossary");
+  const glossary = await loadGlossary(metadata.targetLanguage, builtInGlossaryDir, inputs.glossaryPath || void 0, coreLogger);
+  let rebaseCache;
+  const targetBaseSha = metadata.targetBaseSha;
+  if (targetBaseSha) {
+    rebaseCache = /* @__PURE__ */ new Map();
+    const prBranch = pr.head.ref;
+    for (const file of filesToSync) {
+      try {
+        const { content: previousTranslation } = await fetchFileContent(octokit, owner, repo, file.filename, prBranch);
+        const { content: oldTargetContent } = await fetchFileContent(octokit, owner, repo, file.filename, targetBaseSha);
+        rebaseCache.set(file.filename, { previousTranslation, oldTargetContent });
+        core7.info(`${file.filename}: Loaded rebase cache (previous translation + old baseline)`);
+      } catch {
+        core7.info(`${file.filename}: Could not load rebase cache \u2014 will re-translate`);
+      }
+    }
+    if (rebaseCache.size > 0) {
+      core7.info(`Rebase cache loaded for ${rebaseCache.size} file(s) \u2014 unchanged sections will skip Claude API calls`);
+    } else {
+      rebaseCache = void 0;
+    }
+  } else {
+    core7.info("No targetBaseSha in metadata \u2014 rebase cache unavailable (pre-cache PR)");
+  }
+  const existingStateShas = /* @__PURE__ */ new Map();
+  const stateConfig = {
+    sourceCommitSha,
+    existingStateShas,
+    docsFolder: inputs.docsFolder
+  };
+  const orchestrator = new SyncOrchestrator({
+    sourceLanguage: metadata.sourceLanguage,
+    targetLanguage: metadata.targetLanguage,
+    claudeModel: metadata.claudeModel,
+    anthropicApiKey: inputs.anthropicApiKey,
+    debugMode: true
+  }, coreLogger, stateConfig);
+  const result = await orchestrator.processFiles(filesToSync, glossary, rebaseCache);
+  if (result.translatedFiles.length === 0 && result.filesToDelete.length === 0) {
+    core7.info(`PR #${pr.number}: No translated files produced. Skipping force-push.`);
+    return;
+  }
+  const branchName = pr.head.ref;
+  const branchRef = `heads/${branchName}`;
+  const { data: defaultBranchData } = await octokit.rest.repos.get({ owner, repo });
+  const { data: mainRef } = await octokit.rest.git.getRef({
+    owner,
+    repo,
+    ref: `heads/${defaultBranchData.default_branch}`
+  });
+  const newBaseSha = mainRef.object.sha;
+  await octokit.rest.git.updateRef({
+    owner,
+    repo,
+    ref: branchRef,
+    sha: newBaseSha,
+    force: true
+  });
+  for (const file of result.translatedFiles) {
+    let fileSha;
+    try {
+      const { sha } = await fetchFileContent(octokit, owner, repo, file.path, branchName);
+      fileSha = sha;
+    } catch {
+    }
+    await octokit.rest.repos.createOrUpdateFileContents({
+      owner,
+      repo,
+      path: file.path,
+      message: `Update translation: ${file.path}`,
+      content: Buffer.from(file.content).toString("base64"),
+      branch: branchName,
+      sha: fileSha
+    });
+  }
+  for (const file of result.filesToDelete) {
+    try {
+      const { sha } = await fetchFileContent(octokit, owner, repo, file.path, branchName);
+      await octokit.rest.repos.deleteFile({
+        owner,
+        repo,
+        path: file.path,
+        message: `Delete removed file: ${file.path}`,
+        branch: branchName,
+        sha
+      });
+    } catch {
+      core7.info(`${file.path}: Not found on branch \u2014 skip deletion`);
+    }
+  }
+  core7.info(`PR #${pr.number}: Successfully rebased with ${result.translatedFiles.length} file(s).`);
 }
 async function runSync() {
   core7.info("Getting action inputs...");
@@ -34570,6 +34911,7 @@ async function runSync() {
         sourceRepoOwner: github2.context.repo.owner,
         sourceRepoName: github2.context.repo.repo,
         prNumber,
+        sourceCommitSha: effectiveSha,
         prLabels: inputs.prLabels,
         prReviewers: inputs.prReviewers,
         prTeamReviewers: inputs.prTeamReviewers
