@@ -246,14 +246,66 @@ async function rebaseSinglePR(
   const filesToSync: FileToSync[] = [];
 
   for (const file of metadata.files) {
+    // Determine file type from metadata (default to 'markdown' for backward compat)
+    const fileType = file.type || 'markdown';
+
     try {
-      // Fetch source content at the original commit SHA (new = at commit, old = at commit^)
+      if (fileType === 'removed') {
+        // Removed files: just need the existing target SHA for deletion
+        let existingFileSha: string | undefined;
+        try {
+          const result = await fetchFileContent(octokit, owner, repo, file.path);
+          existingFileSha = result.sha;
+        } catch {
+          core.info(`${file.path}: Already gone from target repo — skip deletion`);
+          continue;
+        }
+
+        filesToSync.push({
+          filename: file.path,
+          type: 'removed',
+          existingFileSha,
+          isNewFile: false,
+        });
+        continue;
+      }
+
+      if (fileType === 'toc') {
+        // TOC files: copy from source as-is (no translation)
+        let newContent = '';
+        try {
+          const { content } = await fetchFileContent(octokit, sourceOwner, sourceRepoName, file.path, sourceCommitSha);
+          newContent = content;
+        } catch {
+          core.info(`${file.path}: Could not fetch TOC content — skipping`);
+          continue;
+        }
+
+        let existingFileSha: string | undefined;
+        try {
+          const result = await fetchFileContent(octokit, owner, repo, file.path);
+          existingFileSha = result.sha;
+        } catch {
+          // New TOC file
+        }
+
+        filesToSync.push({
+          filename: file.path,
+          type: 'toc',
+          newContent,
+          existingFileSha,
+          isNewFile: !existingFileSha,
+        });
+        continue;
+      }
+
+      // markdown and renamed: fetch source content
       let newContent = '';
       try {
         const { content } = await fetchFileContent(octokit, sourceOwner, sourceRepoName, file.path, sourceCommitSha);
         newContent = content;
       } catch {
-        core.info(`${file.path}: Could not fetch source content at ${sourceCommitSha} — file may have been deleted`);
+        core.info(`${file.path}: Could not fetch source content at ${sourceCommitSha} — skipping`);
         continue;
       }
 
@@ -265,30 +317,56 @@ async function rebaseSinglePR(
         core.info(`${file.path}: New file (no parent commit content)`);
       }
 
-      // Fetch UPDATED target content from current main (post-merge)
-      let targetContent = '';
-      let existingFileSha: string | undefined;
-      let isNewFile = false;
+      if (fileType === 'renamed' && file.previousPath) {
+        // Renamed files: fetch target content from old path
+        let targetContent = '';
+        let oldFileSha: string | undefined;
 
-      try {
-        const result = await fetchFileContent(octokit, owner, repo, file.path);
-        targetContent = result.content;
-        existingFileSha = result.sha;
-      } catch {
-        isNewFile = true;
-        core.info(`${file.path}: Not found in target repo — treating as new file`);
+        try {
+          const result = await fetchFileContent(octokit, owner, repo, file.previousPath);
+          targetContent = result.content;
+          oldFileSha = result.sha;
+        } catch {
+          core.info(`${file.previousPath}: Previous path not found in target repo`);
+        }
+
+        filesToSync.push({
+          filename: file.path,
+          type: 'renamed',
+          newContent,
+          oldContent,
+          targetContent,
+          previousFilename: file.previousPath,
+          oldFileSha,
+          isNewFile: !targetContent,
+          sourceCommitSha,
+        });
+      } else {
+        // Default: markdown file
+        let targetContent = '';
+        let existingFileSha: string | undefined;
+        let isNewFile = false;
+
+        try {
+          const result = await fetchFileContent(octokit, owner, repo, file.path);
+          targetContent = result.content;
+          existingFileSha = result.sha;
+        } catch {
+          isNewFile = true;
+          core.info(`${file.path}: Not found in target repo — treating as new file`);
+        }
+
+        filesToSync.push({
+          filename: file.path,
+          type: 'markdown',
+          newContent,
+          oldContent,
+          targetContent,
+          existingFileSha,
+          isNewFile,
+          sourceCommitSha,
+        });
       }
-
-      filesToSync.push({
-        filename: file.path,
-        type: 'markdown',
-        newContent,
-        oldContent,
-        targetContent,
-        existingFileSha,
-        isNewFile,
-        sourceCommitSha,
-      });
     } catch (error) {
       core.error(`Error fetching content for ${file.path}: ${error}`);
     }
@@ -583,6 +661,18 @@ async function runSync(): Promise<void> {
           prTeamReviewers: inputs.prTeamReviewers,
         };
 
+        // Build file metadata with type info for rebase mode
+        const fileMetadata = filesToSync.map(f => {
+          const entry: { path: string; type: string; previousPath?: string } = {
+            path: f.filename,
+            type: f.type,
+          };
+          if (f.type === 'renamed' && f.previousFilename) {
+            entry.previousPath = f.previousFilename;
+          }
+          return entry;
+        });
+
         const prResult = await createTranslationPR(
           octokit,
           result.translatedFiles,
@@ -591,6 +681,7 @@ async function runSync(): Promise<void> {
           coreLogger,
           sourcePrInfo,
           result.skippedSections,
+          fileMetadata,
         );
 
         prUrl = prResult.prUrl;

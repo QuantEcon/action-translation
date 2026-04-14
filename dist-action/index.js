@@ -34297,7 +34297,7 @@ var SyncOrchestrator = class {
 };
 
 // dist/pr-creator.js
-async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections) {
+async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata) {
   const { targetOwner, targetRepo } = config;
   const { data: targetRepoData } = await octokit.rest.repos.get({
     owner: targetOwner,
@@ -34343,7 +34343,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     });
     logger.info(`Deleted: ${file.path}`);
   }
-  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha);
+  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata);
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
   const { data: pr } = await octokit.rest.pulls.create({
     owner: targetOwner,
@@ -34390,7 +34390,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     prNumber: pr.number
   };
 }
-function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha) {
+function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata) {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);
   let filesChangedSection = "";
@@ -34423,7 +34423,12 @@ The following sections were **not modified by this source PR** and are missing f
 
 ${lines.join("\n")}`;
   }
-  const allFilePaths = [
+  const metadataFiles = fileMetadata ? fileMetadata.map((f) => {
+    const entry = { path: f.path, type: f.type };
+    if (f.previousPath)
+      entry.previousPath = f.previousPath;
+    return entry;
+  }) : [
     ...translatedFiles.map((f) => ({ path: f.path })),
     ...filesToDelete.map((f) => ({ path: f.path }))
   ];
@@ -34435,7 +34440,7 @@ ${lines.join("\n")}`;
     sourceLanguage: config.sourceLanguage,
     targetLanguage: config.targetLanguage,
     claudeModel: config.claudeModel,
-    files: allFilePaths
+    files: metadataFiles
   };
   const metadataBlock = `<!-- translation-sync-metadata
 ${JSON.stringify(metadata, null, 2)}
@@ -34683,13 +34688,55 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
   const sourceCommitSha = metadata.sourceCommitSha;
   const filesToSync = [];
   for (const file of metadata.files) {
+    const fileType = file.type || "markdown";
     try {
+      if (fileType === "removed") {
+        let existingFileSha;
+        try {
+          const result2 = await fetchFileContent(octokit, owner, repo, file.path);
+          existingFileSha = result2.sha;
+        } catch {
+          core7.info(`${file.path}: Already gone from target repo \u2014 skip deletion`);
+          continue;
+        }
+        filesToSync.push({
+          filename: file.path,
+          type: "removed",
+          existingFileSha,
+          isNewFile: false
+        });
+        continue;
+      }
+      if (fileType === "toc") {
+        let newContent2 = "";
+        try {
+          const { content } = await fetchFileContent(octokit, sourceOwner, sourceRepoName, file.path, sourceCommitSha);
+          newContent2 = content;
+        } catch {
+          core7.info(`${file.path}: Could not fetch TOC content \u2014 skipping`);
+          continue;
+        }
+        let existingFileSha;
+        try {
+          const result2 = await fetchFileContent(octokit, owner, repo, file.path);
+          existingFileSha = result2.sha;
+        } catch {
+        }
+        filesToSync.push({
+          filename: file.path,
+          type: "toc",
+          newContent: newContent2,
+          existingFileSha,
+          isNewFile: !existingFileSha
+        });
+        continue;
+      }
       let newContent = "";
       try {
         const { content } = await fetchFileContent(octokit, sourceOwner, sourceRepoName, file.path, sourceCommitSha);
         newContent = content;
       } catch {
-        core7.info(`${file.path}: Could not fetch source content at ${sourceCommitSha} \u2014 file may have been deleted`);
+        core7.info(`${file.path}: Could not fetch source content at ${sourceCommitSha} \u2014 skipping`);
         continue;
       }
       let oldContent = "";
@@ -34699,27 +34746,50 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
       } catch {
         core7.info(`${file.path}: New file (no parent commit content)`);
       }
-      let targetContent = "";
-      let existingFileSha;
-      let isNewFile = false;
-      try {
-        const result2 = await fetchFileContent(octokit, owner, repo, file.path);
-        targetContent = result2.content;
-        existingFileSha = result2.sha;
-      } catch {
-        isNewFile = true;
-        core7.info(`${file.path}: Not found in target repo \u2014 treating as new file`);
+      if (fileType === "renamed" && file.previousPath) {
+        let targetContent = "";
+        let oldFileSha;
+        try {
+          const result2 = await fetchFileContent(octokit, owner, repo, file.previousPath);
+          targetContent = result2.content;
+          oldFileSha = result2.sha;
+        } catch {
+          core7.info(`${file.previousPath}: Previous path not found in target repo`);
+        }
+        filesToSync.push({
+          filename: file.path,
+          type: "renamed",
+          newContent,
+          oldContent,
+          targetContent,
+          previousFilename: file.previousPath,
+          oldFileSha,
+          isNewFile: !targetContent,
+          sourceCommitSha
+        });
+      } else {
+        let targetContent = "";
+        let existingFileSha;
+        let isNewFile = false;
+        try {
+          const result2 = await fetchFileContent(octokit, owner, repo, file.path);
+          targetContent = result2.content;
+          existingFileSha = result2.sha;
+        } catch {
+          isNewFile = true;
+          core7.info(`${file.path}: Not found in target repo \u2014 treating as new file`);
+        }
+        filesToSync.push({
+          filename: file.path,
+          type: "markdown",
+          newContent,
+          oldContent,
+          targetContent,
+          existingFileSha,
+          isNewFile,
+          sourceCommitSha
+        });
       }
-      filesToSync.push({
-        filename: file.path,
-        type: "markdown",
-        newContent,
-        oldContent,
-        targetContent,
-        existingFileSha,
-        isNewFile,
-        sourceCommitSha
-      });
     } catch (error3) {
       core7.error(`Error fetching content for ${file.path}: ${error3}`);
     }
@@ -34917,7 +34987,17 @@ async function runSync() {
         prReviewers: inputs.prReviewers,
         prTeamReviewers: inputs.prTeamReviewers
       };
-      const prResult = await createTranslationPR(octokit, result.translatedFiles, result.filesToDelete, prConfig, coreLogger, sourcePrInfo, result.skippedSections);
+      const fileMetadata = filesToSync.map((f) => {
+        const entry = {
+          path: f.filename,
+          type: f.type
+        };
+        if (f.type === "renamed" && f.previousFilename) {
+          entry.previousPath = f.previousFilename;
+        }
+        return entry;
+      });
+      const prResult = await createTranslationPR(octokit, result.translatedFiles, result.filesToDelete, prConfig, coreLogger, sourcePrInfo, result.skippedSections, fileMetadata);
       prUrl = prResult.prUrl;
       core7.setOutput("pr-url", prResult.prUrl);
       core7.setOutput("files-synced", result.processedFiles.length.toString());

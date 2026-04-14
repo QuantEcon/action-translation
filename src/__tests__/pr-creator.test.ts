@@ -374,4 +374,64 @@ describe('parseTranslationSyncMetadata', () => {
     expect(result!.sourcePR).toBe(10);
     expect(result!.targetBaseSha).toBe('base456');
   });
+
+  it('should include file types in metadata when fileMetadata is provided', () => {
+    const files: TranslatedFile[] = [
+      { path: 'lectures/intro.md', content: 'content' },
+      { path: 'lectures/renamed.md', content: 'content' },
+    ];
+    const deleted = [{ path: 'lectures/old.md', sha: 'sha1' }];
+    const fileMetadata = [
+      { path: 'lectures/intro.md', type: 'markdown' },
+      { path: 'lectures/renamed.md', type: 'renamed', previousPath: 'lectures/old-name.md' },
+      { path: 'lectures/old.md', type: 'removed' },
+    ];
+    const body = buildPrBody(files, deleted, baseConfig, undefined, undefined, undefined, fileMetadata);
+    const metadata = parseTranslationSyncMetadata(body);
+
+    expect(metadata).toBeDefined();
+    expect(metadata!.files).toEqual([
+      { path: 'lectures/intro.md', type: 'markdown' },
+      { path: 'lectures/renamed.md', type: 'renamed', previousPath: 'lectures/old-name.md' },
+      { path: 'lectures/old.md', type: 'removed' },
+    ]);
+  });
+
+  it('should default to path-only files when no fileMetadata provided', () => {
+    const files: TranslatedFile[] = [{ path: 'lectures/intro.md', content: 'content' }];
+    const body = buildPrBody(files, [], baseConfig);
+    const metadata = parseTranslationSyncMetadata(body);
+
+    expect(metadata).toBeDefined();
+    expect(metadata!.files).toEqual([{ path: 'lectures/intro.md' }]);
+    // No type field — backward compatible
+    expect(metadata!.files[0]).not.toHaveProperty('type');
+  });
+
+  it('should parse file types from metadata (rebase reconstruction)', () => {
+    const metadataObj = {
+      sourceRepo: 'Org/repo',
+      sourcePR: 10,
+      sourceCommitSha: 'abc',
+      targetBaseSha: '',
+      sourceLanguage: 'en',
+      targetLanguage: 'zh-cn',
+      claudeModel: 'claude-sonnet-4-20250514',
+      files: [
+        { path: 'intro.md', type: 'markdown' },
+        { path: 'newname.md', type: 'renamed', previousPath: 'oldname.md' },
+        { path: 'deleted.md', type: 'removed' },
+        { path: '_toc.yml', type: 'toc' },
+      ],
+    };
+    const body = `<!-- translation-sync-metadata\n${JSON.stringify(metadataObj)}\n-->`;
+    const result = parseTranslationSyncMetadata(body);
+
+    expect(result).toBeDefined();
+    expect(result!.files[0].type).toBe('markdown');
+    expect(result!.files[1].type).toBe('renamed');
+    expect(result!.files[1].previousPath).toBe('oldname.md');
+    expect(result!.files[2].type).toBe('removed');
+    expect(result!.files[3].type).toBe('toc');
+  });
 });

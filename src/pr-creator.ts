@@ -49,7 +49,7 @@ export interface TranslationSyncMetadata {
   sourceLanguage: string;
   targetLanguage: string;
   claudeModel: string;
-  files: Array<{ path: string }>;
+  files: Array<{ path: string; type?: 'markdown' | 'renamed' | 'removed' | 'toc'; previousPath?: string }>;
 }
 
 /**
@@ -96,6 +96,7 @@ export async function createTranslationPR(
   logger: Logger,
   sourcePrInfo?: SourcePrInfo,
   skippedSections?: Map<string, string[]>,
+  fileMetadata?: Array<{ path: string; type: string; previousPath?: string }>,
 ): Promise<PrCreationResult> {
   const { targetOwner, targetRepo } = config;
 
@@ -155,7 +156,7 @@ export async function createTranslationPR(
   }
 
   // Build PR body (includes targetBaseSha for rebase cache support)
-  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha);
+  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata);
 
   // Build PR title
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
@@ -229,6 +230,7 @@ export function buildPrBody(
   sourcePrInfo?: SourcePrInfo,
   skippedSections?: Map<string, string[]>,
   targetBaseSha?: string,
+  fileMetadata?: Array<{ path: string; type: string; previousPath?: string }>,
 ): string {
   const newFiles = translatedFiles.filter(f => !f.sha);
   const updatedFiles = translatedFiles.filter(f => f.sha);
@@ -261,10 +263,17 @@ export function buildPrBody(
   }
 
   // Build machine-readable metadata for rebase mode
-  const allFilePaths = [
-    ...translatedFiles.map(f => ({ path: f.path })),
-    ...filesToDelete.map(f => ({ path: f.path })),
-  ];
+  // Use fileMetadata (with type info) if available, otherwise fall back to path-only
+  const metadataFiles: TranslationSyncMetadata['files'] = fileMetadata
+    ? fileMetadata.map(f => {
+        const entry: TranslationSyncMetadata['files'][0] = { path: f.path, type: f.type as TranslationSyncMetadata['files'][0]['type'] };
+        if (f.previousPath) entry.previousPath = f.previousPath;
+        return entry;
+      })
+    : [
+        ...translatedFiles.map(f => ({ path: f.path })),
+        ...filesToDelete.map(f => ({ path: f.path })),
+      ];
 
   const metadata: TranslationSyncMetadata = {
     sourceRepo: `${sourceRepoOwner}/${sourceRepoName}`,
@@ -274,7 +283,7 @@ export function buildPrBody(
     sourceLanguage: config.sourceLanguage,
     targetLanguage: config.targetLanguage,
     claudeModel: config.claudeModel,
-    files: allFilePaths,
+    files: metadataFiles,
   };
 
   const metadataBlock = `<!-- translation-sync-metadata\n${JSON.stringify(metadata, null, 2)}\n-->`;
