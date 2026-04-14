@@ -15,7 +15,7 @@
 import { MystParser } from './parser.js';
 import { DiffDetector } from './diff-detector.js';
 import { TranslationService } from './translator.js';
-import { Section, Glossary } from './types.js';
+import { Section, Glossary, RebaseCacheData } from './types.js';
 import * as core from '@actions/core';
 import { 
   extractHeadingMap, 
@@ -58,7 +58,8 @@ export class FileProcessor {
     sourceLanguage: string,
     targetLanguage: string,
     glossary?: Glossary,
-    onSkippedSection?: (heading: string) => void
+    onSkippedSection?: (heading: string) => void,
+    rebaseCache?: RebaseCacheData,
   ): Promise<string> {
     this.log(`Processing file using component-based approach: ${filepath}`);
 
@@ -75,6 +76,29 @@ export class FileProcessor {
     const headingMap = extractHeadingMap(targetContent);
     this.log(`Loaded heading map with ${headingMap.size} entries`);
     
+    // 2b. Parse rebase cache if provided (for skipping redundant Claude calls)
+    let cachedParsed: Awaited<ReturnType<typeof this.parser.parseDocumentComponents>> | undefined;
+    let oldTargetParsed: Awaited<ReturnType<typeof this.parser.parseDocumentComponents>> | undefined;
+    let oldTargetSectionById: Map<string, Section> | undefined;
+    let cachedSectionById: Map<string, Section> | undefined;
+    let cachedHeadingMap: Map<string, string> | undefined;
+
+    if (rebaseCache) {
+      try {
+        cachedParsed = await this.parser.parseDocumentComponents(rebaseCache.previousTranslation, filepath);
+        oldTargetParsed = await this.parser.parseDocumentComponents(rebaseCache.oldTargetContent, filepath);
+        oldTargetSectionById = new Map(oldTargetParsed.sections.map(s => [s.id, s]));
+        cachedSectionById = new Map(cachedParsed.sections.map(s => [s.id, s]));
+        cachedHeadingMap = extractHeadingMap(rebaseCache.previousTranslation);
+        this.log(`Rebase cache loaded: ${cachedParsed.sections.length} cached sections, ${oldTargetParsed.sections.length} old target sections`);
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        this.log(`Rebase cache parse failed — will re-translate: ${msg}`);
+        cachedParsed = undefined;
+        oldTargetParsed = undefined;
+      }
+    }
+
     // 3. Process each component - translate if changed, copy if unchanged
     
     // CONFIG: Always use new source config (doesn't get translated)
@@ -88,22 +112,28 @@ export class FileProcessor {
     if (oldSource.title !== newSource.title) {
       this.log(`TITLE changed: "${oldSource.titleText}" -> "${newSource.titleText}"`);
       
-      const result = await this.translator.translateSection({
-        mode: 'update',
-        sourceLanguage,
-        targetLanguage,
-        glossary,
-        oldEnglish: oldSource.title,
-        newEnglish: newSource.title,
-        currentTranslation: target.title,
-      });
+      // Rebase cache: if target title is unchanged since PR creation, reuse cached translation
+      if (cachedParsed && oldTargetParsed && oldTargetParsed.title === target.title) {
+        resultTitle = cachedParsed.title;
+        this.log(`Cache hit for title — skipping Claude call`);
+      } else {
+        const result = await this.translator.translateSection({
+          mode: 'update',
+          sourceLanguage,
+          targetLanguage,
+          glossary,
+          oldEnglish: oldSource.title,
+          newEnglish: newSource.title,
+          currentTranslation: target.title,
+        });
       
-      if (!result.success) {
-        throw new Error(`Translation failed for title: ${result.error}`);
+        if (!result.success) {
+          throw new Error(`Translation failed for title: ${result.error}`);
+        }
+      
+        resultTitle = result.translatedSection || target.title;
+        this.log(`Translated title to: "${resultTitle}"`);
       }
-      
-      resultTitle = result.translatedSection || target.title;
-      this.log(`Translated title to: "${resultTitle}"`);
     } else {
       this.log(`TITLE unchanged, keeping target: "${target.title}"`);
     }
@@ -113,22 +143,28 @@ export class FileProcessor {
     if (oldSource.intro !== newSource.intro) {
       this.log(`INTRO changed (${oldSource.intro.length} -> ${newSource.intro.length} chars)`);
       
-      const result = await this.translator.translateSection({
-        mode: 'update',
-        sourceLanguage,
-        targetLanguage,
-        glossary,
-        oldEnglish: oldSource.intro,
-        newEnglish: newSource.intro,
-        currentTranslation: target.intro,
-      });
+      // Rebase cache: if target intro is unchanged since PR creation, reuse cached translation
+      if (cachedParsed && oldTargetParsed && oldTargetParsed.intro === target.intro) {
+        resultIntro = cachedParsed.intro;
+        this.log(`Cache hit for intro — skipping Claude call`);
+      } else {
+        const result = await this.translator.translateSection({
+          mode: 'update',
+          sourceLanguage,
+          targetLanguage,
+          glossary,
+          oldEnglish: oldSource.intro,
+          newEnglish: newSource.intro,
+          currentTranslation: target.intro,
+        });
       
-      if (!result.success) {
-        throw new Error(`Translation failed for intro: ${result.error}`);
+        if (!result.success) {
+          throw new Error(`Translation failed for intro: ${result.error}`);
+        }
+      
+        resultIntro = result.translatedSection || target.intro;
+        this.log(`Translated intro (${resultIntro.length} chars)`);
       }
-      
-      resultIntro = result.translatedSection || target.intro;
-      this.log(`Translated intro (${resultIntro.length} chars)`);
     } else {
       this.log(`INTRO unchanged, keeping target`);
     }
@@ -183,6 +219,25 @@ export class FileProcessor {
       // Section has changes - translate based on change type
       if (change.type === 'added') {
         this.log(`Processing ADDED section: ${newSection.heading}`);
+
+        // Rebase cache: for added sections, use heading map from cached translation
+        // to find the corresponding cached section (IDs differ across languages)
+        if (cachedParsed && cachedHeadingMap) {
+          const sourceHeading = newSection.heading.replace(/^#+\s+/, '');
+          const translatedHeading = cachedHeadingMap.get(sourceHeading);
+          if (translatedHeading) {
+            const cachedSection = cachedParsed.sections.find(s =>
+              s.heading.replace(/^#+\s+/, '') === translatedHeading
+            );
+            if (cachedSection) {
+              resultSections.push(cachedSection);
+              includedSourceSections.push(newSection);
+              this.log(`Cache hit for added section: ${newSection.heading} → ${cachedSection.heading} — skipping Claude call`);
+              continue;
+            }
+          }
+        }
+
         const translatedSection = await this.translateNewSection(
           newSection,
           sourceLanguage,
@@ -215,6 +270,23 @@ export class FileProcessor {
           resultSections.push(translatedSection);
           includedSourceSections.push(newSection);
           continue;
+        }
+
+        // Rebase cache: if this section's target content is unchanged since PR creation,
+        // the translation inputs are identical — reuse the cached result
+        if (oldTargetSectionById && cachedSectionById) {
+          const oldTargetMatch = oldTargetSectionById.get(targetSection.id);
+          const cachedMatch = cachedSectionById.get(targetSection.id);
+          if (oldTargetMatch && cachedMatch) {
+            const oldTargetSerialized = this.serializeSection(oldTargetMatch);
+            const currentTargetSerialized = this.serializeSection(targetSection);
+            if (oldTargetSerialized === currentTargetSerialized) {
+              resultSections.push(cachedMatch);
+              includedSourceSections.push(newSection);
+              this.log(`Cache hit for modified section: ${newSection.heading} — skipping Claude call`);
+              continue;
+            }
+          }
         }
 
         // Translate the update

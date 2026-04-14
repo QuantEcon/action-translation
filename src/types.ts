@@ -47,6 +47,26 @@ export interface RebaseInputs {
 }
 
 // ============================================================================
+// REBASE CACHE
+// ============================================================================
+
+/**
+ * Per-file cache data used during rebase to skip redundant Claude API calls.
+ *
+ * During rebase, we compare old target sections (at the SHA when the PR was
+ * originally created) with current target sections (after the merged PR).
+ * If a section's target content is unchanged, its translation inputs are
+ * identical and the cached result from the PR branch can be reused.
+ */
+export interface RebaseCacheData {
+  previousTranslation: string;  // Full translated file content from the PR branch
+  oldTargetContent: string;     // Target file content at targetBaseSha
+}
+
+/** Map from filename to per-file rebase cache data */
+export type RebaseCache = Map<string, RebaseCacheData>;
+
+// ============================================================================
 // GLOSSARY
 // ============================================================================
 

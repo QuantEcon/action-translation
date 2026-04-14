@@ -4,6 +4,7 @@ import { getMode, getInputs, getReviewInputs, getRebaseInputs, validatePREvent, 
 import { TranslationReviewer } from './reviewer.js';
 import { SyncOrchestrator, classifyChangedFiles, loadGlossary, FileToSync, Logger, StateGenerationConfig } from './sync-orchestrator.js';
 import { createTranslationPR, PrCreatorConfig, SourcePrInfo, parseTranslationSyncMetadata, TranslationSyncMetadata } from './pr-creator.js';
+import { RebaseCache, RebaseCacheData } from './types.js';
 import { stateFileRelativePath } from './cli/translate-state.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -307,6 +308,42 @@ async function rebaseSinglePR(
     coreLogger,
   );
 
+  // Build rebase cache: read existing translations from PR branch and old target
+  // baseline to skip redundant Claude API calls during re-translation
+  let rebaseCache: RebaseCache | undefined;
+  const targetBaseSha = metadata.targetBaseSha;
+  if (targetBaseSha) {
+    rebaseCache = new Map();
+    const prBranch = pr.head.ref;
+
+    for (const file of filesToSync) {
+      try {
+        // Read the previously translated file from the PR branch
+        const { content: previousTranslation } = await fetchFileContent(
+          octokit, owner, repo, file.filename, prBranch
+        );
+
+        // Read the old target baseline (what target main looked like when PR was created)
+        const { content: oldTargetContent } = await fetchFileContent(
+          octokit, owner, repo, file.filename, targetBaseSha
+        );
+
+        rebaseCache.set(file.filename, { previousTranslation, oldTargetContent });
+        core.info(`${file.filename}: Loaded rebase cache (previous translation + old baseline)`);
+      } catch {
+        core.info(`${file.filename}: Could not load rebase cache — will re-translate`);
+      }
+    }
+
+    if (rebaseCache.size > 0) {
+      core.info(`Rebase cache loaded for ${rebaseCache.size} file(s) — unchanged sections will skip Claude API calls`);
+    } else {
+      rebaseCache = undefined;
+    }
+  } else {
+    core.info('No targetBaseSha in metadata — rebase cache unavailable (pre-cache PR)');
+  }
+
   // Fetch existing state file SHAs for the PR branch (not main)
   const existingStateShas = new Map<string, string>();
   const stateConfig: StateGenerationConfig = {
@@ -324,7 +361,7 @@ async function rebaseSinglePR(
     debugMode: true,
   }, coreLogger, stateConfig);
 
-  const result = await orchestrator.processFiles(filesToSync, glossary);
+  const result = await orchestrator.processFiles(filesToSync, glossary, rebaseCache);
 
   if (result.translatedFiles.length === 0 && result.filesToDelete.length === 0) {
     core.info(`PR #${pr.number}: No translated files produced. Skipping force-push.`);

@@ -270,6 +270,16 @@ describe('buildPrBody metadata block', () => {
     expect(metadata!.targetLanguage).toBe('zh-cn');
     expect(metadata!.claudeModel).toBe('claude-sonnet-4-20250514');
     expect(metadata!.files).toEqual([{ path: 'lectures/intro.md' }]);
+    expect(metadata!.targetBaseSha).toBe('');
+  });
+
+  it('should include targetBaseSha in metadata when provided', () => {
+    const files: TranslatedFile[] = [{ path: 'lectures/intro.md', content: 'content' }];
+    const body = buildPrBody(files, [], baseConfig, undefined, undefined, 'target-sha-abc123');
+    const metadata = parseTranslationSyncMetadata(body);
+
+    expect(metadata).toBeDefined();
+    expect(metadata!.targetBaseSha).toBe('target-sha-abc123');
   });
 });
 
@@ -300,6 +310,24 @@ describe('parseTranslationSyncMetadata', () => {
       sourceRepo: 'QuantEcon/lecture-python',
       sourcePR: 100,
       sourceCommitSha: 'deadbeef',
+      sourceLanguage: 'en',
+      targetLanguage: 'fa',
+      claudeModel: 'claude-sonnet-4-20250514',
+      files: [{ path: 'lectures/intro.md' }],
+    };
+    const body = `Some PR text\n<!-- translation-sync-metadata\n${JSON.stringify(metadata, null, 2)}\n-->\nMore text`;
+    const result = parseTranslationSyncMetadata(body);
+
+    // Parser adds targetBaseSha='' for backward compatibility with pre-cache PRs
+    expect(result).toEqual({ ...metadata, targetBaseSha: '' });
+  });
+
+  it('should parse metadata block with targetBaseSha', () => {
+    const metadata = {
+      sourceRepo: 'QuantEcon/lecture-python',
+      sourcePR: 100,
+      sourceCommitSha: 'deadbeef',
+      targetBaseSha: 'abc123target',
       sourceLanguage: 'en',
       targetLanguage: 'fa',
       claudeModel: 'claude-sonnet-4-20250514',

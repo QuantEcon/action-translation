@@ -45,6 +45,7 @@ export interface TranslationSyncMetadata {
   sourceRepo: string;
   sourcePR: number;
   sourceCommitSha: string;
+  targetBaseSha: string;
   sourceLanguage: string;
   targetLanguage: string;
   claudeModel: string;
@@ -153,8 +154,8 @@ export async function createTranslationPR(
     logger.info(`Deleted: ${file.path}`);
   }
 
-  // Build PR body
-  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections);
+  // Build PR body (includes targetBaseSha for rebase cache support)
+  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha);
 
   // Build PR title
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
@@ -227,6 +228,7 @@ export function buildPrBody(
   config: PrCreatorConfig,
   sourcePrInfo?: SourcePrInfo,
   skippedSections?: Map<string, string[]>,
+  targetBaseSha?: string,
 ): string {
   const newFiles = translatedFiles.filter(f => !f.sha);
   const updatedFiles = translatedFiles.filter(f => f.sha);
@@ -268,6 +270,7 @@ export function buildPrBody(
     sourceRepo: `${sourceRepoOwner}/${sourceRepoName}`,
     sourcePR: prNumber,
     sourceCommitSha: config.sourceCommitSha,
+    targetBaseSha: targetBaseSha || '',
     sourceLanguage: config.sourceLanguage,
     targetLanguage: config.targetLanguage,
     claudeModel: config.claudeModel,
@@ -419,6 +422,11 @@ export function parseTranslationSyncMetadata(prBody: string): TranslationSyncMet
       !Array.isArray(parsed.files)
     ) {
       return undefined;
+    }
+
+    // targetBaseSha is optional for backward compatibility with pre-cache PRs
+    if (!parsed.targetBaseSha) {
+      parsed.targetBaseSha = '';
     }
 
     return parsed as TranslationSyncMetadata;
