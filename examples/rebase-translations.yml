@@ -23,14 +23,18 @@ jobs:
       startsWith(github.event.pull_request.head.ref, 'translation-sync-')
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+      pull-requests: write
+
     # Prevent concurrent rebases from overlapping
     concurrency:
       group: rebase-translations
       cancel-in-progress: false
 
     steps:
-      - name: Rebase conflicted translation PRs
-        uses: quantecon/action-translation@v0.15
+      - name: Rebase open translation PRs
+        uses: QuantEcon/action-translation@v0.15.0
         with:
           mode: rebase
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
