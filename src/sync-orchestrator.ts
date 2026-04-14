@@ -14,7 +14,7 @@
 import { TranslationService } from './translator.js';
 import { FileProcessor } from './file-processor.js';
 import { MystParser } from './parser.js';
-import { Glossary, TranslatedFile } from './types.js';
+import { Glossary, TranslatedFile, RebaseCache } from './types.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import { serializeFileState, stateFileRelativePath, getToolVersion } from './cli/translate-state.js';
@@ -252,6 +252,7 @@ export class SyncOrchestrator {
   async processFiles(
     files: FileToSync[],
     glossary?: Glossary,
+    rebaseCache?: RebaseCache,
   ): Promise<SyncProcessingResult> {
     const result: SyncProcessingResult = {
       translatedFiles: [],
@@ -265,10 +266,10 @@ export class SyncOrchestrator {
       try {
         switch (file.type) {
           case 'markdown':
-            await this.processMarkdownFile(file, glossary, result);
+            await this.processMarkdownFile(file, glossary, result, rebaseCache?.get(file.filename));
             break;
           case 'renamed':
-            await this.processRenamedFile(file, glossary, result);
+            await this.processRenamedFile(file, glossary, result, rebaseCache?.get(file.filename));
             break;
           case 'toc':
             this.processTocFile(file, result);
@@ -299,6 +300,7 @@ export class SyncOrchestrator {
     file: FileToSync,
     glossary: Glossary | undefined,
     result: SyncProcessingResult,
+    fileRebaseCache?: import('./types.js').RebaseCacheData,
   ): Promise<void> {
     this.logger.info(`Processing ${file.filename}...`);
 
@@ -326,6 +328,7 @@ export class SyncOrchestrator {
         this.config.targetLanguage,
         glossary,
         (heading) => skipped.push(heading),
+        fileRebaseCache,
       );
       if (skipped.length > 0) {
         result.skippedSections.set(file.filename, skipped);
@@ -365,6 +368,7 @@ export class SyncOrchestrator {
     file: FileToSync,
     glossary: Glossary | undefined,
     result: SyncProcessingResult,
+    fileRebaseCache?: import('./types.js').RebaseCacheData,
   ): Promise<void> {
     this.logger.info(`Processing renamed file: ${file.previousFilename} → ${file.filename}...`);
 
@@ -385,6 +389,7 @@ export class SyncOrchestrator {
         this.config.targetLanguage,
         glossary,
         (heading) => skipped.push(heading),
+        fileRebaseCache,
       );
       if (skipped.length > 0) {
         result.skippedSections.set(file.filename, skipped);

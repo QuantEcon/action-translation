@@ -9,7 +9,7 @@ branding:
 inputs:
   # Mode selection
   mode:
-    description: 'Operation mode: sync (create translation PRs) or review (quality assessment)'
+    description: 'Operation mode: sync (create translation PRs), review (quality assessment), or rebase (update conflicted translation PRs)'
     required: true
   
   # Sync mode inputs

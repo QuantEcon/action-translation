@@ -1425,3 +1425,473 @@ config: test
     expect(headingMap.get('Main Section::Subsection A')).toBe('子节 A');
   });
 });
+
+// =============================================================================
+// REBASE CACHE TESTS
+// =============================================================================
+
+describe('FileProcessor.processSectionBased — rebase cache', () => {
+  let processor: FileProcessor;
+  let mockTranslator: jest.Mocked<TranslationService>;
+
+  beforeEach(() => {
+    mockTranslator = {
+      translateSection: jest.fn(),
+      translateFullDocument: jest.fn(),
+    } as any;
+    processor = new FileProcessor(mockTranslator, true);
+  });
+
+  // Shared fixtures
+  const oldSource = `---
+config: test
+---
+
+# Introduction
+
+Old intro text.
+
+## Section A
+
+Content of section A.
+
+## Section B
+
+Content of section B.`;
+
+  const newSource = `---
+config: test
+---
+
+# Introduction
+
+New intro text.
+
+## Section A
+
+Updated content of section A.
+
+## Section B
+
+Content of section B.`;
+
+  const oldTarget = `---
+config: test
+translation:
+  title: 介绍
+  headings:
+    Section A: "部分 A"
+    Section B: "部分 B"
+---
+
+# 介绍
+
+旧介绍文本。
+
+## 部分 A
+
+部分 A 的内容。
+
+## 部分 B
+
+部分 B 的内容。`;
+
+  // Target after another PR merged (Section B was updated by a different PR)
+  const newTarget = `---
+config: test
+translation:
+  title: 介绍
+  headings:
+    Section A: "部分 A"
+    Section B: "部分 B"
+---
+
+# 介绍
+
+旧介绍文本。
+
+## 部分 A
+
+部分 A 的内容。
+
+## 部分 B
+
+部分 B 的 **更新** 内容。`;
+
+  // Previous translation from PR branch (translated Section A)
+  const previousTranslation = `---
+config: test
+translation:
+  title: 介绍
+  headings:
+    Section A: "部分 A"
+    Section B: "部分 B"
+---
+
+# 介绍
+
+新介绍文本。
+
+## 部分 A
+
+部分 A 的更新内容。
+
+## 部分 B
+
+部分 B 的内容。`;
+
+  it('should use cached translation when target section is unchanged', async () => {
+    // Scenario: source changed Section A, target Section A is unchanged between
+    // old target and new target → cache hit, skip Claude
+    mockTranslator.translateSection.mockResolvedValue({
+      success: true,
+      translatedSection: '新介绍文本。',
+    });
+
+    const result = await processor.processSectionBased(
+      oldSource,
+      newSource,
+      oldTarget,  // Target unchanged for Section A
+      'test.md',
+      'en',
+      'zh-cn',
+      undefined,
+      undefined,
+      { previousTranslation, oldTargetContent: oldTarget },
+    );
+
+    // Section A should be cached (target section A unchanged in old target vs current target)
+    // Intro changed → should be cached too (old target intro === current target intro)
+    // Only 0 Claude calls should be made (both intro and Section A are cached)
+    expect(mockTranslator.translateSection).not.toHaveBeenCalled();
+
+    // Result should contain the cached translations
+    expect(result).toContain('部分 A 的更新内容');
+    expect(result).toContain('新介绍文本');
+    expect(result).toContain('## 部分 B');
+  });
+
+  it('should re-translate when target section changed (cache miss)', async () => {
+    // Scenario: another PR changed Section A on target → cache miss
+    const modifiedTarget = oldTarget.replace('部分 A 的内容', '部分 A 的 **新** 内容');
+
+    mockTranslator.translateSection.mockResolvedValue({
+      success: true,
+      translatedSection: '## 部分 A\n\n部分 A 重新翻译的内容。',
+    });
+
+    const result = await processor.processSectionBased(
+      oldSource,
+      newSource,
+      modifiedTarget,  // Target Section A was changed
+      'test.md',
+      'en',
+      'zh-cn',
+      undefined,
+      undefined,
+      { previousTranslation, oldTargetContent: oldTarget },
+    );
+
+    // Section A's target changed → cache miss → should call Claude
+    // Intro's target is unchanged → cache hit → no Claude call for intro
+    // So we expect exactly 1 Claude call (for the modified section)
+    expect(mockTranslator.translateSection).toHaveBeenCalledTimes(1);
+    expect(result).toContain('部分 A 重新翻译的内容');
+  });
+
+  it('should cache intro when target intro is unchanged', async () => {
+    mockTranslator.translateSection.mockResolvedValue({
+      success: true,
+      translatedSection: '不应该被调用',
+    });
+
+    const result = await processor.processSectionBased(
+      oldSource,
+      newSource,
+      oldTarget,  // Same as old target → all caches hit
+      'test.md',
+      'en',
+      'zh-cn',
+      undefined,
+      undefined,
+      { previousTranslation, oldTargetContent: oldTarget },
+    );
+
+    // No Claude calls should be made
+    expect(mockTranslator.translateSection).not.toHaveBeenCalled();
+
+    // Cached intro should be used
+    expect(result).toContain('新介绍文本');
+  });
+
+  it('should re-translate intro when target intro changed', async () => {
+    const modifiedTarget = oldTarget.replace('旧介绍文本', '修改过的介绍文本');
+
+    mockTranslator.translateSection.mockResolvedValue({
+      success: true,
+      translatedSection: '全新的介绍翻译。',
+    });
+
+    const result = await processor.processSectionBased(
+      oldSource,
+      newSource,
+      modifiedTarget,
+      'test.md',
+      'en',
+      'zh-cn',
+      undefined,
+      undefined,
+      { previousTranslation, oldTargetContent: oldTarget },
+    );
+
+    // Intro target changed → cache miss → should call Claude for intro
+    // Section A target unchanged → cache hit
+    expect(mockTranslator.translateSection).toHaveBeenCalledTimes(1);
+    // The call should be for the intro (update mode)
+    expect(mockTranslator.translateSection).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'update',
+        oldEnglish: expect.stringContaining('Old intro'),
+        newEnglish: expect.stringContaining('New intro'),
+      })
+    );
+  });
+
+  it('should work normally without rebase cache (backward compatible)', async () => {
+    mockTranslator.translateSection.mockResolvedValue({
+      success: true,
+      translatedSection: '翻译结果',
+    });
+
+    const result = await processor.processSectionBased(
+      oldSource,
+      newSource,
+      oldTarget,
+      'test.md',
+      'en',
+      'zh-cn',
+    );
+
+    // Without cache, both intro and Section A should trigger Claude calls
+    expect(mockTranslator.translateSection).toHaveBeenCalledTimes(2);
+  });
+
+  it('should gracefully handle invalid cache data', async () => {
+    mockTranslator.translateSection.mockResolvedValue({
+      success: true,
+      translatedSection: '翻译结果',
+    });
+
+    // Pass invalid content that can't be parsed
+    const result = await processor.processSectionBased(
+      oldSource,
+      newSource,
+      oldTarget,
+      'test.md',
+      'en',
+      'zh-cn',
+      undefined,
+      undefined,
+      { previousTranslation: '', oldTargetContent: '' },
+    );
+
+    // Should fall back to normal translation
+    expect(mockTranslator.translateSection).toHaveBeenCalledTimes(2);
+    expect(result).toContain('翻译结果');
+  });
+
+  it('should cache added sections via heading map lookup', async () => {
+    // Source adds a new Section C
+    const newSourceWithAdded = newSource + `
+
+## Section C
+
+Brand new content.`;
+
+    // Previous translation includes the translated Section C
+    // AND a heading map so the cache can look up English→Chinese
+    const previousWithAdded = `---
+config: test
+translation:
+  title: 介绍
+  headings:
+    Section A: "部分 A"
+    Section B: "部分 B"
+    Section C: "部分 C"
+---
+
+# 介绍
+
+新介绍文本。
+
+## 部分 A
+
+部分 A 的更新内容。
+
+## 部分 B
+
+部分 B 的内容。
+
+## 部分 C
+
+全新的内容。`;
+
+    const result = await processor.processSectionBased(
+      oldSource,
+      newSourceWithAdded,
+      oldTarget,  // Target same as old target
+      'test.md',
+      'en',
+      'zh-cn',
+      undefined,
+      undefined,
+      { previousTranslation: previousWithAdded, oldTargetContent: oldTarget },
+    );
+
+    // No Claude calls — intro cached, Section A cached, Section C cached (added)
+    expect(mockTranslator.translateSection).not.toHaveBeenCalled();
+    expect(result).toContain('## 部分 C');
+    expect(result).toContain('全新的内容');
+  });
+
+  it('should cache sections with subsections correctly', async () => {
+    // Source with subsections
+    const oldSourceSub = `---
+config: test
+---
+
+# Introduction
+
+Intro text.
+
+## Section A
+
+Content of section A.
+
+### Subsection A1
+
+Content of subsection A1.
+
+### Subsection A2
+
+Content of subsection A2.`;
+
+    const newSourceSub = `---
+config: test
+---
+
+# Introduction
+
+Intro text.
+
+## Section A
+
+Updated content of section A.
+
+### Subsection A1
+
+Updated content of subsection A1.
+
+### Subsection A2
+
+Content of subsection A2.`;
+
+    const oldTargetSub = `---
+config: test
+translation:
+  title: 介绍
+  headings:
+    Section A: "部分 A"
+    Section A::Subsection A1: "子部分 A1"
+    Section A::Subsection A2: "子部分 A2"
+---
+
+# 介绍
+
+介绍文本。
+
+## 部分 A
+
+部分 A 的内容。
+
+### 子部分 A1
+
+子部分 A1 的内容。
+
+### 子部分 A2
+
+子部分 A2 的内容。`;
+
+    // Previous translation from PR branch (with translated subsections)
+    const previousTranslationSub = `---
+config: test
+translation:
+  title: 介绍
+  headings:
+    Section A: "部分 A"
+    Section A::Subsection A1: "子部分 A1"
+    Section A::Subsection A2: "子部分 A2"
+---
+
+# 介绍
+
+介绍文本。
+
+## 部分 A
+
+部分 A 的更新内容。
+
+### 子部分 A1
+
+子部分 A1 的更新内容。
+
+### 子部分 A2
+
+子部分 A2 的内容。`;
+
+    const result = await processor.processSectionBased(
+      oldSourceSub,
+      newSourceSub,
+      oldTargetSub, // Target unchanged → cache hit
+      'test.md',
+      'en',
+      'zh-cn',
+      undefined,
+      undefined,
+      { previousTranslation: previousTranslationSub, oldTargetContent: oldTargetSub },
+    );
+
+    // Section A (with subsections) should be cached — no Claude calls
+    expect(mockTranslator.translateSection).not.toHaveBeenCalled();
+
+    // Cached subsections should appear in the output
+    expect(result).toContain('### 子部分 A1');
+    expect(result).toContain('子部分 A1 的更新内容');
+    expect(result).toContain('### 子部分 A2');
+    expect(result).toContain('子部分 A2 的内容');
+  });
+
+  it('should produce correct heading map after cache hits', async () => {
+    // Use the same fixtures from the main cache hit test
+    const result = await processor.processSectionBased(
+      oldSource,
+      newSource,
+      oldTarget,
+      'test.md',
+      'en',
+      'zh-cn',
+      undefined,
+      undefined,
+      { previousTranslation, oldTargetContent: oldTarget },
+    );
+
+    // No Claude calls (all cached)
+    expect(mockTranslator.translateSection).not.toHaveBeenCalled();
+
+    // The heading map in the output should correctly map English → Chinese
+    expect(result).toContain('Section A: 部分 A');
+    expect(result).toContain('Section B: 部分 B');
+    // Title should be in the translation metadata
+    expect(result).toContain('title: 介绍');
+  });
+});

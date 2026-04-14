@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Rebase mode** (`mode: rebase`): Automatically rebases open translation-sync PRs when a sibling PR is merged. Eliminates the 62% merge conflict rate from issue #63. Runs in the target repo, triggered by `pull_request.closed` events on `translation-sync-` branches. Detects file overlap via PR metadata, re-runs the sync pipeline against updated `main`, and force-pushes the result. Posts success/failure comments on rebased PRs.
+- **Translation cache for rebase**: Stores `targetBaseSha` in PR metadata to enable section-level cache during rebase. Before re-translating, compares each section's target content between the original baseline and current `main`. Unchanged sections reuse cached translations from the PR branch — zero Claude API calls in the common case (PRs modifying different sections). Added sections matched via heading map. Graceful fallback to re-translation if cache parsing fails.
+- **Structured PR metadata**: Translation-sync PR bodies now include a `<!-- translation-sync-metadata -->` HTML comment block with machine-readable JSON: `sourceRepo`, `sourcePR`, `sourceCommitSha`, `targetBaseSha`, `sourceLanguage`, `targetLanguage`, `claudeModel`, and file list. Used by rebase mode to reconstruct pipeline inputs. Invisible on GitHub. Backward compatible — PRs without metadata are skipped during rebase.
+- **Rebase workflow template**: Ready-to-use `examples/rebase-translations.yml` for target repos. Includes concurrency group to prevent overlapping rebases.
+- **`RebaseInputs` type**: New action inputs for rebase mode (`anthropic-api-key`, `github-token`, optional `docs-folder` and `glossary-path`).
+- **17 tests**: 8 for metadata/rebase inputs, 2 for targetBaseSha, 7 for translation cache, 2 for cache subsections and heading-map correctness (976 → 1001 total, 39 suites)
+
 ## [0.14.1] - 2026-04-09
 
 ### Fixed

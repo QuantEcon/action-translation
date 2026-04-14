@@ -1,9 +1,10 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { getMode, getInputs, getReviewInputs, validatePREvent, validateReviewPREvent } from './inputs.js';
+import { getMode, getInputs, getReviewInputs, getRebaseInputs, validatePREvent, validateReviewPREvent } from './inputs.js';
 import { TranslationReviewer } from './reviewer.js';
 import { SyncOrchestrator, classifyChangedFiles, loadGlossary, FileToSync, Logger, StateGenerationConfig } from './sync-orchestrator.js';
-import { createTranslationPR, PrCreatorConfig, SourcePrInfo } from './pr-creator.js';
+import { createTranslationPR, PrCreatorConfig, SourcePrInfo, parseTranslationSyncMetadata, TranslationSyncMetadata } from './pr-creator.js';
+import { RebaseCache, RebaseCacheData } from './types.js';
 import { stateFileRelativePath } from './cli/translate-state.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -24,6 +25,8 @@ async function run(): Promise<void> {
 
     if (mode === 'sync') {
       await runSync();
+    } else if (mode === 'rebase') {
+      await runRebase();
     } else {
       await runReview();
     }
@@ -101,6 +104,405 @@ function detectTargetLanguage(): string | undefined {
   const repoName = github.context.repo.repo;
   const match = repoName.match(/\.([a-z]{2}(?:-[a-z]{2})?)$/);
   return match ? match[1] : undefined;
+}
+
+// =============================================================================
+// REBASE MODE
+// =============================================================================
+
+/**
+ * Run the REBASE mode - update conflicted translation sync PRs
+ *
+ * Triggered in the TARGET repo when a translation-sync PR is merged.
+ * Finds other open translation-sync PRs, checks for conflicts, and
+ * re-generates them against the updated main branch.
+ *
+ * Workflow:
+ * 1. Validate this is a merged translation-sync PR
+ * 2. List other open translation-sync PRs
+ * 3. For each conflicted PR, parse metadata and re-run the sync pipeline
+ * 4. Force-push the result to the existing PR branch
+ * 5. Post a comment explaining the rebase
+ */
+async function runRebase(): Promise<void> {
+  core.info('Getting rebase mode inputs...');
+  const inputs = getRebaseInputs();
+
+  // Validate this is a merged PR event
+  const { eventName, payload } = github.context;
+  if (eventName !== 'pull_request' || payload.action !== 'closed' || !payload.pull_request?.merged) {
+    core.info('Rebase mode requires a merged pull_request event. Exiting.');
+    return;
+  }
+
+  const mergedPrNumber = payload.pull_request.number;
+  const mergedBranch = payload.pull_request.head?.ref || '';
+
+  // Only run when a translation-sync PR is merged
+  if (!mergedBranch.startsWith('translation-sync-')) {
+    core.info(`Merged PR #${mergedPrNumber} is not a translation-sync PR (branch: ${mergedBranch}). Exiting.`);
+    return;
+  }
+
+  core.info(`♻️ Translation-sync PR #${mergedPrNumber} was merged. Checking for conflicted sibling PRs...`);
+
+  const octokit = github.getOctokit(inputs.githubToken);
+  const { owner, repo } = github.context.repo;
+
+  // Find files touched by the merged PR (paginate — PRs can touch >30 files)
+  const mergedPrFiles = await octokit.paginate(octokit.rest.pulls.listFiles, {
+    owner, repo, pull_number: mergedPrNumber, per_page: 100,
+  });
+  const mergedFilePaths = new Set(mergedPrFiles.map((f: { filename: string }) => f.filename));
+
+  // List all open PRs in this repo
+  const { data: openPRs } = await octokit.rest.pulls.list({
+    owner, repo, state: 'open', per_page: 100,
+  });
+
+  // Filter to translation-sync PRs
+  const siblingPRs = openPRs.filter(pr =>
+    pr.head.ref.startsWith('translation-sync-') && pr.number !== mergedPrNumber
+  );
+
+  if (siblingPRs.length === 0) {
+    core.info('No other open translation-sync PRs found. Nothing to rebase.');
+    return;
+  }
+
+  core.info(`Found ${siblingPRs.length} open translation-sync PR(s). Checking for file overlaps...`);
+
+  let rebasedCount = 0;
+  let skippedCount = 0;
+  let errorCount = 0;
+
+  for (const pr of siblingPRs) {
+    try {
+      // Parse metadata from PR body
+      const metadata = parseTranslationSyncMetadata(pr.body || '');
+      if (!metadata) {
+        core.info(`PR #${pr.number}: No translation-sync metadata found — skipping (pre-metadata PR).`);
+        skippedCount++;
+        continue;
+      }
+
+      // Check file overlap
+      const prFilePaths = metadata.files.map(f => f.path);
+      const overlapping = prFilePaths.filter(p => mergedFilePaths.has(p));
+      if (overlapping.length === 0) {
+        core.info(`PR #${pr.number}: No file overlap with merged PR — skipping.`);
+        skippedCount++;
+        continue;
+      }
+
+      core.info(`PR #${pr.number}: ${overlapping.length} overlapping file(s) — rebasing...`);
+
+      // Re-run the sync pipeline for this PR
+      await rebaseSinglePR(octokit, pr, metadata, inputs);
+      rebasedCount++;
+
+      // Post a comment on the rebased PR
+      await octokit.rest.issues.createComment({
+        owner, repo, issue_number: pr.number,
+        body: `♻️ **Automatically rebased** after #${mergedPrNumber} was merged.\n\nOverlapping files: ${overlapping.map(f => `\`${f}\``).join(', ')}\n\nThe translation content is preserved; only unchanged sections were updated to match the current \`main\` branch. Please re-review if needed.`,
+      });
+
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      core.error(`PR #${pr.number}: Rebase failed — ${msg}`);
+      errorCount++;
+
+      // Post an error comment so the PR author knows
+      try {
+        await octokit.rest.issues.createComment({
+          owner, repo, issue_number: pr.number,
+          body: `⚠️ **Automatic rebase failed** after #${mergedPrNumber} was merged.\n\nError: ${msg}\n\nYou may need to manually resolve conflicts or run \`/translate-resync\` on the source PR.`,
+        });
+      } catch {
+        core.warning(`Could not post error comment on PR #${pr.number}`);
+      }
+    }
+  }
+
+  core.info(`♻️ Rebase complete: ${rebasedCount} rebased, ${skippedCount} skipped, ${errorCount} errors.`);
+}
+
+/**
+ * Re-run the sync pipeline for a single translation PR and force-push the result.
+ */
+async function rebaseSinglePR(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  octokit: any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  pr: any,
+  metadata: TranslationSyncMetadata,
+  inputs: ReturnType<typeof getRebaseInputs>,
+): Promise<void> {
+  const { owner, repo } = github.context.repo;
+  const [sourceOwner, sourceRepoName] = metadata.sourceRepo.split('/');
+  const sourceCommitSha = metadata.sourceCommitSha;
+
+  // Fetch content for each file and build FileToSync array
+  const filesToSync: FileToSync[] = [];
+
+  for (const file of metadata.files) {
+    // Determine file type from metadata (default to 'markdown' for backward compat)
+    const fileType = file.type || 'markdown';
+
+    try {
+      if (fileType === 'removed') {
+        // Removed files: just need the existing target SHA for deletion
+        let existingFileSha: string | undefined;
+        try {
+          const result = await fetchFileContent(octokit, owner, repo, file.path);
+          existingFileSha = result.sha;
+        } catch {
+          core.info(`${file.path}: Already gone from target repo — skip deletion`);
+          continue;
+        }
+
+        filesToSync.push({
+          filename: file.path,
+          type: 'removed',
+          existingFileSha,
+          isNewFile: false,
+        });
+        continue;
+      }
+
+      if (fileType === 'toc') {
+        // TOC files: copy from source as-is (no translation)
+        let newContent = '';
+        try {
+          const { content } = await fetchFileContent(octokit, sourceOwner, sourceRepoName, file.path, sourceCommitSha);
+          newContent = content;
+        } catch {
+          core.info(`${file.path}: Could not fetch TOC content — skipping`);
+          continue;
+        }
+
+        let existingFileSha: string | undefined;
+        try {
+          const result = await fetchFileContent(octokit, owner, repo, file.path);
+          existingFileSha = result.sha;
+        } catch {
+          // New TOC file
+        }
+
+        filesToSync.push({
+          filename: file.path,
+          type: 'toc',
+          newContent,
+          existingFileSha,
+          isNewFile: !existingFileSha,
+        });
+        continue;
+      }
+
+      // markdown and renamed: fetch source content
+      let newContent = '';
+      try {
+        const { content } = await fetchFileContent(octokit, sourceOwner, sourceRepoName, file.path, sourceCommitSha);
+        newContent = content;
+      } catch {
+        core.info(`${file.path}: Could not fetch source content at ${sourceCommitSha} — skipping`);
+        continue;
+      }
+
+      let oldContent = '';
+      try {
+        const result = await fetchFileContent(octokit, sourceOwner, sourceRepoName, file.path, `${sourceCommitSha}^`);
+        oldContent = result.content;
+      } catch {
+        core.info(`${file.path}: New file (no parent commit content)`);
+      }
+
+      if (fileType === 'renamed' && file.previousPath) {
+        // Renamed files: fetch target content from old path
+        let targetContent = '';
+        let oldFileSha: string | undefined;
+
+        try {
+          const result = await fetchFileContent(octokit, owner, repo, file.previousPath);
+          targetContent = result.content;
+          oldFileSha = result.sha;
+        } catch {
+          core.info(`${file.previousPath}: Previous path not found in target repo`);
+        }
+
+        filesToSync.push({
+          filename: file.path,
+          type: 'renamed',
+          newContent,
+          oldContent,
+          targetContent,
+          previousFilename: file.previousPath,
+          oldFileSha,
+          isNewFile: !targetContent,
+          sourceCommitSha,
+        });
+      } else {
+        // Default: markdown file
+        let targetContent = '';
+        let existingFileSha: string | undefined;
+        let isNewFile = false;
+
+        try {
+          const result = await fetchFileContent(octokit, owner, repo, file.path);
+          targetContent = result.content;
+          existingFileSha = result.sha;
+        } catch {
+          isNewFile = true;
+          core.info(`${file.path}: Not found in target repo — treating as new file`);
+        }
+
+        filesToSync.push({
+          filename: file.path,
+          type: 'markdown',
+          newContent,
+          oldContent,
+          targetContent,
+          existingFileSha,
+          isNewFile,
+          sourceCommitSha,
+        });
+      }
+    } catch (error) {
+      core.error(`Error fetching content for ${file.path}: ${error}`);
+    }
+  }
+
+  if (filesToSync.length === 0) {
+    core.info(`PR #${pr.number}: No files to process after content fetch. Skipping.`);
+    return;
+  }
+
+  // Load glossary
+  const builtInGlossaryDir = path.join(__dirname, '..', 'glossary');
+  const glossary = await loadGlossary(
+    metadata.targetLanguage,
+    builtInGlossaryDir,
+    inputs.glossaryPath || undefined,
+    coreLogger,
+  );
+
+  // Build rebase cache: read existing translations from PR branch and old target
+  // baseline to skip redundant Claude API calls during re-translation
+  let rebaseCache: RebaseCache | undefined;
+  const targetBaseSha = metadata.targetBaseSha;
+  if (targetBaseSha) {
+    rebaseCache = new Map();
+    const prBranch = pr.head.ref;
+
+    for (const file of filesToSync) {
+      try {
+        // Read the previously translated file from the PR branch
+        const { content: previousTranslation } = await fetchFileContent(
+          octokit, owner, repo, file.filename, prBranch
+        );
+
+        // Read the old target baseline (what target main looked like when PR was created)
+        const { content: oldTargetContent } = await fetchFileContent(
+          octokit, owner, repo, file.filename, targetBaseSha
+        );
+
+        rebaseCache.set(file.filename, { previousTranslation, oldTargetContent });
+        core.info(`${file.filename}: Loaded rebase cache (previous translation + old baseline)`);
+      } catch {
+        core.info(`${file.filename}: Could not load rebase cache — will re-translate`);
+      }
+    }
+
+    if (rebaseCache.size > 0) {
+      core.info(`Rebase cache loaded for ${rebaseCache.size} file(s) — unchanged sections will skip Claude API calls`);
+    } else {
+      rebaseCache = undefined;
+    }
+  } else {
+    core.info('No targetBaseSha in metadata — rebase cache unavailable (pre-cache PR)');
+  }
+
+  // Fetch existing state file SHAs — the branch was reset to main, so state files
+  // from main exist and need their SHAs for createOrUpdateFileContents to succeed
+  const existingStateShas = await fetchExistingStateShas(
+    octokit, owner, repo, filesToSync, inputs.docsFolder,
+  );
+  const stateConfig: StateGenerationConfig = {
+    sourceCommitSha,
+    existingStateShas,
+    docsFolder: inputs.docsFolder,
+  };
+
+  // Run the sync orchestrator
+  const orchestrator = new SyncOrchestrator({
+    sourceLanguage: metadata.sourceLanguage,
+    targetLanguage: metadata.targetLanguage,
+    claudeModel: metadata.claudeModel,
+    anthropicApiKey: inputs.anthropicApiKey,
+    debugMode: true,
+  }, coreLogger, stateConfig);
+
+  const result = await orchestrator.processFiles(filesToSync, glossary, rebaseCache);
+
+  if (result.translatedFiles.length === 0 && result.filesToDelete.length === 0) {
+    core.info(`PR #${pr.number}: No translated files produced. Skipping force-push.`);
+    return;
+  }
+
+  // Force-push: delete the old branch and recreate from current main
+  const branchName = pr.head.ref;
+  const branchRef = `heads/${branchName}`;
+
+  // Get current main SHA
+  const { data: defaultBranchData } = await octokit.rest.repos.get({ owner, repo });
+  const { data: mainRef } = await octokit.rest.git.getRef({
+    owner, repo, ref: `heads/${defaultBranchData.default_branch}`,
+  });
+  const newBaseSha = mainRef.object.sha;
+
+  // Reset the branch to current main
+  await octokit.rest.git.updateRef({
+    owner, repo, ref: branchRef, sha: newBaseSha, force: true,
+  });
+
+  // Commit translated files to the branch
+  for (const file of result.translatedFiles) {
+    // Get the SHA of this file on the newly-reset branch (it now matches main)
+    let fileSha: string | undefined;
+    try {
+      const { sha } = await fetchFileContent(octokit, owner, repo, file.path, branchName);
+      fileSha = sha;
+    } catch {
+      // File doesn't exist on this branch yet — that's fine
+    }
+
+    await octokit.rest.repos.createOrUpdateFileContents({
+      owner, repo,
+      path: file.path,
+      message: `Update translation: ${file.path}`,
+      content: Buffer.from(file.content).toString('base64'),
+      branch: branchName,
+      sha: fileSha,
+    });
+  }
+
+  // Delete removed files
+  for (const file of result.filesToDelete) {
+    try {
+      const { sha } = await fetchFileContent(octokit, owner, repo, file.path, branchName);
+      await octokit.rest.repos.deleteFile({
+        owner, repo,
+        path: file.path,
+        message: `Delete removed file: ${file.path}`,
+        branch: branchName,
+        sha,
+      });
+    } catch {
+      core.info(`${file.path}: Not found on branch — skip deletion`);
+    }
+  }
+
+  core.info(`PR #${pr.number}: Successfully rebased with ${result.translatedFiles.length} file(s).`);
 }
 
 /**
@@ -253,10 +655,23 @@ async function runSync(): Promise<void> {
           sourceRepoOwner: github.context.repo.owner,
           sourceRepoName: github.context.repo.repo,
           prNumber,
+          sourceCommitSha: effectiveSha,
           prLabels: inputs.prLabels,
           prReviewers: inputs.prReviewers,
           prTeamReviewers: inputs.prTeamReviewers,
         };
+
+        // Build file metadata with type info for rebase mode
+        const fileMetadata = filesToSync.map(f => {
+          const entry: { path: string; type: string; previousPath?: string } = {
+            path: f.filename,
+            type: f.type,
+          };
+          if (f.type === 'renamed' && f.previousFilename) {
+            entry.previousPath = f.previousFilename;
+          }
+          return entry;
+        });
 
         const prResult = await createTranslationPR(
           octokit,
@@ -266,6 +681,7 @@ async function runSync(): Promise<void> {
           coreLogger,
           sourcePrInfo,
           result.skippedSections,
+          fileMetadata,
         );
 
         prUrl = prResult.prUrl;

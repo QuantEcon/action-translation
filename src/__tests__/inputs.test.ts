@@ -11,7 +11,7 @@
  */
 
 import * as core from '@actions/core';
-import { getMode, getInputs, getReviewInputs, validatePREvent, validateReviewPREvent } from '../inputs.js';
+import { getMode, getInputs, getReviewInputs, getRebaseInputs, validatePREvent, validateReviewPREvent } from '../inputs.js';
 
 // Mock @actions/core
 jest.mock('@actions/core');
@@ -39,6 +39,11 @@ describe('getMode', () => {
   it('should accept review mode', () => {
     setMockInputs({ mode: 'review' });
     expect(getMode()).toBe('review');
+  });
+
+  it('should accept rebase mode', () => {
+    setMockInputs({ mode: 'rebase' });
+    expect(getMode()).toBe('rebase');
   });
 
   it('should reject invalid modes', () => {
@@ -677,5 +682,50 @@ describe('Language Code Validation', () => {
       setMockInputs({ ...baseInputs, 'target-language': lang });
       expect(() => getInputs()).toThrow(/Unsupported target language/);
     });
+  });
+});
+
+// =============================================================================
+// REBASE MODE INPUT TESTS
+// =============================================================================
+
+describe('getRebaseInputs', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should return rebase inputs with defaults', () => {
+    setMockInputs({
+      'anthropic-api-key': 'sk-test',
+      'github-token': 'ghp-test',
+    });
+
+    const inputs = getRebaseInputs();
+    expect(inputs.anthropicApiKey).toBe('sk-test');
+    expect(inputs.githubToken).toBe('ghp-test');
+    expect(inputs.docsFolder).toBe('');
+    expect(inputs.glossaryPath).toBe('');
+  });
+
+  it('should normalize docs-folder with trailing slash', () => {
+    setMockInputs({
+      'docs-folder': 'lectures',
+      'anthropic-api-key': 'sk-test',
+      'github-token': 'ghp-test',
+    });
+
+    const inputs = getRebaseInputs();
+    expect(inputs.docsFolder).toBe('lectures/');
+  });
+
+  it('should treat dot docs-folder as empty string', () => {
+    setMockInputs({
+      'docs-folder': '.',
+      'anthropic-api-key': 'sk-test',
+      'github-token': 'ghp-test',
+    });
+
+    const inputs = getRebaseInputs();
+    expect(inputs.docsFolder).toBe('');
   });
 });

@@ -4,11 +4,12 @@
 
 **action-translation** is a GitHub Action that automatically translates and reviews MyST Markdown documents using Claude AI. It uses a **section-based approach**: documents are split at `##` headings, only changed sections are translated, and sections are matched by position (not content) so matching works across languages.
 
-**Two Modes**:
+**Three Modes**:
 - **Sync Mode**: Runs in SOURCE repo, creates translation PRs in target repo
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
+- **Rebase Mode**: Runs in TARGET repo, rebases conflicted translation PRs when a sibling PR is merged
 
-**Current Version**: v0.14.1 | **Tests**: 976 (39 suites) | **Glossary**: 357 terms (zh-cn, fa)
+**Current Version**: v0.14.1 | **Tests**: 1001 (39 suites) | **Glossary**: 357 terms (zh-cn, fa)
 
 ---
 
@@ -16,7 +17,7 @@
 
 ```
 src/
-├── index.ts             # GitHub Actions entry point + mode routing + sync notifications
+├── index.ts             # GitHub Actions entry point + mode routing + sync notifications + rebase mode
 ├── sync-orchestrator.ts # Sync processing pipeline — reusable by future CLI
 ├── pr-creator.ts        # PR creation in target repo
 ├── parser.ts            # MyST Markdown parser, stack-based, no AST
@@ -101,7 +102,7 @@ Title is stored explicitly; headings are flat (no nesting), include all heading 
 
 ### Running Tests
 ```bash
-npm test                          # All 873 tests
+npm test                          # All 1001 tests
 npm test -- parser.test.ts        # Single file
 npm test -- --watch               # Watch mode
 npm test -- --coverage            # Coverage report
@@ -252,7 +253,10 @@ Before creating a release, verify the following:
 | Heading-map generation | `commands/headingmap.ts` → `runHeadingmap` / `buildHeadingMap` |
 | Localization rules | `localization-rules.ts` → `buildLocalizationPrompt` / `getFontRequirements` |
 | Whole-file RESYNC | `translator.ts` → `translateDocumentResync` |
-| Input validation | `inputs.ts` → `getInputs` / `getReviewInputs` |
+| Input validation | `inputs.ts` → `getInputs` / `getReviewInputs` / `getRebaseInputs` |
 | Resync trigger | `inputs.ts` → `validatePREvent` (handles `issue_comment` events) |
 | Sync notifications | `index.ts` → `postSuccessComment` / `createFailureIssue` |
+| Rebase mode | `index.ts` → `runRebase` / `rebaseSinglePR` |
+| PR metadata | `pr-creator.ts` → `TranslationSyncMetadata` / `parseTranslationSyncMetadata` |
+| Translation cache | `file-processor.ts` → `processSectionBased` (rebaseCache param) |
 

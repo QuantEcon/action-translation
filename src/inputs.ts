@@ -1,5 +1,5 @@
 import * as core from '@actions/core';
-import { ActionInputs, ReviewInputs } from './types.js';
+import { ActionInputs, ReviewInputs, RebaseInputs } from './types.js';
 import { validateLanguageCode, getSupportedLanguages } from './language-config.js';
 
 /**
@@ -34,15 +34,15 @@ function validateClaudeModel(model: string): void {
 }
 
 /**
- * Get the action mode (sync or review)
+ * Get the action mode (sync, review, or rebase)
  */
-export function getMode(): 'sync' | 'review' {
+export function getMode(): 'sync' | 'review' | 'rebase' {
   const mode = core.getInput('mode', { required: true });
   if (!mode) {
-    throw new Error(`Missing required input: 'mode'. Expected 'sync' or 'review'.`);
+    throw new Error(`Missing required input: 'mode'. Expected 'sync', 'review', or 'rebase'.`);
   }
-  if (mode !== 'sync' && mode !== 'review') {
-    throw new Error(`Invalid mode: '${mode}'. Expected 'sync' or 'review'.`);
+  if (mode !== 'sync' && mode !== 'review' && mode !== 'rebase') {
+    throw new Error(`Invalid mode: '${mode}'. Expected 'sync', 'review', or 'rebase'.`);
   }
   return mode;
 }
@@ -104,6 +104,29 @@ export function getInputs(): ActionInputs {
     prReviewers,
     prTeamReviewers,
     testMode,
+  };
+}
+
+/**
+ * Get and validate action inputs for REBASE mode
+ */
+export function getRebaseInputs(): RebaseInputs {
+  // Handle docs-folder: '.' means root level (empty string for no prefix filter)
+  const docsFolderInput = core.getInput('docs-folder', { required: false });
+  const docsFolder = (docsFolderInput === '.' || docsFolderInput === '/') ? '' : docsFolderInput;
+
+  const glossaryPath = core.getInput('glossary-path', { required: false }) || '';
+  const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
+  const githubToken = core.getInput('github-token', { required: true });
+
+  // Ensure docs folder ends with / (unless it's empty string for root level)
+  const normalizedDocsFolder = docsFolder === '' ? '' : (docsFolder.endsWith('/') ? docsFolder : `${docsFolder}/`);
+
+  return {
+    docsFolder: normalizedDocsFolder,
+    glossaryPath,
+    anthropicApiKey,
+    githubToken,
   };
 }
 
