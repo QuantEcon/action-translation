@@ -12,8 +12,11 @@ The glossary system ensures consistent translation of technical terminology acro
 |----------|------|-------|--------------|
 | Chinese (Simplified) | `glossary/zh-cn.json` | 357 | October 2025 |
 | Farsi | `glossary/fa.json` | 357 | December 2025 |
+| Japanese | `glossary/ja.json` | 357 | June 2026 (draft) |
 
-Both glossaries are bundled with the action and loaded automatically when the `target-language` matches. No configuration needed.
+These glossaries are bundled with the action and loaded automatically when the `target-language` matches. No configuration needed.
+
+> The Japanese glossary is an initial draft pending native-speaker review.
 
 ## How it works
 
