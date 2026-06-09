@@ -142,7 +142,7 @@ Each glossary file follows this JSON structure:
 4. Add description and version fields
 5. Test with sample translation
 6. Update this README to list the new language
-7. Update `docs/BUILT-IN-GLOSSARY.md`
+7. Update the glossary documentation at [`docs/user/glossary.md`](../docs/user/glossary.md)
 8. Submit PR
 
 ## Quality Guidelines

@@ -147,7 +147,7 @@ export function parseForwardTriageResponse(responseText: string): {
   };
 }
 
-function normalizeVerdict(parsed: any): { verdict: ForwardTriageVerdict; reason: string } {
+function normalizeVerdict(parsed: Record<string, unknown>): { verdict: ForwardTriageVerdict; reason: string } {
   const raw = String(parsed.verdict ?? '').toUpperCase();
   let verdict: ForwardTriageVerdict;
 

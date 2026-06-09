@@ -50,7 +50,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      - uses: QuantEcon/action-translation@v0.11
+      - uses: QuantEcon/action-translation@v0
         with:
           mode: sync
           target-repo: 'YourOrg/your-repo.zh-cn'
@@ -83,7 +83,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      - uses: QuantEcon/action-translation@v0.11
+      - uses: QuantEcon/action-translation@v0
         with:
           mode: review
           source-repo: 'YourOrg/your-source-repo'
