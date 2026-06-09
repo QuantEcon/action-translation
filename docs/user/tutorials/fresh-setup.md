@@ -283,7 +283,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      - uses: QuantEcon/action-translation@v0.11
+      - uses: QuantEcon/action-translation@v0
         with:
           mode: sync
           target-repo: 'QuantEcon/lecture-python-intro.zh-cn'
@@ -329,7 +329,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      - uses: QuantEcon/action-translation@v0.11
+      - uses: QuantEcon/action-translation@v0
         with:
           mode: review
           source-repo: 'QuantEcon/lecture-python-intro'

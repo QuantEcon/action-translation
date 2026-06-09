@@ -124,7 +124,7 @@ Summer students would likely focus on **Project A** (the most coding-intensive),
 
 ## Related Documents
 
-- [PLAN.md](../../PLAN.md) -- Development roadmap for `action-translation`; Phase 9 discusses whole-file vs section-by-section translation architecture, and `experiments/forward/` contains initial experiment results that Project A should build on
+- [PLAN.md](../../dev-notes/PLAN.md) -- Development roadmap for `action-translation`; Phase 9 discusses whole-file vs section-by-section translation architecture, and `experiments/forward/` contains initial experiment results that Project A should build on
 - [_archive/PROJECT-BENCHMARK.md](_archive/PROJECT-BENCHMARK.md) -- Original comprehensive benchmark plan with detailed infrastructure specs (CI/CD, issue templates, provider interfaces, dashboard mockup) -- useful reference when implementing
 - [architecture.md](../developer/architecture.md) -- `action-translation` module structure
 - [testing.md](../developer/testing.md) -- How the action's test suite works

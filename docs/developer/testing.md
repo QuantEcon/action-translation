@@ -4,7 +4,7 @@ title: Testing
 
 # Testing
 
-**Current**: 724 tests | 32 suites | ~2s execution time
+**Current**: 1005 tests | 39 suites | ~4s execution time
 
 ## Running tests
 

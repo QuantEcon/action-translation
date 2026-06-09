@@ -14,8 +14,7 @@
  */
 
 import chalk from 'chalk';
-import { BackportSuggestionData } from './schema.js';
-import { SuggestionWithContext, LoadStats } from './commands/review.js';
+import { SuggestionWithContext } from './commands/review.js';
 
 // ============================================================================
 // CONSTANTS

@@ -147,7 +147,7 @@ After editing the source:
 
 ```bash
 npm run build       # Compile TypeScript
-npm run package     # Bundle for distribution (updates dist-action/)
+npm run build     # Bundle for distribution (updates dist-action/)
 npm test            # Run all tests
 ```
 
@@ -246,7 +246,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      - uses: QuantEcon/action-translation@v0.11
+      - uses: QuantEcon/action-translation@v0
         with:
           mode: sync
           target-repo: 'QuantEcon/lecture-python-intro.zh-cn'
@@ -264,7 +264,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      - uses: QuantEcon/action-translation@v0.11
+      - uses: QuantEcon/action-translation@v0
         with:
           mode: sync
           target-repo: 'QuantEcon/lecture-python-intro.ja'
@@ -295,7 +295,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      - uses: QuantEcon/action-translation@v0.11
+      - uses: QuantEcon/action-translation@v0
         with:
           mode: review
           source-repo: 'QuantEcon/lecture-python-intro'
@@ -389,7 +389,7 @@ Each target repository maintains its own `.translate/state/` independently.
 - [ ] Glossary created at `glossary/{code}.json`
 - [ ] Language rules added to `src/language-config.ts` (optional)
 - [ ] Font configuration added if needed (optional)
-- [ ] Source rebuilt: `npm run build && npm run package`
+- [ ] Source rebuilt: `npm run build`
 - [ ] Target repo scaffolded: `translate setup`
 - [ ] Content translated: `translate init`
 - [ ] Translated content pushed to target repo

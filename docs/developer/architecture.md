@@ -4,7 +4,7 @@ title: Architecture
 
 # Architecture
 
-**Last Updated**: 6 March 2026 — v0.11.2  
+**Last Updated**: 14 April 2026 — v0.15.0  
 
 This document covers the complete system architecture: design philosophy, operational modes, module structure, data flow, and key design decisions.
 
@@ -310,8 +310,8 @@ API calls use exponential backoff retry (3 attempts: 1s, 2s, 4s delays):
 ### ESM + CJS dual build
 
 The CLI uses ESM (required by `ink` v4 for interactive rendering). The GitHub Action uses CJS (required by the Actions runtime). The build system produces both:
-- `npm run build:cli` → ESM via `tsc` (CLI)
-- `npm run package` → CJS via `esbuild` (`dist-action/index.js`)
+- `npm run build:cli` → ESM via `tsc` (CLI, outputs `dist/`)
+- `npm run build` → `tsc` then `esbuild` (compiles `dist/` **and** bundles the CJS action at `dist-action/index.js`)
 
 ## Parser internals
 
@@ -380,10 +380,9 @@ Only sections detected as changed are sent to Claude for translation. This typic
 ## Build and packaging
 
 ```bash
-npm run build        # TypeScript compilation
-npm run build:cli    # CLI ESM build
-npm run package      # Action CJS bundle (dist-action/index.js)
-npm test             # Run all 909 tests
+npm run build        # tsc compile (dist/) + esbuild bundle (dist-action/index.js)
+npm run build:cli    # CLI-only TypeScript compile (dist/)
+npm test             # Run all 1005 tests
 ```
 
 The action is distributed as a single bundled file (`dist-action/index.js`) with no external dependencies at runtime. Glossary files are included in `dist-action/glossary/`.

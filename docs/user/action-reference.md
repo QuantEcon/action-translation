@@ -111,7 +111,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      - uses: QuantEcon/action-translation@v0.11
+      - uses: QuantEcon/action-translation@v0
         with:
           mode: sync
           target-repo: 'QuantEcon/lecture-intro.zh-cn'
@@ -148,7 +148,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      - uses: QuantEcon/action-translation@v0.11
+      - uses: QuantEcon/action-translation@v0
         with:
           mode: sync
           target-repo: 'QuantEcon/lecture-intro.zh-cn'
@@ -165,7 +165,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      - uses: QuantEcon/action-translation@v0.11
+      - uses: QuantEcon/action-translation@v0
         with:
           mode: sync
           target-repo: 'QuantEcon/lecture-intro.fa'
@@ -192,7 +192,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      - uses: QuantEcon/action-translation@v0.11
+      - uses: QuantEcon/action-translation@v0
         with:
           mode: review
           source-repo: 'QuantEcon/lecture-python-intro'
@@ -207,7 +207,7 @@ jobs:
 ### Using outputs
 
 ```yaml
-- uses: QuantEcon/action-translation@v0.11
+- uses: QuantEcon/action-translation@v0
   id: translate
   with:
     mode: sync

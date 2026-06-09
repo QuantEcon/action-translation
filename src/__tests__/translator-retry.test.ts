@@ -30,8 +30,8 @@ jest.mock('@anthropic-ai/sdk', () => {
   class APIError extends AnthropicError {
     readonly status: number | undefined;
     readonly headers: Headers | undefined;
-    readonly error: Object | undefined;
-    constructor(status: number | undefined, error: Object | undefined, message: string | undefined, headers: Headers | undefined) {
+    readonly error: unknown;
+    constructor(status: number | undefined, error: unknown, message: string | undefined, headers: Headers | undefined) {
       super(message || 'API Error');
       this.status = status;
       this.error = error;
@@ -41,14 +41,14 @@ jest.mock('@anthropic-ai/sdk', () => {
   }
 
   class AuthenticationError extends APIError {
-    constructor(status: number | undefined, error: Object | undefined, message: string | undefined, headers: Headers | undefined) {
+    constructor(status: number | undefined, error: unknown, message: string | undefined, headers: Headers | undefined) {
       super(status ?? 401, error, message, headers);
       this.name = 'AuthenticationError';
     }
   }
 
   class RateLimitError extends APIError {
-    constructor(status: number | undefined, error: Object | undefined, message: string | undefined, headers: Headers | undefined) {
+    constructor(status: number | undefined, error: unknown, message: string | undefined, headers: Headers | undefined) {
       super(status ?? 429, error, message, headers);
       this.name = 'RateLimitError';
     }
@@ -64,7 +64,7 @@ jest.mock('@anthropic-ai/sdk', () => {
   }
 
   class BadRequestError extends APIError {
-    constructor(status: number | undefined, error: Object | undefined, message: string | undefined, headers: Headers | undefined) {
+    constructor(status: number | undefined, error: unknown, message: string | undefined, headers: Headers | undefined) {
       super(status ?? 400, error, message, headers);
       this.name = 'BadRequestError';
     }

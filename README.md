@@ -2,7 +2,7 @@
 
 A GitHub Action and CLI tool for managing translations of MyST Markdown documents using Claude AI.
 
-**Version**: v0.11.2 | **Tests**: 909 (39 suites) | [Full Documentation](docs/)
+**Version**: v0.15.0 | **Tests**: 1005 (39 suites) | [Full Documentation](docs/)
 
 ## What it does
 
@@ -44,7 +44,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 2
-      - uses: quantecon/action-translation@v0.11
+      - uses: quantecon/action-translation@v0
         with:
           mode: sync
           target-repo: 'quantecon/lecture-python.zh-cn'
@@ -87,9 +87,8 @@ See the [Quickstart guide](docs/user/quickstart.md) for full setup instructions.
 
 ```bash
 npm install          # Install dependencies
-npm test             # Run all 909 tests
-npm run build        # Compile TypeScript
-npm run package      # Bundle for distribution
+npm test             # Run all 1005 tests
+npm run build        # Compile TypeScript + bundle the action (dist-action/)
 ```
 
 ## License

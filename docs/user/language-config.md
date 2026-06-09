@@ -73,4 +73,4 @@ Each language configuration has:
 After adding a language configuration, you should also:
 1. Create a glossary file at `glossary/{code}.json` (see [Glossary](glossary.md))
 2. Add test cases for the new language
-3. Rebuild the action (`npm run build && npm run package`)
+3. Rebuild the action (`npm run build`)

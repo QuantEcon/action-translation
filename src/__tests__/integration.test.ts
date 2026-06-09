@@ -178,7 +178,7 @@ describe('Integration Tests - Full Translation Workflow', () => {
       expect(currentChinese.sections.length).toBe(5);
       
       // Step 4: Apply changes manually (simulating FileProcessor)
-      let updatedChineseSections = [...currentChinese.sections];
+      const updatedChineseSections = [...currentChinese.sections];
       
       for (const change of changes) {
         if (change.type === 'added') {
