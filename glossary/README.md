@@ -10,6 +10,8 @@ Each language has its own glossary file:
 glossary/
 ├── README.md          # This file
 ├── zh-cn.json         # Simplified Chinese glossary
+├── fa.json            # Persian/Farsi glossary
+├── fr.json            # French glossary
 ├── ja.json            # Japanese glossary (future)
 └── es.json            # Spanish glossary (future)
 ```
@@ -19,10 +21,11 @@ glossary/
 Glossary files are named using **language codes**:
 
 - `zh-cn.json` - Simplified Chinese (中文简体)
+- `fa.json` - Persian/Farsi (فارسی)
+- `fr.json` - French (Français)
 - `zh-tw.json` - Traditional Chinese (中文繁體) - future
 - `ja.json` - Japanese (日本語) - future
 - `es.json` - Spanish (Español) - future
-- `fr.json` - French (Français) - future
 
 The filename **must match** the `target-language` input in the workflow configuration.
 
@@ -65,6 +68,22 @@ When the action runs with `target-language: 'zh-cn'`:
 **Maintained by**: QuantEcon team
 
 **Last updated**: December 2025
+
+### French (`fr.json`)
+
+**Status**: 🟡 Draft (357 terms) — pending native-speaker review
+
+**Contents**:
+- ~160 economic terms (PIB, équilibre, politique budgétaire, etc.)
+- ~100 mathematical terms (valeur propre, matrice, dérivée, etc.)
+- ~35 statistical terms (loi, régression, variance, etc.)
+- ~45 economist names (Robert Solow, Kenneth Arrow, etc.)
+- ~17 miscellaneous terms
+
+**Notes**: Mirrors the English term set of the `zh-cn` / `fa` glossaries.
+Personal names keep Latin script with French diacritics/exonyms where standard
+(e.g. *Léon Walras*, *Gérard Debreu*, *Pythagore*). Native-speaker review is
+recommended before promoting to ✅ Complete.
 
 ### Japanese (`ja.json`)
 
@@ -239,4 +258,4 @@ These glossaries are part of the Translation Sync Action and inherit its license
 ---
 
 **Maintained by**: QuantEcon Team  
-**Last updated**: December 5, 2025
+**Last updated**: June 9, 2026

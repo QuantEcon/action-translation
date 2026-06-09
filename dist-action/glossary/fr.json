@@ -1,0 +1,1791 @@
+{
+  "version": "1.0",
+  "description": "Translation glossary for QuantEcon lectures (English to French)",
+  "terms": [
+    {
+      "en": "Accessible state",
+      "fr": "État accessible",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Adaptive expectations",
+      "fr": "Anticipations adaptatives",
+      "context": "economics"
+    },
+    {
+      "en": "Adjacency matrix",
+      "fr": "Matrice d'adjacence",
+      "context": "graph theory"
+    },
+    {
+      "en": "Aggregate consumption",
+      "fr": "Consommation agrégée",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Aggregate demand for capital",
+      "fr": "Demande agrégée de capital",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Aggregate production function",
+      "fr": "Fonction de production agrégée",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Aggregate supply of capital",
+      "fr": "Offre agrégée de capital",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Angle sum identities",
+      "fr": "Identités d'addition des angles",
+      "context": "trigonometry"
+    },
+    {
+      "en": "Annuity",
+      "fr": "Annuité",
+      "context": "finance"
+    },
+    {
+      "en": "AR(1) processes",
+      "fr": "Processus AR(1)",
+      "context": "time series"
+    },
+    {
+      "en": "Arrow securities",
+      "fr": "Titres d'Arrow",
+      "context": "finance"
+    },
+    {
+      "en": "Asymptotic stability",
+      "fr": "Stabilité asymptotique",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Asymptotic stationarity",
+      "fr": "Stationnarité asymptotique",
+      "context": "time series"
+    },
+    {
+      "en": "Authority centrality",
+      "fr": "Centralité d'autorité",
+      "context": "network science"
+    },
+    {
+      "en": "Autarky equilibrium",
+      "fr": "Équilibre d'autarcie",
+      "context": "economics"
+    },
+    {
+      "en": "Autoregressive model",
+      "fr": "Modèle autorégressif",
+      "context": "time series"
+    },
+    {
+      "en": "Autoregressive representation",
+      "fr": "Représentation autorégressive",
+      "context": "time series"
+    },
+    {
+      "en": "Balance sheet equation",
+      "fr": "Équation du bilan",
+      "context": "accounting"
+    },
+    {
+      "en": "Bandwidth",
+      "fr": "Largeur de bande",
+      "context": "kernel density estimation"
+    },
+    {
+      "en": "Barrier option",
+      "fr": "Option à barrière",
+      "context": "finance"
+    },
+    {
+      "en": "Bellman operator",
+      "fr": "Opérateur de Bellman",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Beta distribution",
+      "fr": "Loi bêta",
+      "context": "probability"
+    },
+    {
+      "en": "Bivariate uniform distribution",
+      "fr": "Loi uniforme bivariée",
+      "context": "probability"
+    },
+    {
+      "en": "Budget constraint",
+      "fr": "Contrainte budgétaire",
+      "context": "economics"
+    },
+    {
+      "en": "Business cycle",
+      "fr": "Cycle économique",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Calculus",
+      "fr": "Calcul infinitésimal",
+      "context": "mathematics"
+    },
+    {
+      "en": "Capital depreciation",
+      "fr": "Dépréciation du capital",
+      "context": "economics"
+    },
+    {
+      "en": "Capital dynamics",
+      "fr": "Dynamique du capital",
+      "context": "economics"
+    },
+    {
+      "en": "Cauchy distribution",
+      "fr": "Loi de Cauchy",
+      "context": "probability"
+    },
+    {
+      "en": "Central limit theorem",
+      "fr": "Théorème central limite",
+      "context": "probability"
+    },
+    {
+      "en": "Central moment",
+      "fr": "Moment centré",
+      "context": "statistics"
+    },
+    {
+      "en": "Centrality measure",
+      "fr": "Mesure de centralité",
+      "context": "network science"
+    },
+    {
+      "en": "Characteristic equation",
+      "fr": "Équation caractéristique",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Characteristic function",
+      "fr": "Fonction caractéristique",
+      "context": "probability"
+    },
+    {
+      "en": "Characteristic polynomial",
+      "fr": "Polynôme caractéristique",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Closed economy",
+      "fr": "Économie fermée",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Cobb-Douglas production function",
+      "fr": "Fonction de production de Cobb-Douglas",
+      "context": "economics"
+    },
+    {
+      "en": "Cobweb model",
+      "fr": "Modèle de la toile d'araignée",
+      "context": "economics"
+    },
+    {
+      "en": "Communicating states",
+      "fr": "États communicants",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Competitive equilibrium",
+      "fr": "Équilibre concurrentiel",
+      "context": "economics"
+    },
+    {
+      "en": "Complex conjugate",
+      "fr": "Conjugué complexe",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Complex eigenvalues",
+      "fr": "Valeurs propres complexes",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Complex number",
+      "fr": "Nombre complexe",
+      "context": "mathematics"
+    },
+    {
+      "en": "Complex plane",
+      "fr": "Plan complexe",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Conditional probability",
+      "fr": "Probabilité conditionnelle",
+      "context": "probability"
+    },
+    {
+      "en": "Consumer sentiment index",
+      "fr": "Indice de confiance des consommateurs",
+      "context": "economics"
+    },
+    {
+      "en": "Consumer surplus",
+      "fr": "Surplus du consommateur",
+      "context": "economics"
+    },
+    {
+      "en": "Consumption-smoothing model",
+      "fr": "Modèle de lissage de la consommation",
+      "context": "economics"
+    },
+    {
+      "en": "Continuation value",
+      "fr": "Valeur de continuation",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Contractions",
+      "fr": "Contractions",
+      "context": "functional analysis"
+    },
+    {
+      "en": "Convergence",
+      "fr": "Convergence",
+      "context": "mathematics"
+    },
+    {
+      "en": "Convergence in distribution",
+      "fr": "Convergence en loi",
+      "context": "probability"
+    },
+    {
+      "en": "Core consumer price index",
+      "fr": "Indice des prix à la consommation sous-jacent",
+      "context": "economics"
+    },
+    {
+      "en": "CPI",
+      "fr": "Indice des prix à la consommation (IPC)",
+      "context": "economics abbreviation"
+    },
+    {
+      "en": "Corporate bond",
+      "fr": "Obligation d'entreprise",
+      "context": "finance"
+    },
+    {
+      "en": "Corporate tax rate",
+      "fr": "Taux d'imposition des sociétés",
+      "context": "public finance"
+    },
+    {
+      "en": "Cost function",
+      "fr": "Fonction de coût",
+      "context": "economics"
+    },
+    {
+      "en": "Cost-to-go function",
+      "fr": "Fonction de coût résiduel",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Counter CDF",
+      "fr": "Fonction de répartition complémentaire",
+      "context": "probability"
+    },
+    {
+      "en": "CCDF",
+      "fr": "Fonction de répartition complémentaire (CCDF)",
+      "context": "probability abbreviation"
+    },
+    {
+      "en": "Cumulative distribution function",
+      "fr": "Fonction de répartition",
+      "context": "probability"
+    },
+    {
+      "en": "Cyclical price dynamics",
+      "fr": "Dynamique cyclique des prix",
+      "context": "economics"
+    },
+    {
+      "en": "de Moivre's theorem",
+      "fr": "Théorème de de Moivre",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Degree centrality",
+      "fr": "Centralité de degré",
+      "context": "network science"
+    },
+    {
+      "en": "Deposit receipt",
+      "fr": "Récépissé de dépôt",
+      "context": "banking"
+    },
+    {
+      "en": "Development economics",
+      "fr": "Économie du développement",
+      "context": "economics"
+    },
+    {
+      "en": "Discount factor",
+      "fr": "Facteur d'actualisation",
+      "context": "economics"
+    },
+    {
+      "en": "Discounted payoff",
+      "fr": "Gain actualisé",
+      "context": "economics"
+    },
+    {
+      "en": "Discounting",
+      "fr": "Actualisation",
+      "context": "finance"
+    },
+    {
+      "en": "Distance matrix",
+      "fr": "Matrice des distances",
+      "context": "graph theory"
+    },
+    {
+      "en": "Distribution dynamics",
+      "fr": "Dynamique de la distribution",
+      "context": "economics"
+    },
+    {
+      "en": "Domestic credit",
+      "fr": "Crédit intérieur",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Dominant eigenvalue",
+      "fr": "Valeur propre dominante",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Dynamic Laffer curve",
+      "fr": "Courbe de Laffer dynamique",
+      "context": "public finance"
+    },
+    {
+      "en": "Dynamic model",
+      "fr": "Modèle dynamique",
+      "context": "economics"
+    },
+    {
+      "en": "Dynamic process",
+      "fr": "Processus dynamique",
+      "context": "mathematics"
+    },
+    {
+      "en": "Dynamic programming",
+      "fr": "Programmation dynamique",
+      "context": "optimization"
+    },
+    {
+      "en": "Eigenvector",
+      "fr": "Vecteur propre",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Eigenvector centrality",
+      "fr": "Centralité de vecteur propre",
+      "context": "network science"
+    },
+    {
+      "en": "Eigenvector decomposition",
+      "fr": "Décomposition en vecteurs propres",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Elasticity of substitution",
+      "fr": "Élasticité de substitution",
+      "context": "economics"
+    },
+    {
+      "en": "Empirical Distribution",
+      "fr": "Distribution empirique",
+      "context": "statistics"
+    },
+    {
+      "en": "Equalizing Difference Model",
+      "fr": "Modèle des différences compensatrices",
+      "context": "labor economics"
+    },
+    {
+      "en": "Equilibrium",
+      "fr": "Équilibre",
+      "context": "economics"
+    },
+    {
+      "en": "Ergodicity",
+      "fr": "Ergodicité",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Euclidean distance",
+      "fr": "Distance euclidienne",
+      "context": "mathematics"
+    },
+    {
+      "en": "Euler equation",
+      "fr": "Équation d'Euler",
+      "context": "economics"
+    },
+    {
+      "en": "Euler's formula",
+      "fr": "Formule d'Euler",
+      "context": "complex analysis"
+    },
+    {
+      "en": "European call option",
+      "fr": "Option d'achat européenne",
+      "context": "finance"
+    },
+    {
+      "en": "Exercise",
+      "fr": "Exercice",
+      "context": "educational content"
+    },
+    {
+      "en": "Exogenous",
+      "fr": "Exogène",
+      "context": "economics"
+    },
+    {
+      "en": "Exogenous initial capital stock",
+      "fr": "Stock de capital initial exogène",
+      "context": "economics"
+    },
+    {
+      "en": "Expansions",
+      "fr": "Phases d'expansion",
+      "context": "business cycles"
+    },
+    {
+      "en": "Expiry date",
+      "fr": "Date d'échéance",
+      "context": "finance"
+    },
+    {
+      "en": "Exponential distribution",
+      "fr": "Loi exponentielle",
+      "context": "probability"
+    },
+    {
+      "en": "Fiat money",
+      "fr": "Monnaie fiduciaire",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Financial repression",
+      "fr": "Répression financière",
+      "context": "economics"
+    },
+    {
+      "en": "Finite horizon",
+      "fr": "Horizon fini",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "First fundamental welfare theorem",
+      "fr": "Premier théorème fondamental de l'économie du bien-être",
+      "context": "welfare economics"
+    },
+    {
+      "en": "First Moment",
+      "fr": "Premier moment",
+      "context": "statistics"
+    },
+    {
+      "en": "Fiscal policy multiplier",
+      "fr": "Multiplicateur de politique budgétaire",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Fiscal theory",
+      "fr": "Théorie budgétaire",
+      "context": "public finance"
+    },
+    {
+      "en": "Fiscal theory of price levels",
+      "fr": "Théorie budgétaire du niveau des prix",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Flow utility function",
+      "fr": "Fonction d'utilité instantanée",
+      "context": "economics"
+    },
+    {
+      "en": "Folk theorem",
+      "fr": "Théorème folk",
+      "context": "game theory"
+    },
+    {
+      "en": "Forcing variable",
+      "fr": "Variable de forçage",
+      "context": "difference equations"
+    },
+    {
+      "en": "Forecast errors",
+      "fr": "Erreurs de prévision",
+      "context": "time series"
+    },
+    {
+      "en": "Forward-looking difference equation",
+      "fr": "Équation aux différences prospective",
+      "context": "economics"
+    },
+    {
+      "en": "Fractional reserve banking",
+      "fr": "Système de réserves fractionnaires",
+      "context": "banking"
+    },
+    {
+      "en": "FRED",
+      "fr": "FRED",
+      "context": "data source"
+    },
+    {
+      "en": "Federal Reserve Economic Data",
+      "fr": "Données économiques de la Réserve fédérale (FRED)",
+      "context": "data source"
+    },
+    {
+      "en": "Gaussian kernel",
+      "fr": "Noyau gaussien",
+      "context": "kernel methods"
+    },
+    {
+      "en": "Geary–Khamis dollar",
+      "fr": "Dollar de Geary-Khamis",
+      "context": "international comparison"
+    },
+    {
+      "en": "Gershgorin Circle Theorem",
+      "fr": "Théorème des disques de Gershgorin",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Global Financial Crisis",
+      "fr": "Crise financière mondiale",
+      "context": "economic history"
+    },
+    {
+      "en": "GFC",
+      "fr": "Crise financière mondiale (GFC)",
+      "context": "economic history abbreviation"
+    },
+    {
+      "en": "Global stability",
+      "fr": "Stabilité globale",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Golden Rule savings rate",
+      "fr": "Taux d'épargne de la règle d'or",
+      "context": "growth theory"
+    },
+    {
+      "en": "Gordon formula",
+      "fr": "Formule de Gordon",
+      "context": "finance"
+    },
+    {
+      "en": "Government budget constraint",
+      "fr": "Contrainte budgétaire de l'État",
+      "context": "public finance"
+    },
+    {
+      "en": "Government expenditures multiplier",
+      "fr": "Multiplicateur des dépenses publiques",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Greek debt crisis",
+      "fr": "Crise de la dette grecque",
+      "context": "economic history"
+    },
+    {
+      "en": "Gross Domestic Product",
+      "fr": "Produit intérieur brut",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "GDP",
+      "fr": "Produit intérieur brut (PIB)",
+      "context": "macroeconomics abbreviation"
+    },
+    {
+      "en": "Gross nominal interest rate",
+      "fr": "Taux d'intérêt nominal brut",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Gross rate of return",
+      "fr": "Taux de rendement brut",
+      "context": "finance"
+    },
+    {
+      "en": "Growth facts",
+      "fr": "Faits stylisés de la croissance",
+      "context": "growth theory"
+    },
+    {
+      "en": "Grim trigger strategy",
+      "fr": "Stratégie de la gâchette",
+      "context": "game theory"
+    },
+    {
+      "en": "Heavy-tailed distribution",
+      "fr": "Loi à queue lourde",
+      "context": "probability"
+    },
+    {
+      "en": "Hicksian demand curve",
+      "fr": "Courbe de demande hicksienne",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Histogram",
+      "fr": "Histogramme",
+      "context": "statistics"
+    },
+    {
+      "en": "Hub centrality",
+      "fr": "Centralité de hub",
+      "context": "network science"
+    },
+    {
+      "en": "Human wealth",
+      "fr": "Richesse humaine",
+      "context": "economics"
+    },
+    {
+      "en": "Hyperinflation",
+      "fr": "Hyperinflation",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Imaginary part",
+      "fr": "Partie imaginaire",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Independent and identically distributed",
+      "fr": "Indépendantes et identiquement distribuées",
+      "context": "probability"
+    },
+    {
+      "en": "Indicator function",
+      "fr": "Fonction indicatrice",
+      "context": "mathematics"
+    },
+    {
+      "en": "Industrial output",
+      "fr": "Production industrielle",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Industrial Revolution",
+      "fr": "Révolution industrielle",
+      "context": "economic history"
+    },
+    {
+      "en": "Inflation tax",
+      "fr": "Taxe d'inflation",
+      "context": "public finance"
+    },
+    {
+      "en": "Inflation-indexed bonds",
+      "fr": "Obligations indexées sur l'inflation",
+      "context": "finance"
+    },
+    {
+      "en": "Inflation-tax theory",
+      "fr": "Théorie de la taxe d'inflation",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Initial condition",
+      "fr": "Condition initiale",
+      "context": "differential equations"
+    },
+    {
+      "en": "Input-output model",
+      "fr": "Modèle entrées-sorties",
+      "context": "economics"
+    },
+    {
+      "en": "Invariant subspace",
+      "fr": "Sous-espace invariant",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Investment multiplier",
+      "fr": "Multiplicateur d'investissement",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Irreducible matrix",
+      "fr": "Matrice irréductible",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Jump Chain Algorithm",
+      "fr": "Algorithme de la chaîne de sauts",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Jump variable",
+      "fr": "Variable de saut",
+      "context": "economics"
+    },
+    {
+      "en": "Katz centrality",
+      "fr": "Centralité de Katz",
+      "context": "network science"
+    },
+    {
+      "en": "Kernel",
+      "fr": "Noyau",
+      "context": "functional analysis"
+    },
+    {
+      "en": "Kernel density estimate",
+      "fr": "Estimation par noyau de la densité",
+      "context": "statistics"
+    },
+    {
+      "en": "Kernel density estimator",
+      "fr": "Estimateur à noyau de la densité",
+      "context": "statistics"
+    },
+    {
+      "en": "Keynesian multiplier",
+      "fr": "Multiplicateur keynésien",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Knockout barrier",
+      "fr": "Barrière désactivante",
+      "context": "options"
+    },
+    {
+      "en": "Kolmogorov-Smirnov test",
+      "fr": "Test de Kolmogorov-Smirnov",
+      "context": "statistics"
+    },
+    {
+      "en": "Laffer curve",
+      "fr": "Courbe de Laffer",
+      "context": "public finance"
+    },
+    {
+      "en": "Lake model",
+      "fr": "Modèle du lac",
+      "context": "labor economics"
+    },
+    {
+      "en": "Law of large numbers",
+      "fr": "Loi des grands nombres",
+      "context": "probability"
+    },
+    {
+      "en": "Law of total probability",
+      "fr": "Loi des probabilités totales",
+      "context": "probability"
+    },
+    {
+      "en": "Lecture",
+      "fr": "Cours",
+      "context": "educational content"
+    },
+    {
+      "en": "Legal restrictions theory",
+      "fr": "Théorie des restrictions légales",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Leontief Inverse",
+      "fr": "Inverse de Leontief",
+      "context": "input-output economics"
+    },
+    {
+      "en": "Light-tailed distribution",
+      "fr": "Loi à queue légère",
+      "context": "probability"
+    },
+    {
+      "en": "Linear algebra",
+      "fr": "Algèbre linéaire",
+      "context": "mathematics"
+    },
+    {
+      "en": "Linear differential equation",
+      "fr": "Équation différentielle linéaire",
+      "context": "mathematics"
+    },
+    {
+      "en": "Linear programming",
+      "fr": "Programmation linéaire",
+      "context": "optimization"
+    },
+    {
+      "en": "Log likelihood function",
+      "fr": "Fonction de log-vraisemblance",
+      "context": "statistics"
+    },
+    {
+      "en": "Log transform",
+      "fr": "Transformation logarithmique",
+      "context": "mathematics"
+    },
+    {
+      "en": "Log-normal distribution",
+      "fr": "Loi log-normale",
+      "context": "probability"
+    },
+    {
+      "en": "Long-Run Growth",
+      "fr": "Croissance à long terme",
+      "context": "growth theory"
+    },
+    {
+      "en": "Lorenz curve",
+      "fr": "Courbe de Lorenz",
+      "context": "income distribution"
+    },
+    {
+      "en": "Marginal distribution",
+      "fr": "Loi marginale",
+      "context": "probability"
+    },
+    {
+      "en": "Marginal product of capital",
+      "fr": "Productivité marginale du capital",
+      "context": "economics"
+    },
+    {
+      "en": "Marginal propensity to consume",
+      "fr": "Propension marginale à consommer",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Marginal propensity to save",
+      "fr": "Propension marginale à épargner",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Marginal revenue",
+      "fr": "Recette marginale",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Marginal utility of wealth",
+      "fr": "Utilité marginale de la richesse",
+      "context": "economics"
+    },
+    {
+      "en": "Market clearing",
+      "fr": "Apurement du marché",
+      "context": "economics"
+    },
+    {
+      "en": "Markov chain",
+      "fr": "Chaîne de Markov",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Marshallian demand curve",
+      "fr": "Courbe de demande marshallienne",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Matrix inversion",
+      "fr": "Inversion de matrice",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Matrix multiplication",
+      "fr": "Multiplication matricielle",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Maximum likelihood estimation",
+      "fr": "Estimation par maximum de vraisemblance",
+      "context": "statistics"
+    },
+    {
+      "en": "Method of successive approximations",
+      "fr": "Méthode des approximations successives",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Moment generating function",
+      "fr": "Fonction génératrice des moments",
+      "context": "probability"
+    },
+    {
+      "en": "Moments",
+      "fr": "Moments",
+      "context": "probability"
+    },
+    {
+      "en": "Money demand",
+      "fr": "Demande de monnaie",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Money multiplier",
+      "fr": "Multiplicateur monétaire",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Money supply",
+      "fr": "Masse monétaire",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Money-financed government deficit",
+      "fr": "Déficit public financé par la création monétaire",
+      "context": "public finance"
+    },
+    {
+      "en": "Monte Carlo",
+      "fr": "Monte-Carlo",
+      "context": "simulation methods"
+    },
+    {
+      "en": "Moving average representation",
+      "fr": "Représentation en moyenne mobile",
+      "context": "time series"
+    },
+    {
+      "en": "Multiple consumer economy",
+      "fr": "Économie à plusieurs consommateurs",
+      "context": "economics"
+    },
+    {
+      "en": "Multiplier-accelerator model",
+      "fr": "Modèle multiplicateur-accélérateur",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Multivariate normal distributions",
+      "fr": "Lois normales multivariées",
+      "context": "probability"
+    },
+    {
+      "en": "Mutual fund",
+      "fr": "Fonds commun de placement",
+      "context": "finance"
+    },
+    {
+      "en": "Naive expectations",
+      "fr": "Anticipations naïves",
+      "context": "economics"
+    },
+    {
+      "en": "NBER",
+      "fr": "NBER",
+      "context": "institution"
+    },
+    {
+      "en": "National Bureau of Economic Research",
+      "fr": "National Bureau of Economic Research (NBER)",
+      "context": "institution"
+    },
+    {
+      "en": "Net nominal interest rate",
+      "fr": "Taux d'intérêt nominal net",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Network science",
+      "fr": "Science des réseaux",
+      "context": "mathematics"
+    },
+    {
+      "en": "Neumann Series Lemma",
+      "fr": "Lemme de la série de Neumann",
+      "context": "functional analysis"
+    },
+    {
+      "en": "Newton's method",
+      "fr": "Méthode de Newton",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Non-financial income",
+      "fr": "Revenu non financier",
+      "context": "economics"
+    },
+    {
+      "en": "Non-satiation",
+      "fr": "Non-satiété",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Non-stationary univariate time series",
+      "fr": "Série temporelle univariée non stationnaire",
+      "context": "time series"
+    },
+    {
+      "en": "Normal distribution",
+      "fr": "Loi normale",
+      "context": "probability"
+    },
+    {
+      "en": "Numeraire",
+      "fr": "Numéraire",
+      "context": "economics"
+    },
+    {
+      "en": "Numerical integration",
+      "fr": "Intégration numérique",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Oil Crisis",
+      "fr": "Choc pétrolier",
+      "context": "economic history"
+    },
+    {
+      "en": "Open market operations",
+      "fr": "Opérations d'open market",
+      "context": "monetary policy"
+    },
+    {
+      "en": "Optimal path",
+      "fr": "Trajectoire optimale",
+      "context": "optimization"
+    },
+    {
+      "en": "Optimal policy",
+      "fr": "Politique optimale",
+      "context": "optimization"
+    },
+    {
+      "en": "Ordinary Least Squares",
+      "fr": "Moindres carrés ordinaires",
+      "context": "econometrics"
+    },
+    {
+      "en": "OLS",
+      "fr": "Moindres carrés ordinaires (MCO)",
+      "context": "econometrics abbreviation"
+    },
+    {
+      "en": "Output elasticity of capital",
+      "fr": "Élasticité de la production par rapport au capital",
+      "context": "production economics"
+    },
+    {
+      "en": "Output multiplier",
+      "fr": "Multiplicateur de production",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Overlapping generations model",
+      "fr": "Modèle à générations imbriquées",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "OLG model",
+      "fr": "Modèle à générations imbriquées (OLG)",
+      "context": "macroeconomics abbreviation"
+    },
+    {
+      "en": "PageRank algorithm",
+      "fr": "Algorithme PageRank",
+      "context": "network science"
+    },
+    {
+      "en": "Pareto tail",
+      "fr": "Queue de Pareto",
+      "context": "probability"
+    },
+    {
+      "en": "Partial derivative",
+      "fr": "Dérivée partielle",
+      "context": "calculus"
+    },
+    {
+      "en": "Path simulation",
+      "fr": "Simulation de trajectoires",
+      "context": "simulation"
+    },
+    {
+      "en": "Perfect foresight",
+      "fr": "Prévision parfaite",
+      "context": "economics"
+    },
+    {
+      "en": "Perfect foresight model",
+      "fr": "Modèle à prévision parfaite",
+      "context": "economics"
+    },
+    {
+      "en": "Perron projection",
+      "fr": "Projection de Perron",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Perron-Frobenius theorem",
+      "fr": "Théorème de Perron-Frobenius",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Power law",
+      "fr": "Loi de puissance",
+      "context": "probability"
+    },
+    {
+      "en": "Present discounted value",
+      "fr": "Valeur actualisée",
+      "context": "finance"
+    },
+    {
+      "en": "Present value",
+      "fr": "Valeur actuelle",
+      "context": "finance"
+    },
+    {
+      "en": "Present value model",
+      "fr": "Modèle de la valeur actuelle",
+      "context": "finance"
+    },
+    {
+      "en": "Price level",
+      "fr": "Niveau des prix",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Primitive matrix",
+      "fr": "Matrice primitive",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Probability density function",
+      "fr": "Fonction de densité de probabilité",
+      "context": "probability"
+    },
+    {
+      "en": "Probability mass function",
+      "fr": "Fonction de masse de probabilité",
+      "context": "probability"
+    },
+    {
+      "en": "Producer surplus",
+      "fr": "Surplus du producteur",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Projected corporate tax revenue",
+      "fr": "Recettes fiscales projetées des sociétés",
+      "context": "public finance"
+    },
+    {
+      "en": "Purchasing power parity",
+      "fr": "Parité de pouvoir d'achat",
+      "context": "international economics"
+    },
+    {
+      "en": "Quantity theory of money",
+      "fr": "Théorie quantitative de la monnaie",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Rational expectations",
+      "fr": "Anticipations rationnelles",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Real bills theory",
+      "fr": "Théorie des effets réels",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Real money balances",
+      "fr": "Encaisses monétaires réelles",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Real part",
+      "fr": "Partie réelle",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Recessions",
+      "fr": "Récessions",
+      "context": "business cycles"
+    },
+    {
+      "en": "Recursive expressions",
+      "fr": "Expressions récursives",
+      "context": "mathematics"
+    },
+    {
+      "en": "Reform and liberalization",
+      "fr": "Réforme et libéralisation",
+      "context": "economic policy"
+    },
+    {
+      "en": "Reserve-deposit ratio",
+      "fr": "Ratio réserves-dépôts",
+      "context": "banking"
+    },
+    {
+      "en": "Residuals",
+      "fr": "Résidus",
+      "context": "econometrics"
+    },
+    {
+      "en": "Risk-neutral pricing",
+      "fr": "Évaluation risque-neutre",
+      "context": "finance"
+    },
+    {
+      "en": "Sample mean",
+      "fr": "Moyenne empirique",
+      "context": "statistics"
+    },
+    {
+      "en": "Sample variance",
+      "fr": "Variance empirique",
+      "context": "statistics"
+    },
+    {
+      "en": "Scatter plot",
+      "fr": "Nuage de points",
+      "context": "statistics"
+    },
+    {
+      "en": "Second fundamental welfare theorem",
+      "fr": "Deuxième théorème fondamental de l'économie du bien-être",
+      "context": "welfare economics"
+    },
+    {
+      "en": "Second-order linear difference equation",
+      "fr": "Équation aux différences linéaire du second ordre",
+      "context": "difference equations"
+    },
+    {
+      "en": "Seigniorage",
+      "fr": "Seigneuriage",
+      "context": "public finance"
+    },
+    {
+      "en": "Silverman's rule",
+      "fr": "Règle de Silverman",
+      "context": "kernel density estimation"
+    },
+    {
+      "en": "Simple regression model",
+      "fr": "Modèle de régression simple",
+      "context": "econometrics"
+    },
+    {
+      "en": "Social welfare",
+      "fr": "Bien-être social",
+      "context": "welfare economics"
+    },
+    {
+      "en": "Solow-Swan Growth Model",
+      "fr": "Modèle de croissance de Solow-Swan",
+      "context": "growth theory"
+    },
+    {
+      "en": "Spectral gap",
+      "fr": "Trou spectral",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Spectral radius",
+      "fr": "Rayon spectral",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Spectral theory",
+      "fr": "Théorie spectrale",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Spot price",
+      "fr": "Prix au comptant",
+      "context": "finance"
+    },
+    {
+      "en": "Stable cycle",
+      "fr": "Cycle stable",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Stagflation",
+      "fr": "Stagflation",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "State space",
+      "fr": "Espace d'états",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "State transition matrix",
+      "fr": "Matrice de transition d'états",
+      "context": "Markov chains"
+    },
+    {
+      "en": "State variable",
+      "fr": "Variable d'état",
+      "context": "dynamic systems"
+    },
+    {
+      "en": "State-contingent claims",
+      "fr": "Créances contingentes à l'état",
+      "context": "finance"
+    },
+    {
+      "en": "Stationary distribution",
+      "fr": "Distribution stationnaire",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Stationarity",
+      "fr": "Stationnarité",
+      "context": "time series"
+    },
+    {
+      "en": "Statistical stationarity",
+      "fr": "Stationnarité statistique",
+      "context": "time series"
+    },
+    {
+      "en": "Steady state",
+      "fr": "État stationnaire",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Stochastic difference equation",
+      "fr": "Équation aux différences stochastique",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Stochastic linear difference equation",
+      "fr": "Équation aux différences linéaire stochastique",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Stochastic matrix",
+      "fr": "Matrice stochastique",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Stochastic productivity",
+      "fr": "Productivité stochastique",
+      "context": "economics"
+    },
+    {
+      "en": "Stochastic volatility",
+      "fr": "Volatilité stochastique",
+      "context": "finance"
+    },
+    {
+      "en": "Strike price",
+      "fr": "Prix d'exercice",
+      "context": "options"
+    },
+    {
+      "en": "Strong law of large numbers",
+      "fr": "Loi forte des grands nombres",
+      "context": "probability"
+    },
+    {
+      "en": "Strongly connected",
+      "fr": "Fortement connexe",
+      "context": "graph theory"
+    },
+    {
+      "en": "Successive approximation",
+      "fr": "Approximation successive",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Support",
+      "fr": "Support",
+      "context": "probability"
+    },
+    {
+      "en": "Sum of the squared residuals",
+      "fr": "Somme des carrés des résidus",
+      "context": "econometrics"
+    },
+    {
+      "en": "SSR",
+      "fr": "Somme des carrés des résidus (SCR)",
+      "context": "econometrics abbreviation"
+    },
+    {
+      "en": "Survey of Consumer Finances",
+      "fr": "Enquête sur les finances des consommateurs (SCF)",
+      "context": "data source"
+    },
+    {
+      "en": "Tail index",
+      "fr": "Indice de queue",
+      "context": "probability"
+    },
+    {
+      "en": "Tax farming",
+      "fr": "Affermage de l'impôt",
+      "context": "public finance"
+    },
+    {
+      "en": "Tax-smoothing model",
+      "fr": "Modèle de lissage fiscal",
+      "context": "public finance"
+    },
+    {
+      "en": "Taylor series",
+      "fr": "Série de Taylor",
+      "context": "calculus"
+    },
+    {
+      "en": "Terminal condition",
+      "fr": "Condition terminale",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Terminal price",
+      "fr": "Prix terminal",
+      "context": "finance"
+    },
+    {
+      "en": "Time series",
+      "fr": "Série temporelle",
+      "context": "statistics"
+    },
+    {
+      "en": "Time to build",
+      "fr": "Délai de construction",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Transition probability",
+      "fr": "Probabilité de transition",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Trigonometric form",
+      "fr": "Forme trigonométrique",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Trigonometric integrals",
+      "fr": "Intégrales trigonométriques",
+      "context": "calculus"
+    },
+    {
+      "en": "Underlying asset",
+      "fr": "Actif sous-jacent",
+      "context": "derivatives"
+    },
+    {
+      "en": "University of Michigan",
+      "fr": "Université du Michigan",
+      "context": "institution"
+    },
+    {
+      "en": "Unpleasant monetarist arithmetic",
+      "fr": "Arithmétique monétariste déplaisante",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Vector field",
+      "fr": "Champ de vecteurs",
+      "context": "mathematics"
+    },
+    {
+      "en": "Vector linear difference equations",
+      "fr": "Équations aux différences linéaires vectorielles",
+      "context": "difference equations"
+    },
+    {
+      "en": "Vectorization",
+      "fr": "Vectorisation",
+      "context": "numerical computation"
+    },
+    {
+      "en": "Vertices",
+      "fr": "Sommets",
+      "context": "graph theory"
+    },
+    {
+      "en": "Violin plot",
+      "fr": "Diagramme en violon",
+      "context": "data visualization"
+    },
+    {
+      "en": "Volatility",
+      "fr": "Volatilité",
+      "context": "finance"
+    },
+    {
+      "en": "Wage gap",
+      "fr": "Écart salarial",
+      "context": "labor economics"
+    },
+    {
+      "en": "Weighted average",
+      "fr": "Moyenne pondérée",
+      "context": "statistics"
+    },
+    {
+      "en": "Weighted directed graph",
+      "fr": "Graphe orienté pondéré",
+      "context": "graph theory"
+    },
+    {
+      "en": "Weight function",
+      "fr": "Fonction de poids",
+      "context": "mathematics"
+    },
+    {
+      "en": "Welfare criterion",
+      "fr": "Critère de bien-être",
+      "context": "welfare economics"
+    },
+    {
+      "en": "Welfare maximization problem",
+      "fr": "Problème de maximisation du bien-être",
+      "context": "welfare economics"
+    },
+    {
+      "en": "World Bank",
+      "fr": "Banque mondiale",
+      "context": "institution"
+    },
+    {
+      "en": "Zero-sum game",
+      "fr": "Jeu à somme nulle",
+      "context": "game theory"
+    },
+    {
+      "en": "Abba Lerner",
+      "fr": "Abba Lerner",
+      "context": "economist name"
+    },
+    {
+      "en": "Adam Tooze",
+      "fr": "Adam Tooze",
+      "context": "historian name"
+    },
+    {
+      "en": "Albert Marcet",
+      "fr": "Albert Marcet",
+      "context": "economist name"
+    },
+    {
+      "en": "Alberto Bisin",
+      "fr": "Alberto Bisin",
+      "context": "economist name"
+    },
+    {
+      "en": "Angus Maddison",
+      "fr": "Angus Maddison",
+      "context": "economic historian name"
+    },
+    {
+      "en": "Brian Wright",
+      "fr": "Brian Wright",
+      "context": "economist name"
+    },
+    {
+      "en": "Christian Schluter",
+      "fr": "Christian Schluter",
+      "context": "economist name"
+    },
+    {
+      "en": "Dimitris Bertsimas",
+      "fr": "Dimitris Bertsimas",
+      "context": "mathematician name"
+    },
+    {
+      "en": "Eugene Slutsky",
+      "fr": "Eugene Slutsky",
+      "context": "economist name"
+    },
+    {
+      "en": "Francis Ysidro Edgeworth",
+      "fr": "Francis Ysidro Edgeworth",
+      "context": "economist name"
+    },
+    {
+      "en": "Gerard Debreu",
+      "fr": "Gérard Debreu",
+      "context": "economist name"
+    },
+    {
+      "en": "Guangming Zhao",
+      "fr": "Guangming Zhao",
+      "context": "researcher name"
+    },
+    {
+      "en": "Harold Hotelling",
+      "fr": "Harold Hotelling",
+      "context": "economist name"
+    },
+    {
+      "en": "Hiroki Kondo",
+      "fr": "Hiroki Kondo",
+      "context": "researcher name"
+    },
+    {
+      "en": "James Hamilton",
+      "fr": "James Hamilton",
+      "context": "economist name"
+    },
+    {
+      "en": "Jennifer Burns",
+      "fr": "Jennifer Burns",
+      "context": "historian name"
+    },
+    {
+      "en": "Jess Benhabib",
+      "fr": "Jess Benhabib",
+      "context": "economist name"
+    },
+    {
+      "en": "John Tsitsiklis",
+      "fr": "John Tsitsiklis",
+      "context": "mathematician name"
+    },
+    {
+      "en": "Jonathan Temple",
+      "fr": "Jonathan Temple",
+      "context": "economist name"
+    },
+    {
+      "en": "José Scheinkman",
+      "fr": "José Scheinkman",
+      "context": "economist name"
+    },
+    {
+      "en": "Kenneth Arrow",
+      "fr": "Kenneth Arrow",
+      "context": "economist name"
+    },
+    {
+      "en": "Leon Walras",
+      "fr": "Léon Walras",
+      "context": "economist name"
+    },
+    {
+      "en": "Leonhard Euler",
+      "fr": "Leonhard Euler",
+      "context": "mathematician name"
+    },
+    {
+      "en": "Mi Luo",
+      "fr": "Mi Luo",
+      "context": "researcher name"
+    },
+    {
+      "en": "Michael Bruno",
+      "fr": "Michael Bruno",
+      "context": "economist name"
+    },
+    {
+      "en": "Milton Friedman",
+      "fr": "Milton Friedman",
+      "context": "economist name"
+    },
+    {
+      "en": "Neil Wallace",
+      "fr": "Neil Wallace",
+      "context": "economist name"
+    },
+    {
+      "en": "Patrick Imam",
+      "fr": "Patrick Imam",
+      "context": "economist name"
+    },
+    {
+      "en": "Paul Samuelson",
+      "fr": "Paul Samuelson",
+      "context": "economist name"
+    },
+    {
+      "en": "Phillip Cagan",
+      "fr": "Phillip Cagan",
+      "context": "economist name"
+    },
+    {
+      "en": "Pythagoras",
+      "fr": "Pythagore",
+      "context": "mathematician name"
+    },
+    {
+      "en": "Ragnar Frisch",
+      "fr": "Ragnar Frisch",
+      "context": "economist name"
+    },
+    {
+      "en": "Robert Solow",
+      "fr": "Robert Solow",
+      "context": "economist name"
+    },
+    {
+      "en": "Simon Kuznets",
+      "fr": "Simon Kuznets",
+      "context": "economist name"
+    },
+    {
+      "en": "Thomas C. Schelling",
+      "fr": "Thomas C. Schelling",
+      "context": "economist name"
+    },
+    {
+      "en": "Thomas Sargent",
+      "fr": "Thomas Sargent",
+      "context": "economist name"
+    },
+    {
+      "en": "Trevor Swan",
+      "fr": "Trevor Swan",
+      "context": "economist name"
+    },
+    {
+      "en": "Vilfredo Pareto",
+      "fr": "Vilfredo Pareto",
+      "context": "economist name"
+    },
+    {
+      "en": "Xavier Gabaix",
+      "fr": "Xavier Gabaix",
+      "context": "economist name"
+    },
+    {
+      "en": "Xin Guo",
+      "fr": "Xin Guo",
+      "context": "researcher name"
+    },
+    {
+      "en": "Yoshi Fujiwara",
+      "fr": "Yoshi Fujiwara",
+      "context": "researcher name"
+    },
+    {
+      "en": "Yunzhe Hu",
+      "fr": "Yunzhe Hu",
+      "context": "researcher name"
+    }
+  ]
+}
