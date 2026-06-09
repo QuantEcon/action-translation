@@ -146,8 +146,7 @@ For Japanese, you would add a font entry if matplotlib's default fonts don't ren
 After editing the source:
 
 ```bash
-npm run build       # Compile TypeScript
-npm run build     # Bundle for distribution (updates dist-action/)
+npm run build       # Compile TypeScript + bundle the action (updates dist-action/)
 npm test            # Run all tests
 ```
 
