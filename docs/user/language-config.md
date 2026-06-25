@@ -12,6 +12,7 @@ Each target language can have specific translation rules that are automatically 
 |------|----------|--------|
 | `zh-cn` | Chinese (Simplified) | ✅ Configured |
 | `fa` | Farsi (Persian) | ✅ Configured |
+| `fr` | French | ✅ Configured (draft glossary) |
 | `ja` | Japanese | Planned |
 | `es` | Spanish | Planned |
 
@@ -26,6 +27,11 @@ Each target language can have specific translation rules that are automatically 
 - Use proper Persian punctuation marks (، ؛ ؟) without any RTL directionality markup
 - Keep technical terms and code examples in English/Latin script
 - Use formal/academic Persian style appropriate for educational content
+
+### French — `fr`
+
+- Use French guillemets « » (with a non-breaking space inside each) for quotations rather than straight or curly double quotes
+- Insert a non-breaking space before the high punctuation marks ; : ! ? as required by French typography
 
 ## How rules are applied
 

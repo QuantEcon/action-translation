@@ -45,6 +45,14 @@ export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
       'Use formal/academic Persian style appropriate for educational content',
     ],
   },
+  'fr': {
+    code: 'fr',
+    name: 'French',
+    additionalRules: [
+      'Use French guillemets « » (with a non-breaking space inside each, e.g. « citation ») for quotations rather than straight or curly double quotes',
+      'Insert a non-breaking space before the high punctuation marks ; : ! ? as required by French typography (e.g. "Bonjour !" not "Bonjour!")',
+    ],
+  },
   // Future language configurations can be added here:
   // 'ja': {
   //   code: 'ja',
