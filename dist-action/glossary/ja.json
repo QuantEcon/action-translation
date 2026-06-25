@@ -1,0 +1,1791 @@
+{
+  "version": "1.0",
+  "description": "Translation glossary for QuantEcon lectures (English to Japanese)",
+  "terms": [
+    {
+      "en": "Accessible state",
+      "ja": "到達可能状態",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Adaptive expectations",
+      "ja": "適応的期待",
+      "context": "economics"
+    },
+    {
+      "en": "Adjacency matrix",
+      "ja": "隣接行列",
+      "context": "graph theory"
+    },
+    {
+      "en": "Aggregate consumption",
+      "ja": "総消費",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Aggregate demand for capital",
+      "ja": "資本の総需要",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Aggregate production function",
+      "ja": "集計生産関数",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Aggregate supply of capital",
+      "ja": "資本の総供給",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Angle sum identities",
+      "ja": "加法定理",
+      "context": "trigonometry"
+    },
+    {
+      "en": "Annuity",
+      "ja": "年金（アニュイティ）",
+      "context": "finance"
+    },
+    {
+      "en": "AR(1) processes",
+      "ja": "AR(1)過程",
+      "context": "time series"
+    },
+    {
+      "en": "Arrow securities",
+      "ja": "アロー証券",
+      "context": "finance"
+    },
+    {
+      "en": "Asymptotic stability",
+      "ja": "漸近安定性",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Asymptotic stationarity",
+      "ja": "漸近定常性",
+      "context": "time series"
+    },
+    {
+      "en": "Authority centrality",
+      "ja": "オーソリティ中心性",
+      "context": "network science"
+    },
+    {
+      "en": "Autarky equilibrium",
+      "ja": "自給自足均衡",
+      "context": "economics"
+    },
+    {
+      "en": "Autoregressive model",
+      "ja": "自己回帰モデル",
+      "context": "time series"
+    },
+    {
+      "en": "Autoregressive representation",
+      "ja": "自己回帰表現",
+      "context": "time series"
+    },
+    {
+      "en": "Balance sheet equation",
+      "ja": "貸借対照表等式",
+      "context": "accounting"
+    },
+    {
+      "en": "Bandwidth",
+      "ja": "バンド幅",
+      "context": "kernel density estimation"
+    },
+    {
+      "en": "Barrier option",
+      "ja": "バリアオプション",
+      "context": "finance"
+    },
+    {
+      "en": "Bellman operator",
+      "ja": "ベルマン作用素",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Beta distribution",
+      "ja": "ベータ分布",
+      "context": "probability"
+    },
+    {
+      "en": "Bivariate uniform distribution",
+      "ja": "二変量一様分布",
+      "context": "probability"
+    },
+    {
+      "en": "Budget constraint",
+      "ja": "予算制約",
+      "context": "economics"
+    },
+    {
+      "en": "Business cycle",
+      "ja": "景気循環",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Calculus",
+      "ja": "微分積分学",
+      "context": "mathematics"
+    },
+    {
+      "en": "Capital depreciation",
+      "ja": "資本減耗",
+      "context": "economics"
+    },
+    {
+      "en": "Capital dynamics",
+      "ja": "資本の動学",
+      "context": "economics"
+    },
+    {
+      "en": "Cauchy distribution",
+      "ja": "コーシー分布",
+      "context": "probability"
+    },
+    {
+      "en": "Central limit theorem",
+      "ja": "中心極限定理",
+      "context": "probability"
+    },
+    {
+      "en": "Central moment",
+      "ja": "中心モーメント",
+      "context": "statistics"
+    },
+    {
+      "en": "Centrality measure",
+      "ja": "中心性指標",
+      "context": "network science"
+    },
+    {
+      "en": "Characteristic equation",
+      "ja": "特性方程式",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Characteristic function",
+      "ja": "特性関数",
+      "context": "probability"
+    },
+    {
+      "en": "Characteristic polynomial",
+      "ja": "特性多項式",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Closed economy",
+      "ja": "閉鎖経済",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Cobb-Douglas production function",
+      "ja": "コブ＝ダグラス型生産関数",
+      "context": "economics"
+    },
+    {
+      "en": "Cobweb model",
+      "ja": "クモの巣モデル",
+      "context": "economics"
+    },
+    {
+      "en": "Communicating states",
+      "ja": "連結状態",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Competitive equilibrium",
+      "ja": "競争均衡",
+      "context": "economics"
+    },
+    {
+      "en": "Complex conjugate",
+      "ja": "複素共役",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Complex eigenvalues",
+      "ja": "複素固有値",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Complex number",
+      "ja": "複素数",
+      "context": "mathematics"
+    },
+    {
+      "en": "Complex plane",
+      "ja": "複素平面",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Conditional probability",
+      "ja": "条件付き確率",
+      "context": "probability"
+    },
+    {
+      "en": "Consumer sentiment index",
+      "ja": "消費者信頼感指数",
+      "context": "economics"
+    },
+    {
+      "en": "Consumer surplus",
+      "ja": "消費者余剰",
+      "context": "economics"
+    },
+    {
+      "en": "Consumption-smoothing model",
+      "ja": "消費平滑化モデル",
+      "context": "economics"
+    },
+    {
+      "en": "Continuation value",
+      "ja": "継続価値",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Contractions",
+      "ja": "縮小写像",
+      "context": "functional analysis"
+    },
+    {
+      "en": "Convergence",
+      "ja": "収束",
+      "context": "mathematics"
+    },
+    {
+      "en": "Convergence in distribution",
+      "ja": "分布収束",
+      "context": "probability"
+    },
+    {
+      "en": "Core consumer price index",
+      "ja": "コア消費者物価指数",
+      "context": "economics"
+    },
+    {
+      "en": "CPI",
+      "ja": "消費者物価指数（CPI）",
+      "context": "economics abbreviation"
+    },
+    {
+      "en": "Corporate bond",
+      "ja": "社債",
+      "context": "finance"
+    },
+    {
+      "en": "Corporate tax rate",
+      "ja": "法人税率",
+      "context": "public finance"
+    },
+    {
+      "en": "Cost function",
+      "ja": "費用関数",
+      "context": "economics"
+    },
+    {
+      "en": "Cost-to-go function",
+      "ja": "残余費用関数",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Counter CDF",
+      "ja": "相補累積分布関数",
+      "context": "probability"
+    },
+    {
+      "en": "CCDF",
+      "ja": "相補累積分布関数（CCDF）",
+      "context": "probability abbreviation"
+    },
+    {
+      "en": "Cumulative distribution function",
+      "ja": "累積分布関数",
+      "context": "probability"
+    },
+    {
+      "en": "Cyclical price dynamics",
+      "ja": "価格の循環的動学",
+      "context": "economics"
+    },
+    {
+      "en": "de Moivre's theorem",
+      "ja": "ド・モアブルの定理",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Degree centrality",
+      "ja": "次数中心性",
+      "context": "network science"
+    },
+    {
+      "en": "Deposit receipt",
+      "ja": "預り証",
+      "context": "banking"
+    },
+    {
+      "en": "Development economics",
+      "ja": "開発経済学",
+      "context": "economics"
+    },
+    {
+      "en": "Discount factor",
+      "ja": "割引因子",
+      "context": "economics"
+    },
+    {
+      "en": "Discounted payoff",
+      "ja": "割引ペイオフ",
+      "context": "economics"
+    },
+    {
+      "en": "Discounting",
+      "ja": "割引",
+      "context": "finance"
+    },
+    {
+      "en": "Distance matrix",
+      "ja": "距離行列",
+      "context": "graph theory"
+    },
+    {
+      "en": "Distribution dynamics",
+      "ja": "分布動学",
+      "context": "economics"
+    },
+    {
+      "en": "Domestic credit",
+      "ja": "国内信用",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Dominant eigenvalue",
+      "ja": "支配的固有値",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Dynamic Laffer curve",
+      "ja": "動学的ラッファー曲線",
+      "context": "public finance"
+    },
+    {
+      "en": "Dynamic model",
+      "ja": "動学モデル",
+      "context": "economics"
+    },
+    {
+      "en": "Dynamic process",
+      "ja": "動的過程",
+      "context": "mathematics"
+    },
+    {
+      "en": "Dynamic programming",
+      "ja": "動的計画法",
+      "context": "optimization"
+    },
+    {
+      "en": "Eigenvector",
+      "ja": "固有ベクトル",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Eigenvector centrality",
+      "ja": "固有ベクトル中心性",
+      "context": "network science"
+    },
+    {
+      "en": "Eigenvector decomposition",
+      "ja": "固有ベクトル分解",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Elasticity of substitution",
+      "ja": "代替の弾力性",
+      "context": "economics"
+    },
+    {
+      "en": "Empirical Distribution",
+      "ja": "経験分布",
+      "context": "statistics"
+    },
+    {
+      "en": "Equalizing Difference Model",
+      "ja": "補償賃金格差モデル",
+      "context": "labor economics"
+    },
+    {
+      "en": "Equilibrium",
+      "ja": "均衡",
+      "context": "economics"
+    },
+    {
+      "en": "Ergodicity",
+      "ja": "エルゴード性",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Euclidean distance",
+      "ja": "ユークリッド距離",
+      "context": "mathematics"
+    },
+    {
+      "en": "Euler equation",
+      "ja": "オイラー方程式",
+      "context": "economics"
+    },
+    {
+      "en": "Euler's formula",
+      "ja": "オイラーの公式",
+      "context": "complex analysis"
+    },
+    {
+      "en": "European call option",
+      "ja": "ヨーロピアン・コール・オプション",
+      "context": "finance"
+    },
+    {
+      "en": "Exercise",
+      "ja": "演習",
+      "context": "educational content"
+    },
+    {
+      "en": "Exogenous",
+      "ja": "外生的",
+      "context": "economics"
+    },
+    {
+      "en": "Exogenous initial capital stock",
+      "ja": "外生的な初期資本ストック",
+      "context": "economics"
+    },
+    {
+      "en": "Expansions",
+      "ja": "景気拡大局面",
+      "context": "business cycles"
+    },
+    {
+      "en": "Expiry date",
+      "ja": "満期日",
+      "context": "finance"
+    },
+    {
+      "en": "Exponential distribution",
+      "ja": "指数分布",
+      "context": "probability"
+    },
+    {
+      "en": "Fiat money",
+      "ja": "不換紙幣",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Financial repression",
+      "ja": "金融抑圧",
+      "context": "economics"
+    },
+    {
+      "en": "Finite horizon",
+      "ja": "有限期間",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "First fundamental welfare theorem",
+      "ja": "厚生経済学の第一基本定理",
+      "context": "welfare economics"
+    },
+    {
+      "en": "First Moment",
+      "ja": "一次モーメント",
+      "context": "statistics"
+    },
+    {
+      "en": "Fiscal policy multiplier",
+      "ja": "財政政策乗数",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Fiscal theory",
+      "ja": "財政理論",
+      "context": "public finance"
+    },
+    {
+      "en": "Fiscal theory of price levels",
+      "ja": "物価水準の財政理論",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Flow utility function",
+      "ja": "フロー効用関数",
+      "context": "economics"
+    },
+    {
+      "en": "Folk theorem",
+      "ja": "フォーク定理",
+      "context": "game theory"
+    },
+    {
+      "en": "Forcing variable",
+      "ja": "強制変数",
+      "context": "difference equations"
+    },
+    {
+      "en": "Forecast errors",
+      "ja": "予測誤差",
+      "context": "time series"
+    },
+    {
+      "en": "Forward-looking difference equation",
+      "ja": "先見的差分方程式",
+      "context": "economics"
+    },
+    {
+      "en": "Fractional reserve banking",
+      "ja": "部分準備銀行制度",
+      "context": "banking"
+    },
+    {
+      "en": "FRED",
+      "ja": "FRED",
+      "context": "data source"
+    },
+    {
+      "en": "Federal Reserve Economic Data",
+      "ja": "連邦準備経済データ（FRED）",
+      "context": "data source"
+    },
+    {
+      "en": "Gaussian kernel",
+      "ja": "ガウシアンカーネル",
+      "context": "kernel methods"
+    },
+    {
+      "en": "Geary–Khamis dollar",
+      "ja": "ギアリー＝ケイミス・ドル",
+      "context": "international comparison"
+    },
+    {
+      "en": "Gershgorin Circle Theorem",
+      "ja": "ゲルシュゴリンの定理",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Global Financial Crisis",
+      "ja": "世界金融危機",
+      "context": "economic history"
+    },
+    {
+      "en": "GFC",
+      "ja": "世界金融危機（GFC）",
+      "context": "economic history abbreviation"
+    },
+    {
+      "en": "Global stability",
+      "ja": "大域的安定性",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Golden Rule savings rate",
+      "ja": "黄金律貯蓄率",
+      "context": "growth theory"
+    },
+    {
+      "en": "Gordon formula",
+      "ja": "ゴードンの公式",
+      "context": "finance"
+    },
+    {
+      "en": "Government budget constraint",
+      "ja": "政府の予算制約",
+      "context": "public finance"
+    },
+    {
+      "en": "Government expenditures multiplier",
+      "ja": "政府支出乗数",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Greek debt crisis",
+      "ja": "ギリシャ債務危機",
+      "context": "economic history"
+    },
+    {
+      "en": "Gross Domestic Product",
+      "ja": "国内総生産",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "GDP",
+      "ja": "国内総生産（GDP）",
+      "context": "macroeconomics abbreviation"
+    },
+    {
+      "en": "Gross nominal interest rate",
+      "ja": "名目総利子率",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Gross rate of return",
+      "ja": "総収益率",
+      "context": "finance"
+    },
+    {
+      "en": "Growth facts",
+      "ja": "成長に関する事実",
+      "context": "growth theory"
+    },
+    {
+      "en": "Grim trigger strategy",
+      "ja": "グリム・トリガー戦略",
+      "context": "game theory"
+    },
+    {
+      "en": "Heavy-tailed distribution",
+      "ja": "裾の重い分布",
+      "context": "probability"
+    },
+    {
+      "en": "Hicksian demand curve",
+      "ja": "ヒックス需要曲線",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Histogram",
+      "ja": "ヒストグラム",
+      "context": "statistics"
+    },
+    {
+      "en": "Hub centrality",
+      "ja": "ハブ中心性",
+      "context": "network science"
+    },
+    {
+      "en": "Human wealth",
+      "ja": "人的資産",
+      "context": "economics"
+    },
+    {
+      "en": "Hyperinflation",
+      "ja": "ハイパーインフレーション",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Imaginary part",
+      "ja": "虚部",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Independent and identically distributed",
+      "ja": "独立同分布",
+      "context": "probability"
+    },
+    {
+      "en": "Indicator function",
+      "ja": "指示関数",
+      "context": "mathematics"
+    },
+    {
+      "en": "Industrial output",
+      "ja": "工業生産",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Industrial Revolution",
+      "ja": "産業革命",
+      "context": "economic history"
+    },
+    {
+      "en": "Inflation tax",
+      "ja": "インフレ税",
+      "context": "public finance"
+    },
+    {
+      "en": "Inflation-indexed bonds",
+      "ja": "物価連動債",
+      "context": "finance"
+    },
+    {
+      "en": "Inflation-tax theory",
+      "ja": "インフレ税理論",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Initial condition",
+      "ja": "初期条件",
+      "context": "differential equations"
+    },
+    {
+      "en": "Input-output model",
+      "ja": "産業連関モデル",
+      "context": "economics"
+    },
+    {
+      "en": "Invariant subspace",
+      "ja": "不変部分空間",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Investment multiplier",
+      "ja": "投資乗数",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Irreducible matrix",
+      "ja": "既約行列",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Jump Chain Algorithm",
+      "ja": "ジャンプ連鎖アルゴリズム",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Jump variable",
+      "ja": "ジャンプ変数",
+      "context": "economics"
+    },
+    {
+      "en": "Katz centrality",
+      "ja": "カッツ中心性",
+      "context": "network science"
+    },
+    {
+      "en": "Kernel",
+      "ja": "核",
+      "context": "functional analysis"
+    },
+    {
+      "en": "Kernel density estimate",
+      "ja": "カーネル密度推定",
+      "context": "statistics"
+    },
+    {
+      "en": "Kernel density estimator",
+      "ja": "カーネル密度推定量",
+      "context": "statistics"
+    },
+    {
+      "en": "Keynesian multiplier",
+      "ja": "ケインズ乗数",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Knockout barrier",
+      "ja": "ノックアウト・バリア",
+      "context": "options"
+    },
+    {
+      "en": "Kolmogorov-Smirnov test",
+      "ja": "コルモゴロフ・スミルノフ検定",
+      "context": "statistics"
+    },
+    {
+      "en": "Laffer curve",
+      "ja": "ラッファー曲線",
+      "context": "public finance"
+    },
+    {
+      "en": "Lake model",
+      "ja": "レイクモデル",
+      "context": "labor economics"
+    },
+    {
+      "en": "Law of large numbers",
+      "ja": "大数の法則",
+      "context": "probability"
+    },
+    {
+      "en": "Law of total probability",
+      "ja": "全確率の法則",
+      "context": "probability"
+    },
+    {
+      "en": "Lecture",
+      "ja": "講義",
+      "context": "educational content"
+    },
+    {
+      "en": "Legal restrictions theory",
+      "ja": "法的制約理論",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Leontief Inverse",
+      "ja": "レオンチェフ逆行列",
+      "context": "input-output economics"
+    },
+    {
+      "en": "Light-tailed distribution",
+      "ja": "裾の軽い分布",
+      "context": "probability"
+    },
+    {
+      "en": "Linear algebra",
+      "ja": "線形代数",
+      "context": "mathematics"
+    },
+    {
+      "en": "Linear differential equation",
+      "ja": "線形微分方程式",
+      "context": "mathematics"
+    },
+    {
+      "en": "Linear programming",
+      "ja": "線形計画法",
+      "context": "optimization"
+    },
+    {
+      "en": "Log likelihood function",
+      "ja": "対数尤度関数",
+      "context": "statistics"
+    },
+    {
+      "en": "Log transform",
+      "ja": "対数変換",
+      "context": "mathematics"
+    },
+    {
+      "en": "Log-normal distribution",
+      "ja": "対数正規分布",
+      "context": "probability"
+    },
+    {
+      "en": "Long-Run Growth",
+      "ja": "長期成長",
+      "context": "growth theory"
+    },
+    {
+      "en": "Lorenz curve",
+      "ja": "ローレンツ曲線",
+      "context": "income distribution"
+    },
+    {
+      "en": "Marginal distribution",
+      "ja": "周辺分布",
+      "context": "probability"
+    },
+    {
+      "en": "Marginal product of capital",
+      "ja": "資本の限界生産物",
+      "context": "economics"
+    },
+    {
+      "en": "Marginal propensity to consume",
+      "ja": "限界消費性向",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Marginal propensity to save",
+      "ja": "限界貯蓄性向",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Marginal revenue",
+      "ja": "限界収入",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Marginal utility of wealth",
+      "ja": "富の限界効用",
+      "context": "economics"
+    },
+    {
+      "en": "Market clearing",
+      "ja": "市場清算",
+      "context": "economics"
+    },
+    {
+      "en": "Markov chain",
+      "ja": "マルコフ連鎖",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Marshallian demand curve",
+      "ja": "マーシャル需要曲線",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Matrix inversion",
+      "ja": "逆行列",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Matrix multiplication",
+      "ja": "行列の積",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Maximum likelihood estimation",
+      "ja": "最尤推定",
+      "context": "statistics"
+    },
+    {
+      "en": "Method of successive approximations",
+      "ja": "逐次近似法",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Moment generating function",
+      "ja": "モーメント母関数",
+      "context": "probability"
+    },
+    {
+      "en": "Moments",
+      "ja": "モーメント",
+      "context": "probability"
+    },
+    {
+      "en": "Money demand",
+      "ja": "貨幣需要",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Money multiplier",
+      "ja": "貨幣乗数",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Money supply",
+      "ja": "貨幣供給",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Money-financed government deficit",
+      "ja": "貨幣調達による財政赤字",
+      "context": "public finance"
+    },
+    {
+      "en": "Monte Carlo",
+      "ja": "モンテカルロ",
+      "context": "simulation methods"
+    },
+    {
+      "en": "Moving average representation",
+      "ja": "移動平均表現",
+      "context": "time series"
+    },
+    {
+      "en": "Multiple consumer economy",
+      "ja": "複数消費者経済",
+      "context": "economics"
+    },
+    {
+      "en": "Multiplier-accelerator model",
+      "ja": "乗数・加速度モデル",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Multivariate normal distributions",
+      "ja": "多変量正規分布",
+      "context": "probability"
+    },
+    {
+      "en": "Mutual fund",
+      "ja": "投資信託",
+      "context": "finance"
+    },
+    {
+      "en": "Naive expectations",
+      "ja": "素朴な期待",
+      "context": "economics"
+    },
+    {
+      "en": "NBER",
+      "ja": "NBER",
+      "context": "institution"
+    },
+    {
+      "en": "National Bureau of Economic Research",
+      "ja": "全米経済研究所（NBER）",
+      "context": "institution"
+    },
+    {
+      "en": "Net nominal interest rate",
+      "ja": "名目純利子率",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Network science",
+      "ja": "ネットワーク科学",
+      "context": "mathematics"
+    },
+    {
+      "en": "Neumann Series Lemma",
+      "ja": "ノイマン級数の補題",
+      "context": "functional analysis"
+    },
+    {
+      "en": "Newton's method",
+      "ja": "ニュートン法",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Non-financial income",
+      "ja": "非金融所得",
+      "context": "economics"
+    },
+    {
+      "en": "Non-satiation",
+      "ja": "非飽和性",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Non-stationary univariate time series",
+      "ja": "非定常一変量時系列",
+      "context": "time series"
+    },
+    {
+      "en": "Normal distribution",
+      "ja": "正規分布",
+      "context": "probability"
+    },
+    {
+      "en": "Numeraire",
+      "ja": "ニュメレール",
+      "context": "economics"
+    },
+    {
+      "en": "Numerical integration",
+      "ja": "数値積分",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Oil Crisis",
+      "ja": "石油危機",
+      "context": "economic history"
+    },
+    {
+      "en": "Open market operations",
+      "ja": "公開市場操作",
+      "context": "monetary policy"
+    },
+    {
+      "en": "Optimal path",
+      "ja": "最適経路",
+      "context": "optimization"
+    },
+    {
+      "en": "Optimal policy",
+      "ja": "最適政策",
+      "context": "optimization"
+    },
+    {
+      "en": "Ordinary Least Squares",
+      "ja": "最小二乗法",
+      "context": "econometrics"
+    },
+    {
+      "en": "OLS",
+      "ja": "最小二乗法（OLS）",
+      "context": "econometrics abbreviation"
+    },
+    {
+      "en": "Output elasticity of capital",
+      "ja": "資本の産出弾力性",
+      "context": "production economics"
+    },
+    {
+      "en": "Output multiplier",
+      "ja": "産出乗数",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Overlapping generations model",
+      "ja": "世代重複モデル",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "OLG model",
+      "ja": "世代重複モデル（OLG）",
+      "context": "macroeconomics abbreviation"
+    },
+    {
+      "en": "PageRank algorithm",
+      "ja": "ページランク・アルゴリズム",
+      "context": "network science"
+    },
+    {
+      "en": "Pareto tail",
+      "ja": "パレートの裾",
+      "context": "probability"
+    },
+    {
+      "en": "Partial derivative",
+      "ja": "偏微分",
+      "context": "calculus"
+    },
+    {
+      "en": "Path simulation",
+      "ja": "経路シミュレーション",
+      "context": "simulation"
+    },
+    {
+      "en": "Perfect foresight",
+      "ja": "完全予見",
+      "context": "economics"
+    },
+    {
+      "en": "Perfect foresight model",
+      "ja": "完全予見モデル",
+      "context": "economics"
+    },
+    {
+      "en": "Perron projection",
+      "ja": "ペロン射影",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Perron-Frobenius theorem",
+      "ja": "ペロン・フロベニウスの定理",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Power law",
+      "ja": "べき乗則",
+      "context": "probability"
+    },
+    {
+      "en": "Present discounted value",
+      "ja": "現在割引価値",
+      "context": "finance"
+    },
+    {
+      "en": "Present value",
+      "ja": "現在価値",
+      "context": "finance"
+    },
+    {
+      "en": "Present value model",
+      "ja": "現在価値モデル",
+      "context": "finance"
+    },
+    {
+      "en": "Price level",
+      "ja": "物価水準",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Primitive matrix",
+      "ja": "原始行列",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Probability density function",
+      "ja": "確率密度関数",
+      "context": "probability"
+    },
+    {
+      "en": "Probability mass function",
+      "ja": "確率質量関数",
+      "context": "probability"
+    },
+    {
+      "en": "Producer surplus",
+      "ja": "生産者余剰",
+      "context": "microeconomics"
+    },
+    {
+      "en": "Projected corporate tax revenue",
+      "ja": "予測法人税収",
+      "context": "public finance"
+    },
+    {
+      "en": "Purchasing power parity",
+      "ja": "購買力平価",
+      "context": "international economics"
+    },
+    {
+      "en": "Quantity theory of money",
+      "ja": "貨幣数量説",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Rational expectations",
+      "ja": "合理的期待",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Real bills theory",
+      "ja": "真正手形理論",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Real money balances",
+      "ja": "実質貨幣残高",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Real part",
+      "ja": "実部",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Recessions",
+      "ja": "景気後退",
+      "context": "business cycles"
+    },
+    {
+      "en": "Recursive expressions",
+      "ja": "再帰的表現",
+      "context": "mathematics"
+    },
+    {
+      "en": "Reform and liberalization",
+      "ja": "改革と自由化",
+      "context": "economic policy"
+    },
+    {
+      "en": "Reserve-deposit ratio",
+      "ja": "準備預金比率",
+      "context": "banking"
+    },
+    {
+      "en": "Residuals",
+      "ja": "残差",
+      "context": "econometrics"
+    },
+    {
+      "en": "Risk-neutral pricing",
+      "ja": "リスク中立価格付け",
+      "context": "finance"
+    },
+    {
+      "en": "Sample mean",
+      "ja": "標本平均",
+      "context": "statistics"
+    },
+    {
+      "en": "Sample variance",
+      "ja": "標本分散",
+      "context": "statistics"
+    },
+    {
+      "en": "Scatter plot",
+      "ja": "散布図",
+      "context": "statistics"
+    },
+    {
+      "en": "Second fundamental welfare theorem",
+      "ja": "厚生経済学の第二基本定理",
+      "context": "welfare economics"
+    },
+    {
+      "en": "Second-order linear difference equation",
+      "ja": "二階線形差分方程式",
+      "context": "difference equations"
+    },
+    {
+      "en": "Seigniorage",
+      "ja": "通貨発行益（シニョリッジ）",
+      "context": "public finance"
+    },
+    {
+      "en": "Silverman's rule",
+      "ja": "シルバーマンの規則",
+      "context": "kernel density estimation"
+    },
+    {
+      "en": "Simple regression model",
+      "ja": "単回帰モデル",
+      "context": "econometrics"
+    },
+    {
+      "en": "Social welfare",
+      "ja": "社会的厚生",
+      "context": "welfare economics"
+    },
+    {
+      "en": "Solow-Swan Growth Model",
+      "ja": "ソロー・スワン成長モデル",
+      "context": "growth theory"
+    },
+    {
+      "en": "Spectral gap",
+      "ja": "スペクトルギャップ",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Spectral radius",
+      "ja": "スペクトル半径",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Spectral theory",
+      "ja": "スペクトル理論",
+      "context": "linear algebra"
+    },
+    {
+      "en": "Spot price",
+      "ja": "現物価格",
+      "context": "finance"
+    },
+    {
+      "en": "Stable cycle",
+      "ja": "安定周期",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Stagflation",
+      "ja": "スタグフレーション",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "State space",
+      "ja": "状態空間",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "State transition matrix",
+      "ja": "状態遷移行列",
+      "context": "Markov chains"
+    },
+    {
+      "en": "State variable",
+      "ja": "状態変数",
+      "context": "dynamic systems"
+    },
+    {
+      "en": "State-contingent claims",
+      "ja": "状態依存請求権",
+      "context": "finance"
+    },
+    {
+      "en": "Stationary distribution",
+      "ja": "定常分布",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Stationarity",
+      "ja": "定常性",
+      "context": "time series"
+    },
+    {
+      "en": "Statistical stationarity",
+      "ja": "統計的定常性",
+      "context": "time series"
+    },
+    {
+      "en": "Steady state",
+      "ja": "定常状態",
+      "context": "dynamical systems"
+    },
+    {
+      "en": "Stochastic difference equation",
+      "ja": "確率差分方程式",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Stochastic linear difference equation",
+      "ja": "確率線形差分方程式",
+      "context": "stochastic processes"
+    },
+    {
+      "en": "Stochastic matrix",
+      "ja": "確率行列",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Stochastic productivity",
+      "ja": "確率的生産性",
+      "context": "economics"
+    },
+    {
+      "en": "Stochastic volatility",
+      "ja": "確率的ボラティリティ",
+      "context": "finance"
+    },
+    {
+      "en": "Strike price",
+      "ja": "行使価格",
+      "context": "options"
+    },
+    {
+      "en": "Strong law of large numbers",
+      "ja": "大数の強法則",
+      "context": "probability"
+    },
+    {
+      "en": "Strongly connected",
+      "ja": "強連結",
+      "context": "graph theory"
+    },
+    {
+      "en": "Successive approximation",
+      "ja": "逐次近似",
+      "context": "numerical methods"
+    },
+    {
+      "en": "Support",
+      "ja": "台（サポート）",
+      "context": "probability"
+    },
+    {
+      "en": "Sum of the squared residuals",
+      "ja": "残差平方和",
+      "context": "econometrics"
+    },
+    {
+      "en": "SSR",
+      "ja": "残差平方和（SSR）",
+      "context": "econometrics abbreviation"
+    },
+    {
+      "en": "Survey of Consumer Finances",
+      "ja": "消費者金融調査（SCF）",
+      "context": "data source"
+    },
+    {
+      "en": "Tail index",
+      "ja": "裾指数",
+      "context": "probability"
+    },
+    {
+      "en": "Tax farming",
+      "ja": "徴税請負",
+      "context": "public finance"
+    },
+    {
+      "en": "Tax-smoothing model",
+      "ja": "課税平滑化モデル",
+      "context": "public finance"
+    },
+    {
+      "en": "Taylor series",
+      "ja": "テイラー級数",
+      "context": "calculus"
+    },
+    {
+      "en": "Terminal condition",
+      "ja": "終端条件",
+      "context": "dynamic programming"
+    },
+    {
+      "en": "Terminal price",
+      "ja": "終端価格",
+      "context": "finance"
+    },
+    {
+      "en": "Time series",
+      "ja": "時系列",
+      "context": "statistics"
+    },
+    {
+      "en": "Time to build",
+      "ja": "建設期間",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Transition probability",
+      "ja": "遷移確率",
+      "context": "Markov chains"
+    },
+    {
+      "en": "Trigonometric form",
+      "ja": "三角形式",
+      "context": "complex analysis"
+    },
+    {
+      "en": "Trigonometric integrals",
+      "ja": "三角積分",
+      "context": "calculus"
+    },
+    {
+      "en": "Underlying asset",
+      "ja": "原資産",
+      "context": "derivatives"
+    },
+    {
+      "en": "University of Michigan",
+      "ja": "ミシガン大学",
+      "context": "institution"
+    },
+    {
+      "en": "Unpleasant monetarist arithmetic",
+      "ja": "不愉快なマネタリストの算術",
+      "context": "monetary economics"
+    },
+    {
+      "en": "Vector field",
+      "ja": "ベクトル場",
+      "context": "mathematics"
+    },
+    {
+      "en": "Vector linear difference equations",
+      "ja": "ベクトル線形差分方程式",
+      "context": "difference equations"
+    },
+    {
+      "en": "Vectorization",
+      "ja": "ベクトル化",
+      "context": "numerical computation"
+    },
+    {
+      "en": "Vertices",
+      "ja": "頂点",
+      "context": "graph theory"
+    },
+    {
+      "en": "Violin plot",
+      "ja": "バイオリンプロット",
+      "context": "data visualization"
+    },
+    {
+      "en": "Volatility",
+      "ja": "ボラティリティ",
+      "context": "finance"
+    },
+    {
+      "en": "Wage gap",
+      "ja": "賃金格差",
+      "context": "labor economics"
+    },
+    {
+      "en": "Weighted average",
+      "ja": "加重平均",
+      "context": "statistics"
+    },
+    {
+      "en": "Weighted directed graph",
+      "ja": "重み付き有向グラフ",
+      "context": "graph theory"
+    },
+    {
+      "en": "Weight function",
+      "ja": "重み関数",
+      "context": "mathematics"
+    },
+    {
+      "en": "Welfare criterion",
+      "ja": "厚生基準",
+      "context": "welfare economics"
+    },
+    {
+      "en": "Welfare maximization problem",
+      "ja": "厚生最大化問題",
+      "context": "welfare economics"
+    },
+    {
+      "en": "World Bank",
+      "ja": "世界銀行",
+      "context": "institution"
+    },
+    {
+      "en": "Zero-sum game",
+      "ja": "ゼロサムゲーム",
+      "context": "game theory"
+    },
+    {
+      "en": "Abba Lerner",
+      "ja": "アバ・ラーナー",
+      "context": "economist name"
+    },
+    {
+      "en": "Adam Tooze",
+      "ja": "アダム・トゥーズ",
+      "context": "historian name"
+    },
+    {
+      "en": "Albert Marcet",
+      "ja": "アルベルト・マルセ",
+      "context": "economist name"
+    },
+    {
+      "en": "Alberto Bisin",
+      "ja": "アルベルト・ビシン",
+      "context": "economist name"
+    },
+    {
+      "en": "Angus Maddison",
+      "ja": "アンガス・マディソン",
+      "context": "economic historian name"
+    },
+    {
+      "en": "Brian Wright",
+      "ja": "ブライアン・ライト",
+      "context": "economist name"
+    },
+    {
+      "en": "Christian Schluter",
+      "ja": "クリスチャン・シュルター",
+      "context": "economist name"
+    },
+    {
+      "en": "Dimitris Bertsimas",
+      "ja": "ディミトリス・ベルツィマス",
+      "context": "mathematician name"
+    },
+    {
+      "en": "Eugene Slutsky",
+      "ja": "ユージン・スルツキー",
+      "context": "economist name"
+    },
+    {
+      "en": "Francis Ysidro Edgeworth",
+      "ja": "フランシス・イシドロ・エッジワース",
+      "context": "economist name"
+    },
+    {
+      "en": "Gerard Debreu",
+      "ja": "ジェラール・ドブリュー",
+      "context": "economist name"
+    },
+    {
+      "en": "Guangming Zhao",
+      "ja": "グアンミン・ジャオ",
+      "context": "researcher name"
+    },
+    {
+      "en": "Harold Hotelling",
+      "ja": "ハロルド・ホテリング",
+      "context": "economist name"
+    },
+    {
+      "en": "Hiroki Kondo",
+      "ja": "ヒロキ・コンドウ",
+      "context": "researcher name"
+    },
+    {
+      "en": "James Hamilton",
+      "ja": "ジェームズ・ハミルトン",
+      "context": "economist name"
+    },
+    {
+      "en": "Jennifer Burns",
+      "ja": "ジェニファー・バーンズ",
+      "context": "historian name"
+    },
+    {
+      "en": "Jess Benhabib",
+      "ja": "ジェス・ベンハビブ",
+      "context": "economist name"
+    },
+    {
+      "en": "John Tsitsiklis",
+      "ja": "ジョン・チチクリス",
+      "context": "mathematician name"
+    },
+    {
+      "en": "Jonathan Temple",
+      "ja": "ジョナサン・テンプル",
+      "context": "economist name"
+    },
+    {
+      "en": "José Scheinkman",
+      "ja": "ホセ・シャインクマン",
+      "context": "economist name"
+    },
+    {
+      "en": "Kenneth Arrow",
+      "ja": "ケネス・アロー",
+      "context": "economist name"
+    },
+    {
+      "en": "Leon Walras",
+      "ja": "レオン・ワルラス",
+      "context": "economist name"
+    },
+    {
+      "en": "Leonhard Euler",
+      "ja": "レオンハルト・オイラー",
+      "context": "mathematician name"
+    },
+    {
+      "en": "Mi Luo",
+      "ja": "ミー・ルオ",
+      "context": "researcher name"
+    },
+    {
+      "en": "Michael Bruno",
+      "ja": "マイケル・ブルーノ",
+      "context": "economist name"
+    },
+    {
+      "en": "Milton Friedman",
+      "ja": "ミルトン・フリードマン",
+      "context": "economist name"
+    },
+    {
+      "en": "Neil Wallace",
+      "ja": "ニール・ウォレス",
+      "context": "economist name"
+    },
+    {
+      "en": "Patrick Imam",
+      "ja": "パトリック・イマーム",
+      "context": "economist name"
+    },
+    {
+      "en": "Paul Samuelson",
+      "ja": "ポール・サミュエルソン",
+      "context": "economist name"
+    },
+    {
+      "en": "Phillip Cagan",
+      "ja": "フィリップ・ケーガン",
+      "context": "economist name"
+    },
+    {
+      "en": "Pythagoras",
+      "ja": "ピタゴラス",
+      "context": "mathematician name"
+    },
+    {
+      "en": "Ragnar Frisch",
+      "ja": "ラグナル・フリッシュ",
+      "context": "economist name"
+    },
+    {
+      "en": "Robert Solow",
+      "ja": "ロバート・ソロー",
+      "context": "economist name"
+    },
+    {
+      "en": "Simon Kuznets",
+      "ja": "サイモン・クズネッツ",
+      "context": "economist name"
+    },
+    {
+      "en": "Thomas C. Schelling",
+      "ja": "トーマス・C・シェリング",
+      "context": "economist name"
+    },
+    {
+      "en": "Thomas Sargent",
+      "ja": "トーマス・サージェント",
+      "context": "economist name"
+    },
+    {
+      "en": "Trevor Swan",
+      "ja": "トレバー・スワン",
+      "context": "economist name"
+    },
+    {
+      "en": "Vilfredo Pareto",
+      "ja": "ヴィルフレド・パレート",
+      "context": "economist name"
+    },
+    {
+      "en": "Xavier Gabaix",
+      "ja": "ザビエル・ガベ",
+      "context": "economist name"
+    },
+    {
+      "en": "Xin Guo",
+      "ja": "シン・グオ",
+      "context": "researcher name"
+    },
+    {
+      "en": "Yoshi Fujiwara",
+      "ja": "ヨシ・フジワラ",
+      "context": "researcher name"
+    },
+    {
+      "en": "Yunzhe Hu",
+      "ja": "ユンジャ・フー",
+      "context": "researcher name"
+    }
+  ]
+}

@@ -10,17 +10,21 @@ Each language has its own glossary file:
 glossary/
 ├── README.md          # This file
 ├── zh-cn.json         # Simplified Chinese glossary
-├── ja.json            # Japanese glossary (future)
-└── es.json            # Spanish glossary (future)
+├── fa.json            # Persian/Farsi glossary
+└── ja.json            # Japanese glossary
 ```
+
+Planned languages (`es`, `zh-tw`, `fr`) are listed under
+[File Naming Convention](#file-naming-convention) below.
 
 ## File Naming Convention
 
 Glossary files are named using **language codes**:
 
 - `zh-cn.json` - Simplified Chinese (中文简体)
+- `fa.json` - Persian/Farsi (فارسی)
+- `ja.json` - Japanese (日本語)
 - `zh-tw.json` - Traditional Chinese (中文繁體) - future
-- `ja.json` - Japanese (日本語) - future
 - `es.json` - Spanish (Español) - future
 - `fr.json` - French (Français) - future
 
@@ -68,9 +72,21 @@ When the action runs with `target-language: 'zh-cn'`:
 
 ### Japanese (`ja.json`)
 
-**Status**: 🚧 Planned
+**Status**: 🟡 Draft (357 terms) — pending native-speaker review
 
-Will include translations for all terms in the existing glossaries.
+**Contents**:
+- ~160 economic terms (国内総生産, 均衡, 財政政策, etc.)
+- ~100 mathematical terms (固有値, 行列, 微分, etc.)
+- ~35 statistical terms (分布, 回帰, 分散, etc.)
+- ~45 economist names (ロバート・ソロー, ケネス・アロー, etc.)
+- ~17 miscellaneous terms
+
+**Notes**: Mirrors the English term set of the `zh-cn` / `fa` glossaries.
+Abbreviations expand to the full Japanese term with the abbreviation in
+parentheses (e.g. GDP → 国内総生産（GDP）). Personal names are transliterated
+to katakana; CJK-origin researcher names (e.g. Hiroki Kondo, Yoshi Fujiwara,
+and the Chinese-origin names) should be reviewed by the authors so preferred
+kanji can replace the katakana placeholders before promoting to ✅ Complete.
 
 ### Spanish (`es.json`)
 
@@ -239,4 +255,4 @@ These glossaries are part of the Translation Sync Action and inherit its license
 ---
 
 **Maintained by**: QuantEcon Team  
-**Last updated**: December 5, 2025
+**Last updated**: June 9, 2026

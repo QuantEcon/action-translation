@@ -23908,15 +23908,16 @@ var LANGUAGE_CONFIGS = {
       "Keep technical terms and code examples in English/Latin script",
       "Use formal/academic Persian style appropriate for educational content"
     ]
+  },
+  "ja": {
+    code: "ja",
+    name: "Japanese",
+    additionalRules: [
+      "Use proper full-width Japanese punctuation marks (\u3001\u3002\u300C\u300D) not ASCII punctuation (,.) in prose text",
+      "Always insert a space between Japanese characters and inline MyST directives ({doc}, {ref}, {any}, {term}, etc.) or Markdown links ([text](url))"
+    ]
   }
   // Future language configurations can be added here:
-  // 'ja': {
-  //   code: 'ja',
-  //   name: 'Japanese',
-  //   additionalRules: [
-  //     'Use proper Japanese punctuation marks (、。「」)',
-  //   ],
-  // },
   // 'es': {
   //   code: 'es',
   //   name: 'Spanish',
