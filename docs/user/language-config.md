@@ -12,7 +12,7 @@ Each target language can have specific translation rules that are automatically 
 |------|----------|--------|
 | `zh-cn` | Chinese (Simplified) | ✅ Configured |
 | `fa` | Farsi (Persian) | ✅ Configured |
-| `ja` | Japanese | Planned |
+| `ja` | Japanese | ✅ Configured (draft glossary) |
 | `es` | Spanish | Planned |
 
 ## Current rules
@@ -26,6 +26,11 @@ Each target language can have specific translation rules that are automatically 
 - Use proper Persian punctuation marks (، ؛ ؟) without any RTL directionality markup
 - Keep technical terms and code examples in English/Latin script
 - Use formal/academic Persian style appropriate for educational content
+
+### Japanese — `ja`
+
+- Use proper full-width Japanese punctuation marks (、。「」) not ASCII punctuation (,.) in prose text
+- Insert a space between Japanese characters and inline MyST directives or Markdown links
 
 ## How rules are applied
 

@@ -31,9 +31,17 @@ describe('Language Configuration', () => {
       expect(config2).toEqual(config3);
     });
 
-    it('should return empty rules for unconfigured languages', () => {
+    it('should return Japanese config for ja', () => {
       const config = getLanguageConfig('ja');
       expect(config.code).toBe('ja');
+      expect(config.name).toBe('Japanese');
+      expect(config.additionalRules).toHaveLength(2);
+      expect(config.additionalRules[0]).toContain('full-width Japanese punctuation');
+    });
+
+    it('should return empty rules for unconfigured languages', () => {
+      const config = getLanguageConfig('ko');
+      expect(config.code).toBe('ko');
       expect(config.additionalRules).toHaveLength(0);
     });
 
@@ -51,7 +59,7 @@ describe('Language Configuration', () => {
     });
 
     it('should return empty string for unconfigured languages', () => {
-      const rules = formatAdditionalRules('ja');
+      const rules = formatAdditionalRules('ko');
       expect(rules).toBe('');
     });
 
@@ -78,10 +86,11 @@ describe('Language Configuration', () => {
     it('should return true for configured languages', () => {
       expect(isLanguageSupported('zh-cn')).toBe(true);
       expect(isLanguageSupported('ZH-CN')).toBe(true);
+      expect(isLanguageSupported('ja')).toBe(true);
     });
 
     it('should return false for unconfigured languages', () => {
-      expect(isLanguageSupported('ja')).toBe(false);
+      expect(isLanguageSupported('ko')).toBe(false);
       expect(isLanguageSupported('es')).toBe(false);
       expect(isLanguageSupported('unknown')).toBe(false);
     });
@@ -93,13 +102,17 @@ describe('Language Configuration', () => {
       expect(() => validateLanguageCode('ZH-CN')).not.toThrow();
     });
 
+    it('should not throw for newly configured language ja', () => {
+      expect(() => validateLanguageCode('ja')).not.toThrow();
+    });
+
     it('should throw for unsupported languages', () => {
-      expect(() => validateLanguageCode('ja')).toThrow(/Unsupported target language/);
+      expect(() => validateLanguageCode('ko')).toThrow(/Unsupported target language/);
       expect(() => validateLanguageCode('unknown')).toThrow(/Unsupported target language/);
     });
 
     it('should include supported languages in error message', () => {
-      expect(() => validateLanguageCode('ja')).toThrow(/zh-cn/);
+      expect(() => validateLanguageCode('ko')).toThrow(/zh-cn/);
     });
 
     it('should suggest updating LANGUAGE_CONFIGS in error', () => {
@@ -112,6 +125,7 @@ describe('Language Configuration', () => {
       expect(languageLabel('en')).toBe('English (en)');
       expect(languageLabel('zh-cn')).toBe('Chinese (Simplified) (zh-cn)');
       expect(languageLabel('fa')).toBe('Persian (Farsi) (fa)');
+      expect(languageLabel('ja')).toBe('Japanese (ja)');
     });
 
     it('should handle case insensitive codes', () => {
@@ -120,7 +134,7 @@ describe('Language Configuration', () => {
     });
 
     it('should fall back to code for unknown languages', () => {
-      expect(languageLabel('ja')).toBe('ja (ja)');
+      expect(languageLabel('ko')).toBe('ko (ko)');
       expect(languageLabel('es')).toBe('es (es)');
     });
   });

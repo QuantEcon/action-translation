@@ -11,9 +11,11 @@ glossary/
 ├── README.md          # This file
 ├── zh-cn.json         # Simplified Chinese glossary
 ├── fa.json            # Persian/Farsi glossary
-├── ja.json            # Japanese glossary
-└── es.json            # Spanish glossary (future)
+└── ja.json            # Japanese glossary
 ```
+
+Planned languages (`es`, `zh-tw`, `fr`) are listed under
+[File Naming Convention](#file-naming-convention) below.
 
 ## File Naming Convention
 
