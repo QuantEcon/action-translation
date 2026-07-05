@@ -3,19 +3,24 @@
 Guidance for coding agents working in this repository (GitHub Action + `translate` CLI for
 translating QuantEcon MyST lectures via the Anthropic API; TypeScript).
 
-## Working notes — read first
+## Project notes (`.dev/`)
 
-Maintainer/agent working memory lives in [`.dev/`](.dev/README.md):
+Maintainer/agent working memory lives in [`.dev/`](.dev/README.md) (the QuantEcon `.dev/`
+convention — this is the pilot repo). Contract:
 
-- [`.dev/PLAN.md`](.dev/PLAN.md) — the active, phased work plan. Read before starting
-  maintenance/roadmap work; tick tasks as you complete them.
-- [`.dev/FUTURE.md`](.dev/FUTURE.md) — documented feature ideas awaiting iteration.
-- [`.dev/ARCHITECTURE.md`](.dev/ARCHITECTURE.md) — architecture assessment and open design
-  questions.
-- [`.dev/DECISIONS.md`](.dev/DECISIONS.md) — append-only decision log (micro-ADR entries).
-  Read before re-opening a design question; append an entry when one is settled.
-
-Update these files as part of finishing work — they are the cross-session state.
+- Read [`.dev/STATE.md`](.dev/STATE.md) before starting work; discount it if `verified` is
+  stale, and reconfirm. It points to [`PLAN.md`](.dev/PLAN.md) (roadmap),
+  [`FUTURE.md`](.dev/FUTURE.md) (feature ideas), and [`ARCHITECTURE.md`](.dev/ARCHITECTURE.md)
+  (open design questions).
+- On finishing a session: write a summary to [`.dev/log/`](.dev/log/) (`YYYY-MM-DD-<id>.md`,
+  a few lines; cross-repo findings go in its `promote:` list).
+- Decisions go in [`.dev/decisions/`](.dev/decisions/), one file each, in the same PR that
+  makes them; never edited — supersede via `superseded_by`.
+- Keep STATE.md ≤1 page; bump `verified` only after reconfirming its claims. Frontmatter is
+  limited to `verified`, `scope`, `superseded_by`, `promote` (CI-enforced — see
+  [`.dev/README.md`](.dev/README.md)).
+- `.dev/` is public: no credentials or sensitive detail; keep unpatched security specifics
+  vague until fixed. Validate locally with `node .dev/tools/check.mjs`.
 
 ## Commands
 

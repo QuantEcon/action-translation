@@ -2,7 +2,7 @@
 
 **Created**: 2026-07-05 (from the deep technical review). Living document — iterate on the
 open questions here *before* anything becomes a PLAN.md phase; when a question settles,
-remove it here and record the outcome in [DECISIONS.md](DECISIONS.md).
+remove it here and record the outcome as a file in [decisions/](decisions/).
 
 ---
 
@@ -192,7 +192,7 @@ production language repos.
 
 Backward Stage 2's move to whole-file evaluation gave ~6× fewer API calls *and* better
 results (182→32 calls on a 51-file repo; more high-confidence findings, less noise — see
-DECISIONS.md 2026-03-05 and `experiments/forward/`; full plan in git history:
+decisions/2026-03-05-whole-file-backward-eval.md and `experiments/forward/`; full plan in git history:
 `dev-notes/PLAN.md`). Should forward sync (`translator.ts`) follow?
 
 - **For**: cross-section terminology consistency; fewer calls; no section-reconstruction
@@ -212,5 +212,5 @@ DECISIONS.md 2026-03-05 and `experiments/forward/`; full plan in git history:
 
 ## 4. Decisions
 
-Settled questions are recorded in [DECISIONS.md](DECISIONS.md) (append-only). When a question
-above closes, remove it from this file and add the dated entry there.
+Settled questions are recorded as one file each in [decisions/](decisions/) (append-only). When
+a question above closes, remove it from this file and add the decision file.

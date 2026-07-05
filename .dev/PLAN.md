@@ -3,11 +3,11 @@
 **Created**: 2026-07-05 (from the deep technical review of all source, tests, CI, docs, issues, and PRs)
 **Baseline**: v0.15.0 on `main`; PR #71 (Malayalam) open as draft
 **Predecessor**: the 2026-02→03 resync-CLI plan — complete; distilled into
-[DECISIONS.md](DECISIONS.md), full text in git history (`dev-notes/PLAN.md`)
+[decisions/](decisions/), full text in git history (`dev-notes/PLAN.md`)
 
 How to use this plan: work phases in order — each phase is independently shippable and ends
 with a release or a verifiable checkpoint. Tick tasks as they land; when the whole plan
-completes, distill outcomes into [DECISIONS.md](DECISIONS.md) and start the next plan fresh
+completes, distill outcomes into [decisions/](decisions/) and start the next plan fresh
 (git keeps the history). Feature work lives in [FUTURE.md](FUTURE.md); design questions in
 [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -360,8 +360,8 @@ new-language adopter can go from zero to a working target repo following only pu
 - [ ] Close **#4** (all six findings fixed in v0.6.1; residual tracked in QuantEcon/meta#268)
 - [ ] Close **#6** (implemented + tested; point to #65 for the translator-side remainder)
 - [ ] Close **#48** (all four referenced PRs closed unmerged; superseded by #63/#64)
-- [ ] Close **#1** (decision "accept, monitor" — already recorded as the 2025-10 entry in
-      DECISIONS.md; close with a pointer)
+- [ ] Close **#1** (decision "accept, monitor" — recorded in
+      decisions/2025-10-01-accept-llm-translation-improvements.md; close with a pointer)
 - [ ] Close **#3** (superseded by #51/#52 `translation:` frontmatter + `.translate/`; fold any
       residue into #66)
 - [ ] Close or retitle **#2** to the narrow "cross-model (GPT) reviewer" remainder

@@ -2,7 +2,7 @@
 
 **Created**: 2026-07-05. Each idea is documented well enough to revisit and iterate on later.
 When an idea is scheduled for building, expand it into phases and move it to
-[PLAN.md](PLAN.md); if rejected, record why in [DECISIONS.md](DECISIONS.md) and delete the
+[PLAN.md](PLAN.md); if rejected, record why in a [decisions/](decisions/) file and delete the
 section here.
 
 Template per idea: **Status / Summary / Motivation & evidence / Design sketch /
@@ -26,7 +26,7 @@ review (~80–90% per the #63 discussion). Without rebase-on-merge auto-merge wa
 condition; with it shipped, auto-merge is now safe and purely a productivity feature.
 
 **Design sketch** (from the #63 design record — git history: `dev-notes/FIX-ISSUE-63.md`;
-decision context: DECISIONS.md 2026-04):
+decision context: decisions/2026-04-01-rebase-on-merge.md):
 
 - New sync-mode inputs, off by default:
   `auto-merge: true`, `auto-merge-quality-threshold: 9` (1–10),
@@ -48,7 +48,7 @@ calibration — use the 24-PR human evaluation set (#4) as the baseline?
 
 **Effort**: M (auto-merge) + S (digest mode).
 
-**References**: issue #63 (analysis + recommendation), DECISIONS.md 2026-04 (rebase-on-merge),
+**References**: issue #63 (analysis + recommendation), decisions/2026-04-01-rebase-on-merge.md,
 PLAN.md Phase 4 (review-mode fixes are prerequisites — per-file evaluation, NaN guards).
 
 ---
@@ -319,7 +319,8 @@ JSON schemas (now true). Revisit only if idea 5's richer review UI hits ink's li
 **Effort**: XL.
 
 **References**: 2026-03 plan, "Future: Python Rewrite with rich" (git history:
-`dev-notes/PLAN.md`; includes the module inventory). Decision context: DECISIONS.md 2026-03-04.
+`dev-notes/PLAN.md`; includes the module inventory). Decision context:
+decisions/2026-03-04-ink-over-rich-cli.md.
 
 ---
 
