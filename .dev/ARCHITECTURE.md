@@ -1,8 +1,8 @@
 # ARCHITECTURE: assessment, open questions, decisions
 
 **Created**: 2026-07-05 (from the deep technical review). Living document — iterate on the
-open questions here *before* anything becomes a PLAN.md phase; record outcomes in the
-Decision log at the bottom.
+open questions here *before* anything becomes a PLAN.md phase; when a question settles,
+remove it here and record the outcome in [DECISIONS.md](DECISIONS.md).
 
 ---
 
@@ -188,12 +188,12 @@ builder-agnostic by design. The exceptions are exactly where it will break:
 abstraction first; pilot sync on the first mystmd-migrated series before migrating the
 production language repos.
 
-### Q3. Whole-file vs section-by-section forward translation (carried from archive plan "Phase 9")
+### Q3. Whole-file vs section-by-section forward translation (carried from the 2026-03 plan, "Phase 9")
 
 Backward Stage 2's move to whole-file evaluation gave ~6× fewer API calls *and* better
-results (182→32 calls on a 51-file repo; more high-confidence findings, less noise —
-[archive/2026-03-resync-cli-plan.md](archive/2026-03-resync-cli-plan.md), `experiments/forward/`).
-Should forward sync (`translator.ts`) follow?
+results (182→32 calls on a 51-file repo; more high-confidence findings, less noise — see
+DECISIONS.md 2026-03-05 and `experiments/forward/`; full plan in git history:
+`dev-notes/PLAN.md`). Should forward sync (`translator.ts`) follow?
 
 - **For**: cross-section terminology consistency; fewer calls; no section-reconstruction
   bug class (a large slice of PLAN Phase 2 exists because of split/rejoin).
@@ -210,32 +210,7 @@ Should forward sync (`translator.ts`) follow?
 
 ---
 
-## 4. Decision log
+## 4. Decisions
 
-Dated records of settled questions (newest first). Add an entry whenever a Q above closes or
-a significant FUTURE idea is rejected.
-
-- **2026-07-05 — Adopted the `.dev/` convention** (this folder): PLAN/FUTURE/ARCHITECTURE +
-  immutable archive, replacing `dev-notes/`. Intended as a cross-repo pattern for QuantEcon
-  projects.
-- **2026-06 — Malayalam keep-English-dominant policy** (issue #70, PR #71): native-reviewer
-  decision — technical terms stay English with Malayalam grammatical inflection; policy
-  carried by `language-config.ts` prompt rules; glossary `treatment` field deferred
-  (zero-schema-change v1).
-- **2026-04 — Rebase-on-merge over sequential-queue/batching for #63** (see
-  [archive/2026-04-fix-issue-63-rebase-on-merge.md](archive/2026-04-fix-issue-63-rebase-on-merge.md)):
-  full-file-snapshot PRs made 3-way merges structurally impossible; regenerating siblings on
-  merge with a section cache fixes the root cause. Auto-merge + digest (its Stage 2)
-  deliberately deferred — now FUTURE.md idea 1.
-- **2026-03-06 — CLI renamed `resync` → `translate`**; `init` command added (archive plan
-  Phase 5).
-- **2026-03-05 — Whole-file evaluation for backward Stage 2** (archive plan Phase 3b
-  experiment): 6× fewer calls, better precision; raised Q3 for forward.
-- **2026-03-04 — `ink` over Python `rich` for the review UI**: unified codebase and direct
-  module imports won; Python rewrite documented as a conditional fallback (FUTURE.md idea 11).
-- **2026-03 — Frontmatter `translation:` block over `_translation.yml`** (issues #3/#51,
-  PR #52): per-file frontmatter won for v0.x; legacy `heading-map:` removal is PLAN Phase 8
-  (issue #53). Note Q2 may reopen the storage location under mystmd.
-- **2025-10 — LLM improvements to unchanged translations: accept and monitor** (issue #1):
-  beneficial in observed cases; revisit only if review cost becomes measurable (field
-  evidence noted in #63 discussion).
+Settled questions are recorded in [DECISIONS.md](DECISIONS.md) (append-only). When a question
+above closes, remove it from this file and add the dated entry there.

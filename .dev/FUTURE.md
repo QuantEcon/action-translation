@@ -2,8 +2,8 @@
 
 **Created**: 2026-07-05. Each idea is documented well enough to revisit and iterate on later.
 When an idea is scheduled for building, expand it into phases and move it to
-[PLAN.md](PLAN.md); if rejected, record why in [ARCHITECTURE.md](ARCHITECTURE.md)'s decision
-log and delete the section here.
+[PLAN.md](PLAN.md); if rejected, record why in [DECISIONS.md](DECISIONS.md) and delete the
+section here.
 
 Template per idea: **Status / Summary / Motivation & evidence / Design sketch /
 Open questions / Effort / References**.
@@ -25,8 +25,8 @@ conflict-mechanics half (rebase-on-merge) was built. Most translation PRs score 
 review (~80–90% per the #63 discussion). Without rebase-on-merge auto-merge was a race
 condition; with it shipped, auto-merge is now safe and purely a productivity feature.
 
-**Design sketch** (full original spec preserved in
-[archive/2026-04-fix-issue-63-rebase-on-merge.md](archive/2026-04-fix-issue-63-rebase-on-merge.md)):
+**Design sketch** (from the #63 design record — git history: `dev-notes/FIX-ISSUE-63.md`;
+decision context: DECISIONS.md 2026-04):
 
 - New sync-mode inputs, off by default:
   `auto-merge: true`, `auto-merge-quality-threshold: 9` (1–10),
@@ -48,7 +48,7 @@ calibration — use the 24-PR human evaluation set (#4) as the baseline?
 
 **Effort**: M (auto-merge) + S (digest mode).
 
-**References**: issue #63 (analysis + recommendation), archive/2026-04 design record,
+**References**: issue #63 (analysis + recommendation), DECISIONS.md 2026-04 (rebase-on-merge),
 PLAN.md Phase 4 (review-mode fixes are prerequisites — per-file evaluation, NaN guards).
 
 ---
@@ -114,7 +114,8 @@ consumers, which is a much safer thing to freeze. Also sequence after the rebase
 
 **Effort**: S.
 
-**References**: issue #66, archive/2026-04 design record (original schema), ARCHITECTURE.md R2/Q3.
+**References**: issue #66, the #63 design record for the original schema (git history:
+`dev-notes/FIX-ISSUE-63.md`), ARCHITECTURE.md R2/Q3.
 
 ---
 
@@ -285,7 +286,8 @@ auto-merge lands and real disagreement data exists.
 
 ## 10. Scheduled backward analysis (carried from previous plan, "Phase 8")
 
-**Status**: Designed at task level in the archived plan; unscheduled.
+**Status**: Designed at task level in the 2026-03 plan (git history: `dev-notes/PLAN.md`);
+unscheduled.
 
 **Summary**: Monthly GitHub Actions workflow running `translate backward` + `status` per
 target repo, storing the report as an artifact and notifying maintainers (tracking-issue
@@ -298,7 +300,7 @@ via `review` stays).
 **Effort**: S — blocked on PLAN Phase 3 (backward's skip predicate is currently inverted, so
 scheduled runs would silently analyze nothing).
 
-**References**: archive/2026-03 plan Phase 8; PLAN Phase 3.
+**References**: 2026-03 plan Phase 8 (git history: `dev-notes/PLAN.md`); PLAN Phase 3.
 
 ---
 
@@ -316,8 +318,8 @@ JSON schemas (now true). Revisit only if idea 5's richer review UI hits ink's li
 
 **Effort**: XL.
 
-**References**: archive/2026-03 plan "Future: Python Rewrite with rich" (includes the module
-inventory).
+**References**: 2026-03 plan, "Future: Python Rewrite with rich" (git history:
+`dev-notes/PLAN.md`; includes the module inventory). Decision context: DECISIONS.md 2026-03-04.
 
 ---
 
@@ -325,14 +327,14 @@ inventory).
 
 Kept as one section; promote items individually if they become real.
 
-- **Review-command UX polish** (archive plan): scroll viewport; truncate long before/after
+- **Review-command UX polish** (2026-03 plan): scroll viewport; truncate long before/after
   blocks with expand; syntax highlighting (cli-highlight); MyST-aware card rendering;
   word-level inline diff.
-- **Prompt-tuning pass** (archive plan): Stage-1 triage precision (flagging rate ~67% vs
+- **Prompt-tuning pass** (2026-03 plan): Stage-1 triage precision (flagging rate ~67% vs
   target 5–10% — high recall, poor precision); Stage-2 noise reduction; RESYNC preservation
   quality; re-run the validation set after each change. Pairs with prompt versioning
   (ARCHITECTURE.md R7) so tuning is measurable.
-- **Error-handling hardening** (archive plan): missing source/target files; API timeout/rate
+- **Error-handling hardening** (2026-03 plan): missing source/target files; API timeout/rate
   limit; invalid heading-map; oversized documents; graceful degradation with warnings.
 - **Digest of dropped-anchor damage** (issue #65 follow-up): one-off scan of past translation
   output for silently dropped `(label)=` anchors across zh-cn/fa repos.

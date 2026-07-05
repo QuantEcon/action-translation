@@ -10,9 +10,10 @@ Maintainer/agent working memory lives in [`.dev/`](.dev/README.md):
 - [`.dev/PLAN.md`](.dev/PLAN.md) — the active, phased work plan. Read before starting
   maintenance/roadmap work; tick tasks as you complete them.
 - [`.dev/FUTURE.md`](.dev/FUTURE.md) — documented feature ideas awaiting iteration.
-- [`.dev/ARCHITECTURE.md`](.dev/ARCHITECTURE.md) — architecture assessment, open design
-  questions, and the decision log. Append decisions here when a design question is settled.
-- `.dev/archive/` — immutable historical records; never edit.
+- [`.dev/ARCHITECTURE.md`](.dev/ARCHITECTURE.md) — architecture assessment and open design
+  questions.
+- [`.dev/DECISIONS.md`](.dev/DECISIONS.md) — append-only decision log (micro-ADR entries).
+  Read before re-opening a design question; append an entry when one is settled.
 
 Update these files as part of finishing work — they are the cross-session state.
 
