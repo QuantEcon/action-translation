@@ -63,7 +63,13 @@ Everything here is a contained fix with an obvious correct behaviour. Ship as on
 - [ ] Add an `engines` field to `package.json` (node >= 20 now; see Phase 5.6 for node24)
 - [ ] Fix stale `.gitignore:6` comment ("ncc CJS bundle" — the build is esbuild)
 
-### 1.5 Release chores
+### 1.5 Rebase-mode input validation (security — pulled forward from Phase 4)
+- [ ] **[H]** Harden rebase mode's handling of PR-embedded metadata: cross-check it against the
+      workflow's own configuration and require the expected automation identity before acting.
+      Specifics deliberately omitted here per the `.dev/` public-content rule. Land this before
+      issue #66 documents the metadata as a public contract.
+
+### 1.6 Release chores
 - [ ] Fix `CHANGELOG.md:10` date: `[0.15.0] - 2025-07-14` → `2026-04-14`
 - [ ] Add `[Unreleased]` entries (Malayalam commit `d5b216e` shipped without one)
 - [ ] Release v0.15.1, rebuild `dist-action/`, move the `v0` / `v0.15` tags
@@ -196,12 +202,6 @@ repos byte-identical.
 
 ## Phase 4 — Security & robustness (action)
 
-- [ ] **[H]** Rebase mode executes attacker-influenceable PR-body metadata: any open PR whose
-      head ref starts with `translation-sync-` gets its embedded `sourceRepo` (arbitrary content
-      fetched into prompts — injection + API-credit burn), `claudeModel`, and `files` trusted
-      (`src/index.ts:164-182`, `src/pr-creator.ts:416-445`). Validate `metadata.sourceRepo`
-      against the workflow's configured source repo and require the PR author to be the
-      automation identity. **Do this before issue #66 freezes the metadata as a public contract**
 - [ ] **[M]** Refresh (or re-embed) PR-body metadata after a rebase rewrites the branch —
       `targetBaseSha` goes stale after the first rebase and degrades cache decisions
 - [ ] **[M]** `fetchFileContent` silently returns `""` for files >1 MB (contents API returns
@@ -231,8 +231,8 @@ repos byte-identical.
       → unretried 409; two near-simultaneous merges rebase the same branch concurrently. Add
       retry-on-409 and document the `concurrency` group as required in the workflow template
 
-**Done when**: a crafted `translation-sync-*` PR with foreign `sourceRepo` metadata is skipped
-with a warning; review mode scores a 3-file PR with different per-file section counts correctly.
+**Done when**: review mode scores a 3-file PR with different per-file section counts correctly;
+oversized files error instead of reading as empty.
 
 ---
 
@@ -361,7 +361,7 @@ new-language adopter can go from zero to a working target repo following only pu
 - [ ] Close **#6** (implemented + tested; point to #65 for the translator-side remainder)
 - [ ] Close **#48** (all four referenced PRs closed unmerged; superseded by #63/#64)
 - [ ] Close **#1** (decision "accept, monitor" — recorded in
-      decisions/2025-10-01-accept-llm-translation-improvements.md; close with a pointer)
+      decisions/D-2025-10-01-accept-llm-translation-improvements.md; close with a pointer)
 - [ ] Close **#3** (superseded by #51/#52 `translation:` frontmatter + `.translate/`; fold any
       residue into #66)
 - [ ] Close or retitle **#2** to the narrow "cross-model (GPT) reviewer" remainder

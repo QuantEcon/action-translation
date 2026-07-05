@@ -26,7 +26,7 @@ review (~80–90% per the #63 discussion). Without rebase-on-merge auto-merge wa
 condition; with it shipped, auto-merge is now safe and purely a productivity feature.
 
 **Design sketch** (from the #63 design record — git history: `dev-notes/FIX-ISSUE-63.md`;
-decision context: decisions/2026-04-01-rebase-on-merge.md):
+decision context: decisions/D-2026-04-01-rebase-on-merge.md):
 
 - New sync-mode inputs, off by default:
   `auto-merge: true`, `auto-merge-quality-threshold: 9` (1–10),
@@ -48,7 +48,7 @@ calibration — use the 24-PR human evaluation set (#4) as the baseline?
 
 **Effort**: M (auto-merge) + S (digest mode).
 
-**References**: issue #63 (analysis + recommendation), decisions/2026-04-01-rebase-on-merge.md,
+**References**: issue #63 (analysis + recommendation), decisions/D-2026-04-01-rebase-on-merge.md,
 PLAN.md Phase 4 (review-mode fixes are prerequisites — per-file evaluation, NaN guards).
 
 ---
@@ -109,8 +109,9 @@ fields.
 
 **Open questions**: Settle **ARCHITECTURE.md Q3 first** — if rebase state moves into
 `.translate/` on the PR branch, the PR-body block becomes a *read-only summary* for external
-consumers, which is a much safer thing to freeze. Also sequence after the rebase trust fix
-(PLAN Phase 4) so the documented contract isn't an injection surface.
+consumers, which is a much safer thing to freeze. Also sequence after the rebase-mode
+input-validation hardening (PLAN Phase 1.5) so the documented contract rests on validated
+inputs.
 
 **Effort**: S.
 
@@ -320,7 +321,7 @@ JSON schemas (now true). Revisit only if idea 5's richer review UI hits ink's li
 
 **References**: 2026-03 plan, "Future: Python Rewrite with rich" (git history:
 `dev-notes/PLAN.md`; includes the module inventory). Decision context:
-decisions/2026-03-04-ink-over-rich-cli.md.
+decisions/D-2026-03-04-ink-over-rich-cli.md.
 
 ---
 

@@ -3,8 +3,12 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore: ['.dev/**']
   pull_request:
     branches: [main]
+    # Note: if `test` ever becomes a *required* status check, drop this ignore —
+    # a skipped required check never reports and would deadlock .dev-only PRs.
+    paths-ignore: ['.dev/**']
   workflow_dispatch:
 
 permissions:

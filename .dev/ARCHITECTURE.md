@@ -35,7 +35,7 @@ zh-cn + fa; ml in flight (PR #71), fr/ja glossaries drafted (#68/#69).
 
 Known structural weaknesses (evidence in the 2026-07-05 review; fixes tracked in PLAN.md):
 no fence awareness in the parser, no parse→reconstruct guarantee, a validation gate that
-cannot fire, truncation undetectable, PR-body state human-editable and trusted, duplicated
+cannot fire, truncation undetectable, PR-body state human-editable, duplicated
 retry/parse/section logic drifting across five sites.
 
 ---
@@ -53,8 +53,8 @@ regardless of parser.
 
 ### R2. Consolidate state into `.translate/`; demote the PR body to a summary
 The PR-body channel is the weakest state store (64 KB cap, human-editable — already broke
-review mode and needed a CRLF shim; goes stale after rebase force-pushes; trust boundary for
-anything that can name a branch `translation-sync-*`) yet it is the *sole* input to rebase.
+review mode and needed a CRLF shim; goes stale after rebase force-pushes; an input surface
+whose validation is being hardened in PLAN Phase 1.5) yet it is the *sole* input to rebase.
 Move rebase-relevant state (source SHAs, per-file types, target base SHA, cache hints) into
 `.translate/` **on the PR branch** — bot-controlled, size-unbounded, versioned with the
 content it describes. Keep the PR-body block as a small versioned *read-only summary* for
@@ -192,7 +192,7 @@ production language repos.
 
 Backward Stage 2's move to whole-file evaluation gave ~6× fewer API calls *and* better
 results (182→32 calls on a 51-file repo; more high-confidence findings, less noise — see
-decisions/2026-03-05-whole-file-backward-eval.md and `experiments/forward/`; full plan in git history:
+decisions/D-2026-03-05-whole-file-backward-eval.md and `experiments/forward/`; full plan in git history:
 `dev-notes/PLAN.md`). Should forward sync (`translator.ts`) follow?
 
 - **For**: cross-section terminology consistency; fewer calls; no section-reconstruction

@@ -5,22 +5,21 @@ translating QuantEcon MyST lectures via the Anthropic API; TypeScript).
 
 ## Project notes (`.dev/`)
 
-Maintainer/agent working memory lives in [`.dev/`](.dev/README.md) (the QuantEcon `.dev/`
-convention — this is the pilot repo). Contract:
+Working notes — state, decisions, design ideas — live in [`.dev/`](.dev/README.md)
+(the QuantEcon `.dev/` convention; this is the pilot repo).
 
-- Read [`.dev/STATE.md`](.dev/STATE.md) before starting work; discount it if `verified` is
-  stale, and reconfirm. It points to [`PLAN.md`](.dev/PLAN.md) (roadmap),
-  [`FUTURE.md`](.dev/FUTURE.md) (feature ideas), and [`ARCHITECTURE.md`](.dev/ARCHITECTURE.md)
-  (open design questions).
-- On finishing a session: write a summary to [`.dev/log/`](.dev/log/) (`YYYY-MM-DD-<id>.md`,
-  a few lines; cross-repo findings go in its `promote:` list).
-- Decisions go in [`.dev/decisions/`](.dev/decisions/), one file each, in the same PR that
-  makes them; never edited — supersede via `superseded_by`.
-- Keep STATE.md ≤1 page; bump `verified` only after reconfirming its claims. Frontmatter is
-  limited to `verified`, `scope`, `superseded_by`, `promote` (CI-enforced — see
-  [`.dev/README.md`](.dev/README.md)).
-- `.dev/` is public: no credentials or sensitive detail; keep unpatched security specifics
-  vague until fixed. Validate locally with `node .dev/tools/check.mjs`.
+- Read [`.dev/STATE.md`](.dev/STATE.md) before starting; it carries a `verified: <date>`
+  first line — trust it less as that ages. It points to [`PLAN.md`](.dev/PLAN.md),
+  [`FUTURE.md`](.dev/FUTURE.md), and [`ARCHITECTURE.md`](.dev/ARCHITECTURE.md).
+- Finish each session by appending a short log entry to [`.dev/log/`](.dev/log/)
+  (`YYYY-MM-DD-<id>.md`) and updating STATE.md if reality changed.
+- Record settled decisions in [`.dev/decisions/`](.dev/decisions/) in the same PR that makes
+  them (`D-YYYY-MM-DD-<slug>.md`; never edited — supersede with a new file + a note at the
+  top of the old one).
+- Tag cross-repo findings inline with `#promote`.
+- Keep it curated: distill, supersede, or delete — git holds the history.
+- `.dev/` is public: no credentials, no unpatched-vulnerability specifics (security
+  advisories until fixed).
 
 ## Commands
 
@@ -33,8 +32,8 @@ convention — this is the pilot repo). Contract:
 
 - `dist-action/` is committed and must stay in sync with `src/` — always `npm run build`
   after source changes; CI fails on drift.
-- Use `.tmp/` (gitignored) for scratch files; never create standalone summary/notes markdown
-  files for individual changes.
+- Use `.dev/scratch/` (gitignored) for scratch files; never create standalone summary/notes
+  markdown files for individual changes.
 - Update `CHANGELOG.md` under `[Unreleased]` for user-visible changes.
 - Detailed conventions, module map, and the release checklist:
   [`.github/copilot-instructions.md`](.github/copilot-instructions.md).

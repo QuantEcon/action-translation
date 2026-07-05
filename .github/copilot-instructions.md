@@ -117,27 +117,27 @@ npm run build    # Compile TypeScript + bundle dist-action/index.js
 - Always work on a branch, never commit directly to `main`
 - Use PRs for all changes, including docs
 - **Always use create/edit file tools** for file content — never heredoc or shell string escaping
-- Multi-line commit messages: write to `.tmp/` first, then use `-F`:
+- Multi-line commit messages: write to `.dev/scratch/` first, then use `-F`:
   ```bash
-  git commit -F .tmp/msg.txt
+  git commit -F .dev/scratch/msg.txt
   ```
 
 ### Using the `gh` CLI
 
-Always write output to the local **`.tmp/`** folder (not `/tmp/`) to keep work repo-scoped:
+Always write output to the local **`.dev/scratch/`** folder (not `/tmp/`) to keep work repo-scoped:
 
 ```bash
 # Read PR details
-gh pr view 123 > .tmp/pr.txt && cat .tmp/pr.txt
+gh pr view 123 > .dev/scratch/pr.txt && cat .dev/scratch/pr.txt
 
 # Create PR (write body with file tool first, then:)
-gh pr create --title "..." --body-file .tmp/pr-body.txt --base main > .tmp/pr-result.txt && cat .tmp/pr-result.txt
+gh pr create --title "..." --body-file .dev/scratch/pr-body.txt --base main > .dev/scratch/pr-result.txt && cat .dev/scratch/pr-result.txt
 
 # Create release (write notes with file tool first, then:)
-gh release create vX.Y.Z --title "..." --notes-file .tmp/release-notes.md > .tmp/release-result.txt && cat .tmp/release-result.txt
+gh release create vX.Y.Z --title "..." --notes-file .dev/scratch/release-notes.md > .dev/scratch/release-result.txt && cat .dev/scratch/release-result.txt
 ```
 
-The `.tmp/` folder is committed (via `.gitkeep`) but its contents are git-ignored.
+The `.dev/scratch/` folder is committed (via `.gitkeep`) but its contents are git-ignored.
 
 ### Addressing Copilot PR Review Comments
 
@@ -147,13 +147,13 @@ After pushing a PR, Copilot may leave review comments. To address them:
    ```bash
    gh api repos/QuantEcon/action-translation/pulls/PR_NUM/comments \
      --jq '.[] | {id, path, line, body: (.body | split("\n")[0])}' \
-     > .tmp/pr-comments.txt && cat .tmp/pr-comments.txt
+     > .dev/scratch/pr-comments.txt && cat .dev/scratch/pr-comments.txt
    ```
 2. **Push fixes** to the PR branch addressing the feedback
 3. **Reply to each comment** — write reply to a file, then post:
    ```bash
    gh api repos/QuantEcon/action-translation/pulls/PR_NUM/comments/COMMENT_ID/replies \
-     -f body="$(cat .tmp/reply.txt)" 2>&1 | jq -r '.html_url'
+     -f body="$(cat .dev/scratch/reply.txt)" 2>&1 | jq -r '.html_url'
    ```
 4. **Resolve threads** on the GitHub web interface
 
@@ -227,7 +227,7 @@ Before creating a release, verify the following:
 3. **Tests pass** — run `npm test` and confirm all tests pass
 4. **Build succeeds** — run `npm run build` to compile TypeScript and update `dist-action/`
 5. **Commit, tag, push** — commit all changes, create git tag `vX.Y.Z`, push with `--tags`
-6. **Create GitHub release** — `gh release create vX.Y.Z --title "..." --notes-file .tmp/release-notes.md`
+6. **Create GitHub release** — `gh release create vX.Y.Z --title "..." --notes-file .dev/scratch/release-notes.md`
 
 ---
 
