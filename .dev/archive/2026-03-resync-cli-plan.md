@@ -1,5 +1,9 @@
 # PLAN: Development Roadmap
 
+> **Archived 2026-07-05.** Historical record of the resync-CLI build-out (Phases 0–7, v0.8–v0.12.5).
+> All phases here shipped; unfinished items were carried into [`../PLAN.md`](../PLAN.md),
+> [`../FUTURE.md`](../FUTURE.md), and [`../ARCHITECTURE.md`](../ARCHITECTURE.md). Do not update this file.
+
 **Created**: 2026-02-16  
 **Last Updated**: 2026-03-26 (v0.12.5 release, heading-map MyST role fix)  
 **Sources**: docs/DESIGN-RESYNC.md  

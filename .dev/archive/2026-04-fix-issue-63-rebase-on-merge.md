@@ -1,5 +1,10 @@
 # Fix: Translation sync PR conflicts (Issue #63)
 
+> **Archived 2026-07-05.** Design record for rebase-on-merge, shipped in v0.14–v0.15.0 (Stage 1 complete).
+> Stage 2 (auto-merge + digest) was **not built** — that spec now lives in
+> [`../FUTURE.md`](../FUTURE.md) as an active feature idea. This file also documents the original
+> `translation-sync-metadata` schema (see issue #66 for making it a public contract). Do not update this file.
+
 **Issue**: [#63 — Translation sync PRs conflict when multiple upstream PRs modify the same file — 62% failure rate](https://github.com/QuantEcon/action-translation/issues/63)
 
 ---

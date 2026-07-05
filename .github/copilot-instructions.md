@@ -223,7 +223,7 @@ Docs live in `docs/` — see `docs/index.md` for the full structure.
 Before creating a release, verify the following:
 
 1. **CHANGELOG is up to date** — all merged PRs and features are listed under `[Unreleased]`; promote `[Unreleased]` → `[X.Y.Z] - YYYY-MM-DD`
-2. **Version bumped** — update `package.json`, this file (`copilot-instructions.md`), and `dev-notes/PLAN.md`
+2. **Version bumped** — update `package.json`, this file (`copilot-instructions.md`), and `.dev/PLAN.md`
 3. **Tests pass** — run `npm test` and confirm all tests pass
 4. **Build succeeds** — run `npm run build` to compile TypeScript and update `dist-action/`
 5. **Commit, tag, push** — commit all changes, create git tag `vX.Y.Z`, push with `--tags`
