@@ -54,7 +54,7 @@
     },
     {
       "en": "Arrow securities",
-      "fr": "Titres d'Arrow",
+      "fr": "Titres d'Arrow-Debreu",
       "context": "finance"
     },
     {
@@ -89,7 +89,7 @@
     },
     {
       "en": "Balance sheet equation",
-      "fr": "Équation du bilan",
+      "fr": "Équation comptable",
       "context": "accounting"
     },
     {
@@ -204,7 +204,7 @@
     },
     {
       "en": "Complex conjugate",
-      "fr": "Conjugué complexe",
+      "fr": "Conjugué d'un nombre complexe",
       "context": "complex analysis"
     },
     {
@@ -279,7 +279,7 @@
     },
     {
       "en": "Corporate tax rate",
-      "fr": "Taux d'imposition des sociétés",
+      "fr": "Taux d'impôt des sociétés",
       "context": "public finance"
     },
     {
