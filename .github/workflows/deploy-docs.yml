@@ -45,6 +45,22 @@ jobs:
         run: myst build --html
         working-directory: docs
 
+      # Static passthrough for temporary experiment pages (e.g. blind review
+      # packets). Anything under docs/_experiments/ is copied verbatim into the
+      # site at /experiments/... . MyST ignores the underscore-prefixed dir, so
+      # these self-contained HTML files are served as-is. No-op when absent —
+      # take an experiment down by deleting its folder under docs/_experiments/.
+      - name: Publish experiment pages (static passthrough)
+        run: |
+          if [ -d docs/_experiments ]; then
+            mkdir -p docs/_build/html/experiments
+            cp -R docs/_experiments/. docs/_build/html/experiments/
+            echo "Published experiment pages under /experiments/:"
+            find docs/_build/html/experiments -type f | sed 's#docs/_build/html/##'
+          else
+            echo "No docs/_experiments/ — nothing to publish."
+          fi
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
