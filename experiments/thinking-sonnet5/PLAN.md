@@ -230,16 +230,25 @@ thinking is on — the CLI commands already do this).
 ```
 experiments/thinking-sonnet5/
   PLAN.md            ← this document
+  emile-email.md        # draft email to the fr native reviewer (fill placeholders, then send)
   scripts/
     lib.mjs               # shared: variants, prod prompts (verbatim), glossary, pricing, SDK call
     run-matrix.mjs        # lectures × languages × variants × reps → translate + Opus review → metrics.jsonl
     make-review-packets.mjs  # anonymized, self-contained HTML review packets for the native reviewer
+    ingest-reviews.mjs    # join reviewer JSON + key + Opus metrics → per-variant table for REPORT
   outputs/              # generated translations + metrics.jsonl (git-ignored)
   data/
-    review-packets/     # blind self-contained HTML packets + index.html — safe to host (git-ignored)
     review-key.json     # id→variant map — PRIVATE, never publish (git-ignored)
+    native-reviews/     # drop Emile's downloaded review JSON here (git-ignored)
+    ingest-summary.{md,json}  # combined native + Opus table (git-ignored; paste into REPORT.md)
   REPORT.md             # results + recommendation (written after the runs)
 ```
+
+**npm shortcuts** (from repo root): `npm run exp:matrix` (run the matrix),
+`exp:packets` (build packets into `docs/_experiments/thinking-sonnet5`),
+`exp:publish` / `exp:takedown` (stage+commit the packets; you push to `main`),
+`exp:ingest` (aggregate the reviews). Review packets publish to the docs site —
+see the **Hosting** note above.
 
 **Native review packets** (`make-review-packets.mjs`) render each subset lecture's
 source + shuffled, neutral-ID translations into one **self-contained HTML file**

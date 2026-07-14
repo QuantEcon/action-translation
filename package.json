@@ -12,7 +12,12 @@
     "build:cli": "tsc",
     "test": "jest",
     "lint": "eslint src/**/*.ts",
-    "format": "prettier --write src/**/*.ts"
+    "format": "prettier --write src/**/*.ts",
+    "exp:matrix": "node experiments/thinking-sonnet5/scripts/run-matrix.mjs",
+    "exp:packets": "node experiments/thinking-sonnet5/scripts/make-review-packets.mjs --out docs/_experiments/thinking-sonnet5",
+    "exp:publish": "npm run exp:packets && git add docs/_experiments/thinking-sonnet5 && git commit -m \"publish thinking-eval review packets\" && echo '\\nCommitted. Push to main to deploy: git push'",
+    "exp:takedown": "git rm -r docs/_experiments/thinking-sonnet5 && git commit -m \"take down thinking-eval review packets\" && echo '\\nCommitted. Push to main to deploy: git push'",
+    "exp:ingest": "node experiments/thinking-sonnet5/scripts/ingest-reviews.mjs"
   },
   "keywords": [
     "github-action",
