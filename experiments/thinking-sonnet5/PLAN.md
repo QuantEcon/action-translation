@@ -231,12 +231,24 @@ thinking is on — the CLI commands already do this).
 experiments/thinking-sonnet5/
   PLAN.md            ← this document
   scripts/
-    lib.mjs          # shared: variants, prod prompts (verbatim), glossary, pricing, SDK call
-    run-matrix.mjs   # lectures × languages × variants × reps → translate + Opus review → metrics.jsonl
-  outputs/           # generated translations + metrics.jsonl (git-ignored)
-  data/review-packets/  # anonymized subset for native review + key.json (git-ignored)
-  REPORT.md          # results + recommendation (written after the runs)
+    lib.mjs               # shared: variants, prod prompts (verbatim), glossary, pricing, SDK call
+    run-matrix.mjs        # lectures × languages × variants × reps → translate + Opus review → metrics.jsonl
+    make-review-packets.mjs  # anonymized, self-contained HTML review packets for the native reviewer
+  outputs/              # generated translations + metrics.jsonl (git-ignored)
+  data/
+    review-packets/     # blind self-contained HTML packets + index.html — safe to host (git-ignored)
+    review-key.json     # id→variant map — PRIVATE, never publish (git-ignored)
+  REPORT.md             # results + recommendation (written after the runs)
 ```
+
+**Native review packets** (`make-review-packets.mjs`) render each subset lecture's
+source + shuffled, neutral-ID translations into one **self-contained HTML file**
+(offline-capable) with an inline scoring form and a "Download my review (JSON)"
+button — no backend. The `id→variant` key is written *outside* the packets dir so
+the folder is safe to serve publicly. Emile can open the files locally, or they
+can be hosted on **GitHub Pages** (`npx gh-pages -d …/data/review-packets`, key
+excluded) so he just visits a URL. He scores/ranks, downloads the JSON, emails it
+back; we join it to `review-key.json` to un-blind and aggregate.
 
 **Status: scripts built and smoke-tested** (`--dry-run` shows the 96-cell core
 matrix). To run (needs `npm run build:cli` first — `lib.mjs` imports the real
