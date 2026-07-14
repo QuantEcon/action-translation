@@ -109,7 +109,7 @@ npx translate backward -s <source-path> -t <target-path> [options]
 | `-d, --docs-folder <folder>` | `lectures` | Documentation folder within repos |
 | `-l, --language <code>` | `zh-cn` | Target language code |
 | `-o, --output <path>` | `./reports` | Output directory for reports |
-| `-m, --model <model>` | `claude-sonnet-4-6` | Claude model |
+| `-m, --model <model>` | `claude-sonnet-5` | Claude model |
 | `--json` | `false` | Include JSON reports |
 | `--test` | `false` | Use deterministic mock responses (no LLM) |
 | `--min-confidence <n>` | `0.6` | Minimum confidence threshold for reporting |
@@ -232,7 +232,7 @@ npx translate forward -s <source-path> -t <target-path> [options]
 | `-f, --file <name>` | *(all outdated files)* | Resync a single file |
 | `-d, --docs-folder <folder>` | `lectures` | Documentation folder within repos |
 | `-l, --language <code>` | `zh-cn` | Target language code |
-| `-m, --model <model>` | `claude-sonnet-4-6` | Claude model |
+| `-m, --model <model>` | `claude-sonnet-5` | Claude model |
 | `--test` | `false` | Use deterministic mock responses (no LLM) |
 | `--github <owner/repo>` | *(none)* | Create one PR per file in the target repo |
 | `--exclude <pattern>` | *(none)* | Exclude files matching pattern |
@@ -298,7 +298,7 @@ npx translate init -s <source-path> -t <target-path> --target-language <code> [o
 | `--target-language <code>` | *(required)* | Target language code (e.g., `zh-cn`, `fa`) |
 | `--source-language <code>` | `en` | Source language code |
 | `-d, --docs-folder <folder>` | `lectures` | Documentation folder within repos |
-| `-m, --model <model>` | `claude-sonnet-4-6` | Claude model |
+| `-m, --model <model>` | `claude-sonnet-5` | Claude model |
 | `-f, --file <file>` | *(all lectures)* | Translate a single lecture file (e.g., `cobweb.md`) |
 | `--batch-delay <ms>` | `1000` | Delay between lectures in ms (rate limiting) |
 | `--resume-from <file>` | *(none)* | Resume from a specific lecture file |
@@ -368,7 +368,7 @@ Output:
 Source:   /Users/you/repos/lecture-python-intro
 Target:   /Users/you/repos/lecture-python-intro.zh-cn
 Language: en → zh-cn
-Model:    claude-sonnet-4-6
+Model:    claude-sonnet-5
 Glossary: 181 terms
 
 Found 51 lectures in _toc.yml
@@ -476,7 +476,7 @@ npx translate status -s ~/source -t ~/target -l zh-cn --write-state
 
 ## Cost estimates
 
-Approximate costs using `claude-sonnet-4-6` (March 2026 pricing):
+Approximate costs using `claude-sonnet-5` (March 2026 pricing):
 
 | Operation | Cost | Notes |
 |-----------|------|-------|
@@ -526,7 +526,7 @@ Provides defaults so CLI flags don't need to be repeated every invocation.
 ```yaml
 source-sha: abc1234f           # Commit SHA that last touched the source file
 synced-at: "2026-03-06"        # ISO date of last sync
-model: claude-sonnet-4-6     # Model used for translation
+model: claude-sonnet-5     # Model used for translation
 mode: NEW                      # Translation mode: NEW / UPDATE / RESYNC
 section-count: 5               # Source section count at sync time
 tool-version: 0.8.0            # Version that performed this sync

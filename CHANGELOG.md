@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Default Claude model → `claude-sonnet-5`** (was `claude-sonnet-4-6`). Sonnet 5 delivers near-Opus quality on coding/agentic work at Sonnet-tier cost. Applies to sync, review, and all CLI commands; override per-run with the `claude-model` action input or the `--model` CLI flag.
+- **Centralized the model default** in `src/models.ts` (`DEFAULT_CLAUDE_MODEL`). All action and CLI defaults now resolve to this single constant, so future upgrades are a one-line change. The `claude-model` default in `action.yml` is kept in sync manually (YAML can't import the constant). Recognized-model validation patterns moved to `src/models.ts` and now include `claude-sonnet-5` and `claude-opus-4-8`.
+
 ## [0.15.0] - 2025-07-14
 
 ### Added

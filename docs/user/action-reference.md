@@ -50,7 +50,7 @@ Runs in the **target** (translated) repository. When a translation PR is opened 
 | `source-language` | `en` | Source language code |
 | `glossary-path` | *(empty)* | Path to custom glossary JSON file. If empty, the built-in glossary for the target language is used |
 | `toc-file` | `_toc.yml` | Table of contents file name |
-| `claude-model` | `claude-sonnet-4-6` | Claude model for translation |
+| `claude-model` | `claude-sonnet-5` | Claude model for translation |
 | `pr-labels` | `action-translation,automated` | Comma-separated labels for created PRs |
 | `pr-reviewers` | *(empty)* | GitHub usernames to request as reviewers |
 | `pr-team-reviewers` | *(empty)* | GitHub team slugs to request as reviewers |
@@ -65,7 +65,7 @@ Runs in the **target** (translated) repository. When a translation PR is opened 
 | `target-language` | *(required for review)* | Target language code |
 | `docs-folder` | `lectures/` | Documentation folder |
 | `max-suggestions` | `5` | Maximum improvement suggestions in review comment |
-| `claude-model` | `claude-sonnet-4-6` | Claude model for review |
+| `claude-model` | `claude-sonnet-5` | Claude model for review |
 
 ## Outputs
 
@@ -240,11 +240,11 @@ For new files, the entire document is translated in a single call (NEW mode).
 
 ## Claude model selection
 
-The default model is `claude-sonnet-4-6`, which provides excellent translation quality at reasonable cost. Options:
+The default model is `claude-sonnet-5`, which provides excellent translation quality at reasonable cost. Options:
 
 | Model | Cost | Best for |
 |-------|------|----------|
-| `claude-sonnet-4-6` | ~$0.05/file | Daily sync operations (recommended) |
+| `claude-sonnet-5` | ~$0.05/file | Daily sync operations (recommended) |
 | `claude-opus-4` | ~$0.25/file | High-stakes translations needing maximum quality |
 | `claude-haiku-3.5` | ~$0.01/file | Budget-conscious bulk operations |
 

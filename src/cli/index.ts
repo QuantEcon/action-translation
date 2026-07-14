@@ -19,6 +19,7 @@ import { resyncSingleFile, runForwardBulk } from './commands/forward.js';
 import { runInit, InitOptions } from './commands/init.js';
 import { runSetup, SetupOptions } from './commands/setup.js';
 import { runHeadingmap, formatHeadingmapTable, formatHeadingmapJson, HeadingmapOptions } from './commands/headingmap.js';
+import { DEFAULT_CLAUDE_MODEL } from '../models.js';
 import { runDoctor, formatDoctorTable, formatDoctorJson, DoctorOptions } from './commands/doctor.js';
 import { BackwardOptions, ForwardOptions } from './types.js';
 import { DEFAULT_RULES, parseLocalizationRules } from '../localization-rules.js';
@@ -94,7 +95,7 @@ program
   .option('-l, --language <code>', 'Target language code', 'zh-cn')
   .option('--source-language <code>', 'Source language code')
   .option('-o, --output <path>', 'Output directory (or .md/.json file path for single-file mode)', './reports')
-  .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-6')
+  .option('-m, --model <model>', 'Claude model to use', DEFAULT_CLAUDE_MODEL)
   .option('--json', 'Output reports as JSON', false)
   .option('--test', 'Use deterministic mock responses (no LLM calls)', false)
   .option('--min-confidence <number>', 'Minimum confidence for reporting', '0.6')
@@ -189,7 +190,7 @@ program
       force: opts.force,
       checkSync: opts.checkSync,
       apiKey: apiKey || 'test-key',
-      model: 'claude-sonnet-4-6',
+      model: DEFAULT_CLAUDE_MODEL,
       testMode: opts.test,
     };
 
@@ -246,7 +247,7 @@ program
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
   .option('-l, --language <code>', 'Target language code', 'zh-cn')
   .option('--source-language <code>', 'Source language code')
-  .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-6')
+  .option('-m, --model <model>', 'Claude model to use', DEFAULT_CLAUDE_MODEL)
   .option('--test', 'Use deterministic mock responses (no LLM calls)', false)
   .option('--github <owner/repo>', 'Create one PR per file in TARGET repo')
   .option('--exclude <pattern>', 'Exclude files matching pattern (repeatable, comma-separated)', collectExclude, [])
@@ -319,7 +320,7 @@ program
   .requiredOption('--target-language <code>', 'Target language code (e.g., zh-cn, fa)')
   .option('--source-language <code>', 'Source language code', 'en')
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
-  .option('-m, --model <model>', 'Claude model to use', 'claude-sonnet-4-6')
+  .option('-m, --model <model>', 'Claude model to use', DEFAULT_CLAUDE_MODEL)
   .option('--batch-delay <ms>', 'Delay between batches in ms (rate limiting)', '1000')
   .option('-j, --parallel <n>', 'Number of parallel translations (default: 1)', '1')
   .option('-f, --file <file>', 'Translate a single lecture file (e.g., cobweb.md)')

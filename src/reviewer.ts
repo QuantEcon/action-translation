@@ -23,9 +23,10 @@ import {
   ChangedSection,
   FileChange,
 } from './types.js';
+import { DEFAULT_CLAUDE_MODEL } from './models.js';
 
 // Default model for review (can be overridden)
-const DEFAULT_REVIEW_MODEL = 'claude-sonnet-4-6';
+const DEFAULT_REVIEW_MODEL = DEFAULT_CLAUDE_MODEL;
 
 /** Retry configuration for review API calls */
 const REVIEW_RETRY_CONFIG = {

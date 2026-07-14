@@ -12,7 +12,7 @@ This tutorial walks through creating a new Chinese translation of an English lec
 - Automated sync and review workflows configured
 
 **Time:** ~30 minutes (plus translation time, which depends on project size)
-**Cost:** ~$0.12/lecture for translation using `claude-sonnet-4-6`
+**Cost:** ~$0.12/lecture for translation using `claude-sonnet-5`
 
 ## Prerequisites
 

@@ -21,6 +21,7 @@ import {
 import { Glossary, SectionTranslationRequest, SectionTranslationResult, FullDocumentTranslationRequest, DocumentResyncRequest } from './types.js';
 import * as core from '@actions/core';
 import { getLanguageConfig } from './language-config.js';
+import { DEFAULT_CLAUDE_MODEL } from './models.js';
 
 /**
  * Constants
@@ -117,7 +118,7 @@ export class TranslationService {
   private model: string;
   private debug: boolean;
 
-  constructor(apiKey: string, model: string = 'claude-sonnet-4-6', debug: boolean = false) {
+  constructor(apiKey: string, model: string = DEFAULT_CLAUDE_MODEL, debug: boolean = false) {
     this.client = new Anthropic({ apiKey });
     this.model = model;
     this.debug = debug;

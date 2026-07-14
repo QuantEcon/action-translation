@@ -16,7 +16,7 @@ Any language can be used as a target. The `target-language` input accepts any la
 
 ### How much does it cost to run?
 
-Costs depend on document size and the Claude model used. With `claude-sonnet-4-6`:
+Costs depend on document size and the Claude model used. With `claude-sonnet-5`:
 - **Sync mode** (per PR): ~$0.05–0.20 depending on how many sections changed
 - **Backward analysis** (51 files): ~$0.85 total
 - **Forward resync** (per file): ~$0.12–0.17

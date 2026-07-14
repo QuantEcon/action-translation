@@ -23955,12 +23955,17 @@ function validateLanguageCode(languageCode) {
   }
 }
 
-// dist/inputs.js
+// dist/models.js
+var DEFAULT_CLAUDE_MODEL = "claude-sonnet-5";
 var VALID_MODEL_PATTERNS = [
+  /^claude-sonnet-5$/,
+  // claude-sonnet-5 (current-generation Sonnet)
+  /^claude-opus-4-8$/,
+  // claude-opus-4-8 (current-generation Opus)
   /^claude-sonnet-4-6$/,
-  // claude-sonnet-4-6 (latest Sonnet)
+  // claude-sonnet-4-6 (previous-generation Sonnet)
   /^claude-opus-4-6$/,
-  // claude-opus-4-6 (latest Opus)
+  // claude-opus-4-6 (previous-generation Opus)
   /^claude-sonnet-4-5-\d{8}$/,
   // claude-sonnet-4-5-20250929
   /^claude-opus-4-5-\d{8}$/,
@@ -23978,10 +23983,12 @@ var VALID_MODEL_PATTERNS = [
   /^claude-3-haiku-\d{8}$/
   // claude-3-haiku-20240307
 ];
+
+// dist/inputs.js
 function validateClaudeModel(model) {
   const isValid = VALID_MODEL_PATTERNS.some((pattern) => pattern.test(model));
   if (!isValid) {
-    core.warning(`Unrecognized Claude model: '${model}'. Expected patterns like 'claude-sonnet-4-6' or 'claude-sonnet-4-5-YYYYMMDD'. The model will still be used, but verify it's correct.`);
+    core.warning(`Unrecognized Claude model: '${model}'. Expected patterns like 'claude-sonnet-5' or 'claude-sonnet-4-5-YYYYMMDD'. The model will still be used, but verify it's correct.`);
   }
 }
 function getMode() {
@@ -24003,7 +24010,7 @@ function getInputs() {
   const glossaryPath = core.getInput("glossary-path", { required: false }) || "";
   const tocFile = core.getInput("toc-file", { required: false }) || "_toc.yml";
   const anthropicApiKey = core.getInput("anthropic-api-key", { required: true });
-  const claudeModel = core.getInput("claude-model", { required: false }) || "claude-sonnet-4-6";
+  const claudeModel = core.getInput("claude-model", { required: false }) || DEFAULT_CLAUDE_MODEL;
   const githubToken = core.getInput("github-token", { required: true });
   const prLabelsRaw = core.getInput("pr-labels", { required: false }) || "action-translation,automated";
   const prLabels = prLabelsRaw.split(",").map((l) => l.trim()).filter((l) => l.length > 0);
@@ -24061,7 +24068,7 @@ function getReviewInputs() {
   const sourceLanguage = core.getInput("source-language", { required: false }) || "en";
   const glossaryPath = core.getInput("glossary-path", { required: false }) || "";
   const anthropicApiKey = core.getInput("anthropic-api-key", { required: true });
-  const claudeModel = core.getInput("claude-model", { required: false }) || "claude-sonnet-4-6";
+  const claudeModel = core.getInput("claude-model", { required: false }) || DEFAULT_CLAUDE_MODEL;
   const githubToken = core.getInput("github-token", { required: true });
   if (!sourceRepo.includes("/")) {
     throw new Error(`Invalid source-repo format: ${sourceRepo}. Expected format: owner/repo`);
@@ -29010,7 +29017,7 @@ Anthropic.Models = Models2;
 Anthropic.Beta = Beta;
 
 // dist/reviewer.js
-var DEFAULT_REVIEW_MODEL = "claude-sonnet-4-6";
+var DEFAULT_REVIEW_MODEL = DEFAULT_CLAUDE_MODEL;
 var REVIEW_RETRY_CONFIG = {
   maxRetries: 3,
   baseDelayMs: 1e3
@@ -29839,7 +29846,7 @@ var TranslationService = class {
   client;
   model;
   debug;
-  constructor(apiKey, model = "claude-sonnet-4-6", debug = false) {
+  constructor(apiKey, model = DEFAULT_CLAUDE_MODEL, debug = false) {
     this.client = new Anthropic({ apiKey });
     this.model = model;
     this.debug = debug;
