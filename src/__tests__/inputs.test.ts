@@ -659,6 +659,7 @@ describe('Language Code Validation', () => {
   const supportedLanguages = [
     'zh-cn',  // Simplified Chinese
     'fa',     // Persian (Farsi)
+    'fr',     // French (draft glossary)
   ];
 
   supportedLanguages.forEach(lang => {
@@ -675,7 +676,7 @@ describe('Language Code Validation', () => {
   });
 
   // These languages are NOT YET configured - tests document future expansion
-  const futureLanguages = ['zh-tw', 'ja', 'ko', 'es', 'de', 'fr'];
+  const futureLanguages = ['zh-tw', 'ja', 'ko', 'es', 'de'];
   
   futureLanguages.forEach(lang => {
     it(`should reject not-yet-configured language: ${lang}`, () => {

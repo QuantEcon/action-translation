@@ -23908,6 +23908,14 @@ var LANGUAGE_CONFIGS = {
       "Keep technical terms and code examples in English/Latin script",
       "Use formal/academic Persian style appropriate for educational content"
     ]
+  },
+  "fr": {
+    code: "fr",
+    name: "French",
+    additionalRules: [
+      "Use French guillemets \xAB \xBB (with a non-breaking space inside each, e.g. \xAB citation \xBB) for quotations rather than straight or curly double quotes",
+      'Insert a non-breaking space before the high punctuation marks ; : ! ? as required by French typography (e.g. "Bonjour !" not "Bonjour!")'
+    ]
   }
   // Future language configurations can be added here:
   // 'ja': {
