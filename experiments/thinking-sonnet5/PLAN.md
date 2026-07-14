@@ -2,10 +2,19 @@
 
 **Created**: 2026-07-14
 **Status**: Design — not yet run
-**Primary language**: `zh-cn` (Simplified Chinese)
+**Languages**: `zh-cn` (Simplified Chinese) and `fr` (French)
 **Decision this informs**: whether, where, and at what effort to enable adaptive
 thinking on `claude-sonnet-5`, currently pinned **off** tool-wide
 (`DEFAULT_THINKING` in [`src/models.ts`](../../src/models.ts)).
+
+> **Two languages, and the `fr` arm is dual-purpose.** French has no existing
+> translation yet, so its variants translate English → French from scratch —
+> which is exactly the `init` path. The French arm therefore doubles as a
+> **measured pilot of the French `init`** that follows this experiment: same
+> command path, and its outputs can seed or sanity-check the real init. `zh-cn`
+> has an existing, native-reviewed translation, so it also anchors quality
+> against a known-good target. The `fr` glossary is native-reviewed (by Emile),
+> so French terminology is validated going in.
 
 ---
 
@@ -69,9 +78,10 @@ today. E is optional — it directly tests the original premise on 4.6.
 
 ## 4. Sample
 
-Reuse the local checkouts the existing experiments use
-(`SOURCE_DIR=~/work/quantecon/lecture-python-intro`,
-`TARGET_DIR=~/work/quantecon/lecture-intro.zh-cn`, `DOCS_FOLDER=lectures`).
+**Same English source lectures, translated into both target languages.** The
+`SOURCE` is `~/work/quantecon/lecture-python-intro`; `zh-cn` uses the existing
+`~/work/quantecon/lecture-intro.zh-cn` target, `fr` starts from scratch (no
+target repo needed for fresh-translate — §5).
 
 Pick **~6 lectures spanning content types** so the result isn't skewed to one style:
 
@@ -84,23 +94,26 @@ Pick **~6 lectures spanning content types** so the result isn't skewed to one st
 | `cons_smooth.md` | Mixed math/prose |
 | `networks.md` | Code- and figure-heavy |
 
-Final list to be confirmed (§11). Native-speaker review covers a **subset of 3**
-(one math-heavy, one prose-heavy, one code/localization-heavy).
+Each lecture is translated to **both `zh-cn` and `fr`** under every variant, so
+we can see whether thinking's effect is language-dependent (e.g. `zh` terminology
+consistency vs `fr` typography — see §6). Final list to be confirmed (§11).
+Native-speaker review covers a **subset of 3** (one math-heavy, one prose-heavy,
+one code/localization-heavy), reviewed in **both** languages.
 
 ---
 
 ## 5. Translation paths tested
 
-Start with the cleanest signal, then optionally widen:
+**Primary: fresh whole-file translation (the `init` path).** One call per
+lecture, no diff/section-matching confound, so it isolates thinking's effect on
+raw translation quality. It's the path **common to both languages** (French has
+no existing target, so this is the only path available for `fr`) and it's exactly
+what the French kickstart will run — making the `fr` arm a true init pilot.
 
-1. **Fresh whole-file translation** (`init`-style) — **primary.** One call, no
-   diff/section-matching confound, so it isolates thinking's effect on raw
-   translation quality.
-2. **Section update (sync)** — *secondary/optional.* The most-used production
-   path; run if the primary shows an effect, to confirm it survives the
-   section-by-section pipeline.
-
-RESYNC (forward whole-file) can reuse the same harness later if needed.
+**Secondary (optional, `zh-cn` only): section update (sync).** The most-used
+production path; because `zh-cn` has an existing target we can also run it there
+to confirm any effect survives the section-by-section pipeline. Not applicable to
+`fr` until a French target exists.
 
 ---
 
@@ -117,7 +130,8 @@ and any syntax errors. The judge sees only *(source, translation)* — **blind t
 variant**.
 
 **Quality — native speaker (ground truth).** Blind human review on the 3-lecture
-subset. Outputs are anonymized and shuffled (§7). Two instruments:
+subset, **per language**: a `zh-cn` native reviewer and **Emile for `fr`**.
+Outputs are anonymized and shuffled (§7). Two instruments:
 - **Absolute rubric**: Accuracy / Fluency / Terminology, 1–5 each.
 - **Forced-rank**: rank A/B/C (and D) for the same lecture, best→worst.
 
@@ -128,9 +142,16 @@ Report the thinking-token premium of B/C over A explicitly.
 **Latency.** Wall-clock seconds per translation call.
 
 **Objective correctness** (spot-checked, especially for code/localization
-lectures): does the output preserve localization additions (Chinese font config,
-translated plot labels), keep math/code intact, and produce valid MyST? Count
-regressions per variant — the whole-file-vs-section experiment's
+lectures): keep math/code intact and produce valid MyST, plus language-specific
+checks that are cheap to verify automatically:
+- **`zh-cn`**: preserves localization additions (Chinese font config, translated
+  plot labels).
+- **`fr`**: adheres to the French typography rules already encoded in
+  `language-config.ts` — guillemets `« »` with inner non-breaking spaces, and a
+  non-breaking space before `;` `:` `!` `?`. Thinking may improve consistent
+  adherence; a regex pass can score it per variant.
+
+Count regressions per variant — the whole-file-vs-section experiment's
 [`REPORT.md`](../forward/whole-file-vs-section-by-section/REPORT.md) is the
 template for this table.
 
@@ -190,6 +211,11 @@ Decide **per path**, because volume differs (sync review is per-PR / low volume;
   "thinking helped" belief held on 4.6 — useful context, but the Sonnet 5
   decision rests on A/B/C.
 
+Also decide **per language**: thinking may pay off differently for `zh-cn`
+(terminology consistency, CJK compactness) than for `fr` (typography adherence,
+Romance-language expansion). If one language benefits and the other doesn't, the
+outcome can be a per-language default rather than a single tool-wide value.
+
 Whatever we choose becomes a decision record in
 [`.dev/decisions/`](../../.dev/decisions/) and, if we enable thinking, a code
 change: flip `DEFAULT_THINKING` (or make it per-path) **and** switch the
@@ -220,18 +246,27 @@ independent of the shipped default.
 
 ---
 
-## 11. Parameters to confirm before building scripts
+## 11. Parameters — resolved vs. open
 
-1. **Lecture set** — accept the 6 proposed in §4, or substitute?
-2. **Native review** — one reviewer or two? Rubric + forced-rank as in §6, or a
-   different format you already use?
-3. **Repetitions** — 2 per cell (proposed), or more for tighter variance (higher cost)?
-4. **Include variant E** (4.6 + thinking) to validate the historical claim?
-5. **Paths** — fresh-translate only to start (proposed), or also section-sync now?
+**Resolved:**
+- **Languages** — `zh-cn` + `fr`.
+- **Native reviewers** — `zh-cn` native reviewer + **Emile** for `fr`; format is
+  the §6 rubric + forced-rank.
+- **Path** — fresh whole-file translation (`init`) is primary and common to both
+  languages; `zh-cn` section-sync is an optional secondary.
+
+**Still open (sensible defaults in parens — harness takes them as inputs, so
+they can change at run time without a rebuild):**
+1. **Lecture set** — the 6 in §4, or substitute? *(default: the 6)*
+2. **Repetitions** — *(default: 2 per cell)*; raise for tighter variance at higher cost.
+3. **Include variant E** (4.6 + thinking) to validate the historical claim? *(default: run core A–D first, add E only if the A/B/C result is ambiguous)*
 
 ## 12. Rough cost/effort of running it
 
-Core (A–D, 6 lectures, 2 reps): **48 translations + 48 Opus reviews**.
-Ballpark **$15–25** in API spend (thinking variants and the Opus judge cost more
-per call) plus native-speaker time on 3 lectures. Adding E or more reps scales
-linearly. Exact figures land in `REPORT.md` from the captured `metrics.jsonl`.
+Core across **both languages** (A–D × 6 lectures × 2 languages × 2 reps):
+**96 translations + 96 Opus reviews**. Ballpark **$30–50** in API spend (thinking
+variants and the Opus judge cost more per call) plus native-speaker time on the
+3-lecture subset in each language (Emile for `fr`). Adding variant E or more reps
+scales linearly. Exact figures land in `REPORT.md` from the captured
+`metrics.jsonl` — and those measured per-file costs feed back into the doc cost
+tables (which currently hold ~1.3×-scaled estimates).
