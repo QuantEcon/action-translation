@@ -1,7 +1,7 @@
 # Experiment PLAN: Does extended thinking improve Sonnet 5 translation? (zh-cn)
 
 **Created**: 2026-07-14
-**Status**: Design — not yet run
+**Status**: Concluded 2026-07-14 (calibration + diagnostic) — see [REPORT.md](./REPORT.md). Decision: keep thinking OFF. The full matrix was not run.
 **Languages**: `zh-cn` (Simplified Chinese) and `fr` (French)
 **Decision this informs**: whether, where, and at what effort to enable adaptive
 thinking on `claude-sonnet-5`, currently pinned **off** tool-wide
