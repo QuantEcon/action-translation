@@ -69,6 +69,8 @@ export const DEFAULT_THINKING: Anthropic.ThinkingConfigParam = { type: 'disabled
 export const VALID_MODEL_PATTERNS: RegExp[] = [
   /^claude-sonnet-5$/,              // claude-sonnet-5 (current-generation Sonnet)
   /^claude-opus-4-8$/,             // claude-opus-4-8 (current-generation Opus)
+  /^claude-opus-4-7$/,             // claude-opus-4-7 (current-generation Opus)
+  /^claude-haiku-4-5$/,            // claude-haiku-4-5 (current-generation Haiku, bare alias)
   /^claude-sonnet-4-6$/,           // claude-sonnet-4-6 (previous-generation Sonnet)
   /^claude-opus-4-6$/,             // claude-opus-4-6 (previous-generation Opus)
   /^claude-sonnet-4-5-\d{8}$/,     // claude-sonnet-4-5-20250929

@@ -269,6 +269,8 @@ describe('Claude Model Validation', () => {
   const validModels = [
     'claude-sonnet-5',
     'claude-opus-4-8',
+    'claude-opus-4-7',
+    'claude-haiku-4-5',
     'claude-3-5-sonnet-20241022',
     'claude-sonnet-4-6',
     'claude-3-5-haiku-20241022',

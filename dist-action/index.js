@@ -23973,6 +23973,10 @@ var VALID_MODEL_PATTERNS = [
   // claude-sonnet-5 (current-generation Sonnet)
   /^claude-opus-4-8$/,
   // claude-opus-4-8 (current-generation Opus)
+  /^claude-opus-4-7$/,
+  // claude-opus-4-7 (current-generation Opus)
+  /^claude-haiku-4-5$/,
+  // claude-haiku-4-5 (current-generation Haiku, bare alias)
   /^claude-sonnet-4-6$/,
   // claude-sonnet-4-6 (previous-generation Sonnet)
   /^claude-opus-4-6$/,
