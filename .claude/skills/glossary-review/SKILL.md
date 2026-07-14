@@ -152,6 +152,12 @@ table and counts. Record any policy-level outcome in `.dev/decisions/`.
 `scripts/glossary/` — `lib.mjs` (models, prompts, pricing), `translate-sample.mjs`,
 `suggest-glossary.mjs`, `compare-models.mjs`.
 
+They live outside this skill on purpose. They do deterministic work a human maintainer
+should be able to run without Claude Code in the loop, and `glossary/README.md` points
+there. Moving them under `.claude/` would not make them self-contained either — they
+import from `dist/` and need a build, a corpus checkout and an API key regardless. This
+skill is the judgement; those are the machinery.
+
 `lib.mjs` holds a **verbatim copy** of the production translate prompt, because
 `src/translator.ts` builds it inline in `translateFullDocument` and doesn't export it. If
 that prompt or `language-config.ts` changes, re-sync `lib.mjs` — otherwise you are pinning
