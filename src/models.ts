@@ -49,14 +49,18 @@ export const MAX_TOKENS = {
  * Thinking is DISABLED tool-wide. Sonnet 5 runs adaptive thinking by default,
  * which would (a) bill thinking tokens on every bulk translation and (b) place
  * a thinking block first in the response — breaking the `content[0]` text
- * extraction in translator.ts / reviewer.ts. Disabling restores the proven
- * Sonnet 4.6 behavior (which also ran thinking-off) and cost profile on a
- * stronger base model. One uniform value is valid on both Sonnet 5 and 4.6, so
- * no per-model branching is needed.
+ * extraction in translator.ts / reviewer.ts. Disabling preserves the exact
+ * behavior the shipped action has always run (Sonnet 4.6 with no thinking param)
+ * and its cost profile on a stronger base model. One uniform value is valid on
+ * both Sonnet 5 and 4.6, so no per-model branching is needed.
  *
- * Future quality lever: the review path is low-volume and judgment-heavy — a
- * candidate to switch to `{ type: 'adaptive' }`. That also requires reading the
- * text via a `.filter(b => b.type === 'text')` scan instead of `content[0]`.
+ * This is a deliberate hold, NOT a quality verdict: the action has never shipped
+ * with thinking on, so its value on Sonnet 5 is being measured before we enable
+ * it — see experiments/thinking-sonnet5/PLAN.md. Turning it on later means
+ * flipping this value (or making it per-path) AND switching the translator/
+ * reviewer text extraction from `content[0]` to `.filter(b => b.type === 'text')`
+ * (a thinking block lands first when thinking is on; the CLI commands already
+ * use that pattern).
  */
 export const DEFAULT_THINKING: Anthropic.ThinkingConfigParam = { type: 'disabled' };
 
