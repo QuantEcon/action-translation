@@ -231,18 +231,31 @@ thinking is on — the CLI commands already do this).
 experiments/thinking-sonnet5/
   PLAN.md            ← this document
   scripts/
-    run-translate.mjs   # translate one lecture under one variant (SDK direct, prod prompt)
-    run-opus-review.mjs # score one output with claude-opus-4-8 (blind)
-    run-matrix.mjs      # orchestrate lectures × variants × reps; write metrics.jsonl
-  outputs/            # generated translations + metrics.jsonl (git-ignored)
-  data/review-packets # anonymized subset for the native speaker + key.json (git-ignored)
-  REPORT.md           # results + recommendation (written after the runs)
+    lib.mjs          # shared: variants, prod prompts (verbatim), glossary, pricing, SDK call
+    run-matrix.mjs   # lectures × languages × variants × reps → translate + Opus review → metrics.jsonl
+  outputs/           # generated translations + metrics.jsonl (git-ignored)
+  data/review-packets/  # anonymized subset for native review + key.json (git-ignored)
+  REPORT.md          # results + recommendation (written after the runs)
+```
+
+**Status: scripts built and smoke-tested** (`--dry-run` shows the 96-cell core
+matrix). To run (needs `npm run build:cli` first — `lib.mjs` imports the real
+`dist/language-config.js` — and `ANTHROPIC_API_KEY`):
+
+```
+node experiments/thinking-sonnet5/scripts/run-matrix.mjs --dry-run
+node experiments/thinking-sonnet5/scripts/run-matrix.mjs --langs fr --lectures pv.md --variants A,B,C --reps 1   # calibrate one lecture
+node experiments/thinking-sonnet5/scripts/run-matrix.mjs                                                         # full core: A–D, both langs, 6 lectures, 2 reps
 ```
 
 Scripts follow the existing experiment convention: **standalone `.mjs` calling the
 Anthropic SDK directly** and varying the `thinking` param — they do **not** go
-through production code (which hardcodes thinking-off), so the experiment stays
-independent of the shipped default.
+through production code (which pins thinking-off), so the experiment stays
+independent of the shipped default. The translate/review prompts are copied
+**verbatim** from production and the language rules are imported from `dist/`, so
+we measure the real path; `max_tokens` is pinned identical across variants so the
+only differences are model + thinking. The Opus judge is inherently blind — its
+prompt never sees the variant.
 
 ---
 
