@@ -33,7 +33,7 @@ export const DOCS_FOLDER = process.env.DOCS_FOLDER || 'lectures';
 export const MAX_TOKENS_FULL = 64000;   // whole-file translation (streamed)
 export const MAX_TOKENS_REVIEW = 8192;  // Opus judge (streamed)
 
-export const TRANSLATOR_MODELS = { sonnet5: 'claude-sonnet-5', sonnet46: 'claude-sonnet-4-6' };
+export const TRANSLATOR_MODELS = { sonnet5: 'claude-sonnet-5', sonnet46: 'claude-sonnet-4-6', opus48: 'claude-opus-4-8' };
 export const REVIEW_MODEL = 'claude-opus-4-8'; // independent judge (different family than translator)
 
 // Thinking variants. `thinking`/`effort` are passed straight to the SDK; because
@@ -44,6 +44,10 @@ export const VARIANTS = {
   C: { id: 'C', label: 'sonnet5-adaptive-high',    model: TRANSLATOR_MODELS.sonnet5,  thinking: { type: 'adaptive' }, effort: 'high' },
   D: { id: 'D', label: 'sonnet46-off',             model: TRANSLATOR_MODELS.sonnet46, thinking: { type: 'disabled' } },
   E: { id: 'E', label: 'sonnet46-adaptive',        model: TRANSLATOR_MODELS.sonnet46, thinking: { type: 'adaptive' }, effort: 'high' },
+  // Opus 4.8, thinking off — apples-to-apples with A (same config, stronger model).
+  // Used for the cross-model comparison: disagreement between A and O flags
+  // context-dependent terms that need pinning in the glossary.
+  O: { id: 'O', label: 'opus4-8-off',              model: TRANSLATOR_MODELS.opus48,   thinking: { type: 'disabled' } },
 };
 export const CORE_VARIANTS = ['A', 'B', 'C', 'D'];
 
