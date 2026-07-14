@@ -3,7 +3,9 @@
 Static passthrough for **temporary** experiment pages (e.g. blind translation
 review packets) that we want to host on the docs site for a while and then take
 down. The underscore prefix keeps MyST from processing this folder; the
-`deploy-docs` workflow copies it verbatim into the built site.
+`deploy-docs` workflow copies each **subfolder** here into the built site (this
+README and other top-level files are *not* published — only subfolders are, and
+the step no-ops when there are none).
 
 - **Served at:** `https://quantecon.github.io/action-translation/experiments/<...>`
   (a folder here → `/experiments/<folder>/`). Put an `index.html` in each folder.

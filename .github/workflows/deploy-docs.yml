@@ -46,19 +46,25 @@ jobs:
         working-directory: docs
 
       # Static passthrough for temporary experiment pages (e.g. blind review
-      # packets). Anything under docs/_experiments/ is copied verbatim into the
-      # site at /experiments/... . MyST ignores the underscore-prefixed dir, so
-      # these self-contained HTML files are served as-is. No-op when absent —
-      # take an experiment down by deleting its folder under docs/_experiments/.
+      # packets). Each experiment SUBFOLDER of docs/_experiments/ is copied
+      # verbatim into the site at /experiments/<name>/ . MyST ignores the
+      # underscore-prefixed dir, so self-contained HTML is served as-is. Only
+      # subfolders are published — README.md and other stray files are not — and
+      # the step no-ops when there are no experiment subfolders. Take an
+      # experiment down by deleting its folder under docs/_experiments/.
       - name: Publish experiment pages (static passthrough)
         run: |
-          if [ -d docs/_experiments ]; then
-            mkdir -p docs/_build/html/experiments
-            cp -R docs/_experiments/. docs/_build/html/experiments/
-            echo "Published experiment pages under /experiments/:"
-            find docs/_build/html/experiments -type f | sed 's#docs/_build/html/##'
+          shopt -s nullglob
+          dirs=(docs/_experiments/*/)
+          if [ ${#dirs[@]} -eq 0 ]; then
+            echo "No experiment folders under docs/_experiments/ — nothing to publish."
           else
-            echo "No docs/_experiments/ — nothing to publish."
+            for d in "${dirs[@]}"; do
+              name=$(basename "$d")
+              mkdir -p "docs/_build/html/experiments/$name"
+              cp -R "$d." "docs/_build/html/experiments/$name/"
+              echo "Published /experiments/$name/"
+            done
           fi
 
       - name: Upload artifact
