@@ -53,8 +53,8 @@ regardless of parser.
 
 ### R2. Consolidate state into `.translate/`; demote the PR body to a summary
 The PR-body channel is the weakest state store (64 KB cap, human-editable — already broke
-review mode and needed a CRLF shim; goes stale after rebase force-pushes; an input surface
-whose validation is being hardened in PLAN Phase 1.5) yet it is the *sole* input to rebase.
+review mode and needed a CRLF shim; goes stale after rebase force-pushes) yet it is the
+*sole* input to rebase.
 Move rebase-relevant state (source SHAs, per-file types, target base SHA, cache hints) into
 `.translate/` **on the PR branch** — bot-controlled, size-unbounded, versioned with the
 content it describes. Keep the PR-body block as a small versioned *read-only summary* for

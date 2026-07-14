@@ -1,4 +1,4 @@
-verified: 2026-07-05
+verified: 2026-07-14
 
 # STATE
 
@@ -10,8 +10,12 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 - **PR #72** — `.dev/` notes convention pilot (this folder; spec QuantEcon/QuantEcon.manual#103,
   pilot QuantEcon/action-translation#73). Seeds `.dev/` from the 2026-07-05 deep technical review.
 - **PR #71** — Malayalam (`ml`) language support, draft; awaiting a native-reviewer calibration
-  batch. Glossary PRs **#68** (fr) / **#69** (ja) open, awaiting native review + missing
-  `LANGUAGE_CONFIGS` entries.
+  batch. Glossary PR **#69** (ja) open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
+
+## Recently landed
+
+- **PR #68** (fr) merged 2026-07-14 — French glossary + `LANGUAGE_CONFIGS` entry; `fr` is now
+  a usable target language (native-speaker review fixes applied pre-merge).
 
 ## Blocked
 
@@ -25,7 +29,8 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## Health & context
 
-- Released **v0.15.0**; `main` clean. Production targets: `zh-cn`, `fa`; `ml`/`fr`/`ja` in flight.
+- Released **v0.15.0**; `main` clean. Production targets: `zh-cn`, `fa`. `fr` enabled
+  (glossary + config landed, no production repo yet); `ml`/`ja` in flight.
 - Highest-priority known bug: issue **#65** — translator drops `(label)=` anchors before
   headings; broke a zh-cn build once already (PLAN Phase 2).
 - Test suite green (~5s); note ~30 tests in `translator.test.ts` don't exercise the module
