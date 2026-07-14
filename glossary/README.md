@@ -154,6 +154,17 @@ Each glossary file follows this JSON structure:
 4. Run `npm run build` to verify JSON is valid
 5. Submit PR with clear description of added terms
 
+### For a New Lecture Series
+
+Glossaries are **corpus-specific**. A glossary built for the economics lectures can be
+almost blind to a different series — the French glossary had 1 of 24 sampled programming
+terms. When pointing an existing language at a new series, don't hand-guess the additions:
+use the **`glossary-review`** skill (`.claude/skills/glossary-review/`), which translates a
+sample with two different models and proposes only the terms they disagree on.
+
+The tooling lives in [`scripts/glossary/`](../scripts/glossary/); a worked example is
+[`experiments/fr-glossary-programming/REPORT.md`](../experiments/fr-glossary-programming/REPORT.md).
+
 ### New Language Glossary
 
 1. Create `glossary/{language-code}.json`
@@ -185,6 +196,15 @@ When adding or updating terms:
 - Add overly specific terms used in only one lecture
 - Duplicate terms with different translations
 - Use machine translations without verification
+- **Pin a term the models already render consistently** — see below
+
+### Every Term Has a Running Cost
+
+The whole glossary is injected into **every** translation prompt. At 364 terms the French
+glossary is ~15K input tokens per lecture — roughly $0.06 of the ~$0.24 it costs to
+translate one. So a term earns its place only if it changes an output: if two different
+models already render it the same way in every lecture, pinning it costs tokens forever
+and changes nothing. Prefer specialist terms that vary; skip the obvious ones.
 
 ## Maintenance
 

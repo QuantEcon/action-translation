@@ -244,11 +244,9 @@ experiments/thinking-sonnet5/
   REPORT.md             # results + recommendation (written after the runs)
 ```
 
-**npm shortcuts** (from repo root): `npm run exp:matrix` (run the matrix),
-`exp:packets` (build packets into `docs/_experiments/thinking-sonnet5`),
-`exp:publish` / `exp:takedown` (stage+commit the packets; you push to `main`),
-`exp:ingest` (aggregate the reviews). Review packets publish to the docs site —
-see the **Hosting** note above.
+Run the scripts directly with `node experiments/thinking-sonnet5/scripts/<name>.mjs`.
+(There were `npm run exp:*` aliases; they were removed when this experiment
+concluded, since they hardcoded these paths and implied a live experiment.)
 
 **Native review packets** (`make-review-packets.mjs`) render each subset lecture's
 source + shuffled, neutral-ID translations into one **self-contained HTML file**
