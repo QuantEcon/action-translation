@@ -22,10 +22,12 @@ docs/_build/
 # TypeScript build info
 *.tsbuildinfo
 
-# Temporary files — .tmp/ dir is committed (for scoped gh CLI output) but contents are ignored
-.tmp/*
+# Scratch — .dev/scratch/ dir is committed (via .gitkeep) but contents are ignored
+.dev/scratch/*
+!.dev/scratch/.gitkeep
+# Legacy scratch location (retired 2026-07-05; see .dev/decisions/) — keep ignoring stale local copies
+.tmp/
 **/*.tmp
-!.tmp/.gitkeep
 .cache/
 
 # Generated reports (output of CLI tools)
