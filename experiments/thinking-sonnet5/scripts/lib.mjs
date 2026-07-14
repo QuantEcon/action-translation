@@ -19,9 +19,12 @@ import { getLanguageConfig, languageLabel } from '../../../dist/language-config.
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, '../../..');
-export const SOURCE_DIR = path.resolve(
-  process.env.SOURCE_DIR || path.join(process.env.HOME, 'work/quantecon/lecture-python-intro'),
-);
+const _home = process.env.HOME || process.env.USERPROFILE;
+export const SOURCE_DIR = process.env.SOURCE_DIR
+  ? path.resolve(process.env.SOURCE_DIR)
+  : _home
+    ? path.resolve(_home, 'work/quantecon/lecture-python-intro')
+    : ''; // no HOME/USERPROFILE to derive a default — run-matrix errors clearly if a run needs it
 export const DOCS_FOLDER = process.env.DOCS_FOLDER || 'lectures';
 
 // --- Experiment controls -----------------------------------------------------

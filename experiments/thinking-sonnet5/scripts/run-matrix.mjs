@@ -46,6 +46,7 @@ const force = has('force');
 
 const unknown = variants.filter((v) => !VARIANTS[v]);
 if (unknown.length) { console.error(`Unknown variant(s): ${unknown.join(', ')}. Known: ${Object.keys(VARIANTS).join(',')}`); process.exit(1); }
+if (!Number.isInteger(reps) || reps < 1) { console.error(`--reps must be a positive integer (got "${arg('reps', '2')}")`); process.exit(1); }
 
 const cells = [];
 for (const lang of langs)
@@ -65,6 +66,7 @@ if (dryRun) {
 
 const apiKey = process.env.ANTHROPIC_API_KEY;
 if (!apiKey) { console.error('ANTHROPIC_API_KEY not set'); process.exit(1); }
+if (!SOURCE_DIR) { console.error('SOURCE_DIR not set and no HOME/USERPROFILE to derive a default — set SOURCE_DIR to your lecture-python-intro checkout.'); process.exit(1); }
 const client = new Anthropic({ apiKey });
 fs.mkdirSync(outDir, { recursive: true });
 const metricsPath = path.join(outDir, 'metrics.jsonl');
@@ -82,8 +84,8 @@ function parseReviewJson(text) {
   return JSON.parse(cleaned.slice(s, e + 1));
 }
 
-const summary = {}; // key `${variant}/${lang}` -> {overall:[], cost:[], latency:[]}
-const bump = (k, f, val) => { (summary[k] ??= { overall: [], cost: [], latency: [] })[f].push(val); };
+const summary = {}; // key `${variant}/${lang}` -> {overall:[], cost:[], reviewCost:[], latency:[]}
+const bump = (k, f, val) => { (summary[k] ??= { overall: [], cost: [], reviewCost: [], latency: [] })[f].push(val); };
 
 for (const [n, cell] of cells.entries()) {
   const { lang, lecture, variant, rep } = cell;
@@ -132,6 +134,7 @@ for (const [n, cell] of cells.entries()) {
         costUSD: +costUSD(REVIEW_MODEL, r.usage).toFixed(4),
       };
       bump(`${variant}/${lang}`, 'overall', overall);
+      bump(`${variant}/${lang}`, 'reviewCost', rec.review.costUSD);
       console.log(`${tag}  review overall ${overall} (A${j.accuracy}/F${j.fluency}/T${j.terminology}/Fmt${j.formatting}) syntaxErr ${rec.review.syntaxErrors}`);
     }
   } catch (err) {
@@ -145,10 +148,10 @@ for (const [n, cell] of cells.entries()) {
 const mean = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
 const fmt = (x, d = 2) => (x == null ? '—' : x.toFixed(d));
 console.log(`\n=== Summary (mean per variant × language) ===`);
-console.log(`variant/lang            n  overall  $/file  latency`);
+console.log(`variant/lang            n  overall  $tr/f  $rev/f  latency`);
 for (const k of Object.keys(summary).sort()) {
   const s = summary[k];
-  console.log(`${k.padEnd(22)} ${String(s.overall.length).padStart(2)}  ${fmt(mean(s.overall)).padStart(7)}  ${fmt(mean(s.cost), 3).padStart(6)}  ${fmt(mean(s.latency), 1).padStart(6)}s`);
+  console.log(`${k.padEnd(22)} ${String(s.overall.length).padStart(2)}  ${fmt(mean(s.overall)).padStart(7)}  ${fmt(mean(s.cost), 3).padStart(5)}  ${fmt(mean(s.reviewCost), 3).padStart(6)}  ${fmt(mean(s.latency), 1).padStart(6)}s`);
 }
 console.log(`\nmetrics → ${path.relative(ROOT, metricsPath)}`);
 console.log(`Next: anonymize outputs/ into review packets for native review (PLAN §7), then write REPORT.md.`);
