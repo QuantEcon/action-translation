@@ -21,6 +21,7 @@ import {
 import { Glossary, SectionTranslationRequest, SectionTranslationResult, FullDocumentTranslationRequest, DocumentResyncRequest } from './types.js';
 import * as core from '@actions/core';
 import { getLanguageConfig } from './language-config.js';
+import { DEFAULT_CLAUDE_MODEL, MAX_TOKENS, DEFAULT_THINKING } from './models.js';
 
 /**
  * Constants
@@ -69,7 +70,7 @@ function estimateOutputTokens(sourceLength: number, targetLanguage: string): num
  */
 function checkDocumentSize(sourceLength: number, targetLanguage: string): string | null {
   const estimated = estimateOutputTokens(sourceLength, targetLanguage);
-  const API_MAX_TOKENS = 32768;
+  const API_MAX_TOKENS = MAX_TOKENS.fullDocument;
   
   if (estimated > API_MAX_TOKENS) {
     return `Document too large: estimated ${estimated} tokens exceeds API maximum of ${API_MAX_TOKENS} tokens. ` +
@@ -117,7 +118,7 @@ export class TranslationService {
   private model: string;
   private debug: boolean;
 
-  constructor(apiKey: string, model: string = 'claude-sonnet-4-6', debug: boolean = false) {
+  constructor(apiKey: string, model: string = DEFAULT_CLAUDE_MODEL, debug: boolean = false) {
     this.client = new Anthropic({ apiKey });
     this.model = model;
     this.debug = debug;
@@ -158,7 +159,10 @@ export class TranslationService {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        const stream = this.client.messages.stream(createParams as Anthropic.MessageStreamParams);
+        const stream = this.client.messages.stream({
+          ...createParams,
+          thinking: DEFAULT_THINKING,
+        } as Anthropic.MessageStreamParams);
         return await stream.finalMessage();
       } catch (error) {
         // Don't retry on non-transient errors
@@ -272,7 +276,7 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
 
     const response = await this.callWithRetry({
       model: this.model,
-      max_tokens: 8192,
+      max_tokens: MAX_TOKENS.section,
       messages: [{ role: 'user', content: prompt }],
     }, 'translateSectionUpdate');
 
@@ -354,7 +358,7 @@ Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing t
 
     const response = await this.callWithRetry({
       model: this.model,
-      max_tokens: 8192,
+      max_tokens: MAX_TOKENS.section,
       messages: [{ role: 'user', content: prompt }],
     }, 'translateSectionResync');
 
@@ -426,7 +430,7 @@ Provide ONLY the ${targetLanguage} translation. Do not include any markers, expl
 
     const response = await this.callWithRetry({
       model: this.model,
-      max_tokens: 8192,
+      max_tokens: MAX_TOKENS.section,
       messages: [{ role: 'user', content: prompt }],
     }, 'translateNewSection');
 
@@ -498,7 +502,7 @@ Provide the complete translated document maintaining exact MyST structure.`;
     }
     
     // Use maximum tokens for all translatable documents
-    const maxTokens = 32768;
+    const maxTokens = MAX_TOKENS.fullDocument;
     
     this.log(`Translating full document`);
     this.log(`Content length: ${content.length} chars`);
@@ -606,7 +610,7 @@ ${targetContent}`;
       throw new Error(sizeError);
     }
 
-    const maxTokens = 32768;
+    const maxTokens = MAX_TOKENS.fullDocument;
 
     this.log(`Resyncing full document`);
     this.log(`Source length: ${sourceContent.length} chars`);

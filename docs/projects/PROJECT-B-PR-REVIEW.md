@@ -104,7 +104,7 @@ Each of the 25 lectures gets its own GitHub issue in `lecture-python-programming
 
 **Source**: lecture-python-programming/lectures/python_by_example.md
 **Translation**: lecture-python-programming.zh-cn/lectures/python_by_example.md
-**AI Model**: claude-sonnet-4-6
+**AI Model**: claude-sonnet-5
 **Generated**: 2026-04-01
 **Reviewer**: (assign yourself)
 

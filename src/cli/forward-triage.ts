@@ -12,6 +12,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { MAX_TOKENS, DEFAULT_THINKING } from '../models.js';
 import {
   APIError,
   AuthenticationError,
@@ -236,7 +237,8 @@ export async function triageForward(
     try {
       const response = await client.messages.create({
         model: options.model,
-        max_tokens: 1024,
+        max_tokens: MAX_TOKENS.analysis,
+        thinking: DEFAULT_THINKING,
         messages: [{ role: 'user', content: prompt }],
       });
 

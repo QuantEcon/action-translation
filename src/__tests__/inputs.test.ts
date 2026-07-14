@@ -123,7 +123,7 @@ describe('getInputs (sync mode)', () => {
     it('should use default claude model', () => {
       setMockInputs(validInputs);
       const result = getInputs();
-      expect(result.claudeModel).toBe('claude-sonnet-4-6');
+      expect(result.claudeModel).toBe('claude-sonnet-5');
     });
 
     it('should use default source language', () => {
@@ -267,6 +267,10 @@ describe('Claude Model Validation', () => {
   };
 
   const validModels = [
+    'claude-sonnet-5',
+    'claude-opus-4-8',
+    'claude-opus-4-7',
+    'claude-haiku-4-5',
     'claude-3-5-sonnet-20241022',
     'claude-sonnet-4-6',
     'claude-3-5-haiku-20241022',

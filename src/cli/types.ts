@@ -183,7 +183,7 @@ export interface CommonOptions {
   language: string;          // Target language code (default: "zh-cn")
   sourceLanguage: string;    // Source language code (default: "en")
   output: string;            // Output directory for reports (default: "./reports")
-  model: string;             // Claude model (default: "claude-sonnet-4-6")
+  model: string;             // Claude model (default: DEFAULT_CLAUDE_MODEL - see src/models.ts)
   json: boolean;             // Output as JSON
   test: boolean;             // Use deterministic mock responses (no LLM calls)
 }
@@ -274,7 +274,7 @@ export interface ForwardOptions {
   docsFolder: string;        // Documentation folder (default: "lectures")
   language: string;          // Target language code (default: "zh-cn")
   sourceLanguage: string;    // Source language code (default: "en")
-  model: string;             // Claude model (default: "claude-sonnet-4-6")
+  model: string;             // Claude model (default: DEFAULT_CLAUDE_MODEL - see src/models.ts)
   test: boolean;             // Use deterministic mock responses (no LLM calls)
   github?: string;           // TARGET repo in owner/repo format for PR creation
   apiKey: string;            // Anthropic API key
@@ -303,7 +303,7 @@ export interface TranslateConfig {
 export interface FileState {
   'source-sha': string;         // Commit SHA that last touched the source file
   'synced-at': string;          // ISO date (YYYY-MM-DD)
-  model: string;                // Claude model used (e.g., "claude-sonnet-4-6")
+  model: string;                // Claude model used (e.g., "claude-sonnet-5")
   mode: 'NEW' | 'UPDATE' | 'RESYNC';  // Translation mode used
   'section-count': number;      // Source section count at sync time
   'tool-version'?: string;     // Version of action-translation that performed this sync

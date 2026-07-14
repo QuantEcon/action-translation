@@ -29,6 +29,7 @@ import { extractHeadingMap } from '../../heading-map.js';
 import { getFileGitMetadata } from '../git-metadata.js';
 import { readFileState, writeFileState, writeConfig } from '../translate-state.js';
 import { triageForward } from '../forward-triage.js';
+import { DEFAULT_CLAUDE_MODEL } from '../../models.js';
 import { languageLabel } from '../../language-config.js';
 
 // ============================================================================
@@ -88,7 +89,7 @@ export interface StatusOptions {
   force?: boolean;      // Skip sync-date safety check for --write-state
   checkSync?: boolean;  // LLM-based content sync check (requires ANTHROPIC_API_KEY)
   apiKey?: string;      // Anthropic API key (required for --check-sync)
-  model?: string;       // Claude model (default: claude-sonnet-4-6)
+  model?: string;       // Claude model (default: DEFAULT_CLAUDE_MODEL — see src/models.ts)
   testMode?: boolean;   // Use mock triage responses (for --check-sync)
 }
 
@@ -413,7 +414,7 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
           targetContent,
           {
             apiKey: options.apiKey,
-            model: options.model ?? 'claude-sonnet-4-6',
+            model: options.model ?? DEFAULT_CLAUDE_MODEL,
             sourceLanguage: languageLabel(srcLang),
             targetLanguage: languageLabel(options.language),
             testMode: options.testMode ?? false,

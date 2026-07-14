@@ -11,7 +11,7 @@ This tutorial walks through adding support for a new target language — for exa
 - A glossary for consistent technical terminology
 - A new target repository with automated sync
 
-**Time:** ~1 hour for configuration, plus translation time (~$0.12/lecture)
+**Time:** ~1 hour for configuration, plus translation time (~$0.16/lecture)
 
 ## Overview
 

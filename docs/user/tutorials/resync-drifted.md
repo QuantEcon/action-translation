@@ -10,7 +10,7 @@ This tutorial covers diagnosing and recovering when translations have fallen beh
 By the end, you'll have all drifted files resynced to match the current source content.
 
 **Time:** ~15 minutes for diagnosis + ~2 minutes per file for resync
-**Cost:** ~$0.12/file for resync using `claude-sonnet-4-6`
+**Cost:** ~$0.16/file for resync using `claude-sonnet-5`
 
 ## When to use this tutorial
 

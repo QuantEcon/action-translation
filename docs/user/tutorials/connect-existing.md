@@ -14,7 +14,7 @@ By the end, you'll have:
 - Automated sync and review workflows configured
 
 **Time:** ~30 minutes (includes sync verification)
-**Cost:** Free for status/heading-maps. ~$0.02/file for sync check. ~$0.12/file if resync needed.
+**Cost:** Free for status/heading-maps. ~$0.03/file for sync check. ~$0.16/file if resync needed.
 
 ## When to use this tutorial
 

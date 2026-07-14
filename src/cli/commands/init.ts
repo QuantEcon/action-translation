@@ -36,7 +36,7 @@ export interface InitOptions {
   targetLanguage: string;    // Target language code (e.g., "zh-cn")
   sourceLanguage: string;    // Source language code (default: "en")
   docsFolder: string;        // Documentation folder within repos (default: "lectures")
-  model: string;             // Claude model (default: "claude-sonnet-4-6")
+  model: string;             // Claude model (default: DEFAULT_CLAUDE_MODEL - see src/models.ts)
   batchDelay: number;        // Delay between lectures in ms (default: 1000)
   parallel: number;          // Number of parallel translations (default: 1)
   file?: string;             // Single file to translate (for testing)

@@ -15,6 +15,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
+import { MAX_TOKENS, DEFAULT_THINKING } from '../models.js';
 import { 
   APIError, 
   AuthenticationError, 
@@ -281,7 +282,8 @@ export async function evaluateSection(
     try {
       const response = await client.messages.create({
         model: options.model,
-        max_tokens: 2048,
+        max_tokens: MAX_TOKENS.analysis,
+        thinking: DEFAULT_THINKING,
         messages: [{ role: 'user', content: prompt }],
       });
 
@@ -593,7 +595,8 @@ export async function evaluateFile(
     try {
       const response = await client.messages.create({
         model: options.model,
-        max_tokens: 4096,
+        max_tokens: MAX_TOKENS.analysis,
+        thinking: DEFAULT_THINKING,
         messages: [{ role: 'user', content: prompt }],
       });
 
