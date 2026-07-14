@@ -106,17 +106,20 @@ for (const r of strong) {
 }
 console.log(`\nseen by only one role (lower confidence): ${weak.length}`);
 
-// The decision rule (see SKILL.md). The count here is PRE-assessment — hand
-// assessment usually removes a few more (fr: 11 → 8).
+// This count is an INPUT to the review-mechanism decision, not the decision. It is
+// also PRE-assessment — hand assessment removes more (fr: 11 → 8). The mechanism
+// turns on the KIND of question (answerable from a table vs needing rendered
+// context; correctness vs preference ranking), which no count can tell you. The
+// fr run sent 11 candidates to a PR precisely because all 11 were table questions.
+// See .claude/skills/glossary-review/SKILL.md step 5.
 console.log(`\n--- Next step ---`);
 if (strong.length === 0) {
   console.log(`No variation found. Either the glossary already covers this series, or the sample is too small.`);
-} else if (strong.length <= 10) {
-  console.log(`${strong.length} candidates (<= 10) → assess by hand, then open a glossary PR with numbered`);
-  console.log(`questions for the native reviewer. Do NOT build a blind-review experiment for this few.`);
 } else {
-  console.log(`${strong.length} candidates (> 10) → assess by hand first; if more than ~10 survive,`);
-  console.log(`a blind review packet may be worth it. Re-check: is the sample dominated by one lecture?`);
+  console.log(`Assess these ${strong.length} by hand (drop singular/plural, article/preposition-only,`);
+  console.log(`trivially compositional, and context-dependent terms), then recommend a review`);
+  console.log(`mechanism to the user and agree it before building anything.`);
+  if (strong.length > 15) console.log(`\nNote: ${strong.length} is high — check whether one lecture is dominating the sample.`);
 }
 
 fs.mkdirSync(outDir, { recursive: true });

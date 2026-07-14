@@ -101,13 +101,33 @@ Keep:
   conventional French statistical term is `loi normale centrée réduite`. Look for these
   while reading — they're the reason a native reviewer exists.
 
-### 5. Decide the review mechanism
+### 5. Recommend a review mechanism, then agree it with the user
 
-- **≤ 10 candidates → a glossary PR.** Cheaper and clearer for a reviewer than any
-  experiment. Do not build a blind packet for this few.
-- **> 10 after assessment → consider a blind review packet** (see
-  `experiments/thinking-sonnet5/scripts/make-review-packets.mjs`). First check whether one
-  lecture is dominating the sample.
+Do not branch on the candidate count. Form a recommendation, state the reasoning, and
+**put it to the user before building anything** — a blind packet is hours of work and a
+real ask of the reviewer's time, so it should be a decision, not an automatic consequence
+of a number.
+
+Judge by the **kind of question**, not how many:
+
+- **Answerable from a table of renderings → glossary PR.** `mutable` vs `muable` needs no
+  context: one is simply wrong in the Python sense. A reviewer answers inline in minutes.
+- **Needs the term seen in rendered prose to answer → blind packet.** If the reviewer must
+  read a paragraph to judge whether a rendering *reads* right, a table won't do (see
+  `experiments/thinking-sonnet5/scripts/make-review-packets.mjs`).
+- **Correctness call vs preference ranking.** Blinding exists to strip bias out of
+  *subjective ranking*. Glossary terms are mostly expert judgement, where blinding buys
+  nothing and costs a lot of machinery. This is why the French run sent **11** candidates
+  to a PR rather than a packet — the count exceeded any rule of thumb, but every question
+  was a table question.
+
+Count still informs the recommendation, it just doesn't decide it. As rough calibration:
+under ~10 table-answerable questions is comfortably a PR; well over that starts to be a
+big ask for one PR body and may be worth splitting or packaging. If the count is high,
+check first whether one lecture is dominating the sample.
+
+Put it to the user as: how many survived assessment, what kind of questions they are,
+which mechanism you recommend and why, and what it will cost the reviewer.
 
 ### 6. Open the glossary PR
 
