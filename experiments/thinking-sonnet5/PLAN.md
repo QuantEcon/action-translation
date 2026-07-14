@@ -244,11 +244,23 @@ experiments/thinking-sonnet5/
 **Native review packets** (`make-review-packets.mjs`) render each subset lecture's
 source + shuffled, neutral-ID translations into one **self-contained HTML file**
 (offline-capable) with an inline scoring form and a "Download my review (JSON)"
-button — no backend. The `id→variant` key is written *outside* the packets dir so
-the folder is safe to serve publicly. Emile can open the files locally, or they
-can be hosted on **GitHub Pages** (`npx gh-pages -d …/data/review-packets`, key
-excluded) so he just visits a URL. He scores/ranks, downloads the JSON, emails it
-back; we join it to `review-key.json` to un-blind and aggregate.
+button — no backend. The `id→variant` key is written to a fixed private path
+(`data/review-key.json`, gitignored) — never under a publishable dir.
+
+**Hosting** rides the existing MyST docs → GitHub Pages deploy (there is one Pages
+deployment; no `gh-pages` branch). Publish by generating packets straight into the
+docs static passthrough and pushing to `main`:
+
+```
+node scripts/make-review-packets.mjs --out docs/_experiments/thinking-sonnet5   # key stays private
+git add docs/_experiments/thinking-sonnet5 && git commit && git push            # triggers deploy-docs
+```
+
+`deploy-docs.yml` copies `docs/_experiments/` into the built site, serving it at
+`https://quantecon.github.io/action-translation/experiments/thinking-sonnet5/`.
+Emile visits that URL, scores/ranks, downloads the JSON, emails it back; we join
+it to `review-key.json` to un-blind. **Take down** when finished:
+`git rm -r docs/_experiments/thinking-sonnet5 && git commit && git push`.
 
 **Status: scripts built and smoke-tested** (`--dry-run` shows the 96-cell core
 matrix). To run (needs `npm run build:cli` first — `lib.mjs` imports the real
