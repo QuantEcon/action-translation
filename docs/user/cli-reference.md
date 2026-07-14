@@ -445,13 +445,13 @@ A complete translation maintenance workflow using the CLI:
 # 1. Check sync status (free, instant)
 npx translate status -s ~/source -t ~/target
 
-# 2. Run backward analysis to find improvements (LLM, ~$0.85 for 51 files)
+# 2. Run backward analysis to find improvements (LLM, ~$1.10 for 51 files)
 npx translate backward -s ~/source -t ~/target
 
 # 3. Review suggestions interactively, create Issues for accepted ones
 npx translate review reports/backward-2026-03-06 --repo QuantEcon/lecture-python-intro
 
-# 4. Forward resync any outdated files (LLM, ~$0.12/file)
+# 4. Forward resync any outdated files (LLM, ~$0.16/file)
 npx translate forward -s ~/source -t ~/target
 cd ~/target && git diff  # Review changes
 ```
@@ -476,17 +476,17 @@ npx translate status -s ~/source -t ~/target -l zh-cn --write-state
 
 ## Cost estimates
 
-Approximate costs using `claude-sonnet-5` (March 2026 pricing):
+Approximate costs using `claude-sonnet-5` at standard pricing ($3 / $15 per M input/output tokens). The introductory rate ($2 / $10 per M through 2026-08-31) runs ~13% lower. Figures reflect Sonnet 5's tokenizer, which produces ~30% more tokens than Sonnet 4.6 for the same text:
 
 | Operation | Cost | Notes |
 |-----------|------|-------|
 | `status` | Free | No LLM calls |
-| `backward` Stage 1 (triage) | ~$0.05/file | 1 LLM call per file |
-| `backward` Stage 2 (evaluation) | ~$0.10/file | 1 LLM call per flagged file |
-| `backward` full run (51 files) | ~$0.85 total | Stage 1 filters ~80% of files |
-| `forward` triage | ~$0.05/file | 1 LLM call per file |
-| `forward` RESYNC | ~$0.12/file | 1 LLM call per file (whole-file) |
-| `init` (bulk translate) | ~$0.12/file | 1 LLM call per lecture (whole-file) |
+| `backward` Stage 1 (triage) | ~$0.06/file | 1 LLM call per file |
+| `backward` Stage 2 (evaluation) | ~$0.13/file | 1 LLM call per flagged file |
+| `backward` full run (51 files) | ~$1.10 total | Stage 1 filters ~80% of files |
+| `forward` triage | ~$0.06/file | 1 LLM call per file |
+| `forward` RESYNC | ~$0.16/file | 1 LLM call per file (whole-file) |
+| `init` (bulk translate) | ~$0.16/file | 1 LLM call per lecture (whole-file) |
 | `review` | Free | Reads existing reports, no LLM calls |
 | `setup` | Free | Creates GitHub repo (no LLM calls) |
 | `doctor` | Free | No LLM calls |

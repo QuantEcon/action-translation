@@ -14,7 +14,7 @@ backward analysis → interactive review → GitHub Issues → fix source → ve
 ```
 
 **Time:** ~10 minutes for analysis of a 50-file project, plus review time
-**Cost:** ~$0.85 for 51 files using `claude-sonnet-5`
+**Cost:** ~$1.10 for 51 files using `claude-sonnet-5`
 
 ## When to use this
 
@@ -299,9 +299,9 @@ The previously-flagged suggestions should no longer appear (the source now match
 | Step | Cost | Notes |
 |---|---|---|
 | `status` | Free | No LLM calls |
-| `backward` Stage 1 (triage) | ~$0.05/file | 1 LLM call per file |
-| `backward` Stage 2 (analysis) | ~$0.10/file | Only for flagged files (~20%) |
-| `backward` full run (51 files) | ~$0.85 total | Stage 1 filters ~80% |
+| `backward` Stage 1 (triage) | ~$0.06/file | 1 LLM call per file |
+| `backward` Stage 2 (analysis) | ~$0.13/file | Only for flagged files (~20%) |
+| `backward` full run (51 files) | ~$1.10 total | Stage 1 filters ~80% |
 | `review` | Free | Reads existing reports |
 | Issue creation | Free | Uses `gh` CLI |
 

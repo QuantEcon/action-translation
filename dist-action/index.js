@@ -23957,6 +23957,17 @@ function validateLanguageCode(languageCode) {
 
 // dist/models.js
 var DEFAULT_CLAUDE_MODEL = "claude-sonnet-5";
+var MAX_TOKENS = {
+  /** Section-level translation (update / resync / new). Streamed. */
+  section: 16384,
+  /** Whole-document translation / resync (init, forward RESYNC). Streamed. */
+  fullDocument: 64e3,
+  /** Quality / diff review verdicts. Streamed. */
+  review: 8192,
+  /** Analytical CLI judgments (backward eval, forward triage, doc compare). Non-streamed. */
+  analysis: 8192
+};
+var DEFAULT_THINKING = { type: "disabled" };
 var VALID_MODEL_PATTERNS = [
   /^claude-sonnet-5$/,
   // claude-sonnet-5 (current-generation Sonnet)
@@ -29191,6 +29202,7 @@ var TranslationReviewer = class {
         const stream = this.anthropic.messages.stream({
           model: this.model,
           max_tokens: maxTokens,
+          thinking: DEFAULT_THINKING,
           messages: [{ role: "user", content: prompt }]
         });
         const response = await stream.finalMessage();
@@ -29523,7 +29535,7 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
 - Do NOT invent issues just to fill the array - quality over quantity
 
 **CRITICAL**: The "issues" array MUST contain suggestions that relate ONLY to the sections that were changed in this PR. Do not suggest improvements for unchanged parts of the document.`;
-    const result = await this.callWithRetry(prompt, 1500, "evaluateTranslation");
+    const result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateTranslation");
     const score = result.accuracy * 0.35 + result.fluency * 0.25 + result.terminology * 0.25 + result.formatting * 0.15;
     return {
       score: Math.round(score * 10) / 10,
@@ -29616,7 +29628,7 @@ Respond with ONLY valid JSON:
   "positionDetails": "Brief explanation of position check",
   "structureDetails": "Brief explanation of structure check"
 }`;
-    const result = await this.callWithRetry(prompt, 1500, "evaluateDiff");
+    const result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateDiff");
     const checks = [
       result.scopeCorrect,
       result.positionCorrect,
@@ -29809,7 +29821,7 @@ function estimateOutputTokens(sourceLength, targetLanguage) {
 }
 function checkDocumentSize(sourceLength, targetLanguage) {
   const estimated = estimateOutputTokens(sourceLength, targetLanguage);
-  const API_MAX_TOKENS = 32768;
+  const API_MAX_TOKENS = MAX_TOKENS.fullDocument;
   if (estimated > API_MAX_TOKENS) {
     return `Document too large: estimated ${estimated} tokens exceeds API maximum of ${API_MAX_TOKENS} tokens. This document needs section-by-section translation rather than bulk translation.`;
   }
@@ -29880,7 +29892,10 @@ var TranslationService = class {
     const { maxRetries, baseDelayMs } = RETRY_CONFIG;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        const stream = this.client.messages.stream(createParams);
+        const stream = this.client.messages.stream({
+          ...createParams,
+          thinking: DEFAULT_THINKING
+        });
         return await stream.finalMessage();
       } catch (error3) {
         if (error3 instanceof AuthenticationError || error3 instanceof BadRequestError) {
@@ -29972,7 +29987,7 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
     this.log(`Current ${targetLanguage} length: ${currentTranslation.length}`);
     const response = await this.callWithRetry({
       model: this.model,
-      max_tokens: 8192,
+      max_tokens: MAX_TOKENS.section,
       messages: [{ role: "user", content: prompt }]
     }, "translateSectionUpdate");
     const content = response.content[0];
@@ -30043,7 +30058,7 @@ Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing t
     this.log(`Existing ${targetLanguage} length: ${currentTranslation.length}`);
     const response = await this.callWithRetry({
       model: this.model,
-      max_tokens: 8192,
+      max_tokens: MAX_TOKENS.section,
       messages: [{ role: "user", content: prompt }]
     }, "translateSectionResync");
     const content = response.content[0];
@@ -30104,7 +30119,7 @@ Provide ONLY the ${targetLanguage} translation. Do not include any markers, expl
     this.log(`${sourceLanguage} section length: ${englishSection.length}`);
     const response = await this.callWithRetry({
       model: this.model,
-      max_tokens: 8192,
+      max_tokens: MAX_TOKENS.section,
       messages: [{ role: "user", content: prompt }]
     }, "translateNewSection");
     const content = response.content[0];
@@ -30164,7 +30179,7 @@ Provide the complete translated document maintaining exact MyST structure.`;
     if (sizeError) {
       throw new Error(sizeError);
     }
-    const maxTokens = 32768;
+    const maxTokens = MAX_TOKENS.fullDocument;
     this.log(`Translating full document`);
     this.log(`Content length: ${content.length} chars`);
     const response = await this.callWithRetry({
@@ -30255,7 +30270,7 @@ ${targetContent}`;
     if (sizeError) {
       throw new Error(sizeError);
     }
-    const maxTokens = 32768;
+    const maxTokens = MAX_TOKENS.fullDocument;
     this.log(`Resyncing full document`);
     this.log(`Source length: ${sourceContent.length} chars`);
     this.log(`Target length: ${targetContent.length} chars`);

@@ -244,9 +244,11 @@ The default model is `claude-sonnet-5`, which provides excellent translation qua
 
 | Model | Cost | Best for |
 |-------|------|----------|
-| `claude-sonnet-5` | ~$0.05/file | Daily sync operations (recommended) |
-| `claude-opus-4` | ~$0.25/file | High-stakes translations needing maximum quality |
-| `claude-haiku-3.5` | ~$0.01/file | Budget-conscious bulk operations |
+| `claude-sonnet-5` | ~$0.06/file | Daily sync operations (recommended) |
+| `claude-opus-4-8` | ~$0.10/file | High-stakes translations needing maximum quality |
+| `claude-haiku-4-5` | ~$0.02/file | Budget-conscious bulk operations |
+
+Costs are approximate and based on Sonnet 5 standard pricing ($3 / $15 per M input/output tokens); the introductory rate ($2 / $10 per M through 2026-08-31) runs ~13% lower. Sonnet 5's tokenizer produces ~30% more tokens than Sonnet 4.6 for the same text, which is already reflected above.
 
 ## File naming conventions
 

@@ -23,7 +23,7 @@ import {
   ChangedSection,
   FileChange,
 } from './types.js';
-import { DEFAULT_CLAUDE_MODEL } from './models.js';
+import { DEFAULT_CLAUDE_MODEL, MAX_TOKENS, DEFAULT_THINKING } from './models.js';
 
 // Default model for review (can be overridden)
 const DEFAULT_REVIEW_MODEL = DEFAULT_CLAUDE_MODEL;
@@ -291,6 +291,7 @@ export class TranslationReviewer {
         const stream = this.anthropic.messages.stream({
           model: this.model,
           max_tokens: maxTokens,
+          thinking: DEFAULT_THINKING,
           messages: [{ role: 'user', content: prompt }],
         });
         const response = await stream.finalMessage();
@@ -753,7 +754,7 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
 **CRITICAL**: The "issues" array MUST contain suggestions that relate ONLY to the sections that were changed in this PR. Do not suggest improvements for unchanged parts of the document.`;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result: any = await this.callWithRetry(prompt, 1500, 'evaluateTranslation');
+    const result: any = await this.callWithRetry(prompt, MAX_TOKENS.review, 'evaluateTranslation');
     const score = (
       result.accuracy * 0.35 +
       result.fluency * 0.25 +
@@ -861,7 +862,7 @@ Respond with ONLY valid JSON:
 }`;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result: any = await this.callWithRetry(prompt, 1500, 'evaluateDiff');
+    const result: any = await this.callWithRetry(prompt, MAX_TOKENS.review, 'evaluateDiff');
     const checks = [
       result.scopeCorrect,
       result.positionCorrect,

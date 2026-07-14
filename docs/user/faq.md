@@ -16,10 +16,10 @@ Any language can be used as a target. The `target-language` input accepts any la
 
 ### How much does it cost to run?
 
-Costs depend on document size and the Claude model used. With `claude-sonnet-5`:
-- **Sync mode** (per PR): ~$0.05–0.20 depending on how many sections changed
-- **Backward analysis** (51 files): ~$0.85 total
-- **Forward resync** (per file): ~$0.12–0.17
+Costs depend on document size and the Claude model used. With `claude-sonnet-5` at standard pricing ($3 / $15 per M input/output tokens; ~13% lower during the introductory rate through 2026-08-31):
+- **Sync mode** (per PR): ~$0.06–0.25 depending on how many sections changed
+- **Backward analysis** (51 files): ~$1.10 total
+- **Forward resync** (per file): ~$0.16–0.22
 
 Use `--dry-run` with CLI commands to preview what would be done without making API calls.
 

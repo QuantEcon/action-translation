@@ -12,7 +12,7 @@ This tutorial sets up two maintenance workflows:
 1. **Weekly status check** — posts sync status to an Issue (free, no LLM calls)
 2. **Monthly backward analysis** — runs LLM analysis and uploads the report as an artifact
 
-**Cost:** Status checks are free. Monthly backward analysis is ~$0.85 for a 51-file project.
+**Cost:** Status checks are free. Monthly backward analysis is ~$1.10 for a 51-file project.
 
 ## Prerequisites
 
@@ -335,7 +335,7 @@ Automated forward resync creates translation PRs without human pre-review of the
 | Frequency | Use case | Cost |
 |---|---|---|
 | Weekly `status` | Active projects with frequent changes | Free |
-| Monthly `backward` | Standard maintenance cadence | ~$0.85/run |
+| Monthly `backward` | Standard maintenance cadence | ~$1.10/run |
 | On-demand (`workflow_dispatch`) | Before releases or intensive work periods | Variable |
 
 Adjust the `cron` expressions to match your project's pace:

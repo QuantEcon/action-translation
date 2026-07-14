@@ -8,8 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
-- **Default Claude model → `claude-sonnet-5`** (was `claude-sonnet-4-6`). Sonnet 5 delivers near-Opus quality on coding/agentic work at Sonnet-tier cost. Applies to sync, review, and all CLI commands; override per-run with the `claude-model` action input or the `--model` CLI flag.
+- **Default Claude model → `claude-sonnet-5`** (was `claude-sonnet-4-6`). Sonnet 5 delivers near-Opus quality on coding/agentic work at Sonnet-tier cost. Applies to sync, review, and all CLI commands; override per-run with the `claude-model` action input or the `--model` CLI flag. To keep the previous model, pin the action to `@v0.15.0` or set the model explicitly.
 - **Centralized the model default** in `src/models.ts` (`DEFAULT_CLAUDE_MODEL`). All action and CLI defaults now resolve to this single constant, so future upgrades are a one-line change. The `claude-model` default in `action.yml` is kept in sync manually (YAML can't import the constant). Recognized-model validation patterns moved to `src/models.ts` and now include `claude-sonnet-5` and `claude-opus-4-8`.
+- **Thinking disabled tool-wide** (`DEFAULT_THINKING` in `src/models.ts`). Sonnet 5 runs adaptive thinking by default, which would bill thinking tokens on every bulk translation and place a thinking block first in the response — breaking the `content[0]` text extraction in the translator and reviewer. Disabling restores the proven Sonnet 4.6 behavior and cost profile on a stronger base model. One uniform value is valid on both Sonnet 5 and 4.6.
+- **Centralized `max_tokens` budgets** in `src/models.ts` (`MAX_TOKENS`), sized with headroom for Sonnet 5's tokenizer (~30% more tokens than Sonnet 4.6 for the same text): section translation 8192 → 16384, whole-document 32768 → 64000 (and the pre-flight size gate), review verdicts 1500 → 8192, analytical CLI calls (backward eval, forward triage, doc compare) 1024–4096 → 8192. `max_tokens` is a ceiling, not a charge, so larger caps only prevent truncation.
+- **Cost figures in docs refreshed** for Sonnet 5 pricing (standard $3/$15 per M tokens; ~13% lower under the introductory rate through 2026-08-31), reflecting the ~30% tokenizer increase.
 
 ## [0.15.0] - 2025-07-14
 
