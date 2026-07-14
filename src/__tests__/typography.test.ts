@@ -154,6 +154,54 @@ describe('applyTypography', () => {
     });
   });
 
+  describe('display math state tracking', () => {
+    // Regression: a $$ block opening with content on the same line was missed,
+    // so its closing $$ read as an opener and every later line in the file was
+    // treated as math. Observed in scipy.md — 2 real occurrences suppressed.
+    it('tracks a math block that opens with content on the same line', () => {
+      const src = [
+        'Par la loi des grands nombres,',
+        '',
+        '$$ \\mathbb E \\max\\{ S_n - K, 0 \\}',
+        '    \\approx',
+        '    \\frac{1}{M} \\sum_{m=1}^M \\max \\{S_n^m - K, 0 \\}',
+        '    $$',
+        '',
+        'Voici une solution :',
+      ].join('\n');
+      const out = applyTypography(src, 'fr');
+      expect(out).toContain(`Voici une solution${NBSP}:`);
+      expect(out).toContain('$$ \\mathbb E \\max\\{ S_n - K, 0 \\}');
+    });
+
+    it('does not let $$ inside a code fence desync math state', () => {
+      const src = [
+        '```python',
+        'print("$$")',
+        '```',
+        '',
+        'Ensuite :',
+      ].join('\n');
+      const out = applyTypography(src, 'fr');
+      expect(out).toContain('print("$$")');
+      expect(out).toContain(`Ensuite${NBSP}:`);
+    });
+
+    it('handles self-contained $$ x $$ on one line', () => {
+      const src = ['$$ a : b $$', '', 'Donc :'].join('\n');
+      const out = applyTypography(src, 'fr');
+      expect(out).toContain('$$ a : b $$');
+      expect(out).toContain(`Donc${NBSP}:`);
+    });
+
+    it('recovers prose after a balanced math block', () => {
+      const src = ['$$', 'x : y', '$$', '', 'Fini !'].join('\n');
+      const out = applyTypography(src, 'fr');
+      expect(out).toContain('x : y');
+      expect(out).toContain(`Fini${NBSP}!`);
+    });
+  });
+
   describe('MyST prose directives', () => {
     it('typesets prose inside an admonition', () => {
       const src = ['```{hint}', 'Vos indices sont les suivants :', '```'].join('\n');

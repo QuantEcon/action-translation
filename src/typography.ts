@@ -54,7 +54,19 @@ const PROSE_DIRECTIVES = new Set([
 
 const FENCE_OPEN = /^(\s{0,3})(`{3,}|~{3,}|:{3,})\s*(?:\{([\w:-]+)\})?/;
 const DIRECTIVE_OPTION = /^\s*:[a-zA-Z][\w-]*:/;
-const MATH_DELIM = /^\s*\$\$\s*$/;
+/**
+ * Display-math delimiters are counted, not matched whole-line. A block may open
+ * with content on the same line:
+ *
+ *     $$ \mathbb E \max\{ S_n - K, 0 \}
+ *         \approx ...
+ *         $$
+ *
+ * Matching only a bare `$$` line misses that opener and then reads the closer as
+ * an opener, leaving the parser convinced the rest of the file is math — which
+ * silently suppressed every substitution after it in scipy.md.
+ */
+const MATH_DELIM = /\$\$/g;
 
 interface Fence {
   marker: string;
@@ -79,12 +91,29 @@ function classifyLines(lines: string[]): boolean[] {
       continue;
     }
 
-    // Display math block.
-    if (MATH_DELIM.test(line)) { inMathBlock = !inMathBlock; continue; }
-    if (inMathBlock) continue;
-
     const top = stack[stack.length - 1];
     const open = FENCE_OPEN.exec(line);
+
+    // Inside a code fence, look only for its closer. This must come before the
+    // math check: a `$$` inside a code cell is code, and toggling math state on
+    // it would desync everything downstream.
+    if (top && !top.prose) {
+      if (open) {
+        const [, , marker, directive] = open;
+        if (!directive && marker[0] === top.marker[0] && marker.length >= top.marker.length) stack.pop();
+      }
+      continue;
+    }
+
+    // Display math. Toggle once per delimiter, so a block that opens with
+    // content on the same line is tracked correctly and a self-contained
+    // `$$ x $$` nets out to no state change. A line carrying any delimiter is
+    // math, never prose.
+    const delimiters = (line.match(MATH_DELIM) || []).length;
+    if (inMathBlock || delimiters > 0) {
+      if (delimiters % 2 === 1) inMathBlock = !inMathBlock;
+      continue;
+    }
 
     if (open) {
       const [, , marker, directive] = open;
@@ -94,8 +123,6 @@ function classifyLines(lines: string[]): boolean[] {
         stack.pop();
         continue;
       }
-      // Inside code, nothing opens — it is just code text.
-      if (top && !top.prose) continue;
       const prose = Boolean(directive) && PROSE_DIRECTIVES.has(directive.toLowerCase());
       stack.push({ marker, prose });
       awaitingOptions = prose;
@@ -103,7 +130,6 @@ function classifyLines(lines: string[]): boolean[] {
     }
 
     if (!top) { eligible[i] = true; continue; }
-    if (!top.prose) continue; // inside a code fence
 
     // Directive options (`:name: fig-one`) sit directly under the opener.
     if (awaitingOptions) {
