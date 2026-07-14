@@ -22,6 +22,7 @@ import { TranslationService } from '../../translator.js';
 import { MystParser } from '../../parser.js';
 import { Glossary } from '../../types.js';
 import { updateHeadingMap, injectHeadingMap } from '../../heading-map.js';
+import { applyTypography } from '../../typography.js';
 import { RuleId, buildLocalizationPrompt, getFontRequirements } from '../../localization-rules.js';
 import { readFileState, writeConfig, writeFileState } from '../translate-state.js';
 import { getFileGitMetadata } from '../git-metadata.js';
@@ -293,7 +294,9 @@ async function translateLecture(
     throw new Error(result.error || 'Translation failed');
   }
 
-  const translatedContent = result.translatedSection;
+  // Apply deterministic typography before anything derives from the text, so the
+  // heading map is built from the same strings that land in the body.
+  const translatedContent = applyTypography(result.translatedSection, options.targetLanguage);
 
   // Generate heading-map
   const { map: headingMap, title: translatedTitle } = await generateHeadingMap(sourceContent, translatedContent);
