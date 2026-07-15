@@ -301,7 +301,7 @@ export async function evaluateSection(
         // Truncated output must not be interpreted: a cut-off analysis JSON
         // otherwise falls through the parsers and reads as a clean verdict.
         throw new Error(
-          `Response truncated at max_tokens=; refusing to interpret incomplete output`
+          `Response truncated at max_tokens=${MAX_TOKENS.analysis}; refusing to interpret incomplete output`
         );
       }
 
@@ -631,7 +631,7 @@ export async function evaluateFile(
         // Truncated output must not be interpreted: a cut-off analysis JSON
         // otherwise falls through the parsers and reads as a clean verdict.
         throw new Error(
-          `Response truncated at max_tokens=; refusing to interpret incomplete output`
+          `Response truncated at max_tokens=${MAX_TOKENS.analysis}; refusing to interpret incomplete output`
         );
       }
 
