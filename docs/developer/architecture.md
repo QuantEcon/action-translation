@@ -4,7 +4,7 @@ title: Architecture
 
 # Architecture
 
-**Last Updated**: 14 April 2026 — v0.15.0  
+**Last Updated**: 15 July 2026 — v0.16.0  
 
 This document covers the complete system architecture: design philosophy, operational modes, module structure, data flow, and key design decisions.
 
@@ -104,7 +104,9 @@ src/
 ├── reviewer.ts          # Claude API — review mode
 ├── file-processor.ts    # Document reconstruction + subsection handling
 ├── heading-map.ts       # Heading-map extract/update/inject
-├── language-config.ts   # Language-specific translation rules
+├── language-config.ts   # Language-specific translation rules (prompt-side)
+├── typography.ts        # Language typography applied in code, not via the prompt (CLI init path)
+├── models.ts            # Model IDs, max_tokens budgets, thinking config — single source of truth
 ├── inputs.ts            # Action input validation + resync trigger
 └── types.ts             # TypeScript type definitions
 ```
