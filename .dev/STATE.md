@@ -36,7 +36,7 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 ## Next
 
 - Merge lecture-python-programming.fr#4 (the repair run output).
-- **Release v0.16.1** with the #83 fixes; move the `v0`/`v0.16` tags (release step).
+- **Release v0.16.1** — PR open (chore/release-v0.16.1); tag + move `v0`/`v0.16` after merge.
 - **PLAN Phase 1 remainder**: rebase no-op comments, `context.sha` vs `merge_commit_sha`,
   resync fail-closed, `@actions/*` + SDK major bumps (pair with node24, PLAN 5.8),
   rebase input-validation hardening (1.5).

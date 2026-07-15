@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-07-15
+
 ### Fixed
 - **French typography no longer corrupts footnote/link-reference definitions**: the NBSP pass rewrote `[^id]: text` as `[^id] : text`, which stops the line parsing as a definition — it rendered as literal text and broke every reference (shipped in the fr seed, e.g. `pandas.md`). Definition labels are now masked, and the exact corruption is repaired on contact, so running `scripts/typography/apply.mjs` over an affected repo heals it. The definition text after the colon is still typeset.
 - **GitHub API pagination** at all five unpaginated call sites: sync `pulls.listFiles` (PRs touching >30 files were silently truncated), review mode's two `listFiles` calls, rebase's `pulls.list` (sibling PRs beyond 100), and `postReviewComment`'s `listComments` (the existing review comment was missed past 30 comments, accumulating duplicates).
