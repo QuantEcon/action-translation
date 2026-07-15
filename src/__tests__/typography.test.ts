@@ -1,4 +1,4 @@
-import { applyTypography, hasTypographyRules } from '../typography';
+import { applyTypography, hasTypographyRules } from '../typography.js';
 
 const NBSP = '\u00A0';
 
@@ -43,6 +43,46 @@ describe('applyTypography', () => {
     it('applies before a closing delimiter', () => {
       expect(applyTypography('(Bonjour !)', 'fr')).toBe(`(Bonjour${NBSP}!)`);
     });
+
+    // A run must be spaced once, in front of the group — never split by putting
+    // the space between the marks, which corrupts the author's punctuation.
+    describe('consecutive high-punctuation runs', () => {
+      it.each([
+        ['Quoi?!', `Quoi${NBSP}?!`],
+        ['Quoi ?!', `Quoi${NBSP}?!`],
+        ['Non!!', `Non${NBSP}!!`],
+        ['Hein !?', `Hein${NBSP}!?`],
+        ['Vraiment ?!?', `Vraiment${NBSP}?!?`],
+      ])('spaces %p as a group', (src, expected) => {
+        expect(applyTypography(src, 'fr')).toBe(expected);
+      });
+
+      it('never inserts a space inside a run', () => {
+        const out = applyTypography('Quoi?! Et alors!!', 'fr');
+        expect(out).not.toContain(`?${NBSP}!`);
+        expect(out).not.toContain(`!${NBSP}!`);
+        expect(out).toBe(`Quoi${NBSP}?! Et alors${NBSP}!!`);
+      });
+
+      it('is idempotent over runs', () => {
+        const once = applyTypography('Quoi?! Non!!', 'fr');
+        expect(applyTypography(once, 'fr')).toBe(once);
+      });
+    });
+  });
+
+  describe('language lookup is not prototype-polluted', () => {
+    // `language` comes from user input (--target-language). An object lookup
+    // would resolve Object.prototype.toString and call it as a rule, replacing
+    // the document with "[object Undefined]".
+    it.each(['toString', 'constructor', 'hasOwnProperty', '__proto__', 'valueOf'])(
+      'treats %p as an unknown language and returns content unchanged',
+      (lang) => {
+        const src = 'Bonjour! Ça va?';
+        expect(applyTypography(src, lang)).toBe(src);
+        expect(hasTypographyRules(lang)).toBe(false);
+      }
+    );
   });
 
   describe('does not corrupt non-prose', () => {

@@ -39,6 +39,9 @@ const NBSP = '\u00A0';
 /** Any existing non-breaking space counts as already-correct. */
 const EXISTING_NBSP = /[\u00A0\u202F]/;
 
+/** The French "high" punctuation this pass spaces. */
+const HIGH_PUNCTUATION = /[;:!?]/;
+
 /**
  * MyST directives whose body is prose to be typeset, not code. Anything not
  * listed here is treated as code and left untouched.
@@ -161,16 +164,25 @@ const PLACEHOLDER = '\u0000';
  * Applied only where the mark is followed by whitespace, end-of-line, or a
  * closing delimiter — i.e. terminal punctuation in prose, rather than a
  * separator inside an identifier, ratio or time.
+ *
+ * A run of high punctuation (`?!`, `!!`) is matched WHOLE and spaced once, in
+ * front of the group: `Quoi?!` → `Quoi ?!`. Matching a single mark instead
+ * splits the run — the space lands between the `?` and the `!` — which is both
+ * wrong typography and a corruption of the author's punctuation.
  */
 function applyFrenchSpacing(text: string): string {
   return text.replace(
-    /(\S)([ \t]*)([;:!?])(?=[\s)\]»"'.,]|$)/g,
-    (match, before: string, gap: string, punct: string) => {
+    /(\S)([ \t]*)([;:!?]+)(?=[\s)\]»"'.,]|$)/g,
+    (match, before: string, gap: string, run: string) => {
       if (EXISTING_NBSP.test(before)) return match; // already correct
       if (before === '\\') return match; // escaped
-      if (before === punct) return match; // ?? !! :: — space the first only
-      if (gap.length === 0 && /\d/.test(before) && punct === ':') return match; // 14:30
-      return `${before}${NBSP}${punct}`;
+      // `before` is itself high punctuation → we are inside an already-spaced
+      // run. On a second pass the NBSP counts as whitespace, so `\S` cannot
+      // anchor to it and scanning resumes mid-run: without this, `Quoi ?!`
+      // would become `Quoi ? !` and the transform would not be idempotent.
+      if (HIGH_PUNCTUATION.test(before)) return match;
+      if (gap.length === 0 && /\d/.test(before) && run === ':') return match; // 14:30
+      return `${before}${NBSP}${run}`;
     }
   );
 }
@@ -199,9 +211,15 @@ function applyToProse(line: string, rule: (text: string) => string): string {
   return out;
 }
 
-const RULES: Record<string, (text: string) => string> = {
-  fr: applyFrenchSpacing,
-};
+/**
+ * A Map, not a plain object: language codes come from user input
+ * (`--target-language`), and an object lookup resolves the prototype chain.
+ * `applyTypography(content, 'toString')` would otherwise find
+ * Object.prototype.toString, call it as a rule, and replace the whole document
+ * with "[object Undefined]". A Map has no such chain, so the lookup can only
+ * ever find a rule we actually registered.
+ */
+const RULES = new Map<string, (text: string) => string>([['fr', applyFrenchSpacing]]);
 
 /**
  * Apply deterministic typography rules for `language` to translated MyST
@@ -209,7 +227,7 @@ const RULES: Record<string, (text: string) => string> = {
  * twice produces the same result, so it is safe on already-processed files.
  */
 export function applyTypography(content: string, language: string): string {
-  const rule = RULES[language];
+  const rule = RULES.get(language);
   if (!rule) return content;
 
   const lines = content.split('\n');
@@ -219,5 +237,5 @@ export function applyTypography(content: string, language: string): string {
 
 /** Languages with a deterministic typography pass. */
 export function hasTypographyRules(language: string): boolean {
-  return language in RULES;
+  return RULES.has(language);
 }
