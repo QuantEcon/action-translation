@@ -177,7 +177,18 @@ export class TranslationService {
           ...createParams,
           thinking: DEFAULT_THINKING,
         } as Anthropic.MessageStreamParams);
-        return await stream.finalMessage();
+        const message = await stream.finalMessage();
+        // A max_tokens stop means the output was cut off mid-document.
+        // Committing it would silently truncate the translation, and the model
+        // never gets to emit its incomplete-document marker — so fail the
+        // operation loudly. Retrying at the same cap cannot succeed (generic
+        // Error is not retryable below).
+        if (message.stop_reason === 'max_tokens') {
+          throw new Error(
+            `${operationName}: response truncated at max_tokens=${createParams.max_tokens}; refusing to use incomplete output`
+          );
+        }
+        return message;
       } catch (error) {
         // Don't retry on non-transient errors
         if (error instanceof AuthenticationError || error instanceof BadRequestError) {
@@ -303,7 +314,7 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
     );
 
     const content = response.content[0];
-    if (content.type !== 'text') {
+    if (!content || content.type !== 'text') {
       return {
         success: false,
         error: 'Unexpected response format from Claude',
@@ -391,7 +402,7 @@ Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing t
     );
 
     const content = response.content[0];
-    if (content.type !== 'text') {
+    if (!content || content.type !== 'text') {
       return {
         success: false,
         error: 'Unexpected response format from Claude',
@@ -469,7 +480,7 @@ Provide ONLY the ${targetLanguage} translation. Do not include any markers, expl
     );
 
     const content = response.content[0];
-    if (content.type !== 'text') {
+    if (!content || content.type !== 'text') {
       return {
         success: false,
         error: 'Unexpected response format from Claude',
@@ -554,7 +565,7 @@ Provide the complete translated document maintaining exact MyST structure.`;
     );
 
     const result = response.content[0];
-    if (result.type !== 'text') {
+    if (!result || result.type !== 'text') {
       return {
         success: false,
         error: 'Unexpected response format from Claude',
@@ -674,7 +685,7 @@ ${targetContent}`;
       );
 
       const result = response.content[0];
-      if (result.type !== 'text') {
+      if (!result || result.type !== 'text') {
         return {
           success: false,
           error: 'Unexpected response format from Claude',
@@ -719,6 +730,15 @@ ${targetContent}`;
     }
 
     const terms = glossary.terms
+      .filter((term) => {
+        // A term without a translation for this language would render as
+        // `"term" → "undefined"` in the prompt — skip it and say so.
+        if (typeof term[targetLanguage] === 'string' && term[targetLanguage] !== '') {
+          return true;
+        }
+        this.log(`Glossary term "${term.en}" has no ${targetLanguage} translation — skipped`);
+        return false;
+      })
       .map((term) => {
         const translation = term[targetLanguage];
         const context = term.context ? ` (${term.context})` : '';

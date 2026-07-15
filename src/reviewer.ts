@@ -303,9 +303,19 @@ export class TranslationReviewer {
         });
         const response = await stream.finalMessage();
 
+        // A max_tokens stop means the verdict JSON was cut off; retrying at
+        // the same cap cannot succeed (generic Error is not retried below).
+        if (response.stop_reason === 'max_tokens') {
+          throw new Error(
+            `${operationName}: response truncated at max_tokens=${maxTokens}; verdict JSON is incomplete`
+          );
+        }
+
         const content = response.content[0];
-        if (content.type !== 'text') {
-          throw new Error('Unexpected response type from Claude');
+        if (!content || content.type !== 'text') {
+          throw new Error(
+            `Unexpected response from Claude: ${content ? content.type : `empty content (stop_reason: ${response.stop_reason})`}`
+          );
         }
 
         return parseJsonResponse(content.text);
@@ -350,7 +360,9 @@ export class TranslationReviewer {
     if (!prBody) return null;
 
     // Match: ### Source PR\n**[#123
-    const match = prBody.match(/### Source PR\n\*\*\[#(\d+)/);
+    // \r?\n: GitHub normalizes edited PR bodies to CRLF — a \n-only match
+    // permanently breaks review mode for any PR whose body was edited.
+    const match = prBody.match(/### Source PR\r?\n\*\*\[#(\d+)/);
     if (match) {
       return parseInt(match[1], 10);
     }
@@ -377,8 +389,8 @@ export class TranslationReviewer {
         pull_number: sourcePrNumber,
       });
 
-      // Get files changed in source PR
-      const { data: sourceFiles } = await this.octokit.rest.pulls.listFiles({
+      // Get files changed in source PR (paginate — PRs can touch >30 files)
+      const sourceFiles = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
         owner: sourceOwner,
         repo: sourceRepoName,
         pull_number: sourcePrNumber,
@@ -458,8 +470,8 @@ export class TranslationReviewer {
       pull_number: prNumber,
     });
 
-    // Get changed files in the PR
-    const { data: files } = await this.octokit.rest.pulls.listFiles({
+    // Get changed files in the PR (paginate — PRs can touch >30 files)
+    const files = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
       owner: targetOwner,
       repo: targetRepo,
       pull_number: prNumber,
@@ -1046,7 +1058,8 @@ ${diffResult.issues.map((i) => `- ${i}`).join('\n')}`;
   ): Promise<void> {
     try {
       // Check for existing review comment and update it instead of creating new
-      const { data: comments } = await this.octokit.rest.issues.listComments({
+      // (paginate — beyond 30 comments the existing one is missed and duplicates accumulate)
+      const comments = await this.octokit.paginate(this.octokit.rest.issues.listComments, {
         owner,
         repo,
         issue_number: prNumber,

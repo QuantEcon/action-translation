@@ -253,6 +253,13 @@ export async function triageDocument(
         thinking: DEFAULT_THINKING,
         messages: [{ role: 'user', content: prompt }],
       });
+      if (response.stop_reason === 'max_tokens') {
+        // Truncated output must not be interpreted: a cut-off analysis JSON
+        // otherwise falls through the parsers and reads as a clean verdict.
+        throw new Error(
+          `Response truncated at max_tokens=; refusing to interpret incomplete output`
+        );
+      }
 
       const responseText = response.content
         .filter((block): block is Anthropic.TextBlock => block.type === 'text')

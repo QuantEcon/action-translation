@@ -190,8 +190,8 @@ async function runRebase(): Promise<void> {
   });
   const mergedFilePaths = new Set(mergedPrFiles.map((f: { filename: string }) => f.filename));
 
-  // List all open PRs in this repo
-  const { data: openPRs } = await octokit.rest.pulls.list({
+  // List all open PRs in this repo (paginate — sibling PRs beyond 100 must still rebase)
+  const openPRs = await octokit.paginate(octokit.rest.pulls.list, {
     owner,
     repo,
     state: 'open',
@@ -667,8 +667,8 @@ async function runSync(): Promise<void> {
     core.info(`Processing merged PR #${prNumber}`);
   }
 
-  // Get changed files from PR
-  const { data: files } = await octokit.rest.pulls.listFiles({
+  // Get changed files from PR (paginate — PRs can touch >30 files)
+  const files = await octokit.paginate(octokit.rest.pulls.listFiles, {
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
     pull_number: prNumber,
