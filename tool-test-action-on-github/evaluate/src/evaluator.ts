@@ -323,19 +323,38 @@ ${sourceEnglish}
 ${targetChinese}
 \`\`\`
 ${this.glossarySection}
-## IMPORTANT: About the Heading-Map
+## IMPORTANT: About the translation frontmatter block
 
-The Chinese translation contains a \`heading-map\` section in the YAML frontmatter that is NOT present in the English source. This is CORRECT and EXPECTED behavior:
+The Chinese translation contains a \`translation\` block in the YAML frontmatter that is NOT
+present in the English source. This is CORRECT and EXPECTED behavior:
 
 \`\`\`yaml
-heading-map:
-  introduction: "介绍"
-  background: "背景"
+translation:
+  title: 经济学导论
+  headings:
+    Supply and Demand: 供给与需求
+    Economic Models: 经济模型
 \`\`\`
 
-This is a feature of the translation sync system that maps English heading IDs to Chinese headings for section matching across languages. Do NOT flag this as an issue or formatting problem - it is intentional and does not affect Jupyter Book compilation.
+This is a feature of the translation sync system that maps English headings to Chinese
+headings for section matching across languages. Do NOT flag this block as an issue, a
+formatting problem, or a "non-standard addition" — it is intentional and does not affect
+Jupyter Book compilation.
 
-**Note on double-colon notation**: The heading-map may use \`section::subsection\` notation (e.g., \`supply-and-demand::market-dynamics\`) to represent hierarchical headings. This double-colon \`::\` syntax is intentional and valid - it represents the relationship between a section and its nested subsection. This is safe in YAML because YAML only treats \`:\` as a key-value separator when followed by a space.
+- \`translation.title\` is the translated document title (the \`#\` heading).
+- \`translation.headings\` keys are the **English heading text** with \`#\` markers and MyST
+  roles stripped (e.g. \`Supply and Demand\`) — NOT lowercased, NOT hyphenated, NOT slugs.
+  Values are the translated heading text as it appears in the document.
+
+**Note on double-colon notation**: nested headings use path-based keys joined by \`::\`
+(e.g. \`International Trade::Regional Trade Agreements\`), representing the parent/child
+relationship at any depth. This is intentional and valid — YAML only treats \`:\` as a
+key-value separator when followed by a space.
+
+**Legacy format**: older documents may carry a flat \`heading-map:\` block (no \`translation:\`
+wrapper). The system reads both but always WRITES the \`translation:\` form above, migrating
+legacy documents on next sync. A PR that converts \`heading-map:\` → \`translation:\` is
+performing a correct, expected migration — do NOT penalize it as an unexpected restructure.
 
 ## Evaluation Criteria
 Rate each criterion from 1-10:
@@ -494,23 +513,40 @@ A translation sync action detected changes in an English source document and cre
 1. **Scope**: Only the correct files were modified
 2. **Position**: Changes appear in the same relative positions
 3. **Structure**: Document structure is preserved
-4. **Heading-map**: The heading-map in frontmatter is correctly updated
+4. **Heading-map**: The \`translation.headings\` map in frontmatter is correctly updated
 
-## IMPORTANT: About the Heading-Map System
+## IMPORTANT: About the translation frontmatter system
 
-The \`heading-map\` in the frontmatter is a CRITICAL feature of this translation system, NOT a bug. Here's how it works:
+The \`translation\` block in the frontmatter is a CRITICAL feature of this translation system,
+NOT a bug. Here's how it works:
 
 - English headings generate IDs from English text: \`## Introduction\` → ID: \`introduction\`
 - Chinese headings generate IDs from Chinese text: \`## 介绍\` → ID: \`介绍\`
-- The \`heading-map\` bridges this gap by mapping English IDs to Chinese headings
+- \`translation.headings\` bridges this gap by mapping the **English heading text** to the
+  translated heading, so sections can be matched across languages
+
+\`\`\`yaml
+translation:
+  title: 经济学导论
+  headings:
+    Supply and Demand: 供给与需求
+    International Trade::Regional Trade Agreements: 区域贸易协定
+\`\`\`
 
 **Expected behavior**:
-- When a section is added/modified, its heading-map entry should be added/updated
-- When a section is deleted, its heading-map entry may be removed
-- The heading-map should always contain entries for ALL sections in the document
-- Hierarchical headings use double-colon \`::\` notation: \`section::subsection\` (e.g., \`supply-and-demand::market-dynamics\`). This is valid YAML syntax.
+- When a section is added/modified, its \`translation.headings\` entry should be added/updated
+- When a section is deleted, its entry may be removed
+- The map should contain entries for ALL sections in the document
+- \`translation.title\` carries the translated \`#\` title
+- Nested headings use path-based keys joined by \`::\` at any depth
+  (e.g. \`International Trade::Regional Trade Agreements\`). This is valid YAML syntax.
 
-This is CORRECT and EXPECTED - do NOT flag heading-map changes as issues unless they are actually wrong (e.g., wrong mapping, missing entries for existing sections).
+**Legacy format**: older documents may still carry a flat \`heading-map:\` block. The system
+reads both formats but always writes \`translation:\`. A diff that migrates \`heading-map:\` →
+\`translation:\` is correct and expected — do NOT score it down as an unexpected restructure.
+
+This is CORRECT and EXPECTED - do NOT flag \`translation\` block changes as issues unless they
+are actually wrong (e.g., wrong mapping, missing entries for existing sections).
 
 ## Source Document Changes
 
@@ -546,7 +582,7 @@ ${targetFiles.map(f => `- ${f.filename}: ${f.status} (+${f.additions}/-${f.delet
 1. **Scope Correct**: Were only the necessary files modified in target?
 2. **Position Correct**: Do changes appear in the same sections/locations as source?
 3. **Structure Preserved**: Is the document structure (headings, sections) maintained?
-4. **Heading-map Correct**: Is the heading-map updated appropriately?
+4. **Heading-map Correct**: Is the \`translation.headings\` map updated appropriately?
 
 ## Response Format
 Respond with ONLY valid JSON:
