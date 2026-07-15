@@ -52,11 +52,17 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## Next
 
-- Merge lecture-python-programming.fr#4 (the repair run output).
-- **Release v0.16.1** — PR open (chore/release-v0.16.1); tag + move `v0`/`v0.16` after merge.
+- Merge the estate upgrade to v0.16.1 (4 PRs, 9 pins — see In flight). Merging the source
+  PR is the moment Sonnet 5 starts producing real zh-cn/fa translations; watch the first
+  real sync for the new truncation guard firing on a long lecture (correct behaviour, but
+  it surfaces as a loud failure where output was previously silently truncated).
 - **PLAN Phase 1 remainder**: rebase no-op comments, `context.sha` vs `merge_commit_sha`,
   resync fail-closed, `@actions/*` + SDK major bumps (pair with node24, PLAN 5.8),
   rebase input-validation hardening (1.5).
+- **node24 is no longer optional** (PLAN 5.8): the 2026-07-15 harness run shows GitHub
+  already overriding `action.yml`'s `using: node20` — *"The following actions target Node.js
+  20 but are being forced to run on Node.js 24: ./action"* — on every run, in production
+  too. We are getting the runtime without having declared or tested for it.
 - New issues from the review round: **#81** (typography on sync path), **#82** (model-swap
   eval — see REVIEW §7.4 for a concrete deterministic design).
 

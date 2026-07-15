@@ -33,6 +33,23 @@ Judge pinned to the baseline's (`claude-opus-4-5-20251101`) so the comparison is
 translation model. Opus 4.8 as judge scored translation 9.6/10.
 Reports: `tool-test-action-on-github/reports/evaluation-2026-07-15-sonnet5-{v2,opus48}.md`.
 
+**Why three different denominators** (26 / 25 / 24) — they are genuinely different runs, not
+a typo, and the numbers above are as-measured:
+
+| number | what it counts | why it differs |
+|---|---|---|
+| **26** | scenarios in the harness → PRs produced, per language | structural check: does sync produce a correct PR. Not judge-scored. |
+| **25** | pairs the Opus-4.5 run scored (01–21, 23–26) | scenario **22** (deep nesting) dropped mid-run; it passes in isolation (9.2 translation, 10/10 diff), so the artifact is fine and the run was at fault. Transient — the Opus-4.8 run scored all 26. |
+| **24** | pairs the Dec-2025 baseline scored (01–24) | only 24 scenarios existed then; 25 and 26 were added 2026-03-24. So 24/24 was complete *for its time*. |
+
+The 24 vs 25 gap is therefore two scenarios that did not exist in December plus one transient
+drop — not a coverage regression. Comparing the *rates* (100% pass either way) is sound;
+comparing the counts is not, and the counts should not be reconciled by adjusting them.
+
+Caveat on the baseline's denominator: before the fix in #86, a pair that errored vanished
+from the report silently, so "24 pairs" in the Dec reports cannot be *confirmed* as 24 of 24
+from the artifact alone — the contiguous 01–24 range is what supports it.
+
 ## What the evidence does NOT cover
 
 The harness runs small synthetic lectures. It says nothing about the new `stop_reason`
