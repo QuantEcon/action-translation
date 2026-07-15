@@ -7,14 +7,31 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## In flight
 
-- **lecture-python-programming.fr#4** — the `apply.mjs` repair run for the shipped
-  footnote corruption (one byte, `pandas.md`); mechanical, ready to merge.
+- **PR #87** — commit the v0.16.1 harness baselines + fix `.gitignore`'s bare `reports/`
+  silently ignoring `tool-test-action-on-github/reports/` (why no baselines exist between
+  2025-12 and now).
+- **Estate upgrade to v0.16.1** — 9 pins across 4 repos: lecture-python-programming#575
+  (3 sync workflows), .zh-cn#69, .fa#132, .fr#5 (rebase + review each). Catalogue:
+  QuantEcon/project-translation#7.
 - **PR #78** — fr programming-domain glossary terms; awaiting native review.
 - **PR #71** — Malayalam (`ml`) draft; awaiting native-reviewer calibration batch.
   Glossary PR **#69** (ja) open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
 
 ## Recently landed
 
+- **v0.16.1 released** 2026-07-15 — the #83 fixes; `v0`/`v0.16` moved to it (moving the
+  floating tags is now an explicit release-checklist step, both commands spelled out).
+- **PR #86** merged — harness trustworthiness: templates pinned to the release under test;
+  evaluator judge default → `claude-opus-4-8` (comparisons pin to the baseline's judge,
+  recorded in each report's `**Evaluator**:` header); rubric updated to the `translation:`
+  frontmatter format (it had described the pre-v0.13.0 `heading-map:` since 2025-12, marking
+  every PR down for being correct); dropped pairs no longer vanish silently; documents no
+  longer truncated at 4000 chars before the diff judge.
+- **Sonnet 5 validated for zh-cn/fa** — 26/26 correct PRs per language on the e2e harness;
+  9.4/10 translation, 10/10 diff vs the Dec-2025 Sonnet 4.5 baseline's 9.5/10 (same judge);
+  9.6/10 under an Opus 4.8 judge. Answers project-translation#5 — note 4.6 (what they run
+  today) was itself never measured. `.dev/decisions/D-2026-07-15-sonnet5-validated.md`.
+- **fr footnote corruption repaired** — lecture-python-programming.fr#4 merged.
 - **PR #83** merged 2026-07-15 (squash, `bb17926`) — high-severity fixes from the
   2026-07-15 deep review (`REVIEW-FABLE5-2026-07-15.md`): fr typography definition-label
   fix, LICENSE, lint-glob fix + prettier + CI format gate + `--max-warnings 0`,
