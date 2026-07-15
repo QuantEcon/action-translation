@@ -1,10 +1,16 @@
 # Example Workflow Configuration
 
-This directory contains example workflow files for using the Translation Sync action.
+This directory contains example workflow files for the action-translation action.
+
+> **Cross-repo pushes need a PAT.** Sync mode opens PRs in a *different* repository, which
+> the workflow-scoped `secrets.GITHUB_TOKEN` cannot do. Store a fine-grained personal
+> access token (or a machine-user token) with write access to the target repo as
+> `TRANSLATION_PAT` and pass that. `GITHUB_TOKEN` is only sufficient for same-repo modes
+> (review, rebase).
 
 ## Basic Usage
 
-Create `.github/workflows/sync-translations.yml` in your source repository:
+Create `.github/workflows/sync-translations.yml` in your **source** repository:
 
 ```yaml
 name: Sync Translations to Chinese
@@ -23,27 +29,26 @@ jobs:
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Sync translations
-        uses: quantecon/action-translation@v0.11
+        uses: quantecon/action-translation@v0
         with:
           mode: sync
           target-repo: 'quantecon/lecture-python.zh-cn'
           target-language: 'zh-cn'
           docs-folder: 'lectures/'
           source-language: 'en'
-          glossary-path: '.github/translation-glossary.json'
-          toc-file: '_toc.yml'
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          pr-labels: 'translation-sync,automated'
+          github-token: ${{ secrets.TRANSLATION_PAT }}
           pr-reviewers: 'translation-team'
 ```
 
 ## Multi-Language Support
 
-You can sync to multiple target repositories:
+You can sync to multiple target repositories. Each target language needs a
+`LANGUAGE_CONFIGS` entry in the action (currently: `zh-cn`, `fa`, `fr`) — a glossary
+alone does not enable a language.
 
 ```yaml
 name: Sync Translations
@@ -63,45 +68,45 @@ jobs:
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
     runs-on: ubuntu-latest
     steps:
-      - uses: quantecon/action-translation@v0.11
+      - uses: quantecon/action-translation@v0
         with:
           mode: sync
           target-repo: 'quantecon/lecture-python.zh-cn'
           target-language: 'zh-cn'
           docs-folder: 'lectures/'
-          glossary-path: '.github/translation-glossary-zh-cn.json'
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-  
-  sync-to-japanese:
+          github-token: ${{ secrets.TRANSLATION_PAT }}
+
+  sync-to-french:
     if: >
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
     runs-on: ubuntu-latest
     steps:
-      - uses: quantecon/action-translation@v0.11
+      - uses: quantecon/action-translation@v0
         with:
           mode: sync
-          target-repo: 'quantecon/lecture-python.ja'
-          target-language: 'ja'
+          target-repo: 'quantecon/lecture-python.fr'
+          target-language: 'fr'
           docs-folder: 'lectures/'
-          glossary-path: '.github/translation-glossary-ja.json'
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.TRANSLATION_PAT }}
 ```
 
 ## Required Secrets
 
-Add these secrets to your repository settings:
+Add these secrets to your **source** repository settings:
 
 - `ANTHROPIC_API_KEY`: Your Anthropic API key for Claude
-- `GITHUB_TOKEN`: Automatically provided by GitHub Actions
+- `TRANSLATION_PAT`: A token with write access to each target repo (the default
+  `GITHUB_TOKEN` cannot push cross-repo)
 
 ## Rebase Workflow (Conflict Prevention)
 
 Install this workflow in each **target** (translated) repository to automatically rebase
 open translation-sync PRs when another translation PR is merged. This eliminates the
 merge conflicts described in [issue #63](https://github.com/QuantEcon/action-translation/issues/63).
+Rebase runs in the same repository, so the default `GITHUB_TOKEN` is sufficient there.
 
 See [`rebase-translations.yml`](rebase-translations.yml) for the ready-to-use template.
 
@@ -109,29 +114,28 @@ Place it at `.github/workflows/rebase-translations.yml` in the target repo.
 
 ## Glossary File
 
-Create `.github/translation-glossary.json`:
+Built-in glossaries ship with the action for `zh-cn`, `fa`, and `fr` — most projects
+need no glossary configuration at all. To override with your own, point `glossary-path`
+at a JSON file shaped like the built-ins:
 
 ```json
 {
   "version": "1.0",
+  "description": "Project-specific terminology",
   "terms": [
     {
       "en": "equilibrium",
-      "zh-cn": "均衡",
-      "ja": "均衡",
-      "context": "economics"
+      "context": "economics",
+      "zh-cn": "均衡"
     },
     {
       "en": "steady state",
-      "zh-cn": "稳态",
-      "ja": "定常状態"
+      "context": "economics",
+      "zh-cn": "稳态"
     }
-  ],
-  "style_guide": {
-    "preserve_code_blocks": true,
-    "preserve_math": true,
-    "preserve_citations": true,
-    "preserve_myst_directives": true
-  }
+  ]
 }
 ```
+
+Every term needs a translation for each target language you sync to; terms without one
+are skipped (with a log line) for that language.

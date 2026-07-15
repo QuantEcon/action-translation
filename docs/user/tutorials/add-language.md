@@ -386,7 +386,7 @@ Each target repository maintains its own `.translate/state/` independently.
 ## Checklist
 
 - [ ] Glossary created at `glossary/{code}.json`
-- [ ] Language rules added to `src/language-config.ts` (optional)
+- [ ] `LANGUAGE_CONFIGS` entry added in `src/language-config.ts` (**required** — sync throws for language codes without one; a glossary alone does not enable a language)
 - [ ] Font configuration added if needed (optional)
 - [ ] Source rebuilt: `npm run build`
 - [ ] Target repo scaffolded: `translate setup`
