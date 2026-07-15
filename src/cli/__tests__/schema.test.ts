@@ -50,16 +50,16 @@ function minimalReport(overrides: Partial<BackwardReportData> = {}): Record<stri
   };
 }
 
-function backportSuggestion(overrides: Partial<BackportSuggestionData> = {}): Record<string, unknown> {
+function backportSuggestion(
+  overrides: Partial<BackportSuggestionData> = {}
+): Record<string, unknown> {
   return {
     sectionHeading: '## Example',
     recommendation: 'BACKPORT',
     category: 'BUG_FIX',
     confidence: 0.85,
     summary: 'Fixed a formula error',
-    specificChanges: [
-      { type: 'Formula fix', original: 'x^2', improved: 'x^3' },
-    ],
+    specificChanges: [{ type: 'Formula fix', original: 'x^2', improved: 'x^3' }],
     reasoning: 'The target fixed a typo.',
     ...overrides,
   };
@@ -101,8 +101,12 @@ describe('TriageVerdictSchema', () => {
 
 describe('BackportCategorySchema', () => {
   const validCategories = [
-    'BUG_FIX', 'CLARIFICATION', 'EXAMPLE',
-    'CODE_IMPROVEMENT', 'I18N_ONLY', 'NO_CHANGE',
+    'BUG_FIX',
+    'CLARIFICATION',
+    'EXAMPLE',
+    'CODE_IMPROVEMENT',
+    'I18N_ONLY',
+    'NO_CHANGE',
   ];
 
   it.each(validCategories)('accepts %s', (cat) => {
@@ -141,25 +145,25 @@ describe('BackportSuggestionSchema', () => {
   });
 
   it('validates a NO_BACKPORT suggestion with empty changes', () => {
-    const result = BackportSuggestionSchema.parse(backportSuggestion({
-      recommendation: 'NO_BACKPORT',
-      category: 'NO_CHANGE',
-      confidence: 0.9,
-      specificChanges: [],
-    }));
+    const result = BackportSuggestionSchema.parse(
+      backportSuggestion({
+        recommendation: 'NO_BACKPORT',
+        category: 'NO_CHANGE',
+        confidence: 0.9,
+        specificChanges: [],
+      })
+    );
     expect(result.recommendation).toBe('NO_BACKPORT');
   });
 
   it('rejects confidence > 1', () => {
-    expect(() => BackportSuggestionSchema.parse(
-      backportSuggestion({ confidence: 1.5 }),
-    )).toThrow();
+    expect(() => BackportSuggestionSchema.parse(backportSuggestion({ confidence: 1.5 }))).toThrow();
   });
 
   it('rejects confidence < 0', () => {
-    expect(() => BackportSuggestionSchema.parse(
-      backportSuggestion({ confidence: -0.1 }),
-    )).toThrow();
+    expect(() =>
+      BackportSuggestionSchema.parse(backportSuggestion({ confidence: -0.1 }))
+    ).toThrow();
   });
 });
 
@@ -316,9 +320,7 @@ describe('ProgressCheckpointSchema', () => {
       lastUpdated: '2026-03-04T03:09:03.963Z',
       totalFiles: 51,
       completedFiles: ['about.md', 'cobweb.md'],
-      erroredFiles: [
-        { file: 'README.md', error: 'SOURCE file not found' },
-      ],
+      erroredFiles: [{ file: 'README.md', error: 'SOURCE file not found' }],
     };
     const result = ProgressCheckpointSchema.parse(checkpoint);
     expect(result.completedFiles).toHaveLength(2);
@@ -399,12 +401,14 @@ describe('parseBackwardReport', () => {
 
 describe('parseProgressCheckpoint', () => {
   it('returns success for valid checkpoint', () => {
-    const result = parseProgressCheckpoint(JSON.stringify({
-      startedAt: '2026-01-01T00:00:00Z',
-      lastUpdated: '2026-01-01T00:05:00Z',
-      totalFiles: 5,
-      completedFiles: ['a.md'],
-    }));
+    const result = parseProgressCheckpoint(
+      JSON.stringify({
+        startedAt: '2026-01-01T00:00:00Z',
+        lastUpdated: '2026-01-01T00:05:00Z',
+        totalFiles: 5,
+        completedFiles: ['a.md'],
+      })
+    );
     expect(result.success).toBe(true);
   });
 
@@ -419,21 +423,28 @@ describe('parseProgressCheckpoint', () => {
 // ============================================================================
 
 describe('filterActionableSuggestions', () => {
-  const report = BackwardReportSchema.parse(minimalReport({
-    triageResult: { file: 'x.md', verdict: 'CHANGES_DETECTED', notes: 'changes' },
-    suggestions: [
-      backportSuggestion({ confidence: 0.9 }),
-      backportSuggestion({ recommendation: 'NO_BACKPORT', confidence: 0.95, category: 'NO_CHANGE', specificChanges: [] }),
-      backportSuggestion({ confidence: 0.5 }),
-      backportSuggestion({ confidence: 0.7 }),
-    ] as any,
-  }));
+  const report = BackwardReportSchema.parse(
+    minimalReport({
+      triageResult: { file: 'x.md', verdict: 'CHANGES_DETECTED', notes: 'changes' },
+      suggestions: [
+        backportSuggestion({ confidence: 0.9 }),
+        backportSuggestion({
+          recommendation: 'NO_BACKPORT',
+          confidence: 0.95,
+          category: 'NO_CHANGE',
+          specificChanges: [],
+        }),
+        backportSuggestion({ confidence: 0.5 }),
+        backportSuggestion({ confidence: 0.7 }),
+      ] as any,
+    })
+  );
 
   it('returns only BACKPORT suggestions above threshold', () => {
     const result = filterActionableSuggestions(report, 0.6);
     expect(result).toHaveLength(2); // 0.9 and 0.7
-    expect(result.every(s => s.recommendation === 'BACKPORT')).toBe(true);
-    expect(result.every(s => s.confidence >= 0.6)).toBe(true);
+    expect(result.every((s) => s.recommendation === 'BACKPORT')).toBe(true);
+    expect(result.every((s) => s.confidence >= 0.6)).toBe(true);
   });
 
   it('defaults to 0.6 threshold', () => {
@@ -453,15 +464,20 @@ describe('filterActionableSuggestions', () => {
 
 describe('loadResyncDirectory', () => {
   const fixtureDir = path.join(
-    __dirname, '..', '..', '..', 'reports',
-    'backward-2026-03-04-whole-file', '.resync',
+    __dirname,
+    '..',
+    '..',
+    '..',
+    'reports',
+    'backward-2026-03-04-whole-file',
+    '.resync'
   );
 
   // Only run these tests if the fixture directory exists
   const hasFixtures = fs.existsSync(fixtureDir);
 
   (hasFixtures ? it : it.skip)('loads real report files from fixture dir', () => {
-    const { reports, errors } = loadResyncDirectory(fixtureDir);
+    const { reports } = loadResyncDirectory(fixtureDir);
     expect(reports.length).toBeGreaterThan(0);
     // All loaded reports should have required fields
     for (const report of reports) {
@@ -474,15 +490,15 @@ describe('loadResyncDirectory', () => {
 
   (hasFixtures ? it : it.skip)('skips _progress.json and _log.txt', () => {
     const { reports } = loadResyncDirectory(fixtureDir);
-    const filenames = reports.map(r => r.file);
+    const filenames = reports.map((r) => r.file);
     expect(filenames).not.toContain('_progress.json');
     expect(filenames).not.toContain('_log.txt');
   });
 
   (hasFixtures ? it : it.skip)('finds files with BACKPORT suggestions', () => {
     const { reports } = loadResyncDirectory(fixtureDir);
-    const withBackport = reports.filter(r =>
-      r.suggestions.some(s => s.recommendation === 'BACKPORT'),
+    const withBackport = reports.filter((r) =>
+      r.suggestions.some((s) => s.recommendation === 'BACKPORT')
     );
     // We know from exploration that at least cagan_adaptive.json has BACKPORT suggestions
     expect(withBackport.length).toBeGreaterThan(0);

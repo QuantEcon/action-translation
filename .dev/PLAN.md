@@ -21,47 +21,47 @@ realistic conditions, **[L]** quality/robustness.
 Everything here is a contained fix with an obvious correct behaviour. Ship as one patch release.
 
 ### 1.1 GitHub API pagination
-- [ ] **[H]** `runSync` truncates PRs with >30 changed files — add `octokit.paginate` to
+- [x] **[H]** `runSync` truncates PRs with >30 changed files — add `octokit.paginate` to
       `pulls.listFiles` in `src/index.ts:573` (the rebase path at `src/index.ts:153` already
       does this correctly; copy that pattern)
-- [ ] **[H]** Same unpaginated `listFiles` in review mode: `src/reviewer.ts:448` and `src/reviewer.ts:368`
-- [ ] **[L]** `pulls.list` capped at 100 in rebase (`src/index.ts:159`) — paginate so sibling
+- [x] **[H]** Same unpaginated `listFiles` in review mode: `src/reviewer.ts:448` and `src/reviewer.ts:368`
+- [x] **[L]** `pulls.list` capped at 100 in rebase (`src/index.ts:159`) — paginate so sibling
       PRs beyond 100 can be rebased
-- [ ] **[L]** `issues.listComments` unpaginated in `postReviewComment` (`src/reviewer.ts:1028`) —
+- [x] **[L]** `issues.listComments` unpaginated in `postReviewComment` (`src/reviewer.ts:1028`) —
       with >30 comments the existing review comment isn't found and duplicates accumulate
 
 ### 1.2 Small correctness fixes (action)
-- [ ] **[H]** CRLF: `parseSourcePRNumber` requires `\n` (`src/reviewer.ts:340`) — GitHub
+- [x] **[H]** CRLF: `parseSourcePRNumber` requires `\n` (`src/reviewer.ts:340`) — GitHub
       normalizes edited PR bodies to `\r\n`, permanently breaking review mode for that PR.
       Use `\r?\n` (as `src/pr-creator.ts:417` already does)
 - [ ] **[M]** `runRebase` posts "♻️ Automatically rebased" and counts success even when the
       early returns at `src/index.ts:375` and `src/index.ts:447` mean nothing was pushed —
       return a status and only comment/count on an actual push
-- [ ] **[M]** Glossary terms missing the target language render as `"term" → "undefined"` in
+- [x] **[M]** Glossary terms missing the target language render as `"term" → "undefined"` in
       prompts (`src/translator.ts:664`) — skip such terms (and log)
 - [ ] **[L]** `\translate-resync zh` (unsupported code) proceeds with **all** languages
       (`src/inputs.ts:281`) — fail closed with an explanatory comment instead
 - [ ] **[M]** Primary sync path uses `context.sha` (`src/index.ts:544`); for `pull_request:
       closed` events this can be a stale synthetic merge-ref SHA. Use `pr.merge_commit_sha`
       as the resync path already does (`src/index.ts:548-563`)
-- [ ] **[L]** Guard `response.content[0]` before reading `.text` (`src/translator.ts:279` et al.,
+- [x] **[L]** Guard `response.content[0]` before reading `.text` (`src/translator.ts:279` et al.,
       `src/reviewer.ts:297`) — empty/refusal responses currently throw a bare `TypeError`
 
 ### 1.3 Truncation detection (minimal version)
-- [ ] **[H]** Check `response.stop_reason` after every Anthropic call and **fail the file** on
+- [x] **[H]** Check `response.stop_reason` after every Anthropic call and **fail the file** on
       `max_tokens` instead of committing truncated output. Sites: `src/translator.ts:279, 361,
       433, 512, 622`; `src/reviewer.ts:755, 863`; CLI: `src/cli/backward-evaluator.ts:594`,
       `src/cli/document-comparator.ts:246`, `src/cli/forward-triage.ts:237`.
       (The full shared-client refactor is Phase 6; this is the per-site guard.)
 
 ### 1.4 Dependencies & packaging
-- [ ] **[H]** `npm audit fix` — clears the two high-severity `ws` advisories (via `ink`, CLI-only)
+- [x] **[H]** `npm audit fix` — clears the two high-severity `ws` advisories (via `ink`, CLI-only)
 - [ ] **[H]** Bump `@actions/core` (1.11 → 3.x) and `@actions/github` (6 → 9.x) and rebuild —
       the committed `dist-action/index.js` currently **ships a vulnerable `undici`**
 - [ ] Bump `@anthropic-ai/sdk` (0.78 → current 0.110.x) and re-run the retry tests
-- [ ] Fix `package-lock.json` self-version still saying `0.8.0` (lines 3, 9)
-- [ ] Add an `engines` field to `package.json` (node >= 20 now; see Phase 5.6 for node24)
-- [ ] Fix stale `.gitignore:6` comment ("ncc CJS bundle" — the build is esbuild)
+- [x] Fix `package-lock.json` self-version still saying `0.8.0` (lines 3, 9)
+- [x] Add an `engines` field to `package.json` (node >= 20 now; see Phase 5.6 for node24)
+- [x] Fix stale `.gitignore:6` comment ("ncc CJS bundle" — the build is esbuild)
 
 ### 1.5 Rebase-mode input validation (security — pulled forward from Phase 4)
 - [ ] **[H]** Harden rebase mode's handling of PR-embedded metadata: cross-check it against the
@@ -70,7 +70,7 @@ Everything here is a contained fix with an obvious correct behaviour. Ship as on
       issue #66 documents the metadata as a public contract.
 
 ### 1.6 Release chores
-- [ ] Fix `CHANGELOG.md:10` date: `[0.15.0] - 2025-07-14` → `2026-04-14`
+- [x] Fix `CHANGELOG.md:10` date: `[0.15.0] - 2025-07-14` → `2026-04-14`
 - [ ] Add `[Unreleased]` entries (Malayalam commit `d5b216e` shipped without one)
 - [ ] Release v0.15.1, rebuild `dist-action/`, move the `v0` / `v0.15` tags
 
@@ -319,13 +319,13 @@ but not sync; `overloaded` retry in the translator but not the reviewer or any C
 
 ## Phase 7 — Docs & repo currency
 
-- [ ] **[H]** `examples/README.md`: both sync examples use `secrets.GITHUB_TOKEN`, which cannot
+- [x] **[H]** `examples/README.md`: both sync examples use `secrets.GITHUB_TOKEN`, which cannot
       push to a different repo — switch to the PAT pattern (README/quickstart are already
       correct); also fix stale `@v0.11` pins, pre-v0.6.3 label defaults, the old project name,
       and the unconfigured `ja` example
-- [ ] Add the six tutorials (plus `developer/legacy-tools.md`) to `docs/myst.yml` toc — they 404
+- [x] Add the six tutorials (plus `developer/legacy-tools.md`) to `docs/myst.yml` toc — they 404
       on the live site today while `docs/index.md:63-70` links them
-- [ ] Refresh `docs/index.md:84-87` (says v0.8.0, 873 tests; contradicts README)
+- [x] Refresh `docs/index.md:84-87` (says v0.8.0, 873 tests; contradicts README)
 - [ ] **Document rebase mode** in `docs/user/action-reference.md` (inputs, triggers,
       `translation-sync-` branch convention, cache behaviour, failure comments) — v0.15.0's
       headline feature is absent from the docs site; add rebase troubleshooting to the FAQ

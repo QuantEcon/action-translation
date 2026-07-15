@@ -63,7 +63,7 @@ export function initialState(count: number): SessionState {
 export function applyAction(
   state: SessionState,
   action: ReviewAction,
-  count: number,
+  count: number
 ): SessionState {
   if (state.done) return state;
 
@@ -73,9 +73,9 @@ export function applyAction(
 
   return {
     currentIndex: nextIndex,
-    accepted:  action === 'accept'  ? [...state.accepted,  currentIndex] : state.accepted,
-    skipped:   action === 'skip'    ? [...state.skipped,   currentIndex] : state.skipped,
-    rejected:  action === 'reject'  ? [...state.rejected,  currentIndex] : state.rejected,
+    accepted: action === 'accept' ? [...state.accepted, currentIndex] : state.accepted,
+    skipped: action === 'skip' ? [...state.skipped, currentIndex] : state.skipped,
+    rejected: action === 'reject' ? [...state.rejected, currentIndex] : state.rejected,
     done,
   };
 }
@@ -85,12 +85,12 @@ export function applyAction(
  */
 export function resolveSummary(
   state: SessionState,
-  suggestions: SuggestionWithContext[],
+  suggestions: SuggestionWithContext[]
 ): SessionSummary {
   return {
-    accepted:  state.accepted.map(i => suggestions[i]),
-    skipped:   state.skipped.map(i  => suggestions[i]),
-    rejected:  state.rejected.map(i => suggestions[i]),
+    accepted: state.accepted.map((i) => suggestions[i]),
+    skipped: state.skipped.map((i) => suggestions[i]),
+    rejected: state.rejected.map((i) => suggestions[i]),
   };
 }
 
@@ -121,14 +121,15 @@ export function formatTallies(state: SessionState): string {
 export function formatEndSummary(
   summary: SessionSummary,
   totalSuggestions: number,
-  dryRun = false,
+  dryRun = false
 ): string[] {
   const { accepted, skipped, rejected } = summary;
-  const acceptedNote = accepted.length > 0
-    ? dryRun
-      ? '  (dry run — no Issues will be created)'
-      : '  → will create GitHub Issues'
-    : '';
+  const acceptedNote =
+    accepted.length > 0
+      ? dryRun
+        ? '  (dry run — no Issues will be created)'
+        : '  → will create GitHub Issues'
+      : '';
   const lines: string[] = [
     '',
     '── Review complete ──────────────────────────────────────────────────────',

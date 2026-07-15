@@ -1,12 +1,12 @@
 /**
  * Tests for the Translation Service module
- * 
+ *
  * Tests the translator functionality including:
  * - Token estimation
  * - Document size validation
  * - Glossary formatting
  * - Error handling
- * 
+ *
  * Note: API calls are NOT tested here (would require mocking Anthropic SDK)
  * The actual translation quality is validated via tool-test-action-on-github
  */
@@ -36,12 +36,11 @@ describe('Translator Module', () => {
     it('should estimate CJK languages need fewer tokens (more compact)', () => {
       // CJK expansion factor is 1.3, vs 1.5 for default
       // This means CJK translations should have smaller estimates
-      const sourceLength = 10000; // 10k chars
-      
+
       // Expected: (10000/4) * 1.3 + 2000 = 5250 tokens for CJK
       // Expected: (10000/4) * 1.5 + 2000 = 5750 tokens for default
       // CJK should be ~500 tokens less
-      
+
       // We can't test the function directly, but we document the expected behavior
       expect(true).toBe(true); // Placeholder - behavior verified in integration tests
     });
@@ -49,12 +48,11 @@ describe('Translator Module', () => {
     it('should estimate RTL languages need more tokens (verbose)', () => {
       // RTL expansion factor is 1.8, vs 1.5 for default
       // This means Persian/Arabic translations should have larger estimates
-      const sourceLength = 10000; // 10k chars
-      
+
       // Expected: (10000/4) * 1.8 + 2000 = 6500 tokens for RTL
       // Expected: (10000/4) * 1.5 + 2000 = 5750 tokens for default
       // RTL should be ~750 tokens more
-      
+
       expect(true).toBe(true); // Placeholder - behavior verified in integration tests
     });
   });
@@ -77,9 +75,9 @@ describe('Translator Module', () => {
         terms: [
           { en: 'utility function', 'zh-cn': '效用函数', context: 'economics' },
           { en: 'random variable', 'zh-cn': '随机变量' }, // no context
-        ]
+        ],
       };
-      
+
       expect(glossary.terms[0].context).toBe('economics');
       expect(glossary.terms[1].context).toBeUndefined();
     });
@@ -145,47 +143,30 @@ describe('Translator Module', () => {
   describe('Prompt Structure', () => {
     it('UPDATE prompt should include old/new/current markers', () => {
       // The update prompt uses these markers to clearly delineate content
-      const markers = [
-        '[OLD',
-        '[NEW',
-        '[CURRENT',
-        'VERSION]',
-        'TRANSLATION]',
-      ];
-      
+      const markers = ['[OLD', '[NEW', '[CURRENT', 'VERSION]', 'TRANSLATION]'];
+
       // All markers should be distinct and parseable
       expect(markers.length).toBe(5);
     });
 
     it('NEW prompt should include section markers', () => {
       // The new prompt uses these markers
-      const markers = [
-        '[',
-        'SECTION TO TRANSLATE]',
-        '[/END SECTION]',
-      ];
-      
+      const markers = ['[', 'SECTION TO TRANSLATE]', '[/END SECTION]'];
+
       expect(markers.length).toBe(3);
     });
 
     it('RESYNC prompt should include source and translation markers', () => {
       // The resync prompt uses these markers
-      const markers = [
-        '[CURRENT',
-        'SOURCE]',
-        '[EXISTING',
-        'TRANSLATION]',
-      ];
-      
+      const markers = ['[CURRENT', 'SOURCE]', '[EXISTING', 'TRANSLATION]'];
+
       // All markers should be distinct
       expect(markers.length).toBe(4);
     });
 
     it('RESYNC prompt should instruct to preserve existing style', () => {
       // Key RESYNC instruction: preserve the existing translation style
-      const keyInstructions = [
-        'Preserve', 'existing', 'style', 'terminology', 'localization',
-      ];
+      const keyInstructions = ['Preserve', 'existing', 'style', 'terminology', 'localization'];
       expect(keyInstructions.length).toBeGreaterThan(0);
     });
 
@@ -197,7 +178,7 @@ describe('Translator Module', () => {
         'Math blocks must have matching $$ delimiters',
         'Do NOT mix fence markers',
       ];
-      
+
       expect(criticalRules).toHaveLength(4);
     });
 
@@ -208,7 +189,7 @@ describe('Translator Module', () => {
         'DO NOT translate math',
         'DO NOT translate URLs',
       ];
-      
+
       expect(preservationRules).toHaveLength(3);
     });
   });
@@ -229,7 +210,7 @@ describe('Translator Module', () => {
       // 200,000 chars → (200000/4) * 1.5 + 2000 = 77,000 tokens > 32768
       const veryLargeSourceLength = 200000;
       const estimatedTokens = Math.ceil(veryLargeSourceLength / 4) * 1.5 + 2000;
-      
+
       expect(estimatedTokens).toBeGreaterThan(32768);
     });
 
@@ -238,7 +219,7 @@ describe('Translator Module', () => {
       // 20,000 chars → (20000/4) * 1.5 + 2000 = 9,500 tokens < 32768
       const typicalSourceLength = 20000;
       const estimatedTokens = Math.ceil(typicalSourceLength / 4) * 1.5 + 2000;
-      
+
       expect(estimatedTokens).toBeLessThan(32768);
     });
   });
@@ -292,7 +273,7 @@ describe('Translator Integration Behavior', () => {
         // CJK: 1.3x (more compact scripts)
         // RTL: 1.8x (more verbose translations)
         // Default: 1.5x
-        
+
         if (['zh-cn', 'zh-tw', 'ja', 'ko'].includes(language)) {
           expect(expectedFactor).toBe(1.3);
         } else if (['fa', 'ar', 'he'].includes(language)) {

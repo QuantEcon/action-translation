@@ -26,14 +26,8 @@ import { TranslationService } from '../../translator.js';
 import { Glossary } from '../../types.js';
 import { triageForward } from '../forward-triage.js';
 import { languageLabel } from '../../language-config.js';
-import {
-  ForwardOptions,
-  ForwardFileResult,
-} from '../types.js';
-import {
-  runStatus,
-  StatusOptions,
-} from './status.js';
+import { ForwardOptions, ForwardFileResult } from '../types.js';
+import { runStatus } from './status.js';
 import { writeFileState } from '../translate-state.js';
 import { getFileGitMetadata } from '../git-metadata.js';
 import { MystParser } from '../../parser.js';
@@ -41,7 +35,6 @@ import {
   createForwardPR,
   gitPrepareAndPush,
   detectSourceRepo,
-  ForwardPRResult,
   GhRunner,
   GitRunner,
   realGhRunner,
@@ -81,7 +74,7 @@ export async function resyncSingleFile(
   options: ForwardOptions,
   logger: ForwardLogger = defaultLogger,
   ghRunner?: GhRunner,
-  gitRunner?: GitRunner,
+  gitRunner?: GitRunner
 ): Promise<ForwardFileResult> {
   const sourceFilePath = path.join(sourceRepoPath, docsFolder, file);
   const targetFilePath = path.join(targetRepoPath, docsFolder, file);
@@ -91,7 +84,9 @@ export async function resyncSingleFile(
     throw new Error(`Source file not found: ${sourceFilePath}`);
   }
   if (!fs.existsSync(targetFilePath)) {
-    throw new Error(`Target file not found: ${targetFilePath} (use 'new' translation for missing targets)`);
+    throw new Error(
+      `Target file not found: ${targetFilePath} (use 'new' translation for missing targets)`
+    );
   }
 
   const sourceContent = fs.readFileSync(sourceFilePath, 'utf-8');
@@ -100,20 +95,18 @@ export async function resyncSingleFile(
   // ──── Step 1: Forward triage ─────────────────────────────────────────────
   logger.info(`  Triaging ${file}…`);
 
-  const triageResult = await triageForward(
-    file,
-    sourceContent,
-    targetContent,
-    {
-      apiKey: options.apiKey,
-      model: options.model,
-      sourceLanguage: languageLabel(options.sourceLanguage),
-      targetLanguage: languageLabel(options.language),
-      testMode: options.test,
-    },
-  );
+  const triageResult = await triageForward(file, sourceContent, targetContent, {
+    apiKey: options.apiKey,
+    model: options.model,
+    sourceLanguage: languageLabel(options.sourceLanguage),
+    targetLanguage: languageLabel(options.language),
+    testMode: options.test,
+  });
 
-  if (triageResult.verdict !== 'CONTENT_CHANGES' && triageResult.verdict !== 'TARGET_HAS_ADDITIONS') {
+  if (
+    triageResult.verdict !== 'CONTENT_CHANGES' &&
+    triageResult.verdict !== 'TARGET_HAS_ADDITIONS'
+  ) {
     const label = triageResult.verdict === 'IDENTICAL' ? 'identical' : 'i18n only';
     logger.info(`  SKIPPED — ${label}${triageResult.reason ? ` (${triageResult.reason})` : ''}`);
     return {
@@ -197,12 +190,12 @@ export async function resyncSingleFile(
       const prResult = createForwardPR(
         file,
         outputContent,
-        [],  // No per-section results in whole-file mode
+        [], // No per-section results in whole-file mode
         options.github,
         runner,
         sourceGitHub,
         docsFolder,
-        triageResult.reason,
+        triageResult.reason
       );
       if (prResult.success) {
         prUrl = prResult.url;
@@ -248,7 +241,7 @@ export async function resyncSingleFile(
   return {
     file,
     triageResult,
-    sections: [],  // Whole-file mode — no per-section tracking
+    sections: [], // Whole-file mode — no per-section tracking
     outputContent,
     prUrl,
     tokensUsed,
@@ -268,7 +261,7 @@ export async function runForwardBulk(
   logger: ForwardLogger = defaultLogger,
   exclude: string[] = [],
   ghRunner?: GhRunner,
-  gitRunner?: GitRunner,
+  gitRunner?: GitRunner
 ): Promise<ForwardFileResult[]> {
   const { source, target, docsFolder, language } = options;
 
@@ -285,8 +278,8 @@ export async function runForwardBulk(
 
   // Filter to files that need resync (OUTDATED or SOURCE_AHEAD)
   const candidates = statusResult.entries
-    .filter(e => e.status === 'OUTDATED' || e.status === 'SOURCE_AHEAD')
-    .map(e => e.file);
+    .filter((e) => e.status === 'OUTDATED' || e.status === 'SOURCE_AHEAD')
+    .map((e) => e.file);
 
   if (candidates.length === 0) {
     logger.info('All files are in sync — nothing to resync.');
@@ -303,7 +296,7 @@ export async function runForwardBulk(
   const results: ForwardFileResult[] = [];
   const bar = new cliProgress.SingleBar(
     { format: '  {bar} {percentage}% | {value}/{total} files | {filename}' },
-    cliProgress.Presets.shades_classic,
+    cliProgress.Presets.shades_classic
   );
   bar.start(candidates.length, 0, { filename: '' });
 
@@ -315,28 +308,36 @@ export async function runForwardBulk(
     const batch = candidates.slice(i, i + CONCURRENCY);
     bar.update(results.length, { filename: batch[0] });
 
-    const batchResults = await Promise.all(batch.map(async (file) => {
-      try {
-        return await resyncSingleFile(
-          file,
-          source,
-          target,
-          docsFolder,
-          options,
-          logger,
-          ghRunner,
-          gitRunner,
-        );
-      } catch (error) {
-        logger.error(`Failed to resync ${file}: ${error instanceof Error ? error.message : String(error)}`);
-        return {
-          file,
-          triageResult: { file, verdict: 'CONTENT_CHANGES' as const, reason: 'Error during processing' },
-          sections: [],
-          summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
-        };
-      }
-    }));
+    const batchResults = await Promise.all(
+      batch.map(async (file) => {
+        try {
+          return await resyncSingleFile(
+            file,
+            source,
+            target,
+            docsFolder,
+            options,
+            logger,
+            ghRunner,
+            gitRunner
+          );
+        } catch (error) {
+          logger.error(
+            `Failed to resync ${file}: ${error instanceof Error ? error.message : String(error)}`
+          );
+          return {
+            file,
+            triageResult: {
+              file,
+              verdict: 'CONTENT_CHANGES' as const,
+              reason: 'Error during processing',
+            },
+            sections: [],
+            summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
+          };
+        }
+      })
+    );
 
     results.push(...batchResults);
     bar.update(results.length, { filename: batch[batch.length - 1] });
@@ -357,8 +358,8 @@ export async function runForwardBulk(
 // ============================================================================
 
 function printBulkSummary(results: ForwardFileResult[], logger: ForwardLogger): void {
-  const skipped = results.filter(r => r.triageResult.verdict !== 'CONTENT_CHANGES');
-  const processed = results.filter(r => r.triageResult.verdict === 'CONTENT_CHANGES');
+  const skipped = results.filter((r) => r.triageResult.verdict !== 'CONTENT_CHANGES');
+  const processed = results.filter((r) => r.triageResult.verdict === 'CONTENT_CHANGES');
 
   let totalResynced = 0;
   let totalErrors = 0;

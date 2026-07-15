@@ -1,6 +1,6 @@
 /**
  * Tests for the Translation Reviewer module
- * 
+ *
  * Tests the review mode functionality including:
  * - Helper functions (extractPreamble, extractSections, headingToId)
  * - Change detection (identifyChangedSections)
@@ -17,7 +17,7 @@ import { ChangedSection } from '../types.js';
 describe('Reviewer Helper Functions', () => {
   // We need to test the internal helper functions
   // Since they're not exported, we test them through identifyChangedSections
-  
+
   describe('extractPreamble (via identifyChangedSections)', () => {
     it('should detect preamble changes', () => {
       const sourceBefore = `---
@@ -65,9 +65,11 @@ title: 测试更新
 内容在这里。`;
 
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
-      
-      expect(changes.some(c => c.heading === '(preamble/frontmatter)')).toBe(true);
-      expect(changes.find(c => c.heading === '(preamble/frontmatter)')?.changeType).toBe('modified');
+
+      expect(changes.some((c) => c.heading === '(preamble/frontmatter)')).toBe(true);
+      expect(changes.find((c) => c.heading === '(preamble/frontmatter)')?.changeType).toBe(
+        'modified'
+      );
     });
   });
 
@@ -106,9 +108,9 @@ Methods content.`;
 方法内容。`;
 
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
-      
+
       // Should detect Introduction as modified
-      const introChange = changes.find(c => c.heading.includes('Introduction'));
+      const introChange = changes.find((c) => c.heading.includes('Introduction'));
       expect(introChange).toBeDefined();
       expect(introChange?.changeType).toBe('modified');
     });
@@ -141,9 +143,9 @@ New methods.`;
 新方法。`;
 
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
-      
+
       expect(changes.length).toBeGreaterThan(0);
-      expect(changes.every(c => c.changeType === 'added')).toBe(true);
+      expect(changes.every((c) => c.changeType === 'added')).toBe(true);
     });
 
     it('should handle new document with no sections', () => {
@@ -158,7 +160,7 @@ Just some text without sections.`;
 只是一些没有章节的文字。`;
 
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
-      
+
       expect(changes.length).toBe(1);
       expect(changes[0].changeType).toBe('added');
       expect(changes[0].heading).toBe('(new document)');
@@ -179,7 +181,7 @@ Content.`;
       const targetAfter = '';
 
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
-      
+
       expect(changes.length).toBe(1);
       expect(changes[0].heading).toBe('(document deleted)');
       expect(changes[0].changeType).toBe('deleted');
@@ -199,7 +201,7 @@ Content here.`;
 内容在这里。`;
 
       const changes = identifyChangedSections(content, content, targetContent, targetContent);
-      
+
       expect(changes.length).toBe(1);
       expect(changes[0].heading).toContain('no content changes');
       expect(changes[0].changeType).toBe('modified');
@@ -241,8 +243,8 @@ Updated methods with new details.`;
 更新的方法和新细节。`;
 
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
-      
-      const methodsChange = changes.find(c => c.heading.includes('Methods'));
+
+      const methodsChange = changes.find((c) => c.heading.includes('Methods'));
       expect(methodsChange).toBeDefined();
       expect(methodsChange?.changeType).toBe('modified');
     });
@@ -281,10 +283,14 @@ Methods content.`;
 方法内容。`;
 
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
-      
+
       // Should detect deleted Introduction and added Overview
-      expect(changes.some(c => c.heading.includes('Introduction') && c.changeType === 'deleted')).toBe(true);
-      expect(changes.some(c => c.heading.includes('Overview') && c.changeType === 'added')).toBe(true);
+      expect(
+        changes.some((c) => c.heading.includes('Introduction') && c.changeType === 'deleted')
+      ).toBe(true);
+      expect(changes.some((c) => c.heading.includes('Overview') && c.changeType === 'added')).toBe(
+        true
+      );
     });
   });
 
@@ -317,8 +323,8 @@ Brand new content.`;
 全新内容。`;
 
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
-      
-      const newSection = changes.find(c => c.heading.includes('New Section'));
+
+      const newSection = changes.find((c) => c.heading.includes('New Section'));
       expect(newSection).toBeDefined();
       expect(newSection?.changeType).toBe('added');
     });
@@ -365,8 +371,8 @@ Final words.`;
 最后的话。`;
 
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
-      
-      const deletedSection = changes.find(c => c.heading.includes('Deprecated'));
+
+      const deletedSection = changes.find((c) => c.heading.includes('Deprecated'));
       expect(deletedSection).toBeDefined();
       expect(deletedSection?.changeType).toBe('deleted');
     });
@@ -425,16 +431,16 @@ Brand new section.`;
 全新部分。`;
 
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
-      
+
       // Should detect: Introduction modified, Methods deleted, Methodology added, Discussion added
       expect(changes.length).toBeGreaterThanOrEqual(3);
-      
+
       // Introduction should be modified
-      const introChange = changes.find(c => c.heading.includes('Introduction'));
+      const introChange = changes.find((c) => c.heading.includes('Introduction'));
       expect(introChange?.changeType).toBe('modified');
-      
+
       // Discussion should be added
-      const discussionChange = changes.find(c => c.heading.includes('Discussion'));
+      const discussionChange = changes.find((c) => c.heading.includes('Discussion'));
       expect(discussionChange?.changeType).toBe('added');
     });
   });
@@ -482,9 +488,9 @@ Original motivation.`;
 原始动机。`;
 
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
-      
+
       // Should detect Background subsection change
-      const backgroundChange = changes.find(c => c.heading.includes('Background'));
+      const backgroundChange = changes.find((c) => c.heading.includes('Background'));
       expect(backgroundChange).toBeDefined();
       expect(backgroundChange?.changeType).toBe('modified');
     });
@@ -533,8 +539,8 @@ date: 2024-12-01
 内容。`;
 
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
-      
-      expect(changes.some(c => c.heading === '(preamble/frontmatter)')).toBe(true);
+
+      expect(changes.some((c) => c.heading === '(preamble/frontmatter)')).toBe(true);
     });
 
     it('should handle whitespace-only differences', () => {
@@ -547,7 +553,7 @@ Content.`;
 
 ## Section
 Content.
-`;  // Added trailing newline
+`; // Added trailing newline
 
       const targetBefore = `# 标题
 
@@ -561,7 +567,7 @@ Content.
 `;
 
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
-      
+
       // Should detect no meaningful changes (whitespace normalized)
       // or minimal preamble change
       expect(changes.length).toBeLessThanOrEqual(1);
@@ -589,7 +595,7 @@ Updated content.`;
 更新的内容。`;
 
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
-      
+
       expect(changes.length).toBeGreaterThan(0);
       // Should match by position since IDs differ between languages
     });
@@ -616,7 +622,7 @@ Updated content.`;
 محتوای به‌روزشده.`;
 
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
-      
+
       expect(changes.length).toBeGreaterThan(0);
     });
   });
@@ -643,10 +649,10 @@ describe('Review Comment Generation', () => {
         { heading: '## Methods', changeType: 'added', englishContent: 'New section' },
         { heading: '## Old Section', changeType: 'deleted' },
       ];
-      
-      expect(changes.filter(c => c.changeType === 'modified').length).toBe(1);
-      expect(changes.filter(c => c.changeType === 'added').length).toBe(1);
-      expect(changes.filter(c => c.changeType === 'deleted').length).toBe(1);
+
+      expect(changes.filter((c) => c.changeType === 'modified').length).toBe(1);
+      expect(changes.filter((c) => c.changeType === 'added').length).toBe(1);
+      expect(changes.filter((c) => c.changeType === 'deleted').length).toBe(1);
     });
   });
 
@@ -654,7 +660,7 @@ describe('Review Comment Generation', () => {
     // Test that issues are properly normalized to strings
     it('should handle string issues', () => {
       const issues = ['Issue 1', 'Issue 2'];
-      expect(issues.every(i => typeof i === 'string')).toBe(true);
+      expect(issues.every((i) => typeof i === 'string')).toBe(true);
     });
 
     it('should handle object issues structure', () => {
@@ -664,7 +670,7 @@ describe('Review Comment Generation', () => {
         original: 'wrong text',
         suggestion: 'correct text',
       };
-      
+
       expect(issueObj.location).toBeDefined();
       expect(issueObj.original).toBeDefined();
       expect(issueObj.suggestion).toBeDefined();
@@ -699,7 +705,7 @@ describe('Review Input Validation', () => {
     it('should validate owner/repo format', () => {
       const validRepo = 'QuantEcon/lecture-python';
       expect(validRepo.includes('/')).toBe(true);
-      
+
       const invalidRepo = 'lecture-python';
       expect(invalidRepo.includes('/')).toBe(false);
     });
@@ -708,7 +714,7 @@ describe('Review Input Validation', () => {
   describe('max-suggestions', () => {
     it('should accept positive integers', () => {
       const validValues = [1, 5, 10];
-      validValues.forEach(v => {
+      validValues.forEach((v) => {
         expect(Number.isInteger(v) && v > 0).toBe(true);
       });
     });
@@ -876,16 +882,18 @@ Q_s = Q_d
 $$`;
 
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
-      
+
       // Should detect: preamble (heading-map), Overview modified, Market Equilibrium added
       expect(changes.length).toBeGreaterThanOrEqual(2);
-      
+
       // Overview should be modified
-      const overviewChange = changes.find(c => c.heading.includes('Overview'));
+      const overviewChange = changes.find((c) => c.heading.includes('Overview'));
       expect(overviewChange?.changeType).toBe('modified');
-      
+
       // Market Equilibrium should be added
-      const equilibriumChange = changes.find(c => c.heading.includes('Equilibrium') || c.heading.includes('Market'));
+      const equilibriumChange = changes.find(
+        (c) => c.heading.includes('Equilibrium') || c.heading.includes('Market')
+      );
       expect(equilibriumChange?.changeType).toBe('added');
     });
 
@@ -929,9 +937,9 @@ x = np.array([1, 2, 3])
 \`\`\``;
 
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
-      
+
       // Should detect Setup section as modified
-      const setupChange = changes.find(c => c.heading.includes('Setup'));
+      const setupChange = changes.find((c) => c.heading.includes('Setup'));
       expect(setupChange?.changeType).toBe('modified');
     });
   });
@@ -950,7 +958,8 @@ describe('parseJsonResponse', () => {
   });
 
   it('should extract JSON from markdown code block', () => {
-    const response = 'Here is my evaluation:\n```json\n{"accuracy": 9, "fluency": 8}\n```\nThat is my assessment.';
+    const response =
+      'Here is my evaluation:\n```json\n{"accuracy": 9, "fluency": 8}\n```\nThat is my assessment.';
     const result = parseJsonResponse(response) as { accuracy: number; fluency: number };
     expect(result.accuracy).toBe(9);
     expect(result.fluency).toBe(8);
@@ -963,7 +972,8 @@ describe('parseJsonResponse', () => {
   });
 
   it('should extract JSON with leading/trailing text via greedy regex', () => {
-    const response = 'Based on my analysis:\n\n{"accuracy": 7, "issues": ["minor issue"]}\n\nLet me know if you need more details.';
+    const response =
+      'Based on my analysis:\n\n{"accuracy": 7, "issues": ["minor issue"]}\n\nLet me know if you need more details.';
     const result = parseJsonResponse(response) as { accuracy: number; issues: string[] };
     expect(result.accuracy).toBe(7);
     expect(result.issues).toEqual(['minor issue']);
@@ -1013,7 +1023,10 @@ describe('parseJsonResponse', () => {
 
   it('should handle nested objects inside a markdown code block', () => {
     const response = '```json\n{"outer": {"inner": 1}, "list": [{"a": 2}]}\n```';
-    const result = parseJsonResponse(response) as { outer: { inner: number }; list: Array<{ a: number }> };
+    const result = parseJsonResponse(response) as {
+      outer: { inner: number };
+      list: Array<{ a: number }>;
+    };
     expect(result.outer.inner).toBe(1);
     expect(result.list[0].a).toBe(2);
   });

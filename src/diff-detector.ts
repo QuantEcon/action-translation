@@ -1,9 +1,9 @@
 /**
  * Section-Based Diff Detection Engine
- * 
+ *
  * Detects changes at the section level (## headings) rather than individual blocks.
  * This approach is much simpler and more reliable for translation workflows.
- * 
+ *
  * Key principles:
  * - Sections are matched by position (most reliable for translations)
  * - Changes are: added section, modified section, deleted section
@@ -39,7 +39,7 @@ export class DiffDetector {
     filepath: string
   ): Promise<SectionChange[]> {
     this.log(`Detecting section changes in ${filepath}`);
-    
+
     const oldSections = await this.parser.parseSections(oldContent, filepath);
     const newSections = await this.parser.parseSections(newContent, filepath);
 
@@ -53,21 +53,21 @@ export class DiffDetector {
     if (oldSections.preamble !== newSections.preamble) {
       const oldPreamble = oldSections.preamble?.trim() || '';
       const newPreamble = newSections.preamble?.trim() || '';
-      
+
       if (oldPreamble !== newPreamble) {
         this.log(`PREAMBLE MODIFIED: Content changed`);
-        
+
         // Treat preamble as a special section with ID 'preamble'
         changes.push({
           type: 'modified',
           oldSection: {
             id: '_preamble',
-            heading: '',  // Preamble has no heading
-            level: 0,     // Special level for preamble
+            heading: '', // Preamble has no heading
+            level: 0, // Special level for preamble
             content: oldPreamble,
             startLine: 1,
             endLine: 1,
-            subsections: []
+            subsections: [],
           },
           newSection: {
             id: '_preamble',
@@ -76,8 +76,8 @@ export class DiffDetector {
             content: newPreamble,
             startLine: 1,
             endLine: 1,
-            subsections: []
-          }
+            subsections: [],
+          },
         });
       }
     }
@@ -85,19 +85,16 @@ export class DiffDetector {
     // Check for added and modified sections
     for (let i = 0; i < newSections.sections.length; i++) {
       const newSection = newSections.sections[i];
-      
+
       // Try to find corresponding section in old document
       // Strategy 1: Match by position (most reliable for translations)
       const oldSectionByPosition = oldSections.sections[i];
-      
+
       // Strategy 2: Match by ID (works if section heading didn't change)
-      const oldSectionById = this.parser.findSectionById(
-        oldSections.sections,
-        newSection.id
-      );
+      const oldSectionById = this.parser.findSectionById(oldSections.sections, newSection.id);
 
       let matchedOldSection: Section | undefined;
-      
+
       // Prefer position-based matching for translations
       // (Chinese "## 经济模型" is at same position as English "## Economic Models")
       if (oldSectionByPosition && this.sectionsMatch(oldSectionByPosition, newSection)) {
@@ -154,7 +151,7 @@ export class DiffDetector {
   /**
    * Check if two sections match (for position-based matching)
    * Sections match if they have the same ID (heading)
-   * 
+   *
    * Note: We used to check structural similarity (level + subsection count),
    * but this caused false matches when inserting new sections.
    * Now we require ID match for position-based matching.
@@ -172,24 +169,24 @@ export class DiffDetector {
     // Compare source documents (old English vs new English) using exact string equality
     // Any change in content, even a single character, should be detected
     // This ensures we catch typo fixes, word changes, added sentences, etc.
-    
+
     // 1. Compare direct content (excluding subsections)
     if (section1.content.trim() !== section2.content.trim()) {
       return false;
     }
-    
+
     // 2. Compare subsection count
     if (section1.subsections.length !== section2.subsections.length) {
       return false;
     }
-    
+
     // 3. Recursively compare each subsection
     for (let i = 0; i < section1.subsections.length; i++) {
       if (!this.sectionContentEqual(section1.subsections[i], section2.subsections[i])) {
         return false;
       }
     }
-    
+
     return true;
   }
 }

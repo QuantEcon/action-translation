@@ -10,7 +10,13 @@
  * integration tests with the real GitHub Action workflow.
  */
 
-import { buildPrBody, buildPrTitle, buildLabelSet, parseTranslationSyncMetadata, PrCreatorConfig } from '../pr-creator.js';
+import {
+  buildPrBody,
+  buildPrTitle,
+  buildLabelSet,
+  parseTranslationSyncMetadata,
+  PrCreatorConfig,
+} from '../pr-creator.js';
 import { TranslatedFile } from '../types.js';
 
 // =============================================================================
@@ -96,9 +102,7 @@ describe('buildPrBody', () => {
   });
 
   it('should list added files (no SHA)', () => {
-    const files: TranslatedFile[] = [
-      { path: 'lectures/new-file.md', content: 'content' },
-    ];
+    const files: TranslatedFile[] = [{ path: 'lectures/new-file.md', content: 'content' }];
     const body = buildPrBody(files, [], baseConfig);
 
     expect(body).toContain('### Files Added');
@@ -167,9 +171,7 @@ describe('buildPrBody', () => {
   });
 
   it('should escape backticks in skipped section headings', () => {
-    const skipped = new Map<string, string[]>([
-      ['test.md', ['Code `example` section']],
-    ]);
+    const skipped = new Map<string, string[]>([['test.md', ['Code `example` section']]]);
     const body = buildPrBody([], [], baseConfig, undefined, skipped);
 
     // Heading should be wrapped in backticks with inner backticks escaped
@@ -386,7 +388,15 @@ describe('parseTranslationSyncMetadata', () => {
       { path: 'lectures/renamed.md', type: 'renamed', previousPath: 'lectures/old-name.md' },
       { path: 'lectures/old.md', type: 'removed' },
     ];
-    const body = buildPrBody(files, deleted, baseConfig, undefined, undefined, undefined, fileMetadata);
+    const body = buildPrBody(
+      files,
+      deleted,
+      baseConfig,
+      undefined,
+      undefined,
+      undefined,
+      fileMetadata
+    );
     const metadata = parseTranslationSyncMetadata(body);
 
     expect(metadata).toBeDefined();

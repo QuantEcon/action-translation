@@ -47,12 +47,36 @@ const HIGH_PUNCTUATION = /[;:!?]/;
  * listed here is treated as code and left untouched.
  */
 const PROSE_DIRECTIVES = new Set([
-  'admonition', 'attention', 'caution', 'danger', 'error', 'hint', 'important',
-  'note', 'seealso', 'tip', 'warning',
-  'exercise', 'exercise-start', 'exercise-end',
-  'solution', 'solution-start', 'solution-end',
-  'epigraph', 'margin', 'sidebar', 'topic', 'card', 'grid-item-card',
-  'proof', 'theorem', 'lemma', 'corollary', 'definition', 'remark', 'conjecture',
+  'admonition',
+  'attention',
+  'caution',
+  'danger',
+  'error',
+  'hint',
+  'important',
+  'note',
+  'seealso',
+  'tip',
+  'warning',
+  'exercise',
+  'exercise-start',
+  'exercise-end',
+  'solution',
+  'solution-start',
+  'solution-end',
+  'epigraph',
+  'margin',
+  'sidebar',
+  'topic',
+  'card',
+  'grid-item-card',
+  'proof',
+  'theorem',
+  'lemma',
+  'corollary',
+  'definition',
+  'remark',
+  'conjecture',
 ]);
 
 const FENCE_OPEN = /^(\s{0,3})(`{3,}|~{3,}|:{3,})\s*(?:\{([\w:-]+)\})?/;
@@ -88,7 +112,10 @@ function classifyLines(lines: string[]): boolean[] {
     const line = lines[i];
 
     // Leading YAML frontmatter — includes the translation heading map.
-    if (i === 0 && line.trim() === '---') { inFrontmatter = true; continue; }
+    if (i === 0 && line.trim() === '---') {
+      inFrontmatter = true;
+      continue;
+    }
     if (inFrontmatter) {
       if (line.trim() === '---') inFrontmatter = false;
       continue;
@@ -103,7 +130,8 @@ function classifyLines(lines: string[]): boolean[] {
     if (top && !top.prose) {
       if (open) {
         const [, , marker, directive] = open;
-        if (!directive && marker[0] === top.marker[0] && marker.length >= top.marker.length) stack.pop();
+        if (!directive && marker[0] === top.marker[0] && marker.length >= top.marker.length)
+          stack.pop();
       }
       continue;
     }
@@ -132,7 +160,10 @@ function classifyLines(lines: string[]): boolean[] {
       continue;
     }
 
-    if (!top) { eligible[i] = true; continue; }
+    if (!top) {
+      eligible[i] = true;
+      continue;
+    }
 
     // Directive options (`:name: fig-one`) sit directly under the opener.
     if (awaitingOptions) {
@@ -187,9 +218,33 @@ function applyFrenchSpacing(text: string): string {
   );
 }
 
+/**
+ * Footnote and link-reference definitions — `[^id]: text`, `[label]: url` —
+ * require the colon immediately after `]`. An inserted NBSP stops the line
+ * parsing as a definition: it renders as literal paragraph text and every
+ * reference to it breaks (this shipped — pandas.md in the fr seed). The label
+ * and colon are masked below; the definition TEXT after the colon is ordinary
+ * prose and still gets typeset. CommonMark allows up to 3 leading spaces.
+ */
+const DEFINITION_LABEL = /^\s{0,3}\[[^\]]*\]:/;
+
+/**
+ * The corruption the pre-fix transform produced: a non-breaking space between
+ * a line-leading label and its colon. That sequence can never be legitimate —
+ * with the NBSP the line is not a definition at all — so it is repaired,
+ * which lets `scripts/typography/apply.mjs` heal already-damaged repos.
+ * Only NBSP/narrow-NBSP are collapsed: `[x] :` with a regular space is prose,
+ * not a definition, and is left to the ordinary spacing rule.
+ */
+const DEFINITION_CORRUPTED = /^(\s{0,3}\[[^\]]*\])[\u00A0\u202F]+:/;
+
 function applyToProse(line: string, rule: (text: string) => string): string {
   const chunks: string[] = [];
-  let masked = line;
+  let masked = line.replace(DEFINITION_CORRUPTED, '$1:');
+  masked = masked.replace(DEFINITION_LABEL, (m) => {
+    chunks.push(m);
+    return `${PLACEHOLDER}${chunks.length - 1}${PLACEHOLDER}`;
+  });
   for (const pattern of INLINE_PROTECTED) {
     masked = masked.replace(pattern, (m) => {
       chunks.push(m);

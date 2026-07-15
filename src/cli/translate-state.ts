@@ -43,7 +43,9 @@ export function getToolVersion(): string {
       const pkgPath = path.resolve(__dirname, '../../package.json');
       _cachedVersion = JSON.parse(fs.readFileSync(pkgPath, 'utf-8')).version as string;
       return _cachedVersion!;
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
   }
 
   // Strategy 2: walk up from process.argv[1] (ESM / CLI runtime)
@@ -53,13 +55,18 @@ export function getToolVersion(): string {
       const pkgPath = path.join(dir, 'package.json');
       if (fs.existsSync(pkgPath)) {
         const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-        if (pkg.name === 'action-translation') { _cachedVersion = pkg.version as string; return _cachedVersion!; }
+        if (pkg.name === 'action-translation') {
+          _cachedVersion = pkg.version as string;
+          return _cachedVersion!;
+        }
       }
       const parent = path.dirname(dir);
       if (parent === dir) break;
       dir = parent;
     }
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
 
   // Strategy 3: walk up from cwd (works with npx bin shims where argv[1] is a wrapper)
   try {
@@ -68,13 +75,18 @@ export function getToolVersion(): string {
       const pkgPath = path.join(dir, 'package.json');
       if (fs.existsSync(pkgPath)) {
         const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
-        if (pkg.name === 'action-translation') { _cachedVersion = pkg.version as string; return _cachedVersion!; }
+        if (pkg.name === 'action-translation') {
+          _cachedVersion = pkg.version as string;
+          return _cachedVersion!;
+        }
       }
       const parent = path.dirname(dir);
       if (parent === dir) break;
       dir = parent;
     }
-  } catch { /* fall through */ }
+  } catch {
+    /* fall through */
+  }
 
   _cachedVersion = 'unknown';
   return _cachedVersion;
@@ -233,7 +245,7 @@ export async function isSourceChanged(
   sourceRepoPath: string,
   docsFolder: string,
   filename: string,
-  state: FileState | undefined,
+  state: FileState | undefined
 ): Promise<boolean> {
   if (!state) return true; // No state = always consider changed
 

@@ -1,14 +1,14 @@
 /**
  * Tests for git-metadata module
- * 
+ *
  * Tests git log output parsing and date utilities.
  * Also tests getFileGitMetadata against the current repo.
  */
 
-import { 
-  parseGitLogOutput, 
-  formatDate, 
-  daysBetween, 
+import {
+  parseGitLogOutput,
+  formatDate,
+  daysBetween,
   getFileGitMetadata,
   parseTimelineEntry,
   getRepoCommits,
@@ -23,7 +23,7 @@ describe('git-metadata', () => {
     it('should parse standard git log output', () => {
       const output = 'abc123def456789012345678901234567890abcd 2024-06-15 10:30:00 -0500 Jane Doe';
       const result = parseGitLogOutput(output);
-      
+
       expect(result).not.toBeNull();
       expect(result!.lastCommit).toBe('abc123def456789012345678901234567890abcd');
       expect(result!.lastAuthor).toBe('Jane Doe');
@@ -101,7 +101,7 @@ describe('git-metadata', () => {
     it('should parse a standard git log line', () => {
       const entry = parseTimelineEntry(
         '2024-06-15 10:30:00 -0500|abc123d|Add solow model lecture',
-        'SOURCE',
+        'SOURCE'
       );
       expect(entry).not.toBeNull();
       expect(entry!.date).toBe('2024-06-15');
@@ -114,7 +114,7 @@ describe('git-metadata', () => {
     it('should handle commit messages with pipe characters', () => {
       const entry = parseTimelineEntry(
         '2024-01-01 00:00:00 +0800|def456a|Fix: a|b|c regression',
-        'TARGET',
+        'TARGET'
       );
       expect(entry).not.toBeNull();
       expect(entry!.sha).toBe('def456a');
@@ -172,9 +172,7 @@ describe('git-metadata', () => {
     });
 
     it('should return null when neither repo has commits for file', async () => {
-      const timeline = await getFileTimeline(
-        '/nonexistent/path1', '/nonexistent/path2', 'file.md',
-      );
+      const timeline = await getFileTimeline('/nonexistent/path1', '/nonexistent/path2', 'file.md');
       expect(timeline).toBeNull();
     });
 
@@ -188,11 +186,41 @@ describe('git-metadata', () => {
   describe('formatTimelineForPrompt', () => {
     const sampleTimeline: FileTimeline = {
       entries: [
-        { date: '2025-12-23', fullDate: '2025-12-23 10:00:00 +0000', repo: 'SOURCE', sha: 'abc123d', message: 'Fix SymPy deprecation + unicode variables' },
-        { date: '2025-03-26', fullDate: '2025-03-26 14:00:00 +0000', repo: 'TARGET', sha: 'fed987a', message: 'Update translation syncing' },
-        { date: '2025-01-10', fullDate: '2025-01-10 09:00:00 +0000', repo: 'SOURCE', sha: 'bbb222c', message: 'Fix FutureWarning string comparison' },
-        { date: '2024-07-22', fullDate: '2024-07-22 08:00:00 +0000', repo: 'TARGET', sha: 'ccc333d', message: 'Translate solow.md to zh-cn' },
-        { date: '2024-06-15', fullDate: '2024-06-15 12:00:00 +0000', repo: 'SOURCE', sha: 'ddd444e', message: 'Add solow model lecture' },
+        {
+          date: '2025-12-23',
+          fullDate: '2025-12-23 10:00:00 +0000',
+          repo: 'SOURCE',
+          sha: 'abc123d',
+          message: 'Fix SymPy deprecation + unicode variables',
+        },
+        {
+          date: '2025-03-26',
+          fullDate: '2025-03-26 14:00:00 +0000',
+          repo: 'TARGET',
+          sha: 'fed987a',
+          message: 'Update translation syncing',
+        },
+        {
+          date: '2025-01-10',
+          fullDate: '2025-01-10 09:00:00 +0000',
+          repo: 'SOURCE',
+          sha: 'bbb222c',
+          message: 'Fix FutureWarning string comparison',
+        },
+        {
+          date: '2024-07-22',
+          fullDate: '2024-07-22 08:00:00 +0000',
+          repo: 'TARGET',
+          sha: 'ccc333d',
+          message: 'Translate solow.md to zh-cn',
+        },
+        {
+          date: '2024-06-15',
+          fullDate: '2024-06-15 12:00:00 +0000',
+          repo: 'SOURCE',
+          sha: 'ddd444e',
+          message: 'Add solow model lecture',
+        },
       ],
       sourceCommitCount: 3,
       targetCommitCount: 2,
@@ -236,7 +264,13 @@ describe('git-metadata', () => {
     it('should handle timeline with no estimated sync date', () => {
       const noSync: FileTimeline = {
         entries: [
-          { date: '2024-06-15', fullDate: '2024-06-15 12:00:00 +0000', repo: 'SOURCE', sha: 'aaa111b', message: 'Initial commit' },
+          {
+            date: '2024-06-15',
+            fullDate: '2024-06-15 12:00:00 +0000',
+            repo: 'SOURCE',
+            sha: 'aaa111b',
+            message: 'Initial commit',
+          },
         ],
         sourceCommitCount: 1,
         targetCommitCount: 0,

@@ -96,12 +96,15 @@ export function parseLocalizationRules(input: string): RuleId[] {
   const trimmed = input.trim().toLowerCase();
   if (trimmed === 'none') return [];
 
-  const ids = trimmed.split(',').map(s => s.trim()).filter(Boolean);
-  const invalid = ids.filter(id => !RULES[id as RuleId]);
+  const ids = trimmed
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const invalid = ids.filter((id) => !RULES[id as RuleId]);
   if (invalid.length > 0) {
     throw new Error(
       `Unknown localization rule(s): ${invalid.join(', ')}. ` +
-      `Available: ${ALL_RULE_IDS.join(', ')}, none`
+        `Available: ${ALL_RULE_IDS.join(', ')}, none`
     );
   }
   return ids as RuleId[];
@@ -114,9 +117,7 @@ export function parseLocalizationRules(input: string): RuleId[] {
 export function buildLocalizationPrompt(rules: RuleId[], targetLanguage: string): string {
   if (rules.length === 0) return '';
 
-  const parts = rules
-    .map(id => RULES[id].buildPrompt(targetLanguage))
-    .filter(Boolean);
+  const parts = rules.map((id) => RULES[id].buildPrompt(targetLanguage)).filter(Boolean);
 
   if (parts.length === 0) return '';
 
@@ -133,7 +134,7 @@ function getCommentExample(targetLanguage: string): string {
 Example:
   Before: # Calculate the steady state
   After:  # 计算稳态`,
-    'fa': `
+    fa: `
 Example:
   Before: # Calculate the steady state
   After:  # محاسبه حالت پایدار`,
@@ -186,7 +187,7 @@ Example:
   After:  plt.title('价格动态')
   Before: ax.set_xlabel('Time')
   After:  ax.set_xlabel('时间')`,
-    'fa': `
+    fa: `
 Example:
   Before: plt.title('Price Dynamics')
   After:  plt.title('دینامیک قیمت')

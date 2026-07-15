@@ -1,10 +1,10 @@
 /**
  * MyST Markdown Section Parser
- * 
+ *
  * Parses MyST markdown documents into sections based on ## headings.
  * Each section includes all content until the next ## heading, including
  * any nested ### subsections.
- * 
+ *
  * This simplified parser replaces the previous block-based approach with
  * a cleaner section-based structure that's easier to work with for translations.
  */
@@ -20,24 +20,26 @@ export class MystParser {
   async parseSections(content: string, filepath: string): Promise<ParsedSections> {
     const lines = content.split('\n');
     const sections: Section[] = [];
-    
+
     // Extract frontmatter (YAML between --- markers)
     let frontmatter: string | undefined;
     let preamble: string | undefined;
     let contentStartIndex = 0;
-    
+
     if (lines[0] === '---') {
       // Find end of frontmatter
-      const endIndex = lines.slice(1).findIndex(line => line === '---');
+      const endIndex = lines.slice(1).findIndex((line) => line === '---');
       if (endIndex !== -1) {
         // Extract frontmatter including the --- markers
         frontmatter = lines.slice(0, endIndex + 2).join('\n');
         contentStartIndex = endIndex + 2;
       }
     }
-    
+
     // Extract preamble (content before first ## heading, or all content if no ## sections)
-    const firstSectionIndex = lines.slice(contentStartIndex).findIndex(line => line.match(/^##\s+/));
+    const firstSectionIndex = lines
+      .slice(contentStartIndex)
+      .findIndex((line) => line.match(/^##\s+/));
     if (firstSectionIndex !== -1) {
       // There are ## sections, extract content before them
       const preambleLines = lines.slice(contentStartIndex, contentStartIndex + firstSectionIndex);
@@ -56,23 +58,23 @@ export class MystParser {
       }
       contentStartIndex = lines.length; // No sections to parse
     }
-    
+
     // Stack-based parsing for recursive subsections (handles ##, ###, ####, #####, ######)
     // Stack tracks the current nesting: [level2Section, level3Sub, level4SubSub, ...]
     const sectionStack: Section[] = [];
-    
+
     for (let i = contentStartIndex; i < lines.length; i++) {
       const line = lines[i];
       const lineNum = i + 1;
-      
+
       // Check for any heading level (## through ######)
       const headingMatch = line.match(/^(#{2,6})\s+(.+)$/);
-      
+
       if (headingMatch) {
         const level = headingMatch[1].length;
         const headingText = headingMatch[2];
         const id = this.generateHeadingId(headingText);
-        
+
         // Create new section
         const newSection: Section = {
           heading: line,
@@ -83,18 +85,18 @@ export class MystParser {
           endLine: lineNum,
           subsections: [],
         };
-        
+
         // Set parentId if this is a subsection
         if (level > 2 && sectionStack.length > 0) {
           newSection.parentId = sectionStack[sectionStack.length - 1].id;
         }
-        
+
         // Pop stack until we find the parent level (level - 1)
         // or reach a level lower than current
         while (sectionStack.length > 0 && sectionStack[sectionStack.length - 1].level >= level) {
           const completed = sectionStack.pop()!;
           completed.endLine = lineNum - 1;
-          
+
           if (sectionStack.length > 0) {
             // Add to parent's subsections
             sectionStack[sectionStack.length - 1].subsections.push(completed);
@@ -103,12 +105,12 @@ export class MystParser {
             sections.push(completed);
           }
         }
-        
+
         // Push new section onto stack
         sectionStack.push(newSection);
         continue;
       }
-      
+
       // Add content to the deepest section in the stack
       if (sectionStack.length > 0) {
         const currentDeepest = sectionStack[sectionStack.length - 1];
@@ -116,11 +118,11 @@ export class MystParser {
         currentDeepest.endLine = lineNum;
       }
     }
-    
+
     // Save remaining sections in stack
     while (sectionStack.length > 0) {
       const completed = sectionStack.pop()!;
-      
+
       if (sectionStack.length > 0) {
         // Add to parent's subsections
         sectionStack[sectionStack.length - 1].subsections.push(completed);
@@ -129,9 +131,9 @@ export class MystParser {
         sections.push(completed);
       }
     }
-    
+
     // Trim trailing newlines from content
-    
+
     // Recursively trim trailing newlines from content
     const trimSection = (section: Section) => {
       section.content = section.content.trimEnd();
@@ -150,7 +152,7 @@ export class MystParser {
       },
     };
   }
-  
+
   /**
    * Strip MyST inline roles from heading text to extract display text.
    * Handles single roles, multiple roles, and mixed role+text headings.
@@ -164,16 +166,12 @@ export class MystParser {
     let result = text;
 
     // Strip {role}`Display Text <...>` patterns, keeping only "Display Text"
-    result = result.replace(
-      /\{[^}]+\}`([^`]+?)\s*<[^>]+>`/g,
-      (_match, display: string) => display.trim(),
+    result = result.replace(/\{[^}]+\}`([^`]+?)\s*<[^>]+>`/g, (_match, display: string) =>
+      display.trim()
     );
 
     // Strip {role}`Simple Text` patterns, keeping only "Simple Text"
-    result = result.replace(
-      /\{[^}]+\}`([^`]+?)`/g,
-      (_match, display: string) => display.trim(),
-    );
+    result = result.replace(/\{[^}]+\}`([^`]+?)`/g, (_match, display: string) => display.trim());
 
     return result.trim();
   }
@@ -220,7 +218,10 @@ export class MystParser {
    * Validate MyST syntax by attempting to parse
    * Returns true if valid, false otherwise
    */
-  async validateMyST(content: string, filepath: string): Promise<{ valid: boolean; error?: string }> {
+  async validateMyST(
+    content: string,
+    filepath: string
+  ): Promise<{ valid: boolean; error?: string }> {
     try {
       await this.parseSections(content, filepath);
       return { valid: true };
@@ -234,10 +235,10 @@ export class MystParser {
 
   /**
    * Parse document into explicit components: CONFIG + TITLE + INTRO + SECTIONS
-   * 
+   *
    * This provides a more structured view of the document that ensures
    * complete reconstruction by always including all components.
-   * 
+   *
    * @param content - The markdown content to parse
    * @param filepath - Path to the file (for metadata)
    * @returns DocumentComponents with all parts explicitly separated
@@ -245,10 +246,10 @@ export class MystParser {
   async parseDocumentComponents(content: string, filepath: string): Promise<DocumentComponents> {
     // Use the full recursive parser to get sections with all nested subsections (##, ###, ####, etc.)
     const parsed = await this.parseSections(content, filepath);
-    
+
     const lines = content.split('\n');
     let contentStartIndex = 0;
-    
+
     // 1. Extract CONFIG (frontmatter YAML) - reuse from parseSections
     const config = parsed.frontmatter || '';
     if (config) {
@@ -256,20 +257,20 @@ export class MystParser {
       const configLines = config.split('\n');
       contentStartIndex = configLines.length;
     }
-    
+
     // 2. Extract TITLE (# heading), collecting any pre-title content
     // Pre-title content includes MyST cross-ref targets like (label)= and
     // directive blocks like ```{raw} jupyter ... ``` that appear before the title
     let title = '';
     let titleText = '';
-    let preTitleLines: string[] = [];
+    const preTitleLines: string[] = [];
     let titleEndIndex = contentStartIndex;
     let insideFence = false;
-    
+
     // Scan forward to find the # title heading, collecting pre-title content
     while (titleEndIndex < lines.length) {
       const line = lines[titleEndIndex];
-      
+
       // Track code fence boundaries
       if (line.match(/^(`{3,}|~{3,})/)) {
         insideFence = !insideFence;
@@ -277,14 +278,14 @@ export class MystParser {
         titleEndIndex++;
         continue;
       }
-      
+
       // Inside a fence, skip everything
       if (insideFence) {
         preTitleLines.push(line);
         titleEndIndex++;
         continue;
       }
-      
+
       // Check for # title heading
       const titleMatch = line.match(/^#\s+(.+)$/);
       if (titleMatch) {
@@ -293,30 +294,31 @@ export class MystParser {
         titleEndIndex++;
         break;
       }
-      
+
       // Not a title — collect as pre-title content
       preTitleLines.push(line);
       titleEndIndex++;
     }
-    
+
     const preTitle = preTitleLines.join('\n').trim();
-    
+
     if (!title) {
       throw new Error('Document must have a # title heading');
     }
-    
+
     // 3. Extract INTRO (content after title, before first ## section)
     // Use parsed.sections[0].startLine (1-based) from parseSections to avoid
     // re-scanning lines — keeps section-boundary logic centralized.
     let intro = '';
-    const introEndIndex = parsed.sections.length > 0
-      ? parsed.sections[0].startLine - 1   // convert 1-based to 0-based
-      : lines.length;
+    const introEndIndex =
+      parsed.sections.length > 0
+        ? parsed.sections[0].startLine - 1 // convert 1-based to 0-based
+        : lines.length;
     intro = lines.slice(titleEndIndex, introEndIndex).join('\n').trim();
-    
+
     // 4. Use sections from parseSections (includes full recursive structure)
     const sections = parsed.sections;
-    
+
     return {
       config,
       preTitle,

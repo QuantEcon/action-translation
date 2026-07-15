@@ -1,6 +1,6 @@
 /**
  * Tests for the headingmap command
- * 
+ *
  * Tests heading-map generation by position-based section matching,
  * frontmatter injection, mismatch handling, and console output formatting.
  * Uses temporary directories with fixture-style .md files.
@@ -193,12 +193,44 @@ jupytext:
 describe('buildHeadingMap', () => {
   test('builds map from matching sections', () => {
     const source = [
-      { heading: '## Section One', level: 2, id: 'section-one', content: '', startLine: 1, endLine: 2, subsections: [] },
-      { heading: '## Section Two', level: 2, id: 'section-two', content: '', startLine: 3, endLine: 4, subsections: [] },
+      {
+        heading: '## Section One',
+        level: 2,
+        id: 'section-one',
+        content: '',
+        startLine: 1,
+        endLine: 2,
+        subsections: [],
+      },
+      {
+        heading: '## Section Two',
+        level: 2,
+        id: 'section-two',
+        content: '',
+        startLine: 3,
+        endLine: 4,
+        subsections: [],
+      },
     ];
     const target = [
-      { heading: '## 第一节', level: 2, id: '第一节', content: '', startLine: 1, endLine: 2, subsections: [] },
-      { heading: '## 第二节', level: 2, id: '第二节', content: '', startLine: 3, endLine: 4, subsections: [] },
+      {
+        heading: '## 第一节',
+        level: 2,
+        id: '第一节',
+        content: '',
+        startLine: 1,
+        endLine: 2,
+        subsections: [],
+      },
+      {
+        heading: '## 第二节',
+        level: 2,
+        id: '第二节',
+        content: '',
+        startLine: 3,
+        endLine: 4,
+        subsections: [],
+      },
     ];
 
     const { map, warnings } = buildHeadingMap(source, target);
@@ -211,11 +243,35 @@ describe('buildHeadingMap', () => {
 
   test('handles source-only sections with warnings', () => {
     const source = [
-      { heading: '## Section One', level: 2, id: 'section-one', content: '', startLine: 1, endLine: 2, subsections: [] },
-      { heading: '## Section Two', level: 2, id: 'section-two', content: '', startLine: 3, endLine: 4, subsections: [] },
+      {
+        heading: '## Section One',
+        level: 2,
+        id: 'section-one',
+        content: '',
+        startLine: 1,
+        endLine: 2,
+        subsections: [],
+      },
+      {
+        heading: '## Section Two',
+        level: 2,
+        id: 'section-two',
+        content: '',
+        startLine: 3,
+        endLine: 4,
+        subsections: [],
+      },
     ];
     const target = [
-      { heading: '## 第一节', level: 2, id: '第一节', content: '', startLine: 1, endLine: 2, subsections: [] },
+      {
+        heading: '## 第一节',
+        level: 2,
+        id: '第一节',
+        content: '',
+        startLine: 1,
+        endLine: 2,
+        subsections: [],
+      },
     ];
 
     const { map, warnings } = buildHeadingMap(source, target);
@@ -229,11 +285,35 @@ describe('buildHeadingMap', () => {
 
   test('handles target-only sections with warnings', () => {
     const source = [
-      { heading: '## Section One', level: 2, id: 'section-one', content: '', startLine: 1, endLine: 2, subsections: [] },
+      {
+        heading: '## Section One',
+        level: 2,
+        id: 'section-one',
+        content: '',
+        startLine: 1,
+        endLine: 2,
+        subsections: [],
+      },
     ];
     const target = [
-      { heading: '## 第一节', level: 2, id: '第一节', content: '', startLine: 1, endLine: 2, subsections: [] },
-      { heading: '## 额外节', level: 2, id: '额外节', content: '', startLine: 3, endLine: 4, subsections: [] },
+      {
+        heading: '## 第一节',
+        level: 2,
+        id: '第一节',
+        content: '',
+        startLine: 1,
+        endLine: 2,
+        subsections: [],
+      },
+      {
+        heading: '## 额外节',
+        level: 2,
+        id: '额外节',
+        content: '',
+        startLine: 3,
+        endLine: 4,
+        subsections: [],
+      },
     ];
 
     const { map, warnings } = buildHeadingMap(source, target);
@@ -246,19 +326,61 @@ describe('buildHeadingMap', () => {
   test('handles subsections with path-based keys', () => {
     const source = [
       {
-        heading: '## Vector Spaces', level: 2, id: 'vector-spaces', content: '', startLine: 1, endLine: 6,
+        heading: '## Vector Spaces',
+        level: 2,
+        id: 'vector-spaces',
+        content: '',
+        startLine: 1,
+        endLine: 6,
         subsections: [
-          { heading: '### Basic Properties', level: 3, id: 'basic-properties', content: '', startLine: 3, endLine: 4, subsections: [] },
-          { heading: '### Applications', level: 3, id: 'applications', content: '', startLine: 5, endLine: 6, subsections: [] },
+          {
+            heading: '### Basic Properties',
+            level: 3,
+            id: 'basic-properties',
+            content: '',
+            startLine: 3,
+            endLine: 4,
+            subsections: [],
+          },
+          {
+            heading: '### Applications',
+            level: 3,
+            id: 'applications',
+            content: '',
+            startLine: 5,
+            endLine: 6,
+            subsections: [],
+          },
         ],
       },
     ];
     const target = [
       {
-        heading: '## 向量空间', level: 2, id: '向量空间', content: '', startLine: 1, endLine: 6,
+        heading: '## 向量空间',
+        level: 2,
+        id: '向量空间',
+        content: '',
+        startLine: 1,
+        endLine: 6,
         subsections: [
-          { heading: '### 基本性质', level: 3, id: '基本性质', content: '', startLine: 3, endLine: 4, subsections: [] },
-          { heading: '### 应用', level: 3, id: '应用', content: '', startLine: 5, endLine: 6, subsections: [] },
+          {
+            heading: '### 基本性质',
+            level: 3,
+            id: '基本性质',
+            content: '',
+            startLine: 3,
+            endLine: 4,
+            subsections: [],
+          },
+          {
+            heading: '### 应用',
+            level: 3,
+            id: '应用',
+            content: '',
+            startLine: 5,
+            endLine: 6,
+            subsections: [],
+          },
         ],
       },
     ];
@@ -280,20 +402,56 @@ describe('buildHeadingMap', () => {
 
   test('strips MyST roles from heading-map keys and values', () => {
     const source = [
-      { heading: '## Name Resolution', level: 2, id: 'name-resolution', content: '', startLine: 1, endLine: 2, subsections: [
-        { heading: '### {index}`Mutable <single: Mutable>` Versus {index}`Immutable <single: Immutable>` Parameters', level: 3, id: 'mutable-vs-immutable', content: '', startLine: 3, endLine: 4, subsections: [] },
-      ] },
+      {
+        heading: '## Name Resolution',
+        level: 2,
+        id: 'name-resolution',
+        content: '',
+        startLine: 1,
+        endLine: 2,
+        subsections: [
+          {
+            heading:
+              '### {index}`Mutable <single: Mutable>` Versus {index}`Immutable <single: Immutable>` Parameters',
+            level: 3,
+            id: 'mutable-vs-immutable',
+            content: '',
+            startLine: 3,
+            endLine: 4,
+            subsections: [],
+          },
+        ],
+      },
     ];
     const target = [
-      { heading: '## 名称解析', level: 2, id: '名称解析', content: '', startLine: 1, endLine: 2, subsections: [
-        { heading: '### {index}`可变 <single: Mutable>` 与 {index}`不可变 <single: Immutable>` 参数', level: 3, id: '可变与不可变', content: '', startLine: 3, endLine: 4, subsections: [] },
-      ] },
+      {
+        heading: '## 名称解析',
+        level: 2,
+        id: '名称解析',
+        content: '',
+        startLine: 1,
+        endLine: 2,
+        subsections: [
+          {
+            heading:
+              '### {index}`可变 <single: Mutable>` 与 {index}`不可变 <single: Immutable>` 参数',
+            level: 3,
+            id: '可变与不可变',
+            content: '',
+            startLine: 3,
+            endLine: 4,
+            subsections: [],
+          },
+        ],
+      },
     ];
 
     const { map, warnings } = buildHeadingMap(source, target);
     expect(map.get('Name Resolution')).toBe('名称解析');
     // Key and value should have MyST roles stripped
-    expect(map.get('Name Resolution::Mutable Versus Immutable Parameters')).toBe('可变 与 不可变 参数');
+    expect(map.get('Name Resolution::Mutable Versus Immutable Parameters')).toBe(
+      '可变 与 不可变 参数'
+    );
     expect(warnings).toHaveLength(0);
   });
 });
@@ -341,7 +499,7 @@ describe('generateHeadingmapForFile', () => {
     expect(result.matchedSections).toBe(2);
     expect(result.totalSourceSections).toBe(3);
     expect(result.totalTargetSections).toBe(2);
-    expect(result.warnings.some(w => w.includes('Section count mismatch'))).toBe(true);
+    expect(result.warnings.some((w) => w.includes('Section count mismatch'))).toBe(true);
   });
 
   test('skips when source file missing', async () => {
@@ -562,7 +720,7 @@ describe('runHeadingmap', () => {
     fs.mkdirSync(stateDir, { recursive: true });
     fs.writeFileSync(
       path.join(stateDir, 'intro.md.yml'),
-      'source-sha: abc123\nsynced-at: "2026-01-01"\nmodel: claude-sonnet-4-6\nmode: NEW\nsection-count: 99\ntool-version: 0.8.0\n',
+      'source-sha: abc123\nsynced-at: "2026-01-01"\nmodel: claude-sonnet-4-6\nmode: NEW\nsection-count: 99\ntool-version: 0.8.0\n'
     );
 
     const options: HeadingmapOptions = {
@@ -590,8 +748,22 @@ describe('formatHeadingmapTable', () => {
   test('formats results table correctly', () => {
     const result = {
       results: [
-        { file: 'intro.md', status: 'generated' as const, matchedSections: 2, totalSourceSections: 2, totalTargetSections: 2, warnings: [] },
-        { file: 'cobweb.md', status: 'unchanged' as const, matchedSections: 3, totalSourceSections: 3, totalTargetSections: 3, warnings: [] },
+        {
+          file: 'intro.md',
+          status: 'generated' as const,
+          matchedSections: 2,
+          totalSourceSections: 2,
+          totalTargetSections: 2,
+          warnings: [],
+        },
+        {
+          file: 'cobweb.md',
+          status: 'unchanged' as const,
+          matchedSections: 3,
+          totalSourceSections: 3,
+          totalTargetSections: 3,
+          warnings: [],
+        },
       ],
       summary: { total: 2, generated: 1, updated: 0, unchanged: 1, mismatch: 0, skipped: 0 },
     };
@@ -639,7 +811,14 @@ describe('formatHeadingmapJson', () => {
   test('formats results as valid JSON', () => {
     const result = {
       results: [
-        { file: 'intro.md', status: 'generated' as const, matchedSections: 2, totalSourceSections: 2, totalTargetSections: 2, warnings: [] },
+        {
+          file: 'intro.md',
+          status: 'generated' as const,
+          matchedSections: 2,
+          totalSourceSections: 2,
+          totalTargetSections: 2,
+          warnings: [],
+        },
       ],
       summary: { total: 1, generated: 1, updated: 0, unchanged: 0, mismatch: 0, skipped: 0 },
     };
@@ -722,7 +901,10 @@ describe('Title-only files', () => {
 
     await runHeadingmap(options);
 
-    const updatedContent = fs.readFileSync(path.join(targetDir, 'lectures', 'preamble.md'), 'utf-8');
+    const updatedContent = fs.readFileSync(
+      path.join(targetDir, 'lectures', 'preamble.md'),
+      'utf-8'
+    );
     expect(updatedContent).toContain('translation:');
     expect(updatedContent).toContain('title: 前言讲座');
   });

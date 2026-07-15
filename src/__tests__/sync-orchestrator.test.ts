@@ -13,8 +13,14 @@
  *   - Multi-file processing
  */
 
-import { classifyChangedFiles, loadGlossary, SyncOrchestrator, FileToSync, Logger, StateGenerationConfig } from '../sync-orchestrator.js';
-import { promises as fs } from 'fs';
+import {
+  classifyChangedFiles,
+  loadGlossary,
+  SyncOrchestrator,
+  FileToSync,
+  Logger,
+  StateGenerationConfig,
+} from '../sync-orchestrator.js';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
 
@@ -66,7 +72,11 @@ describe('classifyChangedFiles', () => {
       { filename: 'lectures/intro.md', status: 'modified' },
       { filename: 'lectures/new-file.md', status: 'added' },
       { filename: 'lectures/old-file.md', status: 'removed' },
-      { filename: 'lectures/renamed.md', status: 'renamed', previous_filename: 'lectures/old-name.md' },
+      {
+        filename: 'lectures/renamed.md',
+        status: 'renamed',
+        previous_filename: 'lectures/old-name.md',
+      },
     ];
 
     const result = classifyChangedFiles(files, 'lectures/');
@@ -180,7 +190,7 @@ describe('loadGlossary', () => {
     const logger = createTestLogger();
     await loadGlossary('xx-unknown', glossaryDir, undefined, logger);
 
-    const warnings = logger.messages.filter(m => m.level === 'warning');
+    const warnings = logger.messages.filter((m) => m.level === 'warning');
     expect(warnings.length).toBeGreaterThan(0);
   });
 
@@ -210,23 +220,28 @@ describe('SyncOrchestrator', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     logger = createTestLogger();
-    orchestrator = new SyncOrchestrator({
-      sourceLanguage: 'en',
-      targetLanguage: 'zh-cn',
-      claudeModel: 'claude-sonnet-4-20250514',
-      anthropicApiKey: 'test-key',
-      debugMode: false,
-    }, logger);
+    orchestrator = new SyncOrchestrator(
+      {
+        sourceLanguage: 'en',
+        targetLanguage: 'zh-cn',
+        claudeModel: 'claude-sonnet-4-20250514',
+        anthropicApiKey: 'test-key',
+        debugMode: false,
+      },
+      logger
+    );
   });
 
   describe('processFiles - markdown files', () => {
     it('should process a new markdown file with full translation', async () => {
-      const files: FileToSync[] = [{
-        filename: 'lectures/intro.md',
-        type: 'markdown',
-        newContent: '# Introduction\n\nSome content',
-        isNewFile: true,
-      }];
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/intro.md',
+          type: 'markdown',
+          newContent: '# Introduction\n\nSome content',
+          isNewFile: true,
+        },
+      ];
 
       const result = await orchestrator.processFiles(files);
 
@@ -238,15 +253,17 @@ describe('SyncOrchestrator', () => {
     });
 
     it('should process an existing markdown file with section-based update', async () => {
-      const files: FileToSync[] = [{
-        filename: 'lectures/intro.md',
-        type: 'markdown',
-        newContent: '# Introduction\n\nUpdated content',
-        oldContent: '# Introduction\n\nOld content',
-        targetContent: '# 介绍\n\n旧内容',
-        existingFileSha: 'abc123',
-        isNewFile: false,
-      }];
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/intro.md',
+          type: 'markdown',
+          newContent: '# Introduction\n\nUpdated content',
+          oldContent: '# Introduction\n\nOld content',
+          targetContent: '# 介绍\n\n旧内容',
+          existingFileSha: 'abc123',
+          isNewFile: false,
+        },
+      ];
 
       const result = await orchestrator.processFiles(files);
 
@@ -258,12 +275,14 @@ describe('SyncOrchestrator', () => {
     });
 
     it('should error when no content provided', async () => {
-      const files: FileToSync[] = [{
-        filename: 'lectures/intro.md',
-        type: 'markdown',
-        isNewFile: true,
-        // No newContent!
-      }];
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/intro.md',
+          type: 'markdown',
+          isNewFile: true,
+          // No newContent!
+        },
+      ];
 
       const result = await orchestrator.processFiles(files);
 
@@ -275,16 +294,18 @@ describe('SyncOrchestrator', () => {
 
   describe('processFiles - renamed files', () => {
     it('should process a renamed file with existing translation', async () => {
-      const files: FileToSync[] = [{
-        filename: 'lectures/new-name.md',
-        type: 'renamed',
-        newContent: '# Content\n\nSome text',
-        oldContent: '# Content\n\nSome text',
-        targetContent: '# 内容\n\n一些文本',
-        previousFilename: 'lectures/old-name.md',
-        oldFileSha: 'old-sha-123',
-        isNewFile: false,
-      }];
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/new-name.md',
+          type: 'renamed',
+          newContent: '# Content\n\nSome text',
+          oldContent: '# Content\n\nSome text',
+          targetContent: '# 内容\n\n一些文本',
+          previousFilename: 'lectures/old-name.md',
+          oldFileSha: 'old-sha-123',
+          isNewFile: false,
+        },
+      ];
 
       const result = await orchestrator.processFiles(files);
 
@@ -298,13 +319,15 @@ describe('SyncOrchestrator', () => {
     });
 
     it('should process a renamed file without existing translation (full translation)', async () => {
-      const files: FileToSync[] = [{
-        filename: 'lectures/new-name.md',
-        type: 'renamed',
-        newContent: '# Content\n\nSome text',
-        previousFilename: 'lectures/old-name.md',
-        isNewFile: true,
-      }];
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/new-name.md',
+          type: 'renamed',
+          newContent: '# Content\n\nSome text',
+          previousFilename: 'lectures/old-name.md',
+          isNewFile: true,
+        },
+      ];
 
       const result = await orchestrator.processFiles(files);
 
@@ -317,13 +340,15 @@ describe('SyncOrchestrator', () => {
 
   describe('processFiles - TOC files', () => {
     it('should copy TOC files directly without translation', async () => {
-      const files: FileToSync[] = [{
-        filename: 'lectures/_toc.yml',
-        type: 'toc',
-        newContent: 'format: jb-book\nroot: intro',
-        existingFileSha: 'toc-sha-123',
-        isNewFile: false,
-      }];
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/_toc.yml',
+          type: 'toc',
+          newContent: 'format: jb-book\nroot: intro',
+          existingFileSha: 'toc-sha-123',
+          isNewFile: false,
+        },
+      ];
 
       const result = await orchestrator.processFiles(files);
 
@@ -336,12 +361,14 @@ describe('SyncOrchestrator', () => {
 
   describe('processFiles - removed files', () => {
     it('should track removed files for deletion', async () => {
-      const files: FileToSync[] = [{
-        filename: 'lectures/old-lecture.md',
-        type: 'removed',
-        existingFileSha: 'del-sha-456',
-        isNewFile: false,
-      }];
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/old-lecture.md',
+          type: 'removed',
+          existingFileSha: 'del-sha-456',
+          isNewFile: false,
+        },
+      ];
 
       const result = await orchestrator.processFiles(files);
 
@@ -352,12 +379,14 @@ describe('SyncOrchestrator', () => {
     });
 
     it('should skip removal when file does not exist in target', async () => {
-      const files: FileToSync[] = [{
-        filename: 'lectures/old-lecture.md',
-        type: 'removed',
-        isNewFile: false,
-        // No existingFileSha - file doesn't exist in target
-      }];
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/old-lecture.md',
+          type: 'removed',
+          isNewFile: false,
+          // No existingFileSha - file doesn't exist in target
+        },
+      ];
 
       const result = await orchestrator.processFiles(files);
 
@@ -448,28 +477,35 @@ describe('SyncOrchestrator', () => {
 
     beforeEach(() => {
       stateLogger = createTestLogger();
-      stateOrchestrator = new SyncOrchestrator({
-        sourceLanguage: 'en',
-        targetLanguage: 'zh-cn',
-        claudeModel: 'claude-sonnet-4-20250514',
-        anthropicApiKey: 'test-key',
-        debugMode: false,
-      }, stateLogger, stateConfig);
+      stateOrchestrator = new SyncOrchestrator(
+        {
+          sourceLanguage: 'en',
+          targetLanguage: 'zh-cn',
+          claudeModel: 'claude-sonnet-4-20250514',
+          anthropicApiKey: 'test-key',
+          debugMode: false,
+        },
+        stateLogger,
+        stateConfig
+      );
     });
 
     it('should generate state file alongside new markdown translation', async () => {
-      const files: FileToSync[] = [{
-        filename: 'lectures/intro.md',
-        type: 'markdown',
-        newContent: '# Introduction\n\n## Section One\n\nContent\n\n## Section Two\n\nMore content',
-        isNewFile: true,
-      }];
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/intro.md',
+          type: 'markdown',
+          newContent:
+            '# Introduction\n\n## Section One\n\nContent\n\n## Section Two\n\nMore content',
+          isNewFile: true,
+        },
+      ];
 
       const result = await stateOrchestrator.processFiles(files);
 
       // 1 translated file + 1 state file
       expect(result.translatedFiles).toHaveLength(2);
-      const stateFile = result.translatedFiles.find(f => f.path.startsWith('.translate/'));
+      const stateFile = result.translatedFiles.find((f) => f.path.startsWith('.translate/'));
       expect(stateFile).toBeDefined();
       expect(stateFile!.path).toBe('.translate/state/intro.md.yml');
 
@@ -483,19 +519,21 @@ describe('SyncOrchestrator', () => {
     });
 
     it('should generate state file with UPDATE mode for existing file', async () => {
-      const files: FileToSync[] = [{
-        filename: 'lectures/intro.md',
-        type: 'markdown',
-        newContent: '# Introduction\n\n## Section One\n\nUpdated',
-        oldContent: '# Introduction\n\n## Section One\n\nOld',
-        targetContent: '# 介绍\n\n## 第一节\n\n旧的',
-        existingFileSha: 'target-sha',
-        isNewFile: false,
-      }];
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/intro.md',
+          type: 'markdown',
+          newContent: '# Introduction\n\n## Section One\n\nUpdated',
+          oldContent: '# Introduction\n\n## Section One\n\nOld',
+          targetContent: '# 介绍\n\n## 第一节\n\n旧的',
+          existingFileSha: 'target-sha',
+          isNewFile: false,
+        },
+      ];
 
       const result = await stateOrchestrator.processFiles(files);
 
-      const stateFile = result.translatedFiles.find(f => f.path.startsWith('.translate/'));
+      const stateFile = result.translatedFiles.find((f) => f.path.startsWith('.translate/'));
       expect(stateFile).toBeDefined();
 
       const state = yaml.load(stateFile!.content) as Record<string, unknown>;
@@ -503,56 +541,64 @@ describe('SyncOrchestrator', () => {
     });
 
     it('should use per-file sourceCommitSha when provided', async () => {
-      const files: FileToSync[] = [{
-        filename: 'lectures/intro.md',
-        type: 'markdown',
-        newContent: '# Introduction\n\nContent',
-        isNewFile: true,
-        sourceCommitSha: 'per-file-sha-999',
-      }];
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/intro.md',
+          type: 'markdown',
+          newContent: '# Introduction\n\nContent',
+          isNewFile: true,
+          sourceCommitSha: 'per-file-sha-999',
+        },
+      ];
 
       const result = await stateOrchestrator.processFiles(files);
 
-      const stateFile = result.translatedFiles.find(f => f.path.startsWith('.translate/'));
+      const stateFile = result.translatedFiles.find((f) => f.path.startsWith('.translate/'));
       const state = yaml.load(stateFile!.content) as Record<string, unknown>;
       expect(state['source-sha']).toBe('per-file-sha-999');
     });
 
     it('should use existing state SHA when updating state file', async () => {
-      const existingShas = new Map([
-        ['.translate/state/intro.md.yml', 'existing-state-blob-sha'],
-      ]);
-      const orchWithExisting = new SyncOrchestrator({
-        sourceLanguage: 'en',
-        targetLanguage: 'zh-cn',
-        claudeModel: 'claude-sonnet-4-20250514',
-        anthropicApiKey: 'test-key',
-      }, stateLogger, { sourceCommitSha: 'abc123', existingStateShas: existingShas, docsFolder: 'lectures/' });
+      const existingShas = new Map([['.translate/state/intro.md.yml', 'existing-state-blob-sha']]);
+      const orchWithExisting = new SyncOrchestrator(
+        {
+          sourceLanguage: 'en',
+          targetLanguage: 'zh-cn',
+          claudeModel: 'claude-sonnet-4-20250514',
+          anthropicApiKey: 'test-key',
+        },
+        stateLogger,
+        { sourceCommitSha: 'abc123', existingStateShas: existingShas, docsFolder: 'lectures/' }
+      );
 
-      const files: FileToSync[] = [{
-        filename: 'lectures/intro.md',
-        type: 'markdown',
-        newContent: '# Introduction\n\nContent',
-        existingFileSha: 'target-sha',
-        isNewFile: false,
-        oldContent: '',
-        targetContent: '# 介绍\n\n内容',
-      }];
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/intro.md',
+          type: 'markdown',
+          newContent: '# Introduction\n\nContent',
+          existingFileSha: 'target-sha',
+          isNewFile: false,
+          oldContent: '',
+          targetContent: '# 介绍\n\n内容',
+        },
+      ];
 
       const result = await orchWithExisting.processFiles(files);
 
-      const stateFile = result.translatedFiles.find(f => f.path.startsWith('.translate/'));
+      const stateFile = result.translatedFiles.find((f) => f.path.startsWith('.translate/'));
       expect(stateFile!.sha).toBe('existing-state-blob-sha');
     });
 
     it('should not generate state files when stateConfig is absent', async () => {
       // Use the default orchestrator (no stateConfig)
-      const files: FileToSync[] = [{
-        filename: 'lectures/intro.md',
-        type: 'markdown',
-        newContent: '# Introduction\n\nContent',
-        isNewFile: true,
-      }];
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/intro.md',
+          type: 'markdown',
+          newContent: '# Introduction\n\nContent',
+          isNewFile: true,
+        },
+      ];
 
       const result = await orchestrator.processFiles(files);
 
@@ -562,73 +608,83 @@ describe('SyncOrchestrator', () => {
     });
 
     it('should generate state for renamed files and delete old state', async () => {
-      const existingShas = new Map([
-        ['.translate/state/old-name.md.yml', 'old-state-sha'],
-      ]);
-      const orchWithExisting = new SyncOrchestrator({
-        sourceLanguage: 'en',
-        targetLanguage: 'zh-cn',
-        claudeModel: 'claude-sonnet-4-20250514',
-        anthropicApiKey: 'test-key',
-      }, stateLogger, { sourceCommitSha: 'abc123', existingStateShas: existingShas, docsFolder: 'lectures/' });
+      const existingShas = new Map([['.translate/state/old-name.md.yml', 'old-state-sha']]);
+      const orchWithExisting = new SyncOrchestrator(
+        {
+          sourceLanguage: 'en',
+          targetLanguage: 'zh-cn',
+          claudeModel: 'claude-sonnet-4-20250514',
+          anthropicApiKey: 'test-key',
+        },
+        stateLogger,
+        { sourceCommitSha: 'abc123', existingStateShas: existingShas, docsFolder: 'lectures/' }
+      );
 
-      const files: FileToSync[] = [{
-        filename: 'lectures/new-name.md',
-        type: 'renamed',
-        newContent: '# Content\n\n## Section\n\nText',
-        oldContent: '# Content\n\nText',
-        targetContent: '# 内容\n\n文本',
-        previousFilename: 'lectures/old-name.md',
-        oldFileSha: 'old-file-sha',
-        isNewFile: false,
-      }];
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/new-name.md',
+          type: 'renamed',
+          newContent: '# Content\n\n## Section\n\nText',
+          oldContent: '# Content\n\nText',
+          targetContent: '# 内容\n\n文本',
+          previousFilename: 'lectures/old-name.md',
+          oldFileSha: 'old-file-sha',
+          isNewFile: false,
+        },
+      ];
 
       const result = await orchWithExisting.processFiles(files);
 
       // Should have: translated file + new state file
-      const stateFile = result.translatedFiles.find(f => f.path.startsWith('.translate/'));
+      const stateFile = result.translatedFiles.find((f) => f.path.startsWith('.translate/'));
       expect(stateFile).toBeDefined();
       expect(stateFile!.path).toBe('.translate/state/new-name.md.yml');
 
       // Should delete old file AND old state file
       expect(result.filesToDelete).toHaveLength(2);
-      expect(result.filesToDelete.map(f => f.path)).toContain('lectures/old-name.md');
-      expect(result.filesToDelete.map(f => f.path)).toContain('.translate/state/old-name.md.yml');
+      expect(result.filesToDelete.map((f) => f.path)).toContain('lectures/old-name.md');
+      expect(result.filesToDelete.map((f) => f.path)).toContain('.translate/state/old-name.md.yml');
     });
 
     it('should delete state file when source file is removed', async () => {
-      const existingShas = new Map([
-        ['.translate/state/removed.md.yml', 'state-sha-to-delete'],
-      ]);
-      const orchWithExisting = new SyncOrchestrator({
-        sourceLanguage: 'en',
-        targetLanguage: 'zh-cn',
-        claudeModel: 'claude-sonnet-4-20250514',
-        anthropicApiKey: 'test-key',
-      }, stateLogger, { sourceCommitSha: 'abc123', existingStateShas: existingShas, docsFolder: 'lectures/' });
+      const existingShas = new Map([['.translate/state/removed.md.yml', 'state-sha-to-delete']]);
+      const orchWithExisting = new SyncOrchestrator(
+        {
+          sourceLanguage: 'en',
+          targetLanguage: 'zh-cn',
+          claudeModel: 'claude-sonnet-4-20250514',
+          anthropicApiKey: 'test-key',
+        },
+        stateLogger,
+        { sourceCommitSha: 'abc123', existingStateShas: existingShas, docsFolder: 'lectures/' }
+      );
 
-      const files: FileToSync[] = [{
-        filename: 'lectures/removed.md',
-        type: 'removed',
-        existingFileSha: 'del-sha',
-        isNewFile: false,
-      }];
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/removed.md',
+          type: 'removed',
+          existingFileSha: 'del-sha',
+          isNewFile: false,
+        },
+      ];
 
       const result = await orchWithExisting.processFiles(files);
 
       // Should delete both the translated file and its state file
       expect(result.filesToDelete).toHaveLength(2);
-      expect(result.filesToDelete.map(f => f.path)).toContain('lectures/removed.md');
-      expect(result.filesToDelete.map(f => f.path)).toContain('.translate/state/removed.md.yml');
+      expect(result.filesToDelete.map((f) => f.path)).toContain('lectures/removed.md');
+      expect(result.filesToDelete.map((f) => f.path)).toContain('.translate/state/removed.md.yml');
     });
 
     it('should not generate state for TOC files', async () => {
-      const files: FileToSync[] = [{
-        filename: 'lectures/_toc.yml',
-        type: 'toc',
-        newContent: 'format: jb-book\nroot: intro',
-        isNewFile: true,
-      }];
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/_toc.yml',
+          type: 'toc',
+          newContent: 'format: jb-book\nroot: intro',
+          isNewFile: true,
+        },
+      ];
 
       const result = await stateOrchestrator.processFiles(files);
 
@@ -638,34 +694,36 @@ describe('SyncOrchestrator', () => {
     });
 
     it('should count sections correctly including nested sections', async () => {
-      const files: FileToSync[] = [{
-        filename: 'lectures/complex.md',
-        type: 'markdown',
-        newContent: [
-          '# Complex Lecture',
-          '',
-          '## First Section',
-          '',
-          'Content',
-          '',
-          '### Subsection 1.1',
-          '',
-          'Details',
-          '',
-          '## Second Section',
-          '',
-          'More content',
-          '',
-          '## Third Section',
-          '',
-          'Final content',
-        ].join('\n'),
-        isNewFile: true,
-      }];
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/complex.md',
+          type: 'markdown',
+          newContent: [
+            '# Complex Lecture',
+            '',
+            '## First Section',
+            '',
+            'Content',
+            '',
+            '### Subsection 1.1',
+            '',
+            'Details',
+            '',
+            '## Second Section',
+            '',
+            'More content',
+            '',
+            '## Third Section',
+            '',
+            'Final content',
+          ].join('\n'),
+          isNewFile: true,
+        },
+      ];
 
       const result = await stateOrchestrator.processFiles(files);
 
-      const stateFile = result.translatedFiles.find(f => f.path.startsWith('.translate/'));
+      const stateFile = result.translatedFiles.find((f) => f.path.startsWith('.translate/'));
       const state = yaml.load(stateFile!.content) as Record<string, unknown>;
       // 3 top-level sections (## headings)
       expect(state['section-count']).toBe(3);

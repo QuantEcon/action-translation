@@ -71,6 +71,49 @@ describe('applyTypography', () => {
     });
   });
 
+  // `[^id]: text` / `[label]: url` require the colon immediately after `]`;
+  // an inserted NBSP stops the line parsing as a definition (shipped as broken
+  // footnotes in the fr seed — pandas.md).
+  describe('footnote and link-reference definitions', () => {
+    it('never spaces a footnote definition label', () => {
+      const src = '[^mung]: Wikipédia définit le munging !';
+      expect(applyTypography(src, 'fr')).toBe(`[^mung]: Wikipédia définit le munging${NBSP}!`);
+    });
+
+    it('never spaces a link-reference definition label', () => {
+      const src = '[pandas]: https://pandas.pydata.org/';
+      expect(applyTypography(src, 'fr')).toBe(src);
+    });
+
+    it('allows up to three leading spaces on a definition', () => {
+      const src = '   [^note]: Texte de la note.';
+      expect(applyTypography(src, 'fr')).toBe(src);
+    });
+
+    it('repairs a label the earlier transform corrupted', () => {
+      const corrupted = `[^mung]${NBSP}: Wikipédia définit le munging${NBSP}!`;
+      expect(applyTypography(corrupted, 'fr')).toBe(
+        `[^mung]: Wikipédia définit le munging${NBSP}!`
+      );
+    });
+
+    it('is idempotent over definitions', () => {
+      const once = applyTypography('[^a]: Un texte ! Vraiment ?', 'fr');
+      expect(applyTypography(once, 'fr')).toBe(once);
+    });
+
+    it('still spaces a footnote reference used in prose', () => {
+      // Mid-line `[^ref]` followed by ` : ` is prose, not a definition.
+      const src = 'Voir la note [^mung] : elle explique tout.';
+      expect(applyTypography(src, 'fr')).toBe(`Voir la note [^mung]${NBSP}: elle explique tout.`);
+    });
+
+    it('does not collapse a regular space before the colon (prose, not definition)', () => {
+      const src = '[Un mot] : une glose.';
+      expect(applyTypography(src, 'fr')).toBe(`[Un mot]${NBSP}: une glose.`);
+    });
+  });
+
   describe('language lookup is not prototype-polluted', () => {
     // `language` comes from user input (--target-language). An object lookup
     // would resolve Object.prototype.toString and call it as a rule, replacing
@@ -87,7 +130,14 @@ describe('applyTypography', () => {
 
   describe('does not corrupt non-prose', () => {
     it('leaves code fences alone', () => {
-      const src = ['Texte :', '', '```python', 'x = a if b else c  # a ? b : c', 'd = {"k": 1}', '```'].join('\n');
+      const src = [
+        'Texte :',
+        '',
+        '```python',
+        'x = a if b else c  # a ? b : c',
+        'd = {"k": 1}',
+        '```',
+      ].join('\n');
       const out = applyTypography(src, 'fr');
       expect(out).toContain('# a ? b : c');
       expect(out).toContain('d = {"k": 1}');
@@ -95,7 +145,12 @@ describe('applyTypography', () => {
     });
 
     it('leaves MyST code-cell directives alone', () => {
-      const src = ['```{code-cell} ipython3', 'print("ratio: 3:1")', 'y = x if x > 0 else -x', '```'].join('\n');
+      const src = [
+        '```{code-cell} ipython3',
+        'print("ratio: 3:1")',
+        'y = x if x > 0 else -x',
+        '```',
+      ].join('\n');
       expect(applyTypography(src, 'fr')).toBe(src);
     });
 
@@ -115,7 +170,15 @@ describe('applyTypography', () => {
     });
 
     it('leaves YAML frontmatter alone', () => {
-      const src = ['---', 'title: Introduction', 'kernelspec:', '  name: python3', '---', '', 'Bonjour !'].join('\n');
+      const src = [
+        '---',
+        'title: Introduction',
+        'kernelspec:',
+        '  name: python3',
+        '---',
+        '',
+        'Bonjour !',
+      ].join('\n');
       const out = applyTypography(src, 'fr');
       expect(out).toContain('title: Introduction');
       expect(out).toContain('kernelspec:');
@@ -132,7 +195,15 @@ describe('applyTypography', () => {
     });
 
     it('leaves MyST anchors and directive options alone', () => {
-      const src = ['(sec:intro)=', '# Titre', '', '```{figure} a.png', ':width: 100px', ':name: fig:one', '```'].join('\n');
+      const src = [
+        '(sec:intro)=',
+        '# Titre',
+        '',
+        '```{figure} a.png',
+        ':width: 100px',
+        ':name: fig:one',
+        '```',
+      ].join('\n');
       const out = applyTypography(src, 'fr');
       expect(out).toContain('(sec:intro)=');
       expect(out).toContain(':width: 100px');
@@ -215,13 +286,7 @@ describe('applyTypography', () => {
     });
 
     it('does not let $$ inside a code fence desync math state', () => {
-      const src = [
-        '```python',
-        'print("$$")',
-        '```',
-        '',
-        'Ensuite :',
-      ].join('\n');
+      const src = ['```python', 'print("$$")', '```', '', 'Ensuite :'].join('\n');
       const out = applyTypography(src, 'fr');
       expect(out).toContain('print("$$")');
       expect(out).toContain(`Ensuite${NBSP}:`);

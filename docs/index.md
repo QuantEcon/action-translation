@@ -18,6 +18,7 @@ The system has two main components:
 **GitHub Action** — Runs automatically in your CI/CD pipeline:
 - **Sync mode**: Watches for merged PRs in the source repo, translates changed sections, and creates translation PRs in the target repo
 - **Review mode**: Posts AI-powered quality reviews on translation PRs with scores and suggestions
+- **Rebase mode**: Automatically rebases open translation-sync PRs in the target repo when a sibling PR merges, reusing cached translations for unchanged sections
 
 **CLI tool (`translate`)** — Runs locally for analysis and recovery:
 - **`status`**: Quick structural diagnostic — no LLM calls, shows which files are in sync, outdated, or missing
@@ -81,7 +82,7 @@ Step-by-step guides for common scenarios:
 
 ## Current status
 
-**Version**: v0.8.0  
-**Tests**: 873 (39 suites)  
-**Glossary**: 357 terms (zh-cn, fa)  
-**Languages**: English → Simplified Chinese, Farsi (more planned)
+**Version**: v0.16.0  
+**Tests**: 1,000+ (40 suites)  
+**Glossary**: 357 terms (zh-cn, fa, fr)  
+**Languages**: English → Simplified Chinese, Farsi, French (more planned)

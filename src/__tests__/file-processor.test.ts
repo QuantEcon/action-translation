@@ -5,7 +5,7 @@ import { extractHeadingMap, extractTranslationTitle } from '../heading-map.js';
 
 /**
  * Tests for FileProcessor key methods
- * 
+ *
  * These tests verify the critical bug fixes:
  * - Bug #2: findMatchingSectionIndex() must match by ID, not position
  */
@@ -28,15 +28,20 @@ describe('FileProcessor - Section Matching Logic', () => {
    * Simulates the OLD BUGGY logic for comparison
    * This always returned 0 for the first matching level
    */
-  function findMatchingSectionIndexBuggy(targetSections: Section[], sourceSection: Section): number {
+  function findMatchingSectionIndexBuggy(
+    targetSections: Section[],
+    sourceSection: Section
+  ): number {
     for (let i = 0; i < targetSections.length; i++) {
       const targetSection = targetSections[i];
-      
+
       // BUG: This matched on level and subsection count, always returning first match
       if (targetSection.level === sourceSection.level) {
-        const subsectionDiff = Math.abs(targetSection.subsections.length - sourceSection.subsections.length);
+        const subsectionDiff = Math.abs(
+          targetSection.subsections.length - sourceSection.subsections.length
+        );
         if (subsectionDiff <= 1) {
-          return i;  // Always returned 0 for level-2 sections
+          return i; // Always returned 0 for level-2 sections
         }
       }
     }
@@ -45,10 +50,42 @@ describe('FileProcessor - Section Matching Logic', () => {
 
   describe('Bug #2 Fix - findMatchingSectionIndex()', () => {
     const targetSections: Section[] = [
-      { id: 'intro.md:getting-started', heading: '## Getting Started', level: 2, content: '', startLine: 1, endLine: 5, subsections: [] },
-      { id: 'intro.md:mathematical-example', heading: '## Mathematical Example', level: 2, content: '', startLine: 6, endLine: 10, subsections: [] },
-      { id: 'intro.md:python-tools', heading: '## Python Tools', level: 2, content: '', startLine: 11, endLine: 15, subsections: [] },
-      { id: 'intro.md:data-analysis', heading: '## Data Analysis', level: 2, content: '', startLine: 16, endLine: 20, subsections: [] }
+      {
+        id: 'intro.md:getting-started',
+        heading: '## Getting Started',
+        level: 2,
+        content: '',
+        startLine: 1,
+        endLine: 5,
+        subsections: [],
+      },
+      {
+        id: 'intro.md:mathematical-example',
+        heading: '## Mathematical Example',
+        level: 2,
+        content: '',
+        startLine: 6,
+        endLine: 10,
+        subsections: [],
+      },
+      {
+        id: 'intro.md:python-tools',
+        heading: '## Python Tools',
+        level: 2,
+        content: '',
+        startLine: 11,
+        endLine: 15,
+        subsections: [],
+      },
+      {
+        id: 'intro.md:data-analysis',
+        heading: '## Data Analysis',
+        level: 2,
+        content: '',
+        startLine: 16,
+        endLine: 20,
+        subsections: [],
+      },
     ];
 
     it('FIXED: should find correct section by ID', () => {
@@ -75,9 +112,9 @@ describe('FileProcessor - Section Matching Logic', () => {
         content: '',
         startLine: 25,
         endLine: 30,
-        subsections: []
+        subsections: [],
       };
-      
+
       expect(findMatchingSectionIndex(targetSections, newSection)).toBe(-1);
     });
 
@@ -85,7 +122,7 @@ describe('FileProcessor - Section Matching Logic', () => {
       // Verify we correctly identify first section vs incorrectly always returning 0
       const firstSection = targetSections[0];
       const thirdSection = targetSections[2];
-      
+
       expect(findMatchingSectionIndex(targetSections, firstSection)).toBe(0);
       expect(findMatchingSectionIndex(targetSections, thirdSection)).toBe(2); // NOT 0!
     });
@@ -97,28 +134,52 @@ describe('FileProcessor - Section Matching Logic', () => {
      */
     function reconstructDocument(sections: Section[], frontmatter: string): string {
       let result = frontmatter;
-      
+
       for (const section of sections) {
         result += section.heading + section.content;
-        
+
         // Add subsections
         for (const subsection of section.subsections) {
           result += subsection.heading + subsection.content;
         }
       }
-      
+
       return result.trim();
     }
 
     it('should preserve section order', () => {
       const sections: Section[] = [
-        { id: 'test.md:intro', heading: '# Title', level: 1, content: '\n\nIntro.\n\n', startLine: 1, endLine: 3, subsections: [] },
-        { id: 'test.md:a', heading: '## A', level: 2, content: '\n\nContent A.\n\n', startLine: 4, endLine: 6, subsections: [] },
-        { id: 'test.md:b', heading: '## B', level: 2, content: '\n\nContent B.\n\n', startLine: 7, endLine: 9, subsections: [] }
+        {
+          id: 'test.md:intro',
+          heading: '# Title',
+          level: 1,
+          content: '\n\nIntro.\n\n',
+          startLine: 1,
+          endLine: 3,
+          subsections: [],
+        },
+        {
+          id: 'test.md:a',
+          heading: '## A',
+          level: 2,
+          content: '\n\nContent A.\n\n',
+          startLine: 4,
+          endLine: 6,
+          subsections: [],
+        },
+        {
+          id: 'test.md:b',
+          heading: '## B',
+          level: 2,
+          content: '\n\nContent B.\n\n',
+          startLine: 7,
+          endLine: 9,
+          subsections: [],
+        },
       ];
-      
+
       const doc = reconstructDocument(sections, '');
-      
+
       expect(doc.indexOf('# Title')).toBeLessThan(doc.indexOf('## A'));
       expect(doc.indexOf('## A')).toBeLessThan(doc.indexOf('## B'));
     });
@@ -140,14 +201,14 @@ describe('FileProcessor - Section Matching Logic', () => {
               content: '\n\nChild content.\n\n',
               startLine: 3,
               endLine: 5,
-              subsections: []
-            }
-          ]
-        }
+              subsections: [],
+            },
+          ],
+        },
       ];
-      
+
       const doc = reconstructDocument(sections, '');
-      
+
       expect(doc).toContain('## Parent');
       expect(doc).toContain('### Child');
       expect(doc.indexOf('## Parent')).toBeLessThan(doc.indexOf('### Child'));
@@ -202,8 +263,8 @@ kernelspec:
           content: '## Section A\n\nContent here.',
           startLine: 1,
           endLine: 3,
-          subsections: []
-        }
+          subsections: [],
+        },
       ];
 
       const doc = reconstructWithFrontmatter(sections, frontmatter);
@@ -213,14 +274,15 @@ kernelspec:
       expect(doc).toContain('jupytext:');
       expect(doc).toContain('format_name: myst');
       expect(doc).toContain('kernelspec:');
-      
+
       // Section should come after frontmatter
       expect(doc.indexOf('---')).toBeLessThan(doc.indexOf('## Section A'));
     });
 
     it('should preserve document title and intro (preamble) during reconstruction', () => {
       const frontmatter = '---\njupytext:\n  format_name: myst\n---';
-      const preamble = '# Introduction to Economics\n\nThis is a test lecture for translation sync action.';
+      const preamble =
+        '# Introduction to Economics\n\nThis is a test lecture for translation sync action.';
 
       const sections: Section[] = [
         {
@@ -230,27 +292,27 @@ kernelspec:
           content: '## Basic Concepts\n\nEconomics is the study of resources.',
           startLine: 1,
           endLine: 3,
-          subsections: []
-        }
+          subsections: [],
+        },
       ];
 
       const doc = reconstructWithFrontmatter(sections, frontmatter, preamble);
 
       // Should contain frontmatter
       expect(doc).toContain('jupytext:');
-      
+
       // Should contain preamble (title + intro)
       expect(doc).toContain('# Introduction to Economics');
       expect(doc).toContain('This is a test lecture');
-      
+
       // Should contain sections
       expect(doc).toContain('## Basic Concepts');
-      
+
       // Order should be: frontmatter → preamble → sections
       const frontmatterIndex = doc.indexOf('---');
       const titleIndex = doc.indexOf('# Introduction to Economics');
       const sectionIndex = doc.indexOf('## Basic Concepts');
-      
+
       expect(frontmatterIndex).toBeLessThan(titleIndex);
       expect(titleIndex).toBeLessThan(sectionIndex);
     });
@@ -274,8 +336,8 @@ kernelspec:
           content: '## Section A\n\nContent.',
           startLine: 1,
           endLine: 2,
-          subsections: []
-        }
+          subsections: [],
+        },
       ];
 
       const buggyDoc = reconstructBuggy(sections);
@@ -284,7 +346,7 @@ kernelspec:
       expect(buggyDoc).not.toContain('---');
       expect(buggyDoc).not.toContain('jupytext:');
       expect(buggyDoc).not.toContain('# Introduction');
-      
+
       // Only has the section
       expect(buggyDoc).toContain('## Section A');
     });
@@ -298,8 +360,8 @@ kernelspec:
           content: '## Section A\n\nContent.',
           startLine: 1,
           endLine: 2,
-          subsections: []
-        }
+          subsections: [],
+        },
       ];
 
       // No frontmatter, no preamble
@@ -314,7 +376,7 @@ kernelspec:
   // ========================================================================
   // REGRESSION TESTS FOR v0.4.3
   // ========================================================================
-  
+
   describe('Document Reconstruction - v0.4.3 Regression Tests', () => {
     /**
      * Simulates reconstructFromSections - the FIXED version
@@ -375,25 +437,21 @@ kernelspec:
 `,
               startLine: 15,
               endLine: 20,
-              subsections: []
-            }
-          ]
-        }
+              subsections: [],
+            },
+          ],
+        },
       ];
 
       // Reconstruct document
-      const reconstructed = reconstructFromSections(
-        sections,
-        '---\ntitle: Test\n---',
-        ''
-      );
+      const reconstructed = reconstructFromSections(sections, '---\ntitle: Test\n---', '');
 
       // Count occurrences of subsection heading
       const matches = reconstructed.match(/### 核心原则/g);
-      
+
       // Should appear EXACTLY ONCE (not twice)
       expect(matches).toHaveLength(1);
-      
+
       // Verify content structure
       expect(reconstructed).toContain('## 概述');
       expect(reconstructed).toContain('### 核心原则');
@@ -405,16 +463,16 @@ kernelspec:
       // Simulate the buggy v0.4.3-debug behavior
       function reconstructBuggy(sections: Section[]): string {
         const parts: string[] = [];
-        
+
         for (const section of sections) {
-          parts.push(section.content);  // Already includes subsections
-          
+          parts.push(section.content); // Already includes subsections
+
           // BUG: Append subsections again!
           for (const subsection of section.subsections) {
-            parts.push(subsection.content);  // DUPLICATE!
+            parts.push(subsection.content); // DUPLICATE!
           }
         }
-        
+
         return parts.join('\n');
       }
 
@@ -434,22 +492,22 @@ kernelspec:
               content: '### Subsection\n\nContent.\n\n',
               startLine: 3,
               endLine: 5,
-              subsections: []
-            }
-          ]
-        }
+              subsections: [],
+            },
+          ],
+        },
       ];
 
       const buggyOutput = reconstructBuggy(sections);
       const matches = buggyOutput.match(/### Subsection/g);
-      
+
       // Buggy code produces DUPLICATE
-      expect(matches).toHaveLength(2);  // Bug demonstrated!
-      
+      expect(matches).toHaveLength(2); // Bug demonstrated!
+
       // Fixed code produces single occurrence
       const fixedOutput = reconstructFromSections(sections);
       const fixedMatches = fixedOutput.match(/### Subsection/g);
-      expect(fixedMatches).toHaveLength(1);  // Fixed!
+      expect(fixedMatches).toHaveLength(1); // Fixed!
     });
 
     it('should handle multiple sections with subsections correctly', () => {
@@ -469,7 +527,7 @@ kernelspec:
               content: '### Sub 1A\n\nContent.\n\n',
               startLine: 3,
               endLine: 5,
-              subsections: []
+              subsections: [],
             },
             {
               id: 'section-1:sub-1b',
@@ -478,9 +536,9 @@ kernelspec:
               content: '### Sub 1B\n\nMore.\n\n',
               startLine: 7,
               endLine: 10,
-              subsections: []
-            }
-          ]
+              subsections: [],
+            },
+          ],
         },
         {
           id: 'section-2',
@@ -497,10 +555,10 @@ kernelspec:
               content: '### Sub 2A\n\nText.\n\n',
               startLine: 13,
               endLine: 15,
-              subsections: []
-            }
-          ]
-        }
+              subsections: [],
+            },
+          ],
+        },
       ];
 
       const reconstructed = reconstructFromSections(sections, '', '');
@@ -509,14 +567,12 @@ kernelspec:
       expect(reconstructed.match(/### Sub 1A/g)).toHaveLength(1);
       expect(reconstructed.match(/### Sub 1B/g)).toHaveLength(1);
       expect(reconstructed.match(/### Sub 2A/g)).toHaveLength(1);
-      
+
       // Sections should be in order
       expect(reconstructed.indexOf('## Section 1')).toBeLessThan(
         reconstructed.indexOf('## Section 2')
       );
-      expect(reconstructed.indexOf('### Sub 1A')).toBeLessThan(
-        reconstructed.indexOf('### Sub 1B')
-      );
+      expect(reconstructed.indexOf('### Sub 1A')).toBeLessThan(reconstructed.indexOf('### Sub 1B'));
     });
 
     it('should preserve section.content which already includes subsections', () => {
@@ -548,18 +604,18 @@ Subsection text already in section.content from translation.
 `,
             startLine: 5,
             endLine: 10,
-            subsections: []
-          }
-        ]
+            subsections: [],
+          },
+        ],
       };
 
       // Reconstruct using ONLY section.content (correct approach)
       const parts: string[] = [];
       parts.push(section.content);
       // DO NOT append subsections separately!
-      
+
       const correct = parts.join('\n');
-      
+
       // Should have subsection exactly once
       expect(correct.match(/### Core Principles/g)).toHaveLength(1);
     });
@@ -573,22 +629,22 @@ Subsection text already in section.content from translation.
           content: '## Simple Section\n\nJust content, no subsections.\n\n',
           startLine: 1,
           endLine: 3,
-          subsections: []  // Empty subsections array
-        }
+          subsections: [], // Empty subsections array
+        },
       ];
 
       const reconstructed = reconstructFromSections(sections);
 
       expect(reconstructed).toContain('## Simple Section');
       expect(reconstructed).toContain('Just content, no subsections.');
-      
+
       // Should not have any level-3 headings
       expect(reconstructed).not.toContain('###');
     });
 
     it('parseTranslatedSubsections should strip subsections from content to prevent duplication', () => {
       // This documents the fix for the subsection duplication bug (GitHub issue #103)
-      // 
+      //
       // PROBLEM: When translator returns section content that includes subsections,
       // and we also extract those subsections separately, they would appear twice.
       //
@@ -597,7 +653,7 @@ Subsection text already in section.content from translation.
       // - contentWithoutSubsections: Content truncated at first subsection heading
       //
       // This test verifies the conceptual fix without needing actual translation
-      
+
       const translatedContent = `## Supply and Demand
 
 Supply and demand are fundamental concepts.
@@ -611,15 +667,15 @@ Market equilibrium occurs when supply equals demand.
       // 1. Find first subsection heading
       const firstSubsectionIndex = translatedContent.indexOf('### Market Equilibrium');
       expect(firstSubsectionIndex).toBeGreaterThan(0);
-      
+
       // 2. Content WITHOUT subsections = everything before first subsection
       const contentWithoutSubsections = translatedContent.substring(0, firstSubsectionIndex).trim();
-      
+
       // 3. Verify content no longer includes subsection
       expect(contentWithoutSubsections).not.toContain('### Market Equilibrium');
       expect(contentWithoutSubsections).not.toContain('Market equilibrium occurs');
       expect(contentWithoutSubsections).toContain('Supply and demand are fundamental concepts');
-      
+
       // This ensures when we reconstruct:
       // - section.content = contentWithoutSubsections (no duplication)
       // - section.subsections = [extracted subsections] (added separately during serialization)
@@ -630,38 +686,38 @@ Market equilibrium occurs when supply equals demand.
       // Root Cause: Parser uses 1-indexed line numbers but array.slice() uses 0-indexed
       //
       // Example:
-      // - Subsection heading is on line 5 (1-indexed) of unwrapped content  
+      // - Subsection heading is on line 5 (1-indexed) of unwrapped content
       // - After adjusting for frontmatter: firstSubsectionLine = 12 - 7 = 5 (still 1-indexed)
       // - Bug: lines.slice(0, 5) gets indices 0,1,2,3,4 which is lines 1-5 (INCLUDING line 5!)
       // - Fix: Convert to 0-indexed first: lines.slice(0, 5-1) gets indices 0,1,2,3 (lines 1-4, EXCLUDING line 5)
-      
+
       const translatedLines = [
-        '## Supply and Demand',        // Line 1 (index 0)
-        '',                             // Line 2 (index 1)
-        'Some content here.',           // Line 3 (index 2)
-        '',                             // Line 4 (index 3)
-        '### Market Equilibrium',       // Line 5 (index 4) <-- subsection heading
-        '',                             // Line 6 (index 5)
-        'Equilibrium content.',         // Line 7 (index 6)
+        '## Supply and Demand', // Line 1 (index 0)
+        '', // Line 2 (index 1)
+        'Some content here.', // Line 3 (index 2)
+        '', // Line 4 (index 3)
+        '### Market Equilibrium', // Line 5 (index 4) <-- subsection heading
+        '', // Line 6 (index 5)
+        'Equilibrium content.', // Line 7 (index 6)
       ];
-      
+
       // Parser reports startLine = 12 (1-indexed, including 7 lines of frontmatter wrapper)
       // So the subsection heading is at 1-indexed line 5 of unwrapped content
       const startLine1Indexed = 12;
-      const wrapperLineCount = 7;  // Minimal YAML wrapper
-      
+      const wrapperLineCount = 7; // Minimal YAML wrapper
+
       // OLD (BUGGY) BEHAVIOR - using hardcoded wrapper count:
-      const buggyIndex = startLine1Indexed - 7;  // = 5
+      const buggyIndex = startLine1Indexed - 7; // = 5
       const buggyContent = translatedLines.slice(0, buggyIndex).join('\n');
-      expect(buggyContent).toContain('### Market Equilibrium');  // BUG: Heading included!
-      
+      expect(buggyContent).toContain('### Market Equilibrium'); // BUG: Heading included!
+
       // NEW (FIXED) BEHAVIOR - correct conversion to 0-indexed:
       const fixedIndex1Indexed = startLine1Indexed;
-      const fixedIndex0Indexed = fixedIndex1Indexed - 1;  // Convert to 0-indexed = 11
-      const positionInOriginal = fixedIndex0Indexed - wrapperLineCount;  // = 4
+      const fixedIndex0Indexed = fixedIndex1Indexed - 1; // Convert to 0-indexed = 11
+      const positionInOriginal = fixedIndex0Indexed - wrapperLineCount; // = 4
       const fixedContent = translatedLines.slice(0, positionInOriginal).join('\n');
-      expect(fixedContent).not.toContain('### Market Equilibrium');  // FIXED: Heading excluded!
-      expect(fixedContent).toContain('Some content here.');  // Parent content preserved
+      expect(fixedContent).not.toContain('### Market Equilibrium'); // FIXED: Heading excluded!
+      expect(fixedContent).toContain('Some content here.'); // Parent content preserved
     });
 
     it('BUG FIX (v0.4.5): should handle variable-length YAML headers correctly', () => {
@@ -673,33 +729,33 @@ Market equilibrium occurs when supply equals demand.
       // - Typical lecture: 13+ lines (includes kernelspec, jupytext version, etc.)
       //
       // Fix: Calculate wrapper length dynamically by finding closing --- fence
-      
+
       const minimalWrapper = [
-        '---',                          // Line 1
-        'jupytext:',                    // Line 2
-        '  text_representation:',       // Line 3
-        '    extension: .md',           // Line 4
-        '    format_name: myst',        // Line 5
-        '---',                          // Line 6 (closing fence)
-        '',                             // Line 7 (empty line after)
+        '---', // Line 1
+        'jupytext:', // Line 2
+        '  text_representation:', // Line 3
+        '    extension: .md', // Line 4
+        '    format_name: myst', // Line 5
+        '---', // Line 6 (closing fence)
+        '', // Line 7 (empty line after)
       ];
-      
+
       const extendedWrapper = [
-        '---',                          // Line 1
-        'jupytext:',                    // Line 2
-        '  text_representation:',       // Line 3
-        '    extension: .md',           // Line 4
-        '    format_name: myst',        // Line 5
-        '    format_version: 0.13',     // Line 6
+        '---', // Line 1
+        'jupytext:', // Line 2
+        '  text_representation:', // Line 3
+        '    extension: .md', // Line 4
+        '    format_name: myst', // Line 5
+        '    format_version: 0.13', // Line 6
         '    jupytext_version: 1.16.4', // Line 7
-        'kernelspec:',                  // Line 8
-        '  display_name: Python 3',     // Line 9
-        '  language: python',           // Line 10
-        '  name: python3',              // Line 11
-        '---',                          // Line 12 (closing fence)
-        '',                             // Line 13 (empty line after)
+        'kernelspec:', // Line 8
+        '  display_name: Python 3', // Line 9
+        '  language: python', // Line 10
+        '  name: python3', // Line 11
+        '---', // Line 12 (closing fence)
+        '', // Line 13 (empty line after)
       ];
-      
+
       // Function to calculate wrapper length (mimics our fix)
       const calculateWrapperLength = (wrapperLines: string[]): number => {
         let count = 0;
@@ -714,39 +770,39 @@ Market equilibrium occurs when supply equals demand.
         }
         return foundClosing ? count : 0;
       };
-      
+
       // Verify calculation works for both wrapper sizes
       expect(calculateWrapperLength(minimalWrapper)).toBe(7);
       expect(calculateWrapperLength(extendedWrapper)).toBe(13);
-      
+
       // Simulate actual usage:
       // If subsection starts at line 15 in wrapped content with extended wrapper (13 lines)
       // Then it's at position 15 - 1 (0-indexed) - 13 (wrapper) = 1 in original content
       const subsectionLine1Indexed = 15;
       const wrapperCount = calculateWrapperLength(extendedWrapper);
-      const positionInOriginal = (subsectionLine1Indexed - 1) - wrapperCount;
-      
-      expect(positionInOriginal).toBe(1);  // Correct position in original content
+      const positionInOriginal = subsectionLine1Indexed - 1 - wrapperCount;
+
+      expect(positionInOriginal).toBe(1); // Correct position in original content
     });
   });
 
   describe('Recursive Subsection Structure Validation', () => {
     /**
      * Tests the validateSubsectionStructure() helper added in v0.4.7+
-     * 
+     *
      * When translator doesn't return full nested structure (missing ####, #####),
      * we should detect the mismatch and preserve target subsections.
-     * 
+     *
      * This prevents heading-map entries from being lost when Claude doesn't
      * return deeply nested subsections.
      */
-    
+
     it('should detect when translator omits level-4 subsections', () => {
       // Simulate the scenario from Test 09:
       // Source: ## Vector Spaces > ### Basic Properties > #### Applications in Economics
       // Target: ## 向量空间 > ### 基本性质 > #### 在经济学中的应用
       // Translator returns: ## 向量空间 > ### 基本性质 (missing ####)
-      
+
       const expectedSubsections: Section[] = [
         {
           id: 'basic-properties',
@@ -763,10 +819,10 @@ Market equilibrium occurs when supply equals demand.
               content: 'Applications content',
               startLine: 15,
               endLine: 20,
-              subsections: []
-            }
-          ]
-        }
+              subsections: [],
+            },
+          ],
+        },
       ];
 
       const parsedSubsections: Section[] = [
@@ -777,14 +833,14 @@ Market equilibrium occurs when supply equals demand.
           content: 'Properties content in Chinese',
           startLine: 10,
           endLine: 20,
-          subsections: []  // Translator didn't return the #### level!
-        }
+          subsections: [], // Translator didn't return the #### level!
+        },
       ];
 
       // This is the validation function from file-processor.ts
       const validateSubsectionStructure = (expected: Section[], parsed: Section[]): boolean => {
         if (expected.length !== parsed.length) return false;
-        
+
         for (let i = 0; i < expected.length; i++) {
           // Recursively validate nested subsections
           if (!validateSubsectionStructure(expected[i].subsections, parsed[i].subsections)) {
@@ -796,11 +852,11 @@ Market equilibrium occurs when supply equals demand.
 
       // OLD validation: only checked direct children count
       const oldValidation = parsedSubsections.length === expectedSubsections.length;
-      expect(oldValidation).toBe(true);  // BUG: Would have passed!
+      expect(oldValidation).toBe(true); // BUG: Would have passed!
 
       // NEW validation: recursively checks full tree
       const newValidation = validateSubsectionStructure(expectedSubsections, parsedSubsections);
-      expect(newValidation).toBe(false);  // ✓ Correctly detects mismatch!
+      expect(newValidation).toBe(false); // ✓ Correctly detects mismatch!
     });
 
     it('should validate correctly when nested structure matches', () => {
@@ -828,7 +884,7 @@ Market equilibrium occurs when supply equals demand.
                   content: 'Short-term content',
                   startLine: 20,
                   endLine: 25,
-                  subsections: []
+                  subsections: [],
                 },
                 {
                   id: 'long-term-effects',
@@ -837,12 +893,12 @@ Market equilibrium occurs when supply equals demand.
                   content: 'Long-term content',
                   startLine: 26,
                   endLine: 30,
-                  subsections: []
-                }
-              ]
-            }
-          ]
-        }
+                  subsections: [],
+                },
+              ],
+            },
+          ],
+        },
       ];
 
       const parsedSubsections: Section[] = [
@@ -869,7 +925,7 @@ Market equilibrium occurs when supply equals demand.
                   content: 'Short-term content in Chinese',
                   startLine: 20,
                   endLine: 25,
-                  subsections: []
+                  subsections: [],
                 },
                 {
                   id: 'long-term-effects',
@@ -878,17 +934,17 @@ Market equilibrium occurs when supply equals demand.
                   content: 'Long-term content in Chinese',
                   startLine: 26,
                   endLine: 30,
-                  subsections: []
-                }
-              ]
-            }
-          ]
-        }
+                  subsections: [],
+                },
+              ],
+            },
+          ],
+        },
       ];
 
       const validateSubsectionStructure = (expected: Section[], parsed: Section[]): boolean => {
         if (expected.length !== parsed.length) return false;
-        
+
         for (let i = 0; i < expected.length; i++) {
           if (!validateSubsectionStructure(expected[i].subsections, parsed[i].subsections)) {
             return false;
@@ -898,7 +954,7 @@ Market equilibrium occurs when supply equals demand.
       };
 
       const isValid = validateSubsectionStructure(expectedSubsections, parsedSubsections);
-      expect(isValid).toBe(true);  // ✓ Full nested structure matches!
+      expect(isValid).toBe(true); // ✓ Full nested structure matches!
     });
 
     it('should detect when translator omits level-5 subsections', () => {
@@ -926,12 +982,12 @@ Market equilibrium occurs when supply equals demand.
                   content: 'Sub-sub content',
                   startLine: 20,
                   endLine: 40,
-                  subsections: []
-                }
-              ]
-            }
-          ]
-        }
+                  subsections: [],
+                },
+              ],
+            },
+          ],
+        },
       ];
 
       // Translator returns up to level 4, but missing level 5
@@ -951,15 +1007,15 @@ Market equilibrium occurs when supply equals demand.
               content: 'Sub content',
               startLine: 15,
               endLine: 40,
-              subsections: []  // Missing level 5!
-            }
-          ]
-        }
+              subsections: [], // Missing level 5!
+            },
+          ],
+        },
       ];
 
       const validateSubsectionStructure = (expected: Section[], parsed: Section[]): boolean => {
         if (expected.length !== parsed.length) return false;
-        
+
         for (let i = 0; i < expected.length; i++) {
           if (!validateSubsectionStructure(expected[i].subsections, parsed[i].subsections)) {
             return false;
@@ -969,7 +1025,7 @@ Market equilibrium occurs when supply equals demand.
       };
 
       const isValid = validateSubsectionStructure(expectedSubsections, parsedSubsections);
-      expect(isValid).toBe(false);  // ✓ Correctly detects missing level 5!
+      expect(isValid).toBe(false); // ✓ Correctly detects missing level 5!
     });
 
     it('should detect when subsection count differs at any depth', () => {
@@ -989,7 +1045,7 @@ Market equilibrium occurs when supply equals demand.
               content: 'A',
               startLine: 15,
               endLine: 25,
-              subsections: []
+              subsections: [],
             },
             {
               id: 'sub-b',
@@ -998,10 +1054,10 @@ Market equilibrium occurs when supply equals demand.
               content: 'B',
               startLine: 26,
               endLine: 40,
-              subsections: []
-            }
-          ]
-        }
+              subsections: [],
+            },
+          ],
+        },
       ];
 
       // Translator only returns one of two subsections
@@ -1021,16 +1077,16 @@ Market equilibrium occurs when supply equals demand.
               content: 'A',
               startLine: 15,
               endLine: 25,
-              subsections: []
-            }
+              subsections: [],
+            },
             // Missing Sub B!
-          ]
-        }
+          ],
+        },
       ];
 
       const validateSubsectionStructure = (expected: Section[], parsed: Section[]): boolean => {
         if (expected.length !== parsed.length) return false;
-        
+
         for (let i = 0; i < expected.length; i++) {
           if (!validateSubsectionStructure(expected[i].subsections, parsed[i].subsections)) {
             return false;
@@ -1040,7 +1096,7 @@ Market equilibrium occurs when supply equals demand.
       };
 
       const isValid = validateSubsectionStructure(expectedSubsections, parsedSubsections);
-      expect(isValid).toBe(false);  // ✓ Correctly detects count mismatch!
+      expect(isValid).toBe(false); // ✓ Correctly detects count mismatch!
     });
   });
 
@@ -1062,7 +1118,7 @@ Market equilibrium occurs when supply equals demand.
             subsections: mergeSubsectionsWithTargetTranslations(
               sourceSub.subsections,
               targetSub.subsections
-            )
+            ),
           };
         }
         return sourceSub;
@@ -1086,10 +1142,10 @@ Market equilibrium occurs when supply equals demand.
               content: 'Vector space properties...',
               startLine: 15,
               endLine: 20,
-              subsections: []
-            }
-          ]
-        }
+              subsections: [],
+            },
+          ],
+        },
       ];
 
       const targetSubsections: Section[] = [
@@ -1108,10 +1164,10 @@ Market equilibrium occurs when supply equals demand.
               content: '向量空间性质...',
               startLine: 15,
               endLine: 20,
-              subsections: []
-            }
-          ]
-        }
+              subsections: [],
+            },
+          ],
+        },
       ];
 
       const merged = mergeSubsectionsWithTargetTranslations(sourceSubsections, targetSubsections);
@@ -1119,7 +1175,7 @@ Market equilibrium occurs when supply equals demand.
       // Should use Chinese headings from target
       expect(merged[0].heading).toBe('### 基本性质');
       expect(merged[0].subsections[0].heading).toBe('#### 在经济学中的应用');
-      
+
       // But use source content (the updates)
       expect(merged[0].content).toBe('Vector spaces satisfy...');
       expect(merged[0].subsections[0].content).toBe('Vector space properties...');
@@ -1134,7 +1190,7 @@ Market equilibrium occurs when supply equals demand.
           content: 'Content...',
           startLine: 10,
           endLine: 20,
-          subsections: []
+          subsections: [],
         },
         {
           id: 'new-section',
@@ -1143,8 +1199,8 @@ Market equilibrium occurs when supply equals demand.
           content: 'New content...',
           startLine: 21,
           endLine: 30,
-          subsections: []
-        }
+          subsections: [],
+        },
       ];
 
       const targetSubsections: Section[] = [
@@ -1155,8 +1211,8 @@ Market equilibrium occurs when supply equals demand.
           content: '内容...',
           startLine: 10,
           endLine: 20,
-          subsections: []
-        }
+          subsections: [],
+        },
         // Missing second section
       ];
 
@@ -1164,7 +1220,7 @@ Market equilibrium occurs when supply equals demand.
 
       // First section: Chinese heading
       expect(merged[0].heading).toBe('### 基本性质');
-      
+
       // Second section (NEW): English heading
       expect(merged[1].heading).toBe('### New Section');
       expect(merged[1].content).toBe('New content...');
@@ -1195,12 +1251,12 @@ Market equilibrium occurs when supply equals demand.
                   content: 'Content',
                   startLine: 20,
                   endLine: 30,
-                  subsections: []
-                }
-              ]
-            }
-          ]
-        }
+                  subsections: [],
+                },
+              ],
+            },
+          ],
+        },
       ];
 
       const targetSubsections: Section[] = [
@@ -1227,12 +1283,12 @@ Market equilibrium occurs when supply equals demand.
                   content: '内容',
                   startLine: 20,
                   endLine: 30,
-                  subsections: []
-                }
-              ]
-            }
-          ]
-        }
+                  subsections: [],
+                },
+              ],
+            },
+          ],
+        },
       ];
 
       const merged = mergeSubsectionsWithTargetTranslations(sourceSubsections, targetSubsections);
@@ -1307,12 +1363,7 @@ jupytext:
       translatedSection: translatedContent,
     });
 
-    const result = await processor.processFull(
-      sourceContent,
-      'test.md',
-      'en',
-      'zh-cn',
-    );
+    const result = await processor.processFull(sourceContent, 'test.md', 'en', 'zh-cn');
 
     // Should contain translation metadata
     const headingMap = extractHeadingMap(result);
@@ -1355,12 +1406,7 @@ jupytext:
       translatedSection: translatedContent,
     });
 
-    const result = await processor.processFull(
-      sourceContent,
-      'status.md',
-      'en',
-      'zh-cn',
-    );
+    const result = await processor.processFull(sourceContent, 'status.md', 'en', 'zh-cn');
 
     // Title-only file: title should still be injected
     const title = extractTranslationTitle(result);
@@ -1411,12 +1457,7 @@ config: test
       translatedSection: translatedContent,
     });
 
-    const result = await processor.processFull(
-      sourceContent,
-      'lecture.md',
-      'en',
-      'zh-cn',
-    );
+    const result = await processor.processFull(sourceContent, 'lecture.md', 'en', 'zh-cn');
 
     const headingMap = extractHeadingMap(result);
     expect(headingMap.size).toBe(2);
@@ -1496,28 +1537,6 @@ translation:
 
 部分 B 的内容。`;
 
-  // Target after another PR merged (Section B was updated by a different PR)
-  const newTarget = `---
-config: test
-translation:
-  title: 介绍
-  headings:
-    Section A: "部分 A"
-    Section B: "部分 B"
----
-
-# 介绍
-
-旧介绍文本。
-
-## 部分 A
-
-部分 A 的内容。
-
-## 部分 B
-
-部分 B 的 **更新** 内容。`;
-
   // Previous translation from PR branch (translated Section A)
   const previousTranslation = `---
 config: test
@@ -1551,13 +1570,13 @@ translation:
     const result = await processor.processSectionBased(
       oldSource,
       newSource,
-      oldTarget,  // Target unchanged for Section A
+      oldTarget, // Target unchanged for Section A
       'test.md',
       'en',
       'zh-cn',
       undefined,
       undefined,
-      { previousTranslation, oldTargetContent: oldTarget },
+      { previousTranslation, oldTargetContent: oldTarget }
     );
 
     // Section A should be cached (target section A unchanged in old target vs current target)
@@ -1583,13 +1602,13 @@ translation:
     const result = await processor.processSectionBased(
       oldSource,
       newSource,
-      modifiedTarget,  // Target Section A was changed
+      modifiedTarget, // Target Section A was changed
       'test.md',
       'en',
       'zh-cn',
       undefined,
       undefined,
-      { previousTranslation, oldTargetContent: oldTarget },
+      { previousTranslation, oldTargetContent: oldTarget }
     );
 
     // Section A's target changed → cache miss → should call Claude
@@ -1608,13 +1627,13 @@ translation:
     const result = await processor.processSectionBased(
       oldSource,
       newSource,
-      oldTarget,  // Same as old target → all caches hit
+      oldTarget, // Same as old target → all caches hit
       'test.md',
       'en',
       'zh-cn',
       undefined,
       undefined,
-      { previousTranslation, oldTargetContent: oldTarget },
+      { previousTranslation, oldTargetContent: oldTarget }
     );
 
     // No Claude calls should be made
@@ -1632,7 +1651,7 @@ translation:
       translatedSection: '全新的介绍翻译。',
     });
 
-    const result = await processor.processSectionBased(
+    await processor.processSectionBased(
       oldSource,
       newSource,
       modifiedTarget,
@@ -1641,7 +1660,7 @@ translation:
       'zh-cn',
       undefined,
       undefined,
-      { previousTranslation, oldTargetContent: oldTarget },
+      { previousTranslation, oldTargetContent: oldTarget }
     );
 
     // Intro target changed → cache miss → should call Claude for intro
@@ -1663,14 +1682,7 @@ translation:
       translatedSection: '翻译结果',
     });
 
-    const result = await processor.processSectionBased(
-      oldSource,
-      newSource,
-      oldTarget,
-      'test.md',
-      'en',
-      'zh-cn',
-    );
+    await processor.processSectionBased(oldSource, newSource, oldTarget, 'test.md', 'en', 'zh-cn');
 
     // Without cache, both intro and Section A should trigger Claude calls
     expect(mockTranslator.translateSection).toHaveBeenCalledTimes(2);
@@ -1692,7 +1704,7 @@ translation:
       'zh-cn',
       undefined,
       undefined,
-      { previousTranslation: '', oldTargetContent: '' },
+      { previousTranslation: '', oldTargetContent: '' }
     );
 
     // Should fall back to normal translation
@@ -1702,7 +1714,9 @@ translation:
 
   it('should cache added sections via heading map lookup', async () => {
     // Source adds a new Section C
-    const newSourceWithAdded = newSource + `
+    const newSourceWithAdded =
+      newSource +
+      `
 
 ## Section C
 
@@ -1739,13 +1753,13 @@ translation:
     const result = await processor.processSectionBased(
       oldSource,
       newSourceWithAdded,
-      oldTarget,  // Target same as old target
+      oldTarget, // Target same as old target
       'test.md',
       'en',
       'zh-cn',
       undefined,
       undefined,
-      { previousTranslation: previousWithAdded, oldTargetContent: oldTarget },
+      { previousTranslation: previousWithAdded, oldTargetContent: oldTarget }
     );
 
     // No Claude calls — intro cached, Section A cached, Section C cached (added)
@@ -1858,7 +1872,7 @@ translation:
       'zh-cn',
       undefined,
       undefined,
-      { previousTranslation: previousTranslationSub, oldTargetContent: oldTargetSub },
+      { previousTranslation: previousTranslationSub, oldTargetContent: oldTargetSub }
     );
 
     // Section A (with subsections) should be cached — no Claude calls
@@ -1882,7 +1896,7 @@ translation:
       'zh-cn',
       undefined,
       undefined,
-      { previousTranslation, oldTargetContent: oldTarget },
+      { previousTranslation, oldTargetContent: oldTarget }
     );
 
     // No Claude calls (all cached)

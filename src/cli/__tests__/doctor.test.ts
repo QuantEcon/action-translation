@@ -19,7 +19,6 @@ import {
   runDoctor,
   formatDoctorTable,
   formatDoctorJson,
-  DoctorOptions,
 } from '../commands/doctor.js';
 import { writeConfig, writeFileState } from '../translate-state.js';
 
@@ -188,7 +187,7 @@ describe('checkStateFiles', () => {
     expect(result.status).toBe('warn');
     expect(result.message).toContain('1/2');
     expect(result.details).toBeDefined();
-    expect(result.details?.some(d => d.includes('cobweb.md'))).toBe(true);
+    expect(result.details?.some((d) => d.includes('cobweb.md'))).toBe(true);
   });
 
   test('fails when state directory does not exist', () => {
@@ -242,7 +241,9 @@ describe('checkHeadingMaps', () => {
     // File with sections + heading-map → pass
     writeMd(path.join(tmpDir, 'lectures', 'intro.md'), TARGET_WITH_MAP);
     // File with no sections → should be skipped, not flagged
-    writeMd(path.join(tmpDir, 'lectures', 'status.md'), `---
+    writeMd(
+      path.join(tmpDir, 'lectures', 'status.md'),
+      `---
 jupytext:
   text_representation:
     extension: .md
@@ -252,7 +253,8 @@ jupytext:
 
 This file has no ## sections at all.
 Just a title and some text.
-`);
+`
+    );
 
     const result = checkHeadingMaps(tmpDir, 'lectures');
     expect(result.status).toBe('pass');
@@ -291,7 +293,7 @@ describe('checkSectionAlignment', () => {
 
     const result = await checkSectionAlignment(sourceDir, targetDir, 'lectures');
     expect(result.status).toBe('warn');
-    expect(result.details?.some(d => d.includes('3 source vs 2 target'))).toBe(true);
+    expect(result.details?.some((d) => d.includes('3 source vs 2 target'))).toBe(true);
   });
 });
 
@@ -306,7 +308,7 @@ describe('checkWorkflow', () => {
     fs.writeFileSync(
       path.join(workflowDir, 'review-translations.yml'),
       'uses: QuantEcon/action-translation@v0.8',
-      'utf-8',
+      'utf-8'
     );
 
     const result = checkWorkflow(tmpDir);
@@ -383,7 +385,7 @@ describe('runDoctor', () => {
     fs.writeFileSync(
       path.join(workflowDir, 'review-translations.yml'),
       'uses: QuantEcon/action-translation@v0.8',
-      'utf-8',
+      'utf-8'
     );
 
     const result = await runDoctor({
@@ -394,10 +396,10 @@ describe('runDoctor', () => {
 
     expect(result.summary.fail).toBe(0);
     expect(result.summary.pass).toBeGreaterThanOrEqual(3);
-    expect(result.checks.find(c => c.name === '.translate/config.yml')?.status).toBe('pass');
-    expect(result.checks.find(c => c.name === '.translate/state/')?.status).toBe('pass');
-    expect(result.checks.find(c => c.name === 'Heading maps')?.status).toBe('pass');
-    expect(result.checks.find(c => c.name === 'Workflow')?.status).toBe('pass');
+    expect(result.checks.find((c) => c.name === '.translate/config.yml')?.status).toBe('pass');
+    expect(result.checks.find((c) => c.name === '.translate/state/')?.status).toBe('pass');
+    expect(result.checks.find((c) => c.name === 'Heading maps')?.status).toBe('pass');
+    expect(result.checks.find((c) => c.name === 'Workflow')?.status).toBe('pass');
   });
 
   test('reports failures for an unconfigured repo', async () => {
@@ -411,7 +413,7 @@ describe('runDoctor', () => {
     });
 
     expect(result.summary.fail).toBeGreaterThan(0);
-    expect(result.checks.find(c => c.name === '.translate/config.yml')?.status).toBe('fail');
+    expect(result.checks.find((c) => c.name === '.translate/config.yml')?.status).toBe('fail');
   });
 
   test('includes source checks when source provided', async () => {
@@ -432,8 +434,8 @@ describe('runDoctor', () => {
       json: false,
     });
 
-    expect(result.checks.some(c => c.name === 'Source repo')).toBe(true);
-    expect(result.checks.some(c => c.name === 'Section alignment')).toBe(true);
+    expect(result.checks.some((c) => c.name === 'Source repo')).toBe(true);
+    expect(result.checks.some((c) => c.name === 'Section alignment')).toBe(true);
   });
 
   test('reads docs-folder from config when not explicitly provided', async () => {
@@ -458,7 +460,7 @@ describe('runDoctor', () => {
     });
 
     // Should find the file in docs/ not lectures/
-    expect(result.checks.find(c => c.name === '.translate/state/')?.status).toBe('pass');
+    expect(result.checks.find((c) => c.name === '.translate/state/')?.status).toBe('pass');
   });
 });
 

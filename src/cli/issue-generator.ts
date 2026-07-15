@@ -28,9 +28,9 @@ import { CATEGORY_STYLES, confidenceTier } from './review-formatter.js';
  * (filtered out by filterActionableSuggestions), so they are omitted.
  */
 const CATEGORY_LABEL: Record<string, string> = {
-  BUG_FIX:          'translate:bug-fix',
-  CLARIFICATION:    'translate:narrative',
-  EXAMPLE:          'translate:narrative',
+  BUG_FIX: 'translate:bug-fix',
+  CLARIFICATION: 'translate:narrative',
+  EXAMPLE: 'translate:narrative',
   CODE_IMPROVEMENT: 'translate:code',
 };
 
@@ -105,9 +105,10 @@ const MAX_TITLE_SUMMARY_CHARS = 80;
  * Truncates the summary at `MAX_TITLE_SUMMARY_CHARS` and appends "…" if needed.
  */
 export function formatIssueTitle(item: SuggestionWithContext): string {
-  const summary = item.suggestion.summary.length > MAX_TITLE_SUMMARY_CHARS
-    ? item.suggestion.summary.slice(0, MAX_TITLE_SUMMARY_CHARS).trimEnd() + '…'
-    : item.suggestion.summary;
+  const summary =
+    item.suggestion.summary.length > MAX_TITLE_SUMMARY_CHARS
+      ? item.suggestion.summary.slice(0, MAX_TITLE_SUMMARY_CHARS).trimEnd() + '…'
+      : item.suggestion.summary;
 
   return `[${item.file}] ${summary}`;
 }
@@ -200,5 +201,3 @@ export function formatIssueBody(item: SuggestionWithContext): string {
 
   return lines.join('\n');
 }
-
-

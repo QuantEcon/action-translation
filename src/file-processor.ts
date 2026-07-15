@@ -1,14 +1,14 @@
 /**
  * Section-Based File Processor
- * 
+ *
  * Orchestrates the translation process for a single file using section-based approach.
- * 
+ *
  * Key operations:
  * 1. Detect section-level changes between old and new English documents
  * 2. Match sections to target document (by position)
  * 3. Translate changed sections (update mode for modified, new mode for added)
  * 4. Reconstruct target document with translated sections
- * 
+ *
  * This is much simpler than the old block-based approach!
  */
 
@@ -17,13 +17,13 @@ import { DiffDetector } from './diff-detector.js';
 import { TranslationService } from './translator.js';
 import { Section, Glossary, RebaseCacheData } from './types.js';
 import * as core from '@actions/core';
-import { 
-  extractHeadingMap, 
-  updateHeadingMap, 
+import {
+  extractHeadingMap,
+  updateHeadingMap,
   lookupTargetHeading,
   injectHeadingMap,
   buildHeadingMap,
-  HeadingMap
+  HeadingMap,
 } from './heading-map.js';
 
 export class FileProcessor {
@@ -59,7 +59,7 @@ export class FileProcessor {
     targetLanguage: string,
     glossary?: Glossary,
     onSkippedSection?: (heading: string) => void,
-    rebaseCache?: RebaseCacheData,
+    rebaseCache?: RebaseCacheData
   ): Promise<string> {
     this.log(`Processing file using component-based approach: ${filepath}`);
 
@@ -67,7 +67,7 @@ export class FileProcessor {
     const oldSource = await this.parser.parseDocumentComponents(oldContent, filepath);
     const newSource = await this.parser.parseDocumentComponents(newContent, filepath);
     const target = await this.parser.parseDocumentComponents(targetContent, filepath);
-    
+
     this.log(`Old source: ${oldSource.sections.length} sections`);
     this.log(`New source: ${newSource.sections.length} sections`);
     this.log(`Target: ${target.sections.length} sections`);
@@ -75,22 +75,32 @@ export class FileProcessor {
     // 2. Extract heading map from target document
     const headingMap = extractHeadingMap(targetContent);
     this.log(`Loaded heading map with ${headingMap.size} entries`);
-    
+
     // 2b. Parse rebase cache if provided (for skipping redundant Claude calls)
     let cachedParsed: Awaited<ReturnType<typeof this.parser.parseDocumentComponents>> | undefined;
-    let oldTargetParsed: Awaited<ReturnType<typeof this.parser.parseDocumentComponents>> | undefined;
+    let oldTargetParsed:
+      | Awaited<ReturnType<typeof this.parser.parseDocumentComponents>>
+      | undefined;
     let oldTargetSectionById: Map<string, Section> | undefined;
     let cachedSectionById: Map<string, Section> | undefined;
     let cachedHeadingMap: Map<string, string> | undefined;
 
     if (rebaseCache) {
       try {
-        cachedParsed = await this.parser.parseDocumentComponents(rebaseCache.previousTranslation, filepath);
-        oldTargetParsed = await this.parser.parseDocumentComponents(rebaseCache.oldTargetContent, filepath);
-        oldTargetSectionById = new Map(oldTargetParsed.sections.map(s => [s.id, s]));
-        cachedSectionById = new Map(cachedParsed.sections.map(s => [s.id, s]));
+        cachedParsed = await this.parser.parseDocumentComponents(
+          rebaseCache.previousTranslation,
+          filepath
+        );
+        oldTargetParsed = await this.parser.parseDocumentComponents(
+          rebaseCache.oldTargetContent,
+          filepath
+        );
+        oldTargetSectionById = new Map(oldTargetParsed.sections.map((s) => [s.id, s]));
+        cachedSectionById = new Map(cachedParsed.sections.map((s) => [s.id, s]));
         cachedHeadingMap = extractHeadingMap(rebaseCache.previousTranslation);
-        this.log(`Rebase cache loaded: ${cachedParsed.sections.length} cached sections, ${oldTargetParsed.sections.length} old target sections`);
+        this.log(
+          `Rebase cache loaded: ${cachedParsed.sections.length} cached sections, ${oldTargetParsed.sections.length} old target sections`
+        );
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
         this.log(`Rebase cache parse failed — will re-translate: ${msg}`);
@@ -100,18 +110,18 @@ export class FileProcessor {
     }
 
     // 3. Process each component - translate if changed, copy if unchanged
-    
+
     // CONFIG: Always use new source config (doesn't get translated)
     const resultConfig = newSource.config;
-    
+
     // PRE-TITLE: Always use new source pre-title content (cross-ref targets, raw blocks - not translated)
     const resultPreTitle = newSource.preTitle;
-    
+
     // TITLE: Translate if changed, otherwise keep target
     let resultTitle = target.title;
     if (oldSource.title !== newSource.title) {
       this.log(`TITLE changed: "${oldSource.titleText}" -> "${newSource.titleText}"`);
-      
+
       // Rebase cache: if target title is unchanged since PR creation, reuse cached translation
       if (cachedParsed && oldTargetParsed && oldTargetParsed.title === target.title) {
         resultTitle = cachedParsed.title;
@@ -126,23 +136,23 @@ export class FileProcessor {
           newEnglish: newSource.title,
           currentTranslation: target.title,
         });
-      
+
         if (!result.success) {
           throw new Error(`Translation failed for title: ${result.error}`);
         }
-      
+
         resultTitle = result.translatedSection || target.title;
         this.log(`Translated title to: "${resultTitle}"`);
       }
     } else {
       this.log(`TITLE unchanged, keeping target: "${target.title}"`);
     }
-    
+
     // INTRO: Translate if changed, otherwise keep target
     let resultIntro = target.intro;
     if (oldSource.intro !== newSource.intro) {
       this.log(`INTRO changed (${oldSource.intro.length} -> ${newSource.intro.length} chars)`);
-      
+
       // Rebase cache: if target intro is unchanged since PR creation, reuse cached translation
       if (cachedParsed && oldTargetParsed && oldTargetParsed.intro === target.intro) {
         resultIntro = cachedParsed.intro;
@@ -157,47 +167,45 @@ export class FileProcessor {
           newEnglish: newSource.intro,
           currentTranslation: target.intro,
         });
-      
+
         if (!result.success) {
           throw new Error(`Translation failed for intro: ${result.error}`);
         }
-      
+
         resultIntro = result.translatedSection || target.intro;
         this.log(`Translated intro (${resultIntro.length} chars)`);
       }
     } else {
       this.log(`INTRO unchanged, keeping target`);
     }
-    
+
     // SECTIONS: Detect changes and process each section
     const changes = await this.diffDetector.detectSectionChanges(oldContent, newContent, filepath);
     this.log(`Detected ${changes.length} section-level changes`);
-    
+
     const resultSections: Section[] = [];
-    const includedSourceSections: Section[] = [];  // Tracks which source sections map to resultSections (keeps heading-map aligned)
-    
+    const includedSourceSections: Section[] = []; // Tracks which source sections map to resultSections (keeps heading-map aligned)
+
     // Process each section from new source (ensures proper order)
     for (let i = 0; i < newSource.sections.length; i++) {
       const newSection = newSource.sections[i];
-      
+
       // Find if this section has changes
-      const change = changes.find(c => 
-        c.newSection?.id === newSection.id
-      );
+      const change = changes.find((c) => c.newSection?.id === newSection.id);
 
       if (!change) {
         // Section unchanged - copy from target
         // Only use position fallback when section counts match (positions are aligned).
         // When counts differ (section added/deleted in source), positions are shifted
         // and fallback would grab the wrong target section.
-        const positionHint = (newSource.sections.length === target.sections.length) ? i : undefined;
+        const positionHint = newSource.sections.length === target.sections.length ? i : undefined;
         const targetSection = this.findTargetSectionByHeadingMap(
           newSection,
           target.sections,
           headingMap,
           positionHint
         );
-        
+
         if (targetSection) {
           resultSections.push(targetSection);
           includedSourceSections.push(newSection);
@@ -210,7 +218,9 @@ export class FileProcessor {
           // with earlier translation PRs that introduce the missing sections.
           // If the earlier PR is abandoned, a /translate-resync will recover this.
           const headingText = newSection.heading.replace(/^#+\s+/, '');
-          this.log(`Section "${headingText}" unchanged in source but missing from target — skipping (pending earlier translation PR)`);
+          this.log(
+            `Section "${headingText}" unchanged in source but missing from target — skipping (pending earlier translation PR)`
+          );
           onSkippedSection?.(headingText);
         }
         continue;
@@ -223,16 +233,22 @@ export class FileProcessor {
         // Rebase cache: for added sections, use heading map from cached translation
         // to find the corresponding cached section (IDs differ across languages)
         if (cachedParsed && cachedHeadingMap) {
-          const sourceHeading = MystParser.stripMystRoles(newSection.heading.replace(/^#+\s+/, '').trim());
+          const sourceHeading = MystParser.stripMystRoles(
+            newSection.heading.replace(/^#+\s+/, '').trim()
+          );
           const translatedHeading = cachedHeadingMap.get(sourceHeading);
           if (translatedHeading) {
-            const cachedSection = cachedParsed.sections.find(s =>
-              MystParser.stripMystRoles(s.heading.replace(/^#+\s+/, '').trim()) === translatedHeading
+            const cachedSection = cachedParsed.sections.find(
+              (s) =>
+                MystParser.stripMystRoles(s.heading.replace(/^#+\s+/, '').trim()) ===
+                translatedHeading
             );
             if (cachedSection) {
               resultSections.push(cachedSection);
               includedSourceSections.push(newSection);
-              this.log(`Cache hit for added section: ${newSection.heading} → ${cachedSection.heading} — skipping Claude call`);
+              this.log(
+                `Cache hit for added section: ${newSection.heading} → ${cachedSection.heading} — skipping Claude call`
+              );
               continue;
             }
           }
@@ -246,19 +262,18 @@ export class FileProcessor {
         );
         resultSections.push(translatedSection);
         includedSourceSections.push(newSection);
-        
       } else if (change.type === 'modified') {
         this.log(`Processing MODIFIED section: ${newSection.heading}`);
-        
+
         // Find matching target section
-        const positionHint = (newSource.sections.length === target.sections.length) ? i : undefined;
+        const positionHint = newSource.sections.length === target.sections.length ? i : undefined;
         const targetSection = this.findTargetSectionByHeadingMap(
           change.oldSection!,
           target.sections,
           headingMap,
           positionHint
         );
-        
+
         if (!targetSection) {
           this.log(`Warning: Could not find target for modified section, treating as new`);
           const translatedSection = await this.translateNewSection(
@@ -283,7 +298,9 @@ export class FileProcessor {
             if (oldTargetSerialized === currentTargetSerialized) {
               resultSections.push(cachedMatch);
               includedSourceSections.push(newSection);
-              this.log(`Cache hit for modified section: ${newSection.heading} — skipping Claude call`);
+              this.log(
+                `Cache hit for modified section: ${newSection.heading} — skipping Claude call`
+              );
               continue;
             }
           }
@@ -331,7 +348,7 @@ export class FileProcessor {
         let finalSubsections: Section[];
         const expectedSubsectionCount = newSection.subsections.length;
         const parsedSubsectionCount = subsections.length;
-        
+
         // Helper to recursively validate subsection structure
         const validateSubsectionStructure = (expected: Section[], parsed: Section[]): boolean => {
           if (expected.length !== parsed.length) {
@@ -345,7 +362,7 @@ export class FileProcessor {
           }
           return true;
         };
-        
+
         // Helper to merge source subsections with target translations
         // Takes source structure (English) and applies target headings/content where they exist
         // Also checks heading-map for Chinese translations of subsections not in target array
@@ -357,28 +374,24 @@ export class FileProcessor {
           return sourceSubs.map((sourceSub, i) => {
             const sourceHeading = sourceSub.heading.replace(/^#+\s+/, '');
             const targetSub = targetSubs[i];
-            
+
             if (targetSub) {
               // Use target heading AND content (Chinese), but source structure
-              const currentPath = parentPath 
-                ? `${parentPath}::${sourceHeading}` 
-                : sourceHeading;
+              const currentPath = parentPath ? `${parentPath}::${sourceHeading}` : sourceHeading;
               return {
-                ...targetSub,  // Use target (Chinese heading + content)
+                ...targetSub, // Use target (Chinese heading + content)
                 subsections: mergeSubsectionsWithTargetTranslations(
-                  sourceSub.subsections,  // Source structure (may have more subsections)
-                  targetSub.subsections,  // Target translations
-                  currentPath             // Track path for heading-map lookup
-                )
+                  sourceSub.subsections, // Source structure (may have more subsections)
+                  targetSub.subsections, // Target translations
+                  currentPath // Track path for heading-map lookup
+                ),
               };
             }
-            
+
             // No target in array - check if it exists in heading-map
-            const sourcePath = parentPath 
-              ? `${parentPath}::${sourceHeading}` 
-              : sourceHeading;
+            const sourcePath = parentPath ? `${parentPath}::${sourceHeading}` : sourceHeading;
             const chineseHeading = headingMap.get(sourcePath);
-            
+
             if (chineseHeading) {
               // Found in heading-map - use Chinese heading from map
               this.log(`Found Chinese heading in map for: ${sourcePath} → ${chineseHeading}`);
@@ -389,15 +402,15 @@ export class FileProcessor {
                   sourceSub.subsections,
                   [],
                   sourcePath
-                )
+                ),
               };
             }
-            
+
             // Not in heading-map - keep source as-is (will be English, truly new)
             return sourceSub;
           });
         };
-        
+
         if (parsedSubsectionCount === expectedSubsectionCount && parsedSubsectionCount > 0) {
           // Check if the full recursive structure matches
           if (validateSubsectionStructure(newSection.subsections, subsections)) {
@@ -406,7 +419,9 @@ export class FileProcessor {
             this.log(`Using ${parsedSubsectionCount} translated subsections (structure validated)`);
           } else {
             // Structure mismatch - merge source structure with target headings
-            this.log(`Warning: Subsection structure mismatch (counts match but nested structure differs), merging with target headings`);
+            this.log(
+              `Warning: Subsection structure mismatch (counts match but nested structure differs), merging with target headings`
+            );
             const parentPath = newSection.heading.replace(/^#+\s+/, '');
             finalSubsections = mergeSubsectionsWithTargetTranslations(
               newSection.subsections,
@@ -420,11 +435,15 @@ export class FileProcessor {
         } else if (expectedSubsectionCount === 0) {
           // Source has no subsections (deletion case) - always use empty array
           // Don't preserve target subsections when source explicitly has none
-          this.log(`Source has no subsections (deletion), using empty array (ignoring ${parsedSubsectionCount} parsed subsections)`);
+          this.log(
+            `Source has no subsections (deletion), using empty array (ignoring ${parsedSubsectionCount} parsed subsections)`
+          );
           finalSubsections = [];
         } else {
           // Mismatch: merge source structure with target headings
-          this.log(`Warning: Expected ${expectedSubsectionCount} subsections but got ${parsedSubsectionCount}, merging with target headings`);
+          this.log(
+            `Warning: Expected ${expectedSubsectionCount} subsections but got ${parsedSubsectionCount}, merging with target headings`
+          );
           const parentPath = newSection.heading.replace(/^#+\s+/, '');
           finalSubsections = mergeSubsectionsWithTargetTranslations(
             newSection.subsections,
@@ -446,18 +465,18 @@ export class FileProcessor {
 
     // 4. Update heading map with sections (title tracked separately)
     this.log(`Updating heading map`);
-    
+
     const resultTitleText = MystParser.stripMystRoles(resultTitle.replace(/^#\s+/, '').trim());
-    
+
     // Use includedSourceSections (not newSource.sections) so indices stay aligned
     // with resultSections — skipped sections are excluded from both arrays.
     const finalHeadingMap = updateHeadingMap(
       new Map(headingMap),
       includedSourceSections,
-      resultSections,
+      resultSections
     );
     this.log(`Updated heading map to ${finalHeadingMap.size} entries`);
-    
+
     // 5. Reconstruct complete document from all components
     this.log(`Reconstructing complete document`);
     const reconstructed = this.reconstructFromComponents(
@@ -467,7 +486,7 @@ export class FileProcessor {
       resultIntro,
       resultSections
     );
-    
+
     // 6. Inject updated translation metadata (title + headings) into frontmatter
     return injectHeadingMap(reconstructed, finalHeadingMap, resultTitleText);
   }
@@ -482,7 +501,7 @@ export class FileProcessor {
     glossary?: Glossary
   ): Promise<Section> {
     const fullSectionContent = this.serializeSection(section);
-    
+
     const result = await this.translator.translateSection({
       mode: 'new',
       sourceLanguage,
@@ -497,12 +516,12 @@ export class FileProcessor {
 
     const translatedLines = (result.translatedSection || '').split('\n');
     const translatedHeading = translatedLines[0] || '';
-    
+
     const { subsections, contentWithoutSubsections } = await this.parseTranslatedSubsections(
       result.translatedSection || '',
       section
     );
-    
+
     return {
       heading: translatedHeading,
       level: section.level,
@@ -594,23 +613,27 @@ export class FileProcessor {
     // doesn't fail the entire sync — we fall back to the raw translated content.
     try {
       const sourceParsed = await this.parser.parseDocumentComponents(content, filepath);
-      const translatedParsed = await this.parser.parseDocumentComponents(translatedContent, filepath);
-
-      const { map: headingMap } = buildHeadingMap(
-        sourceParsed.sections,
-        translatedParsed.sections,
+      const translatedParsed = await this.parser.parseDocumentComponents(
+        translatedContent,
+        filepath
       );
+
+      const { map: headingMap } = buildHeadingMap(sourceParsed.sections, translatedParsed.sections);
 
       const translatedTitle = translatedParsed.titleText || '';
 
       // Inject heading-map into translated content
       if (headingMap.size > 0 || translatedTitle) {
-        this.log(`Injecting heading-map with ${headingMap.size} entries and title "${translatedTitle}"`);
+        this.log(
+          `Injecting heading-map with ${headingMap.size} entries and title "${translatedTitle}"`
+        );
         return injectHeadingMap(translatedContent, headingMap, translatedTitle);
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
-      core.warning(`Failed to build heading-map for ${filepath}: ${msg}. Returning translated content without heading-map.`);
+      core.warning(
+        `Failed to build heading-map for ${filepath}: ${msg}. Returning translated content without heading-map.`
+      );
     }
 
     return translatedContent;
@@ -623,7 +646,7 @@ export class FileProcessor {
    */
   private async parseTranslatedSubsections(
     translatedContent: string,
-    sourceSection: Section
+    _sourceSection: Section
   ): Promise<{ subsections: Section[]; contentWithoutSubsections: string }> {
     try {
       // Wrap in minimal MyST document for parsing
@@ -635,20 +658,20 @@ jupytext:
 ---
 
 ${translatedContent}`;
-      
+
       const parsed = await this.parser.parseSections(wrappedContent, 'temp.md');
-      
+
       // Extract subsections from the first section
       if (parsed.sections.length > 0 && parsed.sections[0].subsections.length > 0) {
         const section = parsed.sections[0];
         this.log(`Extracted ${section.subsections.length} subsections from translated content`);
-        
+
         // Calculate wrapper length by counting lines up to and including the closing ---
         // This handles variable-length YAML headers correctly
         const wrapperLines = wrappedContent.split('\n');
         let wrapperLineCount = 0;
         let foundClosingFence = false;
-        
+
         for (let i = 0; i < wrapperLines.length; i++) {
           wrapperLineCount++;
           if (i > 0 && wrapperLines[i] === '---') {
@@ -658,35 +681,35 @@ ${translatedContent}`;
             break;
           }
         }
-        
+
         if (!foundClosingFence) {
           this.log('Warning: Could not find closing YAML fence in wrapper');
           return { subsections: [], contentWithoutSubsections: translatedContent };
         }
-        
+
         // Convert parser's 1-indexed line number to position in original content
         // Parser line numbers are 1-indexed, array indices are 0-indexed
         const firstSubsectionLine1Indexed = section.subsections[0].startLine;
         const firstSubsectionLine0Indexed = firstSubsectionLine1Indexed - 1;
         const positionInOriginalContent = firstSubsectionLine0Indexed - wrapperLineCount;
-        
+
         // Extract content before first subsection
         const lines = translatedContent.split('\n');
         const contentLines = lines.slice(0, positionInOriginalContent);
         const contentWithoutSubsections = contentLines.join('\n').trim();
-        
+
         return {
           subsections: section.subsections,
-          contentWithoutSubsections
+          contentWithoutSubsections,
         };
       }
     } catch (error) {
       this.log(`Warning: Failed to parse subsections from translated content: ${error}`);
     }
-    
+
     return {
       subsections: [],
-      contentWithoutSubsections: translatedContent
+      contentWithoutSubsections: translatedContent,
     };
   }
 
@@ -698,16 +721,18 @@ ${translatedContent}`;
     sourceSection: Section,
     targetSections: Section[],
     headingMap: HeadingMap,
-    positionHint?: number  // Optional position for fallback matching
+    positionHint?: number // Optional position for fallback matching
   ): Section | undefined {
-    this.log(`Finding target for source section: "${sourceSection.heading}" (id: ${sourceSection.id})`);
-    
+    this.log(
+      `Finding target for source section: "${sourceSection.heading}" (id: ${sourceSection.id})`
+    );
+
     // Strategy 1: Use heading map to find translated heading
     // For top-level sections, parent path is empty
     const translatedHeading = lookupTargetHeading(sourceSection.heading, headingMap, '');
     if (translatedHeading) {
       this.log(`  Strategy 1: Looking for translated heading: "${translatedHeading}"`);
-      
+
       // Search for the translated heading in target sections
       for (const targetSection of targetSections) {
         const cleanTargetHeading = targetSection.heading.replace(/^#+\s+/, '').trim();
@@ -718,7 +743,9 @@ ${translatedContent}`;
       }
       this.log(`  ✗ Not found by heading map`);
     } else {
-      this.log(`  Strategy 1: No heading map entry for "${sourceSection.heading.replace(/^#+\s+/, '').trim()}"`);
+      this.log(
+        `  Strategy 1: No heading map entry for "${sourceSection.heading.replace(/^#+\s+/, '').trim()}"`
+      );
     }
 
     // Strategy 2: Fall back to ID-based matching
@@ -730,10 +757,10 @@ ${translatedContent}`;
       }
     }
     this.log(`  ✗ Not found by ID`);
-    
+
     // Log target section IDs for debugging
     if (targetSections.length <= 10) {
-      this.log(`  Available target IDs: ${targetSections.map(s => s.id).join(', ')}`);
+      this.log(`  Available target IDs: ${targetSections.map((s) => s.id).join(', ')}`);
     }
 
     // Strategy 3: Fall back to position-based matching when heading map and ID both fail.
@@ -745,7 +772,9 @@ ${translatedContent}`;
         this.log(`  ✓ Found by position: index ${positionHint}`);
         return targetSections[positionHint];
       }
-      this.log(`  ✗ Position ${positionHint} out of bounds (target has ${targetSections.length} sections)`);
+      this.log(
+        `  ✗ Position ${positionHint} out of bounds (target has ${targetSections.length} sections)`
+      );
     }
 
     return undefined;
@@ -757,24 +786,27 @@ ${translatedContent}`;
    */
   private serializeSection(section: Section): string {
     const parts: string[] = [];
-    
+
     // Add section content (heading and direct content)
     parts.push(section.content);
-    
+
     // Add subsections recursively if present
     for (const subsection of section.subsections) {
       parts.push(''); // Empty line before subsection
       // Recursively serialize subsection to handle nested subsections
       parts.push(this.serializeSection(subsection));
     }
-    
+
     return parts.join('\n');
   }
 
   /**
    * Validate the translated content has valid MyST syntax
    */
-  async validateMyST(content: string, filepath: string): Promise<{ valid: boolean; error?: string }> {
+  async validateMyST(
+    content: string,
+    filepath: string
+  ): Promise<{ valid: boolean; error?: string }> {
     return await this.parser.validateMyST(content, filepath);
   }
 }

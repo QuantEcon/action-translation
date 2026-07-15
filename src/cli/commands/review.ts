@@ -11,7 +11,11 @@
  */
 
 import * as path from 'path';
-import { loadResyncDirectory, filterActionableSuggestions, BackwardReportData, BackportSuggestionData } from '../schema.js';
+import {
+  loadResyncDirectory,
+  filterActionableSuggestions,
+  BackportSuggestionData,
+} from '../schema.js';
 import { createIssuesForAccepted, checkGhAvailable } from '../issue-creator.js';
 import type { SessionSummary } from '../review-session.js';
 import { formatEndSummary } from '../review-session.js';
@@ -82,7 +86,7 @@ export interface ReviewOptions {
  */
 export function loadAndFlattenSuggestions(
   reportDir: string,
-  minConfidence: number = 0.6,
+  minConfidence: number = 0.6
 ): FlattenResult {
   const resyncDir = path.join(reportDir, '.resync');
   const { reports, errors } = loadResyncDirectory(resyncDir);
@@ -189,7 +193,7 @@ export async function runReview(options: ReviewOptions): Promise<void> {
       onDone: (summary: SessionSummary) => {
         sessionSummary = summary;
       },
-    }),
+    })
   );
 
   await waitUntilExit();
@@ -211,6 +215,8 @@ export async function runReview(options: ReviewOptions): Promise<void> {
   } else if (options.repo) {
     await createIssuesForAccepted(accepted, options.repo);
   } else if (accepted.length > 0) {
-    console.log(`  ${accepted.length} suggestion(s) accepted. Use --repo <owner/repo> to create GitHub Issues.`);
+    console.log(
+      `  ${accepted.length} suggestion(s) accepted. Use --repo <owner/repo> to create GitHub Issues.`
+    );
   }
 }

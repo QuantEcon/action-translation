@@ -10,7 +10,6 @@ import {
   createIssuesForAccepted,
   checkGhAvailable,
   GhRunner,
-  IssueResult,
 } from '../issue-creator.js';
 import { SuggestionWithContext } from '../commands/review.js';
 
@@ -93,7 +92,7 @@ describe('buildGhArgs', () => {
       if (args[i] === '--label') labelIndices.push(i + 1);
     }
     expect(labelIndices).toHaveLength(3);
-    const labels = labelIndices.map(i => args[i]);
+    const labels = labelIndices.map((i) => args[i]);
     expect(labels).toContain('translate');
     expect(labels).toContain('translate:bug-fix');
     expect(labels).toContain('translate:zh-cn');
@@ -134,7 +133,7 @@ describe('createIssue', () => {
       return { stdout: 'https://github.com/Org/Repo/issues/99', stderr: '', status: 0 };
     };
     createIssue(item, 'Org/Repo', capturingRunner);
-    expect(capturedStdin).toContain('## Summary');          // Issue body markdown
+    expect(capturedStdin).toContain('## Summary'); // Issue body markdown
     expect(capturedStdin).toContain('ar1_processes.md');
   });
 
@@ -184,7 +183,7 @@ describe('createIssuesForAccepted', () => {
   it('marks all as success when runner always succeeds', async () => {
     const items = [makeSuggestion(), makeSuggestion({ file: 'b.md' })];
     const results = await createIssuesForAccepted(items, 'Org/Repo', successRunner());
-    expect(results.every(r => r.success)).toBe(true);
+    expect(results.every((r) => r.success)).toBe(true);
   });
 
   it('captures failure results without throwing', async () => {

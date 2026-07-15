@@ -17,11 +17,20 @@ project:
         - file: user/heading-maps.md
         - file: user/language-config.md
         - file: user/faq.md
+    - title: Tutorials
+      children:
+        - file: user/tutorials/fresh-setup.md
+        - file: user/tutorials/connect-existing.md
+        - file: user/tutorials/resync-drifted.md
+        - file: user/tutorials/backward-review.md
+        - file: user/tutorials/add-language.md
+        - file: user/tutorials/automated-maintenance.md
     - title: Developer Guide
       children:
         - file: developer/architecture.md
         - file: developer/testing.md
         - file: developer/roadmap.md
+        - file: developer/legacy-tools.md
 
 site:
   template: book-theme

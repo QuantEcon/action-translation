@@ -8,12 +8,12 @@ import { DEFAULT_CLAUDE_MODEL, VALID_MODEL_PATTERNS } from './models.js';
  * Recognized patterns live in ./models.ts alongside DEFAULT_CLAUDE_MODEL.
  */
 function validateClaudeModel(model: string): void {
-  const isValid = VALID_MODEL_PATTERNS.some(pattern => pattern.test(model));
+  const isValid = VALID_MODEL_PATTERNS.some((pattern) => pattern.test(model));
   if (!isValid) {
     core.warning(
       `Unrecognized Claude model: '${model}'. ` +
-      `Expected patterns like 'claude-sonnet-5' or 'claude-sonnet-4-5-YYYYMMDD'. ` +
-      `The model will still be used, but verify it's correct.`
+        `Expected patterns like 'claude-sonnet-5' or 'claude-sonnet-4-5-YYYYMMDD'. ` +
+        `The model will still be used, but verify it's correct.`
     );
   }
 }
@@ -40,22 +40,32 @@ export function getInputs(): ActionInputs {
   const targetLanguage = core.getInput('target-language', { required: true });
   // Handle docs-folder: '.' means root level (empty string for no prefix filter)
   const docsFolderInput = core.getInput('docs-folder', { required: false });
-  const docsFolder = (docsFolderInput === '.' || docsFolderInput === '/') ? '' : docsFolderInput;
+  const docsFolder = docsFolderInput === '.' || docsFolderInput === '/' ? '' : docsFolderInput;
   const sourceLanguage = core.getInput('source-language', { required: false }) || 'en';
-  const glossaryPath = core.getInput('glossary-path', { required: false }) || '';  // Empty by default - uses built-in
+  const glossaryPath = core.getInput('glossary-path', { required: false }) || ''; // Empty by default - uses built-in
   const tocFile = core.getInput('toc-file', { required: false }) || '_toc.yml';
   const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
   const claudeModel = core.getInput('claude-model', { required: false }) || DEFAULT_CLAUDE_MODEL;
   const githubToken = core.getInput('github-token', { required: true });
-  
-  const prLabelsRaw = core.getInput('pr-labels', { required: false }) || 'action-translation,automated';
-  const prLabels = prLabelsRaw.split(',').map((l: string) => l.trim()).filter((l: string) => l.length > 0);
-  
+
+  const prLabelsRaw =
+    core.getInput('pr-labels', { required: false }) || 'action-translation,automated';
+  const prLabels = prLabelsRaw
+    .split(',')
+    .map((l: string) => l.trim())
+    .filter((l: string) => l.length > 0);
+
   const prReviewersRaw = core.getInput('pr-reviewers', { required: false }) || '';
-  const prReviewers = prReviewersRaw.split(',').map((r: string) => r.trim()).filter((r: string) => r.length > 0);
+  const prReviewers = prReviewersRaw
+    .split(',')
+    .map((r: string) => r.trim())
+    .filter((r: string) => r.length > 0);
 
   const prTeamReviewersRaw = core.getInput('pr-team-reviewers', { required: false }) || '';
-  const prTeamReviewers = prTeamReviewersRaw.split(',').map((t: string) => t.trim()).filter((t: string) => t.length > 0);
+  const prTeamReviewers = prTeamReviewersRaw
+    .split(',')
+    .map((t: string) => t.trim())
+    .filter((t: string) => t.length > 0);
 
   // Test mode: use PR head instead of merge commit
   const testModeRaw = core.getInput('test-mode', { required: false }) || 'false';
@@ -73,7 +83,8 @@ export function getInputs(): ActionInputs {
   validateClaudeModel(claudeModel);
 
   // Ensure docs folder ends with / (unless it's empty string for root level)
-  const normalizedDocsFolder = docsFolder === '' ? '' : (docsFolder.endsWith('/') ? docsFolder : `${docsFolder}/`);
+  const normalizedDocsFolder =
+    docsFolder === '' ? '' : docsFolder.endsWith('/') ? docsFolder : `${docsFolder}/`;
 
   return {
     targetRepo,
@@ -98,14 +109,15 @@ export function getInputs(): ActionInputs {
 export function getRebaseInputs(): RebaseInputs {
   // Handle docs-folder: '.' means root level (empty string for no prefix filter)
   const docsFolderInput = core.getInput('docs-folder', { required: false });
-  const docsFolder = (docsFolderInput === '.' || docsFolderInput === '/') ? '' : docsFolderInput;
+  const docsFolder = docsFolderInput === '.' || docsFolderInput === '/' ? '' : docsFolderInput;
 
   const glossaryPath = core.getInput('glossary-path', { required: false }) || '';
   const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
   const githubToken = core.getInput('github-token', { required: true });
 
   // Ensure docs folder ends with / (unless it's empty string for root level)
-  const normalizedDocsFolder = docsFolder === '' ? '' : (docsFolder.endsWith('/') ? docsFolder : `${docsFolder}/`);
+  const normalizedDocsFolder =
+    docsFolder === '' ? '' : docsFolder.endsWith('/') ? docsFolder : `${docsFolder}/`;
 
   return {
     docsFolder: normalizedDocsFolder,
@@ -122,15 +134,17 @@ export function getReviewInputs(): ReviewInputs {
   const sourceRepo = core.getInput('source-repo', { required: true });
   const maxSuggestionsRaw = core.getInput('max-suggestions', { required: false }) || '5';
   const maxSuggestions = parseInt(maxSuggestionsRaw, 10);
-  
+
   if (isNaN(maxSuggestions) || maxSuggestions < 0) {
-    throw new Error(`Invalid max-suggestions: '${maxSuggestionsRaw}'. Expected a non-negative integer.`);
+    throw new Error(
+      `Invalid max-suggestions: '${maxSuggestionsRaw}'. Expected a non-negative integer.`
+    );
   }
 
   // Handle docs-folder: '.' means root level (empty string for no prefix filter)
   const docsFolderInput = core.getInput('docs-folder', { required: false });
-  const docsFolder = (docsFolderInput === '.' || docsFolderInput === '/') ? '' : docsFolderInput;
-  
+  const docsFolder = docsFolderInput === '.' || docsFolderInput === '/' ? '' : docsFolderInput;
+
   const sourceLanguage = core.getInput('source-language', { required: false }) || 'en';
   const glossaryPath = core.getInput('glossary-path', { required: false }) || '';
   const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
@@ -146,7 +160,8 @@ export function getReviewInputs(): ReviewInputs {
   validateClaudeModel(claudeModel);
 
   // Ensure docs folder ends with / (unless it's empty string for root level)
-  const normalizedDocsFolder = docsFolder === '' ? '' : (docsFolder.endsWith('/') ? docsFolder : `${docsFolder}/`);
+  const normalizedDocsFolder =
+    docsFolder === '' ? '' : docsFolder.endsWith('/') ? docsFolder : `${docsFolder}/`;
 
   return {
     sourceRepo,
@@ -174,7 +189,7 @@ export const RESYNC_COMMAND = '\\translate-resync';
 
 /**
  * Validate that the event is a merged PR, test mode label, or resync comment (SYNC mode)
- * 
+ *
  * Supported triggers:
  * - pull_request[closed] + merged — normal sync
  * - pull_request[labeled] with test-translation — test mode
@@ -193,7 +208,7 @@ export function validatePREvent(context: any, testMode: boolean): PREventResult 
   if (eventName !== 'pull_request') {
     throw new Error(
       `This action only works on pull_request or issue_comment events. Got: ${eventName}. ` +
-      `For manual testing, add the 'test-translation' label to a PR instead of using workflow_dispatch.`
+        `For manual testing, add the 'test-translation' label to a PR instead of using workflow_dispatch.`
     );
   }
 
@@ -204,12 +219,14 @@ export function validatePREvent(context: any, testMode: boolean): PREventResult 
       throw new Error('Could not determine PR number from event payload');
     }
     core.info(`🧪 Running in TEST mode for PR #${prNumber} (using PR head commit, not merge)`);
-    return { merged: true, prNumber, isTestMode: true, isResync: false };  // merged=true to continue processing
+    return { merged: true, prNumber, isTestMode: true, isResync: false }; // merged=true to continue processing
   }
 
   // Production mode: must be closed and merged
   if (payload.action !== 'closed') {
-    throw new Error(`This action only runs when PRs are closed or labeled with test-translation. Got action: ${payload.action}`);
+    throw new Error(
+      `This action only runs when PRs are closed or labeled with test-translation. Got action: ${payload.action}`
+    );
   }
 
   const merged = payload.pull_request?.merged === true;
@@ -241,7 +258,9 @@ function validateResyncComment(payload: any): PREventResult {
 
   // Only respond to newly created comments
   if (payload.action !== 'created') {
-    core.info(`Ignoring issue_comment action: ${payload.action}. Only 'created' is supported for resync.`);
+    core.info(
+      `Ignoring issue_comment action: ${payload.action}. Only 'created' is supported for resync.`
+    );
     return noOp;
   }
 
@@ -261,12 +280,13 @@ function validateResyncComment(payload: any): PREventResult {
   const parts = commentBody.split(/\s+/);
   const requestedLang = parts.length > 1 ? parts[1].toLowerCase() : undefined;
   const supportedLanguages = new Set(getSupportedLanguages());
-  const resyncLanguage = requestedLang && supportedLanguages.has(requestedLang) ? requestedLang : undefined;
+  const resyncLanguage =
+    requestedLang && supportedLanguages.has(requestedLang) ? requestedLang : undefined;
 
   if (requestedLang && !resyncLanguage) {
     core.warning(
       `Ignoring unsupported language '${requestedLang}' in ${RESYNC_COMMAND}. ` +
-      'Proceeding with resync for all languages.'
+        'Proceeding with resync for all languages.'
     );
   }
 
@@ -275,7 +295,7 @@ function validateResyncComment(payload: any): PREventResult {
   if (!TRUSTED_ASSOCIATIONS.has(association)) {
     core.warning(
       `Ignoring \\translate-resync from user with association '${association}'. ` +
-      `Only OWNER, MEMBER, and COLLABORATOR can trigger resync.`
+        `Only OWNER, MEMBER, and COLLABORATOR can trigger resync.`
     );
     return noOp;
   }

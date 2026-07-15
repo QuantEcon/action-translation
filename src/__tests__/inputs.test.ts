@@ -1,6 +1,6 @@
 /**
  * Tests for Action Inputs module
- * 
+ *
  * Tests input validation for both SYNC and REVIEW modes including:
  * - Mode validation
  * - Repo format validation
@@ -11,7 +11,14 @@
  */
 
 import * as core from '@actions/core';
-import { getMode, getInputs, getReviewInputs, getRebaseInputs, validatePREvent, validateReviewPREvent } from '../inputs.js';
+import {
+  getMode,
+  getInputs,
+  getReviewInputs,
+  getRebaseInputs,
+  validatePREvent,
+  validateReviewPREvent,
+} from '../inputs.js';
 
 // Mock @actions/core
 jest.mock('@actions/core');
@@ -77,7 +84,7 @@ describe('getInputs (sync mode)', () => {
   it('should accept valid inputs', () => {
     setMockInputs(validInputs);
     const result = getInputs();
-    
+
     expect(result.targetRepo).toBe('owner/repo');
     expect(result.targetLanguage).toBe('zh-cn');
     expect(result.docsFolder).toBe('lectures/');
@@ -210,7 +217,7 @@ describe('getReviewInputs (review mode)', () => {
   it('should accept valid review inputs', () => {
     setMockInputs(validReviewInputs);
     const result = getReviewInputs();
-    
+
     expect(result.sourceRepo).toBe('owner/repo');
   });
 
@@ -280,7 +287,7 @@ describe('Claude Model Validation', () => {
     'claude-3-haiku-20240307',
   ];
 
-  validModels.forEach(model => {
+  validModels.forEach((model) => {
     it(`should accept valid model: ${model}`, () => {
       setMockInputs({ ...baseInputs, 'claude-model': model });
       const result = getInputs();
@@ -294,7 +301,9 @@ describe('Claude Model Validation', () => {
     setMockInputs({ ...baseInputs, 'claude-model': 'claude-unknown-model' });
     const result = getInputs();
     expect(result.claudeModel).toBe('claude-unknown-model');
-    expect(mockedCore.warning).toHaveBeenCalledWith(expect.stringContaining('Unrecognized Claude model'));
+    expect(mockedCore.warning).toHaveBeenCalledWith(
+      expect.stringContaining('Unrecognized Claude model')
+    );
   });
 });
 
@@ -349,7 +358,9 @@ describe('validatePREvent (sync mode)', () => {
       payload: {},
     };
 
-    expect(() => validatePREvent(context, false)).toThrow(/only works on pull_request or issue_comment events/);
+    expect(() => validatePREvent(context, false)).toThrow(
+      /only works on pull_request or issue_comment events/
+    );
   });
 
   it('should reject non-closed actions without test mode', () => {
@@ -661,12 +672,12 @@ describe('Language Code Validation', () => {
 
   // Only test languages that are actually configured in LANGUAGE_CONFIGS
   const supportedLanguages = [
-    'zh-cn',  // Simplified Chinese
-    'fa',     // Persian (Farsi)
-    'fr',     // French (draft glossary)
+    'zh-cn', // Simplified Chinese
+    'fa', // Persian (Farsi)
+    'fr', // French (draft glossary)
   ];
 
-  supportedLanguages.forEach(lang => {
+  supportedLanguages.forEach((lang) => {
     it(`should accept supported language: ${lang}`, () => {
       setMockInputs({ ...baseInputs, 'target-language': lang });
       const result = getInputs();
@@ -681,8 +692,8 @@ describe('Language Code Validation', () => {
 
   // These languages are NOT YET configured - tests document future expansion
   const futureLanguages = ['zh-tw', 'ja', 'ko', 'es', 'de'];
-  
-  futureLanguages.forEach(lang => {
+
+  futureLanguages.forEach((lang) => {
     it(`should reject not-yet-configured language: ${lang}`, () => {
       setMockInputs({ ...baseInputs, 'target-language': lang });
       expect(() => getInputs()).toThrow(/Unsupported target language/);

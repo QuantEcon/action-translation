@@ -17,9 +17,7 @@ import {
 
 describe('buildForwardTriagePrompt', () => {
   it('includes source and target content', () => {
-    const prompt = buildForwardTriagePrompt(
-      'Hello world', '你好世界', 'English', 'zh-cn',
-    );
+    const prompt = buildForwardTriagePrompt('Hello world', '你好世界', 'English', 'zh-cn');
     expect(prompt).toContain('Hello world');
     expect(prompt).toContain('你好世界');
     expect(prompt).toContain('English');
@@ -106,7 +104,8 @@ describe('parseForwardTriageResponse', () => {
   });
 
   it('handles JSON with extra text around it', () => {
-    const response = 'Based on my analysis:\n\n{"verdict": "I18N_ONLY", "reason": "terminology"}\n\nThe differences are minor.';
+    const response =
+      'Based on my analysis:\n\n{"verdict": "I18N_ONLY", "reason": "terminology"}\n\nThe differences are minor.';
     const result = parseForwardTriageResponse(response);
     expect(result.verdict).toBe('I18N_ONLY');
     expect(result.reason).toBe('terminology');
@@ -126,7 +125,8 @@ describe('parseForwardTriageResponse', () => {
   });
 
   it('parses TARGET_HAS_ADDITIONS verdict', () => {
-    const response = '```json\n{"verdict": "TARGET_HAS_ADDITIONS", "reason": "Target has extra examples"}\n```';
+    const response =
+      '```json\n{"verdict": "TARGET_HAS_ADDITIONS", "reason": "Target has extra examples"}\n```';
     const result = parseForwardTriageResponse(response);
     expect(result.verdict).toBe('TARGET_HAS_ADDITIONS');
     expect(result.reason).toBe('Target has extra examples');
@@ -212,7 +212,7 @@ describe('forward triage prompt snapshot', () => {
       '## Introduction\n\nThis is an intro.',
       '## 介绍\n\n这是一个介绍。',
       'English',
-      'zh-cn',
+      'zh-cn'
     );
     expect(prompt).toMatchSnapshot();
   });

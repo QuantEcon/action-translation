@@ -1,15 +1,12 @@
 import { DiffDetector } from '../diff-detector.js';
-import { MystParser } from '../parser.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
 describe('DiffDetector', () => {
   let detector: DiffDetector;
-  let parser: MystParser;
-  
+
   beforeEach(() => {
     detector = new DiffDetector();
-    parser = new MystParser();
   });
 
   describe('Section Matching - sectionsMatch()', () => {
@@ -21,7 +18,7 @@ describe('DiffDetector', () => {
         content: 'Content A',
         startLine: 1,
         endLine: 3,
-        subsections: []
+        subsections: [],
       };
       const section2 = {
         id: 'test.md:section-a',
@@ -30,9 +27,9 @@ describe('DiffDetector', () => {
         content: 'Different content',
         startLine: 1,
         endLine: 3,
-        subsections: []
+        subsections: [],
       };
-      
+
       // Use reflection to test private method
       const match = (detector as any).sectionsMatch(section1, section2);
       expect(match).toBe(true);
@@ -48,7 +45,7 @@ describe('DiffDetector', () => {
         content: 'Economic content',
         startLine: 10,
         endLine: 15,
-        subsections: []
+        subsections: [],
       };
       const section2 = {
         id: 'test.md:mathematical-example',
@@ -57,9 +54,9 @@ describe('DiffDetector', () => {
         content: 'Math content',
         startLine: 16,
         endLine: 20,
-        subsections: []
+        subsections: [],
       };
-      
+
       const match = (detector as any).sectionsMatch(section1, section2);
       expect(match).toBe(false);
     });
@@ -74,8 +71,16 @@ describe('DiffDetector', () => {
         startLine: 1,
         endLine: 5,
         subsections: [
-          { id: 'test.md:section-a:sub1', heading: '### Sub 1', level: 3, content: '', startLine: 3, endLine: 4, subsections: [] }
-        ]
+          {
+            id: 'test.md:section-a:sub1',
+            heading: '### Sub 1',
+            level: 3,
+            content: '',
+            startLine: 3,
+            endLine: 4,
+            subsections: [],
+          },
+        ],
       };
       const section2 = {
         id: 'test.md:section-b',
@@ -85,10 +90,18 @@ describe('DiffDetector', () => {
         startLine: 10,
         endLine: 14,
         subsections: [
-          { id: 'test.md:section-b:sub1', heading: '### Sub 1', level: 3, content: '', startLine: 12, endLine: 13, subsections: [] }
-        ]
+          {
+            id: 'test.md:section-b:sub1',
+            heading: '### Sub 1',
+            level: 3,
+            content: '',
+            startLine: 12,
+            endLine: 13,
+            subsections: [],
+          },
+        ],
       };
-      
+
       const match = (detector as any).sectionsMatch(section1, section2);
       expect(match).toBe(false);
     });
@@ -116,9 +129,9 @@ New content.
 
 Content B.
 `;
-      
+
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
-      
+
       const addedSections = changes.filter((c: any) => c.type === 'added');
       expect(addedSections).toHaveLength(1);
       expect(addedSections[0].newSection?.heading).toBe('## New Section');
@@ -133,9 +146,9 @@ Short old content.
 
 Much longer new content with different text.
 `;
-      
+
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
-      
+
       const modifiedSections = changes.filter((c: any) => c.type === 'modified');
       expect(modifiedSections).toHaveLength(1);
       expect(modifiedSections[0].oldSection?.content).toContain('Short old');
@@ -151,9 +164,9 @@ This is the orignal content with a typo.
 
 This is the original content with a typo fix.
 `;
-      
+
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
-      
+
       // Should detect the change even though it's just 2 character differences
       const modifiedSections = changes.filter((c: any) => c.type === 'modified');
       expect(modifiedSections).toHaveLength(1);
@@ -170,9 +183,9 @@ Economic models are used to analyze markets.
 
 Economic models are used to analyze markets, with updated examples from recent research.
 `;
-      
+
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
-      
+
       // Should detect the added phrase
       const modifiedSections = changes.filter((c: any) => c.type === 'modified');
       expect(modifiedSections).toHaveLength(1);
@@ -191,9 +204,9 @@ Content B.
 
 Content A.
 `;
-      
+
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
-      
+
       const deletedSections = changes.filter((c: any) => c.type === 'deleted');
       expect(deletedSections).toHaveLength(1);
       expect(deletedSections[0].oldSection?.heading).toBe('## Section B');
@@ -206,23 +219,26 @@ Content A.
       const fixturePath = path.join(__dirname, 'fixtures');
       const oldContent = fs.readFileSync(path.join(fixturePath, 'intro-old.md'), 'utf-8');
       const newContent = fs.readFileSync(path.join(fixturePath, 'intro-new.md'), 'utf-8');
-      
+
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'intro.md');
-      
+
       // Should detect "Economic Models" as added, not modified
       const addedSections = changes.filter((c: any) => c.type === 'added');
-      const economicModels = addedSections.find((c: any) => c.newSection?.heading === '## Economic Models');
-      
+      const economicModels = addedSections.find(
+        (c: any) => c.newSection?.heading === '## Economic Models'
+      );
+
       expect(economicModels).toBeDefined();
       expect(economicModels?.type).toBe('added');
-      
+
       // Should NOT have a false modified change for Mathematical Example
       const modifiedSections = changes.filter((c: any) => c.type === 'modified');
-      const mathExample = modifiedSections.find((c: any) => 
-        c.oldSection?.heading === '## Mathematical Example' ||
-        c.newSection?.heading === '## Mathematical Example'
+      const mathExample = modifiedSections.find(
+        (c: any) =>
+          c.oldSection?.heading === '## Mathematical Example' ||
+          c.newSection?.heading === '## Mathematical Example'
       );
-      
+
       // If it exists, verify content actually changed
       if (mathExample) {
         expect(mathExample.oldSection?.content).not.toBe(mathExample.newSection?.content);
@@ -254,9 +270,9 @@ Brand new section D with some content.
 
 Short content for section C.
 `;
-      
+
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
-      
+
       expect(changes.filter((c: any) => c.type === 'added')).toHaveLength(1);
       expect(changes.filter((c: any) => c.type === 'modified')).toHaveLength(1);
       expect(changes.filter((c: any) => c.type === 'deleted')).toHaveLength(1);
@@ -269,7 +285,7 @@ Short content for section C.
 
 Content.
 `;
-      
+
       const changes = await detector.detectSectionChanges(content, content, 'test.md');
       expect(changes).toHaveLength(0);
     });
@@ -283,9 +299,9 @@ Content A.
 
 Content B.
 `;
-      
+
       const changes = await detector.detectSectionChanges('', newContent, 'test.md');
-      
+
       expect(changes).toHaveLength(2);
       expect(changes.every((c: any) => c.type === 'added')).toBe(true);
     });
@@ -299,9 +315,9 @@ Content A.
 
 Content B.
 `;
-      
+
       const changes = await detector.detectSectionChanges(oldContent, '', 'test.md');
-      
+
       expect(changes).toHaveLength(2);
       expect(changes.every((c: any) => c.type === 'deleted')).toBe(true);
     });
@@ -338,13 +354,15 @@ Content here.
 `;
 
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
-      
+
       // Should detect preamble change
       const preambleChange = changes.find((c: any) => c.newSection?.id === '_preamble');
       expect(preambleChange).toBeDefined();
       expect(preambleChange?.type).toBe('modified');
       expect(preambleChange?.oldSection?.content).toContain('Introduction to Economics');
-      expect(preambleChange?.newSection?.content).toContain('Introduction to Quantitative Economics');
+      expect(preambleChange?.newSection?.content).toContain(
+        'Introduction to Quantitative Economics'
+      );
       expect(preambleChange?.newSection?.content).toContain('comprehensive test lecture');
     });
 
@@ -379,7 +397,7 @@ Content.
 `;
 
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
-      
+
       // Preamble unchanged, so no preamble change detected
       const preambleChange = changes.find((c: any) => c.newSection?.id === '_preamble');
       expect(preambleChange).toBeUndefined();
@@ -401,7 +419,7 @@ Content.
 `;
 
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
-      
+
       // Preamble was added
       const preambleChange = changes.find((c: any) => c.newSection?.id === '_preamble');
       expect(preambleChange).toBeDefined();
@@ -425,7 +443,7 @@ Content.
 `;
 
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
-      
+
       // Preamble was removed
       const preambleChange = changes.find((c: any) => c.oldSection?.id === '_preamble');
       expect(preambleChange).toBeDefined();
@@ -465,11 +483,13 @@ Content B.
 `;
 
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
-      
+
       // Should have preamble change + section addition
       const preambleChange = changes.find((c: any) => c.newSection?.id === '_preamble');
-      const sectionAddition = changes.find((c: any) => c.type === 'added' && c.newSection?.heading === '## New Section C');
-      
+      const sectionAddition = changes.find(
+        (c: any) => c.type === 'added' && c.newSection?.heading === '## New Section C'
+      );
+
       expect(preambleChange).toBeDefined();
       expect(sectionAddition).toBeDefined();
     });
@@ -510,7 +530,7 @@ The sum of vectors is defined.
 `;
 
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
-      
+
       expect(changes).toHaveLength(1);
       expect(changes[0].type).toBe('modified');
       expect(changes[0].newSection?.heading).toBe('## Vector Spaces');
@@ -548,7 +568,7 @@ Some equations here.
 `;
 
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
-      
+
       expect(changes).toHaveLength(1);
       expect(changes[0].type).toBe('modified');
       expect(changes[0].newSection?.heading).toBe('## Economics');
@@ -590,7 +610,7 @@ Modified fine point with additional information.
 `;
 
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
-      
+
       expect(changes).toHaveLength(1);
       expect(changes[0].type).toBe('modified');
       expect(changes[0].newSection?.heading).toBe('## Main Topic');
@@ -628,7 +648,7 @@ New part C.
 `;
 
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
-      
+
       expect(changes).toHaveLength(1);
       expect(changes[0].type).toBe('modified');
     });
@@ -665,7 +685,7 @@ New deep section.
 `;
 
       const changes = await detector.detectSectionChanges(oldContent, newContent, 'test.md');
-      
+
       expect(changes).toHaveLength(1);
       expect(changes[0].type).toBe('modified');
       expect(changes[0].newSection?.heading).toBe('## Main');
@@ -688,7 +708,7 @@ More deep content.
 `;
 
       const changes = await detector.detectSectionChanges(content, content, 'test.md');
-      
+
       expect(changes).toHaveLength(0);
     });
   });

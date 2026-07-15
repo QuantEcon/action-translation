@@ -1,10 +1,30 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { getMode, getInputs, getReviewInputs, getRebaseInputs, validatePREvent, validateReviewPREvent } from './inputs.js';
+import {
+  getMode,
+  getInputs,
+  getReviewInputs,
+  getRebaseInputs,
+  validatePREvent,
+  validateReviewPREvent,
+} from './inputs.js';
 import { TranslationReviewer } from './reviewer.js';
-import { SyncOrchestrator, classifyChangedFiles, loadGlossary, FileToSync, Logger, StateGenerationConfig } from './sync-orchestrator.js';
-import { createTranslationPR, PrCreatorConfig, SourcePrInfo, parseTranslationSyncMetadata, TranslationSyncMetadata } from './pr-creator.js';
-import { RebaseCache, RebaseCacheData } from './types.js';
+import {
+  SyncOrchestrator,
+  classifyChangedFiles,
+  loadGlossary,
+  FileToSync,
+  Logger,
+  StateGenerationConfig,
+} from './sync-orchestrator.js';
+import {
+  createTranslationPR,
+  PrCreatorConfig,
+  SourcePrInfo,
+  parseTranslationSyncMetadata,
+  TranslationSyncMetadata,
+} from './pr-creator.js';
+import { RebaseCache } from './types.js';
 import { stateFileRelativePath } from './cli/translate-state.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -67,8 +87,10 @@ async function runReview(): Promise<void> {
       const glossary = JSON.parse(glossaryContent);
       if (glossary && glossary.terms) {
         glossaryTerms = glossary.terms
-          .map((t: { en: string; [key: string]: string | undefined; context?: string }) => 
-            `- "${t.en}" → "${t[targetLanguage] || ''}"${t.context ? ` (${t.context})` : ''}`)
+          .map(
+            (t: { en: string; [key: string]: string | undefined; context?: string }) =>
+              `- "${t.en}" → "${t[targetLanguage] || ''}"${t.context ? ` (${t.context})` : ''}`
+          )
           .join('\n');
         core.info(`✓ Loaded glossary for ${targetLanguage} with ${glossary.terms.length} terms`);
       }
@@ -93,7 +115,9 @@ async function runReview(): Promise<void> {
   core.setOutput('translation-score', result.translationQuality.score.toString());
   core.setOutput('diff-score', result.diffQuality.score.toString());
 
-  core.info(`✅ Review complete: ${result.verdict} (Translation: ${result.translationQuality.score}/10, Diff: ${result.diffQuality.score}/10)`);
+  core.info(
+    `✅ Review complete: ${result.verdict} (Translation: ${result.translationQuality.score}/10, Diff: ${result.diffQuality.score}/10)`
+  );
 }
 
 /**
@@ -130,7 +154,11 @@ async function runRebase(): Promise<void> {
 
   // Validate this is a merged PR event
   const { eventName, payload } = github.context;
-  if (eventName !== 'pull_request' || payload.action !== 'closed' || !payload.pull_request?.merged) {
+  if (
+    eventName !== 'pull_request' ||
+    payload.action !== 'closed' ||
+    !payload.pull_request?.merged
+  ) {
     core.info('Rebase mode requires a merged pull_request event. Exiting.');
     return;
   }
@@ -140,29 +168,39 @@ async function runRebase(): Promise<void> {
 
   // Only run when a translation-sync PR is merged
   if (!mergedBranch.startsWith('translation-sync-')) {
-    core.info(`Merged PR #${mergedPrNumber} is not a translation-sync PR (branch: ${mergedBranch}). Exiting.`);
+    core.info(
+      `Merged PR #${mergedPrNumber} is not a translation-sync PR (branch: ${mergedBranch}). Exiting.`
+    );
     return;
   }
 
-  core.info(`♻️ Translation-sync PR #${mergedPrNumber} was merged. Checking for conflicted sibling PRs...`);
+  core.info(
+    `♻️ Translation-sync PR #${mergedPrNumber} was merged. Checking for conflicted sibling PRs...`
+  );
 
   const octokit = github.getOctokit(inputs.githubToken);
   const { owner, repo } = github.context.repo;
 
   // Find files touched by the merged PR (paginate — PRs can touch >30 files)
   const mergedPrFiles = await octokit.paginate(octokit.rest.pulls.listFiles, {
-    owner, repo, pull_number: mergedPrNumber, per_page: 100,
+    owner,
+    repo,
+    pull_number: mergedPrNumber,
+    per_page: 100,
   });
   const mergedFilePaths = new Set(mergedPrFiles.map((f: { filename: string }) => f.filename));
 
-  // List all open PRs in this repo
-  const { data: openPRs } = await octokit.rest.pulls.list({
-    owner, repo, state: 'open', per_page: 100,
+  // List all open PRs in this repo (paginate — sibling PRs beyond 100 must still rebase)
+  const openPRs = await octokit.paginate(octokit.rest.pulls.list, {
+    owner,
+    repo,
+    state: 'open',
+    per_page: 100,
   });
 
   // Filter to translation-sync PRs
-  const siblingPRs = openPRs.filter(pr =>
-    pr.head.ref.startsWith('translation-sync-') && pr.number !== mergedPrNumber
+  const siblingPRs = openPRs.filter(
+    (pr) => pr.head.ref.startsWith('translation-sync-') && pr.number !== mergedPrNumber
   );
 
   if (siblingPRs.length === 0) {
@@ -170,7 +208,9 @@ async function runRebase(): Promise<void> {
     return;
   }
 
-  core.info(`Found ${siblingPRs.length} open translation-sync PR(s). Checking for file overlaps...`);
+  core.info(
+    `Found ${siblingPRs.length} open translation-sync PR(s). Checking for file overlaps...`
+  );
 
   let rebasedCount = 0;
   let skippedCount = 0;
@@ -181,14 +221,16 @@ async function runRebase(): Promise<void> {
       // Parse metadata from PR body
       const metadata = parseTranslationSyncMetadata(pr.body || '');
       if (!metadata) {
-        core.info(`PR #${pr.number}: No translation-sync metadata found — skipping (pre-metadata PR).`);
+        core.info(
+          `PR #${pr.number}: No translation-sync metadata found — skipping (pre-metadata PR).`
+        );
         skippedCount++;
         continue;
       }
 
       // Check file overlap
-      const prFilePaths = metadata.files.map(f => f.path);
-      const overlapping = prFilePaths.filter(p => mergedFilePaths.has(p));
+      const prFilePaths = metadata.files.map((f) => f.path);
+      const overlapping = prFilePaths.filter((p) => mergedFilePaths.has(p));
       if (overlapping.length === 0) {
         core.info(`PR #${pr.number}: No file overlap with merged PR — skipping.`);
         skippedCount++;
@@ -203,10 +245,11 @@ async function runRebase(): Promise<void> {
 
       // Post a comment on the rebased PR
       await octokit.rest.issues.createComment({
-        owner, repo, issue_number: pr.number,
-        body: `♻️ **Automatically rebased** after #${mergedPrNumber} was merged.\n\nOverlapping files: ${overlapping.map(f => `\`${f}\``).join(', ')}\n\nThe translation content is preserved; only unchanged sections were updated to match the current \`main\` branch. Please re-review if needed.`,
+        owner,
+        repo,
+        issue_number: pr.number,
+        body: `♻️ **Automatically rebased** after #${mergedPrNumber} was merged.\n\nOverlapping files: ${overlapping.map((f) => `\`${f}\``).join(', ')}\n\nThe translation content is preserved; only unchanged sections were updated to match the current \`main\` branch. Please re-review if needed.`,
       });
-
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error);
       core.error(`PR #${pr.number}: Rebase failed — ${msg}`);
@@ -215,7 +258,9 @@ async function runRebase(): Promise<void> {
       // Post an error comment so the PR author knows
       try {
         await octokit.rest.issues.createComment({
-          owner, repo, issue_number: pr.number,
+          owner,
+          repo,
+          issue_number: pr.number,
           body: `⚠️ **Automatic rebase failed** after #${mergedPrNumber} was merged.\n\nError: ${msg}\n\nYou may need to manually resolve conflicts or run \`/translate-resync\` on the source PR.`,
         });
       } catch {
@@ -224,7 +269,9 @@ async function runRebase(): Promise<void> {
     }
   }
 
-  core.info(`♻️ Rebase complete: ${rebasedCount} rebased, ${skippedCount} skipped, ${errorCount} errors.`);
+  core.info(
+    `♻️ Rebase complete: ${rebasedCount} rebased, ${skippedCount} skipped, ${errorCount} errors.`
+  );
 }
 
 /**
@@ -236,7 +283,7 @@ async function rebaseSinglePR(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   pr: any,
   metadata: TranslationSyncMetadata,
-  inputs: ReturnType<typeof getRebaseInputs>,
+  inputs: ReturnType<typeof getRebaseInputs>
 ): Promise<void> {
   const { owner, repo } = github.context.repo;
   const [sourceOwner, sourceRepoName] = metadata.sourceRepo.split('/');
@@ -274,7 +321,13 @@ async function rebaseSinglePR(
         // TOC files: copy from source as-is (no translation)
         let newContent = '';
         try {
-          const { content } = await fetchFileContent(octokit, sourceOwner, sourceRepoName, file.path, sourceCommitSha);
+          const { content } = await fetchFileContent(
+            octokit,
+            sourceOwner,
+            sourceRepoName,
+            file.path,
+            sourceCommitSha
+          );
           newContent = content;
         } catch {
           core.info(`${file.path}: Could not fetch TOC content — skipping`);
@@ -302,7 +355,13 @@ async function rebaseSinglePR(
       // markdown and renamed: fetch source content
       let newContent = '';
       try {
-        const { content } = await fetchFileContent(octokit, sourceOwner, sourceRepoName, file.path, sourceCommitSha);
+        const { content } = await fetchFileContent(
+          octokit,
+          sourceOwner,
+          sourceRepoName,
+          file.path,
+          sourceCommitSha
+        );
         newContent = content;
       } catch {
         core.info(`${file.path}: Could not fetch source content at ${sourceCommitSha} — skipping`);
@@ -311,7 +370,13 @@ async function rebaseSinglePR(
 
       let oldContent = '';
       try {
-        const result = await fetchFileContent(octokit, sourceOwner, sourceRepoName, file.path, `${sourceCommitSha}^`);
+        const result = await fetchFileContent(
+          octokit,
+          sourceOwner,
+          sourceRepoName,
+          file.path,
+          `${sourceCommitSha}^`
+        );
         oldContent = result.content;
       } catch {
         core.info(`${file.path}: New file (no parent commit content)`);
@@ -383,7 +448,7 @@ async function rebaseSinglePR(
     metadata.targetLanguage,
     builtInGlossaryDir,
     inputs.glossaryPath || undefined,
-    coreLogger,
+    coreLogger
   );
 
   // Build rebase cache: read existing translations from PR branch and old target
@@ -398,12 +463,20 @@ async function rebaseSinglePR(
       try {
         // Read the previously translated file from the PR branch
         const { content: previousTranslation } = await fetchFileContent(
-          octokit, owner, repo, file.filename, prBranch
+          octokit,
+          owner,
+          repo,
+          file.filename,
+          prBranch
         );
 
         // Read the old target baseline (what target main looked like when PR was created)
         const { content: oldTargetContent } = await fetchFileContent(
-          octokit, owner, repo, file.filename, targetBaseSha
+          octokit,
+          owner,
+          repo,
+          file.filename,
+          targetBaseSha
         );
 
         rebaseCache.set(file.filename, { previousTranslation, oldTargetContent });
@@ -414,7 +487,9 @@ async function rebaseSinglePR(
     }
 
     if (rebaseCache.size > 0) {
-      core.info(`Rebase cache loaded for ${rebaseCache.size} file(s) — unchanged sections will skip Claude API calls`);
+      core.info(
+        `Rebase cache loaded for ${rebaseCache.size} file(s) — unchanged sections will skip Claude API calls`
+      );
     } else {
       rebaseCache = undefined;
     }
@@ -425,7 +500,11 @@ async function rebaseSinglePR(
   // Fetch existing state file SHAs — the branch was reset to main, so state files
   // from main exist and need their SHAs for createOrUpdateFileContents to succeed
   const existingStateShas = await fetchExistingStateShas(
-    octokit, owner, repo, filesToSync, inputs.docsFolder,
+    octokit,
+    owner,
+    repo,
+    filesToSync,
+    inputs.docsFolder
   );
   const stateConfig: StateGenerationConfig = {
     sourceCommitSha,
@@ -434,13 +513,17 @@ async function rebaseSinglePR(
   };
 
   // Run the sync orchestrator
-  const orchestrator = new SyncOrchestrator({
-    sourceLanguage: metadata.sourceLanguage,
-    targetLanguage: metadata.targetLanguage,
-    claudeModel: metadata.claudeModel,
-    anthropicApiKey: inputs.anthropicApiKey,
-    debugMode: true,
-  }, coreLogger, stateConfig);
+  const orchestrator = new SyncOrchestrator(
+    {
+      sourceLanguage: metadata.sourceLanguage,
+      targetLanguage: metadata.targetLanguage,
+      claudeModel: metadata.claudeModel,
+      anthropicApiKey: inputs.anthropicApiKey,
+      debugMode: true,
+    },
+    coreLogger,
+    stateConfig
+  );
 
   const result = await orchestrator.processFiles(filesToSync, glossary, rebaseCache);
 
@@ -456,13 +539,19 @@ async function rebaseSinglePR(
   // Get current main SHA
   const { data: defaultBranchData } = await octokit.rest.repos.get({ owner, repo });
   const { data: mainRef } = await octokit.rest.git.getRef({
-    owner, repo, ref: `heads/${defaultBranchData.default_branch}`,
+    owner,
+    repo,
+    ref: `heads/${defaultBranchData.default_branch}`,
   });
   const newBaseSha = mainRef.object.sha;
 
   // Reset the branch to current main
   await octokit.rest.git.updateRef({
-    owner, repo, ref: branchRef, sha: newBaseSha, force: true,
+    owner,
+    repo,
+    ref: branchRef,
+    sha: newBaseSha,
+    force: true,
   });
 
   // Commit translated files to the branch
@@ -477,7 +566,8 @@ async function rebaseSinglePR(
     }
 
     await octokit.rest.repos.createOrUpdateFileContents({
-      owner, repo,
+      owner,
+      repo,
       path: file.path,
       message: `Update translation: ${file.path}`,
       content: Buffer.from(file.content).toString('base64'),
@@ -491,7 +581,8 @@ async function rebaseSinglePR(
     try {
       const { sha } = await fetchFileContent(octokit, owner, repo, file.path, branchName);
       await octokit.rest.repos.deleteFile({
-        owner, repo,
+        owner,
+        repo,
         path: file.path,
         message: `Delete removed file: ${file.path}`,
         branch: branchName,
@@ -502,7 +593,9 @@ async function rebaseSinglePR(
     }
   }
 
-  core.info(`PR #${pr.number}: Successfully rebased with ${result.translatedFiles.length} file(s).`);
+  core.info(
+    `PR #${pr.number}: Successfully rebased with ${result.translatedFiles.length} file(s).`
+  );
 }
 
 /**
@@ -516,198 +609,232 @@ async function rebaseSinglePR(
  * 5. Create PR in target repo via PrCreator
  */
 async function runSync(): Promise<void> {
-    // Get and validate inputs
-    core.info('Getting action inputs...');
-    const inputs = getInputs();
+  // Get and validate inputs
+  core.info('Getting action inputs...');
+  const inputs = getInputs();
 
-    // Validate this is a merged PR event, test mode, or resync comment
-    core.info('Validating PR event...');
-    const { merged, prNumber, isTestMode, isResync, resyncLanguage } = validatePREvent(github.context, inputs.testMode);
+  // Validate this is a merged PR event, test mode, or resync comment
+  core.info('Validating PR event...');
+  const { merged, prNumber, isTestMode, isResync, resyncLanguage } = validatePREvent(
+    github.context,
+    inputs.testMode
+  );
 
-    if (!merged) {
-      core.info('PR was not merged. Exiting.');
-      return;
-    }
+  if (!merged) {
+    core.info('PR was not merged. Exiting.');
+    return;
+  }
 
-    // If resync targets a specific language, skip if this workflow doesn't match
-    if (isResync && resyncLanguage && resyncLanguage !== inputs.targetLanguage) {
-      core.info(`Resync requested for '${resyncLanguage}', skipping (this workflow targets '${inputs.targetLanguage}').`);
-      return;
-    }
+  // If resync targets a specific language, skip if this workflow doesn't match
+  if (isResync && resyncLanguage && resyncLanguage !== inputs.targetLanguage) {
+    core.info(
+      `Resync requested for '${resyncLanguage}', skipping (this workflow targets '${inputs.targetLanguage}').`
+    );
+    return;
+  }
 
-    const octokit = github.getOctokit(inputs.githubToken);
+  const octokit = github.getOctokit(inputs.githubToken);
 
-    // Determine effective SHA for fetching file content.
-    // For issue_comment events (resync), github.context.sha is HEAD of default branch,
-    // NOT the PR's merge commit. Use the PR's merge_commit_sha instead so that
-    // oldContent (sha^) and newContent (sha) reflect the actual PR changes.
-    let effectiveSha = github.context.sha;
+  // Determine effective SHA for fetching file content.
+  // For issue_comment events (resync), github.context.sha is HEAD of default branch,
+  // NOT the PR's merge commit. Use the PR's merge_commit_sha instead so that
+  // oldContent (sha^) and newContent (sha) reflect the actual PR changes.
+  let effectiveSha = github.context.sha;
 
-    // For resync: verify PR is actually merged (issue_comment payload doesn't include merged status)
-    if (isResync) {
-      const { data: pr } = await octokit.rest.pulls.get({
-        owner: github.context.repo.owner,
-        repo: github.context.repo.repo,
-        pull_number: prNumber,
-      });
-      if (!pr.merged) {
-        core.info(`PR #${prNumber} is not merged. Resync only works on merged PRs.`);
-        return;
-      }
-      if (pr.merge_commit_sha) {
-        effectiveSha = pr.merge_commit_sha;
-        core.info(`🔄 RESYNC: PR #${prNumber} is merged — using merge commit ${effectiveSha}`);
-      } else {
-        core.warning(`PR #${prNumber} has no merge_commit_sha, falling back to context.sha`);
-        core.info(`🔄 RESYNC: PR #${prNumber} is merged — proceeding with translation sync`);
-      }
-    }
-
-    if (isTestMode) {
-      core.info(`🧪 TEST MODE: Processing PR #${prNumber} (using head commit)`);
-    } else if (!isResync) {
-      core.info(`Processing merged PR #${prNumber}`);
-    }
-
-    // Get changed files from PR
-    const { data: files } = await octokit.rest.pulls.listFiles({
+  // For resync: verify PR is actually merged (issue_comment payload doesn't include merged status)
+  if (isResync) {
+    const { data: pr } = await octokit.rest.pulls.get({
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
       pull_number: prNumber,
     });
-
-    // Classify files into categories
-    const classified = classifyChangedFiles(files, inputs.docsFolder);
-
-    if (classified.changedMarkdownFiles.length === 0 && classified.changedTocFiles.length === 0 &&
-        classified.removedMarkdownFiles.length === 0 && classified.removedTocFiles.length === 0 &&
-        classified.renamedMarkdownFiles.length === 0) {
-      core.info('No markdown or TOC files changed in docs folder. Exiting.');
+    if (!pr.merged) {
+      core.info(`PR #${prNumber} is not merged. Resync only works on merged PRs.`);
       return;
     }
+    if (pr.merge_commit_sha) {
+      effectiveSha = pr.merge_commit_sha;
+      core.info(`🔄 RESYNC: PR #${prNumber} is merged — using merge commit ${effectiveSha}`);
+    } else {
+      core.warning(`PR #${prNumber} has no merge_commit_sha, falling back to context.sha`);
+      core.info(`🔄 RESYNC: PR #${prNumber} is merged — proceeding with translation sync`);
+    }
+  }
 
-    core.info(`Found ${classified.changedMarkdownFiles.length} changed markdown files`);
-    core.info(`Found ${classified.renamedMarkdownFiles.length} renamed markdown files`);
-    core.info(`Found ${classified.changedTocFiles.length} changed TOC files`);
-    core.info(`Found ${classified.removedMarkdownFiles.length} removed markdown files`);
-    core.info(`Found ${classified.removedTocFiles.length} removed TOC files`);
+  if (isTestMode) {
+    core.info(`🧪 TEST MODE: Processing PR #${prNumber} (using head commit)`);
+  } else if (!isResync) {
+    core.info(`Processing merged PR #${prNumber}`);
+  }
 
-    // Load glossary
-    const builtInGlossaryDir = path.join(__dirname, '..', 'glossary');
-    const glossary = await loadGlossary(
-      inputs.targetLanguage,
-      builtInGlossaryDir,
-      inputs.glossaryPath || undefined,
-      coreLogger,
-    );
+  // Get changed files from PR (paginate — PRs can touch >30 files)
+  const files = await octokit.paginate(octokit.rest.pulls.listFiles, {
+    owner: github.context.repo.owner,
+    repo: github.context.repo.repo,
+    pull_number: prNumber,
+  });
 
-    // Fetch content and build FileToSync array
-    const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
-    const filesToSync = await fetchAllFileContents(
-      octokit, classified, inputs, targetOwner, targetRepo, effectiveSha,
-    );
+  // Classify files into categories
+  const classified = classifyChangedFiles(files, inputs.docsFolder);
 
-    // Fetch existing state file SHAs from target repo for state generation
-    const existingStateShas = await fetchExistingStateShas(
-      octokit, targetOwner, targetRepo, filesToSync, inputs.docsFolder,
-    );
+  if (
+    classified.changedMarkdownFiles.length === 0 &&
+    classified.changedTocFiles.length === 0 &&
+    classified.removedMarkdownFiles.length === 0 &&
+    classified.removedTocFiles.length === 0 &&
+    classified.renamedMarkdownFiles.length === 0
+  ) {
+    core.info('No markdown or TOC files changed in docs folder. Exiting.');
+    return;
+  }
 
-    const stateConfig: StateGenerationConfig = {
-      sourceCommitSha: effectiveSha,
-      existingStateShas,
-      docsFolder: inputs.docsFolder,
-    };
+  core.info(`Found ${classified.changedMarkdownFiles.length} changed markdown files`);
+  core.info(`Found ${classified.renamedMarkdownFiles.length} renamed markdown files`);
+  core.info(`Found ${classified.changedTocFiles.length} changed TOC files`);
+  core.info(`Found ${classified.removedMarkdownFiles.length} removed markdown files`);
+  core.info(`Found ${classified.removedTocFiles.length} removed TOC files`);
 
-    // Process files through the orchestrator
-    const orchestrator = new SyncOrchestrator({
+  // Load glossary
+  const builtInGlossaryDir = path.join(__dirname, '..', 'glossary');
+  const glossary = await loadGlossary(
+    inputs.targetLanguage,
+    builtInGlossaryDir,
+    inputs.glossaryPath || undefined,
+    coreLogger
+  );
+
+  // Fetch content and build FileToSync array
+  const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
+  const filesToSync = await fetchAllFileContents(
+    octokit,
+    classified,
+    inputs,
+    targetOwner,
+    targetRepo,
+    effectiveSha
+  );
+
+  // Fetch existing state file SHAs from target repo for state generation
+  const existingStateShas = await fetchExistingStateShas(
+    octokit,
+    targetOwner,
+    targetRepo,
+    filesToSync,
+    inputs.docsFolder
+  );
+
+  const stateConfig: StateGenerationConfig = {
+    sourceCommitSha: effectiveSha,
+    existingStateShas,
+    docsFolder: inputs.docsFolder,
+  };
+
+  // Process files through the orchestrator
+  const orchestrator = new SyncOrchestrator(
+    {
       sourceLanguage: inputs.sourceLanguage,
       targetLanguage: inputs.targetLanguage,
       claudeModel: inputs.claudeModel,
       anthropicApiKey: inputs.anthropicApiKey,
       debugMode: true,
-    }, coreLogger, stateConfig);
+    },
+    coreLogger,
+    stateConfig
+  );
 
-    const result = await orchestrator.processFiles(filesToSync, glossary);
+  const result = await orchestrator.processFiles(filesToSync, glossary);
 
-    // Report results
-    const hasErrors = result.errors.length > 0;
-    if (hasErrors) {
-      core.setFailed(`Translation completed with ${result.errors.length} errors`);
-    } else {
-      core.info(`Successfully processed ${result.processedFiles.length} files`);
-    }
+  // Report results
+  const hasErrors = result.errors.length > 0;
+  if (hasErrors) {
+    core.setFailed(`Translation completed with ${result.errors.length} errors`);
+  } else {
+    core.info(`Successfully processed ${result.processedFiles.length} files`);
+  }
 
-    // Create PR in target repo with translated content
-    let prUrl: string | undefined;
-    if (result.translatedFiles.length > 0 || result.filesToDelete.length > 0) {
-      try {
-        core.info('Creating PR in target repository...');
+  // Create PR in target repo with translated content
+  let prUrl: string | undefined;
+  if (result.translatedFiles.length > 0 || result.filesToDelete.length > 0) {
+    try {
+      core.info('Creating PR in target repository...');
 
-        // Fetch source PR details
-        const sourcePrInfo = await fetchSourcePrInfo(octokit, prNumber);
+      // Fetch source PR details
+      const sourcePrInfo = await fetchSourcePrInfo(octokit, prNumber);
 
-        const prConfig: PrCreatorConfig = {
-          targetOwner,
-          targetRepo,
-          sourceLanguage: inputs.sourceLanguage,
-          targetLanguage: inputs.targetLanguage,
-          claudeModel: inputs.claudeModel,
-          sourceRepoOwner: github.context.repo.owner,
-          sourceRepoName: github.context.repo.repo,
-          prNumber,
-          sourceCommitSha: effectiveSha,
-          prLabels: inputs.prLabels,
-          prReviewers: inputs.prReviewers,
-          prTeamReviewers: inputs.prTeamReviewers,
+      const prConfig: PrCreatorConfig = {
+        targetOwner,
+        targetRepo,
+        sourceLanguage: inputs.sourceLanguage,
+        targetLanguage: inputs.targetLanguage,
+        claudeModel: inputs.claudeModel,
+        sourceRepoOwner: github.context.repo.owner,
+        sourceRepoName: github.context.repo.repo,
+        prNumber,
+        sourceCommitSha: effectiveSha,
+        prLabels: inputs.prLabels,
+        prReviewers: inputs.prReviewers,
+        prTeamReviewers: inputs.prTeamReviewers,
+      };
+
+      // Build file metadata with type info for rebase mode
+      const fileMetadata = filesToSync.map((f) => {
+        const entry: { path: string; type: string; previousPath?: string } = {
+          path: f.filename,
+          type: f.type,
         };
+        if (f.type === 'renamed' && f.previousFilename) {
+          entry.previousPath = f.previousFilename;
+        }
+        return entry;
+      });
 
-        // Build file metadata with type info for rebase mode
-        const fileMetadata = filesToSync.map(f => {
-          const entry: { path: string; type: string; previousPath?: string } = {
-            path: f.filename,
-            type: f.type,
-          };
-          if (f.type === 'renamed' && f.previousFilename) {
-            entry.previousPath = f.previousFilename;
-          }
-          return entry;
-        });
+      const prResult = await createTranslationPR(
+        octokit,
+        result.translatedFiles,
+        result.filesToDelete,
+        prConfig,
+        coreLogger,
+        sourcePrInfo,
+        result.skippedSections,
+        fileMetadata
+      );
 
-        const prResult = await createTranslationPR(
-          octokit,
-          result.translatedFiles,
-          result.filesToDelete,
-          prConfig,
-          coreLogger,
-          sourcePrInfo,
-          result.skippedSections,
-          fileMetadata,
-        );
-
-        prUrl = prResult.prUrl;
-        core.setOutput('pr-url', prResult.prUrl);
-        core.setOutput('files-synced', result.processedFiles.length.toString());
-
-      } catch (prError) {
-        core.setFailed(`Failed to create PR: ${prError instanceof Error ? prError.message : String(prError)}`);
-        result.errors.push(`PR creation failed: ${prError instanceof Error ? prError.message : String(prError)}`);
-      }
+      prUrl = prResult.prUrl;
+      core.setOutput('pr-url', prResult.prUrl);
+      core.setOutput('files-synced', result.processedFiles.length.toString());
+    } catch (prError) {
+      core.setFailed(
+        `Failed to create PR: ${prError instanceof Error ? prError.message : String(prError)}`
+      );
+      result.errors.push(
+        `PR creation failed: ${prError instanceof Error ? prError.message : String(prError)}`
+      );
     }
+  }
 
-    // Post-sync notifications (skip in test mode)
-    if (!isTestMode) {
-      if (result.errors.length > 0) {
-        // On failure: open an Issue linked to the source PR
-        await createFailureIssue(
-          octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, result.errors,
-        );
-      } else if (prUrl) {
-        // On success: comment on the source PR
-        await postSuccessComment(
-          octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, prUrl, result.processedFiles,
-        );
-      }
+  // Post-sync notifications (skip in test mode)
+  if (!isTestMode) {
+    if (result.errors.length > 0) {
+      // On failure: open an Issue linked to the source PR
+      await createFailureIssue(
+        octokit,
+        prNumber,
+        inputs.targetLanguage,
+        inputs.targetRepo,
+        result.errors
+      );
+    } else if (prUrl) {
+      // On success: comment on the source PR
+      await postSuccessComment(
+        octokit,
+        prNumber,
+        inputs.targetLanguage,
+        inputs.targetRepo,
+        prUrl,
+        result.processedFiles
+      );
     }
+  }
 }
 
 // =============================================================================
@@ -733,7 +860,7 @@ async function fetchFileContent(
   owner: string,
   repo: string,
   filepath: string,
-  ref?: string,
+  ref?: string
 ): Promise<{ content: string; sha?: string }> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const params: any = { owner, repo, path: filepath };
@@ -759,7 +886,7 @@ async function fetchAllFileContents(
   inputs: ReturnType<typeof getInputs>,
   targetOwner: string,
   targetRepo: string,
-  commitSha?: string,
+  commitSha?: string
 ): Promise<FileToSync[]> {
   const filesToSync: FileToSync[] = [];
   const sourceOwner = github.context.repo.owner;
@@ -769,11 +896,23 @@ async function fetchAllFileContents(
   // Changed markdown files
   for (const file of classified.changedMarkdownFiles) {
     try {
-      const { content: newContent } = await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, sha);
+      const { content: newContent } = await fetchFileContent(
+        octokit,
+        sourceOwner,
+        sourceRepo,
+        file.filename,
+        sha
+      );
 
       let oldContent = '';
       try {
-        const result = await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, `${sha}^`);
+        const result = await fetchFileContent(
+          octokit,
+          sourceOwner,
+          sourceRepo,
+          file.filename,
+          `${sha}^`
+        );
         oldContent = result.content;
       } catch {
         core.info(`${file.filename} is a new file`);
@@ -810,13 +949,25 @@ async function fetchAllFileContents(
   // Renamed markdown files
   for (const file of classified.renamedMarkdownFiles) {
     try {
-      const { content: newContent } = await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, sha);
+      const { content: newContent } = await fetchFileContent(
+        octokit,
+        sourceOwner,
+        sourceRepo,
+        file.filename,
+        sha
+      );
       const previousFilename = file.previous_filename;
 
       let oldContent = '';
       if (previousFilename) {
         try {
-          const result = await fetchFileContent(octokit, sourceOwner, sourceRepo, previousFilename, `${sha}^`);
+          const result = await fetchFileContent(
+            octokit,
+            sourceOwner,
+            sourceRepo,
+            previousFilename,
+            `${sha}^`
+          );
           oldContent = result.content;
         } catch {
           core.info(`Could not get old content from ${previousFilename}`);
@@ -831,7 +982,9 @@ async function fetchAllFileContents(
           const result = await fetchFileContent(octokit, targetOwner, targetRepo, previousFilename);
           targetContent = result.content;
           oldFileSha = result.sha;
-          core.info(`Found existing translation at ${previousFilename} - will transfer to ${file.filename}`);
+          core.info(
+            `Found existing translation at ${previousFilename} - will transfer to ${file.filename}`
+          );
         } catch {
           core.info(`${previousFilename} does not exist in target repo`);
         }
@@ -856,7 +1009,13 @@ async function fetchAllFileContents(
   // TOC files
   for (const file of classified.changedTocFiles) {
     try {
-      const { content: newContent } = await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, sha);
+      const { content: newContent } = await fetchFileContent(
+        octokit,
+        sourceOwner,
+        sourceRepo,
+        file.filename,
+        sha
+      );
 
       let existingFileSha: string | undefined;
       try {
@@ -911,7 +1070,7 @@ async function fetchAllFileContents(
 async function fetchSourcePrInfo(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   octokit: any,
-  prNumber: number,
+  prNumber: number
 ): Promise<SourcePrInfo | undefined> {
   try {
     const { data: sourcePr } = await octokit.rest.pulls.get({
@@ -923,7 +1082,7 @@ async function fetchSourcePrInfo(
       title: sourcePr.title,
       labels: sourcePr.labels
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .map((label: any) => typeof label === 'string' ? label : label.name || '')
+        .map((label: any) => (typeof label === 'string' ? label : label.name || ''))
         .filter((name: string) => name && name !== 'test-translation'),
     };
   } catch (error) {
@@ -943,18 +1102,21 @@ async function fetchExistingStateShas(
   targetOwner: string,
   targetRepo: string,
   filesToSync: FileToSync[],
-  docsFolder: string,
+  docsFolder: string
 ): Promise<Map<string, string>> {
   const shas = new Map<string, string>();
 
   // Only need state SHAs for markdown and renamed files (ones that generate state)
-  const markdownFiles = filesToSync.filter(f => f.type === 'markdown' || f.type === 'renamed' || f.type === 'removed');
+  const markdownFiles = filesToSync.filter(
+    (f) => f.type === 'markdown' || f.type === 'renamed' || f.type === 'removed'
+  );
 
   // Compute docs-folder-relative filenames for state paths (CLI uses docs-relative)
   for (const file of markdownFiles) {
-    const docsRelName = docsFolder && file.filename.startsWith(docsFolder)
-      ? file.filename.slice(docsFolder.length)
-      : file.filename;
+    const docsRelName =
+      docsFolder && file.filename.startsWith(docsFolder)
+        ? file.filename.slice(docsFolder.length)
+        : file.filename;
     const statePath = stateFileRelativePath(docsRelName);
     try {
       const { data } = await octokit.rest.repos.getContent({
@@ -971,9 +1133,10 @@ async function fetchExistingStateShas(
 
     // For renamed files, also fetch the old state file SHA (for deletion)
     if (file.type === 'renamed' && file.previousFilename) {
-      const oldDocsRelName = docsFolder && file.previousFilename.startsWith(docsFolder)
-        ? file.previousFilename.slice(docsFolder.length)
-        : file.previousFilename;
+      const oldDocsRelName =
+        docsFolder && file.previousFilename.startsWith(docsFolder)
+          ? file.previousFilename.slice(docsFolder.length)
+          : file.previousFilename;
       const oldStatePath = stateFileRelativePath(oldDocsRelName);
       try {
         const { data } = await octokit.rest.repos.getContent({
@@ -1011,10 +1174,10 @@ async function postSuccessComment(
   targetLanguage: string,
   targetRepo: string,
   prUrl: string,
-  processedFiles: string[],
+  processedFiles: string[]
 ): Promise<void> {
   try {
-    const fileList = processedFiles.map(f => `- \`${f}\``).join('\n');
+    const fileList = processedFiles.map((f) => `- \`${f}\``).join('\n');
     const body = [
       `### ✅ Translation sync completed (${targetLanguage})`,
       '',
@@ -1045,10 +1208,10 @@ async function createFailureIssue(
   prNumber: number,
   targetLanguage: string,
   targetRepo: string,
-  errors: string[],
+  errors: string[]
 ): Promise<void> {
   try {
-    const errorList = errors.map(e => `- ${e}`).join('\n');
+    const errorList = errors.map((e) => `- ${e}`).join('\n');
     const title = `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
     const body = [
       `### Translation sync failure`,
@@ -1082,7 +1245,9 @@ async function createFailureIssue(
         labels: ['translation-sync-failure'],
       });
     } catch (labelError) {
-      core.warning(`Could not add label to failure issue #${issue.number}: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
+      core.warning(
+        `Could not add label to failure issue #${issue.number}: ${labelError instanceof Error ? labelError.message : String(labelError)}`
+      );
     }
 
     core.info(`Created failure issue #${issue.number}: ${issue.html_url}`);

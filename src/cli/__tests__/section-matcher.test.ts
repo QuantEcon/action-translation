@@ -1,6 +1,6 @@
 /**
  * Tests for section-matcher module
- * 
+ *
  * Tests position-based cross-language section matching
  * with heading-map validation.
  */
@@ -9,7 +9,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { MystParser } from '../../parser.js';
 import { extractHeadingMap } from '../../heading-map.js';
-import { matchSections, validateMatchesWithHeadingMap, getMatchingSummary } from '../section-matcher.js';
+import {
+  matchSections,
+  validateMatchesWithHeadingMap,
+  getMatchingSummary,
+} from '../section-matcher.js';
 import { Section } from '../../types.js';
 
 const fixturesDir = path.join(__dirname, 'fixtures');
@@ -47,10 +51,7 @@ describe('section-matcher', () => {
         makeSection('## B', 'b', 'b'),
         makeSection('## C', 'c', 'c'),
       ];
-      const target: Section[] = [
-        makeSection('## 甲', '甲', 'a'),
-        makeSection('## 乙', '乙', 'b'),
-      ];
+      const target: Section[] = [makeSection('## 甲', '甲', 'a'), makeSection('## 乙', '乙', 'b')];
 
       const pairs = matchSections(source, target);
       expect(pairs).toHaveLength(3);
@@ -62,13 +63,8 @@ describe('section-matcher', () => {
     });
 
     it('should handle TARGET_ONLY when target has more sections', () => {
-      const source: Section[] = [
-        makeSection('## A', 'a', 'a'),
-      ];
-      const target: Section[] = [
-        makeSection('## 甲', '甲', 'a'),
-        makeSection('## 乙', '乙', 'b'),
-      ];
+      const source: Section[] = [makeSection('## A', 'a', 'a')];
+      const target: Section[] = [makeSection('## 甲', '甲', 'a'), makeSection('## 乙', '乙', 'b')];
 
       const pairs = matchSections(source, target);
       expect(pairs).toHaveLength(2);
@@ -80,10 +76,8 @@ describe('section-matcher', () => {
 
     it('should handle empty section arrays', () => {
       expect(matchSections([], [])).toHaveLength(0);
-      
-      const source: Section[] = [
-        makeSection('## A', 'a', 'a'),
-      ];
+
+      const source: Section[] = [makeSection('## A', 'a', 'a')];
       const pairs = matchSections(source, []);
       expect(pairs).toHaveLength(1);
       expect(pairs[0].status).toBe('SOURCE_ONLY');
@@ -91,10 +85,12 @@ describe('section-matcher', () => {
 
     it('should match sections from fixture files', async () => {
       const sourceContent = fs.readFileSync(
-        path.join(fixturesDir, 'aligned-pair', 'source.md'), 'utf-8'
+        path.join(fixturesDir, 'aligned-pair', 'source.md'),
+        'utf-8'
       );
       const targetContent = fs.readFileSync(
-        path.join(fixturesDir, 'aligned-pair', 'target.md'), 'utf-8'
+        path.join(fixturesDir, 'aligned-pair', 'target.md'),
+        'utf-8'
       );
 
       const sourceParsed = await parser.parseSections(sourceContent, 'source.md');
@@ -110,10 +106,12 @@ describe('section-matcher', () => {
 
     it('should detect section-count-mismatch from fixtures', async () => {
       const sourceContent = fs.readFileSync(
-        path.join(fixturesDir, 'section-count-mismatch', 'source.md'), 'utf-8'
+        path.join(fixturesDir, 'section-count-mismatch', 'source.md'),
+        'utf-8'
       );
       const targetContent = fs.readFileSync(
-        path.join(fixturesDir, 'section-count-mismatch', 'target.md'), 'utf-8'
+        path.join(fixturesDir, 'section-count-mismatch', 'target.md'),
+        'utf-8'
       );
 
       const sourceParsed = await parser.parseSections(sourceContent, 'source.md');
@@ -130,10 +128,12 @@ describe('section-matcher', () => {
   describe('validateMatchesWithHeadingMap', () => {
     it('should produce no warnings for correct heading-map matches', async () => {
       const targetContent = fs.readFileSync(
-        path.join(fixturesDir, 'aligned-pair', 'target.md'), 'utf-8'
+        path.join(fixturesDir, 'aligned-pair', 'target.md'),
+        'utf-8'
       );
       const sourceContent = fs.readFileSync(
-        path.join(fixturesDir, 'aligned-pair', 'source.md'), 'utf-8'
+        path.join(fixturesDir, 'aligned-pair', 'source.md'),
+        'utf-8'
       );
 
       const sourceParsed = await parser.parseSections(sourceContent, 'source.md');
@@ -146,13 +146,9 @@ describe('section-matcher', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    it('should warn when heading-map doesn\'t match position-aligned sections', () => {
-      const source: Section[] = [
-        makeSection('## Introduction', 'intro', 'introduction'),
-      ];
-      const target: Section[] = [
-        makeSection('## 结论', '结论', 'conclusion'),
-      ];
+    it("should warn when heading-map doesn't match position-aligned sections", () => {
+      const source: Section[] = [makeSection('## Introduction', 'intro', 'introduction')];
+      const target: Section[] = [makeSection('## 结论', '结论', 'conclusion')];
 
       // Heading-map says "Introduction" → "介绍" but we got "结论"
       const headingMap: Map<string, string> = new Map([['Introduction', '介绍']]);
@@ -173,10 +169,7 @@ describe('section-matcher', () => {
         makeSection('## B', 'b', 'b'),
         makeSection('## C', 'c', 'c'),
       ];
-      const target: Section[] = [
-        makeSection('## X', 'x', 'x'),
-        makeSection('## Y', 'y', 'y'),
-      ];
+      const target: Section[] = [makeSection('## X', 'x', 'x'), makeSection('## Y', 'y', 'y')];
 
       const pairs = matchSections(source, target);
       const summary = getMatchingSummary(pairs);

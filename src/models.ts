@@ -71,18 +71,18 @@ export const DEFAULT_THINKING: Anthropic.ThinkingConfigParam = { type: 'disabled
  * passed through to the API. Add new aliases here as generations ship.
  */
 export const VALID_MODEL_PATTERNS: RegExp[] = [
-  /^claude-sonnet-5$/,              // claude-sonnet-5 (current-generation Sonnet)
-  /^claude-opus-4-8$/,             // claude-opus-4-8 (current-generation Opus)
-  /^claude-opus-4-7$/,             // claude-opus-4-7 (current-generation Opus)
-  /^claude-haiku-4-5$/,            // claude-haiku-4-5 (current-generation Haiku, bare alias)
-  /^claude-sonnet-4-6$/,           // claude-sonnet-4-6 (previous-generation Sonnet)
-  /^claude-opus-4-6$/,             // claude-opus-4-6 (previous-generation Opus)
-  /^claude-sonnet-4-5-\d{8}$/,     // claude-sonnet-4-5-20250929
-  /^claude-opus-4-5-\d{8}$/,       // claude-opus-4-5-20251101
-  /^claude-haiku-4-5-\d{8}$/,      // claude-haiku-4-5-20251001
-  /^claude-3-5-sonnet-\d{8}$/,     // claude-3-5-sonnet-20241022
-  /^claude-3-5-haiku-\d{8}$/,      // claude-3-5-haiku-20241022
-  /^claude-3-opus-\d{8}$/,         // claude-3-opus-20240229
-  /^claude-3-sonnet-\d{8}$/,       // claude-3-sonnet-20240229
-  /^claude-3-haiku-\d{8}$/,        // claude-3-haiku-20240307
+  /^claude-sonnet-5$/, // claude-sonnet-5 (current-generation Sonnet)
+  /^claude-opus-4-8$/, // claude-opus-4-8 (current-generation Opus)
+  /^claude-opus-4-7$/, // claude-opus-4-7 (current-generation Opus)
+  /^claude-haiku-4-5$/, // claude-haiku-4-5 (current-generation Haiku, bare alias)
+  /^claude-sonnet-4-6$/, // claude-sonnet-4-6 (previous-generation Sonnet)
+  /^claude-opus-4-6$/, // claude-opus-4-6 (previous-generation Opus)
+  /^claude-sonnet-4-5-\d{8}$/, // claude-sonnet-4-5-20250929
+  /^claude-opus-4-5-\d{8}$/, // claude-opus-4-5-20251101
+  /^claude-haiku-4-5-\d{8}$/, // claude-haiku-4-5-20251001
+  /^claude-3-5-sonnet-\d{8}$/, // claude-3-5-sonnet-20241022
+  /^claude-3-5-haiku-\d{8}$/, // claude-3-5-haiku-20241022
+  /^claude-3-opus-\d{8}$/, // claude-3-opus-20240229
+  /^claude-3-sonnet-\d{8}$/, // claude-3-sonnet-20240229
+  /^claude-3-haiku-\d{8}$/, // claude-3-haiku-20240307
 ];

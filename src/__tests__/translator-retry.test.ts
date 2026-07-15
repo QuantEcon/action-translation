@@ -31,7 +31,12 @@ jest.mock('@anthropic-ai/sdk', () => {
     readonly status: number | undefined;
     readonly headers: Headers | undefined;
     readonly error: unknown;
-    constructor(status: number | undefined, error: unknown, message: string | undefined, headers: Headers | undefined) {
+    constructor(
+      status: number | undefined,
+      error: unknown,
+      message: string | undefined,
+      headers: Headers | undefined
+    ) {
       super(message || 'API Error');
       this.status = status;
       this.error = error;
@@ -41,14 +46,24 @@ jest.mock('@anthropic-ai/sdk', () => {
   }
 
   class AuthenticationError extends APIError {
-    constructor(status: number | undefined, error: unknown, message: string | undefined, headers: Headers | undefined) {
+    constructor(
+      status: number | undefined,
+      error: unknown,
+      message: string | undefined,
+      headers: Headers | undefined
+    ) {
       super(status ?? 401, error, message, headers);
       this.name = 'AuthenticationError';
     }
   }
 
   class RateLimitError extends APIError {
-    constructor(status: number | undefined, error: unknown, message: string | undefined, headers: Headers | undefined) {
+    constructor(
+      status: number | undefined,
+      error: unknown,
+      message: string | undefined,
+      headers: Headers | undefined
+    ) {
       super(status ?? 429, error, message, headers);
       this.name = 'RateLimitError';
     }
@@ -64,7 +79,12 @@ jest.mock('@anthropic-ai/sdk', () => {
   }
 
   class BadRequestError extends APIError {
-    constructor(status: number | undefined, error: unknown, message: string | undefined, headers: Headers | undefined) {
+    constructor(
+      status: number | undefined,
+      error: unknown,
+      message: string | undefined,
+      headers: Headers | undefined
+    ) {
       super(status ?? 400, error, message, headers);
       this.name = 'BadRequestError';
     }
@@ -134,7 +154,7 @@ function overloadedError() {
     undefined,
     { type: 'error', error: { type: 'overloaded_error', message: 'Overloaded' } },
     '{"type":"error","error":{"details":null,"type":"overloaded_error","message":"Overloaded"}}',
-    null as any,
+    null as any
   );
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -174,6 +194,46 @@ describe('TranslationService - Retry Logic', () => {
 
       expect(result.success).toBe(true);
       expect(result.translatedSection).toBe('Translated text');
+      expect(mockStream).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('truncation and empty-content guards', () => {
+    it('fails the file when the response stops at max_tokens', async () => {
+      mockFinalMessage.mockResolvedValueOnce({
+        ...createSuccessResponse('cut off mid-docum'),
+        stop_reason: 'max_tokens',
+      });
+
+      const result = await service.translateSection({
+        mode: 'new',
+        sourceLanguage: 'en',
+        targetLanguage: 'zh-cn',
+        englishSection: '## Introduction\n\nSome content',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('truncated at max_tokens');
+      // Retrying at the same cap cannot succeed — must not retry.
+      expect(mockStream).toHaveBeenCalledTimes(1);
+    });
+
+    it('fails cleanly on an empty content array instead of throwing', async () => {
+      mockFinalMessage.mockResolvedValueOnce({
+        content: [],
+        stop_reason: 'refusal',
+        usage: { input_tokens: 100, output_tokens: 0 },
+      });
+
+      const result = await service.translateSection({
+        mode: 'new',
+        sourceLanguage: 'en',
+        targetLanguage: 'zh-cn',
+        englishSection: '## Introduction\n\nSome content',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
       expect(mockStream).toHaveBeenCalledTimes(1);
     });
   });

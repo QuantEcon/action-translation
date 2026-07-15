@@ -31,11 +31,7 @@ export const SCHEMA_VERSION = '1.0.0';
 // TRIAGE (Stage 1)
 // ============================================================================
 
-export const TriageVerdictSchema = z.enum([
-  'CHANGES_DETECTED',
-  'IN_SYNC',
-  'SKIPPED_TOO_LARGE',
-]);
+export const TriageVerdictSchema = z.enum(['CHANGES_DETECTED', 'IN_SYNC', 'SKIPPED_TOO_LARGE']);
 
 export const TriageResultSchema = z.object({
   file: z.string(),
@@ -48,11 +44,7 @@ export const TriageResultSchema = z.object({
 // SECTION-LEVEL ANALYSIS (Stage 2)
 // ============================================================================
 
-export const SectionSyncStatusSchema = z.enum([
-  'SOURCE_ONLY',
-  'TARGET_ONLY',
-  'MATCHED',
-]);
+export const SectionSyncStatusSchema = z.enum(['SOURCE_ONLY', 'TARGET_ONLY', 'MATCHED']);
 
 export const BackportCategorySchema = z.enum([
   'BUG_FIX',
@@ -84,14 +76,14 @@ export const BackportSuggestionSchema = z.object({
 // ============================================================================
 
 export const FileGitMetadataSchema = z.object({
-  lastModified: z.string(),   // ISO 8601 date string (serialized from Date)
+  lastModified: z.string(), // ISO 8601 date string (serialized from Date)
   lastCommit: z.string(),
   lastAuthor: z.string(),
 });
 
 export const TimelineEntrySchema = z.object({
-  date: z.string(),           // "YYYY-MM-DD"
-  fullDate: z.string(),       // "YYYY-MM-DD HH:MM:SS +ZZZZ"
+  date: z.string(), // "YYYY-MM-DD"
+  fullDate: z.string(), // "YYYY-MM-DD HH:MM:SS +ZZZZ"
   repo: z.enum(['SOURCE', 'TARGET']),
   sha: z.string(),
   message: z.string(),
@@ -128,7 +120,10 @@ export const SectionSnapshotSchema: z.ZodType<SectionSnapshot> = z.object({
   content: z.string(),
   startLine: z.number().int().nonnegative(),
   endLine: z.number().int().nonnegative(),
-  subsections: z.lazy(() => z.array(SectionSnapshotSchema)).optional().default([]),
+  subsections: z
+    .lazy(() => z.array(SectionSnapshotSchema))
+    .optional()
+    .default([]),
 });
 
 export const SectionPairSchema = z.object({
@@ -144,7 +139,7 @@ export const SectionPairSchema = z.object({
 // ============================================================================
 
 export const BackwardReportSchema = z.object({
-  schemaVersion: z.string().optional(),  // Added in v1.0.0; absent in pre-schema reports
+  schemaVersion: z.string().optional(), // Added in v1.0.0; absent in pre-schema reports
   file: z.string(),
   timestamp: z.string(),
   model: z.string().optional(),
@@ -213,13 +208,15 @@ export type TriageResultData = z.infer<typeof TriageResultSchema>;
 // LOADER / VALIDATOR
 // ============================================================================
 
-export type LoadResult<T> = {
-  success: true;
-  data: T;
-} | {
-  success: false;
-  error: string;
-};
+export type LoadResult<T> =
+  | {
+      success: true;
+      data: T;
+    }
+  | {
+      success: false;
+      error: string;
+    };
 
 /**
  * Parse and validate a JSON string as a BackwardReport.
@@ -234,7 +231,7 @@ export function parseBackwardReport(json: string): LoadResult<BackwardReportData
     }
     return {
       success: false,
-      error: `Validation failed: ${result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ')}`,
+      error: `Validation failed: ${result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')}`,
     };
   } catch (e) {
     return { success: false, error: `Invalid JSON: ${(e as Error).message}` };
@@ -253,7 +250,7 @@ export function parseProgressCheckpoint(json: string): LoadResult<ProgressCheckp
     }
     return {
       success: false,
-      error: `Validation failed: ${result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ')}`,
+      error: `Validation failed: ${result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')}`,
     };
   } catch (e) {
     return { success: false, error: `Invalid JSON: ${(e as Error).message}` };
@@ -304,9 +301,9 @@ export function loadResyncDirectory(resyncDir: string): {
  */
 export function filterActionableSuggestions(
   report: BackwardReportData,
-  minConfidence: number = 0.6,
+  minConfidence: number = 0.6
 ): BackportSuggestionData[] {
   return report.suggestions.filter(
-    s => s.recommendation === 'BACKPORT' && s.confidence >= minConfidence,
+    (s) => s.recommendation === 'BACKPORT' && s.confidence >= minConfidence
   );
 }

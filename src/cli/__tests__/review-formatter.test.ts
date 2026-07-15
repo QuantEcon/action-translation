@@ -132,7 +132,14 @@ describe('formatConfidence', () => {
 // ============================================================================
 
 describe('CATEGORY_STYLES', () => {
-  const expected = ['BUG_FIX', 'CLARIFICATION', 'EXAMPLE', 'CODE_IMPROVEMENT', 'I18N_ONLY', 'NO_CHANGE'];
+  const expected = [
+    'BUG_FIX',
+    'CLARIFICATION',
+    'EXAMPLE',
+    'CODE_IMPROVEMENT',
+    'I18N_ONLY',
+    'NO_CHANGE',
+  ];
 
   it.each(expected)('defines style for %s', (cat) => {
     expect(CATEGORY_STYLES[cat]).toBeDefined();
@@ -239,7 +246,14 @@ describe('formatSuggestionCard', () => {
   });
 
   it('renders all categories without throwing', () => {
-    const cats = ['BUG_FIX', 'CLARIFICATION', 'EXAMPLE', 'CODE_IMPROVEMENT', 'I18N_ONLY', 'NO_CHANGE'] as const;
+    const cats = [
+      'BUG_FIX',
+      'CLARIFICATION',
+      'EXAMPLE',
+      'CODE_IMPROVEMENT',
+      'I18N_ONLY',
+      'NO_CHANGE',
+    ] as const;
     for (const cat of cats) {
       const i2 = makeSuggestion({ suggestion: { ...item.suggestion, category: cat } });
       expect(() => formatSuggestionCard(i2, 1, 1)).not.toThrow();
@@ -262,9 +276,15 @@ describe('computeSummaryStats', () => {
 
   it('counts categories correctly', () => {
     const items = [
-      makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, category: 'BUG_FIX', confidence: 0.9 } }),
-      makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, category: 'CLARIFICATION', confidence: 0.7 } }),
-      makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, category: 'CLARIFICATION', confidence: 0.65 } }),
+      makeSuggestion({
+        suggestion: { ...makeSuggestion().suggestion, category: 'BUG_FIX', confidence: 0.9 },
+      }),
+      makeSuggestion({
+        suggestion: { ...makeSuggestion().suggestion, category: 'CLARIFICATION', confidence: 0.7 },
+      }),
+      makeSuggestion({
+        suggestion: { ...makeSuggestion().suggestion, category: 'CLARIFICATION', confidence: 0.65 },
+      }),
     ];
     const stats = computeSummaryStats(items);
     expect(stats.total).toBe(3);
@@ -277,7 +297,7 @@ describe('computeSummaryStats', () => {
       makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, confidence: 0.95 } }), // high
       makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, confidence: 0.85 } }), // high
       makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, confidence: 0.72 } }), // medium
-      makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, confidence: 0.3 } }),  // low
+      makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, confidence: 0.3 } }), // low
     ];
     const stats = computeSummaryStats(items);
     expect(stats.byTier.high).toBe(2);
@@ -295,5 +315,3 @@ describe('computeSummaryStats', () => {
     expect(stats.filesWithSuggestions).toBe(2);
   });
 });
-
-

@@ -121,9 +121,9 @@ config: test
 
 This is invalid.`;
 
-    await expect(
-      parser.parseDocumentComponents(content, 'test.md')
-    ).rejects.toThrow('Document must have a # title heading');
+    await expect(parser.parseDocumentComponents(content, 'test.md')).rejects.toThrow(
+      'Document must have a # title heading'
+    );
   });
 
   it('should handle title with special characters', async () => {

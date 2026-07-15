@@ -1,6 +1,6 @@
 /**
  * Translation Reviewer for GitHub Action Review Mode
- * 
+ *
  * Provides AI-powered quality assessment of translation PRs.
  * Adapted from tool-test-action-on-github/evaluate/src/evaluator.ts
  */
@@ -13,10 +13,9 @@ import {
   AuthenticationError,
   RateLimitError,
   APIConnectionError,
-  BadRequestError
+  BadRequestError,
 } from '@anthropic-ai/sdk';
 import {
-  ReviewInputs,
   TranslationQualityResult,
   DiffQualityResult,
   ReviewResult,
@@ -31,7 +30,7 @@ const DEFAULT_REVIEW_MODEL = DEFAULT_CLAUDE_MODEL;
 /** Retry configuration for review API calls */
 const REVIEW_RETRY_CONFIG = {
   maxRetries: 3,
-  baseDelayMs: 1000,  // 1s, 2s, 4s with exponential backoff
+  baseDelayMs: 1000, // 1s, 2s, 4s with exponential backoff
 };
 
 /**
@@ -88,14 +87,14 @@ export function parseJsonResponse(text: string): Record<string, unknown> {
 function extractPreamble(content: string): string {
   const lines = content.split('\n');
   const preambleLines: string[] = [];
-  
+
   for (const line of lines) {
     if (line.match(/^#{1,6}\s+/)) {
       break;
     }
     preambleLines.push(line);
   }
-  
+
   return preambleLines.join('\n').trim();
 }
 
@@ -106,11 +105,11 @@ function extractPreamble(content: string): string {
 function extractSections(content: string): Array<{ heading: string; content: string }> {
   const sections: Array<{ heading: string; content: string }> = [];
   const lines = content.split('\n');
-  
+
   let currentHeading = '';
   let currentContent: string[] = [];
   let inSection = false;
-  
+
   for (const line of lines) {
     const headingMatch = line.match(/^(#{2,6})\s+(.+)$/);
     if (headingMatch) {
@@ -128,7 +127,7 @@ function extractSections(content: string): Array<{ heading: string; content: str
       currentContent.push(line);
     }
   }
-  
+
   // Save last section
   if (inSection && currentHeading) {
     sections.push({
@@ -136,7 +135,7 @@ function extractSections(content: string): Array<{ heading: string; content: str
       content: currentContent.join('\n').trim(),
     });
   }
-  
+
   return sections;
 }
 
@@ -162,38 +161,43 @@ export function identifyChangedSections(
   targetAfter: string
 ): ChangedSection[] {
   const changedSections: ChangedSection[] = [];
-  
+
   // Handle empty documents
   if (!sourceAfter && !targetAfter) {
     return [{ heading: '(document deleted)', changeType: 'deleted' }];
   }
-  
+
   if (!sourceBefore && !targetBefore) {
     const sections = extractSections(sourceAfter);
     if (sections.length === 0) {
       return [{ heading: '(new document)', changeType: 'added', englishContent: sourceAfter }];
     }
-    return sections.map(s => ({
+    return sections.map((s) => ({
       heading: s.heading,
       changeType: 'added' as const,
       englishContent: s.content,
     }));
   }
-  
+
   // Check for pure rename (no content changes)
   const normalizeForComparison = (s: string) => s.replace(/\r\n/g, '\n').trim();
-  if (normalizeForComparison(sourceBefore) === normalizeForComparison(sourceAfter) &&
-      normalizeForComparison(targetBefore) === normalizeForComparison(targetAfter)) {
+  if (
+    normalizeForComparison(sourceBefore) === normalizeForComparison(sourceAfter) &&
+    normalizeForComparison(targetBefore) === normalizeForComparison(targetAfter)
+  ) {
     return [{ heading: '(no content changes - file renamed)', changeType: 'modified' as const }];
   }
-  
+
   // Check preamble changes
   const sourcePreambleBefore = extractPreamble(sourceBefore);
   const sourcePreambleAfter = extractPreamble(sourceAfter);
   const targetPreambleBefore = extractPreamble(targetBefore);
   const targetPreambleAfter = extractPreamble(targetAfter);
-  
-  if (sourcePreambleBefore !== sourcePreambleAfter || targetPreambleBefore !== targetPreambleAfter) {
+
+  if (
+    sourcePreambleBefore !== sourcePreambleAfter ||
+    targetPreambleBefore !== targetPreambleAfter
+  ) {
     changedSections.push({
       heading: '(preamble/frontmatter)',
       changeType: 'modified',
@@ -201,23 +205,23 @@ export function identifyChangedSections(
       translatedContent: targetPreambleAfter,
     });
   }
-  
+
   // Extract sections
   const sourceBeforeSections = extractSections(sourceBefore);
   const sourceAfterSections = extractSections(sourceAfter);
   const targetAfterSections = extractSections(targetAfter);
-  
+
   // Build maps for quick lookup by ID
-  const beforeById = new Map(sourceBeforeSections.map(s => [headingToId(s.heading), s]));
-  const afterById = new Map(sourceAfterSections.map(s => [headingToId(s.heading), s]));
-  
+  const beforeById = new Map(sourceBeforeSections.map((s) => [headingToId(s.heading), s]));
+  const afterById = new Map(sourceAfterSections.map((s) => [headingToId(s.heading), s]));
+
   // Check for added and modified sections
   for (let i = 0; i < sourceAfterSections.length; i++) {
     const section = sourceAfterSections[i];
     const id = headingToId(section.heading);
     const beforeSection = beforeById.get(id);
     const targetSection = targetAfterSections[i];
-    
+
     if (!beforeSection) {
       changedSections.push({
         heading: section.heading,
@@ -225,7 +229,10 @@ export function identifyChangedSections(
         englishContent: section.content,
         translatedContent: targetSection?.content,
       });
-    } else if (beforeSection.content !== section.content || beforeSection.heading !== section.heading) {
+    } else if (
+      beforeSection.content !== section.content ||
+      beforeSection.heading !== section.heading
+    ) {
       changedSections.push({
         heading: section.heading,
         changeType: 'modified',
@@ -234,7 +241,7 @@ export function identifyChangedSections(
       });
     }
   }
-  
+
   // Check for deleted sections
   for (const section of sourceBeforeSections) {
     const id = headingToId(section.heading);
@@ -245,7 +252,7 @@ export function identifyChangedSections(
       });
     }
   }
-  
+
   return changedSections;
 }
 
@@ -272,7 +279,7 @@ export class TranslationReviewer {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -282,7 +289,7 @@ export class TranslationReviewer {
   private async callWithRetry(
     prompt: string,
     maxTokens: number,
-    operationName: string,
+    operationName: string
   ): Promise<Record<string, unknown>> {
     const { maxRetries, baseDelayMs } = REVIEW_RETRY_CONFIG;
 
@@ -296,9 +303,19 @@ export class TranslationReviewer {
         });
         const response = await stream.finalMessage();
 
+        // A max_tokens stop means the verdict JSON was cut off; retrying at
+        // the same cap cannot succeed (generic Error is not retried below).
+        if (response.stop_reason === 'max_tokens') {
+          throw new Error(
+            `${operationName}: response truncated at max_tokens=${maxTokens}; verdict JSON is incomplete`
+          );
+        }
+
         const content = response.content[0];
-        if (content.type !== 'text') {
-          throw new Error('Unexpected response type from Claude');
+        if (!content || content.type !== 'text') {
+          throw new Error(
+            `Unexpected response from Claude: ${content ? content.type : `empty content (stop_reason: ${response.stop_reason})`}`
+          );
         }
 
         return parseJsonResponse(content.text);
@@ -313,7 +330,9 @@ export class TranslationReviewer {
           error instanceof RateLimitError ||
           error instanceof APIConnectionError ||
           (error instanceof APIError && error.status !== undefined && error.status >= 500);
-        const isParseFailure = error instanceof SyntaxError || (error instanceof Error && error.message.includes('No JSON object'));
+        const isParseFailure =
+          error instanceof SyntaxError ||
+          (error instanceof Error && error.message.includes('No JSON object'));
 
         if ((!isApiRetryable && !isParseFailure) || attempt === maxRetries) {
           if (isParseFailure) {
@@ -323,7 +342,9 @@ export class TranslationReviewer {
         }
 
         const delay = baseDelayMs * Math.pow(2, attempt - 1);
-        core.info(`${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error instanceof Error ? error.message : error}. Retrying in ${delay}ms...`);
+        core.info(
+          `${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error instanceof Error ? error.message : error}. Retrying in ${delay}ms...`
+        );
         await this.sleep(delay);
       }
     }
@@ -337,9 +358,11 @@ export class TranslationReviewer {
    */
   private parseSourcePRNumber(prBody: string | null): number | null {
     if (!prBody) return null;
-    
+
     // Match: ### Source PR\n**[#123
-    const match = prBody.match(/### Source PR\n\*\*\[#(\d+)/);
+    // \r?\n: GitHub normalizes edited PR bodies to CRLF — a \n-only match
+    // permanently breaks review mode for any PR whose body was edited.
+    const match = prBody.match(/### Source PR\r?\n\*\*\[#(\d+)/);
     if (match) {
       return parseInt(match[1], 10);
     }
@@ -366,8 +389,8 @@ export class TranslationReviewer {
         pull_number: sourcePrNumber,
       });
 
-      // Get files changed in source PR
-      const { data: sourceFiles } = await this.octokit.rest.pulls.listFiles({
+      // Get files changed in source PR (paginate — PRs can touch >30 files)
+      const sourceFiles = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
         owner: sourceOwner,
         repo: sourceRepoName,
         pull_number: sourcePrNumber,
@@ -375,12 +398,13 @@ export class TranslationReviewer {
 
       for (const filename of filenames) {
         // Check if this file was changed in source PR
-        const sourceFile = sourceFiles.find(f => f.filename === filename);
-        
+        const sourceFile = sourceFiles.find((f) => f.filename === filename);
+
         // For renamed files, use previous filename for "before"
-        const beforeFilename = sourceFile?.status === 'renamed' && sourceFile.previous_filename
-          ? sourceFile.previous_filename
-          : filename;
+        const beforeFilename =
+          sourceFile?.status === 'renamed' && sourceFile.previous_filename
+            ? sourceFile.previous_filename
+            : filename;
 
         // Get content BEFORE (from base ref)
         if (!sourceFile || sourceFile.status !== 'added') {
@@ -446,8 +470,8 @@ export class TranslationReviewer {
       pull_number: prNumber,
     });
 
-    // Get changed files in the PR
-    const { data: files } = await this.octokit.rest.pulls.listFiles({
+    // Get changed files in the PR (paginate — PRs can touch >30 files)
+    const files = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
       owner: targetOwner,
       repo: targetRepo,
       pull_number: prNumber,
@@ -495,7 +519,7 @@ export class TranslationReviewer {
 
     // Get content for evaluation
     const [sourceOwner, sourceRepoName] = sourceRepo.split('/');
-    
+
     // Parse source PR number from translation PR body
     // Format: "### Source PR\n**[#123 - Title](url)**"
     // This is always present for PRs created by sync mode
@@ -503,20 +527,20 @@ export class TranslationReviewer {
     if (!sourcePrNumber) {
       throw new Error(
         'Could not find source PR reference in translation PR body. ' +
-        'This PR may not have been created by the translation action. ' +
-        'Expected format: "### Source PR\\n**[#123..."'
+          'This PR may not have been created by the translation action. ' +
+          'Expected format: "### Source PR\\n**[#123..."'
       );
     }
     core.info(`Found source PR reference: #${sourcePrNumber}`);
 
     // Get filenames for fetching
-    const filenames = markdownFiles.map(f => f.filename);
+    const filenames = markdownFiles.map((f) => f.filename);
 
     // Fetch source PR diff (English before/after) - this gives us accurate change detection
     const { before: sourceBeforeMap, after: sourceAfterMap } = await this.getSourceDiff(
-      sourceOwner, 
-      sourceRepoName, 
-      sourcePrNumber, 
+      sourceOwner,
+      sourceRepoName,
+      sourcePrNumber,
       filenames
     );
 
@@ -550,7 +574,8 @@ export class TranslationReviewer {
             ref: pr.base.sha,
           });
           if ('content' in targetBeforeData) {
-            targetBefore += Buffer.from(targetBeforeData.content, 'base64').toString('utf-8') + '\n\n';
+            targetBefore +=
+              Buffer.from(targetBeforeData.content, 'base64').toString('utf-8') + '\n\n';
           }
         } catch {
           // File is new in target
@@ -560,7 +585,9 @@ export class TranslationReviewer {
         if (sourceAfterMap.has(file.filename)) {
           sourceEnglish += sourceAfterMap.get(file.filename) + '\n\n';
         } else {
-          core.warning(`Source content not found for ${file.filename} in source PR #${sourcePrNumber}`);
+          core.warning(
+            `Source content not found for ${file.filename} in source PR #${sourcePrNumber}`
+          );
         }
 
         // Get source content before from source PR diff
@@ -568,7 +595,6 @@ export class TranslationReviewer {
           sourceBefore += sourceBeforeMap.get(file.filename) + '\n\n';
         }
         // Note: sourceBefore may be empty for new files, which is correct
-
       } catch (error) {
         core.warning(`Error processing ${file.filename}: ${error}`);
       }
@@ -598,7 +624,7 @@ export class TranslationReviewer {
       sourceEnglish,
       targetBefore,
       targetTranslation,
-      markdownFiles.map(f => ({
+      markdownFiles.map((f) => ({
         filename: f.filename,
         status: f.status as 'added' | 'modified' | 'removed' | 'renamed',
         additions: f.additions,
@@ -607,7 +633,7 @@ export class TranslationReviewer {
     );
 
     // Calculate overall score and verdict
-    const overallScore = (translationQuality.score * 0.7 + diffQuality.score * 0.3);
+    const overallScore = translationQuality.score * 0.7 + diffQuality.score * 0.3;
     let verdict: 'PASS' | 'WARN' | 'FAIL';
     if (overallScore >= 8 && translationQuality.syntaxErrors.length === 0) {
       verdict = 'PASS';
@@ -647,21 +673,23 @@ export class TranslationReviewer {
     targetLanguage?: string
   ): Promise<TranslationQualityResult> {
     const changedSectionsPrompt = this.formatChangedSections(changedSections);
-    
+
     // Determine language name for prompt
     const languageNames: Record<string, string> = {
       'zh-cn': 'Simplified Chinese',
       'zh-tw': 'Traditional Chinese',
-      'fa': 'Persian (Farsi)',
-      'es': 'Spanish',
-      'fr': 'French',
-      'de': 'German',
-      'ja': 'Japanese',
-      'ko': 'Korean',
+      fa: 'Persian (Farsi)',
+      es: 'Spanish',
+      fr: 'French',
+      de: 'German',
+      ja: 'Japanese',
+      ko: 'Korean',
     };
-    const targetLangName = targetLanguage ? (languageNames[targetLanguage] || targetLanguage) : 'the target language';
-    
-    const glossarySection = glossaryTerms 
+    const targetLangName = targetLanguage
+      ? languageNames[targetLanguage] || targetLanguage
+      : 'the target language';
+
+    const glossarySection = glossaryTerms
       ? `\n## Reference Glossary\nThe translation should follow this established terminology glossary:\n${glossaryTerms}\n`
       : '';
 
@@ -755,12 +783,11 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: any = await this.callWithRetry(prompt, MAX_TOKENS.review, 'evaluateTranslation');
-    const score = (
+    const score =
       result.accuracy * 0.35 +
       result.fluency * 0.25 +
       result.terminology * 0.25 +
-      result.formatting * 0.15
-    );
+      result.formatting * 0.15;
 
     return {
       score: Math.round(score * 10) / 10,
@@ -837,7 +864,7 @@ ${targetAfter}
 \`\`\`
 
 ### Files Changed:
-${targetFiles.map(f => `- ${f.filename}: ${f.status} (+${f.additions}/-${f.deletions})`).join('\n')}
+${targetFiles.map((f) => `- ${f.filename}: ${f.status} (+${f.additions}/-${f.deletions})`).join('\n')}
 
 ## Verification Checks
 Evaluate each criterion:
@@ -894,12 +921,14 @@ Respond with ONLY valid JSON:
       return '';
     }
 
-    const sectionsList = changedSections.map(s => {
-      if (s.changeType === 'deleted') {
-        return `- **DELETED**: ${s.heading}`;
-      }
-      return `- **${s.changeType.toUpperCase()}**: ${s.heading}`;
-    }).join('\n');
+    const sectionsList = changedSections
+      .map((s) => {
+        if (s.changeType === 'deleted') {
+          return `- **DELETED**: ${s.heading}`;
+        }
+        return `- **${s.changeType.toUpperCase()}**: ${s.heading}`;
+      })
+      .join('\n');
 
     return `\n## IMPORTANT: Changed Sections in This PR
 
@@ -916,27 +945,29 @@ ${sectionsList}
    */
   private normalizeIssues(issues: unknown[]): string[] {
     if (!Array.isArray(issues)) return [];
-    return issues.map(issue => {
-      if (typeof issue === 'string') return issue;
-      if (typeof issue === 'object' && issue !== null) {
-        const obj = issue as Record<string, unknown>;
-        const location = obj.location || obj.section || obj.heading || '';
-        const original = obj.original || obj.current || obj.translated || obj.text || '';
-        const suggestion = obj.suggestion || obj.recommended || obj.fix || obj.correction || '';
-        const description = obj.description || obj.issue || obj.problem || obj.message || '';
-        
-        if (description) {
-          return location ? `${location}: ${description}` : String(description);
+    return issues
+      .map((issue) => {
+        if (typeof issue === 'string') return issue;
+        if (typeof issue === 'object' && issue !== null) {
+          const obj = issue as Record<string, unknown>;
+          const location = obj.location || obj.section || obj.heading || '';
+          const original = obj.original || obj.current || obj.translated || obj.text || '';
+          const suggestion = obj.suggestion || obj.recommended || obj.fix || obj.correction || '';
+          const description = obj.description || obj.issue || obj.problem || obj.message || '';
+
+          if (description) {
+            return location ? `${location}: ${description}` : String(description);
+          }
+          if (original && suggestion) {
+            return location
+              ? `${location}: "${original}" → "${suggestion}"`
+              : `"${original}" → "${suggestion}"`;
+          }
+          return JSON.stringify(obj);
         }
-        if (original && suggestion) {
-          return location 
-            ? `${location}: "${original}" → "${suggestion}"`
-            : `"${original}" → "${suggestion}"`;
-        }
-        return JSON.stringify(obj);
-      }
-      return String(issue);
-    }).filter(s => s && s !== '{}' && s !== '""');
+        return String(issue);
+      })
+      .filter((s) => s && s !== '{}' && s !== '""');
   }
 
   /**
@@ -948,7 +979,7 @@ ${sectionsList}
     verdict: 'PASS' | 'WARN' | 'FAIL'
   ): string {
     const emoji = verdict === 'PASS' ? '✅' : verdict === 'WARN' ? '⚠️' : '❌';
-    
+
     let comment = `## ${emoji} Translation Quality Review
 
 **Verdict**: ${verdict} | **Model**: ${this.model} | **Date**: ${new Date().toISOString().split('T')[0]}
@@ -975,14 +1006,14 @@ ${sectionsList}
       comment += `
 
 ### ⚠️ Markdown Syntax Errors (CRITICAL)
-${translationResult.syntaxErrors.map(e => `- 🔴 ${e}`).join('\n')}`;
+${translationResult.syntaxErrors.map((e) => `- 🔴 ${e}`).join('\n')}`;
     }
 
     if (translationResult.issues.length > 0) {
       comment += `
 
 **Suggestions**:
-${translationResult.issues.map(i => `- ${i}`).join('\n')}`;
+${translationResult.issues.map((i) => `- ${i}`).join('\n')}`;
     }
 
     comment += `
@@ -1005,7 +1036,7 @@ ${translationResult.issues.map(i => `- ${i}`).join('\n')}`;
       comment += `
 
 **Issues**:
-${diffResult.issues.map(i => `- ${i}`).join('\n')}`;
+${diffResult.issues.map((i) => `- ${i}`).join('\n')}`;
     }
 
     comment += `
@@ -1027,15 +1058,16 @@ ${diffResult.issues.map(i => `- ${i}`).join('\n')}`;
   ): Promise<void> {
     try {
       // Check for existing review comment and update it instead of creating new
-      const { data: comments } = await this.octokit.rest.issues.listComments({
+      // (paginate — beyond 30 comments the existing one is missed and duplicates accumulate)
+      const comments = await this.octokit.paginate(this.octokit.rest.issues.listComments, {
         owner,
         repo,
         issue_number: prNumber,
       });
 
-      const existingComment = comments.find(c => 
-        c.body?.includes('Translation Quality Review') &&
-        c.body?.includes('action-translation')
+      const existingComment = comments.find(
+        (c) =>
+          c.body?.includes('Translation Quality Review') && c.body?.includes('action-translation')
       );
 
       if (existingComment) {

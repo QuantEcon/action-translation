@@ -17,7 +17,11 @@ import { MystParser } from './parser.js';
 import { Glossary, TranslatedFile, RebaseCache } from './types.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { serializeFileState, stateFileRelativePath, getToolVersion } from './cli/translate-state.js';
+import {
+  serializeFileState,
+  stateFileRelativePath,
+  getToolVersion,
+} from './cli/translate-state.js';
 import { FileState } from './cli/types.js';
 
 // =============================================================================
@@ -65,13 +69,13 @@ export interface StateGenerationConfig {
 export interface FileToSync {
   filename: string;
   type: 'markdown' | 'toc' | 'renamed' | 'removed';
-  newContent?: string;         // Current English content from source
-  oldContent?: string;         // Previous English content (before change)
-  targetContent?: string;      // Current translation in target repo
-  previousFilename?: string;   // For renamed files: old path
-  existingFileSha?: string;    // SHA of existing target file (for updates)
-  oldFileSha?: string;         // SHA of old target file to delete (renamed files)
-  isNewFile: boolean;          // No existing translation in target repo
+  newContent?: string; // Current English content from source
+  oldContent?: string; // Previous English content (before change)
+  targetContent?: string; // Current translation in target repo
+  previousFilename?: string; // For renamed files: old path
+  existingFileSha?: string; // SHA of existing target file (for updates)
+  oldFileSha?: string; // SHA of old target file to delete (renamed files)
+  isNewFile: boolean; // No existing translation in target repo
   /** Per-file source commit SHA (overrides StateGenerationConfig.sourceCommitSha) */
   sourceCommitSha?: string;
 }
@@ -106,7 +110,7 @@ export async function loadGlossary(
   targetLanguage: string,
   builtInGlossaryDir: string,
   customGlossaryPath?: string,
-  logger?: Logger,
+  logger?: Logger
 ): Promise<Glossary | undefined> {
   // Try built-in glossary first
   const builtInPath = path.join(builtInGlossaryDir, `${targetLanguage}.json`);
@@ -114,7 +118,9 @@ export async function loadGlossary(
     const content = await fs.readFile(builtInPath, 'utf-8');
     const glossary: Glossary = JSON.parse(content);
     if (glossary) {
-      logger?.info(`✓ Loaded built-in glossary for ${targetLanguage} with ${glossary.terms.length} terms`);
+      logger?.info(
+        `✓ Loaded built-in glossary for ${targetLanguage} with ${glossary.terms.length} terms`
+      );
       return glossary;
     }
   } catch (error) {
@@ -127,7 +133,9 @@ export async function loadGlossary(
       const content = await fs.readFile(customGlossaryPath, 'utf-8');
       const glossary: Glossary = JSON.parse(content);
       if (glossary) {
-        logger?.info(`✓ Loaded custom glossary from ${customGlossaryPath} with ${glossary.terms.length} terms`);
+        logger?.info(
+          `✓ Loaded custom glossary from ${customGlossaryPath} with ${glossary.terms.length} terms`
+        );
         return glossary;
       }
     } catch (error) {
@@ -153,7 +161,7 @@ export async function loadGlossary(
 export function classifyChangedFiles(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   files: any[],
-  docsFolder: string,
+  docsFolder: string
 ): {
   changedMarkdownFiles: typeof files;
   renamedMarkdownFiles: typeof files;
@@ -175,9 +183,7 @@ export function classifyChangedFiles(
   const renamedMarkdownFiles = files.filter(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (file: any) =>
-      file.filename.startsWith(prefix) &&
-      file.filename.endsWith('.md') &&
-      file.status === 'renamed'
+      file.filename.startsWith(prefix) && file.filename.endsWith('.md') && file.status === 'renamed'
   );
 
   const changedTocFiles = files.filter(
@@ -192,9 +198,7 @@ export function classifyChangedFiles(
   const removedMarkdownFiles = files.filter(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (file: any) =>
-      file.filename.startsWith(prefix) &&
-      file.filename.endsWith('.md') &&
-      file.status === 'removed'
+      file.filename.startsWith(prefix) && file.filename.endsWith('.md') && file.status === 'removed'
   );
 
   const removedTocFiles = files.filter(
@@ -205,7 +209,13 @@ export function classifyChangedFiles(
       file.status === 'removed'
   );
 
-  return { changedMarkdownFiles, renamedMarkdownFiles, changedTocFiles, removedMarkdownFiles, removedTocFiles };
+  return {
+    changedMarkdownFiles,
+    renamedMarkdownFiles,
+    changedTocFiles,
+    removedMarkdownFiles,
+    removedTocFiles,
+  };
 }
 
 // =============================================================================
@@ -252,7 +262,7 @@ export class SyncOrchestrator {
   async processFiles(
     files: FileToSync[],
     glossary?: Glossary,
-    rebaseCache?: RebaseCache,
+    rebaseCache?: RebaseCache
   ): Promise<SyncProcessingResult> {
     const result: SyncProcessingResult = {
       translatedFiles: [],
@@ -300,7 +310,7 @@ export class SyncOrchestrator {
     file: FileToSync,
     glossary: Glossary | undefined,
     result: SyncProcessingResult,
-    fileRebaseCache?: import('./types.js').RebaseCacheData,
+    fileRebaseCache?: import('./types.js').RebaseCacheData
   ): Promise<void> {
     this.logger.info(`Processing ${file.filename}...`);
 
@@ -315,7 +325,7 @@ export class SyncOrchestrator {
         file.filename,
         this.config.sourceLanguage,
         this.config.targetLanguage,
-        glossary,
+        glossary
       );
     } else {
       const skipped: string[] = [];
@@ -328,11 +338,13 @@ export class SyncOrchestrator {
         this.config.targetLanguage,
         glossary,
         (heading) => skipped.push(heading),
-        fileRebaseCache,
+        fileRebaseCache
       );
       if (skipped.length > 0) {
         result.skippedSections.set(file.filename, skipped);
-        this.logger.warning(`${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target — pending earlier translation PR`);
+        this.logger.warning(
+          `${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target — pending earlier translation PR`
+        );
       }
     }
 
@@ -356,7 +368,7 @@ export class SyncOrchestrator {
       file.newContent,
       file.sourceCommitSha,
       file.isNewFile ? 'NEW' : 'UPDATE',
-      result,
+      result
     );
   }
 
@@ -368,7 +380,7 @@ export class SyncOrchestrator {
     file: FileToSync,
     glossary: Glossary | undefined,
     result: SyncProcessingResult,
-    fileRebaseCache?: import('./types.js').RebaseCacheData,
+    fileRebaseCache?: import('./types.js').RebaseCacheData
   ): Promise<void> {
     this.logger.info(`Processing renamed file: ${file.previousFilename} → ${file.filename}...`);
 
@@ -389,11 +401,13 @@ export class SyncOrchestrator {
         this.config.targetLanguage,
         glossary,
         (heading) => skipped.push(heading),
-        fileRebaseCache,
+        fileRebaseCache
       );
       if (skipped.length > 0) {
         result.skippedSections.set(file.filename, skipped);
-        this.logger.warning(`${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target — pending earlier translation PR`);
+        this.logger.warning(
+          `${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target — pending earlier translation PR`
+        );
       }
     } else {
       // No existing translation — full translation
@@ -402,7 +416,7 @@ export class SyncOrchestrator {
         file.filename,
         this.config.sourceLanguage,
         this.config.targetLanguage,
-        glossary,
+        glossary
       );
     }
 
@@ -427,7 +441,9 @@ export class SyncOrchestrator {
         path: file.previousFilename,
         sha: file.oldFileSha,
       });
-      this.logger.info(`Marked ${file.previousFilename} for deletion (renamed to ${file.filename})`);
+      this.logger.info(
+        `Marked ${file.previousFilename} for deletion (renamed to ${file.filename})`
+      );
 
       // Also delete old state file if it exists
       if (this.stateConfig) {
@@ -448,7 +464,7 @@ export class SyncOrchestrator {
         file.newContent,
         file.sourceCommitSha,
         file.targetContent ? 'UPDATE' : 'NEW',
-        result,
+        result
       );
     }
   }
@@ -456,10 +472,7 @@ export class SyncOrchestrator {
   /**
    * Process a TOC file (copied directly without translation).
    */
-  private processTocFile(
-    file: FileToSync,
-    result: SyncProcessingResult,
-  ): void {
+  private processTocFile(file: FileToSync, result: SyncProcessingResult): void {
     this.logger.info(`Processing TOC file ${file.filename}...`);
 
     if (!file.newContent) {
@@ -479,10 +492,7 @@ export class SyncOrchestrator {
   /**
    * Process a removed file (track for deletion in target repo).
    */
-  private processRemovedFile(
-    file: FileToSync,
-    result: SyncProcessingResult,
-  ): void {
+  private processRemovedFile(file: FileToSync, result: SyncProcessingResult): void {
     if (file.existingFileSha) {
       result.filesToDelete.push({
         path: file.filename,
@@ -519,7 +529,7 @@ export class SyncOrchestrator {
     sourceContent: string,
     perFileCommitSha: string | undefined,
     mode: 'NEW' | 'UPDATE',
-    result: SyncProcessingResult,
+    result: SyncProcessingResult
   ): Promise<void> {
     if (!this.stateConfig) return;
 

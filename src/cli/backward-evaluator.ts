@@ -1,35 +1,42 @@
 /**
  * Backward Evaluator — Stage 2 Analysis
- * 
+ *
  * For files flagged by Stage 1, evaluates all matched section pairs in a single
  * LLM call to identify improvements worth backporting to SOURCE.
- * 
+ *
  * The LLM reads both languages directly (no back-translation needed)
  * and produces structured per-section suggestions with category, confidence, and reasoning.
- * 
+ *
  * Whole-file approach: one LLM call per file (all sections at once) for better
  * cross-section context, fewer API calls, and lower latency.
- * 
+ *
  * Tone: Respectful suggestions. SOURCE is the source of truth.
  * These are improvements "for consideration", not corrections.
  */
 
 import Anthropic from '@anthropic-ai/sdk';
 import { MAX_TOKENS, DEFAULT_THINKING } from '../models.js';
-import { 
-  APIError, 
-  AuthenticationError, 
-  RateLimitError, 
+import {
+  APIError,
+  AuthenticationError,
+  RateLimitError,
   APIConnectionError,
-  BadRequestError 
+  BadRequestError,
 } from '@anthropic-ai/sdk';
-import { BackportSuggestion, BackportCategory, SpecificChange, FileGitMetadata, FileTimeline, SectionPair } from './types.js';
+import {
+  BackportSuggestion,
+  BackportCategory,
+  SpecificChange,
+  FileGitMetadata,
+  FileTimeline,
+  SectionPair,
+} from './types.js';
 import { formatDate, daysBetween, formatTimelineForPrompt } from './git-metadata.js';
 import { RETRY_CONFIG } from '../translator.js';
 
 /**
  * Build the Stage 2 section evaluation prompt
- * 
+ *
  * Exported for snapshot testing.
  */
 export function buildEvaluationPrompt(
@@ -41,7 +48,7 @@ export function buildEvaluationPrompt(
   sourceMetadata: FileGitMetadata | null,
   targetMetadata: FileGitMetadata | null,
   triageNotes: string,
-  timeline: FileTimeline | null,
+  timeline: FileTimeline | null
 ): string {
   let timelineContext = '';
   if (sourceMetadata && targetMetadata) {
@@ -139,7 +146,7 @@ Respond with a JSON object:
  */
 export function parseEvaluationResponse(
   responseText: string,
-  sectionHeading: string,
+  sectionHeading: string
 ): BackportSuggestion {
   // Strategy 1: Extract JSON from a code fence (most reliable)
   const fenceMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
@@ -156,9 +163,8 @@ export function parseEvaluationResponse(
         sectionHeading,
         recommendation: parsed.recommendation === 'BACKPORT' ? 'BACKPORT' : 'NO_BACKPORT',
         category: validateCategory(parsed.category),
-        confidence: typeof parsed.confidence === 'number' 
-          ? Math.max(0, Math.min(1, parsed.confidence)) 
-          : 0.5,
+        confidence:
+          typeof parsed.confidence === 'number' ? Math.max(0, Math.min(1, parsed.confidence)) : 0.5,
         summary: typeof parsed.summary === 'string' ? parsed.summary : '',
         specificChanges: parseSpecificChanges(parsed.specific_changes),
         reasoning: typeof parsed.reasoning === 'string' ? parsed.reasoning : '',
@@ -185,7 +191,12 @@ export function parseEvaluationResponse(
  */
 function validateCategory(category: unknown): BackportCategory {
   const validCategories: BackportCategory[] = [
-    'BUG_FIX', 'CLARIFICATION', 'EXAMPLE', 'CODE_IMPROVEMENT', 'I18N_ONLY', 'NO_CHANGE',
+    'BUG_FIX',
+    'CLARIFICATION',
+    'EXAMPLE',
+    'CODE_IMPROVEMENT',
+    'I18N_ONLY',
+    'NO_CHANGE',
   ];
   if (typeof category === 'string' && validCategories.includes(category as BackportCategory)) {
     return category as BackportCategory;
@@ -198,10 +209,10 @@ function validateCategory(category: unknown): BackportCategory {
  */
 function parseSpecificChanges(changes: unknown): SpecificChange[] {
   if (!Array.isArray(changes)) return [];
-  
+
   return changes
     .filter((c): c is Record<string, unknown> => typeof c === 'object' && c !== null)
-    .map(c => ({
+    .map((c) => ({
       type: typeof c.type === 'string' ? c.type : 'unknown',
       original: typeof c.original === 'string' ? c.original : '',
       improved: typeof c.improved === 'string' ? c.improved : '',
@@ -227,12 +238,12 @@ function mockEvaluationResponse(sectionHeading: string): BackportSuggestion {
  * Sleep for a given number of milliseconds
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
  * Evaluate a single section pair for backport potential
- * 
+ *
  * @param sourceSection - SOURCE section content
  * @param targetSection - TARGET section content
  * @param sectionHeading - Heading text for this section
@@ -256,7 +267,7 @@ export async function evaluateSection(
     sourceLanguage: string;
     targetLanguage: string;
     testMode: boolean;
-  },
+  }
 ): Promise<BackportSuggestion> {
   // Test mode: return deterministic response
   if (options.testMode) {
@@ -272,7 +283,7 @@ export async function evaluateSection(
     sourceMetadata,
     targetMetadata,
     triageNotes,
-    timeline,
+    timeline
   );
 
   const client = new Anthropic({ apiKey: options.apiKey });
@@ -286,10 +297,17 @@ export async function evaluateSection(
         thinking: DEFAULT_THINKING,
         messages: [{ role: 'user', content: prompt }],
       });
+      if (response.stop_reason === 'max_tokens') {
+        // Truncated output must not be interpreted: a cut-off analysis JSON
+        // otherwise falls through the parsers and reads as a clean verdict.
+        throw new Error(
+          `Response truncated at max_tokens=${MAX_TOKENS.analysis}; refusing to interpret incomplete output`
+        );
+      }
 
       const responseText = response.content
         .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-        .map(block => block.text)
+        .map((block) => block.text)
         .join('');
 
       return parseEvaluationResponse(responseText, sectionHeading);
@@ -324,9 +342,12 @@ export async function evaluateSection(
  * Build section pairs block for the whole-file prompt.
  * Each matched pair is numbered for the LLM to reference.
  */
-function buildSectionPairsBlock(matchedPairs: Array<{ heading: string; source: string; target: string }>): string {
-  return matchedPairs.map((pair, i) => {
-    return `### Section ${i + 1}: ${pair.heading}
+function buildSectionPairsBlock(
+  matchedPairs: Array<{ heading: string; source: string; target: string }>
+): string {
+  return matchedPairs
+    .map((pair, i) => {
+      return `### Section ${i + 1}: ${pair.heading}
 
 **SOURCE:**
 \`\`\`
@@ -337,15 +358,16 @@ ${pair.source}
 \`\`\`
 ${pair.target}
 \`\`\``;
-  }).join('\n\n---\n\n');
+    })
+    .join('\n\n---\n\n');
 }
 
 /**
  * Build the whole-file Stage 2 evaluation prompt.
- * 
+ *
  * Sends all matched section pairs in a single prompt and asks the LLM
  * to return per-section suggestions in one structured JSON response.
- * 
+ *
  * Exported for snapshot testing.
  */
 export function buildFileEvaluationPrompt(
@@ -355,7 +377,7 @@ export function buildFileEvaluationPrompt(
   sourceMetadata: FileGitMetadata | null,
   targetMetadata: FileGitMetadata | null,
   triageNotes: string,
-  timeline: FileTimeline | null,
+  timeline: FileTimeline | null
 ): string {
   let timelineContext = '';
   if (sourceMetadata && targetMetadata) {
@@ -452,13 +474,13 @@ Respond with a JSON object containing a "sections" array. Include an entry for E
 
 /**
  * Parse the whole-file LLM response into per-section suggestions.
- * 
+ *
  * The response should contain a "sections" array with one entry per section.
  * Falls back gracefully if parsing fails.
  */
 export function parseFileEvaluationResponse(
   responseText: string,
-  matchedPairs: Array<{ heading: string }>,
+  matchedPairs: Array<{ heading: string }>
 ): BackportSuggestion[] {
   // Strategy 1: Extract JSON from a code fence
   const fenceMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
@@ -475,7 +497,7 @@ export function parseFileEvaluationResponse(
 
       // Build a lookup by section_number (1-based) for robust mapping.
       // Falls back to array index if section_number is missing or out of range.
-      const byNumber = new Map<number, typeof sections[0]>();
+      const byNumber = new Map<number, (typeof sections)[0]>();
       for (const s of sections) {
         if (typeof s.section_number === 'number') {
           byNumber.set(s.section_number, s);
@@ -487,11 +509,15 @@ export function parseFileEvaluationResponse(
         const section = byNumber.get(i + 1) || sections[i] || {};
         return {
           sectionHeading: pair.heading,
-          recommendation: section.recommendation === 'BACKPORT' ? 'BACKPORT' as const : 'NO_BACKPORT' as const,
+          recommendation:
+            section.recommendation === 'BACKPORT'
+              ? ('BACKPORT' as const)
+              : ('NO_BACKPORT' as const),
           category: validateCategory(section.category),
-          confidence: typeof section.confidence === 'number'
-            ? Math.max(0, Math.min(1, section.confidence))
-            : 0.5,
+          confidence:
+            typeof section.confidence === 'number'
+              ? Math.max(0, Math.min(1, section.confidence))
+              : 0.5,
           summary: typeof section.summary === 'string' ? section.summary : '',
           specificChanges: parseSpecificChanges(section.specific_changes),
           reasoning: typeof section.reasoning === 'string' ? section.reasoning : '',
@@ -503,7 +529,7 @@ export function parseFileEvaluationResponse(
   }
 
   // Fallback: return NO_BACKPORT for all sections
-  return matchedPairs.map(pair => ({
+  return matchedPairs.map((pair) => ({
     sectionHeading: pair.heading,
     recommendation: 'NO_BACKPORT' as const,
     category: 'NO_CHANGE' as BackportCategory,
@@ -517,8 +543,10 @@ export function parseFileEvaluationResponse(
 /**
  * Mock whole-file evaluation response for --test mode
  */
-function mockFileEvaluationResponse(matchedPairs: Array<{ heading: string }>): BackportSuggestion[] {
-  return matchedPairs.map(pair => ({
+function mockFileEvaluationResponse(
+  matchedPairs: Array<{ heading: string }>
+): BackportSuggestion[] {
+  return matchedPairs.map((pair) => ({
     sectionHeading: pair.heading,
     recommendation: 'NO_BACKPORT' as const,
     category: 'NO_CHANGE' as BackportCategory,
@@ -531,13 +559,13 @@ function mockFileEvaluationResponse(matchedPairs: Array<{ heading: string }>): B
 
 /**
  * Evaluate all matched section pairs in a file with a single LLM call.
- * 
+ *
  * This is the preferred Stage 2 approach — one call per flagged file
  * rather than one call per section. Benefits:
  * - Fewer API calls (1 vs N)
  * - Lower latency (1 round-trip vs N)
  * - Cross-section context (LLM sees full picture)
- * 
+ *
  * @param sectionPairs - Matched section pairs from section-matcher
  * @param sourceMetadata - Git metadata for SOURCE file
  * @param targetMetadata - Git metadata for TARGET file
@@ -558,12 +586,12 @@ export async function evaluateFile(
     sourceLanguage: string;
     targetLanguage: string;
     testMode: boolean;
-  },
+  }
 ): Promise<BackportSuggestion[]> {
   // Filter to matched pairs only
   const matchedPairs = sectionPairs
-    .filter(p => p.status === 'MATCHED' && p.sourceSection && p.targetSection)
-    .map(p => ({
+    .filter((p) => p.status === 'MATCHED' && p.sourceSection && p.targetSection)
+    .map((p) => ({
       heading: p.sourceHeading || 'Unknown Section',
       source: p.sourceSection!.content,
       target: p.targetSection!.content,
@@ -585,7 +613,7 @@ export async function evaluateFile(
     sourceMetadata,
     targetMetadata,
     triageNotes,
-    timeline,
+    timeline
   );
 
   const client = new Anthropic({ apiKey: options.apiKey });
@@ -599,10 +627,17 @@ export async function evaluateFile(
         thinking: DEFAULT_THINKING,
         messages: [{ role: 'user', content: prompt }],
       });
+      if (response.stop_reason === 'max_tokens') {
+        // Truncated output must not be interpreted: a cut-off analysis JSON
+        // otherwise falls through the parsers and reads as a clean verdict.
+        throw new Error(
+          `Response truncated at max_tokens=${MAX_TOKENS.analysis}; refusing to interpret incomplete output`
+        );
+      }
 
       const responseText = response.content
         .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-        .map(block => block.text)
+        .map((block) => block.text)
         .join('');
 
       return parseFileEvaluationResponse(responseText, matchedPairs);

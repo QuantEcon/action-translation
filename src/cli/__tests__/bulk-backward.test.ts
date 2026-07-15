@@ -1,6 +1,6 @@
 /**
  * Tests for bulk backward processing
- * 
+ *
  * Tests file discovery, checkpointing, cost estimation, and bulk orchestration.
  * Uses --test mode (no LLM calls) with temporary directories.
  */
@@ -141,7 +141,7 @@ function buildBulkOptions(
   sourceDir: string,
   targetDir: string,
   outputDir: string,
-  overrides: Partial<BackwardOptions & { apiKey: string }> = {},
+  overrides: Partial<BackwardOptions & { apiKey: string }> = {}
 ): BackwardOptions & { apiKey: string } {
   return {
     source: sourceDir,
@@ -283,7 +283,7 @@ describe('buildBulkReport', () => {
     expect(bulk.filesInSync).toBe(1);
     expect(bulk.filesFlagged).toBe(1);
     expect(bulk.totalSuggestions).toBe(1); // Only BACKPORT suggestions counted
-    expect(bulk.highConfidence).toBe(1);   // 0.9 >= 0.85
+    expect(bulk.highConfidence).toBe(1); // 0.9 >= 0.85
     expect(bulk.mediumConfidence).toBe(0);
     expect(bulk.lowConfidence).toBe(0);
     expect(bulk.fileReports).toHaveLength(2);
@@ -320,7 +320,7 @@ describe('runBackwardBulk', () => {
     const sourceName = path.basename(sourceDir); // 'source'
     const repoScopedDir = path.join(outputDir, sourceName);
     expect(fs.existsSync(repoScopedDir)).toBe(true);
-    const bulkFolder = fs.readdirSync(repoScopedDir).find(f => f.startsWith('backward-'));
+    const bulkFolder = fs.readdirSync(repoScopedDir).find((f) => f.startsWith('backward-'));
     expect(bulkFolder).toBeDefined();
 
     // Check aggregate summary was written
@@ -338,7 +338,7 @@ describe('runBackwardBulk', () => {
 
     // Find the timestamped folder under the source repo subfolder
     const repoScopedDir = path.join(outputDir, path.basename(sourceDir));
-    const bulkFolder = fs.readdirSync(repoScopedDir).find(f => f.startsWith('backward-'));
+    const bulkFolder = fs.readdirSync(repoScopedDir).find((f) => f.startsWith('backward-'));
     const bulkDir = path.join(repoScopedDir, bulkFolder!);
 
     // Each file should have a report
@@ -355,7 +355,7 @@ describe('runBackwardBulk', () => {
     await runBackwardBulk(options, silentLogger);
 
     const repoScopedDir = path.join(outputDir, path.basename(sourceDir));
-    const bulkFolder = fs.readdirSync(repoScopedDir).find(f => f.startsWith('backward-'));
+    const bulkFolder = fs.readdirSync(repoScopedDir).find((f) => f.startsWith('backward-'));
     const bulkDir = path.join(repoScopedDir, bulkFolder!);
 
     expect(fs.existsSync(path.join(bulkDir, '_summary.json'))).toBe(true);
@@ -407,7 +407,7 @@ describe('runBackwardBulk with resume', () => {
 
     // Find the bulk folder under the source repo subfolder
     const repoScopedDir = path.join(outputDir, path.basename(sourceDir));
-    const bulkFolder = fs.readdirSync(repoScopedDir).find(f => f.startsWith('backward-'));
+    const bulkFolder = fs.readdirSync(repoScopedDir).find((f) => f.startsWith('backward-'));
     const bulkDir = path.join(repoScopedDir, bulkFolder!);
 
     // Read progress
@@ -448,10 +448,11 @@ describe('runBackwardBulk with resume', () => {
     const options = buildBulkOptions(
       path.join(tmpDir, 'source'),
       path.join(tmpDir, 'target'),
-      emptyDir,
+      emptyDir
     );
 
-    await expect(runBackwardBulk(options, silentLogger, [], true))
-      .rejects.toThrow('No resumable run found');
+    await expect(runBackwardBulk(options, silentLogger, [], true)).rejects.toThrow(
+      'No resumable run found'
+    );
   });
 });

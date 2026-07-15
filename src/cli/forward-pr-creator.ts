@@ -35,7 +35,7 @@ export interface ForwardPRResult {
  */
 export type GhRunner = (
   args: string[],
-  stdin: string,
+  stdin: string
 ) => { stdout: string; stderr: string; status: number | null };
 
 // ============================================================================
@@ -80,7 +80,7 @@ export function realGhRunner(args: string[], stdin: string): ReturnType<GhRunner
  */
 export type GitRunner = (
   args: string[],
-  cwd: string,
+  cwd: string
 ) => { stdout: string; stderr: string; status: number | null };
 
 /**
@@ -145,14 +145,19 @@ export function gitPrepareAndPush(
   content: string,
   targetRepoPath: string,
   docsFolder: string,
-  runner: GitRunner = realGitRunner,
+  runner: GitRunner = realGitRunner
 ): GitPrepareResult {
   const branchName = buildBranchName(file);
 
   // 1. Record current branch
   const branchResult = runner(['rev-parse', '--abbrev-ref', 'HEAD'], targetRepoPath);
   if (branchResult.status !== 0) {
-    return { success: false, branchName, originalBranch: '', error: `Failed to detect current branch: ${branchResult.stderr}` };
+    return {
+      success: false,
+      branchName,
+      originalBranch: '',
+      error: `Failed to detect current branch: ${branchResult.stderr}`,
+    };
   }
   const originalBranch = branchResult.stdout.trim();
 
@@ -170,7 +175,12 @@ export function gitPrepareAndPush(
   const checkoutResult = runner(['checkout', '-b', branchName], targetRepoPath);
   if (checkoutResult.status !== 0) {
     switchBack();
-    return { success: false, branchName, originalBranch, error: `Failed to create branch: ${checkoutResult.stderr}` };
+    return {
+      success: false,
+      branchName,
+      originalBranch,
+      error: `Failed to create branch: ${checkoutResult.stderr}`,
+    };
   }
 
   // 3. Write file
@@ -186,20 +196,35 @@ export function gitPrepareAndPush(
   const addResult = runner(['add', path.join(docsFolder, file)], targetRepoPath);
   if (addResult.status !== 0) {
     switchBack();
-    return { success: false, branchName, originalBranch, error: `Failed to stage file: ${addResult.stderr}` };
+    return {
+      success: false,
+      branchName,
+      originalBranch,
+      error: `Failed to stage file: ${addResult.stderr}`,
+    };
   }
 
   const commitResult = runner(['commit', '-m', `🔄 resync ${file}`], targetRepoPath);
   if (commitResult.status !== 0) {
     switchBack();
-    return { success: false, branchName, originalBranch, error: `Failed to commit: ${commitResult.stderr}` };
+    return {
+      success: false,
+      branchName,
+      originalBranch,
+      error: `Failed to commit: ${commitResult.stderr}`,
+    };
   }
 
   // 5. Push (force to handle re-runs)
   const pushResult = runner(['push', '-u', 'origin', branchName, '--force'], targetRepoPath);
   if (pushResult.status !== 0) {
     switchBack();
-    return { success: false, branchName, originalBranch, error: `Failed to push: ${pushResult.stderr}` };
+    return {
+      success: false,
+      branchName,
+      originalBranch,
+      error: `Failed to push: ${pushResult.stderr}`,
+    };
   }
 
   // 6. Switch back to original branch
@@ -235,7 +260,7 @@ export function parseGitHubRepo(remoteUrl: string): string | undefined {
  */
 export function detectSourceRepo(
   sourceRepoPath: string,
-  runner: GitRunner = realGitRunner,
+  runner: GitRunner = realGitRunner
 ): string | undefined {
   const result = runner(['remote', 'get-url', 'origin'], sourceRepoPath);
   if (result.status !== 0 || !result.stdout) return undefined;
@@ -255,7 +280,7 @@ export function buildForwardPRBody(
   sectionResults: ResyncSectionResult[],
   sourceRepo?: string,
   docsFolder?: string,
-  triageReason?: string,
+  triageReason?: string
 ): string {
   const lines: string[] = [];
 
@@ -264,10 +289,13 @@ export function buildForwardPRBody(
 
   // Source reference
   if (sourceRepo) {
-    const effectiveFolder = (docsFolder && docsFolder !== '.' && docsFolder !== '/') ? docsFolder : '';
+    const effectiveFolder =
+      docsFolder && docsFolder !== '.' && docsFolder !== '/' ? docsFolder : '';
     const sourcePath = effectiveFolder ? `${effectiveFolder}/${file}` : file;
     const sourceUrl = `https://github.com/${sourceRepo}/blob/main/${sourcePath}`;
-    lines.push(`**Source**: [${sourceRepo}](https://github.com/${sourceRepo}) — [${sourcePath}](${sourceUrl})`);
+    lines.push(
+      `**Source**: [${sourceRepo}](https://github.com/${sourceRepo}) — [${sourcePath}](${sourceUrl})`
+    );
   }
   lines.push('This PR resyncs the translation to match the current source document.');
   lines.push('');
@@ -286,11 +314,11 @@ export function buildForwardPRBody(
     lines.push('');
   } else {
     // Legacy section-by-section breakdown
-    const resynced = sectionResults.filter(r => r.action === 'RESYNCED');
-    const newSections = sectionResults.filter(r => r.action === 'NEW');
-    const removed = sectionResults.filter(r => r.action === 'REMOVED');
-    const unchanged = sectionResults.filter(r => r.action === 'UNCHANGED');
-    const errors = sectionResults.filter(r => r.action === 'ERROR');
+    const resynced = sectionResults.filter((r) => r.action === 'RESYNCED');
+    const newSections = sectionResults.filter((r) => r.action === 'NEW');
+    const removed = sectionResults.filter((r) => r.action === 'REMOVED');
+    const unchanged = sectionResults.filter((r) => r.action === 'UNCHANGED');
+    const errors = sectionResults.filter((r) => r.action === 'ERROR');
 
     lines.push('### Changes');
     lines.push('');
@@ -329,7 +357,9 @@ export function buildForwardPRBody(
   }
 
   lines.push('---');
-  lines.push('*Created by [action-translation](https://github.com/QuantEcon/action-translation) forward resync*');
+  lines.push(
+    '*Created by [action-translation](https://github.com/QuantEcon/action-translation) forward resync*'
+  );
 
   return lines.join('\n');
 }
@@ -366,13 +396,20 @@ export function buildPRTitle(file: string): string {
 export function buildGhArgs(file: string, repo: string): string[] {
   const title = buildPRTitle(file);
   return [
-    'pr', 'create',
-    '--repo', repo,
-    '--head', buildBranchName(file),
-    '--title', title,
-    '--body-file', '-',
-    '--label', 'action-translation-sync',
-    '--label', 'resync',
+    'pr',
+    'create',
+    '--repo',
+    repo,
+    '--head',
+    buildBranchName(file),
+    '--title',
+    title,
+    '--body-file',
+    '-',
+    '--label',
+    'action-translation-sync',
+    '--label',
+    'resync',
   ];
 }
 
@@ -399,7 +436,7 @@ export function createForwardPR(
   runner: GhRunner = realGhRunner,
   sourceRepo?: string,
   docsFolder?: string,
-  triageReason?: string,
+  triageReason?: string
 ): ForwardPRResult {
   const args = buildGhArgs(file, repo);
   const body = buildForwardPRBody(file, sectionResults, sourceRepo, docsFolder, triageReason);

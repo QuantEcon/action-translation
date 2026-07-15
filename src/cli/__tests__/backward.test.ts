@@ -1,6 +1,6 @@
 /**
  * Tests for backward command (integration)
- * 
+ *
  * Uses --test mode (deterministic mock responses, no LLM calls).
  * Tests the full pipeline: file reading → triage → section matching → evaluation → report.
  */
@@ -33,12 +33,12 @@ describe('backward command', () => {
 
   /**
    * Helper to build options for fixture-based tests
-   * 
+   *
    * The fixtures use a flat structure (source.md + target.md in the same dir),
    * so we set docsFolder to '' and use the fixture directory as both source and target.
    * The "source" file is under a temp source dir and "target" under a temp target dir.
    */
-  function setupFixtureTest(fixtureName: string): { 
+  function setupFixtureTest(fixtureName: string): {
     options: BackwardOptions & { apiKey: string };
     sourceDir: string;
     targetDir: string;
@@ -50,14 +50,8 @@ describe('backward command', () => {
 
     // Copy fixture files
     const fixtureDir = path.join(fixturesDir, fixtureName);
-    fs.copyFileSync(
-      path.join(fixtureDir, 'source.md'),
-      path.join(sourceDir, 'test-lecture.md'),
-    );
-    fs.copyFileSync(
-      path.join(fixtureDir, 'target.md'),
-      path.join(targetDir, 'test-lecture.md'),
-    );
+    fs.copyFileSync(path.join(fixtureDir, 'source.md'), path.join(sourceDir, 'test-lecture.md'));
+    fs.copyFileSync(path.join(fixtureDir, 'target.md'), path.join(targetDir, 'test-lecture.md'));
 
     return {
       sourceDir,
@@ -171,7 +165,7 @@ describe('backward command', () => {
       // Target has more sections — should still complete
       expect(report.sectionPairs).toBeDefined();
       if (report.sectionPairs) {
-        const targetOnly = report.sectionPairs.filter(p => p.status === 'TARGET_ONLY');
+        const targetOnly = report.sectionPairs.filter((p) => p.status === 'TARGET_ONLY');
         expect(targetOnly.length).toBeGreaterThan(0);
       }
     });
@@ -192,9 +186,9 @@ describe('backward command', () => {
       const { options } = setupFixtureTest('aligned-pair');
       options.file = 'nonexistent.md';
 
-      await expect(
-        runBackwardSingleFile(options, silentLogger),
-      ).rejects.toThrow('SOURCE file not found');
+      await expect(runBackwardSingleFile(options, silentLogger)).rejects.toThrow(
+        'SOURCE file not found'
+      );
     });
 
     it('should throw when target file does not exist', async () => {
@@ -202,18 +196,16 @@ describe('backward command', () => {
       // Remove the target file
       fs.unlinkSync(path.join(targetDir, 'test-lecture.md'));
 
-      await expect(
-        runBackwardSingleFile(options, silentLogger),
-      ).rejects.toThrow('TARGET file not found');
+      await expect(runBackwardSingleFile(options, silentLogger)).rejects.toThrow(
+        'TARGET file not found'
+      );
     });
 
     it('should throw when --file is not provided in single-file mode', async () => {
       const { options } = setupFixtureTest('aligned-pair');
       options.file = undefined;
 
-      await expect(
-        runBackwardSingleFile(options, silentLogger),
-      ).rejects.toThrow('--file');
+      await expect(runBackwardSingleFile(options, silentLogger)).rejects.toThrow('--file');
     });
   });
 });

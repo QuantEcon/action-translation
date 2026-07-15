@@ -1,24 +1,30 @@
 /**
  * Section-Based Translation Service
- * 
+ *
  * Uses Claude Sonnet 4.5 to translate sections of MyST Markdown documents.
- * 
+ *
  * Two modes:
  * 1. UPDATE: Claude sees old English, new English, current translation → produces updated translation
  * 2. NEW: Claude sees new English → produces new translation
- * 
+ *
  * For full documents (new files), translates the entire content in one pass.
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { 
-  APIError, 
-  AuthenticationError, 
-  RateLimitError, 
+import {
+  APIError,
+  AuthenticationError,
+  RateLimitError,
   APIConnectionError,
-  BadRequestError 
+  BadRequestError,
 } from '@anthropic-ai/sdk';
-import { Glossary, SectionTranslationRequest, SectionTranslationResult, FullDocumentTranslationRequest, DocumentResyncRequest } from './types.js';
+import {
+  Glossary,
+  SectionTranslationRequest,
+  SectionTranslationResult,
+  FullDocumentTranslationRequest,
+  DocumentResyncRequest,
+} from './types.js';
 import * as core from '@actions/core';
 import { getLanguageConfig } from './language-config.js';
 import { DEFAULT_CLAUDE_MODEL, MAX_TOKENS, DEFAULT_THINKING } from './models.js';
@@ -31,7 +37,7 @@ const INCOMPLETE_DOCUMENT_MARKER = '-----> INCOMPLETE DOCUMENT <------';
 /** Retry configuration for API calls */
 export const RETRY_CONFIG = {
   maxRetries: 3,
-  baseDelayMs: 1000,  // 1s, 2s, 4s with exponential backoff
+  baseDelayMs: 1000, // 1s, 2s, 4s with exponential backoff
 };
 
 /**
@@ -41,26 +47,26 @@ export const RETRY_CONFIG = {
 function estimateOutputTokens(sourceLength: number, targetLanguage: string): number {
   // Base estimation: ~4 chars per token for most languages
   const baseTokens = Math.ceil(sourceLength / 4);
-  
+
   // Language-specific expansion factors
   // Translation typically expands text, plus we preserve English code/math
   let expansionFactor = 1.5; // Default: 50% expansion
-  
+
   // RTL languages (Arabic, Persian, Hebrew) need more margin due to verbose translations
   if (['ar', 'fa', 'he'].includes(targetLanguage)) {
     expansionFactor = 1.8;
   }
-  
+
   // CJK languages (Chinese, Japanese, Korean) are more compact
   if (['zh', 'zh-cn', 'zh-tw', 'ja', 'ko'].includes(targetLanguage)) {
     expansionFactor = 1.3;
   }
-  
+
   const estimatedTokens = Math.ceil(baseTokens * expansionFactor);
-  
+
   // Add buffer for prompts, formatting, etc.
   const buffer = 2000;
-  
+
   return estimatedTokens + buffer;
 }
 
@@ -71,17 +77,21 @@ function estimateOutputTokens(sourceLength: number, targetLanguage: string): num
 function checkDocumentSize(sourceLength: number, targetLanguage: string): string | null {
   const estimated = estimateOutputTokens(sourceLength, targetLanguage);
   const API_MAX_TOKENS = MAX_TOKENS.fullDocument;
-  
+
   if (estimated > API_MAX_TOKENS) {
-    return `Document too large: estimated ${estimated} tokens exceeds API maximum of ${API_MAX_TOKENS} tokens. ` +
-           `This document needs section-by-section translation rather than bulk translation.`;
+    return (
+      `Document too large: estimated ${estimated} tokens exceeds API maximum of ${API_MAX_TOKENS} tokens. ` +
+      `This document needs section-by-section translation rather than bulk translation.`
+    );
   }
-  
+
   // Log estimation for monitoring (debug-level, not shown unless TRANSLATE_DEBUG is set)
   if (process.env.TRANSLATE_DEBUG) {
-    console.log(`Pre-flight check: source=${sourceLength} chars, estimated output=${estimated} tokens, using max_tokens=${API_MAX_TOKENS}`);
+    console.log(
+      `Pre-flight check: source=${sourceLength} chars, estimated output=${estimated} tokens, using max_tokens=${API_MAX_TOKENS}`
+    );
   }
-  
+
   return null;
 }
 
@@ -134,7 +144,7 @@ export class TranslationService {
    * Sleep for a given number of milliseconds
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -152,8 +162,12 @@ export class TranslationService {
    * - Other non-transient errors
    */
   private async callWithRetry(
-    createParams: { model: string; max_tokens: number; messages: Array<{ role: string; content: string }> },
-    operationName: string,
+    createParams: {
+      model: string;
+      max_tokens: number;
+      messages: Array<{ role: string; content: string }>;
+    },
+    operationName: string
   ): Promise<Anthropic.Message> {
     const { maxRetries, baseDelayMs } = RETRY_CONFIG;
 
@@ -163,7 +177,18 @@ export class TranslationService {
           ...createParams,
           thinking: DEFAULT_THINKING,
         } as Anthropic.MessageStreamParams);
-        return await stream.finalMessage();
+        const message = await stream.finalMessage();
+        // A max_tokens stop means the output was cut off mid-document.
+        // Committing it would silently truncate the translation, and the model
+        // never gets to emit its incomplete-document marker — so fail the
+        // operation loudly. Retrying at the same cap cannot succeed (generic
+        // Error is not retryable below).
+        if (message.stop_reason === 'max_tokens') {
+          throw new Error(
+            `${operationName}: response truncated at max_tokens=${createParams.max_tokens}; refusing to use incomplete output`
+          );
+        }
+        return message;
       } catch (error) {
         // Don't retry on non-transient errors
         if (error instanceof AuthenticationError || error instanceof BadRequestError) {
@@ -174,17 +199,18 @@ export class TranslationService {
         const isRetryable =
           error instanceof RateLimitError ||
           error instanceof APIConnectionError ||
-          (error instanceof APIError && (
-            (error.status !== undefined && error.status >= 500) ||
-            (error.status === undefined && error.message?.includes('overloaded'))  // overloaded_error
-          ));
+          (error instanceof APIError &&
+            ((error.status !== undefined && error.status >= 500) ||
+              (error.status === undefined && error.message?.includes('overloaded')))); // overloaded_error
 
         if (!isRetryable || attempt === maxRetries) {
           throw error;
         }
 
         const delay = baseDelayMs * Math.pow(2, attempt - 1); // 1s, 2s, 4s
-        this.log(`${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error instanceof Error ? error.message : error}. Retrying in ${delay}ms...`);
+        this.log(
+          `${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error instanceof Error ? error.message : error}. Retrying in ${delay}ms...`
+        );
         await this.sleep(delay);
       }
     }
@@ -217,8 +243,11 @@ export class TranslationService {
    * Update existing section (mode='update')
    * Claude sees: old English, new English, current translation → produces updated translation
    */
-  private async translateSectionUpdate(request: SectionTranslationRequest): Promise<SectionTranslationResult> {
-    const { oldEnglish, newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } = request;
+  private async translateSectionUpdate(
+    request: SectionTranslationRequest
+  ): Promise<SectionTranslationResult> {
+    const { oldEnglish, newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } =
+      request;
 
     if (!oldEnglish || !newEnglish || !currentTranslation) {
       return {
@@ -229,9 +258,10 @@ export class TranslationService {
 
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
     const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0
-      ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join('\n')
-      : '';
+    const additionalRules =
+      languageConfig.additionalRules.length > 0
+        ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join('\n')
+        : '';
 
     const prompt = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
 
@@ -274,14 +304,17 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
     this.log(`New ${sourceLanguage} length: ${newEnglish.length}`);
     this.log(`Current ${targetLanguage} length: ${currentTranslation.length}`);
 
-    const response = await this.callWithRetry({
-      model: this.model,
-      max_tokens: MAX_TOKENS.section,
-      messages: [{ role: 'user', content: prompt }],
-    }, 'translateSectionUpdate');
+    const response = await this.callWithRetry(
+      {
+        model: this.model,
+        max_tokens: MAX_TOKENS.section,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      'translateSectionUpdate'
+    );
 
     const content = response.content[0];
-    if (content.type !== 'text') {
+    if (!content || content.type !== 'text') {
       return {
         success: false,
         error: 'Unexpected response format from Claude',
@@ -305,7 +338,9 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
    * Preserves existing translation style, terminology, and localization
    * wherever the meaning hasn't changed.
    */
-  private async translateSectionResync(request: SectionTranslationRequest): Promise<SectionTranslationResult> {
+  private async translateSectionResync(
+    request: SectionTranslationRequest
+  ): Promise<SectionTranslationResult> {
     const { newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } = request;
 
     if (!newEnglish || !currentTranslation) {
@@ -317,9 +352,10 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
 
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
     const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0
-      ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join('\n')
-      : '';
+    const additionalRules =
+      languageConfig.additionalRules.length > 0
+        ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join('\n')
+        : '';
 
     const prompt = `You are resyncing a ${targetLanguage} translation to match the current ${sourceLanguage} source.
 
@@ -356,14 +392,17 @@ Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing t
     this.log(`Current ${sourceLanguage} length: ${newEnglish.length}`);
     this.log(`Existing ${targetLanguage} length: ${currentTranslation.length}`);
 
-    const response = await this.callWithRetry({
-      model: this.model,
-      max_tokens: MAX_TOKENS.section,
-      messages: [{ role: 'user', content: prompt }],
-    }, 'translateSectionResync');
+    const response = await this.callWithRetry(
+      {
+        model: this.model,
+        max_tokens: MAX_TOKENS.section,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      'translateSectionResync'
+    );
 
     const content = response.content[0];
-    if (content.type !== 'text') {
+    if (!content || content.type !== 'text') {
       return {
         success: false,
         error: 'Unexpected response format from Claude',
@@ -383,7 +422,9 @@ Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing t
    * Translate new section (mode='new')
    * Claude sees: English section → produces translation
    */
-  private async translateNewSection(request: SectionTranslationRequest): Promise<SectionTranslationResult> {
+  private async translateNewSection(
+    request: SectionTranslationRequest
+  ): Promise<SectionTranslationResult> {
     const { englishSection, sourceLanguage, targetLanguage, glossary } = request;
 
     if (!englishSection) {
@@ -395,9 +436,10 @@ Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing t
 
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
     const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0
-      ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join('\n')
-      : '';
+    const additionalRules =
+      languageConfig.additionalRules.length > 0
+        ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join('\n')
+        : '';
 
     const prompt = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
 
@@ -428,14 +470,17 @@ Provide ONLY the ${targetLanguage} translation. Do not include any markers, expl
     this.log(`Translating new section, mode=new`);
     this.log(`${sourceLanguage} section length: ${englishSection.length}`);
 
-    const response = await this.callWithRetry({
-      model: this.model,
-      max_tokens: MAX_TOKENS.section,
-      messages: [{ role: 'user', content: prompt }],
-    }, 'translateNewSection');
+    const response = await this.callWithRetry(
+      {
+        model: this.model,
+        max_tokens: MAX_TOKENS.section,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      'translateNewSection'
+    );
 
     const content = response.content[0];
-    if (content.type !== 'text') {
+    if (!content || content.type !== 'text') {
       return {
         success: false,
         error: 'Unexpected response format from Claude',
@@ -454,14 +499,17 @@ Provide ONLY the ${targetLanguage} translation. Do not include any markers, expl
   /**
    * Translate full document (for new files)
    */
-  async translateFullDocument(request: FullDocumentTranslationRequest): Promise<SectionTranslationResult> {
+  async translateFullDocument(
+    request: FullDocumentTranslationRequest
+  ): Promise<SectionTranslationResult> {
     const { content, sourceLanguage, targetLanguage, glossary } = request;
 
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
     const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0
-      ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join('\n')
-      : '';
+    const additionalRules =
+      languageConfig.additionalRules.length > 0
+        ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join('\n')
+        : '';
 
     const prompt = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
 
@@ -500,21 +548,24 @@ Provide the complete translated document maintaining exact MyST structure.`;
     if (sizeError) {
       throw new Error(sizeError);
     }
-    
+
     // Use maximum tokens for all translatable documents
     const maxTokens = MAX_TOKENS.fullDocument;
-    
+
     this.log(`Translating full document`);
     this.log(`Content length: ${content.length} chars`);
 
-    const response = await this.callWithRetry({
-      model: this.model,
-      max_tokens: maxTokens,
-      messages: [{ role: 'user', content: prompt }],
-    }, 'translateFullDocument');
+    const response = await this.callWithRetry(
+      {
+        model: this.model,
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+      },
+      'translateFullDocument'
+    );
 
     const result = response.content[0];
-    if (result.type !== 'text') {
+    if (!result || result.type !== 'text') {
       return {
         success: false,
         error: 'Unexpected response format from Claude',
@@ -522,17 +573,20 @@ Provide the complete translated document maintaining exact MyST structure.`;
     }
 
     const translatedText = result.text.trim();
-    
+
     // Check for incomplete translation marker
     if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
       return {
         success: false,
-        error: `Document exceeded token limits and was truncated. ` +
-               `This document needs section-by-section translation rather than bulk translation.`,
+        error:
+          `Document exceeded token limits and was truncated. ` +
+          `This document needs section-by-section translation rather than bulk translation.`,
       };
     }
-    
-    this.log(`Translation complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
+
+    this.log(
+      `Translation complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`
+    );
 
     return {
       success: true,
@@ -559,9 +613,10 @@ Provide the complete translated document maintaining exact MyST structure.`;
 
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : '';
     const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0
-      ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join('\n')
-      : '';
+    const additionalRules =
+      languageConfig.additionalRules.length > 0
+        ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join('\n')
+        : '';
 
     const prompt = `You are a professional translator specialising in quantitative economics.
 
@@ -605,7 +660,10 @@ ${sourceContent}
 ${targetContent}`;
 
     // Pre-flight check: verify document is within API limits
-    const sizeError = checkDocumentSize(sourceContent.length + targetContent.length, targetLanguage);
+    const sizeError = checkDocumentSize(
+      sourceContent.length + targetContent.length,
+      targetLanguage
+    );
     if (sizeError) {
       throw new Error(sizeError);
     }
@@ -617,14 +675,17 @@ ${targetContent}`;
     this.log(`Target length: ${targetContent.length} chars`);
 
     try {
-      const response = await this.callWithRetry({
-        model: this.model,
-        max_tokens: maxTokens,
-        messages: [{ role: 'user', content: prompt }],
-      }, 'translateDocumentResync');
+      const response = await this.callWithRetry(
+        {
+          model: this.model,
+          max_tokens: maxTokens,
+          messages: [{ role: 'user', content: prompt }],
+        },
+        'translateDocumentResync'
+      );
 
       const result = response.content[0];
-      if (result.type !== 'text') {
+      if (!result || result.type !== 'text') {
         return {
           success: false,
           error: 'Unexpected response format from Claude',
@@ -637,12 +698,15 @@ ${targetContent}`;
       if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
         return {
           success: false,
-          error: `Document exceeded token limits and was truncated. ` +
-                 `This document may need a simpler resync approach.`,
+          error:
+            `Document exceeded token limits and was truncated. ` +
+            `This document may need a simpler resync approach.`,
         };
       }
 
-      this.log(`Resync complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
+      this.log(
+        `Resync complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`
+      );
 
       return {
         success: true,
@@ -666,6 +730,15 @@ ${targetContent}`;
     }
 
     const terms = glossary.terms
+      .filter((term) => {
+        // A term without a translation for this language would render as
+        // `"term" → "undefined"` in the prompt — skip it and say so.
+        if (typeof term[targetLanguage] === 'string' && term[targetLanguage] !== '') {
+          return true;
+        }
+        this.log(`Glossary term "${term.en}" has no ${targetLanguage} translation — skipped`);
+        return false;
+      })
       .map((term) => {
         const translation = term[targetLanguage];
         const context = term.context ? ` (${term.context})` : '';

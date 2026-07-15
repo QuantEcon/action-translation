@@ -38,27 +38,27 @@ function writeFile(filePath: string, content: string): void {
 describe('parseTocLectures', () => {
   it('should parse chapters from _toc.yml', () => {
     const sourceDir = path.join(tmpDir, 'source');
-    writeFile(path.join(sourceDir, 'lectures', '_toc.yml'), `
+    writeFile(
+      path.join(sourceDir, 'lectures', '_toc.yml'),
+      `
 format: jb-book
 root: intro
 chapters:
   - file: getting_started
   - file: cobweb
   - file: solow
-`);
+`
+    );
 
     const lectures = parseTocLectures(sourceDir, 'lectures');
-    expect(lectures).toEqual([
-      'intro.md',
-      'getting_started.md',
-      'cobweb.md',
-      'solow.md',
-    ]);
+    expect(lectures).toEqual(['intro.md', 'getting_started.md', 'cobweb.md', 'solow.md']);
   });
 
   it('should parse parts with chapters', () => {
     const sourceDir = path.join(tmpDir, 'source');
-    writeFile(path.join(sourceDir, 'lectures', '_toc.yml'), `
+    writeFile(
+      path.join(sourceDir, 'lectures', '_toc.yml'),
+      `
 format: jb-book
 root: intro
 parts:
@@ -69,20 +69,18 @@ parts:
   - caption: Part 2
     chapters:
       - file: chapter3
-`);
+`
+    );
 
     const lectures = parseTocLectures(sourceDir, 'lectures');
-    expect(lectures).toEqual([
-      'intro.md',
-      'chapter1.md',
-      'chapter2.md',
-      'chapter3.md',
-    ]);
+    expect(lectures).toEqual(['intro.md', 'chapter1.md', 'chapter2.md', 'chapter3.md']);
   });
 
   it('should parse nested sections within chapters', () => {
     const sourceDir = path.join(tmpDir, 'source');
-    writeFile(path.join(sourceDir, 'lectures', '_toc.yml'), `
+    writeFile(
+      path.join(sourceDir, 'lectures', '_toc.yml'),
+      `
 format: jb-book
 root: intro
 chapters:
@@ -90,25 +88,24 @@ chapters:
     sections:
       - file: sub1
       - file: sub2
-`);
+`
+    );
 
     const lectures = parseTocLectures(sourceDir, 'lectures');
-    expect(lectures).toEqual([
-      'intro.md',
-      'main.md',
-      'sub1.md',
-      'sub2.md',
-    ]);
+    expect(lectures).toEqual(['intro.md', 'main.md', 'sub1.md', 'sub2.md']);
   });
 
   it('should place root file first', () => {
     const sourceDir = path.join(tmpDir, 'source');
-    writeFile(path.join(sourceDir, 'lectures', '_toc.yml'), `
+    writeFile(
+      path.join(sourceDir, 'lectures', '_toc.yml'),
+      `
 format: jb-book
 root: intro
 chapters:
   - file: alpha
-`);
+`
+    );
 
     const lectures = parseTocLectures(sourceDir, 'lectures');
     expect(lectures[0]).toBe('intro.md');
@@ -117,11 +114,14 @@ chapters:
 
   it('should work without root', () => {
     const sourceDir = path.join(tmpDir, 'source');
-    writeFile(path.join(sourceDir, 'lectures', '_toc.yml'), `
+    writeFile(
+      path.join(sourceDir, 'lectures', '_toc.yml'),
+      `
 format: jb-book
 chapters:
   - file: only_chapter
-`);
+`
+    );
 
     const lectures = parseTocLectures(sourceDir, 'lectures');
     expect(lectures).toEqual(['only_chapter.md']);
@@ -136,13 +136,16 @@ chapters:
 
   it('should throw with details on malformed YAML', () => {
     const sourceDir = path.join(tmpDir, 'source');
-    writeFile(path.join(sourceDir, 'lectures', '_toc.yml'), `
+    writeFile(
+      path.join(sourceDir, 'lectures', '_toc.yml'),
+      `
 format: jb-book
 chapters:
   - file: intro
   bad indentation here
   : broken
-`);
+`
+    );
     expect(() => parseTocLectures(sourceDir, 'lectures')).toThrow(/Malformed _toc\.yml/);
   });
 
@@ -154,11 +157,14 @@ chapters:
 
   it('should handle custom docs folder', () => {
     const sourceDir = path.join(tmpDir, 'source');
-    writeFile(path.join(sourceDir, 'docs', '_toc.yml'), `
+    writeFile(
+      path.join(sourceDir, 'docs', '_toc.yml'),
+      `
 format: jb-book
 chapters:
   - file: page1
-`);
+`
+    );
 
     const lectures = parseTocLectures(sourceDir, 'docs');
     expect(lectures).toEqual(['page1.md']);
@@ -166,11 +172,14 @@ chapters:
 
   it('should handle empty chapters list', () => {
     const sourceDir = path.join(tmpDir, 'source');
-    writeFile(path.join(sourceDir, 'lectures', '_toc.yml'), `
+    writeFile(
+      path.join(sourceDir, 'lectures', '_toc.yml'),
+      `
 format: jb-book
 root: intro
 chapters: []
-`);
+`
+    );
 
     const lectures = parseTocLectures(sourceDir, 'lectures');
     expect(lectures).toEqual(['intro.md']);
@@ -178,7 +187,9 @@ chapters: []
 
   it('should handle deeply nested sections', () => {
     const sourceDir = path.join(tmpDir, 'source');
-    writeFile(path.join(sourceDir, 'lectures', '_toc.yml'), `
+    writeFile(
+      path.join(sourceDir, 'lectures', '_toc.yml'),
+      `
 format: jb-book
 chapters:
   - file: top
@@ -186,7 +197,8 @@ chapters:
       - file: mid
         sections:
           - file: deep
-`);
+`
+    );
 
     const lectures = parseTocLectures(sourceDir, 'lectures');
     expect(lectures).toEqual(['top.md', 'mid.md', 'deep.md']);
@@ -194,13 +206,16 @@ chapters:
 
   it('should not double-append .md if entry already has extension', () => {
     const sourceDir = path.join(tmpDir, 'source');
-    writeFile(path.join(sourceDir, 'lectures', '_toc.yml'), `
+    writeFile(
+      path.join(sourceDir, 'lectures', '_toc.yml'),
+      `
 format: jb-book
 root: intro.md
 chapters:
   - file: chapter1.md
   - file: chapter2
-`);
+`
+    );
 
     const lectures = parseTocLectures(sourceDir, 'lectures');
     expect(lectures).toEqual(['intro.md', 'chapter1.md', 'chapter2.md']);
@@ -314,10 +329,7 @@ describe('copyNonMarkdownFiles', () => {
     // Create a real file and a symlink
     writeFile(path.join(sourceDir, 'lectures', 'real.txt'), 'real');
     writeFile(path.join(tmpDir, 'outside.txt'), 'outside');
-    fs.symlinkSync(
-      path.join(tmpDir, 'outside.txt'),
-      path.join(sourceDir, 'lectures', 'link.txt'),
-    );
+    fs.symlinkSync(path.join(tmpDir, 'outside.txt'), path.join(sourceDir, 'lectures', 'link.txt'));
 
     const count = copyNonMarkdownFiles(sourceDir, targetDir, 'lectures');
 
@@ -352,7 +364,12 @@ describe('filterSkipExisting', () => {
       'section-count': 3,
     });
 
-    const result = filterSkipExisting(targetDir, ['intro.md', 'cobweb.md', 'solow.md', 'lake_model.md']);
+    const result = filterSkipExisting(targetDir, [
+      'intro.md',
+      'cobweb.md',
+      'solow.md',
+      'lake_model.md',
+    ]);
 
     expect(result.skippedCount).toBe(2);
     expect(result.remaining).toEqual(['intro.md', 'lake_model.md']);

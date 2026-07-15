@@ -1,9 +1,13 @@
 {
   "name": "action-translation",
   "version": "0.16.0",
+  "private": true,
   "type": "module",
   "description": "GitHub Action to sync and review translations across repositories",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
     "translate": "dist/cli/index.js"
   },
@@ -11,8 +15,9 @@
     "build": "tsc && node build-action.mjs",
     "build:cli": "tsc",
     "test": "jest",
-    "lint": "eslint src/**/*.ts",
-    "format": "prettier --write src/**/*.ts"
+    "lint": "eslint \"src/**/*.{ts,tsx}\" --max-warnings 0",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\""
   },
   "keywords": [
     "github-action",

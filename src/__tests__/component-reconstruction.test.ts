@@ -1,6 +1,6 @@
 /**
  * Tests for component-based document reconstruction
- * 
+ *
  * These tests verify that the new component-based approach always
  * reconstructs complete documents: CONFIG + TITLE + INTRO + SECTIONS
  */
@@ -87,11 +87,11 @@ config: test
     );
 
     // Verify structure is complete
-    expect(result).toContain('---');  // CONFIG
-    expect(result).toContain('# 经济学导论');  // TITLE
-    expect(result).toContain('这是一个简单的测试讲座');  // INTRO (translated)
-    expect(result).toContain('## 基本概念');  // SECTION 1
-    expect(result).toContain('## 数学框架');  // SECTION 2
+    expect(result).toContain('---'); // CONFIG
+    expect(result).toContain('# 经济学导论'); // TITLE
+    expect(result).toContain('这是一个简单的测试讲座'); // INTRO (translated)
+    expect(result).toContain('## 基本概念'); // SECTION 1
+    expect(result).toContain('## 数学框架'); // SECTION 2
 
     // Count sections - should have both
     const sectionMatches = result.match(/^## /gm);
@@ -156,9 +156,9 @@ config: test
     // Verify complete structure
     expect(result).toContain('---');
     expect(result).toContain('# 标题');
-    expect(result).toContain('介绍段落在这里');  // Intro preserved
+    expect(result).toContain('介绍段落在这里'); // Intro preserved
     expect(result).toContain('## 第一部分');
-    expect(result).toContain('新内容在这里，有实际的变化');  // Section updated
+    expect(result).toContain('新内容在这里，有实际的变化'); // Section updated
 
     // Only section was translated
     expect(mockTranslator.translateSection).toHaveBeenCalledTimes(1);
@@ -212,7 +212,7 @@ config: test
     // Verify structure
     expect(result).toContain('# 标题');
     expect(result).toContain('## 部分');
-    
+
     // No double empty lines where intro should be
     expect(result).not.toMatch(/\n\n\n\n/);
   });
@@ -272,7 +272,7 @@ config: test
     // Verify title changed
     expect(result).toContain('# 经济学导论');
     expect(result).not.toContain('# 介绍');
-    
+
     // But intro and sections preserved
     expect(result).toContain('文本');
     expect(result).toContain('## 部分');
@@ -326,7 +326,7 @@ config: test
     // Verify structure
     expect(result).toContain('# 标题');
     expect(result).toContain('这是更新的没有部分的介绍文本');
-    
+
     // No sections
     expect(result).not.toContain('##');
   });
@@ -334,7 +334,7 @@ config: test
 
 /**
  * Element Isolation Tests
- * 
+ *
  * Systematically test each document element in isolation to ensure
  * changes to one element don't affect others.
  */
@@ -402,12 +402,12 @@ config: test
       // New frontmatter field added
       expect(result).toContain('config: test');
       expect(result).toContain('newfield: value');
-      
+
       // Content unchanged - no translation calls needed
       expect(result).toContain('# 标题');
       expect(result).toContain('介绍文本');
       expect(result).toContain('## 部分');
-      
+
       // No translations should occur
       expect(mockTranslator.translateSection).not.toHaveBeenCalled();
     });
@@ -508,12 +508,12 @@ config: test
       // Title translated
       expect(result).toContain('# 经济学导论');
       expect(result).not.toContain('# 介绍');
-      
+
       // Intro and sections preserved
       expect(result).toContain('这里是介绍文本');
       expect(result).toContain('## 第一部分');
       expect(result).toContain('内容');
-      
+
       // Only title translated
       expect(mockTranslator.translateSection).toHaveBeenCalledTimes(1);
       expect(mockTranslator.translateSection).toHaveBeenCalledWith(
@@ -588,7 +588,7 @@ heading-map:
 
       // Title updated
       expect(result).toContain('# 经济学导论');
-      
+
       // Translation metadata contains section heading and title
       expect(result).toContain('translation:');
       expect(result).toContain('title: 经济学导论');
@@ -651,12 +651,12 @@ config: test
       // Intro translated
       expect(result).toContain('这是新的介绍段落，内容不同');
       expect(result).not.toContain('这是旧的介绍段落');
-      
+
       // Title and sections preserved
       expect(result).toContain('# 标题');
       expect(result).toContain('## 部分');
       expect(result).toContain('这里是内容');
-      
+
       // Only intro translated
       expect(mockTranslator.translateSection).toHaveBeenCalledTimes(1);
     });
@@ -799,10 +799,10 @@ config: test
 
       // Heading changed
       expect(result).toContain('## 基础概念');
-      
+
       // Content preserved
       expect(result).toContain('本节介绍基本概念');
-      
+
       // Intro preserved
       expect(result).toContain('介绍');
     });
@@ -863,10 +863,10 @@ config: test
       // Content updated
       expect(result).toContain('本节中的新内容，包含更新');
       expect(result).not.toContain('本节中的旧内容');
-      
+
       // Heading preserved (same heading)
       expect(result).toContain('## 部分');
-      
+
       // Intro preserved
       expect(result).toContain('介绍');
     });
@@ -923,7 +923,8 @@ x = 1
 
       mockTranslator.translateSection.mockResolvedValue({
         success: true,
-        translatedSection: '## 代码示例\n\n代码前有变化的一些文本。\n\n```python\nx = 2\ny = 3\n```',
+        translatedSection:
+          '## 代码示例\n\n代码前有变化的一些文本。\n\n```python\nx = 2\ny = 3\n```',
       });
 
       const result = await processor.processSectionBased(
@@ -993,7 +994,8 @@ config: test
 
       mockTranslator.translateSection.mockResolvedValue({
         success: true,
-        translatedSection: '## 主要部分\n\n这里是有变化的主要内容。\n\n### 子部分\n\n这里是新的子部分内容。',
+        translatedSection:
+          '## 主要部分\n\n这里是有变化的主要内容。\n\n### 子部分\n\n这里是新的子部分内容。',
       });
 
       const result = await processor.processSectionBased(
@@ -1008,7 +1010,7 @@ config: test
       // Subsection updated
       expect(result).toContain('这里是新的子部分内容');
       expect(result).not.toContain('这里是旧的子部分内容');
-      
+
       // Main section also changed so it's updated
       expect(result).toContain('## 主要部分');
     });
@@ -1100,7 +1102,7 @@ heading-map:
       // Check order: C, A, B
       const sections = result.match(/## 部分 [ABC]/g);
       expect(sections).toEqual(['## 部分 C', '## 部分 A', '## 部分 B']);
-      
+
       // No translations needed
       expect(mockTranslator.translateSection).not.toHaveBeenCalled();
     });
@@ -1176,7 +1178,7 @@ heading-map:
       const firstPos = result.indexOf('## 第二');
       const secondPos = result.indexOf('## 第一');
       expect(firstPos).toBeLessThan(secondPos); // Second now comes first
-      
+
       expect(result).toContain('第一内容');
       expect(result).toContain('第二内容');
     });
@@ -1242,10 +1244,10 @@ config: test
       // Both title and intro translated
       expect(result).toContain('# 经济学101');
       expect(result).toContain('经济学高级介绍');
-      
+
       // Section preserved
       expect(result).toContain('## 部分');
-      
+
       // Two translation calls
       expect(mockTranslator.translateSection).toHaveBeenCalledTimes(2);
     });
@@ -1384,7 +1386,7 @@ heading-map:
 装饰器内容。`;
 
     const result = await processor.processSectionBased(
-      sourceContent,  // oldContent === newContent (no diff detected)
+      sourceContent, // oldContent === newContent (no diff detected)
       sourceContent,
       targetContent,
       'test.md',
@@ -1453,7 +1455,7 @@ heading-map:
 内容B。`;
 
     const result = await processor.processSectionBased(
-      sourceContent,  // oldContent === newContent (no diff)
+      sourceContent, // oldContent === newContent (no diff)
       sourceContent,
       targetContent,
       'test.md',
@@ -1510,7 +1512,7 @@ config: test
 内容二。`;
 
     const result = await processor.processSectionBased(
-      sourceContent,  // oldContent === newContent
+      sourceContent, // oldContent === newContent
       sourceContent,
       targetContent,
       'test.md',
@@ -1595,7 +1597,7 @@ heading-map:
       'en',
       'zh-cn',
       undefined,
-      (heading) => skipped.push(heading),
+      (heading) => skipped.push(heading)
     );
 
     // Section A should be absent — it was unchanged in source and missing from target

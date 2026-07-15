@@ -1,11 +1,11 @@
 /**
  * Status Command
- * 
+ *
  * Fast, free diagnostic — no LLM calls.
  * Compares SOURCE and TARGET repos to produce a per-file sync status.
- * 
+ *
  * Output goes to the CLI console (like `git status`), not report files.
- * 
+ *
  * Primary status (most significant issue):
  * - ALIGNED:            Structure matches, heading-map present, no newer SOURCE commits
  * - OUTDATED:           Structure/heading-map OK, but SOURCE has newer commits than TARGET
@@ -15,7 +15,7 @@
  * - SOURCE_ONLY:        File exists in SOURCE but not TARGET
  * - TARGET_ONLY:        File exists in TARGET but not SOURCE
  * - NOT_FOUND:          File not found in either repo (only with --file)
- * 
+ *
  * Flags (compound conditions — a file may have multiple):
  * - SOURCE_AHEAD / TARGET_AHEAD: section count mismatch (more sections in one side)
  * - MISSING_HEADINGMAP: no heading-map in TARGET
@@ -48,15 +48,15 @@ export type FileSyncStatus =
 
 export interface FileStatusEntry {
   file: string;
-  status: FileSyncStatus;       // Primary (most significant) status
-  flags: FileSyncStatus[];      // All conditions that apply (compound)
-  details?: string;             // Human-readable detail (e.g., "7 source vs 6 target sections")
+  status: FileSyncStatus; // Primary (most significant) status
+  flags: FileSyncStatus[]; // All conditions that apply (compound)
+  details?: string; // Human-readable detail (e.g., "7 source vs 6 target sections")
   sourceSections?: number;
   targetSections?: number;
-  sourceLastModified?: string;  // ISO date
-  targetLastModified?: string;  // ISO date
-  contentSync?: string;         // Forward triage verdict (only with --check-sync)
-  contentSyncReason?: string;   // Reason from triage (only with --check-sync)
+  sourceLastModified?: string; // ISO date
+  targetLastModified?: string; // ISO date
+  contentSync?: string; // Forward triage verdict (only with --check-sync)
+  contentSyncReason?: string; // Reason from triage (only with --check-sync)
 }
 
 export interface StatusResult {
@@ -82,15 +82,15 @@ export interface StatusOptions {
   target: string;
   docsFolder: string;
   language: string;
-  exclude: string[];    // Glob patterns to exclude
-  file?: string;        // Single file to check (relative to docs-folder)
+  exclude: string[]; // Glob patterns to exclude
+  file?: string; // Single file to check (relative to docs-folder)
   writeState?: boolean; // Bootstrap .translate/ metadata from current state
   sourceLanguage?: string; // Required when writeState is true
-  force?: boolean;      // Skip sync-date safety check for --write-state
-  checkSync?: boolean;  // LLM-based content sync check (requires ANTHROPIC_API_KEY)
-  apiKey?: string;      // Anthropic API key (required for --check-sync)
-  model?: string;       // Claude model (default: DEFAULT_CLAUDE_MODEL — see src/models.ts)
-  testMode?: boolean;   // Use mock triage responses (for --check-sync)
+  force?: boolean; // Skip sync-date safety check for --write-state
+  checkSync?: boolean; // LLM-based content sync check (requires ANTHROPIC_API_KEY)
+  apiKey?: string; // Anthropic API key (required for --check-sync)
+  model?: string; // Claude model (default: DEFAULT_CLAUDE_MODEL — see src/models.ts)
+  testMode?: boolean; // Use mock triage responses (for --check-sync)
 }
 
 // ============================================================================
@@ -107,8 +107,9 @@ export function discoverMarkdownFiles(repoPath: string, docsFolder: string): str
     return [];
   }
 
-  return fs.readdirSync(fullPath)
-    .filter(f => f.endsWith('.md'))
+  return fs
+    .readdirSync(fullPath)
+    .filter((f) => f.endsWith('.md'))
     .sort();
 }
 
@@ -116,10 +117,7 @@ export function discoverMarkdownFiles(repoPath: string, docsFolder: string): str
  * Resolve the set of all files across SOURCE and TARGET, paired by filename.
  * Returns a deduplicated sorted list of filenames.
  */
-export function resolveFilePairs(
-  sourceFiles: string[],
-  targetFiles: string[],
-): string[] {
+export function resolveFilePairs(sourceFiles: string[], targetFiles: string[]): string[] {
   const all = new Set([...sourceFiles, ...targetFiles]);
   return Array.from(all).sort();
 }
@@ -131,7 +129,7 @@ export function resolveFilePairs(
 export function applyExcludes(files: string[], excludes: string[]): string[] {
   if (excludes.length === 0) return files;
 
-  return files.filter(file => {
+  return files.filter((file) => {
     for (const pattern of excludes) {
       if (pattern.startsWith('*')) {
         // Suffix match: *.yml matches foo.yml
@@ -151,7 +149,7 @@ export function applyExcludes(files: string[], excludes: string[]): string[] {
 
 /**
  * Determine the sync status of a single file.
- * 
+ *
  * Builds a list of all applicable flags, then picks the most significant
  * as the primary status. Priority: SOURCE_AHEAD/TARGET_AHEAD > MISSING_HEADINGMAP > OUTDATED > ALIGNED.
  */
@@ -160,7 +158,7 @@ export async function checkFileStatus(
   sourceRepoPath: string,
   targetRepoPath: string,
   docsFolder: string,
-  stateAware: boolean = false,
+  stateAware: boolean = false
 ): Promise<FileStatusEntry> {
   const sourceFilePath = path.join(sourceRepoPath, docsFolder, file);
   const targetFilePath = path.join(targetRepoPath, docsFolder, file);
@@ -176,7 +174,12 @@ export async function checkFileStatus(
     return { file, status: 'SOURCE_ONLY', flags: ['SOURCE_ONLY'] };
   }
   if (!sourceExists && !targetExists) {
-    return { file, status: 'NOT_FOUND', flags: ['NOT_FOUND'], details: 'File not found in either repo' };
+    return {
+      file,
+      status: 'NOT_FOUND',
+      flags: ['NOT_FOUND'],
+      details: 'File not found in either repo',
+    };
   }
 
   // Both exist — collect all flags
@@ -247,15 +250,20 @@ export async function checkFileStatus(
         const idx = flags.indexOf('OUTDATED');
         flags.splice(idx, 1);
         // Remove the date-based detail
-        const detailIdx = details.findIndex(d => d.includes('SOURCE modified'));
+        const detailIdx = details.findIndex((d) => d.includes('SOURCE modified'));
         if (detailIdx >= 0) details.splice(detailIdx, 1);
       }
     }
   }
 
   // Pick primary status (highest priority flag, or ALIGNED if no flags)
-  const PRIORITY: FileSyncStatus[] = ['SOURCE_AHEAD', 'TARGET_AHEAD', 'MISSING_HEADINGMAP', 'OUTDATED'];
-  const primary = PRIORITY.find(s => flags.includes(s)) ?? 'ALIGNED';
+  const PRIORITY: FileSyncStatus[] = [
+    'SOURCE_AHEAD',
+    'TARGET_AHEAD',
+    'MISSING_HEADINGMAP',
+    'OUTDATED',
+  ];
+  const primary = PRIORITY.find((s) => flags.includes(s)) ?? 'ALIGNED';
   if (primary === 'ALIGNED') {
     flags.push('ALIGNED');
   }
@@ -278,7 +286,7 @@ export async function checkFileStatus(
 
 /**
  * Run the status command across all files in both repos.
- * 
+ *
  * @param options - Status command options
  * @returns StatusResult with per-file entries and summary
  */
@@ -314,7 +322,7 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
   if (options.writeState && options.checkSync) {
     throw new Error(
       '--write-state and --check-sync cannot be used together.\n' +
-      'Run --check-sync first, then --write-state once you\'re satisfied.',
+        "Run --check-sync first, then --write-state once you're satisfied."
     );
   }
 
@@ -324,7 +332,11 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
     if (!options.force) {
       const staleFiles: { file: string; sourceDate: string; targetDate: string }[] = [];
       for (const entry of entries) {
-        if (entry.sourceLastModified && entry.targetLastModified && entry.sourceLastModified > entry.targetLastModified) {
+        if (
+          entry.sourceLastModified &&
+          entry.targetLastModified &&
+          entry.sourceLastModified > entry.targetLastModified
+        ) {
           staleFiles.push({
             file: entry.file,
             sourceDate: entry.sourceLastModified,
@@ -334,16 +346,17 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
       }
       if (staleFiles.length > 0) {
         const lines = staleFiles.map(
-          f => `  ${f.file}  (source: ${f.sourceDate}, target: ${f.targetDate})`,
+          (f) => `  ${f.file}  (source: ${f.sourceDate}, target: ${f.targetDate})`
         );
         throw new Error(
           `--write-state blocked: ${staleFiles.length} file(s) have SOURCE commits newer than TARGET.\n` +
-          `This means the current SOURCE content may not match what was translated.\n` +
-          `Recording current HEAD as baseline would mask this divergence.\n\n` +
-          lines.join('\n') + '\n\n' +
-          `Options:\n` +
-          `  1. Run 'translate forward' first to bring TARGET up to date\n` +
-          `  2. Use --force to write state anyway (if you're sure translations are current)`,
+            `This means the current SOURCE content may not match what was translated.\n` +
+            `Recording current HEAD as baseline would mask this divergence.\n\n` +
+            lines.join('\n') +
+            '\n\n' +
+            `Options:\n` +
+            `  1. Run 'translate forward' first to bring TARGET up to date\n` +
+            `  2. Use --force to write state anyway (if you're sure translations are current)`
         );
       }
     }
@@ -358,7 +371,11 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
     const parser = new MystParser();
     for (const entry of entries) {
       // Only bootstrap state for files that exist in both repos
-      if (entry.status === 'SOURCE_ONLY' || entry.status === 'TARGET_ONLY' || entry.status === 'NOT_FOUND') {
+      if (
+        entry.status === 'SOURCE_ONLY' ||
+        entry.status === 'TARGET_ONLY' ||
+        entry.status === 'NOT_FOUND'
+      ) {
         continue;
       }
 
@@ -376,13 +393,16 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
 
         // Preserve model from existing state if it was set by a prior command (e.g. forward)
         const existingState = readFileState(target, entry.file);
-        const model = (existingState?.model && existingState.model !== 'unknown')
-          ? existingState.model
-          : 'unknown';
+        const model =
+          existingState?.model && existingState.model !== 'unknown'
+            ? existingState.model
+            : 'unknown';
 
         writeFileState(target, entry.file, {
           'source-sha': sourceGit?.lastCommit ?? 'unknown',
-          'synced-at': targetGit?.lastModified?.toISOString().split('T')[0] ?? new Date().toISOString().split('T')[0],
+          'synced-at':
+            targetGit?.lastModified?.toISOString().split('T')[0] ??
+            new Date().toISOString().split('T')[0],
           model,
           mode: 'RESYNC',
           'section-count': parsed.sections.length,
@@ -398,7 +418,11 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
     const srcLang = options.sourceLanguage ?? 'en';
     for (const entry of entries) {
       // Only triage files that exist in both repos
-      if (entry.status === 'SOURCE_ONLY' || entry.status === 'TARGET_ONLY' || entry.status === 'NOT_FOUND') {
+      if (
+        entry.status === 'SOURCE_ONLY' ||
+        entry.status === 'TARGET_ONLY' ||
+        entry.status === 'NOT_FOUND'
+      ) {
         continue;
       }
 
@@ -408,18 +432,13 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
         const sourceContent = fs.readFileSync(sourceFilePath, 'utf-8');
         const targetContent = fs.readFileSync(targetFilePath, 'utf-8');
 
-        const triageResult = await triageForward(
-          entry.file,
-          sourceContent,
-          targetContent,
-          {
-            apiKey: options.apiKey,
-            model: options.model ?? DEFAULT_CLAUDE_MODEL,
-            sourceLanguage: languageLabel(srcLang),
-            targetLanguage: languageLabel(options.language),
-            testMode: options.testMode ?? false,
-          },
-        );
+        const triageResult = await triageForward(entry.file, sourceContent, targetContent, {
+          apiKey: options.apiKey,
+          model: options.model ?? DEFAULT_CLAUDE_MODEL,
+          sourceLanguage: languageLabel(srcLang),
+          targetLanguage: languageLabel(options.language),
+          testMode: options.testMode ?? false,
+        });
 
         entry.contentSync = triageResult.verdict;
         entry.contentSyncReason = triageResult.reason;
@@ -433,14 +452,14 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
   // Build summary (count by primary status)
   const summary = {
     total: entries.length,
-    aligned: entries.filter(e => e.status === 'ALIGNED').length,
-    outdated: entries.filter(e => e.status === 'OUTDATED').length,
-    sourceAhead: entries.filter(e => e.status === 'SOURCE_AHEAD').length,
-    targetAhead: entries.filter(e => e.status === 'TARGET_AHEAD').length,
-    missingHeadingMap: entries.filter(e => e.status === 'MISSING_HEADINGMAP').length,
-    sourceOnly: entries.filter(e => e.status === 'SOURCE_ONLY').length,
-    targetOnly: entries.filter(e => e.status === 'TARGET_ONLY').length,
-    notFound: entries.filter(e => e.status === 'NOT_FOUND').length,
+    aligned: entries.filter((e) => e.status === 'ALIGNED').length,
+    outdated: entries.filter((e) => e.status === 'OUTDATED').length,
+    sourceAhead: entries.filter((e) => e.status === 'SOURCE_AHEAD').length,
+    targetAhead: entries.filter((e) => e.status === 'TARGET_AHEAD').length,
+    missingHeadingMap: entries.filter((e) => e.status === 'MISSING_HEADINGMAP').length,
+    sourceOnly: entries.filter((e) => e.status === 'SOURCE_ONLY').length,
+    targetOnly: entries.filter((e) => e.status === 'TARGET_ONLY').length,
+    notFound: entries.filter((e) => e.status === 'NOT_FOUND').length,
   };
 
   return {
@@ -474,13 +493,15 @@ const STATUS_ICONS: Record<FileSyncStatus, string> = {
 export function formatStatusTable(result: StatusResult): string {
   const lines: string[] = [];
 
-  lines.push(`Sync Status: ${path.basename(result.sourceRepo)} ↔ ${path.basename(result.targetRepo)} (${result.language})`);
+  lines.push(
+    `Sync Status: ${path.basename(result.sourceRepo)} ↔ ${path.basename(result.targetRepo)} (${result.language})`
+  );
   lines.push('');
 
   // Per-file table
   const maxFileLen = Math.max(
     4, // "File" header
-    ...result.entries.map(e => e.file.length),
+    ...result.entries.map((e) => e.file.length)
   );
 
   const header = `  ${'File'.padEnd(maxFileLen)}  Status`;
@@ -492,17 +513,22 @@ export function formatStatusTable(result: StatusResult): string {
   for (const entry of result.entries) {
     const icon = STATUS_ICONS[entry.status];
     // Show compound flags if there are additional conditions beyond the primary
-    const extraFlags = entry.flags.filter(f => f !== entry.status);
+    const extraFlags = entry.flags.filter((f) => f !== entry.status);
     let statusText = `${icon} ${entry.status}`;
     if (extraFlags.length > 0) {
-      statusText += ` + ${extraFlags.map(f => STATUS_ICONS[f] + ' ' + f).join(' + ')}`;
+      statusText += ` + ${extraFlags.map((f) => STATUS_ICONS[f] + ' ' + f).join(' + ')}`;
     }
     if (entry.contentSync) {
-      const syncIcon = entry.contentSync === 'IDENTICAL' ? '🟢'
-        : entry.contentSync === 'I18N_ONLY' ? '🔵'
-        : entry.contentSync === 'TARGET_HAS_ADDITIONS' ? '🟡'
-        : entry.contentSync === 'CONTENT_CHANGES' ? '🔴'
-        : '⚪';
+      const syncIcon =
+        entry.contentSync === 'IDENTICAL'
+          ? '🟢'
+          : entry.contentSync === 'I18N_ONLY'
+            ? '🔵'
+            : entry.contentSync === 'TARGET_HAS_ADDITIONS'
+              ? '🟡'
+              : entry.contentSync === 'CONTENT_CHANGES'
+                ? '🔴'
+                : '⚪';
       statusText += `  ${syncIcon} ${entry.contentSync}`;
     }
     lines.push(`  ${entry.file.padEnd(maxFileLen)}  ${statusText}`);
@@ -520,14 +546,25 @@ export function formatStatusTable(result: StatusResult): string {
   const s = result.summary;
   lines.push('Summary:');
   lines.push(`  ${s.total} files total`);
-  if (s.aligned > 0)           lines.push(`  ${STATUS_ICONS.ALIGNED} ${s.aligned} aligned`);
-  if (s.outdated > 0)          lines.push(`  ${STATUS_ICONS.OUTDATED} ${s.outdated} outdated (SOURCE newer)`);
-  if (s.sourceAhead > 0)       lines.push(`  ${STATUS_ICONS.SOURCE_AHEAD} ${s.sourceAhead} source ahead (sections added upstream)`);
-  if (s.targetAhead > 0)       lines.push(`  ${STATUS_ICONS.TARGET_AHEAD} ${s.targetAhead} target ahead (extra sections in translation)`);
-  if (s.missingHeadingMap > 0) lines.push(`  ${STATUS_ICONS.MISSING_HEADINGMAP} ${s.missingHeadingMap} missing heading-map`);
-  if (s.sourceOnly > 0)        lines.push(`  ${STATUS_ICONS.SOURCE_ONLY} ${s.sourceOnly} source only (not yet translated)`);
-  if (s.targetOnly > 0)        lines.push(`  ${STATUS_ICONS.TARGET_ONLY} ${s.targetOnly} target only (not in source)`);
-  if (s.notFound > 0)           lines.push(`  ${STATUS_ICONS.NOT_FOUND} ${s.notFound} not found (missing from both repos)`);
+  if (s.aligned > 0) lines.push(`  ${STATUS_ICONS.ALIGNED} ${s.aligned} aligned`);
+  if (s.outdated > 0)
+    lines.push(`  ${STATUS_ICONS.OUTDATED} ${s.outdated} outdated (SOURCE newer)`);
+  if (s.sourceAhead > 0)
+    lines.push(
+      `  ${STATUS_ICONS.SOURCE_AHEAD} ${s.sourceAhead} source ahead (sections added upstream)`
+    );
+  if (s.targetAhead > 0)
+    lines.push(
+      `  ${STATUS_ICONS.TARGET_AHEAD} ${s.targetAhead} target ahead (extra sections in translation)`
+    );
+  if (s.missingHeadingMap > 0)
+    lines.push(`  ${STATUS_ICONS.MISSING_HEADINGMAP} ${s.missingHeadingMap} missing heading-map`);
+  if (s.sourceOnly > 0)
+    lines.push(`  ${STATUS_ICONS.SOURCE_ONLY} ${s.sourceOnly} source only (not yet translated)`);
+  if (s.targetOnly > 0)
+    lines.push(`  ${STATUS_ICONS.TARGET_ONLY} ${s.targetOnly} target only (not in source)`);
+  if (s.notFound > 0)
+    lines.push(`  ${STATUS_ICONS.NOT_FOUND} ${s.notFound} not found (missing from both repos)`);
 
   return lines.join('\n');
 }
