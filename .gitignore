@@ -30,7 +30,7 @@ docs/_build/
 .cache/
 
 # Generated reports (output of CLI tools)
-reports/
+/reports/
 
 # Test repositories (cloned locally for testing)
 test-translation-sync/
