@@ -1,9 +1,13 @@
 {
   "name": "action-translation",
   "version": "0.16.0",
+  "private": true,
   "type": "module",
   "description": "GitHub Action to sync and review translations across repositories",
   "main": "dist/index.js",
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
     "translate": "dist/cli/index.js"
   },
