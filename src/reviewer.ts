@@ -16,7 +16,6 @@ import {
   BadRequestError
 } from '@anthropic-ai/sdk';
 import {
-  ReviewInputs,
   TranslationQualityResult,
   DiffQualityResult,
   ReviewResult,

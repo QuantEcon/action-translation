@@ -14,7 +14,6 @@
  */
 
 import { classifyChangedFiles, loadGlossary, SyncOrchestrator, FileToSync, Logger, StateGenerationConfig } from '../sync-orchestrator.js';
-import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
 

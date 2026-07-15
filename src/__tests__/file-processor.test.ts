@@ -1496,27 +1496,6 @@ translation:
 
 部分 B 的内容。`;
 
-  // Target after another PR merged (Section B was updated by a different PR)
-  const newTarget = `---
-config: test
-translation:
-  title: 介绍
-  headings:
-    Section A: "部分 A"
-    Section B: "部分 B"
----
-
-# 介绍
-
-旧介绍文本。
-
-## 部分 A
-
-部分 A 的内容。
-
-## 部分 B
-
-部分 B 的 **更新** 内容。`;
 
   // Previous translation from PR branch (translated Section A)
   const previousTranslation = `---
@@ -1632,7 +1611,7 @@ translation:
       translatedSection: '全新的介绍翻译。',
     });
 
-    const result = await processor.processSectionBased(
+    await processor.processSectionBased(
       oldSource,
       newSource,
       modifiedTarget,
@@ -1663,7 +1642,7 @@ translation:
       translatedSection: '翻译结果',
     });
 
-    const result = await processor.processSectionBased(
+    await processor.processSectionBased(
       oldSource,
       newSource,
       oldTarget,

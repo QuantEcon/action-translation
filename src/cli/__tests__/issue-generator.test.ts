@@ -11,10 +11,6 @@ import {
 import { SuggestionWithContext } from '../commands/review.js';
 
 // ── strip ANSI ─────────────────────────────────────────────────────────────
-function strip(s: string): string {
-  // eslint-disable-next-line no-control-regex
-  return s.replace(/\x1B\[[0-9;]*m/g, '');
-}
 
 // ── fixture factory ────────────────────────────────────────────────────────
 function makeSuggestion(overrides: Partial<SuggestionWithContext> = {}): SuggestionWithContext {

@@ -5,8 +5,6 @@
  * Does NOT make real LLM calls.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
 import { 
   buildTriagePrompt, 
   parseTriageResponse, 
@@ -14,7 +12,6 @@ import {
 } from '../document-comparator.js';
 import { FileGitMetadata, FileTimeline } from '../types.js';
 
-const fixturesDir = path.join(__dirname, 'fixtures');
 
 describe('document-comparator', () => {
   const mockSourceMeta: FileGitMetadata = {

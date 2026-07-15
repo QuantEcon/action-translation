@@ -1,15 +1,12 @@
 import { DiffDetector } from '../diff-detector.js';
-import { MystParser } from '../parser.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
 describe('DiffDetector', () => {
   let detector: DiffDetector;
-  let parser: MystParser;
   
   beforeEach(() => {
     detector = new DiffDetector();
-    parser = new MystParser();
   });
 
   describe('Section Matching - sectionsMatch()', () => {

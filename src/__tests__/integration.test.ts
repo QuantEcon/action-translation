@@ -1,7 +1,6 @@
 import { MystParser } from '../parser.js';
 import { DiffDetector } from '../diff-detector.js';
 import { TranslationService } from '../translator.js';
-import { FileProcessor } from '../file-processor.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -84,20 +83,17 @@ describe('Integration Tests - Full Translation Workflow', () => {
   let parser: MystParser;
   let detector: DiffDetector;
   let translator: MockTranslationService;
-  let processor: FileProcessor;
   
   beforeEach(() => {
     parser = new MystParser();
     detector = new DiffDetector(false);
     translator = new MockTranslationService();
-    processor = new FileProcessor(translator, false);
   });
 
   describe('Scenario: Add "Economic Models" section to document', () => {
     let oldEnglishContent: string;
     let newEnglishContent: string;
     let currentChineseContent: string;
-    let expectedChineseContent: string;
     
     beforeAll(() => {
       const fixturesDir = path.join(__dirname, 'fixtures');
@@ -128,8 +124,8 @@ describe('Integration Tests - Full Translation Workflow', () => {
 
     it('should correctly identify modified sections', async () => {
       // Parse old and new to check for modifications
-      const oldSections = await parser.parseSections(oldEnglishContent, 'intro.md');
-      const newSections = await parser.parseSections(newEnglishContent, 'intro.md');
+      await parser.parseSections(oldEnglishContent, 'intro.md');
+      await parser.parseSections(newEnglishContent, 'intro.md');
       
       // The first paragraph changed (intro text longer)
       // Mathematical Example changed (derivative wording)
@@ -266,7 +262,7 @@ describe('Integration Tests - Full Translation Workflow', () => {
     it('INTEGRATION: should preserve code blocks and math in translations', async () => {
       // Parse documents
       const newEnglish = await parser.parseSections(newEnglishContent, 'intro.md');
-      const currentChinese = await parser.parseSections(currentChineseContent, 'intro.md');
+      await parser.parseSections(currentChineseContent, 'intro.md');
       
       // Find the Python Tools section in new English
       const pythonSection = newEnglish.sections.find(s => s.id === 'python-tools');

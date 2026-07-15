@@ -106,6 +106,7 @@ export function parseTocLectures(sourceRepoPath: string, docsFolder: string): st
   }
 
   const tocContent = fs.readFileSync(tocPath, 'utf-8');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- yaml.load is untyped; fields are runtime-checked
   let toc: any;
   try {
     toc = yaml.load(tocContent);
@@ -463,7 +464,7 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     const sourceDocsDir = path.join(options.source, options.docsFolder);
     if (fs.existsSync(sourceDocsDir)) {
       let nonMdCount = 0;
-      function countNonMd(dir: string) {
+      const countNonMd = (dir: string): void => {
         const entries = fs.readdirSync(dir, { withFileTypes: true });
         for (const entry of entries) {
           if (entry.name.startsWith('.git')) continue;

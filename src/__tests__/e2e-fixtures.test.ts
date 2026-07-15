@@ -28,7 +28,6 @@ class MockTranslator extends TranslationService {
     // Extract the heading and content
     const lines = content.split('\n');
     const heading = lines[0] || '';
-    const body = lines.slice(1).join('\n');
     
     // Create a mock Chinese translation preserving structure
     const translatedHeading = heading.replace(/^##+ /, (match: string) => match) + ' [已翻译]';

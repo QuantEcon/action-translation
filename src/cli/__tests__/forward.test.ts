@@ -11,8 +11,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { resyncSingleFile, runForwardBulk } from '../commands/forward.js';
-import { ForwardOptions, ForwardFileResult } from '../types.js';
+import { resyncSingleFile } from '../commands/forward.js';
+import { ForwardOptions } from '../types.js';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 

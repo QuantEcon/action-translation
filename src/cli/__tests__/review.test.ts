@@ -13,7 +13,6 @@ import * as path from 'path';
 import {
   loadAndFlattenSuggestions,
   formatLoadSummary,
-  SuggestionWithContext,
   LoadStats,
 } from '../commands/review.js';
 

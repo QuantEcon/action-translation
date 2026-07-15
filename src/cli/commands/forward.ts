@@ -30,10 +30,7 @@ import {
   ForwardOptions,
   ForwardFileResult,
 } from '../types.js';
-import {
-  runStatus,
-  StatusOptions,
-} from './status.js';
+import { runStatus } from './status.js';
 import { writeFileState } from '../translate-state.js';
 import { getFileGitMetadata } from '../git-metadata.js';
 import { MystParser } from '../../parser.js';
@@ -41,7 +38,6 @@ import {
   createForwardPR,
   gitPrepareAndPush,
   detectSourceRepo,
-  ForwardPRResult,
   GhRunner,
   GitRunner,
   realGhRunner,

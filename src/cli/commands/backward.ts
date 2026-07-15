@@ -30,7 +30,7 @@ import { triageDocument } from '../document-comparator.js';
 import { evaluateFile } from '../backward-evaluator.js';
 import { getFileGitMetadata, getFileTimeline } from '../git-metadata.js';
 import { generateMarkdownReport, generateJsonReport, generateBulkMarkdownReport, generateBulkJsonReport } from '../report-generator.js';
-import { BackwardReport, BackwardOptions, BackportSuggestion, BulkBackwardReport } from '../types.js';
+import { BackwardReport, BackwardOptions, BulkBackwardReport } from '../types.js';
 import { SCHEMA_VERSION } from '../schema.js';
 import { discoverMarkdownFiles, resolveFilePairs, applyExcludes } from './status.js';
 import { readFileState, isSourceChanged } from '../translate-state.js';

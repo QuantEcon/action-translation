@@ -11,7 +11,7 @@
  */
 
 import * as path from 'path';
-import { loadResyncDirectory, filterActionableSuggestions, BackwardReportData, BackportSuggestionData } from '../schema.js';
+import { loadResyncDirectory, filterActionableSuggestions, BackportSuggestionData } from '../schema.js';
 import { createIssuesForAccepted, checkGhAvailable } from '../issue-creator.js';
 import type { SessionSummary } from '../review-session.js';
 import { formatEndSummary } from '../review-session.js';

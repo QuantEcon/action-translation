@@ -34,6 +34,7 @@ export function extractHeadingMap(content: string): HeadingMap {
   }
   
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- yaml.load is untyped; fields are runtime-checked
     const frontmatter = yaml.load(frontmatterMatch[1]) as any;
     
     // New format: translation.headings
@@ -64,6 +65,7 @@ export function extractTranslationTitle(content: string): string | undefined {
   if (!frontmatterMatch) return undefined;
   
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- yaml.load is untyped; fields are runtime-checked
     const frontmatter = yaml.load(frontmatterMatch[1]) as any;
     const title = frontmatter?.translation?.title;
     return typeof title === 'string' ? title : undefined;
@@ -174,6 +176,7 @@ export function serializeHeadingMap(map: HeadingMap, title?: string): string {
   }
   
   // Build translation object
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- yaml.load is untyped; fields are runtime-checked
   const translation: Record<string, any> = {};
   
   if (title) {
@@ -268,6 +271,7 @@ export function injectHeadingMap(
   
   try {
     // Parse existing frontmatter
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- yaml.load is untyped; fields are runtime-checked
     const frontmatter = yaml.load(existingYaml) as any || {};
     
     // Remove legacy heading-map key
@@ -275,6 +279,7 @@ export function injectHeadingMap(
     
     // Build translation object
     if (headingMap.size > 0 || title) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- yaml.load is untyped; fields are runtime-checked
       const translationObj: Record<string, any> = {};
       if (title) {
         translationObj.title = title;

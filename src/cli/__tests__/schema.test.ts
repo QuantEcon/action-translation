@@ -461,7 +461,7 @@ describe('loadResyncDirectory', () => {
   const hasFixtures = fs.existsSync(fixtureDir);
 
   (hasFixtures ? it : it.skip)('loads real report files from fixture dir', () => {
-    const { reports, errors } = loadResyncDirectory(fixtureDir);
+    const { reports } = loadResyncDirectory(fixtureDir);
     expect(reports.length).toBeGreaterThan(0);
     // All loaded reports should have required fields
     for (const report of reports) {

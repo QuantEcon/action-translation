@@ -10,7 +10,6 @@ import {
   createIssuesForAccepted,
   checkGhAvailable,
   GhRunner,
-  IssueResult,
 } from '../issue-creator.js';
 import { SuggestionWithContext } from '../commands/review.js';
 

@@ -262,7 +262,7 @@ export class MystParser {
     // directive blocks like ```{raw} jupyter ... ``` that appear before the title
     let title = '';
     let titleText = '';
-    let preTitleLines: string[] = [];
+    const preTitleLines: string[] = [];
     let titleEndIndex = contentStartIndex;
     let insideFence = false;
     

@@ -623,7 +623,7 @@ export class FileProcessor {
    */
   private async parseTranslatedSubsections(
     translatedContent: string,
-    sourceSection: Section
+    _sourceSection: Section
   ): Promise<{ subsections: Section[]; contentWithoutSubsections: string }> {
     try {
       // Wrap in minimal MyST document for parsing

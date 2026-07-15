@@ -4,7 +4,7 @@ import { getMode, getInputs, getReviewInputs, getRebaseInputs, validatePREvent, 
 import { TranslationReviewer } from './reviewer.js';
 import { SyncOrchestrator, classifyChangedFiles, loadGlossary, FileToSync, Logger, StateGenerationConfig } from './sync-orchestrator.js';
 import { createTranslationPR, PrCreatorConfig, SourcePrInfo, parseTranslationSyncMetadata, TranslationSyncMetadata } from './pr-creator.js';
-import { RebaseCache, RebaseCacheData } from './types.js';
+import { RebaseCache } from './types.js';
 import { stateFileRelativePath } from './cli/translate-state.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';

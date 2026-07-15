@@ -41,7 +41,7 @@ export interface ReviewSessionProps {
 // COMPONENT
 // ============================================================================
 
-export function ReviewSession({ suggestions, dryRun = false, onDone }: ReviewSessionProps): React.ReactElement {
+export function ReviewSession({ suggestions, onDone }: ReviewSessionProps): React.ReactElement {
   const { exit } = useApp();
   const [state, setState] = useState(() => initialState(suggestions.length));
   const [showReasoning, setShowReasoning] = useState(false);

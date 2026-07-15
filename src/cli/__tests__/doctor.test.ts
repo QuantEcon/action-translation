@@ -19,7 +19,6 @@ import {
   runDoctor,
   formatDoctorTable,
   formatDoctorJson,
-  DoctorOptions,
 } from '../commands/doctor.js';
 import { writeConfig, writeFileState } from '../translate-state.js';
 

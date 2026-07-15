@@ -36,7 +36,6 @@ describe('Translator Module', () => {
     it('should estimate CJK languages need fewer tokens (more compact)', () => {
       // CJK expansion factor is 1.3, vs 1.5 for default
       // This means CJK translations should have smaller estimates
-      const sourceLength = 10000; // 10k chars
       
       // Expected: (10000/4) * 1.3 + 2000 = 5250 tokens for CJK
       // Expected: (10000/4) * 1.5 + 2000 = 5750 tokens for default
@@ -49,7 +48,6 @@ describe('Translator Module', () => {
     it('should estimate RTL languages need more tokens (verbose)', () => {
       // RTL expansion factor is 1.8, vs 1.5 for default
       // This means Persian/Arabic translations should have larger estimates
-      const sourceLength = 10000; // 10k chars
       
       // Expected: (10000/4) * 1.8 + 2000 = 6500 tokens for RTL
       // Expected: (10000/4) * 1.5 + 2000 = 5750 tokens for default

@@ -13,7 +13,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { MystParser } from '../../parser.js';
-import { Section } from '../../types.js';
 import {
   HeadingMap,
   extractHeadingMap,
