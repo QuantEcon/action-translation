@@ -1,10 +1,10 @@
 /**
  * File-level git metadata extraction
- * 
+ *
  * Uses `git log` to get last modification date, commit SHA, and author
  * for source and target files. This temporal context is passed to the LLM
  * to help evaluate whether changes are worth backporting.
- * 
+ *
  * Uses file-level dates (not section-level) for simplicity and reliability.
  */
 
@@ -16,20 +16,20 @@ const execFileAsync = promisify(execFile);
 
 /**
  * Get file-level git metadata for a file
- * 
+ *
  * @param repoPath - Path to the git repository root
  * @param filePath - Relative path to the file within the repo
  * @returns Git metadata or null if the file has no git history
  */
 export async function getFileGitMetadata(
   repoPath: string,
-  filePath: string,
+  filePath: string
 ): Promise<FileGitMetadata | null> {
   try {
     const { stdout } = await execFileAsync(
       'git',
       ['log', '-1', '--format=%H %ai %an', '--', filePath],
-      { cwd: repoPath },
+      { cwd: repoPath }
     );
 
     const trimmed = stdout.trim();
@@ -45,13 +45,15 @@ export async function getFileGitMetadata(
 
 /**
  * Parse the output of `git log -1 --format="%H %ai %an"`
- * 
+ *
  * Format: "<sha> <date> <timezone> <author>"
  * Example: "abc123def 2024-06-15 10:30:00 -0500 Jane Doe"
  */
 export function parseGitLogOutput(output: string): FileGitMetadata | null {
   // SHA is 40 hex chars, date is "YYYY-MM-DD HH:MM:SS +ZZZZ", rest is author
-  const match = output.match(/^([0-9a-f]{40})\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\s+[+-]\d{4})\s+(.+)$/);
+  const match = output.match(
+    /^([0-9a-f]{40})\s+(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\s+[+-]\d{4})\s+(.+)$/
+  );
   if (!match) {
     return null;
   }
@@ -87,7 +89,7 @@ export function daysBetween(earlier: Date, later: Date): number {
 /**
  * Get the full commit history for a file from a single repo
  * Returns entries newest-first.
- * 
+ *
  * @param repoPath - Path to the git repository root
  * @param filePath - Relative path to the file within the repo
  * @param label - 'SOURCE' or 'TARGET'
@@ -96,21 +98,20 @@ export function daysBetween(earlier: Date, later: Date): number {
 export async function getRepoCommits(
   repoPath: string,
   filePath: string,
-  label: 'SOURCE' | 'TARGET',
+  label: 'SOURCE' | 'TARGET'
 ): Promise<TimelineEntry[]> {
   try {
-    const { stdout } = await execFileAsync(
-      'git',
-      ['log', '--format=%ai|%h|%s', '--', filePath],
-      { cwd: repoPath },
-    );
+    const { stdout } = await execFileAsync('git', ['log', '--format=%ai|%h|%s', '--', filePath], {
+      cwd: repoPath,
+    });
 
     const trimmed = stdout.trim();
     if (!trimmed) return [];
 
-    return trimmed.split('\n').map(line => parseTimelineEntry(line, label)).filter(
-      (entry): entry is TimelineEntry => entry !== null,
-    );
+    return trimmed
+      .split('\n')
+      .map((line) => parseTimelineEntry(line, label))
+      .filter((entry): entry is TimelineEntry => entry !== null);
   } catch {
     return [];
   }
@@ -118,13 +119,10 @@ export async function getRepoCommits(
 
 /**
  * Parse a single line of `git log --format="%ai|%h|%s"` output
- * 
+ *
  * Format: "2024-06-15 10:30:00 -0500|abc123d|commit message"
  */
-export function parseTimelineEntry(
-  line: string,
-  label: 'SOURCE' | 'TARGET',
-): TimelineEntry | null {
+export function parseTimelineEntry(line: string, label: 'SOURCE' | 'TARGET'): TimelineEntry | null {
   const parts = line.split('|');
   if (parts.length < 3) return null;
 
@@ -147,11 +145,11 @@ export function parseTimelineEntry(
 
 /**
  * Build an interleaved commit timeline for a file across SOURCE and TARGET repos.
- * 
+ *
  * This gives the LLM a chronological narrative of what changed where and when,
  * preventing directional reasoning errors (e.g., thinking TARGET's older code
  * should be backported when SOURCE is actually newer).
- * 
+ *
  * @param sourceRepoPath - Path to the SOURCE repository
  * @param targetRepoPath - Path to the TARGET repository
  * @param filePath - Relative path to the file within each repo's docs folder
@@ -160,7 +158,7 @@ export function parseTimelineEntry(
 export async function getFileTimeline(
   sourceRepoPath: string,
   targetRepoPath: string,
-  filePath: string,
+  filePath: string
 ): Promise<FileTimeline | null> {
   const [sourceEntries, targetEntries] = await Promise.all([
     getRepoCommits(sourceRepoPath, filePath, 'SOURCE'),
@@ -173,17 +171,16 @@ export async function getFileTimeline(
 
   // Interleave and sort newest-first by full timestamp (not just date)
   const allEntries = [...sourceEntries, ...targetEntries].sort((a, b) =>
-    b.fullDate.localeCompare(a.fullDate),
+    b.fullDate.localeCompare(a.fullDate)
   );
 
   // Estimated sync date: earliest TARGET commit = when translation was first created
-  const estimatedSyncDate = targetEntries.length > 0
-    ? targetEntries[targetEntries.length - 1].date
-    : null;
+  const estimatedSyncDate =
+    targetEntries.length > 0 ? targetEntries[targetEntries.length - 1].date : null;
 
   // Count SOURCE commits after the sync point
   const sourceCommitsAfterSync = estimatedSyncDate
-    ? sourceEntries.filter(e => e.date > estimatedSyncDate).length
+    ? sourceEntries.filter((e) => e.date > estimatedSyncDate).length
     : 0;
 
   return {
@@ -198,23 +195,24 @@ export async function getFileTimeline(
 /**
  * Format a timeline into a compact string for LLM prompts.
  * Shows most recent N entries to keep token usage reasonable.
- * 
+ *
  * @param timeline - The file timeline
  * @param maxEntries - Maximum entries to show (default: 20)
  * @returns Formatted string for inclusion in a prompt
  */
-export function formatTimelineForPrompt(
-  timeline: FileTimeline,
-  maxEntries: number = 20,
-): string {
+export function formatTimelineForPrompt(timeline: FileTimeline, maxEntries: number = 20): string {
   const lines: string[] = [];
 
-  lines.push(`Source has ${timeline.sourceCommitCount} commits, Target has ${timeline.targetCommitCount} commits.`);
+  lines.push(
+    `Source has ${timeline.sourceCommitCount} commits, Target has ${timeline.targetCommitCount} commits.`
+  );
 
   if (timeline.estimatedSyncDate) {
     lines.push(`Estimated sync point (earliest TARGET commit): ${timeline.estimatedSyncDate}`);
     if (timeline.sourceCommitsAfterSync > 0) {
-      lines.push(`SOURCE has ${timeline.sourceCommitsAfterSync} commit(s) AFTER the translation was created.`);
+      lines.push(
+        `SOURCE has ${timeline.sourceCommitsAfterSync} commit(s) AFTER the translation was created.`
+      );
     }
   }
 

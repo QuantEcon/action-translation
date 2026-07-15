@@ -49,7 +49,11 @@ export interface TranslationSyncMetadata {
   sourceLanguage: string;
   targetLanguage: string;
   claudeModel: string;
-  files: Array<{ path: string; type?: 'markdown' | 'renamed' | 'removed' | 'toc'; previousPath?: string }>;
+  files: Array<{
+    path: string;
+    type?: 'markdown' | 'renamed' | 'removed' | 'toc';
+    previousPath?: string;
+  }>;
 }
 
 /**
@@ -96,7 +100,7 @@ export async function createTranslationPR(
   logger: Logger,
   sourcePrInfo?: SourcePrInfo,
   skippedSections?: Map<string, string[]>,
-  fileMetadata?: Array<{ path: string; type: string; previousPath?: string }>,
+  fileMetadata?: Array<{ path: string; type: string; previousPath?: string }>
 ): Promise<PrCreationResult> {
   const { targetOwner, targetRepo } = config;
 
@@ -156,7 +160,15 @@ export async function createTranslationPR(
   }
 
   // Build PR body (includes targetBaseSha for rebase cache support)
-  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata);
+  const prBody = buildPrBody(
+    translatedFiles,
+    filesToDelete,
+    config,
+    sourcePrInfo,
+    skippedSections,
+    baseSha,
+    fileMetadata
+  );
 
   // Build PR title
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
@@ -194,15 +206,21 @@ export async function createTranslationPR(
         break;
       } catch (labelError) {
         if (attempt < maxAttempts) {
-          logger.info(`Label attempt ${attempt}/${maxAttempts} failed, retrying in ${delayMs}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delayMs));
+          logger.info(
+            `Label attempt ${attempt}/${maxAttempts} failed, retrying in ${delayMs}ms...`
+          );
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
         } else {
-          logger.warning(`Could not add labels to PR #${pr.number} after ${maxAttempts} attempts: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
+          logger.warning(
+            `Could not add labels to PR #${pr.number} after ${maxAttempts} attempts: ${labelError instanceof Error ? labelError.message : String(labelError)}`
+          );
         }
       }
     }
     if (!labeled) {
-      logger.warning(`PR #${pr.number} created successfully but labels could not be applied. Downstream workflows that filter by label may not trigger.`);
+      logger.warning(
+        `PR #${pr.number} created successfully but labels could not be applied. Downstream workflows that filter by label may not trigger.`
+      );
     }
   }
 
@@ -230,22 +248,25 @@ export function buildPrBody(
   sourcePrInfo?: SourcePrInfo,
   skippedSections?: Map<string, string[]>,
   targetBaseSha?: string,
-  fileMetadata?: Array<{ path: string; type: string; previousPath?: string }>,
+  fileMetadata?: Array<{ path: string; type: string; previousPath?: string }>
 ): string {
-  const newFiles = translatedFiles.filter(f => !f.sha);
-  const updatedFiles = translatedFiles.filter(f => f.sha);
+  const newFiles = translatedFiles.filter((f) => !f.sha);
+  const updatedFiles = translatedFiles.filter((f) => f.sha);
 
   let filesChangedSection = '';
   if (newFiles.length > 0) {
-    filesChangedSection += '### Files Added\n' + newFiles.map(f => `- ✅ \`${f.path}\``).join('\n');
+    filesChangedSection +=
+      '### Files Added\n' + newFiles.map((f) => `- ✅ \`${f.path}\``).join('\n');
   }
   if (updatedFiles.length > 0) {
     if (filesChangedSection) filesChangedSection += '\n\n';
-    filesChangedSection += '### Files Updated\n' + updatedFiles.map(f => `- ✏️ \`${f.path}\``).join('\n');
+    filesChangedSection +=
+      '### Files Updated\n' + updatedFiles.map((f) => `- ✏️ \`${f.path}\``).join('\n');
   }
   if (filesToDelete.length > 0) {
     if (filesChangedSection) filesChangedSection += '\n\n';
-    filesChangedSection += '### Files Deleted\n' + filesToDelete.map(f => `- ❌ \`${f.path}\``).join('\n');
+    filesChangedSection +=
+      '### Files Deleted\n' + filesToDelete.map((f) => `- ❌ \`${f.path}\``).join('\n');
   }
 
   const sourcePrTitle = sourcePrInfo?.title || '';
@@ -257,7 +278,9 @@ export function buildPrBody(
     const lines: string[] = [];
     for (const [file, headings] of skippedSections) {
       // Wrap each heading in backticks (escaped) to neutralize any Markdown syntax
-      lines.push(`- \`${file}\`: ${headings.map(h => `\`${h.replace(/`/g, '\\`')}\``).join(', ')}`);
+      lines.push(
+        `- \`${file}\`: ${headings.map((h) => `\`${h.replace(/`/g, '\\`')}\``).join(', ')}`
+      );
     }
     skippedNotice = `\n\n### ⚠️ Sections Pending Earlier Translation PR\n\nThe following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. If that PR is abandoned, run \`/translate-resync\` to recover.\n\n${lines.join('\n')}`;
   }
@@ -265,14 +288,17 @@ export function buildPrBody(
   // Build machine-readable metadata for rebase mode
   // Use fileMetadata (with type info) if available, otherwise fall back to path-only
   const metadataFiles: TranslationSyncMetadata['files'] = fileMetadata
-    ? fileMetadata.map(f => {
-        const entry: TranslationSyncMetadata['files'][0] = { path: f.path, type: f.type as TranslationSyncMetadata['files'][0]['type'] };
+    ? fileMetadata.map((f) => {
+        const entry: TranslationSyncMetadata['files'][0] = {
+          path: f.path,
+          type: f.type as TranslationSyncMetadata['files'][0]['type'],
+        };
         if (f.previousPath) entry.previousPath = f.previousPath;
         return entry;
       })
     : [
-        ...translatedFiles.map(f => ({ path: f.path })),
-        ...filesToDelete.map(f => ({ path: f.path })),
+        ...translatedFiles.map((f) => ({ path: f.path })),
+        ...filesToDelete.map((f) => ({ path: f.path })),
       ];
 
   const metadata: TranslationSyncMetadata = {
@@ -315,14 +341,14 @@ export function buildPrTitle(
   translatedFiles: TranslatedFile[],
   filesToDelete: Array<{ path: string; sha: string }>,
   config: PrCreatorConfig,
-  sourcePrInfo?: SourcePrInfo,
+  sourcePrInfo?: SourcePrInfo
 ): string {
   if (sourcePrInfo?.title) {
     return `🌐 [translation-sync] ${sourcePrInfo.title}`;
   }
 
   // Fallback: list files changed
-  const allFiles = [...translatedFiles.map(f => f.path), ...filesToDelete.map(f => f.path)];
+  const allFiles = [...translatedFiles.map((f) => f.path), ...filesToDelete.map((f) => f.path)];
   let titleFileList: string;
   if (allFiles.length === 1) {
     titleFileList = allFiles[0];
@@ -338,10 +364,7 @@ export function buildPrTitle(
  * Build the set of labels to add to the PR.
  * Combines input labels with source PR labels (excluding source-specific ones).
  */
-export function buildLabelSet(
-  inputLabels: string[],
-  sourcePrLabels?: string[],
-): string[] {
+export function buildLabelSet(inputLabels: string[], sourcePrLabels?: string[]): string[] {
   const labelsToAdd = new Set<string>();
 
   for (const label of inputLabels) {
@@ -367,7 +390,7 @@ async function requestReviewers(
   targetRepo: string,
   prNumber: number,
   config: PrCreatorConfig,
-  logger: Logger,
+  logger: Logger
 ): Promise<void> {
   if (config.prReviewers.length === 0 && config.prTeamReviewers.length === 0) {
     return;
@@ -399,7 +422,9 @@ async function requestReviewers(
     logger.info(`Requested reviewers: ${reviewersList.join('; ')}`);
   } catch (reviewerError) {
     // Don't fail the entire action if reviewer request fails
-    logger.warning(`Could not request reviewers: ${reviewerError instanceof Error ? reviewerError.message : String(reviewerError)}`);
+    logger.warning(
+      `Could not request reviewers: ${reviewerError instanceof Error ? reviewerError.message : String(reviewerError)}`
+    );
   }
 }
 

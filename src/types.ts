@@ -1,6 +1,6 @@
 /**
  * Types and interfaces for the translation sync action
- * 
+ *
  * This action uses a SECTION-BASED approach:
  * - Documents are parsed into sections based on ## headings
  * - Changes are detected at the section level
@@ -25,25 +25,25 @@ export interface ActionInputs {
   prLabels: string[];
   prReviewers: string[];
   prTeamReviewers: string[];
-  testMode: boolean;        // If true, run on PR head instead of merge commit
+  testMode: boolean; // If true, run on PR head instead of merge commit
 }
 
 export interface ReviewInputs {
-  sourceRepo: string;       // Source repository for English content (owner/repo)
-  maxSuggestions: number;   // Maximum suggestions in review comment
-  docsFolder: string;       // Documentation folder pattern
-  sourceLanguage: string;   // Source language code (default: en)
-  glossaryPath: string;     // Path to custom glossary
-  anthropicApiKey: string;  // Anthropic API key for Claude
-  claudeModel: string;      // Claude model for evaluation
-  githubToken: string;      // GitHub token for API access
+  sourceRepo: string; // Source repository for English content (owner/repo)
+  maxSuggestions: number; // Maximum suggestions in review comment
+  docsFolder: string; // Documentation folder pattern
+  sourceLanguage: string; // Source language code (default: en)
+  glossaryPath: string; // Path to custom glossary
+  anthropicApiKey: string; // Anthropic API key for Claude
+  claudeModel: string; // Claude model for evaluation
+  githubToken: string; // GitHub token for API access
 }
 
 export interface RebaseInputs {
-  docsFolder: string;       // Documentation folder pattern
-  glossaryPath: string;     // Path to custom glossary
-  anthropicApiKey: string;  // Anthropic API key for Claude
-  githubToken: string;      // GitHub token for API access
+  docsFolder: string; // Documentation folder pattern
+  glossaryPath: string; // Path to custom glossary
+  anthropicApiKey: string; // Anthropic API key for Claude
+  githubToken: string; // GitHub token for API access
 }
 
 // ============================================================================
@@ -59,8 +59,8 @@ export interface RebaseInputs {
  * identical and the cached result from the PR branch can be reused.
  */
 export interface RebaseCacheData {
-  previousTranslation: string;  // Full translated file content from the PR branch
-  oldTargetContent: string;     // Target file content at targetBaseSha
+  previousTranslation: string; // Full translated file content from the PR branch
+  oldTargetContent: string; // Target file content at targetBaseSha
 }
 
 /** Map from filename to per-file rebase cache data */
@@ -96,20 +96,20 @@ export interface Glossary {
  * until the next ## heading
  */
 export interface Section {
-  heading: string;          // Full heading text: "## Economic Models"
-  level: number;            // Heading level: 2 (for ##)
-  id: string;               // Anchor/slug: "economic-models"
-  content: string;          // Full markdown content of section (including subsections)
-  startLine: number;        // Starting line in original document
-  endLine: number;          // Ending line in original document
-  parentId?: string;        // ID of parent section (for nested sections)
-  subsections: Section[];   // Nested subsections (### headings)
+  heading: string; // Full heading text: "## Economic Models"
+  level: number; // Heading level: 2 (for ##)
+  id: string; // Anchor/slug: "economic-models"
+  content: string; // Full markdown content of section (including subsections)
+  startLine: number; // Starting line in original document
+  endLine: number; // Ending line in original document
+  parentId?: string; // ID of parent section (for nested sections)
+  subsections: Section[]; // Nested subsections (### headings)
 }
 
 export interface ParsedSections {
   sections: Section[];
-  frontmatter?: string;     // YAML frontmatter (if present)
-  preamble?: string;        // Content before first ## heading (title, intro, etc.)
+  frontmatter?: string; // YAML frontmatter (if present)
+  preamble?: string; // Content before first ## heading (title, intro, etc.)
   metadata: {
     filepath: string;
     totalLines: number;
@@ -123,12 +123,12 @@ export interface ParsedSections {
  * - INTRO and SECTIONS can be empty
  */
 export interface DocumentComponents {
-  config: string;           // YAML frontmatter (always present, even if empty)
-  preTitle: string;         // Content between frontmatter and # title (cross-ref targets, raw blocks, etc.)
-  title: string;            // The # heading line (e.g., "# Introduction to Economics")
-  titleText: string;        // Just the heading text (e.g., "Introduction to Economics")
-  intro: string;            // Content between # title and first ## (can be empty)
-  sections: Section[];      // All ## level sections (can be empty array)
+  config: string; // YAML frontmatter (always present, even if empty)
+  preTitle: string; // Content between frontmatter and # title (cross-ref targets, raw blocks, etc.)
+  title: string; // The # heading line (e.g., "# Introduction to Economics")
+  titleText: string; // Just the heading text (e.g., "Introduction to Economics")
+  intro: string; // Content between # title and first ## (can be empty)
+  sections: Section[]; // All ## level sections (can be empty array)
   metadata: {
     filepath: string;
     totalLines: number;
@@ -147,12 +147,13 @@ export type SectionChangeType = 'added' | 'modified' | 'deleted';
  */
 export interface SectionChange {
   type: SectionChangeType;
-  oldSection?: Section;     // For modified/deleted
-  newSection?: Section;     // For modified/added
-  position?: {              // For added sections
+  oldSection?: Section; // For modified/deleted
+  newSection?: Section; // For modified/added
+  position?: {
+    // For added sections
     afterSectionId?: string;
     parentSectionId?: string;
-    index?: number;         // Position among siblings
+    index?: number; // Position among siblings
   };
 }
 
@@ -173,11 +174,11 @@ export interface SectionTranslationRequest {
   glossary?: Glossary;
   customInstructions?: string;
   // For update mode
-  oldEnglish?: string;      // Current English section
-  newEnglish?: string;      // Updated English section
-  currentTranslation?: string;  // Current translation (generalized from currentChinese)
+  oldEnglish?: string; // Current English section
+  newEnglish?: string; // Updated English section
+  currentTranslation?: string; // Current translation (generalized from currentChinese)
   // For new mode
-  englishSection?: string;  // New English section to translate
+  englishSection?: string; // New English section to translate
   // For resync mode (uses newEnglish + currentTranslation)
 }
 
@@ -210,8 +211,8 @@ export interface DocumentResyncRequest {
   targetLanguage: string;
   glossary?: Glossary;
   customInstructions?: string;
-  sourceContent: string;      // Current authoritative source document
-  targetContent: string;      // Existing translation (may be outdated)
+  sourceContent: string; // Current authoritative source document
+  targetContent: string; // Existing translation (may be outdated)
 }
 
 // ============================================================================
@@ -248,41 +249,41 @@ export interface TranslatedFile {
  * Represents a changed section identified for review
  */
 export interface ChangedSection {
-  heading: string;          // The section heading (e.g., "## Introduction")
+  heading: string; // The section heading (e.g., "## Introduction")
   changeType: 'added' | 'modified' | 'deleted';
-  englishContent?: string;  // For added/modified sections
-  translatedContent?: string;  // For added/modified sections (target language)
+  englishContent?: string; // For added/modified sections
+  translatedContent?: string; // For added/modified sections (target language)
 }
 
 /**
  * Result of translation quality evaluation
  */
 export interface TranslationQualityResult {
-  score: number;           // Overall score 1-10
-  accuracy: number;        // Accuracy score 1-10
-  fluency: number;         // Fluency score 1-10
-  terminology: number;     // Terminology score 1-10
-  formatting: number;      // Formatting score 1-10
-  syntaxErrors: string[];  // Markdown/MyST syntax errors found
-  issues: string[];        // Suggested improvements
-  strengths: string[];     // Positive aspects
-  summary: string;         // Brief overall assessment
+  score: number; // Overall score 1-10
+  accuracy: number; // Accuracy score 1-10
+  fluency: number; // Fluency score 1-10
+  terminology: number; // Terminology score 1-10
+  formatting: number; // Formatting score 1-10
+  syntaxErrors: string[]; // Markdown/MyST syntax errors found
+  issues: string[]; // Suggested improvements
+  strengths: string[]; // Positive aspects
+  summary: string; // Brief overall assessment
 }
 
 /**
  * Result of diff quality evaluation
  */
 export interface DiffQualityResult {
-  score: number;              // Overall score 1-10
-  scopeCorrect: boolean;      // Only intended files changed?
-  positionCorrect: boolean;   // Changes in correct document locations?
+  score: number; // Overall score 1-10
+  scopeCorrect: boolean; // Only intended files changed?
+  positionCorrect: boolean; // Changes in correct document locations?
   structurePreserved: boolean; // Document structure maintained?
   headingMapCorrect: boolean; // Heading-map properly updated?
-  issues: string[];           // Issues found
-  summary: string;            // Brief overall assessment
-  scopeDetails: string;       // Explanation of scope check
-  positionDetails: string;    // Explanation of position check
-  structureDetails: string;   // Explanation of structure check
+  issues: string[]; // Issues found
+  summary: string; // Brief overall assessment
+  scopeDetails: string; // Explanation of scope check
+  positionDetails: string; // Explanation of position check
+  structureDetails: string; // Explanation of structure check
 }
 
 /**

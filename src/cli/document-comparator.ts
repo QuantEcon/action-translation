@@ -1,10 +1,10 @@
 /**
  * Document Comparator — Stage 1 Triage
- * 
+ *
  * Performs whole-document comparison with a single LLM call per file.
  * Determines whether a translated document contains substantive changes
  * beyond normal translation work that might be worth backporting to SOURCE.
- * 
+ *
  * Design: Recall-biased — false positives (flagging a clean file) are cheap
  * (~$0.10 for unnecessary Stage 2), but false negatives (missing a real
  * backport) mean lost improvements. When in doubt, flag it.
@@ -12,12 +12,12 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { MAX_TOKENS, DEFAULT_THINKING } from '../models.js';
-import { 
-  APIError, 
-  AuthenticationError, 
-  RateLimitError, 
+import {
+  APIError,
+  AuthenticationError,
+  RateLimitError,
   APIConnectionError,
-  BadRequestError 
+  BadRequestError,
 } from '@anthropic-ai/sdk';
 import { TriageResult, TriageVerdict, FileGitMetadata, FileTimeline } from './types.js';
 import { formatDate, daysBetween, formatTimelineForPrompt } from './git-metadata.js';
@@ -39,7 +39,7 @@ function estimateTokens(text: string): number {
 
 /**
  * Build the Stage 1 triage prompt
- * 
+ *
  * Exported for snapshot testing.
  */
 export function buildTriagePrompt(
@@ -49,7 +49,7 @@ export function buildTriagePrompt(
   targetLanguage: string,
   sourceMetadata: FileGitMetadata | null,
   targetMetadata: FileGitMetadata | null,
-  timeline: FileTimeline | null,
+  timeline: FileTimeline | null
 ): string {
   let timelineContext = '';
   if (sourceMetadata && targetMetadata) {
@@ -121,7 +121,10 @@ Respond with a JSON object:
  * Parse the LLM response for Stage 1 triage
  * Robust: handles cases where Claude doesn't return clean JSON
  */
-export function parseTriageResponse(responseText: string): { verdict: TriageVerdict; notes: string } {
+export function parseTriageResponse(responseText: string): {
+  verdict: TriageVerdict;
+  notes: string;
+} {
   // Strategy 1: Extract JSON from a code fence (most reliable)
   const fenceMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
   if (fenceMatch) {
@@ -155,9 +158,9 @@ export function parseTriageResponse(responseText: string): { verdict: TriageVerd
   }
 
   // Default to CHANGES_DETECTED (recall-biased: when in doubt, flag it)
-  return { 
-    verdict: 'CHANGES_DETECTED', 
-    notes: `Unable to parse LLM response cleanly; flagging for detailed review. Raw: ${responseText.slice(0, 200)}` 
+  return {
+    verdict: 'CHANGES_DETECTED',
+    notes: `Unable to parse LLM response cleanly; flagging for detailed review. Raw: ${responseText.slice(0, 200)}`,
   };
 }
 
@@ -169,9 +172,9 @@ function mockTriageResponse(file: string): { verdict: TriageVerdict; notes: stri
   if (file.includes('aligned') || file.includes('intro')) {
     return { verdict: 'IN_SYNC', notes: '' };
   }
-  return { 
-    verdict: 'CHANGES_DETECTED', 
-    notes: 'Test mode: flagged for detailed review.' 
+  return {
+    verdict: 'CHANGES_DETECTED',
+    notes: 'Test mode: flagged for detailed review.',
   };
 }
 
@@ -179,12 +182,12 @@ function mockTriageResponse(file: string): { verdict: TriageVerdict; notes: stri
  * Sleep for a given number of milliseconds
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
  * Perform Stage 1 document-level triage
- * 
+ *
  * @param file - Filename for reporting
  * @param sourceContent - Full SOURCE document content
  * @param targetContent - Full TARGET document content
@@ -206,7 +209,7 @@ export async function triageDocument(
     sourceLanguage: string;
     targetLanguage: string;
     testMode: boolean;
-  },
+  }
 ): Promise<TriageResult> {
   // Test mode: return deterministic response
   if (options.testMode) {
@@ -236,7 +239,7 @@ export async function triageDocument(
     options.targetLanguage,
     sourceMetadata,
     targetMetadata,
-    timeline,
+    timeline
   );
 
   const client = new Anthropic({ apiKey: options.apiKey });
@@ -253,7 +256,7 @@ export async function triageDocument(
 
       const responseText = response.content
         .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-        .map(block => block.text)
+        .map((block) => block.text)
         .join('');
 
       const { verdict, notes } = parseTriageResponse(responseText);

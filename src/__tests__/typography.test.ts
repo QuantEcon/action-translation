@@ -130,7 +130,14 @@ describe('applyTypography', () => {
 
   describe('does not corrupt non-prose', () => {
     it('leaves code fences alone', () => {
-      const src = ['Texte :', '', '```python', 'x = a if b else c  # a ? b : c', 'd = {"k": 1}', '```'].join('\n');
+      const src = [
+        'Texte :',
+        '',
+        '```python',
+        'x = a if b else c  # a ? b : c',
+        'd = {"k": 1}',
+        '```',
+      ].join('\n');
       const out = applyTypography(src, 'fr');
       expect(out).toContain('# a ? b : c');
       expect(out).toContain('d = {"k": 1}');
@@ -138,7 +145,12 @@ describe('applyTypography', () => {
     });
 
     it('leaves MyST code-cell directives alone', () => {
-      const src = ['```{code-cell} ipython3', 'print("ratio: 3:1")', 'y = x if x > 0 else -x', '```'].join('\n');
+      const src = [
+        '```{code-cell} ipython3',
+        'print("ratio: 3:1")',
+        'y = x if x > 0 else -x',
+        '```',
+      ].join('\n');
       expect(applyTypography(src, 'fr')).toBe(src);
     });
 
@@ -158,7 +170,15 @@ describe('applyTypography', () => {
     });
 
     it('leaves YAML frontmatter alone', () => {
-      const src = ['---', 'title: Introduction', 'kernelspec:', '  name: python3', '---', '', 'Bonjour !'].join('\n');
+      const src = [
+        '---',
+        'title: Introduction',
+        'kernelspec:',
+        '  name: python3',
+        '---',
+        '',
+        'Bonjour !',
+      ].join('\n');
       const out = applyTypography(src, 'fr');
       expect(out).toContain('title: Introduction');
       expect(out).toContain('kernelspec:');
@@ -175,7 +195,15 @@ describe('applyTypography', () => {
     });
 
     it('leaves MyST anchors and directive options alone', () => {
-      const src = ['(sec:intro)=', '# Titre', '', '```{figure} a.png', ':width: 100px', ':name: fig:one', '```'].join('\n');
+      const src = [
+        '(sec:intro)=',
+        '# Titre',
+        '',
+        '```{figure} a.png',
+        ':width: 100px',
+        ':name: fig:one',
+        '```',
+      ].join('\n');
       const out = applyTypography(src, 'fr');
       expect(out).toContain('(sec:intro)=');
       expect(out).toContain(':width: 100px');
@@ -258,13 +286,7 @@ describe('applyTypography', () => {
     });
 
     it('does not let $$ inside a code fence desync math state', () => {
-      const src = [
-        '```python',
-        'print("$$")',
-        '```',
-        '',
-        'Ensuite :',
-      ].join('\n');
+      const src = ['```python', 'print("$$")', '```', '', 'Ensuite :'].join('\n');
       const out = applyTypography(src, 'fr');
       expect(out).toContain('print("$$")');
       expect(out).toContain(`Ensuite${NBSP}:`);

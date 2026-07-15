@@ -10,11 +10,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import {
-  loadAndFlattenSuggestions,
-  formatLoadSummary,
-  LoadStats,
-} from '../commands/review.js';
+import { loadAndFlattenSuggestions, formatLoadSummary, LoadStats } from '../commands/review.js';
 
 // ============================================================================
 // HELPERS
@@ -46,18 +42,14 @@ function makeReport(overrides: Record<string, unknown> = {}): Record<string, unk
 /**
  * Build a BACKPORT suggestion with configurable confidence.
  */
-function makeSuggestion(
-  overrides: Record<string, unknown> = {},
-): Record<string, unknown> {
+function makeSuggestion(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     sectionHeading: '## Introduction',
     recommendation: 'BACKPORT',
     category: 'BUG_FIX',
     confidence: 0.85,
     summary: 'Fixed a formula',
-    specificChanges: [
-      { type: 'Formula', original: 'x^2', improved: 'x^3' },
-    ],
+    specificChanges: [{ type: 'Formula', original: 'x^2', improved: 'x^3' }],
     reasoning: 'The target fixed a typo.',
     ...overrides,
   };
@@ -107,11 +99,15 @@ describe('loadAndFlattenSuggestions — basic loading', () => {
 
   it('loads a report with one BACKPORT suggestion', () => {
     const { reportDir, resyncDir } = createTempReport('one-backport');
-    writeJson(resyncDir, 'example.json', makeReport({
-      file: 'ar1_processes.md',
-      suggestions: [makeSuggestion()],
-      triageResult: { file: 'ar1_processes.md', verdict: 'CHANGES_DETECTED', notes: '' },
-    }));
+    writeJson(
+      resyncDir,
+      'example.json',
+      makeReport({
+        file: 'ar1_processes.md',
+        suggestions: [makeSuggestion()],
+        triageResult: { file: 'ar1_processes.md', verdict: 'CHANGES_DETECTED', notes: '' },
+      })
+    );
     const result = loadAndFlattenSuggestions(reportDir);
     expect(result.stats.filesLoaded).toBe(1);
     expect(result.stats.filesWithSuggestions).toBe(1);
@@ -122,14 +118,18 @@ describe('loadAndFlattenSuggestions — basic loading', () => {
 
   it('enriches suggestions with file context', () => {
     const { reportDir, resyncDir } = createTempReport('context');
-    writeJson(resyncDir, 'example.json', makeReport({
-      file: 'cobweb.md',
-      sourceRepo: 'lecture-python-intro',
-      targetRepo: 'lecture-intro.zh-cn',
-      timestamp: '2026-03-05T10:00:00Z',
-      suggestions: [makeSuggestion()],
-      triageResult: { file: 'cobweb.md', verdict: 'CHANGES_DETECTED', notes: '' },
-    }));
+    writeJson(
+      resyncDir,
+      'example.json',
+      makeReport({
+        file: 'cobweb.md',
+        sourceRepo: 'lecture-python-intro',
+        targetRepo: 'lecture-intro.zh-cn',
+        timestamp: '2026-03-05T10:00:00Z',
+        suggestions: [makeSuggestion()],
+        triageResult: { file: 'cobweb.md', verdict: 'CHANGES_DETECTED', notes: '' },
+      })
+    );
     const result = loadAndFlattenSuggestions(reportDir);
     const item = result.suggestions[0];
     expect(item.file).toBe('cobweb.md');
@@ -173,23 +173,32 @@ describe('loadAndFlattenSuggestions — confidence filtering', () => {
 
   beforeEach(() => {
     ({ reportDir, resyncDir } = createTempReport('filter'));
-    writeJson(resyncDir, 'file.json', makeReport({
-      file: 'test.md',
-      triageResult: { file: 'test.md', verdict: 'CHANGES_DETECTED', notes: '' },
-      suggestions: [
-        makeSuggestion({ confidence: 0.9 }),
-        makeSuggestion({ confidence: 0.7, sectionHeading: '## Section 2' }),
-        makeSuggestion({ confidence: 0.5, sectionHeading: '## Section 3' }),
-        // NO_BACKPORT should always be excluded
-        makeSuggestion({ recommendation: 'NO_BACKPORT', confidence: 0.95, category: 'NO_CHANGE', sectionHeading: '## Section 4' }),
-      ],
-    }));
+    writeJson(
+      resyncDir,
+      'file.json',
+      makeReport({
+        file: 'test.md',
+        triageResult: { file: 'test.md', verdict: 'CHANGES_DETECTED', notes: '' },
+        suggestions: [
+          makeSuggestion({ confidence: 0.9 }),
+          makeSuggestion({ confidence: 0.7, sectionHeading: '## Section 2' }),
+          makeSuggestion({ confidence: 0.5, sectionHeading: '## Section 3' }),
+          // NO_BACKPORT should always be excluded
+          makeSuggestion({
+            recommendation: 'NO_BACKPORT',
+            confidence: 0.95,
+            category: 'NO_CHANGE',
+            sectionHeading: '## Section 4',
+          }),
+        ],
+      })
+    );
   });
 
   it('uses default threshold of 0.6 (includes 0.9 and 0.7, excludes 0.5)', () => {
     const result = loadAndFlattenSuggestions(reportDir);
     expect(result.suggestions).toHaveLength(2);
-    expect(result.suggestions.every(s => s.suggestion.confidence >= 0.6)).toBe(true);
+    expect(result.suggestions.every((s) => s.suggestion.confidence >= 0.6)).toBe(true);
   });
 
   it('applies custom minConfidence threshold', () => {
@@ -205,7 +214,7 @@ describe('loadAndFlattenSuggestions — confidence filtering', () => {
 
   it('always excludes NO_BACKPORT suggestions even above threshold', () => {
     const result = loadAndFlattenSuggestions(reportDir, 0);
-    expect(result.suggestions.every(s => s.suggestion.recommendation === 'BACKPORT')).toBe(true);
+    expect(result.suggestions.every((s) => s.suggestion.recommendation === 'BACKPORT')).toBe(true);
   });
 
   it('threshold 1 includes only perfect-confidence suggestions', () => {
@@ -221,43 +230,57 @@ describe('loadAndFlattenSuggestions — confidence filtering', () => {
 describe('loadAndFlattenSuggestions — sort order', () => {
   it('sorts suggestions by confidence descending across multiple files', () => {
     const { reportDir, resyncDir } = createTempReport('sort');
-    writeJson(resyncDir, 'a.json', makeReport({
-      file: 'a.md',
-      triageResult: { file: 'a.md', verdict: 'CHANGES_DETECTED', notes: '' },
-      suggestions: [
-        makeSuggestion({ confidence: 0.7, sectionHeading: '## A-Low' }),
-        makeSuggestion({ confidence: 0.95, sectionHeading: '## A-High' }),
-      ],
-    }));
-    writeJson(resyncDir, 'b.json', makeReport({
-      file: 'b.md',
-      triageResult: { file: 'b.md', verdict: 'CHANGES_DETECTED', notes: '' },
-      suggestions: [
-        makeSuggestion({ confidence: 0.85, sectionHeading: '## B-Mid' }),
-      ],
-    }));
+    writeJson(
+      resyncDir,
+      'a.json',
+      makeReport({
+        file: 'a.md',
+        triageResult: { file: 'a.md', verdict: 'CHANGES_DETECTED', notes: '' },
+        suggestions: [
+          makeSuggestion({ confidence: 0.7, sectionHeading: '## A-Low' }),
+          makeSuggestion({ confidence: 0.95, sectionHeading: '## A-High' }),
+        ],
+      })
+    );
+    writeJson(
+      resyncDir,
+      'b.json',
+      makeReport({
+        file: 'b.md',
+        triageResult: { file: 'b.md', verdict: 'CHANGES_DETECTED', notes: '' },
+        suggestions: [makeSuggestion({ confidence: 0.85, sectionHeading: '## B-Mid' })],
+      })
+    );
     const result = loadAndFlattenSuggestions(reportDir, 0);
-    const confidences = result.suggestions.map(s => s.suggestion.confidence);
+    const confidences = result.suggestions.map((s) => s.suggestion.confidence);
     expect(confidences).toEqual([0.95, 0.85, 0.7]);
   });
 
   it('stats correctly aggregates across multiple files', () => {
     const { reportDir, resyncDir } = createTempReport('multi-stats');
     // File 1: 2 BACKPORT suggestions above threshold
-    writeJson(resyncDir, 'file1.json', makeReport({
-      file: 'file1.md',
-      triageResult: { file: 'file1.md', verdict: 'CHANGES_DETECTED', notes: '' },
-      suggestions: [
-        makeSuggestion({ confidence: 0.9 }),
-        makeSuggestion({ confidence: 0.8, sectionHeading: '## S2' }),
-      ],
-    }));
+    writeJson(
+      resyncDir,
+      'file1.json',
+      makeReport({
+        file: 'file1.md',
+        triageResult: { file: 'file1.md', verdict: 'CHANGES_DETECTED', notes: '' },
+        suggestions: [
+          makeSuggestion({ confidence: 0.9 }),
+          makeSuggestion({ confidence: 0.8, sectionHeading: '## S2' }),
+        ],
+      })
+    );
     // File 2: 1 BACKPORT suggestion above threshold
-    writeJson(resyncDir, 'file2.json', makeReport({
-      file: 'file2.md',
-      triageResult: { file: 'file2.md', verdict: 'CHANGES_DETECTED', notes: '' },
-      suggestions: [makeSuggestion({ confidence: 0.75 })],
-    }));
+    writeJson(
+      resyncDir,
+      'file2.json',
+      makeReport({
+        file: 'file2.md',
+        triageResult: { file: 'file2.md', verdict: 'CHANGES_DETECTED', notes: '' },
+        suggestions: [makeSuggestion({ confidence: 0.75 })],
+      })
+    );
     // File 3: no BACKPORT suggestions (IN_SYNC)
     writeJson(resyncDir, 'file3.json', makeReport({ file: 'file3.md' }));
 
@@ -304,9 +327,13 @@ describe('formatLoadSummary', () => {
 
 describe('loadAndFlattenSuggestions — integration with real fixtures', () => {
   const fixtureReportDir = path.join(
-    __dirname, '..', '..', '..', 'reports',
+    __dirname,
+    '..',
+    '..',
+    '..',
+    'reports',
     'lecture-python-intro',
-    'backward-2026-03-04-section-by-section',
+    'backward-2026-03-04-section-by-section'
   );
   const hasFixtures = fs.existsSync(path.join(fixtureReportDir, '.resync'));
 
@@ -323,7 +350,7 @@ describe('loadAndFlattenSuggestions — integration with real fixtures', () => {
 
   (hasFixtures ? it : it.skip)('results are sorted by confidence descending', () => {
     const result = loadAndFlattenSuggestions(fixtureReportDir, 0);
-    const confidences = result.suggestions.map(s => s.suggestion.confidence);
+    const confidences = result.suggestions.map((s) => s.suggestion.confidence);
     for (let i = 1; i < confidences.length; i++) {
       expect(confidences[i]).toBeLessThanOrEqual(confidences[i - 1]);
     }

@@ -115,8 +115,8 @@ describe('applyAction', () => {
 describe('applyAction full session', () => {
   it('correctly tracks mixed actions across all suggestions', () => {
     let s = initialState(3);
-    s = applyAction(s, 'accept', 3);  // 0 → accepted
-    s = applyAction(s, 'skip', 3);   // 1 → skipped
+    s = applyAction(s, 'accept', 3); // 0 → accepted
+    s = applyAction(s, 'skip', 3); // 1 → skipped
     s = applyAction(s, 'reject', 3); // 2 → rejected, done
 
     expect(s.currentIndex).toBe(3);
@@ -130,7 +130,7 @@ describe('applyAction full session', () => {
     let s = initialState(3);
     s = applyAction(s, 'accept', 3);
     s = applyAction(s, 'accept', 3);
-    s = applyAction(s, 'skip',   3);
+    s = applyAction(s, 'skip', 3);
     expect(s.accepted).toEqual([0, 1]);
     expect(s.skipped).toEqual([2]);
   });
@@ -143,8 +143,8 @@ describe('applyAction full session', () => {
 describe('resolveSummary', () => {
   it('resolves index arrays back to suggestion objects', () => {
     let s = initialState(3);
-    s = applyAction(s, 'accept', 3);  // a.md
-    s = applyAction(s, 'skip', 3);   // b.md
+    s = applyAction(s, 'accept', 3); // a.md
+    s = applyAction(s, 'skip', 3); // b.md
     s = applyAction(s, 'reject', 3); // c.md
 
     const summary = resolveSummary(s, THREE);
@@ -204,7 +204,7 @@ describe('formatTallies', () => {
   it('reflects running counts', () => {
     let s = initialState(3);
     s = applyAction(s, 'accept', 3);
-    s = applyAction(s, 'skip',   3);
+    s = applyAction(s, 'skip', 3);
     s = applyAction(s, 'reject', 3);
     expect(formatTallies(s)).toContain('✓ 1');
     expect(formatTallies(s)).toContain('~ 1');

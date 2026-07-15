@@ -61,7 +61,7 @@ export function checkGhAvailable(runner: AuthCheckRunner = defaultAuthCheckRunne
   if (result.status !== 0) {
     throw new Error(
       'The `gh` CLI is not authenticated. Run `gh auth login` first.\n' +
-      (result.stderr || '').trim()
+        (result.stderr || '').trim()
     );
   }
 }
@@ -87,7 +87,7 @@ export interface IssueResult {
  */
 export type GhRunner = (
   args: string[],
-  stdin: string,
+  stdin: string
 ) => { stdout: string; stderr: string; status: number | null };
 
 // ============================================================================
@@ -104,15 +104,19 @@ export type GhRunner = (
  * @param repo        Target SOURCE repo in `owner/repo` format
  */
 export function buildGhArgs(suggestion: SuggestionWithContext, repo: string): string[] {
-  const title  = formatIssueTitle(suggestion);
+  const title = formatIssueTitle(suggestion);
   const labels = getIssueLabels(suggestion);
 
   return [
-    'issue', 'create',
-    '--repo', repo,
-    '--title', title,
-    '--body-file', '-',           // Read body from stdin
-    ...labels.flatMap(l => ['--label', l]),
+    'issue',
+    'create',
+    '--repo',
+    repo,
+    '--title',
+    title,
+    '--body-file',
+    '-', // Read body from stdin
+    ...labels.flatMap((l) => ['--label', l]),
   ];
 }
 
@@ -162,10 +166,10 @@ export function realGhRunner(args: string[], stdin: string): ReturnType<GhRunner
 export function createIssue(
   suggestion: SuggestionWithContext,
   repo: string,
-  runner: GhRunner = realGhRunner,
+  runner: GhRunner = realGhRunner
 ): IssueResult {
-  const args  = buildGhArgs(suggestion, repo);
-  const body  = formatIssueBody(suggestion);
+  const args = buildGhArgs(suggestion, repo);
+  const body = formatIssueBody(suggestion);
   const result = runner(args, body);
 
   if (result.status === 0 && result.stdout) {
@@ -195,7 +199,7 @@ export function createIssue(
 export async function createIssuesForAccepted(
   accepted: SuggestionWithContext[],
   repo: string,
-  runner: GhRunner = realGhRunner,
+  runner: GhRunner = realGhRunner
 ): Promise<IssueResult[]> {
   if (accepted.length === 0) return [];
 
@@ -215,8 +219,8 @@ export async function createIssuesForAccepted(
     results.push(result);
   }
 
-  const created = results.filter(r => r.success).length;
-  const failed  = results.filter(r => !r.success).length;
+  const created = results.filter((r) => r.success).length;
+  const failed = results.filter((r) => !r.success).length;
 
   console.log('');
   if (failed === 0) {

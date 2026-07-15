@@ -1,13 +1,13 @@
 /**
  * Tests for backward-evaluator module (Stage 2)
- * 
+ *
  * Tests prompt building, response parsing, and test-mode behavior.
  * Does NOT make real LLM calls.
  */
 
-import { 
-  buildEvaluationPrompt, 
-  parseEvaluationResponse, 
+import {
+  buildEvaluationPrompt,
+  parseEvaluationResponse,
   evaluateSection,
   buildFileEvaluationPrompt,
   parseFileEvaluationResponse,
@@ -31,8 +31,15 @@ describe('backward-evaluator', () => {
   describe('buildEvaluationPrompt', () => {
     it('should include source and target sections', () => {
       const prompt = buildEvaluationPrompt(
-        'Source section text', 'Target section text',
-        '## Example', 'en', 'zh-cn', null, null, '', null,
+        'Source section text',
+        'Target section text',
+        '## Example',
+        'en',
+        'zh-cn',
+        null,
+        null,
+        '',
+        null
       );
       expect(prompt).toContain('Source section text');
       expect(prompt).toContain('Target section text');
@@ -41,8 +48,15 @@ describe('backward-evaluator', () => {
 
     it('should include timeline when git metadata provided', () => {
       const prompt = buildEvaluationPrompt(
-        'source', 'target', '## Test',
-        'en', 'zh-cn', mockSourceMeta, mockTargetMeta, '', null,
+        'source',
+        'target',
+        '## Test',
+        'en',
+        'zh-cn',
+        mockSourceMeta,
+        mockTargetMeta,
+        '',
+        null
       );
       expect(prompt).toContain('2024-06-01');
       expect(prompt).toContain('2024-09-15');
@@ -51,9 +65,15 @@ describe('backward-evaluator', () => {
 
     it('should include triage notes when provided', () => {
       const prompt = buildEvaluationPrompt(
-        'source', 'target', '## Test',
-        'en', 'zh-cn', null, null,
-        'Formula correction found in section 3', null,
+        'source',
+        'target',
+        '## Test',
+        'en',
+        'zh-cn',
+        null,
+        null,
+        'Formula correction found in section 3',
+        null
       );
       expect(prompt).toContain('Stage 1 Triage Notes');
       expect(prompt).toContain('Formula correction found in section 3');
@@ -61,16 +81,30 @@ describe('backward-evaluator', () => {
 
     it('should omit triage notes section when empty', () => {
       const prompt = buildEvaluationPrompt(
-        'source', 'target', '## Test',
-        'en', 'zh-cn', null, null, '', null,
+        'source',
+        'target',
+        '## Test',
+        'en',
+        'zh-cn',
+        null,
+        null,
+        '',
+        null
       );
       expect(prompt).not.toContain('Stage 1 Triage Notes');
     });
 
     it('should include respectful suggestion framing', () => {
       const prompt = buildEvaluationPrompt(
-        'source', 'target', '## Test',
-        'en', 'zh-cn', null, null, '', null,
+        'source',
+        'target',
+        '## Test',
+        'en',
+        'zh-cn',
+        null,
+        null,
+        '',
+        null
       );
       expect(prompt).toContain('SUGGESTIONS');
       expect(prompt).toContain('source of truth');
@@ -80,8 +114,20 @@ describe('backward-evaluator', () => {
     it('should include commit history when timeline is provided', () => {
       const timeline: FileTimeline = {
         entries: [
-          { date: '2025-12-23', fullDate: '2025-12-23 10:00:00 +0000', repo: 'SOURCE', sha: 'abc123d', message: 'Fix SymPy' },
-          { date: '2024-07-22', fullDate: '2024-07-22 08:00:00 +0000', repo: 'TARGET', sha: 'fed987a', message: 'Translate' },
+          {
+            date: '2025-12-23',
+            fullDate: '2025-12-23 10:00:00 +0000',
+            repo: 'SOURCE',
+            sha: 'abc123d',
+            message: 'Fix SymPy',
+          },
+          {
+            date: '2024-07-22',
+            fullDate: '2024-07-22 08:00:00 +0000',
+            repo: 'TARGET',
+            sha: 'fed987a',
+            message: 'Translate',
+          },
         ],
         sourceCommitCount: 1,
         targetCommitCount: 1,
@@ -89,8 +135,15 @@ describe('backward-evaluator', () => {
         sourceCommitsAfterSync: 1,
       };
       const prompt = buildEvaluationPrompt(
-        'source', 'target', '## Test',
-        'en', 'zh-cn', mockSourceMeta, mockTargetMeta, '', timeline,
+        'source',
+        'target',
+        '## Test',
+        'en',
+        'zh-cn',
+        mockSourceMeta,
+        mockTargetMeta,
+        '',
+        timeline
       );
       expect(prompt).toContain('## Commit History');
       expect(prompt).toContain('SOURCE has 1 commit(s) AFTER');
@@ -99,8 +152,15 @@ describe('backward-evaluator', () => {
 
     it('should match prompt structure', () => {
       const prompt = buildEvaluationPrompt(
-        'source', 'target', '## Test',
-        'en', 'zh-cn', mockSourceMeta, mockTargetMeta, 'notes', null,
+        'source',
+        'target',
+        '## Test',
+        'en',
+        'zh-cn',
+        mockSourceMeta,
+        mockTargetMeta,
+        'notes',
+        null
       );
       expect(prompt).toContain('## Context');
       expect(prompt).toContain('## Source Section');
@@ -216,9 +276,7 @@ describe('backward-evaluator', () => {
     });
 
     it('should handle completely unparseable response', () => {
-      const result = parseEvaluationResponse(
-        'I cannot process this request.', '## Test',
-      );
+      const result = parseEvaluationResponse('I cannot process this request.', '## Test');
       expect(result.recommendation).toBe('NO_BACKPORT');
       expect(result.category).toBe('NO_CHANGE');
       expect(result.confidence).toBe(0);
@@ -230,11 +288,7 @@ describe('backward-evaluator', () => {
         category: 'BUG_FIX',
         confidence: 0.9,
         summary: 'test',
-        specific_changes: [
-          { type: 'fix' },
-          { original: 'old', improved: 'new' },
-          'not an object',
-        ],
+        specific_changes: [{ type: 'fix' }, { original: 'old', improved: 'new' }, 'not an object'],
         reasoning: 'test',
       });
 
@@ -257,8 +311,14 @@ describe('backward-evaluator', () => {
 
     it('should return NO_BACKPORT in test mode', async () => {
       const result = await evaluateSection(
-        'source section', 'target section',
-        '## Introduction', null, null, '', null, testOptions,
+        'source section',
+        'target section',
+        '## Introduction',
+        null,
+        null,
+        '',
+        null,
+        testOptions
       );
       expect(result.recommendation).toBe('NO_BACKPORT');
       expect(result.category).toBe('NO_CHANGE');
@@ -268,8 +328,14 @@ describe('backward-evaluator', () => {
 
     it('should include section heading in test mode result', async () => {
       const result = await evaluateSection(
-        'source', 'target',
-        '## 稳态', null, null, '', null, testOptions,
+        'source',
+        'target',
+        '## 稳态',
+        null,
+        null,
+        '',
+        null,
+        testOptions
       );
       expect(result.sectionHeading).toBe('## 稳态');
     });
@@ -287,9 +353,7 @@ describe('backward-evaluator', () => {
     ];
 
     it('should include all section pairs', () => {
-      const prompt = buildFileEvaluationPrompt(
-        matchedPairs, 'en', 'zh-cn', null, null, '', null,
-      );
+      const prompt = buildFileEvaluationPrompt(matchedPairs, 'en', 'zh-cn', null, null, '', null);
       expect(prompt).toContain('Section 1: ## Introduction');
       expect(prompt).toContain('Section 2: ## Model');
       expect(prompt).toContain('Section 3: ## Conclusion');
@@ -300,17 +364,20 @@ describe('backward-evaluator', () => {
     });
 
     it('should state the number of sections', () => {
-      const prompt = buildFileEvaluationPrompt(
-        matchedPairs, 'en', 'zh-cn', null, null, '', null,
-      );
+      const prompt = buildFileEvaluationPrompt(matchedPairs, 'en', 'zh-cn', null, null, '', null);
       expect(prompt).toContain('Number of sections: 3');
       expect(prompt).toContain(`Include ALL 3 sections`);
     });
 
     it('should include timeline context', () => {
       const prompt = buildFileEvaluationPrompt(
-        matchedPairs, 'en', 'zh-cn',
-        mockSourceMeta, mockTargetMeta, '', null,
+        matchedPairs,
+        'en',
+        'zh-cn',
+        mockSourceMeta,
+        mockTargetMeta,
+        '',
+        null
       );
       expect(prompt).toContain('2024-06-01');
       expect(prompt).toContain('2024-09-15');
@@ -318,8 +385,13 @@ describe('backward-evaluator', () => {
 
     it('should include triage notes', () => {
       const prompt = buildFileEvaluationPrompt(
-        matchedPairs, 'en', 'zh-cn', null, null,
-        'Formula correction in section about steady state', null,
+        matchedPairs,
+        'en',
+        'zh-cn',
+        null,
+        null,
+        'Formula correction in section about steady state',
+        null
       );
       expect(prompt).toContain('Stage 1 Triage Notes');
       expect(prompt).toContain('Formula correction in section about steady state');
@@ -328,7 +400,13 @@ describe('backward-evaluator', () => {
     it('should include commit history when timeline provided', () => {
       const timeline: FileTimeline = {
         entries: [
-          { date: '2025-12-23', fullDate: '2025-12-23 10:00:00 +0000', repo: 'SOURCE', sha: 'abc123d', message: 'Fix formula' },
+          {
+            date: '2025-12-23',
+            fullDate: '2025-12-23 10:00:00 +0000',
+            repo: 'SOURCE',
+            sha: 'abc123d',
+            message: 'Fix formula',
+          },
         ],
         sourceCommitCount: 1,
         targetCommitCount: 0,
@@ -336,17 +414,20 @@ describe('backward-evaluator', () => {
         sourceCommitsAfterSync: 1,
       };
       const prompt = buildFileEvaluationPrompt(
-        matchedPairs, 'en', 'zh-cn',
-        mockSourceMeta, mockTargetMeta, '', timeline,
+        matchedPairs,
+        'en',
+        'zh-cn',
+        mockSourceMeta,
+        mockTargetMeta,
+        '',
+        timeline
       );
       expect(prompt).toContain('## Commit History');
       expect(prompt).toContain('expected divergences');
     });
 
     it('should include response format with sections array', () => {
-      const prompt = buildFileEvaluationPrompt(
-        matchedPairs, 'en', 'zh-cn', null, null, '', null,
-      );
+      const prompt = buildFileEvaluationPrompt(matchedPairs, 'en', 'zh-cn', null, null, '', null);
       expect(prompt).toContain('"sections"');
       expect(prompt).toContain('"section_number"');
       expect(prompt).toContain('"section_heading"');
@@ -355,9 +436,7 @@ describe('backward-evaluator', () => {
     });
 
     it('should include respectful suggestion framing', () => {
-      const prompt = buildFileEvaluationPrompt(
-        matchedPairs, 'en', 'zh-cn', null, null, '', null,
-      );
+      const prompt = buildFileEvaluationPrompt(matchedPairs, 'en', 'zh-cn', null, null, '', null);
       expect(prompt).toContain('SUGGESTIONS');
       expect(prompt).toContain('source of truth');
       expect(prompt).toContain('respectfully');
@@ -441,7 +520,14 @@ describe('backward-evaluator', () => {
     it('should handle fewer sections in response than expected', () => {
       const response = JSON.stringify({
         sections: [
-          { recommendation: 'NO_BACKPORT', category: 'NO_CHANGE', confidence: 0.9, summary: 'ok', specific_changes: [], reasoning: 'fine' },
+          {
+            recommendation: 'NO_BACKPORT',
+            category: 'NO_CHANGE',
+            confidence: 0.9,
+            summary: 'ok',
+            specific_changes: [],
+            reasoning: 'fine',
+          },
         ],
       });
 
@@ -455,9 +541,7 @@ describe('backward-evaluator', () => {
     });
 
     it('should handle completely unparseable response', () => {
-      const results = parseFileEvaluationResponse(
-        'I cannot process this request.', matchedPairs,
-      );
+      const results = parseFileEvaluationResponse('I cannot process this request.', matchedPairs);
       expect(results).toHaveLength(3);
       expect(results[0].recommendation).toBe('NO_BACKPORT');
       expect(results[0].confidence).toBe(0);
@@ -467,9 +551,30 @@ describe('backward-evaluator', () => {
     it('should clamp confidence values', () => {
       const response = JSON.stringify({
         sections: [
-          { recommendation: 'BACKPORT', category: 'BUG_FIX', confidence: 1.5, summary: 'test', specific_changes: [], reasoning: 'test' },
-          { recommendation: 'BACKPORT', category: 'BUG_FIX', confidence: -0.3, summary: 'test', specific_changes: [], reasoning: 'test' },
-          { recommendation: 'BACKPORT', category: 'BUG_FIX', confidence: 0.8, summary: 'test', specific_changes: [], reasoning: 'test' },
+          {
+            recommendation: 'BACKPORT',
+            category: 'BUG_FIX',
+            confidence: 1.5,
+            summary: 'test',
+            specific_changes: [],
+            reasoning: 'test',
+          },
+          {
+            recommendation: 'BACKPORT',
+            category: 'BUG_FIX',
+            confidence: -0.3,
+            summary: 'test',
+            specific_changes: [],
+            reasoning: 'test',
+          },
+          {
+            recommendation: 'BACKPORT',
+            category: 'BUG_FIX',
+            confidence: 0.8,
+            summary: 'test',
+            specific_changes: [],
+            reasoning: 'test',
+          },
         ],
       });
 
@@ -482,9 +587,30 @@ describe('backward-evaluator', () => {
     it('should validate categories', () => {
       const response = JSON.stringify({
         sections: [
-          { recommendation: 'BACKPORT', category: 'INVALID', confidence: 0.8, summary: 'test', specific_changes: [], reasoning: 'test' },
-          { recommendation: 'BACKPORT', category: 'BUG_FIX', confidence: 0.8, summary: 'test', specific_changes: [], reasoning: 'test' },
-          { recommendation: 'BACKPORT', category: 'CLARIFICATION', confidence: 0.8, summary: 'test', specific_changes: [], reasoning: 'test' },
+          {
+            recommendation: 'BACKPORT',
+            category: 'INVALID',
+            confidence: 0.8,
+            summary: 'test',
+            specific_changes: [],
+            reasoning: 'test',
+          },
+          {
+            recommendation: 'BACKPORT',
+            category: 'BUG_FIX',
+            confidence: 0.8,
+            summary: 'test',
+            specific_changes: [],
+            reasoning: 'test',
+          },
+          {
+            recommendation: 'BACKPORT',
+            category: 'CLARIFICATION',
+            confidence: 0.8,
+            summary: 'test',
+            specific_changes: [],
+            reasoning: 'test',
+          },
         ],
       });
 
@@ -498,9 +624,36 @@ describe('backward-evaluator', () => {
       // LLM returns sections out of order — section_number should be used for mapping
       const response = JSON.stringify({
         sections: [
-          { section_number: 3, section_heading: 'Section Three', recommendation: 'NO_BACKPORT', category: 'NO_CHANGE', confidence: 0.9, summary: 'third', specific_changes: [], reasoning: 'ok' },
-          { section_number: 1, section_heading: 'Section One', recommendation: 'BACKPORT', category: 'BUG_FIX', confidence: 0.85, summary: 'first', specific_changes: [], reasoning: 'important' },
-          { section_number: 2, section_heading: 'Section Two', recommendation: 'NO_BACKPORT', category: 'NO_CHANGE', confidence: 0.7, summary: 'second', specific_changes: [], reasoning: 'fine' },
+          {
+            section_number: 3,
+            section_heading: 'Section Three',
+            recommendation: 'NO_BACKPORT',
+            category: 'NO_CHANGE',
+            confidence: 0.9,
+            summary: 'third',
+            specific_changes: [],
+            reasoning: 'ok',
+          },
+          {
+            section_number: 1,
+            section_heading: 'Section One',
+            recommendation: 'BACKPORT',
+            category: 'BUG_FIX',
+            confidence: 0.85,
+            summary: 'first',
+            specific_changes: [],
+            reasoning: 'important',
+          },
+          {
+            section_number: 2,
+            section_heading: 'Section Two',
+            recommendation: 'NO_BACKPORT',
+            category: 'NO_CHANGE',
+            confidence: 0.7,
+            summary: 'second',
+            specific_changes: [],
+            reasoning: 'fine',
+          },
         ],
       });
 
@@ -531,15 +684,47 @@ describe('backward-evaluator', () => {
     it('should return NO_BACKPORT for all sections in test mode', async () => {
       const pairs: SectionPair[] = [
         {
-          sourceSection: { heading: '## Intro', content: 'intro text', level: 2, id: 'intro', startLine: 1, endLine: 5, subsections: [] },
-          targetSection: { heading: '## 介绍', content: '介绍文本', level: 2, id: 'intro', startLine: 1, endLine: 5, subsections: [] },
+          sourceSection: {
+            heading: '## Intro',
+            content: 'intro text',
+            level: 2,
+            id: 'intro',
+            startLine: 1,
+            endLine: 5,
+            subsections: [],
+          },
+          targetSection: {
+            heading: '## 介绍',
+            content: '介绍文本',
+            level: 2,
+            id: 'intro',
+            startLine: 1,
+            endLine: 5,
+            subsections: [],
+          },
           status: 'MATCHED',
           sourceHeading: '## Intro',
           targetHeading: '## 介绍',
         },
         {
-          sourceSection: { heading: '## Model', content: 'model text', level: 2, id: 'model', startLine: 6, endLine: 15, subsections: [] },
-          targetSection: { heading: '## 模型', content: '模型文本', level: 2, id: 'model', startLine: 6, endLine: 15, subsections: [] },
+          sourceSection: {
+            heading: '## Model',
+            content: 'model text',
+            level: 2,
+            id: 'model',
+            startLine: 6,
+            endLine: 15,
+            subsections: [],
+          },
+          targetSection: {
+            heading: '## 模型',
+            content: '模型文本',
+            level: 2,
+            id: 'model',
+            startLine: 6,
+            endLine: 15,
+            subsections: [],
+          },
           status: 'MATCHED',
           sourceHeading: '## Model',
           targetHeading: '## 模型',
@@ -557,13 +742,37 @@ describe('backward-evaluator', () => {
     it('should skip non-matched pairs', async () => {
       const pairs: SectionPair[] = [
         {
-          sourceSection: { heading: '## Intro', content: 'intro text', level: 2, id: 'intro', startLine: 1, endLine: 5, subsections: [] },
-          targetSection: { heading: '## 介绍', content: '介绍文本', level: 2, id: 'intro', startLine: 1, endLine: 5, subsections: [] },
+          sourceSection: {
+            heading: '## Intro',
+            content: 'intro text',
+            level: 2,
+            id: 'intro',
+            startLine: 1,
+            endLine: 5,
+            subsections: [],
+          },
+          targetSection: {
+            heading: '## 介绍',
+            content: '介绍文本',
+            level: 2,
+            id: 'intro',
+            startLine: 1,
+            endLine: 5,
+            subsections: [],
+          },
           status: 'MATCHED',
           sourceHeading: '## Intro',
         },
         {
-          sourceSection: { heading: '## Extra', content: 'extra text', level: 2, id: 'extra', startLine: 6, endLine: 15, subsections: [] },
+          sourceSection: {
+            heading: '## Extra',
+            content: 'extra text',
+            level: 2,
+            id: 'extra',
+            startLine: 6,
+            endLine: 15,
+            subsections: [],
+          },
           targetSection: null,
           status: 'SOURCE_ONLY',
           sourceHeading: '## Extra',
@@ -578,7 +787,15 @@ describe('backward-evaluator', () => {
     it('should return empty array when no matched pairs', async () => {
       const pairs: SectionPair[] = [
         {
-          sourceSection: { heading: '## Extra', content: 'extra text', level: 2, id: 'extra', startLine: 1, endLine: 5, subsections: [] },
+          sourceSection: {
+            heading: '## Extra',
+            content: 'extra text',
+            level: 2,
+            id: 'extra',
+            startLine: 1,
+            endLine: 5,
+            subsections: [],
+          },
           targetSection: null,
           status: 'SOURCE_ONLY',
           sourceHeading: '## Extra',
@@ -601,8 +818,12 @@ describe('evaluation prompt snapshots', () => {
       '## Introduction\n\nThis is the introduction to the model.',
       '## 介绍\n\n这是模型的介绍。',
       '## Introduction',
-      'English', 'zh-cn',
-      null, null, 'Target may contain clarifications.', null,
+      'English',
+      'zh-cn',
+      null,
+      null,
+      'Target may contain clarifications.',
+      null
     );
     expect(prompt).toMatchSnapshot();
   });
@@ -616,7 +837,13 @@ describe('evaluation prompt snapshots', () => {
       },
     ];
     const prompt = buildFileEvaluationPrompt(
-      matchedPairs, 'English', 'zh-cn', null, null, 'Some triage notes.', null,
+      matchedPairs,
+      'English',
+      'zh-cn',
+      null,
+      null,
+      'Some triage notes.',
+      null
     );
     expect(prompt).toMatchSnapshot();
   });

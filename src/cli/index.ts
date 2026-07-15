@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Translate CLI — Entry Point
- * 
+ *
  * Commands:
  * - init:          Bulk-translate a new project (Phase 5)
  * - backward:      Two-stage analysis → suggestion reports
@@ -13,14 +13,29 @@
 
 import { Command } from 'commander';
 import { runBackwardSingleFile, runBackwardBulk } from './commands/backward.js';
-import { runStatus, formatStatusTable, formatStatusJson, StatusOptions } from './commands/status.js';
+import {
+  runStatus,
+  formatStatusTable,
+  formatStatusJson,
+  StatusOptions,
+} from './commands/status.js';
 import { runReview, ReviewOptions } from './commands/review.js';
 import { resyncSingleFile, runForwardBulk } from './commands/forward.js';
 import { runInit, InitOptions } from './commands/init.js';
 import { runSetup, SetupOptions } from './commands/setup.js';
-import { runHeadingmap, formatHeadingmapTable, formatHeadingmapJson, HeadingmapOptions } from './commands/headingmap.js';
+import {
+  runHeadingmap,
+  formatHeadingmapTable,
+  formatHeadingmapJson,
+  HeadingmapOptions,
+} from './commands/headingmap.js';
 import { DEFAULT_CLAUDE_MODEL } from '../models.js';
-import { runDoctor, formatDoctorTable, formatDoctorJson, DoctorOptions } from './commands/doctor.js';
+import {
+  runDoctor,
+  formatDoctorTable,
+  formatDoctorJson,
+  DoctorOptions,
+} from './commands/doctor.js';
 import { BackwardOptions, ForwardOptions } from './types.js';
 import { DEFAULT_RULES, parseLocalizationRules } from '../localization-rules.js';
 import { checkGhAvailable } from './issue-creator.js';
@@ -80,7 +95,12 @@ function resolveSourceLanguage(cliValue: string | undefined, targetPath: string)
  * Parse --exclude into an array. Supports comma-separated and repeated flags.
  */
 function collectExclude(value: string, previous: string[]): string[] {
-  return previous.concat(value.split(',').map(s => s.trim()).filter(Boolean));
+  return previous.concat(
+    value
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  );
 }
 
 // ─── backward command ───────────────────────────────────────────────────────
@@ -94,12 +114,21 @@ program
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
   .option('-l, --language <code>', 'Target language code', 'zh-cn')
   .option('--source-language <code>', 'Source language code')
-  .option('-o, --output <path>', 'Output directory (or .md/.json file path for single-file mode)', './reports')
+  .option(
+    '-o, --output <path>',
+    'Output directory (or .md/.json file path for single-file mode)',
+    './reports'
+  )
   .option('-m, --model <model>', 'Claude model to use', DEFAULT_CLAUDE_MODEL)
   .option('--json', 'Output reports as JSON', false)
   .option('--test', 'Use deterministic mock responses (no LLM calls)', false)
   .option('--min-confidence <number>', 'Minimum confidence for reporting', '0.6')
-  .option('--exclude <pattern>', 'Exclude files matching pattern (repeatable, comma-separated)', collectExclude, [])
+  .option(
+    '--exclude <pattern>',
+    'Exclude files matching pattern (repeatable, comma-separated)',
+    collectExclude,
+    []
+  )
   .option('--resume', 'Resume a previous bulk run from checkpoint', false)
   .option('-j, --parallel <n>', 'Number of parallel translations (default: 5)', '5')
   .action(async (opts) => {
@@ -131,11 +160,15 @@ program
       // Single file mode
       try {
         const report = await runBackwardSingleFile(options);
-        const backportCount = report.suggestions.filter(s => s.recommendation === 'BACKPORT').length;
-        
+        const backportCount = report.suggestions.filter(
+          (s) => s.recommendation === 'BACKPORT'
+        ).length;
+
         if (backportCount > 0) {
           const outputLabel = /\.(md|json)$/i.test(opts.output) ? opts.output : `${opts.output}/`;
-          console.log(`\n✅ Found ${backportCount} suggestion(s). Report written to ${outputLabel}`);
+          console.log(
+            `\n✅ Found ${backportCount} suggestion(s). Report written to ${outputLabel}`
+          );
         } else {
           console.log('\n✅ No backport suggestions found.');
         }
@@ -165,7 +198,12 @@ program
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
   .option('-l, --language <code>', 'Target language code', 'zh-cn')
   .option('--source-language <code>', 'Source language code (required with --write-state)', 'en')
-  .option('--exclude <pattern>', 'Exclude files matching pattern (repeatable, comma-separated)', collectExclude, [])
+  .option(
+    '--exclude <pattern>',
+    'Exclude files matching pattern (repeatable, comma-separated)',
+    collectExclude,
+    []
+  )
   .option('--json', 'Output as JSON', false)
   .option('--write-state', 'Bootstrap .translate/ metadata from current state', false)
   .option('--force', 'Skip sync-date safety check for --write-state', false)
@@ -174,7 +212,9 @@ program
   .action(async (opts) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (opts.checkSync && !apiKey && !opts.test) {
-      console.error('❌ ANTHROPIC_API_KEY environment variable is required for --check-sync (or use --test)');
+      console.error(
+        '❌ ANTHROPIC_API_KEY environment variable is required for --check-sync (or use --test)'
+      );
       process.exit(1);
     }
 
@@ -217,8 +257,14 @@ program
 program
   .command('review')
   .description('Interactively review backward suggestions and create GitHub Issues')
-  .argument('<report-dir>', 'Path to the backward report directory (must contain a .resync/ subfolder)')
-  .option('--repo <owner/repo>', 'SOURCE repository for Issue creation (e.g. QuantEcon/lecture-python-intro)')
+  .argument(
+    '<report-dir>',
+    'Path to the backward report directory (must contain a .resync/ subfolder)'
+  )
+  .option(
+    '--repo <owner/repo>',
+    'SOURCE repository for Issue creation (e.g. QuantEcon/lecture-python-intro)'
+  )
   .option('--dry-run', 'Preview Issues without creating them', false)
   .option('--min-confidence <number>', 'Minimum confidence threshold for suggestions', '0.6')
   .action(async (reportDir: string, opts) => {
@@ -250,7 +296,12 @@ program
   .option('-m, --model <model>', 'Claude model to use', DEFAULT_CLAUDE_MODEL)
   .option('--test', 'Use deterministic mock responses (no LLM calls)', false)
   .option('--github <owner/repo>', 'Create one PR per file in TARGET repo')
-  .option('--exclude <pattern>', 'Exclude files matching pattern (repeatable, comma-separated)', collectExclude, [])
+  .option(
+    '--exclude <pattern>',
+    'Exclude files matching pattern (repeatable, comma-separated)',
+    collectExclude,
+    []
+  )
   .option('-j, --parallel <n>', 'Number of parallel translations (default: 5)', '5')
   .action(async (opts) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -287,18 +338,23 @@ program
           opts.source,
           opts.target,
           opts.docsFolder,
-          options,
+          options
         );
 
         const { summary } = result;
-        if (result.triageResult.verdict !== 'CONTENT_CHANGES' && result.triageResult.verdict !== 'TARGET_HAS_ADDITIONS') {
+        if (
+          result.triageResult.verdict !== 'CONTENT_CHANGES' &&
+          result.triageResult.verdict !== 'TARGET_HAS_ADDITIONS'
+        ) {
           const label = result.triageResult.verdict === 'IDENTICAL' ? 'identical' : 'i18n only';
           console.log(`\n  ${opts.file}: SKIPPED (${label})`);
         } else {
           if (result.triageResult.verdict === 'TARGET_HAS_ADDITIONS') {
             console.log(`\n  ⚠️  ${opts.file}: TARGET has additions that were lost during resync`);
           }
-          console.log(`\n  ${opts.file}: ${summary.resynced} resynced, ${summary.new} new, ${summary.removed} removed, ${summary.unchanged} unchanged${summary.errors > 0 ? `, ${summary.errors} errors` : ''}`);
+          console.log(
+            `\n  ${opts.file}: ${summary.resynced} resynced, ${summary.new} new, ${summary.removed} removed, ${summary.unchanged} unchanged${summary.errors > 0 ? `, ${summary.errors} errors` : ''}`
+          );
         }
       } else {
         // Bulk mode
@@ -327,7 +383,11 @@ program
   .option('--resume-from <file>', 'Resume from a specific lecture file (e.g., cobweb.md)')
   .option('--skip-existing', 'Skip lectures already translated (reads .translate/state)', false)
   .option('--glossary <path>', 'Path to glossary JSON file (default: glossary/<lang>.json)')
-  .option('--localize <rules>', `Localization rules for code cells (use "none" to disable)`, DEFAULT_RULES.join(','))
+  .option(
+    '--localize <rules>',
+    `Localization rules for code cells (use "none" to disable)`,
+    DEFAULT_RULES.join(',')
+  )
   .option('--dry-run', 'Preview lectures without translating', false)
   .action(async (opts) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -423,12 +483,22 @@ program
 
 program
   .command('headingmap')
-  .description('Generate heading-maps by comparing source and target section headings (no LLM calls)')
+  .description(
+    'Generate heading-maps by comparing source and target section headings (no LLM calls)'
+  )
   .requiredOption('-s, --source <path>', 'Path to SOURCE (English) repository')
   .requiredOption('-t, --target <path>', 'Path to TARGET (translated) repository')
-  .option('-f, --file <filename>', 'Generate heading-map for a single file (relative to docs-folder)')
+  .option(
+    '-f, --file <filename>',
+    'Generate heading-map for a single file (relative to docs-folder)'
+  )
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
-  .option('--exclude <pattern>', 'Exclude files matching pattern (repeatable, comma-separated)', collectExclude, [])
+  .option(
+    '--exclude <pattern>',
+    'Exclude files matching pattern (repeatable, comma-separated)',
+    collectExclude,
+    []
+  )
   .option('--json', 'Output as JSON', false)
   .option('--dry-run', 'Show what heading-maps would be generated without modifying files', false)
   .action(async (opts) => {
@@ -460,7 +530,10 @@ program
 program
   .command('setup')
   .description('Scaffold a new target translation repository')
-  .requiredOption('--source <owner/repo>', 'Source repository (e.g., QuantEcon/lecture-python-intro)')
+  .requiredOption(
+    '--source <owner/repo>',
+    'Source repository (e.g., QuantEcon/lecture-python-intro)'
+  )
   .requiredOption('--target-language <code>', 'Target language code (e.g., zh-cn, fa)')
   .option('--source-language <code>', 'Source language code', 'en')
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')

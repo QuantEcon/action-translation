@@ -87,7 +87,7 @@ describe('config read/write', () => {
     fs.writeFileSync(
       path.join(configDir, 'config.yml'),
       'source-language: en\ntarget-language: zh-cn\n',
-      'utf-8',
+      'utf-8'
     );
 
     expect(readConfig(tmpDir)).toBeUndefined();
@@ -186,7 +186,7 @@ describe('file state read/write', () => {
     fs.writeFileSync(
       path.join(stateDir, 'partial.md.yml'),
       'source-sha: abc\nsynced-at: "2026-01-01"\nmodel: test\nmode: NEW\n',
-      'utf-8',
+      'utf-8'
     );
 
     expect(readFileState(tmpDir, 'partial.md')).toBeUndefined();
@@ -277,8 +277,9 @@ describe('stateFileRelativePath', () => {
   });
 
   test('returns correct path for nested filename', () => {
-    expect(stateFileRelativePath('lectures/advanced/cobweb.md'))
-      .toBe('.translate/state/lectures/advanced/cobweb.md.yml');
+    expect(stateFileRelativePath('lectures/advanced/cobweb.md')).toBe(
+      '.translate/state/lectures/advanced/cobweb.md.yml'
+    );
   });
 });
 

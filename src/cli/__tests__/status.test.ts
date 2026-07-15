@@ -1,6 +1,6 @@
 /**
  * Tests for the status command
- * 
+ *
  * Tests file discovery, per-file status checking, and console output formatting.
  * Uses temporary directories with fixture-style .md files.
  */
@@ -227,7 +227,7 @@ describe('checkFileStatus', () => {
       'intro.md',
       path.join(tmpDir, 'source'),
       path.join(tmpDir, 'target'),
-      'lectures',
+      'lectures'
     );
 
     expect(result.status).toBe('SOURCE_ONLY');
@@ -241,7 +241,7 @@ describe('checkFileStatus', () => {
       'intro.md',
       path.join(tmpDir, 'source'),
       path.join(tmpDir, 'target'),
-      'lectures',
+      'lectures'
     );
 
     expect(result.status).toBe('TARGET_ONLY');
@@ -257,7 +257,7 @@ describe('checkFileStatus', () => {
       'intro.md',
       path.join(tmpDir, 'source'),
       path.join(tmpDir, 'target'),
-      'lectures',
+      'lectures'
     );
 
     expect(result.status).toBe('TARGET_AHEAD');
@@ -277,7 +277,7 @@ describe('checkFileStatus', () => {
       'intro.md',
       path.join(tmpDir, 'source'),
       path.join(tmpDir, 'target'),
-      'lectures',
+      'lectures'
     );
 
     expect(result.status).toBe('SOURCE_AHEAD');
@@ -292,13 +292,16 @@ describe('checkFileStatus', () => {
     const targetDir = path.join(tmpDir, 'target', 'lectures');
     writeMd(path.join(sourceDir, 'intro.md'), SOURCE_2_SECTIONS);
     // Target with 3 sections and no heading-map
-    writeMd(path.join(targetDir, 'intro.md'), TARGET_NO_HEADINGMAP + '\n## 额外的部分\n\n额外的内容。\n');
+    writeMd(
+      path.join(targetDir, 'intro.md'),
+      TARGET_NO_HEADINGMAP + '\n## 额外的部分\n\n额外的内容。\n'
+    );
 
     const result = await checkFileStatus(
       'intro.md',
       path.join(tmpDir, 'source'),
       path.join(tmpDir, 'target'),
-      'lectures',
+      'lectures'
     );
 
     // Primary status is TARGET_AHEAD (highest priority)
@@ -318,7 +321,7 @@ describe('checkFileStatus', () => {
       'intro.md',
       path.join(tmpDir, 'source'),
       path.join(tmpDir, 'target'),
-      'lectures',
+      'lectures'
     );
 
     expect(result.status).toBe('MISSING_HEADINGMAP');
@@ -334,7 +337,7 @@ describe('checkFileStatus', () => {
       'intro.md',
       path.join(tmpDir, 'source'),
       path.join(tmpDir, 'target'),
-      'lectures',
+      'lectures'
     );
 
     // Without git history in tmpDir, dates won't be available, so ALIGNED
@@ -349,7 +352,7 @@ describe('checkFileStatus', () => {
       'nonexistent.md',
       path.join(tmpDir, 'source'),
       path.join(tmpDir, 'target'),
-      'lectures',
+      'lectures'
     );
 
     expect(result.status).toBe('NOT_FOUND');
@@ -394,7 +397,7 @@ jupytext:
       'status.md',
       path.join(tmpDir, 'source'),
       path.join(tmpDir, 'target'),
-      'lectures',
+      'lectures'
     );
 
     expect(result.status).toBe('ALIGNED');
@@ -514,11 +517,34 @@ describe('formatStatusTable', () => {
       targetRepo: '/path/to/target',
       language: 'zh-cn',
       entries: [
-        { file: 'intro.md', status: 'ALIGNED' as FileSyncStatus, flags: ['ALIGNED' as FileSyncStatus] },
-        { file: 'cobweb.md', status: 'OUTDATED' as FileSyncStatus, flags: ['OUTDATED' as FileSyncStatus], details: 'SOURCE modified 2026-03-01, TARGET modified 2026-02-15' },
-        { file: 'new.md', status: 'SOURCE_ONLY' as FileSyncStatus, flags: ['SOURCE_ONLY' as FileSyncStatus] },
+        {
+          file: 'intro.md',
+          status: 'ALIGNED' as FileSyncStatus,
+          flags: ['ALIGNED' as FileSyncStatus],
+        },
+        {
+          file: 'cobweb.md',
+          status: 'OUTDATED' as FileSyncStatus,
+          flags: ['OUTDATED' as FileSyncStatus],
+          details: 'SOURCE modified 2026-03-01, TARGET modified 2026-02-15',
+        },
+        {
+          file: 'new.md',
+          status: 'SOURCE_ONLY' as FileSyncStatus,
+          flags: ['SOURCE_ONLY' as FileSyncStatus],
+        },
       ],
-      summary: { total: 3, aligned: 1, outdated: 1, sourceAhead: 0, targetAhead: 0, missingHeadingMap: 0, sourceOnly: 1, targetOnly: 0, notFound: 0 },
+      summary: {
+        total: 3,
+        aligned: 1,
+        outdated: 1,
+        sourceAhead: 0,
+        targetAhead: 0,
+        missingHeadingMap: 0,
+        sourceOnly: 1,
+        targetOnly: 0,
+        notFound: 0,
+      },
     };
 
     const output = formatStatusTable(result);
@@ -543,9 +569,23 @@ describe('formatStatusTable', () => {
       targetRepo: '/path/to/target',
       language: 'zh-cn',
       entries: [
-        { file: 'intro.md', status: 'ALIGNED' as FileSyncStatus, flags: ['ALIGNED' as FileSyncStatus] },
+        {
+          file: 'intro.md',
+          status: 'ALIGNED' as FileSyncStatus,
+          flags: ['ALIGNED' as FileSyncStatus],
+        },
       ],
-      summary: { total: 1, aligned: 1, outdated: 0, sourceAhead: 0, targetAhead: 0, missingHeadingMap: 0, sourceOnly: 0, targetOnly: 0, notFound: 0 },
+      summary: {
+        total: 1,
+        aligned: 1,
+        outdated: 0,
+        sourceAhead: 0,
+        targetAhead: 0,
+        missingHeadingMap: 0,
+        sourceOnly: 0,
+        targetOnly: 0,
+        notFound: 0,
+      },
     };
 
     const output = formatStatusTable(result);
@@ -565,9 +605,23 @@ describe('formatStatusJson', () => {
       targetRepo: '/path/to/target',
       language: 'zh-cn',
       entries: [
-        { file: 'intro.md', status: 'ALIGNED' as FileSyncStatus, flags: ['ALIGNED' as FileSyncStatus] },
+        {
+          file: 'intro.md',
+          status: 'ALIGNED' as FileSyncStatus,
+          flags: ['ALIGNED' as FileSyncStatus],
+        },
       ],
-      summary: { total: 1, aligned: 1, outdated: 0, sourceAhead: 0, targetAhead: 0, missingHeadingMap: 0, sourceOnly: 0, targetOnly: 0, notFound: 0 },
+      summary: {
+        total: 1,
+        aligned: 1,
+        outdated: 0,
+        sourceAhead: 0,
+        targetAhead: 0,
+        missingHeadingMap: 0,
+        sourceOnly: 0,
+        targetOnly: 0,
+        notFound: 0,
+      },
     };
 
     const json = formatStatusJson(result);
@@ -636,14 +690,16 @@ describe('--write-state safeguard', () => {
     writeMd(path.join(sourceDir, 'intro.md'), SOURCE_2_SECTIONS);
     writeMd(path.join(targetDir, 'intro.md'), TARGET_2_SECTIONS_WITH_MAP);
 
-    await expect(runStatus({
-      source: path.join(tmpDir, 'source'),
-      target: path.join(tmpDir, 'target'),
-      docsFolder: 'lectures',
-      language: 'zh-cn',
-      exclude: [],
-      writeState: true,
-    })).resolves.toBeDefined();
+    await expect(
+      runStatus({
+        source: path.join(tmpDir, 'source'),
+        target: path.join(tmpDir, 'target'),
+        docsFolder: 'lectures',
+        language: 'zh-cn',
+        exclude: [],
+        writeState: true,
+      })
+    ).resolves.toBeDefined();
   });
 
   it('should reject --write-state combined with --check-sync', async () => {
@@ -652,17 +708,19 @@ describe('--write-state safeguard', () => {
     writeMd(path.join(sourceDir, 'intro.md'), SOURCE_2_SECTIONS);
     writeMd(path.join(targetDir, 'intro.md'), TARGET_2_SECTIONS_WITH_MAP);
 
-    await expect(runStatus({
-      source: path.join(tmpDir, 'source'),
-      target: path.join(tmpDir, 'target'),
-      docsFolder: 'lectures',
-      language: 'zh-cn',
-      exclude: [],
-      writeState: true,
-      checkSync: true,
-      apiKey: 'test-key',
-      testMode: true,
-    })).rejects.toThrow('cannot be used together');
+    await expect(
+      runStatus({
+        source: path.join(tmpDir, 'source'),
+        target: path.join(tmpDir, 'target'),
+        docsFolder: 'lectures',
+        language: 'zh-cn',
+        exclude: [],
+        writeState: true,
+        checkSync: true,
+        apiKey: 'test-key',
+        testMode: true,
+      })
+    ).rejects.toThrow('cannot be used together');
   });
 
   it('should preserve model from existing state file instead of overwriting with unknown', async () => {

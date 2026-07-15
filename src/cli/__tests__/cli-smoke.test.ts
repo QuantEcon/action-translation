@@ -32,7 +32,7 @@ function run(args: string[]): Promise<{ stdout: string; stderr: string; code: nu
       resolve({
         stdout: stdout?.toString() ?? '',
         stderr: stderr?.toString() ?? '',
-        code: error ? (error as any).code ?? 1 : 0,
+        code: error ? ((error as any).code ?? 1) : 0,
       });
     });
   });
@@ -96,12 +96,15 @@ describe('CLI smoke tests', () => {
       // Create a minimal source repo with _toc.yml
       const lecturesDir = path.join(tmpDir, 'source', 'lectures');
       fs.mkdirSync(lecturesDir, { recursive: true });
-      fs.writeFileSync(path.join(lecturesDir, '_toc.yml'), `
+      fs.writeFileSync(
+        path.join(lecturesDir, '_toc.yml'),
+        `
 format: jb-book
 root: intro
 chapters:
   - file: cobweb
-`);
+`
+      );
       fs.writeFileSync(path.join(lecturesDir, 'intro.md'), '# Intro\n\n## Section\n\nContent.');
       fs.writeFileSync(path.join(lecturesDir, 'cobweb.md'), '# Cobweb\n\n## Model\n\nContent.');
     });
@@ -114,9 +117,12 @@ chapters:
       const target = path.join(tmpDir, 'target');
       const { stdout, code } = await run([
         'init',
-        '-s', path.join(tmpDir, 'source'),
-        '-t', target,
-        '--target-language', 'zh-cn',
+        '-s',
+        path.join(tmpDir, 'source'),
+        '-t',
+        target,
+        '--target-language',
+        'zh-cn',
         '--dry-run',
       ]);
       expect(code).toBe(0);
@@ -153,7 +159,17 @@ chapters:
     });
 
     it('backward exits with error when api key missing and not --test', async () => {
-      const { code } = await run(['backward', '-s', '/tmp', '-t', '/tmp', '-f', 'x.md', '-o', '/tmp']);
+      const { code } = await run([
+        'backward',
+        '-s',
+        '/tmp',
+        '-t',
+        '/tmp',
+        '-f',
+        'x.md',
+        '-o',
+        '/tmp',
+      ]);
       expect(code).not.toBe(0);
     });
   });

@@ -4,7 +4,7 @@ import {
   updateHeadingMap,
   serializeHeadingMap,
   lookupTargetHeading,
-  injectHeadingMap
+  injectHeadingMap,
 } from '../heading-map.js';
 import { Section } from '../types.js';
 
@@ -22,7 +22,7 @@ heading-map:
 Content here`;
 
       const map = extractHeadingMap(content);
-      
+
       expect(map.size).toBe(3);
       expect(map.get('Introduction')).toBe('简介');
       expect(map.get('Overview')).toBe('概述');
@@ -35,7 +35,7 @@ Content here`;
 Some content`;
 
       const map = extractHeadingMap(content);
-      
+
       expect(map.size).toBe(0);
     });
 
@@ -48,7 +48,7 @@ author: Someone
 Content`;
 
       const map = extractHeadingMap(content);
-      
+
       expect(map.size).toBe(0);
     });
 
@@ -61,7 +61,7 @@ heading-map: {}
 Content`;
 
       const map = extractHeadingMap(content);
-      
+
       expect(map.size).toBe(0);
     });
 
@@ -78,7 +78,7 @@ heading-map:
 Content`;
 
       const map = extractHeadingMap(content);
-      
+
       expect(map.size).toBe(5);
       expect(map.get('Advanced Topics')).toBe('高级主题');
     });
@@ -88,23 +88,20 @@ Content`;
     const createSection = (heading: string, subsections: Section[] = []): Section => ({
       heading,
       level: heading.startsWith('###') ? 3 : 2,
-      id: heading.replace(/^#+\s+/, '').toLowerCase().replace(/\s+/g, '-'),
+      id: heading
+        .replace(/^#+\s+/, '')
+        .toLowerCase()
+        .replace(/\s+/g, '-'),
       content: 'Test content',
       subsections,
       startLine: 1,
-      endLine: 10
+      endLine: 10,
     });
 
     it('should add new mappings for new sections', () => {
       const existingMap = new Map<string, string>();
-      const sourceSections = [
-        createSection('## Introduction'),
-        createSection('## Overview')
-      ];
-      const targetSections = [
-        createSection('## 简介'),
-        createSection('## 概述')
-      ];
+      const sourceSections = [createSection('## Introduction'), createSection('## Overview')];
+      const targetSections = [createSection('## 简介'), createSection('## 概述')];
 
       const updated = updateHeadingMap(existingMap, sourceSections, targetSections);
 
@@ -116,17 +113,17 @@ Content`;
     it('should preserve existing mappings', () => {
       const existingMap = new Map([
         ['Introduction', '简介'],
-        ['Overview', '概述']
+        ['Overview', '概述'],
       ]);
       const sourceSections = [
         createSection('## Introduction'),
         createSection('## Overview'),
-        createSection('## New Section')
+        createSection('## New Section'),
       ];
       const targetSections = [
         createSection('## 简介'),
         createSection('## 概述'),
-        createSection('## 新章节')
+        createSection('## 新章节'),
       ];
 
       const updated = updateHeadingMap(existingMap, sourceSections, targetSections);
@@ -141,16 +138,10 @@ Content`;
       const existingMap = new Map([
         ['Introduction', '简介'],
         ['Overview', '概述'],
-        ['Old Section', '旧章节']
+        ['Old Section', '旧章节'],
       ]);
-      const sourceSections = [
-        createSection('## Introduction'),
-        createSection('## Overview')
-      ];
-      const targetSections = [
-        createSection('## 简介'),
-        createSection('## 概述')
-      ];
+      const sourceSections = [createSection('## Introduction'), createSection('## Overview')];
+      const targetSections = [createSection('## 简介'), createSection('## 概述')];
 
       const updated = updateHeadingMap(existingMap, sourceSections, targetSections);
 
@@ -163,16 +154,10 @@ Content`;
     it('should handle subsections', () => {
       const existingMap = new Map<string, string>();
       const sourceSections = [
-        createSection('## Introduction', [
-          createSection('### Setup'),
-          createSection('### Usage')
-        ])
+        createSection('## Introduction', [createSection('### Setup'), createSection('### Usage')]),
       ];
       const targetSections = [
-        createSection('## 简介', [
-          createSection('### 设置'),
-          createSection('### 用法')
-        ])
+        createSection('## 简介', [createSection('### 设置'), createSection('### 用法')]),
       ];
 
       const updated = updateHeadingMap(existingMap, sourceSections, targetSections);
@@ -189,12 +174,12 @@ Content`;
       const sourceSections = [
         createSection('## First'),
         createSection('## Second'),
-        createSection('## Third')
+        createSection('## Third'),
       ];
       const targetSections = [
         createSection('## 第一'),
         createSection('## 第二'),
-        createSection('## 第三')
+        createSection('## 第三'),
       ];
 
       const updated = updateHeadingMap(existingMap, sourceSections, targetSections);
@@ -209,12 +194,9 @@ Content`;
       const sourceSections = [
         createSection('## First'),
         createSection('## Second'),
-        createSection('## Third')
+        createSection('## Third'),
       ];
-      const targetSections = [
-        createSection('## 第一'),
-        createSection('## 第二')
-      ];
+      const targetSections = [createSection('## 第一'), createSection('## 第二')];
 
       const updated = updateHeadingMap(existingMap, sourceSections, targetSections);
 
@@ -228,29 +210,35 @@ Content`;
       const existingMap = new Map([
         ['Introduction to Economics', '经济学导论'],
         ['Supply and Demand', '供给与需求'],
-        ['Economic Models', '经济模型']
+        ['Economic Models', '经济模型'],
       ]);
       const sourceSections = [
         createSection('## Supply and Demand'),
-        createSection('## Economic Models')
+        createSection('## Economic Models'),
       ];
-      const targetSections = [
-        createSection('## 供给与需求'),
-        createSection('## 经济模型')
-      ];
+      const targetSections = [createSection('## 供给与需求'), createSection('## 经济模型')];
       const titleHeading = 'Comprehensive Introduction to Economic Principles';
 
       // Without title parameter, title would be deleted
       const updatedWithoutTitle = updateHeadingMap(existingMap, sourceSections, targetSections);
       expect(updatedWithoutTitle.has('Introduction to Economics')).toBe(false);
-      expect(updatedWithoutTitle.has('Comprehensive Introduction to Economic Principles')).toBe(false);
+      expect(updatedWithoutTitle.has('Comprehensive Introduction to Economic Principles')).toBe(
+        false
+      );
 
       // With title parameter, title should be preserved
       existingMap.set(titleHeading, '经济学原理综合导论');
-      const updatedWithTitle = updateHeadingMap(existingMap, sourceSections, targetSections, titleHeading);
-      
+      const updatedWithTitle = updateHeadingMap(
+        existingMap,
+        sourceSections,
+        targetSections,
+        titleHeading
+      );
+
       expect(updatedWithTitle.size).toBe(3);
-      expect(updatedWithTitle.get('Comprehensive Introduction to Economic Principles')).toBe('经济学原理综合导论');
+      expect(updatedWithTitle.get('Comprehensive Introduction to Economic Principles')).toBe(
+        '经济学原理综合导论'
+      );
       expect(updatedWithTitle.get('Supply and Demand')).toBe('供给与需求');
       expect(updatedWithTitle.get('Economic Models')).toBe('经济模型');
       expect(updatedWithTitle.has('Introduction to Economics')).toBe(false); // Old title removed
@@ -259,14 +247,10 @@ Content`;
     it('should handle title changes correctly', () => {
       const existingMap = new Map([
         ['Old Title', '旧标题'],
-        ['Section One', '第一节']
+        ['Section One', '第一节'],
       ]);
-      const sourceSections = [
-        createSection('## Section One')
-      ];
-      const targetSections = [
-        createSection('## 第一节')
-      ];
+      const sourceSections = [createSection('## Section One')];
+      const targetSections = [createSection('## 第一节')];
       const newTitle = 'New Title';
 
       existingMap.set(newTitle, '新标题');
@@ -283,7 +267,7 @@ Content`;
     it('should serialize map to YAML format', () => {
       const map = new Map([
         ['Introduction', '简介'],
-        ['Overview', '概述']
+        ['Overview', '概述'],
       ]);
 
       const yaml = serializeHeadingMap(map);
@@ -303,7 +287,7 @@ Content`;
     it('should handle special characters in headings', () => {
       const map = new Map([
         ['Section: Advanced', '章节：高级'],
-        ['Q&A', '问答']
+        ['Q&A', '问答'],
       ]);
 
       const yaml = serializeHeadingMap(map);
@@ -319,7 +303,7 @@ Content`;
     it('should find exact match in map', () => {
       const map = new Map([
         ['Introduction', '简介'],
-        ['Overview', '概述']
+        ['Overview', '概述'],
       ]);
 
       const result = lookupTargetHeading('Introduction', map);
@@ -328,9 +312,7 @@ Content`;
     });
 
     it('should return undefined for missing heading', () => {
-      const map = new Map([
-        ['Introduction', '简介']
-      ]);
+      const map = new Map([['Introduction', '简介']]);
 
       const result = lookupTargetHeading('Overview', map);
 
@@ -338,9 +320,7 @@ Content`;
     });
 
     it('should handle headings with ## markers', () => {
-      const map = new Map([
-        ['Introduction', '简介']
-      ]);
+      const map = new Map([['Introduction', '简介']]);
 
       const result = lookupTargetHeading('## Introduction', map);
 
@@ -348,9 +328,7 @@ Content`;
     });
 
     it('should handle headings with ### markers', () => {
-      const map = new Map([
-        ['Setup', '设置']
-      ]);
+      const map = new Map([['Setup', '设置']]);
 
       const result = lookupTargetHeading('### Setup', map);
 
@@ -358,9 +336,7 @@ Content`;
     });
 
     it('should handle whitespace variations', () => {
-      const map = new Map([
-        ['Introduction', '简介']
-      ]);
+      const map = new Map([['Introduction', '简介']]);
 
       const result = lookupTargetHeading('##  Introduction  ', map);
 
@@ -378,7 +354,7 @@ Content`;
     it('should find match with different case (case-insensitive fallback)', () => {
       const map = new Map([
         ['Iterables and Iterators', '可迭代对象和迭代器'],
-        ['Overview', '概述']
+        ['Overview', '概述'],
       ]);
 
       // Source heading changed case: "Iterators" → "iterators"
@@ -390,7 +366,7 @@ Content`;
     it('should prefer exact match over case-insensitive match', () => {
       const map = new Map([
         ['Setup', '设置-exact'],
-        ['setup', '设置-lower']
+        ['setup', '设置-lower'],
       ]);
 
       const result = lookupTargetHeading('## Setup', map);
@@ -399,9 +375,7 @@ Content`;
     });
 
     it('should find case-insensitive match with path-based keys', () => {
-      const map = new Map([
-        ['Vector Spaces::Basic Properties', '向量空间::基本性质']
-      ]);
+      const map = new Map([['Vector Spaces::Basic Properties', '向量空间::基本性质']]);
 
       const result = lookupTargetHeading('### Basic properties', map, 'Vector spaces');
 
@@ -422,7 +396,7 @@ Content here`;
 
       const map = new Map([
         ['Introduction', '简介'],
-        ['Overview', '概述']
+        ['Overview', '概述'],
       ]);
 
       const result = injectHeadingMap(content, map);
@@ -446,9 +420,7 @@ heading-map:
 
 Content`;
 
-      const map = new Map([
-        ['New', '新的']
-      ]);
+      const map = new Map([['New', '新的']]);
 
       const result = injectHeadingMap(content, map);
 
@@ -461,9 +433,7 @@ Content`;
 
 Content here`;
 
-      const map = new Map([
-        ['Introduction', '简介']
-      ]);
+      const map = new Map([['Introduction', '简介']]);
 
       const result = injectHeadingMap(content, map);
 
@@ -511,7 +481,7 @@ Content 2`;
 
       const map = new Map([
         ['Section 1', '章节 1'],
-        ['Section 2', '章节 2']
+        ['Section 2', '章节 2'],
       ]);
 
       const result = injectHeadingMap(content, map);
@@ -536,9 +506,7 @@ jupytext:
 
 Content`;
 
-      const map = new Map([
-        ['Introduction', '简介']
-      ]);
+      const map = new Map([['Introduction', '简介']]);
 
       const result = injectHeadingMap(content, map);
 
@@ -579,7 +547,7 @@ title: Test
           content: 'English content',
           subsections: [],
           startLine: 1,
-          endLine: 5
+          endLine: 5,
         },
         {
           heading: '## Overview',
@@ -588,8 +556,8 @@ title: Test
           content: 'More content',
           subsections: [],
           startLine: 6,
-          endLine: 10
-        }
+          endLine: 10,
+        },
       ];
 
       // Simulate Chinese sections (same structure)
@@ -601,7 +569,7 @@ title: Test
           content: '中文内容',
           subsections: [],
           startLine: 1,
-          endLine: 5
+          endLine: 5,
         },
         {
           heading: '## 概述',
@@ -610,8 +578,8 @@ title: Test
           content: '更多内容',
           subsections: [],
           startLine: 6,
-          endLine: 10
-        }
+          endLine: 10,
+        },
       ];
 
       // Update (should create map by position matching)
@@ -663,7 +631,7 @@ heading-map:
           content: 'English content',
           subsections: [],
           startLine: 1,
-          endLine: 5
+          endLine: 5,
         },
         {
           heading: '## Overview',
@@ -672,7 +640,7 @@ heading-map:
           content: 'More content',
           subsections: [],
           startLine: 6,
-          endLine: 10
+          endLine: 10,
         },
         {
           heading: '## New Section',
@@ -681,8 +649,8 @@ heading-map:
           content: 'New content',
           subsections: [],
           startLine: 11,
-          endLine: 15
-        }
+          endLine: 15,
+        },
       ];
 
       const targetSections: Section[] = [
@@ -693,7 +661,7 @@ heading-map:
           content: '中文内容',
           subsections: [],
           startLine: 1,
-          endLine: 5
+          endLine: 5,
         },
         {
           heading: '## 概述',
@@ -702,7 +670,7 @@ heading-map:
           content: '更多内容',
           subsections: [],
           startLine: 6,
-          endLine: 10
+          endLine: 10,
         },
         {
           heading: '## 新章节',
@@ -711,8 +679,8 @@ heading-map:
           content: '新内容',
           subsections: [],
           startLine: 11,
-          endLine: 15
-        }
+          endLine: 15,
+        },
       ];
 
       // Update (should preserve existing + add new)
@@ -731,29 +699,32 @@ heading-map:
   // ========================================================================
   // REGRESSION TESTS FOR v0.4.3
   // ========================================================================
-  
+
   describe('Subsection Support - v0.4.3 Regression Tests', () => {
-    const createSection = (heading: string, level: number, subsections: Section[] = []): Section => ({
+    const createSection = (
+      heading: string,
+      level: number,
+      subsections: Section[] = []
+    ): Section => ({
       heading,
       level,
-      id: heading.replace(/^#+\s+/, '').toLowerCase().replace(/\s+/g, '-'),
+      id: heading
+        .replace(/^#+\s+/, '')
+        .toLowerCase()
+        .replace(/\s+/g, '-'),
       content: 'Test content',
       subsections,
       startLine: 1,
-      endLine: 10
+      endLine: 10,
     });
 
     it('should include subsections in heading-map', () => {
       const sourceSections: Section[] = [
-        createSection('## Overview', 2, [
-          createSection('### Core Principles', 3)
-        ])
+        createSection('## Overview', 2, [createSection('### Core Principles', 3)]),
       ];
 
       const targetSections: Section[] = [
-        createSection('## 概述', 2, [
-          createSection('### 核心原则', 3)
-        ])
+        createSection('## 概述', 2, [createSection('### 核心原则', 3)]),
       ];
 
       const existingMap = new Map<string, string>();
@@ -769,15 +740,15 @@ heading-map:
       const sourceSections: Section[] = [
         createSection('## Basic Concepts', 2, [
           createSection('### Key Terms', 3),
-          createSection('### Examples', 3)
-        ])
+          createSection('### Examples', 3),
+        ]),
       ];
 
       const targetSections: Section[] = [
         createSection('## 基本概念', 2, [
           createSection('### 关键术语', 3),
-          createSection('### 示例', 3)
-        ])
+          createSection('### 示例', 3),
+        ]),
       ];
 
       const updatedMap = updateHeadingMap(new Map(), sourceSections, targetSections);
@@ -794,18 +765,18 @@ heading-map:
         createSection('## Policy Implications', 2, [
           createSection('### Policy Trade-offs', 3, [
             createSection('#### Short-term Effects', 4),
-            createSection('#### Long-term Effects', 4)
-          ])
-        ])
+            createSection('#### Long-term Effects', 4),
+          ]),
+        ]),
       ];
 
       const targetSections: Section[] = [
         createSection('## 政策含义', 2, [
           createSection('### 政策权衡', 3, [
             createSection('#### 短期影响', 4),
-            createSection('#### 长期影响', 4)
-          ])
-        ])
+            createSection('#### 长期影响', 4),
+          ]),
+        ]),
       ];
 
       const updatedMap = updateHeadingMap(new Map(), sourceSections, targetSections);
@@ -814,29 +785,25 @@ heading-map:
       expect(updatedMap.size).toBe(4);
       expect(updatedMap.get('Policy Implications')).toBe('政策含义');
       expect(updatedMap.get('Policy Implications::Policy Trade-offs')).toBe('政策权衡');
-      expect(updatedMap.get('Policy Implications::Policy Trade-offs::Short-term Effects')).toBe('短期影响');
-      expect(updatedMap.get('Policy Implications::Policy Trade-offs::Long-term Effects')).toBe('长期影响');
+      expect(updatedMap.get('Policy Implications::Policy Trade-offs::Short-term Effects')).toBe(
+        '短期影响'
+      );
+      expect(updatedMap.get('Policy Implications::Policy Trade-offs::Long-term Effects')).toBe(
+        '长期影响'
+      );
     });
 
     it('should handle sections with and without subsections', () => {
       const sourceSections: Section[] = [
-        createSection('## Overview', 2, [
-          createSection('### Core Principles', 3)
-        ]),
-        createSection('## Mathematical Example', 2),  // No subsections
-        createSection('## Exercises', 2, [
-          createSection('### Exercise Solutions', 3)
-        ])
+        createSection('## Overview', 2, [createSection('### Core Principles', 3)]),
+        createSection('## Mathematical Example', 2), // No subsections
+        createSection('## Exercises', 2, [createSection('### Exercise Solutions', 3)]),
       ];
 
       const targetSections: Section[] = [
-        createSection('## 概述', 2, [
-          createSection('### 核心原则', 3)
-        ]),
-        createSection('## 数学示例', 2),  // No subsections
-        createSection('## 练习', 2, [
-          createSection('### 练习答案', 3)
-        ])
+        createSection('## 概述', 2, [createSection('### 核心原则', 3)]),
+        createSection('## 数学示例', 2), // No subsections
+        createSection('## 练习', 2, [createSection('### 练习答案', 3)]),
       ];
 
       const updatedMap = updateHeadingMap(new Map(), sourceSections, targetSections);
@@ -857,58 +824,83 @@ heading-map:
         targetSections: Section[]
       ): Map<string, string> {
         const map = new Map<string, string>();
-        
+
         // BUG: Only processes sections, not subsections recursively
         sourceSections.forEach((source, i) => {
           const target = targetSections[i];
           if (target) {
-            map.set(
-              source.heading.replace(/^#+\s+/, ''),
-              target.heading.replace(/^#+\s+/, '')
-            );
+            map.set(source.heading.replace(/^#+\s+/, ''), target.heading.replace(/^#+\s+/, ''));
           }
           // Missing: No recursive processing of subsections!
         });
-        
+
         return map;
       }
 
       const sourceSections: Section[] = [
-        createSection('## Section', 2, [
-          createSection('### Subsection', 3)
-        ])
+        createSection('## Section', 2, [createSection('### Subsection', 3)]),
       ];
 
       const targetSections: Section[] = [
-        createSection('## 部分', 2, [
-          createSection('### 子部分', 3)
-        ])
+        createSection('## 部分', 2, [createSection('### 子部分', 3)]),
       ];
 
       const buggyMap = updateHeadingMapBuggy(sourceSections, targetSections);
-      
+
       // Buggy version only has section, not subsection
-      expect(buggyMap.size).toBe(1);  // Should be 2!
+      expect(buggyMap.size).toBe(1); // Should be 2!
       expect(buggyMap.get('Section')).toBe('部分');
-      expect(buggyMap.get('Subsection')).toBeUndefined();  // Missing!
+      expect(buggyMap.get('Subsection')).toBeUndefined(); // Missing!
 
       // Correct version has both (with path-based keys)
       const correctMap = updateHeadingMap(new Map(), sourceSections, targetSections);
       expect(correctMap.size).toBe(2);
       expect(correctMap.get('Section')).toBe('部分');
-      expect(correctMap.get('Section::Subsection')).toBe('子部分');  // Present!
+      expect(correctMap.get('Section::Subsection')).toBe('子部分'); // Present!
     });
   });
 
   describe('MyST role stripping in heading-map', () => {
     it('should strip {index} roles from section headings in updateHeadingMap', () => {
       const sourceSections = [
-        { heading: '## {index}`Pandas <single: Pandas>`', level: 2, id: 'pandas', content: '', startLine: 1, endLine: 2, subsections: [] },
-        { heading: '## Plain Section', level: 2, id: 'plain-section', content: '', startLine: 3, endLine: 4, subsections: [] },
+        {
+          heading: '## {index}`Pandas <single: Pandas>`',
+          level: 2,
+          id: 'pandas',
+          content: '',
+          startLine: 1,
+          endLine: 2,
+          subsections: [],
+        },
+        {
+          heading: '## Plain Section',
+          level: 2,
+          id: 'plain-section',
+          content: '',
+          startLine: 3,
+          endLine: 4,
+          subsections: [],
+        },
       ];
       const targetSections = [
-        { heading: '## Pandas', level: 2, id: 'pandas', content: '', startLine: 1, endLine: 2, subsections: [] },
-        { heading: '## 普通部分', level: 2, id: 'plain-section', content: '', startLine: 3, endLine: 4, subsections: [] },
+        {
+          heading: '## Pandas',
+          level: 2,
+          id: 'pandas',
+          content: '',
+          startLine: 1,
+          endLine: 2,
+          subsections: [],
+        },
+        {
+          heading: '## 普通部分',
+          level: 2,
+          id: 'plain-section',
+          content: '',
+          startLine: 3,
+          endLine: 4,
+          subsections: [],
+        },
       ];
       const result = updateHeadingMap(new Map(), sourceSections, targetSections);
       expect(result.get('Pandas')).toBe('Pandas');
@@ -920,17 +912,43 @@ heading-map:
     it('should strip {index} roles from subsection headings', () => {
       const sourceSections = [
         {
-          heading: '## Overview', level: 2, id: 'overview', content: '', startLine: 1, endLine: 4,
+          heading: '## Overview',
+          level: 2,
+          id: 'overview',
+          content: '',
+          startLine: 1,
+          endLine: 4,
           subsections: [
-            { heading: '### {index}`DataFrames <single: DataFrames>`', level: 3, id: 'dataframes', content: '', startLine: 3, endLine: 4, subsections: [] },
+            {
+              heading: '### {index}`DataFrames <single: DataFrames>`',
+              level: 3,
+              id: 'dataframes',
+              content: '',
+              startLine: 3,
+              endLine: 4,
+              subsections: [],
+            },
           ],
         },
       ];
       const targetSections = [
         {
-          heading: '## 概述', level: 2, id: 'overview', content: '', startLine: 1, endLine: 4,
+          heading: '## 概述',
+          level: 2,
+          id: 'overview',
+          content: '',
+          startLine: 1,
+          endLine: 4,
           subsections: [
-            { heading: '### DataFrames', level: 3, id: 'dataframes', content: '', startLine: 3, endLine: 4, subsections: [] },
+            {
+              heading: '### DataFrames',
+              level: 3,
+              id: 'dataframes',
+              content: '',
+              startLine: 3,
+              endLine: 4,
+              subsections: [],
+            },
           ],
         },
       ];

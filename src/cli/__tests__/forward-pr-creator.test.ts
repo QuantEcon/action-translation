@@ -116,7 +116,7 @@ describe('buildGhArgs', () => {
       return acc;
     }, []);
     expect(labelIndices.length).toBe(2);
-    const labels = labelIndices.map(i => args[i + 1]);
+    const labels = labelIndices.map((i) => args[i + 1]);
     expect(labels).toContain('action-translation-sync');
     expect(labels).toContain('resync');
   });
@@ -171,9 +171,18 @@ describe('buildForwardPRBody', () => {
   });
 
   it('includes source repo link when provided', () => {
-    const bodyWithSource = buildForwardPRBody('cobweb.md', [], 'QuantEcon/lecture-python', 'lectures');
-    expect(bodyWithSource).toContain('**Source**: [QuantEcon/lecture-python](https://github.com/QuantEcon/lecture-python)');
-    expect(bodyWithSource).toContain('[lectures/cobweb.md](https://github.com/QuantEcon/lecture-python/blob/main/lectures/cobweb.md)');
+    const bodyWithSource = buildForwardPRBody(
+      'cobweb.md',
+      [],
+      'QuantEcon/lecture-python',
+      'lectures'
+    );
+    expect(bodyWithSource).toContain(
+      '**Source**: [QuantEcon/lecture-python](https://github.com/QuantEcon/lecture-python)'
+    );
+    expect(bodyWithSource).toContain(
+      '[lectures/cobweb.md](https://github.com/QuantEcon/lecture-python/blob/main/lectures/cobweb.md)'
+    );
   });
 
   it('builds source path without docsFolder when not provided', () => {
@@ -188,7 +197,13 @@ describe('buildForwardPRBody', () => {
   });
 
   it('includes triage reason when provided', () => {
-    const bodyWithReason = buildForwardPRBody('cobweb.md', [], undefined, undefined, 'New section added and formula updated');
+    const bodyWithReason = buildForwardPRBody(
+      'cobweb.md',
+      [],
+      undefined,
+      undefined,
+      'New section added and formula updated'
+    );
     expect(bodyWithReason).toContain('**Reason**: New section added and formula updated');
   });
 
@@ -206,9 +221,11 @@ describe('buildForwardPRBody', () => {
 describe('createForwardPR', () => {
   it('returns success with URL on gh success', () => {
     const result = createForwardPR(
-      'cobweb.md', '# content', makeResults(),
+      'cobweb.md',
+      '# content',
+      makeResults(),
       'QuantEcon/lecture-python.zh-cn',
-      successRunner(),
+      successRunner()
     );
     expect(result.success).toBe(true);
     expect(result.url).toBe('https://github.com/Org/Repo/pull/7');
@@ -217,9 +234,11 @@ describe('createForwardPR', () => {
 
   it('returns failure with error on gh failure', () => {
     const result = createForwardPR(
-      'cobweb.md', '# content', makeResults(),
+      'cobweb.md',
+      '# content',
+      makeResults(),
       'QuantEcon/lecture-python.zh-cn',
-      failRunner('permission denied'),
+      failRunner('permission denied')
     );
     expect(result.success).toBe(false);
     expect(result.error).toContain('permission denied');
@@ -258,8 +277,14 @@ describe('createForwardPR', () => {
     };
 
     createForwardPR(
-      'cobweb.md', '# content', [], 'Org/Target', spyRunner,
-      'Org/Source', 'lectures', 'Content changes detected',
+      'cobweb.md',
+      '# content',
+      [],
+      'Org/Target',
+      spyRunner,
+      'Org/Source',
+      'lectures',
+      'Content changes detected'
     );
     expect(capturedStdin).toContain('Org/Source');
     expect(capturedStdin).toContain('lectures/cobweb.md');
@@ -287,7 +312,9 @@ describe('gitPrepareAndPush', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  function makeGitRunner(overrides: Record<string, { stdout: string; stderr: string; status: number }> = {}): {
+  function makeGitRunner(
+    overrides: Record<string, { stdout: string; stderr: string; status: number }> = {}
+  ): {
     runner: GitRunner;
     calls: Array<{ args: string[]; cwd: string }>;
   } {
@@ -323,15 +350,15 @@ describe('gitPrepareAndPush', () => {
     expect(result.error).toBeUndefined();
 
     // Verify call sequence
-    const ops = calls.map(c => c.args.slice(0, 2).join(' '));
+    const ops = calls.map((c) => c.args.slice(0, 2).join(' '));
     expect(ops).toEqual([
-      'rev-parse --abbrev-ref',   // detect current branch
-      'rev-parse --verify',       // check if branch exists
-      'checkout -b',              // create new branch
-      'add lectures/pv.md',       // stage
-      'commit -m',                // commit
-      'push -u',                  // push
-      'checkout main',            // switch back
+      'rev-parse --abbrev-ref', // detect current branch
+      'rev-parse --verify', // check if branch exists
+      'checkout -b', // create new branch
+      'add lectures/pv.md', // stage
+      'commit -m', // commit
+      'push -u', // push
+      'checkout main', // switch back
     ]);
   });
 
@@ -351,7 +378,7 @@ describe('gitPrepareAndPush', () => {
     const result = gitPrepareAndPush('pv.md', 'content', tmpDir, 'lectures', runner);
     expect(result.success).toBe(true);
 
-    const ops = calls.map(c => c.args.slice(0, 2).join(' '));
+    const ops = calls.map((c) => c.args.slice(0, 2).join(' '));
     expect(ops).toContain('branch -D');
   });
 
@@ -402,7 +429,7 @@ describe('gitPrepareAndPush', () => {
     const { runner, calls } = makeGitRunner();
     gitPrepareAndPush('cobweb.md', 'content', tmpDir, 'lectures', runner);
 
-    const commitCall = calls.find(c => c.args[0] === 'commit');
+    const commitCall = calls.find((c) => c.args[0] === 'commit');
     expect(commitCall).toBeDefined();
     expect(commitCall!.args).toContain('🔄 resync cobweb.md');
   });
@@ -411,7 +438,7 @@ describe('gitPrepareAndPush', () => {
     const { runner, calls } = makeGitRunner();
     gitPrepareAndPush('pv.md', 'content', tmpDir, 'lectures', runner);
 
-    const pushCall = calls.find(c => c.args[0] === 'push');
+    const pushCall = calls.find((c) => c.args[0] === 'push');
     expect(pushCall).toBeDefined();
     expect(pushCall!.args).toContain('--force');
   });
@@ -423,19 +450,27 @@ describe('gitPrepareAndPush', () => {
 
 describe('parseGitHubRepo', () => {
   it('parses HTTPS URL with .git suffix', () => {
-    expect(parseGitHubRepo('https://github.com/QuantEcon/lecture-python.git')).toBe('QuantEcon/lecture-python');
+    expect(parseGitHubRepo('https://github.com/QuantEcon/lecture-python.git')).toBe(
+      'QuantEcon/lecture-python'
+    );
   });
 
   it('parses HTTPS URL without .git suffix', () => {
-    expect(parseGitHubRepo('https://github.com/QuantEcon/lecture-python')).toBe('QuantEcon/lecture-python');
+    expect(parseGitHubRepo('https://github.com/QuantEcon/lecture-python')).toBe(
+      'QuantEcon/lecture-python'
+    );
   });
 
   it('parses SSH URL with .git suffix', () => {
-    expect(parseGitHubRepo('git@github.com:QuantEcon/lecture-python.git')).toBe('QuantEcon/lecture-python');
+    expect(parseGitHubRepo('git@github.com:QuantEcon/lecture-python.git')).toBe(
+      'QuantEcon/lecture-python'
+    );
   });
 
   it('parses SSH URL without .git suffix', () => {
-    expect(parseGitHubRepo('git@github.com:QuantEcon/lecture-python')).toBe('QuantEcon/lecture-python');
+    expect(parseGitHubRepo('git@github.com:QuantEcon/lecture-python')).toBe(
+      'QuantEcon/lecture-python'
+    );
   });
 
   it('returns undefined for non-GitHub URLs', () => {

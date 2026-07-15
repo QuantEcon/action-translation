@@ -1,17 +1,17 @@
 /**
  * Backward Command
- * 
+ *
  * Orchestrates the two-stage backward analysis pipeline:
- * 
+ *
  * Stage 1: Document-level triage (single LLM call per file)
  *   - Determines if a file has substantive changes beyond translation
  *   - IN_SYNC files are skipped (cheap filter)
- *   
+ *
  * Stage 2: Whole-file analysis (one LLM call per flagged file)
  *   - Matches sections by position with heading-map validation
  *   - Evaluates all section pairs in a single LLM call
  *   - Produces structured per-section suggestions with category/confidence
- * 
+ *
  * Supports two modes:
  * - Single-file: `npx resync backward -f file.md`
  * - Bulk: `npx resync backward` (all files in docs folder)
@@ -25,11 +25,20 @@ import * as path from 'path';
 import cliProgress from 'cli-progress';
 import { MystParser } from '../../parser.js';
 import { extractHeadingMap } from '../../heading-map.js';
-import { matchSections, getMatchingSummary, validateMatchesWithHeadingMap } from '../section-matcher.js';
+import {
+  matchSections,
+  getMatchingSummary,
+  validateMatchesWithHeadingMap,
+} from '../section-matcher.js';
 import { triageDocument } from '../document-comparator.js';
 import { evaluateFile } from '../backward-evaluator.js';
 import { getFileGitMetadata, getFileTimeline } from '../git-metadata.js';
-import { generateMarkdownReport, generateJsonReport, generateBulkMarkdownReport, generateBulkJsonReport } from '../report-generator.js';
+import {
+  generateMarkdownReport,
+  generateJsonReport,
+  generateBulkMarkdownReport,
+  generateBulkJsonReport,
+} from '../report-generator.js';
 import { BackwardReport, BackwardOptions, BulkBackwardReport } from '../types.js';
 import { SCHEMA_VERSION } from '../schema.js';
 import { discoverMarkdownFiles, resolveFilePairs, applyExcludes } from './status.js';
@@ -86,17 +95,17 @@ export class BufferedLogger implements BackwardLogger {
 
 /**
  * Execute backward analysis for a single file
- * 
+ *
  * @param options - Backward command options
  * @param logger - Logger for console output
  * @returns BackwardReport
  */
 export async function runBackwardSingleFile(
   options: BackwardOptions & { apiKey: string },
-  logger: BackwardLogger = defaultLogger,
+  logger: BackwardLogger = defaultLogger
 ): Promise<BackwardReport> {
   const { file, source, target, docsFolder, language, model, test: testMode } = options;
-  
+
   if (!file) {
     throw new Error('Single-file mode requires --file (-f) option');
   }
@@ -126,17 +135,23 @@ export async function runBackwardSingleFile(
   const targetMetadata = await getFileGitMetadata(target, path.join(docsFolder, file));
 
   if (sourceMetadata) {
-    logger.info(`  SOURCE last modified: ${sourceMetadata.lastModified.toISOString().split('T')[0]}`);
+    logger.info(
+      `  SOURCE last modified: ${sourceMetadata.lastModified.toISOString().split('T')[0]}`
+    );
   }
   if (targetMetadata) {
-    logger.info(`  TARGET last modified: ${targetMetadata.lastModified.toISOString().split('T')[0]}`);
+    logger.info(
+      `  TARGET last modified: ${targetMetadata.lastModified.toISOString().split('T')[0]}`
+    );
   }
 
   // Get interleaved commit timeline
   logger.info('  Building commit timeline...');
   const timeline = await getFileTimeline(source, target, path.join(docsFolder, file));
   if (timeline) {
-    logger.info(`  Timeline: ${timeline.sourceCommitCount} source + ${timeline.targetCommitCount} target commits`);
+    logger.info(
+      `  Timeline: ${timeline.sourceCommitCount} source + ${timeline.targetCommitCount} target commits`
+    );
     if (timeline.estimatedSyncDate) {
       logger.info(`  Estimated sync point: ${timeline.estimatedSyncDate}`);
       if (timeline.sourceCommitsAfterSync > 0) {
@@ -148,7 +163,7 @@ export async function runBackwardSingleFile(
   // ─── Stage 1: Document-Level Triage ───
   logger.info('');
   logger.info('  Stage 1: Document-level triage...');
-  
+
   const triageResult = await triageDocument(
     file,
     sourceContent,
@@ -162,7 +177,7 @@ export async function runBackwardSingleFile(
       sourceLanguage: languageLabel(options.sourceLanguage),
       targetLanguage: languageLabel(language),
       testMode,
-    },
+    }
   );
 
   logger.info(`  Stage 1 verdict: ${triageResult.verdict}`);
@@ -173,7 +188,7 @@ export async function runBackwardSingleFile(
   // If IN_SYNC, we're done
   if (triageResult.verdict === 'IN_SYNC') {
     logger.info('  ✓ File is in sync. No suggestions.');
-    
+
     const report: BackwardReport = {
       schemaVersion: SCHEMA_VERSION,
       file,
@@ -212,11 +227,13 @@ export async function runBackwardSingleFile(
   const pairs = matchSections(
     sourceParsed.sections,
     targetParsed.sections,
-    headingMap.size > 0 ? headingMap : undefined,
+    headingMap.size > 0 ? headingMap : undefined
   );
 
   const summary = getMatchingSummary(pairs);
-  logger.info(`  Sections: ${summary.matched} matched, ${summary.sourceOnly} source-only, ${summary.targetOnly} target-only`);
+  logger.info(
+    `  Sections: ${summary.matched} matched, ${summary.sourceOnly} source-only, ${summary.targetOnly} target-only`
+  );
 
   // Validate matches against heading-map if available
   if (headingMap.size > 0) {
@@ -241,18 +258,20 @@ export async function runBackwardSingleFile(
       sourceLanguage: languageLabel(options.sourceLanguage),
       targetLanguage: languageLabel(language),
       testMode,
-    },
+    }
   );
 
   for (const suggestion of suggestions) {
     if (suggestion.recommendation === 'BACKPORT') {
-      logger.info(`    → BACKPORT: ${suggestion.sectionHeading} (${suggestion.category}, confidence: ${suggestion.confidence.toFixed(2)})`);
+      logger.info(
+        `    → BACKPORT: ${suggestion.sectionHeading} (${suggestion.category}, confidence: ${suggestion.confidence.toFixed(2)})`
+      );
     }
   }
 
   // Filter suggestions by min-confidence
   const minConfidence = options.minConfidence ?? 0;
-  const filteredSuggestions = suggestions.map(s => {
+  const filteredSuggestions = suggestions.map((s) => {
     // Downgrade to NO_BACKPORT if below confidence threshold
     if (s.recommendation === 'BACKPORT' && s.confidence < minConfidence) {
       return { ...s, recommendation: 'NO_BACKPORT' as const };
@@ -261,9 +280,11 @@ export async function runBackwardSingleFile(
   });
 
   // Build report
-  const backportCount = filteredSuggestions.filter(s => s.recommendation === 'BACKPORT').length;
+  const backportCount = filteredSuggestions.filter((s) => s.recommendation === 'BACKPORT').length;
   logger.info('');
-  logger.info(`  Done: ${backportCount} suggestion(s) from ${filteredSuggestions.length} sections analyzed.`);
+  logger.info(
+    `  Done: ${backportCount} suggestion(s) from ${filteredSuggestions.length} sections analyzed.`
+  );
 
   const report: BackwardReport = {
     schemaVersion: SCHEMA_VERSION,
@@ -301,7 +322,7 @@ function resolveFilePath(repoPath: string, docsFolder: string, filename: string)
 async function writeReport(
   report: BackwardReport,
   options: BackwardOptions,
-  logger: BackwardLogger,
+  logger: BackwardLogger
 ): Promise<void> {
   const output = options.output;
   const basename = path.basename(report.file, '.md');
@@ -418,7 +439,7 @@ export function discoverBulkFiles(
   sourceRepoPath: string,
   targetRepoPath: string,
   docsFolder: string,
-  exclude: string[],
+  exclude: string[]
 ): string[] {
   const sourceFiles = discoverMarkdownFiles(sourceRepoPath, docsFolder);
   const targetFiles = discoverMarkdownFiles(targetRepoPath, docsFolder);
@@ -429,10 +450,10 @@ export function discoverBulkFiles(
 
 /**
  * Execute bulk backward analysis across all files.
- * 
+ *
  * Reports are written incrementally to a timestamped folder.
  * Supports --resume to skip already-completed files.
- * 
+ *
  * @param options - Backward command options (file should be undefined for bulk)
  * @param logger - Logger for console output
  * @param exclude - Exclude patterns
@@ -443,7 +464,7 @@ export async function runBackwardBulk(
   options: BackwardOptions & { apiKey: string },
   logger: BackwardLogger = defaultLogger,
   exclude: string[] = [],
-  resume: boolean = false,
+  resume: boolean = false
 ): Promise<BulkBackwardReport> {
   const { source, target, docsFolder, language } = options;
 
@@ -494,10 +515,12 @@ export async function runBackwardBulk(
   if (existingProgress) {
     const doneSet = new Set([
       ...existingProgress.completedFiles,
-      ...existingProgress.erroredFiles.map(e => e.file),
+      ...existingProgress.erroredFiles.map((e) => e.file),
     ]);
-    const remaining = allFiles.filter(f => !doneSet.has(f));
-    logger.info(`Resuming: ${existingProgress.completedFiles.length} already done, ${remaining.length} remaining.`);
+    const remaining = allFiles.filter((f) => !doneSet.has(f));
+    logger.info(
+      `Resuming: ${existingProgress.completedFiles.length} already done, ${remaining.length} remaining.`
+    );
     progress = existingProgress;
   } else {
     progress = {
@@ -511,7 +534,7 @@ export async function runBackwardBulk(
 
   const doneSet = new Set([
     ...progress.completedFiles,
-    ...progress.erroredFiles.map(e => e.file),
+    ...progress.erroredFiles.map((e) => e.file),
   ]);
 
   // Process files with concurrency
@@ -531,7 +554,7 @@ export async function runBackwardBulk(
     }
   }
 
-  const filesToProcess = allFiles.filter(f => !doneSet.has(f));
+  const filesToProcess = allFiles.filter((f) => !doneSet.has(f));
 
   /**
    * Process a single file in the bulk pipeline.
@@ -540,7 +563,7 @@ export async function runBackwardBulk(
    */
   async function processOneFile(
     file: string,
-    logPath: string,
+    logPath: string
   ): Promise<{ file: string; report?: BackwardReport; error?: string }> {
     const globalIdx = allFiles.indexOf(file) + 1;
     const buffered = new BufferedLogger();
@@ -590,7 +613,8 @@ export async function runBackwardBulk(
   const isTTY = process.stderr.isTTY && logger === defaultLogger;
   const bar = isTTY
     ? new cliProgress.SingleBar({
-        format: '  {bar} {value}/{total} | ✓ {inSync} sync  📝 {suggestions} suggestions  ❌ {errors} errors | {currentFile}',
+        format:
+          '  {bar} {value}/{total} | ✓ {inSync} sync  📝 {suggestions} suggestions  ❌ {errors} errors | {currentFile}',
         barCompleteChar: '█',
         barIncompleteChar: '░',
         hideCursor: true,
@@ -599,7 +623,9 @@ export async function runBackwardBulk(
       })
     : null;
 
-  logger.info(`Backward analysis: ${filesToProcess.length} files${CONCURRENCY > 1 ? ` (${CONCURRENCY} parallel)` : ''}`);
+  logger.info(
+    `Backward analysis: ${filesToProcess.length} files${CONCURRENCY > 1 ? ` (${CONCURRENCY} parallel)` : ''}`
+  );
   bar?.start(allFiles.length, completedCount, {
     inSync: inSyncCount,
     suggestions: suggestionsCount,
@@ -614,7 +640,7 @@ export async function runBackwardBulk(
     // Show first file in batch as current
     bar?.update({ currentFile: batch[0] });
 
-    const results = await Promise.all(batch.map(f => processOneFile(f, logPath)));
+    const results = await Promise.all(batch.map((f) => processOneFile(f, logPath)));
 
     for (const result of results) {
       completedCount++;
@@ -626,7 +652,9 @@ export async function runBackwardBulk(
         if (result.report.triageResult.verdict === 'IN_SYNC') {
           inSyncCount++;
         }
-        const backports = result.report.suggestions.filter(s => s.recommendation === 'BACKPORT').length;
+        const backports = result.report.suggestions.filter(
+          (s) => s.recommendation === 'BACKPORT'
+        ).length;
         suggestionsCount += backports;
       } else if (result.error) {
         progress.erroredFiles.push({ file: result.file, error: result.error });
@@ -688,10 +716,10 @@ export function buildBulkReport(
   targetRepo: string,
   language: string,
   fileReports: BackwardReport[],
-  model?: string,
+  model?: string
 ): BulkBackwardReport {
-  const allSuggestions = fileReports.flatMap(r =>
-    r.suggestions.filter(s => s.recommendation === 'BACKPORT'),
+  const allSuggestions = fileReports.flatMap((r) =>
+    r.suggestions.filter((s) => s.recommendation === 'BACKPORT')
   );
 
   return {
@@ -702,15 +730,16 @@ export function buildBulkReport(
     targetRepo,
     language,
     filesAnalyzed: fileReports.length,
-    filesInSync: fileReports.filter(r => r.triageResult.verdict === 'IN_SYNC').length,
-    filesFlagged: fileReports.filter(r =>
-      r.suggestions.some(s => s.recommendation === 'BACKPORT'),
+    filesInSync: fileReports.filter((r) => r.triageResult.verdict === 'IN_SYNC').length,
+    filesFlagged: fileReports.filter((r) =>
+      r.suggestions.some((s) => s.recommendation === 'BACKPORT')
     ).length,
-    filesSkipped: fileReports.filter(r => r.triageResult.verdict === 'SKIPPED_TOO_LARGE').length,
+    filesSkipped: fileReports.filter((r) => r.triageResult.verdict === 'SKIPPED_TOO_LARGE').length,
     totalSuggestions: allSuggestions.length,
-    highConfidence: allSuggestions.filter(s => s.confidence >= 0.85).length,
-    mediumConfidence: allSuggestions.filter(s => s.confidence >= 0.6 && s.confidence < 0.85).length,
-    lowConfidence: allSuggestions.filter(s => s.confidence < 0.6).length,
+    highConfidence: allSuggestions.filter((s) => s.confidence >= 0.85).length,
+    mediumConfidence: allSuggestions.filter((s) => s.confidence >= 0.6 && s.confidence < 0.85)
+      .length,
+    lowConfidence: allSuggestions.filter((s) => s.confidence < 0.6).length,
     fileReports,
   };
 }
@@ -719,7 +748,7 @@ function buildEmptyBulkReport(
   sourceRepo: string,
   targetRepo: string,
   language: string,
-  model?: string,
+  model?: string
 ): BulkBackwardReport {
   return buildBulkReport(sourceRepo, targetRepo, language, [], model);
 }
@@ -734,7 +763,7 @@ function resolveReportPath(outputDir: string, file: string, json: boolean): stri
 
 /**
  * Find the correct output directory for --resume.
- * 
+ *
  * Checks (in order):
  * 1. If options.output itself contains .resync/_progress.json → use it directly
  * 2. If options.output contains backward-* subdirs → use most recent with .resync/_progress.json
@@ -751,9 +780,10 @@ function resolveResumeDir(outputPath: string, sourceName: string): string {
   const searchPath = fs.existsSync(repoScopedPath) ? repoScopedPath : outputPath;
 
   if (fs.existsSync(searchPath)) {
-    const candidates = fs.readdirSync(searchPath)
-      .filter(d => d.startsWith('backward-'))
-      .filter(d => fs.existsSync(path.join(searchPath, d, '.resync', '_progress.json')))
+    const candidates = fs
+      .readdirSync(searchPath)
+      .filter((d) => d.startsWith('backward-'))
+      .filter((d) => fs.existsSync(path.join(searchPath, d, '.resync', '_progress.json')))
       .sort()
       .reverse(); // Most recent first (lexicographic sort on timestamps)
 
@@ -764,6 +794,6 @@ function resolveResumeDir(outputPath: string, sourceName: string): string {
 
   throw new Error(
     `No resumable run found in ${outputPath}. ` +
-    'Run without --resume first, or point --output to a specific backward-* folder.',
+      'Run without --resume first, or point --output to a specific backward-* folder.'
   );
 }

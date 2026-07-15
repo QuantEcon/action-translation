@@ -4,7 +4,7 @@ import * as path from 'path';
 
 describe('MystParser', () => {
   let parser: MystParser;
-  
+
   beforeEach(() => {
     parser = new MystParser();
   });
@@ -21,7 +21,7 @@ Content 2.
 `;
       const result = await parser.parseSections(content, 'test.md');
       const sections = result.sections;
-      
+
       // Parser only captures ## level (level 2) sections
       expect(sections).toHaveLength(2);
       expect(sections[0].heading).toBe('## Section 1');
@@ -39,7 +39,7 @@ Text.
 `;
       const result = await parser.parseSections(content, 'test.md');
       const sections = result.sections;
-      
+
       // IDs don't include filename
       expect(sections[0].id).toBe('section-a');
       expect(sections[1].id).toBe('section-b');
@@ -60,7 +60,7 @@ More child content.
 `;
       const result = await parser.parseSections(content, 'test.md');
       const sections = result.sections;
-      
+
       // Should have one level-2 section with two subsections
       expect(sections).toHaveLength(1);
       expect(sections[0].heading).toBe('## Parent Section');
@@ -76,7 +76,7 @@ Content with some text.
 `;
       const result = await parser.parseSections(content, 'test.md');
       const sections = result.sections;
-      
+
       expect(sections[0].content).toContain('Content with some text');
     });
   });
@@ -85,10 +85,10 @@ Content with some text.
     it('should parse intro-old.md fixture correctly', async () => {
       const fixturePath = path.join(__dirname, 'fixtures', 'intro-old.md');
       const content = fs.readFileSync(fixturePath, 'utf-8');
-      
+
       const result = await parser.parseSections(content, 'intro.md');
       const sections = result.sections;
-      
+
       // Should have 5 level-2 sections
       expect(sections).toHaveLength(5);
       expect(sections[0].heading).toBe('## Getting Started');
@@ -101,10 +101,10 @@ Content with some text.
     it('should parse intro-new.md fixture correctly', async () => {
       const fixturePath = path.join(__dirname, 'fixtures', 'intro-new.md');
       const content = fs.readFileSync(fixturePath, 'utf-8');
-      
+
       const result = await parser.parseSections(content, 'intro.md');
       const sections = result.sections;
-      
+
       // Should have 6 level-2 sections (Economic Models added)
       expect(sections).toHaveLength(6);
       expect(sections[0].heading).toBe('## Getting Started');
@@ -129,7 +129,7 @@ End of section.
 `;
       const result = await parser.parseSections(content, 'test.md');
       const sections = result.sections;
-      
+
       expect(sections[0].content).toContain('```python');
       expect(sections[0].content).toContain('import numpy as np');
     });
@@ -149,7 +149,7 @@ End of section.
 `;
       const result = await parser.parseSections(content, 'test.md');
       const sections = result.sections;
-      
+
       expect(sections[0].content).toContain('$x^2 + y^2 = z^2$');
       expect(sections[0].content).toContain('$$');
       expect(sections[0].content).toContain('\\max_{x}');
@@ -182,7 +182,7 @@ Content.
 `;
       const result = await parser.parseSections(content, 'test.md');
       const sections = result.sections;
-      
+
       expect(sections).toHaveLength(2);
       expect(sections[0].id).toBe('section-with-quotes-and-apostrophes');
       expect(sections[1].id).toBe('section-with-parentheses-and-brackets');
@@ -237,7 +237,7 @@ Intro paragraph.
 Content.
 `;
       const result = await parser.parseSections(content, 'test.md');
-      
+
       // Should extract frontmatter
       expect(result.frontmatter).toBeDefined();
       expect(result.frontmatter).toContain('jupytext:');
@@ -264,13 +264,13 @@ It has multiple paragraphs before the first section.
 Content here.
 `;
       const result = await parser.parseSections(content, 'test.md');
-      
+
       // Should extract preamble
       expect(result.preamble).toBeDefined();
       expect(result.preamble).toContain('# Introduction to Economics');
       expect(result.preamble).toContain('test lecture for translation sync action');
       expect(result.preamble).toContain('multiple paragraphs');
-      
+
       // Preamble should not include frontmatter or sections
       expect(result.preamble).not.toContain('---');
       expect(result.preamble).not.toContain('jupytext:');
@@ -287,10 +287,10 @@ Intro text.
 Content.
 `;
       const result = await parser.parseSections(content, 'test.md');
-      
+
       // No frontmatter
       expect(result.frontmatter).toBeUndefined();
-      
+
       // But should have preamble
       expect(result.preamble).toBeDefined();
       expect(result.preamble).toContain('# Title');
@@ -308,13 +308,13 @@ jupytext:
 Content immediately after frontmatter.
 `;
       const result = await parser.parseSections(content, 'test.md');
-      
+
       // Should have frontmatter
       expect(result.frontmatter).toBeDefined();
-      
+
       // But no preamble (goes straight to sections)
       expect(result.preamble).toBeUndefined();
-      
+
       // Should have sections
       expect(result.sections).toHaveLength(1);
       expect(result.sections[0].heading).toBe('## Section One');
@@ -330,11 +330,11 @@ Just starts with a section.
 Another section.
 `;
       const result = await parser.parseSections(content, 'test.md');
-      
+
       // No frontmatter or preamble
       expect(result.frontmatter).toBeUndefined();
       expect(result.preamble).toBeUndefined();
-      
+
       // But should have sections
       expect(result.sections).toHaveLength(2);
     });
@@ -351,10 +351,10 @@ jupytext:
 Content.
 `;
       const result = await parser.parseSections(content, 'test.md');
-      
+
       // Frontmatter present
       expect(result.frontmatter).toBeDefined();
-      
+
       // Preamble should be undefined (only whitespace)
       expect(result.preamble).toBeUndefined();
     });
@@ -382,7 +382,9 @@ Content.
     });
 
     it('should handle role with spaces in display text', () => {
-      expect(MystParser.stripMystRoles('{index}`NumPy Arrays <single: NumPy Arrays>`')).toBe('NumPy Arrays');
+      expect(MystParser.stripMystRoles('{index}`NumPy Arrays <single: NumPy Arrays>`')).toBe(
+        'NumPy Arrays'
+      );
     });
 
     it('should not strip partial role syntax', () => {
@@ -390,23 +392,37 @@ Content.
     });
 
     it('should handle mixed role and text: text before role', () => {
-      expect(MystParser.stripMystRoles('The {index}`Newton-Raphson Method <single: Newton-Raphson Method>`')).toBe('The Newton-Raphson Method');
+      expect(
+        MystParser.stripMystRoles(
+          'The {index}`Newton-Raphson Method <single: Newton-Raphson Method>`'
+        )
+      ).toBe('The Newton-Raphson Method');
     });
 
     it('should handle mixed role and text: text after role', () => {
-      expect(MystParser.stripMystRoles('{index}`Mutable <single: Mutable>` Versus Immutable Parameters')).toBe('Mutable Versus Immutable Parameters');
+      expect(
+        MystParser.stripMystRoles('{index}`Mutable <single: Mutable>` Versus Immutable Parameters')
+      ).toBe('Mutable Versus Immutable Parameters');
     });
 
     it('should handle multiple roles in one heading', () => {
-      expect(MystParser.stripMystRoles('{index}`Mutable <single: Mutable>` Versus {index}`Immutable <single: Immutable>` Parameters')).toBe('Mutable Versus Immutable Parameters');
+      expect(
+        MystParser.stripMystRoles(
+          '{index}`Mutable <single: Mutable>` Versus {index}`Immutable <single: Immutable>` Parameters'
+        )
+      ).toBe('Mutable Versus Immutable Parameters');
     });
 
     it('should handle two simple roles with text between', () => {
-      expect(MystParser.stripMystRoles('{index}`SciPy` versus {index}`NumPy`')).toBe('SciPy versus NumPy');
+      expect(MystParser.stripMystRoles('{index}`SciPy` versus {index}`NumPy`')).toBe(
+        'SciPy versus NumPy'
+      );
     });
 
     it('should handle role followed by plain text', () => {
-      expect(MystParser.stripMystRoles('Accessing Data with {index}`requests <single: requests>`')).toBe('Accessing Data with requests');
+      expect(
+        MystParser.stripMystRoles('Accessing Data with {index}`requests <single: requests>`')
+      ).toBe('Accessing Data with requests');
     });
   });
 

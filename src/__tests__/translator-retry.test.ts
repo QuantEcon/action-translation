@@ -31,7 +31,12 @@ jest.mock('@anthropic-ai/sdk', () => {
     readonly status: number | undefined;
     readonly headers: Headers | undefined;
     readonly error: unknown;
-    constructor(status: number | undefined, error: unknown, message: string | undefined, headers: Headers | undefined) {
+    constructor(
+      status: number | undefined,
+      error: unknown,
+      message: string | undefined,
+      headers: Headers | undefined
+    ) {
       super(message || 'API Error');
       this.status = status;
       this.error = error;
@@ -41,14 +46,24 @@ jest.mock('@anthropic-ai/sdk', () => {
   }
 
   class AuthenticationError extends APIError {
-    constructor(status: number | undefined, error: unknown, message: string | undefined, headers: Headers | undefined) {
+    constructor(
+      status: number | undefined,
+      error: unknown,
+      message: string | undefined,
+      headers: Headers | undefined
+    ) {
       super(status ?? 401, error, message, headers);
       this.name = 'AuthenticationError';
     }
   }
 
   class RateLimitError extends APIError {
-    constructor(status: number | undefined, error: unknown, message: string | undefined, headers: Headers | undefined) {
+    constructor(
+      status: number | undefined,
+      error: unknown,
+      message: string | undefined,
+      headers: Headers | undefined
+    ) {
       super(status ?? 429, error, message, headers);
       this.name = 'RateLimitError';
     }
@@ -64,7 +79,12 @@ jest.mock('@anthropic-ai/sdk', () => {
   }
 
   class BadRequestError extends APIError {
-    constructor(status: number | undefined, error: unknown, message: string | undefined, headers: Headers | undefined) {
+    constructor(
+      status: number | undefined,
+      error: unknown,
+      message: string | undefined,
+      headers: Headers | undefined
+    ) {
       super(status ?? 400, error, message, headers);
       this.name = 'BadRequestError';
     }
@@ -134,7 +154,7 @@ function overloadedError() {
     undefined,
     { type: 'error', error: { type: 'overloaded_error', message: 'Overloaded' } },
     '{"type":"error","error":{"details":null,"type":"overloaded_error","message":"Overloaded"}}',
-    null as any,
+    null as any
   );
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */

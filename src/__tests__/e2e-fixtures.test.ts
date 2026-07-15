@@ -1,13 +1,13 @@
 /**
  * E2E Fixture-Based Tests
- * 
+ *
  * These tests use real markdown fixture files to validate the complete
  * translation workflow. Each scenario has 4 files:
  * - old-en.md: English before changes
- * - new-en.md: English after changes  
+ * - new-en.md: English after changes
  * - current-zh.md: Chinese current state
  * - expected-zh.md: Chinese expected result (for manual verification)
- * 
+ *
  * Tests use MOCKED translations for deterministic results.
  */
 
@@ -24,17 +24,17 @@ class MockTranslator extends TranslationService {
 
   async translateSection(request: any): Promise<any> {
     const content = request.newEnglish || request.englishSection || '';
-    
+
     // Extract the heading and content
     const lines = content.split('\n');
     const heading = lines[0] || '';
-    
+
     // Create a mock Chinese translation preserving structure
     const translatedHeading = heading.replace(/^##+ /, (match: string) => match) + ' [已翻译]';
     const translatedBody = `[模拟翻译内容]`;
-    
+
     const translatedContent = `${translatedHeading}\n\n${translatedBody}`;
-    
+
     return {
       success: true,
       translatedSection: translatedContent,
@@ -44,7 +44,7 @@ class MockTranslator extends TranslationService {
 
   async translateFullDocument(request: any): Promise<any> {
     const translatedContent = `[FULL TRANSLATION: ${request.content.substring(0, 100)}...]`;
-    
+
     return {
       success: true,
       translatedSection: translatedContent,
@@ -67,14 +67,8 @@ describe('E2E Fixture-Based Tests', () => {
    * Helper to load fixture files for a scenario
    */
   function loadFixtures(scenarioPrefix: string) {
-    const oldEn = fs.readFileSync(
-      path.join(fixturesDir, `${scenarioPrefix}-old-en.md`),
-      'utf-8'
-    );
-    const newEn = fs.readFileSync(
-      path.join(fixturesDir, `${scenarioPrefix}-new-en.md`),
-      'utf-8'
-    );
+    const oldEn = fs.readFileSync(path.join(fixturesDir, `${scenarioPrefix}-old-en.md`), 'utf-8');
+    const newEn = fs.readFileSync(path.join(fixturesDir, `${scenarioPrefix}-new-en.md`), 'utf-8');
     const currentZh = fs.readFileSync(
       path.join(fixturesDir, `${scenarioPrefix}-current-zh.md`),
       'utf-8'

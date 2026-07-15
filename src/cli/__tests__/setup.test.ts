@@ -39,18 +39,21 @@ afterEach(() => {
 
 describe('deriveTargetRepoName', () => {
   test('appends language to repo name', () => {
-    expect(deriveTargetRepoName('QuantEcon/lecture-python-intro', 'zh-cn'))
-      .toBe('lecture-python-intro.zh-cn');
+    expect(deriveTargetRepoName('QuantEcon/lecture-python-intro', 'zh-cn')).toBe(
+      'lecture-python-intro.zh-cn'
+    );
   });
 
   test('handles different languages', () => {
-    expect(deriveTargetRepoName('QuantEcon/lecture-python-intro', 'fa'))
-      .toBe('lecture-python-intro.fa');
+    expect(deriveTargetRepoName('QuantEcon/lecture-python-intro', 'fa')).toBe(
+      'lecture-python-intro.fa'
+    );
   });
 
   test('handles repo name without owner', () => {
-    expect(deriveTargetRepoName('lecture-python-intro', 'zh-cn'))
-      .toBe('lecture-python-intro.zh-cn');
+    expect(deriveTargetRepoName('lecture-python-intro', 'zh-cn')).toBe(
+      'lecture-python-intro.zh-cn'
+    );
   });
 });
 
@@ -64,13 +67,13 @@ describe('generateSourceWorkflowYaml', () => {
       'QuantEcon/lecture-python-intro.zh-cn',
       'zh-cn',
       'lectures',
-      '0.8.0',
+      '0.8.0'
     );
 
     expect(yaml).toContain('name: Sync Translations');
     expect(yaml).toContain('pull_request:');
     expect(yaml).toContain('types: [closed]');
-    expect(yaml).toContain("paths:");
+    expect(yaml).toContain('paths:');
     expect(yaml).toContain("'lectures/**/*.md'");
     expect(yaml).toContain('target-repo: QuantEcon/lecture-python-intro.zh-cn');
     expect(yaml).toContain('target-language: zh-cn');
@@ -103,7 +106,7 @@ describe('generateTargetWorkflowYaml', () => {
       'QuantEcon/lecture-python-intro',
       'zh-cn',
       'lectures',
-      '0.8.0',
+      '0.8.0'
     );
 
     expect(yaml).toContain('name: Review Translations');
@@ -288,7 +291,13 @@ describe('runSetup with mock runners', () => {
 
   test('writes source workflow when --source-workflow is set', async () => {
     const repoDir = path.join(tmpDir, 'lecture-python-intro.zh-cn');
-    const sourceWorkflowPath = path.join(tmpDir, 'source-repo', '.github', 'workflows', 'sync-translations.yml');
+    const sourceWorkflowPath = path.join(
+      tmpDir,
+      'source-repo',
+      '.github',
+      'workflows',
+      'sync-translations.yml'
+    );
 
     const options: SetupOptions = {
       source: 'QuantEcon/lecture-python-intro',

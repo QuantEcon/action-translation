@@ -1,6 +1,6 @@
 /**
  * Language-specific configuration for translation prompts
- * 
+ *
  * Each target language can have specific instructions that are appended to the translation prompts.
  * This allows for language-specific typography, punctuation, and stylistic rules.
  */
@@ -16,14 +16,14 @@ export interface LanguageConfig {
 
 /**
  * Language-specific configurations
- * 
+ *
  * To add a new language:
  * 1. Add a new entry with the language code as the key
  * 2. Include any language-specific typography or punctuation rules
  * 3. The language will automatically be available for use
  */
 export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
-  'en': {
+  en: {
     code: 'en',
     name: 'English',
     additionalRules: [],
@@ -36,7 +36,7 @@ export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
       'Always insert a space between Chinese characters and inline MyST directives ({doc}, {ref}, {any}, {term}, etc.) or Markdown links ([text](url)), e.g., "请参阅 {doc}`介绍 <intro>`" not "请参阅{doc}`介绍 <intro>`"',
     ],
   },
-  'fa': {
+  fa: {
     code: 'fa',
     name: 'Persian (Farsi)',
     additionalRules: [
@@ -45,7 +45,7 @@ export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
       'Use formal/academic Persian style appropriate for educational content',
     ],
   },
-  'fr': {
+  fr: {
     code: 'fr',
     name: 'French',
     additionalRules: [
@@ -76,11 +76,13 @@ export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
  */
 export function getLanguageConfig(languageCode: string): LanguageConfig {
   const normalized = languageCode.toLowerCase();
-  return LANGUAGE_CONFIGS[normalized] || {
-    code: languageCode,
-    name: languageCode,
-    additionalRules: [],
-  };
+  return (
+    LANGUAGE_CONFIGS[normalized] || {
+      code: languageCode,
+      name: languageCode,
+      additionalRules: [],
+    }
+  );
 }
 
 /**
@@ -101,7 +103,7 @@ export function formatAdditionalRules(languageCode: string): string {
   if (config.additionalRules.length === 0) {
     return '';
   }
-  return config.additionalRules.map(rule => rule).join('\n');
+  return config.additionalRules.map((rule) => rule).join('\n');
 }
 
 /**
@@ -127,8 +129,8 @@ export function validateLanguageCode(languageCode: string): void {
     const supported = getSupportedLanguages().join(', ');
     throw new Error(
       `Unsupported target language: '${languageCode}'. ` +
-      `Supported languages: ${supported}. ` +
-      `To add a new language, update LANGUAGE_CONFIGS in src/language-config.ts`
+        `Supported languages: ${supported}. ` +
+        `To add a new language, update LANGUAGE_CONFIGS in src/language-config.ts`
     );
   }
 }

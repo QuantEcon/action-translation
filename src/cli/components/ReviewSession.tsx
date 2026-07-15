@@ -51,7 +51,7 @@ export function ReviewSession({ suggestions, onDone }: ReviewSessionProps): Reac
 
     const lower = input.toLowerCase();
     if (lower === 'd') {
-      setShowReasoning(prev => !prev);
+      setShowReasoning((prev) => !prev);
       return;
     }
     if (lower === 'a' || lower === 's' || lower === 'r') {
@@ -75,11 +75,13 @@ export function ReviewSession({ suggestions, onDone }: ReviewSessionProps): Reac
   });
 
   if (state.done) {
-    return <Text color="green">✅  Review complete.</Text>;
+    return <Text color="green">✅ Review complete.</Text>;
   }
 
   const current = suggestions[state.currentIndex];
-  const cardText = formatSuggestionCard(current, state.currentIndex + 1, suggestions.length, { showReasoning });
+  const cardText = formatSuggestionCard(current, state.currentIndex + 1, suggestions.length, {
+    showReasoning,
+  });
 
   return (
     <Box flexDirection="column">
@@ -96,13 +98,13 @@ export function ReviewSession({ suggestions, onDone }: ReviewSessionProps): Reac
         </Text>
         <Text>
           <Text color="green">[A]</Text>
-          <Text dimColor>ccept  </Text>
+          <Text dimColor>ccept </Text>
           <Text color="yellow">[S]</Text>
-          <Text dimColor>kip  </Text>
+          <Text dimColor>kip </Text>
           <Text color="red">[R]</Text>
-          <Text dimColor>eject  </Text>
+          <Text dimColor>eject </Text>
           <Text color="cyan">[D]</Text>
-          <Text dimColor>etails  </Text>
+          <Text dimColor>etails </Text>
           <Text dimColor>Ctrl+C to abort</Text>
         </Text>
       </Box>

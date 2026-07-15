@@ -28,9 +28,9 @@ import { discoverMarkdownFiles } from './status.js';
 
 export interface DoctorOptions {
   target: string;
-  source?: string;          // Optional — enables cross-repo checks
-  docsFolder?: string;      // Override; otherwise read from config
-  checkGh: boolean;         // Check gh CLI availability
+  source?: string; // Optional — enables cross-repo checks
+  docsFolder?: string; // Override; otherwise read from config
+  checkGh: boolean; // Check gh CLI availability
   json: boolean;
 }
 
@@ -40,7 +40,7 @@ export interface CheckResult {
   name: string;
   status: CheckStatus;
   message: string;
-  details?: string[];     // Additional detail lines
+  details?: string[]; // Additional detail lines
 }
 
 export interface DoctorResult {
@@ -132,9 +132,10 @@ export function checkStateFiles(targetPath: string, docsFolder: string): CheckRe
       name: '.translate/state/',
       status: 'fail',
       message: `No state entries (0/${targetFiles.length} files tracked)`,
-      details: missing.slice(0, 5).map(f => `Missing: ${f}`).concat(
-        missing.length > 5 ? [`…and ${missing.length - 5} more`] : [],
-      ),
+      details: missing
+        .slice(0, 5)
+        .map((f) => `Missing: ${f}`)
+        .concat(missing.length > 5 ? [`…and ${missing.length - 5} more`] : []),
     };
   }
 
@@ -142,9 +143,10 @@ export function checkStateFiles(targetPath: string, docsFolder: string): CheckRe
     name: '.translate/state/',
     status: 'warn',
     message: `${targetFiles.length - missing.length}/${targetFiles.length} files tracked (${missing.length} missing)`,
-    details: missing.slice(0, 5).map(f => `Missing: ${f}`).concat(
-      missing.length > 5 ? [`…and ${missing.length - 5} more`] : [],
-    ),
+    details: missing
+      .slice(0, 5)
+      .map((f) => `Missing: ${f}`)
+      .concat(missing.length > 5 ? [`…and ${missing.length - 5} more`] : []),
   };
 }
 
@@ -193,9 +195,7 @@ export function checkHeadingMaps(targetPath: string, docsFolder: string): CheckR
   }
 
   if (missing.length === 0) {
-    const note = sectionlessCount > 0
-      ? ` (${sectionlessCount} section-less files skipped)`
-      : '';
+    const note = sectionlessCount > 0 ? ` (${sectionlessCount} section-less files skipped)` : '';
     return {
       name: 'Heading maps',
       status: 'pass',
@@ -207,9 +207,10 @@ export function checkHeadingMaps(targetPath: string, docsFolder: string): CheckR
     name: 'Heading maps',
     status: missing.length === filesWithSections ? 'fail' : 'warn',
     message: `${filesWithSections - missing.length}/${filesWithSections} files with sections have heading-maps (${missing.length} missing)${sectionlessCount > 0 ? ` — ${sectionlessCount} section-less files skipped` : ''}`,
-    details: missing.slice(0, 5).map(f => `Missing: ${f}`).concat(
-      missing.length > 5 ? [`…and ${missing.length - 5} more`] : [],
-    ),
+    details: missing
+      .slice(0, 5)
+      .map((f) => `Missing: ${f}`)
+      .concat(missing.length > 5 ? [`…and ${missing.length - 5} more`] : []),
   };
 }
 
@@ -220,13 +221,13 @@ export function checkHeadingMaps(targetPath: string, docsFolder: string): CheckR
 export async function checkSectionAlignment(
   sourcePath: string,
   targetPath: string,
-  docsFolder: string,
+  docsFolder: string
 ): Promise<CheckResult> {
   const sourceFiles = discoverMarkdownFiles(sourcePath, docsFolder);
   const targetFiles = discoverMarkdownFiles(targetPath, docsFolder);
 
   // Only check files that exist in both repos
-  const commonFiles = sourceFiles.filter(f => targetFiles.includes(f));
+  const commonFiles = sourceFiles.filter((f) => targetFiles.includes(f));
 
   if (commonFiles.length === 0) {
     return {
@@ -248,7 +249,7 @@ export async function checkSectionAlignment(
 
     if (sourceParsed.sections.length !== targetParsed.sections.length) {
       mismatched.push(
-        `${file}: ${sourceParsed.sections.length} source vs ${targetParsed.sections.length} target`,
+        `${file}: ${sourceParsed.sections.length} source vs ${targetParsed.sections.length} target`
       );
     }
   }
@@ -265,9 +266,9 @@ export async function checkSectionAlignment(
     name: 'Section alignment',
     status: 'warn',
     message: `${mismatched.length}/${commonFiles.length} files have section count mismatches`,
-    details: mismatched.slice(0, 5).concat(
-      mismatched.length > 5 ? [`…and ${mismatched.length - 5} more`] : [],
-    ),
+    details: mismatched
+      .slice(0, 5)
+      .concat(mismatched.length > 5 ? [`…and ${mismatched.length - 5} more`] : []),
   };
 }
 
@@ -286,7 +287,9 @@ export function checkWorkflow(targetPath: string): CheckResult {
     };
   }
 
-  const files = fs.readdirSync(workflowDir).filter(f => f.endsWith('.yml') || f.endsWith('.yaml'));
+  const files = fs
+    .readdirSync(workflowDir)
+    .filter((f) => f.endsWith('.yml') || f.endsWith('.yaml'));
 
   if (files.length === 0) {
     return {
@@ -297,7 +300,7 @@ export function checkWorkflow(targetPath: string): CheckResult {
   }
 
   // Check if any workflow contains action-translation references
-  const translationWorkflows = files.filter(f => {
+  const translationWorkflows = files.filter((f) => {
     const content = fs.readFileSync(path.join(workflowDir, f), 'utf-8');
     return content.includes('action-translation');
   });
@@ -307,7 +310,7 @@ export function checkWorkflow(targetPath: string): CheckResult {
       name: 'Workflow',
       status: 'warn',
       message: `${files.length} workflow file(s) found, but none reference action-translation`,
-      details: files.map(f => `Found: ${f}`),
+      details: files.map((f) => `Found: ${f}`),
     };
   }
 
@@ -441,9 +444,9 @@ export async function runDoctor(options: DoctorOptions): Promise<DoctorResult> {
 
   // Build summary
   const summary = {
-    pass: checks.filter(c => c.status === 'pass').length,
-    warn: checks.filter(c => c.status === 'warn').length,
-    fail: checks.filter(c => c.status === 'fail').length,
+    pass: checks.filter((c) => c.status === 'pass').length,
+    warn: checks.filter((c) => c.status === 'warn').length,
+    fail: checks.filter((c) => c.status === 'fail').length,
     total: checks.length,
   };
 

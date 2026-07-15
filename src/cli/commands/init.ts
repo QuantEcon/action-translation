@@ -32,21 +32,21 @@ import { getFileGitMetadata } from '../git-metadata.js';
 // ============================================================================
 
 export interface InitOptions {
-  source: string;            // Source repository path (local)
-  target: string;            // Target folder path (local)
-  targetLanguage: string;    // Target language code (e.g., "zh-cn")
-  sourceLanguage: string;    // Source language code (default: "en")
-  docsFolder: string;        // Documentation folder within repos (default: "lectures")
-  model: string;             // Claude model (default: DEFAULT_CLAUDE_MODEL - see src/models.ts)
-  batchDelay: number;        // Delay between lectures in ms (default: 1000)
-  parallel: number;          // Number of parallel translations (default: 1)
-  file?: string;             // Single file to translate (for testing)
-  resumeFrom?: string;       // Resume from specific lecture file
-  skipExisting?: boolean;     // Skip lectures that already have .translate/state entries
-  glossaryPath?: string;     // Explicit path to glossary JSON file
-  localize: RuleId[];        // Active localization rules (default: all)
-  dryRun: boolean;           // Preview without API calls or file writes
-  apiKey: string;            // Anthropic API key
+  source: string; // Source repository path (local)
+  target: string; // Target folder path (local)
+  targetLanguage: string; // Target language code (e.g., "zh-cn")
+  sourceLanguage: string; // Source language code (default: "en")
+  docsFolder: string; // Documentation folder within repos (default: "lectures")
+  model: string; // Claude model (default: DEFAULT_CLAUDE_MODEL - see src/models.ts)
+  batchDelay: number; // Delay between lectures in ms (default: 1000)
+  parallel: number; // Number of parallel translations (default: 1)
+  file?: string; // Single file to translate (for testing)
+  resumeFrom?: string; // Resume from specific lecture file
+  skipExisting?: boolean; // Skip lectures that already have .translate/state entries
+  glossaryPath?: string; // Explicit path to glossary JSON file
+  localize: RuleId[]; // Active localization rules (default: all)
+  dryRun: boolean; // Preview without API calls or file writes
+  apiKey: string; // Anthropic API key
 }
 
 interface TranslationStats {
@@ -160,7 +160,7 @@ export function parseTocLectures(sourceRepoPath: string, docsFolder: string): st
  */
 export function filterSkipExisting(
   targetPath: string,
-  lectures: string[],
+  lectures: string[]
 ): { remaining: string[]; skippedCount: number } {
   const remaining: string[] = [];
   let skippedCount = 0;
@@ -181,7 +181,7 @@ export function filterSkipExisting(
 export function copyNonMarkdownFiles(
   sourceRepoPath: string,
   targetPath: string,
-  docsFolder: string,
+  docsFolder: string
 ): number {
   const sourceDocsDir = path.join(sourceRepoPath, docsFolder);
   if (!fs.existsSync(sourceDocsDir)) {
@@ -224,18 +224,14 @@ export function copyNonMarkdownFiles(
  */
 async function generateHeadingMap(
   sourceContent: string,
-  translatedContent: string,
+  translatedContent: string
 ): Promise<{ map: Map<string, string>; title?: string }> {
   const parser = new MystParser();
   const sourceParsed = await parser.parseSections(sourceContent, 'temp.md');
   const translatedParsed = await parser.parseSections(translatedContent, 'temp.md');
 
-  const map = updateHeadingMap(
-    new Map(),
-    sourceParsed.sections,
-    translatedParsed.sections,
-  );
-  
+  const map = updateHeadingMap(new Map(), sourceParsed.sections, translatedParsed.sections);
+
   // Extract translated title
   let title: string | undefined;
   try {
@@ -244,7 +240,7 @@ async function generateHeadingMap(
   } catch {
     // No title found
   }
-  
+
   return { map, title };
 }
 
@@ -263,7 +259,7 @@ async function translateLecture(
   docsFolder: string,
   translator: TranslationService,
   options: InitOptions,
-  glossary: Glossary | undefined,
+  glossary: Glossary | undefined
 ): Promise<{ tokensUsed: number; elapsedMs: number }> {
   const startTime = Date.now();
 
@@ -300,7 +296,10 @@ async function translateLecture(
   const translatedContent = applyTypography(result.translatedSection, options.targetLanguage);
 
   // Generate heading-map
-  const { map: headingMap, title: translatedTitle } = await generateHeadingMap(sourceContent, translatedContent);
+  const { map: headingMap, title: translatedTitle } = await generateHeadingMap(
+    sourceContent,
+    translatedContent
+  );
 
   // Inject translation metadata into frontmatter
   const finalContent = injectHeadingMap(translatedContent, headingMap, translatedTitle);
@@ -329,11 +328,9 @@ function generateReport(
   targetPath: string,
   options: InitOptions,
   stats: TranslationStats,
-  glossaryTermCount: number,
+  glossaryTermCount: number
 ): void {
-  const avgTimePerLecture = stats.successCount > 0
-    ? stats.totalTimeMs / stats.successCount
-    : 0;
+  const avgTimePerLecture = stats.successCount > 0 ? stats.totalTimeMs / stats.successCount : 0;
 
   let report = `# Translation Report
 
@@ -436,7 +433,7 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   // Filter to single file if specified
   if (options.file) {
     const target = options.file.endsWith('.md') ? options.file : `${options.file}.md`;
-    const found = lectures.find(l => l === target || l.includes(options.file!));
+    const found = lectures.find((l) => l === target || l.includes(options.file!));
     if (found) {
       lectures = [found];
       stats.totalLectures = 1;
@@ -444,7 +441,7 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     } else {
       throw new Error(
         `File not found in _toc.yml: ${options.file}\n` +
-        `Available lectures: ${lectures.slice(0, 5).join(', ')}${lectures.length > 5 ? ', ...' : ''}`
+          `Available lectures: ${lectures.slice(0, 5).join(', ')}${lectures.length > 5 ? ', ...' : ''}`
       );
     }
   } else {
@@ -471,14 +468,22 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
           if (entry.isDirectory()) countNonMd(path.join(dir, entry.name));
           else if (!entry.name.endsWith('.md')) nonMdCount++;
         }
-      }
+      };
       countNonMd(sourceDocsDir);
       console.log(chalk.yellow(`\nWould copy ${nonMdCount} non-markdown file(s)`));
     }
 
     console.log(chalk.yellow('\nRun without --dry-run to translate.'));
-    console.log(chalk.gray(`\nNote: This command translates content in the ${options.docsFolder}/ folder only.`));
-    console.log(chalk.gray('You may also need to set up: .github/workflows/, environment.yml, requirements.txt, LICENSE'));
+    console.log(
+      chalk.gray(
+        `\nNote: This command translates content in the ${options.docsFolder}/ folder only.`
+      )
+    );
+    console.log(
+      chalk.gray(
+        'You may also need to set up: .github/workflows/, environment.yml, requirements.txt, LICENSE'
+      )
+    );
     return stats;
   }
 
@@ -505,12 +510,14 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     const idx = lectures.indexOf(options.resumeFrom);
     if (idx === -1) {
       // Try partial match
-      const partial = lectures.findIndex(l => l.includes(options.resumeFrom!));
+      const partial = lectures.findIndex((l) => l.includes(options.resumeFrom!));
       if (partial !== -1) {
         startIndex = partial;
         console.log(chalk.yellow(`Resuming from: ${lectures[partial]}\n`));
       } else {
-        console.log(chalk.yellow(`Resume file not found: ${options.resumeFrom}, starting from beginning\n`));
+        console.log(
+          chalk.yellow(`Resume file not found: ${options.resumeFrom}, starting from beginning\n`)
+        );
       }
     } else {
       startIndex = idx;
@@ -527,13 +534,17 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     remaining = result.remaining;
     if (result.skippedCount > 0) {
       stats.skippedCount = result.skippedCount;
-      console.log(chalk.yellow(`Skipping ${result.skippedCount} already-translated lecture(s) (of ${result.skippedCount + remaining.length})\n`));
+      console.log(
+        chalk.yellow(
+          `Skipping ${result.skippedCount} already-translated lecture(s) (of ${result.skippedCount + remaining.length})\n`
+        )
+      );
     }
   }
 
   const bar = new cliProgress.SingleBar(
     { format: '  {bar} {percentage}% | {value}/{total} | {status}' },
-    cliProgress.Presets.shades_classic,
+    cliProgress.Presets.shades_classic
   );
   bar.start(remaining.length, 0, { status: '' });
 
@@ -549,7 +560,7 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
         options.docsFolder,
         translator,
         options,
-        glossary,
+        glossary
       );
 
       stats.successCount++;
@@ -585,14 +596,16 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   // Process in batches of CONCURRENCY
   for (let i = 0; i < remaining.length; i += CONCURRENCY) {
     const batch = remaining.slice(i, i + CONCURRENCY);
-    bar.update(completed, { status: batch.length > 1 ? `${batch[0]} (+${batch.length - 1})` : batch[0] });
+    bar.update(completed, {
+      status: batch.length > 1 ? `${batch[0]} (+${batch.length - 1})` : batch[0],
+    });
 
-    await Promise.all(batch.map(lecture => processOne(lecture)));
+    await Promise.all(batch.map((lecture) => processOne(lecture)));
     completed += batch.length;
 
     // Delay between batches for rate limiting (skip after last batch)
     if (i + CONCURRENCY < remaining.length && options.batchDelay > 0) {
-      await new Promise(resolve => setTimeout(resolve, options.batchDelay));
+      await new Promise((resolve) => setTimeout(resolve, options.batchDelay));
     }
   }
 
@@ -601,7 +614,9 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
 
   // Phase 6: Generate report
   generateReport(options.target, options, stats, termCount);
-  console.log(chalk.green(`\n📄 Report saved to: ${path.join(options.target, 'TRANSLATION-REPORT.md')}`));
+  console.log(
+    chalk.green(`\n📄 Report saved to: ${path.join(options.target, 'TRANSLATION-REPORT.md')}`)
+  );
 
   // Phase 7: Summary
   console.log(chalk.bold.cyan('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'));

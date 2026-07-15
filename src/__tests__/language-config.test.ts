@@ -2,9 +2,9 @@
  * Tests for language-specific configuration
  */
 
-import { 
-  getLanguageConfig, 
-  formatAdditionalRules, 
+import {
+  getLanguageConfig,
+  formatAdditionalRules,
   getSupportedLanguages,
   isLanguageSupported,
   validateLanguageCode,
@@ -19,14 +19,16 @@ describe('Language Configuration', () => {
       expect(config.name).toBe('Chinese (Simplified)');
       expect(config.additionalRules).toHaveLength(2);
       expect(config.additionalRules[0]).toContain('full-width Chinese punctuation');
-      expect(config.additionalRules[1]).toContain('space between Chinese characters and inline MyST directives');
+      expect(config.additionalRules[1]).toContain(
+        'space between Chinese characters and inline MyST directives'
+      );
     });
 
     it('should handle case insensitive language codes', () => {
       const config1 = getLanguageConfig('zh-cn');
       const config2 = getLanguageConfig('ZH-CN');
       const config3 = getLanguageConfig('Zh-Cn');
-      
+
       expect(config1).toEqual(config2);
       expect(config2).toEqual(config3);
     });

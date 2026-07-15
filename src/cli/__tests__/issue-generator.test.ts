@@ -106,17 +106,23 @@ describe('getIssueLabels', () => {
   });
 
   it('returns "translate:narrative" for EXAMPLE too', () => {
-    const item = makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, category: 'EXAMPLE' } });
+    const item = makeSuggestion({
+      suggestion: { ...makeSuggestion().suggestion, category: 'EXAMPLE' },
+    });
     expect(getIssueLabels(item)).toContain('translate:narrative');
   });
 
   it('returns "translate:bug-fix" for BUG_FIX category', () => {
-    const item = makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, category: 'BUG_FIX' } });
+    const item = makeSuggestion({
+      suggestion: { ...makeSuggestion().suggestion, category: 'BUG_FIX' },
+    });
     expect(getIssueLabels(item)).toContain('translate:bug-fix');
   });
 
   it('returns "translate:code" for CODE_IMPROVEMENT category', () => {
-    const item = makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, category: 'CODE_IMPROVEMENT' } });
+    const item = makeSuggestion({
+      suggestion: { ...makeSuggestion().suggestion, category: 'CODE_IMPROVEMENT' },
+    });
     expect(getIssueLabels(item)).toContain('translate:code');
   });
 
@@ -137,7 +143,9 @@ describe('getIssueLabels', () => {
   });
 
   it('falls back gracefully for unknown categories', () => {
-    const item = makeSuggestion({ suggestion: { ...makeSuggestion().suggestion, category: 'CUSTOM_THING' as any } });
+    const item = makeSuggestion({
+      suggestion: { ...makeSuggestion().suggestion, category: 'CUSTOM_THING' as any },
+    });
     expect(getIssueLabels(item)).toContain('translate:custom-thing');
   });
 });
@@ -256,5 +264,3 @@ describe('formatIssueBody', () => {
     expect(b).toContain('```python');
   });
 });
-
-

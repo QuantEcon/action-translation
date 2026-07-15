@@ -1,13 +1,13 @@
 /**
  * Tests for report-generator module
- * 
+ *
  * Tests Markdown and JSON report formatting for both single-file
  * and bulk backward analysis reports.
  */
 
-import { 
-  generateMarkdownReport, 
-  generateBulkMarkdownReport, 
+import {
+  generateMarkdownReport,
+  generateBulkMarkdownReport,
   generateJsonReport,
   generateBulkJsonReport,
 } from '../report-generator.js';
@@ -54,8 +54,20 @@ describe('report-generator', () => {
     it('should include commit timeline when present', () => {
       const timeline: FileTimeline = {
         entries: [
-          { date: '2025-12-23', fullDate: '2025-12-23 10:00:00 +0000', repo: 'SOURCE', sha: 'abc123d', message: 'Fix SymPy' },
-          { date: '2024-07-22', fullDate: '2024-07-22 08:00:00 +0000', repo: 'TARGET', sha: 'fed987a', message: 'Translate to zh-cn' },
+          {
+            date: '2025-12-23',
+            fullDate: '2025-12-23 10:00:00 +0000',
+            repo: 'SOURCE',
+            sha: 'abc123d',
+            message: 'Fix SymPy',
+          },
+          {
+            date: '2024-07-22',
+            fullDate: '2024-07-22 08:00:00 +0000',
+            repo: 'TARGET',
+            sha: 'fed987a',
+            message: 'Translate to zh-cn',
+          },
         ],
         sourceCommitCount: 1,
         targetCommitCount: 1,
@@ -93,15 +105,17 @@ describe('report-generator', () => {
     it('should show SUGGESTION count verdict when backports found', () => {
       const report: BackwardReport = {
         ...baseReport,
-        suggestions: [{
-          sectionHeading: '## A',
-          recommendation: 'BACKPORT',
-          category: 'BUG_FIX',
-          confidence: 0.9,
-          summary: 'fix',
-          specificChanges: [],
-          reasoning: 'reason',
-        }],
+        suggestions: [
+          {
+            sectionHeading: '## A',
+            recommendation: 'BACKPORT',
+            category: 'BUG_FIX',
+            confidence: 0.9,
+            summary: 'fix',
+            specificChanges: [],
+            reasoning: 'reason',
+          },
+        ],
       };
       const md = generateMarkdownReport(report);
       expect(md).toContain('1 SUGGESTION');
@@ -153,43 +167,49 @@ describe('report-generator', () => {
     it('should label confidence levels correctly', () => {
       const highReport: BackwardReport = {
         ...baseReport,
-        suggestions: [{
-          sectionHeading: '## A',
-          recommendation: 'BACKPORT',
-          category: 'BUG_FIX',
-          confidence: 0.90,
-          summary: 'test',
-          specificChanges: [],
-          reasoning: 'test',
-        }],
+        suggestions: [
+          {
+            sectionHeading: '## A',
+            recommendation: 'BACKPORT',
+            category: 'BUG_FIX',
+            confidence: 0.9,
+            summary: 'test',
+            specificChanges: [],
+            reasoning: 'test',
+          },
+        ],
       };
       expect(generateMarkdownReport(highReport)).toContain('HIGH');
 
       const medReport: BackwardReport = {
         ...baseReport,
-        suggestions: [{
-          sectionHeading: '## B',
-          recommendation: 'BACKPORT',
-          category: 'CLARIFICATION',
-          confidence: 0.70,
-          summary: 'test',
-          specificChanges: [],
-          reasoning: 'test',
-        }],
+        suggestions: [
+          {
+            sectionHeading: '## B',
+            recommendation: 'BACKPORT',
+            category: 'CLARIFICATION',
+            confidence: 0.7,
+            summary: 'test',
+            specificChanges: [],
+            reasoning: 'test',
+          },
+        ],
       };
       expect(generateMarkdownReport(medReport)).toContain('MEDIUM');
 
       const lowReport: BackwardReport = {
         ...baseReport,
-        suggestions: [{
-          sectionHeading: '## C',
-          recommendation: 'BACKPORT',
-          category: 'EXAMPLE',
-          confidence: 0.40,
-          summary: 'test',
-          specificChanges: [],
-          reasoning: 'test',
-        }],
+        suggestions: [
+          {
+            sectionHeading: '## C',
+            recommendation: 'BACKPORT',
+            category: 'EXAMPLE',
+            confidence: 0.4,
+            summary: 'test',
+            specificChanges: [],
+            reasoning: 'test',
+          },
+        ],
       };
       expect(generateMarkdownReport(lowReport)).toContain('LOW');
     });
@@ -197,15 +217,17 @@ describe('report-generator', () => {
     it('should include "no suggestions" message when Stage 2 found nothing', () => {
       const report: BackwardReport = {
         ...baseReport,
-        suggestions: [{
-          sectionHeading: '## Test',
-          recommendation: 'NO_BACKPORT',
-          category: 'NO_CHANGE',
-          confidence: 0.95,
-          summary: 'Faithful translation',
-          specificChanges: [],
-          reasoning: 'No changes found',
-        }],
+        suggestions: [
+          {
+            sectionHeading: '## Test',
+            recommendation: 'NO_BACKPORT',
+            category: 'NO_CHANGE',
+            confidence: 0.95,
+            summary: 'Faithful translation',
+            specificChanges: [],
+            reasoning: 'No changes found',
+          },
+        ],
       };
       const md = generateMarkdownReport(report);
       expect(md).toContain('No backport suggestions');
@@ -214,15 +236,17 @@ describe('report-generator', () => {
     it('should include footer', () => {
       const report: BackwardReport = {
         ...baseReport,
-        suggestions: [{
-          sectionHeading: '## A',
-          recommendation: 'BACKPORT',
-          category: 'BUG_FIX',
-          confidence: 0.9,
-          summary: 'fix',
-          specificChanges: [],
-          reasoning: 'reason',
-        }],
+        suggestions: [
+          {
+            sectionHeading: '## A',
+            recommendation: 'BACKPORT',
+            category: 'BUG_FIX',
+            confidence: 0.9,
+            summary: 'fix',
+            specificChanges: [],
+            reasoning: 'reason',
+          },
+        ],
       };
       const md = generateMarkdownReport(report);
       expect(md).toContain('Suggestions are for consideration by source maintainers');

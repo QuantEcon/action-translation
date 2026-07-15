@@ -36,7 +36,7 @@ export function buildForwardTriagePrompt(
   sourceContent: string,
   targetContent: string,
   sourceLanguage: string,
-  targetLanguage: string,
+  targetLanguage: string
 ): string {
   return `You are comparing an ${sourceLanguage} source document with its ${targetLanguage} translation to determine if there are substantive content differences that require re-translation.
 
@@ -148,7 +148,10 @@ export function parseForwardTriageResponse(responseText: string): {
   };
 }
 
-function normalizeVerdict(parsed: Record<string, unknown>): { verdict: ForwardTriageVerdict; reason: string } {
+function normalizeVerdict(parsed: Record<string, unknown>): {
+  verdict: ForwardTriageVerdict;
+  reason: string;
+} {
   const raw = String(parsed.verdict ?? '').toUpperCase();
   let verdict: ForwardTriageVerdict;
 
@@ -188,7 +191,7 @@ function mockForwardTriage(file: string): { verdict: ForwardTriageVerdict; reaso
 // ============================================================================
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -210,7 +213,7 @@ export async function triageForward(
     sourceLanguage: string;
     targetLanguage: string;
     testMode: boolean;
-  },
+  }
 ): Promise<ForwardTriageResult> {
   // Quick check: if content is byte-identical, skip everything
   if (sourceContent === targetContent) {
@@ -227,7 +230,7 @@ export async function triageForward(
     sourceContent,
     targetContent,
     options.sourceLanguage,
-    options.targetLanguage,
+    options.targetLanguage
   );
 
   const client = new Anthropic({ apiKey: options.apiKey });
@@ -244,7 +247,7 @@ export async function triageForward(
 
       const responseText = response.content
         .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-        .map(block => block.text)
+        .map((block) => block.text)
         .join('');
 
       const { verdict, reason } = parseForwardTriageResponse(responseText);

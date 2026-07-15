@@ -90,7 +90,7 @@ describe('resyncSingleFile', () => {
           fixture.targetRepo,
           'lectures',
           options,
-          silentLogger,
+          silentLogger
         );
 
         expect(result.triageResult.verdict).toBe('IDENTICAL');
@@ -119,7 +119,7 @@ describe('resyncSingleFile', () => {
           fixture.targetRepo,
           'lectures',
           options,
-          silentLogger,
+          silentLogger
         );
 
         expect(result.triageResult.verdict).toBe('I18N_ONLY');
@@ -147,7 +147,7 @@ describe('resyncSingleFile', () => {
           fixture.targetRepo,
           'lectures',
           options,
-          silentLogger,
+          silentLogger
         );
 
         expect(result.triageResult.verdict).toBe('CONTENT_CHANGES');
@@ -163,7 +163,8 @@ describe('resyncSingleFile', () => {
   describe('whole-file resync', () => {
     it('produces output content in test mode', async () => {
       const fixture = createTempFixture({
-        sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## Section A\n\nContent A\n\n## Section B\n\nContent B',
+        sourceContent:
+          '---\ntitle: Test\n---\n\n# Title\n\n## Section A\n\nContent A\n\n## Section B\n\nContent B',
         targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## A翻译\n\n翻译A\n\n## B翻译\n\n翻译B',
         filename: 'multi-section.md',
       });
@@ -179,7 +180,7 @@ describe('resyncSingleFile', () => {
           fixture.targetRepo,
           'lectures',
           options,
-          silentLogger,
+          silentLogger
         );
 
         expect(result.triageResult.verdict).toBe('CONTENT_CHANGES');
@@ -211,7 +212,7 @@ describe('resyncSingleFile', () => {
           fixture.targetRepo,
           'lectures',
           options,
-          silentLogger,
+          silentLogger
         );
 
         expect(result.outputContent).toBeDefined();
@@ -243,7 +244,7 @@ describe('resyncSingleFile', () => {
           fixture.targetRepo,
           'lectures',
           options,
-          silentLogger,
+          silentLogger
         );
 
         // Whole-file mode: sections array is always empty
@@ -275,8 +276,8 @@ describe('resyncSingleFile', () => {
             fixture.targetRepo,
             'lectures',
             options,
-            silentLogger,
-          ),
+            silentLogger
+          )
         ).rejects.toThrow('Source file not found');
       } finally {
         fixture.cleanup();
@@ -306,8 +307,8 @@ describe('resyncSingleFile', () => {
             fixture.targetRepo,
             'lectures',
             options,
-            silentLogger,
-          ),
+            silentLogger
+          )
         ).rejects.toThrow('Target file not found');
       } finally {
         fixture.cleanup();
@@ -360,7 +361,7 @@ describe('resyncSingleFile', () => {
           options,
           silentLogger,
           mockGhRunner,
-          mockGitRunner,
+          mockGitRunner
         );
 
         // In test mode the file triggers CONTENT_CHANGES and whole-file resync
@@ -370,12 +371,12 @@ describe('resyncSingleFile', () => {
         expect(capturedGhArgs).toContain('Org/Repo');
 
         // Verify git operations were called
-        const gitOps = gitCalls.map(c => c[0]);
-        expect(gitOps).toContain('rev-parse');    // detect branch
-        expect(gitOps).toContain('checkout');      // create branch + switch back
-        expect(gitOps).toContain('add');           // stage
-        expect(gitOps).toContain('commit');        // commit
-        expect(gitOps).toContain('push');          // push
+        const gitOps = gitCalls.map((c) => c[0]);
+        expect(gitOps).toContain('rev-parse'); // detect branch
+        expect(gitOps).toContain('checkout'); // create branch + switch back
+        expect(gitOps).toContain('add'); // stage
+        expect(gitOps).toContain('commit'); // commit
+        expect(gitOps).toContain('push'); // push
       } finally {
         fixture.cleanup();
       }
@@ -417,7 +418,7 @@ describe('resyncSingleFile', () => {
           options,
           silentLogger,
           failGhRunner,
-          mockGitRunner,
+          mockGitRunner
         );
 
         expect(result.summary.errors).toBe(1);
@@ -432,8 +433,10 @@ describe('resyncSingleFile', () => {
   describe('summary counts', () => {
     it('reports resynced=1 for successful whole-file resync', async () => {
       const fixture = createTempFixture({
-        sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## A\n\nContent A\n\n## B\n\nContent B\n\n## C\n\nContent C',
-        targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## A翻译\n\n翻译A\n\n## B翻译\n\n翻译B\n\n## 附加\n\n附加内容',
+        sourceContent:
+          '---\ntitle: Test\n---\n\n# Title\n\n## A\n\nContent A\n\n## B\n\nContent B\n\n## C\n\nContent C',
+        targetContent:
+          '---\ntitle: Test\n---\n\n# 标题\n\n## A翻译\n\n翻译A\n\n## B翻译\n\n翻译B\n\n## 附加\n\n附加内容',
         filename: 'counting.md',
       });
 
@@ -448,7 +451,7 @@ describe('resyncSingleFile', () => {
           fixture.targetRepo,
           'lectures',
           options,
-          silentLogger,
+          silentLogger
         );
 
         // Whole-file mode: summary shows 1 resynced file
@@ -480,7 +483,7 @@ describe('resyncSingleFile', () => {
           fixture.targetRepo,
           'lectures',
           options,
-          silentLogger,
+          silentLogger
         );
 
         expect(result.triageResult.verdict).toBe('IDENTICAL');

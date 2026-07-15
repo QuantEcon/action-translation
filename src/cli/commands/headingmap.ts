@@ -1,9 +1,9 @@
 /**
  * Headingmap Command
- * 
+ *
  * Generate heading-maps for target files by comparing source and target
  * section headings by position. No LLM calls — free and local-only.
- * 
+ *
  * Use cases:
  * - Connect existing target repos that lack heading-maps
  * - Fix missing heading-maps after manual edits
@@ -32,7 +32,7 @@ export interface HeadingmapOptions {
   source: string;
   target: string;
   docsFolder: string;
-  file?: string;        // Single file mode
+  file?: string; // Single file mode
   exclude: string[];
   dryRun: boolean;
 }
@@ -73,7 +73,7 @@ export async function generateHeadingmapForFile(
   file: string,
   sourceRepoPath: string,
   targetRepoPath: string,
-  docsFolder: string,
+  docsFolder: string
 ): Promise<HeadingmapFileResult> {
   const sourceFilePath = path.join(sourceRepoPath, docsFolder, file);
   const targetFilePath = path.join(targetRepoPath, docsFolder, file);
@@ -107,7 +107,7 @@ export async function generateHeadingmapForFile(
   const parser = new MystParser();
   const sourceParsed = await parser.parseSections(sourceContent, sourceFilePath);
   const targetParsed = await parser.parseSections(targetContent, targetFilePath);
-  
+
   // Extract titles using parseDocumentComponents
   let targetTitle: string | undefined;
   try {
@@ -203,10 +203,19 @@ export async function runHeadingmap(options: HeadingmapOptions): Promise<Heading
     results.push(result);
 
     // Write the translation metadata to the target file (unless dry-run or skipped/unchanged)
-    if (!dryRun && result.status !== 'skipped' && result.status !== 'unchanged' && (result.generatedMap || result.generatedTitle)) {
+    if (
+      !dryRun &&
+      result.status !== 'skipped' &&
+      result.status !== 'unchanged' &&
+      (result.generatedMap || result.generatedTitle)
+    ) {
       const targetFilePath = path.join(target, docsFolder, f);
       const targetContent = fs.readFileSync(targetFilePath, 'utf-8');
-      const updatedContent = injectHeadingMap(targetContent, result.generatedMap ?? new Map(), result.generatedTitle);
+      const updatedContent = injectHeadingMap(
+        targetContent,
+        result.generatedMap ?? new Map(),
+        result.generatedTitle
+      );
       fs.writeFileSync(targetFilePath, updatedContent, 'utf-8');
 
       // Update section-count in .translate/state/ if state exists
@@ -223,11 +232,11 @@ export async function runHeadingmap(options: HeadingmapOptions): Promise<Heading
   // Build summary
   const summary = {
     total: results.length,
-    generated: results.filter(r => r.status === 'generated').length,
-    updated: results.filter(r => r.status === 'updated').length,
-    unchanged: results.filter(r => r.status === 'unchanged').length,
-    mismatch: results.filter(r => r.status === 'mismatch').length,
-    skipped: results.filter(r => r.status === 'skipped').length,
+    generated: results.filter((r) => r.status === 'generated').length,
+    updated: results.filter((r) => r.status === 'updated').length,
+    unchanged: results.filter((r) => r.status === 'unchanged').length,
+    mismatch: results.filter((r) => r.status === 'mismatch').length,
+    skipped: results.filter((r) => r.status === 'skipped').length,
   };
 
   return { results, summary };
@@ -258,10 +267,7 @@ export function formatHeadingmapTable(result: HeadingmapResult, dryRun: boolean)
   }
   lines.push('');
 
-  const maxFileLen = Math.max(
-    4,
-    ...result.results.map(r => r.file.length),
-  );
+  const maxFileLen = Math.max(4, ...result.results.map((r) => r.file.length));
 
   const header = `  ${'File'.padEnd(maxFileLen)}  Status`;
   const separator = `  ${'─'.repeat(maxFileLen)}  ${'─'.repeat(30)}`;
@@ -271,9 +277,10 @@ export function formatHeadingmapTable(result: HeadingmapResult, dryRun: boolean)
 
   for (const entry of result.results) {
     const icon = STATUS_ICONS[entry.status];
-    const sectionInfo = entry.status !== 'skipped'
-      ? ` (${entry.matchedSections} matched, ${entry.totalSourceSections}s/${entry.totalTargetSections}t)`
-      : '';
+    const sectionInfo =
+      entry.status !== 'skipped'
+        ? ` (${entry.matchedSections} matched, ${entry.totalSourceSections}s/${entry.totalTargetSections}t)`
+        : '';
     lines.push(`  ${entry.file.padEnd(maxFileLen)}  ${icon} ${entry.status}${sectionInfo}`);
     for (const warning of entry.warnings) {
       lines.push(`  ${''.padEnd(maxFileLen)}  ↳ ${warning}`);
@@ -285,11 +292,16 @@ export function formatHeadingmapTable(result: HeadingmapResult, dryRun: boolean)
   const s = result.summary;
   lines.push('Summary:');
   lines.push(`  ${s.total} files total`);
-  if (s.generated > 0)  lines.push(`  ${STATUS_ICONS.generated} ${s.generated} generated (new heading-map)`);
-  if (s.updated > 0)    lines.push(`  ${STATUS_ICONS.updated} ${s.updated} updated (heading-map changed)`);
-  if (s.unchanged > 0)  lines.push(`  ${STATUS_ICONS.unchanged} ${s.unchanged} unchanged`);
-  if (s.mismatch > 0)   lines.push(`  ${STATUS_ICONS.mismatch} ${s.mismatch} with section mismatch (partial map generated)`);
-  if (s.skipped > 0)    lines.push(`  ${STATUS_ICONS.skipped} ${s.skipped} skipped`);
+  if (s.generated > 0)
+    lines.push(`  ${STATUS_ICONS.generated} ${s.generated} generated (new heading-map)`);
+  if (s.updated > 0)
+    lines.push(`  ${STATUS_ICONS.updated} ${s.updated} updated (heading-map changed)`);
+  if (s.unchanged > 0) lines.push(`  ${STATUS_ICONS.unchanged} ${s.unchanged} unchanged`);
+  if (s.mismatch > 0)
+    lines.push(
+      `  ${STATUS_ICONS.mismatch} ${s.mismatch} with section mismatch (partial map generated)`
+    );
+  if (s.skipped > 0) lines.push(`  ${STATUS_ICONS.skipped} ${s.skipped} skipped`);
 
   return lines.join('\n');
 }

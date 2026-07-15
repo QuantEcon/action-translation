@@ -13,23 +13,26 @@ describe('localization-rules', () => {
 
   describe('parseLocalizationRules', () => {
     it('parses comma-separated valid rules', () => {
-      expect(parseLocalizationRules('code-comments,figure-labels'))
-        .toEqual(['code-comments', 'figure-labels']);
+      expect(parseLocalizationRules('code-comments,figure-labels')).toEqual([
+        'code-comments',
+        'figure-labels',
+      ]);
     });
 
     it('parses single rule', () => {
-      expect(parseLocalizationRules('figure-labels'))
-        .toEqual(['figure-labels']);
+      expect(parseLocalizationRules('figure-labels')).toEqual(['figure-labels']);
     });
 
     it('parses i18n-font-config rule', () => {
-      expect(parseLocalizationRules('i18n-font-config'))
-        .toEqual(['i18n-font-config']);
+      expect(parseLocalizationRules('i18n-font-config')).toEqual(['i18n-font-config']);
     });
 
     it('parses all three rules', () => {
-      expect(parseLocalizationRules('code-comments,figure-labels,i18n-font-config'))
-        .toEqual(['code-comments', 'figure-labels', 'i18n-font-config']);
+      expect(parseLocalizationRules('code-comments,figure-labels,i18n-font-config')).toEqual([
+        'code-comments',
+        'figure-labels',
+        'i18n-font-config',
+      ]);
     });
 
     it('returns empty array for "none"', () => {
@@ -37,23 +40,26 @@ describe('localization-rules', () => {
     });
 
     it('handles whitespace and casing', () => {
-      expect(parseLocalizationRules(' Code-Comments , Figure-Labels '))
-        .toEqual(['code-comments', 'figure-labels']);
+      expect(parseLocalizationRules(' Code-Comments , Figure-Labels ')).toEqual([
+        'code-comments',
+        'figure-labels',
+      ]);
     });
 
     it('throws on unknown rule', () => {
-      expect(() => parseLocalizationRules('code-comments,unknown-rule'))
-        .toThrow(/Unknown localization rule\(s\): unknown-rule/);
+      expect(() => parseLocalizationRules('code-comments,unknown-rule')).toThrow(
+        /Unknown localization rule\(s\): unknown-rule/
+      );
     });
 
     it('throws on multiple unknown rules', () => {
-      expect(() => parseLocalizationRules('foo,bar'))
-        .toThrow(/foo, bar/);
+      expect(() => parseLocalizationRules('foo,bar')).toThrow(/foo, bar/);
     });
 
     it('lists available rules in error message', () => {
-      expect(() => parseLocalizationRules('bad'))
-        .toThrow(/Available: code-comments, figure-labels, i18n-font-config, none/);
+      expect(() => parseLocalizationRules('bad')).toThrow(
+        /Available: code-comments, figure-labels, i18n-font-config, none/
+      );
     });
   });
 
@@ -101,7 +107,10 @@ describe('localization-rules', () => {
     });
 
     it('numbers rules correctly with all three', () => {
-      const prompt = buildLocalizationPrompt(['code-comments', 'figure-labels', 'i18n-font-config'], 'zh-cn');
+      const prompt = buildLocalizationPrompt(
+        ['code-comments', 'figure-labels', 'i18n-font-config'],
+        'zh-cn'
+      );
       expect(prompt).toContain('1. **Localize code comments**');
       expect(prompt).toContain('2. **Localize figure labels**');
       expect(prompt).toContain('3. **Inject font configuration**');
