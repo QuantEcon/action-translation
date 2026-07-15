@@ -22,7 +22,7 @@
 # 1. Clones/updates both test repositories
 # 2. Force pushes base state to main (clean slate)
 # 3. Closes all open PRs on both source and target repos
-# 4. Creates 24 fresh test PRs covering the scenario matrix (see test-action-on-github-data/)
+# 4. Creates 26 fresh test PRs covering the scenario matrix (see the `scenarios` array below)
 # 5. Adds 'test-translation' label to each PR
 # 6. Prints summary of created PRs
 #
