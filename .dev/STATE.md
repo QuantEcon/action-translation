@@ -59,11 +59,16 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 - **PLAN Phase 1 remainder**: rebase no-op comments, `context.sha` vs `merge_commit_sha`,
   resync fail-closed, `@actions/*` + SDK major bumps (pair with node24, PLAN 5.8),
   rebase input-validation hardening (1.5).
-- **node24 is no longer optional** (PLAN 5.8): the 2026-07-15 harness run shows GitHub
-  already overriding `action.yml`'s `using: node20` — *"The following actions target Node.js
-  20 but are being forced to run on Node.js 24: ./action"* — on every run, in production
-  too. We are getting the runtime without having declared or tested for it.
-- New issues from the review round: **#81** (typography on sync path), **#82** (model-swap
+- **#89 node24 + `@actions/*` majors** — GitHub already force-runs the action on Node 24
+  despite `action.yml` declaring node20 (harness evidence, every run). Also clears the last
+  prod advisories (undici via `@actions/*`). PLAN 5.8 + 1.4, one release.
+- **#90 silent data loss in the sync merge path** — five ways translations vanish or English
+  leaks in while the run reports success (REVIEW §6.1). Not covered by PLAN Phase 2; the
+  Phase 2 round-trip test would catch three of them as a class, so Phase 2 first.
+- Smaller review-round follow-ups: **#91** (heading-maps.md documents a key format the action
+  has never written — nearly caused a bad rubric fix), **#92** (PR creation reports failure
+  when the API times out *after* succeeding; naive retry would duplicate).
+- Earlier review-round issues: **#81** (typography on sync path), **#82** (model-swap
   eval — see REVIEW §7.4 for a concrete deterministic design).
 
 ## Health & context
