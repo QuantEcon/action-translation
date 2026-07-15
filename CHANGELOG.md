@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **French typography no longer corrupts footnote/link-reference definitions**: the NBSP pass rewrote `[^id]: text` as `[^id] : text`, which stops the line parsing as a definition — it rendered as literal text and broke every reference (shipped in the fr seed, e.g. `pandas.md`). Definition labels are now masked, and the exact corruption is repaired on contact, so running `scripts/typography/apply.mjs` over an affected repo heals it. The definition text after the colon is still typeset.
+- **GitHub API pagination** at all five unpaginated call sites: sync `pulls.listFiles` (PRs touching >30 files were silently truncated), review mode's two `listFiles` calls, rebase's `pulls.list` (sibling PRs beyond 100), and `postReviewComment`'s `listComments` (the existing review comment was missed past 30 comments, accumulating duplicates).
+- **Truncation detection**: every Claude call (translator, reviewer, backward evaluator, forward triage, document comparator) now checks `stop_reason` and fails the operation on `max_tokens` instead of using cut-off output — previously a truncated backward analysis parsed as `NO_BACKPORT` and reported the file as *clean*.
+- **Empty-response guard**: `response.content[0]` is guarded everywhere; an empty content array (e.g. a refusal stop) produces a clean error instead of a bare `TypeError`.
+- **Review mode CRLF**: `parseSourcePRNumber` accepts `\r\n` — GitHub normalizes edited PR bodies to CRLF, which permanently broke review mode for that PR.
+- **Glossary terms without a translation** for the target language are skipped with a log line instead of rendering `"term" → "undefined"` into the prompt.
+- **Lint/format actually cover the codebase**: the unquoted `src/**/*.ts` glob matched only 32 of 78 files under `/bin/sh`, so the core modules were never linted. Globs quoted, `--max-warnings 0` gate added, prettier applied across src (mechanical), and CI now runs a format check.
+
+### Added
+- **LICENSE** (MIT) — claimed in README/package.json since the start, but the file never existed; GitHub reported the repo as unlicensed.
+- `REVIEW-FABLE5-2026-07-15.md` — deep technical review (follow-up to 2026-07-05).
+
+### Changed
+- **`v0` floating tag now tracks the latest release** (was stuck at v0.7.0-era code, 115 commits behind, while the README quickstart recommends `@v0`). Moving `v0` is a release step from now on.
+- `package.json`: `private: true` (publish-unsafe: no files allowlist, colliding bin name, would have shipped `.dev/` and local settings) and `engines: node >= 20`.
+- `npm audit fix`: clears the `ws`, `lodash`, and `js-yaml` advisories (js-yaml is a direct prod dep bundled into `dist-action/`). The remaining `undici` pair rides on `@actions/*` majors — deferred to the node24 change (PLAN 1.4/5.8).
+- Docs accuracy: examples use the PAT pattern (`GITHUB_TOKEN` cannot push cross-repo) and current pins; the broken `ja` example is now `fr`; docs-site landing page updated from v0.8.0/873-tests; tutorials and legacy-tools added to the site toc (they 404ed); `add-language` marks the `LANGUAGE_CONFIGS` entry required; README lists rebase mode and drops exact test counts.
+
 ## [0.16.0] - 2026-07-15
 
 ### Added
