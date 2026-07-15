@@ -25,6 +25,16 @@ const __dirname = path.dirname(__filename);
 // existing report, pass that report's recorded evaluator explicitly instead.
 export const DEFAULT_EVALUATOR_MODEL = 'claude-opus-4-8';
 
+/**
+ * Refuse to diff-evaluate a document larger than this rather than truncate it.
+ *
+ * Generous on purpose: a lecture is a few KB and the judge's context is orders of
+ * magnitude larger, so this should never fire in practice. It exists so that an
+ * unexpectedly huge document produces a loud error instead of a silently-partial
+ * prompt (see evaluateDiff for what symmetric truncation did to en↔zh comparisons).
+ */
+const MAX_DOCUMENT_CHARS = 200_000;
+
 // Load glossary
 interface GlossaryTerm {
   en: string;
@@ -505,6 +515,32 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
     sourceFiles: FileDiff[],
     targetFiles: FileDiff[]
   ): Promise<DiffQualityResult> {
+    // Documents go to the judge WHOLE.
+    //
+    // These were previously cut at `.slice(0, 4000)` per document. A symmetric
+    // character cut is asymmetric in content: Chinese encodes the same material in
+    // ~35% fewer characters, so on any lecture over ~4000 chars the English source
+    // truncated while the whole Chinese target still fit. The judge then saw target
+    // edits whose source counterpart had been sliced away and — correctly, given its
+    // inputs — reported "out-of-scope edits with no corresponding source change".
+    // Verified on scenario 13: English 5777 chars (68% shown) vs Chinese 3783 (100%),
+    // with both changed eigenvalue equations invisible on the English side only.
+    //
+    // A lecture is a few KB; the judge's context is orders of magnitude larger, so
+    // there is nothing to save here. If a document is ever genuinely too large, say so
+    // loudly rather than silently handing the judge a partial document to be confident
+    // about — a truncated input must never produce a confident verdict.
+    const documents = { sourceBefore, sourceAfter, targetBefore, targetAfter };
+    const oversized = Object.entries(documents)
+      .filter(([, doc]) => doc.length > MAX_DOCUMENT_CHARS)
+      .map(([name, doc]) => `${name} (${doc.length} chars)`);
+    if (oversized.length > 0) {
+      throw new Error(
+        `Document(s) exceed ${MAX_DOCUMENT_CHARS} chars and cannot be diff-evaluated ` +
+          `without truncation, which produces false out-of-scope findings: ${oversized.join(', ')}. ` +
+          `Raise MAX_DOCUMENT_CHARS or evaluate this pair section-by-section.`
+      );
+    }
     const prompt = `You are an expert code reviewer specializing in translation sync workflows. Your task is to verify that translation changes are correctly positioned in the target document.
 
 ## Context
@@ -552,12 +588,12 @@ are actually wrong (e.g., wrong mapping, missing entries for existing sections).
 
 ### Before (English):
 \`\`\`markdown
-${sourceBefore.slice(0, 4000)}${sourceBefore.length > 4000 ? '\n... (truncated)' : ''}
+${sourceBefore}
 \`\`\`
 
 ### After (English):
 \`\`\`markdown
-${sourceAfter.slice(0, 4000)}${sourceAfter.length > 4000 ? '\n... (truncated)' : ''}
+${sourceAfter}
 \`\`\`
 
 ### Source Files Changed:
@@ -567,12 +603,12 @@ ${sourceFiles.map(f => `- ${f.filename}: ${f.status} (+${f.additions}/-${f.delet
 
 ### Before (Chinese):
 \`\`\`markdown
-${targetBefore.slice(0, 4000)}${targetBefore.length > 4000 ? '\n... (truncated)' : ''}
+${targetBefore}
 \`\`\`
 
 ### After (Chinese):
 \`\`\`markdown
-${targetAfter.slice(0, 4000)}${targetAfter.length > 4000 ? '\n... (truncated)' : ''}
+${targetAfter}
 \`\`\`
 
 ### Target Files Changed:
