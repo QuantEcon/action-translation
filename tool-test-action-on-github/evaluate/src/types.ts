@@ -76,6 +76,12 @@ export interface EvaluationReport {
   sourceRepo: string;
   targetRepo: string;
   prPairsEvaluated: number;
+  /**
+   * Pairs that were matched but threw during evaluation. They contribute to NO score
+   * below, so a reader comparing this report's denominator against a baseline needs to
+   * see them — otherwise a partial run reads as a clean one.
+   */
+  droppedPairs?: Array<{ sourceNumber: number; title: string; error: string }>;
   results: EvaluationResult[];
   summary: {
     passed: number;

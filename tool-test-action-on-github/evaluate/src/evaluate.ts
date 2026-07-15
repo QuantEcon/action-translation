@@ -134,7 +134,8 @@ async function evaluatePRPair(
 function generateReport(
   results: EvaluationResult[],
   repoInfo: { sourceRepo: string; targetRepo: string },
-  model: string
+  model: string,
+  dropped: Array<{ pair: PRPair; error: string }> = []
 ): EvaluationReport {
   const passed = results.filter(r => r.overallVerdict === 'PASS').length;
   const warned = results.filter(r => r.overallVerdict === 'WARN').length;
@@ -168,6 +169,11 @@ function generateReport(
     sourceRepo: repoInfo.sourceRepo,
     targetRepo: repoInfo.targetRepo,
     prPairsEvaluated: results.length,
+    droppedPairs: dropped.map(d => ({
+      sourceNumber: d.pair.sourceNumber,
+      title: d.pair.sourceTitle,
+      error: d.error,
+    })),
     results,
     summary: {
       passed,
@@ -202,6 +208,16 @@ function formatReportMarkdown(report: EvaluationReport): string {
 | Avg Diff Score | ${report.summary.averageDiffScore}/10 |
 
 `;
+
+  if (report.droppedPairs && report.droppedPairs.length > 0) {
+    md += `> ⚠️ **Incomplete run — ${report.droppedPairs.length} pair(s) errored and are excluded from every score above.**
+> The scores describe only the ${report.prPairsEvaluated} pair(s) that completed; do not compare
+> this denominator against a baseline without re-running the pairs below (\`--pr <number>\`).
+>
+${report.droppedPairs.map(d => `> - **${d.title}** (source PR #${d.sourceNumber}): ${d.error}`).join('\n')}
+
+`;
+  }
 
   if (report.summary.commonIssues.length > 0) {
     md += `### Common Issues
@@ -367,17 +383,38 @@ async function main() {
 
   // Evaluate each pair
   const results: EvaluationResult[] = [];
+  // A pair that throws must not just vanish: the report's denominator is what a
+  // reader compares against a baseline, so a silently-dropped pair turns a partial
+  // run into a clean-looking one ("25 pairs, 25 passed, 0 failed" while a 26th
+  // errored). Collect failures and surface them in the report and exit code.
+  const dropped: Array<{ pair: PRPair; error: string }> = [];
   for (const pair of pairs) {
     try {
       const result = await evaluatePRPair(pair, github, evaluator, options);
       results.push(result);
     } catch (error) {
-      console.error(chalk.red(`Failed to evaluate PR pair ${pair.sourceNumber}: ${error}`));
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(chalk.red(`Failed to evaluate PR pair ${pair.sourceNumber}: ${message}`));
+      dropped.push({ pair, error: message });
     }
   }
 
+  if (dropped.length > 0) {
+    console.error(
+      chalk.red(
+        `\n${dropped.length} of ${pairs.length} pair(s) could not be evaluated and are NOT in the scores below:`
+      )
+    );
+    for (const d of dropped) {
+      console.error(chalk.red(`  - ${d.pair.sourceTitle} (source PR #${d.pair.sourceNumber}): ${d.error}`));
+    }
+    console.error(
+      chalk.red('Re-run those pairs with --pr <number> before comparing against a baseline.\n')
+    );
+  }
+
   // Generate report
-  const report = generateReport(results, repoInfo, options.model!);
+  const report = generateReport(results, repoInfo, options.model!, dropped);
 
   // Print summary
   console.log(chalk.blue('\n' + '═'.repeat(50)));
@@ -400,8 +437,9 @@ async function main() {
   fs.writeFileSync(outputPath, reportMd);
   console.log(chalk.green(`\nReport saved to: ${outputPath}`));
 
-  // Exit with error code if any failures
-  if (report.summary.failed > 0) {
+  // Exit non-zero on failures, and equally on an incomplete run: a dropped pair means
+  // the scores above describe a subset, which must not read as a clean pass.
+  if (report.summary.failed > 0 || dropped.length > 0) {
     process.exit(1);
   }
 }
