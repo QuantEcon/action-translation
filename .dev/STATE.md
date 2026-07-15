@@ -37,6 +37,11 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## Next
 
+**Suggested order: #94** — work plan with the reasoning (external clocks first, detection
+before repair, shared foundations before what needs them). Summary: #89 → Phase 1 remainder
+→ **Phase 2** (the main event; its round-trip test catches 3 of #90's 5 as a class) → #90
+remainder → Phase 6 (unblocks structured outputs + prompt caching).
+
 - **Watch the first real zh-cn/fa syncs** — the estate upgrade landed, so the next merged
   lecture PR is the first production Sonnet 5 translation. Two things to expect that look
   like regressions but are not: the new truncation guard may fail a long lecture that
