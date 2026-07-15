@@ -187,9 +187,33 @@ function applyFrenchSpacing(text: string): string {
   );
 }
 
+/**
+ * Footnote and link-reference definitions — `[^id]: text`, `[label]: url` —
+ * require the colon immediately after `]`. An inserted NBSP stops the line
+ * parsing as a definition: it renders as literal paragraph text and every
+ * reference to it breaks (this shipped — pandas.md in the fr seed). The label
+ * and colon are masked below; the definition TEXT after the colon is ordinary
+ * prose and still gets typeset. CommonMark allows up to 3 leading spaces.
+ */
+const DEFINITION_LABEL = /^\s{0,3}\[[^\]]*\]:/;
+
+/**
+ * The corruption the pre-fix transform produced: a non-breaking space between
+ * a line-leading label and its colon. That sequence can never be legitimate —
+ * with the NBSP the line is not a definition at all — so it is repaired,
+ * which lets `scripts/typography/apply.mjs` heal already-damaged repos.
+ * Only NBSP/narrow-NBSP are collapsed: `[x] :` with a regular space is prose,
+ * not a definition, and is left to the ordinary spacing rule.
+ */
+const DEFINITION_CORRUPTED = /^(\s{0,3}\[[^\]]*\])[\u00A0\u202F]+:/;
+
 function applyToProse(line: string, rule: (text: string) => string): string {
   const chunks: string[] = [];
-  let masked = line;
+  let masked = line.replace(DEFINITION_CORRUPTED, '$1:');
+  masked = masked.replace(DEFINITION_LABEL, (m) => {
+    chunks.push(m);
+    return `${PLACEHOLDER}${chunks.length - 1}${PLACEHOLDER}`;
+  });
   for (const pattern of INLINE_PROTECTED) {
     masked = masked.replace(pattern, (m) => {
       chunks.push(m);
