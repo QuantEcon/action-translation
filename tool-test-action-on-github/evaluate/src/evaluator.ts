@@ -19,8 +19,11 @@ import type {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Default to Opus 4.5 for evaluation (configurable via constructor)
-export const DEFAULT_EVALUATOR_MODEL = 'claude-opus-4-5-20251101';
+// The grading model, configurable via constructor / --model.
+// Keep this at the current best Opus: it judges translation quality, so a stronger
+// reviewer gives a better absolute read. When reproducing or comparing against an
+// existing report, pass that report's recorded evaluator explicitly instead.
+export const DEFAULT_EVALUATOR_MODEL = 'claude-opus-4-8';
 
 // Load glossary
 interface GlossaryTerm {

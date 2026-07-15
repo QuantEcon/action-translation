@@ -247,7 +247,19 @@ async function main() {
     .option('--output <file>', 'Output report to file (default: reports/evaluation-<date>.md)')
     .option('--list-only', 'Only list matched PR pairs without evaluation (no API key needed)', false)
     .option('--max-suggestions <number>', 'Maximum suggestions per evaluation (default: 5)', '5')
-    .option('--model <name>', 'Claude model for evaluation (opus-4-5 or sonnet-4-5)', 'claude-opus-4-5-20251101')
+    // The judge, not the thing under test. Defaults to the current best Opus so an
+    // absolute quality read uses the strongest available reviewer.
+    //
+    // Comparing against an existing baseline? Pin this to whatever THAT report's
+    // "**Evaluator**:" header names (e.g. --model claude-opus-4-5-20251101 for the
+    // 2025-12 reports). Moving the judge and the translation model at once makes a
+    // score delta unattributable. Every report records the judge it used, so the
+    // right pin is always recoverable from the baseline itself.
+    .option(
+      '--model <name>',
+      'Claude model used to GRADE translations; pin to the baseline’s judge when comparing',
+      'claude-opus-4-8'
+    )
     .parse(process.argv);
 
   const opts = program.opts();

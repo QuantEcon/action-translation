@@ -94,5 +94,5 @@ export interface EvaluationOptions {
   postReviews: boolean; // Post review comments to translation PRs
   outputFile?: string; // Path for report output
   maxSuggestions: number; // Maximum number of suggestions per evaluation (default: 5)
-  model?: string; // Claude model to use for evaluation (default: opus-4-5)
+  model?: string; // Claude model used to GRADE translations (default: DEFAULT_EVALUATOR_MODEL)
 }
