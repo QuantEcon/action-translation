@@ -53,3 +53,15 @@ Reports are automatically saved to this folder with the format `evaluation-YYYY-
 - **PASS** (✅): Overall ≥8, Diff ≥8
 - **WARN** (⚠️): Overall ≥6, Diff ≥6  
 - **FAIL** (❌): Below thresholds
+
+## Baselines
+
+| report | action model | judge | notes |
+|---|---|---|---|
+| `evaluation-2025-12-04/05.md` | Sonnet 4.5 | `claude-opus-4-5-20251101` | 24 pairs. Predates the v0.13.0 `translation:` frontmatter format. |
+| `evaluation-2026-07-15-sonnet5-v2.md` | **Sonnet 5** (v0.16.1) | `claude-opus-4-5-20251101` | 25 pairs. Judge pinned to the 2025-12 one so the comparison isolates the translation model. |
+| `evaluation-2026-07-15-sonnet5-opus48.md` | **Sonnet 5** (v0.16.1) | `claude-opus-4-8` | 26 pairs. Current-generation judge; absolute read, not comparable to the 2025-12 scores. |
+
+**Comparing against a baseline?** Pin the judge to the one that report used (`--model <its **Evaluator**: header>`). Moving the judge and the translation model together makes a score delta unattributable to either.
+
+**A denominator below the scenario count means the run was incomplete** — since 2026-07-15 the report says so explicitly; before that, dropped pairs vanished silently, so the "24 pairs" in the 2025-12 reports cannot be confirmed as 24 of 24.
