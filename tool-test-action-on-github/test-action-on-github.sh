@@ -22,7 +22,7 @@
 # 1. Clones/updates both test repositories
 # 2. Force pushes base state to main (clean slate)
 # 3. Closes all open PRs on both source and target repos
-# 4. Creates 9 fresh test PRs with different scenarios
+# 4. Creates 26 fresh test PRs covering the scenario matrix (see the `scenarios` array below)
 # 5. Adds 'test-translation' label to each PR
 # 6. Prints summary of created PRs
 #
@@ -566,11 +566,13 @@ if [ "$DRY_RUN" = true ]; then
     echo "     - 18: Document DELETED (lecture.md + TOC)"
     echo "     - 19: Multiple files changed (minimal + lecture)"
     echo "     - 20: Document RENAMED (lecture → linear-algebra + TOC)"
-    echo "   Edge Cases (21-24):"
+    echo "   Edge Cases (21-26):"
     echo "     - 21: Preamble only changed (frontmatter)"
     echo "     - 22: Deep nesting (##### and ######)"
     echo "     - 23: Special characters in headings"
     echo "     - 24: Empty sections (heading only)"
+    echo "     - 25: Pre-title content (anchor + raw block)"
+    echo "     - 26: Heading case change (title-case -> sentence-case)"
     echo "4. Add 'test-translation' label to each PR"
     echo ""
     echo -e "${YELLOW}To actually run these changes, execute without --dry-run:${NC}"

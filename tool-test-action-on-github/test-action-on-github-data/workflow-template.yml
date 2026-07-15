@@ -18,6 +18,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: QuantEcon/action-translation
+          # Pin to the release under test — tracking the default branch makes a run
+          # unreproducible and silently retests whatever landed on main last.
+          ref: v0.16.1
           path: action
       
       - name: Setup Node.js

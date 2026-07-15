@@ -1,6 +1,6 @@
 # Translation Quality Evaluator
 
-Evaluates translation PRs from action-translation test suite using Claude Opus 4.5.
+Evaluates translation PRs from the action-translation test suite using Claude Opus.
 
 ## Purpose
 
@@ -115,7 +115,13 @@ const TARGET_REPO = 'test-translation-sync.zh-cn';
 
 ## Model
 
-Uses **Claude Opus 4.5** (`claude-opus-4-5-20251101`) for evaluation.
+Grades with **Claude Opus 4.8** (`claude-opus-4-8`) by default — the judge, not the thing under
+test, so it should be the strongest available reviewer.
+
+**When comparing against an existing report, pin the judge to the one that report used**
+(its `**Evaluator**:` header records it) — e.g. `--model claude-opus-4-5-20251101` for the
+2025-12 baselines. Changing the judge and the translation model together makes a score delta
+unattributable to either.
 
 Requires `ANTHROPIC_API_KEY` environment variable (automatically loaded from `.env` if present).
 

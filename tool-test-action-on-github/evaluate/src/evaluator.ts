@@ -19,8 +19,21 @@ import type {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Default to Opus 4.5 for evaluation (configurable via constructor)
-export const DEFAULT_EVALUATOR_MODEL = 'claude-opus-4-5-20251101';
+// The grading model, configurable via constructor / --model.
+// Keep this at the current best Opus: it judges translation quality, so a stronger
+// reviewer gives a better absolute read. When reproducing or comparing against an
+// existing report, pass that report's recorded evaluator explicitly instead.
+export const DEFAULT_EVALUATOR_MODEL = 'claude-opus-4-8';
+
+/**
+ * Refuse to diff-evaluate a document larger than this rather than truncate it.
+ *
+ * Generous on purpose: a lecture is a few KB and the judge's context is orders of
+ * magnitude larger, so this should never fire in practice. It exists so that an
+ * unexpectedly huge document produces a loud error instead of a silently-partial
+ * prompt (see evaluateDiff for what symmetric truncation did to en↔zh comparisons).
+ */
+const MAX_DOCUMENT_CHARS = 200_000;
 
 // Load glossary
 interface GlossaryTerm {
@@ -320,19 +333,38 @@ ${sourceEnglish}
 ${targetChinese}
 \`\`\`
 ${this.glossarySection}
-## IMPORTANT: About the Heading-Map
+## IMPORTANT: About the translation frontmatter block
 
-The Chinese translation contains a \`heading-map\` section in the YAML frontmatter that is NOT present in the English source. This is CORRECT and EXPECTED behavior:
+The Chinese translation contains a \`translation\` block in the YAML frontmatter that is NOT
+present in the English source. This is CORRECT and EXPECTED behavior:
 
 \`\`\`yaml
-heading-map:
-  introduction: "介绍"
-  background: "背景"
+translation:
+  title: 经济学导论
+  headings:
+    Supply and Demand: 供给与需求
+    Economic Models: 经济模型
 \`\`\`
 
-This is a feature of the translation sync system that maps English heading IDs to Chinese headings for section matching across languages. Do NOT flag this as an issue or formatting problem - it is intentional and does not affect Jupyter Book compilation.
+This is a feature of the translation sync system that maps English headings to Chinese
+headings for section matching across languages. Do NOT flag this block as an issue, a
+formatting problem, or a "non-standard addition" — it is intentional and does not affect
+Jupyter Book compilation.
 
-**Note on double-colon notation**: The heading-map may use \`section::subsection\` notation (e.g., \`supply-and-demand::market-dynamics\`) to represent hierarchical headings. This double-colon \`::\` syntax is intentional and valid - it represents the relationship between a section and its nested subsection. This is safe in YAML because YAML only treats \`:\` as a key-value separator when followed by a space.
+- \`translation.title\` is the translated document title (the \`#\` heading).
+- \`translation.headings\` keys are the **English heading text** with \`#\` markers and MyST
+  roles stripped (e.g. \`Supply and Demand\`) — NOT lowercased, NOT hyphenated, NOT slugs.
+  Values are the translated heading text as it appears in the document.
+
+**Note on double-colon notation**: nested headings use path-based keys joined by \`::\`
+(e.g. \`International Trade::Regional Trade Agreements\`), representing the parent/child
+relationship at any depth. This is intentional and valid — YAML only treats \`:\` as a
+key-value separator when followed by a space.
+
+**Legacy format**: older documents may carry a flat \`heading-map:\` block (no \`translation:\`
+wrapper). The system reads both but always WRITES the \`translation:\` form above, migrating
+legacy documents on next sync. A PR that converts \`heading-map:\` → \`translation:\` is
+performing a correct, expected migration — do NOT penalize it as an unexpected restructure.
 
 ## Evaluation Criteria
 Rate each criterion from 1-10:
@@ -483,6 +515,32 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
     sourceFiles: FileDiff[],
     targetFiles: FileDiff[]
   ): Promise<DiffQualityResult> {
+    // Documents go to the judge WHOLE.
+    //
+    // These were previously cut at `.slice(0, 4000)` per document. A symmetric
+    // character cut is asymmetric in content: Chinese encodes the same material in
+    // ~35% fewer characters, so on any lecture over ~4000 chars the English source
+    // truncated while the whole Chinese target still fit. The judge then saw target
+    // edits whose source counterpart had been sliced away and — correctly, given its
+    // inputs — reported "out-of-scope edits with no corresponding source change".
+    // Verified on scenario 13: English 5777 chars (68% shown) vs Chinese 3783 (100%),
+    // with both changed eigenvalue equations invisible on the English side only.
+    //
+    // A lecture is a few KB; the judge's context is orders of magnitude larger, so
+    // there is nothing to save here. If a document is ever genuinely too large, say so
+    // loudly rather than silently handing the judge a partial document to be confident
+    // about — a truncated input must never produce a confident verdict.
+    const documents = { sourceBefore, sourceAfter, targetBefore, targetAfter };
+    const oversized = Object.entries(documents)
+      .filter(([, doc]) => doc.length > MAX_DOCUMENT_CHARS)
+      .map(([name, doc]) => `${name} (${doc.length} chars)`);
+    if (oversized.length > 0) {
+      throw new Error(
+        `Document(s) exceed ${MAX_DOCUMENT_CHARS} chars and cannot be diff-evaluated ` +
+          `without truncation, which produces false out-of-scope findings: ${oversized.join(', ')}. ` +
+          `Raise MAX_DOCUMENT_CHARS or evaluate this pair section-by-section.`
+      );
+    }
     const prompt = `You are an expert code reviewer specializing in translation sync workflows. Your task is to verify that translation changes are correctly positioned in the target document.
 
 ## Context
@@ -491,34 +549,51 @@ A translation sync action detected changes in an English source document and cre
 1. **Scope**: Only the correct files were modified
 2. **Position**: Changes appear in the same relative positions
 3. **Structure**: Document structure is preserved
-4. **Heading-map**: The heading-map in frontmatter is correctly updated
+4. **Heading-map**: The \`translation.headings\` map in frontmatter is correctly updated
 
-## IMPORTANT: About the Heading-Map System
+## IMPORTANT: About the translation frontmatter system
 
-The \`heading-map\` in the frontmatter is a CRITICAL feature of this translation system, NOT a bug. Here's how it works:
+The \`translation\` block in the frontmatter is a CRITICAL feature of this translation system,
+NOT a bug. Here's how it works:
 
 - English headings generate IDs from English text: \`## Introduction\` → ID: \`introduction\`
 - Chinese headings generate IDs from Chinese text: \`## 介绍\` → ID: \`介绍\`
-- The \`heading-map\` bridges this gap by mapping English IDs to Chinese headings
+- \`translation.headings\` bridges this gap by mapping the **English heading text** to the
+  translated heading, so sections can be matched across languages
+
+\`\`\`yaml
+translation:
+  title: 经济学导论
+  headings:
+    Supply and Demand: 供给与需求
+    International Trade::Regional Trade Agreements: 区域贸易协定
+\`\`\`
 
 **Expected behavior**:
-- When a section is added/modified, its heading-map entry should be added/updated
-- When a section is deleted, its heading-map entry may be removed
-- The heading-map should always contain entries for ALL sections in the document
-- Hierarchical headings use double-colon \`::\` notation: \`section::subsection\` (e.g., \`supply-and-demand::market-dynamics\`). This is valid YAML syntax.
+- When a section is added/modified, its \`translation.headings\` entry should be added/updated
+- When a section is deleted, its entry may be removed
+- The map should contain entries for ALL sections in the document
+- \`translation.title\` carries the translated \`#\` title
+- Nested headings use path-based keys joined by \`::\` at any depth
+  (e.g. \`International Trade::Regional Trade Agreements\`). This is valid YAML syntax.
 
-This is CORRECT and EXPECTED - do NOT flag heading-map changes as issues unless they are actually wrong (e.g., wrong mapping, missing entries for existing sections).
+**Legacy format**: older documents may still carry a flat \`heading-map:\` block. The system
+reads both formats but always writes \`translation:\`. A diff that migrates \`heading-map:\` →
+\`translation:\` is correct and expected — do NOT score it down as an unexpected restructure.
+
+This is CORRECT and EXPECTED - do NOT flag \`translation\` block changes as issues unless they
+are actually wrong (e.g., wrong mapping, missing entries for existing sections).
 
 ## Source Document Changes
 
 ### Before (English):
 \`\`\`markdown
-${sourceBefore.slice(0, 4000)}${sourceBefore.length > 4000 ? '\n... (truncated)' : ''}
+${sourceBefore}
 \`\`\`
 
 ### After (English):
 \`\`\`markdown
-${sourceAfter.slice(0, 4000)}${sourceAfter.length > 4000 ? '\n... (truncated)' : ''}
+${sourceAfter}
 \`\`\`
 
 ### Source Files Changed:
@@ -528,12 +603,12 @@ ${sourceFiles.map(f => `- ${f.filename}: ${f.status} (+${f.additions}/-${f.delet
 
 ### Before (Chinese):
 \`\`\`markdown
-${targetBefore.slice(0, 4000)}${targetBefore.length > 4000 ? '\n... (truncated)' : ''}
+${targetBefore}
 \`\`\`
 
 ### After (Chinese):
 \`\`\`markdown
-${targetAfter.slice(0, 4000)}${targetAfter.length > 4000 ? '\n... (truncated)' : ''}
+${targetAfter}
 \`\`\`
 
 ### Target Files Changed:
@@ -543,7 +618,7 @@ ${targetFiles.map(f => `- ${f.filename}: ${f.status} (+${f.additions}/-${f.delet
 1. **Scope Correct**: Were only the necessary files modified in target?
 2. **Position Correct**: Do changes appear in the same sections/locations as source?
 3. **Structure Preserved**: Is the document structure (headings, sections) maintained?
-4. **Heading-map Correct**: Is the heading-map updated appropriately?
+4. **Heading-map Correct**: Is the \`translation.headings\` map updated appropriately?
 
 ## Response Format
 Respond with ONLY valid JSON:

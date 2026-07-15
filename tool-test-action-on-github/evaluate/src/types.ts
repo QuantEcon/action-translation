@@ -76,6 +76,12 @@ export interface EvaluationReport {
   sourceRepo: string;
   targetRepo: string;
   prPairsEvaluated: number;
+  /**
+   * Pairs that were matched but threw during evaluation. They contribute to NO score
+   * below, so a reader comparing this report's denominator against a baseline needs to
+   * see them — otherwise a partial run reads as a clean one.
+   */
+  droppedPairs?: Array<{ sourceNumber: number; title: string; error: string }>;
   results: EvaluationResult[];
   summary: {
     passed: number;
@@ -94,5 +100,5 @@ export interface EvaluationOptions {
   postReviews: boolean; // Post review comments to translation PRs
   outputFile?: string; // Path for report output
   maxSuggestions: number; // Maximum number of suggestions per evaluation (default: 5)
-  model?: string; // Claude model to use for evaluation (default: opus-4-5)
+  model?: string; // Claude model used to GRADE translations (default: DEFAULT_EVALUATOR_MODEL)
 }
