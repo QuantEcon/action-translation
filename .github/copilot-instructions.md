@@ -226,7 +226,14 @@ Before creating a release, verify the following:
 2. **Version bumped** — update `package.json`, this file (`copilot-instructions.md`), and `.dev/PLAN.md`
 3. **Tests pass** — run `npm test` and confirm all tests pass
 4. **Build succeeds** — run `npm run build` to compile TypeScript and update `dist-action/`
-5. **Commit, tag, push** — commit all changes, create git tag `vX.Y.Z`, push with `--tags`; **also move the floating tags** `vX.Y` and `v0` to the release commit (`git tag -f v0 vX.Y.Z && git push -f origin v0` etc.) — the README quickstart recommends `@v0`, and it went stale for 9 releases once
+5. **Commit, tag, push** — commit all changes, create git tag `vX.Y.Z`, push with `--tags`; **then move both floating tags** to the release commit:
+
+   ```bash
+   git tag -f vX.Y vX.Y.Z && git push -f origin vX.Y   # e.g. v0.16
+   git tag -f v0   vX.Y.Z && git push -f origin v0
+   ```
+
+   The README quickstart recommends `@v0`; it went stale for 9 releases once (stuck at v0.7.0-era code through v0.16.0).
 6. **Create GitHub release** — `gh release create vX.Y.Z --title "..." --notes-file .dev/scratch/release-notes.md`
 
 ---
