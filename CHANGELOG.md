@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.16.1] - 2026-07-15
+### Fixed
+- **Concurrent review runs no longer post duplicate review comments**: `postReviewComment` listed comments, looked for its own, then created one if absent — a check-then-act with nothing making it atomic, so every concurrent run saw "no comment yet" and created one. Observed on `lecture-python-programming.fr#6`, which carried two "Translation Quality Review" comments a second apart, each subsequently overwritten by a *different* run, leaving scores that matched no single review. Review comments now carry a hidden `<!-- action-translation-review -->` marker, and each run deletes any older marked comment after writing its own. Because ids increase with creation time and every run lists after it writes, the run holding the highest id always sees and removes the rest: exactly one comment survives any interleaving. Pre-existing duplicates (from v0.16.1 and earlier, which have no marker) are cleaned up on the next review of that PR.
+
+### Changed
+- **Review comments are identified by marker, not prose**: the old predicate matched any comment containing both "Translation Quality Review" and "action-translation" anywhere in its body — it could match, and overwrite, a human comment quoting a review. Matching is now anchored at the start of the body, so quoted or reposted reviews are never touched.
+- **Review workflow templates gained a `concurrency` group** (docs): the action-side fix converges the *comment*, but each racing run still pays for a full review. A per-PR `concurrency` group with `cancel-in-progress` collapses the `opened` and `labeled` events a single sync produces into one review. The `connect-existing` template additionally ignores `labeled` events for labels other than `action-translation` — it triggers on `labeled` (necessary, since labels are applied after the PR is opened), and a sync applying two labels was starting a full review per label. Templates now also declare `permissions` explicitly (`pull-requests: write`, required to remove duplicate comments). Existing target repos should copy these guards; without them a sync bills several reviews of the same diff.
 
 ### Fixed
 - **French typography no longer corrupts footnote/link-reference definitions**: the NBSP pass rewrote `[^id]: text` as `[^id] : text`, which stops the line parsing as a definition — it rendered as literal text and broke every reference (shipped in the fr seed, e.g. `pandas.md`). Definition labels are now masked, and the exact corruption is repaired on contact, so running `scripts/typography/apply.mjs` over an affected repo heals it. The definition text after the colon is still typeset.

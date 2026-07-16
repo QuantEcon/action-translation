@@ -78,6 +78,15 @@ jobs:
     if: contains(github.event.pull_request.labels.*.name, 'action-translation')
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      pull-requests: write
+
+    # One review per PR — supersede an in-flight review instead of running both
+    concurrency:
+      group: review-translations-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+
     steps:
       - uses: actions/checkout@v4
         with:
