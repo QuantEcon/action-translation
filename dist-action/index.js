@@ -30777,6 +30777,168 @@ var DiffDetector = class {
   }
 };
 
+// dist/typography.js
+var NBSP = "\xA0";
+var EXISTING_NBSP = /[\u00A0\u202F]/;
+var HIGH_PUNCTUATION = /[;:!?]/;
+var PROSE_DIRECTIVES = /* @__PURE__ */ new Set([
+  "admonition",
+  "attention",
+  "caution",
+  "danger",
+  "error",
+  "hint",
+  "important",
+  "note",
+  "seealso",
+  "tip",
+  "warning",
+  "exercise",
+  "exercise-start",
+  "exercise-end",
+  "solution",
+  "solution-start",
+  "solution-end",
+  "epigraph",
+  "margin",
+  "sidebar",
+  "topic",
+  "card",
+  "grid-item-card",
+  "proof",
+  "theorem",
+  "lemma",
+  "corollary",
+  "definition",
+  "remark",
+  "conjecture"
+]);
+var FENCE_OPEN = /^(\s{0,3})(`{3,}|~{3,}|:{3,})\s*(?:\{([\w:-]+)\})?/;
+var DIRECTIVE_OPTION = /^\s*:[a-zA-Z][\w-]*:/;
+var MATH_DELIM = /\$\$/g;
+function classifyLines(lines) {
+  const eligible = new Array(lines.length).fill(false);
+  const stack = [];
+  let inFrontmatter = false;
+  let inMathBlock = false;
+  let awaitingOptions = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (i === 0 && line.trim() === "---") {
+      inFrontmatter = true;
+      continue;
+    }
+    if (inFrontmatter) {
+      if (line.trim() === "---")
+        inFrontmatter = false;
+      continue;
+    }
+    const top = stack[stack.length - 1];
+    const open = FENCE_OPEN.exec(line);
+    if (top && !top.prose) {
+      if (open) {
+        const [, , marker, directive] = open;
+        if (!directive && marker[0] === top.marker[0] && marker.length >= top.marker.length)
+          stack.pop();
+      }
+      continue;
+    }
+    const delimiters = (line.match(MATH_DELIM) || []).length;
+    if (inMathBlock || delimiters > 0) {
+      if (delimiters % 2 === 1)
+        inMathBlock = !inMathBlock;
+      continue;
+    }
+    if (open) {
+      const [, , marker, directive] = open;
+      if (top && !directive && marker[0] === top.marker[0] && marker.length >= top.marker.length) {
+        stack.pop();
+        continue;
+      }
+      const prose = Boolean(directive) && PROSE_DIRECTIVES.has(directive.toLowerCase());
+      stack.push({ marker, prose });
+      awaitingOptions = prose;
+      continue;
+    }
+    if (!top) {
+      eligible[i] = true;
+      continue;
+    }
+    if (awaitingOptions) {
+      if (DIRECTIVE_OPTION.test(line))
+        continue;
+      if (line.trim() === "")
+        continue;
+      awaitingOptions = false;
+    }
+    eligible[i] = true;
+  }
+  return eligible;
+}
+var INLINE_PROTECTED = [
+  /\$[^$\n]+\$/g,
+  // inline math
+  /`[^`\n]+`/g,
+  // inline code — also covers MyST roles: {doc}`intro <sec:intro>`
+  /!?\[[^\]]*\]\([^)]*\)/g,
+  // links and images, including the URL
+  /<[^>\n]+>/g,
+  // HTML tags and autolinks
+  /&(?:[a-zA-Z]+\d*|#\d+|#x[0-9a-fA-F]+);/g,
+  // HTML entities — &nbsp; ends in ;
+  /https?:\/\/\S+/g
+  // bare URLs
+];
+var PLACEHOLDER = "\0";
+function applyFrenchSpacing(text) {
+  return text.replace(/(\S)([ \t]*)([;:!?]+)(?=[\s)\]»"'.,]|$)/g, (match, before, gap, run2) => {
+    if (EXISTING_NBSP.test(before))
+      return match;
+    if (before === "\\")
+      return match;
+    if (HIGH_PUNCTUATION.test(before))
+      return match;
+    if (gap.length === 0 && /\d/.test(before) && run2 === ":")
+      return match;
+    return `${before}${NBSP}${run2}`;
+  });
+}
+var DEFINITION_LABEL = /^\s{0,3}\[[^\]]*\]:/;
+var DEFINITION_CORRUPTED = /^(\s{0,3}\[[^\]]*\])[\u00A0\u202F]+:/;
+function applyToProse(line, rule) {
+  const chunks = [];
+  let masked = line.replace(DEFINITION_CORRUPTED, "$1:");
+  masked = masked.replace(DEFINITION_LABEL, (m) => {
+    chunks.push(m);
+    return `${PLACEHOLDER}${chunks.length - 1}${PLACEHOLDER}`;
+  });
+  for (const pattern of INLINE_PROTECTED) {
+    masked = masked.replace(pattern, (m) => {
+      chunks.push(m);
+      return `${PLACEHOLDER}${chunks.length - 1}${PLACEHOLDER}`;
+    });
+  }
+  if (/^\s*\([^)\n]*\)=\s*$/.test(masked))
+    return line;
+  let out = rule(masked);
+  for (let i = 0; i < INLINE_PROTECTED.length + 1; i++) {
+    const next = out.replace(new RegExp(`${PLACEHOLDER}(\\d+)${PLACEHOLDER}`, "g"), (_, idx) => chunks[Number(idx)] ?? "");
+    if (next === out)
+      break;
+    out = next;
+  }
+  return out;
+}
+var RULES = /* @__PURE__ */ new Map([["fr", applyFrenchSpacing]]);
+function applyTypography(content, language) {
+  const rule = RULES.get(language);
+  if (!rule)
+    return content;
+  const lines = content.split("\n");
+  const eligible = classifyLines(lines);
+  return lines.map((line, i) => eligible[i] ? applyToProse(line, rule) : line).join("\n");
+}
+
 // dist/file-processor.js
 var core6 = __toESM(require_core(), 1);
 
@@ -34335,7 +34497,13 @@ ${bodyLines.join("\n")}`;
     this.log(`Updated heading map to ${finalHeadingMap.size} entries`);
     this.log(`Reconstructing complete document`);
     const reconstructed = this.reconstructFromComponents(resultConfig, resultPreTitle, resultTitle, resultIntro, resultSections);
-    return injectHeadingMap(reconstructed, finalHeadingMap, resultTitleText);
+    const typeset = applyTypography(reconstructed, targetLanguage);
+    const typesetHeadingMap = new Map([...finalHeadingMap].map(([source, translated]) => [
+      source,
+      applyTypography(translated, targetLanguage)
+    ]));
+    const typesetTitleText = applyTypography(resultTitleText, targetLanguage);
+    return injectHeadingMap(typeset, typesetHeadingMap, typesetTitleText);
   }
   /**
    * Helper: Translate a new section
@@ -34406,7 +34574,7 @@ ${bodyLines.join("\n")}`;
     if (!result.success) {
       throw new Error(`Full translation failed: ${result.error}`);
     }
-    const translatedContent = result.translatedSection || "";
+    const translatedContent = applyTypography(result.translatedSection || "", targetLanguage);
     try {
       const sourceParsed = await this.parser.parseDocumentComponents(content, filepath);
       const translatedParsed = await this.parser.parseDocumentComponents(translatedContent, filepath);

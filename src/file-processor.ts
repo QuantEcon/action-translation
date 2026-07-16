@@ -16,6 +16,7 @@ import { MystParser } from './parser.js';
 import { DiffDetector } from './diff-detector.js';
 import { TranslationService } from './translator.js';
 import { Section, Glossary, RebaseCacheData } from './types.js';
+import { applyTypography } from './typography.js';
 import * as core from '@actions/core';
 import {
   extractHeadingMap,
@@ -487,8 +488,23 @@ export class FileProcessor {
       resultSections
     );
 
-    // 6. Inject updated translation metadata (title + headings) into frontmatter
-    return injectHeadingMap(reconstructed, finalHeadingMap, resultTitleText);
+    // 6. Typeset the body and the heading map together — never the body alone.
+    // applyTypography skips frontmatter, so a body-only pass would leave map
+    // values plain-spaced while body headings gained non-breaking spaces. Heading
+    // lookup is an exact string compare, so that mismatch silently drops unchanged
+    // sections and retranslates modified ones from English, discarding human
+    // edits. Same pairing as scripts/typography/apply.mjs.
+    const typeset = applyTypography(reconstructed, targetLanguage);
+    const typesetHeadingMap: HeadingMap = new Map(
+      [...finalHeadingMap].map(([source, translated]) => [
+        source,
+        applyTypography(translated, targetLanguage),
+      ])
+    );
+    const typesetTitleText = applyTypography(resultTitleText, targetLanguage);
+
+    // 7. Inject updated translation metadata (title + headings) into frontmatter
+    return injectHeadingMap(typeset, typesetHeadingMap, typesetTitleText);
   }
 
   /**
@@ -606,7 +622,9 @@ export class FileProcessor {
       throw new Error(`Full translation failed: ${result.error}`);
     }
 
-    const translatedContent = result.translatedSection || '';
+    // Apply deterministic typography before anything derives from the text, so the
+    // heading map is built from the same strings that land in the body.
+    const translatedContent = applyTypography(result.translatedSection || '', targetLanguage);
 
     // Build heading-map from source and translated sections.
     // Wrapped in try/catch so a malformed translation (e.g. missing # title)
