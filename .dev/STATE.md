@@ -7,6 +7,10 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## In flight
 
+- **PR #98** — #96: duplicate review comments under concurrent runs (unsynchronised upsert).
+  Marker + delete-older-ids reconciliation; also adds the `concurrency` group missing from
+  all four review workflow templates, which is where `.fr`/`.fa` inherited the 5x review
+  spend. Decision: `decisions/D-2026-07-16-single-review-comment.md`.
 - **PR #78** — fr programming-domain glossary terms; awaiting native review.
 - **PR #71** — Malayalam (`ml`) draft; awaiting native-reviewer calibration batch.
   Glossary PR **#69** (ja) open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
@@ -53,7 +57,9 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   Phase 2 round-trip test would catch three of them as a class, so Phase 2 first.
 - Smaller review-round follow-ups: **#91** (heading-maps.md documents a key format the action
   has never written — nearly caused a bad rubric fix), **#92** (PR creation reports failure
-  when the API times out *after* succeeding; naive retry would duplicate).
+  when the API times out *after* succeeding; naive retry would duplicate — #96 flags a
+  possible second sighting: four `labeled` events recorded for two `addLabels` calls,
+  unreproduced, mechanism unknown).
 - Earlier review-round issues: **#81** (typography on sync path), **#82** (model-swap
   eval — see REVIEW §7.4 for a concrete deterministic design).
 
