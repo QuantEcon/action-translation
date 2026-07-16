@@ -606,3 +606,93 @@ Contenu tout neuf.`;
     expect(result).toContain('Contenu tout neuf.');
   });
 });
+
+describe('subsection merge fallback substitutes headings consistently (#100 review)', () => {
+  let processor: FileProcessor;
+  let mockTranslator: jest.Mocked<TranslationService>;
+
+  beforeEach(() => {
+    mockTranslator = {
+      translateSection: jest.fn(),
+      translateFullDocument: jest.fn(),
+    } as any;
+    processor = new FileProcessor(mockTranslator, false);
+  });
+
+  const oldSource = `---
+title: T
+---
+
+# Lecture
+
+Intro.
+
+## Sec
+
+Sec content OLD.
+
+### Sub One
+
+Sub one content.
+
+### {index}\`Sub Two <single: Sub Two>\`
+
+Sub two content.`;
+
+  const newSource = oldSource.replace('Sec content OLD.', 'Sec content NEW.');
+
+  // Target: the section exists but its subsections were never translated into
+  // the body; the heading map still knows their translations.
+  const target = `---
+title: T
+translation:
+  title: Cours
+  headings:
+    Sec: Section fr
+    Sec::Sub One: Sous-section un
+    Sec::Sub Two: Sous-section deux
+---
+
+# Cours
+
+Intro fr.
+
+## Section fr
+
+Contenu de section.`;
+
+  it('writes the map heading into the body for role-free subsections, keeps roles as source', async () => {
+    // Model returns the section without its subsections → count mismatch →
+    // merge fallback consults the heading map.
+    mockTranslator.translateSection.mockResolvedValue({
+      success: true,
+      translatedSection: '## Section fr\n\nContenu de section, mis \u00e0 jour.',
+    });
+
+    const out = await processor.processSectionBased(
+      oldSource,
+      newSource,
+      target,
+      'test.md',
+      'en',
+      'fr'
+    );
+
+    // Role-free subsection: the map's translated heading must land in the BODY
+    // (serializeSection writes .content), not just the .heading field — a
+    // field-only swap leaves the body English while the map records French,
+    // and the next sync cannot match the section.
+    expect(out).toContain('### Sous-section un');
+    expect(out).not.toContain('### Sub One');
+
+    // Role-wrapped subsection: map values are role-stripped, so substituting
+    // would drop the {index} wrapper — kept as source instead.
+    expect(out).toContain('{index}`Sub Two <single: Sub Two>`');
+    expect(out).not.toContain('### Sous-section deux');
+
+    // The frontmatter map must agree with what actually landed in the body.
+    const map = extractHeadingMap(out);
+    expect(map.get('Sec::Sub One')).toBe('Sous-section un');
+    expect(map.get('Sec::Sub Two')).toBe('Sub Two');
+  });
+});

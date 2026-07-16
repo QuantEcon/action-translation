@@ -34466,10 +34466,20 @@ ${bodyLines.join("\n")}`;
             const sourcePath = parentPath ? `${parentPath}::${sourceHeading}` : sourceHeading;
             const chineseHeading = headingMap.get(sourcePath);
             if (chineseHeading) {
-              this.log(`Found Chinese heading in map for: ${sourcePath} \u2192 ${chineseHeading}`);
+              const bareHeading = sourceSub.heading.replace(/^#+\s+/, "").trim();
+              if (bareHeading !== cleanHeadingText(sourceSub.heading)) {
+                return sourceSub;
+              }
+              this.log(`Found translated heading in map for: ${sourcePath} \u2192 ${chineseHeading}`);
+              const translatedHeadingLine = sourceSub.heading.replace(/^(#+\s+).*/, `$1${chineseHeading}`);
               return {
                 ...sourceSub,
-                heading: sourceSub.heading.replace(/^(#+\s+).*/, `$1${chineseHeading}`),
+                heading: translatedHeadingLine,
+                // serializeSection writes .content, whose first line is the
+                // heading — the substitution must land there too, or the body
+                // keeps the English heading while updateHeadingMap records the
+                // translated one and the next sync can't match the section.
+                content: sourceSub.content.replace(/^#+[^\n]*/, translatedHeadingLine),
                 subsections: mergeSubsectionsWithTargetTranslations(sourceSub.subsections, [], sourcePath)
               };
             }

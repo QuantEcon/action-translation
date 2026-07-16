@@ -408,11 +408,26 @@ export class FileProcessor {
             const chineseHeading = headingMap.get(sourcePath);
 
             if (chineseHeading) {
-              // Found in heading-map - use Chinese heading from map
-              this.log(`Found Chinese heading in map for: ${sourcePath} → ${chineseHeading}`);
+              // Map values are role-stripped display text: substituting one
+              // into a role-wrapped heading would drop the {role} wrapper.
+              // Keep those as source (pre-existing behavior for map misses).
+              const bareHeading = sourceSub.heading.replace(/^#+\s+/, '').trim();
+              if (bareHeading !== cleanHeadingText(sourceSub.heading)) {
+                return sourceSub;
+              }
+              this.log(`Found translated heading in map for: ${sourcePath} → ${chineseHeading}`);
+              const translatedHeadingLine = sourceSub.heading.replace(
+                /^(#+\s+).*/,
+                `$1${chineseHeading}`
+              );
               return {
                 ...sourceSub,
-                heading: sourceSub.heading.replace(/^(#+\s+).*/, `$1${chineseHeading}`),
+                heading: translatedHeadingLine,
+                // serializeSection writes .content, whose first line is the
+                // heading — the substitution must land there too, or the body
+                // keeps the English heading while updateHeadingMap records the
+                // translated one and the next sync can't match the section.
+                content: sourceSub.content.replace(/^#+[^\n]*/, translatedHeadingLine),
                 subsections: mergeSubsectionsWithTargetTranslations(
                   sourceSub.subsections,
                   [],
