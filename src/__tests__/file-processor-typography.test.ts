@@ -13,7 +13,7 @@ import { FileProcessor } from '../file-processor.js';
 import { TranslationService } from '../translator.js';
 import { extractHeadingMap, extractTranslationTitle } from '../heading-map.js';
 
-const NBSP = ' ';
+const NBSP = '\u00A0';
 
 describe('FileProcessor typography (issue #97)', () => {
   let processor: FileProcessor;
