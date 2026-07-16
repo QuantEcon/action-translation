@@ -21,6 +21,46 @@ export const PATH_SEPARATOR = '::';
 export type HeadingMap = Map<string, string>;
 
 /**
+ * Normalize a heading for matching — never for what gets written out.
+ * A frontmatter map value and its body heading can legitimately disagree on
+ * whitespace and role markup: applyTypography masks role spans while
+ * stripMystRoles later exposes their display text, scripts/typography/apply.mjs
+ * typesets map values independently of the body, and human edits touch only one
+ * side. Matching is how sync locates existing translations, and a mismatch
+ * silently drops unchanged sections or retranslates modified ones from source.
+ *
+ * Comparisons therefore strip `#` markers and MyST roles, fold NBSP and
+ * narrow-NBSP to plain spaces, collapse whitespace runs, and drop spaces
+ * before the high punctuation `; : ! ?` — every shape French typography can
+ * produce or consume (`Quoi\u00A0?!` gains an NBSP where the model emitted no
+ * space at all, `Alpha  :` has its run collapsed), so all typography-variants
+ * of one heading normalize identically. Written map values stay as typeset.
+ *
+ * Known asymmetry, accepted: display text beginning with `# ` (a role wrapping
+ * `# Comments`) loses that prefix when a bare map value is normalized but keeps
+ * it when a `##`-marked body heading is — the marker strip runs before
+ * role-stripping exposes the text. Callers needing those to match compare
+ * exactly first.
+ */
+export function normalizeHeadingForMatch(heading: string): string {
+  return MystParser.stripMystRoles(heading.replace(/^#+\s+/, ''))
+    .replace(/[\u00A0\u202F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/ ([;:!?])/g, '$1')
+    .trim();
+}
+
+/**
+ * Clean a heading exactly the way heading-map KEYS and VALUES are written:
+ * strip the `#` marker and MyST roles, trim — nothing else. Use this (not
+ * normalizeHeadingForMatch) when building a key for `headingMap.get()`: stored
+ * keys are not whitespace-normalized, so a folded key would miss them.
+ */
+export function cleanHeadingText(heading: string): string {
+  return MystParser.stripMystRoles(heading.replace(/^#+\s+/, '').trim());
+}
+
+/**
  * Extract heading map from target document frontmatter.
  * Reads from `translation.headings` (new format) with `heading-map` fallback (legacy).
  */

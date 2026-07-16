@@ -183,3 +183,33 @@ describe('section-matcher', () => {
     });
   });
 });
+
+describe('validateMatchesWithHeadingMap — normalization (issue #97 follow-up)', () => {
+  const NBSP = '\u00A0';
+  const mk = (heading: string, id: string) =>
+    ({ heading, content: 'c', level: 2, id, startLine: 0, endLine: 0, subsections: [] }) as Section;
+
+  it('finds the map entry for a role-wrapped source heading', () => {
+    // Keys are stored role-stripped; the raw lookup used to miss and silently
+    // skip validation. A true mismatch behind a role must now warn.
+    const pairs = matchSections(
+      [mk('## {index}`Overview <single: Overview>`', 'overview')],
+      [mk('## Autre chose', 'autre')]
+    );
+    const warnings = validateMatchesWithHeadingMap(pairs, new Map([['Overview', 'Aper\u00e7u']]));
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('Aper\u00e7u');
+  });
+
+  it('does not warn when map value and body heading differ only by typography', () => {
+    const pairs = matchSections(
+      [mk('## Why Bother?', 'why')],
+      [mk("## Pourquoi s'emb\u00eater ?", 'pourquoi')]
+    );
+    const warnings = validateMatchesWithHeadingMap(
+      pairs,
+      new Map([['Why Bother?', `Pourquoi s'emb\u00eater${NBSP}?`]])
+    );
+    expect(warnings).toHaveLength(0);
+  });
+});

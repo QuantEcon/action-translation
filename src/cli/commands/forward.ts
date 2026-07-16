@@ -31,6 +31,7 @@ import { runStatus } from './status.js';
 import { writeFileState } from '../translate-state.js';
 import { getFileGitMetadata } from '../git-metadata.js';
 import { MystParser } from '../../parser.js';
+import { applyTypography } from '../../typography.js';
 import {
   createForwardPR,
   gitPrepareAndPush,
@@ -147,7 +148,11 @@ export async function resyncSingleFile(
     });
 
     if (result.success && result.translatedSection) {
-      outputContent = result.translatedSection;
+      // Apply deterministic typography before anything derives from the text —
+      // the model does not honour the NBSP prompt rule, and every other write
+      // path (init, sync, apply.mjs) already typesets. Frontmatter (including
+      // the preserved heading map) is skipped by the transform.
+      outputContent = applyTypography(result.translatedSection, options.language);
       tokensUsed = result.tokensUsed;
       logger.info(`  ✅ Resync complete (${tokensUsed?.toLocaleString()} tokens)`);
     } else {

@@ -34002,6 +34002,12 @@ var {
 
 // dist/heading-map.js
 var PATH_SEPARATOR = "::";
+function normalizeHeadingForMatch(heading) {
+  return MystParser.stripMystRoles(heading.replace(/^#+\s+/, "")).replace(/[\u00A0\u202F]/g, " ").replace(/\s+/g, " ").replace(/ ([;:!?])/g, "$1").trim();
+}
+function cleanHeadingText(heading) {
+  return MystParser.stripMystRoles(heading.replace(/^#+\s+/, "").trim());
+}
 function extractHeadingMap(content) {
   const map2 = /* @__PURE__ */ new Map();
   const frontmatterMatch = content.match(/^---\n(.*?)\n---/s);
@@ -34357,7 +34363,14 @@ var FileProcessor = class {
           const sourceHeading = MystParser.stripMystRoles(newSection.heading.replace(/^#+\s+/, "").trim());
           const translatedHeading = cachedHeadingMap.get(sourceHeading);
           if (translatedHeading) {
-            const cachedSection = cachedParsed.sections.find((s) => MystParser.stripMystRoles(s.heading.replace(/^#+\s+/, "").trim()) === translatedHeading);
+            const wantedCached = normalizeHeadingForMatch(translatedHeading);
+            let cachedSection = cachedParsed.sections.find((s) => cleanHeadingText(s.heading) === translatedHeading);
+            if (!cachedSection) {
+              const normalizedCached = cachedParsed.sections.filter((s) => normalizeHeadingForMatch(s.heading) === wantedCached);
+              if (normalizedCached.length === 1) {
+                cachedSection = normalizedCached[0];
+              }
+            }
             if (cachedSection) {
               resultSections.push(cachedSection);
               includedSourceSections.push(newSection);
@@ -34433,7 +34446,7 @@ ${bodyLines.join("\n")}`;
         };
         const mergeSubsectionsWithTargetTranslations = (sourceSubs, targetSubs, parentPath = "") => {
           return sourceSubs.map((sourceSub, i2) => {
-            const sourceHeading = sourceSub.heading.replace(/^#+\s+/, "");
+            const sourceHeading = cleanHeadingText(sourceSub.heading);
             const targetSub = targetSubs[i2];
             if (targetSub) {
               const currentPath = parentPath ? `${parentPath}::${sourceHeading}` : sourceHeading;
@@ -34453,10 +34466,20 @@ ${bodyLines.join("\n")}`;
             const sourcePath = parentPath ? `${parentPath}::${sourceHeading}` : sourceHeading;
             const chineseHeading = headingMap.get(sourcePath);
             if (chineseHeading) {
-              this.log(`Found Chinese heading in map for: ${sourcePath} \u2192 ${chineseHeading}`);
+              const bareHeading = sourceSub.heading.replace(/^#+\s+/, "").trim();
+              if (bareHeading !== cleanHeadingText(sourceSub.heading)) {
+                return sourceSub;
+              }
+              this.log(`Found translated heading in map for: ${sourcePath} \u2192 ${chineseHeading}`);
+              const translatedHeadingLine = sourceSub.heading.replace(/^(#+\s+).*/, `$1${chineseHeading}`);
               return {
                 ...sourceSub,
-                heading: sourceSub.heading.replace(/^(#+\s+).*/, `$1${chineseHeading}`),
+                heading: translatedHeadingLine,
+                // serializeSection writes .content, whose first line is the
+                // heading — the substitution must land there too, or the body
+                // keeps the English heading while updateHeadingMap records the
+                // translated one and the next sync can't match the section.
+                content: sourceSub.content.replace(/^#+[^\n]*/, translatedHeadingLine),
                 subsections: mergeSubsectionsWithTargetTranslations(sourceSub.subsections, [], sourcePath)
               };
             }
@@ -34655,11 +34678,21 @@ ${translatedContent}`;
       for (const targetSection of targetSections) {
         const cleanTargetHeading = targetSection.heading.replace(/^#+\s+/, "").trim();
         if (cleanTargetHeading === translatedHeading) {
-          this.log(`  \u2713 Found by heading map: "${translatedHeading}"`);
+          this.log(`  \u2713 Found by heading map (exact): "${translatedHeading}"`);
           return targetSection;
         }
       }
-      this.log(`  \u2717 Not found by heading map`);
+      const wantedHeading = normalizeHeadingForMatch(translatedHeading);
+      const normalizedMatches = targetSections.filter((t) => normalizeHeadingForMatch(t.heading) === wantedHeading);
+      if (normalizedMatches.length === 1) {
+        this.log(`  \u2713 Found by heading map (normalized): "${translatedHeading}"`);
+        return normalizedMatches[0];
+      }
+      if (normalizedMatches.length > 1) {
+        this.log(`  \u2717 ${normalizedMatches.length} sections normalize to "${wantedHeading}" \u2014 ambiguous, falling through`);
+      } else {
+        this.log(`  \u2717 Not found by heading map`);
+      }
     } else {
       this.log(`  Strategy 1: No heading map entry for "${sourceSection.heading.replace(/^#+\s+/, "").trim()}"`);
     }
