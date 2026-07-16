@@ -17,6 +17,14 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## Recently landed
 
+- **v0.17.0** (2026-07-16; tagged + published on merge of #101) — typography-erosion day:
+  #99 wired `applyTypography`
+  into the sync path (issue #97: every fr sync stripped the seed's NBSP; numba.md 27→14 in
+  one merge, restored by .fr#9 backfill), #100 made heading matching typography-insensitive
+  (`normalizeHeadingForMatch`, exact-first + ambiguity guard; also forward-resync typesetting,
+  headingmap/apply.mjs ping-pong, role-stripped key lookups, the deleted `[0.16.1]` CHANGELOG
+  header). #98 fixed duplicate review comments under concurrent runs. Estate pins still on
+  v0.16.1 — bumping them is the natural next step.
 - **Estate upgraded to v0.16.1** — all 9 pins across 4 repos (lecture-python-programming#575,
   .zh-cn#69, .fa#132, .fr#5). First time the estate is on one version; it spanned
   v0.13.0–v0.16.0 that morning. **zh-cn and fa now translate with Sonnet 5.** Deployment
