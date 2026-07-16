@@ -12,7 +12,7 @@
  */
 
 import { Section } from '../types.js';
-import { HeadingMap } from '../heading-map.js';
+import { HeadingMap, normalizeHeadingForMatch, cleanHeadingText } from '../heading-map.js';
 import { SectionPair } from './types.js';
 
 /**
@@ -88,8 +88,10 @@ export function validateMatchesWithHeadingMap(
       continue;
     }
 
-    // Extract the heading text without the ## prefix
-    const sourceHeadingText = pair.sourceSection.heading.replace(/^#+\s+/, '');
+    // Map keys are written role-stripped and trimmed (cleanHeading), so the
+    // lookup key must be built the same way — a raw role-wrapped heading would
+    // miss its entry and silently skip validation.
+    const sourceHeadingText = cleanHeadingText(pair.sourceSection.heading);
 
     // Look up in heading-map: the key is typically the source heading ID or path
     // Heading-map maps English heading text → translated heading text
@@ -97,7 +99,12 @@ export function validateMatchesWithHeadingMap(
 
     if (expectedTranslation) {
       const targetHeadingText = pair.targetSection.heading.replace(/^#+\s+/, '');
-      if (expectedTranslation !== targetHeadingText) {
+      // Normalized: a typeset map value vs a role-masked body heading is
+      // expected drift, not the structural mismatch this warning is for.
+      if (
+        normalizeHeadingForMatch(expectedTranslation) !==
+        normalizeHeadingForMatch(targetHeadingText)
+      ) {
         warnings.push(
           `Position ${pairs.indexOf(pair)}: heading-map expected "${expectedTranslation}" ` +
             `for "${sourceHeadingText}", but found "${targetHeadingText}"`

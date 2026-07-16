@@ -1,10 +1,12 @@
 import {
+  cleanHeadingText,
   extractHeadingMap,
   extractTranslationTitle,
   updateHeadingMap,
   serializeHeadingMap,
   lookupTargetHeading,
   injectHeadingMap,
+  normalizeHeadingForMatch,
 } from '../heading-map.js';
 import { Section } from '../types.js';
 
@@ -1067,5 +1069,83 @@ Content`;
       expect(result).toContain('translation:');
       expect(result).toContain('title: 经济学导论');
     });
+  });
+});
+
+describe('normalizeHeadingForMatch', () => {
+  const NBSP = '\u00A0';
+  const NNBSP = '\u202F';
+
+  it('folds non-breaking spaces into the canonical form', () => {
+    // Canonical form also drops the space before high punctuation, so every
+    // typography variant (plain, NBSP, narrow-NBSP, zero-gap) collides.
+    expect(normalizeHeadingForMatch(`Exemple${NBSP}: le chaos`)).toBe('Exemple: le chaos');
+    expect(normalizeHeadingForMatch(`Vraiment${NNBSP}?`)).toBe('Vraiment?');
+  });
+
+  it('makes a typeset map value match a plain-spaced body heading', () => {
+    const mapValue = `Pourquoi s'emb\u00eater${NBSP}?`;
+    const bodyHeading = "## Pourquoi s'emb\u00eater ?";
+    expect(normalizeHeadingForMatch(mapValue)).toBe(normalizeHeadingForMatch(bodyHeading));
+  });
+
+  it('strips markers and MyST roles, so a role-wrapped body heading matches its map value', () => {
+    // The map stores the role-stripped display text; the body keeps the role.
+    // applyTypography masks role spans, so only the map side can gain an NBSP.
+    const bodyHeading =
+      '## {index}`POO II : Construire des classes <single: POO II: Building Classes>`';
+    const mapValue = `POO II${NBSP}: Construire des classes`;
+    expect(normalizeHeadingForMatch(bodyHeading)).toBe(normalizeHeadingForMatch(mapValue));
+  });
+
+  it('is stable on already-plain headings', () => {
+    expect(normalizeHeadingForMatch('## Overview')).toBe('Overview');
+    expect(normalizeHeadingForMatch('Overview')).toBe('Overview');
+  });
+});
+
+describe('normalizeHeadingForMatch — typography-variant canonicalization', () => {
+  const NBSP = '\u00A0';
+  const NNBSP = '\u202F';
+
+  it('matches a zero-gap heading against its typeset form', () => {
+    // applyTypography inserts an NBSP where the model emitted no space at all.
+    expect(normalizeHeadingForMatch('Quoi?!')).toBe(normalizeHeadingForMatch(`Quoi${NBSP}?!`));
+    expect(normalizeHeadingForMatch("Pourquoi s'emb\u00eater?")).toBe(
+      normalizeHeadingForMatch(`Pourquoi s'emb\u00eater${NBSP}?`)
+    );
+  });
+
+  it('collapses whitespace runs the transform would collapse', () => {
+    expect(normalizeHeadingForMatch('Alpha  : x')).toBe(
+      normalizeHeadingForMatch(`Alpha${NBSP}: x`)
+    );
+  });
+
+  it('treats all three space variants before high punctuation as one heading', () => {
+    const variants = [
+      'Exemple : chaos',
+      `Exemple${NBSP}: chaos`,
+      `Exemple${NNBSP}: chaos`,
+      'Exemple: chaos',
+    ];
+    const normalized = variants.map(normalizeHeadingForMatch);
+    expect(new Set(normalized).size).toBe(1);
+  });
+
+  it('does not conflate genuinely different headings', () => {
+    expect(normalizeHeadingForMatch('Exemple : chaos')).not.toBe(
+      normalizeHeadingForMatch('Exemple : ordre')
+    );
+  });
+});
+
+describe('cleanHeadingText', () => {
+  it('strips markers and roles, preserves interior whitespace exactly', () => {
+    const NBSP = '\u00A0';
+    expect(cleanHeadingText('## {index}`Overview <single: Overview>`')).toBe('Overview');
+    // Unlike normalizeHeadingForMatch, typeset spacing survives — keys/values
+    // in the map are stored this way.
+    expect(cleanHeadingText(`## Exemple${NBSP}: chaos`)).toBe(`Exemple${NBSP}: chaos`);
   });
 });

@@ -24,6 +24,8 @@ import {
   lookupTargetHeading,
   injectHeadingMap,
   buildHeadingMap,
+  normalizeHeadingForMatch,
+  cleanHeadingText,
   HeadingMap,
 } from './heading-map.js';
 
@@ -239,11 +241,21 @@ export class FileProcessor {
           );
           const translatedHeading = cachedHeadingMap.get(sourceHeading);
           if (translatedHeading) {
-            const cachedSection = cachedParsed.sections.find(
-              (s) =>
-                MystParser.stripMystRoles(s.heading.replace(/^#+\s+/, '').trim()) ===
-                translatedHeading
+            // Exact (pre-normalization semantics) first, then normalized only
+            // when unambiguous: reusing the wrong cached section would commit a
+            // wrong translation, while a miss merely costs one Claude call.
+            const wantedCached = normalizeHeadingForMatch(translatedHeading);
+            let cachedSection = cachedParsed.sections.find(
+              (s) => cleanHeadingText(s.heading) === translatedHeading
             );
+            if (!cachedSection) {
+              const normalizedCached = cachedParsed.sections.filter(
+                (s) => normalizeHeadingForMatch(s.heading) === wantedCached
+              );
+              if (normalizedCached.length === 1) {
+                cachedSection = normalizedCached[0];
+              }
+            }
             if (cachedSection) {
               resultSections.push(cachedSection);
               includedSourceSections.push(newSection);
@@ -373,7 +385,9 @@ export class FileProcessor {
           parentPath: string = ''
         ): Section[] => {
           return sourceSubs.map((sourceSub, i) => {
-            const sourceHeading = sourceSub.heading.replace(/^#+\s+/, '');
+            // Map keys are written role-stripped (cleanHeading), so the lookup
+            // path must be built the same way or role-wrapped headings miss.
+            const sourceHeading = cleanHeadingText(sourceSub.heading);
             const targetSub = targetSubs[i];
 
             if (targetSub) {
@@ -751,15 +765,37 @@ ${translatedContent}`;
     if (translatedHeading) {
       this.log(`  Strategy 1: Looking for translated heading: "${translatedHeading}"`);
 
-      // Search for the translated heading in target sections
+      // Exact match first: raw-distinct headings that normalization would
+      // conflate (duplicated display text under different roles, NBSP-vs-plain
+      // pairs) keep their old, correct pairing.
       for (const targetSection of targetSections) {
         const cleanTargetHeading = targetSection.heading.replace(/^#+\s+/, '').trim();
         if (cleanTargetHeading === translatedHeading) {
-          this.log(`  ✓ Found by heading map: "${translatedHeading}"`);
+          this.log(`  ✓ Found by heading map (exact): "${translatedHeading}"`);
           return targetSection;
         }
       }
-      this.log(`  ✗ Not found by heading map`);
+
+      // Normalized match second: the map value is role-stripped and may be
+      // typeset with non-breaking spaces the role-masked body heading can never
+      // carry. Only accepted when unambiguous — matching the wrong section
+      // overwrites a different section's translation, which is strictly worse
+      // than falling through to the ID/position strategies.
+      const wantedHeading = normalizeHeadingForMatch(translatedHeading);
+      const normalizedMatches = targetSections.filter(
+        (t) => normalizeHeadingForMatch(t.heading) === wantedHeading
+      );
+      if (normalizedMatches.length === 1) {
+        this.log(`  ✓ Found by heading map (normalized): "${translatedHeading}"`);
+        return normalizedMatches[0];
+      }
+      if (normalizedMatches.length > 1) {
+        this.log(
+          `  ✗ ${normalizedMatches.length} sections normalize to "${wantedHeading}" — ambiguous, falling through`
+        );
+      } else {
+        this.log(`  ✗ Not found by heading map`);
+      }
     } else {
       this.log(
         `  Strategy 1: No heading map entry for "${sourceSection.heading.replace(/^#+\s+/, '').trim()}"`

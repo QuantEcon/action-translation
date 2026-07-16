@@ -943,3 +943,43 @@ describe('Title-only files', () => {
     expect(second.summary.unchanged).toBe(1);
   });
 });
+
+describe('typography-variant map values (issue #97 follow-up)', () => {
+  const NBSP = '\u00A0';
+
+  test('reports unchanged when existing map differs from body only by NBSP', async () => {
+    // The existing map value is typeset; the body heading is plain because the
+    // role span masked typography. Exact equality used to report 'updated'
+    // forever, ping-ponging with scripts/typography/apply.mjs.
+    const sourceDir = path.join(tmpDir, 'source');
+    const targetDir = path.join(tmpDir, 'target');
+    const source = `---
+title: T
+---
+
+# Lecture
+
+## Why Bother?
+
+Content.`;
+    const target = `---
+title: T
+translation:
+  title: Cours
+  headings:
+    Why Bother?: "Pourquoi s'emb\u00eater${NBSP}?"
+---
+
+# Cours
+
+## Pourquoi s'emb\u00eater ?
+
+Contenu.`;
+    writeMd(path.join(sourceDir, 'lectures', 'nbsp.md'), source);
+    writeMd(path.join(targetDir, 'lectures', 'nbsp.md'), target);
+
+    const result = await generateHeadingmapForFile('nbsp.md', sourceDir, targetDir, 'lectures');
+
+    expect(result.status).toBe('unchanged');
+  });
+});

@@ -19,6 +19,7 @@ import {
   extractTranslationTitle,
   injectHeadingMap,
   buildHeadingMap,
+  normalizeHeadingForMatch,
 } from '../../heading-map.js';
 export { buildHeadingMap } from '../../heading-map.js';
 import { discoverMarkdownFiles, resolveFilePairs, applyExcludes } from './status.js';
@@ -129,10 +130,20 @@ export async function generateHeadingmapForFile(
     warnings.unshift(`Section count mismatch: ${totalSource} source vs ${totalTarget} target`);
   }
 
-  // Compare with existing heading-map and title
+  // Compare with existing heading-map and title. Normalized: the existing map
+  // holds typeset values (NBSP before high punctuation) while the freshly
+  // body-derived map can be plain where applyTypography masked a role span —
+  // an exact compare would report 'updated' forever and this command would
+  // ping-pong with scripts/typography/apply.mjs, each rewriting the other's
+  // output. Whitespace-variant values are the same entry; keep the existing.
   const existingMap = extractHeadingMap(targetContent);
   const existingTitle = extractTranslationTitle(targetContent);
-  const mapsAreEqual = areMapsEqual(existingMap, map) && existingTitle === targetTitle;
+  const titlesAreEqual =
+    existingTitle === targetTitle ||
+    (existingTitle !== undefined &&
+      targetTitle !== undefined &&
+      normalizeHeadingForMatch(existingTitle) === normalizeHeadingForMatch(targetTitle));
+  const mapsAreEqual = areMapsEqual(existingMap, map) && titlesAreEqual;
 
   if (mapsAreEqual) {
     return {
@@ -165,12 +176,19 @@ export async function generateHeadingmapForFile(
 }
 
 /**
- * Compare two heading maps for equality
+ * Compare two heading maps for equality.
+ * Values compare whitespace-normalized (see the call site) — a typeset value
+ * and its plain-spaced body derivation are the same logical entry. Keys are
+ * written identically on both sides (cleanHeading paths) and compare exactly.
  */
 function areMapsEqual(a: HeadingMap, b: HeadingMap): boolean {
   if (a.size !== b.size) return false;
   for (const [key, value] of a) {
-    if (b.get(key) !== value) return false;
+    const other = b.get(key);
+    if (other === undefined) return false;
+    if (other !== value && normalizeHeadingForMatch(other) !== normalizeHeadingForMatch(value)) {
+      return false;
+    }
   }
   return true;
 }
