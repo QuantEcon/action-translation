@@ -29038,6 +29038,19 @@ var REVIEW_RETRY_CONFIG = {
   baseDelayMs: 1e3
   // 1s, 2s, 4s with exponential backoff
 };
+var REVIEW_COMMENT_MARKER = "<!-- action-translation-review -->";
+var LEGACY_REVIEW_HEADING = /^#{2} .*Translation Quality Review/;
+var REVIEW_COMMENT_UPSERT_ATTEMPTS = 3;
+function isActionReviewComment(body) {
+  if (!body)
+    return false;
+  if (body.startsWith(REVIEW_COMMENT_MARKER))
+    return true;
+  return LEGACY_REVIEW_HEADING.test(body) && body.includes("action-translation");
+}
+function isNotFoundError(error3) {
+  return typeof error3 === "object" && error3 !== null && error3.status === 404;
+}
 function parseJsonResponse(text) {
   let parsed;
   try {
@@ -29771,32 +29784,90 @@ ${diffResult.issues.map((i) => `- ${i}`).join("\n")}`;
     return comment;
   }
   /**
-   * Post review comment on PR
+   * Our review comments on the PR, oldest first.
+   *
+   * Paginated: beyond 30 comments the existing one is missed and duplicates accumulate.
+   */
+  async listOwnReviewComments(prNumber, owner, repo) {
+    const comments = await this.octokit.paginate(this.octokit.rest.issues.listComments, {
+      owner,
+      repo,
+      issue_number: prNumber,
+      per_page: 100
+    });
+    return comments.filter((c) => isActionReviewComment(c.body)).sort((a, b) => a.id - b.id);
+  }
+  /**
+   * Delete our review comments older than `keepId` — duplicates left by concurrent runs.
+   *
+   * Best effort: a duplicate comment is not worth failing a review that posted successfully.
+   */
+  async deleteOlderReviewComments(prNumber, owner, repo, keepId) {
+    let duplicates;
+    try {
+      duplicates = (await this.listOwnReviewComments(prNumber, owner, repo)).filter((c) => c.id < keepId);
+    } catch (error3) {
+      core2.warning(`Could not check PR #${prNumber} for duplicate review comments: ${error3}`);
+      return;
+    }
+    for (const duplicate of duplicates) {
+      try {
+        await this.octokit.rest.issues.deleteComment({ owner, repo, comment_id: duplicate.id });
+        core2.info(`Removed duplicate review comment ${duplicate.id} on PR #${prNumber}`);
+      } catch (error3) {
+        if (isNotFoundError(error3))
+          continue;
+        core2.warning(`Could not remove duplicate review comment ${duplicate.id} on PR #${prNumber}: ${error3}`);
+      }
+    }
+  }
+  /**
+   * Post the review, leaving exactly one review comment on the PR.
+   *
+   * Concurrent review runs are routine — one sync fires `opened` plus a `labeled` event per
+   * label — and list-then-create is a check-then-act race: every run sees "no comment yet"
+   * and creates one (issue #96). Issue comments have no conditional-write primitive, so each
+   * run instead reconciles after writing, deleting every *older* review comment of ours.
+   * Ids increase with creation time and each run lists after it writes, so the run holding the
+   * highest id necessarily sees the others and removes them: one comment survives any
+   * interleaving. (Deleting *newer* ids instead would not converge — a run that lists before
+   * a slower run creates would leave both.)
    */
   async postReviewComment(prNumber, owner, repo, comment) {
+    const body = `${REVIEW_COMMENT_MARKER}
+${comment}`;
     try {
-      const comments = await this.octokit.paginate(this.octokit.rest.issues.listComments, {
-        owner,
-        repo,
-        issue_number: prNumber
-      });
-      const existingComment = comments.find((c) => c.body?.includes("Translation Quality Review") && c.body?.includes("action-translation"));
-      if (existingComment) {
-        await this.octokit.rest.issues.updateComment({
-          owner,
-          repo,
-          comment_id: existingComment.id,
-          body: comment
-        });
+      for (let attempt = 1; attempt <= REVIEW_COMMENT_UPSERT_ATTEMPTS; attempt++) {
+        const existing = await this.listOwnReviewComments(prNumber, owner, repo);
+        if (existing.length === 0) {
+          const { data: created } = await this.octokit.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number: prNumber,
+            body
+          });
+          core2.info(`Posted review comment on PR #${prNumber}`);
+          await this.deleteOlderReviewComments(prNumber, owner, repo, created.id);
+          return;
+        }
+        const target = existing[existing.length - 1];
+        try {
+          await this.octokit.rest.issues.updateComment({
+            owner,
+            repo,
+            comment_id: target.id,
+            body
+          });
+        } catch (error3) {
+          if (isNotFoundError(error3) && attempt < REVIEW_COMMENT_UPSERT_ATTEMPTS) {
+            core2.info(`Review comment ${target.id} was removed by a concurrent run, retrying (${attempt})`);
+            continue;
+          }
+          throw error3;
+        }
         core2.info(`Updated existing review comment on PR #${prNumber}`);
-      } else {
-        await this.octokit.rest.issues.createComment({
-          owner,
-          repo,
-          issue_number: prNumber,
-          body: comment
-        });
-        core2.info(`Posted review comment on PR #${prNumber}`);
+        await this.deleteOlderReviewComments(prNumber, owner, repo, target.id);
+        return;
       }
     } catch (error3) {
       core2.error(`Failed to post review comment: ${error3}`);

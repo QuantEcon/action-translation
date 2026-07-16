@@ -408,8 +408,21 @@ on:
 
 jobs:
   review:
-    if: contains(github.event.pull_request.labels.*.name, 'action-translation')
+    # Ignore `labeled` events for every other label: a sync applies its labels one call at a
+    # time, and each one would otherwise start a full (billed) review of the same diff.
+    if: >
+      contains(github.event.pull_request.labels.*.name, 'action-translation') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'action-translation')
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    # One review per PR — supersede an in-flight review instead of running both
+    concurrency:
+      group: review-translations-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
 
     steps:
       - uses: actions/checkout@v6
@@ -428,7 +441,7 @@ jobs:
 ```
 
 :::{tip}
-The `labeled` event type is important — without it, the workflow won't trigger if the `action-translation` label is added after the PR is opened.
+The `labeled` event type is important — without it, the workflow won't trigger if the `action-translation` label is added after the PR is opened. The `github.event.label.name` check keeps it from firing again for each *other* label the sync applies, and the `concurrency` group collapses the `opened` and `labeled` events a single sync produces into one review. Without both, one sync bills several reviews of the same diff ([#96](https://github.com/QuantEcon/action-translation/issues/96)).
 :::
 
 ### 6d: Target repo — Secret

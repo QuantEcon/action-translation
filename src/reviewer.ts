@@ -34,6 +34,37 @@ const REVIEW_RETRY_CONFIG = {
 };
 
 /**
+ * Hidden marker on the first line of every review comment this action posts.
+ * Invisible on GitHub; lets later runs find their own comment without prose matching.
+ */
+export const REVIEW_COMMENT_MARKER = '<!-- action-translation-review -->';
+
+/** Heading of review comments posted before the marker existed (v0.16.1 and earlier). */
+const LEGACY_REVIEW_HEADING = /^#{2} .*Translation Quality Review/;
+
+/** Attempts for the comment upsert; >1 only matters when a concurrent run deletes our target. */
+const REVIEW_COMMENT_UPSERT_ATTEMPTS = 3;
+
+/**
+ * Whether `body` is a review comment posted by this action.
+ *
+ * Both patterns are anchored at the start of the body: these comments get deleted as
+ * duplicates, so matching a human's comment that quotes a review would destroy it.
+ */
+export function isActionReviewComment(body: string | undefined | null): boolean {
+  if (!body) return false;
+  if (body.startsWith(REVIEW_COMMENT_MARKER)) return true;
+  return LEGACY_REVIEW_HEADING.test(body) && body.includes('action-translation');
+}
+
+/** Whether an Octokit error is a 404 — the comment was already deleted by a concurrent run. */
+function isNotFoundError(error: unknown): boolean {
+  return (
+    typeof error === 'object' && error !== null && (error as { status?: number }).status === 404
+  );
+}
+
+/**
  * Extract JSON from an LLM response string.
  * Tries multiple strategies: raw parse, markdown code block extraction, greedy regex.
  * Returns a non-null object (throws if the parsed value is not an object).
@@ -1048,7 +1079,70 @@ ${diffResult.issues.map((i) => `- ${i}`).join('\n')}`;
   }
 
   /**
-   * Post review comment on PR
+   * Our review comments on the PR, oldest first.
+   *
+   * Paginated: beyond 30 comments the existing one is missed and duplicates accumulate.
+   */
+  private async listOwnReviewComments(
+    prNumber: number,
+    owner: string,
+    repo: string
+  ): Promise<Array<{ id: number }>> {
+    const comments = await this.octokit.paginate(this.octokit.rest.issues.listComments, {
+      owner,
+      repo,
+      issue_number: prNumber,
+      per_page: 100,
+    });
+
+    return comments.filter((c) => isActionReviewComment(c.body)).sort((a, b) => a.id - b.id);
+  }
+
+  /**
+   * Delete our review comments older than `keepId` — duplicates left by concurrent runs.
+   *
+   * Best effort: a duplicate comment is not worth failing a review that posted successfully.
+   */
+  private async deleteOlderReviewComments(
+    prNumber: number,
+    owner: string,
+    repo: string,
+    keepId: number
+  ): Promise<void> {
+    let duplicates: Array<{ id: number }>;
+    try {
+      duplicates = (await this.listOwnReviewComments(prNumber, owner, repo)).filter(
+        (c) => c.id < keepId
+      );
+    } catch (error) {
+      core.warning(`Could not check PR #${prNumber} for duplicate review comments: ${error}`);
+      return;
+    }
+
+    for (const duplicate of duplicates) {
+      try {
+        await this.octokit.rest.issues.deleteComment({ owner, repo, comment_id: duplicate.id });
+        core.info(`Removed duplicate review comment ${duplicate.id} on PR #${prNumber}`);
+      } catch (error) {
+        if (isNotFoundError(error)) continue; // Another run deleted it: same end state.
+        core.warning(
+          `Could not remove duplicate review comment ${duplicate.id} on PR #${prNumber}: ${error}`
+        );
+      }
+    }
+  }
+
+  /**
+   * Post the review, leaving exactly one review comment on the PR.
+   *
+   * Concurrent review runs are routine — one sync fires `opened` plus a `labeled` event per
+   * label — and list-then-create is a check-then-act race: every run sees "no comment yet"
+   * and creates one (issue #96). Issue comments have no conditional-write primitive, so each
+   * run instead reconciles after writing, deleting every *older* review comment of ours.
+   * Ids increase with creation time and each run lists after it writes, so the run holding the
+   * highest id necessarily sees the others and removes them: one comment survives any
+   * interleaving. (Deleting *newer* ids instead would not converge — a run that lists before
+   * a slower run creates would leave both.)
    */
   private async postReviewComment(
     prNumber: number,
@@ -1056,36 +1150,48 @@ ${diffResult.issues.map((i) => `- ${i}`).join('\n')}`;
     repo: string,
     comment: string
   ): Promise<void> {
+    const body = `${REVIEW_COMMENT_MARKER}\n${comment}`;
+
     try {
-      // Check for existing review comment and update it instead of creating new
-      // (paginate — beyond 30 comments the existing one is missed and duplicates accumulate)
-      const comments = await this.octokit.paginate(this.octokit.rest.issues.listComments, {
-        owner,
-        repo,
-        issue_number: prNumber,
-      });
+      for (let attempt = 1; attempt <= REVIEW_COMMENT_UPSERT_ATTEMPTS; attempt++) {
+        const existing = await this.listOwnReviewComments(prNumber, owner, repo);
 
-      const existingComment = comments.find(
-        (c) =>
-          c.body?.includes('Translation Quality Review') && c.body?.includes('action-translation')
-      );
+        if (existing.length === 0) {
+          const { data: created } = await this.octokit.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number: prNumber,
+            body,
+          });
+          core.info(`Posted review comment on PR #${prNumber}`);
+          await this.deleteOlderReviewComments(prNumber, owner, repo, created.id);
+          return;
+        }
 
-      if (existingComment) {
-        await this.octokit.rest.issues.updateComment({
-          owner,
-          repo,
-          comment_id: existingComment.id,
-          body: comment,
-        });
+        // Newest wins — anything older is a duplicate, including pre-marker comments.
+        const target = existing[existing.length - 1];
+        try {
+          await this.octokit.rest.issues.updateComment({
+            owner,
+            repo,
+            comment_id: target.id,
+            body,
+          });
+        } catch (error) {
+          // A concurrent run pruned it between our list and our update: re-read and retry.
+          // Logged at info — these races are diagnosed from run logs, and `core.debug` output
+          // only appears when the repo has ACTIONS_STEP_DEBUG set.
+          if (isNotFoundError(error) && attempt < REVIEW_COMMENT_UPSERT_ATTEMPTS) {
+            core.info(
+              `Review comment ${target.id} was removed by a concurrent run, retrying (${attempt})`
+            );
+            continue;
+          }
+          throw error;
+        }
         core.info(`Updated existing review comment on PR #${prNumber}`);
-      } else {
-        await this.octokit.rest.issues.createComment({
-          owner,
-          repo,
-          issue_number: prNumber,
-          body: comment,
-        });
-        core.info(`Posted review comment on PR #${prNumber}`);
+        await this.deleteOlderReviewComments(prNumber, owner, repo, target.id);
+        return;
       }
     } catch (error) {
       core.error(`Failed to post review comment: ${error}`);
