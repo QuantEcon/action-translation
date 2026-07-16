@@ -17,7 +17,8 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## Recently landed
 
-- **v0.17.0 released** (2026-07-16) — typography-erosion day: #99 wired `applyTypography`
+- **v0.17.0** (2026-07-16; tagged + published on merge of #101) — typography-erosion day:
+  #99 wired `applyTypography`
   into the sync path (issue #97: every fr sync stripped the seed's NBSP; numba.md 27→14 in
   one merge, restored by .fr#9 backfill), #100 made heading matching typography-insensitive
   (`normalizeHeadingForMatch`, exact-first + ambiguity guard; also forward-resync typesetting,
