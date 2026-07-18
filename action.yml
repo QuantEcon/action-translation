@@ -90,5 +90,5 @@ outputs:
     description: 'Diff quality score 1-10 (review mode)'
 
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist-action/index.js'

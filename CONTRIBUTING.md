@@ -5,7 +5,7 @@ the local workflow for code, tests, and documentation.
 
 ## Prerequisites
 
-- Node.js 20 (matches the GitHub Actions `node20` runtime)
+- Node.js 24 (matches the GitHub Actions `node24` runtime)
 - npm
 
 ## Setup

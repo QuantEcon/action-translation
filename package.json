@@ -6,7 +6,7 @@
   "description": "GitHub Action to sync and review translations across repositories",
   "main": "dist/index.js",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "bin": {
     "translate": "dist/cli/index.js"
@@ -34,8 +34,8 @@
     "url": "https://github.com/QuantEcon/action-translation.git"
   },
   "dependencies": {
-    "@actions/core": "^1.10.1",
-    "@actions/github": "^6.0.0",
+    "@actions/core": "^2.0.3",
+    "@actions/github": "^8.0.1",
     "@anthropic-ai/sdk": "^0.78.0",
     "chalk": "^4.1.2",
     "cli-progress": "^3.12.0",
@@ -49,7 +49,7 @@
     "@types/cli-progress": "^3.11.6",
     "@types/jest": "^29.5.10",
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^20.10.0",
+    "@types/node": "^24.0.0",
     "@types/react": "^18.3.28",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
