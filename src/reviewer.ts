@@ -22,6 +22,7 @@ import {
   ChangedSection,
   FileChange,
 } from './types.js';
+import { parseTranslationSyncMetadata, TranslationSyncMetadata } from './pr-creator.js';
 import { DEFAULT_CLAUDE_MODEL, MAX_TOKENS, DEFAULT_THINKING } from './models.js';
 
 // Default model for review (can be overridden)
@@ -481,6 +482,43 @@ export class TranslationReviewer {
   }
 
   /**
+   * Get source content at a specific commit (for resync PRs, which have no
+   * source PR). Returns the same shape as getSourceDiff with an empty
+   * `before` map — a resync review compares the whole target against the
+   * current source, not against a source-side diff.
+   */
+  private async getSourceAtCommit(
+    sourceOwner: string,
+    sourceRepoName: string,
+    commitSha: string,
+    filenames: string[]
+  ): Promise<{ before: Map<string, string>; after: Map<string, string> }> {
+    const before = new Map<string, string>();
+    const after = new Map<string, string>();
+
+    for (const filename of filenames) {
+      try {
+        const { data } = await this.octokit.rest.repos.getContent({
+          owner: sourceOwner,
+          repo: sourceRepoName,
+          path: filename,
+          ref: commitSha,
+        });
+        if ('content' in data) {
+          after.set(filename, Buffer.from(data.content, 'base64').toString('utf-8'));
+        }
+      } catch (error) {
+        core.warning(`Could not fetch ${filename} @ ${commitSha.substring(0, 7)}: ${error}`);
+      }
+    }
+
+    core.info(
+      `✓ Fetched source @ ${commitSha.substring(0, 7)} for ${after.size}/${filenames.length} file(s)`
+    );
+    return { before, after };
+  }
+
+  /**
    * Review a translation PR
    */
   async reviewPR(
@@ -553,27 +591,45 @@ export class TranslationReviewer {
 
     // Parse source PR number from translation PR body
     // Format: "### Source PR\n**[#123 - Title](url)**"
-    // This is always present for PRs created by sync mode
+    // Always present for PRs created by sync mode. CLI forward resync PRs
+    // have no source PR — they carry a translation-sync-metadata block with
+    // mode "resync" and a source commit SHA instead (#104).
     const sourcePrNumber = this.parseSourcePRNumber(pr.body);
+    let resyncMetadata: TranslationSyncMetadata | undefined;
     if (!sourcePrNumber) {
-      throw new Error(
-        'Could not find source PR reference in translation PR body. ' +
-          'This PR may not have been created by the translation action. ' +
-          'Expected format: "### Source PR\\n**[#123..."'
-      );
+      const metadata = parseTranslationSyncMetadata(pr.body || '');
+      if (metadata && !metadata.sourcePR && metadata.sourceCommitSha) {
+        resyncMetadata = metadata;
+        core.info(
+          `No source PR reference — resync PR detected; reviewing against source @ ${metadata.sourceCommitSha.substring(0, 7)}`
+        );
+      } else {
+        throw new Error(
+          'Could not find source PR reference in translation PR body. ' +
+            'This PR may not have been created by the translation action. ' +
+            'Expected format: "### Source PR\\n**[#123..." ' +
+            '(or a translation-sync-metadata block for resync PRs)'
+        );
+      }
+    } else {
+      core.info(`Found source PR reference: #${sourcePrNumber}`);
     }
-    core.info(`Found source PR reference: #${sourcePrNumber}`);
 
     // Get filenames for fetching
     const filenames = markdownFiles.map((f) => f.filename);
 
-    // Fetch source PR diff (English before/after) - this gives us accurate change detection
-    const { before: sourceBeforeMap, after: sourceAfterMap } = await this.getSourceDiff(
-      sourceOwner,
-      sourceRepoName,
-      sourcePrNumber,
-      filenames
-    );
+    // Fetch source content (English before/after).
+    // Sync PRs: from the source PR diff — accurate change detection.
+    // Resync PRs: current source at the recorded commit; there is no
+    // source-side "before" because the change under review is target-side.
+    const { before: sourceBeforeMap, after: sourceAfterMap } = resyncMetadata
+      ? await this.getSourceAtCommit(
+          sourceOwner,
+          sourceRepoName,
+          resyncMetadata.sourceCommitSha,
+          filenames
+        )
+      : await this.getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber as number, filenames);
 
     // Build content strings for evaluation
     let sourceEnglish = '';
@@ -617,7 +673,11 @@ export class TranslationReviewer {
           sourceEnglish += sourceAfterMap.get(file.filename) + '\n\n';
         } else {
           core.warning(
-            `Source content not found for ${file.filename} in source PR #${sourcePrNumber}`
+            `Source content not found for ${file.filename} in ${
+              resyncMetadata
+                ? `source @ ${resyncMetadata.sourceCommitSha.substring(0, 7)}`
+                : `source PR #${sourcePrNumber}`
+            }`
           );
         }
 
@@ -631,14 +691,23 @@ export class TranslationReviewer {
       }
     }
 
-    // Identify changed sections
-    const detectedChanges = identifyChangedSections(
-      sourceBefore,
-      sourceEnglish,
-      targetBefore,
-      targetTranslation
-    );
-    changedSections.push(...detectedChanges);
+    // Identify changed sections.
+    // A resync PR realigns the whole document, so scoping suggestions to a
+    // source-side diff (which doesn't exist) would be wrong — review it all.
+    if (resyncMetadata) {
+      changedSections.push({
+        heading: '(whole-file resync — the entire document was re-aligned to the current source)',
+        changeType: 'modified',
+      });
+    } else {
+      const detectedChanges = identifyChangedSections(
+        sourceBefore,
+        sourceEnglish,
+        targetBefore,
+        targetTranslation
+      );
+      changedSections.push(...detectedChanges);
+    }
 
     // Evaluate translation quality
     const translationQuality = await this.evaluateTranslation(
@@ -649,9 +718,11 @@ export class TranslationReviewer {
       targetLanguage
     );
 
-    // Evaluate diff quality
+    // Evaluate diff quality. For resync PRs the source has no before/after —
+    // pass the current source as both and tell the evaluator large target
+    // diffs are expected.
     const diffQuality = await this.evaluateDiff(
-      sourceBefore,
+      resyncMetadata ? sourceEnglish : sourceBefore,
       sourceEnglish,
       targetBefore,
       targetTranslation,
@@ -660,7 +731,8 @@ export class TranslationReviewer {
         status: f.status as 'added' | 'modified' | 'removed' | 'renamed',
         additions: f.additions,
         deletions: f.deletions,
-      }))
+      })),
+      resyncMetadata !== undefined
     );
 
     // Calculate overall score and verdict
@@ -841,12 +913,17 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
     sourceAfter: string,
     targetBefore: string,
     targetAfter: string,
-    targetFiles: FileChange[]
+    targetFiles: FileChange[],
+    isResync = false
   ): Promise<DiffQualityResult> {
+    const contextNote = isResync
+      ? `A whole-file resync re-aligned the target document to the current source: the source "Before" and "After" below are identical (the current source), and the target diff may legitimately be large — do not penalize its size. Evaluate whether the final target matches the current source's structure and content. We need to verify:`
+      : `A translation sync action detected changes in an English source document and created corresponding changes in the target document. We need to verify:`;
+
     const prompt = `You are an expert code reviewer specializing in translation sync workflows. Your task is to verify that translation changes are correctly positioned in the target document.
 
 ## Context
-A translation sync action detected changes in an English source document and created corresponding changes in the target document. We need to verify:
+${contextNote}
 
 1. **Scope**: Only the correct files were modified
 2. **Position**: Changes appear in the same relative positions

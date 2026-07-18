@@ -17,6 +17,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { spawnSync, SpawnSyncOptions } from 'child_process';
 import { ResyncSectionResult } from './types.js';
+import type { TranslationSyncMetadata } from '../pr-creator.js';
 
 // ============================================================================
 // TYPES
@@ -27,6 +28,28 @@ export interface ForwardPRResult {
   url?: string;
   error?: string;
   success: boolean;
+}
+
+/**
+ * Extra file to commit on the resync branch alongside the lecture file
+ * (e.g., .translate/state/<file>.yml). Path is relative to the repo root.
+ */
+export interface ExtraCommitFile {
+  relPath: string;
+  content: string;
+}
+
+/**
+ * Provenance details for the machine-readable metadata block embedded in
+ * forward PR bodies, so `mode: review` can review resync PRs (#104).
+ */
+export interface ForwardResyncInfo {
+  sourceCommitSha: string;
+  targetBaseSha: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  model: string;
+  statePath?: string;
 }
 
 /**
@@ -119,6 +142,8 @@ export interface GitPrepareResult {
   success: boolean;
   branchName: string;
   originalBranch: string;
+  /** SHA of the branch point (HEAD before the resync branch was created) */
+  baseSha?: string;
   error?: string;
 }
 
@@ -126,9 +151,9 @@ export interface GitPrepareResult {
  * Prepare a git branch with the resynced file and push to remote.
  *
  * Steps:
- * 1. Record current branch
+ * 1. Record current branch and its HEAD SHA
  * 2. Create and switch to `resync/{filename}` branch
- * 3. Write the resynced file content
+ * 3. Write the resynced file content (+ any extra files, e.g. sync state)
  * 4. Stage, commit, push
  * 5. Switch back to the original branch
  *
@@ -139,17 +164,19 @@ export interface GitPrepareResult {
  * @param targetRepoPath Absolute path to TARGET repository root
  * @param docsFolder     Docs folder within repo (e.g., "lectures")
  * @param runner         Injectable git runner (default: realGitRunner)
+ * @param extraFiles     Additional files (repo-root-relative) committed with the content
  */
 export function gitPrepareAndPush(
   file: string,
   content: string,
   targetRepoPath: string,
   docsFolder: string,
-  runner: GitRunner = realGitRunner
+  runner: GitRunner = realGitRunner,
+  extraFiles: ExtraCommitFile[] = []
 ): GitPrepareResult {
   const branchName = buildBranchName(file);
 
-  // 1. Record current branch
+  // 1. Record current branch and its HEAD SHA (PR base for metadata)
   const branchResult = runner(['rev-parse', '--abbrev-ref', 'HEAD'], targetRepoPath);
   if (branchResult.status !== 0) {
     return {
@@ -160,6 +187,9 @@ export function gitPrepareAndPush(
     };
   }
   const originalBranch = branchResult.stdout.trim();
+
+  const baseShaResult = runner(['rev-parse', 'HEAD'], targetRepoPath);
+  const baseSha = baseShaResult.status === 0 ? baseShaResult.stdout.trim() : undefined;
 
   // Helper: switch back on failure
   const switchBack = () => runner(['checkout', originalBranch], targetRepoPath);
@@ -183,17 +213,23 @@ export function gitPrepareAndPush(
     };
   }
 
-  // 3. Write file
+  // 3. Write files (content + extras such as .translate/state)
   const filePath = path.join(targetRepoPath, docsFolder, file);
   try {
     fs.writeFileSync(filePath, content, 'utf-8');
+    for (const extra of extraFiles) {
+      const extraPath = path.join(targetRepoPath, extra.relPath);
+      fs.mkdirSync(path.dirname(extraPath), { recursive: true });
+      fs.writeFileSync(extraPath, extra.content, 'utf-8');
+    }
   } catch (err) {
     switchBack();
     return { success: false, branchName, originalBranch, error: `Failed to write file: ${err}` };
   }
 
-  // 4. Stage and commit
-  const addResult = runner(['add', path.join(docsFolder, file)], targetRepoPath);
+  // 4. Stage and commit (one commit containing content + state)
+  const pathsToStage = [path.join(docsFolder, file), ...extraFiles.map((e) => e.relPath)];
+  const addResult = runner(['add', ...pathsToStage], targetRepoPath);
   if (addResult.status !== 0) {
     switchBack();
     return {
@@ -230,7 +266,7 @@ export function gitPrepareAndPush(
   // 6. Switch back to original branch
   switchBack();
 
-  return { success: true, branchName, originalBranch };
+  return { success: true, branchName, originalBranch, baseSha };
 }
 
 // ============================================================================
@@ -268,6 +304,41 @@ export function detectSourceRepo(
 }
 
 /**
+ * Build the machine-readable translation-sync-metadata block for a forward
+ * resync PR. Same format sync PRs carry (pr-creator.ts), with `mode: "resync"`
+ * and `sourcePR: 0` — a resync has no source PR; provenance is the source
+ * commit SHA. Review mode uses this block to review resync PRs (#104).
+ *
+ * Exported for testing.
+ */
+export function buildForwardSyncMetadata(
+  file: string,
+  sourceRepo: string,
+  docsFolder: string | undefined,
+  info: ForwardResyncInfo
+): TranslationSyncMetadata {
+  const effectiveFolder = docsFolder && docsFolder !== '.' && docsFolder !== '/' ? docsFolder : '';
+  const contentPath = effectiveFolder ? `${effectiveFolder}/${file}` : file;
+
+  const files: TranslationSyncMetadata['files'] = [{ path: contentPath, type: 'markdown' }];
+  if (info.statePath) {
+    files.push({ path: info.statePath });
+  }
+
+  return {
+    sourceRepo,
+    sourcePR: 0,
+    mode: 'resync',
+    sourceCommitSha: info.sourceCommitSha,
+    targetBaseSha: info.targetBaseSha,
+    sourceLanguage: info.sourceLanguage,
+    targetLanguage: info.targetLanguage,
+    claudeModel: info.model,
+    files,
+  };
+}
+
+/**
  * Build the PR body summarizing the resync changes.
  *
  * Supports both whole-file resync (sectionResults empty) and legacy
@@ -280,7 +351,8 @@ export function buildForwardPRBody(
   sectionResults: ResyncSectionResult[],
   sourceRepo?: string,
   docsFolder?: string,
-  triageReason?: string
+  triageReason?: string,
+  resyncInfo?: ForwardResyncInfo
 ): string {
   const lines: string[] = [];
 
@@ -296,6 +368,12 @@ export function buildForwardPRBody(
     lines.push(
       `**Source**: [${sourceRepo}](https://github.com/${sourceRepo}) — [${sourcePath}](${sourceUrl})`
     );
+    if (resyncInfo && resyncInfo.sourceCommitSha && resyncInfo.sourceCommitSha !== 'unknown') {
+      const sha = resyncInfo.sourceCommitSha;
+      lines.push(
+        `**Source commit**: [\`${sha.slice(0, 7)}\`](https://github.com/${sourceRepo}/commit/${sha})`
+      );
+    }
   }
   lines.push('This PR resyncs the translation to match the current source document.');
   lines.push('');
@@ -360,6 +438,13 @@ export function buildForwardPRBody(
   lines.push(
     '*Created by [action-translation](https://github.com/QuantEcon/action-translation) forward resync*'
   );
+
+  // Machine-readable metadata so review mode can review resync PRs (#104)
+  if (sourceRepo && resyncInfo) {
+    const metadata = buildForwardSyncMetadata(file, sourceRepo, docsFolder, resyncInfo);
+    lines.push('');
+    lines.push(`<!-- translation-sync-metadata\n${JSON.stringify(metadata, null, 2)}\n-->`);
+  }
 
   return lines.join('\n');
 }
@@ -427,6 +512,7 @@ export function buildGhArgs(file: string, repo: string): string[] {
  * @param sourceRepo     SOURCE repo in `owner/repo` format (optional, for PR body)
  * @param docsFolder     Docs folder path (optional, for source file link)
  * @param triageReason   Triage explanation (optional, for PR body)
+ * @param resyncInfo     Provenance for the metadata block (optional, enables review mode)
  */
 export function createForwardPR(
   file: string,
@@ -436,10 +522,18 @@ export function createForwardPR(
   runner: GhRunner = realGhRunner,
   sourceRepo?: string,
   docsFolder?: string,
-  triageReason?: string
+  triageReason?: string,
+  resyncInfo?: ForwardResyncInfo
 ): ForwardPRResult {
   const args = buildGhArgs(file, repo);
-  const body = buildForwardPRBody(file, sectionResults, sourceRepo, docsFolder, triageReason);
+  const body = buildForwardPRBody(
+    file,
+    sectionResults,
+    sourceRepo,
+    docsFolder,
+    triageReason,
+    resyncInfo
+  );
   const result = runner(args, body);
 
   if (result.status === 0 && result.stdout) {

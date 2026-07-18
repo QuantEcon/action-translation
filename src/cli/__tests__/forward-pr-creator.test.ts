@@ -20,6 +20,7 @@ import {
   GitRunner,
 } from '../forward-pr-creator.js';
 import { ResyncSectionResult } from '../types.js';
+import { parseTranslationSyncMetadata } from '../../pr-creator.js';
 
 // ── fixtures ───────────────────────────────────────────────────────────────
 
@@ -196,6 +197,67 @@ describe('buildForwardPRBody', () => {
     expect(bodyDot).not.toContain('./');
   });
 
+  describe('translation-sync-metadata block (#104)', () => {
+    const resyncInfo = {
+      sourceCommitSha: '450bafecd23db638602150b47f4272b98aad3146',
+      targetBaseSha: 'deadbeefcafe',
+      sourceLanguage: 'en',
+      targetLanguage: 'zh-cn',
+      model: 'claude-sonnet-5',
+      statePath: '.translate/state/cobweb.md.yml',
+    };
+    const bodyWithMeta = buildForwardPRBody(
+      'cobweb.md',
+      [],
+      'QuantEcon/lecture-python',
+      'lectures',
+      'Content changes detected',
+      resyncInfo
+    );
+
+    it('embeds a metadata block that parseTranslationSyncMetadata accepts', () => {
+      const metadata = parseTranslationSyncMetadata(bodyWithMeta);
+      expect(metadata).toBeDefined();
+      expect(metadata?.mode).toBe('resync');
+      expect(metadata?.sourcePR).toBe(0);
+      expect(metadata?.sourceRepo).toBe('QuantEcon/lecture-python');
+      expect(metadata?.sourceCommitSha).toBe(resyncInfo.sourceCommitSha);
+      expect(metadata?.targetBaseSha).toBe('deadbeefcafe');
+      expect(metadata?.sourceLanguage).toBe('en');
+      expect(metadata?.targetLanguage).toBe('zh-cn');
+      expect(metadata?.claudeModel).toBe('claude-sonnet-5');
+    });
+
+    it('lists the content file and the state file', () => {
+      const metadata = parseTranslationSyncMetadata(bodyWithMeta);
+      expect(metadata?.files).toEqual([
+        { path: 'lectures/cobweb.md', type: 'markdown' },
+        { path: '.translate/state/cobweb.md.yml' },
+      ]);
+    });
+
+    it('links the source commit in the human-readable body', () => {
+      expect(bodyWithMeta).toContain(
+        '**Source commit**: [`450bafe`](https://github.com/QuantEcon/lecture-python/commit/450bafecd23db638602150b47f4272b98aad3146)'
+      );
+    });
+
+    it('omits the metadata block when no resync info is given', () => {
+      const plain = buildForwardPRBody('cobweb.md', [], 'Org/Repo', 'lectures');
+      expect(plain).not.toContain('translation-sync-metadata');
+    });
+
+    it('omits the source commit line for unknown SHAs', () => {
+      const bodyUnknown = buildForwardPRBody('cobweb.md', [], 'Org/Repo', 'lectures', undefined, {
+        ...resyncInfo,
+        sourceCommitSha: 'unknown',
+      });
+      expect(bodyUnknown).not.toContain('**Source commit**');
+      // Metadata block still present so review mode can detect the resync shape
+      expect(parseTranslationSyncMetadata(bodyUnknown)?.mode).toBe('resync');
+    });
+  });
+
   it('includes triage reason when provided', () => {
     const bodyWithReason = buildForwardPRBody(
       'cobweb.md',
@@ -353,6 +415,7 @@ describe('gitPrepareAndPush', () => {
     const ops = calls.map((c) => c.args.slice(0, 2).join(' '));
     expect(ops).toEqual([
       'rev-parse --abbrev-ref', // detect current branch
+      'rev-parse HEAD', // record base SHA for PR metadata
       'rev-parse --verify', // check if branch exists
       'checkout -b', // create new branch
       'add lectures/pv.md', // stage
@@ -360,6 +423,34 @@ describe('gitPrepareAndPush', () => {
       'push -u', // push
       'checkout main', // switch back
     ]);
+  });
+
+  it('returns the base SHA of the branch point', () => {
+    const { runner } = makeGitRunner({
+      'rev-parse HEAD': { stdout: 'abc123def456', stderr: '', status: 0 },
+    });
+    const result = gitPrepareAndPush('pv.md', 'content', tmpDir, 'lectures', runner);
+    expect(result.success).toBe(true);
+    expect(result.baseSha).toBe('abc123def456');
+  });
+
+  it('writes and stages extra files in the same commit (#105)', () => {
+    const { runner, calls } = makeGitRunner();
+    const stateRelPath = '.translate/state/pv.md.yml';
+    const result = gitPrepareAndPush('pv.md', '# new content', tmpDir, 'lectures', runner, [
+      { relPath: stateRelPath, content: 'source-sha: "abc"\n' },
+    ]);
+
+    expect(result.success).toBe(true);
+
+    // State file written on disk (intermediate dirs created)
+    const written = fs.readFileSync(path.join(tmpDir, stateRelPath), 'utf-8');
+    expect(written).toBe('source-sha: "abc"\n');
+
+    // Content and state staged together, one commit
+    const addCall = calls.find((c) => c.args[0] === 'add');
+    expect(addCall?.args).toEqual(['add', 'lectures/pv.md', stateRelPath]);
+    expect(calls.filter((c) => c.args[0] === 'commit').length).toBe(1);
   });
 
   it('writes file content to disk', () => {
