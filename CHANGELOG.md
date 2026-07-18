@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-07-18
+
 ### Changed
 - **Node 24 runtime, declared and built for** (#89): GitHub has been force-running the action on Node 24 while `action.yml` still declared `node20` — the declared and actual runtimes had diverged. Now aligned everywhere: `action.yml` (`using: node24`), CI (`node-version: 24`), the esbuild bundle target, `@types/node` 24, `engines.node >= 24`, and CONTRIBUTING.
 - **`@actions/core` 1.11 → 2.0.3 and `@actions/github` 6.0 → 8.0.1** — the majors that clear the last production advisories: `npm audit --omit=dev` now reports **0 vulnerabilities** (was 1 high / 2 moderate, all `undici` reaching the committed bundle through these two packages). Deliberately stopped at 2.x/8.x: the 3.x/9.x lines are ESM-only, which Jest's CJS module registry cannot load — that migration is tracked separately in #89. The new `@octokit/*` majors under `@actions/github@8` are themselves ESM-only, handled at runtime by Node ≥ 22's native `require(esm)` and in Jest by a stub (`src/test-support/actions-github-stub.ts`; tests always replace the octokit instance with a fake). Verified live: a full review-mode run with the new bundle against a real PR (inputs, pagination, content fetch, comment upsert, outputs) passed.

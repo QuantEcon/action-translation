@@ -1,4 +1,4 @@
-verified: 2026-07-15
+verified: 2026-07-18
 
 # STATE
 
@@ -7,24 +7,29 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## In flight
 
-- **PR #98** — #96: duplicate review comments under concurrent runs (unsynchronised upsert).
-  Marker + delete-older-ids reconciliation; also adds the `concurrency` group missing from
-  all four review workflow templates, which is where `.fr`/`.fa` inherited the 5x review
-  spend. Decision: `decisions/D-2026-07-16-single-review-comment.md`.
 - **PR #78** — fr programming-domain glossary terms; awaiting native review.
 - **PR #71** — Malayalam (`ml`) draft; awaiting native-reviewer calibration batch.
   Glossary PR **#69** (ja) open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
 
 ## Recently landed
 
+- **v0.18.0** (2026-07-18; tagged + published on merge) — forward-resync integrity day:
+  #108 fixed the `forward --github` Tier-1 cluster from the intro.zh-cn drift wave —
+  #105 (state + heading map committed with content, target frontmatter carried, stray `---`
+  fixed), #104 (resync PRs reviewable via `translation-sync-metadata` fallback), the
+  mechanical halves of #106 (flag-based discovery, outcome-based summary), #107 prompt
+  hardening (localisation as ground truth — **unvalidated**, needs a wave). #110 closed
+  #102 (criterion-score validation; incomplete review = retry/error, never FAIL). #111
+  declared node24 + bumped `@actions/*` to the CJS majors — prod advisories now 0.
+  Smoke-tested live on test-translation-sync.fa#78 (both halves). Estate pins on v0.16.1 —
+  two releases behind; bumping them is the natural next step.
 - **v0.17.0** (2026-07-16; tagged + published on merge of #101) — typography-erosion day:
   #99 wired `applyTypography`
   into the sync path (issue #97: every fr sync stripped the seed's NBSP; numba.md 27→14 in
   one merge, restored by .fr#9 backfill), #100 made heading matching typography-insensitive
   (`normalizeHeadingForMatch`, exact-first + ambiguity guard; also forward-resync typesetting,
   headingmap/apply.mjs ping-pong, role-stripped key lookups, the deleted `[0.16.1]` CHANGELOG
-  header). #98 fixed duplicate review comments under concurrent runs. Estate pins still on
-  v0.16.1 — bumping them is the natural next step.
+  header). #98 fixed duplicate review comments under concurrent runs.
 - **Estate upgraded to v0.16.1** — all 9 pins across 4 repos (lecture-python-programming#575,
   .zh-cn#69, .fa#132, .fr#5). First time the estate is on one version; it spanned
   v0.13.0–v0.16.0 that morning. **zh-cn and fa now translate with Sonnet 5.** Deployment
@@ -57,9 +62,6 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 - **PLAN Phase 1 remainder**: rebase no-op comments, `context.sha` vs `merge_commit_sha`,
   resync fail-closed, `@actions/*` + SDK major bumps (pair with node24, PLAN 5.8),
   rebase input-validation hardening (1.5).
-- **#89 node24 + `@actions/*` majors** — GitHub already force-runs the action on Node 24
-  despite `action.yml` declaring node20 (harness evidence, every run). Also clears the last
-  prod advisories (undici via `@actions/*`). PLAN 5.8 + 1.4, one release.
 - **#90 silent data loss in the sync merge path** — five ways translations vanish or English
   leaks in while the run reports success (REVIEW §6.1). Not covered by PLAN Phase 2; the
   Phase 2 round-trip test would catch three of them as a class, so Phase 2 first.
@@ -73,11 +75,12 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## Health & context
 
-- `main` green; ~1,068 tests (40 suites), lint now actually covers all 78 files
+- `main` green; 1,143 tests (47 suites), lint covers all files
   (`--max-warnings 0`) and CI checks formatting.
 - Highest-priority known bug: issue **#65** — translator drops `(label)=` anchors
   (PLAN Phase 2), plus the silent-data-loss family documented in REVIEW §6.1.
-- Prod dep advisories: 1 high / 2 moderate remaining (undici via `@actions/*` majors).
+- Prod dep advisories: **0** (cleared by #111's `@actions/*` CJS majors; the ESM-only
+  3.x/9.x lines remain tracked in #89).
 
 ## Map
 
