@@ -29287,6 +29287,26 @@ var REVIEW_RETRY_CONFIG = {
 var REVIEW_COMMENT_MARKER = "<!-- action-translation-review -->";
 var LEGACY_REVIEW_HEADING = /^#{2} .*Translation Quality Review/;
 var REVIEW_COMMENT_UPSERT_ATTEMPTS = 3;
+var REVIEW_CRITERIA = [
+  { key: "accuracy", weight: 0.35 },
+  { key: "fluency", weight: 0.25 },
+  { key: "terminology", weight: 0.25 },
+  { key: "formatting", weight: 0.15 }
+];
+function validateCriterionScores(result) {
+  const scores = {};
+  const missing = [];
+  for (const { key } of REVIEW_CRITERIA) {
+    const raw = result[key];
+    const value = typeof raw === "number" ? raw : typeof raw === "string" && raw !== "" ? Number(raw) : NaN;
+    if (Number.isFinite(value)) {
+      scores[key] = value;
+    } else {
+      missing.push(key);
+    }
+  }
+  return missing.length === 0 ? { valid: true, missing, scores } : { valid: false, missing };
+}
 function isActionReviewComment(body) {
   if (!body)
     return false;
@@ -29843,14 +29863,24 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
 - Do NOT invent issues just to fill the array - quality over quantity
 
 **CRITICAL**: The "issues" array MUST contain suggestions that relate ONLY to the sections that were changed in this PR. Do not suggest improvements for unchanged parts of the document.`;
-    const result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateTranslation");
-    const score = result.accuracy * 0.35 + result.fluency * 0.25 + result.terminology * 0.25 + result.formatting * 0.15;
+    let result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateTranslation");
+    let check = validateCriterionScores(result);
+    if (!check.valid) {
+      core2.warning(`evaluateTranslation: response missing numeric criteria [${check.missing.join(", ")}] \u2014 retrying`);
+      result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateTranslation");
+      check = validateCriterionScores(result);
+      if (!check.valid) {
+        throw new Error(`evaluateTranslation: response still missing numeric criterion scores [${check.missing.join(", ")}] after retry \u2014 refusing to compute a verdict from an incomplete review`);
+      }
+    }
+    const scores = check.scores;
+    const score = REVIEW_CRITERIA.reduce((sum, c) => sum + scores[c.key] * c.weight, 0);
     return {
       score: Math.round(score * 10) / 10,
-      accuracy: result.accuracy,
-      fluency: result.fluency,
-      terminology: result.terminology,
-      formatting: result.formatting,
+      accuracy: scores.accuracy,
+      fluency: scores.fluency,
+      terminology: scores.terminology,
+      formatting: scores.formatting,
       syntaxErrors: result.syntaxErrors || [],
       issues: this.normalizeIssues(result.issues || []),
       strengths: result.strengths || [],
