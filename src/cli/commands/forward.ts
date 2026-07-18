@@ -21,17 +21,24 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import * as yaml from 'js-yaml';
 import cliProgress from 'cli-progress';
 import { TranslationService } from '../../translator.js';
 import { Glossary } from '../../types.js';
 import { triageForward } from '../forward-triage.js';
 import { languageLabel } from '../../language-config.js';
-import { ForwardOptions, ForwardFileResult } from '../types.js';
-import { runStatus } from './status.js';
-import { writeFileState } from '../translate-state.js';
+import { ForwardOptions, ForwardFileResult, FileState } from '../types.js';
+import { runStatus, FileStatusEntry, FileSyncStatus } from './status.js';
+import {
+  writeFileState,
+  serializeFileState,
+  stateFileRelativePath,
+  getToolVersion,
+} from '../translate-state.js';
 import { getFileGitMetadata } from '../git-metadata.js';
 import { MystParser } from '../../parser.js';
 import { applyTypography } from '../../typography.js';
+import { buildHeadingMap, injectHeadingMap, extractTranslationTitle } from '../../heading-map.js';
 import {
   createForwardPR,
   gitPrepareAndPush,
@@ -57,6 +64,88 @@ const defaultLogger: ForwardLogger = {
   warn: (msg) => console.warn(`⚠️  ${msg}`),
   error: (msg) => console.error(`❌ ${msg}`),
 };
+
+// ============================================================================
+// OUTPUT FINALIZATION
+// ============================================================================
+
+/**
+ * Split a document into frontmatter YAML and body.
+ *
+ * A leading `---` only counts as a frontmatter opener when a closing `---`
+ * exists AND the enclosed text parses as a YAML mapping. Otherwise a stray
+ * lone `---` (which the model can emit on frontmatter-less files) would
+ * swallow body content up to the next horizontal rule.
+ */
+function splitFrontmatter(content: string): { yaml?: string; body: string } {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+  if (match) {
+    try {
+      const parsed = yaml.load(match[1]);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return { yaml: match[1], body: content.slice(match[0].length) };
+      }
+    } catch {
+      // Not valid YAML — treat the leading `---` as stray, handled below
+    }
+  }
+  return { body: content };
+}
+
+/**
+ * Finalize whole-file resync output before it is written or committed:
+ *
+ * 1. Carry the TARGET's frontmatter forward — the model is instructed to
+ *    preserve it, but field runs show it emits the source's frontmatter
+ *    instead, silently reverting target-side metadata (e.g. jupytext
+ *    version bumps). Enforced deterministically here.
+ * 2. Strip a stray lone `---` the model can invent on frontmatter-less
+ *    documents (an unclosed delimiter corrupts MyST parsing).
+ * 3. Rebuild and inject the heading map (`translation:` block) from the
+ *    current source and resynced sections, matching what the action's
+ *    processFull() path writes — without it every resynced file stays
+ *    MISSING_HEADINGMAP and section-level sync cannot match it.
+ *
+ * Exported for testing.
+ */
+export async function finalizeResyncContent(
+  resyncedContent: string,
+  sourceContent: string,
+  targetContent: string,
+  file: string,
+  logger: ForwardLogger = defaultLogger
+): Promise<string> {
+  // 1-2. Replace whatever frontmatter the model emitted with the target's own;
+  // drop a stray leading `---` when neither side has real frontmatter.
+  const targetSplit = splitFrontmatter(targetContent);
+  const outputSplit = splitFrontmatter(resyncedContent);
+  let body = outputSplit.body;
+  if (outputSplit.yaml === undefined) {
+    body = body.replace(/^---[ \t]*\r?\n+/, '');
+  }
+  body = body.replace(/^\r?\n+/, '');
+
+  let merged = targetSplit.yaml !== undefined ? `---\n${targetSplit.yaml}\n---\n\n${body}` : body;
+
+  // 3. Rebuild the heading map from current source + resynced body.
+  // Mirrors processFull(): a malformed document must not fail the resync,
+  // so fall back to the frontmatter-fixed content without a map.
+  try {
+    const parser = new MystParser();
+    const sourceParsed = await parser.parseDocumentComponents(sourceContent, file);
+    const mergedParsed = await parser.parseDocumentComponents(merged, file);
+    const { map } = buildHeadingMap(sourceParsed.sections, mergedParsed.sections);
+    const title = mergedParsed.titleText || extractTranslationTitle(targetContent) || '';
+    if (map.size > 0 || title) {
+      merged = injectHeadingMap(merged, map, title);
+    }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    logger.warn(`Could not build heading map for ${file}: ${msg}`);
+  }
+
+  return merged;
+}
 
 // ============================================================================
 // SINGLE FILE RESYNC
@@ -152,7 +241,16 @@ export async function resyncSingleFile(
       // the model does not honour the NBSP prompt rule, and every other write
       // path (init, sync, apply.mjs) already typesets. Frontmatter (including
       // the preserved heading map) is skipped by the transform.
-      outputContent = applyTypography(result.translatedSection, options.language);
+      const typeset = applyTypography(result.translatedSection, options.language);
+      // Carry the target's frontmatter forward and inject the heading map —
+      // the model is prompted to do both but does not reliably comply.
+      outputContent = await finalizeResyncContent(
+        typeset,
+        sourceContent,
+        targetContent,
+        file,
+        logger
+      );
       tokensUsed = result.tokensUsed;
       logger.info(`  ✅ Resync complete (${tokensUsed?.toLocaleString()} tokens)`);
     } else {
@@ -169,11 +267,46 @@ export async function resyncSingleFile(
   // ──── Step 3: Output ─────────────────────────────────────────────────────
   let prUrl: string | undefined;
 
+  // Compute per-file state once — committed alongside the content in --github
+  // mode (so discovery works after merge), written to the working tree in
+  // local mode. Failure to compute state is non-fatal.
+  let fileState: FileState | undefined;
+  try {
+    const docsRelPath = docsFolder ? path.join(docsFolder, file) : file;
+    const sourceGit = await getFileGitMetadata(sourceRepoPath, docsRelPath);
+    const parser = new MystParser();
+    const parsed = await parser.parseSections(sourceContent, file);
+    fileState = {
+      'source-sha': sourceGit?.lastCommit ?? 'unknown',
+      'synced-at': new Date().toISOString().split('T')[0],
+      model: options.model,
+      mode: 'RESYNC',
+      'section-count': parsed.sections.length,
+    };
+  } catch {
+    fileState = undefined;
+  }
+
   if (outputContent) {
     if (options.github) {
-      // Git: create branch, write file, commit, push
+      // Git: create branch, write content + state, commit, push
+      const stateFiles = fileState
+        ? [
+            {
+              relPath: stateFileRelativePath(file),
+              content: serializeFileState({ ...fileState, 'tool-version': getToolVersion() }),
+            },
+          ]
+        : [];
       const gRunner = gitRunner ?? realGitRunner;
-      const gitResult = gitPrepareAndPush(file, outputContent, targetRepoPath, docsFolder, gRunner);
+      const gitResult = gitPrepareAndPush(
+        file,
+        outputContent,
+        targetRepoPath,
+        docsFolder,
+        gRunner,
+        stateFiles
+      );
       if (!gitResult.success) {
         logger.error(`  Git failed for ${file}: ${gitResult.error}`);
         return {
@@ -200,7 +333,15 @@ export async function resyncSingleFile(
         runner,
         sourceGitHub,
         docsFolder,
-        triageResult.reason
+        triageResult.reason,
+        {
+          sourceCommitSha: fileState?.['source-sha'] ?? 'unknown',
+          targetBaseSha: gitResult.baseSha ?? '',
+          sourceLanguage: options.sourceLanguage,
+          targetLanguage: options.language,
+          model: options.model,
+          statePath: fileState ? stateFileRelativePath(file) : undefined,
+        }
       );
       if (prResult.success) {
         prUrl = prResult.url;
@@ -217,29 +358,16 @@ export async function resyncSingleFile(
         };
       }
     } else {
-      // Write to local disk
+      // Write to local disk (state goes to .translate/state/ in the worktree)
       fs.writeFileSync(targetFilePath, outputContent, 'utf-8');
       logger.info(`  ✅ Written to ${targetFilePath}`);
-    }
-  }
-
-  // Write per-file state after successful resync
-  if (outputContent) {
-    try {
-      const docsRelPath = docsFolder ? path.join(docsFolder, file) : file;
-      const sourceGit = await getFileGitMetadata(sourceRepoPath, docsRelPath);
-      const parser = new MystParser();
-      const sourceContent = fs.readFileSync(path.join(sourceRepoPath, docsFolder, file), 'utf-8');
-      const parsed = await parser.parseSections(sourceContent, file);
-      writeFileState(targetRepoPath, file, {
-        'source-sha': sourceGit?.lastCommit ?? 'unknown',
-        'synced-at': new Date().toISOString().split('T')[0],
-        model: options.model,
-        mode: 'RESYNC',
-        'section-count': parsed.sections.length,
-      });
-    } catch {
-      // State write failure is non-fatal
+      if (fileState) {
+        try {
+          writeFileState(targetRepoPath, file, fileState);
+        } catch {
+          // State write failure is non-fatal
+        }
+      }
     }
   }
 
@@ -259,7 +387,45 @@ export async function resyncSingleFile(
 // ============================================================================
 
 /**
- * Run forward resync on all OUTDATED files.
+ * Flags that make a file a forward-resync candidate. Anything carrying one of
+ * these goes to stage-1 triage, which is the real gate — i18n-only/identical
+ * files are skipped there at the cost of one triage call.
+ */
+const FORWARD_CANDIDATE_FLAGS: FileSyncStatus[] = [
+  'OUTDATED',
+  'SOURCE_AHEAD',
+  'TARGET_AHEAD',
+  'MISSING_HEADINGMAP',
+];
+
+/**
+ * Select which status entries forward should attempt.
+ *
+ * Matches on `flags`, not the primary status (#106): status priority ranks
+ * MISSING_HEADINGMAP above OUTDATED, so on an unbootstrapped repo — where
+ * every file lacks a heading map — a date-stale file's primary status hides
+ * its staleness and the old primary-status filter never saw it. TARGET_AHEAD
+ * files are candidates too: forward explicitly handles the
+ * TARGET_HAS_ADDITIONS verdict rather than ignoring target-side divergence.
+ *
+ * Note the residual gap: a content-stale file that carries none of these
+ * flags (heading map present, no state, matching section counts, target git
+ * dates newer than source) is still invisible — only `status --check-sync`'s
+ * LLM triage can catch it. Exported for testing.
+ */
+export function selectForwardCandidates(
+  entries: FileStatusEntry[]
+): Array<{ file: string; flags: FileSyncStatus[] }> {
+  return entries
+    .map((e) => ({
+      file: e.file,
+      flags: e.flags.filter((f) => FORWARD_CANDIDATE_FLAGS.includes(f)),
+    }))
+    .filter((c) => c.flags.length > 0);
+}
+
+/**
+ * Run forward resync on all files flagged as divergent by status.
  */
 export async function runForwardBulk(
   options: ForwardOptions,
@@ -281,19 +447,23 @@ export async function runForwardBulk(
     exclude,
   });
 
-  // Filter to files that need resync (OUTDATED or SOURCE_AHEAD)
-  const candidates = statusResult.entries
-    .filter((e) => e.status === 'OUTDATED' || e.status === 'SOURCE_AHEAD')
-    .map((e) => e.file);
+  // Filter to files carrying any divergence flag (#106) — triage decides the rest
+  const selected = selectForwardCandidates(statusResult.entries);
+  const candidates = selected.map((c) => c.file);
 
   if (candidates.length === 0) {
-    logger.info('All files are in sync — nothing to resync.');
+    logger.info('No files carry divergence flags — nothing to resync.');
+    logger.info(
+      'Note: content-stale files with matching structure and no .translate/ state ' +
+        "are invisible to discovery — run 'status --check-sync' to find them, then " +
+        'resync with -f.'
+    );
     return [];
   }
 
-  logger.info(`Found ${candidates.length} file(s) to resync:\n`);
-  for (const f of candidates) {
-    logger.info(`  • ${f}`);
+  logger.info(`Found ${candidates.length} candidate file(s) — triage will decide each:\n`);
+  for (const c of selected) {
+    logger.info(`  • ${c.file} [${c.flags.join(', ')}]`);
   }
   logger.info('');
 
@@ -362,15 +532,36 @@ export async function runForwardBulk(
 // SUMMARY
 // ============================================================================
 
-function printBulkSummary(results: ForwardFileResult[], logger: ForwardLogger): void {
-  const skipped = results.filter((r) => r.triageResult.verdict !== 'CONTENT_CHANGES');
-  const processed = results.filter((r) => r.triageResult.verdict === 'CONTENT_CHANGES');
+/** Human label for why a file was skipped, from its triage verdict. */
+function skipLabel(verdict: string): string {
+  switch (verdict) {
+    case 'IDENTICAL':
+      return 'identical';
+    case 'I18N_ONLY':
+      return 'i18n only';
+    case 'TARGET_HAS_ADDITIONS':
+      return 'target has additions';
+    default:
+      return verdict.toLowerCase().replace(/_/g, ' ');
+  }
+}
+
+/**
+ * Print the bulk-run summary, bucketing by what the pipeline actually DID
+ * with each file — not by triage verdict (#106): TARGET_HAS_ADDITIONS files
+ * are resynced, so bucketing by `verdict !== CONTENT_CHANGES` reported them
+ * as "skipped: i18n only" while their PRs existed, understating the wave and
+ * mislabeling the reason. Exported for testing.
+ */
+export function printBulkSummary(results: ForwardFileResult[], logger: ForwardLogger): void {
+  const processed = results.filter((r) => r.summary.resynced > 0 || r.summary.errors > 0);
+  const skipped = results.filter((r) => r.summary.resynced === 0 && r.summary.errors === 0);
 
   let totalResynced = 0;
   let totalErrors = 0;
   let totalTokens = 0;
 
-  for (const r of processed) {
+  for (const r of results) {
     totalResynced += r.summary.resynced;
     totalErrors += r.summary.errors;
     if (r.tokensUsed) totalTokens += r.tokensUsed;
@@ -383,14 +574,16 @@ function printBulkSummary(results: ForwardFileResult[], logger: ForwardLogger): 
 
   if (skipped.length > 0) {
     for (const r of skipped) {
-      const label = r.triageResult.verdict === 'IDENTICAL' ? 'identical' : 'i18n only';
       const reason = r.triageResult.reason ? ` — ${r.triageResult.reason}` : '';
-      logger.info(`    ${r.file}: ${label}${reason}`);
+      logger.info(`    ${r.file}: ${skipLabel(r.triageResult.verdict)}${reason}`);
     }
   }
 
   if (totalErrors > 0) {
     logger.info(`  Files errored:   ${totalErrors}`);
+    for (const r of results.filter((x) => x.summary.errors > 0)) {
+      logger.info(`    ${r.file}`);
+    }
   }
   if (totalTokens > 0) {
     logger.info(`  Total tokens:    ${totalTokens.toLocaleString()}`);

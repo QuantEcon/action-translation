@@ -633,14 +633,23 @@ Your task: produce an **updated ${targetLanguage} translation** that accurately 
 3. **Add any missing content** that exists in the source but not in the translation.
 4. **Remove any content** that exists in the translation but not in the source — EXCEPT for i18n/localization additions (see rule 6).
 5. **Preserve all MyST Markdown syntax** exactly — directives, roles, code blocks, math blocks, cross-references, frontmatter.
-6. **NEVER remove i18n/localization code from code cells.** Translated documents often contain extra code inside \`\`\`{code-cell}\`\`\` blocks that does NOT exist in the source — this is intentional localization and MUST be preserved. Common patterns include:
+6. **The existing translation's in-code localization is ground truth — NEVER revert it to ${sourceLanguage}.** Code cells in the translation often deliberately differ from the source: every line containing ${targetLanguage} text or other localization was added on purpose, usually by hand. Apply these rules line by line:
+   - If the source code around a localized line is unchanged: keep that line EXACTLY as it is in the translation.
+   - If the source changed the surrounding code: carry the localization into the updated code — keep the label/mapping machinery and translate any new user-visible strings to match.
+   - Drop a localized line only when the source removed the code it belongs to entirely.
+   - NEVER replace a localized string with its ${sourceLanguage} source equivalent.
+   Common localization patterns that MUST be preserved:
    - Font configuration: \`from matplotlib import font_manager\`, \`fontP = font_manager.FontProperties()\`, \`fontP.set_family('SimHei')\`, \`fontP.set_size(14)\`
    - rcParams: \`plt.rcParams['font.sans-serif'] = ['SimHei']\`, \`plt.rcParams['axes.unicode_minus'] = False\`
+   - Translated plot strings: \`set_xlabel\`/\`set_ylabel\`/\`set_title\`/\`legend\`/\`annotate\`/\`ax.text\` labels, legend-label lists, plotly trace names
+   - Label-translation dicts and column mappings: \`DataFrame.rename\` maps, CSV column-name mappings, country/category name lists, date formatters
+   - Translated \`print()\` strings and docstrings
    - Any imports, variable assignments, or configuration lines that appear in the translation's code cells but not in the source's code cells
    - Locale-appropriate reference links
    - Full-width punctuation where conventionally used
    - Lines marked with \`# i18n\` comments
-   When in doubt about whether extra code in a code cell is localization, **keep it**.
+   Keep localized label text as plain strings — NEVER wrap ${targetLanguage} text in math delimiters (\`$...$\`).
+   When in doubt about whether a code line in the translation is localization, **keep the translation's version**.
 7. **Preserve the frontmatter (YAML between --- markers) from the TARGET translation** — do not replace it with the source frontmatter. Only update the heading-map if section headings changed.
 8. **Use the glossary below for consistent terminology** — when a term from the glossary appears, use the specified translation.
 ${additionalRules}
@@ -649,7 +658,7 @@ ${glossarySection}
 
 ## Output format
 
-Return ONLY the complete updated ${targetLanguage} document. No explanations, no commentary, no code fences wrapping the document. Start directly with the frontmatter \`---\` marker.
+Return ONLY the complete updated ${targetLanguage} document. No explanations, no commentary, no code fences wrapping the document. Start directly with the document's first line: the frontmatter \`---\` marker if the ${targetLanguage} translation has frontmatter, otherwise its first content line. NEVER add a \`---\` marker to a document that does not have frontmatter.
 
 ## Current ${sourceLanguage} Source
 

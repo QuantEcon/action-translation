@@ -43,7 +43,10 @@ export interface PrCreatorConfig {
  */
 export interface TranslationSyncMetadata {
   sourceRepo: string;
+  /** 0 for CLI forward resync PRs, which have no source PR */
   sourcePR: number;
+  /** How the PR was produced. Absent on sync PRs created before this field existed. */
+  mode?: 'sync' | 'resync';
   sourceCommitSha: string;
   targetBaseSha: string;
   sourceLanguage: string;

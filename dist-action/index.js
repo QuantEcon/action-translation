@@ -29031,6 +29031,252 @@ Anthropic.Messages = Messages2;
 Anthropic.Models = Models2;
 Anthropic.Beta = Beta;
 
+// dist/pr-creator.js
+async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata) {
+  const { targetOwner, targetRepo } = config;
+  const { data: targetRepoData } = await octokit.rest.repos.get({
+    owner: targetOwner,
+    repo: targetRepo
+  });
+  const defaultBranch = targetRepoData.default_branch;
+  const { data: refData } = await octokit.rest.git.getRef({
+    owner: targetOwner,
+    repo: targetRepo,
+    ref: `heads/${defaultBranch}`
+  });
+  const baseSha = refData.object.sha;
+  const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-").slice(0, -5);
+  const branchName = `translation-sync-${timestamp2}-pr-${config.prNumber}`;
+  await octokit.rest.git.createRef({
+    owner: targetOwner,
+    repo: targetRepo,
+    ref: `refs/heads/${branchName}`,
+    sha: baseSha
+  });
+  logger.info(`Created branch: ${branchName}`);
+  for (const file of translatedFiles) {
+    await octokit.rest.repos.createOrUpdateFileContents({
+      owner: targetOwner,
+      repo: targetRepo,
+      path: file.path,
+      message: `Update translation: ${file.path}`,
+      content: Buffer.from(file.content).toString("base64"),
+      branch: branchName,
+      sha: file.sha
+      // Include SHA if updating existing file
+    });
+    logger.info(`Committed: ${file.path}`);
+  }
+  for (const file of filesToDelete) {
+    await octokit.rest.repos.deleteFile({
+      owner: targetOwner,
+      repo: targetRepo,
+      path: file.path,
+      message: `Delete removed file: ${file.path}`,
+      branch: branchName,
+      sha: file.sha
+    });
+    logger.info(`Deleted: ${file.path}`);
+  }
+  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata);
+  const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
+  const { data: pr } = await octokit.rest.pulls.create({
+    owner: targetOwner,
+    repo: targetRepo,
+    title: prTitle,
+    body: prBody,
+    head: branchName,
+    base: defaultBranch
+  });
+  logger.info(`Created PR: ${pr.html_url}`);
+  const labelsToAdd = buildLabelSet(config.prLabels, sourcePrInfo?.labels);
+  if (labelsToAdd.length > 0) {
+    const maxAttempts = 3;
+    const delayMs = 2e3;
+    let labeled = false;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await octokit.rest.issues.addLabels({
+          owner: targetOwner,
+          repo: targetRepo,
+          issue_number: pr.number,
+          labels: labelsToAdd
+        });
+        logger.info(`Added labels: ${labelsToAdd.join(", ")}`);
+        labeled = true;
+        break;
+      } catch (labelError) {
+        if (attempt < maxAttempts) {
+          logger.info(`Label attempt ${attempt}/${maxAttempts} failed, retrying in ${delayMs}ms...`);
+          await new Promise((resolve2) => setTimeout(resolve2, delayMs));
+        } else {
+          logger.warning(`Could not add labels to PR #${pr.number} after ${maxAttempts} attempts: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
+        }
+      }
+    }
+    if (!labeled) {
+      logger.warning(`PR #${pr.number} created successfully but labels could not be applied. Downstream workflows that filter by label may not trigger.`);
+    }
+  }
+  await requestReviewers(octokit, targetOwner, targetRepo, pr.number, config, logger);
+  return {
+    prUrl: pr.html_url,
+    branchName,
+    prNumber: pr.number
+  };
+}
+function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata) {
+  const newFiles = translatedFiles.filter((f) => !f.sha);
+  const updatedFiles = translatedFiles.filter((f) => f.sha);
+  let filesChangedSection = "";
+  if (newFiles.length > 0) {
+    filesChangedSection += "### Files Added\n" + newFiles.map((f) => `- \u2705 \`${f.path}\``).join("\n");
+  }
+  if (updatedFiles.length > 0) {
+    if (filesChangedSection)
+      filesChangedSection += "\n\n";
+    filesChangedSection += "### Files Updated\n" + updatedFiles.map((f) => `- \u270F\uFE0F \`${f.path}\``).join("\n");
+  }
+  if (filesToDelete.length > 0) {
+    if (filesChangedSection)
+      filesChangedSection += "\n\n";
+    filesChangedSection += "### Files Deleted\n" + filesToDelete.map((f) => `- \u274C \`${f.path}\``).join("\n");
+  }
+  const sourcePrTitle = sourcePrInfo?.title || "";
+  const { sourceRepoOwner, sourceRepoName, prNumber } = config;
+  let skippedNotice = "";
+  if (skippedSections && skippedSections.size > 0) {
+    const lines = [];
+    for (const [file, headings] of skippedSections) {
+      lines.push(`- \`${file}\`: ${headings.map((h) => `\`${h.replace(/`/g, "\\`")}\``).join(", ")}`);
+    }
+    skippedNotice = `
+
+### \u26A0\uFE0F Sections Pending Earlier Translation PR
+
+The following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. If that PR is abandoned, run \`/translate-resync\` to recover.
+
+${lines.join("\n")}`;
+  }
+  const metadataFiles = fileMetadata ? fileMetadata.map((f) => {
+    const entry = {
+      path: f.path,
+      type: f.type
+    };
+    if (f.previousPath)
+      entry.previousPath = f.previousPath;
+    return entry;
+  }) : [
+    ...translatedFiles.map((f) => ({ path: f.path })),
+    ...filesToDelete.map((f) => ({ path: f.path }))
+  ];
+  const metadata = {
+    sourceRepo: `${sourceRepoOwner}/${sourceRepoName}`,
+    sourcePR: prNumber,
+    sourceCommitSha: config.sourceCommitSha,
+    targetBaseSha: targetBaseSha || "",
+    sourceLanguage: config.sourceLanguage,
+    targetLanguage: config.targetLanguage,
+    claudeModel: config.claudeModel,
+    files: metadataFiles
+  };
+  const metadataBlock = `<!-- translation-sync-metadata
+${JSON.stringify(metadata, null, 2)}
+-->`;
+  return `## Automated Translation Sync
+
+This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoName}](https://github.com/${sourceRepoOwner}/${sourceRepoName}).
+
+### Source PR
+**[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ""}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
+
+${filesChangedSection}${skippedNotice}
+
+### Details
+- **Source Language**: ${config.sourceLanguage}
+- **Target Language**: ${config.targetLanguage}
+- **Model**: ${config.claudeModel}
+
+---
+*This PR was created automatically by the [translation action](https://github.com/quantecon/action-translation).*
+
+${metadataBlock}`;
+}
+function buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo) {
+  if (sourcePrInfo?.title) {
+    return `\u{1F310} [translation-sync] ${sourcePrInfo.title}`;
+  }
+  const allFiles = [...translatedFiles.map((f) => f.path), ...filesToDelete.map((f) => f.path)];
+  let titleFileList;
+  if (allFiles.length === 1) {
+    titleFileList = allFiles[0];
+  } else if (allFiles.length === 2) {
+    titleFileList = `${allFiles[0]} + 1 more`;
+  } else {
+    titleFileList = `${allFiles.length} files`;
+  }
+  return `\u{1F310} [translation-sync] ${titleFileList}`;
+}
+function buildLabelSet(inputLabels, sourcePrLabels) {
+  const labelsToAdd = /* @__PURE__ */ new Set();
+  for (const label of inputLabels) {
+    labelsToAdd.add(label);
+  }
+  if (sourcePrLabels) {
+    for (const label of sourcePrLabels) {
+      labelsToAdd.add(label);
+    }
+  }
+  return Array.from(labelsToAdd);
+}
+async function requestReviewers(octokit, targetOwner, targetRepo, prNumber, config, logger) {
+  if (config.prReviewers.length === 0 && config.prTeamReviewers.length === 0) {
+    return;
+  }
+  try {
+    const reviewRequest = {};
+    if (config.prReviewers.length > 0) {
+      reviewRequest.reviewers = config.prReviewers;
+    }
+    if (config.prTeamReviewers.length > 0) {
+      reviewRequest.team_reviewers = config.prTeamReviewers;
+    }
+    await octokit.rest.pulls.requestReviewers({
+      owner: targetOwner,
+      repo: targetRepo,
+      pull_number: prNumber,
+      ...reviewRequest
+    });
+    const reviewersList = [];
+    if (config.prReviewers.length > 0) {
+      reviewersList.push(`users: ${config.prReviewers.join(", ")}`);
+    }
+    if (config.prTeamReviewers.length > 0) {
+      reviewersList.push(`teams: ${config.prTeamReviewers.join(", ")}`);
+    }
+    logger.info(`Requested reviewers: ${reviewersList.join("; ")}`);
+  } catch (reviewerError) {
+    logger.warning(`Could not request reviewers: ${reviewerError instanceof Error ? reviewerError.message : String(reviewerError)}`);
+  }
+}
+function parseTranslationSyncMetadata(prBody) {
+  const match = prBody.match(/<!-- translation-sync-metadata\r?\n([\s\S]*?)\r?\n-->/);
+  if (!match)
+    return void 0;
+  try {
+    const parsed = JSON.parse(match[1]);
+    if (typeof parsed.sourceRepo !== "string" || typeof parsed.sourcePR !== "number" || typeof parsed.sourceCommitSha !== "string" || typeof parsed.sourceLanguage !== "string" || typeof parsed.targetLanguage !== "string" || typeof parsed.claudeModel !== "string" || !Array.isArray(parsed.files)) {
+      return void 0;
+    }
+    if (!parsed.targetBaseSha) {
+      parsed.targetBaseSha = "";
+    }
+    return parsed;
+  } catch {
+    return void 0;
+  }
+}
+
 // dist/reviewer.js
 var DEFAULT_REVIEW_MODEL = DEFAULT_CLAUDE_MODEL;
 var REVIEW_RETRY_CONFIG = {
@@ -29319,6 +29565,33 @@ var TranslationReviewer = class {
     return { before, after };
   }
   /**
+   * Get source content at a specific commit (for resync PRs, which have no
+   * source PR). Returns the same shape as getSourceDiff with an empty
+   * `before` map — a resync review compares the whole target against the
+   * current source, not against a source-side diff.
+   */
+  async getSourceAtCommit(sourceOwner, sourceRepoName, commitSha, filenames) {
+    const before = /* @__PURE__ */ new Map();
+    const after = /* @__PURE__ */ new Map();
+    for (const filename of filenames) {
+      try {
+        const { data } = await this.octokit.rest.repos.getContent({
+          owner: sourceOwner,
+          repo: sourceRepoName,
+          path: filename,
+          ref: commitSha
+        });
+        if ("content" in data) {
+          after.set(filename, Buffer.from(data.content, "base64").toString("utf-8"));
+        }
+      } catch (error3) {
+        core2.warning(`Could not fetch ${filename} @ ${commitSha.substring(0, 7)}: ${error3}`);
+      }
+    }
+    core2.info(`\u2713 Fetched source @ ${commitSha.substring(0, 7)} for ${after.size}/${filenames.length} file(s)`);
+    return { before, after };
+  }
+  /**
    * Review a translation PR
    */
   async reviewPR(prNumber, sourceRepo, targetOwner, targetRepo, docsFolder, glossaryTerms, targetLanguage) {
@@ -29370,12 +29643,20 @@ var TranslationReviewer = class {
     }
     const [sourceOwner, sourceRepoName] = sourceRepo.split("/");
     const sourcePrNumber = this.parseSourcePRNumber(pr.body);
+    let resyncMetadata;
     if (!sourcePrNumber) {
-      throw new Error('Could not find source PR reference in translation PR body. This PR may not have been created by the translation action. Expected format: "### Source PR\\n**[#123..."');
+      const metadata = parseTranslationSyncMetadata(pr.body || "");
+      if (metadata && !metadata.sourcePR && metadata.sourceCommitSha) {
+        resyncMetadata = metadata;
+        core2.info(`No source PR reference \u2014 resync PR detected; reviewing against source @ ${metadata.sourceCommitSha.substring(0, 7)}`);
+      } else {
+        throw new Error('Could not find source PR reference in translation PR body. This PR may not have been created by the translation action. Expected format: "### Source PR\\n**[#123..." (or a translation-sync-metadata block for resync PRs)');
+      }
+    } else {
+      core2.info(`Found source PR reference: #${sourcePrNumber}`);
     }
-    core2.info(`Found source PR reference: #${sourcePrNumber}`);
     const filenames = markdownFiles.map((f) => f.filename);
-    const { before: sourceBeforeMap, after: sourceAfterMap } = await this.getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames);
+    const { before: sourceBeforeMap, after: sourceAfterMap } = resyncMetadata ? await this.getSourceAtCommit(sourceOwner, sourceRepoName, resyncMetadata.sourceCommitSha, filenames) : await this.getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames);
     let sourceEnglish = "";
     let targetTranslation = "";
     let sourceBefore = "";
@@ -29407,7 +29688,7 @@ var TranslationReviewer = class {
         if (sourceAfterMap.has(file.filename)) {
           sourceEnglish += sourceAfterMap.get(file.filename) + "\n\n";
         } else {
-          core2.warning(`Source content not found for ${file.filename} in source PR #${sourcePrNumber}`);
+          core2.warning(`Source content not found for ${file.filename} in ${resyncMetadata ? `source @ ${resyncMetadata.sourceCommitSha.substring(0, 7)}` : `source PR #${sourcePrNumber}`}`);
         }
         if (sourceBeforeMap.has(file.filename)) {
           sourceBefore += sourceBeforeMap.get(file.filename) + "\n\n";
@@ -29416,15 +29697,22 @@ var TranslationReviewer = class {
         core2.warning(`Error processing ${file.filename}: ${error3}`);
       }
     }
-    const detectedChanges = identifyChangedSections(sourceBefore, sourceEnglish, targetBefore, targetTranslation);
-    changedSections.push(...detectedChanges);
+    if (resyncMetadata) {
+      changedSections.push({
+        heading: "(whole-file resync \u2014 the entire document was re-aligned to the current source)",
+        changeType: "modified"
+      });
+    } else {
+      const detectedChanges = identifyChangedSections(sourceBefore, sourceEnglish, targetBefore, targetTranslation);
+      changedSections.push(...detectedChanges);
+    }
     const translationQuality = await this.evaluateTranslation(sourceEnglish, targetTranslation, changedSections, glossaryTerms, targetLanguage);
-    const diffQuality = await this.evaluateDiff(sourceBefore, sourceEnglish, targetBefore, targetTranslation, markdownFiles.map((f) => ({
+    const diffQuality = await this.evaluateDiff(resyncMetadata ? sourceEnglish : sourceBefore, sourceEnglish, targetBefore, targetTranslation, markdownFiles.map((f) => ({
       filename: f.filename,
       status: f.status,
       additions: f.additions,
       deletions: f.deletions
-    })));
+    })), resyncMetadata !== void 0);
     const overallScore = translationQuality.score * 0.7 + diffQuality.score * 0.3;
     let verdict;
     if (overallScore >= 8 && translationQuality.syntaxErrors.length === 0) {
@@ -29572,11 +29860,12 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
   /**
    * Evaluate diff quality using Claude
    */
-  async evaluateDiff(sourceBefore, sourceAfter, targetBefore, targetAfter, targetFiles) {
+  async evaluateDiff(sourceBefore, sourceAfter, targetBefore, targetAfter, targetFiles, isResync = false) {
+    const contextNote = isResync ? `A whole-file resync re-aligned the target document to the current source: the source "Before" and "After" below are identical (the current source), and the target diff may legitimately be large \u2014 do not penalize its size. Evaluate whether the final target matches the current source's structure and content. We need to verify:` : `A translation sync action detected changes in an English source document and created corresponding changes in the target document. We need to verify:`;
     const prompt = `You are an expert code reviewer specializing in translation sync workflows. Your task is to verify that translation changes are correctly positioned in the target document.
 
 ## Context
-A translation sync action detected changes in an English source document and created corresponding changes in the target document. We need to verify:
+${contextNote}
 
 1. **Scope**: Only the correct files were modified
 2. **Position**: Changes appear in the same relative positions
@@ -30323,14 +30612,23 @@ Your task: produce an **updated ${targetLanguage} translation** that accurately 
 3. **Add any missing content** that exists in the source but not in the translation.
 4. **Remove any content** that exists in the translation but not in the source \u2014 EXCEPT for i18n/localization additions (see rule 6).
 5. **Preserve all MyST Markdown syntax** exactly \u2014 directives, roles, code blocks, math blocks, cross-references, frontmatter.
-6. **NEVER remove i18n/localization code from code cells.** Translated documents often contain extra code inside \`\`\`{code-cell}\`\`\` blocks that does NOT exist in the source \u2014 this is intentional localization and MUST be preserved. Common patterns include:
+6. **The existing translation's in-code localization is ground truth \u2014 NEVER revert it to ${sourceLanguage}.** Code cells in the translation often deliberately differ from the source: every line containing ${targetLanguage} text or other localization was added on purpose, usually by hand. Apply these rules line by line:
+   - If the source code around a localized line is unchanged: keep that line EXACTLY as it is in the translation.
+   - If the source changed the surrounding code: carry the localization into the updated code \u2014 keep the label/mapping machinery and translate any new user-visible strings to match.
+   - Drop a localized line only when the source removed the code it belongs to entirely.
+   - NEVER replace a localized string with its ${sourceLanguage} source equivalent.
+   Common localization patterns that MUST be preserved:
    - Font configuration: \`from matplotlib import font_manager\`, \`fontP = font_manager.FontProperties()\`, \`fontP.set_family('SimHei')\`, \`fontP.set_size(14)\`
    - rcParams: \`plt.rcParams['font.sans-serif'] = ['SimHei']\`, \`plt.rcParams['axes.unicode_minus'] = False\`
+   - Translated plot strings: \`set_xlabel\`/\`set_ylabel\`/\`set_title\`/\`legend\`/\`annotate\`/\`ax.text\` labels, legend-label lists, plotly trace names
+   - Label-translation dicts and column mappings: \`DataFrame.rename\` maps, CSV column-name mappings, country/category name lists, date formatters
+   - Translated \`print()\` strings and docstrings
    - Any imports, variable assignments, or configuration lines that appear in the translation's code cells but not in the source's code cells
    - Locale-appropriate reference links
    - Full-width punctuation where conventionally used
    - Lines marked with \`# i18n\` comments
-   When in doubt about whether extra code in a code cell is localization, **keep it**.
+   Keep localized label text as plain strings \u2014 NEVER wrap ${targetLanguage} text in math delimiters (\`$...$\`).
+   When in doubt about whether a code line in the translation is localization, **keep the translation's version**.
 7. **Preserve the frontmatter (YAML between --- markers) from the TARGET translation** \u2014 do not replace it with the source frontmatter. Only update the heading-map if section headings changed.
 8. **Use the glossary below for consistent terminology** \u2014 when a term from the glossary appears, use the specified translation.
 ${additionalRules}
@@ -30339,7 +30637,7 @@ ${glossarySection}
 
 ## Output format
 
-Return ONLY the complete updated ${targetLanguage} document. No explanations, no commentary, no code fences wrapping the document. Start directly with the frontmatter \`---\` marker.
+Return ONLY the complete updated ${targetLanguage} document. No explanations, no commentary, no code fences wrapping the document. Start directly with the document's first line: the frontmatter \`---\` marker if the ${targetLanguage} translation has frontmatter, otherwise its first content line. NEVER add a \`---\` marker to a document that does not have frontmatter.
 
 ## Current ${sourceLanguage} Source
 
@@ -35095,252 +35393,6 @@ var SyncOrchestrator = class {
     return filename;
   }
 };
-
-// dist/pr-creator.js
-async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata) {
-  const { targetOwner, targetRepo } = config;
-  const { data: targetRepoData } = await octokit.rest.repos.get({
-    owner: targetOwner,
-    repo: targetRepo
-  });
-  const defaultBranch = targetRepoData.default_branch;
-  const { data: refData } = await octokit.rest.git.getRef({
-    owner: targetOwner,
-    repo: targetRepo,
-    ref: `heads/${defaultBranch}`
-  });
-  const baseSha = refData.object.sha;
-  const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-").slice(0, -5);
-  const branchName = `translation-sync-${timestamp2}-pr-${config.prNumber}`;
-  await octokit.rest.git.createRef({
-    owner: targetOwner,
-    repo: targetRepo,
-    ref: `refs/heads/${branchName}`,
-    sha: baseSha
-  });
-  logger.info(`Created branch: ${branchName}`);
-  for (const file of translatedFiles) {
-    await octokit.rest.repos.createOrUpdateFileContents({
-      owner: targetOwner,
-      repo: targetRepo,
-      path: file.path,
-      message: `Update translation: ${file.path}`,
-      content: Buffer.from(file.content).toString("base64"),
-      branch: branchName,
-      sha: file.sha
-      // Include SHA if updating existing file
-    });
-    logger.info(`Committed: ${file.path}`);
-  }
-  for (const file of filesToDelete) {
-    await octokit.rest.repos.deleteFile({
-      owner: targetOwner,
-      repo: targetRepo,
-      path: file.path,
-      message: `Delete removed file: ${file.path}`,
-      branch: branchName,
-      sha: file.sha
-    });
-    logger.info(`Deleted: ${file.path}`);
-  }
-  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata);
-  const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
-  const { data: pr } = await octokit.rest.pulls.create({
-    owner: targetOwner,
-    repo: targetRepo,
-    title: prTitle,
-    body: prBody,
-    head: branchName,
-    base: defaultBranch
-  });
-  logger.info(`Created PR: ${pr.html_url}`);
-  const labelsToAdd = buildLabelSet(config.prLabels, sourcePrInfo?.labels);
-  if (labelsToAdd.length > 0) {
-    const maxAttempts = 3;
-    const delayMs = 2e3;
-    let labeled = false;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        await octokit.rest.issues.addLabels({
-          owner: targetOwner,
-          repo: targetRepo,
-          issue_number: pr.number,
-          labels: labelsToAdd
-        });
-        logger.info(`Added labels: ${labelsToAdd.join(", ")}`);
-        labeled = true;
-        break;
-      } catch (labelError) {
-        if (attempt < maxAttempts) {
-          logger.info(`Label attempt ${attempt}/${maxAttempts} failed, retrying in ${delayMs}ms...`);
-          await new Promise((resolve2) => setTimeout(resolve2, delayMs));
-        } else {
-          logger.warning(`Could not add labels to PR #${pr.number} after ${maxAttempts} attempts: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
-        }
-      }
-    }
-    if (!labeled) {
-      logger.warning(`PR #${pr.number} created successfully but labels could not be applied. Downstream workflows that filter by label may not trigger.`);
-    }
-  }
-  await requestReviewers(octokit, targetOwner, targetRepo, pr.number, config, logger);
-  return {
-    prUrl: pr.html_url,
-    branchName,
-    prNumber: pr.number
-  };
-}
-function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata) {
-  const newFiles = translatedFiles.filter((f) => !f.sha);
-  const updatedFiles = translatedFiles.filter((f) => f.sha);
-  let filesChangedSection = "";
-  if (newFiles.length > 0) {
-    filesChangedSection += "### Files Added\n" + newFiles.map((f) => `- \u2705 \`${f.path}\``).join("\n");
-  }
-  if (updatedFiles.length > 0) {
-    if (filesChangedSection)
-      filesChangedSection += "\n\n";
-    filesChangedSection += "### Files Updated\n" + updatedFiles.map((f) => `- \u270F\uFE0F \`${f.path}\``).join("\n");
-  }
-  if (filesToDelete.length > 0) {
-    if (filesChangedSection)
-      filesChangedSection += "\n\n";
-    filesChangedSection += "### Files Deleted\n" + filesToDelete.map((f) => `- \u274C \`${f.path}\``).join("\n");
-  }
-  const sourcePrTitle = sourcePrInfo?.title || "";
-  const { sourceRepoOwner, sourceRepoName, prNumber } = config;
-  let skippedNotice = "";
-  if (skippedSections && skippedSections.size > 0) {
-    const lines = [];
-    for (const [file, headings] of skippedSections) {
-      lines.push(`- \`${file}\`: ${headings.map((h) => `\`${h.replace(/`/g, "\\`")}\``).join(", ")}`);
-    }
-    skippedNotice = `
-
-### \u26A0\uFE0F Sections Pending Earlier Translation PR
-
-The following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. If that PR is abandoned, run \`/translate-resync\` to recover.
-
-${lines.join("\n")}`;
-  }
-  const metadataFiles = fileMetadata ? fileMetadata.map((f) => {
-    const entry = {
-      path: f.path,
-      type: f.type
-    };
-    if (f.previousPath)
-      entry.previousPath = f.previousPath;
-    return entry;
-  }) : [
-    ...translatedFiles.map((f) => ({ path: f.path })),
-    ...filesToDelete.map((f) => ({ path: f.path }))
-  ];
-  const metadata = {
-    sourceRepo: `${sourceRepoOwner}/${sourceRepoName}`,
-    sourcePR: prNumber,
-    sourceCommitSha: config.sourceCommitSha,
-    targetBaseSha: targetBaseSha || "",
-    sourceLanguage: config.sourceLanguage,
-    targetLanguage: config.targetLanguage,
-    claudeModel: config.claudeModel,
-    files: metadataFiles
-  };
-  const metadataBlock = `<!-- translation-sync-metadata
-${JSON.stringify(metadata, null, 2)}
--->`;
-  return `## Automated Translation Sync
-
-This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoName}](https://github.com/${sourceRepoOwner}/${sourceRepoName}).
-
-### Source PR
-**[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ""}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
-
-${filesChangedSection}${skippedNotice}
-
-### Details
-- **Source Language**: ${config.sourceLanguage}
-- **Target Language**: ${config.targetLanguage}
-- **Model**: ${config.claudeModel}
-
----
-*This PR was created automatically by the [translation action](https://github.com/quantecon/action-translation).*
-
-${metadataBlock}`;
-}
-function buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo) {
-  if (sourcePrInfo?.title) {
-    return `\u{1F310} [translation-sync] ${sourcePrInfo.title}`;
-  }
-  const allFiles = [...translatedFiles.map((f) => f.path), ...filesToDelete.map((f) => f.path)];
-  let titleFileList;
-  if (allFiles.length === 1) {
-    titleFileList = allFiles[0];
-  } else if (allFiles.length === 2) {
-    titleFileList = `${allFiles[0]} + 1 more`;
-  } else {
-    titleFileList = `${allFiles.length} files`;
-  }
-  return `\u{1F310} [translation-sync] ${titleFileList}`;
-}
-function buildLabelSet(inputLabels, sourcePrLabels) {
-  const labelsToAdd = /* @__PURE__ */ new Set();
-  for (const label of inputLabels) {
-    labelsToAdd.add(label);
-  }
-  if (sourcePrLabels) {
-    for (const label of sourcePrLabels) {
-      labelsToAdd.add(label);
-    }
-  }
-  return Array.from(labelsToAdd);
-}
-async function requestReviewers(octokit, targetOwner, targetRepo, prNumber, config, logger) {
-  if (config.prReviewers.length === 0 && config.prTeamReviewers.length === 0) {
-    return;
-  }
-  try {
-    const reviewRequest = {};
-    if (config.prReviewers.length > 0) {
-      reviewRequest.reviewers = config.prReviewers;
-    }
-    if (config.prTeamReviewers.length > 0) {
-      reviewRequest.team_reviewers = config.prTeamReviewers;
-    }
-    await octokit.rest.pulls.requestReviewers({
-      owner: targetOwner,
-      repo: targetRepo,
-      pull_number: prNumber,
-      ...reviewRequest
-    });
-    const reviewersList = [];
-    if (config.prReviewers.length > 0) {
-      reviewersList.push(`users: ${config.prReviewers.join(", ")}`);
-    }
-    if (config.prTeamReviewers.length > 0) {
-      reviewersList.push(`teams: ${config.prTeamReviewers.join(", ")}`);
-    }
-    logger.info(`Requested reviewers: ${reviewersList.join("; ")}`);
-  } catch (reviewerError) {
-    logger.warning(`Could not request reviewers: ${reviewerError instanceof Error ? reviewerError.message : String(reviewerError)}`);
-  }
-}
-function parseTranslationSyncMetadata(prBody) {
-  const match = prBody.match(/<!-- translation-sync-metadata\r?\n([\s\S]*?)\r?\n-->/);
-  if (!match)
-    return void 0;
-  try {
-    const parsed = JSON.parse(match[1]);
-    if (typeof parsed.sourceRepo !== "string" || typeof parsed.sourcePR !== "number" || typeof parsed.sourceCommitSha !== "string" || typeof parsed.sourceLanguage !== "string" || typeof parsed.targetLanguage !== "string" || typeof parsed.claudeModel !== "string" || !Array.isArray(parsed.files)) {
-      return void 0;
-    }
-    if (!parsed.targetBaseSha) {
-      parsed.targetBaseSha = "";
-    }
-    return parsed;
-  } catch {
-    return void 0;
-  }
-}
 
 // dist/index.js
 var import_fs2 = require("fs");
