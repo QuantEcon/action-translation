@@ -46,6 +46,47 @@ const LEGACY_REVIEW_HEADING = /^#{2} .*Translation Quality Review/;
 /** Attempts for the comment upsert; >1 only matters when a concurrent run deletes our target. */
 const REVIEW_COMMENT_UPSERT_ATTEMPTS = 3;
 
+/** The four criteria a translation review must score, with their verdict weights. */
+export const REVIEW_CRITERIA = [
+  { key: 'accuracy', weight: 0.35 },
+  { key: 'fluency', weight: 0.25 },
+  { key: 'terminology', weight: 0.25 },
+  { key: 'formatting', weight: 0.15 },
+] as const;
+
+export type CriterionScores = Record<(typeof REVIEW_CRITERIA)[number]['key'], number>;
+
+/**
+ * Validate the criterion scores in a model review response (#102).
+ *
+ * A missing criterion previously flowed straight into the weighted sum —
+ * `undefined * 0.15` → NaN → both verdict thresholds false → automatic FAIL
+ * on a clean PR, rendered as "undefined/10" and "NaN/10". Scores must be
+ * finite numbers; numeric strings ("9") are coerced as a mercy since the
+ * model occasionally quotes values. Exported for testing.
+ */
+export function validateCriterionScores(result: Record<string, unknown>): {
+  valid: boolean;
+  missing: string[];
+  scores?: CriterionScores;
+} {
+  const scores = {} as CriterionScores;
+  const missing: string[] = [];
+
+  for (const { key } of REVIEW_CRITERIA) {
+    const raw = result[key];
+    const value =
+      typeof raw === 'number' ? raw : typeof raw === 'string' && raw !== '' ? Number(raw) : NaN;
+    if (Number.isFinite(value)) {
+      scores[key] = value;
+    } else {
+      missing.push(key);
+    }
+  }
+
+  return missing.length === 0 ? { valid: true, missing, scores } : { valid: false, missing };
+}
+
 /**
  * Whether `body` is a review comment posted by this action.
  *
@@ -885,19 +926,33 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
 **CRITICAL**: The "issues" array MUST contain suggestions that relate ONLY to the sections that were changed in this PR. Do not suggest improvements for unchanged parts of the document.`;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result: any = await this.callWithRetry(prompt, MAX_TOKENS.review, 'evaluateTranslation');
-    const score =
-      result.accuracy * 0.35 +
-      result.fluency * 0.25 +
-      result.terminology * 0.25 +
-      result.formatting * 0.15;
+    let result: any = await this.callWithRetry(prompt, MAX_TOKENS.review, 'evaluateTranslation');
+
+    // Validate the four criterion scores before they reach the weighted sum
+    // (#102) — retry once on an incomplete response, then fail loudly rather
+    // than let a partial review become an automatic FAIL verdict.
+    let check = validateCriterionScores(result);
+    if (!check.valid) {
+      core.warning(
+        `evaluateTranslation: response missing numeric criteria [${check.missing.join(', ')}] — retrying`
+      );
+      result = await this.callWithRetry(prompt, MAX_TOKENS.review, 'evaluateTranslation');
+      check = validateCriterionScores(result);
+      if (!check.valid) {
+        throw new Error(
+          `evaluateTranslation: response still missing numeric criterion scores [${check.missing.join(', ')}] after retry — refusing to compute a verdict from an incomplete review`
+        );
+      }
+    }
+    const scores = check.scores!;
+    const score = REVIEW_CRITERIA.reduce((sum, c) => sum + scores[c.key] * c.weight, 0);
 
     return {
       score: Math.round(score * 10) / 10,
-      accuracy: result.accuracy,
-      fluency: result.fluency,
-      terminology: result.terminology,
-      formatting: result.formatting,
+      accuracy: scores.accuracy,
+      fluency: scores.fluency,
+      terminology: scores.terminology,
+      formatting: scores.formatting,
       syntaxErrors: result.syntaxErrors || [],
       issues: this.normalizeIssues(result.issues || []),
       strengths: result.strengths || [],
