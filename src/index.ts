@@ -200,7 +200,8 @@ async function runRebase(): Promise<void> {
 
   // Filter to translation-sync PRs
   const siblingPRs = openPRs.filter(
-    (pr) => pr.head.ref.startsWith('translation-sync-') && pr.number !== mergedPrNumber
+    (pr: { head: { ref: string }; number: number }) =>
+      pr.head.ref.startsWith('translation-sync-') && pr.number !== mergedPrNumber
   );
 
   if (siblingPRs.length === 0) {

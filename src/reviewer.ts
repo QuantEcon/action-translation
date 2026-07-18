@@ -46,6 +46,19 @@ const LEGACY_REVIEW_HEADING = /^#{2} .*Translation Quality Review/;
 /** Attempts for the comment upsert; >1 only matters when a concurrent run deletes our target. */
 const REVIEW_COMMENT_UPSERT_ATTEMPTS = 3;
 
+/**
+ * Structural type for items from `pulls.listFiles` — the @octokit majors that
+ * arrived with @actions/github@8 no longer infer element types through
+ * `paginate()`, so the fields the reviewer uses are pinned here explicitly.
+ */
+interface PrListFile {
+  filename: string;
+  status: string;
+  additions: number;
+  deletions: number;
+  previous_filename?: string;
+}
+
 /** The four criteria a translation review must score, with their verdict weights. */
 export const REVIEW_CRITERIA = [
   { key: 'accuracy', weight: 0.35 },
@@ -463,15 +476,18 @@ export class TranslationReviewer {
       });
 
       // Get files changed in source PR (paginate — PRs can touch >30 files)
-      const sourceFiles = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
-        owner: sourceOwner,
-        repo: sourceRepoName,
-        pull_number: sourcePrNumber,
-      });
+      const sourceFiles: PrListFile[] = await this.octokit.paginate(
+        this.octokit.rest.pulls.listFiles,
+        {
+          owner: sourceOwner,
+          repo: sourceRepoName,
+          pull_number: sourcePrNumber,
+        }
+      );
 
       for (const filename of filenames) {
         // Check if this file was changed in source PR
-        const sourceFile = sourceFiles.find((f) => f.filename === filename);
+        const sourceFile = sourceFiles.find((f: PrListFile) => f.filename === filename);
 
         // For renamed files, use previous filename for "before"
         const beforeFilename =
@@ -581,7 +597,7 @@ export class TranslationReviewer {
     });
 
     // Get changed files in the PR (paginate — PRs can touch >30 files)
-    const files = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
+    const files: PrListFile[] = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
       owner: targetOwner,
       repo: targetRepo,
       pull_number: prNumber,
@@ -589,7 +605,7 @@ export class TranslationReviewer {
 
     // Filter for markdown files in docs folder
     const markdownFiles = files.filter(
-      (f) => f.filename.startsWith(docsFolder) && f.filename.endsWith('.md')
+      (f: PrListFile) => f.filename.startsWith(docsFolder) && f.filename.endsWith('.md')
     );
 
     if (markdownFiles.length === 0) {
@@ -1220,14 +1236,19 @@ ${diffResult.issues.map((i) => `- ${i}`).join('\n')}`;
     owner: string,
     repo: string
   ): Promise<Array<{ id: number }>> {
-    const comments = await this.octokit.paginate(this.octokit.rest.issues.listComments, {
-      owner,
-      repo,
-      issue_number: prNumber,
-      per_page: 100,
-    });
+    const comments: Array<{ id: number; body?: string | null }> = await this.octokit.paginate(
+      this.octokit.rest.issues.listComments,
+      {
+        owner,
+        repo,
+        issue_number: prNumber,
+        per_page: 100,
+      }
+    );
 
-    return comments.filter((c) => isActionReviewComment(c.body)).sort((a, b) => a.id - b.id);
+    return comments
+      .filter((c: { id: number; body?: string | null }) => isActionReviewComment(c.body))
+      .sort((a: { id: number }, b: { id: number }) => a.id - b.id);
   }
 
   /**

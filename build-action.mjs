@@ -2,7 +2,7 @@
  * Bundle the GitHub Action entry point to CJS for the Actions runner.
  *
  * The source is compiled to ESM by tsc (for ink v4 compatibility).
- * esbuild re-bundles it to CJS so the GitHub Actions node20 runner
+ * esbuild re-bundles it to CJS so the GitHub Actions node24 runner
  * can load it via require().
  *
  * Glossary JSON files are copied as external assets since they're
@@ -20,7 +20,7 @@ await esbuild.build({
   bundle: true,
   format: 'cjs',
   platform: 'node',
-  target: 'node20',
+  target: 'node24',
   outfile: path.join(outdir, 'index.js'),
   // Replace import.meta.url with a CJS-compatible equivalent
   define: {
@@ -49,4 +49,4 @@ fs.writeFileSync(
   JSON.stringify({ type: 'commonjs' }, null, 2) + '\n',
 );
 
-console.log(`✓ Action bundled to ${outdir}/index.js (CJS, node20)`);
+console.log(`✓ Action bundled to ${outdir}/index.js (CJS, node24)`);
