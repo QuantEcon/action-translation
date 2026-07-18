@@ -434,6 +434,40 @@ describe('gitPrepareAndPush', () => {
     expect(result.baseSha).toBe('abc123def456');
   });
 
+  it('refuses to write a file path that escapes the repo root', () => {
+    const { runner, calls } = makeGitRunner();
+    const result = gitPrepareAndPush('../../evil.md', 'content', tmpDir, 'lectures', runner);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Refusing to write outside the target repo root');
+    // Refused before any git operation — no branch was created or touched
+    expect(calls.length).toBe(0);
+    expect(fs.existsSync(path.join(path.dirname(tmpDir), 'evil.md'))).toBe(false);
+  });
+
+  it('refuses an extra file path that escapes the repo root', () => {
+    const { runner, calls } = makeGitRunner();
+    const result = gitPrepareAndPush('pv.md', 'content', tmpDir, 'lectures', runner, [
+      { relPath: '../outside.yml', content: 'x' },
+    ]);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('../outside.yml');
+    expect(calls.length).toBe(0);
+    expect(fs.existsSync(path.join(path.dirname(tmpDir), 'outside.yml'))).toBe(false);
+  });
+
+  it('treats docsFolder "/" as the repo root, not an escape', () => {
+    fs.writeFileSync(path.join(tmpDir, 'root.md'), 'old', 'utf-8');
+    const { runner, calls } = makeGitRunner();
+    const result = gitPrepareAndPush('root.md', '# new', tmpDir, '/', runner);
+
+    expect(result.success).toBe(true);
+    expect(fs.readFileSync(path.join(tmpDir, 'root.md'), 'utf-8')).toBe('# new');
+    const addCall = calls.find((c) => c.args[0] === 'add');
+    expect(addCall?.args).toEqual(['add', 'root.md']);
+  });
+
   it('writes and stages extra files in the same commit (#105)', () => {
     const { runner, calls } = makeGitRunner();
     const stateRelPath = '.translate/state/pv.md.yml';

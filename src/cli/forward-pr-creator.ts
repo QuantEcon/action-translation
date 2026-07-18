@@ -176,6 +176,34 @@ export function gitPrepareAndPush(
 ): GitPrepareResult {
   const branchName = buildBranchName(file);
 
+  // 0. Resolve every write target and refuse anything outside the repo root.
+  // file/docsFolder/relPath come from CLI options and .translate config; a
+  // typo'd value ("-f ../../x.md") must fail cleanly here, not write outside
+  // the operator's clone. Containment is checked on the JOINED result —
+  // docsFolder "/" legitimately means the repo root and must keep working.
+  const repoRoot = path.resolve(targetRepoPath);
+  const containedPath = (...segments: string[]): string | undefined => {
+    const abs = path.resolve(path.join(repoRoot, ...segments));
+    return abs.startsWith(repoRoot + path.sep) ? abs : undefined;
+  };
+
+  const refuse = (offending: string): GitPrepareResult => ({
+    success: false,
+    branchName,
+    originalBranch: '',
+    error: `Refusing to write outside the target repo root: ${offending}`,
+  });
+
+  const contentAbs = containedPath(docsFolder, file);
+  if (contentAbs === undefined) return refuse(path.join(docsFolder, file));
+
+  const resolvedExtras: Array<{ abs: string; content: string }> = [];
+  for (const extra of extraFiles) {
+    const abs = containedPath(extra.relPath);
+    if (abs === undefined) return refuse(extra.relPath);
+    resolvedExtras.push({ abs, content: extra.content });
+  }
+
   // 1. Record current branch and its HEAD SHA (PR base for metadata)
   const branchResult = runner(['rev-parse', '--abbrev-ref', 'HEAD'], targetRepoPath);
   if (branchResult.status !== 0) {
@@ -213,22 +241,25 @@ export function gitPrepareAndPush(
     };
   }
 
-  // 3. Write files (content + extras such as .translate/state)
-  const filePath = path.join(targetRepoPath, docsFolder, file);
+  // 3. Write files (content + extras such as .translate/state), using the
+  // repo-contained absolute paths validated above
   try {
-    fs.writeFileSync(filePath, content, 'utf-8');
-    for (const extra of extraFiles) {
-      const extraPath = path.join(targetRepoPath, extra.relPath);
-      fs.mkdirSync(path.dirname(extraPath), { recursive: true });
-      fs.writeFileSync(extraPath, extra.content, 'utf-8');
+    fs.writeFileSync(contentAbs, content, 'utf-8');
+    for (const extra of resolvedExtras) {
+      fs.mkdirSync(path.dirname(extra.abs), { recursive: true });
+      fs.writeFileSync(extra.abs, extra.content, 'utf-8');
     }
   } catch (err) {
     switchBack();
     return { success: false, branchName, originalBranch, error: `Failed to write file: ${err}` };
   }
 
-  // 4. Stage and commit (one commit containing content + state)
-  const pathsToStage = [path.join(docsFolder, file), ...extraFiles.map((e) => e.relPath)];
+  // 4. Stage and commit (one commit containing content + state).
+  // Staging paths are derived from the validated absolute paths, so they are
+  // always repo-relative regardless of how docsFolder was spelled.
+  const pathsToStage = [contentAbs, ...resolvedExtras.map((e) => e.abs)].map((abs) =>
+    path.relative(repoRoot, abs)
+  );
   const addResult = runner(['add', ...pathsToStage], targetRepoPath);
   if (addResult.status !== 0) {
     switchBack();
