@@ -182,10 +182,14 @@ npx translate forward \
 ```
 
 This automatically:
-1. Runs `status` to discover OUTDATED and SOURCE_AHEAD files
-2. Triages each file (skips files with only i18n differences)
+1. Runs `status` and selects every file carrying a divergence flag (OUTDATED, SOURCE_AHEAD, TARGET_AHEAD, or MISSING_HEADINGMAP)
+2. Triages each candidate (skips files with only i18n differences)
 3. Resyncs files with real content changes
 4. Shows a summary table
+
+```{warning} Discovery has a blind spot before bootstrap
+Discovery works from structural and git-metadata signals. A file whose *content* is stale but whose section structure matches the source, whose heading map is present, and whose `.translate/state/` is absent (e.g. a repo not yet bootstrapped with `status --write-state`) carries no divergence flag and will not be discovered. Run `npx translate status --check-sync` (LLM content triage) to find such files, then resync them explicitly with `-f <file>`. After the first resync wave is merged, per-file state makes discovery exact.
+```
 
 Example output:
 

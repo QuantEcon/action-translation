@@ -28,7 +28,7 @@ import { Glossary } from '../../types.js';
 import { triageForward } from '../forward-triage.js';
 import { languageLabel } from '../../language-config.js';
 import { ForwardOptions, ForwardFileResult, FileState } from '../types.js';
-import { runStatus } from './status.js';
+import { runStatus, FileStatusEntry, FileSyncStatus } from './status.js';
 import {
   writeFileState,
   serializeFileState,
@@ -387,7 +387,45 @@ export async function resyncSingleFile(
 // ============================================================================
 
 /**
- * Run forward resync on all OUTDATED files.
+ * Flags that make a file a forward-resync candidate. Anything carrying one of
+ * these goes to stage-1 triage, which is the real gate — i18n-only/identical
+ * files are skipped there at the cost of one triage call.
+ */
+const FORWARD_CANDIDATE_FLAGS: FileSyncStatus[] = [
+  'OUTDATED',
+  'SOURCE_AHEAD',
+  'TARGET_AHEAD',
+  'MISSING_HEADINGMAP',
+];
+
+/**
+ * Select which status entries forward should attempt.
+ *
+ * Matches on `flags`, not the primary status (#106): status priority ranks
+ * MISSING_HEADINGMAP above OUTDATED, so on an unbootstrapped repo — where
+ * every file lacks a heading map — a date-stale file's primary status hides
+ * its staleness and the old primary-status filter never saw it. TARGET_AHEAD
+ * files are candidates too: forward explicitly handles the
+ * TARGET_HAS_ADDITIONS verdict rather than ignoring target-side divergence.
+ *
+ * Note the residual gap: a content-stale file that carries none of these
+ * flags (heading map present, no state, matching section counts, target git
+ * dates newer than source) is still invisible — only `status --check-sync`'s
+ * LLM triage can catch it. Exported for testing.
+ */
+export function selectForwardCandidates(
+  entries: FileStatusEntry[]
+): Array<{ file: string; flags: FileSyncStatus[] }> {
+  return entries
+    .map((e) => ({
+      file: e.file,
+      flags: e.flags.filter((f) => FORWARD_CANDIDATE_FLAGS.includes(f)),
+    }))
+    .filter((c) => c.flags.length > 0);
+}
+
+/**
+ * Run forward resync on all files flagged as divergent by status.
  */
 export async function runForwardBulk(
   options: ForwardOptions,
@@ -409,19 +447,23 @@ export async function runForwardBulk(
     exclude,
   });
 
-  // Filter to files that need resync (OUTDATED or SOURCE_AHEAD)
-  const candidates = statusResult.entries
-    .filter((e) => e.status === 'OUTDATED' || e.status === 'SOURCE_AHEAD')
-    .map((e) => e.file);
+  // Filter to files carrying any divergence flag (#106) — triage decides the rest
+  const selected = selectForwardCandidates(statusResult.entries);
+  const candidates = selected.map((c) => c.file);
 
   if (candidates.length === 0) {
-    logger.info('All files are in sync — nothing to resync.');
+    logger.info('No files carry divergence flags — nothing to resync.');
+    logger.info(
+      'Note: content-stale files with matching structure and no .translate/ state ' +
+        "are invisible to discovery — run 'status --check-sync' to find them, then " +
+        'resync with -f.'
+    );
     return [];
   }
 
-  logger.info(`Found ${candidates.length} file(s) to resync:\n`);
-  for (const f of candidates) {
-    logger.info(`  • ${f}`);
+  logger.info(`Found ${candidates.length} candidate file(s) — triage will decide each:\n`);
+  for (const c of selected) {
+    logger.info(`  • ${c.file} [${c.flags.join(', ')}]`);
   }
   logger.info('');
 
@@ -490,15 +532,36 @@ export async function runForwardBulk(
 // SUMMARY
 // ============================================================================
 
-function printBulkSummary(results: ForwardFileResult[], logger: ForwardLogger): void {
-  const skipped = results.filter((r) => r.triageResult.verdict !== 'CONTENT_CHANGES');
-  const processed = results.filter((r) => r.triageResult.verdict === 'CONTENT_CHANGES');
+/** Human label for why a file was skipped, from its triage verdict. */
+function skipLabel(verdict: string): string {
+  switch (verdict) {
+    case 'IDENTICAL':
+      return 'identical';
+    case 'I18N_ONLY':
+      return 'i18n only';
+    case 'TARGET_HAS_ADDITIONS':
+      return 'target has additions';
+    default:
+      return verdict.toLowerCase().replace(/_/g, ' ');
+  }
+}
+
+/**
+ * Print the bulk-run summary, bucketing by what the pipeline actually DID
+ * with each file — not by triage verdict (#106): TARGET_HAS_ADDITIONS files
+ * are resynced, so bucketing by `verdict !== CONTENT_CHANGES` reported them
+ * as "skipped: i18n only" while their PRs existed, understating the wave and
+ * mislabeling the reason. Exported for testing.
+ */
+export function printBulkSummary(results: ForwardFileResult[], logger: ForwardLogger): void {
+  const processed = results.filter((r) => r.summary.resynced > 0 || r.summary.errors > 0);
+  const skipped = results.filter((r) => r.summary.resynced === 0 && r.summary.errors === 0);
 
   let totalResynced = 0;
   let totalErrors = 0;
   let totalTokens = 0;
 
-  for (const r of processed) {
+  for (const r of results) {
     totalResynced += r.summary.resynced;
     totalErrors += r.summary.errors;
     if (r.tokensUsed) totalTokens += r.tokensUsed;
@@ -511,14 +574,16 @@ function printBulkSummary(results: ForwardFileResult[], logger: ForwardLogger): 
 
   if (skipped.length > 0) {
     for (const r of skipped) {
-      const label = r.triageResult.verdict === 'IDENTICAL' ? 'identical' : 'i18n only';
       const reason = r.triageResult.reason ? ` — ${r.triageResult.reason}` : '';
-      logger.info(`    ${r.file}: ${label}${reason}`);
+      logger.info(`    ${r.file}: ${skipLabel(r.triageResult.verdict)}${reason}`);
     }
   }
 
   if (totalErrors > 0) {
     logger.info(`  Files errored:   ${totalErrors}`);
+    for (const r of results.filter((x) => x.summary.errors > 0)) {
+      logger.info(`    ${r.file}`);
+    }
   }
   if (totalTokens > 0) {
     logger.info(`  Total tokens:    ${totalTokens.toLocaleString()}`);
