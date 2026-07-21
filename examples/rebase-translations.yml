@@ -17,10 +17,16 @@ on:
 
 jobs:
   rebase:
-    # Only run when a translation-sync PR is merged
+    # Only run when a translation PR is merged. Both prefixes must be listed:
+    # sync mode creates `translation-sync-*`, while the CLI's `forward --github`
+    # creates `resync/*`, and a wave of resync PRs goes stale the same way.
+    # Keep this in step with `isTranslationBranch` in the action's src/branch-naming.ts
+    # — this `if` decides whether the job runs, that predicate decides which open PRs
+    # it then rebases, so a prefix matching only one of them is a no-op run.
     if: >
       github.event.pull_request.merged == true &&
-      startsWith(github.event.pull_request.head.ref, 'translation-sync-')
+      (startsWith(github.event.pull_request.head.ref, 'translation-sync-') ||
+       startsWith(github.event.pull_request.head.ref, 'resync/'))
     runs-on: ubuntu-latest
 
     permissions:
@@ -34,7 +40,7 @@ jobs:
 
     steps:
       - name: Rebase open translation PRs
-        uses: QuantEcon/action-translation@v0.15.0
+        uses: QuantEcon/action-translation@v0
         with:
           mode: rebase
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}

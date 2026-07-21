@@ -31516,6 +31516,14 @@ Anthropic.Messages = Messages2;
 Anthropic.Models = Models2;
 Anthropic.Beta = Beta;
 
+// dist/branch-naming.js
+var SYNC_BRANCH_PREFIX = "translation-sync-";
+var RESYNC_BRANCH_PREFIX = "resync/";
+var TRANSLATION_BRANCH_PREFIXES = [SYNC_BRANCH_PREFIX, RESYNC_BRANCH_PREFIX];
+function isTranslationBranch(ref) {
+  return TRANSLATION_BRANCH_PREFIXES.some((prefix) => ref.startsWith(prefix));
+}
+
 // dist/pr-creator.js
 async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata) {
   const { targetOwner, targetRepo } = config;
@@ -31531,7 +31539,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
   });
   const baseSha = refData.object.sha;
   const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-").slice(0, -5);
-  const branchName = `translation-sync-${timestamp2}-pr-${config.prNumber}`;
+  const branchName = `${SYNC_BRANCH_PREFIX}${timestamp2}-pr-${config.prNumber}`;
   await octokit.rest.git.createRef({
     owner: targetOwner,
     repo: targetRepo,
@@ -37993,12 +38001,12 @@ async function runRebase() {
     state: "open",
     per_page: 100
   });
-  const siblingPRs = openPRs.filter((pr) => pr.head.ref.startsWith("translation-sync-") && pr.number !== mergedPrNumber);
+  const siblingPRs = openPRs.filter((pr) => isTranslationBranch(pr.head.ref) && pr.number !== mergedPrNumber);
   if (siblingPRs.length === 0) {
-    core7.info("No other open translation-sync PRs found. Nothing to rebase.");
+    core7.info("No other open translation PRs found. Nothing to rebase.");
     return;
   }
-  core7.info(`Found ${siblingPRs.length} open translation-sync PR(s). Checking for file overlaps...`);
+  core7.info(`Found ${siblingPRs.length} open translation PR(s). Checking for file overlaps...`);
   let rebasedCount = 0;
   let skippedCount = 0;
   let errorCount = 0;

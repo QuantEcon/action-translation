@@ -25,6 +25,7 @@ import {
   TranslationSyncMetadata,
 } from './pr-creator.js';
 import { RebaseCache } from './types.js';
+import { isTranslationBranch } from './branch-naming.js';
 import { stateFileRelativePath } from './cli/translate-state.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -198,20 +199,20 @@ async function runRebase(): Promise<void> {
     per_page: 100,
   });
 
-  // Filter to translation-sync PRs
+  // Filter to translation PRs this tool created — both the Action's sync branches
+  // and the CLI's `resync/*` branches. Matching only the former left resync waves
+  // permanently unrebased (issue #115).
   const siblingPRs = openPRs.filter(
     (pr: { head: { ref: string }; number: number }) =>
-      pr.head.ref.startsWith('translation-sync-') && pr.number !== mergedPrNumber
+      isTranslationBranch(pr.head.ref) && pr.number !== mergedPrNumber
   );
 
   if (siblingPRs.length === 0) {
-    core.info('No other open translation-sync PRs found. Nothing to rebase.');
+    core.info('No other open translation PRs found. Nothing to rebase.');
     return;
   }
 
-  core.info(
-    `Found ${siblingPRs.length} open translation-sync PR(s). Checking for file overlaps...`
-  );
+  core.info(`Found ${siblingPRs.length} open translation PR(s). Checking for file overlaps...`);
 
   let rebasedCount = 0;
   let skippedCount = 0;

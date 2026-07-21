@@ -14,6 +14,7 @@
 
 import { TranslatedFile } from './types.js';
 import { Logger } from './sync-orchestrator.js';
+import { SYNC_BRANCH_PREFIX } from './branch-naming.js';
 
 // =============================================================================
 // INTERFACES
@@ -124,7 +125,7 @@ export async function createTranslationPR(
 
   // Create a new branch
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-  const branchName = `translation-sync-${timestamp}-pr-${config.prNumber}`;
+  const branchName = `${SYNC_BRANCH_PREFIX}${timestamp}-pr-${config.prNumber}`;
 
   await octokit.rest.git.createRef({
     owner: targetOwner,
