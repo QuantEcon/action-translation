@@ -13,6 +13,15 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## Recently landed
 
+- **v0.19.0** (2026-07-21) — #124 closed #123: `rebase-stale-siblings` (default off) refreshes
+  non-overlapping sibling PRs during waves via update-branch — no re-translation, message-gated
+  422s. **Harness-validated pre-release** under the harness-first policy: pinned workflow to the
+  PR head, PAT token, two resync PRs, one merged → sibling refreshed and its checks re-triggered
+  (run 29799241099). The A/B that decided #125's token question ran the same day on the same
+  repo: 13 GITHUB_TOKEN-rebased heads got **zero** workflow runs; the one PAT-refreshed head got
+  its review run. Production rollout of the PAT (5 edition repos: org-secret grant + one-line
+  workflow edit each) is #125, awaiting maintainer sign-off. Harness targets aligned to
+  production shape (both now carry review+rebase on `@v0`, PAT in steady state) — #109.
 - **v0.18.1** (2026-07-21) — #121 closed #115: rebase mode ignored `resync/*` PRs, so a
   drift-recovery wave left 60+ PRs going stale with every merge. The prefix turned out to be
   enforced in **three** places, not the two the issue and the first fix assumed —
