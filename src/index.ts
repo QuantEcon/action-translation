@@ -249,13 +249,32 @@ async function runRebase(): Promise<void> {
           continue;
         }
 
-        const refreshed = await refreshStaleBranch(octokit, owner, repo, pr.number);
-        if (refreshed) {
-          core.info(`PR #${pr.number}: No overlap — refreshed against the new base.`);
-          refreshedCount++;
-        } else {
-          core.info(`PR #${pr.number}: No overlap and already up to date — skipping.`);
-          skippedCount++;
+        // Errors are handled here rather than by the outer catch: its comment advises
+        // resolving conflicts or re-running the resync, which is wrong for a refresh —
+        // nothing was translated and there is no conflict-resolution step to redo.
+        try {
+          const refreshed = await refreshStaleBranch(octokit, owner, repo, pr.number);
+          if (refreshed) {
+            core.info(`PR #${pr.number}: No overlap — refreshed against the new base.`);
+            refreshedCount++;
+          } else {
+            core.info(`PR #${pr.number}: No overlap and already up to date — skipping.`);
+            skippedCount++;
+          }
+        } catch (refreshError) {
+          const msg = refreshError instanceof Error ? refreshError.message : String(refreshError);
+          core.error(`PR #${pr.number}: Branch refresh failed — ${msg}`);
+          errorCount++;
+          try {
+            await octokit.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: pr.number,
+              body: `⚠️ **Automatic branch refresh failed** after #${mergedPrNumber} was merged.\n\nError: ${msg}\n\nNo content was changed — this PR's branch is simply still behind \`main\`. Use the **Update branch** button on this PR, or merge \`main\` into the branch manually.`,
+            });
+          } catch {
+            core.warning(`Could not post refresh-failure comment on PR #${pr.number}`);
+          }
         }
         continue;
       }

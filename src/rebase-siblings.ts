@@ -27,11 +27,20 @@ export interface UpdateBranchCapableOctokit {
 }
 
 /**
- * GitHub returns 422 from the update-branch endpoint when the head branch is not behind
- * its base. Mid-wave that is routine — a PR opened after the last merge is already
- * current — so it is a quiet no-op, never a failure.
+ * GitHub returns 422 from the update-branch endpoint for several DISTINCT conditions:
+ * the branch not being behind its base (benign — routine mid-wave, a PR opened after
+ * the last merge is already current), but also a merge conflict between base and head,
+ * and an expected-head-SHA mismatch (both real problems). The status alone cannot tell
+ * them apart, so benignity is decided on the error message.
+ *
+ * A merge conflict IS reachable for a "non-overlapping" PR: overlap is computed from the
+ * PR's translation-sync-metadata, and branches can carry hand-pushed commits touching
+ * files the metadata does not list — the Track B wave fixed 10 defects that way.
+ *
+ * Unknown 422s therefore throw. A loud false alarm beats a silent skip, which is how
+ * every defect in this class has stayed hidden.
  */
-const NOT_BEHIND_BASE = 422;
+const BENIGN_422 = /no new commits|not behind|already up to date/i;
 
 /**
  * Bring a PR branch up to date with its base without re-translating anything.
@@ -55,7 +64,8 @@ export async function refreshStaleBranch(
     await octokit.rest.pulls.updateBranch({ owner, repo, pull_number: prNumber });
     return true;
   } catch (error) {
-    if ((error as { status?: number }).status === NOT_BEHIND_BASE) {
+    const { status, message } = error as { status?: number; message?: string };
+    if (status === 422 && BENIGN_422.test(message ?? '')) {
       return false;
     }
     throw error;

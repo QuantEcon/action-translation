@@ -26554,7 +26554,7 @@ function getRebaseInputs() {
     glossaryPath,
     anthropicApiKey,
     githubToken,
-    rebaseStaleSiblings: core.getInput("rebase-stale-siblings", { required: false }) === "true"
+    rebaseStaleSiblings: core.getInput("rebase-stale-siblings", { required: false }).toLowerCase() === "true"
   };
 }
 function getReviewInputs() {
@@ -37919,13 +37919,14 @@ var SyncOrchestrator = class {
 };
 
 // dist/rebase-siblings.js
-var NOT_BEHIND_BASE = 422;
+var BENIGN_422 = /no new commits|not behind|already up to date/i;
 async function refreshStaleBranch(octokit, owner, repo, prNumber) {
   try {
     await octokit.rest.pulls.updateBranch({ owner, repo, pull_number: prNumber });
     return true;
   } catch (error3) {
-    if (error3.status === NOT_BEHIND_BASE) {
+    const { status, message } = error3;
+    if (status === 422 && BENIGN_422.test(message ?? "")) {
       return false;
     }
     throw error3;
@@ -38042,13 +38043,33 @@ async function runRebase() {
           skippedCount++;
           continue;
         }
-        const refreshed = await refreshStaleBranch(octokit, owner, repo, pr.number);
-        if (refreshed) {
-          core7.info(`PR #${pr.number}: No overlap \u2014 refreshed against the new base.`);
-          refreshedCount++;
-        } else {
-          core7.info(`PR #${pr.number}: No overlap and already up to date \u2014 skipping.`);
-          skippedCount++;
+        try {
+          const refreshed = await refreshStaleBranch(octokit, owner, repo, pr.number);
+          if (refreshed) {
+            core7.info(`PR #${pr.number}: No overlap \u2014 refreshed against the new base.`);
+            refreshedCount++;
+          } else {
+            core7.info(`PR #${pr.number}: No overlap and already up to date \u2014 skipping.`);
+            skippedCount++;
+          }
+        } catch (refreshError) {
+          const msg = refreshError instanceof Error ? refreshError.message : String(refreshError);
+          core7.error(`PR #${pr.number}: Branch refresh failed \u2014 ${msg}`);
+          errorCount++;
+          try {
+            await octokit.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: pr.number,
+              body: `\u26A0\uFE0F **Automatic branch refresh failed** after #${mergedPrNumber} was merged.
+
+Error: ${msg}
+
+No content was changed \u2014 this PR's branch is simply still behind \`main\`. Use the **Update branch** button on this PR, or merge \`main\` into the branch manually.`
+            });
+          } catch {
+            core7.warning(`Could not post refresh-failure comment on PR #${pr.number}`);
+          }
         }
         continue;
       }

@@ -85,6 +85,8 @@ Runs in the **target** (translated) repository, triggered when a translation PR 
 
 It is off by default because the cost scales with the wave: with 60 open PRs, every merge refreshes up to 59 branches and re-runs their checks. Turn it on while a wave is in flight, and off again afterwards.
 
+**Token caveat — this applies to all of rebase mode, not just the new input.** Commits pushed with the default `GITHUB_TOKEN` do not trigger workflows (GitHub's recursion guard), so a branch rebased or refreshed with it gets its new commit but **no CI runs on it** — verified live on the test harness, where 13 force-push rebased PRs ended with zero check runs on their new heads. If the goal is re-run checks (it usually is), pass a PAT or GitHub App token as `github-token` in the rebase workflow, exactly as the sync workflows already do with the machine-user PAT. With required status checks, a `GITHUB_TOKEN` refresh is worse than nothing: the PR goes from stale-but-green to a head with no runs at all, which blocks merging until someone triggers checks by hand.
+
 ## Outputs
 
 ### Sync mode outputs

@@ -7,10 +7,12 @@
  * moves the base out from under them and their checks go out of date, which is the
  * symptom #115 actually reported.
  *
- * These cover the refresh helper. The important case is the 422: GitHub returns it when
- * a branch is not behind its base, which is a normal mid-wave outcome and must NOT be
- * reported as a failure. That branch is easy to invert silently, and `src/index.ts` has
- * no other coverage.
+ * These cover the refresh helper. The important cases are the 422s: GitHub uses that
+ * status for BOTH "branch not behind base" (benign, routine mid-wave) and "merge
+ * conflict between base and head" (a real problem — reachable here because overlap is
+ * computed from PR metadata, and branches can carry hand-pushed commits touching files
+ * the metadata does not list). Only message-identified benign 422s may be swallowed;
+ * a conflict reported as "already up to date" would be a silent failure.
  */
 
 import { refreshStaleBranch } from '../rebase-siblings.js';
@@ -45,14 +47,48 @@ describe('refreshStaleBranch', () => {
     });
   });
 
-  it('treats 422 as "already current", not as an error', async () => {
-    // GitHub returns 422 when the head branch is not behind its base. A PR opened after
-    // the last merge is in exactly that state, so this must be a quiet no-op.
-    const updateBranch: UpdateBranchFake = jest.fn().mockRejectedValue(httpError(422));
+  it('treats a benign 422 ("not behind base") as "already current", not as an error', async () => {
+    // A PR opened after the last merge is already current, so this must be a quiet no-op.
+    // The known benign wordings all resolve false; matching is case-insensitive.
+    for (const message of [
+      'There are no new commits on the base branch.',
+      'Head branch is not behind the base branch',
+      'Branch is already up to date',
+    ]) {
+      const updateBranch: UpdateBranchFake = jest.fn().mockRejectedValue(httpError(422, message));
+
+      await expect(
+        refreshStaleBranch(makeOctokit(updateBranch), 'QuantEcon', 'repo.zh-cn', 7)
+      ).resolves.toBe(false);
+    }
+  });
+
+  it('rethrows a 422 merge conflict — the status alone must never read as benign', async () => {
+    // GitHub also uses 422 for a merge conflict between base and head, and for an
+    // expected-head-SHA mismatch. Reporting either as "already up to date" would be a
+    // silent failure — the exact class this feature exists to eliminate.
+    for (const message of [
+      'merge conflict between base and head',
+      'expected head sha didn’t match current head ref.',
+    ]) {
+      const updateBranch: UpdateBranchFake = jest.fn().mockRejectedValue(httpError(422, message));
+
+      await expect(
+        refreshStaleBranch(makeOctokit(updateBranch), 'QuantEcon', 'repo.zh-cn', 7)
+      ).rejects.toThrow(message);
+    }
+  });
+
+  it('rethrows a 422 with an unrecognised message rather than guessing it is benign', async () => {
+    // If GitHub changes its wording, the failure mode must be a loud error we then
+    // whitelist deliberately — not a silent skip.
+    const updateBranch: UpdateBranchFake = jest
+      .fn()
+      .mockRejectedValue(httpError(422, 'Validation Failed'));
 
     await expect(
       refreshStaleBranch(makeOctokit(updateBranch), 'QuantEcon', 'repo.zh-cn', 7)
-    ).resolves.toBe(false);
+    ).rejects.toThrow('Validation Failed');
   });
 
   it('rethrows any other HTTP error so the caller counts it as a failure', async () => {

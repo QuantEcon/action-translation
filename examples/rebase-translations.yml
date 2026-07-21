@@ -46,6 +46,11 @@ jobs:
         with:
           mode: rebase
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Commits pushed with the default GITHUB_TOKEN do not trigger workflows
+          # (GitHub's recursion guard), so rebased/refreshed branches will get their
+          # new commit but NO CI runs on it. If checks must re-run — and with
+          # required checks a run-less head blocks merging — pass a PAT or App
+          # token here instead, as the sync workflows do.
           github-token: ${{ secrets.GITHUB_TOKEN }}
           # Uncomment during a drift-recovery wave. `forward` opens one PR per lecture,
           # so siblings never share a file and none of them are conflict-rebased — but
