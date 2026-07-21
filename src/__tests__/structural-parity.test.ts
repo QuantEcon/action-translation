@@ -147,6 +147,27 @@ describe('checkStructuralParity — the confirmed defect shapes', () => {
     expect(result.ok).toBe(false);
     expect(result.violations.some((v) => v.message.includes('different order'))).toBe(true);
   });
+
+  it('a dropped DUPLICATE anchor is reported as missing, not as reordering', () => {
+    // includes()-based diffing would see every label present and mislabel this
+    // as "different order". The multiset diff must name the dropped copy.
+    const src = '(a)=\n# One\n\n(a)=\n## Two\n\n(b)=\n### Three';
+    const out = '(a)=\n# 一\n\n(b)=\n### 三';
+    const result = checkStructuralParity(src, out);
+    expect(result.ok).toBe(false);
+    const anchorViolation = result.violations.find((v) => v.message.includes('anchors diverge'));
+    expect(anchorViolation?.message).toContain('missing from output: (a)=');
+    expect(anchorViolation?.message).not.toContain('different order');
+  });
+
+  it('a duplicated-in-output anchor is reported as not-in-source with its count', () => {
+    const src = '(a)=\n# One';
+    const out = '(a)=\n# 一\n\n(a)=\n## 二\n\n(a)=\n### 三';
+    const result = checkStructuralParity(src, out);
+    expect(result.ok).toBe(false);
+    const anchorViolation = result.violations.find((v) => v.message.includes('anchors diverge'));
+    expect(anchorViolation?.message).toContain('not in source: (a)= ×2');
+  });
 });
 
 describe('checkStructuralParity — legitimate translation must pass', () => {

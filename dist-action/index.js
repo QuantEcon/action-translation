@@ -37645,14 +37645,33 @@ function checkStructuralParity(sourceContent, outputContent) {
   const sourceLabels = source.anchors.map((a) => a.label);
   const outputLabels = output.anchors.map((a) => a.label);
   if (sourceLabels.join("\n") !== outputLabels.join("\n")) {
-    const missing = sourceLabels.filter((l) => !outputLabels.includes(l));
-    const invented = outputLabels.filter((l) => !sourceLabels.includes(l));
+    const counts = (labels) => {
+      const m = /* @__PURE__ */ new Map();
+      for (const l of labels)
+        m.set(l, (m.get(l) ?? 0) + 1);
+      return m;
+    };
+    const describe = (label, n) => n > 1 ? `(${label})= \xD7${n}` : `(${label})=`;
+    const sourceCounts = counts(sourceLabels);
+    const outputCounts = counts(outputLabels);
+    const missing = [];
+    const invented = [];
+    for (const [label, n] of sourceCounts) {
+      const d = n - (outputCounts.get(label) ?? 0);
+      if (d > 0)
+        missing.push(describe(label, d));
+    }
+    for (const [label, n] of outputCounts) {
+      const d = n - (sourceCounts.get(label) ?? 0);
+      if (d > 0)
+        invented.push(describe(label, d));
+    }
     const parts = [];
     if (missing.length > 0) {
-      parts.push(`missing from output: ${missing.map((l) => `(${l})=`).join(", ")}`);
+      parts.push(`missing from output: ${missing.join(", ")}`);
     }
     if (invented.length > 0) {
-      parts.push(`not in source: ${invented.map((l) => `(${l})=`).join(", ")}`);
+      parts.push(`not in source: ${invented.join(", ")}`);
     }
     if (parts.length === 0) {
       parts.push(`same labels, different order \u2014 source: ${sourceLabels.join(", ")}; output: ${outputLabels.join(", ")}`);

@@ -225,16 +225,40 @@ export function checkStructuralParity(sourceContent: string, outputContent: stri
   const outputLabels = output.anchors.map((a) => a.label);
 
   if (sourceLabels.join('\n') !== outputLabels.join('\n')) {
-    const missing = sourceLabels.filter((l) => !outputLabels.includes(l));
-    const invented = outputLabels.filter((l) => !sourceLabels.includes(l));
+    // Diagnose with a multiset diff, not includes(): a duplicated label with one
+    // copy dropped would otherwise report as "different order", which misleads.
+    // (Duplicate labels are themselves a source defect, but the guard's diagnosis
+    // must not depend on the source being clean.)
+    const counts = (labels: string[]): Map<string, number> => {
+      const m = new Map<string, number>();
+      for (const l of labels) m.set(l, (m.get(l) ?? 0) + 1);
+      return m;
+    };
+    const describe = (label: string, n: number): string =>
+      n > 1 ? `(${label})= ×${n}` : `(${label})=`;
+
+    const sourceCounts = counts(sourceLabels);
+    const outputCounts = counts(outputLabels);
+    const missing: string[] = [];
+    const invented: string[] = [];
+    for (const [label, n] of sourceCounts) {
+      const d = n - (outputCounts.get(label) ?? 0);
+      if (d > 0) missing.push(describe(label, d));
+    }
+    for (const [label, n] of outputCounts) {
+      const d = n - (sourceCounts.get(label) ?? 0);
+      if (d > 0) invented.push(describe(label, d));
+    }
+
     const parts: string[] = [];
     if (missing.length > 0) {
-      parts.push(`missing from output: ${missing.map((l) => `(${l})=`).join(', ')}`);
+      parts.push(`missing from output: ${missing.join(', ')}`);
     }
     if (invented.length > 0) {
-      parts.push(`not in source: ${invented.map((l) => `(${l})=`).join(', ')}`);
+      parts.push(`not in source: ${invented.join(', ')}`);
     }
     if (parts.length === 0) {
+      // Multisets genuinely match, so the only divergence left is ordering.
       parts.push(
         `same labels, different order — source: ${sourceLabels.join(', ')}; ` +
           `output: ${outputLabels.join(', ')}`
