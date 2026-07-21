@@ -73,6 +73,15 @@ inputs:
     description: 'Run in test mode (use PR head commit instead of merge commit). Set to "true" for testing.'
     required: false
     default: 'false'
+  rebase-stale-siblings:
+    description: >
+      Rebase mode. When "true", open translation PRs that do NOT overlap the merged PR are
+      still refreshed against the new base (a merge of the base branch, no re-translation),
+      which re-triggers their CI. Intended for drift-recovery waves, where `forward` opens
+      one PR per lecture so siblings never overlap and would otherwise all go stale.
+      Off by default: during a large wave this refreshes every other open PR on every merge.
+    required: false
+    default: 'false'
 
 outputs:
   # Sync mode outputs

@@ -26,6 +26,7 @@ import {
 } from './pr-creator.js';
 import { RebaseCache } from './types.js';
 import { isTranslationBranch } from './branch-naming.js';
+import { refreshStaleBranch } from './rebase-siblings.js';
 import { stateFileRelativePath } from './cli/translate-state.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -218,6 +219,7 @@ async function runRebase(): Promise<void> {
   core.info(`Found ${siblingPRs.length} open translation PR(s). Checking for file overlaps...`);
 
   let rebasedCount = 0;
+  let refreshedCount = 0;
   let skippedCount = 0;
   let errorCount = 0;
 
@@ -237,8 +239,43 @@ async function runRebase(): Promise<void> {
       const prFilePaths = metadata.files.map((f) => f.path);
       const overlapping = prFilePaths.filter((p) => mergedFilePaths.has(p));
       if (overlapping.length === 0) {
-        core.info(`PR #${pr.number}: No file overlap with merged PR — skipping.`);
-        skippedCount++;
+        // No overlap means no merge conflict, so there is nothing to re-translate. The
+        // branch is still behind the new base though, and its checks are now stale —
+        // which is the whole complaint in #115 for a `forward` wave, where every PR
+        // touches a different lecture and so no two siblings ever overlap.
+        if (!inputs.rebaseStaleSiblings) {
+          core.info(`PR #${pr.number}: No file overlap with merged PR — skipping.`);
+          skippedCount++;
+          continue;
+        }
+
+        // Errors are handled here rather than by the outer catch: its comment advises
+        // resolving conflicts or re-running the resync, which is wrong for a refresh —
+        // nothing was translated and there is no conflict-resolution step to redo.
+        try {
+          const refreshed = await refreshStaleBranch(octokit, owner, repo, pr.number);
+          if (refreshed) {
+            core.info(`PR #${pr.number}: No overlap — refreshed against the new base.`);
+            refreshedCount++;
+          } else {
+            core.info(`PR #${pr.number}: No overlap and already up to date — skipping.`);
+            skippedCount++;
+          }
+        } catch (refreshError) {
+          const msg = refreshError instanceof Error ? refreshError.message : String(refreshError);
+          core.error(`PR #${pr.number}: Branch refresh failed — ${msg}`);
+          errorCount++;
+          try {
+            await octokit.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: pr.number,
+              body: `⚠️ **Automatic branch refresh failed** after #${mergedPrNumber} was merged.\n\nError: ${msg}\n\nNo content was changed — this PR's branch is simply still behind \`main\`. Use the **Update branch** button on this PR, or merge \`main\` into the branch manually.`,
+            });
+          } catch {
+            core.warning(`Could not post refresh-failure comment on PR #${pr.number}`);
+          }
+        }
         continue;
       }
 
@@ -274,8 +311,9 @@ async function runRebase(): Promise<void> {
     }
   }
 
+  const refreshedNote = inputs.rebaseStaleSiblings ? `, ${refreshedCount} refreshed` : '';
   core.info(
-    `♻️ Rebase complete: ${rebasedCount} rebased, ${skippedCount} skipped, ${errorCount} errors.`
+    `♻️ Rebase complete: ${rebasedCount} rebased${refreshedNote}, ${skippedCount} skipped, ${errorCount} errors.`
   );
 }
 

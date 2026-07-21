@@ -8,7 +8,7 @@ Complete reference for the `QuantEcon/action-translation` GitHub Action.
 
 ## Modes
 
-The action operates in two modes, specified by the `mode` input:
+The action operates in three modes, specified by the `mode` input:
 
 ### Sync mode
 
@@ -29,6 +29,14 @@ Runs in the **target** (translated) repository. When a translation PR is opened 
 1. Compares the translation against the source content
 2. Evaluates translation quality and diff accuracy
 3. Posts a review comment with scores and suggestions
+
+### Rebase mode
+
+Runs in the **target** (translated) repository, triggered when a translation PR is merged. Open translation PRs go stale as soon as the base moves, so the action:
+
+1. Finds the other open translation PRs — both sync (`translation-sync-*`) and CLI resync (`resync/*`) branches
+2. For each one whose files **overlap** the merged PR, re-runs the sync pipeline and force-pushes, resolving the conflict while preserving translated content
+3. For each one that does **not** overlap, skips by default — or, with `rebase-stale-siblings`, refreshes it against the new base without re-translating
 
 ## Inputs
 
@@ -66,6 +74,18 @@ Runs in the **target** (translated) repository. When a translation PR is opened 
 | `docs-folder` | `lectures/` | Documentation folder |
 | `max-suggestions` | `5` | Maximum improvement suggestions in review comment |
 | `claude-model` | `claude-sonnet-5` | Claude model for review |
+
+### Rebase mode inputs
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `rebase-stale-siblings` | `false` | Also refresh open translation PRs that do **not** overlap the merged PR, so their checks re-run against the new base. No re-translation and no model calls — the branch is merged forward, nothing else. |
+
+`rebase-stale-siblings` exists for **drift-recovery waves**. `translate forward --github` opens one PR per lecture, and each PR touches only that lecture and its own state file — so no two siblings ever overlap, none are conflict-rebased, and every merge leaves the rest of the wave stale. Enabling this keeps them current.
+
+It is off by default because the cost scales with the wave: with 60 open PRs, every merge refreshes up to 59 branches and re-runs their checks. Turn it on while a wave is in flight, and off again afterwards.
+
+**Token caveat — this applies to all of rebase mode, not just the new input.** Commits pushed with the default `GITHUB_TOKEN` do not trigger workflows (GitHub's recursion guard), so a branch rebased or refreshed with it gets its new commit but **no CI runs on it** — verified live on the test harness, where 13 force-push rebased PRs ended with zero check runs on their new heads. If the goal is re-run checks (it usually is), pass a PAT or GitHub App token as `github-token` in the rebase workflow, exactly as the sync workflows already do with the machine-user PAT. With required status checks, a `GITHUB_TOKEN` refresh is worse than nothing: the PR goes from stale-but-green to a head with no runs at all, which blocks merging until someone triggers checks by hand.
 
 ## Outputs
 

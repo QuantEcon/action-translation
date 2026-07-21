@@ -124,6 +124,8 @@ export function getRebaseInputs(): RebaseInputs {
     glossaryPath,
     anthropicApiKey,
     githubToken,
+    rebaseStaleSiblings:
+      core.getInput('rebase-stale-siblings', { required: false }).toLowerCase() === 'true',
   };
 }
 
