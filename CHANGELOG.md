@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-07-21
+
+### Added
+- **`rebase-stale-siblings` input — rebase mode can refresh non-overlapping sibling PRs** (#123): rebase only acts on PRs whose files overlap the merged PR, because its job is conflict resolution. But `translate forward --github` opens one PR per lecture, and each PR's metadata lists only that lecture plus its own per-lecture state file — so two siblings from the same wave never share a path, never overlap, and were skipped forever while their bases and checks went stale. That staleness is the symptom #115 actually reported ("with 60+ open at once, every stale check has to be re-enqueued by hand"); v0.18.1 made resync PRs *visible* to rebase but the overlap gate still skipped them. With the new input enabled, a non-overlapping sibling is brought current through GitHub's update-branch endpoint — the base merged forward, nothing re-translated, zero model calls. **Off by default**: the cost scales with the wave (60 open PRs means every merge refreshes up to 59 branches and re-runs their checks), and under floating `@v0` delivery a default-on would land that on every repo unannounced. Enable it for the duration of a wave; the template carries a commented-out line. Validated end-to-end on the harness pre-release: the sibling that v0.18.1 skipped was refreshed (`0 rebased, 1 refreshed, 0 skipped, 0 errors`), with a plain merge commit and its checks re-triggered.
+- 422 responses from the update-branch endpoint are **message-gated**: GitHub uses that status for "not behind base" (benign, routine mid-wave) but also for merge conflicts and head-SHA mismatches (real problems, and a conflict is reachable for a "non-overlapping" PR because overlap is computed from metadata while branches can carry hand-pushed commits touching unlisted files). Known-benign wordings resolve as "already current"; unknown 422s throw — a loud false alarm beats a silent skip. Refresh failures are handled with refresh-specific messaging rather than the conflict-resolution advice the rebase error path posts.
+
+### Changed
+- **Documented: rebase-pushed commits get no CI under the default `GITHUB_TOKEN`** — GitHub's recursion guard means a branch rebased or refreshed with it gets its new commit but no workflow runs on the new head, verified both ways on the harness (13 force-push rebased PRs: zero runs; one PAT-refreshed PR: review workflow triggered). With required status checks that is worse than skipping — the PR goes from stale-but-green to a head with no runs, which blocks merging — and force-pushed re-translated content lands unreviewed. The action reference and the rebase template now state the constraint and point at a PAT/App token, as sync workflows already use; the estate-wide token decision is tracked in #125. Applies to all of rebase mode, not only the new input.
+- **Rebase mode is documented in the action reference** — which had described the action as operating in "two modes" for as long as rebase has existed. New mode section and inputs table.
+- The helper behind the refresh lives in a new `src/rebase-siblings.ts` rather than `index.ts`, which uses `import.meta.url` and therefore cannot be loaded by Jest's CJS registry at all — the structural reason `index.ts` has no unit coverage, and how a third hard-coded branch prefix survived the first #115 fix. New rebase logic goes in testable modules.
+
 ## [0.18.1] - 2026-07-21
 
 ### Fixed
