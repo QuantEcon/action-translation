@@ -5,7 +5,7 @@
  *
  *   - the GitHub Action's sync mode creates `translation-sync-{timestamp}-pr-{n}`
  *     (see `createTranslationPR` in pr-creator.ts)
- *   - the CLI's `forward --github` creates `resync/{stem}`
+ *   - the CLI's `translate forward --github` creates `resync/{stem}`
  *     (see `buildBranchName` in cli/forward-pr-creator.ts)
  *
  * Rebase mode has to recognise **both**, because a wave of resync PRs goes stale
@@ -24,7 +24,7 @@
 /** Branch prefix used by the Action's sync mode. */
 export const SYNC_BRANCH_PREFIX = 'translation-sync-';
 
-/** Branch prefix used by the CLI's `forward --github` resync mode. */
+/** Branch prefix used by the CLI's `translate forward --github` resync mode. */
 export const RESYNC_BRANCH_PREFIX = 'resync/';
 
 /** Every branch prefix that identifies a translation PR this tool created. */
