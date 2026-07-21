@@ -298,7 +298,6 @@ async function runRebase(): Promise<void> {
   );
 }
 
-
 /**
  * Re-run the sync pipeline for a single translation PR and force-push the result.
  */

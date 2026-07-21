@@ -21,11 +21,7 @@
 export interface UpdateBranchCapableOctokit {
   rest: {
     pulls: {
-      updateBranch(params: {
-        owner: string;
-        repo: string;
-        pull_number: number;
-      }): Promise<unknown>;
+      updateBranch(params: { owner: string; repo: string; pull_number: number }): Promise<unknown>;
     };
   };
 }

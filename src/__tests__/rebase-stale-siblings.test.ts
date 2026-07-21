@@ -30,7 +30,12 @@ describe('refreshStaleBranch', () => {
   it('reports true when the branch was actually updated', async () => {
     const updateBranch: UpdateBranchFake = jest.fn().mockResolvedValue({ status: 202 });
 
-    const result = await refreshStaleBranch(makeOctokit(updateBranch), 'QuantEcon', 'repo.zh-cn', 7);
+    const result = await refreshStaleBranch(
+      makeOctokit(updateBranch),
+      'QuantEcon',
+      'repo.zh-cn',
+      7
+    );
 
     expect(result).toBe(true);
     expect(updateBranch).toHaveBeenCalledWith({
