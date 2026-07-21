@@ -9,7 +9,7 @@
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 - **Rebase Mode**: Runs in TARGET repo, rebases conflicted translation PRs when a sibling PR is merged
 
-**Current Version**: v0.18.0 | **Tests**: 1,140+ (47 suites; exact count in CI) | **Glossary**: 357 terms (zh-cn, fa, fr)
+**Current Version**: v0.18.1 | **Tests**: 1,146+ (48 suites; exact count in CI) | **Glossary**: 357 terms (zh-cn, fa, fr)
 
 ---
 

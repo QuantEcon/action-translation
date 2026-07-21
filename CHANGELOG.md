@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-07-21
+
+### Fixed
+- **Rebase mode now rebases CLI resync PRs, not only Action sync PRs** (#115): rebase filtered on the `translation-sync-` branch prefix, but `translate forward --github` creates `resync/{stem}` branches — so merging one resync PR never rebased its siblings. During a drift-recovery wave that leaves a stack of 60+ open PRs whose bases go stale with every merge, each one re-enqueued by hand (observed on the 69-PR lecture-python.zh-cn Track B wave). The prefix was enforced in **three** independent places, and fixing any subset leaves the defect: `runRebase`'s early return on the merged branch (job runs, returns immediately — a silent no-op), the job `if` in `examples/rebase-translations.yml` (job never starts), and the sibling-PR filter (job runs, finds nothing). All three now share one predicate. The root cause was that the prefixes had no owner — sync built one spelling, forward built another, and the filters re-spelled them by hand — so a new `src/branch-naming.ts` holds both prefixes and `isTranslationBranch`, and every builder and filter consumes it. Widening rather than unifying the prefixes is deliberate: unifying changes branch naming for a command already in production use, and an in-flight wave would straddle both conventions mid-migration. `isTranslationBranch` also rejects a bare prefix (`resync/` with nothing after it) — no builder emits one, and every match authorises a force-push during rebase, so the predicate claims fewer branches rather than more.
+
+### Changed
+- **Regression guards for the branch-prefix class**, prompted by the first fix for #115 being incomplete in review. Two structural tests: one asserts `branch-naming.ts` is the only source file that spells a prefix as a standalone literal or interpolates one into a template (comments are stripped first, and shapes that merely share an opening substring — `'translation-sync-failure'` is an issue label — are deliberately not flagged); the other reads `examples/rebase-translations.yml` and asserts its `if` lists every prefix the predicate knows, so the workflow and code layers cannot drift apart. Both were verified to fail against the reintroduced defects rather than only to pass in their absence. This matters because `src/index.ts` has no unit coverage, so the full suite passing says nothing about the rebase entry points.
+- **`examples/rebase-translations.yml` documents both branch kinds** and pins `@v0` instead of the exact `@v0.15.0` it still carried, matching the convention the docs recommend.
+- **`actions/checkout` in the `docs/` workflow templates moved from `@v4` to `@v7`** — the documented templates had fallen behind the editions copying them (`.fa` on v7, `.fr` on v6; only `.zh-cn` still matched at v4), so "mirrors the upstream template" was aspirational rather than true. `examples/` is unaffected: its only workflow is `rebase-translations.yml`, which runs the action without checking out the repo.
+
 ## [0.18.0] - 2026-07-18
 
 ### Changed

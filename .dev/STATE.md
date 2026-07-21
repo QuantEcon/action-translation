@@ -1,4 +1,4 @@
-verified: 2026-07-18
+verified: 2026-07-21
 
 # STATE
 
@@ -13,6 +13,16 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## Recently landed
 
+- **v0.18.1** (2026-07-21) — #121 closed #115: rebase mode ignored `resync/*` PRs, so a
+  drift-recovery wave left 60+ PRs going stale with every merge. The prefix turned out to be
+  enforced in **three** places, not the two the issue and the first fix assumed —
+  `runRebase`'s early return was the third, and missing it made that fix a silent no-op.
+  Caught in review, not by the suite: `src/index.ts` has **no unit coverage**, and the drift
+  test written for this very class only compared the workflow template against the predicate.
+  New `src/branch-naming.ts` owns both prefixes; a structural test now asserts no other source
+  file re-spells one, verified against the reintroduced defect. **Carry forward**: the 0%
+  coverage on `src/index.ts` is a demonstrated liability now — it holds mode dispatch and
+  rebase logic, and Phase 2's guards land next door.
 - **v0.18.0** (2026-07-18; tagged + published on merge) — forward-resync integrity day:
   #108 fixed the `forward --github` Tier-1 cluster from the intro.zh-cn drift wave —
   #105 (state + heading map committed with content, target frontmatter carried, stray `---`
