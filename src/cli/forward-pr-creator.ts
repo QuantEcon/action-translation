@@ -18,6 +18,7 @@ import * as path from 'path';
 import { spawnSync, SpawnSyncOptions } from 'child_process';
 import { ResyncSectionResult } from './types.js';
 import type { TranslationSyncMetadata } from '../pr-creator.js';
+import { RESYNC_BRANCH_PREFIX } from '../branch-naming.js';
 
 // ============================================================================
 // TYPES
@@ -488,7 +489,7 @@ export function buildForwardPRBody(
 export function buildBranchName(file: string): string {
   // Remove .md extension and sanitize for git branch name
   const stem = file.replace(/\.md$/i, '').replace(/[^a-zA-Z0-9_.-]/g, '-');
-  return `resync/${stem}`;
+  return `${RESYNC_BRANCH_PREFIX}${stem}`;
 }
 
 /**

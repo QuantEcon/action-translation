@@ -62,12 +62,12 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0    # Full history for git metadata
 
       - name: Checkout target
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: QuantEcon/lecture-intro.zh-cn
           path: target
@@ -169,12 +169,12 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Checkout target
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: QuantEcon/lecture-intro.zh-cn
           path: target
@@ -286,8 +286,8 @@ jobs:
             language: ja
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           repository: ${{ matrix.target-repo }}
           path: target

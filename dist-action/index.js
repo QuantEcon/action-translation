@@ -31516,6 +31516,14 @@ Anthropic.Messages = Messages2;
 Anthropic.Models = Models2;
 Anthropic.Beta = Beta;
 
+// dist/branch-naming.js
+var SYNC_BRANCH_PREFIX = "translation-sync-";
+var RESYNC_BRANCH_PREFIX = "resync/";
+var TRANSLATION_BRANCH_PREFIXES = [SYNC_BRANCH_PREFIX, RESYNC_BRANCH_PREFIX];
+function isTranslationBranch(ref) {
+  return TRANSLATION_BRANCH_PREFIXES.some((prefix) => ref.startsWith(prefix) && ref.length > prefix.length);
+}
+
 // dist/pr-creator.js
 async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata) {
   const { targetOwner, targetRepo } = config;
@@ -31531,7 +31539,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
   });
   const baseSha = refData.object.sha;
   const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-").slice(0, -5);
-  const branchName = `translation-sync-${timestamp2}-pr-${config.prNumber}`;
+  const branchName = `${SYNC_BRANCH_PREFIX}${timestamp2}-pr-${config.prNumber}`;
   await octokit.rest.git.createRef({
     owner: targetOwner,
     repo: targetRepo,
@@ -37973,11 +37981,11 @@ async function runRebase() {
   }
   const mergedPrNumber = payload.pull_request.number;
   const mergedBranch = payload.pull_request.head?.ref || "";
-  if (!mergedBranch.startsWith("translation-sync-")) {
-    core7.info(`Merged PR #${mergedPrNumber} is not a translation-sync PR (branch: ${mergedBranch}). Exiting.`);
+  if (!isTranslationBranch(mergedBranch)) {
+    core7.info(`Merged PR #${mergedPrNumber} is not a translation PR (branch: ${mergedBranch}). Exiting.`);
     return;
   }
-  core7.info(`\u267B\uFE0F Translation-sync PR #${mergedPrNumber} was merged. Checking for conflicted sibling PRs...`);
+  core7.info(`\u267B\uFE0F Translation PR #${mergedPrNumber} was merged. Checking for conflicted sibling PRs...`);
   const octokit = github2.getOctokit(inputs.githubToken);
   const { owner, repo } = github2.context.repo;
   const mergedPrFiles = await octokit.paginate(octokit.rest.pulls.listFiles, {
@@ -37993,12 +38001,12 @@ async function runRebase() {
     state: "open",
     per_page: 100
   });
-  const siblingPRs = openPRs.filter((pr) => pr.head.ref.startsWith("translation-sync-") && pr.number !== mergedPrNumber);
+  const siblingPRs = openPRs.filter((pr) => isTranslationBranch(pr.head.ref) && pr.number !== mergedPrNumber);
   if (siblingPRs.length === 0) {
-    core7.info("No other open translation-sync PRs found. Nothing to rebase.");
+    core7.info("No other open translation PRs found. Nothing to rebase.");
     return;
   }
-  core7.info(`Found ${siblingPRs.length} open translation-sync PR(s). Checking for file overlaps...`);
+  core7.info(`Found ${siblingPRs.length} open translation PR(s). Checking for file overlaps...`);
   let rebasedCount = 0;
   let skippedCount = 0;
   let errorCount = 0;
