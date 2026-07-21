@@ -47,3 +47,9 @@ jobs:
           mode: rebase
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Uncomment during a drift-recovery wave. `forward` opens one PR per lecture,
+          # so siblings never share a file and none of them are conflict-rebased — but
+          # every merge still leaves their checks stale. This refreshes them against the
+          # new base without re-translating. Off by default: mid-wave it touches every
+          # other open PR on every merge. See action-translation#123.
+          # rebase-stale-siblings: 'true'

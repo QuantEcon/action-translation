@@ -44,6 +44,11 @@ export interface RebaseInputs {
   glossaryPath: string; // Path to custom glossary
   anthropicApiKey: string; // Anthropic API key for Claude
   githubToken: string; // GitHub token for API access
+  /**
+   * Refresh non-overlapping sibling PRs against the new base instead of skipping them.
+   * Off by default — see action.yml for why this is opt-in rather than automatic.
+   */
+  rebaseStaleSiblings: boolean;
 }
 
 // ============================================================================

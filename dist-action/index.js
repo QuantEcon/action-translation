@@ -26553,7 +26553,8 @@ function getRebaseInputs() {
     docsFolder: normalizedDocsFolder,
     glossaryPath,
     anthropicApiKey,
-    githubToken
+    githubToken,
+    rebaseStaleSiblings: core.getInput("rebase-stale-siblings", { required: false }) === "true"
   };
 }
 function getReviewInputs() {
@@ -37917,6 +37918,20 @@ var SyncOrchestrator = class {
   }
 };
 
+// dist/rebase-siblings.js
+var NOT_BEHIND_BASE = 422;
+async function refreshStaleBranch(octokit, owner, repo, prNumber) {
+  try {
+    await octokit.rest.pulls.updateBranch({ owner, repo, pull_number: prNumber });
+    return true;
+  } catch (error3) {
+    if (error3.status === NOT_BEHIND_BASE) {
+      return false;
+    }
+    throw error3;
+  }
+}
+
 // dist/index.js
 var import_fs2 = require("fs");
 var path4 = __toESM(require("path"), 1);
@@ -38008,6 +38023,7 @@ async function runRebase() {
   }
   core7.info(`Found ${siblingPRs.length} open translation PR(s). Checking for file overlaps...`);
   let rebasedCount = 0;
+  let refreshedCount = 0;
   let skippedCount = 0;
   let errorCount = 0;
   for (const pr of siblingPRs) {
@@ -38021,8 +38037,19 @@ async function runRebase() {
       const prFilePaths = metadata.files.map((f) => f.path);
       const overlapping = prFilePaths.filter((p) => mergedFilePaths.has(p));
       if (overlapping.length === 0) {
-        core7.info(`PR #${pr.number}: No file overlap with merged PR \u2014 skipping.`);
-        skippedCount++;
+        if (!inputs.rebaseStaleSiblings) {
+          core7.info(`PR #${pr.number}: No file overlap with merged PR \u2014 skipping.`);
+          skippedCount++;
+          continue;
+        }
+        const refreshed = await refreshStaleBranch(octokit, owner, repo, pr.number);
+        if (refreshed) {
+          core7.info(`PR #${pr.number}: No overlap \u2014 refreshed against the new base.`);
+          refreshedCount++;
+        } else {
+          core7.info(`PR #${pr.number}: No overlap and already up to date \u2014 skipping.`);
+          skippedCount++;
+        }
         continue;
       }
       core7.info(`PR #${pr.number}: ${overlapping.length} overlapping file(s) \u2014 rebasing...`);
@@ -38058,7 +38085,8 @@ You may need to manually resolve conflicts or run \`/translate-resync\` on the s
       }
     }
   }
-  core7.info(`\u267B\uFE0F Rebase complete: ${rebasedCount} rebased, ${skippedCount} skipped, ${errorCount} errors.`);
+  const refreshedNote = inputs.rebaseStaleSiblings ? `, ${refreshedCount} refreshed` : "";
+  core7.info(`\u267B\uFE0F Rebase complete: ${rebasedCount} rebased${refreshedNote}, ${skippedCount} skipped, ${errorCount} errors.`);
 }
 async function rebaseSinglePR(octokit, pr, metadata, inputs) {
   const { owner, repo } = github2.context.repo;

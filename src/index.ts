@@ -26,6 +26,7 @@ import {
 } from './pr-creator.js';
 import { RebaseCache } from './types.js';
 import { isTranslationBranch } from './branch-naming.js';
+import { refreshStaleBranch } from './rebase-siblings.js';
 import { stateFileRelativePath } from './cli/translate-state.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -218,6 +219,7 @@ async function runRebase(): Promise<void> {
   core.info(`Found ${siblingPRs.length} open translation PR(s). Checking for file overlaps...`);
 
   let rebasedCount = 0;
+  let refreshedCount = 0;
   let skippedCount = 0;
   let errorCount = 0;
 
@@ -237,8 +239,24 @@ async function runRebase(): Promise<void> {
       const prFilePaths = metadata.files.map((f) => f.path);
       const overlapping = prFilePaths.filter((p) => mergedFilePaths.has(p));
       if (overlapping.length === 0) {
-        core.info(`PR #${pr.number}: No file overlap with merged PR — skipping.`);
-        skippedCount++;
+        // No overlap means no merge conflict, so there is nothing to re-translate. The
+        // branch is still behind the new base though, and its checks are now stale —
+        // which is the whole complaint in #115 for a `forward` wave, where every PR
+        // touches a different lecture and so no two siblings ever overlap.
+        if (!inputs.rebaseStaleSiblings) {
+          core.info(`PR #${pr.number}: No file overlap with merged PR — skipping.`);
+          skippedCount++;
+          continue;
+        }
+
+        const refreshed = await refreshStaleBranch(octokit, owner, repo, pr.number);
+        if (refreshed) {
+          core.info(`PR #${pr.number}: No overlap — refreshed against the new base.`);
+          refreshedCount++;
+        } else {
+          core.info(`PR #${pr.number}: No overlap and already up to date — skipping.`);
+          skippedCount++;
+        }
         continue;
       }
 
@@ -274,10 +292,12 @@ async function runRebase(): Promise<void> {
     }
   }
 
+  const refreshedNote = inputs.rebaseStaleSiblings ? `, ${refreshedCount} refreshed` : '';
   core.info(
-    `♻️ Rebase complete: ${rebasedCount} rebased, ${skippedCount} skipped, ${errorCount} errors.`
+    `♻️ Rebase complete: ${rebasedCount} rebased${refreshedNote}, ${skippedCount} skipped, ${errorCount} errors.`
   );
 }
+
 
 /**
  * Re-run the sync pipeline for a single translation PR and force-push the result.
