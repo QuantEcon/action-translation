@@ -37560,6 +37560,115 @@ ${translatedContent}`;
   }
 };
 
+// dist/structural-parity.js
+var FLEXIBLE_ARG_DIRECTIVES = /* @__PURE__ */ new Set([
+  "admonition",
+  "dropdown",
+  "card",
+  "grid-item-card",
+  "tab-item",
+  "exercise",
+  "exercise-start",
+  "contents",
+  "index",
+  "code-cell"
+]);
+var FLEXIBLE_ARG_PREFIX = "prf:";
+function isFlexibleArgDirective(name) {
+  return FLEXIBLE_ARG_DIRECTIVES.has(name) || name.startsWith(FLEXIBLE_ARG_PREFIX);
+}
+var FENCE_LINE = /^\s*(`{3,}|~{3,})(.*)$/;
+var DIRECTIVE_INFO = /^\{([A-Za-z0-9_+:.-]+)\}\s*(.*)$/;
+var ANCHOR_LINE = /^\(([^()\s]+)\)=\s*$/;
+function extractStructuralTokens(content) {
+  const directives = [];
+  const anchors = [];
+  let openFence = null;
+  const lines = content.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const fence = FENCE_LINE.exec(line);
+    if (openFence) {
+      if (fence && fence[1][0] === openFence.char && fence[1].length >= openFence.length && fence[2].trim() === "") {
+        openFence = null;
+      }
+      continue;
+    }
+    if (fence) {
+      openFence = { char: fence[1][0], length: fence[1].length };
+      const info7 = DIRECTIVE_INFO.exec(fence[2].trim());
+      if (info7) {
+        directives.push({ name: info7[1], arg: info7[2].trim(), line: i + 1 });
+      }
+      continue;
+    }
+    const anchor = ANCHOR_LINE.exec(line);
+    if (anchor) {
+      anchors.push({ label: anchor[1], line: i + 1 });
+    }
+  }
+  return { directives, anchors };
+}
+function checkStructuralParity(sourceContent, outputContent) {
+  const source = extractStructuralTokens(sourceContent);
+  const output = extractStructuralTokens(outputContent);
+  const violations = [];
+  if (source.directives.length !== output.directives.length) {
+    violations.push({
+      message: `directive count differs: source has ${source.directives.length}, output has ${output.directives.length} \u2014 a wholesale mismatch usually means the document was re-fenced or truncated`
+    });
+  }
+  const pairCount = Math.min(source.directives.length, output.directives.length);
+  for (let i = 0; i < pairCount; i++) {
+    const s = source.directives[i];
+    const o = output.directives[i];
+    if (s.name !== o.name) {
+      violations.push({
+        message: `directive #${i + 1} name changed: source line ${s.line} has {${s.name}}, output line ${o.line} has {${o.name}}`
+      });
+      continue;
+    }
+    if (isFlexibleArgDirective(s.name)) {
+      const sHas = s.arg !== "";
+      const oHas = o.arg !== "";
+      if (sHas !== oHas) {
+        violations.push({
+          message: `directive #${i + 1} {${s.name}} ${sHas ? "lost" : "gained"} its argument: source line ${s.line} has ${sHas ? `"${s.arg}"` : "no argument"}, output line ${o.line} has ${oHas ? `"${o.arg}"` : "none"}`
+        });
+      }
+    } else if (s.arg !== o.arg) {
+      violations.push({
+        message: `directive #${i + 1} {${s.name}} argument changed: source line ${s.line} has "${s.arg}", output line ${o.line} has "${o.arg}" \u2014 structural arguments are never translated`
+      });
+    }
+  }
+  const sourceLabels = source.anchors.map((a) => a.label);
+  const outputLabels = output.anchors.map((a) => a.label);
+  if (sourceLabels.join("\n") !== outputLabels.join("\n")) {
+    const missing = sourceLabels.filter((l) => !outputLabels.includes(l));
+    const invented = outputLabels.filter((l) => !sourceLabels.includes(l));
+    const parts = [];
+    if (missing.length > 0) {
+      parts.push(`missing from output: ${missing.map((l) => `(${l})=`).join(", ")}`);
+    }
+    if (invented.length > 0) {
+      parts.push(`not in source: ${invented.map((l) => `(${l})=`).join(", ")}`);
+    }
+    if (parts.length === 0) {
+      parts.push(`same labels, different order \u2014 source: ${sourceLabels.join(", ")}; output: ${outputLabels.join(", ")}`);
+    }
+    violations.push({
+      message: `target anchors diverge \u2014 ${parts.join("; ")}`
+    });
+  }
+  return { ok: violations.length === 0, violations };
+}
+function formatParityViolations(filename, result) {
+  const bullets = result.violations.map((v) => `  - ${v.message}`).join("\n");
+  return `structural parity check failed for ${filename}:
+${bullets}`;
+}
+
 // dist/sync-orchestrator.js
 var import_fs = require("fs");
 var path3 = __toESM(require("path"), 1);
@@ -37769,6 +37878,10 @@ var SyncOrchestrator = class {
     if (!validation.valid) {
       throw new Error(`Validation failed: ${validation.error}`);
     }
+    const parity = checkStructuralParity(file.newContent, translatedContent);
+    if (!parity.ok) {
+      throw new Error(formatParityViolations(file.filename, parity));
+    }
     this.logger.info(`Successfully processed ${file.filename}`);
     result.processedFiles.push(file.filename);
     result.translatedFiles.push({
@@ -37801,6 +37914,10 @@ var SyncOrchestrator = class {
     const validation = await this.processor.validateMyST(translatedContent, file.filename);
     if (!validation.valid) {
       throw new Error(`Validation failed: ${validation.error}`);
+    }
+    const parity = checkStructuralParity(file.newContent, translatedContent);
+    if (!parity.ok) {
+      throw new Error(formatParityViolations(file.filename, parity));
     }
     this.logger.info(`Successfully processed renamed file ${file.filename}`);
     result.processedFiles.push(file.filename);
