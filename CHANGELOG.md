@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-07-21
+
+### Added
+- **Structural parity guard on every write path** (#119, #65 — first item of the #120 P0 plan): the silent-corruption class (#118, #119, #65) is structural MyST mutated by a path that should have passed it through verbatim, with the run reporting success every time — eight instances to date, every one discovered weeks later on a downstream strict build. Sync (markdown and renamed-file handlers) and forward resync (post-finalization, checking exactly the bytes that would be written) now extract the structural tokens — top-level fenced-directive openings and `(label)=` target anchors — from source and output, and **fail the file loudly on divergence**. Directive name sequences must match (#118's fence-wrap collapses the sequence and fails on count); structural arguments (`{raw}` format, `{include}`/`{figure}` paths, `{solution}`'s exercise label) must match byte-for-byte (#119's defect); flexible arguments — `{admonition}`/`{prf:*}` titles, `{contents}`/`{index}` display text, `{code-cell}`'s edition-pinned kernel tag — need only presence to match, though a dropped argument still fails; anchor sequences must match exactly, with multiset-diff diagnostics that name dropped or surplus labels (#65). The rules were **calibrated against the real corpus**: a byte-equal-everything draft dry-run over all 211 source/target lecture pairs across five editions produced 362 false positives in exactly the three flexible-arg classes, and the calibrated guard passes 200/211 (the rest are pending-drift artifacts of current-vs-current comparison, which the guard never performs in situ). The dry-run also found live production damage — `sympy.fr` had dropped its `(sympy)=` anchor, restored in lecture-python-programming.fr#16. **Operational note**: files whose *historical* translations already dropped anchors will fail their next sync until repaired — loud by design; resync is the repair tool. Scanning is a top-level stateful fence walk (nested directives are #94 Phase 2's round-trip territory); the guard lives in `src/structural-parity.ts` per the rule that guards go in modules Jest can load.
+
+### Fixed
+- Docs and template comments name the CLI invocation correctly as `translate forward --github` (#127) — the bare `forward --github` is not a runnable command.
+
 ## [0.19.0] - 2026-07-21
 
 ### Added
