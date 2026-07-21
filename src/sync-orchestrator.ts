@@ -14,6 +14,7 @@
 import { TranslationService } from './translator.js';
 import { FileProcessor } from './file-processor.js';
 import { MystParser } from './parser.js';
+import { checkStructuralParity, formatParityViolations } from './structural-parity.js';
 import { Glossary, TranslatedFile, RebaseCache } from './types.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -354,6 +355,15 @@ export class SyncOrchestrator {
       throw new Error(`Validation failed: ${validation.error}`);
     }
 
+    // Structural parity: directive shapes and target anchors must survive
+    // translation verbatim (#119, #65). Failing the file loudly here is the
+    // point — every defect in this class previously shipped as a success and
+    // surfaced weeks later on a downstream strict build.
+    const parity = checkStructuralParity(file.newContent, translatedContent);
+    if (!parity.ok) {
+      throw new Error(formatParityViolations(file.filename, parity));
+    }
+
     this.logger.info(`Successfully processed ${file.filename}`);
     result.processedFiles.push(file.filename);
     result.translatedFiles.push({
@@ -424,6 +434,12 @@ export class SyncOrchestrator {
     const validation = await this.processor.validateMyST(translatedContent, file.filename);
     if (!validation.valid) {
       throw new Error(`Validation failed: ${validation.error}`);
+    }
+
+    // Structural parity — same guard as processMarkdownFile (#119, #65).
+    const parity = checkStructuralParity(file.newContent, translatedContent);
+    if (!parity.ok) {
+      throw new Error(formatParityViolations(file.filename, parity));
     }
 
     this.logger.info(`Successfully processed renamed file ${file.filename}`);

@@ -38,6 +38,7 @@ import {
 import { getFileGitMetadata } from '../git-metadata.js';
 import { MystParser } from '../../parser.js';
 import { applyTypography } from '../../typography.js';
+import { checkStructuralParity, formatParityViolations } from '../../structural-parity.js';
 import { buildHeadingMap, injectHeadingMap, extractTranslationTitle } from '../../heading-map.js';
 import {
   createForwardPR,
@@ -251,6 +252,24 @@ export async function resyncSingleFile(
         file,
         logger
       );
+
+      // Structural parity: directive shapes and target anchors must survive the
+      // resync verbatim (#119, #65 — and #118's fence-wrap destroys the whole
+      // token sequence, so it fails here too). This runs AFTER finalization so
+      // it checks exactly the bytes that would be written; failing the file
+      // loudly is the point, because every defect in this class previously
+      // shipped as a success and surfaced weeks later downstream.
+      const parity = checkStructuralParity(sourceContent, outputContent);
+      if (!parity.ok) {
+        logger.error(`  ${formatParityViolations(file, parity)}`);
+        return {
+          file,
+          triageResult,
+          sections: [],
+          summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
+        };
+      }
+
       tokensUsed = result.tokensUsed;
       logger.info(`  ✅ Resync complete (${tokensUsed?.toLocaleString()} tokens)`);
     } else {
