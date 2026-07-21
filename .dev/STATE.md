@@ -13,6 +13,14 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## Recently landed
 
+- **v0.20.0** (2026-07-21) — #128 closed #119 + #65: structural parity guard on every write
+  path (directive shapes byte-equal or presence-matched by class; anchors exact). Calibrated
+  empirically: byte-equal draft over 211 real pairs → 362 false positives in 3 classes
+  (contents/index titles, prf:* titles, code-cell kernel tags) → calibrated guard passes
+  200/211, remainder pending-drift artifacts. Found live damage during calibration: sympy.fr
+  dropped (sympy)= anchor (restored, .fr#16). First wave after this may loudly fail files
+  with pre-existing anchor damage — that is the guard working the backlog. Next P0 item:
+  round-trip invariant (#94 Phase 2); nested-directive coverage belongs there.
 - **v0.19.0** (2026-07-21) — #124 closed #123: `rebase-stale-siblings` (default off) refreshes
   non-overlapping sibling PRs during waves via update-branch — no re-translation, message-gated
   422s. **Harness-validated pre-release** under the harness-first policy: pinned workflow to the
