@@ -31521,7 +31521,7 @@ var SYNC_BRANCH_PREFIX = "translation-sync-";
 var RESYNC_BRANCH_PREFIX = "resync/";
 var TRANSLATION_BRANCH_PREFIXES = [SYNC_BRANCH_PREFIX, RESYNC_BRANCH_PREFIX];
 function isTranslationBranch(ref) {
-  return TRANSLATION_BRANCH_PREFIXES.some((prefix) => ref.startsWith(prefix));
+  return TRANSLATION_BRANCH_PREFIXES.some((prefix) => ref.startsWith(prefix) && ref.length > prefix.length);
 }
 
 // dist/pr-creator.js
@@ -37981,11 +37981,11 @@ async function runRebase() {
   }
   const mergedPrNumber = payload.pull_request.number;
   const mergedBranch = payload.pull_request.head?.ref || "";
-  if (!mergedBranch.startsWith("translation-sync-")) {
-    core7.info(`Merged PR #${mergedPrNumber} is not a translation-sync PR (branch: ${mergedBranch}). Exiting.`);
+  if (!isTranslationBranch(mergedBranch)) {
+    core7.info(`Merged PR #${mergedPrNumber} is not a translation PR (branch: ${mergedBranch}). Exiting.`);
     return;
   }
-  core7.info(`\u267B\uFE0F Translation-sync PR #${mergedPrNumber} was merged. Checking for conflicted sibling PRs...`);
+  core7.info(`\u267B\uFE0F Translation PR #${mergedPrNumber} was merged. Checking for conflicted sibling PRs...`);
   const octokit = github2.getOctokit(inputs.githubToken);
   const { owner, repo } = github2.context.repo;
   const mergedPrFiles = await octokit.paginate(octokit.rest.pulls.listFiles, {

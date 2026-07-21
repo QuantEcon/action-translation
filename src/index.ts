@@ -167,16 +167,19 @@ async function runRebase(): Promise<void> {
   const mergedPrNumber = payload.pull_request.number;
   const mergedBranch = payload.pull_request.head?.ref || '';
 
-  // Only run when a translation-sync PR is merged
-  if (!mergedBranch.startsWith('translation-sync-')) {
+  // Only run when a translation PR is merged — sync or resync. Using the shared
+  // predicate matters here: the workflow template fires for both prefixes, so a
+  // narrower check would enter this function on a resync merge and return before
+  // rebasing anything, which is a silent no-op rather than a visible failure.
+  if (!isTranslationBranch(mergedBranch)) {
     core.info(
-      `Merged PR #${mergedPrNumber} is not a translation-sync PR (branch: ${mergedBranch}). Exiting.`
+      `Merged PR #${mergedPrNumber} is not a translation PR (branch: ${mergedBranch}). Exiting.`
     );
     return;
   }
 
   core.info(
-    `♻️ Translation-sync PR #${mergedPrNumber} was merged. Checking for conflicted sibling PRs...`
+    `♻️ Translation PR #${mergedPrNumber} was merged. Checking for conflicted sibling PRs...`
   );
 
   const octokit = github.getOctokit(inputs.githubToken);

@@ -42,8 +42,14 @@ describe('isTranslationBranch', () => {
   });
 
   it('rejects the bare prefixes with nothing after them', () => {
-    // `resync/` alone is not a branch a builder ever emits; treat it as foreign.
+    // No builder emits a bare prefix, so such a ref did not come from us. This
+    // matters because every match authorises a force-push during rebase.
+    for (const prefix of TRANSLATION_BRANCH_PREFIXES) {
+      expect(isTranslationBranch(prefix)).toBe(false);
+    }
+    // ...and the near-misses either side of the boundary.
     expect(isTranslationBranch('resync')).toBe(false);
+    expect(isTranslationBranch('resync/x')).toBe(true);
   });
 });
 
@@ -58,6 +64,54 @@ describe('branch builders use the shared prefixes', () => {
   it('accepts a sync branch built to the documented shape', () => {
     const ref = `${SYNC_BRANCH_PREFIX}2026-07-21T10-00-00-pr-7`;
     expect(isTranslationBranch(ref)).toBe(true);
+  });
+});
+
+describe('no source file re-spells a branch prefix by hand', () => {
+  // The original defect (#115) was a prefix literal duplicated in a filter that
+  // then drifted from the builders. The first fix for it missed a THIRD copy —
+  // an early return in runRebase that this suite could not see, because
+  // src/index.ts has no unit coverage. Reviewing for it by eye had already failed
+  // twice, so assert it structurally instead: branch-naming.ts is the only file
+  // allowed to contain these literals.
+  const SOURCE_DIRS = ['src', path.join('src', 'cli')];
+
+  /**
+   * Drop block and line comments so documentation prose does not trip the scan.
+   * Doc comments legitimately write `resync/*` in markdown backticks, which is
+   * describing the prefix rather than re-implementing it.
+   */
+  const stripComments = (source: string): string =>
+    source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+
+  it('keeps the prefix literals confined to branch-naming.ts', () => {
+    const offenders: string[] = [];
+
+    for (const dir of SOURCE_DIRS) {
+      const abs = path.join(__dirname, '..', '..', dir);
+      for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
+        if (!entry.isFile() || !entry.name.endsWith('.ts')) continue;
+        if (entry.name === 'branch-naming.ts') continue;
+
+        const code = stripComments(fs.readFileSync(path.join(abs, entry.name), 'utf8'));
+        for (const prefix of TRANSLATION_BRANCH_PREFIXES) {
+          // Two shapes mean the prefix is being re-implemented rather than merely
+          // sharing an opening substring: the exact prefix as a standalone literal
+          // (how the #115 filters were written), or a template literal that starts
+          // with it and interpolates (how a branch name gets built).
+          //
+          // Anything else is left alone — `'translation-sync-failure'` is an issue
+          // label that happens to start the same way, and is not this concept.
+          const exact = [`'${prefix}'`, `"${prefix}"`];
+          const built = `\`${prefix}\${`;
+          if (exact.some((literal) => code.includes(literal)) || code.includes(built)) {
+            offenders.push(`${dir}/${entry.name} re-spells '${prefix}'`);
+          }
+        }
+      }
+    }
+
+    expect(offenders).toEqual([]);
   });
 });
 

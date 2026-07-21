@@ -1,8 +1,10 @@
 # Rebase Translation PRs
 #
 # Install this workflow in the TARGET (translated) repository.
-# When a translation-sync PR is merged, this workflow automatically
-# rebases other open translation-sync PRs against the updated main branch.
+# When a translation PR is merged, this workflow automatically rebases the
+# other open translation PRs against the updated main branch. It covers both
+# kinds this tool creates: `translation-sync-*` branches from the Action's sync
+# mode, and `resync/*` branches from the CLI's `forward --github`.
 #
 # This eliminates merge conflicts caused by multiple upstream PRs
 # modifying the same files. See: https://github.com/QuantEcon/action-translation/issues/63

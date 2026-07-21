@@ -34,8 +34,15 @@ export const TRANSLATION_BRANCH_PREFIXES = [SYNC_BRANCH_PREFIX, RESYNC_BRANCH_PR
  * True when `ref` is a branch created by this tool for a translation PR —
  * either a sync branch or a resync branch.
  *
+ * A bare prefix with nothing after it (`resync/`, `translation-sync-`) is NOT a
+ * match: no builder emits one, so such a ref did not come from us. `startsWith`
+ * alone would accept them, and every match here authorises a force-push during
+ * rebase — so the predicate errs towards claiming fewer branches, not more.
+ *
  * @param ref - A git branch name (a PR's `head.ref`), without any `refs/heads/` prefix.
  */
 export function isTranslationBranch(ref: string): boolean {
-  return TRANSLATION_BRANCH_PREFIXES.some((prefix) => ref.startsWith(prefix));
+  return TRANSLATION_BRANCH_PREFIXES.some(
+    (prefix) => ref.startsWith(prefix) && ref.length > prefix.length
+  );
 }
