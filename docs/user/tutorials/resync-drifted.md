@@ -67,7 +67,7 @@ Sync Status: lecture-python-intro ↔ lecture-python-intro.zh-cn (zh-cn)
 |---|---|---|
 | `OUTDATED` | Source has newer commits since last sync | `forward` resync |
 | `SOURCE_AHEAD` | Source added new sections | `forward` resync |
-| `SOURCE_ONLY` | Entirely new file in source | `forward -f <file>` |
+| `SOURCE_ONLY` | Entirely new file in source | `init -f <file>` |
 | `TARGET_AHEAD` | Target has more sections than source | Investigate manually |
 
 Before resyncing, run a health check to verify the target repo is properly configured:
@@ -226,7 +226,7 @@ npx translate forward \
   --github QuantEcon/lecture-python-intro.zh-cn
 ```
 
-Each PR is created on a `resync/{filename}` branch with labels `action-translation-sync` and `resync`.
+Each PR is created on a `resync/{filename}` branch with labels `action-translation`, `action-translation-sync`, and `resync`. The `action-translation` label is what the review workflow triggers on, so resync PRs get AI review automatically. All three labels must already exist in the target repo — `gh pr create` fails if any is missing.
 
 ---
 
@@ -297,12 +297,13 @@ If any files still show as `OUTDATED`, it may be because the source changed *aga
 
 ### New files (SOURCE_ONLY)
 
-For files that exist only in the source, `forward` will translate them from scratch:
+Files that exist only in the source need a fresh translation, which is `init`'s job — `forward` resyncs an *existing* translation and errors with `Target file not found` when there is nothing to resync. Use `init -f` to translate the single new file:
 
 ```bash
-npx translate forward \
+npx translate init \
   -s ~/repos/lecture-python-intro \
   -t ~/repos/lecture-python-intro.zh-cn \
+  --target-language zh-cn \
   -f new_lecture.md
 ```
 

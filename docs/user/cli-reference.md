@@ -266,7 +266,7 @@ npx translate forward \
   --github QuantEcon/lecture-intro.zh-cn
 ```
 
-Creates one PR per file in the target repo with branch `resync/{filename}` and labels `action-translation-sync`, `resync`.
+Creates one PR per file in the target repo with branch `resync/{filename}` and labels `action-translation`, `action-translation-sync`, `resync`. The `action-translation` label is the one the review workflow template gates on, so these PRs trigger AI review automatically.
 
 **Forward triage verdicts:**
 

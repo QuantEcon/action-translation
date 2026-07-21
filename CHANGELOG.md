@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **`forward --github` PRs now carry the `action-translation` label, so the review workflow actually triggers on them** (#131): the CLI hard-coded its label set as `action-translation-sync` + `resync`, while the deployed review workflow template gates on `action-translation` — the label the *action's* pr-creator applies. Every CLI resync PR therefore failed the filter and `Review Translations` completed as `skipped`, silently; all six PRs of the lecture-python.zh-cn post-wave drift mini-wave went unreviewed until the label was added by hand. The CLI now applies `action-translation` alongside its existing labels, keeping the template's label contract single-valued instead of widening the filter in every deployed copy.
+- **The resync-drifted tutorial no longer routes `SOURCE_ONLY` files to `forward -f`** (#131): `forward` errors with `Target file not found` for targets that don't exist — a fresh translation is `init`'s job. The drift-category table and the "New files" example now say `init -f <file>`.
+
 ## [0.20.0] - 2026-07-21
 
 ### Added

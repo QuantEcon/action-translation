@@ -10,7 +10,9 @@
  *
  * Branch: `resync/{filename}` (e.g., `resync/cobweb`)
  * Title: `🔄 [resync] cobweb.md`
- * Labels: `action-translation-sync`, `resync`
+ * Labels: `action-translation`, `action-translation-sync`, `resync` —
+ * `action-translation` is what the deployed review workflow template gates
+ * on, so resync PRs trigger AI review like sync PRs do (#131)
  */
 
 import * as fs from 'fs';
@@ -523,6 +525,8 @@ export function buildGhArgs(file: string, repo: string): string[] {
     title,
     '--body-file',
     '-',
+    '--label',
+    'action-translation',
     '--label',
     'action-translation-sync',
     '--label',

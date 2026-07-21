@@ -111,13 +111,15 @@ describe('buildGhArgs', () => {
     expect(args[idx + 1]).toBe('-');
   });
 
-  it('includes both labels', () => {
+  it('includes all three labels, including the review-workflow gate label', () => {
     const labelIndices = args.reduce((acc: number[], val, i) => {
       if (val === '--label') acc.push(i);
       return acc;
     }, []);
-    expect(labelIndices.length).toBe(2);
+    expect(labelIndices.length).toBe(3);
     const labels = labelIndices.map((i) => args[i + 1]);
+    // The deployed review workflow template gates on `action-translation` (#131)
+    expect(labels).toContain('action-translation');
     expect(labels).toContain('action-translation-sync');
     expect(labels).toContain('resync');
   });
