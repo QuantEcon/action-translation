@@ -1909,3 +1909,102 @@ translation:
     expect(result).toContain('title: 介绍');
   });
 });
+
+describe('FileProcessor.processSectionBased — dropped target-only sections (#90 defect 2)', () => {
+  let processor: FileProcessor;
+  let mockTranslator: jest.Mocked<TranslationService>;
+
+  beforeEach(() => {
+    mockTranslator = {
+      translateSection: jest.fn(),
+      translateFullDocument: jest.fn(),
+    } as any;
+    processor = new FileProcessor(mockTranslator, true);
+  });
+
+  const source = `---
+config: test
+---
+
+# Introduction
+
+Intro text.
+
+## Section A
+
+Content of section A.
+
+## Section B
+
+Content of section B.`;
+
+  const targetWithAddition = `---
+config: test
+translation:
+  title: 介绍
+  headings:
+    Section A: "部分 A"
+    Section B: "部分 B"
+---
+
+# 介绍
+
+介绍文本。
+
+## 部分 A
+
+部分 A 的内容。
+
+## 部分 B
+
+部分 B 的内容。
+
+## 额外练习
+
+只存在于目标的内容。`;
+
+  it('reports each removed target-only section and omits it from the output', async () => {
+    const dropped: string[] = [];
+    const result = await processor.processSectionBased(
+      source,
+      source, // unchanged source → no translation calls
+      targetWithAddition,
+      'test.md',
+      'en',
+      'zh-cn',
+      undefined,
+      undefined,
+      undefined,
+      (heading) => dropped.push(heading)
+    );
+
+    expect(dropped).toEqual(['额外练习']);
+    expect(result).not.toContain('额外练习');
+    // Matched sections survive untouched
+    expect(result).toContain('## 部分 A');
+    expect(result).toContain('## 部分 B');
+    expect(mockTranslator.translateSection).not.toHaveBeenCalled();
+  });
+
+  it('does not fire the callback when every target section has a source counterpart', async () => {
+    const alignedTarget = targetWithAddition.replace(
+      /\n## 额外练习\n\n只存在于目标的内容。/,
+      ''
+    );
+    const dropped: string[] = [];
+    await processor.processSectionBased(
+      source,
+      source,
+      alignedTarget,
+      'test.md',
+      'en',
+      'zh-cn',
+      undefined,
+      undefined,
+      undefined,
+      (heading) => dropped.push(heading)
+    );
+
+    expect(dropped).toEqual([]);
+  });
+});

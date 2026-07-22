@@ -311,7 +311,7 @@ npx translate init \
 
 ### Target-only files (TARGET_ONLY)
 
-Files that exist only in the target are usually orphans — the source file was deleted or renamed. Check git history:
+Files that exist only in the target are either **deliberate additions** — the supported way to carry edition-specific content, since sync never touches a file without a source counterpart (see [the FAQ on adding content to a translated edition](../faq.md#how-do-i-add-content-to-a-translated-edition-that-isnt-in-the-source)) — or **orphans**, left behind when the source file was deleted or renamed. Check git history:
 
 ```bash
 cd ~/repos/lecture-python-intro

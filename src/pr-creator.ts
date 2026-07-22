@@ -104,7 +104,8 @@ export async function createTranslationPR(
   logger: Logger,
   sourcePrInfo?: SourcePrInfo,
   skippedSections?: Map<string, string[]>,
-  fileMetadata?: Array<{ path: string; type: string; previousPath?: string }>
+  fileMetadata?: Array<{ path: string; type: string; previousPath?: string }>,
+  droppedTargetSections?: Map<string, string[]>
 ): Promise<PrCreationResult> {
   const { targetOwner, targetRepo } = config;
 
@@ -171,7 +172,8 @@ export async function createTranslationPR(
     sourcePrInfo,
     skippedSections,
     baseSha,
-    fileMetadata
+    fileMetadata,
+    droppedTargetSections
   );
 
   // Build PR title
@@ -252,7 +254,8 @@ export function buildPrBody(
   sourcePrInfo?: SourcePrInfo,
   skippedSections?: Map<string, string[]>,
   targetBaseSha?: string,
-  fileMetadata?: Array<{ path: string; type: string; previousPath?: string }>
+  fileMetadata?: Array<{ path: string; type: string; previousPath?: string }>,
+  droppedTargetSections?: Map<string, string[]>
 ): string {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);
@@ -287,6 +290,22 @@ export function buildPrBody(
       );
     }
     skippedNotice = `\n\n### ⚠️ Sections Pending Earlier Translation PR\n\nThe following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. If that PR is abandoned, run \`/translate-resync\` to recover.\n\n${lines.join('\n')}`;
+  }
+
+  // Build removed target-only sections notice (#90 defect 2): the sync mirrors
+  // the source's structure, so a target section with no source counterpart is
+  // removed. Correct when upstream deleted it; destructive when a human added
+  // it — the reviewer decides, so the removal must be stated, not left as red
+  // lines in the diff.
+  let droppedNotice = '';
+  if (droppedTargetSections && droppedTargetSections.size > 0) {
+    const lines: string[] = [];
+    for (const [file, headings] of droppedTargetSections) {
+      lines.push(
+        `- \`${file}\`: ${headings.map((h) => `\`${h.replace(/`/g, '\\`')}\``).join(', ')}`
+      );
+    }
+    droppedNotice = `\n\n### ⚠️ Target-Only Sections Removed\n\nThe following sections exist in the current translation but have **no counterpart in the source document**, so this sync removes them (the translation mirrors the source's structure). If the source deleted these sections, this removal is correct — merge as usual. If they are human-authored additions you want to keep, move them into a target-only file before merging (see [adding content to a translated edition](https://github.com/QuantEcon/action-translation/blob/main/docs/user/faq.md#how-do-i-add-content-to-a-translated-edition-that-isnt-in-the-source)).\n\n${lines.join('\n')}`;
   }
 
   // Build machine-readable metadata for rebase mode
@@ -325,7 +344,7 @@ This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoNam
 ### Source PR
 **[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ''}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
 
-${filesChangedSection}${skippedNotice}
+${filesChangedSection}${skippedNotice}${droppedNotice}
 
 ### Details
 - **Source Language**: ${config.sourceLanguage}

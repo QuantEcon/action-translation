@@ -31526,7 +31526,7 @@ function isTranslationBranch(ref) {
 }
 
 // dist/pr-creator.js
-async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata) {
+async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections) {
   const { targetOwner, targetRepo } = config;
   const { data: targetRepoData } = await octokit.rest.repos.get({
     owner: targetOwner,
@@ -31572,7 +31572,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     });
     logger.info(`Deleted: ${file.path}`);
   }
-  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata);
+  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections);
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
   const { data: pr } = await octokit.rest.pulls.create({
     owner: targetOwner,
@@ -31619,7 +31619,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     prNumber: pr.number
   };
 }
-function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata) {
+function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections) {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);
   let filesChangedSection = "";
@@ -31649,6 +31649,20 @@ function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skipp
 ### \u26A0\uFE0F Sections Pending Earlier Translation PR
 
 The following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. If that PR is abandoned, run \`/translate-resync\` to recover.
+
+${lines.join("\n")}`;
+  }
+  let droppedNotice = "";
+  if (droppedTargetSections && droppedTargetSections.size > 0) {
+    const lines = [];
+    for (const [file, headings] of droppedTargetSections) {
+      lines.push(`- \`${file}\`: ${headings.map((h) => `\`${h.replace(/`/g, "\\`")}\``).join(", ")}`);
+    }
+    droppedNotice = `
+
+### \u26A0\uFE0F Target-Only Sections Removed
+
+The following sections exist in the current translation but have **no counterpart in the source document**, so this sync removes them (the translation mirrors the source's structure). If the source deleted these sections, this removal is correct \u2014 merge as usual. If they are human-authored additions you want to keep, move them into a target-only file before merging (see [adding content to a translated edition](https://github.com/QuantEcon/action-translation/blob/main/docs/user/faq.md#how-do-i-add-content-to-a-translated-edition-that-isnt-in-the-source)).
 
 ${lines.join("\n")}`;
   }
@@ -31684,7 +31698,7 @@ This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoNam
 ### Source PR
 **[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ""}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
 
-${filesChangedSection}${skippedNotice}
+${filesChangedSection}${skippedNotice}${droppedNotice}
 
 ### Details
 - **Source Language**: ${config.sourceLanguage}
@@ -37076,7 +37090,7 @@ var FileProcessor = class {
    * Always reconstructs complete document: CONFIG + TITLE + INTRO + SECTIONS
    * This ensures no components get lost during translation updates
    */
-  async processSectionBased(oldContent, newContent, targetContent, filepath, sourceLanguage, targetLanguage, glossary, onSkippedSection, rebaseCache) {
+  async processSectionBased(oldContent, newContent, targetContent, filepath, sourceLanguage, targetLanguage, glossary, onSkippedSection, rebaseCache, onDroppedTargetSection) {
     this.log(`Processing file using component-based approach: ${filepath}`);
     const oldSource = await this.parser.parseDocumentComponents(oldContent, filepath);
     const newSource = await this.parser.parseDocumentComponents(newContent, filepath);
@@ -37162,6 +37176,7 @@ var FileProcessor = class {
     this.log(`Detected ${changes.length} section-level changes`);
     const resultSections = [];
     const includedSourceSections = [];
+    const usedTargetSections = /* @__PURE__ */ new Set();
     for (let i = 0; i < newSource.sections.length; i++) {
       const newSection = newSource.sections[i];
       const change = changes.find((c) => c.newSection?.id === newSection.id);
@@ -37169,6 +37184,7 @@ var FileProcessor = class {
         const positionHint = newSource.sections.length === target.sections.length ? i : void 0;
         const targetSection = this.findTargetSectionByHeadingMap(newSection, target.sections, headingMap, positionHint);
         if (targetSection) {
+          usedTargetSections.add(targetSection);
           resultSections.push(targetSection);
           includedSourceSections.push(newSection);
           this.log(`Keeping unchanged section: ${newSection.heading}`);
@@ -37208,7 +37224,9 @@ var FileProcessor = class {
         this.log(`Processing MODIFIED section: ${newSection.heading}`);
         const positionHint = newSource.sections.length === target.sections.length ? i : void 0;
         const targetSection = this.findTargetSectionByHeadingMap(change.oldSection, target.sections, headingMap, positionHint);
-        if (!targetSection) {
+        if (targetSection) {
+          usedTargetSections.add(targetSection);
+        } else {
           this.log(`Warning: Could not find target for modified section, treating as new`);
           const translatedSection = await this.translateNewSection(newSection, sourceLanguage, targetLanguage, glossary);
           resultSections.push(translatedSection);
@@ -37334,6 +37352,13 @@ ${bodyLines.join("\n")}`;
         });
         includedSourceSections.push(newSection);
         this.log(`Updated section at position ${i}`);
+      }
+    }
+    for (const targetSection of target.sections) {
+      if (!usedTargetSections.has(targetSection)) {
+        const headingText = cleanHeadingText(targetSection.heading);
+        this.log(`Removing target-only section (no source counterpart): ${headingText}`);
+        onDroppedTargetSection?.(headingText);
       }
     }
     this.log(`Updating heading map`);
@@ -37844,7 +37869,8 @@ var SyncOrchestrator = class {
       filesToDelete: [],
       processedFiles: [],
       errors: [],
-      skippedSections: /* @__PURE__ */ new Map()
+      skippedSections: /* @__PURE__ */ new Map(),
+      droppedTargetSections: /* @__PURE__ */ new Map()
     };
     for (const file of files) {
       try {
@@ -37887,10 +37913,15 @@ var SyncOrchestrator = class {
       translatedContent = await this.processor.processFull(file.newContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary);
     } else {
       const skipped = [];
-      translatedContent = await this.processor.processSectionBased(file.oldContent || "", file.newContent, file.targetContent || "", file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary, (heading) => skipped.push(heading), fileRebaseCache);
+      const dropped = [];
+      translatedContent = await this.processor.processSectionBased(file.oldContent || "", file.newContent, file.targetContent || "", file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary, (heading) => skipped.push(heading), fileRebaseCache, (heading) => dropped.push(heading));
       if (skipped.length > 0) {
         result.skippedSections.set(file.filename, skipped);
         this.logger.warning(`${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target \u2014 pending earlier translation PR`);
+      }
+      if (dropped.length > 0) {
+        result.droppedTargetSections.set(file.filename, dropped);
+        this.logger.warning(`${file.filename}: removed ${dropped.length} target-only section(s) with no source counterpart \u2014 correct if upstream deleted them; destructive if human-added (see PR body)`);
       }
     }
     const validation = await this.processor.validateMyST(translatedContent, file.filename);
@@ -37922,10 +37953,15 @@ var SyncOrchestrator = class {
     let translatedContent;
     if (file.targetContent) {
       const skipped = [];
-      translatedContent = await this.processor.processSectionBased(file.oldContent || "", file.newContent, file.targetContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary, (heading) => skipped.push(heading), fileRebaseCache);
+      const dropped = [];
+      translatedContent = await this.processor.processSectionBased(file.oldContent || "", file.newContent, file.targetContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary, (heading) => skipped.push(heading), fileRebaseCache, (heading) => dropped.push(heading));
       if (skipped.length > 0) {
         result.skippedSections.set(file.filename, skipped);
         this.logger.warning(`${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target \u2014 pending earlier translation PR`);
+      }
+      if (dropped.length > 0) {
+        result.droppedTargetSections.set(file.filename, dropped);
+        this.logger.warning(`${file.filename}: removed ${dropped.length} target-only section(s) with no source counterpart \u2014 correct if upstream deleted them; destructive if human-added (see PR body)`);
       }
     } else {
       translatedContent = await this.processor.processFull(file.newContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary);
@@ -38560,7 +38596,7 @@ async function runSync() {
         }
         return entry;
       });
-      const prResult = await createTranslationPR(octokit, result.translatedFiles, result.filesToDelete, prConfig, coreLogger, sourcePrInfo, result.skippedSections, fileMetadata);
+      const prResult = await createTranslationPR(octokit, result.translatedFiles, result.filesToDelete, prConfig, coreLogger, sourcePrInfo, result.skippedSections, fileMetadata, result.droppedTargetSections);
       prUrl = prResult.prUrl;
       core7.setOutput("pr-url", prResult.prUrl);
       core7.setOutput("files-synced", result.processedFiles.length.toString());

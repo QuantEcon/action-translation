@@ -209,8 +209,16 @@ export async function resyncSingleFile(
   }
 
   if (triageResult.verdict === 'TARGET_HAS_ADDITIONS') {
-    logger.warn(`${file}: TARGET has content not in SOURCE that will be lost during resync.`);
-    logger.warn(`Consider running 'translate backward' first to capture improvements.`);
+    // Two provenances, opposite treatments (#90 defect 2): content the SOURCE
+    // once had and later deleted (removal is correct — the resync mirrors the
+    // current source), or human-authored target additions (removal is
+    // destructive). The triage verdict cannot tell them apart; the operator can.
+    logger.warn(`${file}: TARGET has content not in SOURCE — the resync will remove it.`);
+    logger.warn(
+      `If the source deleted this content, removal is correct. If it is human-authored, ` +
+        `move it to a target-only file first (see the FAQ on adding content to a translated ` +
+        `edition), or run 'translate backward' to capture improvements upstream.`
+    );
     if (triageResult.reason) {
       logger.warn(`Reason: ${triageResult.reason}`);
     }

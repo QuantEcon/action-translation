@@ -94,7 +94,13 @@ Because success comments are posted via the GitHub API on the source PR, they tr
 
 See [Language Configuration](language-config.md) for details.
 
-## CLI tool
+### How do I add content to a translated edition that isn't in the source?
+
+Put it in a **target-only file** — a new `.md` file in the target repo's docs folder, added to the target's `_toc.yml`. Sync only ever touches files that exist in the source, so a target-only file is never modified, resynced, or removed by automation. The `status` command lists such files as `TARGET_ONLY` so they stay visible.
+
+Do **not** add extra sections inside a synced file. The sync mirrors the source document's structure, so a section that has no counterpart in the source is removed on the next sync of that file. The removal is deliberate — it is how upstream deletions propagate — and the sync PR lists every removed target-only section under "Target-Only Sections Removed" so a reviewer can catch the case where the content was human-authored. If that happens, restore the content into a target-only file and merge the sync.
+
+If the addition is an *improvement to existing content* rather than new material, consider contributing it to the source repository instead (`translate backward` helps capture such improvements) — then every language edition benefits and the sync carries it back to yours.
 
 ### The `forward` command changed too many lines
 

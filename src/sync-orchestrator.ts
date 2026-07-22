@@ -91,6 +91,8 @@ export interface SyncProcessingResult {
   errors: string[];
   /** Sections skipped per file: unchanged in source diff but missing from target (pending earlier translation PR). */
   skippedSections: Map<string, string[]>;
+  /** Target-only sections removed per file: present in the target but with no counterpart in the current source (#90 defect 2 — upstream drift or human-added content; the PR body surfaces them so a reviewer decides which). */
+  droppedTargetSections: Map<string, string[]>;
 }
 
 // =============================================================================
@@ -271,6 +273,7 @@ export class SyncOrchestrator {
       processedFiles: [],
       errors: [],
       skippedSections: new Map(),
+      droppedTargetSections: new Map(),
     };
 
     for (const file of files) {
@@ -330,6 +333,7 @@ export class SyncOrchestrator {
       );
     } else {
       const skipped: string[] = [];
+      const dropped: string[] = [];
       translatedContent = await this.processor.processSectionBased(
         file.oldContent || '',
         file.newContent,
@@ -339,12 +343,19 @@ export class SyncOrchestrator {
         this.config.targetLanguage,
         glossary,
         (heading) => skipped.push(heading),
-        fileRebaseCache
+        fileRebaseCache,
+        (heading) => dropped.push(heading)
       );
       if (skipped.length > 0) {
         result.skippedSections.set(file.filename, skipped);
         this.logger.warning(
           `${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target — pending earlier translation PR`
+        );
+      }
+      if (dropped.length > 0) {
+        result.droppedTargetSections.set(file.filename, dropped);
+        this.logger.warning(
+          `${file.filename}: removed ${dropped.length} target-only section(s) with no source counterpart — correct if upstream deleted them; destructive if human-added (see PR body)`
         );
       }
     }
@@ -402,6 +413,7 @@ export class SyncOrchestrator {
     if (file.targetContent) {
       // Existing translation — use section-based processing to update
       const skipped: string[] = [];
+      const dropped: string[] = [];
       translatedContent = await this.processor.processSectionBased(
         file.oldContent || '',
         file.newContent,
@@ -411,12 +423,19 @@ export class SyncOrchestrator {
         this.config.targetLanguage,
         glossary,
         (heading) => skipped.push(heading),
-        fileRebaseCache
+        fileRebaseCache,
+        (heading) => dropped.push(heading)
       );
       if (skipped.length > 0) {
         result.skippedSections.set(file.filename, skipped);
         this.logger.warning(
           `${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target — pending earlier translation PR`
+        );
+      }
+      if (dropped.length > 0) {
+        result.droppedTargetSections.set(file.filename, dropped);
+        this.logger.warning(
+          `${file.filename}: removed ${dropped.length} target-only section(s) with no source counterpart — correct if upstream deleted them; destructive if human-added (see PR body)`
         );
       }
     } else {
