@@ -105,7 +105,9 @@ describe('normalizeFindings', () => {
   });
 
   it('forces attribution on single-file PRs and nulls unknown files on multi-file PRs', () => {
-    const raw = [{ severity: 'minor', category: 'accuracy', file: 'invented.md', description: 'x' }];
+    const raw = [
+      { severity: 'minor', category: 'accuracy', file: 'invented.md', description: 'x' },
+    ];
     const single = normalizeFindings(raw, undefined, ['lectures/only.md']);
     expect(single.findings[0].file).toBe('lectures/only.md');
     const multi = normalizeFindings(raw, undefined, FILES);
@@ -387,7 +389,10 @@ function makeFakeOctokit() {
       repos: {
         getContent: async (params: { repo: string; ref: string }) => ({
           data: {
-            content: params.repo === 'lecture-python-programming' ? b64(SOURCE_CONTENT) : b64(TARGET_CONTENT),
+            content:
+              params.repo === 'lecture-python-programming'
+                ? b64(SOURCE_CONTENT)
+                : b64(TARGET_CONTENT),
           },
         }),
       },

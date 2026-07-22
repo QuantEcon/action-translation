@@ -53,13 +53,15 @@ const GATING_CATEGORIES: readonly FindingCategory[] = ['accuracy', 'terminology'
  * deliberately conservative until Stage 4 shadow-mode data calibrates them
  * (#103 — floors are set empirically, not a priori).
  */
-export const CRITERION_FLOORS: Record<'accuracy' | 'fluency' | 'terminology' | 'formatting', number> =
-  {
-    accuracy: 9,
-    terminology: 9,
-    fluency: 8,
-    formatting: 8,
-  };
+export const CRITERION_FLOORS: Record<
+  'accuracy' | 'fluency' | 'terminology' | 'formatting',
+  number
+> = {
+  accuracy: 9,
+  terminology: 9,
+  fluency: 8,
+  formatting: 8,
+};
 
 /**
  * The verdict v2 block, as serialised into the review comment.
@@ -208,7 +210,8 @@ export function normalizeFindings(
           ? (obj.category as FindingCategory)
           : 'other';
       const claimedFile = typeof obj.file === 'string' ? obj.file : null;
-      const file = soleFile ?? (claimedFile && validFiles.includes(claimedFile) ? claimedFile : null);
+      const file =
+        soleFile ?? (claimedFile && validFiles.includes(claimedFile) ? claimedFile : null);
       return {
         severity,
         category,
