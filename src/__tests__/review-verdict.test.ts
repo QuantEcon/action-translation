@@ -28,6 +28,17 @@ const FILES = ['lectures/aiyagari.md', 'lectures/cobweb.md'];
 
 const COMPLETE_SCORES = { accuracy: 9, fluency: 9, terminology: 9, formatting: 9 };
 
+const SEVERITY_VALUES = ['blocker', 'major', 'minor', 'nit'];
+const CATEGORY_VALUES = [
+  'accuracy',
+  'fluency',
+  'terminology',
+  'formatting',
+  'syntax',
+  'structure',
+  'other',
+];
+
 function finding(overrides: Partial<ReviewFinding> = {}): ReviewFinding {
   return {
     severity: 'minor',
@@ -87,10 +98,12 @@ describe('normalizeFindings', () => {
     });
   });
 
-  it('coerces legacy issues conservatively even when items carry severity-like fields', () => {
+  it('coerces legacy issues conservatively and gates: the response ignored the schema', () => {
     const legacy = [{ severity: 'nit', category: 'fluency', description: 'Legacy shape.' }];
     const { findings, malformed } = normalizeFindings(undefined, legacy, FILES);
-    expect(malformed).toBe(false);
+    // Items are still recorded, but a response with no `findings` key at all
+    // cannot be trusted as a clean review, so the payload gates.
+    expect(malformed).toBe(true);
     expect(findings[0].severity).toBe('major');
     expect(findings[0].category).toBe('other');
   });
@@ -776,5 +789,120 @@ describe('malformed model output cannot open the gate', () => {
     const out = sortAndCapFindings(assembled);
     expect(out).toHaveLength(20);
     expect(out[0].severity).toBe('blocker');
+  });
+});
+
+// ============================================================================
+// The trust boundary, fuzzed
+// ============================================================================
+
+/**
+ * Every round of scrutiny on this module found the same class of defect:
+ * untrusted input becoming a typed value without a full shape check. These
+ * tests cover the class rather than another instance — the invariants must
+ * hold for arbitrary junk, not just the shapes anyone thought to enumerate.
+ */
+describe('parse and normalise survive arbitrary junk', () => {
+  const JUNK: unknown[] = [
+    null,
+    undefined,
+    0,
+    1,
+    -1,
+    NaN,
+    Infinity,
+    '',
+    'string',
+    'true',
+    'false',
+    true,
+    false,
+    [],
+    [null],
+    [{}],
+    {},
+    { nested: { deep: [1, 2, 3] } },
+    [[[]]],
+    { toString: null },
+  ];
+
+  it('parseReviewVerdict never throws and never accepts an incomplete block', () => {
+    const complete = makeVerdict();
+    for (const key of Object.keys(complete)) {
+      if (key === 'wouldAutoMerge') continue; // genuinely optional
+      const partial = { ...(complete as Record<string, unknown>) };
+      delete partial[key];
+      const body = `<!-- translation-review-verdict\n${JSON.stringify(partial, null, 2)}\n-->`;
+      expect(parseReviewVerdict(body)).toBeUndefined();
+    }
+  });
+
+  it('parseReviewVerdict rejects junk in every field rather than passing it through', () => {
+    const complete = makeVerdict() as unknown as Record<string, unknown>;
+    for (const key of Object.keys(complete)) {
+      for (const junk of JUNK) {
+        const mutated = { ...complete, [key]: junk };
+        const body = `<!-- translation-review-verdict\n${JSON.stringify(mutated, null, 2)}\n-->`;
+        let out: unknown;
+        expect(() => {
+          out = parseReviewVerdict(body);
+        }).not.toThrow();
+        if (out !== undefined) {
+          // Anything accepted must be structurally usable by a consumer.
+          const v = out as ReviewVerdictV2;
+          expect(typeof v.scores.overall).toBe('number');
+          expect(typeof v.diffChecks.scopeCorrect).toBe('boolean');
+          expect(['off', 'shadow']).toContain(v.autoMergeMode);
+          expect(['auto-merge', 'editor']).toContain(v.recommendation);
+        }
+      }
+    }
+  });
+
+  it('a block accepted by the parser is always safe to read', () => {
+    const body = buildVerdictBlock(makeVerdict());
+    const v = parseReviewVerdict(body)!;
+    expect(
+      () => `${v.scores.overall} ${v.diffChecks.headingMapCorrect} ${v.findings.length}`
+    ).not.toThrow();
+  });
+
+  it('normalizeFindings never throws on junk payloads and stays fail-closed', () => {
+    for (const raw of JUNK) {
+      for (const legacy of JUNK) {
+        let out: { findings: ReviewFinding[]; malformed: boolean } | undefined;
+        expect(() => {
+          out = normalizeFindings(raw, legacy, FILES);
+        }).not.toThrow();
+        // An empty findings list must never coincide with malformed=false
+        // unless the model genuinely sent an empty array with nothing in the
+        // legacy field — otherwise "no findings" would read as "clean".
+        // An empty findings list may only be trusted when the model explicitly
+        // returned an empty `findings` array — every other shape must gate.
+        const emptyAndTrusted = out!.findings.length === 0 && !out!.malformed;
+        if (emptyAndTrusted) {
+          expect(Array.isArray(raw) && (raw as unknown[]).length === 0).toBe(true);
+        }
+        for (const f of out!.findings) {
+          expect(SEVERITY_VALUES).toContain(f.severity);
+          expect(CATEGORY_VALUES).toContain(f.category);
+          expect(typeof f.description).toBe('string');
+        }
+      }
+    }
+  });
+
+  it('computeRecommendation never throws and never opens on junk', () => {
+    for (const junk of JUNK) {
+      let out: { recommendation: string; reasons: string[] } | undefined;
+      expect(() => {
+        out = computeRecommendation({
+          ...CLEAN_INPUT,
+          diffChecks: junk as never,
+          scores: junk as never,
+        });
+      }).not.toThrow();
+      expect(out!.recommendation).toBe('editor');
+    }
   });
 });

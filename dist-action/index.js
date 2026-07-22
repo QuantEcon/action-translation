@@ -31860,6 +31860,7 @@ function getEngineVersion() {
   _cachedEngineVersion = "unknown";
   return _cachedEngineVersion;
 }
+var isPlainObject3 = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
 function truncate(value) {
   const s = typeof value === "string" ? value : String(value);
   return s.length > MAX_FIELD_LENGTH ? `${s.slice(0, MAX_FIELD_LENGTH - 1)}\u2026` : s;
@@ -31922,11 +31923,15 @@ function normalizeFindings(rawFindings, legacyIssues, validFiles) {
   } else if (rawFindings === void 0 && Array.isArray(legacyIssues)) {
     items = legacyIssues;
     forceConservative = true;
+    malformed = true;
   } else {
     items = [];
     malformed = true;
   }
   const findings = items.map((item) => toFinding(item, forceConservative)).filter((f) => f.description !== "" && f.description !== "{}").sort((a, b) => severityRank(a.severity) - severityRank(b.severity)).slice(0, MAX_FINDINGS);
+  if (items.length > 0 && findings.length === 0) {
+    malformed = true;
+  }
   return { findings, malformed };
 }
 function sortAndCapFindings(findings) {
@@ -31969,9 +31974,12 @@ function computeRecommendation(input) {
   if (gatingMinors > 0) {
     reasons.push(`${gatingMinors} minor finding(s) in gating categories (${GATING_CATEGORIES.join("/")})`);
   }
+  const scores = isPlainObject3(input.scores) ? input.scores : {};
   for (const [criterion, floor] of Object.entries(CRITERION_FLOORS)) {
-    const score = input.scores[criterion];
-    if (!(score >= floor)) {
+    const score = scores[criterion];
+    if (typeof score !== "number" || !Number.isFinite(score)) {
+      reasons.push(`${criterion} score missing or non-numeric`);
+    } else if (!(score >= floor)) {
       reasons.push(`${criterion} ${score} below floor ${floor}`);
     } else if (!(score <= MAX_CRITERION_SCORE)) {
       reasons.push(`${criterion} ${score} above the ${MAX_CRITERION_SCORE}-point scale`);

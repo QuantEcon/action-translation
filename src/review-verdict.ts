@@ -177,6 +177,9 @@ export function getEngineVersion(): string {
 // FINDINGS NORMALISATION
 // ============================================================================
 
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
 function truncate(value: unknown): string {
   const s = typeof value === 'string' ? value : String(value);
   return s.length > MAX_FIELD_LENGTH ? `${s.slice(0, MAX_FIELD_LENGTH - 1)}…` : s;
@@ -275,9 +278,15 @@ export function normalizeFindings(
   } else if (Array.isArray(rawFindings)) {
     items = rawFindings;
   } else if (rawFindings === undefined && Array.isArray(legacyIssues)) {
-    // Legacy `issues` shape: no severity/category to trust — coerce conservatively.
+    // Legacy `issues` shape with no `findings` key at all: the response
+    // ignored the requested schema, so its items are coerced conservatively
+    // AND the payload is marked malformed. An empty legacy array is the case
+    // that forces this — it is indistinguishable from "the model did not
+    // understand what was asked", and reading it as a confident clean review
+    // would open the gate on a schema violation.
     items = legacyIssues;
     forceConservative = true;
+    malformed = true;
   } else {
     // Non-array findings, or both fields absent: unusable payload. No findings
     // are recorded, and `malformed` gates the recommendation instead — an
@@ -291,6 +300,13 @@ export function normalizeFindings(
     .filter((f) => f.description !== '' && f.description !== '{}')
     .sort((a, b) => severityRank(a.severity) - severityRank(b.severity))
     .slice(0, MAX_FINDINGS);
+
+  // Items went in and nothing came out: every one was empty or unreadable
+  // (`[{}]`, `[null]`, `['']`). Returning a trusted empty list would read as
+  // "the model found nothing wrong" when in fact it said nothing usable.
+  if (items.length > 0 && findings.length === 0) {
+    malformed = true;
+  }
 
   return { findings, malformed };
 }
@@ -403,9 +419,16 @@ export function computeRecommendation(input: RecommendationInput): {
   // Bounded on both sides. A response on a 0-100 scale (accuracy: 85) clears
   // every floor while meaning nothing of the sort, so an out-of-range score is
   // a scale error and gates rather than passing.
+  // `input.scores` is read defensively rather than indexed directly: a null or
+  // non-object value threw a TypeError out of the gate. Throwing is not the
+  // same as gating — a caller that catches must not be able to interpret the
+  // failure as anything but `editor`, so an unusable score set gates here.
+  const scores: Record<string, unknown> = isPlainObject(input.scores) ? input.scores : {};
   for (const [criterion, floor] of Object.entries(CRITERION_FLOORS)) {
-    const score = input.scores[criterion as keyof RecommendationInput['scores']];
-    if (!(score >= floor)) {
+    const score = scores[criterion];
+    if (typeof score !== 'number' || !Number.isFinite(score)) {
+      reasons.push(`${criterion} score missing or non-numeric`);
+    } else if (!(score >= floor)) {
       reasons.push(`${criterion} ${score} below floor ${floor}`);
     } else if (!(score <= MAX_CRITERION_SCORE)) {
       reasons.push(`${criterion} ${score} above the ${MAX_CRITERION_SCORE}-point scale`);
@@ -488,12 +511,72 @@ export function parseReviewVerdict(commentBody: string): ReviewVerdictV2 | undef
   }
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return undefined;
 
-  const block = parsed as Record<string, unknown>;
-  if (block.schemaVersion !== REVIEW_VERDICT_SCHEMA_VERSION) return undefined;
-  if (!['PASS', 'WARN', 'FAIL'].includes(block.verdict as string)) return undefined;
-  if (!['auto-merge', 'editor'].includes(block.recommendation as string)) return undefined;
-  if (typeof block.reviewedHeadSha !== 'string' || block.reviewedHeadSha === '') return undefined;
-  if (!Array.isArray(block.findings)) return undefined;
+  return isWellFormedVerdict(parsed) ? (parsed as ReviewVerdictV2) : undefined;
+}
 
-  return parsed as ReviewVerdictV2;
+const isString = (v: unknown): boolean => typeof v === 'string';
+const isNonEmptyString = (v: unknown): boolean => typeof v === 'string' && v !== '';
+const isFiniteNumber = (v: unknown): boolean => typeof v === 'number' && Number.isFinite(v);
+const isNullableString = (v: unknown): boolean => v === null || typeof v === 'string';
+
+/**
+ * Whether a parsed payload is a structurally complete verdict.
+ *
+ * Every required field is checked for presence *and* type, not just the few
+ * the routing decision reads. Two failures motivate the completeness: a block
+ * carrying only the routing fields parses, and then a consumer reading
+ * `scores.overall` throws on `undefined`; and an unchecked `autoMergeMode`
+ * can arrive as `"active"` — outside the declared union — which a downstream
+ * router could act on. A partially-valid block is a wrong-shape block, and the
+ * contract promises those are rejected.
+ */
+function isWellFormedVerdict(parsed: unknown): boolean {
+  if (!isPlainObject(parsed)) return false;
+  const b = parsed;
+
+  if (b.schemaVersion !== REVIEW_VERDICT_SCHEMA_VERSION) return false;
+  if (!['PASS', 'WARN', 'FAIL'].includes(b.verdict as string)) return false;
+  if (!['auto-merge', 'editor'].includes(b.recommendation as string)) return false;
+  if (!['off', 'shadow'].includes(b.autoMergeMode as string)) return false;
+  if (b.wouldAutoMerge !== undefined && typeof b.wouldAutoMerge !== 'boolean') return false;
+
+  if (!isNonEmptyString(b.reviewedHeadSha)) return false;
+  if (!isString(b.engineVersion) || !isString(b.reviewerModel)) return false;
+  if (!isString(b.targetBaseSha) || !isString(b.sourceRepo) || !isString(b.timestamp)) return false;
+  if (!isFiniteNumber(b.prNumber) || !isFiniteNumber(b.syntaxErrorCount)) return false;
+
+  if (!Array.isArray(b.recommendationReasons) || !b.recommendationReasons.every(isString)) {
+    return false;
+  }
+
+  const scores = b.scores;
+  if (!isPlainObject(scores)) return false;
+  for (const key of [
+    'accuracy',
+    'fluency',
+    'terminology',
+    'formatting',
+    'translation',
+    'diff',
+    'overall',
+  ]) {
+    if (!isFiniteNumber(scores[key])) return false;
+  }
+
+  const diffChecks = b.diffChecks;
+  if (!isPlainObject(diffChecks)) return false;
+  for (const key of DIFF_CHECK_NAMES) {
+    if (typeof diffChecks[key] !== 'boolean') return false;
+  }
+
+  if (!Array.isArray(b.findings)) return false;
+  for (const f of b.findings) {
+    if (!isPlainObject(f)) return false;
+    if (!SEVERITIES.includes(f.severity as FindingSeverity)) return false;
+    if (!CATEGORIES.includes(f.category as FindingCategory)) return false;
+    if (!isNullableString(f.file) || !isNullableString(f.location)) return false;
+    if (!isString(f.description) || !isNullableString(f.suggestion)) return false;
+  }
+
+  return true;
 }
