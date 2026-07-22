@@ -19,11 +19,24 @@ import {
   TranslationQualityResult,
   DiffQualityResult,
   ReviewResult,
+  ReviewFinding,
   ChangedSection,
   FileChange,
 } from './types.js';
 import { parseTranslationSyncMetadata, TranslationSyncMetadata } from './pr-creator.js';
 import { DEFAULT_CLAUDE_MODEL, MAX_TOKENS, DEFAULT_THINKING } from './models.js';
+import {
+  ReviewVerdictV2,
+  REVIEW_VERDICT_SCHEMA_VERSION,
+  buildVerdictBlock,
+  computeRecommendation,
+  findingToDisplayString,
+  getEngineVersion,
+  normalizeFindings,
+  sanitizeCommentText,
+  sortAndCapFindings,
+  truncateField,
+} from './review-verdict.js';
 
 // Default model for review (can be overridden)
 const DEFAULT_REVIEW_MODEL = DEFAULT_CLAUDE_MODEL;
@@ -90,7 +103,10 @@ export function validateCriterionScores(result: Record<string, unknown>): {
     const raw = result[key];
     const value =
       typeof raw === 'number' ? raw : typeof raw === 'string' && raw !== '' ? Number(raw) : NaN;
-    if (Number.isFinite(value)) {
+    // Range-checked, not merely finite. A response on a 0-100 scale
+    // (accuracy: 85) is finite, clears every floor, and means nothing of the
+    // sort — a scale error must be rejected like a missing criterion.
+    if (Number.isFinite(value) && value >= 0 && value <= 10) {
       scores[key] = value;
     } else {
       missing.push(key);
@@ -585,7 +601,8 @@ export class TranslationReviewer {
     targetRepo: string,
     docsFolder: string,
     glossaryTerms?: string,
-    targetLanguage?: string
+    targetLanguage?: string,
+    autoMergeMode: 'off' | 'shadow' = 'off'
   ): Promise<ReviewResult> {
     core.info(`Starting review of PR #${prNumber}...`);
 
@@ -620,6 +637,8 @@ export class TranslationReviewer {
           terminology: 10,
           formatting: 10,
           syntaxErrors: [],
+          findings: [],
+          findingsMalformed: false,
           issues: [],
           strengths: ['No markdown files to review'],
           summary: 'No markdown files changed in this PR.',
@@ -638,6 +657,12 @@ export class TranslationReviewer {
         },
         overallScore: 10,
         verdict: 'PASS',
+        // Fail-closed: with nothing reviewed there is nothing to gate on.
+        recommendation: 'editor',
+        recommendationReasons: ['no markdown files reviewed — nothing to gate'],
+        autoMergeMode,
+        ...(autoMergeMode === 'shadow' ? { wouldAutoMerge: false } : {}),
+        reviewedHeadSha: pr.head.sha,
         reviewComment: 'No markdown files to review in this PR.',
       };
       return emptyResult;
@@ -771,6 +796,7 @@ export class TranslationReviewer {
       sourceEnglish,
       targetTranslation,
       changedSections,
+      filenames,
       glossaryTerms,
       targetLanguage
     );
@@ -803,19 +829,146 @@ export class TranslationReviewer {
       verdict = 'FAIL';
     }
 
-    // Generate review comment
-    const reviewComment = this.generateReviewComment(translationQuality, diffQuality, verdict);
+    // Verdict v2 (#103, #66): unify every issue class into one findings array,
+    // then compute the categorical routing recommendation.
+    //
+    // Severity assignment differs by source, deliberately:
+    //   - model findings carry their own rated severity;
+    //   - syntax errors are blockers (the prompt calls them CRITICAL, and
+    //     `syntaxErrorCount` gates independently);
+    //   - diff-quality issues are recorded at `minor`/`structure`, which does
+    //     NOT gate. `evaluateDiff` returns free prose with no severity concept,
+    //     and harness runs showed it emits narration and self-correction
+    //     ("wait, checking again…", "this matches the new schema, so it's
+    //     fine, but…") alongside real observations. Promoting that to `major`
+    //     made it an absolute gate, which both buried the real signal and
+    //     would poison the shadow-phase calibration data with false negatives.
+    //     The authoritative diff signal is the four `diffChecks` booleans,
+    //     which gate absolutely; these strings are their explanation.
+    const soleFile = filenames.length === 1 ? filenames[0] : null;
+    const syntaxFindings: ReviewFinding[] = translationQuality.syntaxErrors.map((e) => ({
+      severity: 'blocker',
+      category: 'syntax',
+      file: soleFile,
+      location: null,
+      description: truncateField(e),
+      suggestion: null,
+    }));
+    const diffFindings: ReviewFinding[] = diffQuality.issues.map((i) => ({
+      severity: 'minor',
+      category: 'structure',
+      file: soleFile,
+      location: null,
+      description: truncateField(i),
+      suggestion: null,
+    }));
+    // Re-sorted and re-capped: normalizeFindings ordered and bounded the
+    // model's own findings, but concatenating syntax and diff findings onto
+    // the end breaks both, and the contract publishes "worst first, capped".
+    const allFindings = sortAndCapFindings([
+      ...translationQuality.findings,
+      ...syntaxFindings,
+      ...diffFindings,
+    ]);
+
+    const diffChecks = {
+      scopeCorrect: diffQuality.scopeCorrect,
+      positionCorrect: diffQuality.positionCorrect,
+      structurePreserved: diffQuality.structurePreserved,
+      headingMapCorrect: diffQuality.headingMapCorrect,
+    };
+    // A failed source fetch is only a warning on the fetch path (getSourceDiff
+    // catches everything and returns empty maps), so the review can end up
+    // scoring the target against nothing and calling it clean. That must never
+    // reach auto-merge.
+    const sourceContentMissing = sourceEnglish.trim() === '';
+    if (sourceContentMissing) {
+      core.warning(
+        'No source content was fetched for any reviewed file — the verdict is not a real comparison and routes to editor'
+      );
+    }
+
+    const { recommendation, reasons } = computeRecommendation({
+      verdict,
+      scores: {
+        accuracy: translationQuality.accuracy,
+        fluency: translationQuality.fluency,
+        terminology: translationQuality.terminology,
+        formatting: translationQuality.formatting,
+      },
+      diffChecks,
+      syntaxErrorCount: translationQuality.syntaxErrors.length,
+      findings: allFindings,
+      findingsMalformed: translationQuality.findingsMalformed,
+      sourceContentMissing,
+      // With max-suggestions: 0 the prompt asks for no findings at all, so an
+      // empty findings array is not evidence of a clean translation.
+      findingsSuppressed: this.maxSuggestions === 0,
+    });
+
+    const wouldAutoMerge = autoMergeMode === 'shadow' ? recommendation === 'auto-merge' : undefined;
+    if (autoMergeMode === 'shadow') {
+      core.notice(
+        `Shadow auto-merge gate: would ${wouldAutoMerge ? '' : 'NOT '}auto-merge PR #${prNumber}` +
+          (wouldAutoMerge ? '' : ` — ${reasons.join('; ')}`) +
+          ' (recorded in the verdict block; no action taken)'
+      );
+    }
+
+    const timestamp = new Date().toISOString();
+    const verdictV2: ReviewVerdictV2 = {
+      schemaVersion: REVIEW_VERDICT_SCHEMA_VERSION,
+      engineVersion: getEngineVersion(),
+      reviewerModel: this.model,
+      reviewedHeadSha: pr.head.sha,
+      targetBaseSha: pr.base.sha,
+      sourceRepo,
+      prNumber,
+      timestamp,
+      verdict,
+      recommendation,
+      recommendationReasons: reasons,
+      autoMergeMode,
+      ...(wouldAutoMerge !== undefined ? { wouldAutoMerge } : {}),
+      scores: {
+        accuracy: translationQuality.accuracy,
+        fluency: translationQuality.fluency,
+        terminology: translationQuality.terminology,
+        formatting: translationQuality.formatting,
+        translation: translationQuality.score,
+        diff: diffQuality.score,
+        overall: Math.round(overallScore * 10) / 10,
+      },
+      diffChecks,
+      syntaxErrorCount: translationQuality.syntaxErrors.length,
+      findings: allFindings,
+    };
+
+    // Generate review comment, with the machine-readable block at the end
+    const reviewComment =
+      this.generateReviewComment(translationQuality, diffQuality, verdict, {
+        recommendation,
+        reasons,
+        wouldAutoMerge,
+      }) +
+      '\n\n' +
+      buildVerdictBlock(verdictV2);
 
     // Post review comment
     await this.postReviewComment(prNumber, targetOwner, targetRepo, reviewComment);
 
     const result: ReviewResult = {
       prNumber,
-      timestamp: new Date().toISOString(),
+      timestamp,
       translationQuality,
       diffQuality,
       overallScore: Math.round(overallScore * 10) / 10,
       verdict,
+      recommendation,
+      recommendationReasons: reasons,
+      autoMergeMode,
+      ...(wouldAutoMerge !== undefined ? { wouldAutoMerge } : {}),
+      reviewedHeadSha: pr.head.sha,
       reviewComment,
     };
 
@@ -829,10 +982,12 @@ export class TranslationReviewer {
     sourceEnglish: string,
     targetTranslation: string,
     changedSections: ChangedSection[],
+    filenames: string[],
     glossaryTerms?: string,
     targetLanguage?: string
   ): Promise<TranslationQualityResult> {
     const changedSectionsPrompt = this.formatChangedSections(changedSections);
+    const filesList = filenames.map((f) => `- ${f}`).join('\n');
 
     // Determine language name for prompt
     const languageNames: Record<string, string> = {
@@ -916,6 +1071,10 @@ Rate each criterion from 1-10:
    - MyST directives must use correct syntax: \`\`\`{directive}
    - Report any syntax errors found - these are CRITICAL issues that must be fixed
 
+## Files Under Review
+The changed markdown files in this PR are (the document blocks above concatenate them in this order):
+${filesList}
+
 ## Response Format
 Respond with ONLY valid JSON in this exact format (no markdown code blocks):
 {
@@ -924,22 +1083,35 @@ Respond with ONLY valid JSON in this exact format (no markdown code blocks):
   "terminology": <number 1-10>,
   "formatting": <number 1-10>,
   "syntaxErrors": ["error 1 with line/location if possible", "error 2"],
-  "issues": ["Issue 1: description with location and suggestion", "Issue 2: description"],
+  "findings": [
+    {
+      "severity": "blocker|major|minor|nit",
+      "category": "accuracy|fluency|terminology|formatting",
+      "file": "<one of the file paths listed under Files Under Review, or null>",
+      "location": "<section heading or a short quote locating the finding, or null>",
+      "description": "<what is wrong, specific and self-contained>",
+      "suggestion": "<proposed replacement text, or null>"
+    }
+  ],
   "strengths": ["strength 1", "strength 2"],
   "summary": "Brief overall assessment"
 }
 
 Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors are found. Syntax errors are CRITICAL and should always be reported even if the array would otherwise be empty.
 
-## Suggestions Guidelines
-- The "issues" array can contain **0 to ${this.maxSuggestions} string suggestions**
-- Each issue should be a PLAIN STRING (not an object), formatted as: "Location: original text → suggestion"
-- Only include actual issues found - an empty array [] is perfectly valid for excellent translations
-- Each suggestion should be specific and actionable
-- Prioritize by importance: accuracy issues first, then fluency, terminology, formatting
-- Do NOT invent issues just to fill the array - quality over quantity
+## Findings Guidelines
+- The "findings" array can contain **0 to ${this.maxSuggestions} findings** - an empty array [] is perfectly valid for excellent translations
+- Severity meanings:
+  - "blocker": meaning inversion, wrong mathematics or code, or broken MyST that will not build
+  - "major": an accuracy or terminology error a reader would be misled by
+  - "minor": correct but awkward phrasing, or a minor terminology inconsistency
+  - "nit": a stylistic preference
+- "category" must name the criterion the finding counts against
+- "file" must be one of the listed file paths (or null if you cannot attribute the finding)
+- Each finding must be specific and actionable; prioritize by importance: accuracy first, then fluency, terminology, formatting
+- Do NOT invent findings just to fill the array - quality over quantity
 
-**CRITICAL**: The "issues" array MUST contain suggestions that relate ONLY to the sections that were changed in this PR. Do not suggest improvements for unchanged parts of the document.`;
+**CRITICAL**: Findings MUST relate ONLY to the sections that were changed in this PR. Do not report findings for unchanged parts of the document.`;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let result: any = await this.callWithRetry(prompt, MAX_TOKENS.review, 'evaluateTranslation');
@@ -963,14 +1135,28 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
     const scores = check.scores!;
     const score = REVIEW_CRITERIA.reduce((sum, c) => sum + scores[c.key] * c.weight, 0);
 
+    // Structured findings (verdict v2). Legacy `issues` responses are coerced
+    // conservatively; a payload with neither field usable sets the malformed
+    // flag, which gates the recommendation (fail-closed).
+    const { findings, malformed } = normalizeFindings(result.findings, result.issues, filenames);
+    if (malformed) {
+      core.warning(
+        'evaluateTranslation: findings payload missing or malformed — recommendation will fail closed to editor'
+      );
+    }
+
     return {
       score: Math.round(score * 10) / 10,
       accuracy: scores.accuracy,
       fluency: scores.fluency,
       terminology: scores.terminology,
       formatting: scores.formatting,
-      syntaxErrors: result.syntaxErrors || [],
-      issues: this.normalizeIssues(result.issues || []),
+      syntaxErrors: Array.isArray(result.syntaxErrors)
+        ? result.syntaxErrors.map((e: unknown) => String(e))
+        : [],
+      findings,
+      findingsMalformed: malformed,
+      issues: findings.map(findingToDisplayString),
       strengths: result.strengths || [],
       summary: result.summary || '',
     };
@@ -1069,22 +1255,26 @@ Respond with ONLY valid JSON:
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: any = await this.callWithRetry(prompt, MAX_TOKENS.review, 'evaluateDiff');
-    const checks = [
-      result.scopeCorrect,
-      result.positionCorrect,
-      result.structurePreserved,
-      result.headingMapCorrect,
-    ];
+    // Strict identity: these come straight off model JSON, and a quoted
+    // "false" is truthy. Anything that is not literally `true` is a failed
+    // check — including a missing key.
+    const isTrue = (v: unknown): boolean => v === true;
+    const scopeCorrect = isTrue(result.scopeCorrect);
+    const positionCorrect = isTrue(result.positionCorrect);
+    const structurePreserved = isTrue(result.structurePreserved);
+    const headingMapCorrect = isTrue(result.headingMapCorrect);
+
+    const checks = [scopeCorrect, positionCorrect, structurePreserved, headingMapCorrect];
     const passedChecks = checks.filter(Boolean).length;
     const score = (passedChecks / checks.length) * 10;
 
     return {
       score: Math.round(score * 10) / 10,
-      scopeCorrect: result.scopeCorrect,
-      positionCorrect: result.positionCorrect,
-      structurePreserved: result.structurePreserved,
-      headingMapCorrect: result.headingMapCorrect,
-      issues: result.issues || [],
+      scopeCorrect,
+      positionCorrect,
+      structurePreserved,
+      headingMapCorrect,
+      issues: Array.isArray(result.issues) ? result.issues.map((i: unknown) => String(i)) : [],
       summary: result.summary || '',
       scopeDetails: result.scopeDetails || '',
       positionDetails: result.positionDetails || '',
@@ -1120,48 +1310,38 @@ ${sectionsList}
   }
 
   /**
-   * Normalize issues to strings
-   */
-  private normalizeIssues(issues: unknown[]): string[] {
-    if (!Array.isArray(issues)) return [];
-    return issues
-      .map((issue) => {
-        if (typeof issue === 'string') return issue;
-        if (typeof issue === 'object' && issue !== null) {
-          const obj = issue as Record<string, unknown>;
-          const location = obj.location || obj.section || obj.heading || '';
-          const original = obj.original || obj.current || obj.translated || obj.text || '';
-          const suggestion = obj.suggestion || obj.recommended || obj.fix || obj.correction || '';
-          const description = obj.description || obj.issue || obj.problem || obj.message || '';
-
-          if (description) {
-            return location ? `${location}: ${description}` : String(description);
-          }
-          if (original && suggestion) {
-            return location
-              ? `${location}: "${original}" → "${suggestion}"`
-              : `"${original}" → "${suggestion}"`;
-          }
-          return JSON.stringify(obj);
-        }
-        return String(issue);
-      })
-      .filter((s) => s && s !== '{}' && s !== '""');
-  }
-
-  /**
    * Generate review comment
    */
   private generateReviewComment(
     translationResult: TranslationQualityResult,
     diffResult: DiffQualityResult,
-    verdict: 'PASS' | 'WARN' | 'FAIL'
+    verdict: 'PASS' | 'WARN' | 'FAIL',
+    routing?: {
+      recommendation: 'auto-merge' | 'editor';
+      reasons: string[];
+      wouldAutoMerge?: boolean;
+    }
   ): string {
     const emoji = verdict === 'PASS' ? '✅' : verdict === 'WARN' ? '⚠️' : '❌';
 
+    // Routing line (verdict v2): the categorical recommendation, with its
+    // reasons when the route is `editor`, plus the shadow-gate note when the
+    // gate ran in shadow mode.
+    let routingLines = '';
+    if (routing) {
+      routingLines = `\n**Routing**: \`${routing.recommendation}\`${
+        routing.reasons.length > 0
+          ? ` — ${routing.reasons.join('; ')}`
+          : ' — no gating findings; floors met'
+      }`;
+      if (routing.wouldAutoMerge !== undefined) {
+        routingLines += `\n**Shadow gate**: would ${routing.wouldAutoMerge ? '' : 'NOT '}auto-merge (recorded only; no action taken)`;
+      }
+    }
+
     let comment = `## ${emoji} Translation Quality Review
 
-**Verdict**: ${verdict} | **Model**: ${this.model} | **Date**: ${new Date().toISOString().split('T')[0]}
+**Verdict**: ${verdict} | **Model**: ${this.model} | **Date**: ${new Date().toISOString().split('T')[0]}${routingLines}
 
 ---
 
@@ -1175,24 +1355,24 @@ ${sectionsList}
 | Formatting | ${translationResult.formatting}/10 |
 | **Overall** | **${translationResult.score}/10** |
 
-**Summary**: ${translationResult.summary}`;
+**Summary**: ${sanitizeCommentText(translationResult.summary)}`;
 
     if (translationResult.strengths.length > 0) {
-      comment += ` ${translationResult.strengths.join(' ')}`;
+      comment += ` ${sanitizeCommentText(translationResult.strengths.join(' '))}`;
     }
 
     if (translationResult.syntaxErrors && translationResult.syntaxErrors.length > 0) {
       comment += `
 
 ### ⚠️ Markdown Syntax Errors (CRITICAL)
-${translationResult.syntaxErrors.map((e) => `- 🔴 ${e}`).join('\n')}`;
+${translationResult.syntaxErrors.map((e) => `- 🔴 ${sanitizeCommentText(String(e))}`).join('\n')}`;
     }
 
     if (translationResult.issues.length > 0) {
       comment += `
 
 **Suggestions**:
-${translationResult.issues.map((i) => `- ${i}`).join('\n')}`;
+${translationResult.issues.map((i) => `- ${sanitizeCommentText(i)}`).join('\n')}`;
     }
 
     comment += `
@@ -1209,13 +1389,13 @@ ${translationResult.issues.map((i) => `- ${i}`).join('\n')}`;
 | Heading-map Correct | ${diffResult.headingMapCorrect ? '✅' : '❌'} |
 | **Overall** | **${diffResult.score}/10** |
 
-**Summary**: ${diffResult.summary}`;
+**Summary**: ${sanitizeCommentText(diffResult.summary)}`;
 
     if (diffResult.issues.length > 0) {
       comment += `
 
 **Issues**:
-${diffResult.issues.map((i) => `- ${i}`).join('\n')}`;
+${diffResult.issues.map((i) => `- ${sanitizeCommentText(String(i))}`).join('\n')}`;
     }
 
     comment += `

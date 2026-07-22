@@ -20,6 +20,7 @@ import * as path from 'path';
 import { spawnSync, SpawnSyncOptions } from 'child_process';
 import { ResyncSectionResult } from './types.js';
 import type { TranslationSyncMetadata } from '../pr-creator.js';
+import { SYNC_METADATA_SCHEMA_VERSION } from '../pr-creator.js';
 import { RESYNC_BRANCH_PREFIX } from '../branch-naming.js';
 
 // ============================================================================
@@ -360,6 +361,7 @@ export function buildForwardSyncMetadata(
   }
 
   return {
+    schemaVersion: SYNC_METADATA_SCHEMA_VERSION,
     sourceRepo,
     sourcePR: 0,
     mode: 'resync',
