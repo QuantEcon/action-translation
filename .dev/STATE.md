@@ -7,12 +7,35 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## In flight
 
-- **PR #78** — fr programming-domain glossary terms; awaiting native review.
 - **PR #71** — Malayalam (`ml`) draft; awaiting native-reviewer calibration batch.
   Glossary PR **#69** (ja) open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
 
 ## Recently landed
 
+- **v0.22.0** (2026-07-22) — #144 delivered **reviewer verdict v2**, the machine-readable
+  review contract (#103 prerequisite, specified in #66): every review comment now ends with a
+  `translation-review-verdict` JSON block carrying per-criterion scores, the composite that was
+  computed but never printed, the four diff checks, structured findings, a **categorical
+  `auto-merge`/`editor` recommendation from rubric logic rather than the blended score**, the
+  reviewer model, the engine version, and the **head SHA the verdict was computed against**.
+  New input `auto-merge-mode: off | shadow` records the would-auto-merge decision without acting
+  (`active` fails loudly); new outputs `review-recommendation`, `reviewed-head-sha`,
+  `would-auto-merge`. `translation-sync-metadata` gains `schemaVersion: 1` from both writers and
+  both blocks are documented as a public contract in `docs/user/metadata-contract.md`.
+  **Validation is the story**: six live harness runs (driving the built bundle against real PRs,
+  per the harness convention) plus an adversarial audit and Copilot's review found **fourteen
+  defects across five rounds**, most fail-open — a **verdict forgery** smuggled through
+  model-authored prose that beat a first-match parser and yielded `auto-merge` against an
+  attacker-chosen SHA; truthiness-tested `diffChecks` where a quoted `"false"` passed all four;
+  an empty `diffChecks` object gating nothing; lower-bounded-only floors that a 0–100-scale
+  response cleared; a failed source fetch scoring the target against nothing. Every one was the
+  same class — untrusted input becoming a typed value without a full shape check — and a fuzz
+  pass over the trust boundary now covers the class, not instances. **Consumer rule (breaking if
+  ignored): parse the LAST verdict block and fail closed on a malformed one.** Corrects the
+  program risk register, which held that prompt injection cannot change a verdict. Also in this
+  release: #140 (resync pins target-local data reads and strips model preamble, verifying both)
+  and #78 (fr programming-domain glossary, 364 terms). **`auto-merge-mode` defaults to `off`, so
+  nothing changes behaviourally on upgrade** — editions emit the block; no gate acts.
 - **v0.21.0** (2026-07-22) — #132 closed #131: `forward --github` PRs now carry
   `action-translation`, the label the review workflow template gates on — every CLI resync PR
   had been completing review as `skipped`, silently (all six of the zh-cn post-wave mini-wave).
