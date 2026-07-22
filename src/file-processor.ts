@@ -510,8 +510,16 @@ export class FileProcessor {
     // removal is the correct default — but the removal must be visible to the
     // reviewer who confirms that. Human-added content belongs in target-only
     // files, which sync never touches (see FAQ).
+    //
+    // Identity tracking alone under-counts on cache paths: the rebase-cache
+    // fast path for added sections pushes a section parsed from the cached
+    // PR content, never touching target.sections — so an equivalent section
+    // already on the target would be reported as removed while its content is
+    // in the output. Ids are same-language heading slugs, so an id match in
+    // resultSections means the section survives.
+    const resultSectionIds = new Set(resultSections.map((s) => s.id));
     for (const targetSection of target.sections) {
-      if (!usedTargetSections.has(targetSection)) {
+      if (!usedTargetSections.has(targetSection) && !resultSectionIds.has(targetSection.id)) {
         const headingText = cleanHeadingText(targetSection.heading);
         this.log(`Removing target-only section (no source counterpart): ${headingText}`);
         onDroppedTargetSection?.(headingText);

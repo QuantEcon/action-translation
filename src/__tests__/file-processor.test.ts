@@ -2004,4 +2004,61 @@ translation:
 
     expect(dropped).toEqual([]);
   });
+
+  it('does not report a section that survives via the rebase-cache added-section path', async () => {
+    // Source PR adds Section C; the cached PR branch already translated it,
+    // AND an equivalent 部分 C exists on the current target (e.g. an
+    // overlapping sync merged meanwhile). The cache fast path pushes the
+    // cached object — target's own 部分 C is never touched by identity, but
+    // its id matches the surviving section, so it must NOT be reported.
+    const oldSrc = source;
+    const newSrc = source.replace(
+      /\n## Section B\n\nContent of section B\./,
+      '\n## Section B\n\nContent of section B.\n\n## Section C\n\nContent of section C.'
+    );
+    const targetWithC = `---
+config: test
+translation:
+  title: 介绍
+  headings:
+    Section A: "部分 A"
+    Section B: "部分 B"
+    Section C: "部分 C"
+---
+
+# 介绍
+
+介绍文本。
+
+## 部分 A
+
+部分 A 的内容。
+
+## 部分 B
+
+部分 B 的内容。
+
+## 部分 C
+
+部分 C 的内容。`;
+    const previousTranslation = targetWithC;
+
+    const dropped: string[] = [];
+    const result = await processor.processSectionBased(
+      oldSrc,
+      newSrc,
+      targetWithC,
+      'test.md',
+      'en',
+      'zh-cn',
+      undefined,
+      undefined,
+      { previousTranslation, oldTargetContent: targetWithC },
+      (heading) => dropped.push(heading)
+    );
+
+    expect(dropped).toEqual([]);
+    expect(result).toContain('## 部分 C');
+    expect(mockTranslator.translateSection).not.toHaveBeenCalled();
+  });
 });

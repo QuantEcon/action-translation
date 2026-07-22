@@ -37354,8 +37354,9 @@ ${bodyLines.join("\n")}`;
         this.log(`Updated section at position ${i}`);
       }
     }
+    const resultSectionIds = new Set(resultSections.map((s) => s.id));
     for (const targetSection of target.sections) {
-      if (!usedTargetSections.has(targetSection)) {
+      if (!usedTargetSections.has(targetSection) && !resultSectionIds.has(targetSection.id)) {
         const headingText = cleanHeadingText(targetSection.heading);
         this.log(`Removing target-only section (no source counterpart): ${headingText}`);
         onDroppedTargetSection?.(headingText);
