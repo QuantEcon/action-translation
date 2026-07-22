@@ -152,7 +152,21 @@ export function findEmbeddedFrontmatter(content: string, signatureKeys: Set<stri
       let j = i + 1;
       while (j < lines.length && lines[j].trim() === '') j++;
       const key = /^([A-Za-z_][A-Za-z0-9_-]*):(\s|$)/.exec(lines[j] ?? '');
-      if (key && signatureKeys.has(key[1])) return i;
+      if (!key || !signatureKeys.has(key[1])) continue;
+      // A signature key alone is not enough — a horizontal rule followed by
+      // `title:`-style prose would match, and the finalize strip would drop
+      // legitimate body content. The candidate only counts as frontmatter if
+      // it CLOSES with another `---` and the enclosed slab parses as a YAML
+      // mapping (prose after a key line fails YAML, so this discriminates).
+      let close = i + 1;
+      while (close < lines.length && !FRONTMATTER_DELIM.test(lines[close])) close++;
+      if (close >= lines.length) continue;
+      try {
+        const parsed = yaml.load(lines.slice(i + 1, close).join('\n'));
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return i;
+      } catch {
+        // Not a YAML mapping — a horizontal rule, not frontmatter
+      }
     }
   }
   return -1;

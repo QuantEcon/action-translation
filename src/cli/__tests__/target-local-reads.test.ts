@@ -110,16 +110,26 @@ describe('verifyPreservedReads', () => {
     },
   ];
 
-  it('passes when the pinned line survives (any indentation)', () => {
-    const output = `intro\n    code_to_name = pd.read_csv("../lectures/datasets/country_code_cn.csv").set_index('code')\nrest`;
+  it('passes when the pinned line survives inside a {code-cell} (any indentation)', () => {
+    const output = `intro\n\n\`\`\`{code-cell} ipython3\n    code_to_name = pd.read_csv("../lectures/datasets/country_code_cn.csv").set_index('code')\n\`\`\`\nrest`;
     expect(verifyPreservedReads(output, reads)).toEqual([]);
   });
 
   it('reports the exact missing line on a revert — the observed defect', () => {
-    const reverted = `code_to_name = data[\n    ['countrycode', 'country']].drop_duplicates()`;
+    const reverted = `\`\`\`{code-cell} ipython3\ncode_to_name = data[\n    ['countrycode', 'country']].drop_duplicates()\n\`\`\``;
     const missing = verifyPreservedReads(reverted, reads);
     expect(missing).toHaveLength(1);
     expect(missing[0]).toContain('country_code_cn.csv');
+  });
+
+  it('does not count a copy of the line in prose or an example fence — only executable code cells', () => {
+    const proseOnly =
+      `The old code was:\n` +
+      `code_to_name = pd.read_csv("../lectures/datasets/country_code_cn.csv").set_index('code')\n\n` +
+      '```python\ncode_to_name = pd.read_csv("../lectures/datasets/country_code_cn.csv").set_index(\'code\')\n```\n\n' +
+      `\`\`\`{code-cell} ipython3\ncode_to_name = data[['countrycode', 'country']]\n\`\`\`\n`;
+    const missing = verifyPreservedReads(proseOnly, reads);
+    expect(missing).toHaveLength(1);
   });
 
   it('is a no-op with no pinned reads', () => {

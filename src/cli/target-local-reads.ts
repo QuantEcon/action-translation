@@ -40,12 +40,13 @@ const FENCE_LINE = /^\s*(`{3,}|~{3,})(.*)$/;
 const DATA_PATH = /["']([^"']*\.(?:csv|json|xlsx|parquet|dta|npz|zip))["']/gi;
 
 /**
- * Extract code-cell lines that reference data files by quoted path.
- * Fence walk mirrors structural-parity.ts: only lines inside a top-level
- * `{code-cell}` fence are inspected.
+ * All lines inside top-level `{code-cell}` fences. Fence walk mirrors
+ * structural-parity.ts. Shared by extraction AND survival verification so the
+ * two sides look at the same universe — a pinned line reproduced in prose or
+ * an example fence must not count as surviving.
  */
-export function extractDataFileReads(content: string): DataFileRead[] {
-  const reads: DataFileRead[] = [];
+export function codeCellLines(content: string): string[] {
+  const lines: string[] = [];
   let openFence: { char: string; length: number } | null = null;
   let inCodeCell = false;
 
@@ -62,18 +63,27 @@ export function extractDataFileReads(content: string): DataFileRead[] {
         inCodeCell = false;
         continue;
       }
-      if (inCodeCell) {
-        for (const match of rawLine.matchAll(DATA_PATH)) {
-          const ref = match[1];
-          if (/^[a-z]+:\/\//i.test(ref)) continue; // URL, not a repo file
-          reads.push({ line: rawLine.trim(), basename: path.posix.basename(ref) });
-        }
-      }
+      if (inCodeCell) lines.push(rawLine);
       continue;
     }
     if (fence) {
       openFence = { char: fence[1][0], length: fence[1].length };
       inCodeCell = fence[2].trim().startsWith('{code-cell}');
+    }
+  }
+  return lines;
+}
+
+/**
+ * Extract code-cell lines that reference data files by quoted path.
+ */
+export function extractDataFileReads(content: string): DataFileRead[] {
+  const reads: DataFileRead[] = [];
+  for (const rawLine of codeCellLines(content)) {
+    for (const match of rawLine.matchAll(DATA_PATH)) {
+      const ref = match[1];
+      if (/^[a-z]+:\/\//i.test(ref)) continue; // URL, not a repo file
+      reads.push({ line: rawLine.trim(), basename: path.posix.basename(ref) });
     }
   }
   return reads;
@@ -127,10 +137,12 @@ export function findTargetLocalReads(
   sourceDocsDir: string,
   targetDocsDir: string
 ): DataFileRead[] {
+  const reads = extractDataFileReads(targetContent);
+  if (reads.length === 0) return []; // most files — skip the disk walks entirely
   const sourceNames = collectBasenames(sourceDocsDir);
   const targetNames = collectBasenames(targetDocsDir);
   return classifyTargetLocalReads(
-    extractDataFileReads(targetContent),
+    reads,
     (b) => targetNames.has(b),
     (b) => sourceNames.has(b)
   );
@@ -152,12 +164,13 @@ export function buildPreserveInstruction(reads: DataFileRead[]): string {
 }
 
 /**
- * Verify every pinned line survived into the output. Returns the missing
- * lines; empty means preserved. Comparison is on trimmed lines, matching how
- * the lines were captured.
+ * Verify every pinned line survived into the output's `{code-cell}` fences.
+ * Returns the missing lines; empty means preserved. Scoped to code cells —
+ * the reads were captured from code cells, and a copy of the line in prose or
+ * an example fence is not the executable code the localisation lives in.
  */
 export function verifyPreservedReads(outputContent: string, reads: DataFileRead[]): string[] {
   if (reads.length === 0) return [];
-  const outputLines = new Set(outputContent.split('\n').map((l) => l.trim()));
+  const outputLines = new Set(codeCellLines(outputContent).map((l) => l.trim()));
   return reads.filter((r) => !outputLines.has(r.line)).map((r) => r.line);
 }

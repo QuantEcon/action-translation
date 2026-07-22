@@ -229,3 +229,22 @@ describe('findEmbeddedFrontmatter / frontmatterSignatureKeys', () => {
     expect(findEmbeddedFrontmatter(content, keys)).toBe(-1);
   });
 });
+
+describe('findEmbeddedFrontmatter — close-and-parse hardening (Copilot review)', () => {
+  const keys = frontmatterSignatureKeys('jupytext:\n  x: y\ntitle: t\n');
+
+  it('rejects a horizontal rule followed by signature-key prose when the slab is not YAML', () => {
+    const content = `body text\n\n---\n\ntitle: a musing about titles\n\nMore prose that is not YAML.\n\n---\n\nmore body\n`;
+    expect(findEmbeddedFrontmatter(content, keys)).toBe(-1);
+  });
+
+  it('rejects an unclosed candidate block at EOF', () => {
+    const content = `preamble\n\n---\njupytext:\n  x: y\n`;
+    expect(findEmbeddedFrontmatter(content, keys)).toBe(-1);
+  });
+
+  it('still finds a real closed, parsing block after a rejected candidate', () => {
+    const content = `text\n\n---\n\ntitle: prose not yaml\n\nnot yaml here\n\n---\njupytext:\n  x: y\n---\nbody\n`;
+    expect(findEmbeddedFrontmatter(content, keys)).toBe(8);
+  });
+});
