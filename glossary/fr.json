@@ -1360,7 +1360,7 @@
     {
       "en": "Standard normal",
       "fr": "Loi normale centrée réduite",
-      "context": "Statistics"
+      "context": "statistics"
     },
     {
       "en": "State space",
@@ -1524,7 +1524,7 @@
     },
     {
       "en": "Tuple unpacking",
-      "fr": "Déballage de tuple",
+      "fr": "Dépaquetage de tuple",
       "context": "Python"
     },
     {
