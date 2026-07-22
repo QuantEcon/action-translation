@@ -180,7 +180,16 @@ describe('buildPrBody', () => {
 
   it('should include removed target-only sections notice when provided (#90 defect 2)', () => {
     const dropped = new Map<string, string[]>([['lectures/solow.md', ['练习', '模拟']]]);
-    const body = buildPrBody([], [], baseConfig, undefined, undefined, undefined, undefined, dropped);
+    const body = buildPrBody(
+      [],
+      [],
+      baseConfig,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      dropped
+    );
 
     expect(body).toContain('### ⚠️ Target-Only Sections Removed');
     expect(body).toContain('`lectures/solow.md`');

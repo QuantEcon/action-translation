@@ -1987,10 +1987,7 @@ translation:
   });
 
   it('does not fire the callback when every target section has a source counterpart', async () => {
-    const alignedTarget = targetWithAddition.replace(
-      /\n## 额外练习\n\n只存在于目标的内容。/,
-      ''
-    );
+    const alignedTarget = targetWithAddition.replace(/\n## 额外练习\n\n只存在于目标的内容。/, '');
     const dropped: string[] = [];
     await processor.processSectionBased(
       source,
