@@ -28,7 +28,7 @@ Runs in the **target** (translated) repository. When a translation PR is opened 
 
 1. Compares the translation against the source content
 2. Evaluates translation quality and diff accuracy
-3. Posts a review comment with scores and suggestions
+3. Posts a review comment with scores, structured findings, and a machine-readable verdict block (see [Metadata contract](metadata-contract.md))
 
 ### Rebase mode
 
@@ -72,8 +72,9 @@ Runs in the **target** (translated) repository, triggered when a translation PR 
 | `source-language` | `en` | Source language code |
 | `target-language` | *(required for review)* | Target language code |
 | `docs-folder` | `lectures/` | Documentation folder |
-| `max-suggestions` | `5` | Maximum improvement suggestions in review comment |
+| `max-suggestions` | `5` | Maximum findings in review comment |
 | `claude-model` | `claude-sonnet-5` | Claude model for review |
+| `auto-merge-mode` | `off` | `off` or `shadow`. Shadow records the would-auto-merge decision in the verdict block and outputs without acting on it. `active` is not implemented and fails loudly ([#103](https://github.com/QuantEcon/action-translation/issues/103)) |
 
 ### Rebase mode inputs
 
@@ -103,6 +104,9 @@ It is off by default because the cost scales with the wave: with 60 open PRs, ev
 | `review-verdict` | Review verdict: `PASS`, `WARN`, or `FAIL` |
 | `translation-score` | Overall translation quality score (1–10) |
 | `diff-score` | Diff accuracy score (1–10) |
+| `review-recommendation` | Categorical routing recommendation: `auto-merge` or `editor` (verdict v2) |
+| `reviewed-head-sha` | Head SHA the verdict was computed against |
+| `would-auto-merge` | Shadow-gate decision (`true`/`false`); only set when `auto-merge-mode: shadow` |
 
 ## Workflow examples
 

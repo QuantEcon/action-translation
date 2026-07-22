@@ -1,0 +1,384 @@
+/**
+ * Reviewer verdict v2 — the machine-readable review contract (#103, #66).
+ *
+ * Review mode has always posted a prose report with nothing a collector can
+ * parse: no data payload in the comment, the composite score never printed,
+ * action outputs per-run only. This module makes the verdict machine-actionable:
+ *
+ *   - a structured JSON block embedded in the review comment (HTML-comment
+ *     wrapper, the `translation-sync-metadata` pattern),
+ *   - a categorical routing recommendation (`auto-merge` | `editor`) computed
+ *     from rubric logic, never from the blended scalar score, and
+ *   - a shadow flag that records "would auto-merge" without acting.
+ *
+ * Fail-closed throughout (#102 polarity): malformed findings, unknown
+ * severities/categories, failed checks — anything unexpected routes to
+ * `editor`, never toward a merge. Downstream consumers must treat a missing
+ * or unparseable block the same way.
+ */
+
+import * as fs from 'fs';
+import * as path from 'path';
+import { ReviewFinding, FindingSeverity, FindingCategory } from './types.js';
+
+/** Marker naming the verdict block inside the review comment. */
+export const REVIEW_VERDICT_MARKER = 'translation-review-verdict';
+
+/** Schema version of the verdict block. Bump on breaking changes (#66). */
+export const REVIEW_VERDICT_SCHEMA_VERSION = 1;
+
+/** Findings kept in the block, worst first — bounds the comment size. */
+const MAX_FINDINGS = 20;
+
+/** Free-text fields are truncated to this many characters. */
+const MAX_FIELD_LENGTH = 400;
+
+const SEVERITIES: readonly FindingSeverity[] = ['blocker', 'major', 'minor', 'nit'];
+const CATEGORIES: readonly FindingCategory[] = [
+  'accuracy',
+  'fluency',
+  'terminology',
+  'formatting',
+  'syntax',
+  'structure',
+  'other',
+];
+
+/** Categories where a `minor` finding already gates auto-merge (the
+ * fluent-but-wrong class lives here); `blocker`/`major` gate everywhere. */
+const GATING_CATEGORIES: readonly FindingCategory[] = ['accuracy', 'terminology', 'other'];
+
+/**
+ * Per-criterion floors for the auto-merge recommendation. PROVISIONAL:
+ * deliberately conservative until Stage 4 shadow-mode data calibrates them
+ * (#103 — floors are set empirically, not a priori).
+ */
+export const CRITERION_FLOORS: Record<'accuracy' | 'fluency' | 'terminology' | 'formatting', number> =
+  {
+    accuracy: 9,
+    terminology: 9,
+    fluency: 8,
+    formatting: 8,
+  };
+
+/**
+ * The verdict v2 block, as serialised into the review comment.
+ * Field additions are non-breaking; renames/removals/type changes bump
+ * `schemaVersion` (#66 contract rules).
+ */
+export interface ReviewVerdictV2 {
+  schemaVersion: number;
+  engineVersion: string;
+  reviewerModel: string;
+  /** Head SHA of the PR the verdict was computed against — any push invalidates it. */
+  reviewedHeadSha: string;
+  targetBaseSha: string;
+  sourceRepo: string;
+  prNumber: number;
+  timestamp: string;
+  verdict: 'PASS' | 'WARN' | 'FAIL';
+  recommendation: 'auto-merge' | 'editor';
+  /** Why the recommendation is `editor`; empty when `auto-merge`. */
+  recommendationReasons: string[];
+  autoMergeMode: 'off' | 'shadow';
+  /** Present only in shadow mode: the decision the gate would have taken. */
+  wouldAutoMerge?: boolean;
+  scores: {
+    accuracy: number;
+    fluency: number;
+    terminology: number;
+    formatting: number;
+    /** Weighted translation composite (0.35/0.25/0.25/0.15). */
+    translation: number;
+    /** Diff-quality score: (passed checks / 4) × 10. */
+    diff: number;
+    /** translation × 0.7 + diff × 0.3 — trending signal only, never a gate. */
+    overall: number;
+  };
+  diffChecks: {
+    scopeCorrect: boolean;
+    positionCorrect: boolean;
+    structurePreserved: boolean;
+    headingMapCorrect: boolean;
+  };
+  syntaxErrorCount: number;
+  findings: ReviewFinding[];
+}
+
+// ============================================================================
+// ENGINE VERSION
+// ============================================================================
+
+let _cachedEngineVersion: string | undefined;
+
+/**
+ * Engine version from package.json, for verdict provenance. The action runs
+ * from its tag checkout so package.json sits beside dist-action/; in Jest,
+ * __dirname is src/. Memoized; 'unknown' when it cannot be located — a
+ * missing version must never fail a review.
+ */
+export function getEngineVersion(): string {
+  if (_cachedEngineVersion !== undefined) return _cachedEngineVersion;
+
+  if (typeof __dirname === 'string') {
+    try {
+      const pkgPath = path.resolve(__dirname, '../package.json');
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+      if (pkg.name === 'action-translation' && typeof pkg.version === 'string') {
+        _cachedEngineVersion = pkg.version;
+        return _cachedEngineVersion!;
+      }
+    } catch {
+      /* fall through */
+    }
+    try {
+      const pkgPath = path.resolve(__dirname, '../../package.json');
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+      if (pkg.name === 'action-translation' && typeof pkg.version === 'string') {
+        _cachedEngineVersion = pkg.version;
+        return _cachedEngineVersion!;
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+
+  _cachedEngineVersion = 'unknown';
+  return _cachedEngineVersion;
+}
+
+// ============================================================================
+// FINDINGS NORMALISATION
+// ============================================================================
+
+function truncate(value: unknown): string {
+  const s = typeof value === 'string' ? value : String(value);
+  return s.length > MAX_FIELD_LENGTH ? `${s.slice(0, MAX_FIELD_LENGTH - 1)}…` : s;
+}
+
+function asOptionalText(value: unknown): string | null {
+  if (typeof value !== 'string' || value.trim() === '') return null;
+  return truncate(value);
+}
+
+/** Compose a description from the looser shapes models emit (see normalizeIssues). */
+function describeLooseObject(obj: Record<string, unknown>): string {
+  const description = obj.description || obj.issue || obj.problem || obj.message;
+  if (description) return truncate(description);
+  const original = obj.original || obj.current || obj.translated || obj.text;
+  const suggestion = obj.suggestion || obj.recommended || obj.fix || obj.correction;
+  if (original && suggestion) return truncate(`"${original}" → "${suggestion}"`);
+  return truncate(JSON.stringify(obj));
+}
+
+function severityRank(severity: FindingSeverity): number {
+  return SEVERITIES.indexOf(severity);
+}
+
+/**
+ * Normalise the model's findings payload into ReviewFinding[].
+ *
+ * Coercions are fail-closed: an unknown severity becomes `major` (gates), an
+ * unknown category becomes `other` (gates at minor+), a bare string becomes a
+ * `major`/`other` finding. A payload that is not an array at all — or absent
+ * entirely, with no legacy `issues` array either — sets `malformed`, which
+ * the recommendation treats as gating. Findings are sorted worst-first and
+ * capped at MAX_FINDINGS so the worst always survive the cap.
+ *
+ * `validFiles` are the PR's reviewed markdown paths; a single-file PR forces
+ * attribution (the common sync case), otherwise a claimed file must be one of
+ * the valid paths or it is nulled.
+ */
+export function normalizeFindings(
+  rawFindings: unknown,
+  legacyIssues: unknown,
+  validFiles: string[]
+): { findings: ReviewFinding[]; malformed: boolean } {
+  const soleFile = validFiles.length === 1 ? validFiles[0] : null;
+
+  const toFinding = (item: unknown, forceConservative: boolean): ReviewFinding => {
+    if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
+      const obj = item as Record<string, unknown>;
+      const severity =
+        !forceConservative && SEVERITIES.includes(obj.severity as FindingSeverity)
+          ? (obj.severity as FindingSeverity)
+          : 'major';
+      const category =
+        !forceConservative && CATEGORIES.includes(obj.category as FindingCategory)
+          ? (obj.category as FindingCategory)
+          : 'other';
+      const claimedFile = typeof obj.file === 'string' ? obj.file : null;
+      const file = soleFile ?? (claimedFile && validFiles.includes(claimedFile) ? claimedFile : null);
+      return {
+        severity,
+        category,
+        file,
+        location: asOptionalText(obj.location),
+        description: describeLooseObject(obj),
+        suggestion: asOptionalText(obj.suggestion),
+      };
+    }
+    return {
+      severity: 'major',
+      category: 'other',
+      file: soleFile,
+      location: null,
+      description: truncate(item),
+      suggestion: null,
+    };
+  };
+
+  let items: unknown[];
+  let forceConservative = false;
+  let malformed = false;
+
+  if (Array.isArray(rawFindings)) {
+    items = rawFindings;
+  } else if (rawFindings === undefined && Array.isArray(legacyIssues)) {
+    // Legacy `issues` shape: no severity/category to trust — coerce conservatively.
+    items = legacyIssues;
+    forceConservative = true;
+  } else {
+    // Non-array findings, or both fields absent: unusable payload. No findings
+    // are recorded, and `malformed` gates the recommendation instead — an
+    // empty list must never read as "clean review".
+    items = [];
+    malformed = true;
+  }
+
+  const findings = items
+    .map((item) => toFinding(item, forceConservative))
+    .filter((f) => f.description !== '' && f.description !== '{}')
+    .sort((a, b) => severityRank(a.severity) - severityRank(b.severity))
+    .slice(0, MAX_FINDINGS);
+
+  return { findings, malformed };
+}
+
+/** Render a finding for the human-readable review comment. */
+export function findingToDisplayString(finding: ReviewFinding): string {
+  const tag = `**[${finding.severity} · ${finding.category}]**`;
+  const where = [finding.file, finding.location].filter(Boolean).join(' — ');
+  const suggestion = finding.suggestion ? ` → ${finding.suggestion}` : '';
+  return where
+    ? `${tag} ${where}: ${finding.description}${suggestion}`
+    : `${tag} ${finding.description}${suggestion}`;
+}
+
+// ============================================================================
+// RECOMMENDATION RUBRIC
+// ============================================================================
+
+export interface RecommendationInput {
+  verdict: 'PASS' | 'WARN' | 'FAIL';
+  scores: { accuracy: number; fluency: number; terminology: number; formatting: number };
+  diffChecks: {
+    scopeCorrect: boolean;
+    positionCorrect: boolean;
+    structurePreserved: boolean;
+    headingMapCorrect: boolean;
+  };
+  syntaxErrorCount: number;
+  findings: ReviewFinding[];
+  findingsMalformed: boolean;
+}
+
+/**
+ * Categorical routing recommendation — rubric logic, not the blended score
+ * (#103 Decision 1: a weighted overall can average away a meaning inversion).
+ *
+ * `auto-merge` requires ALL of: verdict PASS, zero syntax errors, all four
+ * diff checks passing, a well-formed findings payload, zero blocker/major
+ * findings, zero minor findings in gating categories (accuracy/terminology/
+ * other), and every criterion at or above its provisional floor. `nit`
+ * findings never gate. Anything else — including anything malformed — is
+ * `editor`, with the reasons recorded for shadow-mode calibration.
+ */
+export function computeRecommendation(input: RecommendationInput): {
+  recommendation: 'auto-merge' | 'editor';
+  reasons: string[];
+} {
+  const reasons: string[] = [];
+
+  if (input.verdict !== 'PASS') {
+    reasons.push(`verdict ${input.verdict} (auto-merge requires PASS)`);
+  }
+  if (input.syntaxErrorCount > 0) {
+    reasons.push(`${input.syntaxErrorCount} syntax error(s)`);
+  }
+  for (const [check, passed] of Object.entries(input.diffChecks)) {
+    if (!passed) reasons.push(`diff check failed: ${check}`);
+  }
+  if (input.findingsMalformed) {
+    reasons.push('findings payload missing or malformed (fail-closed)');
+  }
+
+  const blockers = input.findings.filter((f) => f.severity === 'blocker').length;
+  const majors = input.findings.filter((f) => f.severity === 'major').length;
+  const gatingMinors = input.findings.filter(
+    (f) => f.severity === 'minor' && GATING_CATEGORIES.includes(f.category)
+  ).length;
+  if (blockers > 0) reasons.push(`${blockers} blocker finding(s)`);
+  if (majors > 0) reasons.push(`${majors} major finding(s)`);
+  if (gatingMinors > 0) {
+    reasons.push(`${gatingMinors} minor finding(s) in gating categories (accuracy/terminology)`);
+  }
+
+  for (const [criterion, floor] of Object.entries(CRITERION_FLOORS)) {
+    const score = input.scores[criterion as keyof RecommendationInput['scores']];
+    if (!(score >= floor)) {
+      reasons.push(`${criterion} ${score} below floor ${floor}`);
+    }
+  }
+
+  return { recommendation: reasons.length === 0 ? 'auto-merge' : 'editor', reasons };
+}
+
+// ============================================================================
+// BLOCK SERIALISATION
+// ============================================================================
+
+/**
+ * Serialise the verdict into its HTML-comment block.
+ *
+ * Model-authored text can contain `-->` (or the HTML5 `--!>` variant), which
+ * would terminate the comment early and dump raw JSON into the rendered
+ * review. Those sequences can only occur inside JSON string values, so they
+ * are re-escaped as `>` — the parsed data is unchanged.
+ */
+export function buildVerdictBlock(verdict: ReviewVerdictV2): string {
+  const json = JSON.stringify(verdict, null, 2)
+    .replace(/-->/g, '--\\u003e')
+    .replace(/--!>/g, '--!\\u003e');
+  return `<!-- ${REVIEW_VERDICT_MARKER}\n${json}\n-->`;
+}
+
+/**
+ * Parse a verdict block out of a review comment body.
+ *
+ * Returns undefined for a missing, unparseable, or wrong-shape block —
+ * consumers must fail closed and treat that as an `editor` route.
+ */
+export function parseReviewVerdict(commentBody: string): ReviewVerdictV2 | undefined {
+  const match = commentBody.match(
+    new RegExp(`<!-- ${REVIEW_VERDICT_MARKER}\\r?\\n([\\s\\S]*?)\\r?\\n-->`)
+  );
+  if (!match) return undefined;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(match[1]);
+  } catch {
+    return undefined;
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return undefined;
+
+  const block = parsed as Record<string, unknown>;
+  if (block.schemaVersion !== REVIEW_VERDICT_SCHEMA_VERSION) return undefined;
+  if (!['PASS', 'WARN', 'FAIL'].includes(block.verdict as string)) return undefined;
+  if (!['auto-merge', 'editor'].includes(block.recommendation as string)) return undefined;
+  if (typeof block.reviewedHeadSha !== 'string' || block.reviewedHeadSha === '') return undefined;
+  if (!Array.isArray(block.findings)) return undefined;
+
+  return parsed as ReviewVerdictV2;
+}

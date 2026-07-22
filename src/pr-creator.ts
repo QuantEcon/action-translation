@@ -39,10 +39,19 @@ export interface PrCreatorConfig {
 }
 
 /**
+ * Schema version of the translation-sync-metadata block (#66). Field
+ * additions are non-breaking; renames/removals/type changes bump this.
+ */
+export const SYNC_METADATA_SCHEMA_VERSION = 1;
+
+/**
  * Machine-readable metadata embedded in translation sync PR bodies.
- * Used by rebase mode to reconstruct pipeline inputs.
+ * Used by rebase mode to reconstruct pipeline inputs, and documented as a
+ * public contract for downstream tooling (#66, docs/user/metadata-contract.md).
  */
 export interface TranslationSyncMetadata {
+  /** Absent on PRs created before v0.22.0; treat absence as version 1. */
+  schemaVersion?: number;
   sourceRepo: string;
   /** 0 for CLI forward resync PRs, which have no source PR */
   sourcePR: number;
@@ -325,6 +334,7 @@ export function buildPrBody(
       ];
 
   const metadata: TranslationSyncMetadata = {
+    schemaVersion: SYNC_METADATA_SCHEMA_VERSION,
     sourceRepo: `${sourceRepoOwner}/${sourceRepoName}`,
     sourcePR: prNumber,
     sourceCommitSha: config.sourceCommitSha,

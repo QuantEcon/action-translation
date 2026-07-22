@@ -37,6 +37,7 @@ export interface ReviewInputs {
   anthropicApiKey: string; // Anthropic API key for Claude
   claudeModel: string; // Claude model for evaluation
   githubToken: string; // GitHub token for API access
+  autoMergeMode: 'off' | 'shadow'; // Shadow gate: record would-auto-merge without acting (#103)
 }
 
 export interface RebaseInputs {
@@ -261,6 +262,41 @@ export interface ChangedSection {
 }
 
 /**
+ * Severity of a structured review finding (verdict v2, #103).
+ * Ordered most to least severe; `blocker` and `major` always gate auto-merge.
+ */
+export type FindingSeverity = 'blocker' | 'major' | 'minor' | 'nit';
+
+/**
+ * Category of a structured review finding (verdict v2, #103).
+ * `other` is the fail-closed bucket: anything the model labelled outside the
+ * known set lands here and gates auto-merge at minor+ severity.
+ */
+export type FindingCategory =
+  | 'accuracy'
+  | 'fluency'
+  | 'terminology'
+  | 'formatting'
+  | 'syntax'
+  | 'structure'
+  | 'other';
+
+/**
+ * A structured review finding — the unit of the verdict v2 contract (#66).
+ */
+export interface ReviewFinding {
+  severity: FindingSeverity;
+  category: FindingCategory;
+  /** PR file the finding is about; null when not attributable. */
+  file: string | null;
+  /** Free-text location within the file (section heading, short quote); null when absent. */
+  location: string | null;
+  description: string;
+  /** Proposed replacement, when the model offered one; null otherwise. */
+  suggestion: string | null;
+}
+
+/**
  * Result of translation quality evaluation
  */
 export interface TranslationQualityResult {
@@ -270,7 +306,9 @@ export interface TranslationQualityResult {
   terminology: number; // Terminology score 1-10
   formatting: number; // Formatting score 1-10
   syntaxErrors: string[]; // Markdown/MyST syntax errors found
-  issues: string[]; // Suggested improvements
+  findings: ReviewFinding[]; // Structured findings (verdict v2)
+  findingsMalformed: boolean; // True when the model's findings payload was unusable — gates auto-merge
+  issues: string[]; // Findings rendered as display strings (review comment)
   strengths: string[]; // Positive aspects
   summary: string; // Brief overall assessment
 }
@@ -301,5 +339,15 @@ export interface ReviewResult {
   diffQuality: DiffQualityResult;
   overallScore: number;
   verdict: 'PASS' | 'WARN' | 'FAIL';
+  /** Categorical routing recommendation from the verdict v2 rubric (#103). */
+  recommendation: 'auto-merge' | 'editor';
+  /** Why the recommendation is `editor`; empty when `auto-merge`. */
+  recommendationReasons: string[];
+  /** Mode the review ran under; `shadow` records the gate decision without acting. */
+  autoMergeMode: 'off' | 'shadow';
+  /** Present only in shadow mode: the decision the gate would have taken. */
+  wouldAutoMerge?: boolean;
+  /** Head SHA of the PR the verdict was computed against. */
+  reviewedHeadSha: string;
   reviewComment: string;
 }

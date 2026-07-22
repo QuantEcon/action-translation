@@ -16,6 +16,7 @@ project:
         - file: user/glossary.md
         - file: user/heading-maps.md
         - file: user/language-config.md
+        - file: user/metadata-contract.md
         - file: user/faq.md
     - title: Tutorials
       children:

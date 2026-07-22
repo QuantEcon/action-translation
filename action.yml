@@ -28,6 +28,13 @@ inputs:
     description: 'Maximum number of improvement suggestions in review comment'
     required: false
     default: '5'
+  auto-merge-mode:
+    description: >
+      Auto-merge gate mode for review mode: "off" (default) or "shadow". Shadow computes and
+      records the would-auto-merge decision in the verdict block and the would-auto-merge
+      output without acting on it. "active" is not implemented yet and fails loudly (#103).
+    required: false
+    default: 'off'
   
   # Shared inputs
   docs-folder:
@@ -97,6 +104,12 @@ outputs:
     description: 'Overall translation quality score 1-10 (review mode)'
   diff-score:
     description: 'Diff quality score 1-10 (review mode)'
+  review-recommendation:
+    description: 'Categorical routing recommendation: auto-merge or editor (review mode, verdict v2)'
+  reviewed-head-sha:
+    description: 'Head SHA of the PR the verdict was computed against (review mode, verdict v2)'
+  would-auto-merge:
+    description: 'Shadow-gate decision, "true" or "false"; only set when auto-merge-mode is "shadow" (review mode)'
 
 runs:
   using: 'node24'

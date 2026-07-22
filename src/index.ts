@@ -109,16 +109,22 @@ async function runReview(): Promise<void> {
     github.context.repo.repo,
     inputs.docsFolder,
     glossaryTerms,
-    targetLanguage
+    targetLanguage,
+    inputs.autoMergeMode
   );
 
   // Set outputs
   core.setOutput('review-verdict', result.verdict);
   core.setOutput('translation-score', result.translationQuality.score.toString());
   core.setOutput('diff-score', result.diffQuality.score.toString());
+  core.setOutput('review-recommendation', result.recommendation);
+  core.setOutput('reviewed-head-sha', result.reviewedHeadSha);
+  if (result.wouldAutoMerge !== undefined) {
+    core.setOutput('would-auto-merge', String(result.wouldAutoMerge));
+  }
 
   core.info(
-    `✅ Review complete: ${result.verdict} (Translation: ${result.translationQuality.score}/10, Diff: ${result.diffQuality.score}/10)`
+    `✅ Review complete: ${result.verdict} → ${result.recommendation} (Translation: ${result.translationQuality.score}/10, Diff: ${result.diffQuality.score}/10)`
   );
 }
 

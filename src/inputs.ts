@@ -152,11 +152,24 @@ export function getReviewInputs(): ReviewInputs {
   const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
   const claudeModel = core.getInput('claude-model', { required: false }) || DEFAULT_CLAUDE_MODEL;
   const githubToken = core.getInput('github-token', { required: true });
+  const autoMergeModeRaw = core.getInput('auto-merge-mode', { required: false }) || 'off';
 
   // Validate source repo format
   if (!sourceRepo.includes('/')) {
     throw new Error(`Invalid source-repo format: ${sourceRepo}. Expected format: owner/repo`);
   }
+
+  // Shadow is the only gate mode that exists; `active` ships with Stage 5 of
+  // the human-review plan (#103) and must fail loudly, not silently no-op.
+  if (autoMergeModeRaw === 'active') {
+    throw new Error(
+      "auto-merge-mode 'active' is not implemented — the active gate ships with a later release (#103); use 'shadow'"
+    );
+  }
+  if (autoMergeModeRaw !== 'off' && autoMergeModeRaw !== 'shadow') {
+    throw new Error(`Invalid auto-merge-mode: '${autoMergeModeRaw}'. Expected 'off' or 'shadow'.`);
+  }
+  const autoMergeMode: 'off' | 'shadow' = autoMergeModeRaw;
 
   // Validate Claude model (warning only, doesn't throw)
   validateClaudeModel(claudeModel);
@@ -174,6 +187,7 @@ export function getReviewInputs(): ReviewInputs {
     anthropicApiKey,
     claudeModel,
     githubToken,
+    autoMergeMode,
   };
 }
 

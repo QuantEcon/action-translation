@@ -68,7 +68,14 @@ describe('evaluateTranslation criterion validation (#102)', () => {
 
   async function evaluate(reviewer: TranslationReviewer) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (reviewer as any).evaluateTranslation('source', 'target', [], undefined, 'zh-cn');
+    return (reviewer as any).evaluateTranslation(
+      'source',
+      'target',
+      [],
+      ['lectures/x.md'],
+      undefined,
+      'zh-cn'
+    );
   }
 
   it('computes a numeric score from a complete response', async () => {
