@@ -39,6 +39,11 @@ import { getFileGitMetadata } from '../git-metadata.js';
 import { MystParser } from '../../parser.js';
 import { applyTypography } from '../../typography.js';
 import { checkStructuralParity, formatParityViolations } from '../../structural-parity.js';
+import {
+  findTargetLocalReads,
+  buildPreserveInstruction,
+  verifyPreservedReads,
+} from '../target-local-reads.js';
 import { buildHeadingMap, injectHeadingMap, extractTranslationTitle } from '../../heading-map.js';
 import {
   createForwardPR,
@@ -94,6 +99,80 @@ function splitFrontmatter(content: string): { yaml?: string; body: string } {
 }
 
 /**
+ * Top-level keys of the target's frontmatter, plus the keys every lecture
+ * edition carries. Used to recognize a frontmatter block that is NOT at
+ * position 0 — a bare `---` is also a horizontal rule, so only a block whose
+ * first key matches a known frontmatter key counts.
+ */
+export function frontmatterSignatureKeys(targetYaml?: string): Set<string> {
+  const keys = new Set(['jupytext', 'kernelspec', 'translation']);
+  if (targetYaml) {
+    for (const m of targetYaml.matchAll(/^([A-Za-z_][A-Za-z0-9_-]*):/gm)) {
+      keys.add(m[1]);
+    }
+  }
+  return keys;
+}
+
+const EMBEDDED_FENCE = /^\s*(`{3,}|~{3,})(.*)$/;
+const FRONTMATTER_DELIM = /^---\s*$/;
+
+/**
+ * Line index of a frontmatter-signature block (`---` whose next non-blank
+ * line is a known top-level frontmatter key) anywhere in the content, or -1.
+ * Fence-aware so YAML examples inside code cells cannot false-positive.
+ *
+ * Exists because the model can emit reasoning prose BEFORE the document
+ * (observed 2026-07-22 on long_run_growth): splitFrontmatter anchors at
+ * position 0, so the real frontmatter goes unrecognized, the preamble lands
+ * in the body, and the written file carries two frontmatter blocks with
+ * leaked deliberation text between them. #105's sibling, one shape over.
+ */
+export function findEmbeddedFrontmatter(content: string, signatureKeys: Set<string>): number {
+  const lines = content.split('\n');
+  let openFence: { char: string; length: number } | null = null;
+  for (let i = 0; i < lines.length; i++) {
+    const fence = EMBEDDED_FENCE.exec(lines[i]);
+    if (openFence) {
+      if (
+        fence &&
+        fence[1][0] === openFence.char &&
+        fence[1].length >= openFence.length &&
+        fence[2].trim() === ''
+      ) {
+        openFence = null;
+      }
+      continue;
+    }
+    if (fence) {
+      openFence = { char: fence[1][0], length: fence[1].length };
+      continue;
+    }
+    if (FRONTMATTER_DELIM.test(lines[i])) {
+      let j = i + 1;
+      while (j < lines.length && lines[j].trim() === '') j++;
+      const key = /^([A-Za-z_][A-Za-z0-9_-]*):(\s|$)/.exec(lines[j] ?? '');
+      if (!key || !signatureKeys.has(key[1])) continue;
+      // A signature key alone is not enough — a horizontal rule followed by
+      // `title:`-style prose would match, and the finalize strip would drop
+      // legitimate body content. The candidate only counts as frontmatter if
+      // it CLOSES with another `---` and the enclosed slab parses as a YAML
+      // mapping (prose after a key line fails YAML, so this discriminates).
+      let close = i + 1;
+      while (close < lines.length && !FRONTMATTER_DELIM.test(lines[close])) close++;
+      if (close >= lines.length) continue;
+      try {
+        const parsed = yaml.load(lines.slice(i + 1, close).join('\n'));
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return i;
+      } catch {
+        // Not a YAML mapping — a horizontal rule, not frontmatter
+      }
+    }
+  }
+  return -1;
+}
+
+/**
  * Finalize whole-file resync output before it is written or committed:
  *
  * 1. Carry the TARGET's frontmatter forward — the model is instructed to
@@ -119,7 +198,23 @@ export async function finalizeResyncContent(
   // 1-2. Replace whatever frontmatter the model emitted with the target's own;
   // drop a stray leading `---` when neither side has real frontmatter.
   const targetSplit = splitFrontmatter(targetContent);
-  const outputSplit = splitFrontmatter(resyncedContent);
+  let outputSplit = splitFrontmatter(resyncedContent);
+  if (outputSplit.yaml === undefined) {
+    // The model can emit reasoning prose BEFORE the document's frontmatter,
+    // which position-0-anchored splitFrontmatter cannot see — the preamble
+    // would land in the body under the carried-forward frontmatter and the
+    // file would publish deliberation text plus a duplicate jupytext block.
+    // Locate the real block by signature key and drop everything before it.
+    const signatureKeys = frontmatterSignatureKeys(targetSplit.yaml);
+    const idx = findEmbeddedFrontmatter(resyncedContent, signatureKeys);
+    const lines = resyncedContent.split('\n');
+    if (idx > 0 && lines.slice(0, idx).some((l) => l.trim() !== '')) {
+      logger.warn(
+        `${file}: dropped ${idx} preamble line(s) the model emitted before the document frontmatter`
+      );
+      outputSplit = splitFrontmatter(lines.slice(idx).join('\n'));
+    }
+  }
   let body = outputSplit.body;
   if (outputSplit.yaml === undefined) {
     body = body.replace(/^---[ \t]*\r?\n+/, '');
@@ -236,11 +331,30 @@ export async function resyncSingleFile(
     outputContent = `[TEST RESYNC]\n${targetContent}`;
     logger.info(`  ✅ Test mode — mock resync applied`);
   } else {
+    // Target-local data reads (#107): code lines loading files that exist only
+    // in the translation repo are localisation the model cannot infer — the
+    // file itself is invisible to it. Pin the exact lines in the request, and
+    // verify after finalization that they survived (the class rule alone
+    // demonstrably does not hold: the reverted block reproduced on a re-run
+    // with the strengthened rule in place, 2026-07-22 validation wave).
+    const targetLocalReads = findTargetLocalReads(
+      targetContent,
+      path.join(sourceRepoPath, docsFolder),
+      path.join(targetRepoPath, docsFolder)
+    );
+    if (targetLocalReads.length > 0) {
+      logger.info(
+        `  Pinning ${targetLocalReads.length} target-local data read(s): ` +
+          targetLocalReads.map((r) => r.basename).join(', ')
+      );
+    }
+
     const translator = new TranslationService(options.apiKey, options.model, false);
     const result = await translator.translateDocumentResync({
       sourceLanguage: languageLabel(options.sourceLanguage),
       targetLanguage: languageLabel(options.language),
       glossary,
+      customInstructions: buildPreserveInstruction(targetLocalReads),
       sourceContent,
       targetContent,
     });
@@ -270,6 +384,45 @@ export async function resyncSingleFile(
       const parity = checkStructuralParity(sourceContent, outputContent);
       if (!parity.ok) {
         logger.error(`  ${formatParityViolations(file, parity)}`);
+        return {
+          file,
+          triageResult,
+          sections: [],
+          summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
+        };
+      }
+
+      // No second frontmatter block may survive into the written bytes — a
+      // preamble shape the finalize strip missed would publish reasoning
+      // prose and a duplicated jupytext block. Loud beats silent.
+      const embeddedIdx = findEmbeddedFrontmatter(
+        splitFrontmatter(outputContent).body,
+        frontmatterSignatureKeys(splitFrontmatter(targetContent).yaml)
+      );
+      if (embeddedIdx >= 0) {
+        logger.error(
+          `  ${file}: resync output contains an embedded frontmatter block in the body ` +
+            `(model preamble not fully reconciled) — failing the file rather than writing it`
+        );
+        return {
+          file,
+          triageResult,
+          sections: [],
+          summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
+        };
+      }
+
+      // Pinned target-local reads must survive — a silent revert merges
+      // English legends; a loud failure gets a human (#107).
+      const missingReads = verifyPreservedReads(outputContent, targetLocalReads);
+      if (missingReads.length > 0) {
+        logger.error(
+          `  ${file}: resync dropped ${missingReads.length} pinned target-local data read(s) — ` +
+            `failing the file rather than reverting localisation to English:`
+        );
+        for (const line of missingReads) {
+          logger.error(`    - ${line}`);
+        }
         return {
           file,
           triageResult,
