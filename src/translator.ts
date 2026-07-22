@@ -643,6 +643,7 @@ Your task: produce an **updated ${targetLanguage} translation** that accurately 
    - rcParams: \`plt.rcParams['font.sans-serif'] = ['SimHei']\`, \`plt.rcParams['axes.unicode_minus'] = False\`
    - Translated plot strings: \`set_xlabel\`/\`set_ylabel\`/\`set_title\`/\`legend\`/\`annotate\`/\`ax.text\` labels, legend-label lists, plotly trace names
    - Label-translation dicts and column mappings: \`DataFrame.rename\` maps, CSV column-name mappings, country/category name lists, date formatters
+   - Data-source substitutions that load localized data: a read of a file that exists only in the translation repo (e.g. \`pd.read_csv("datasets/country_code_cn.csv")\` or a localized JSON/CSV mapping) and the localized column names selected from it. The file is invisible to you because it lives only in the translation repo — that is exactly why the substitution was made by hand. Keep the translation's read and its column choices even when the source derives the same data differently, and apply source-side data updates (new rows, categories, entities) THROUGH the localized mechanism rather than reverting to the source's derivation.
    - Translated \`print()\` strings and docstrings
    - Any imports, variable assignments, or configuration lines that appear in the translation's code cells but not in the source's code cells
    - Locale-appropriate reference links

@@ -10,7 +10,12 @@
  *  - the heading map (`translation:` block) is injected into the output
  */
 
-import { finalizeResyncContent, ForwardLogger } from '../commands/forward.js';
+import {
+  finalizeResyncContent,
+  findEmbeddedFrontmatter,
+  frontmatterSignatureKeys,
+  ForwardLogger,
+} from '../commands/forward.js';
 import { extractHeadingMap, extractTranslationTitle } from '../../heading-map.js';
 
 const quietLogger: ForwardLogger = {
@@ -151,5 +156,76 @@ describe('finalizeResyncContent', () => {
     const result = await finalizeResyncContent(modelOutput, source, target, 'odd.md', quietLogger);
 
     expect(result).toBe('只有更新的文字。\n');
+  });
+});
+
+describe('model preamble before the document frontmatter (2026-07-22 field defect)', () => {
+  it('drops reasoning prose emitted before the frontmatter — the observed shape', async () => {
+    const preamble =
+      'Looking at the diff between source and translation, the content is aligned. Let me produce the final output.';
+    const modelOutput = `${preamble}\n\n---\njupytext:\n  text_representation:\n    format_name: myst\n  jupytext_version: 1.16.1\nkernelspec:\n  name: python3\n---\n\n# 蛛网模型\n\n介绍文字（更新）。\n\n## 概述\n\n更新的概述。\n\n## 历史\n\n更新的历史。\n`;
+
+    const warnings: string[] = [];
+    const logger: ForwardLogger = {
+      info: () => {},
+      warn: (m) => warnings.push(m),
+      error: () => {},
+    };
+    const result = await finalizeResyncContent(modelOutput, SOURCE, TARGET, 'cobweb.md', logger);
+
+    expect(result).not.toContain('Let me produce the final output');
+    expect(result.startsWith('---\n')).toBe(true);
+    // Exactly one jupytext block — the carried-forward target one
+    expect(result.match(/jupytext:/g)).toHaveLength(1);
+    expect(result).toContain('介绍文字（更新）');
+    expect(warnings.some((w) => w.includes('preamble'))).toBe(true);
+  });
+
+  it('does not strip legitimate body content on frontmatter-less documents', async () => {
+    const source = `About\n\nSome text.\n\n---\n\nnote: this line looks like a key after an hr\n`;
+    const target = `关于\n\n一些文字。\n\n---\n\nnote: 像键的一行\n`;
+    const modelOutput = `关于\n\n更新的文字。\n\n---\n\nnote: 像键的一行\n`;
+
+    const result = await finalizeResyncContent(
+      modelOutput,
+      source,
+      target,
+      'about.md',
+      quietLogger
+    );
+
+    // `note:` is not a frontmatter signature key — nothing is stripped
+    expect(result).toContain('更新的文字');
+    expect(result).toContain('note: 像键的一行');
+  });
+});
+
+describe('findEmbeddedFrontmatter / frontmatterSignatureKeys', () => {
+  const keys = frontmatterSignatureKeys(
+    'jupytext:\n  nested: x\nkernelspec:\n  name: python3\ntitle: t\n'
+  );
+
+  it('collects top-level keys only, plus the standard set', () => {
+    expect(keys.has('jupytext')).toBe(true);
+    expect(keys.has('kernelspec')).toBe(true);
+    expect(keys.has('title')).toBe(true);
+    expect(keys.has('translation')).toBe(true);
+    expect(keys.has('nested')).toBe(false);
+    expect(keys.has('name')).toBe(false);
+  });
+
+  it('finds a signature block mid-content', () => {
+    const content = `preamble text\n\n---\njupytext:\n  x: y\n---\nbody\n`;
+    expect(findEmbeddedFrontmatter(content, keys)).toBe(2);
+  });
+
+  it('ignores a horizontal rule followed by a non-signature key', () => {
+    const content = `text\n\n---\n\nnote: not frontmatter\n`;
+    expect(findEmbeddedFrontmatter(content, keys)).toBe(-1);
+  });
+
+  it('ignores frontmatter-shaped YAML inside a code fence', () => {
+    const content = 'intro\n\n```yaml\n---\njupytext:\n  x: y\n---\n```\n\nbody\n';
+    expect(findEmbeddedFrontmatter(content, keys)).toBe(-1);
   });
 });
