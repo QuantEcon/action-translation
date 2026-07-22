@@ -839,7 +839,8 @@ async function runSync(): Promise<void> {
         coreLogger,
         sourcePrInfo,
         result.skippedSections,
-        fileMetadata
+        fileMetadata,
+        result.droppedTargetSections
       );
 
       prUrl = prResult.prUrl;

@@ -177,6 +177,34 @@ describe('buildPrBody', () => {
     // Heading should be wrapped in backticks with inner backticks escaped
     expect(body).toContain('`Code \\`example\\` section`');
   });
+
+  it('should include removed target-only sections notice when provided (#90 defect 2)', () => {
+    const dropped = new Map<string, string[]>([['lectures/solow.md', ['练习', '模拟']]]);
+    const body = buildPrBody(
+      [],
+      [],
+      baseConfig,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      dropped
+    );
+
+    expect(body).toContain('### ⚠️ Target-Only Sections Removed');
+    expect(body).toContain('`lectures/solow.md`');
+    expect(body).toContain('`练习`');
+    expect(body).toContain('`模拟`');
+    // Must route human-authored cases to the supported pattern
+    expect(body).toContain('faq.md#how-do-i-add-content-to-a-translated-edition');
+  });
+
+  it('should not include removed target-only sections notice when empty or absent', () => {
+    expect(buildPrBody([], [], baseConfig)).not.toContain('Target-Only Sections Removed');
+    expect(
+      buildPrBody([], [], baseConfig, undefined, undefined, undefined, undefined, new Map())
+    ).not.toContain('Target-Only Sections Removed');
+  });
 });
 
 // =============================================================================

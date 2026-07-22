@@ -62,7 +62,8 @@ export class FileProcessor {
     targetLanguage: string,
     glossary?: Glossary,
     onSkippedSection?: (heading: string) => void,
-    rebaseCache?: RebaseCacheData
+    rebaseCache?: RebaseCacheData,
+    onDroppedTargetSection?: (heading: string) => void
   ): Promise<string> {
     this.log(`Processing file using component-based approach: ${filepath}`);
 
@@ -188,6 +189,13 @@ export class FileProcessor {
 
     const resultSections: Section[] = [];
     const includedSourceSections: Section[] = []; // Tracks which source sections map to resultSections (keeps heading-map aligned)
+    // Target sections consumed by the loop below. Anything left over is
+    // target-only — no source counterpart — and is necessarily absent from the
+    // reconstruction, which iterates newSource.sections. That removal is
+    // correct when upstream deleted the section, and destructive when a human
+    // added it; only a reviewer can tell which, so it must be reported, not
+    // inferred from red lines in the diff (#90 defect 2).
+    const usedTargetSections = new Set<Section>();
 
     // Process each section from new source (ensures proper order)
     for (let i = 0; i < newSource.sections.length; i++) {
@@ -210,6 +218,7 @@ export class FileProcessor {
         );
 
         if (targetSection) {
+          usedTargetSections.add(targetSection);
           resultSections.push(targetSection);
           includedSourceSections.push(newSection);
           this.log(`Keeping unchanged section: ${newSection.heading}`);
@@ -287,7 +296,9 @@ export class FileProcessor {
           positionHint
         );
 
-        if (!targetSection) {
+        if (targetSection) {
+          usedTargetSections.add(targetSection);
+        } else {
           this.log(`Warning: Could not find target for modified section, treating as new`);
           const translatedSection = await this.translateNewSection(
             newSection,
@@ -490,6 +501,28 @@ export class FileProcessor {
         includedSourceSections.push(newSection);
 
         this.log(`Updated section at position ${i}`);
+      }
+    }
+
+    // 3b. Report target-only sections the reconstruction drops. Every live
+    // occurrence to date has been upstream drift (2026-07-22 estate scan:
+    // 211 pairs, zero human-authored additions; ifp_egm reclassified), so
+    // removal is the correct default — but the removal must be visible to the
+    // reviewer who confirms that. Human-added content belongs in target-only
+    // files, which sync never touches (see FAQ).
+    //
+    // Identity tracking alone under-counts on cache paths: the rebase-cache
+    // fast path for added sections pushes a section parsed from the cached
+    // PR content, never touching target.sections — so an equivalent section
+    // already on the target would be reported as removed while its content is
+    // in the output. Ids are same-language heading slugs, so an id match in
+    // resultSections means the section survives.
+    const resultSectionIds = new Set(resultSections.map((s) => s.id));
+    for (const targetSection of target.sections) {
+      if (!usedTargetSections.has(targetSection) && !resultSectionIds.has(targetSection.id)) {
+        const headingText = cleanHeadingText(targetSection.heading);
+        this.log(`Removing target-only section (no source counterpart): ${headingText}`);
+        onDroppedTargetSection?.(headingText);
       }
     }
 
