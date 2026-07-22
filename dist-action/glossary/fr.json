@@ -118,6 +118,11 @@
       "context": "probability"
     },
     {
+      "en": "Broadcasting",
+      "fr": "Broadcasting",
+      "context": "NumPy — term kept in English"
+    },
+    {
       "en": "Budget constraint",
       "fr": "Contrainte budgétaire",
       "context": "economics"
@@ -478,6 +483,11 @@
       "context": "probability"
     },
     {
+      "en": "f-string",
+      "fr": "f-string",
+      "context": "Python string formatting — kept in English"
+    },
+    {
       "en": "Fiat money",
       "fr": "Monnaie fiduciaire",
       "context": "monetary economics"
@@ -681,6 +691,11 @@
       "en": "Independent and identically distributed",
       "fr": "Indépendantes et identiquement distribuées",
       "context": "probability"
+    },
+    {
+      "en": "Index",
+      "fr": "Indice",
+      "context": "Position in an array or sequence"
     },
     {
       "en": "Indicator function",
@@ -981,6 +996,11 @@
       "en": "Multivariate normal distributions",
       "fr": "Lois normales multivariées",
       "context": "probability"
+    },
+    {
+      "en": "Mutable",
+      "fr": "Mutable",
+      "context": "Python data types"
     },
     {
       "en": "Mutual fund",
@@ -1293,6 +1313,11 @@
       "context": "econometrics"
     },
     {
+      "en": "Slice notation",
+      "fr": "Notation de tranche",
+      "context": "Python sequences"
+    },
+    {
       "en": "Social welfare",
       "fr": "Bien-être social",
       "context": "welfare economics"
@@ -1331,6 +1356,11 @@
       "en": "Stagflation",
       "fr": "Stagflation",
       "context": "macroeconomics"
+    },
+    {
+      "en": "Standard normal",
+      "fr": "Loi normale centrée réduite",
+      "context": "statistics"
     },
     {
       "en": "State space",
@@ -1491,6 +1521,11 @@
       "en": "Trigonometric integrals",
       "fr": "Intégrales trigonométriques",
       "context": "calculus"
+    },
+    {
+      "en": "Tuple unpacking",
+      "fr": "Dépaquetage de tuple",
+      "context": "Python"
     },
     {
       "en": "Underlying asset",
