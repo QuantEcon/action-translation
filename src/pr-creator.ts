@@ -337,6 +337,7 @@ export function buildPrBody(
     schemaVersion: SYNC_METADATA_SCHEMA_VERSION,
     sourceRepo: `${sourceRepoOwner}/${sourceRepoName}`,
     sourcePR: prNumber,
+    mode: 'sync',
     sourceCommitSha: config.sourceCommitSha,
     targetBaseSha: targetBaseSha || '',
     sourceLanguage: config.sourceLanguage,

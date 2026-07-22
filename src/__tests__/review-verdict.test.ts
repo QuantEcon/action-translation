@@ -19,11 +19,14 @@ import {
   normalizeFindings,
   parseReviewVerdict,
   sanitizeCommentText,
+  sortAndCapFindings,
 } from '../review-verdict.js';
-import { TranslationReviewer } from '../reviewer.js';
+import { TranslationReviewer, validateCriterionScores } from '../reviewer.js';
 import { ReviewFinding } from '../types.js';
 
 const FILES = ['lectures/aiyagari.md', 'lectures/cobweb.md'];
+
+const COMPLETE_SCORES = { accuracy: 9, fluency: 9, terminology: 9, formatting: 9 };
 
 function finding(overrides: Partial<ReviewFinding> = {}): ReviewFinding {
   return {
@@ -684,5 +687,94 @@ describe('forged verdict blocks cannot override the engine verdict', () => {
 
     // The prose copy is neutralised, so it cannot open a comment at all.
     expect(captured.comment).toContain('&lt;!-- translation-review-verdict');
+  });
+});
+
+// ============================================================================
+// Fail-open holes found by the adversarial audit of the first implementation
+// ============================================================================
+
+describe('malformed model output cannot open the gate', () => {
+  it('a quoted "false" in a diff check gates (strict identity, not truthiness)', () => {
+    const out = computeRecommendation({
+      ...CLEAN_INPUT,
+      diffChecks: {
+        scopeCorrect: 'false',
+        positionCorrect: 'no',
+        structurePreserved: 1,
+        headingMapCorrect: 'partially',
+      } as never,
+    });
+    expect(out.recommendation).toBe('editor');
+    expect(out.reasons.filter((r) => r.startsWith('diff check failed'))).toHaveLength(4);
+  });
+
+  it('an empty or partial diffChecks object gates every missing check', () => {
+    expect(computeRecommendation({ ...CLEAN_INPUT, diffChecks: {} as never }).recommendation).toBe(
+      'editor'
+    );
+    const partial = computeRecommendation({
+      ...CLEAN_INPUT,
+      diffChecks: { scopeCorrect: true } as never,
+    });
+    expect(partial.recommendation).toBe('editor');
+    expect(partial.reasons.join()).toContain('headingMapCorrect');
+  });
+
+  it('scores on a 0-100 scale do not clear the floors', () => {
+    const out = computeRecommendation({
+      ...CLEAN_INPUT,
+      scores: { accuracy: 85, fluency: 90, terminology: 88, formatting: 92 },
+    });
+    expect(out.recommendation).toBe('editor');
+    expect(out.reasons.join()).toContain('above the 10-point scale');
+  });
+
+  it('validateCriterionScores rejects out-of-range values', () => {
+    expect(validateCriterionScores({ ...COMPLETE_SCORES, accuracy: 85 }).valid).toBe(false);
+    expect(validateCriterionScores({ ...COMPLETE_SCORES, fluency: -1 }).valid).toBe(false);
+    expect(validateCriterionScores(COMPLETE_SCORES).valid).toBe(true);
+  });
+
+  it('a minor syntax finding gates — syntax is structural', () => {
+    const out = computeRecommendation({
+      ...CLEAN_INPUT,
+      findings: [finding({ severity: 'minor', category: 'syntax' })],
+    });
+    expect(out.recommendation).toBe('editor');
+  });
+
+  it('missing source content gates: the review compared against nothing', () => {
+    const out = computeRecommendation({ ...CLEAN_INPUT, sourceContentMissing: true });
+    expect(out.recommendation).toBe('editor');
+    expect(out.reasons.join()).toContain('source content');
+  });
+
+  it('suppressed findings gate: an empty list proves nothing when none were requested', () => {
+    const out = computeRecommendation({ ...CLEAN_INPUT, findingsSuppressed: true });
+    expect(out.recommendation).toBe('editor');
+    expect(out.reasons.join()).toContain('max-suggestions=0');
+  });
+
+  it('legacy issues are used when findings is present but empty', () => {
+    const { findings, malformed } = normalizeFindings(
+      [],
+      ['Meaning inverted in section 3'],
+      ['a.md']
+    );
+    expect(malformed).toBe(false);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].severity).toBe('major');
+    expect(computeRecommendation({ ...CLEAN_INPUT, findings }).recommendation).toBe('editor');
+  });
+
+  it('sortAndCapFindings restores the documented invariant after concatenation', () => {
+    const assembled = [
+      ...Array.from({ length: 20 }, () => finding({ severity: 'nit', category: 'fluency' })),
+      finding({ severity: 'blocker', category: 'syntax' }),
+    ];
+    const out = sortAndCapFindings(assembled);
+    expect(out).toHaveLength(20);
+    expect(out[0].severity).toBe('blocker');
   });
 });

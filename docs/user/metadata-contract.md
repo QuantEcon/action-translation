@@ -101,6 +101,9 @@ Embedded at the end of the review comment (the comment whose first line is the `
 | `schemaVersion` | number | Contract version |
 | `engineVersion` | string | action-translation version that produced the verdict (`unknown` if unresolvable) |
 | `reviewerModel` | string | Model that performed the review |
+| `sourceRepo` | string | English source repository the review compared against (`owner/repo`) |
+| `prNumber` | number | The reviewed PR |
+| `timestamp` | string | ISO-8601 time the verdict was computed |
 | `reviewedHeadSha` | string | **Head SHA the verdict was computed against.** Any push invalidates the verdict; consumers must compare it with the current head before acting |
 | `targetBaseSha` | string | Base SHA at review time |
 | `verdict` | `PASS` \| `WARN` \| `FAIL` | The threshold verdict (unchanged semantics: PASS ≥ 8 overall with zero syntax errors, WARN ≥ 6, FAIL below) |
@@ -141,12 +144,20 @@ Diff-quality issues are recorded at `minor`/`structure`, which is not a gating c
 - all four `diffChecks` pass
 - the findings payload was well-formed
 - zero `blocker` or `major` findings (any category)
-- zero `minor` findings in the gating categories `accuracy`, `terminology`, `other`
-- every criterion meets its floor — provisionally accuracy ≥ 9, terminology ≥ 9, fluency ≥ 8, formatting ≥ 8, to be calibrated from shadow-mode data
+- zero `minor` findings in the gating categories `accuracy`, `terminology`, `syntax`, `other`
+- every criterion meets its floor **and sits within the 1–10 scale** — provisionally accuracy ≥ 9, terminology ≥ 9, fluency ≥ 8, formatting ≥ 8, to be calibrated from shadow-mode data
+- the source content was actually fetched (a failed fetch means the review compared against nothing)
+- findings were not suppressed by `max-suggestions: 0`
+
+Each `diffChecks` entry must be **literally `true`**; a missing key or a quoted `"false"` is a failed check, not a passing one.
 
 `nit` findings never gate.
 
 ### Fail-closed rule for consumers
+
+**Take the last block in the comment, never the first.** `buildVerdictBlock` appends the real verdict at the end, so any earlier block is either a stale fragment or a forgery: the reviewer summarises lecture content an attacker may influence, and although the engine now neutralises comment openings in that prose, a consumer that takes the first match would be exploitable on its own. If the last block is malformed, fail closed — do **not** fall back to an earlier one, because that fallback is exactly how a forgery wins.
+
+Note that the raw marker string may legitimately appear twice in a body: once opening the real block, and once inside the JSON payload when a finding's `description` quotes it. The second is inert — JSON-stringifying turns its newlines into two-character `\n` escapes, so it cannot match the block pattern.
 
 A **missing, unparseable, or wrong-shape verdict block must be treated as `recommendation: "editor"`** — never as permission to merge. The block is also absent when the review run itself failed. The same polarity applies inside the engine: malformed model output gates the recommendation rather than being dropped.
 

@@ -34,6 +34,7 @@ import {
   getEngineVersion,
   normalizeFindings,
   sanitizeCommentText,
+  sortAndCapFindings,
 } from './review-verdict.js';
 
 // Default model for review (can be overridden)
@@ -101,7 +102,10 @@ export function validateCriterionScores(result: Record<string, unknown>): {
     const raw = result[key];
     const value =
       typeof raw === 'number' ? raw : typeof raw === 'string' && raw !== '' ? Number(raw) : NaN;
-    if (Number.isFinite(value)) {
+    // Range-checked, not merely finite. A response on a 0-100 scale
+    // (accuracy: 85) is finite, clears every floor, and means nothing of the
+    // sort — a scale error must be rejected like a missing criterion.
+    if (Number.isFinite(value) && value >= 0 && value <= 10) {
       scores[key] = value;
     } else {
       missing.push(key);
@@ -857,7 +861,14 @@ export class TranslationReviewer {
       description: i,
       suggestion: null,
     }));
-    const allFindings = [...translationQuality.findings, ...syntaxFindings, ...diffFindings];
+    // Re-sorted and re-capped: normalizeFindings ordered and bounded the
+    // model's own findings, but concatenating syntax and diff findings onto
+    // the end breaks both, and the contract publishes "worst first, capped".
+    const allFindings = sortAndCapFindings([
+      ...translationQuality.findings,
+      ...syntaxFindings,
+      ...diffFindings,
+    ]);
 
     const diffChecks = {
       scopeCorrect: diffQuality.scopeCorrect,
@@ -865,6 +876,17 @@ export class TranslationReviewer {
       structurePreserved: diffQuality.structurePreserved,
       headingMapCorrect: diffQuality.headingMapCorrect,
     };
+    // A failed source fetch is only a warning on the fetch path (getSourceDiff
+    // catches everything and returns empty maps), so the review can end up
+    // scoring the target against nothing and calling it clean. That must never
+    // reach auto-merge.
+    const sourceContentMissing = sourceEnglish.trim() === '';
+    if (sourceContentMissing) {
+      core.warning(
+        'No source content was fetched for any reviewed file — the verdict is not a real comparison and routes to editor'
+      );
+    }
+
     const { recommendation, reasons } = computeRecommendation({
       verdict,
       scores: {
@@ -877,6 +899,10 @@ export class TranslationReviewer {
       syntaxErrorCount: translationQuality.syntaxErrors.length,
       findings: allFindings,
       findingsMalformed: translationQuality.findingsMalformed,
+      sourceContentMissing,
+      // With max-suggestions: 0 the prompt asks for no findings at all, so an
+      // empty findings array is not evidence of a clean translation.
+      findingsSuppressed: this.maxSuggestions === 0,
     });
 
     const wouldAutoMerge = autoMergeMode === 'shadow' ? recommendation === 'auto-merge' : undefined;
@@ -1124,7 +1150,9 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
       fluency: scores.fluency,
       terminology: scores.terminology,
       formatting: scores.formatting,
-      syntaxErrors: result.syntaxErrors || [],
+      syntaxErrors: Array.isArray(result.syntaxErrors)
+        ? result.syntaxErrors.map((e: unknown) => String(e))
+        : [],
       findings,
       findingsMalformed: malformed,
       issues: findings.map(findingToDisplayString),
@@ -1226,22 +1254,26 @@ Respond with ONLY valid JSON:
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result: any = await this.callWithRetry(prompt, MAX_TOKENS.review, 'evaluateDiff');
-    const checks = [
-      result.scopeCorrect,
-      result.positionCorrect,
-      result.structurePreserved,
-      result.headingMapCorrect,
-    ];
+    // Strict identity: these come straight off model JSON, and a quoted
+    // "false" is truthy. Anything that is not literally `true` is a failed
+    // check — including a missing key.
+    const isTrue = (v: unknown): boolean => v === true;
+    const scopeCorrect = isTrue(result.scopeCorrect);
+    const positionCorrect = isTrue(result.positionCorrect);
+    const structurePreserved = isTrue(result.structurePreserved);
+    const headingMapCorrect = isTrue(result.headingMapCorrect);
+
+    const checks = [scopeCorrect, positionCorrect, structurePreserved, headingMapCorrect];
     const passedChecks = checks.filter(Boolean).length;
     const score = (passedChecks / checks.length) * 10;
 
     return {
       score: Math.round(score * 10) / 10,
-      scopeCorrect: result.scopeCorrect,
-      positionCorrect: result.positionCorrect,
-      structurePreserved: result.structurePreserved,
-      headingMapCorrect: result.headingMapCorrect,
-      issues: result.issues || [],
+      scopeCorrect,
+      positionCorrect,
+      structurePreserved,
+      headingMapCorrect,
+      issues: Array.isArray(result.issues) ? result.issues.map((i: unknown) => String(i)) : [],
       summary: result.summary || '',
       scopeDetails: result.scopeDetails || '',
       positionDetails: result.positionDetails || '',

@@ -31692,6 +31692,7 @@ ${lines.join("\n")}`;
     schemaVersion: SYNC_METADATA_SCHEMA_VERSION,
     sourceRepo: `${sourceRepoOwner}/${sourceRepoName}`,
     sourcePR: prNumber,
+    mode: "sync",
     sourceCommitSha: config.sourceCommitSha,
     targetBaseSha: targetBaseSha || "",
     sourceLanguage: config.sourceLanguage,
@@ -31813,7 +31814,19 @@ var CATEGORIES = [
   "structure",
   "other"
 ];
-var GATING_CATEGORIES = ["accuracy", "terminology", "other"];
+var GATING_CATEGORIES = [
+  "accuracy",
+  "terminology",
+  "syntax",
+  "other"
+];
+var MAX_CRITERION_SCORE = 10;
+var DIFF_CHECK_NAMES = [
+  "scopeCorrect",
+  "positionCorrect",
+  "structurePreserved",
+  "headingMapCorrect"
+];
 var CRITERION_FLOORS = {
   accuracy: 9,
   terminology: 9,
@@ -31899,7 +31912,12 @@ function normalizeFindings(rawFindings, legacyIssues, validFiles) {
   let items;
   let forceConservative = false;
   let malformed = false;
-  if (Array.isArray(rawFindings)) {
+  if (Array.isArray(rawFindings) && rawFindings.length > 0) {
+    items = rawFindings;
+  } else if (Array.isArray(rawFindings) && rawFindings.length === 0 && Array.isArray(legacyIssues) && legacyIssues.length > 0) {
+    items = legacyIssues;
+    forceConservative = true;
+  } else if (Array.isArray(rawFindings)) {
     items = rawFindings;
   } else if (rawFindings === void 0 && Array.isArray(legacyIssues)) {
     items = legacyIssues;
@@ -31910,6 +31928,9 @@ function normalizeFindings(rawFindings, legacyIssues, validFiles) {
   }
   const findings = items.map((item) => toFinding(item, forceConservative)).filter((f) => f.description !== "" && f.description !== "{}").sort((a, b) => severityRank(a.severity) - severityRank(b.severity)).slice(0, MAX_FINDINGS);
   return { findings, malformed };
+}
+function sortAndCapFindings(findings) {
+  return [...findings].sort((a, b) => severityRank(a.severity) - severityRank(b.severity)).slice(0, MAX_FINDINGS);
 }
 function findingToDisplayString(finding) {
   const tag = `**[${finding.severity} \xB7 ${finding.category}]**`;
@@ -31925,12 +31946,18 @@ function computeRecommendation(input) {
   if (input.syntaxErrorCount > 0) {
     reasons.push(`${input.syntaxErrorCount} syntax error(s)`);
   }
-  for (const [check, passed] of Object.entries(input.diffChecks)) {
-    if (!passed)
+  for (const check of DIFF_CHECK_NAMES) {
+    if (input.diffChecks?.[check] !== true)
       reasons.push(`diff check failed: ${check}`);
   }
   if (input.findingsMalformed) {
     reasons.push("findings payload missing or malformed (fail-closed)");
+  }
+  if (input.sourceContentMissing) {
+    reasons.push("source content could not be fetched \u2014 the review compared against nothing");
+  }
+  if (input.findingsSuppressed) {
+    reasons.push("findings suppressed by max-suggestions=0 \u2014 the findings half of the gate is blind");
   }
   const blockers = input.findings.filter((f) => f.severity === "blocker").length;
   const majors = input.findings.filter((f) => f.severity === "major").length;
@@ -31940,12 +31967,14 @@ function computeRecommendation(input) {
   if (majors > 0)
     reasons.push(`${majors} major finding(s)`);
   if (gatingMinors > 0) {
-    reasons.push(`${gatingMinors} minor finding(s) in gating categories (accuracy/terminology)`);
+    reasons.push(`${gatingMinors} minor finding(s) in gating categories (${GATING_CATEGORIES.join("/")})`);
   }
   for (const [criterion, floor] of Object.entries(CRITERION_FLOORS)) {
     const score = input.scores[criterion];
     if (!(score >= floor)) {
       reasons.push(`${criterion} ${score} below floor ${floor}`);
+    } else if (!(score <= MAX_CRITERION_SCORE)) {
+      reasons.push(`${criterion} ${score} above the ${MAX_CRITERION_SCORE}-point scale`);
     }
   }
   return { recommendation: reasons.length === 0 ? "auto-merge" : "editor", reasons };
@@ -31982,7 +32011,7 @@ function validateCriterionScores(result) {
   for (const { key } of REVIEW_CRITERIA) {
     const raw = result[key];
     const value = typeof raw === "number" ? raw : typeof raw === "string" && raw !== "" ? Number(raw) : NaN;
-    if (Number.isFinite(value)) {
+    if (Number.isFinite(value) && value >= 0 && value <= 10) {
       scores[key] = value;
     } else {
       missing.push(key);
@@ -32450,13 +32479,21 @@ var TranslationReviewer = class {
       description: i,
       suggestion: null
     }));
-    const allFindings = [...translationQuality.findings, ...syntaxFindings, ...diffFindings];
+    const allFindings = sortAndCapFindings([
+      ...translationQuality.findings,
+      ...syntaxFindings,
+      ...diffFindings
+    ]);
     const diffChecks = {
       scopeCorrect: diffQuality.scopeCorrect,
       positionCorrect: diffQuality.positionCorrect,
       structurePreserved: diffQuality.structurePreserved,
       headingMapCorrect: diffQuality.headingMapCorrect
     };
+    const sourceContentMissing = sourceEnglish.trim() === "";
+    if (sourceContentMissing) {
+      core2.warning("No source content was fetched for any reviewed file \u2014 the verdict is not a real comparison and routes to editor");
+    }
     const { recommendation, reasons } = computeRecommendation({
       verdict,
       scores: {
@@ -32468,7 +32505,11 @@ var TranslationReviewer = class {
       diffChecks,
       syntaxErrorCount: translationQuality.syntaxErrors.length,
       findings: allFindings,
-      findingsMalformed: translationQuality.findingsMalformed
+      findingsMalformed: translationQuality.findingsMalformed,
+      sourceContentMissing,
+      // With max-suggestions: 0 the prompt asks for no findings at all, so an
+      // empty findings array is not evidence of a clean translation.
+      findingsSuppressed: this.maxSuggestions === 0
     });
     const wouldAutoMerge = autoMergeMode === "shadow" ? recommendation === "auto-merge" : void 0;
     if (autoMergeMode === "shadow") {
@@ -32672,7 +32713,7 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
       fluency: scores.fluency,
       terminology: scores.terminology,
       formatting: scores.formatting,
-      syntaxErrors: result.syntaxErrors || [],
+      syntaxErrors: Array.isArray(result.syntaxErrors) ? result.syntaxErrors.map((e) => String(e)) : [],
       findings,
       findingsMalformed: malformed,
       issues: findings.map(findingToDisplayString),
@@ -32761,21 +32802,21 @@ Respond with ONLY valid JSON:
   "structureDetails": "Brief explanation of structure check"
 }`;
     const result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateDiff");
-    const checks = [
-      result.scopeCorrect,
-      result.positionCorrect,
-      result.structurePreserved,
-      result.headingMapCorrect
-    ];
+    const isTrue = (v) => v === true;
+    const scopeCorrect = isTrue(result.scopeCorrect);
+    const positionCorrect = isTrue(result.positionCorrect);
+    const structurePreserved = isTrue(result.structurePreserved);
+    const headingMapCorrect = isTrue(result.headingMapCorrect);
+    const checks = [scopeCorrect, positionCorrect, structurePreserved, headingMapCorrect];
     const passedChecks = checks.filter(Boolean).length;
     const score = passedChecks / checks.length * 10;
     return {
       score: Math.round(score * 10) / 10,
-      scopeCorrect: result.scopeCorrect,
-      positionCorrect: result.positionCorrect,
-      structurePreserved: result.structurePreserved,
-      headingMapCorrect: result.headingMapCorrect,
-      issues: result.issues || [],
+      scopeCorrect,
+      positionCorrect,
+      structurePreserved,
+      headingMapCorrect,
+      issues: Array.isArray(result.issues) ? result.issues.map((i) => String(i)) : [],
       summary: result.summary || "",
       scopeDetails: result.scopeDetails || "",
       positionDetails: result.positionDetails || "",

@@ -44,9 +44,33 @@ const CATEGORIES: readonly FindingCategory[] = [
   'other',
 ];
 
-/** Categories where a `minor` finding already gates auto-merge (the
- * fluent-but-wrong class lives here); `blocker`/`major` gate everywhere. */
-const GATING_CATEGORIES: readonly FindingCategory[] = ['accuracy', 'terminology', 'other'];
+/**
+ * Categories where even a `minor` finding gates auto-merge. `accuracy` and
+ * `terminology` carry the fluent-but-wrong class; `syntax` is structural and
+ * can break the build; `other` is the fail-closed bucket for anything the
+ * model labelled outside the known set. `blocker`/`major` gate everywhere.
+ *
+ * `fluency`, `formatting` and `structure` are absent deliberately: a minor
+ * finding there is a style note, and for `structure` the authoritative signal
+ * is the `diffChecks` booleans, which gate absolutely on their own.
+ */
+const GATING_CATEGORIES: readonly FindingCategory[] = [
+  'accuracy',
+  'terminology',
+  'syntax',
+  'other',
+];
+
+/** Highest score any criterion may report. Anything above is a scale error. */
+const MAX_CRITERION_SCORE = 10;
+
+/** The four diff checks, enumerated so a missing key gates rather than vanishing. */
+const DIFF_CHECK_NAMES = [
+  'scopeCorrect',
+  'positionCorrect',
+  'structurePreserved',
+  'headingMapCorrect',
+] as const;
 
 /**
  * Per-criterion floors for the auto-merge recommendation. PROVISIONAL:
@@ -235,7 +259,20 @@ export function normalizeFindings(
   let forceConservative = false;
   let malformed = false;
 
-  if (Array.isArray(rawFindings)) {
+  if (Array.isArray(rawFindings) && rawFindings.length > 0) {
+    items = rawFindings;
+  } else if (
+    Array.isArray(rawFindings) &&
+    rawFindings.length === 0 &&
+    Array.isArray(legacyIssues) &&
+    legacyIssues.length > 0
+  ) {
+    // The model answered in both shapes and left `findings` empty. Trusting
+    // the empty array would read as a clean review while real issues sit in
+    // the legacy field, so fall back to those, rated conservatively.
+    items = legacyIssues;
+    forceConservative = true;
+  } else if (Array.isArray(rawFindings)) {
     items = rawFindings;
   } else if (rawFindings === undefined && Array.isArray(legacyIssues)) {
     // Legacy `issues` shape: no severity/category to trust — coerce conservatively.
@@ -256,6 +293,19 @@ export function normalizeFindings(
     .slice(0, MAX_FINDINGS);
 
   return { findings, malformed };
+}
+
+/**
+ * Sort worst-first and cap, so the block obeys its documented invariant.
+ *
+ * `normalizeFindings` already does this for the model's own findings, but the
+ * reviewer then concatenates syntax and diff findings onto the end; without
+ * re-applying it the assembled array is neither ordered nor bounded.
+ */
+export function sortAndCapFindings(findings: ReviewFinding[]): ReviewFinding[] {
+  return [...findings]
+    .sort((a, b) => severityRank(a.severity) - severityRank(b.severity))
+    .slice(0, MAX_FINDINGS);
 }
 
 /** Render a finding for the human-readable review comment. */
@@ -284,6 +334,10 @@ export interface RecommendationInput {
   syntaxErrorCount: number;
   findings: ReviewFinding[];
   findingsMalformed: boolean;
+  /** Source content could not be fetched: the comparison was against nothing. */
+  sourceContentMissing?: boolean;
+  /** `max-suggestions: 0` asked the model for no findings, so an empty list proves nothing. */
+  findingsSuppressed?: boolean;
 }
 
 /**
@@ -309,11 +363,28 @@ export function computeRecommendation(input: RecommendationInput): {
   if (input.syntaxErrorCount > 0) {
     reasons.push(`${input.syntaxErrorCount} syntax error(s)`);
   }
-  for (const [check, passed] of Object.entries(input.diffChecks)) {
-    if (!passed) reasons.push(`diff check failed: ${check}`);
+  // Two hazards here, both fail-open if handled loosely.
+  //
+  // Strict identity, not truthiness: `evaluateDiff` reads these straight off
+  // model JSON, and a quoted "false" is a truthy string, so `!passed` would
+  // admit it as a passing check.
+  //
+  // And a fixed list of names, not `Object.entries(input.diffChecks)`: that
+  // enumerates the object's own keys, so `{}` — or any object missing a key —
+  // never enters the loop and reports no failures at all. Absent must gate.
+  for (const check of DIFF_CHECK_NAMES) {
+    if (input.diffChecks?.[check] !== true) reasons.push(`diff check failed: ${check}`);
   }
   if (input.findingsMalformed) {
     reasons.push('findings payload missing or malformed (fail-closed)');
+  }
+  if (input.sourceContentMissing) {
+    reasons.push('source content could not be fetched — the review compared against nothing');
+  }
+  if (input.findingsSuppressed) {
+    reasons.push(
+      'findings suppressed by max-suggestions=0 — the findings half of the gate is blind'
+    );
   }
 
   const blockers = input.findings.filter((f) => f.severity === 'blocker').length;
@@ -324,13 +395,20 @@ export function computeRecommendation(input: RecommendationInput): {
   if (blockers > 0) reasons.push(`${blockers} blocker finding(s)`);
   if (majors > 0) reasons.push(`${majors} major finding(s)`);
   if (gatingMinors > 0) {
-    reasons.push(`${gatingMinors} minor finding(s) in gating categories (accuracy/terminology)`);
+    reasons.push(
+      `${gatingMinors} minor finding(s) in gating categories (${GATING_CATEGORIES.join('/')})`
+    );
   }
 
+  // Bounded on both sides. A response on a 0-100 scale (accuracy: 85) clears
+  // every floor while meaning nothing of the sort, so an out-of-range score is
+  // a scale error and gates rather than passing.
   for (const [criterion, floor] of Object.entries(CRITERION_FLOORS)) {
     const score = input.scores[criterion as keyof RecommendationInput['scores']];
     if (!(score >= floor)) {
       reasons.push(`${criterion} ${score} below floor ${floor}`);
+    } else if (!(score <= MAX_CRITERION_SCORE)) {
+      reasons.push(`${criterion} ${score} above the ${MAX_CRITERION_SCORE}-point scale`);
     }
   }
 
