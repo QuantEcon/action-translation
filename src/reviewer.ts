@@ -35,6 +35,7 @@ import {
   normalizeFindings,
   sanitizeCommentText,
   sortAndCapFindings,
+  truncateField,
 } from './review-verdict.js';
 
 // Default model for review (can be overridden)
@@ -850,7 +851,7 @@ export class TranslationReviewer {
       category: 'syntax',
       file: soleFile,
       location: null,
-      description: e,
+      description: truncateField(e),
       suggestion: null,
     }));
     const diffFindings: ReviewFinding[] = diffQuality.issues.map((i) => ({
@@ -858,7 +859,7 @@ export class TranslationReviewer {
       category: 'structure',
       file: soleFile,
       location: null,
-      description: i,
+      description: truncateField(i),
       suggestion: null,
     }));
     // Re-sorted and re-capped: normalizeFindings ordered and bounded the

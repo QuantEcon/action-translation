@@ -180,6 +180,18 @@ export function getEngineVersion(): string {
 const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
 
+/**
+ * Truncate a free-text field to the contract's bound.
+ *
+ * Exported because the reviewer builds syntax and diff findings directly
+ * rather than through `normalizeFindings`, and those bypassed the bound: 25
+ * long syntax errors produced a ~400 KB block against GitHub's 65,536-char
+ * comment limit, so the post failed and the PR got no verdict at all.
+ */
+export function truncateField(value: unknown): string {
+  return truncate(value);
+}
+
 function truncate(value: unknown): string {
   const s = typeof value === 'string' ? value : String(value);
   return s.length > MAX_FIELD_LENGTH ? `${s.slice(0, MAX_FIELD_LENGTH - 1)}…` : s;

@@ -31861,6 +31861,9 @@ function getEngineVersion() {
   return _cachedEngineVersion;
 }
 var isPlainObject3 = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
+function truncateField(value) {
+  return truncate(value);
+}
 function truncate(value) {
   const s = typeof value === "string" ? value : String(value);
   return s.length > MAX_FIELD_LENGTH ? `${s.slice(0, MAX_FIELD_LENGTH - 1)}\u2026` : s;
@@ -32476,7 +32479,7 @@ var TranslationReviewer = class {
       category: "syntax",
       file: soleFile,
       location: null,
-      description: e,
+      description: truncateField(e),
       suggestion: null
     }));
     const diffFindings = diffQuality.issues.map((i) => ({
@@ -32484,7 +32487,7 @@ var TranslationReviewer = class {
       category: "structure",
       file: soleFile,
       location: null,
-      description: i,
+      description: truncateField(i),
       suggestion: null
     }));
     const allFindings = sortAndCapFindings([

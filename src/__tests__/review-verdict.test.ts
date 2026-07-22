@@ -20,6 +20,7 @@ import {
   parseReviewVerdict,
   sanitizeCommentText,
   sortAndCapFindings,
+  truncateField,
 } from '../review-verdict.js';
 import { TranslationReviewer, validateCriterionScores } from '../reviewer.js';
 import { ReviewFinding } from '../types.js';
@@ -904,5 +905,18 @@ describe('parse and normalise survive arbitrary junk', () => {
       }).not.toThrow();
       expect(out!.recommendation).toBe('editor');
     }
+  });
+});
+
+describe('block size stays within GitHub limits', () => {
+  it('caps and truncates so a pathological review still posts', () => {
+    const huge = 'X'.repeat(20000);
+    const findings = sortAndCapFindings(
+      Array.from({ length: 25 }, () =>
+        finding({ severity: 'blocker', category: 'syntax', description: truncateField(huge) })
+      )
+    );
+    const block = buildVerdictBlock(makeVerdict({ findings, syntaxErrorCount: 25 }));
+    expect(block.length).toBeLessThan(30000);
   });
 });
