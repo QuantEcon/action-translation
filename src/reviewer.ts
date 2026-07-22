@@ -33,6 +33,7 @@ import {
   findingToDisplayString,
   getEngineVersion,
   normalizeFindings,
+  sanitizeCommentText,
 } from './review-verdict.js';
 
 // Default model for review (can be overridden)
@@ -823,9 +824,22 @@ export class TranslationReviewer {
       verdict = 'FAIL';
     }
 
-    // Verdict v2 (#103, #66): unify every issue class into one findings array —
-    // model findings as reported, syntax errors as blockers, diff issues as
-    // structure/major — and compute the categorical routing recommendation.
+    // Verdict v2 (#103, #66): unify every issue class into one findings array,
+    // then compute the categorical routing recommendation.
+    //
+    // Severity assignment differs by source, deliberately:
+    //   - model findings carry their own rated severity;
+    //   - syntax errors are blockers (the prompt calls them CRITICAL, and
+    //     `syntaxErrorCount` gates independently);
+    //   - diff-quality issues are recorded at `minor`/`structure`, which does
+    //     NOT gate. `evaluateDiff` returns free prose with no severity concept,
+    //     and harness runs showed it emits narration and self-correction
+    //     ("wait, checking again…", "this matches the new schema, so it's
+    //     fine, but…") alongside real observations. Promoting that to `major`
+    //     made it an absolute gate, which both buried the real signal and
+    //     would poison the shadow-phase calibration data with false negatives.
+    //     The authoritative diff signal is the four `diffChecks` booleans,
+    //     which gate absolutely; these strings are their explanation.
     const soleFile = filenames.length === 1 ? filenames[0] : null;
     const syntaxFindings: ReviewFinding[] = translationQuality.syntaxErrors.map((e) => ({
       severity: 'blocker',
@@ -836,7 +850,7 @@ export class TranslationReviewer {
       suggestion: null,
     }));
     const diffFindings: ReviewFinding[] = diffQuality.issues.map((i) => ({
-      severity: 'major',
+      severity: 'minor',
       category: 'structure',
       file: soleFile,
       location: null,
@@ -1308,24 +1322,24 @@ ${sectionsList}
 | Formatting | ${translationResult.formatting}/10 |
 | **Overall** | **${translationResult.score}/10** |
 
-**Summary**: ${translationResult.summary}`;
+**Summary**: ${sanitizeCommentText(translationResult.summary)}`;
 
     if (translationResult.strengths.length > 0) {
-      comment += ` ${translationResult.strengths.join(' ')}`;
+      comment += ` ${sanitizeCommentText(translationResult.strengths.join(' '))}`;
     }
 
     if (translationResult.syntaxErrors && translationResult.syntaxErrors.length > 0) {
       comment += `
 
 ### ⚠️ Markdown Syntax Errors (CRITICAL)
-${translationResult.syntaxErrors.map((e) => `- 🔴 ${e}`).join('\n')}`;
+${translationResult.syntaxErrors.map((e) => `- 🔴 ${sanitizeCommentText(String(e))}`).join('\n')}`;
     }
 
     if (translationResult.issues.length > 0) {
       comment += `
 
 **Suggestions**:
-${translationResult.issues.map((i) => `- ${i}`).join('\n')}`;
+${translationResult.issues.map((i) => `- ${sanitizeCommentText(i)}`).join('\n')}`;
     }
 
     comment += `
@@ -1342,13 +1356,13 @@ ${translationResult.issues.map((i) => `- ${i}`).join('\n')}`;
 | Heading-map Correct | ${diffResult.headingMapCorrect ? '✅' : '❌'} |
 | **Overall** | **${diffResult.score}/10** |
 
-**Summary**: ${diffResult.summary}`;
+**Summary**: ${sanitizeCommentText(diffResult.summary)}`;
 
     if (diffResult.issues.length > 0) {
       comment += `
 
 **Issues**:
-${diffResult.issues.map((i) => `- ${i}`).join('\n')}`;
+${diffResult.issues.map((i) => `- ${sanitizeCommentText(String(i))}`).join('\n')}`;
     }
 
     comment += `

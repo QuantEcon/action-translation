@@ -31950,6 +31950,9 @@ function computeRecommendation(input) {
   }
   return { recommendation: reasons.length === 0 ? "auto-merge" : "editor", reasons };
 }
+function sanitizeCommentText(text) {
+  return text.replace(/<!--/g, "&lt;!--");
+}
 function buildVerdictBlock(verdict) {
   const json2 = JSON.stringify(verdict, null, 2).replace(/-->/g, "--\\u003e").replace(/--!>/g, "--!\\u003e");
   return `<!-- ${REVIEW_VERDICT_MARKER}
@@ -32440,7 +32443,7 @@ var TranslationReviewer = class {
       suggestion: null
     }));
     const diffFindings = diffQuality.issues.map((i) => ({
-      severity: "major",
+      severity: "minor",
       category: "structure",
       file: soleFile,
       location: null,
@@ -32832,21 +32835,21 @@ ${sectionsList}
 | Formatting | ${translationResult.formatting}/10 |
 | **Overall** | **${translationResult.score}/10** |
 
-**Summary**: ${translationResult.summary}`;
+**Summary**: ${sanitizeCommentText(translationResult.summary)}`;
     if (translationResult.strengths.length > 0) {
-      comment += ` ${translationResult.strengths.join(" ")}`;
+      comment += ` ${sanitizeCommentText(translationResult.strengths.join(" "))}`;
     }
     if (translationResult.syntaxErrors && translationResult.syntaxErrors.length > 0) {
       comment += `
 
 ### \u26A0\uFE0F Markdown Syntax Errors (CRITICAL)
-${translationResult.syntaxErrors.map((e) => `- \u{1F534} ${e}`).join("\n")}`;
+${translationResult.syntaxErrors.map((e) => `- \u{1F534} ${sanitizeCommentText(String(e))}`).join("\n")}`;
     }
     if (translationResult.issues.length > 0) {
       comment += `
 
 **Suggestions**:
-${translationResult.issues.map((i) => `- ${i}`).join("\n")}`;
+${translationResult.issues.map((i) => `- ${sanitizeCommentText(i)}`).join("\n")}`;
     }
     comment += `
 
@@ -32862,12 +32865,12 @@ ${translationResult.issues.map((i) => `- ${i}`).join("\n")}`;
 | Heading-map Correct | ${diffResult.headingMapCorrect ? "\u2705" : "\u274C"} |
 | **Overall** | **${diffResult.score}/10** |
 
-**Summary**: ${diffResult.summary}`;
+**Summary**: ${sanitizeCommentText(diffResult.summary)}`;
     if (diffResult.issues.length > 0) {
       comment += `
 
 **Issues**:
-${diffResult.issues.map((i) => `- ${i}`).join("\n")}`;
+${diffResult.issues.map((i) => `- ${sanitizeCommentText(String(i))}`).join("\n")}`;
     }
     comment += `
 

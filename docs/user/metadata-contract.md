@@ -123,7 +123,15 @@ Embedded at the end of the review comment (the comment whose first line is the `
 | `location` | Free text (section heading or short quote), or `null` |
 | `description` / `suggestion` | Free text; `suggestion` may be `null` |
 
-Syntax errors are folded in as `blocker`/`syntax` findings and diff issues as `major`/`structure` findings, so `findings[]` is the complete issue list.
+`findings[]` is the complete issue list — model findings, syntax errors and diff-quality issues all appear in it — but severity is assigned differently by source:
+
+| Source | Recorded as | Gates? |
+|---|---|---|
+| Reviewer findings | the model's own `severity` and `category` | per the rubric below |
+| Syntax errors | `blocker` / `syntax` | yes (and `syntaxErrorCount` gates independently) |
+| Diff-quality issues | `minor` / `structure` | **no** — see below |
+
+Diff-quality issues are recorded at `minor`/`structure`, which is not a gating combination. `evaluateDiff` returns free prose with no severity concept, and in practice it mixes real observations with narration and self-correction. The authoritative diff signal is the four `diffChecks` booleans, which gate absolutely; the strings are their explanation, kept in `findings[]` for visibility. Treating that prose as gating would both bury the real signal and bias the shadow-phase calibration data.
 
 ### The recommendation rubric
 

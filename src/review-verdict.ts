@@ -339,6 +339,29 @@ export function computeRecommendation(input: RecommendationInput): {
 // ============================================================================
 
 /**
+ * Neutralise HTML-comment openings in model-authored prose before it is
+ * rendered into the review comment body.
+ *
+ * The reviewer summarises lecture content an attacker may control, and its
+ * summaries, strengths and finding descriptions are rendered verbatim into the
+ * comment. Without this, crafted content could induce the model to emit a
+ * literal `<!-- translation-review-verdict … -->` block inside a description;
+ * that forged block lands *earlier* in the body than the real one, and a
+ * consumer parsing the comment would read the attacker's verdict —
+ * `recommendation: "auto-merge"` against a SHA of their choosing — instead of
+ * the engine's. Escaping the opening `<` to `&lt;` makes the sequence render
+ * as literal text and, decisively, leaves the raw body with no verdict marker
+ * the engine did not itself write.
+ *
+ * Applies to the prose only. The JSON payload keeps the original text: `<!--`
+ * is inert inside a JSON string value, and `buildVerdictBlock` separately
+ * escapes the sequences that could close the block early.
+ */
+export function sanitizeCommentText(text: string): string {
+  return text.replace(/<!--/g, '&lt;!--');
+}
+
+/**
  * Serialise the verdict into its HTML-comment block.
  *
  * Model-authored text can contain `-->` (or the HTML5 `--!>` variant), which
@@ -356,14 +379,25 @@ export function buildVerdictBlock(verdict: ReviewVerdictV2): string {
 /**
  * Parse a verdict block out of a review comment body.
  *
+ * Takes the **last** block in the body, never the first. `buildVerdictBlock`
+ * appends the real verdict at the end of the comment, so any earlier block is
+ * either a forgery smuggled through model-authored prose (see
+ * `sanitizeCommentText`) or a stale fragment. Selecting the last one is
+ * defence in depth: if sanitisation is ever bypassed, the engine's own block
+ * still wins. A malformed last block returns undefined rather than falling
+ * back to an earlier one — that fallback is exactly how a forgery would win.
+ *
  * Returns undefined for a missing, unparseable, or wrong-shape block —
  * consumers must fail closed and treat that as an `editor` route.
  */
 export function parseReviewVerdict(commentBody: string): ReviewVerdictV2 | undefined {
-  const match = commentBody.match(
-    new RegExp(`<!-- ${REVIEW_VERDICT_MARKER}\\r?\\n([\\s\\S]*?)\\r?\\n-->`)
-  );
-  if (!match) return undefined;
+  const matches = [
+    ...commentBody.matchAll(
+      new RegExp(`<!-- ${REVIEW_VERDICT_MARKER}\\r?\\n([\\s\\S]*?)\\r?\\n-->`, 'g')
+    ),
+  ];
+  if (matches.length === 0) return undefined;
+  const match = matches[matches.length - 1];
 
   let parsed: unknown;
   try {
