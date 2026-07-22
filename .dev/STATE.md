@@ -1,4 +1,4 @@
-verified: 2026-07-21
+verified: 2026-07-22
 
 # STATE
 
@@ -13,6 +13,20 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## Recently landed
 
+- **v0.21.0** (2026-07-22) — #132 closed #131: `forward --github` PRs now carry
+  `action-translation`, the label the review workflow template gates on — every CLI resync PR
+  had been completing review as `skipped`, silently (all six of the zh-cn post-wave mini-wave).
+  #137 resolved #90 defect 2 as **removal-with-visibility**: a fence-aware estate scan (211
+  pairs, five editions, `##` and `###`) found **zero** human-authored target-only sections, and
+  the one cited case (ifp_egm's 练习) reclassified as upstream drift — the old source's
+  Exercises, deleted upstream in b27f1eb0a, correctly removed by the wave. Sync PR bodies now
+  enumerate removed target-only sections; target-only **files** documented as the supported
+  pattern for edition-specific content; the `translation.additions` design **shelved** in #90
+  with its lifecycle costs recorded (build trigger: first real human addition). Parity guard
+  deliberately unchanged — the scan shows strict source/output equality is a true corpus
+  invariant. **The P0 co-design gate is dissolved: #94 Phase 2 (round-trip invariant + real
+  `validateMyST`) is unblocked and next.** Also: init `-f` repo-scoped side effects filed as
+  #134; tutorial `SOURCE_ONLY` row corrected to `init -f`.
 - **v0.20.0** (2026-07-21) — #128 closed #119 + #65: structural parity guard on every write
   path (directive shapes byte-equal or presence-matched by class; anchors exact). Calibrated
   empirically: byte-equal draft over 211 real pairs → 362 false positives in 3 classes
