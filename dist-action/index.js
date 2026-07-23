@@ -36207,32 +36207,6 @@ var TranslationReviewer = class {
       additions: f.additions,
       deletions: f.deletions
     })), resyncMetadata !== void 0);
-    const overallScore = translationQuality.score * 0.7 + diffQuality.score * 0.3;
-    let verdict;
-    if (overallScore >= 8 && translationQuality.syntaxErrors.length === 0) {
-      verdict = "PASS";
-    } else if (overallScore >= 6) {
-      verdict = "WARN";
-    } else {
-      verdict = "FAIL";
-    }
-    const soleFile = filenames.length === 1 ? filenames[0] : null;
-    const syntaxFindings = translationQuality.syntaxErrors.map((e) => ({
-      severity: "blocker",
-      category: "syntax",
-      file: soleFile,
-      location: null,
-      description: truncateField(e),
-      suggestion: null
-    }));
-    const diffFindings = diffQuality.issues.map((i) => ({
-      severity: "minor",
-      category: "structure",
-      file: soleFile,
-      location: null,
-      description: truncateField(i),
-      suggestion: null
-    }));
     const reviewedPairs = [...filePairs.entries()].filter(([, v]) => v.source !== void 0 && v.target !== void 0).map(([filename, v]) => ({
       filename,
       source: v.source,
@@ -36256,6 +36230,38 @@ var TranslationReviewer = class {
         core3.warning(`Deterministic diff check failed \u2014 ${name}: ${result2.details.join("; ")}`);
       }
     }
+    const diffScore = Math.round(Object.values(diffChecks).filter(Boolean).length / DIFF_CHECK_NAMES.length * 10 * 10) / 10;
+    const mergedDiffQuality = {
+      ...diffQuality,
+      ...diffChecks,
+      score: diffScore
+    };
+    const overallScore = translationQuality.score * 0.7 + diffScore * 0.3;
+    let verdict;
+    if (overallScore >= 8 && translationQuality.syntaxErrors.length === 0) {
+      verdict = "PASS";
+    } else if (overallScore >= 6) {
+      verdict = "WARN";
+    } else {
+      verdict = "FAIL";
+    }
+    const soleFile = filenames.length === 1 ? filenames[0] : null;
+    const syntaxFindings = translationQuality.syntaxErrors.map((e) => ({
+      severity: "blocker",
+      category: "syntax",
+      file: soleFile,
+      location: null,
+      description: truncateField(e),
+      suggestion: null
+    }));
+    const diffFindings = mergedDiffQuality.issues.map((i) => ({
+      severity: "minor",
+      category: "structure",
+      file: soleFile,
+      location: null,
+      description: truncateField(i),
+      suggestion: null
+    }));
     const modelCheckFindings = ["scopeCorrect", "positionCorrect"].filter((name) => diffChecks[name] !== true).map((name) => ({
       severity: "minor",
       category: "diff-check",
@@ -36326,7 +36332,7 @@ var TranslationReviewer = class {
         terminology: translationQuality.terminology,
         formatting: translationQuality.formatting,
         translation: translationQuality.score,
-        diff: diffQuality.score,
+        diff: mergedDiffQuality.score,
         overall: Math.round(overallScore * 10) / 10
       },
       diffChecks,
@@ -36334,7 +36340,7 @@ var TranslationReviewer = class {
       syntaxErrorCount: translationQuality.syntaxErrors.length,
       findings: allFindings
     };
-    const reviewComment = this.generateReviewComment(translationQuality, diffQuality, verdict, {
+    const reviewComment = this.generateReviewComment(translationQuality, mergedDiffQuality, verdict, {
       recommendation,
       reasons,
       wouldAutoMerge
@@ -36344,7 +36350,7 @@ var TranslationReviewer = class {
       prNumber,
       timestamp: timestamp2,
       translationQuality,
-      diffQuality,
+      diffQuality: mergedDiffQuality,
       overallScore: Math.round(overallScore * 10) / 10,
       verdict,
       recommendation,

@@ -140,15 +140,21 @@ export interface ReviewVerdictV2 {
    * Provenance of each `diffChecks` entry (#148). Added rather than folded into
    * `diffChecks` because changing those booleans to objects would be a type
    * change, and the contract makes that a `schemaVersion` bump; this is a pure
-   * field addition. Absent on blocks written before v0.23.0 — treat those as
-   * entirely `model`, which is what they were.
+   * field addition.
    *
    * Only `deterministic` entries gate as checks. A `model` entry that reports
    * failure gates through a `diff-check` finding instead, so routing is
    * unchanged while shadow-mode calibration can report the two precisions
    * separately rather than blending measured fact with model opinion.
+   *
+   * **Optional, and absent means gate.** Blocks written before v0.23.0 have no
+   * provenance: every check there was model-derived, but every check there also
+   * gated absolutely, so a consumer that reads absence as "`model`, therefore
+   * advisory" turns historical data fail-OPEN. Absence means *treat every check
+   * as gating*; that the values happened to be model-derived is a separate fact
+   * about their origin, not licence to discount them.
    */
-  diffCheckSources: Record<DiffCheckName, DiffCheckSource>;
+  diffCheckSources?: Record<DiffCheckName, DiffCheckSource>;
   syntaxErrorCount: number;
   findings: ReviewFinding[];
 }
@@ -382,9 +388,11 @@ export interface RecommendationInput {
     headingMapCorrect: boolean;
   };
   /**
-   * Provenance of each diff check. A check absent from this map is treated as
-   * `deterministic` — the fail-closed direction, since that is the branch that
-   * gates. Model-asserted checks gate through `findings` instead (#148).
+   * Provenance of each diff check (#148). A check absent from this map — or an
+   * absent map entirely — gates as a check, the same reading `ReviewVerdictV2`
+   * documents for a block with no provenance: absence must never downgrade a
+   * check to advisory, which would be fail-open. Model-asserted checks gate
+   * through `findings` instead.
    */
   diffCheckSources?: Partial<Record<DiffCheckName, DiffCheckSource>>;
   syntaxErrorCount: number;
@@ -615,6 +623,19 @@ function isWellFormedVerdict(parsed: unknown): boolean {
   if (!isPlainObject(diffChecks)) return false;
   for (const key of DIFF_CHECK_NAMES) {
     if (typeof diffChecks[key] !== 'boolean') return false;
+  }
+
+  // Provenance is optional — pre-v0.23.0 blocks have none, and absence reads as
+  // "gate every check". Present but malformed is a different matter: a partial
+  // or junk map would be read key-by-key, and a garbage value that is not
+  // literally 'model' falls to the gating branch, so it cannot open the gate.
+  // Reject it anyway rather than hand a consumer a field it cannot trust.
+  if (b.diffCheckSources !== undefined) {
+    const sources = b.diffCheckSources;
+    if (!isPlainObject(sources)) return false;
+    for (const key of DIFF_CHECK_NAMES) {
+      if (sources[key] !== 'deterministic' && sources[key] !== 'model') return false;
+    }
   }
 
   if (!Array.isArray(b.findings)) return false;

@@ -117,7 +117,7 @@ Embedded at the end of the review comment (the comment whose first line is the `
 | `wouldAutoMerge` | boolean | Present only in shadow mode: the decision the gate would have taken |
 | `scores` | object | Per-criterion scores (1–10), the weighted `translation` composite (0.35 accuracy / 0.25 fluency / 0.25 terminology / 0.15 formatting), the `diff` score ((passed checks ÷ 4) × 10), and `overall` (translation × 0.7 + diff × 0.3 — a trending signal, not a gate) |
 | `diffChecks` | object | The four boolean diff checks |
-| `diffCheckSources` | object | Provenance of each `diffChecks` entry — `deterministic` (computed by the engine) or `model` (the reviewer's judgement). Absent before v0.23.0, when every check was `model` |
+| `diffCheckSources` | object (optional) | Provenance of each `diffChecks` entry — `deterministic` (computed by the engine) or `model` (the reviewer's judgement). Absent before v0.23.0; see below for how to read absence |
 | `syntaxErrorCount` | number | MyST/markdown syntax errors found |
 | `findings[]` | array | Structured findings, worst first, capped at 20 |
 
@@ -156,7 +156,9 @@ Diff-quality issues are recorded at `minor`/`structure`, which is not a gating c
 
 Only `deterministic` checks gate as checks. A `model` check that reports failure gates through a `minor`/`diff-check` finding instead, so **routing is unchanged** — a failed check still routes to `editor` either way — while consumers and shadow-mode calibration can tell measured fact from model opinion.
 
-The split exists because these booleans gate absolutely but were all model output, and a confidently wrong one is indistinguishable from a real structural failure. That fired on the second organic production PR reviewed under verdict v2 ([#148](https://github.com/QuantEcon/action-translation/issues/148)). Consumers computing their own gate should treat a `model` check as advisory and a `deterministic` one as fact; a check whose provenance is absent should be treated as `deterministic`, which is the fail-closed reading.
+The split exists because these booleans gate absolutely but were all model output, and a confidently wrong one is indistinguishable from a real structural failure. That fired on the second organic production PR reviewed under verdict v2 ([#148](https://github.com/QuantEcon/action-translation/issues/148)). Consumers computing their own gate should treat a `model` check as advisory and a `deterministic` one as fact.
+
+**Reading absence.** The field is optional and is missing from every block written before v0.23.0. Absence means **treat every check as gating**. Those checks were in fact all model-derived, but under the contract of the day they also gated absolutely — so reading absence as "`model`, therefore advisory" would retroactively open a gate that was closed, which is fail-open on historical data. Provenance that is present but malformed causes the whole block to fail to parse, so a consumer never sees a partial map.
 
 ### The recommendation rubric
 
