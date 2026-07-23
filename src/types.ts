@@ -279,6 +279,12 @@ export type FindingCategory =
   | 'formatting'
   | 'syntax'
   | 'structure'
+  /**
+   * A model-asserted diff check reported a failure (#148). Gating, so routing
+   * is unchanged, but distinguishable in shadow data from a deterministic
+   * check — the model has been confidently wrong here on real production PRs.
+   */
+  | 'diff-check'
   | 'other';
 
 /**

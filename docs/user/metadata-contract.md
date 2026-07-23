@@ -81,6 +81,10 @@ Embedded at the end of the review comment (the comment whose first line is the `
     "scopeCorrect": true, "positionCorrect": true,
     "structurePreserved": true, "headingMapCorrect": true
   },
+  "diffCheckSources": {
+    "scopeCorrect": "model", "positionCorrect": "model",
+    "structurePreserved": "deterministic", "headingMapCorrect": "deterministic"
+  },
   "syntaxErrorCount": 0,
   "findings": [
     {
@@ -113,6 +117,7 @@ Embedded at the end of the review comment (the comment whose first line is the `
 | `wouldAutoMerge` | boolean | Present only in shadow mode: the decision the gate would have taken |
 | `scores` | object | Per-criterion scores (1–10), the weighted `translation` composite (0.35 accuracy / 0.25 fluency / 0.25 terminology / 0.15 formatting), the `diff` score ((passed checks ÷ 4) × 10), and `overall` (translation × 0.7 + diff × 0.3 — a trending signal, not a gate) |
 | `diffChecks` | object | The four boolean diff checks |
+| `diffCheckSources` | object (optional) | Provenance of each `diffChecks` entry — `deterministic` (computed by the engine) or `model` (the reviewer's judgement). Absent before v0.23.0; see below for how to read absence |
 | `syntaxErrorCount` | number | MyST/markdown syntax errors found |
 | `findings[]` | array | Structured findings, worst first, capped at 20 |
 
@@ -121,7 +126,7 @@ Embedded at the end of the review comment (the comment whose first line is the `
 | Field | Values |
 |-------|--------|
 | `severity` | `blocker` (meaning inversion, wrong math/code, build-breaking MyST) · `major` (misleading accuracy/terminology error) · `minor` (correct but awkward; minor inconsistency) · `nit` (stylistic) |
-| `category` | `accuracy`, `fluency`, `terminology`, `formatting`, `syntax`, `structure`, `other` (`other` is the fail-closed bucket for anything unclassifiable) |
+| `category` | `accuracy`, `fluency`, `terminology`, `formatting`, `syntax`, `structure`, `diff-check`, `other` (`other` is the fail-closed bucket for anything unclassifiable; `diff-check` carries a model-asserted diff check that reported failure) |
 | `file` | One of the PR's reviewed paths, or `null` when not attributable (single-file PRs are always attributed) |
 | `location` | Free text (section heading or short quote), or `null` |
 | `description` / `suggestion` | Free text; `suggestion` may be `null` |
@@ -133,18 +138,37 @@ Embedded at the end of the review comment (the comment whose first line is the `
 | Reviewer findings | the model's own `severity` and `category` | per the rubric below |
 | Syntax errors | `blocker` / `syntax` | yes (and `syntaxErrorCount` gates independently) |
 | Diff-quality issues | `minor` / `structure` | **no** — see below |
+| Deterministic check failures | `minor` / `structure` | **no** — their `diffChecks` boolean gates instead, so gating here would double-count |
+| Model-asserted check failures | `minor` / `diff-check` | **yes** — this is how a `model` check reaches the gate at all |
 
-Diff-quality issues are recorded at `minor`/`structure`, which is not a gating combination. `evaluateDiff` returns free prose with no severity concept, and in practice it mixes real observations with narration and self-correction. The authoritative diff signal is the four `diffChecks` booleans, which gate absolutely; the strings are their explanation, kept in `findings[]` for visibility. Treating that prose as gating would both bury the real signal and bias the shadow-phase calibration data.
+Diff-quality issues are recorded at `minor`/`structure`, which is not a gating combination. `evaluateDiff` returns free prose with no severity concept, and in practice it mixes real observations with narration and self-correction. The strings are kept in `findings[]` for visibility, not as a signal. Treating that prose as gating would both bury the real signal and bias the shadow-phase calibration data.
+
+### Diff checks and their provenance
+
+`diffChecks` reports four checks; `diffCheckSources` says where each value came from, and the two are read together.
+
+| Check | Source | How it is decided |
+|-------|--------|-------------------|
+| `structurePreserved` | `deterministic` | Structural parity (directive openings and target anchors) plus the section-tree heading-level sequence |
+| `headingMapCorrect` | `deterministic` | The recorded frontmatter map compared against the map `buildHeadingMap` derives from the two documents |
+| `scopeCorrect` | `model` | The reviewer's judgement |
+| `positionCorrect` | `model` | The reviewer's judgement |
+
+Only `deterministic` checks gate as checks. A `model` check that reports failure gates through a `minor`/`diff-check` finding instead, so **routing is unchanged** — a failed check still routes to `editor` either way — while consumers and shadow-mode calibration can tell measured fact from model opinion.
+
+The split exists because these booleans gate absolutely but were all model output, and a confidently wrong one is indistinguishable from a real structural failure. That fired on the second organic production PR reviewed under verdict v2 ([#148](https://github.com/QuantEcon/action-translation/issues/148)). Consumers computing their own gate should treat a `model` check as advisory and a `deterministic` one as fact.
+
+**Reading absence.** The field is optional and is missing from every block written before v0.23.0. Absence means **treat every check as gating**. Those checks were in fact all model-derived, but under the contract of the day they also gated absolutely — so reading absence as "`model`, therefore advisory" would retroactively open a gate that was closed, which is fail-open on historical data. Provenance that is present but malformed causes the whole block to fail to parse, so a consumer never sees a partial map.
 
 ### The recommendation rubric
 
 `recommendation` is `auto-merge` only when **all** of these hold, otherwise `editor`:
 
 - `verdict` is `PASS` and `syntaxErrorCount` is 0
-- all four `diffChecks` pass
+- every `deterministic` diff check passes, and no `model` diff check reported failure (the latter arrives as a gating `diff-check` finding)
 - the findings payload was well-formed
 - zero `blocker` or `major` findings (any category)
-- zero `minor` findings in the gating categories `accuracy`, `terminology`, `syntax`, `other`
+- zero `minor` findings in the gating categories `accuracy`, `terminology`, `syntax`, `diff-check`, `other`
 - every criterion meets its floor **and sits within the 1–10 scale** — provisionally accuracy ≥ 9, terminology ≥ 9, fluency ≥ 8, formatting ≥ 8, to be calibrated from shadow-mode data
 - the source content was actually fetched (a failed fetch means the review compared against nothing)
 - findings were not suppressed by `max-suggestions: 0`

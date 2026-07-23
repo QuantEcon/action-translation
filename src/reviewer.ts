@@ -24,6 +24,8 @@ import {
   FileChange,
 } from './types.js';
 import { parseTranslationSyncMetadata, TranslationSyncMetadata } from './pr-creator.js';
+import { MystParser } from './parser.js';
+import { runDeterministicDiffChecks, ReviewedFilePair, DiffCheckSource } from './diff-checks.js';
 import { DEFAULT_CLAUDE_MODEL, MAX_TOKENS, DEFAULT_THINKING } from './models.js';
 import {
   ReviewVerdictV2,
@@ -36,6 +38,8 @@ import {
   sanitizeCommentText,
   sortAndCapFindings,
   truncateField,
+  DiffCheckName,
+  DIFF_CHECK_NAMES,
 } from './review-verdict.js';
 
 // Default model for review (can be overridden)
@@ -367,6 +371,8 @@ export class TranslationReviewer {
   private octokit: ReturnType<typeof github.getOctokit>;
   private model: string;
   private maxSuggestions: number;
+  /** Section parsing for the deterministic diff checks (#148). */
+  private parser: MystParser;
 
   constructor(
     anthropicApiKey: string,
@@ -378,6 +384,7 @@ export class TranslationReviewer {
     this.octokit = github.getOctokit(githubToken);
     this.model = model;
     this.maxSuggestions = maxSuggestions;
+    this.parser = new MystParser();
   }
 
   private sleep(ms: number): Promise<void> {
@@ -719,6 +726,11 @@ export class TranslationReviewer {
     let sourceBefore = '';
     let targetBefore = '';
     const changedSections: ChangedSection[] = [];
+    // Per-file pairs for the deterministic diff checks (#148). The evaluation
+    // strings above are concatenations across files, which is fine for a prompt
+    // but useless for structural comparison — parity and heading maps are
+    // per-document properties.
+    const filePairs = new Map<string, { source?: string; target?: string }>();
 
     for (const file of markdownFiles) {
       try {
@@ -731,7 +743,9 @@ export class TranslationReviewer {
         });
 
         if ('content' in targetData) {
-          targetTranslation += Buffer.from(targetData.content, 'base64').toString('utf-8') + '\n\n';
+          const content = Buffer.from(targetData.content, 'base64').toString('utf-8');
+          targetTranslation += content + '\n\n';
+          filePairs.set(file.filename, { ...filePairs.get(file.filename), target: content });
         }
 
         // Get target content before changes (base branch)
@@ -752,7 +766,9 @@ export class TranslationReviewer {
 
         // Get source (English) content from source PR diff
         if (sourceAfterMap.has(file.filename)) {
-          sourceEnglish += sourceAfterMap.get(file.filename) + '\n\n';
+          const content = sourceAfterMap.get(file.filename) as string;
+          sourceEnglish += content + '\n\n';
+          filePairs.set(file.filename, { ...filePairs.get(file.filename), source: content });
         } else {
           core.warning(
             `Source content not found for ${file.filename} in ${
@@ -818,8 +834,62 @@ export class TranslationReviewer {
       resyncMetadata !== undefined
     );
 
+    // Deterministic diff checks (#148). `structurePreserved` and
+    // `headingMapCorrect` are recomputed from ground truth the engine already
+    // holds, replacing the model's opinion; `scopeCorrect` and `positionCorrect`
+    // remain model-asserted and are tagged as such, so a hallucinated boolean is
+    // no longer indistinguishable from a measured one in the shadow data.
+    //
+    // Runs BEFORE the score: the diff score is defined as (passed checks ÷ 4) ×
+    // 10 over the checks the block publishes, so deriving it from the model's
+    // originals would publish `diff: 10` beside a `false` boolean and — because
+    // `overallScore` feeds the PASS/WARN/FAIL threshold — let a deterministic
+    // structural failure leave the verdict completely untouched.
+    const reviewedPairs: ReviewedFilePair[] = [...filePairs.entries()]
+      .filter(([, v]) => v.source !== undefined && v.target !== undefined)
+      .map(([filename, v]) => ({
+        filename,
+        source: v.source as string,
+        target: v.target as string,
+      }));
+    const deterministic = await runDeterministicDiffChecks(this.parser, reviewedPairs);
+
+    const diffChecks = {
+      scopeCorrect: diffQuality.scopeCorrect,
+      positionCorrect: diffQuality.positionCorrect,
+      structurePreserved: deterministic.structurePreserved.passed,
+      headingMapCorrect: deterministic.headingMapCorrect.passed,
+    };
+    const diffCheckSources: Record<DiffCheckName, DiffCheckSource> = {
+      scopeCorrect: 'model',
+      positionCorrect: 'model',
+      structurePreserved: 'deterministic',
+      headingMapCorrect: 'deterministic',
+    };
+    for (const [name, result] of Object.entries(deterministic)) {
+      if (!result.passed) {
+        core.warning(`Deterministic diff check failed — ${name}: ${result.details.join('; ')}`);
+      }
+    }
+
+    const diffScore =
+      Math.round(
+        (Object.values(diffChecks).filter(Boolean).length / DIFF_CHECK_NAMES.length) * 10 * 10
+      ) / 10;
+
+    // One diff-quality object from here on, carrying the merged checks and the
+    // score derived from them. `evaluateDiff` scored the model's own four
+    // booleans, so leaving its result in place would publish a `diff-score`
+    // action output and a review-comment score that contradict the verdict
+    // block sitting in the same comment.
+    const mergedDiffQuality: DiffQualityResult = {
+      ...diffQuality,
+      ...diffChecks,
+      score: diffScore,
+    };
+
     // Calculate overall score and verdict
-    const overallScore = translationQuality.score * 0.7 + diffQuality.score * 0.3;
+    const overallScore = translationQuality.score * 0.7 + diffScore * 0.3;
     let verdict: 'PASS' | 'WARN' | 'FAIL';
     if (overallScore >= 8 && translationQuality.syntaxErrors.length === 0) {
       verdict = 'PASS';
@@ -854,7 +924,7 @@ export class TranslationReviewer {
       description: truncateField(e),
       suggestion: null,
     }));
-    const diffFindings: ReviewFinding[] = diffQuality.issues.map((i) => ({
+    const diffFindings: ReviewFinding[] = mergedDiffQuality.issues.map((i) => ({
       severity: 'minor',
       category: 'structure',
       file: soleFile,
@@ -862,21 +932,47 @@ export class TranslationReviewer {
       description: truncateField(i),
       suggestion: null,
     }));
+    // A model-asserted check that reports failure still routes to a human, but
+    // as a `diff-check` finding rather than a boolean the gate treats as
+    // measured fact. Demoting it out of the boolean field must not open the
+    // gate it used to close — `diff-check` is a gating category.
+    const modelCheckFindings: ReviewFinding[] = (['scopeCorrect', 'positionCorrect'] as const)
+      .filter((name) => diffChecks[name] !== true)
+      .map((name) => ({
+        severity: 'minor' as const,
+        category: 'diff-check' as const,
+        file: soleFile,
+        location: null,
+        description: truncateField(
+          `${name}: the reviewer reported this check as failed. This is a model judgement, not a ` +
+            `deterministic check — verify against the source diff before treating it as a defect (#148).`
+        ),
+        suggestion: null,
+      }));
+    // Deterministic failures are recorded for visibility at minor/structure,
+    // which does NOT gate — their boolean already gates, and double-gating
+    // would double-count one failure in the shadow data.
+    const deterministicFindings: ReviewFinding[] = Object.values(deterministic)
+      .flatMap((result) => result.details)
+      .map((detail) => ({
+        severity: 'minor' as const,
+        category: 'structure' as const,
+        file: soleFile,
+        location: null,
+        description: truncateField(detail),
+        suggestion: null,
+      }));
+
     // Re-sorted and re-capped: normalizeFindings ordered and bounded the
-    // model's own findings, but concatenating syntax and diff findings onto
-    // the end breaks both, and the contract publishes "worst first, capped".
+    // model's own findings, but concatenating the other sources onto the end
+    // breaks both, and the contract publishes "worst first, capped".
     const allFindings = sortAndCapFindings([
       ...translationQuality.findings,
       ...syntaxFindings,
       ...diffFindings,
+      ...modelCheckFindings,
+      ...deterministicFindings,
     ]);
-
-    const diffChecks = {
-      scopeCorrect: diffQuality.scopeCorrect,
-      positionCorrect: diffQuality.positionCorrect,
-      structurePreserved: diffQuality.structurePreserved,
-      headingMapCorrect: diffQuality.headingMapCorrect,
-    };
     // A failed source fetch is only a warning on the fetch path (getSourceDiff
     // catches everything and returns empty maps), so the review can end up
     // scoring the target against nothing and calling it clean. That must never
@@ -897,6 +993,7 @@ export class TranslationReviewer {
         formatting: translationQuality.formatting,
       },
       diffChecks,
+      diffCheckSources,
       syntaxErrorCount: translationQuality.syntaxErrors.length,
       findings: allFindings,
       findingsMalformed: translationQuality.findingsMalformed,
@@ -936,17 +1033,18 @@ export class TranslationReviewer {
         terminology: translationQuality.terminology,
         formatting: translationQuality.formatting,
         translation: translationQuality.score,
-        diff: diffQuality.score,
+        diff: mergedDiffQuality.score,
         overall: Math.round(overallScore * 10) / 10,
       },
       diffChecks,
+      diffCheckSources,
       syntaxErrorCount: translationQuality.syntaxErrors.length,
       findings: allFindings,
     };
 
     // Generate review comment, with the machine-readable block at the end
     const reviewComment =
-      this.generateReviewComment(translationQuality, diffQuality, verdict, {
+      this.generateReviewComment(translationQuality, mergedDiffQuality, verdict, {
         recommendation,
         reasons,
         wouldAutoMerge,
@@ -961,7 +1059,7 @@ export class TranslationReviewer {
       prNumber,
       timestamp,
       translationQuality,
-      diffQuality,
+      diffQuality: mergedDiffQuality,
       overallScore: Math.round(overallScore * 10) / 10,
       verdict,
       recommendation,

@@ -26680,7 +26680,7 @@ function validateReviewPREvent(context2) {
 }
 
 // dist/reviewer.js
-var core2 = __toESM(require_core(), 1);
+var core3 = __toESM(require_core(), 1);
 var github = __toESM(require_github(), 1);
 
 // node_modules/@anthropic-ai/sdk/internal/tslib.mjs
@@ -31797,1779 +31797,6 @@ function parseTranslationSyncMetadata(prBody) {
   }
 }
 
-// dist/review-verdict.js
-var fs = __toESM(require("fs"), 1);
-var path2 = __toESM(require("path"), 1);
-var REVIEW_VERDICT_MARKER = "translation-review-verdict";
-var REVIEW_VERDICT_SCHEMA_VERSION = 1;
-var MAX_FINDINGS = 20;
-var MAX_FIELD_LENGTH = 400;
-var SEVERITIES = ["blocker", "major", "minor", "nit"];
-var CATEGORIES = [
-  "accuracy",
-  "fluency",
-  "terminology",
-  "formatting",
-  "syntax",
-  "structure",
-  "other"
-];
-var GATING_CATEGORIES = [
-  "accuracy",
-  "terminology",
-  "syntax",
-  "other"
-];
-var MAX_CRITERION_SCORE = 10;
-var DIFF_CHECK_NAMES = [
-  "scopeCorrect",
-  "positionCorrect",
-  "structurePreserved",
-  "headingMapCorrect"
-];
-var CRITERION_FLOORS = {
-  accuracy: 9,
-  terminology: 9,
-  fluency: 8,
-  formatting: 8
-};
-var _cachedEngineVersion;
-function getEngineVersion() {
-  if (_cachedEngineVersion !== void 0)
-    return _cachedEngineVersion;
-  if (typeof __dirname === "string") {
-    try {
-      const pkgPath = path2.resolve(__dirname, "../package.json");
-      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-      if (pkg.name === "action-translation" && typeof pkg.version === "string") {
-        _cachedEngineVersion = pkg.version;
-        return _cachedEngineVersion;
-      }
-    } catch {
-    }
-    try {
-      const pkgPath = path2.resolve(__dirname, "../../package.json");
-      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-      if (pkg.name === "action-translation" && typeof pkg.version === "string") {
-        _cachedEngineVersion = pkg.version;
-        return _cachedEngineVersion;
-      }
-    } catch {
-    }
-  }
-  _cachedEngineVersion = "unknown";
-  return _cachedEngineVersion;
-}
-var isPlainObject3 = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
-function truncateField(value) {
-  return truncate(value);
-}
-function truncate(value) {
-  const s = typeof value === "string" ? value : String(value);
-  return s.length > MAX_FIELD_LENGTH ? `${s.slice(0, MAX_FIELD_LENGTH - 1)}\u2026` : s;
-}
-function asOptionalText(value) {
-  if (typeof value !== "string" || value.trim() === "")
-    return null;
-  return truncate(value);
-}
-function describeLooseObject(obj) {
-  const description = obj.description || obj.issue || obj.problem || obj.message;
-  if (description)
-    return truncate(description);
-  const original = obj.original || obj.current || obj.translated || obj.text;
-  const suggestion = obj.suggestion || obj.recommended || obj.fix || obj.correction;
-  if (original && suggestion)
-    return truncate(`"${original}" \u2192 "${suggestion}"`);
-  return truncate(JSON.stringify(obj));
-}
-function severityRank(severity) {
-  return SEVERITIES.indexOf(severity);
-}
-function normalizeFindings(rawFindings, legacyIssues, validFiles) {
-  const soleFile = validFiles.length === 1 ? validFiles[0] : null;
-  const toFinding = (item, forceConservative2) => {
-    if (typeof item === "object" && item !== null && !Array.isArray(item)) {
-      const obj = item;
-      const severity = !forceConservative2 && SEVERITIES.includes(obj.severity) ? obj.severity : "major";
-      const category = !forceConservative2 && CATEGORIES.includes(obj.category) ? obj.category : "other";
-      const claimedFile = typeof obj.file === "string" ? obj.file : null;
-      const file = soleFile ?? (claimedFile && validFiles.includes(claimedFile) ? claimedFile : null);
-      return {
-        severity,
-        category,
-        file,
-        location: asOptionalText(obj.location),
-        description: describeLooseObject(obj),
-        suggestion: asOptionalText(obj.suggestion)
-      };
-    }
-    return {
-      severity: "major",
-      category: "other",
-      file: soleFile,
-      location: null,
-      description: truncate(item),
-      suggestion: null
-    };
-  };
-  let items;
-  let forceConservative = false;
-  let malformed = false;
-  if (Array.isArray(rawFindings) && rawFindings.length > 0) {
-    items = rawFindings;
-  } else if (Array.isArray(rawFindings) && rawFindings.length === 0 && Array.isArray(legacyIssues) && legacyIssues.length > 0) {
-    items = legacyIssues;
-    forceConservative = true;
-  } else if (Array.isArray(rawFindings)) {
-    items = rawFindings;
-  } else if (rawFindings === void 0 && Array.isArray(legacyIssues)) {
-    items = legacyIssues;
-    forceConservative = true;
-    malformed = true;
-  } else {
-    items = [];
-    malformed = true;
-  }
-  const findings = items.map((item) => toFinding(item, forceConservative)).filter((f) => f.description !== "" && f.description !== "{}").sort((a, b) => severityRank(a.severity) - severityRank(b.severity)).slice(0, MAX_FINDINGS);
-  if (items.length > 0 && findings.length === 0) {
-    malformed = true;
-  }
-  return { findings, malformed };
-}
-function sortAndCapFindings(findings) {
-  return [...findings].sort((a, b) => severityRank(a.severity) - severityRank(b.severity)).slice(0, MAX_FINDINGS);
-}
-function findingToDisplayString(finding) {
-  const tag = `**[${finding.severity} \xB7 ${finding.category}]**`;
-  const where = [finding.file, finding.location].filter(Boolean).join(" \u2014 ");
-  const suggestion = finding.suggestion ? ` \u2192 ${finding.suggestion}` : "";
-  return where ? `${tag} ${where}: ${finding.description}${suggestion}` : `${tag} ${finding.description}${suggestion}`;
-}
-function computeRecommendation(input) {
-  const reasons = [];
-  if (input.verdict !== "PASS") {
-    reasons.push(`verdict ${input.verdict} (auto-merge requires PASS)`);
-  }
-  if (input.syntaxErrorCount > 0) {
-    reasons.push(`${input.syntaxErrorCount} syntax error(s)`);
-  }
-  for (const check of DIFF_CHECK_NAMES) {
-    if (input.diffChecks?.[check] !== true)
-      reasons.push(`diff check failed: ${check}`);
-  }
-  if (input.findingsMalformed) {
-    reasons.push("findings payload missing or malformed (fail-closed)");
-  }
-  if (input.sourceContentMissing) {
-    reasons.push("source content could not be fetched \u2014 the review compared against nothing");
-  }
-  if (input.findingsSuppressed) {
-    reasons.push("findings suppressed by max-suggestions=0 \u2014 the findings half of the gate is blind");
-  }
-  const blockers = input.findings.filter((f) => f.severity === "blocker").length;
-  const majors = input.findings.filter((f) => f.severity === "major").length;
-  const gatingMinors = input.findings.filter((f) => f.severity === "minor" && GATING_CATEGORIES.includes(f.category)).length;
-  if (blockers > 0)
-    reasons.push(`${blockers} blocker finding(s)`);
-  if (majors > 0)
-    reasons.push(`${majors} major finding(s)`);
-  if (gatingMinors > 0) {
-    reasons.push(`${gatingMinors} minor finding(s) in gating categories (${GATING_CATEGORIES.join("/")})`);
-  }
-  const scores = isPlainObject3(input.scores) ? input.scores : {};
-  for (const [criterion, floor] of Object.entries(CRITERION_FLOORS)) {
-    const score = scores[criterion];
-    if (typeof score !== "number" || !Number.isFinite(score)) {
-      reasons.push(`${criterion} score missing or non-numeric`);
-    } else if (!(score >= floor)) {
-      reasons.push(`${criterion} ${score} below floor ${floor}`);
-    } else if (!(score <= MAX_CRITERION_SCORE)) {
-      reasons.push(`${criterion} ${score} above the ${MAX_CRITERION_SCORE}-point scale`);
-    }
-  }
-  return { recommendation: reasons.length === 0 ? "auto-merge" : "editor", reasons };
-}
-function sanitizeCommentText(text) {
-  return text.replace(/<!--/g, "&lt;!--");
-}
-function buildVerdictBlock(verdict) {
-  const json2 = JSON.stringify(verdict, null, 2).replace(/-->/g, "--\\u003e").replace(/--!>/g, "--!\\u003e");
-  return `<!-- ${REVIEW_VERDICT_MARKER}
-${json2}
--->`;
-}
-
-// dist/reviewer.js
-var DEFAULT_REVIEW_MODEL = DEFAULT_CLAUDE_MODEL;
-var REVIEW_RETRY_CONFIG = {
-  maxRetries: 3,
-  baseDelayMs: 1e3
-  // 1s, 2s, 4s with exponential backoff
-};
-var REVIEW_COMMENT_MARKER = "<!-- action-translation-review -->";
-var LEGACY_REVIEW_HEADING = /^#{2} .*Translation Quality Review/;
-var REVIEW_COMMENT_UPSERT_ATTEMPTS = 3;
-var REVIEW_CRITERIA = [
-  { key: "accuracy", weight: 0.35 },
-  { key: "fluency", weight: 0.25 },
-  { key: "terminology", weight: 0.25 },
-  { key: "formatting", weight: 0.15 }
-];
-function validateCriterionScores(result) {
-  const scores = {};
-  const missing = [];
-  for (const { key } of REVIEW_CRITERIA) {
-    const raw = result[key];
-    const value = typeof raw === "number" ? raw : typeof raw === "string" && raw !== "" ? Number(raw) : NaN;
-    if (Number.isFinite(value) && value >= 0 && value <= 10) {
-      scores[key] = value;
-    } else {
-      missing.push(key);
-    }
-  }
-  return missing.length === 0 ? { valid: true, missing, scores } : { valid: false, missing };
-}
-function isActionReviewComment(body) {
-  if (!body)
-    return false;
-  if (body.startsWith(REVIEW_COMMENT_MARKER))
-    return true;
-  return LEGACY_REVIEW_HEADING.test(body) && body.includes("action-translation");
-}
-function isNotFoundError(error3) {
-  return typeof error3 === "object" && error3 !== null && error3.status === 404;
-}
-function parseJsonResponse(text) {
-  let parsed;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-  }
-  if (parsed === void 0) {
-    const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-    if (codeBlockMatch) {
-      const content = codeBlockMatch[1].trim();
-      try {
-        parsed = JSON.parse(content);
-      } catch {
-      }
-    }
-  }
-  if (parsed === void 0) {
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      parsed = JSON.parse(jsonMatch[0]);
-    }
-  }
-  if (parsed === void 0) {
-    throw new Error("No JSON object found in response");
-  }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error("Response JSON is not an object");
-  }
-  return parsed;
-}
-function extractPreamble(content) {
-  const lines = content.split("\n");
-  const preambleLines = [];
-  for (const line of lines) {
-    if (line.match(/^#{1,6}\s+/)) {
-      break;
-    }
-    preambleLines.push(line);
-  }
-  return preambleLines.join("\n").trim();
-}
-function extractSections(content) {
-  const sections = [];
-  const lines = content.split("\n");
-  let currentHeading = "";
-  let currentContent = [];
-  let inSection = false;
-  for (const line of lines) {
-    const headingMatch = line.match(/^(#{2,6})\s+(.+)$/);
-    if (headingMatch) {
-      if (inSection && currentHeading) {
-        sections.push({
-          heading: currentHeading,
-          content: currentContent.join("\n").trim()
-        });
-      }
-      currentHeading = line;
-      currentContent = [];
-      inSection = true;
-    } else if (inSection) {
-      currentContent.push(line);
-    }
-  }
-  if (inSection && currentHeading) {
-    sections.push({
-      heading: currentHeading,
-      content: currentContent.join("\n").trim()
-    });
-  }
-  return sections;
-}
-function headingToId(heading) {
-  return heading.replace(/^#{2,6}\s+/, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
-}
-function identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter) {
-  const changedSections = [];
-  if (!sourceAfter && !targetAfter) {
-    return [{ heading: "(document deleted)", changeType: "deleted" }];
-  }
-  if (!sourceBefore && !targetBefore) {
-    const sections = extractSections(sourceAfter);
-    if (sections.length === 0) {
-      return [{ heading: "(new document)", changeType: "added", englishContent: sourceAfter }];
-    }
-    return sections.map((s) => ({
-      heading: s.heading,
-      changeType: "added",
-      englishContent: s.content
-    }));
-  }
-  const normalizeForComparison = (s) => s.replace(/\r\n/g, "\n").trim();
-  if (normalizeForComparison(sourceBefore) === normalizeForComparison(sourceAfter) && normalizeForComparison(targetBefore) === normalizeForComparison(targetAfter)) {
-    return [{ heading: "(no content changes - file renamed)", changeType: "modified" }];
-  }
-  const sourcePreambleBefore = extractPreamble(sourceBefore);
-  const sourcePreambleAfter = extractPreamble(sourceAfter);
-  const targetPreambleBefore = extractPreamble(targetBefore);
-  const targetPreambleAfter = extractPreamble(targetAfter);
-  if (sourcePreambleBefore !== sourcePreambleAfter || targetPreambleBefore !== targetPreambleAfter) {
-    changedSections.push({
-      heading: "(preamble/frontmatter)",
-      changeType: "modified",
-      englishContent: sourcePreambleAfter,
-      translatedContent: targetPreambleAfter
-    });
-  }
-  const sourceBeforeSections = extractSections(sourceBefore);
-  const sourceAfterSections = extractSections(sourceAfter);
-  const targetAfterSections = extractSections(targetAfter);
-  const beforeById = new Map(sourceBeforeSections.map((s) => [headingToId(s.heading), s]));
-  const afterById = new Map(sourceAfterSections.map((s) => [headingToId(s.heading), s]));
-  for (let i = 0; i < sourceAfterSections.length; i++) {
-    const section = sourceAfterSections[i];
-    const id = headingToId(section.heading);
-    const beforeSection = beforeById.get(id);
-    const targetSection = targetAfterSections[i];
-    if (!beforeSection) {
-      changedSections.push({
-        heading: section.heading,
-        changeType: "added",
-        englishContent: section.content,
-        translatedContent: targetSection?.content
-      });
-    } else if (beforeSection.content !== section.content || beforeSection.heading !== section.heading) {
-      changedSections.push({
-        heading: section.heading,
-        changeType: "modified",
-        englishContent: section.content,
-        translatedContent: targetSection?.content
-      });
-    }
-  }
-  for (const section of sourceBeforeSections) {
-    const id = headingToId(section.heading);
-    if (!afterById.has(id)) {
-      changedSections.push({
-        heading: section.heading,
-        changeType: "deleted"
-      });
-    }
-  }
-  return changedSections;
-}
-var TranslationReviewer = class {
-  anthropic;
-  octokit;
-  model;
-  maxSuggestions;
-  constructor(anthropicApiKey, githubToken, model = DEFAULT_REVIEW_MODEL, maxSuggestions = 5) {
-    this.anthropic = new Anthropic({ apiKey: anthropicApiKey });
-    this.octokit = github.getOctokit(githubToken);
-    this.model = model;
-    this.maxSuggestions = maxSuggestions;
-  }
-  sleep(ms) {
-    return new Promise((resolve3) => setTimeout(resolve3, ms));
-  }
-  /**
-   * Call Claude API with retry logic and exponential backoff.
-   * Retries on transient API errors and parse failures.
-   */
-  async callWithRetry(prompt, maxTokens, operationName) {
-    const { maxRetries, baseDelayMs } = REVIEW_RETRY_CONFIG;
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const stream = this.anthropic.messages.stream({
-          model: this.model,
-          max_tokens: maxTokens,
-          thinking: DEFAULT_THINKING,
-          messages: [{ role: "user", content: prompt }]
-        });
-        const response = await stream.finalMessage();
-        if (response.stop_reason === "max_tokens") {
-          throw new Error(`${operationName}: response truncated at max_tokens=${maxTokens}; verdict JSON is incomplete`);
-        }
-        const content = response.content[0];
-        if (!content || content.type !== "text") {
-          throw new Error(`Unexpected response from Claude: ${content ? content.type : `empty content (stop_reason: ${response.stop_reason})`}`);
-        }
-        return parseJsonResponse(content.text);
-      } catch (error3) {
-        if (error3 instanceof AuthenticationError || error3 instanceof BadRequestError) {
-          throw error3;
-        }
-        const isApiRetryable = error3 instanceof RateLimitError || error3 instanceof APIConnectionError || error3 instanceof APIError && error3.status !== void 0 && error3.status >= 500;
-        const isParseFailure = error3 instanceof SyntaxError || error3 instanceof Error && error3.message.includes("No JSON object");
-        if (!isApiRetryable && !isParseFailure || attempt === maxRetries) {
-          if (isParseFailure) {
-            core2.error(`${operationName}: Failed to parse response after ${maxRetries} attempts`);
-          }
-          throw error3;
-        }
-        const delay = baseDelayMs * Math.pow(2, attempt - 1);
-        core2.info(`${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error3 instanceof Error ? error3.message : error3}. Retrying in ${delay}ms...`);
-        await this.sleep(delay);
-      }
-    }
-    throw new Error("Unexpected: retry loop completed without result");
-  }
-  /**
-   * Parse source PR number from translation PR body
-   * Looks for: ### Source PR\n**[#123 - ...
-   */
-  parseSourcePRNumber(prBody) {
-    if (!prBody)
-      return null;
-    const match = prBody.match(/### Source PR\r?\n\*\*\[#(\d+)/);
-    if (match) {
-      return parseInt(match[1], 10);
-    }
-    return null;
-  }
-  /**
-   * Get source PR diff (English before/after)
-   */
-  async getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames) {
-    const before = /* @__PURE__ */ new Map();
-    const after = /* @__PURE__ */ new Map();
-    try {
-      const { data: sourcePr } = await this.octokit.rest.pulls.get({
-        owner: sourceOwner,
-        repo: sourceRepoName,
-        pull_number: sourcePrNumber
-      });
-      const sourceFiles = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
-        owner: sourceOwner,
-        repo: sourceRepoName,
-        pull_number: sourcePrNumber
-      });
-      for (const filename of filenames) {
-        const sourceFile = sourceFiles.find((f) => f.filename === filename);
-        const beforeFilename = sourceFile?.status === "renamed" && sourceFile.previous_filename ? sourceFile.previous_filename : filename;
-        if (!sourceFile || sourceFile.status !== "added") {
-          try {
-            const { data: beforeData } = await this.octokit.rest.repos.getContent({
-              owner: sourceOwner,
-              repo: sourceRepoName,
-              path: beforeFilename,
-              ref: sourcePr.base.sha
-            });
-            if ("content" in beforeData) {
-              before.set(filename, Buffer.from(beforeData.content, "base64").toString("utf-8"));
-            }
-          } catch {
-          }
-        }
-        if (!sourceFile || sourceFile.status !== "removed") {
-          try {
-            const { data: afterData } = await this.octokit.rest.repos.getContent({
-              owner: sourceOwner,
-              repo: sourceRepoName,
-              path: filename,
-              ref: sourcePr.head.sha
-            });
-            if ("content" in afterData) {
-              after.set(filename, Buffer.from(afterData.content, "base64").toString("utf-8"));
-            }
-          } catch {
-          }
-        }
-      }
-      core2.info(`\u2713 Fetched source PR #${sourcePrNumber} diff for ${filenames.length} file(s)`);
-    } catch (error3) {
-      core2.warning(`Could not fetch source PR #${sourcePrNumber}: ${error3}`);
-    }
-    return { before, after };
-  }
-  /**
-   * Get source content at a specific commit (for resync PRs, which have no
-   * source PR). Returns the same shape as getSourceDiff with an empty
-   * `before` map — a resync review compares the whole target against the
-   * current source, not against a source-side diff.
-   */
-  async getSourceAtCommit(sourceOwner, sourceRepoName, commitSha, filenames) {
-    const before = /* @__PURE__ */ new Map();
-    const after = /* @__PURE__ */ new Map();
-    for (const filename of filenames) {
-      try {
-        const { data } = await this.octokit.rest.repos.getContent({
-          owner: sourceOwner,
-          repo: sourceRepoName,
-          path: filename,
-          ref: commitSha
-        });
-        if ("content" in data) {
-          after.set(filename, Buffer.from(data.content, "base64").toString("utf-8"));
-        }
-      } catch (error3) {
-        core2.warning(`Could not fetch ${filename} @ ${commitSha.substring(0, 7)}: ${error3}`);
-      }
-    }
-    core2.info(`\u2713 Fetched source @ ${commitSha.substring(0, 7)} for ${after.size}/${filenames.length} file(s)`);
-    return { before, after };
-  }
-  /**
-   * Review a translation PR
-   */
-  async reviewPR(prNumber, sourceRepo, targetOwner, targetRepo, docsFolder, glossaryTerms, targetLanguage, autoMergeMode = "off") {
-    core2.info(`Starting review of PR #${prNumber}...`);
-    const { data: pr } = await this.octokit.rest.pulls.get({
-      owner: targetOwner,
-      repo: targetRepo,
-      pull_number: prNumber
-    });
-    const files = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
-      owner: targetOwner,
-      repo: targetRepo,
-      pull_number: prNumber
-    });
-    const markdownFiles = files.filter((f) => f.filename.startsWith(docsFolder) && f.filename.endsWith(".md"));
-    if (markdownFiles.length === 0) {
-      core2.info("No markdown files to review");
-      const emptyResult = {
-        prNumber,
-        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-        translationQuality: {
-          score: 10,
-          accuracy: 10,
-          fluency: 10,
-          terminology: 10,
-          formatting: 10,
-          syntaxErrors: [],
-          findings: [],
-          findingsMalformed: false,
-          issues: [],
-          strengths: ["No markdown files to review"],
-          summary: "No markdown files changed in this PR."
-        },
-        diffQuality: {
-          score: 10,
-          scopeCorrect: true,
-          positionCorrect: true,
-          structurePreserved: true,
-          headingMapCorrect: true,
-          issues: [],
-          summary: "No changes to evaluate.",
-          scopeDetails: "No markdown files changed.",
-          positionDetails: "N/A",
-          structureDetails: "N/A"
-        },
-        overallScore: 10,
-        verdict: "PASS",
-        // Fail-closed: with nothing reviewed there is nothing to gate on.
-        recommendation: "editor",
-        recommendationReasons: ["no markdown files reviewed \u2014 nothing to gate"],
-        autoMergeMode,
-        ...autoMergeMode === "shadow" ? { wouldAutoMerge: false } : {},
-        reviewedHeadSha: pr.head.sha,
-        reviewComment: "No markdown files to review in this PR."
-      };
-      return emptyResult;
-    }
-    const [sourceOwner, sourceRepoName] = sourceRepo.split("/");
-    const sourcePrNumber = this.parseSourcePRNumber(pr.body);
-    let resyncMetadata;
-    if (!sourcePrNumber) {
-      const metadata = parseTranslationSyncMetadata(pr.body || "");
-      if (metadata && !metadata.sourcePR && metadata.sourceCommitSha) {
-        resyncMetadata = metadata;
-        core2.info(`No source PR reference \u2014 resync PR detected; reviewing against source @ ${metadata.sourceCommitSha.substring(0, 7)}`);
-      } else {
-        throw new Error('Could not find source PR reference in translation PR body. This PR may not have been created by the translation action. Expected format: "### Source PR\\n**[#123..." (or a translation-sync-metadata block for resync PRs)');
-      }
-    } else {
-      core2.info(`Found source PR reference: #${sourcePrNumber}`);
-    }
-    const filenames = markdownFiles.map((f) => f.filename);
-    const { before: sourceBeforeMap, after: sourceAfterMap } = resyncMetadata ? await this.getSourceAtCommit(sourceOwner, sourceRepoName, resyncMetadata.sourceCommitSha, filenames) : await this.getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames);
-    let sourceEnglish = "";
-    let targetTranslation = "";
-    let sourceBefore = "";
-    let targetBefore = "";
-    const changedSections = [];
-    for (const file of markdownFiles) {
-      try {
-        const { data: targetData } = await this.octokit.rest.repos.getContent({
-          owner: targetOwner,
-          repo: targetRepo,
-          path: file.filename,
-          ref: pr.head.sha
-        });
-        if ("content" in targetData) {
-          targetTranslation += Buffer.from(targetData.content, "base64").toString("utf-8") + "\n\n";
-        }
-        try {
-          const { data: targetBeforeData } = await this.octokit.rest.repos.getContent({
-            owner: targetOwner,
-            repo: targetRepo,
-            path: file.filename,
-            ref: pr.base.sha
-          });
-          if ("content" in targetBeforeData) {
-            targetBefore += Buffer.from(targetBeforeData.content, "base64").toString("utf-8") + "\n\n";
-          }
-        } catch {
-        }
-        if (sourceAfterMap.has(file.filename)) {
-          sourceEnglish += sourceAfterMap.get(file.filename) + "\n\n";
-        } else {
-          core2.warning(`Source content not found for ${file.filename} in ${resyncMetadata ? `source @ ${resyncMetadata.sourceCommitSha.substring(0, 7)}` : `source PR #${sourcePrNumber}`}`);
-        }
-        if (sourceBeforeMap.has(file.filename)) {
-          sourceBefore += sourceBeforeMap.get(file.filename) + "\n\n";
-        }
-      } catch (error3) {
-        core2.warning(`Error processing ${file.filename}: ${error3}`);
-      }
-    }
-    if (resyncMetadata) {
-      changedSections.push({
-        heading: "(whole-file resync \u2014 the entire document was re-aligned to the current source)",
-        changeType: "modified"
-      });
-    } else {
-      const detectedChanges = identifyChangedSections(sourceBefore, sourceEnglish, targetBefore, targetTranslation);
-      changedSections.push(...detectedChanges);
-    }
-    const translationQuality = await this.evaluateTranslation(sourceEnglish, targetTranslation, changedSections, filenames, glossaryTerms, targetLanguage);
-    const diffQuality = await this.evaluateDiff(resyncMetadata ? sourceEnglish : sourceBefore, sourceEnglish, targetBefore, targetTranslation, markdownFiles.map((f) => ({
-      filename: f.filename,
-      status: f.status,
-      additions: f.additions,
-      deletions: f.deletions
-    })), resyncMetadata !== void 0);
-    const overallScore = translationQuality.score * 0.7 + diffQuality.score * 0.3;
-    let verdict;
-    if (overallScore >= 8 && translationQuality.syntaxErrors.length === 0) {
-      verdict = "PASS";
-    } else if (overallScore >= 6) {
-      verdict = "WARN";
-    } else {
-      verdict = "FAIL";
-    }
-    const soleFile = filenames.length === 1 ? filenames[0] : null;
-    const syntaxFindings = translationQuality.syntaxErrors.map((e) => ({
-      severity: "blocker",
-      category: "syntax",
-      file: soleFile,
-      location: null,
-      description: truncateField(e),
-      suggestion: null
-    }));
-    const diffFindings = diffQuality.issues.map((i) => ({
-      severity: "minor",
-      category: "structure",
-      file: soleFile,
-      location: null,
-      description: truncateField(i),
-      suggestion: null
-    }));
-    const allFindings = sortAndCapFindings([
-      ...translationQuality.findings,
-      ...syntaxFindings,
-      ...diffFindings
-    ]);
-    const diffChecks = {
-      scopeCorrect: diffQuality.scopeCorrect,
-      positionCorrect: diffQuality.positionCorrect,
-      structurePreserved: diffQuality.structurePreserved,
-      headingMapCorrect: diffQuality.headingMapCorrect
-    };
-    const sourceContentMissing = sourceEnglish.trim() === "";
-    if (sourceContentMissing) {
-      core2.warning("No source content was fetched for any reviewed file \u2014 the verdict is not a real comparison and routes to editor");
-    }
-    const { recommendation, reasons } = computeRecommendation({
-      verdict,
-      scores: {
-        accuracy: translationQuality.accuracy,
-        fluency: translationQuality.fluency,
-        terminology: translationQuality.terminology,
-        formatting: translationQuality.formatting
-      },
-      diffChecks,
-      syntaxErrorCount: translationQuality.syntaxErrors.length,
-      findings: allFindings,
-      findingsMalformed: translationQuality.findingsMalformed,
-      sourceContentMissing,
-      // With max-suggestions: 0 the prompt asks for no findings at all, so an
-      // empty findings array is not evidence of a clean translation.
-      findingsSuppressed: this.maxSuggestions === 0
-    });
-    const wouldAutoMerge = autoMergeMode === "shadow" ? recommendation === "auto-merge" : void 0;
-    if (autoMergeMode === "shadow") {
-      core2.notice(`Shadow auto-merge gate: would ${wouldAutoMerge ? "" : "NOT "}auto-merge PR #${prNumber}` + (wouldAutoMerge ? "" : ` \u2014 ${reasons.join("; ")}`) + " (recorded in the verdict block; no action taken)");
-    }
-    const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
-    const verdictV2 = {
-      schemaVersion: REVIEW_VERDICT_SCHEMA_VERSION,
-      engineVersion: getEngineVersion(),
-      reviewerModel: this.model,
-      reviewedHeadSha: pr.head.sha,
-      targetBaseSha: pr.base.sha,
-      sourceRepo,
-      prNumber,
-      timestamp: timestamp2,
-      verdict,
-      recommendation,
-      recommendationReasons: reasons,
-      autoMergeMode,
-      ...wouldAutoMerge !== void 0 ? { wouldAutoMerge } : {},
-      scores: {
-        accuracy: translationQuality.accuracy,
-        fluency: translationQuality.fluency,
-        terminology: translationQuality.terminology,
-        formatting: translationQuality.formatting,
-        translation: translationQuality.score,
-        diff: diffQuality.score,
-        overall: Math.round(overallScore * 10) / 10
-      },
-      diffChecks,
-      syntaxErrorCount: translationQuality.syntaxErrors.length,
-      findings: allFindings
-    };
-    const reviewComment = this.generateReviewComment(translationQuality, diffQuality, verdict, {
-      recommendation,
-      reasons,
-      wouldAutoMerge
-    }) + "\n\n" + buildVerdictBlock(verdictV2);
-    await this.postReviewComment(prNumber, targetOwner, targetRepo, reviewComment);
-    const result = {
-      prNumber,
-      timestamp: timestamp2,
-      translationQuality,
-      diffQuality,
-      overallScore: Math.round(overallScore * 10) / 10,
-      verdict,
-      recommendation,
-      recommendationReasons: reasons,
-      autoMergeMode,
-      ...wouldAutoMerge !== void 0 ? { wouldAutoMerge } : {},
-      reviewedHeadSha: pr.head.sha,
-      reviewComment
-    };
-    return result;
-  }
-  /**
-   * Evaluate translation quality using Claude
-   */
-  async evaluateTranslation(sourceEnglish, targetTranslation, changedSections, filenames, glossaryTerms, targetLanguage) {
-    const changedSectionsPrompt = this.formatChangedSections(changedSections);
-    const filesList = filenames.map((f) => `- ${f}`).join("\n");
-    const languageNames = {
-      "zh-cn": "Simplified Chinese",
-      "zh-tw": "Traditional Chinese",
-      fa: "Persian (Farsi)",
-      es: "Spanish",
-      fr: "French",
-      de: "German",
-      ja: "Japanese",
-      ko: "Korean"
-    };
-    const targetLangName = targetLanguage ? languageNames[targetLanguage] || targetLanguage : "the target language";
-    const glossarySection = glossaryTerms ? `
-## Reference Glossary
-The translation should follow this established terminology glossary:
-${glossaryTerms}
-` : "";
-    const prompt = `You are a professional translator and quality evaluator specializing in technical/academic content translation from English to ${targetLangName}.
-
-## Task
-Evaluate the quality of the ${targetLangName} translation compared to the English source.
-${changedSectionsPrompt}
-## English Source Document
-\`\`\`markdown
-${sourceEnglish}
-\`\`\`
-
-## ${targetLangName} Translation
-\`\`\`markdown
-${targetTranslation}
-\`\`\`
-${glossarySection}
-## IMPORTANT: About the Translation Metadata
-
-The ${targetLangName} translation contains a \`translation\` section in the YAML frontmatter that is NOT present in the English source. This is CORRECT and EXPECTED behavior:
-
-\`\`\`yaml
-translation:
-  title: "\u4ECB\u7ECD"
-  headings:
-    introduction: "\u4ECB\u7ECD"
-    background: "\u80CC\u666F"
-\`\`\`
-
-This is a feature of the translation sync system that maps English heading IDs to ${targetLangName} headings for section matching across languages. The \`title\` field tracks the translated document title. Do NOT flag this as an issue or formatting problem - it is intentional and does not affect Jupyter Book compilation.
-
-**Note on double-colon notation**: The headings may use \`section::subsection\` notation (e.g., \`supply-and-demand::market-dynamics\`) to represent hierarchical headings. This double-colon \`::\` syntax is intentional and valid - it represents the relationship between a section and its nested subsection. This is safe in YAML because YAML only treats \`:\` as a key-value separator when followed by a space.
-
-## Evaluation Criteria
-Rate each criterion from 1-10:
-
-1. **Accuracy** (1-10): Does the translation accurately convey the meaning of the English source?
-   - Technical terms translated correctly
-   - No missing or added information
-   - Mathematical concepts preserved
-
-2. **Fluency** (1-10): Does the translation read naturally in ${targetLangName}?
-   - Natural sentence structure
-   - Appropriate academic register
-   - No awkward phrasing
-
-3. **Terminology** (1-10): Is technical terminology consistent and correct?
-   - Does the translation follow the reference glossary above?
-   - Domain-specific terms handled appropriately
-   - Consistent translation of repeated terms
-   - Proper use of established ${targetLangName} terminology
-
-4. **Formatting** (1-10): Is MyST/Markdown formatting preserved?
-   - Math equations (LaTeX) intact
-   - Code blocks preserved
-   - Headings, lists, and structure maintained
-   - Links and references correct
-
-5. **Syntax** (check for errors): Check for markdown/MyST syntax errors in the translation:
-   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
-   - Code blocks must have matching \`\`\` delimiters
-   - Math blocks must have matching $$ delimiters
-   - MyST directives must use correct syntax: \`\`\`{directive}
-   - Report any syntax errors found - these are CRITICAL issues that must be fixed
-
-## Files Under Review
-The changed markdown files in this PR are (the document blocks above concatenate them in this order):
-${filesList}
-
-## Response Format
-Respond with ONLY valid JSON in this exact format (no markdown code blocks):
-{
-  "accuracy": <number 1-10>,
-  "fluency": <number 1-10>,
-  "terminology": <number 1-10>,
-  "formatting": <number 1-10>,
-  "syntaxErrors": ["error 1 with line/location if possible", "error 2"],
-  "findings": [
-    {
-      "severity": "blocker|major|minor|nit",
-      "category": "accuracy|fluency|terminology|formatting",
-      "file": "<one of the file paths listed under Files Under Review, or null>",
-      "location": "<section heading or a short quote locating the finding, or null>",
-      "description": "<what is wrong, specific and self-contained>",
-      "suggestion": "<proposed replacement text, or null>"
-    }
-  ],
-  "strengths": ["strength 1", "strength 2"],
-  "summary": "Brief overall assessment"
-}
-
-Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors are found. Syntax errors are CRITICAL and should always be reported even if the array would otherwise be empty.
-
-## Findings Guidelines
-- The "findings" array can contain **0 to ${this.maxSuggestions} findings** - an empty array [] is perfectly valid for excellent translations
-- Severity meanings:
-  - "blocker": meaning inversion, wrong mathematics or code, or broken MyST that will not build
-  - "major": an accuracy or terminology error a reader would be misled by
-  - "minor": correct but awkward phrasing, or a minor terminology inconsistency
-  - "nit": a stylistic preference
-- "category" must name the criterion the finding counts against
-- "file" must be one of the listed file paths (or null if you cannot attribute the finding)
-- Each finding must be specific and actionable; prioritize by importance: accuracy first, then fluency, terminology, formatting
-- Do NOT invent findings just to fill the array - quality over quantity
-
-**CRITICAL**: Findings MUST relate ONLY to the sections that were changed in this PR. Do not report findings for unchanged parts of the document.`;
-    let result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateTranslation");
-    let check = validateCriterionScores(result);
-    if (!check.valid) {
-      core2.warning(`evaluateTranslation: response missing numeric criteria [${check.missing.join(", ")}] \u2014 retrying`);
-      result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateTranslation");
-      check = validateCriterionScores(result);
-      if (!check.valid) {
-        throw new Error(`evaluateTranslation: response still missing numeric criterion scores [${check.missing.join(", ")}] after retry \u2014 refusing to compute a verdict from an incomplete review`);
-      }
-    }
-    const scores = check.scores;
-    const score = REVIEW_CRITERIA.reduce((sum, c) => sum + scores[c.key] * c.weight, 0);
-    const { findings, malformed } = normalizeFindings(result.findings, result.issues, filenames);
-    if (malformed) {
-      core2.warning("evaluateTranslation: findings payload missing or malformed \u2014 recommendation will fail closed to editor");
-    }
-    return {
-      score: Math.round(score * 10) / 10,
-      accuracy: scores.accuracy,
-      fluency: scores.fluency,
-      terminology: scores.terminology,
-      formatting: scores.formatting,
-      syntaxErrors: Array.isArray(result.syntaxErrors) ? result.syntaxErrors.map((e) => String(e)) : [],
-      findings,
-      findingsMalformed: malformed,
-      issues: findings.map(findingToDisplayString),
-      strengths: result.strengths || [],
-      summary: result.summary || ""
-    };
-  }
-  /**
-   * Evaluate diff quality using Claude
-   */
-  async evaluateDiff(sourceBefore, sourceAfter, targetBefore, targetAfter, targetFiles, isResync = false) {
-    const contextNote = isResync ? `A whole-file resync re-aligned the target document to the current source: the source "Before" and "After" below are identical (the current source), and the target diff may legitimately be large \u2014 do not penalize its size. Evaluate whether the final target matches the current source's structure and content. We need to verify:` : `A translation sync action detected changes in an English source document and created corresponding changes in the target document. We need to verify:`;
-    const prompt = `You are an expert code reviewer specializing in translation sync workflows. Your task is to verify that translation changes are correctly positioned in the target document.
-
-## Context
-${contextNote}
-
-1. **Scope**: Only the correct files were modified
-2. **Position**: Changes appear in the same relative positions
-3. **Structure**: Document structure is preserved
-4. **Translation metadata**: The translation metadata in frontmatter is correctly updated
-
-## IMPORTANT: About the Translation Metadata System
-
-The \`translation\` section in the frontmatter is a CRITICAL feature of this translation system, NOT a bug. Here's how it works:
-
-- English headings generate IDs from English text: \`## Introduction\` \u2192 ID: \`introduction\`
-- Translated headings generate IDs from translated text: \`## \u4ECB\u7ECD\` \u2192 ID: \`\u4ECB\u7ECD\`
-- The translation headings bridge this gap by mapping English IDs to translated headings
-
-Example:
-\`\`\`yaml
-translation:
-  title: "\u4ECB\u7ECD"
-  headings:
-    introduction: "\u4ECB\u7ECD"
-    supply-and-demand: "\u4F9B\u9700\u5206\u6790"
-\`\`\`
-
-**Note on double-colon notation**: The headings may use \`section::subsection\` notation to represent hierarchical headings. This is intentional and valid YAML.
-
-## Source Document (English)
-### Before:
-\`\`\`markdown
-${sourceBefore}
-\`\`\`
-
-### After:
-\`\`\`markdown
-${sourceAfter}
-\`\`\`
-
-## Target Document (Translation)
-### Before:
-\`\`\`markdown
-${targetBefore}
-\`\`\`
-
-### After:
-\`\`\`markdown
-${targetAfter}
-\`\`\`
-
-### Files Changed:
-${targetFiles.map((f) => `- ${f.filename}: ${f.status} (+${f.additions}/-${f.deletions})`).join("\n")}
-
-## Verification Checks
-Evaluate each criterion:
-
-1. **Scope Correct**: Were only the necessary files modified? The target should change the same files as the source.
-2. **Position Correct**: Do changes appear in the same sections as source? Section order should match.
-3. **Structure Preserved**: Is the document structure (heading levels, nesting) maintained?
-4. **Heading-map Correct**: Is the heading-map updated with new/changed headings?
-
-## Response Format
-Respond with ONLY valid JSON:
-{
-  "scopeCorrect": true/false,
-  "positionCorrect": true/false,
-  "structurePreserved": true/false,
-  "headingMapCorrect": true/false,
-  "issues": ["issue 1 if any"],
-  "summary": "One sentence overall summary",
-  "scopeDetails": "Brief explanation of scope check",
-  "positionDetails": "Brief explanation of position check",
-  "structureDetails": "Brief explanation of structure check"
-}`;
-    const result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateDiff");
-    const isTrue = (v) => v === true;
-    const scopeCorrect = isTrue(result.scopeCorrect);
-    const positionCorrect = isTrue(result.positionCorrect);
-    const structurePreserved = isTrue(result.structurePreserved);
-    const headingMapCorrect = isTrue(result.headingMapCorrect);
-    const checks = [scopeCorrect, positionCorrect, structurePreserved, headingMapCorrect];
-    const passedChecks = checks.filter(Boolean).length;
-    const score = passedChecks / checks.length * 10;
-    return {
-      score: Math.round(score * 10) / 10,
-      scopeCorrect,
-      positionCorrect,
-      structurePreserved,
-      headingMapCorrect,
-      issues: Array.isArray(result.issues) ? result.issues.map((i) => String(i)) : [],
-      summary: result.summary || "",
-      scopeDetails: result.scopeDetails || "",
-      positionDetails: result.positionDetails || "",
-      structureDetails: result.structureDetails || ""
-    };
-  }
-  /**
-   * Format changed sections for the prompt
-   */
-  formatChangedSections(changedSections) {
-    if (changedSections.length === 0) {
-      return "";
-    }
-    const sectionsList = changedSections.map((s) => {
-      if (s.changeType === "deleted") {
-        return `- **DELETED**: ${s.heading}`;
-      }
-      return `- **${s.changeType.toUpperCase()}**: ${s.heading}`;
-    }).join("\n");
-    return `
-## IMPORTANT: Changed Sections in This PR
-
-The following sections were actually modified in this PR. **Your suggestions MUST focus ONLY on these changed sections**. Do NOT suggest improvements for unchanged parts of the document.
-
-${sectionsList}
-
-**Rule**: Any suggestions you make must be about the translation quality of the changed sections listed above. Ignore any issues in other parts of the document - those can be addressed in a separate comprehensive review.
-`;
-  }
-  /**
-   * Generate review comment
-   */
-  generateReviewComment(translationResult, diffResult, verdict, routing) {
-    const emoji = verdict === "PASS" ? "\u2705" : verdict === "WARN" ? "\u26A0\uFE0F" : "\u274C";
-    let routingLines = "";
-    if (routing) {
-      routingLines = `
-**Routing**: \`${routing.recommendation}\`${routing.reasons.length > 0 ? ` \u2014 ${routing.reasons.join("; ")}` : " \u2014 no gating findings; floors met"}`;
-      if (routing.wouldAutoMerge !== void 0) {
-        routingLines += `
-**Shadow gate**: would ${routing.wouldAutoMerge ? "" : "NOT "}auto-merge (recorded only; no action taken)`;
-      }
-    }
-    let comment = `## ${emoji} Translation Quality Review
-
-**Verdict**: ${verdict} | **Model**: ${this.model} | **Date**: ${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}${routingLines}
-
----
-
-### \u{1F4DD} Translation Quality
-
-| Criterion | Score |
-|-----------|-------|
-| Accuracy | ${translationResult.accuracy}/10 |
-| Fluency | ${translationResult.fluency}/10 |
-| Terminology | ${translationResult.terminology}/10 |
-| Formatting | ${translationResult.formatting}/10 |
-| **Overall** | **${translationResult.score}/10** |
-
-**Summary**: ${sanitizeCommentText(translationResult.summary)}`;
-    if (translationResult.strengths.length > 0) {
-      comment += ` ${sanitizeCommentText(translationResult.strengths.join(" "))}`;
-    }
-    if (translationResult.syntaxErrors && translationResult.syntaxErrors.length > 0) {
-      comment += `
-
-### \u26A0\uFE0F Markdown Syntax Errors (CRITICAL)
-${translationResult.syntaxErrors.map((e) => `- \u{1F534} ${sanitizeCommentText(String(e))}`).join("\n")}`;
-    }
-    if (translationResult.issues.length > 0) {
-      comment += `
-
-**Suggestions**:
-${translationResult.issues.map((i) => `- ${sanitizeCommentText(i)}`).join("\n")}`;
-    }
-    comment += `
-
----
-
-### \u{1F50D} Diff Quality
-
-| Check | Status |
-|-------|--------|
-| Scope Correct | ${diffResult.scopeCorrect ? "\u2705" : "\u274C"} |
-| Position Correct | ${diffResult.positionCorrect ? "\u2705" : "\u274C"} |
-| Structure Preserved | ${diffResult.structurePreserved ? "\u2705" : "\u274C"} |
-| Heading-map Correct | ${diffResult.headingMapCorrect ? "\u2705" : "\u274C"} |
-| **Overall** | **${diffResult.score}/10** |
-
-**Summary**: ${sanitizeCommentText(diffResult.summary)}`;
-    if (diffResult.issues.length > 0) {
-      comment += `
-
-**Issues**:
-${diffResult.issues.map((i) => `- ${sanitizeCommentText(String(i))}`).join("\n")}`;
-    }
-    comment += `
-
----
-*This review was generated automatically by [action-translation](https://github.com/quantecon/action-translation) review mode.*`;
-    return comment;
-  }
-  /**
-   * Our review comments on the PR, oldest first.
-   *
-   * Paginated: beyond 30 comments the existing one is missed and duplicates accumulate.
-   */
-  async listOwnReviewComments(prNumber, owner, repo) {
-    const comments = await this.octokit.paginate(this.octokit.rest.issues.listComments, {
-      owner,
-      repo,
-      issue_number: prNumber,
-      per_page: 100
-    });
-    return comments.filter((c) => isActionReviewComment(c.body)).sort((a, b) => a.id - b.id);
-  }
-  /**
-   * Delete our review comments older than `keepId` — duplicates left by concurrent runs.
-   *
-   * Best effort: a duplicate comment is not worth failing a review that posted successfully.
-   */
-  async deleteOlderReviewComments(prNumber, owner, repo, keepId) {
-    let duplicates;
-    try {
-      duplicates = (await this.listOwnReviewComments(prNumber, owner, repo)).filter((c) => c.id < keepId);
-    } catch (error3) {
-      core2.warning(`Could not check PR #${prNumber} for duplicate review comments: ${error3}`);
-      return;
-    }
-    for (const duplicate of duplicates) {
-      try {
-        await this.octokit.rest.issues.deleteComment({ owner, repo, comment_id: duplicate.id });
-        core2.info(`Removed duplicate review comment ${duplicate.id} on PR #${prNumber}`);
-      } catch (error3) {
-        if (isNotFoundError(error3))
-          continue;
-        core2.warning(`Could not remove duplicate review comment ${duplicate.id} on PR #${prNumber}: ${error3}`);
-      }
-    }
-  }
-  /**
-   * Post the review, leaving exactly one review comment on the PR.
-   *
-   * Concurrent review runs are routine — one sync fires `opened` plus a `labeled` event per
-   * label — and list-then-create is a check-then-act race: every run sees "no comment yet"
-   * and creates one (issue #96). Issue comments have no conditional-write primitive, so each
-   * run instead reconciles after writing, deleting every *older* review comment of ours.
-   * Ids increase with creation time and each run lists after it writes, so the run holding the
-   * highest id necessarily sees the others and removes them: one comment survives any
-   * interleaving. (Deleting *newer* ids instead would not converge — a run that lists before
-   * a slower run creates would leave both.)
-   */
-  async postReviewComment(prNumber, owner, repo, comment) {
-    const body = `${REVIEW_COMMENT_MARKER}
-${comment}`;
-    try {
-      for (let attempt = 1; attempt <= REVIEW_COMMENT_UPSERT_ATTEMPTS; attempt++) {
-        const existing = await this.listOwnReviewComments(prNumber, owner, repo);
-        if (existing.length === 0) {
-          const { data: created } = await this.octokit.rest.issues.createComment({
-            owner,
-            repo,
-            issue_number: prNumber,
-            body
-          });
-          core2.info(`Posted review comment on PR #${prNumber}`);
-          await this.deleteOlderReviewComments(prNumber, owner, repo, created.id);
-          return;
-        }
-        const target = existing[existing.length - 1];
-        try {
-          await this.octokit.rest.issues.updateComment({
-            owner,
-            repo,
-            comment_id: target.id,
-            body
-          });
-        } catch (error3) {
-          if (isNotFoundError(error3) && attempt < REVIEW_COMMENT_UPSERT_ATTEMPTS) {
-            core2.info(`Review comment ${target.id} was removed by a concurrent run, retrying (${attempt})`);
-            continue;
-          }
-          throw error3;
-        }
-        core2.info(`Updated existing review comment on PR #${prNumber}`);
-        await this.deleteOlderReviewComments(prNumber, owner, repo, target.id);
-        return;
-      }
-    } catch (error3) {
-      core2.error(`Failed to post review comment: ${error3}`);
-      throw error3;
-    }
-  }
-};
-
-// dist/translator.js
-var core3 = __toESM(require_core(), 1);
-var INCOMPLETE_DOCUMENT_MARKER = "-----> INCOMPLETE DOCUMENT <------";
-var RETRY_CONFIG = {
-  maxRetries: 3,
-  baseDelayMs: 1e3
-  // 1s, 2s, 4s with exponential backoff
-};
-function estimateOutputTokens(sourceLength, targetLanguage) {
-  const baseTokens = Math.ceil(sourceLength / 4);
-  let expansionFactor = 1.5;
-  if (["ar", "fa", "he"].includes(targetLanguage)) {
-    expansionFactor = 1.8;
-  }
-  if (["zh", "zh-cn", "zh-tw", "ja", "ko"].includes(targetLanguage)) {
-    expansionFactor = 1.3;
-  }
-  const estimatedTokens = Math.ceil(baseTokens * expansionFactor);
-  const buffer = 2e3;
-  return estimatedTokens + buffer;
-}
-function checkDocumentSize(sourceLength, targetLanguage) {
-  const estimated = estimateOutputTokens(sourceLength, targetLanguage);
-  const API_MAX_TOKENS = MAX_TOKENS.fullDocument;
-  if (estimated > API_MAX_TOKENS) {
-    return `Document too large: estimated ${estimated} tokens exceeds API maximum of ${API_MAX_TOKENS} tokens. This document needs section-by-section translation rather than bulk translation.`;
-  }
-  if (process.env.TRANSLATE_DEBUG) {
-    console.log(`Pre-flight check: source=${sourceLength} chars, estimated output=${estimated} tokens, using max_tokens=${API_MAX_TOKENS}`);
-  }
-  return null;
-}
-function formatApiError(error3) {
-  if (error3 instanceof AuthenticationError) {
-    return "Authentication failed: Invalid or expired API key. Check your anthropic-api-key secret.";
-  }
-  if (error3 instanceof RateLimitError) {
-    return "Rate limit exceeded: Too many requests. The action will retry automatically, or try again later.";
-  }
-  if (error3 instanceof APIConnectionError) {
-    return "Connection error: Unable to reach Anthropic API. Check network connectivity.";
-  }
-  if (error3 instanceof BadRequestError) {
-    return `Bad request: ${error3.message}. This may indicate an issue with the prompt or content.`;
-  }
-  if (error3 instanceof APIError) {
-    if (error3.message?.includes("overloaded")) {
-      return "Anthropic API is temporarily overloaded. Retries exhausted \u2014 please try again later.";
-    }
-    return `API error (${error3.status}): ${error3.message}`;
-  }
-  if (error3 instanceof Error) {
-    return error3.message;
-  }
-  return "Unknown translation error";
-}
-var TranslationService = class {
-  client;
-  model;
-  debug;
-  constructor(apiKey, model = DEFAULT_CLAUDE_MODEL, debug = false) {
-    this.client = new Anthropic({ apiKey });
-    this.model = model;
-    this.debug = debug;
-  }
-  log(message) {
-    if (this.debug) {
-      core3.info(`[Translator] ${message}`);
-    }
-  }
-  /**
-   * Sleep for a given number of milliseconds
-   */
-  sleep(ms) {
-    return new Promise((resolve3) => setTimeout(resolve3, ms));
-  }
-  /**
-   * Call Claude API with retry logic and exponential backoff.
-   *
-   * Retries on transient errors:
-   * - RateLimitError (429)
-   * - APIConnectionError (network issues)
-   * - APIError with 5xx status (server errors)
-   * - APIError with overloaded_error (status undefined)
-   *
-   * Does NOT retry on:
-   * - AuthenticationError (invalid API key)
-   * - BadRequestError (prompt issues)
-   * - Other non-transient errors
-   */
-  async callWithRetry(createParams, operationName) {
-    const { maxRetries, baseDelayMs } = RETRY_CONFIG;
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const stream = this.client.messages.stream({
-          ...createParams,
-          thinking: DEFAULT_THINKING
-        });
-        const message = await stream.finalMessage();
-        if (message.stop_reason === "max_tokens") {
-          throw new Error(`${operationName}: response truncated at max_tokens=${createParams.max_tokens}; refusing to use incomplete output`);
-        }
-        return message;
-      } catch (error3) {
-        if (error3 instanceof AuthenticationError || error3 instanceof BadRequestError) {
-          throw error3;
-        }
-        const isRetryable = error3 instanceof RateLimitError || error3 instanceof APIConnectionError || error3 instanceof APIError && (error3.status !== void 0 && error3.status >= 500 || error3.status === void 0 && error3.message?.includes("overloaded"));
-        if (!isRetryable || attempt === maxRetries) {
-          throw error3;
-        }
-        const delay = baseDelayMs * Math.pow(2, attempt - 1);
-        this.log(`${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error3 instanceof Error ? error3.message : error3}. Retrying in ${delay}ms...`);
-        await this.sleep(delay);
-      }
-    }
-    throw new Error("Unexpected: retry loop completed without result");
-  }
-  /**
-   * Translate a section (update, new, or resync)
-   */
-  async translateSection(request2) {
-    try {
-      if (request2.mode === "update") {
-        return await this.translateSectionUpdate(request2);
-      } else if (request2.mode === "resync") {
-        return await this.translateSectionResync(request2);
-      } else {
-        return await this.translateNewSection(request2);
-      }
-    } catch (error3) {
-      return {
-        success: false,
-        error: formatApiError(error3)
-      };
-    }
-  }
-  /**
-   * Update existing section (mode='update')
-   * Claude sees: old English, new English, current translation → produces updated translation
-   */
-  async translateSectionUpdate(request2) {
-    const { oldEnglish, newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } = request2;
-    if (!oldEnglish || !newEnglish || !currentTranslation) {
-      return {
-        success: false,
-        error: "Update mode requires oldEnglish, newEnglish, and currentTranslation"
-      };
-    }
-    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
-    const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
-
-TASK: The ${sourceLanguage} section has been modified. Update the existing ${targetLanguage} translation to reflect these changes.
-
-CRITICAL RULES:
-1. Compare the OLD and NEW ${sourceLanguage} versions to understand what changed
-2. Update the CURRENT ${targetLanguage} translation to reflect these changes
-3. Maintain consistency with the existing ${targetLanguage} style and terminology
-4. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
-5. DO NOT translate code, math, URLs, or technical identifiers
-6. **NEVER remove i18n/localization code from code cells.** The translation may contain extra code inside code cells that does NOT exist in the source \u2014 this is intentional localization (e.g., font configuration like \`from matplotlib import font_manager\`, \`fontP.set_family('SimHei')\`, \`plt.rcParams\` settings, or lines marked \`# i18n\`). Always preserve these.
-7. Use the glossary for consistent terminology
-8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
-   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
-   - Code blocks must have matching \`\`\` delimiters
-   - Math blocks must have matching $$ delimiters
-   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
-${additionalRules}
-${additionalRules ? "" : "9. "}Return ONLY the updated ${targetLanguage} section, no explanations
-${request2.customInstructions || ""}
-${glossarySection}
-
-[OLD ${sourceLanguage} VERSION]
-${oldEnglish}
-[/OLD ${sourceLanguage} VERSION]
-
-[NEW ${sourceLanguage} VERSION]
-${newEnglish}
-[/NEW ${sourceLanguage} VERSION]
-
-[CURRENT ${targetLanguage} TRANSLATION]
-${currentTranslation}
-[/CURRENT ${targetLanguage} TRANSLATION]
-
-Provide ONLY the updated ${targetLanguage} translation. Do not include any markers, explanations, or comments.`;
-    this.log(`Translating section update, mode=update`);
-    this.log(`Old ${sourceLanguage} length: ${oldEnglish.length}`);
-    this.log(`New ${sourceLanguage} length: ${newEnglish.length}`);
-    this.log(`Current ${targetLanguage} length: ${currentTranslation.length}`);
-    const response = await this.callWithRetry({
-      model: this.model,
-      max_tokens: MAX_TOKENS.section,
-      messages: [{ role: "user", content: prompt }]
-    }, "translateSectionUpdate");
-    const content = response.content[0];
-    if (!content || content.type !== "text") {
-      return {
-        success: false,
-        error: "Unexpected response format from Claude"
-      };
-    }
-    this.log(`Translated section length: ${content.text.length}`);
-    return {
-      success: true,
-      translatedSection: content.text.trim(),
-      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
-    };
-  }
-  /**
-   * Resync existing section (mode='resync')
-   * Claude sees: current English + current translation → produces resynced translation
-   *
-   * Used for drift recovery when no baseline (old English) is available.
-   * Preserves existing translation style, terminology, and localization
-   * wherever the meaning hasn't changed.
-   */
-  async translateSectionResync(request2) {
-    const { newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } = request2;
-    if (!newEnglish || !currentTranslation) {
-      return {
-        success: false,
-        error: "Resync mode requires newEnglish (current source) and currentTranslation"
-      };
-    }
-    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
-    const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are resyncing a ${targetLanguage} translation to match the current ${sourceLanguage} source.
-
-TASK: The ${sourceLanguage} source may have changed since the translation was made. Update the ${targetLanguage} translation to accurately reflect the current source content.
-
-CRITICAL RULES:
-1. Preserve the existing ${targetLanguage} translation style, terminology choices, and localization decisions wherever the meaning hasn't changed
-2. Only modify parts of the translation where the ${sourceLanguage} source has different content
-3. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
-4. DO NOT translate code, math, URLs, or technical identifiers
-5. **NEVER remove i18n/localization code from code cells.** The translation may contain extra code inside code cells that does NOT exist in the source \u2014 this is intentional localization (e.g., font configuration like \`from matplotlib import font_manager\`, \`fontP.set_family('SimHei')\`, \`plt.rcParams\` settings, or lines marked \`# i18n\`). Always preserve these.
-6. Use the glossary for consistent terminology
-7. MARKDOWN SYNTAX: Ensure proper markdown syntax:
-   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
-   - Code blocks must have matching \`\`\` delimiters
-   - Math blocks must have matching $$ delimiters
-   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
-${additionalRules}
-${additionalRules ? "" : "8. "}Return ONLY the updated ${targetLanguage} section, no explanations
-${request2.customInstructions || ""}
-${glossarySection}
-
-[CURRENT ${sourceLanguage} SOURCE]
-${newEnglish}
-[/CURRENT ${sourceLanguage} SOURCE]
-
-[EXISTING ${targetLanguage} TRANSLATION]
-${currentTranslation}
-[/EXISTING ${targetLanguage} TRANSLATION]
-
-Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing translation's style and only change what's needed to match the current source. Do not include any markers, explanations, or comments.`;
-    this.log(`Translating section resync, mode=resync`);
-    this.log(`Current ${sourceLanguage} length: ${newEnglish.length}`);
-    this.log(`Existing ${targetLanguage} length: ${currentTranslation.length}`);
-    const response = await this.callWithRetry({
-      model: this.model,
-      max_tokens: MAX_TOKENS.section,
-      messages: [{ role: "user", content: prompt }]
-    }, "translateSectionResync");
-    const content = response.content[0];
-    if (!content || content.type !== "text") {
-      return {
-        success: false,
-        error: "Unexpected response format from Claude"
-      };
-    }
-    this.log(`Resynced section length: ${content.text.length}`);
-    return {
-      success: true,
-      translatedSection: content.text.trim(),
-      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
-    };
-  }
-  /**
-   * Translate new section (mode='new')
-   * Claude sees: English section → produces translation
-   */
-  async translateNewSection(request2) {
-    const { englishSection, sourceLanguage, targetLanguage, glossary } = request2;
-    if (!englishSection) {
-      return {
-        success: false,
-        error: "New mode requires englishSection"
-      };
-    }
-    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
-    const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
-
-RULES:
-1. Translate all prose content accurately
-2. Preserve all MyST Markdown formatting, structure, and directives
-3. DO NOT translate code blocks (keep code as-is)
-4. DO NOT translate mathematical equations (keep LaTeX as-is)
-5. DO NOT translate URLs, file paths, or technical identifiers
-6. Use the glossary for consistent terminology
-7. Maintain heading structure and levels
-8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
-   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
-   - Code blocks must have matching \`\`\` delimiters
-   - Math blocks must have matching $$ delimiters
-   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
-${additionalRules}
-${additionalRules ? "" : "9. "}Return ONLY the translated section, no explanations
-${request2.customInstructions || ""}
-${glossarySection}
-
-[${sourceLanguage} SECTION TO TRANSLATE]
-${englishSection}
-[/END SECTION]
-
-Provide ONLY the ${targetLanguage} translation. Do not include any markers, explanations, or comments.`;
-    this.log(`Translating new section, mode=new`);
-    this.log(`${sourceLanguage} section length: ${englishSection.length}`);
-    const response = await this.callWithRetry({
-      model: this.model,
-      max_tokens: MAX_TOKENS.section,
-      messages: [{ role: "user", content: prompt }]
-    }, "translateNewSection");
-    const content = response.content[0];
-    if (!content || content.type !== "text") {
-      return {
-        success: false,
-        error: "Unexpected response format from Claude"
-      };
-    }
-    this.log(`Translated section length: ${content.text.length}`);
-    return {
-      success: true,
-      translatedSection: content.text.trim(),
-      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
-    };
-  }
-  /**
-   * Translate full document (for new files)
-   */
-  async translateFullDocument(request2) {
-    const { content, sourceLanguage, targetLanguage, glossary } = request2;
-    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
-    const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
-
-RULES:
-1. Translate all prose content
-2. Preserve all MyST Markdown directives and structure exactly
-3. DO NOT translate code blocks (keep code as-is)
-4. DO NOT translate mathematical equations (keep LaTeX as-is)
-5. DO NOT translate URLs, file paths, or technical identifiers
-6. Use the provided glossary for consistent terminology
-7. Maintain the exact same heading structure and anchors
-8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
-   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
-   - Code blocks must have matching \`\`\` delimiters  
-   - Math blocks must have matching $$ delimiters
-   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
-9. DIRECTIVE BLOCKS: MyST directive blocks MUST be balanced:
-   - Every \`\`\`{exercise-start} MUST have matching \`\`\`{exercise-end}
-   - Every \`\`\`{solution-start} MUST have matching \`\`\`{solution-end}
-   - Every \`\`\`{code-cell} MUST have closing \`\`\`
-${additionalRules}
-${request2.customInstructions || ""}
-${glossarySection}
-
-IMPORTANT: You MUST translate the ENTIRE document. Do not stop mid-sentence or mid-code.
-If you are approaching token limits and cannot complete the translation, print:
-"${INCOMPLETE_DOCUMENT_MARKER}"
-
-CONTENT:
-${content}
-
-Provide the complete translated document maintaining exact MyST structure.`;
-    const sizeError = checkDocumentSize(content.length, targetLanguage);
-    if (sizeError) {
-      throw new Error(sizeError);
-    }
-    const maxTokens = MAX_TOKENS.fullDocument;
-    this.log(`Translating full document`);
-    this.log(`Content length: ${content.length} chars`);
-    const response = await this.callWithRetry({
-      model: this.model,
-      max_tokens: maxTokens,
-      messages: [{ role: "user", content: prompt }]
-    }, "translateFullDocument");
-    const result = response.content[0];
-    if (!result || result.type !== "text") {
-      return {
-        success: false,
-        error: "Unexpected response format from Claude"
-      };
-    }
-    const translatedText = result.text.trim();
-    if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
-      return {
-        success: false,
-        error: `Document exceeded token limits and was truncated. This document needs section-by-section translation rather than bulk translation.`
-      };
-    }
-    this.log(`Translation complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
-    return {
-      success: true,
-      translatedSection: translatedText,
-      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
-    };
-  }
-  /**
-   * Resync a full document (whole-file RESYNC for forward command).
-   *
-   * Claude sees the complete SOURCE document and the complete existing TARGET
-   * translation, and produces an updated translation that faithfully reflects
-   * the current source while preserving the existing translation's style,
-   * terminology choices, and localization additions.
-   *
-   * This is the recommended approach over section-by-section RESYNC because:
-   * - Preserves cross-section context (localized plot labels, font config)
-   * - 2-3× cheaper (glossary sent once, not per-section)
-   * - Fewer diff lines (more surgical changes)
-   */
-  async translateDocumentResync(request2) {
-    const { sourceContent, targetContent, sourceLanguage, targetLanguage, glossary } = request2;
-    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
-    const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are a professional translator specialising in quantitative economics.
-
-You are given:
-1. The **current ${sourceLanguage} source** document (authoritative)
-2. The **current ${targetLanguage} translation** (may be outdated or have errors)
-
-Your task: produce an **updated ${targetLanguage} translation** that accurately reflects the current ${sourceLanguage} source.
-
-## Critical rules
-
-1. **Preserve the existing translation's style, terminology, and localization choices** wherever the meaning hasn't changed. Do NOT re-translate sections that are already correct \u2014 keep them exactly as-is.
-2. **Fix any errors** in the translation \u2014 missing content, incorrect formulas, wrong code, structural differences.
-3. **Add any missing content** that exists in the source but not in the translation.
-4. **Remove any content** that exists in the translation but not in the source \u2014 EXCEPT for i18n/localization additions (see rule 6).
-5. **Preserve all MyST Markdown syntax** exactly \u2014 directives, roles, code blocks, math blocks, cross-references, frontmatter.
-6. **The existing translation's in-code localization is ground truth \u2014 NEVER revert it to ${sourceLanguage}.** Code cells in the translation often deliberately differ from the source: every line containing ${targetLanguage} text or other localization was added on purpose, usually by hand. Apply these rules line by line:
-   - If the source code around a localized line is unchanged: keep that line EXACTLY as it is in the translation.
-   - If the source changed the surrounding code: carry the localization into the updated code \u2014 keep the label/mapping machinery and translate any new user-visible strings to match.
-   - Drop a localized line only when the source removed the code it belongs to entirely.
-   - NEVER replace a localized string with its ${sourceLanguage} source equivalent.
-   Common localization patterns that MUST be preserved:
-   - Font configuration: \`from matplotlib import font_manager\`, \`fontP = font_manager.FontProperties()\`, \`fontP.set_family('SimHei')\`, \`fontP.set_size(14)\`
-   - rcParams: \`plt.rcParams['font.sans-serif'] = ['SimHei']\`, \`plt.rcParams['axes.unicode_minus'] = False\`
-   - Translated plot strings: \`set_xlabel\`/\`set_ylabel\`/\`set_title\`/\`legend\`/\`annotate\`/\`ax.text\` labels, legend-label lists, plotly trace names
-   - Label-translation dicts and column mappings: \`DataFrame.rename\` maps, CSV column-name mappings, country/category name lists, date formatters
-   - Data-source substitutions that load localized data: a read of a file that exists only in the translation repo (e.g. \`pd.read_csv("datasets/country_code_cn.csv")\` or a localized JSON/CSV mapping) and the localized column names selected from it. The file is invisible to you because it lives only in the translation repo \u2014 that is exactly why the substitution was made by hand. Keep the translation's read and its column choices even when the source derives the same data differently, and apply source-side data updates (new rows, categories, entities) THROUGH the localized mechanism rather than reverting to the source's derivation.
-   - Translated \`print()\` strings and docstrings
-   - Any imports, variable assignments, or configuration lines that appear in the translation's code cells but not in the source's code cells
-   - Locale-appropriate reference links
-   - Full-width punctuation where conventionally used
-   - Lines marked with \`# i18n\` comments
-   Keep localized label text as plain strings \u2014 NEVER wrap ${targetLanguage} text in math delimiters (\`$...$\`).
-   When in doubt about whether a code line in the translation is localization, **keep the translation's version**.
-7. **Preserve the frontmatter (YAML between --- markers) from the TARGET translation** \u2014 do not replace it with the source frontmatter. Only update the heading-map if section headings changed.
-8. **Use the glossary below for consistent terminology** \u2014 when a term from the glossary appears, use the specified translation.
-${additionalRules}
-${request2.customInstructions || ""}
-${glossarySection}
-
-## Output format
-
-Return ONLY the complete updated ${targetLanguage} document. No explanations, no commentary, no code fences wrapping the document. Start directly with the document's first line: the frontmatter \`---\` marker if the ${targetLanguage} translation has frontmatter, otherwise its first content line. NEVER add a \`---\` marker to a document that does not have frontmatter.
-
-## Current ${sourceLanguage} Source
-
-${sourceContent}
-
-## Current ${targetLanguage} Translation
-
-${targetContent}`;
-    const sizeError = checkDocumentSize(sourceContent.length + targetContent.length, targetLanguage);
-    if (sizeError) {
-      throw new Error(sizeError);
-    }
-    const maxTokens = MAX_TOKENS.fullDocument;
-    this.log(`Resyncing full document`);
-    this.log(`Source length: ${sourceContent.length} chars`);
-    this.log(`Target length: ${targetContent.length} chars`);
-    try {
-      const response = await this.callWithRetry({
-        model: this.model,
-        max_tokens: maxTokens,
-        messages: [{ role: "user", content: prompt }]
-      }, "translateDocumentResync");
-      const result = response.content[0];
-      if (!result || result.type !== "text") {
-        return {
-          success: false,
-          error: "Unexpected response format from Claude"
-        };
-      }
-      const translatedText = result.text.trim();
-      if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
-        return {
-          success: false,
-          error: `Document exceeded token limits and was truncated. This document may need a simpler resync approach.`
-        };
-      }
-      this.log(`Resync complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
-      return {
-        success: true,
-        translatedSection: translatedText,
-        tokensUsed: response.usage.input_tokens + response.usage.output_tokens
-      };
-    } catch (error3) {
-      return {
-        success: false,
-        error: formatApiError(error3)
-      };
-    }
-  }
-  /**
-   * Format glossary for inclusion in prompt
-   */
-  formatGlossary(glossary, targetLanguage) {
-    if (!glossary.terms || glossary.terms.length === 0) {
-      return "";
-    }
-    const terms = glossary.terms.filter((term) => {
-      if (typeof term[targetLanguage] === "string" && term[targetLanguage] !== "") {
-        return true;
-      }
-      this.log(`Glossary term "${term.en}" has no ${targetLanguage} translation \u2014 skipped`);
-      return false;
-    }).map((term) => {
-      const translation = term[targetLanguage];
-      const context2 = term.context ? ` (${term.context})` : "";
-      return `  - "${term.en}" \u2192 "${translation}"${context2}`;
-    }).join("\n");
-    return `GLOSSARY:
-${terms}
-`;
-  }
-};
-
 // dist/parser.js
 var MystParser = class _MystParser {
   /**
@@ -33800,304 +32027,133 @@ var MystParser = class _MystParser {
   }
 };
 
-// dist/diff-detector.js
-var core4 = __toESM(require_core(), 1);
-var DiffDetector = class {
-  parser;
-  debug;
-  constructor(debug = false) {
-    this.parser = new MystParser();
-    this.debug = debug;
-  }
-  log(message) {
-    if (this.debug) {
-      core4.info(`[DiffDetector] ${message}`);
-    }
-  }
-  /**
-   * Detect section-level changes between old and new documents
-   * Also detects preamble changes (title and intro before first ## section)
-   */
-  async detectSectionChanges(oldContent, newContent, filepath) {
-    this.log(`Detecting section changes in ${filepath}`);
-    const oldSections = await this.parser.parseSections(oldContent, filepath);
-    const newSections = await this.parser.parseSections(newContent, filepath);
-    this.log(`Old document: ${oldSections.sections.length} sections`);
-    this.log(`New document: ${newSections.sections.length} sections`);
-    const changes = [];
-    const processedOldSections = /* @__PURE__ */ new Set();
-    if (oldSections.preamble !== newSections.preamble) {
-      const oldPreamble = oldSections.preamble?.trim() || "";
-      const newPreamble = newSections.preamble?.trim() || "";
-      if (oldPreamble !== newPreamble) {
-        this.log(`PREAMBLE MODIFIED: Content changed`);
-        changes.push({
-          type: "modified",
-          oldSection: {
-            id: "_preamble",
-            heading: "",
-            // Preamble has no heading
-            level: 0,
-            // Special level for preamble
-            content: oldPreamble,
-            startLine: 1,
-            endLine: 1,
-            subsections: []
-          },
-          newSection: {
-            id: "_preamble",
-            heading: "",
-            level: 0,
-            content: newPreamble,
-            startLine: 1,
-            endLine: 1,
-            subsections: []
-          }
-        });
-      }
-    }
-    for (let i = 0; i < newSections.sections.length; i++) {
-      const newSection = newSections.sections[i];
-      const oldSectionByPosition = oldSections.sections[i];
-      const oldSectionById = this.parser.findSectionById(oldSections.sections, newSection.id);
-      let matchedOldSection;
-      if (oldSectionByPosition && this.sectionsMatch(oldSectionByPosition, newSection)) {
-        matchedOldSection = oldSectionByPosition;
-        this.log(`Matched section "${newSection.heading}" by position ${i}`);
-      } else if (oldSectionById) {
-        matchedOldSection = oldSectionById;
-        this.log(`Matched section "${newSection.heading}" by ID "${newSection.id}"`);
-      }
-      if (!matchedOldSection) {
-        this.log(`ADDED: Section "${newSection.heading}" at position ${i}`);
-        changes.push({
-          type: "added",
-          newSection,
-          position: {
-            index: i,
-            afterSectionId: i > 0 ? newSections.sections[i - 1].id : void 0
-          }
-        });
-      } else {
-        processedOldSections.add(matchedOldSection.id);
-        if (!this.sectionContentEqual(matchedOldSection, newSection)) {
-          this.log(`MODIFIED: Section "${newSection.heading}"`);
-          changes.push({
-            type: "modified",
-            oldSection: matchedOldSection,
-            newSection
-          });
-        } else {
-          this.log(`UNCHANGED: Section "${newSection.heading}"`);
-        }
-      }
-    }
-    for (const oldSection of oldSections.sections) {
-      if (!processedOldSections.has(oldSection.id)) {
-        this.log(`DELETED: Section "${oldSection.heading}"`);
-        changes.push({
-          type: "deleted",
-          oldSection
-        });
-      }
-    }
-    this.log(`Total section changes detected: ${changes.length}`);
-    return changes;
-  }
-  /**
-   * Check if two sections match (for position-based matching)
-   * Sections match if they have the same ID (heading)
-   *
-   * Note: We used to check structural similarity (level + subsection count),
-   * but this caused false matches when inserting new sections.
-   * Now we require ID match for position-based matching.
-   */
-  sectionsMatch(section1, section2) {
-    return section1.id === section2.id;
-  }
-  /**
-   * Check if section content has changed (including all nested subsections recursively)
-   */
-  sectionContentEqual(section1, section2) {
-    if (section1.content.trim() !== section2.content.trim()) {
-      return false;
-    }
-    if (section1.subsections.length !== section2.subsections.length) {
-      return false;
-    }
-    for (let i = 0; i < section1.subsections.length; i++) {
-      if (!this.sectionContentEqual(section1.subsections[i], section2.subsections[i])) {
-        return false;
-      }
-    }
-    return true;
-  }
-};
-
-// dist/typography.js
-var NBSP = "\xA0";
-var EXISTING_NBSP = /[\u00A0\u202F]/;
-var HIGH_PUNCTUATION = /[;:!?]/;
-var PROSE_DIRECTIVES = /* @__PURE__ */ new Set([
+// dist/structural-parity.js
+var FLEXIBLE_ARG_DIRECTIVES = /* @__PURE__ */ new Set([
   "admonition",
-  "attention",
-  "caution",
-  "danger",
-  "error",
-  "hint",
-  "important",
-  "note",
-  "seealso",
-  "tip",
-  "warning",
-  "exercise",
-  "exercise-start",
-  "exercise-end",
-  "solution",
-  "solution-start",
-  "solution-end",
-  "epigraph",
-  "margin",
-  "sidebar",
-  "topic",
+  "dropdown",
   "card",
   "grid-item-card",
-  "proof",
-  "theorem",
-  "lemma",
-  "corollary",
-  "definition",
-  "remark",
-  "conjecture"
+  "tab-item",
+  "exercise",
+  "exercise-start",
+  "contents",
+  "index",
+  "code-cell"
 ]);
-var FENCE_OPEN = /^(\s{0,3})(`{3,}|~{3,}|:{3,})\s*(?:\{([\w:-]+)\})?/;
-var DIRECTIVE_OPTION = /^\s*:[a-zA-Z][\w-]*:/;
-var MATH_DELIM = /\$\$/g;
-function classifyLines(lines) {
-  const eligible = new Array(lines.length).fill(false);
-  const stack = [];
-  let inFrontmatter = false;
-  let inMathBlock = false;
-  let awaitingOptions = false;
+var FLEXIBLE_ARG_PREFIX = "prf:";
+function isFlexibleArgDirective(name) {
+  return FLEXIBLE_ARG_DIRECTIVES.has(name) || name.startsWith(FLEXIBLE_ARG_PREFIX);
+}
+var FENCE_LINE = /^\s*(`{3,}|~{3,})(.*)$/;
+var DIRECTIVE_INFO = /^\{([A-Za-z0-9_+:.-]+)\}\s*(.*)$/;
+var ANCHOR_LINE = /^\(([^()\s]+)\)=\s*$/;
+function extractStructuralTokens(content) {
+  const directives = [];
+  const anchors = [];
+  let openFence = null;
+  const lines = content.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    if (i === 0 && line.trim() === "---") {
-      inFrontmatter = true;
-      continue;
-    }
-    if (inFrontmatter) {
-      if (line.trim() === "---")
-        inFrontmatter = false;
-      continue;
-    }
-    const top = stack[stack.length - 1];
-    const open = FENCE_OPEN.exec(line);
-    if (top && !top.prose) {
-      if (open) {
-        const [, , marker, directive] = open;
-        if (!directive && marker[0] === top.marker[0] && marker.length >= top.marker.length)
-          stack.pop();
+    const fence = FENCE_LINE.exec(line);
+    if (openFence) {
+      if (fence && fence[1][0] === openFence.char && fence[1].length >= openFence.length && fence[2].trim() === "") {
+        openFence = null;
       }
       continue;
     }
-    const delimiters = (line.match(MATH_DELIM) || []).length;
-    if (inMathBlock || delimiters > 0) {
-      if (delimiters % 2 === 1)
-        inMathBlock = !inMathBlock;
-      continue;
-    }
-    if (open) {
-      const [, , marker, directive] = open;
-      if (top && !directive && marker[0] === top.marker[0] && marker.length >= top.marker.length) {
-        stack.pop();
-        continue;
+    if (fence) {
+      openFence = { char: fence[1][0], length: fence[1].length };
+      const info7 = DIRECTIVE_INFO.exec(fence[2].trim());
+      if (info7) {
+        directives.push({ name: info7[1], arg: info7[2].trim(), line: i + 1 });
       }
-      const prose = Boolean(directive) && PROSE_DIRECTIVES.has(directive.toLowerCase());
-      stack.push({ marker, prose });
-      awaitingOptions = prose;
       continue;
     }
-    if (!top) {
-      eligible[i] = true;
-      continue;
+    const anchor = ANCHOR_LINE.exec(line);
+    if (anchor) {
+      anchors.push({ label: anchor[1], line: i + 1 });
     }
-    if (awaitingOptions) {
-      if (DIRECTIVE_OPTION.test(line))
-        continue;
-      if (line.trim() === "")
-        continue;
-      awaitingOptions = false;
-    }
-    eligible[i] = true;
   }
-  return eligible;
+  return { directives, anchors };
 }
-var INLINE_PROTECTED = [
-  /\$[^$\n]+\$/g,
-  // inline math
-  /`[^`\n]+`/g,
-  // inline code — also covers MyST roles: {doc}`intro <sec:intro>`
-  /!?\[[^\]]*\]\([^)]*\)/g,
-  // links and images, including the URL
-  /<[^>\n]+>/g,
-  // HTML tags and autolinks
-  /&(?:[a-zA-Z]+\d*|#\d+|#x[0-9a-fA-F]+);/g,
-  // HTML entities — &nbsp; ends in ;
-  /https?:\/\/\S+/g
-  // bare URLs
-];
-var PLACEHOLDER = "\0";
-function applyFrenchSpacing(text) {
-  return text.replace(/(\S)([ \t]*)([;:!?]+)(?=[\s)\]»"'.,]|$)/g, (match, before, gap, run2) => {
-    if (EXISTING_NBSP.test(before))
-      return match;
-    if (before === "\\")
-      return match;
-    if (HIGH_PUNCTUATION.test(before))
-      return match;
-    if (gap.length === 0 && /\d/.test(before) && run2 === ":")
-      return match;
-    return `${before}${NBSP}${run2}`;
-  });
-}
-var DEFINITION_LABEL = /^\s{0,3}\[[^\]]*\]:/;
-var DEFINITION_CORRUPTED = /^(\s{0,3}\[[^\]]*\])[\u00A0\u202F]+:/;
-function applyToProse(line, rule) {
-  const chunks = [];
-  let masked = line.replace(DEFINITION_CORRUPTED, "$1:");
-  masked = masked.replace(DEFINITION_LABEL, (m) => {
-    chunks.push(m);
-    return `${PLACEHOLDER}${chunks.length - 1}${PLACEHOLDER}`;
-  });
-  for (const pattern of INLINE_PROTECTED) {
-    masked = masked.replace(pattern, (m) => {
-      chunks.push(m);
-      return `${PLACEHOLDER}${chunks.length - 1}${PLACEHOLDER}`;
+function checkStructuralParity(sourceContent, outputContent) {
+  const source = extractStructuralTokens(sourceContent);
+  const output = extractStructuralTokens(outputContent);
+  const violations = [];
+  if (source.directives.length !== output.directives.length) {
+    violations.push({
+      message: `directive count differs: source has ${source.directives.length}, output has ${output.directives.length} \u2014 a wholesale mismatch usually means the document was re-fenced or truncated`
     });
   }
-  if (/^\s*\([^)\n]*\)=\s*$/.test(masked))
-    return line;
-  let out = rule(masked);
-  for (let i = 0; i < INLINE_PROTECTED.length + 1; i++) {
-    const next = out.replace(new RegExp(`${PLACEHOLDER}(\\d+)${PLACEHOLDER}`, "g"), (_, idx) => chunks[Number(idx)] ?? "");
-    if (next === out)
-      break;
-    out = next;
+  const pairCount = Math.min(source.directives.length, output.directives.length);
+  for (let i = 0; i < pairCount; i++) {
+    const s = source.directives[i];
+    const o = output.directives[i];
+    if (s.name !== o.name) {
+      violations.push({
+        message: `directive #${i + 1} name changed: source line ${s.line} has {${s.name}}, output line ${o.line} has {${o.name}}`
+      });
+      continue;
+    }
+    if (isFlexibleArgDirective(s.name)) {
+      const sHas = s.arg !== "";
+      const oHas = o.arg !== "";
+      if (sHas !== oHas) {
+        violations.push({
+          message: `directive #${i + 1} {${s.name}} ${sHas ? "lost" : "gained"} its argument: source line ${s.line} has ${sHas ? `"${s.arg}"` : "no argument"}, output line ${o.line} has ${oHas ? `"${o.arg}"` : "none"}`
+        });
+      }
+    } else if (s.arg !== o.arg) {
+      violations.push({
+        message: `directive #${i + 1} {${s.name}} argument changed: source line ${s.line} has "${s.arg}", output line ${o.line} has "${o.arg}" \u2014 structural arguments are never translated`
+      });
+    }
   }
-  return out;
+  const sourceLabels = source.anchors.map((a) => a.label);
+  const outputLabels = output.anchors.map((a) => a.label);
+  if (sourceLabels.join("\n") !== outputLabels.join("\n")) {
+    const counts = (labels) => {
+      const m = /* @__PURE__ */ new Map();
+      for (const l of labels)
+        m.set(l, (m.get(l) ?? 0) + 1);
+      return m;
+    };
+    const describe = (label, n) => n > 1 ? `(${label})= \xD7${n}` : `(${label})=`;
+    const sourceCounts = counts(sourceLabels);
+    const outputCounts = counts(outputLabels);
+    const missing = [];
+    const invented = [];
+    for (const [label, n] of sourceCounts) {
+      const d = n - (outputCounts.get(label) ?? 0);
+      if (d > 0)
+        missing.push(describe(label, d));
+    }
+    for (const [label, n] of outputCounts) {
+      const d = n - (sourceCounts.get(label) ?? 0);
+      if (d > 0)
+        invented.push(describe(label, d));
+    }
+    const parts = [];
+    if (missing.length > 0) {
+      parts.push(`missing from output: ${missing.join(", ")}`);
+    }
+    if (invented.length > 0) {
+      parts.push(`not in source: ${invented.join(", ")}`);
+    }
+    if (parts.length === 0) {
+      parts.push(`same labels, different order \u2014 source: ${sourceLabels.join(", ")}; output: ${outputLabels.join(", ")}`);
+    }
+    violations.push({
+      message: `target anchors diverge \u2014 ${parts.join("; ")}`
+    });
+  }
+  return { ok: violations.length === 0, violations };
 }
-var RULES = /* @__PURE__ */ new Map([["fr", applyFrenchSpacing]]);
-function applyTypography(content, language) {
-  const rule = RULES.get(language);
-  if (!rule)
-    return content;
-  const lines = content.split("\n");
-  const eligible = classifyLines(lines);
-  return lines.map((line, i) => eligible[i] ? applyToProse(line, rule) : line).join("\n");
+function formatParityViolations(filename, result) {
+  const bullets = result.violations.map((v) => `  - ${v.message}`).join("\n");
+  return `structural parity check failed for ${filename}:
+${bullets}`;
 }
-
-// dist/file-processor.js
-var core6 = __toESM(require_core(), 1);
 
 // node_modules/js-yaml/dist/js-yaml.mjs
 function getDefaultExportFromCjs(x) {
@@ -34773,13 +32829,13 @@ function requireJson() {
   });
   return json;
 }
-var core5;
+var core2;
 var hasRequiredCore;
 function requireCore() {
-  if (hasRequiredCore) return core5;
+  if (hasRequiredCore) return core2;
   hasRequiredCore = 1;
-  core5 = requireJson();
-  return core5;
+  core2 = requireJson();
+  return core2;
 }
 var timestamp;
 var hasRequiredTimestamp;
@@ -37389,7 +35445,2215 @@ function buildHeadingMap(sourceSections, targetSections) {
   return { map: map2, warnings };
 }
 
+// dist/diff-checks.js
+var MAX_DETAILS = 10;
+function levelSequence(sections) {
+  const levels = [];
+  const walk = (secs) => {
+    for (const s of secs) {
+      levels.push(s.level);
+      walk(s.subsections);
+    }
+  };
+  walk(sections);
+  return levels;
+}
+async function checkStructurePreserved(parser, pairs2) {
+  const details = [];
+  for (const pair of pairs2) {
+    const parity = checkStructuralParity(pair.source, pair.target);
+    if (!parity.ok) {
+      for (const violation of parity.violations) {
+        details.push(`${pair.filename}: ${violation.message}`);
+      }
+    }
+    const [sourceParsed, targetParsed] = await Promise.all([
+      parser.parseSections(pair.source, pair.filename),
+      parser.parseSections(pair.target, pair.filename)
+    ]);
+    const sourceLevels = levelSequence(sourceParsed.sections);
+    const targetLevels = levelSequence(targetParsed.sections);
+    if (sourceLevels.join(",") !== targetLevels.join(",")) {
+      details.push(`${pair.filename}: heading level sequence differs \u2014 source [${sourceLevels.join(", ")}] vs target [${targetLevels.join(", ")}]`);
+    }
+  }
+  return { passed: details.length === 0, details: details.slice(0, MAX_DETAILS) };
+}
+async function checkHeadingMapCorrect(parser, pairs2) {
+  const details = [];
+  for (const pair of pairs2) {
+    const [sourceParsed, targetParsed] = await Promise.all([
+      parser.parseSections(pair.source, pair.filename),
+      parser.parseSections(pair.target, pair.filename)
+    ]);
+    const { map: expected, warnings } = buildHeadingMap(sourceParsed.sections, targetParsed.sections);
+    for (const warning5 of warnings) {
+      details.push(`${pair.filename}: ${warning5}`);
+    }
+    if (expected.size === 0)
+      continue;
+    const recorded = extractHeadingMap(pair.target);
+    if (recorded.size === 0) {
+      details.push(`${pair.filename}: no heading map in frontmatter (expected ${expected.size})`);
+      continue;
+    }
+    for (const [key, value] of expected) {
+      const actual = recorded.get(key);
+      if (actual === void 0) {
+        details.push(`${pair.filename}: heading map missing entry for "${key}"`);
+      } else if (normalizeHeadingForMatch(actual) !== normalizeHeadingForMatch(value)) {
+        details.push(`${pair.filename}: heading map entry for "${key}" is "${actual}", document has "${value}"`);
+      }
+    }
+  }
+  return { passed: details.length === 0, details: details.slice(0, MAX_DETAILS) };
+}
+async function runDeterministicDiffChecks(parser, pairs2) {
+  const guard = async (name, fn) => {
+    try {
+      return await fn();
+    } catch (error3) {
+      const message = error3?.message;
+      return {
+        passed: false,
+        details: [
+          `${name} could not be evaluated: ${typeof message === "string" ? message : String(error3)}`
+        ]
+      };
+    }
+  };
+  return {
+    structurePreserved: await guard("structurePreserved", () => checkStructurePreserved(parser, pairs2)),
+    headingMapCorrect: await guard("headingMapCorrect", () => checkHeadingMapCorrect(parser, pairs2))
+  };
+}
+
+// dist/review-verdict.js
+var fs = __toESM(require("fs"), 1);
+var path2 = __toESM(require("path"), 1);
+var REVIEW_VERDICT_MARKER = "translation-review-verdict";
+var REVIEW_VERDICT_SCHEMA_VERSION = 1;
+var MAX_FINDINGS = 20;
+var MAX_FIELD_LENGTH = 400;
+var SEVERITIES = ["blocker", "major", "minor", "nit"];
+var CATEGORIES = [
+  "accuracy",
+  "fluency",
+  "terminology",
+  "formatting",
+  "syntax",
+  "structure",
+  "diff-check",
+  "other"
+];
+var GATING_CATEGORIES = [
+  "accuracy",
+  "terminology",
+  "syntax",
+  "diff-check",
+  "other"
+];
+var MAX_CRITERION_SCORE = 10;
+var DIFF_CHECK_NAMES = [
+  "scopeCorrect",
+  "positionCorrect",
+  "structurePreserved",
+  "headingMapCorrect"
+];
+var CRITERION_FLOORS = {
+  accuracy: 9,
+  terminology: 9,
+  fluency: 8,
+  formatting: 8
+};
+var _cachedEngineVersion;
+function getEngineVersion() {
+  if (_cachedEngineVersion !== void 0)
+    return _cachedEngineVersion;
+  if (typeof __dirname === "string") {
+    try {
+      const pkgPath = path2.resolve(__dirname, "../package.json");
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+      if (pkg.name === "action-translation" && typeof pkg.version === "string") {
+        _cachedEngineVersion = pkg.version;
+        return _cachedEngineVersion;
+      }
+    } catch {
+    }
+    try {
+      const pkgPath = path2.resolve(__dirname, "../../package.json");
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+      if (pkg.name === "action-translation" && typeof pkg.version === "string") {
+        _cachedEngineVersion = pkg.version;
+        return _cachedEngineVersion;
+      }
+    } catch {
+    }
+  }
+  _cachedEngineVersion = "unknown";
+  return _cachedEngineVersion;
+}
+var isPlainObject3 = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
+function truncateField(value) {
+  return truncate(value);
+}
+function truncate(value) {
+  const s = typeof value === "string" ? value : String(value);
+  return s.length > MAX_FIELD_LENGTH ? `${s.slice(0, MAX_FIELD_LENGTH - 1)}\u2026` : s;
+}
+function asOptionalText(value) {
+  if (typeof value !== "string" || value.trim() === "")
+    return null;
+  return truncate(value);
+}
+function describeLooseObject(obj) {
+  const description = obj.description || obj.issue || obj.problem || obj.message;
+  if (description)
+    return truncate(description);
+  const original = obj.original || obj.current || obj.translated || obj.text;
+  const suggestion = obj.suggestion || obj.recommended || obj.fix || obj.correction;
+  if (original && suggestion)
+    return truncate(`"${original}" \u2192 "${suggestion}"`);
+  return truncate(JSON.stringify(obj));
+}
+function severityRank(severity) {
+  return SEVERITIES.indexOf(severity);
+}
+function normalizeFindings(rawFindings, legacyIssues, validFiles) {
+  const soleFile = validFiles.length === 1 ? validFiles[0] : null;
+  const toFinding = (item, forceConservative2) => {
+    if (typeof item === "object" && item !== null && !Array.isArray(item)) {
+      const obj = item;
+      const severity = !forceConservative2 && SEVERITIES.includes(obj.severity) ? obj.severity : "major";
+      const category = !forceConservative2 && CATEGORIES.includes(obj.category) ? obj.category : "other";
+      const claimedFile = typeof obj.file === "string" ? obj.file : null;
+      const file = soleFile ?? (claimedFile && validFiles.includes(claimedFile) ? claimedFile : null);
+      return {
+        severity,
+        category,
+        file,
+        location: asOptionalText(obj.location),
+        description: describeLooseObject(obj),
+        suggestion: asOptionalText(obj.suggestion)
+      };
+    }
+    return {
+      severity: "major",
+      category: "other",
+      file: soleFile,
+      location: null,
+      description: truncate(item),
+      suggestion: null
+    };
+  };
+  let items;
+  let forceConservative = false;
+  let malformed = false;
+  if (Array.isArray(rawFindings) && rawFindings.length > 0) {
+    items = rawFindings;
+  } else if (Array.isArray(rawFindings) && rawFindings.length === 0 && Array.isArray(legacyIssues) && legacyIssues.length > 0) {
+    items = legacyIssues;
+    forceConservative = true;
+  } else if (Array.isArray(rawFindings)) {
+    items = rawFindings;
+  } else if (rawFindings === void 0 && Array.isArray(legacyIssues)) {
+    items = legacyIssues;
+    forceConservative = true;
+    malformed = true;
+  } else {
+    items = [];
+    malformed = true;
+  }
+  const findings = items.map((item) => toFinding(item, forceConservative)).filter((f) => f.description !== "" && f.description !== "{}").sort((a, b) => severityRank(a.severity) - severityRank(b.severity)).slice(0, MAX_FINDINGS);
+  if (items.length > 0 && findings.length === 0) {
+    malformed = true;
+  }
+  return { findings, malformed };
+}
+function sortAndCapFindings(findings) {
+  return [...findings].sort((a, b) => severityRank(a.severity) - severityRank(b.severity)).slice(0, MAX_FINDINGS);
+}
+function findingToDisplayString(finding) {
+  const tag = `**[${finding.severity} \xB7 ${finding.category}]**`;
+  const where = [finding.file, finding.location].filter(Boolean).join(" \u2014 ");
+  const suggestion = finding.suggestion ? ` \u2192 ${finding.suggestion}` : "";
+  return where ? `${tag} ${where}: ${finding.description}${suggestion}` : `${tag} ${finding.description}${suggestion}`;
+}
+function computeRecommendation(input) {
+  const reasons = [];
+  if (input.verdict !== "PASS") {
+    reasons.push(`verdict ${input.verdict} (auto-merge requires PASS)`);
+  }
+  if (input.syntaxErrorCount > 0) {
+    reasons.push(`${input.syntaxErrorCount} syntax error(s)`);
+  }
+  for (const check of DIFF_CHECK_NAMES) {
+    if (input.diffCheckSources?.[check] === "model")
+      continue;
+    if (input.diffChecks?.[check] !== true)
+      reasons.push(`diff check failed: ${check}`);
+  }
+  if (input.findingsMalformed) {
+    reasons.push("findings payload missing or malformed (fail-closed)");
+  }
+  if (input.sourceContentMissing) {
+    reasons.push("source content could not be fetched \u2014 the review compared against nothing");
+  }
+  if (input.findingsSuppressed) {
+    reasons.push("findings suppressed by max-suggestions=0 \u2014 the findings half of the gate is blind");
+  }
+  const blockers = input.findings.filter((f) => f.severity === "blocker").length;
+  const majors = input.findings.filter((f) => f.severity === "major").length;
+  const gatingMinors = input.findings.filter((f) => f.severity === "minor" && GATING_CATEGORIES.includes(f.category)).length;
+  if (blockers > 0)
+    reasons.push(`${blockers} blocker finding(s)`);
+  if (majors > 0)
+    reasons.push(`${majors} major finding(s)`);
+  if (gatingMinors > 0) {
+    reasons.push(`${gatingMinors} minor finding(s) in gating categories (${GATING_CATEGORIES.join("/")})`);
+  }
+  const scores = isPlainObject3(input.scores) ? input.scores : {};
+  for (const [criterion, floor] of Object.entries(CRITERION_FLOORS)) {
+    const score = scores[criterion];
+    if (typeof score !== "number" || !Number.isFinite(score)) {
+      reasons.push(`${criterion} score missing or non-numeric`);
+    } else if (!(score >= floor)) {
+      reasons.push(`${criterion} ${score} below floor ${floor}`);
+    } else if (!(score <= MAX_CRITERION_SCORE)) {
+      reasons.push(`${criterion} ${score} above the ${MAX_CRITERION_SCORE}-point scale`);
+    }
+  }
+  return { recommendation: reasons.length === 0 ? "auto-merge" : "editor", reasons };
+}
+function sanitizeCommentText(text) {
+  return text.replace(/<!--/g, "&lt;!--");
+}
+function buildVerdictBlock(verdict) {
+  const json2 = JSON.stringify(verdict, null, 2).replace(/-->/g, "--\\u003e").replace(/--!>/g, "--!\\u003e");
+  return `<!-- ${REVIEW_VERDICT_MARKER}
+${json2}
+-->`;
+}
+
+// dist/reviewer.js
+var DEFAULT_REVIEW_MODEL = DEFAULT_CLAUDE_MODEL;
+var REVIEW_RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 1e3
+  // 1s, 2s, 4s with exponential backoff
+};
+var REVIEW_COMMENT_MARKER = "<!-- action-translation-review -->";
+var LEGACY_REVIEW_HEADING = /^#{2} .*Translation Quality Review/;
+var REVIEW_COMMENT_UPSERT_ATTEMPTS = 3;
+var REVIEW_CRITERIA = [
+  { key: "accuracy", weight: 0.35 },
+  { key: "fluency", weight: 0.25 },
+  { key: "terminology", weight: 0.25 },
+  { key: "formatting", weight: 0.15 }
+];
+function validateCriterionScores(result) {
+  const scores = {};
+  const missing = [];
+  for (const { key } of REVIEW_CRITERIA) {
+    const raw = result[key];
+    const value = typeof raw === "number" ? raw : typeof raw === "string" && raw !== "" ? Number(raw) : NaN;
+    if (Number.isFinite(value) && value >= 0 && value <= 10) {
+      scores[key] = value;
+    } else {
+      missing.push(key);
+    }
+  }
+  return missing.length === 0 ? { valid: true, missing, scores } : { valid: false, missing };
+}
+function isActionReviewComment(body) {
+  if (!body)
+    return false;
+  if (body.startsWith(REVIEW_COMMENT_MARKER))
+    return true;
+  return LEGACY_REVIEW_HEADING.test(body) && body.includes("action-translation");
+}
+function isNotFoundError(error3) {
+  return typeof error3 === "object" && error3 !== null && error3.status === 404;
+}
+function parseJsonResponse(text) {
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+  }
+  if (parsed === void 0) {
+    const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+    if (codeBlockMatch) {
+      const content = codeBlockMatch[1].trim();
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+      }
+    }
+  }
+  if (parsed === void 0) {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      parsed = JSON.parse(jsonMatch[0]);
+    }
+  }
+  if (parsed === void 0) {
+    throw new Error("No JSON object found in response");
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error("Response JSON is not an object");
+  }
+  return parsed;
+}
+function extractPreamble(content) {
+  const lines = content.split("\n");
+  const preambleLines = [];
+  for (const line of lines) {
+    if (line.match(/^#{1,6}\s+/)) {
+      break;
+    }
+    preambleLines.push(line);
+  }
+  return preambleLines.join("\n").trim();
+}
+function extractSections(content) {
+  const sections = [];
+  const lines = content.split("\n");
+  let currentHeading = "";
+  let currentContent = [];
+  let inSection = false;
+  for (const line of lines) {
+    const headingMatch = line.match(/^(#{2,6})\s+(.+)$/);
+    if (headingMatch) {
+      if (inSection && currentHeading) {
+        sections.push({
+          heading: currentHeading,
+          content: currentContent.join("\n").trim()
+        });
+      }
+      currentHeading = line;
+      currentContent = [];
+      inSection = true;
+    } else if (inSection) {
+      currentContent.push(line);
+    }
+  }
+  if (inSection && currentHeading) {
+    sections.push({
+      heading: currentHeading,
+      content: currentContent.join("\n").trim()
+    });
+  }
+  return sections;
+}
+function headingToId(heading) {
+  return heading.replace(/^#{2,6}\s+/, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
+}
+function identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter) {
+  const changedSections = [];
+  if (!sourceAfter && !targetAfter) {
+    return [{ heading: "(document deleted)", changeType: "deleted" }];
+  }
+  if (!sourceBefore && !targetBefore) {
+    const sections = extractSections(sourceAfter);
+    if (sections.length === 0) {
+      return [{ heading: "(new document)", changeType: "added", englishContent: sourceAfter }];
+    }
+    return sections.map((s) => ({
+      heading: s.heading,
+      changeType: "added",
+      englishContent: s.content
+    }));
+  }
+  const normalizeForComparison = (s) => s.replace(/\r\n/g, "\n").trim();
+  if (normalizeForComparison(sourceBefore) === normalizeForComparison(sourceAfter) && normalizeForComparison(targetBefore) === normalizeForComparison(targetAfter)) {
+    return [{ heading: "(no content changes - file renamed)", changeType: "modified" }];
+  }
+  const sourcePreambleBefore = extractPreamble(sourceBefore);
+  const sourcePreambleAfter = extractPreamble(sourceAfter);
+  const targetPreambleBefore = extractPreamble(targetBefore);
+  const targetPreambleAfter = extractPreamble(targetAfter);
+  if (sourcePreambleBefore !== sourcePreambleAfter || targetPreambleBefore !== targetPreambleAfter) {
+    changedSections.push({
+      heading: "(preamble/frontmatter)",
+      changeType: "modified",
+      englishContent: sourcePreambleAfter,
+      translatedContent: targetPreambleAfter
+    });
+  }
+  const sourceBeforeSections = extractSections(sourceBefore);
+  const sourceAfterSections = extractSections(sourceAfter);
+  const targetAfterSections = extractSections(targetAfter);
+  const beforeById = new Map(sourceBeforeSections.map((s) => [headingToId(s.heading), s]));
+  const afterById = new Map(sourceAfterSections.map((s) => [headingToId(s.heading), s]));
+  for (let i = 0; i < sourceAfterSections.length; i++) {
+    const section = sourceAfterSections[i];
+    const id = headingToId(section.heading);
+    const beforeSection = beforeById.get(id);
+    const targetSection = targetAfterSections[i];
+    if (!beforeSection) {
+      changedSections.push({
+        heading: section.heading,
+        changeType: "added",
+        englishContent: section.content,
+        translatedContent: targetSection?.content
+      });
+    } else if (beforeSection.content !== section.content || beforeSection.heading !== section.heading) {
+      changedSections.push({
+        heading: section.heading,
+        changeType: "modified",
+        englishContent: section.content,
+        translatedContent: targetSection?.content
+      });
+    }
+  }
+  for (const section of sourceBeforeSections) {
+    const id = headingToId(section.heading);
+    if (!afterById.has(id)) {
+      changedSections.push({
+        heading: section.heading,
+        changeType: "deleted"
+      });
+    }
+  }
+  return changedSections;
+}
+var TranslationReviewer = class {
+  anthropic;
+  octokit;
+  model;
+  maxSuggestions;
+  /** Section parsing for the deterministic diff checks (#148). */
+  parser;
+  constructor(anthropicApiKey, githubToken, model = DEFAULT_REVIEW_MODEL, maxSuggestions = 5) {
+    this.anthropic = new Anthropic({ apiKey: anthropicApiKey });
+    this.octokit = github.getOctokit(githubToken);
+    this.model = model;
+    this.maxSuggestions = maxSuggestions;
+    this.parser = new MystParser();
+  }
+  sleep(ms) {
+    return new Promise((resolve3) => setTimeout(resolve3, ms));
+  }
+  /**
+   * Call Claude API with retry logic and exponential backoff.
+   * Retries on transient API errors and parse failures.
+   */
+  async callWithRetry(prompt, maxTokens, operationName) {
+    const { maxRetries, baseDelayMs } = REVIEW_RETRY_CONFIG;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const stream = this.anthropic.messages.stream({
+          model: this.model,
+          max_tokens: maxTokens,
+          thinking: DEFAULT_THINKING,
+          messages: [{ role: "user", content: prompt }]
+        });
+        const response = await stream.finalMessage();
+        if (response.stop_reason === "max_tokens") {
+          throw new Error(`${operationName}: response truncated at max_tokens=${maxTokens}; verdict JSON is incomplete`);
+        }
+        const content = response.content[0];
+        if (!content || content.type !== "text") {
+          throw new Error(`Unexpected response from Claude: ${content ? content.type : `empty content (stop_reason: ${response.stop_reason})`}`);
+        }
+        return parseJsonResponse(content.text);
+      } catch (error3) {
+        if (error3 instanceof AuthenticationError || error3 instanceof BadRequestError) {
+          throw error3;
+        }
+        const isApiRetryable = error3 instanceof RateLimitError || error3 instanceof APIConnectionError || error3 instanceof APIError && error3.status !== void 0 && error3.status >= 500;
+        const isParseFailure = error3 instanceof SyntaxError || error3 instanceof Error && error3.message.includes("No JSON object");
+        if (!isApiRetryable && !isParseFailure || attempt === maxRetries) {
+          if (isParseFailure) {
+            core3.error(`${operationName}: Failed to parse response after ${maxRetries} attempts`);
+          }
+          throw error3;
+        }
+        const delay = baseDelayMs * Math.pow(2, attempt - 1);
+        core3.info(`${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error3 instanceof Error ? error3.message : error3}. Retrying in ${delay}ms...`);
+        await this.sleep(delay);
+      }
+    }
+    throw new Error("Unexpected: retry loop completed without result");
+  }
+  /**
+   * Parse source PR number from translation PR body
+   * Looks for: ### Source PR\n**[#123 - ...
+   */
+  parseSourcePRNumber(prBody) {
+    if (!prBody)
+      return null;
+    const match = prBody.match(/### Source PR\r?\n\*\*\[#(\d+)/);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+    return null;
+  }
+  /**
+   * Get source PR diff (English before/after)
+   */
+  async getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames) {
+    const before = /* @__PURE__ */ new Map();
+    const after = /* @__PURE__ */ new Map();
+    try {
+      const { data: sourcePr } = await this.octokit.rest.pulls.get({
+        owner: sourceOwner,
+        repo: sourceRepoName,
+        pull_number: sourcePrNumber
+      });
+      const sourceFiles = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
+        owner: sourceOwner,
+        repo: sourceRepoName,
+        pull_number: sourcePrNumber
+      });
+      for (const filename of filenames) {
+        const sourceFile = sourceFiles.find((f) => f.filename === filename);
+        const beforeFilename = sourceFile?.status === "renamed" && sourceFile.previous_filename ? sourceFile.previous_filename : filename;
+        if (!sourceFile || sourceFile.status !== "added") {
+          try {
+            const { data: beforeData } = await this.octokit.rest.repos.getContent({
+              owner: sourceOwner,
+              repo: sourceRepoName,
+              path: beforeFilename,
+              ref: sourcePr.base.sha
+            });
+            if ("content" in beforeData) {
+              before.set(filename, Buffer.from(beforeData.content, "base64").toString("utf-8"));
+            }
+          } catch {
+          }
+        }
+        if (!sourceFile || sourceFile.status !== "removed") {
+          try {
+            const { data: afterData } = await this.octokit.rest.repos.getContent({
+              owner: sourceOwner,
+              repo: sourceRepoName,
+              path: filename,
+              ref: sourcePr.head.sha
+            });
+            if ("content" in afterData) {
+              after.set(filename, Buffer.from(afterData.content, "base64").toString("utf-8"));
+            }
+          } catch {
+          }
+        }
+      }
+      core3.info(`\u2713 Fetched source PR #${sourcePrNumber} diff for ${filenames.length} file(s)`);
+    } catch (error3) {
+      core3.warning(`Could not fetch source PR #${sourcePrNumber}: ${error3}`);
+    }
+    return { before, after };
+  }
+  /**
+   * Get source content at a specific commit (for resync PRs, which have no
+   * source PR). Returns the same shape as getSourceDiff with an empty
+   * `before` map — a resync review compares the whole target against the
+   * current source, not against a source-side diff.
+   */
+  async getSourceAtCommit(sourceOwner, sourceRepoName, commitSha, filenames) {
+    const before = /* @__PURE__ */ new Map();
+    const after = /* @__PURE__ */ new Map();
+    for (const filename of filenames) {
+      try {
+        const { data } = await this.octokit.rest.repos.getContent({
+          owner: sourceOwner,
+          repo: sourceRepoName,
+          path: filename,
+          ref: commitSha
+        });
+        if ("content" in data) {
+          after.set(filename, Buffer.from(data.content, "base64").toString("utf-8"));
+        }
+      } catch (error3) {
+        core3.warning(`Could not fetch ${filename} @ ${commitSha.substring(0, 7)}: ${error3}`);
+      }
+    }
+    core3.info(`\u2713 Fetched source @ ${commitSha.substring(0, 7)} for ${after.size}/${filenames.length} file(s)`);
+    return { before, after };
+  }
+  /**
+   * Review a translation PR
+   */
+  async reviewPR(prNumber, sourceRepo, targetOwner, targetRepo, docsFolder, glossaryTerms, targetLanguage, autoMergeMode = "off") {
+    core3.info(`Starting review of PR #${prNumber}...`);
+    const { data: pr } = await this.octokit.rest.pulls.get({
+      owner: targetOwner,
+      repo: targetRepo,
+      pull_number: prNumber
+    });
+    const files = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
+      owner: targetOwner,
+      repo: targetRepo,
+      pull_number: prNumber
+    });
+    const markdownFiles = files.filter((f) => f.filename.startsWith(docsFolder) && f.filename.endsWith(".md"));
+    if (markdownFiles.length === 0) {
+      core3.info("No markdown files to review");
+      const emptyResult = {
+        prNumber,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        translationQuality: {
+          score: 10,
+          accuracy: 10,
+          fluency: 10,
+          terminology: 10,
+          formatting: 10,
+          syntaxErrors: [],
+          findings: [],
+          findingsMalformed: false,
+          issues: [],
+          strengths: ["No markdown files to review"],
+          summary: "No markdown files changed in this PR."
+        },
+        diffQuality: {
+          score: 10,
+          scopeCorrect: true,
+          positionCorrect: true,
+          structurePreserved: true,
+          headingMapCorrect: true,
+          issues: [],
+          summary: "No changes to evaluate.",
+          scopeDetails: "No markdown files changed.",
+          positionDetails: "N/A",
+          structureDetails: "N/A"
+        },
+        overallScore: 10,
+        verdict: "PASS",
+        // Fail-closed: with nothing reviewed there is nothing to gate on.
+        recommendation: "editor",
+        recommendationReasons: ["no markdown files reviewed \u2014 nothing to gate"],
+        autoMergeMode,
+        ...autoMergeMode === "shadow" ? { wouldAutoMerge: false } : {},
+        reviewedHeadSha: pr.head.sha,
+        reviewComment: "No markdown files to review in this PR."
+      };
+      return emptyResult;
+    }
+    const [sourceOwner, sourceRepoName] = sourceRepo.split("/");
+    const sourcePrNumber = this.parseSourcePRNumber(pr.body);
+    let resyncMetadata;
+    if (!sourcePrNumber) {
+      const metadata = parseTranslationSyncMetadata(pr.body || "");
+      if (metadata && !metadata.sourcePR && metadata.sourceCommitSha) {
+        resyncMetadata = metadata;
+        core3.info(`No source PR reference \u2014 resync PR detected; reviewing against source @ ${metadata.sourceCommitSha.substring(0, 7)}`);
+      } else {
+        throw new Error('Could not find source PR reference in translation PR body. This PR may not have been created by the translation action. Expected format: "### Source PR\\n**[#123..." (or a translation-sync-metadata block for resync PRs)');
+      }
+    } else {
+      core3.info(`Found source PR reference: #${sourcePrNumber}`);
+    }
+    const filenames = markdownFiles.map((f) => f.filename);
+    const { before: sourceBeforeMap, after: sourceAfterMap } = resyncMetadata ? await this.getSourceAtCommit(sourceOwner, sourceRepoName, resyncMetadata.sourceCommitSha, filenames) : await this.getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames);
+    let sourceEnglish = "";
+    let targetTranslation = "";
+    let sourceBefore = "";
+    let targetBefore = "";
+    const changedSections = [];
+    const filePairs = /* @__PURE__ */ new Map();
+    for (const file of markdownFiles) {
+      try {
+        const { data: targetData } = await this.octokit.rest.repos.getContent({
+          owner: targetOwner,
+          repo: targetRepo,
+          path: file.filename,
+          ref: pr.head.sha
+        });
+        if ("content" in targetData) {
+          const content = Buffer.from(targetData.content, "base64").toString("utf-8");
+          targetTranslation += content + "\n\n";
+          filePairs.set(file.filename, { ...filePairs.get(file.filename), target: content });
+        }
+        try {
+          const { data: targetBeforeData } = await this.octokit.rest.repos.getContent({
+            owner: targetOwner,
+            repo: targetRepo,
+            path: file.filename,
+            ref: pr.base.sha
+          });
+          if ("content" in targetBeforeData) {
+            targetBefore += Buffer.from(targetBeforeData.content, "base64").toString("utf-8") + "\n\n";
+          }
+        } catch {
+        }
+        if (sourceAfterMap.has(file.filename)) {
+          const content = sourceAfterMap.get(file.filename);
+          sourceEnglish += content + "\n\n";
+          filePairs.set(file.filename, { ...filePairs.get(file.filename), source: content });
+        } else {
+          core3.warning(`Source content not found for ${file.filename} in ${resyncMetadata ? `source @ ${resyncMetadata.sourceCommitSha.substring(0, 7)}` : `source PR #${sourcePrNumber}`}`);
+        }
+        if (sourceBeforeMap.has(file.filename)) {
+          sourceBefore += sourceBeforeMap.get(file.filename) + "\n\n";
+        }
+      } catch (error3) {
+        core3.warning(`Error processing ${file.filename}: ${error3}`);
+      }
+    }
+    if (resyncMetadata) {
+      changedSections.push({
+        heading: "(whole-file resync \u2014 the entire document was re-aligned to the current source)",
+        changeType: "modified"
+      });
+    } else {
+      const detectedChanges = identifyChangedSections(sourceBefore, sourceEnglish, targetBefore, targetTranslation);
+      changedSections.push(...detectedChanges);
+    }
+    const translationQuality = await this.evaluateTranslation(sourceEnglish, targetTranslation, changedSections, filenames, glossaryTerms, targetLanguage);
+    const diffQuality = await this.evaluateDiff(resyncMetadata ? sourceEnglish : sourceBefore, sourceEnglish, targetBefore, targetTranslation, markdownFiles.map((f) => ({
+      filename: f.filename,
+      status: f.status,
+      additions: f.additions,
+      deletions: f.deletions
+    })), resyncMetadata !== void 0);
+    const reviewedPairs = [...filePairs.entries()].filter(([, v]) => v.source !== void 0 && v.target !== void 0).map(([filename, v]) => ({
+      filename,
+      source: v.source,
+      target: v.target
+    }));
+    const deterministic = await runDeterministicDiffChecks(this.parser, reviewedPairs);
+    const diffChecks = {
+      scopeCorrect: diffQuality.scopeCorrect,
+      positionCorrect: diffQuality.positionCorrect,
+      structurePreserved: deterministic.structurePreserved.passed,
+      headingMapCorrect: deterministic.headingMapCorrect.passed
+    };
+    const diffCheckSources = {
+      scopeCorrect: "model",
+      positionCorrect: "model",
+      structurePreserved: "deterministic",
+      headingMapCorrect: "deterministic"
+    };
+    for (const [name, result2] of Object.entries(deterministic)) {
+      if (!result2.passed) {
+        core3.warning(`Deterministic diff check failed \u2014 ${name}: ${result2.details.join("; ")}`);
+      }
+    }
+    const diffScore = Math.round(Object.values(diffChecks).filter(Boolean).length / DIFF_CHECK_NAMES.length * 10 * 10) / 10;
+    const mergedDiffQuality = {
+      ...diffQuality,
+      ...diffChecks,
+      score: diffScore
+    };
+    const overallScore = translationQuality.score * 0.7 + diffScore * 0.3;
+    let verdict;
+    if (overallScore >= 8 && translationQuality.syntaxErrors.length === 0) {
+      verdict = "PASS";
+    } else if (overallScore >= 6) {
+      verdict = "WARN";
+    } else {
+      verdict = "FAIL";
+    }
+    const soleFile = filenames.length === 1 ? filenames[0] : null;
+    const syntaxFindings = translationQuality.syntaxErrors.map((e) => ({
+      severity: "blocker",
+      category: "syntax",
+      file: soleFile,
+      location: null,
+      description: truncateField(e),
+      suggestion: null
+    }));
+    const diffFindings = mergedDiffQuality.issues.map((i) => ({
+      severity: "minor",
+      category: "structure",
+      file: soleFile,
+      location: null,
+      description: truncateField(i),
+      suggestion: null
+    }));
+    const modelCheckFindings = ["scopeCorrect", "positionCorrect"].filter((name) => diffChecks[name] !== true).map((name) => ({
+      severity: "minor",
+      category: "diff-check",
+      file: soleFile,
+      location: null,
+      description: truncateField(`${name}: the reviewer reported this check as failed. This is a model judgement, not a deterministic check \u2014 verify against the source diff before treating it as a defect (#148).`),
+      suggestion: null
+    }));
+    const deterministicFindings = Object.values(deterministic).flatMap((result2) => result2.details).map((detail) => ({
+      severity: "minor",
+      category: "structure",
+      file: soleFile,
+      location: null,
+      description: truncateField(detail),
+      suggestion: null
+    }));
+    const allFindings = sortAndCapFindings([
+      ...translationQuality.findings,
+      ...syntaxFindings,
+      ...diffFindings,
+      ...modelCheckFindings,
+      ...deterministicFindings
+    ]);
+    const sourceContentMissing = sourceEnglish.trim() === "";
+    if (sourceContentMissing) {
+      core3.warning("No source content was fetched for any reviewed file \u2014 the verdict is not a real comparison and routes to editor");
+    }
+    const { recommendation, reasons } = computeRecommendation({
+      verdict,
+      scores: {
+        accuracy: translationQuality.accuracy,
+        fluency: translationQuality.fluency,
+        terminology: translationQuality.terminology,
+        formatting: translationQuality.formatting
+      },
+      diffChecks,
+      diffCheckSources,
+      syntaxErrorCount: translationQuality.syntaxErrors.length,
+      findings: allFindings,
+      findingsMalformed: translationQuality.findingsMalformed,
+      sourceContentMissing,
+      // With max-suggestions: 0 the prompt asks for no findings at all, so an
+      // empty findings array is not evidence of a clean translation.
+      findingsSuppressed: this.maxSuggestions === 0
+    });
+    const wouldAutoMerge = autoMergeMode === "shadow" ? recommendation === "auto-merge" : void 0;
+    if (autoMergeMode === "shadow") {
+      core3.notice(`Shadow auto-merge gate: would ${wouldAutoMerge ? "" : "NOT "}auto-merge PR #${prNumber}` + (wouldAutoMerge ? "" : ` \u2014 ${reasons.join("; ")}`) + " (recorded in the verdict block; no action taken)");
+    }
+    const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
+    const verdictV2 = {
+      schemaVersion: REVIEW_VERDICT_SCHEMA_VERSION,
+      engineVersion: getEngineVersion(),
+      reviewerModel: this.model,
+      reviewedHeadSha: pr.head.sha,
+      targetBaseSha: pr.base.sha,
+      sourceRepo,
+      prNumber,
+      timestamp: timestamp2,
+      verdict,
+      recommendation,
+      recommendationReasons: reasons,
+      autoMergeMode,
+      ...wouldAutoMerge !== void 0 ? { wouldAutoMerge } : {},
+      scores: {
+        accuracy: translationQuality.accuracy,
+        fluency: translationQuality.fluency,
+        terminology: translationQuality.terminology,
+        formatting: translationQuality.formatting,
+        translation: translationQuality.score,
+        diff: mergedDiffQuality.score,
+        overall: Math.round(overallScore * 10) / 10
+      },
+      diffChecks,
+      diffCheckSources,
+      syntaxErrorCount: translationQuality.syntaxErrors.length,
+      findings: allFindings
+    };
+    const reviewComment = this.generateReviewComment(translationQuality, mergedDiffQuality, verdict, {
+      recommendation,
+      reasons,
+      wouldAutoMerge
+    }) + "\n\n" + buildVerdictBlock(verdictV2);
+    await this.postReviewComment(prNumber, targetOwner, targetRepo, reviewComment);
+    const result = {
+      prNumber,
+      timestamp: timestamp2,
+      translationQuality,
+      diffQuality: mergedDiffQuality,
+      overallScore: Math.round(overallScore * 10) / 10,
+      verdict,
+      recommendation,
+      recommendationReasons: reasons,
+      autoMergeMode,
+      ...wouldAutoMerge !== void 0 ? { wouldAutoMerge } : {},
+      reviewedHeadSha: pr.head.sha,
+      reviewComment
+    };
+    return result;
+  }
+  /**
+   * Evaluate translation quality using Claude
+   */
+  async evaluateTranslation(sourceEnglish, targetTranslation, changedSections, filenames, glossaryTerms, targetLanguage) {
+    const changedSectionsPrompt = this.formatChangedSections(changedSections);
+    const filesList = filenames.map((f) => `- ${f}`).join("\n");
+    const languageNames = {
+      "zh-cn": "Simplified Chinese",
+      "zh-tw": "Traditional Chinese",
+      fa: "Persian (Farsi)",
+      es: "Spanish",
+      fr: "French",
+      de: "German",
+      ja: "Japanese",
+      ko: "Korean"
+    };
+    const targetLangName = targetLanguage ? languageNames[targetLanguage] || targetLanguage : "the target language";
+    const glossarySection = glossaryTerms ? `
+## Reference Glossary
+The translation should follow this established terminology glossary:
+${glossaryTerms}
+` : "";
+    const prompt = `You are a professional translator and quality evaluator specializing in technical/academic content translation from English to ${targetLangName}.
+
+## Task
+Evaluate the quality of the ${targetLangName} translation compared to the English source.
+${changedSectionsPrompt}
+## English Source Document
+\`\`\`markdown
+${sourceEnglish}
+\`\`\`
+
+## ${targetLangName} Translation
+\`\`\`markdown
+${targetTranslation}
+\`\`\`
+${glossarySection}
+## IMPORTANT: About the Translation Metadata
+
+The ${targetLangName} translation contains a \`translation\` section in the YAML frontmatter that is NOT present in the English source. This is CORRECT and EXPECTED behavior:
+
+\`\`\`yaml
+translation:
+  title: "\u4ECB\u7ECD"
+  headings:
+    introduction: "\u4ECB\u7ECD"
+    background: "\u80CC\u666F"
+\`\`\`
+
+This is a feature of the translation sync system that maps English heading IDs to ${targetLangName} headings for section matching across languages. The \`title\` field tracks the translated document title. Do NOT flag this as an issue or formatting problem - it is intentional and does not affect Jupyter Book compilation.
+
+**Note on double-colon notation**: The headings may use \`section::subsection\` notation (e.g., \`supply-and-demand::market-dynamics\`) to represent hierarchical headings. This double-colon \`::\` syntax is intentional and valid - it represents the relationship between a section and its nested subsection. This is safe in YAML because YAML only treats \`:\` as a key-value separator when followed by a space.
+
+## Evaluation Criteria
+Rate each criterion from 1-10:
+
+1. **Accuracy** (1-10): Does the translation accurately convey the meaning of the English source?
+   - Technical terms translated correctly
+   - No missing or added information
+   - Mathematical concepts preserved
+
+2. **Fluency** (1-10): Does the translation read naturally in ${targetLangName}?
+   - Natural sentence structure
+   - Appropriate academic register
+   - No awkward phrasing
+
+3. **Terminology** (1-10): Is technical terminology consistent and correct?
+   - Does the translation follow the reference glossary above?
+   - Domain-specific terms handled appropriately
+   - Consistent translation of repeated terms
+   - Proper use of established ${targetLangName} terminology
+
+4. **Formatting** (1-10): Is MyST/Markdown formatting preserved?
+   - Math equations (LaTeX) intact
+   - Code blocks preserved
+   - Headings, lists, and structure maintained
+   - Links and references correct
+
+5. **Syntax** (check for errors): Check for markdown/MyST syntax errors in the translation:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters
+   - Math blocks must have matching $$ delimiters
+   - MyST directives must use correct syntax: \`\`\`{directive}
+   - Report any syntax errors found - these are CRITICAL issues that must be fixed
+
+## Files Under Review
+The changed markdown files in this PR are (the document blocks above concatenate them in this order):
+${filesList}
+
+## Response Format
+Respond with ONLY valid JSON in this exact format (no markdown code blocks):
+{
+  "accuracy": <number 1-10>,
+  "fluency": <number 1-10>,
+  "terminology": <number 1-10>,
+  "formatting": <number 1-10>,
+  "syntaxErrors": ["error 1 with line/location if possible", "error 2"],
+  "findings": [
+    {
+      "severity": "blocker|major|minor|nit",
+      "category": "accuracy|fluency|terminology|formatting",
+      "file": "<one of the file paths listed under Files Under Review, or null>",
+      "location": "<section heading or a short quote locating the finding, or null>",
+      "description": "<what is wrong, specific and self-contained>",
+      "suggestion": "<proposed replacement text, or null>"
+    }
+  ],
+  "strengths": ["strength 1", "strength 2"],
+  "summary": "Brief overall assessment"
+}
+
+Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors are found. Syntax errors are CRITICAL and should always be reported even if the array would otherwise be empty.
+
+## Findings Guidelines
+- The "findings" array can contain **0 to ${this.maxSuggestions} findings** - an empty array [] is perfectly valid for excellent translations
+- Severity meanings:
+  - "blocker": meaning inversion, wrong mathematics or code, or broken MyST that will not build
+  - "major": an accuracy or terminology error a reader would be misled by
+  - "minor": correct but awkward phrasing, or a minor terminology inconsistency
+  - "nit": a stylistic preference
+- "category" must name the criterion the finding counts against
+- "file" must be one of the listed file paths (or null if you cannot attribute the finding)
+- Each finding must be specific and actionable; prioritize by importance: accuracy first, then fluency, terminology, formatting
+- Do NOT invent findings just to fill the array - quality over quantity
+
+**CRITICAL**: Findings MUST relate ONLY to the sections that were changed in this PR. Do not report findings for unchanged parts of the document.`;
+    let result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateTranslation");
+    let check = validateCriterionScores(result);
+    if (!check.valid) {
+      core3.warning(`evaluateTranslation: response missing numeric criteria [${check.missing.join(", ")}] \u2014 retrying`);
+      result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateTranslation");
+      check = validateCriterionScores(result);
+      if (!check.valid) {
+        throw new Error(`evaluateTranslation: response still missing numeric criterion scores [${check.missing.join(", ")}] after retry \u2014 refusing to compute a verdict from an incomplete review`);
+      }
+    }
+    const scores = check.scores;
+    const score = REVIEW_CRITERIA.reduce((sum, c) => sum + scores[c.key] * c.weight, 0);
+    const { findings, malformed } = normalizeFindings(result.findings, result.issues, filenames);
+    if (malformed) {
+      core3.warning("evaluateTranslation: findings payload missing or malformed \u2014 recommendation will fail closed to editor");
+    }
+    return {
+      score: Math.round(score * 10) / 10,
+      accuracy: scores.accuracy,
+      fluency: scores.fluency,
+      terminology: scores.terminology,
+      formatting: scores.formatting,
+      syntaxErrors: Array.isArray(result.syntaxErrors) ? result.syntaxErrors.map((e) => String(e)) : [],
+      findings,
+      findingsMalformed: malformed,
+      issues: findings.map(findingToDisplayString),
+      strengths: result.strengths || [],
+      summary: result.summary || ""
+    };
+  }
+  /**
+   * Evaluate diff quality using Claude
+   */
+  async evaluateDiff(sourceBefore, sourceAfter, targetBefore, targetAfter, targetFiles, isResync = false) {
+    const contextNote = isResync ? `A whole-file resync re-aligned the target document to the current source: the source "Before" and "After" below are identical (the current source), and the target diff may legitimately be large \u2014 do not penalize its size. Evaluate whether the final target matches the current source's structure and content. We need to verify:` : `A translation sync action detected changes in an English source document and created corresponding changes in the target document. We need to verify:`;
+    const prompt = `You are an expert code reviewer specializing in translation sync workflows. Your task is to verify that translation changes are correctly positioned in the target document.
+
+## Context
+${contextNote}
+
+1. **Scope**: Only the correct files were modified
+2. **Position**: Changes appear in the same relative positions
+3. **Structure**: Document structure is preserved
+4. **Translation metadata**: The translation metadata in frontmatter is correctly updated
+
+## IMPORTANT: About the Translation Metadata System
+
+The \`translation\` section in the frontmatter is a CRITICAL feature of this translation system, NOT a bug. Here's how it works:
+
+- English headings generate IDs from English text: \`## Introduction\` \u2192 ID: \`introduction\`
+- Translated headings generate IDs from translated text: \`## \u4ECB\u7ECD\` \u2192 ID: \`\u4ECB\u7ECD\`
+- The translation headings bridge this gap by mapping English IDs to translated headings
+
+Example:
+\`\`\`yaml
+translation:
+  title: "\u4ECB\u7ECD"
+  headings:
+    introduction: "\u4ECB\u7ECD"
+    supply-and-demand: "\u4F9B\u9700\u5206\u6790"
+\`\`\`
+
+**Note on double-colon notation**: The headings may use \`section::subsection\` notation to represent hierarchical headings. This is intentional and valid YAML.
+
+## Source Document (English)
+### Before:
+\`\`\`markdown
+${sourceBefore}
+\`\`\`
+
+### After:
+\`\`\`markdown
+${sourceAfter}
+\`\`\`
+
+## Target Document (Translation)
+### Before:
+\`\`\`markdown
+${targetBefore}
+\`\`\`
+
+### After:
+\`\`\`markdown
+${targetAfter}
+\`\`\`
+
+### Files Changed:
+${targetFiles.map((f) => `- ${f.filename}: ${f.status} (+${f.additions}/-${f.deletions})`).join("\n")}
+
+## Verification Checks
+Evaluate each criterion:
+
+1. **Scope Correct**: Were only the necessary files modified? The target should change the same files as the source.
+2. **Position Correct**: Do changes appear in the same sections as source? Section order should match.
+3. **Structure Preserved**: Is the document structure (heading levels, nesting) maintained?
+4. **Heading-map Correct**: Is the heading-map updated with new/changed headings?
+
+## Response Format
+Respond with ONLY valid JSON:
+{
+  "scopeCorrect": true/false,
+  "positionCorrect": true/false,
+  "structurePreserved": true/false,
+  "headingMapCorrect": true/false,
+  "issues": ["issue 1 if any"],
+  "summary": "One sentence overall summary",
+  "scopeDetails": "Brief explanation of scope check",
+  "positionDetails": "Brief explanation of position check",
+  "structureDetails": "Brief explanation of structure check"
+}`;
+    const result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateDiff");
+    const isTrue = (v) => v === true;
+    const scopeCorrect = isTrue(result.scopeCorrect);
+    const positionCorrect = isTrue(result.positionCorrect);
+    const structurePreserved = isTrue(result.structurePreserved);
+    const headingMapCorrect = isTrue(result.headingMapCorrect);
+    const checks = [scopeCorrect, positionCorrect, structurePreserved, headingMapCorrect];
+    const passedChecks = checks.filter(Boolean).length;
+    const score = passedChecks / checks.length * 10;
+    return {
+      score: Math.round(score * 10) / 10,
+      scopeCorrect,
+      positionCorrect,
+      structurePreserved,
+      headingMapCorrect,
+      issues: Array.isArray(result.issues) ? result.issues.map((i) => String(i)) : [],
+      summary: result.summary || "",
+      scopeDetails: result.scopeDetails || "",
+      positionDetails: result.positionDetails || "",
+      structureDetails: result.structureDetails || ""
+    };
+  }
+  /**
+   * Format changed sections for the prompt
+   */
+  formatChangedSections(changedSections) {
+    if (changedSections.length === 0) {
+      return "";
+    }
+    const sectionsList = changedSections.map((s) => {
+      if (s.changeType === "deleted") {
+        return `- **DELETED**: ${s.heading}`;
+      }
+      return `- **${s.changeType.toUpperCase()}**: ${s.heading}`;
+    }).join("\n");
+    return `
+## IMPORTANT: Changed Sections in This PR
+
+The following sections were actually modified in this PR. **Your suggestions MUST focus ONLY on these changed sections**. Do NOT suggest improvements for unchanged parts of the document.
+
+${sectionsList}
+
+**Rule**: Any suggestions you make must be about the translation quality of the changed sections listed above. Ignore any issues in other parts of the document - those can be addressed in a separate comprehensive review.
+`;
+  }
+  /**
+   * Generate review comment
+   */
+  generateReviewComment(translationResult, diffResult, verdict, routing) {
+    const emoji = verdict === "PASS" ? "\u2705" : verdict === "WARN" ? "\u26A0\uFE0F" : "\u274C";
+    let routingLines = "";
+    if (routing) {
+      routingLines = `
+**Routing**: \`${routing.recommendation}\`${routing.reasons.length > 0 ? ` \u2014 ${routing.reasons.join("; ")}` : " \u2014 no gating findings; floors met"}`;
+      if (routing.wouldAutoMerge !== void 0) {
+        routingLines += `
+**Shadow gate**: would ${routing.wouldAutoMerge ? "" : "NOT "}auto-merge (recorded only; no action taken)`;
+      }
+    }
+    let comment = `## ${emoji} Translation Quality Review
+
+**Verdict**: ${verdict} | **Model**: ${this.model} | **Date**: ${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}${routingLines}
+
+---
+
+### \u{1F4DD} Translation Quality
+
+| Criterion | Score |
+|-----------|-------|
+| Accuracy | ${translationResult.accuracy}/10 |
+| Fluency | ${translationResult.fluency}/10 |
+| Terminology | ${translationResult.terminology}/10 |
+| Formatting | ${translationResult.formatting}/10 |
+| **Overall** | **${translationResult.score}/10** |
+
+**Summary**: ${sanitizeCommentText(translationResult.summary)}`;
+    if (translationResult.strengths.length > 0) {
+      comment += ` ${sanitizeCommentText(translationResult.strengths.join(" "))}`;
+    }
+    if (translationResult.syntaxErrors && translationResult.syntaxErrors.length > 0) {
+      comment += `
+
+### \u26A0\uFE0F Markdown Syntax Errors (CRITICAL)
+${translationResult.syntaxErrors.map((e) => `- \u{1F534} ${sanitizeCommentText(String(e))}`).join("\n")}`;
+    }
+    if (translationResult.issues.length > 0) {
+      comment += `
+
+**Suggestions**:
+${translationResult.issues.map((i) => `- ${sanitizeCommentText(i)}`).join("\n")}`;
+    }
+    comment += `
+
+---
+
+### \u{1F50D} Diff Quality
+
+| Check | Status |
+|-------|--------|
+| Scope Correct | ${diffResult.scopeCorrect ? "\u2705" : "\u274C"} |
+| Position Correct | ${diffResult.positionCorrect ? "\u2705" : "\u274C"} |
+| Structure Preserved | ${diffResult.structurePreserved ? "\u2705" : "\u274C"} |
+| Heading-map Correct | ${diffResult.headingMapCorrect ? "\u2705" : "\u274C"} |
+| **Overall** | **${diffResult.score}/10** |
+
+**Summary**: ${sanitizeCommentText(diffResult.summary)}`;
+    if (diffResult.issues.length > 0) {
+      comment += `
+
+**Issues**:
+${diffResult.issues.map((i) => `- ${sanitizeCommentText(String(i))}`).join("\n")}`;
+    }
+    comment += `
+
+---
+*This review was generated automatically by [action-translation](https://github.com/quantecon/action-translation) review mode.*`;
+    return comment;
+  }
+  /**
+   * Our review comments on the PR, oldest first.
+   *
+   * Paginated: beyond 30 comments the existing one is missed and duplicates accumulate.
+   */
+  async listOwnReviewComments(prNumber, owner, repo) {
+    const comments = await this.octokit.paginate(this.octokit.rest.issues.listComments, {
+      owner,
+      repo,
+      issue_number: prNumber,
+      per_page: 100
+    });
+    return comments.filter((c) => isActionReviewComment(c.body)).sort((a, b) => a.id - b.id);
+  }
+  /**
+   * Delete our review comments older than `keepId` — duplicates left by concurrent runs.
+   *
+   * Best effort: a duplicate comment is not worth failing a review that posted successfully.
+   */
+  async deleteOlderReviewComments(prNumber, owner, repo, keepId) {
+    let duplicates;
+    try {
+      duplicates = (await this.listOwnReviewComments(prNumber, owner, repo)).filter((c) => c.id < keepId);
+    } catch (error3) {
+      core3.warning(`Could not check PR #${prNumber} for duplicate review comments: ${error3}`);
+      return;
+    }
+    for (const duplicate of duplicates) {
+      try {
+        await this.octokit.rest.issues.deleteComment({ owner, repo, comment_id: duplicate.id });
+        core3.info(`Removed duplicate review comment ${duplicate.id} on PR #${prNumber}`);
+      } catch (error3) {
+        if (isNotFoundError(error3))
+          continue;
+        core3.warning(`Could not remove duplicate review comment ${duplicate.id} on PR #${prNumber}: ${error3}`);
+      }
+    }
+  }
+  /**
+   * Post the review, leaving exactly one review comment on the PR.
+   *
+   * Concurrent review runs are routine — one sync fires `opened` plus a `labeled` event per
+   * label — and list-then-create is a check-then-act race: every run sees "no comment yet"
+   * and creates one (issue #96). Issue comments have no conditional-write primitive, so each
+   * run instead reconciles after writing, deleting every *older* review comment of ours.
+   * Ids increase with creation time and each run lists after it writes, so the run holding the
+   * highest id necessarily sees the others and removes them: one comment survives any
+   * interleaving. (Deleting *newer* ids instead would not converge — a run that lists before
+   * a slower run creates would leave both.)
+   */
+  async postReviewComment(prNumber, owner, repo, comment) {
+    const body = `${REVIEW_COMMENT_MARKER}
+${comment}`;
+    try {
+      for (let attempt = 1; attempt <= REVIEW_COMMENT_UPSERT_ATTEMPTS; attempt++) {
+        const existing = await this.listOwnReviewComments(prNumber, owner, repo);
+        if (existing.length === 0) {
+          const { data: created } = await this.octokit.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number: prNumber,
+            body
+          });
+          core3.info(`Posted review comment on PR #${prNumber}`);
+          await this.deleteOlderReviewComments(prNumber, owner, repo, created.id);
+          return;
+        }
+        const target = existing[existing.length - 1];
+        try {
+          await this.octokit.rest.issues.updateComment({
+            owner,
+            repo,
+            comment_id: target.id,
+            body
+          });
+        } catch (error3) {
+          if (isNotFoundError(error3) && attempt < REVIEW_COMMENT_UPSERT_ATTEMPTS) {
+            core3.info(`Review comment ${target.id} was removed by a concurrent run, retrying (${attempt})`);
+            continue;
+          }
+          throw error3;
+        }
+        core3.info(`Updated existing review comment on PR #${prNumber}`);
+        await this.deleteOlderReviewComments(prNumber, owner, repo, target.id);
+        return;
+      }
+    } catch (error3) {
+      core3.error(`Failed to post review comment: ${error3}`);
+      throw error3;
+    }
+  }
+};
+
+// dist/translator.js
+var core4 = __toESM(require_core(), 1);
+var INCOMPLETE_DOCUMENT_MARKER = "-----> INCOMPLETE DOCUMENT <------";
+var RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 1e3
+  // 1s, 2s, 4s with exponential backoff
+};
+function estimateOutputTokens(sourceLength, targetLanguage) {
+  const baseTokens = Math.ceil(sourceLength / 4);
+  let expansionFactor = 1.5;
+  if (["ar", "fa", "he"].includes(targetLanguage)) {
+    expansionFactor = 1.8;
+  }
+  if (["zh", "zh-cn", "zh-tw", "ja", "ko"].includes(targetLanguage)) {
+    expansionFactor = 1.3;
+  }
+  const estimatedTokens = Math.ceil(baseTokens * expansionFactor);
+  const buffer = 2e3;
+  return estimatedTokens + buffer;
+}
+function checkDocumentSize(sourceLength, targetLanguage) {
+  const estimated = estimateOutputTokens(sourceLength, targetLanguage);
+  const API_MAX_TOKENS = MAX_TOKENS.fullDocument;
+  if (estimated > API_MAX_TOKENS) {
+    return `Document too large: estimated ${estimated} tokens exceeds API maximum of ${API_MAX_TOKENS} tokens. This document needs section-by-section translation rather than bulk translation.`;
+  }
+  if (process.env.TRANSLATE_DEBUG) {
+    console.log(`Pre-flight check: source=${sourceLength} chars, estimated output=${estimated} tokens, using max_tokens=${API_MAX_TOKENS}`);
+  }
+  return null;
+}
+function formatApiError(error3) {
+  if (error3 instanceof AuthenticationError) {
+    return "Authentication failed: Invalid or expired API key. Check your anthropic-api-key secret.";
+  }
+  if (error3 instanceof RateLimitError) {
+    return "Rate limit exceeded: Too many requests. The action will retry automatically, or try again later.";
+  }
+  if (error3 instanceof APIConnectionError) {
+    return "Connection error: Unable to reach Anthropic API. Check network connectivity.";
+  }
+  if (error3 instanceof BadRequestError) {
+    return `Bad request: ${error3.message}. This may indicate an issue with the prompt or content.`;
+  }
+  if (error3 instanceof APIError) {
+    if (error3.message?.includes("overloaded")) {
+      return "Anthropic API is temporarily overloaded. Retries exhausted \u2014 please try again later.";
+    }
+    return `API error (${error3.status}): ${error3.message}`;
+  }
+  if (error3 instanceof Error) {
+    return error3.message;
+  }
+  return "Unknown translation error";
+}
+var TranslationService = class {
+  client;
+  model;
+  debug;
+  constructor(apiKey, model = DEFAULT_CLAUDE_MODEL, debug = false) {
+    this.client = new Anthropic({ apiKey });
+    this.model = model;
+    this.debug = debug;
+  }
+  log(message) {
+    if (this.debug) {
+      core4.info(`[Translator] ${message}`);
+    }
+  }
+  /**
+   * Sleep for a given number of milliseconds
+   */
+  sleep(ms) {
+    return new Promise((resolve3) => setTimeout(resolve3, ms));
+  }
+  /**
+   * Call Claude API with retry logic and exponential backoff.
+   *
+   * Retries on transient errors:
+   * - RateLimitError (429)
+   * - APIConnectionError (network issues)
+   * - APIError with 5xx status (server errors)
+   * - APIError with overloaded_error (status undefined)
+   *
+   * Does NOT retry on:
+   * - AuthenticationError (invalid API key)
+   * - BadRequestError (prompt issues)
+   * - Other non-transient errors
+   */
+  async callWithRetry(createParams, operationName) {
+    const { maxRetries, baseDelayMs } = RETRY_CONFIG;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const stream = this.client.messages.stream({
+          ...createParams,
+          thinking: DEFAULT_THINKING
+        });
+        const message = await stream.finalMessage();
+        if (message.stop_reason === "max_tokens") {
+          throw new Error(`${operationName}: response truncated at max_tokens=${createParams.max_tokens}; refusing to use incomplete output`);
+        }
+        return message;
+      } catch (error3) {
+        if (error3 instanceof AuthenticationError || error3 instanceof BadRequestError) {
+          throw error3;
+        }
+        const isRetryable = error3 instanceof RateLimitError || error3 instanceof APIConnectionError || error3 instanceof APIError && (error3.status !== void 0 && error3.status >= 500 || error3.status === void 0 && error3.message?.includes("overloaded"));
+        if (!isRetryable || attempt === maxRetries) {
+          throw error3;
+        }
+        const delay = baseDelayMs * Math.pow(2, attempt - 1);
+        this.log(`${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error3 instanceof Error ? error3.message : error3}. Retrying in ${delay}ms...`);
+        await this.sleep(delay);
+      }
+    }
+    throw new Error("Unexpected: retry loop completed without result");
+  }
+  /**
+   * Translate a section (update, new, or resync)
+   */
+  async translateSection(request2) {
+    try {
+      if (request2.mode === "update") {
+        return await this.translateSectionUpdate(request2);
+      } else if (request2.mode === "resync") {
+        return await this.translateSectionResync(request2);
+      } else {
+        return await this.translateNewSection(request2);
+      }
+    } catch (error3) {
+      return {
+        success: false,
+        error: formatApiError(error3)
+      };
+    }
+  }
+  /**
+   * Update existing section (mode='update')
+   * Claude sees: old English, new English, current translation → produces updated translation
+   */
+  async translateSectionUpdate(request2) {
+    const { oldEnglish, newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } = request2;
+    if (!oldEnglish || !newEnglish || !currentTranslation) {
+      return {
+        success: false,
+        error: "Update mode requires oldEnglish, newEnglish, and currentTranslation"
+      };
+    }
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
+    const prompt = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
+
+TASK: The ${sourceLanguage} section has been modified. Update the existing ${targetLanguage} translation to reflect these changes.
+
+CRITICAL RULES:
+1. Compare the OLD and NEW ${sourceLanguage} versions to understand what changed
+2. Update the CURRENT ${targetLanguage} translation to reflect these changes
+3. Maintain consistency with the existing ${targetLanguage} style and terminology
+4. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
+5. DO NOT translate code, math, URLs, or technical identifiers
+6. **NEVER remove i18n/localization code from code cells.** The translation may contain extra code inside code cells that does NOT exist in the source \u2014 this is intentional localization (e.g., font configuration like \`from matplotlib import font_manager\`, \`fontP.set_family('SimHei')\`, \`plt.rcParams\` settings, or lines marked \`# i18n\`). Always preserve these.
+7. Use the glossary for consistent terminology
+8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters
+   - Math blocks must have matching $$ delimiters
+   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
+${additionalRules}
+${additionalRules ? "" : "9. "}Return ONLY the updated ${targetLanguage} section, no explanations
+${request2.customInstructions || ""}
+${glossarySection}
+
+[OLD ${sourceLanguage} VERSION]
+${oldEnglish}
+[/OLD ${sourceLanguage} VERSION]
+
+[NEW ${sourceLanguage} VERSION]
+${newEnglish}
+[/NEW ${sourceLanguage} VERSION]
+
+[CURRENT ${targetLanguage} TRANSLATION]
+${currentTranslation}
+[/CURRENT ${targetLanguage} TRANSLATION]
+
+Provide ONLY the updated ${targetLanguage} translation. Do not include any markers, explanations, or comments.`;
+    this.log(`Translating section update, mode=update`);
+    this.log(`Old ${sourceLanguage} length: ${oldEnglish.length}`);
+    this.log(`New ${sourceLanguage} length: ${newEnglish.length}`);
+    this.log(`Current ${targetLanguage} length: ${currentTranslation.length}`);
+    const response = await this.callWithRetry({
+      model: this.model,
+      max_tokens: MAX_TOKENS.section,
+      messages: [{ role: "user", content: prompt }]
+    }, "translateSectionUpdate");
+    const content = response.content[0];
+    if (!content || content.type !== "text") {
+      return {
+        success: false,
+        error: "Unexpected response format from Claude"
+      };
+    }
+    this.log(`Translated section length: ${content.text.length}`);
+    return {
+      success: true,
+      translatedSection: content.text.trim(),
+      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
+    };
+  }
+  /**
+   * Resync existing section (mode='resync')
+   * Claude sees: current English + current translation → produces resynced translation
+   *
+   * Used for drift recovery when no baseline (old English) is available.
+   * Preserves existing translation style, terminology, and localization
+   * wherever the meaning hasn't changed.
+   */
+  async translateSectionResync(request2) {
+    const { newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } = request2;
+    if (!newEnglish || !currentTranslation) {
+      return {
+        success: false,
+        error: "Resync mode requires newEnglish (current source) and currentTranslation"
+      };
+    }
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join("\n") : "";
+    const prompt = `You are resyncing a ${targetLanguage} translation to match the current ${sourceLanguage} source.
+
+TASK: The ${sourceLanguage} source may have changed since the translation was made. Update the ${targetLanguage} translation to accurately reflect the current source content.
+
+CRITICAL RULES:
+1. Preserve the existing ${targetLanguage} translation style, terminology choices, and localization decisions wherever the meaning hasn't changed
+2. Only modify parts of the translation where the ${sourceLanguage} source has different content
+3. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
+4. DO NOT translate code, math, URLs, or technical identifiers
+5. **NEVER remove i18n/localization code from code cells.** The translation may contain extra code inside code cells that does NOT exist in the source \u2014 this is intentional localization (e.g., font configuration like \`from matplotlib import font_manager\`, \`fontP.set_family('SimHei')\`, \`plt.rcParams\` settings, or lines marked \`# i18n\`). Always preserve these.
+6. Use the glossary for consistent terminology
+7. MARKDOWN SYNTAX: Ensure proper markdown syntax:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters
+   - Math blocks must have matching $$ delimiters
+   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
+${additionalRules}
+${additionalRules ? "" : "8. "}Return ONLY the updated ${targetLanguage} section, no explanations
+${request2.customInstructions || ""}
+${glossarySection}
+
+[CURRENT ${sourceLanguage} SOURCE]
+${newEnglish}
+[/CURRENT ${sourceLanguage} SOURCE]
+
+[EXISTING ${targetLanguage} TRANSLATION]
+${currentTranslation}
+[/EXISTING ${targetLanguage} TRANSLATION]
+
+Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing translation's style and only change what's needed to match the current source. Do not include any markers, explanations, or comments.`;
+    this.log(`Translating section resync, mode=resync`);
+    this.log(`Current ${sourceLanguage} length: ${newEnglish.length}`);
+    this.log(`Existing ${targetLanguage} length: ${currentTranslation.length}`);
+    const response = await this.callWithRetry({
+      model: this.model,
+      max_tokens: MAX_TOKENS.section,
+      messages: [{ role: "user", content: prompt }]
+    }, "translateSectionResync");
+    const content = response.content[0];
+    if (!content || content.type !== "text") {
+      return {
+        success: false,
+        error: "Unexpected response format from Claude"
+      };
+    }
+    this.log(`Resynced section length: ${content.text.length}`);
+    return {
+      success: true,
+      translatedSection: content.text.trim(),
+      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
+    };
+  }
+  /**
+   * Translate new section (mode='new')
+   * Claude sees: English section → produces translation
+   */
+  async translateNewSection(request2) {
+    const { englishSection, sourceLanguage, targetLanguage, glossary } = request2;
+    if (!englishSection) {
+      return {
+        success: false,
+        error: "New mode requires englishSection"
+      };
+    }
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join("\n") : "";
+    const prompt = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
+
+RULES:
+1. Translate all prose content accurately
+2. Preserve all MyST Markdown formatting, structure, and directives
+3. DO NOT translate code blocks (keep code as-is)
+4. DO NOT translate mathematical equations (keep LaTeX as-is)
+5. DO NOT translate URLs, file paths, or technical identifiers
+6. Use the glossary for consistent terminology
+7. Maintain heading structure and levels
+8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters
+   - Math blocks must have matching $$ delimiters
+   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
+${additionalRules}
+${additionalRules ? "" : "9. "}Return ONLY the translated section, no explanations
+${request2.customInstructions || ""}
+${glossarySection}
+
+[${sourceLanguage} SECTION TO TRANSLATE]
+${englishSection}
+[/END SECTION]
+
+Provide ONLY the ${targetLanguage} translation. Do not include any markers, explanations, or comments.`;
+    this.log(`Translating new section, mode=new`);
+    this.log(`${sourceLanguage} section length: ${englishSection.length}`);
+    const response = await this.callWithRetry({
+      model: this.model,
+      max_tokens: MAX_TOKENS.section,
+      messages: [{ role: "user", content: prompt }]
+    }, "translateNewSection");
+    const content = response.content[0];
+    if (!content || content.type !== "text") {
+      return {
+        success: false,
+        error: "Unexpected response format from Claude"
+      };
+    }
+    this.log(`Translated section length: ${content.text.length}`);
+    return {
+      success: true,
+      translatedSection: content.text.trim(),
+      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
+    };
+  }
+  /**
+   * Translate full document (for new files)
+   */
+  async translateFullDocument(request2) {
+    const { content, sourceLanguage, targetLanguage, glossary } = request2;
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join("\n") : "";
+    const prompt = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
+
+RULES:
+1. Translate all prose content
+2. Preserve all MyST Markdown directives and structure exactly
+3. DO NOT translate code blocks (keep code as-is)
+4. DO NOT translate mathematical equations (keep LaTeX as-is)
+5. DO NOT translate URLs, file paths, or technical identifiers
+6. Use the provided glossary for consistent terminology
+7. Maintain the exact same heading structure and anchors
+8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters  
+   - Math blocks must have matching $$ delimiters
+   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
+9. DIRECTIVE BLOCKS: MyST directive blocks MUST be balanced:
+   - Every \`\`\`{exercise-start} MUST have matching \`\`\`{exercise-end}
+   - Every \`\`\`{solution-start} MUST have matching \`\`\`{solution-end}
+   - Every \`\`\`{code-cell} MUST have closing \`\`\`
+${additionalRules}
+${request2.customInstructions || ""}
+${glossarySection}
+
+IMPORTANT: You MUST translate the ENTIRE document. Do not stop mid-sentence or mid-code.
+If you are approaching token limits and cannot complete the translation, print:
+"${INCOMPLETE_DOCUMENT_MARKER}"
+
+CONTENT:
+${content}
+
+Provide the complete translated document maintaining exact MyST structure.`;
+    const sizeError = checkDocumentSize(content.length, targetLanguage);
+    if (sizeError) {
+      throw new Error(sizeError);
+    }
+    const maxTokens = MAX_TOKENS.fullDocument;
+    this.log(`Translating full document`);
+    this.log(`Content length: ${content.length} chars`);
+    const response = await this.callWithRetry({
+      model: this.model,
+      max_tokens: maxTokens,
+      messages: [{ role: "user", content: prompt }]
+    }, "translateFullDocument");
+    const result = response.content[0];
+    if (!result || result.type !== "text") {
+      return {
+        success: false,
+        error: "Unexpected response format from Claude"
+      };
+    }
+    const translatedText = result.text.trim();
+    if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
+      return {
+        success: false,
+        error: `Document exceeded token limits and was truncated. This document needs section-by-section translation rather than bulk translation.`
+      };
+    }
+    this.log(`Translation complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
+    return {
+      success: true,
+      translatedSection: translatedText,
+      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
+    };
+  }
+  /**
+   * Resync a full document (whole-file RESYNC for forward command).
+   *
+   * Claude sees the complete SOURCE document and the complete existing TARGET
+   * translation, and produces an updated translation that faithfully reflects
+   * the current source while preserving the existing translation's style,
+   * terminology choices, and localization additions.
+   *
+   * This is the recommended approach over section-by-section RESYNC because:
+   * - Preserves cross-section context (localized plot labels, font config)
+   * - 2-3× cheaper (glossary sent once, not per-section)
+   * - Fewer diff lines (more surgical changes)
+   */
+  async translateDocumentResync(request2) {
+    const { sourceContent, targetContent, sourceLanguage, targetLanguage, glossary } = request2;
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
+    const prompt = `You are a professional translator specialising in quantitative economics.
+
+You are given:
+1. The **current ${sourceLanguage} source** document (authoritative)
+2. The **current ${targetLanguage} translation** (may be outdated or have errors)
+
+Your task: produce an **updated ${targetLanguage} translation** that accurately reflects the current ${sourceLanguage} source.
+
+## Critical rules
+
+1. **Preserve the existing translation's style, terminology, and localization choices** wherever the meaning hasn't changed. Do NOT re-translate sections that are already correct \u2014 keep them exactly as-is.
+2. **Fix any errors** in the translation \u2014 missing content, incorrect formulas, wrong code, structural differences.
+3. **Add any missing content** that exists in the source but not in the translation.
+4. **Remove any content** that exists in the translation but not in the source \u2014 EXCEPT for i18n/localization additions (see rule 6).
+5. **Preserve all MyST Markdown syntax** exactly \u2014 directives, roles, code blocks, math blocks, cross-references, frontmatter.
+6. **The existing translation's in-code localization is ground truth \u2014 NEVER revert it to ${sourceLanguage}.** Code cells in the translation often deliberately differ from the source: every line containing ${targetLanguage} text or other localization was added on purpose, usually by hand. Apply these rules line by line:
+   - If the source code around a localized line is unchanged: keep that line EXACTLY as it is in the translation.
+   - If the source changed the surrounding code: carry the localization into the updated code \u2014 keep the label/mapping machinery and translate any new user-visible strings to match.
+   - Drop a localized line only when the source removed the code it belongs to entirely.
+   - NEVER replace a localized string with its ${sourceLanguage} source equivalent.
+   Common localization patterns that MUST be preserved:
+   - Font configuration: \`from matplotlib import font_manager\`, \`fontP = font_manager.FontProperties()\`, \`fontP.set_family('SimHei')\`, \`fontP.set_size(14)\`
+   - rcParams: \`plt.rcParams['font.sans-serif'] = ['SimHei']\`, \`plt.rcParams['axes.unicode_minus'] = False\`
+   - Translated plot strings: \`set_xlabel\`/\`set_ylabel\`/\`set_title\`/\`legend\`/\`annotate\`/\`ax.text\` labels, legend-label lists, plotly trace names
+   - Label-translation dicts and column mappings: \`DataFrame.rename\` maps, CSV column-name mappings, country/category name lists, date formatters
+   - Data-source substitutions that load localized data: a read of a file that exists only in the translation repo (e.g. \`pd.read_csv("datasets/country_code_cn.csv")\` or a localized JSON/CSV mapping) and the localized column names selected from it. The file is invisible to you because it lives only in the translation repo \u2014 that is exactly why the substitution was made by hand. Keep the translation's read and its column choices even when the source derives the same data differently, and apply source-side data updates (new rows, categories, entities) THROUGH the localized mechanism rather than reverting to the source's derivation.
+   - Translated \`print()\` strings and docstrings
+   - Any imports, variable assignments, or configuration lines that appear in the translation's code cells but not in the source's code cells
+   - Locale-appropriate reference links
+   - Full-width punctuation where conventionally used
+   - Lines marked with \`# i18n\` comments
+   Keep localized label text as plain strings \u2014 NEVER wrap ${targetLanguage} text in math delimiters (\`$...$\`).
+   When in doubt about whether a code line in the translation is localization, **keep the translation's version**.
+7. **Preserve the frontmatter (YAML between --- markers) from the TARGET translation** \u2014 do not replace it with the source frontmatter. Only update the heading-map if section headings changed.
+8. **Use the glossary below for consistent terminology** \u2014 when a term from the glossary appears, use the specified translation.
+${additionalRules}
+${request2.customInstructions || ""}
+${glossarySection}
+
+## Output format
+
+Return ONLY the complete updated ${targetLanguage} document. No explanations, no commentary, no code fences wrapping the document. Start directly with the document's first line: the frontmatter \`---\` marker if the ${targetLanguage} translation has frontmatter, otherwise its first content line. NEVER add a \`---\` marker to a document that does not have frontmatter.
+
+## Current ${sourceLanguage} Source
+
+${sourceContent}
+
+## Current ${targetLanguage} Translation
+
+${targetContent}`;
+    const sizeError = checkDocumentSize(sourceContent.length + targetContent.length, targetLanguage);
+    if (sizeError) {
+      throw new Error(sizeError);
+    }
+    const maxTokens = MAX_TOKENS.fullDocument;
+    this.log(`Resyncing full document`);
+    this.log(`Source length: ${sourceContent.length} chars`);
+    this.log(`Target length: ${targetContent.length} chars`);
+    try {
+      const response = await this.callWithRetry({
+        model: this.model,
+        max_tokens: maxTokens,
+        messages: [{ role: "user", content: prompt }]
+      }, "translateDocumentResync");
+      const result = response.content[0];
+      if (!result || result.type !== "text") {
+        return {
+          success: false,
+          error: "Unexpected response format from Claude"
+        };
+      }
+      const translatedText = result.text.trim();
+      if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
+        return {
+          success: false,
+          error: `Document exceeded token limits and was truncated. This document may need a simpler resync approach.`
+        };
+      }
+      this.log(`Resync complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
+      return {
+        success: true,
+        translatedSection: translatedText,
+        tokensUsed: response.usage.input_tokens + response.usage.output_tokens
+      };
+    } catch (error3) {
+      return {
+        success: false,
+        error: formatApiError(error3)
+      };
+    }
+  }
+  /**
+   * Format glossary for inclusion in prompt
+   */
+  formatGlossary(glossary, targetLanguage) {
+    if (!glossary.terms || glossary.terms.length === 0) {
+      return "";
+    }
+    const terms = glossary.terms.filter((term) => {
+      if (typeof term[targetLanguage] === "string" && term[targetLanguage] !== "") {
+        return true;
+      }
+      this.log(`Glossary term "${term.en}" has no ${targetLanguage} translation \u2014 skipped`);
+      return false;
+    }).map((term) => {
+      const translation = term[targetLanguage];
+      const context2 = term.context ? ` (${term.context})` : "";
+      return `  - "${term.en}" \u2192 "${translation}"${context2}`;
+    }).join("\n");
+    return `GLOSSARY:
+${terms}
+`;
+  }
+};
+
+// dist/diff-detector.js
+var core5 = __toESM(require_core(), 1);
+var DiffDetector = class {
+  parser;
+  debug;
+  constructor(debug = false) {
+    this.parser = new MystParser();
+    this.debug = debug;
+  }
+  log(message) {
+    if (this.debug) {
+      core5.info(`[DiffDetector] ${message}`);
+    }
+  }
+  /**
+   * Detect section-level changes between old and new documents
+   * Also detects preamble changes (title and intro before first ## section)
+   */
+  async detectSectionChanges(oldContent, newContent, filepath) {
+    this.log(`Detecting section changes in ${filepath}`);
+    const oldSections = await this.parser.parseSections(oldContent, filepath);
+    const newSections = await this.parser.parseSections(newContent, filepath);
+    this.log(`Old document: ${oldSections.sections.length} sections`);
+    this.log(`New document: ${newSections.sections.length} sections`);
+    const changes = [];
+    const processedOldSections = /* @__PURE__ */ new Set();
+    if (oldSections.preamble !== newSections.preamble) {
+      const oldPreamble = oldSections.preamble?.trim() || "";
+      const newPreamble = newSections.preamble?.trim() || "";
+      if (oldPreamble !== newPreamble) {
+        this.log(`PREAMBLE MODIFIED: Content changed`);
+        changes.push({
+          type: "modified",
+          oldSection: {
+            id: "_preamble",
+            heading: "",
+            // Preamble has no heading
+            level: 0,
+            // Special level for preamble
+            content: oldPreamble,
+            startLine: 1,
+            endLine: 1,
+            subsections: []
+          },
+          newSection: {
+            id: "_preamble",
+            heading: "",
+            level: 0,
+            content: newPreamble,
+            startLine: 1,
+            endLine: 1,
+            subsections: []
+          }
+        });
+      }
+    }
+    for (let i = 0; i < newSections.sections.length; i++) {
+      const newSection = newSections.sections[i];
+      const oldSectionByPosition = oldSections.sections[i];
+      const oldSectionById = this.parser.findSectionById(oldSections.sections, newSection.id);
+      let matchedOldSection;
+      if (oldSectionByPosition && this.sectionsMatch(oldSectionByPosition, newSection)) {
+        matchedOldSection = oldSectionByPosition;
+        this.log(`Matched section "${newSection.heading}" by position ${i}`);
+      } else if (oldSectionById) {
+        matchedOldSection = oldSectionById;
+        this.log(`Matched section "${newSection.heading}" by ID "${newSection.id}"`);
+      }
+      if (!matchedOldSection) {
+        this.log(`ADDED: Section "${newSection.heading}" at position ${i}`);
+        changes.push({
+          type: "added",
+          newSection,
+          position: {
+            index: i,
+            afterSectionId: i > 0 ? newSections.sections[i - 1].id : void 0
+          }
+        });
+      } else {
+        processedOldSections.add(matchedOldSection.id);
+        if (!this.sectionContentEqual(matchedOldSection, newSection)) {
+          this.log(`MODIFIED: Section "${newSection.heading}"`);
+          changes.push({
+            type: "modified",
+            oldSection: matchedOldSection,
+            newSection
+          });
+        } else {
+          this.log(`UNCHANGED: Section "${newSection.heading}"`);
+        }
+      }
+    }
+    for (const oldSection of oldSections.sections) {
+      if (!processedOldSections.has(oldSection.id)) {
+        this.log(`DELETED: Section "${oldSection.heading}"`);
+        changes.push({
+          type: "deleted",
+          oldSection
+        });
+      }
+    }
+    this.log(`Total section changes detected: ${changes.length}`);
+    return changes;
+  }
+  /**
+   * Check if two sections match (for position-based matching)
+   * Sections match if they have the same ID (heading)
+   *
+   * Note: We used to check structural similarity (level + subsection count),
+   * but this caused false matches when inserting new sections.
+   * Now we require ID match for position-based matching.
+   */
+  sectionsMatch(section1, section2) {
+    return section1.id === section2.id;
+  }
+  /**
+   * Check if section content has changed (including all nested subsections recursively)
+   */
+  sectionContentEqual(section1, section2) {
+    if (section1.content.trim() !== section2.content.trim()) {
+      return false;
+    }
+    if (section1.subsections.length !== section2.subsections.length) {
+      return false;
+    }
+    for (let i = 0; i < section1.subsections.length; i++) {
+      if (!this.sectionContentEqual(section1.subsections[i], section2.subsections[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
+
+// dist/typography.js
+var NBSP = "\xA0";
+var EXISTING_NBSP = /[\u00A0\u202F]/;
+var HIGH_PUNCTUATION = /[;:!?]/;
+var PROSE_DIRECTIVES = /* @__PURE__ */ new Set([
+  "admonition",
+  "attention",
+  "caution",
+  "danger",
+  "error",
+  "hint",
+  "important",
+  "note",
+  "seealso",
+  "tip",
+  "warning",
+  "exercise",
+  "exercise-start",
+  "exercise-end",
+  "solution",
+  "solution-start",
+  "solution-end",
+  "epigraph",
+  "margin",
+  "sidebar",
+  "topic",
+  "card",
+  "grid-item-card",
+  "proof",
+  "theorem",
+  "lemma",
+  "corollary",
+  "definition",
+  "remark",
+  "conjecture"
+]);
+var FENCE_OPEN = /^(\s{0,3})(`{3,}|~{3,}|:{3,})\s*(?:\{([\w:-]+)\})?/;
+var DIRECTIVE_OPTION = /^\s*:[a-zA-Z][\w-]*:/;
+var MATH_DELIM = /\$\$/g;
+function classifyLines(lines) {
+  const eligible = new Array(lines.length).fill(false);
+  const stack = [];
+  let inFrontmatter = false;
+  let inMathBlock = false;
+  let awaitingOptions = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (i === 0 && line.trim() === "---") {
+      inFrontmatter = true;
+      continue;
+    }
+    if (inFrontmatter) {
+      if (line.trim() === "---")
+        inFrontmatter = false;
+      continue;
+    }
+    const top = stack[stack.length - 1];
+    const open = FENCE_OPEN.exec(line);
+    if (top && !top.prose) {
+      if (open) {
+        const [, , marker, directive] = open;
+        if (!directive && marker[0] === top.marker[0] && marker.length >= top.marker.length)
+          stack.pop();
+      }
+      continue;
+    }
+    const delimiters = (line.match(MATH_DELIM) || []).length;
+    if (inMathBlock || delimiters > 0) {
+      if (delimiters % 2 === 1)
+        inMathBlock = !inMathBlock;
+      continue;
+    }
+    if (open) {
+      const [, , marker, directive] = open;
+      if (top && !directive && marker[0] === top.marker[0] && marker.length >= top.marker.length) {
+        stack.pop();
+        continue;
+      }
+      const prose = Boolean(directive) && PROSE_DIRECTIVES.has(directive.toLowerCase());
+      stack.push({ marker, prose });
+      awaitingOptions = prose;
+      continue;
+    }
+    if (!top) {
+      eligible[i] = true;
+      continue;
+    }
+    if (awaitingOptions) {
+      if (DIRECTIVE_OPTION.test(line))
+        continue;
+      if (line.trim() === "")
+        continue;
+      awaitingOptions = false;
+    }
+    eligible[i] = true;
+  }
+  return eligible;
+}
+var INLINE_PROTECTED = [
+  /\$[^$\n]+\$/g,
+  // inline math
+  /`[^`\n]+`/g,
+  // inline code — also covers MyST roles: {doc}`intro <sec:intro>`
+  /!?\[[^\]]*\]\([^)]*\)/g,
+  // links and images, including the URL
+  /<[^>\n]+>/g,
+  // HTML tags and autolinks
+  /&(?:[a-zA-Z]+\d*|#\d+|#x[0-9a-fA-F]+);/g,
+  // HTML entities — &nbsp; ends in ;
+  /https?:\/\/\S+/g
+  // bare URLs
+];
+var PLACEHOLDER = "\0";
+function applyFrenchSpacing(text) {
+  return text.replace(/(\S)([ \t]*)([;:!?]+)(?=[\s)\]»"'.,]|$)/g, (match, before, gap, run2) => {
+    if (EXISTING_NBSP.test(before))
+      return match;
+    if (before === "\\")
+      return match;
+    if (HIGH_PUNCTUATION.test(before))
+      return match;
+    if (gap.length === 0 && /\d/.test(before) && run2 === ":")
+      return match;
+    return `${before}${NBSP}${run2}`;
+  });
+}
+var DEFINITION_LABEL = /^\s{0,3}\[[^\]]*\]:/;
+var DEFINITION_CORRUPTED = /^(\s{0,3}\[[^\]]*\])[\u00A0\u202F]+:/;
+function applyToProse(line, rule) {
+  const chunks = [];
+  let masked = line.replace(DEFINITION_CORRUPTED, "$1:");
+  masked = masked.replace(DEFINITION_LABEL, (m) => {
+    chunks.push(m);
+    return `${PLACEHOLDER}${chunks.length - 1}${PLACEHOLDER}`;
+  });
+  for (const pattern of INLINE_PROTECTED) {
+    masked = masked.replace(pattern, (m) => {
+      chunks.push(m);
+      return `${PLACEHOLDER}${chunks.length - 1}${PLACEHOLDER}`;
+    });
+  }
+  if (/^\s*\([^)\n]*\)=\s*$/.test(masked))
+    return line;
+  let out = rule(masked);
+  for (let i = 0; i < INLINE_PROTECTED.length + 1; i++) {
+    const next = out.replace(new RegExp(`${PLACEHOLDER}(\\d+)${PLACEHOLDER}`, "g"), (_, idx) => chunks[Number(idx)] ?? "");
+    if (next === out)
+      break;
+    out = next;
+  }
+  return out;
+}
+var RULES = /* @__PURE__ */ new Map([["fr", applyFrenchSpacing]]);
+function applyTypography(content, language) {
+  const rule = RULES.get(language);
+  if (!rule)
+    return content;
+  const lines = content.split("\n");
+  const eligible = classifyLines(lines);
+  return lines.map((line, i) => eligible[i] ? applyToProse(line, rule) : line).join("\n");
+}
+
 // dist/file-processor.js
+var core6 = __toESM(require_core(), 1);
 var FileProcessor = class {
   parser;
   diffDetector;
@@ -37906,134 +38170,6 @@ ${translatedContent}`;
     return await this.parser.validateMyST(content, filepath);
   }
 };
-
-// dist/structural-parity.js
-var FLEXIBLE_ARG_DIRECTIVES = /* @__PURE__ */ new Set([
-  "admonition",
-  "dropdown",
-  "card",
-  "grid-item-card",
-  "tab-item",
-  "exercise",
-  "exercise-start",
-  "contents",
-  "index",
-  "code-cell"
-]);
-var FLEXIBLE_ARG_PREFIX = "prf:";
-function isFlexibleArgDirective(name) {
-  return FLEXIBLE_ARG_DIRECTIVES.has(name) || name.startsWith(FLEXIBLE_ARG_PREFIX);
-}
-var FENCE_LINE = /^\s*(`{3,}|~{3,})(.*)$/;
-var DIRECTIVE_INFO = /^\{([A-Za-z0-9_+:.-]+)\}\s*(.*)$/;
-var ANCHOR_LINE = /^\(([^()\s]+)\)=\s*$/;
-function extractStructuralTokens(content) {
-  const directives = [];
-  const anchors = [];
-  let openFence = null;
-  const lines = content.split("\n");
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const fence = FENCE_LINE.exec(line);
-    if (openFence) {
-      if (fence && fence[1][0] === openFence.char && fence[1].length >= openFence.length && fence[2].trim() === "") {
-        openFence = null;
-      }
-      continue;
-    }
-    if (fence) {
-      openFence = { char: fence[1][0], length: fence[1].length };
-      const info7 = DIRECTIVE_INFO.exec(fence[2].trim());
-      if (info7) {
-        directives.push({ name: info7[1], arg: info7[2].trim(), line: i + 1 });
-      }
-      continue;
-    }
-    const anchor = ANCHOR_LINE.exec(line);
-    if (anchor) {
-      anchors.push({ label: anchor[1], line: i + 1 });
-    }
-  }
-  return { directives, anchors };
-}
-function checkStructuralParity(sourceContent, outputContent) {
-  const source = extractStructuralTokens(sourceContent);
-  const output = extractStructuralTokens(outputContent);
-  const violations = [];
-  if (source.directives.length !== output.directives.length) {
-    violations.push({
-      message: `directive count differs: source has ${source.directives.length}, output has ${output.directives.length} \u2014 a wholesale mismatch usually means the document was re-fenced or truncated`
-    });
-  }
-  const pairCount = Math.min(source.directives.length, output.directives.length);
-  for (let i = 0; i < pairCount; i++) {
-    const s = source.directives[i];
-    const o = output.directives[i];
-    if (s.name !== o.name) {
-      violations.push({
-        message: `directive #${i + 1} name changed: source line ${s.line} has {${s.name}}, output line ${o.line} has {${o.name}}`
-      });
-      continue;
-    }
-    if (isFlexibleArgDirective(s.name)) {
-      const sHas = s.arg !== "";
-      const oHas = o.arg !== "";
-      if (sHas !== oHas) {
-        violations.push({
-          message: `directive #${i + 1} {${s.name}} ${sHas ? "lost" : "gained"} its argument: source line ${s.line} has ${sHas ? `"${s.arg}"` : "no argument"}, output line ${o.line} has ${oHas ? `"${o.arg}"` : "none"}`
-        });
-      }
-    } else if (s.arg !== o.arg) {
-      violations.push({
-        message: `directive #${i + 1} {${s.name}} argument changed: source line ${s.line} has "${s.arg}", output line ${o.line} has "${o.arg}" \u2014 structural arguments are never translated`
-      });
-    }
-  }
-  const sourceLabels = source.anchors.map((a) => a.label);
-  const outputLabels = output.anchors.map((a) => a.label);
-  if (sourceLabels.join("\n") !== outputLabels.join("\n")) {
-    const counts = (labels) => {
-      const m = /* @__PURE__ */ new Map();
-      for (const l of labels)
-        m.set(l, (m.get(l) ?? 0) + 1);
-      return m;
-    };
-    const describe = (label, n) => n > 1 ? `(${label})= \xD7${n}` : `(${label})=`;
-    const sourceCounts = counts(sourceLabels);
-    const outputCounts = counts(outputLabels);
-    const missing = [];
-    const invented = [];
-    for (const [label, n] of sourceCounts) {
-      const d = n - (outputCounts.get(label) ?? 0);
-      if (d > 0)
-        missing.push(describe(label, d));
-    }
-    for (const [label, n] of outputCounts) {
-      const d = n - (sourceCounts.get(label) ?? 0);
-      if (d > 0)
-        invented.push(describe(label, d));
-    }
-    const parts = [];
-    if (missing.length > 0) {
-      parts.push(`missing from output: ${missing.join(", ")}`);
-    }
-    if (invented.length > 0) {
-      parts.push(`not in source: ${invented.join(", ")}`);
-    }
-    if (parts.length === 0) {
-      parts.push(`same labels, different order \u2014 source: ${sourceLabels.join(", ")}; output: ${outputLabels.join(", ")}`);
-    }
-    violations.push({
-      message: `target anchors diverge \u2014 ${parts.join("; ")}`
-    });
-  }
-  return { ok: violations.length === 0, violations };
-}
-function formatParityViolations(filename, result) {
-  const bullets = result.violations.map((v) => `  - ${v.message}`).join("\n");
-  return `structural parity check failed for ${filename}:
-${bullets}`;
-}
 
 // dist/sync-orchestrator.js
 var import_fs = require("fs");
