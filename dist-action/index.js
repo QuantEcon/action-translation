@@ -205,7 +205,7 @@ var require_file_command = __commonJS({
     exports2.issueFileCommand = issueFileCommand;
     exports2.prepareKeyValueMessage = prepareKeyValueMessage;
     var crypto = __importStar(require("crypto"));
-    var fs5 = __importStar(require("fs"));
+    var fs4 = __importStar(require("fs"));
     var os = __importStar(require("os"));
     var utils_1 = require_utils();
     function issueFileCommand(command, message) {
@@ -213,10 +213,10 @@ var require_file_command = __commonJS({
       if (!filePath) {
         throw new Error(`Unable to find environment variable for file command ${command}`);
       }
-      if (!fs5.existsSync(filePath)) {
+      if (!fs4.existsSync(filePath)) {
         throw new Error(`Missing file at path: ${filePath}`);
       }
-      fs5.appendFileSync(filePath, `${(0, utils_1.toCommandValue)(message)}${os.EOL}`, {
+      fs4.appendFileSync(filePath, `${(0, utils_1.toCommandValue)(message)}${os.EOL}`, {
         encoding: "utf8"
       });
     }
@@ -20353,13 +20353,13 @@ var require_io_util = __commonJS({
     exports2.isRooted = isRooted;
     exports2.tryGetExecutablePath = tryGetExecutablePath;
     exports2.getCmdPath = getCmdPath;
-    var fs5 = __importStar(require("fs"));
+    var fs4 = __importStar(require("fs"));
     var path6 = __importStar(require("path"));
-    _a2 = fs5.promises, exports2.chmod = _a2.chmod, exports2.copyFile = _a2.copyFile, exports2.lstat = _a2.lstat, exports2.mkdir = _a2.mkdir, exports2.open = _a2.open, exports2.readdir = _a2.readdir, exports2.rename = _a2.rename, exports2.rm = _a2.rm, exports2.rmdir = _a2.rmdir, exports2.stat = _a2.stat, exports2.symlink = _a2.symlink, exports2.unlink = _a2.unlink;
+    _a2 = fs4.promises, exports2.chmod = _a2.chmod, exports2.copyFile = _a2.copyFile, exports2.lstat = _a2.lstat, exports2.mkdir = _a2.mkdir, exports2.open = _a2.open, exports2.readdir = _a2.readdir, exports2.rename = _a2.rename, exports2.rm = _a2.rm, exports2.rmdir = _a2.rmdir, exports2.stat = _a2.stat, exports2.symlink = _a2.symlink, exports2.unlink = _a2.unlink;
     exports2.IS_WINDOWS = process.platform === "win32";
     function readlink(fsPath) {
       return __awaiter(this, void 0, void 0, function* () {
-        const result = yield fs5.promises.readlink(fsPath);
+        const result = yield fs4.promises.readlink(fsPath);
         if (exports2.IS_WINDOWS && !result.endsWith("\\")) {
           return `${result}\\`;
         }
@@ -20367,7 +20367,7 @@ var require_io_util = __commonJS({
       });
     }
     exports2.UV_FS_O_EXLOCK = 268435456;
-    exports2.READONLY = fs5.constants.O_RDONLY;
+    exports2.READONLY = fs4.constants.O_RDONLY;
     function exists(fsPath) {
       return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -38104,30 +38104,45 @@ function stateFileRelativePath(filename) {
 
 // dist/sync-orchestrator.js
 async function loadGlossary(targetLanguage, builtInGlossaryDir, customGlossaryPath, logger) {
+  if (customGlossaryPath) {
+    let glossary;
+    try {
+      glossary = await readGlossaryFile(customGlossaryPath);
+    } catch (error3) {
+      throw new Error(`Could not load custom glossary from ${customGlossaryPath}: ${errorMessage(error3)}`);
+    }
+    logger?.info(`\u2713 Loaded custom glossary from ${customGlossaryPath} with ${glossary.terms.length} terms`);
+    return glossary;
+  }
   const builtInPath = path4.join(builtInGlossaryDir, `${targetLanguage}.json`);
   try {
-    const content = await import_fs.promises.readFile(builtInPath, "utf-8");
-    const glossary = JSON.parse(content);
-    if (glossary) {
-      logger?.info(`\u2713 Loaded built-in glossary for ${targetLanguage} with ${glossary.terms.length} terms`);
-      return glossary;
-    }
+    const glossary = await readGlossaryFile(builtInPath);
+    logger?.info(`\u2713 Loaded built-in glossary for ${targetLanguage} with ${glossary.terms.length} terms`);
+    return glossary;
   } catch (error3) {
-    logger?.warning(`Could not load built-in glossary for ${targetLanguage}: ${error3}`);
-  }
-  if (customGlossaryPath) {
-    try {
-      const content = await import_fs.promises.readFile(customGlossaryPath, "utf-8");
-      const glossary = JSON.parse(content);
-      if (glossary) {
-        logger?.info(`\u2713 Loaded custom glossary from ${customGlossaryPath} with ${glossary.terms.length} terms`);
-        return glossary;
-      }
-    } catch (error3) {
-      logger?.warning(`Could not load custom glossary from ${customGlossaryPath}: ${error3}`);
-    }
+    logger?.warning(`Could not load built-in glossary for ${targetLanguage}: ${errorMessage(error3)}`);
   }
   return void 0;
+}
+function errorMessage(error3) {
+  const message = error3?.message;
+  return typeof message === "string" ? message : String(error3);
+}
+async function readGlossaryFile(file) {
+  const content = await import_fs.promises.readFile(file, "utf-8");
+  let glossary;
+  try {
+    glossary = JSON.parse(content);
+  } catch (error3) {
+    throw new Error(`${file} is not valid JSON: ${errorMessage(error3)}`);
+  }
+  if (!glossary || !Array.isArray(glossary.terms)) {
+    throw new Error(`${file} has no "terms" array`);
+  }
+  return glossary;
+}
+function formatGlossaryTerms(glossary, targetLanguage) {
+  return glossary.terms.map((t) => `- "${t.en}" \u2192 "${t[targetLanguage] || ""}"${t.context ? ` (${t.context})` : ""}`).join("\n");
 }
 function classifyChangedFiles(files, docsFolder) {
   const prefix = docsFolder;
@@ -38211,9 +38226,9 @@ var SyncOrchestrator = class {
             break;
         }
       } catch (error3) {
-        const errorMessage = `Error processing ${file.filename}: ${error3}`;
-        this.logger.error(errorMessage);
-        result.errors.push(errorMessage);
+        const errorMessage2 = `Error processing ${file.filename}: ${error3}`;
+        this.logger.error(errorMessage2);
+        result.errors.push(errorMessage2);
       }
     }
     return result;
@@ -38428,7 +38443,6 @@ async function refreshStaleBranch(octokit, owner, repo, prNumber) {
 }
 
 // dist/index.js
-var import_fs2 = require("fs");
 var path5 = __toESM(require("path"), 1);
 var import_url = require("url");
 var __filename = (0, import_url.fileURLToPath)(__importMetaUrl);
@@ -38458,17 +38472,13 @@ async function runReview() {
   let glossaryTerms;
   const targetLanguage = detectTargetLanguage();
   if (targetLanguage) {
-    const builtInGlossaryPath = path5.join(__dirname2, "..", "glossary", `${targetLanguage}.json`);
-    try {
-      const glossaryContent = await import_fs2.promises.readFile(builtInGlossaryPath, "utf-8");
-      const glossary = JSON.parse(glossaryContent);
-      if (glossary && glossary.terms) {
-        glossaryTerms = glossary.terms.map((t) => `- "${t.en}" \u2192 "${t[targetLanguage] || ""}"${t.context ? ` (${t.context})` : ""}`).join("\n");
-        core7.info(`\u2713 Loaded glossary for ${targetLanguage} with ${glossary.terms.length} terms`);
-      }
-    } catch (error3) {
-      core7.warning(`Could not load glossary for ${targetLanguage}: ${error3}`);
+    const builtInGlossaryDir = path5.join(__dirname2, "..", "glossary");
+    const glossary = await loadGlossary(targetLanguage, builtInGlossaryDir, inputs.glossaryPath || void 0, coreLogger);
+    if (glossary) {
+      glossaryTerms = formatGlossaryTerms(glossary, targetLanguage);
     }
+  } else {
+    core7.warning(`Could not detect a target language from repository name '${github2.context.repo.repo}' \u2014 reviewing WITHOUT a glossary, so terminology findings are unreliable.`);
   }
   const result = await reviewer.reviewPR(prNumber, inputs.sourceRepo, github2.context.repo.owner, github2.context.repo.repo, inputs.docsFolder, glossaryTerms, targetLanguage, inputs.autoMergeMode);
   core7.setOutput("review-verdict", result.verdict);

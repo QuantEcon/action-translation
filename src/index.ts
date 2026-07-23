@@ -13,6 +13,7 @@ import {
   SyncOrchestrator,
   classifyChangedFiles,
   loadGlossary,
+  formatGlossaryTerms,
   FileToSync,
   Logger,
   StateGenerationConfig,
@@ -28,7 +29,6 @@ import { RebaseCache } from './types.js';
 import { isTranslationBranch } from './branch-naming.js';
 import { refreshStaleBranch } from './rebase-siblings.js';
 import { stateFileRelativePath } from './cli/translate-state.js';
-import { promises as fs } from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -79,26 +79,30 @@ async function runReview(): Promise<void> {
     inputs.maxSuggestions
   );
 
-  // Load glossary
+  // Load glossary — through the same loader sync and rebase use, so a repo with
+  // a custom glossary is reviewed against the terminology it was translated
+  // against. Review used to read the built-in file directly and ignore
+  // `glossary-path` entirely (#146), which mattered once verdict v2 made
+  // `terminology` a gating category: judging against the wrong glossary
+  // suppresses the gate and biases the shadow calibration data.
   let glossaryTerms: string | undefined;
   const targetLanguage = detectTargetLanguage();
   if (targetLanguage) {
-    const builtInGlossaryPath = path.join(__dirname, '..', 'glossary', `${targetLanguage}.json`);
-    try {
-      const glossaryContent = await fs.readFile(builtInGlossaryPath, 'utf-8');
-      const glossary = JSON.parse(glossaryContent);
-      if (glossary && glossary.terms) {
-        glossaryTerms = glossary.terms
-          .map(
-            (t: { en: string; [key: string]: string | undefined; context?: string }) =>
-              `- "${t.en}" → "${t[targetLanguage] || ''}"${t.context ? ` (${t.context})` : ''}`
-          )
-          .join('\n');
-        core.info(`✓ Loaded glossary for ${targetLanguage} with ${glossary.terms.length} terms`);
-      }
-    } catch (error) {
-      core.warning(`Could not load glossary for ${targetLanguage}: ${error}`);
+    const builtInGlossaryDir = path.join(__dirname, '..', 'glossary');
+    const glossary = await loadGlossary(
+      targetLanguage,
+      builtInGlossaryDir,
+      inputs.glossaryPath || undefined,
+      coreLogger
+    );
+    if (glossary) {
+      glossaryTerms = formatGlossaryTerms(glossary, targetLanguage);
     }
+  } else {
+    core.warning(
+      `Could not detect a target language from repository name '${github.context.repo.repo}' — ` +
+        `reviewing WITHOUT a glossary, so terminology findings are unreliable.`
+    );
   }
 
   // Run review

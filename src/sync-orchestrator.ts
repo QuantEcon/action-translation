@@ -101,13 +101,20 @@ export interface SyncProcessingResult {
 
 /**
  * Load glossary for the target language.
- * Tries built-in glossary first, then falls back to custom glossary path.
+ *
+ * `glossary-path`, when set, is an **override**, not a fallback: it is the only
+ * candidate, and a file that cannot be read or parsed fails the run. It used to
+ * be tried *after* the built-in glossary, which meant a custom glossary was
+ * silently ignored for every language that ships one — i.e. for the whole
+ * estate — and an unreadable custom file quietly degraded to different
+ * terminology. Both are the silent-wrong-glossary class of #146/#149.
  *
  * @param targetLanguage - Target language code (e.g., 'zh-cn')
  * @param builtInGlossaryDir - Directory containing built-in glossary files
- * @param customGlossaryPath - Optional path to custom glossary file
+ * @param customGlossaryPath - Optional path to a custom glossary file (overrides the built-in)
  * @param logger - Optional logger for status messages
- * @returns Loaded glossary or undefined if not found
+ * @returns Loaded glossary, or undefined when the language has no built-in glossary
+ * @throws if `customGlossaryPath` is set but cannot be read or parsed
  */
 export async function loadGlossary(
   targetLanguage: string,
@@ -115,38 +122,96 @@ export async function loadGlossary(
   customGlossaryPath?: string,
   logger?: Logger
 ): Promise<Glossary | undefined> {
-  // Try built-in glossary first
-  const builtInPath = path.join(builtInGlossaryDir, `${targetLanguage}.json`);
-  try {
-    const content = await fs.readFile(builtInPath, 'utf-8');
-    const glossary: Glossary = JSON.parse(content);
-    if (glossary) {
-      logger?.info(
-        `✓ Loaded built-in glossary for ${targetLanguage} with ${glossary.terms.length} terms`
+  // A custom glossary is an override — falling back to different terminology
+  // because the operator's file is missing is exactly the failure to avoid.
+  if (customGlossaryPath) {
+    let glossary: Glossary;
+    try {
+      glossary = await readGlossaryFile(customGlossaryPath);
+    } catch (error) {
+      throw new Error(
+        `Could not load custom glossary from ${customGlossaryPath}: ${errorMessage(error)}`
       );
-      return glossary;
     }
-  } catch (error) {
-    logger?.warning(`Could not load built-in glossary for ${targetLanguage}: ${error}`);
+    logger?.info(
+      `✓ Loaded custom glossary from ${customGlossaryPath} with ${glossary.terms.length} terms`
+    );
+    return glossary;
   }
 
-  // Fallback: try custom glossary path
-  if (customGlossaryPath) {
-    try {
-      const content = await fs.readFile(customGlossaryPath, 'utf-8');
-      const glossary: Glossary = JSON.parse(content);
-      if (glossary) {
-        logger?.info(
-          `✓ Loaded custom glossary from ${customGlossaryPath} with ${glossary.terms.length} terms`
-        );
-        return glossary;
-      }
-    } catch (error) {
-      logger?.warning(`Could not load custom glossary from ${customGlossaryPath}: ${error}`);
-    }
+  // Same validation, deliberately different consequence: a missing custom path
+  // is operator misconfiguration and fails the run, while a corrupt built-in
+  // glossary means a broken install — reported, but not the operator's fault.
+  const builtInPath = path.join(builtInGlossaryDir, `${targetLanguage}.json`);
+  try {
+    const glossary = await readGlossaryFile(builtInPath);
+    logger?.info(
+      `✓ Loaded built-in glossary for ${targetLanguage} with ${glossary.terms.length} terms`
+    );
+    return glossary;
+  } catch (error) {
+    logger?.warning(
+      `Could not load built-in glossary for ${targetLanguage}: ${errorMessage(error)}`
+    );
   }
 
   return undefined;
+}
+
+/**
+ * Message text for a caught value, without the doubled `Error:` prefix that
+ * interpolating the error object itself produces.
+ *
+ * Deliberately duck-typed rather than the `error instanceof Error` idiom used
+ * elsewhere in this codebase: `fs.promises` rejections cross a realm boundary
+ * under Jest's vm context, so `instanceof Error` is **false** for them even
+ * though `constructor.name` is `Error` — the idiom silently falls through to
+ * `String(error)` and re-adds the prefix it was meant to strip. That is only a
+ * cosmetic difference in production (single realm, so `instanceof` holds), but
+ * it is the difference between this behaviour being testable and not.
+ */
+function errorMessage(error: unknown): string {
+  const message = (error as { message?: unknown } | null | undefined)?.message;
+  return typeof message === 'string' ? message : String(error);
+}
+
+/**
+ * Read and validate one glossary file.
+ *
+ * Validating `terms` here rather than at each call site keeps the two branches
+ * from drifting apart: a glossary whose `terms` is present but not an array used
+ * to be logged as `with undefined terms` and returned, then blew up downstream
+ * in `formatGlossaryTerms` or the translator, far from the cause.
+ */
+async function readGlossaryFile(file: string): Promise<Glossary> {
+  const content = await fs.readFile(file, 'utf-8');
+
+  let glossary: Glossary;
+  try {
+    glossary = JSON.parse(content);
+  } catch (error) {
+    throw new Error(`${file} is not valid JSON: ${errorMessage(error)}`);
+  }
+
+  if (!glossary || !Array.isArray(glossary.terms)) {
+    throw new Error(`${file} has no "terms" array`);
+  }
+
+  return glossary;
+}
+
+/**
+ * Render a glossary as the prompt lines the reviewer consumes.
+ *
+ * The reviewer takes terminology as pre-formatted text while the translator
+ * takes the object, so this formatting has to live somewhere; it lived inline
+ * in `runReview`, where `import.meta.url` puts it beyond the reach of the Jest
+ * CJS registry and so beyond the reach of tests.
+ */
+export function formatGlossaryTerms(glossary: Glossary, targetLanguage: string): string {
+  return glossary.terms
+    .map((t) => `- "${t.en}" → "${t[targetLanguage] || ''}"${t.context ? ` (${t.context})` : ''}`)
+    .join('\n');
 }
 
 // =============================================================================

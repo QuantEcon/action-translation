@@ -56,7 +56,7 @@ Runs in the **target** (translated) repository, triggered when a translation PR 
 | `target-language` | *(required)* | Target language code (e.g., `zh-cn`, `fa`) |
 | `docs-folder` | `lectures/` | Documentation folder containing Markdown files |
 | `source-language` | `en` | Source language code |
-| `glossary-path` | *(empty)* | Path to custom glossary JSON file. If empty, the built-in glossary for the target language is used |
+| `glossary-path` | *(empty)* | Path to custom glossary JSON file. **Overrides** the built-in glossary for the target language; if empty, the built-in one is used. Honoured by all three modes — sync, rebase and review. A path that cannot be read or parsed **fails the run** rather than falling back to different terminology |
 | `toc-file` | `_toc.yml` | Table of contents file name |
 | `claude-model` | `claude-sonnet-5` | Claude model for translation |
 | `pr-labels` | `action-translation,automated` | Comma-separated labels for created PRs |

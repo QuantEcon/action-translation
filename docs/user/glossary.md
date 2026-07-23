@@ -63,7 +63,7 @@ Each term has:
 
 ## Using a custom glossary
 
-To use your own glossary instead of (or in addition to) the built-in one, specify the `glossary-path` input:
+To use your own glossary instead of the built-in one, specify the `glossary-path` input:
 
 ```yaml
 - uses: QuantEcon/action-translation@v0
@@ -72,6 +72,8 @@ To use your own glossary instead of (or in addition to) the built-in one, specif
     glossary-path: 'glossary/my-custom-glossary.json'
     # ... other inputs
 ```
+
+`glossary-path` is an **override**, not an addition or a fallback: when set it is the only glossary used, and a file that cannot be read or parsed **fails the run** rather than silently reverting to the built-in terminology. Set it on **every** mode the repo runs — sync, rebase *and* review — so the translation is judged against the same terminology it was produced against. A review running on a different glossary from its sync will flag deliberate terminology choices as defects and miss violations of the terms the edition actually adopted, and since `terminology` is a gating category it will block auto-merge on correct work.
 
 For the CLI, glossaries are loaded automatically based on the language code. The `forward` and `init` commands resolve candidates in this order, and report which one they used:
 
