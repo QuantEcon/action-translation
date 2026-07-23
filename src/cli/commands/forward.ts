@@ -45,6 +45,7 @@ import {
   verifyPreservedReads,
 } from '../target-local-reads.js';
 import { buildHeadingMap, injectHeadingMap, extractTranslationTitle } from '../../heading-map.js';
+import { loadGlossary } from '../glossary-loader.js';
 import {
   createForwardPR,
   gitPrepareAndPush,
@@ -322,7 +323,7 @@ export async function resyncSingleFile(
   logger.info(`  Content changes detected — resyncing (whole-file)…`);
 
   // ──── Step 2: Whole-file RESYNC ──────────────────────────────────────────
-  const glossary = loadGlossary(options.language);
+  const glossary = options.glossary ?? resolveForwardGlossary(options, logger);
   let outputContent: string | undefined;
   let tokensUsed: number | undefined;
 
@@ -647,6 +648,15 @@ export async function runForwardBulk(
   }
   logger.info('');
 
+  // Resolve the glossary once for the whole wave, before any file is translated.
+  // A malformed or missing --glossary throws here rather than after N files have
+  // already been resynced against the wrong terminology.
+  const fileOptions: ForwardOptions = {
+    ...options,
+    glossary: options.glossary ?? resolveForwardGlossary(options, logger),
+  };
+  logger.info('');
+
   // Process each file
   const results: ForwardFileResult[] = [];
   const bar = new cliProgress.SingleBar(
@@ -671,7 +681,7 @@ export async function runForwardBulk(
             source,
             target,
             docsFolder,
-            options,
+            fileOptions,
             logger,
             ghRunner,
             gitRunner
@@ -772,26 +782,22 @@ export function printBulkSummary(results: ForwardFileResult[], logger: ForwardLo
 }
 
 // ============================================================================
-// GLOSSARY LOADER
+// GLOSSARY
 // ============================================================================
 
-function loadGlossary(language: string): Glossary | undefined {
-  // Try to find glossary file relative to CWD
-  const candidates = [
-    path.join(process.cwd(), 'glossary', `${language}.json`),
-    path.join(process.cwd(), `glossary-${language}.json`),
-  ];
-
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      try {
-        const raw = fs.readFileSync(candidate, 'utf-8');
-        return JSON.parse(raw) as Glossary;
-      } catch {
-        // Ignore parse errors
-      }
-    }
-  }
-
-  return undefined;
+/**
+ * Resolve the glossary for a resync run and report the outcome.
+ *
+ * Bulk resolves once up front and threads the result through `options.glossary`
+ * so the load is logged once, not once per file; single-file mode resolves here.
+ */
+export function resolveForwardGlossary(
+  options: ForwardOptions,
+  logger: ForwardLogger
+): Glossary | undefined {
+  return loadGlossary(
+    options.language,
+    { customPath: options.glossaryPath, builtInDir: options.builtInGlossaryDir },
+    logger
+  );
 }

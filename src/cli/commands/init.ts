@@ -26,6 +26,7 @@ import { applyTypography } from '../../typography.js';
 import { RuleId, buildLocalizationPrompt, getFontRequirements } from '../../localization-rules.js';
 import { readFileState, writeConfig, writeFileState } from '../translate-state.js';
 import { getFileGitMetadata } from '../git-metadata.js';
+import { loadGlossary } from '../glossary-loader.js';
 
 // ============================================================================
 // TYPES
@@ -44,6 +45,7 @@ export interface InitOptions {
   resumeFrom?: string; // Resume from specific lecture file
   skipExisting?: boolean; // Skip lectures that already have .translate/state entries
   glossaryPath?: string; // Explicit path to glossary JSON file
+  builtInGlossaryDir?: string; // Packaged glossary directory (<package-root>/glossary)
   localize: RuleId[]; // Active localization rules (default: all)
   dryRun: boolean; // Preview without API calls or file writes
   apiKey: string; // Anthropic API key
@@ -64,32 +66,6 @@ interface TocEntry {
   sections?: TocEntry[];
   caption?: string;
   chapters?: TocEntry[];
-}
-
-// ============================================================================
-// GLOSSARY LOADER
-// ============================================================================
-
-function loadGlossary(language: string, glossaryPath?: string): Glossary | undefined {
-  const candidates = glossaryPath
-    ? [glossaryPath]
-    : [
-        path.join(process.cwd(), 'glossary', `${language}.json`),
-        path.join(process.cwd(), `glossary-${language}.json`),
-      ];
-
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      try {
-        const raw = fs.readFileSync(candidate, 'utf-8');
-        return JSON.parse(raw) as Glossary;
-      } catch {
-        // Ignore parse errors
-      }
-    }
-  }
-
-  return undefined;
 }
 
 // ============================================================================
@@ -408,14 +384,20 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     console.log(chalk.gray(`Localize: ${options.localize.join(', ')}`));
   }
 
-  // Phase 1: Load glossary
-  const glossary = loadGlossary(options.targetLanguage, options.glossaryPath);
-  const termCount = glossary?.terms?.length || 0;
-  if (termCount > 0) {
-    console.log(chalk.green(`Glossary: ${termCount} terms`));
-  } else {
-    console.log(chalk.yellow(`Glossary: none found for ${options.targetLanguage}`));
-  }
+  // Phase 1: Load glossary — reported either way, so a run without terminology
+  // enforcement never looks like a run with it (#149).
+  const glossary = loadGlossary(
+    options.targetLanguage,
+    {
+      customPath: options.glossaryPath,
+      builtInDir: options.builtInGlossaryDir,
+    },
+    {
+      info: (msg) => console.log(chalk.green(msg)),
+      warn: (msg) => console.log(chalk.yellow(`⚠️  ${msg}`)),
+    }
+  );
+  const termCount = glossary?.terms?.length ?? 0;
 
   // Phase 2: Parse TOC for lecture list
   let lectures = parseTocLectures(options.source, options.docsFolder);

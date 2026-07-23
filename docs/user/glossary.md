@@ -73,7 +73,15 @@ To use your own glossary instead of (or in addition to) the built-in one, specif
     # ... other inputs
 ```
 
-For the CLI, glossaries are loaded automatically based on the language code. The CLI looks for `glossary/{language}.json` in the action-translation repository.
+For the CLI, glossaries are loaded automatically based on the language code. The `forward` and `init` commands resolve candidates in this order, and report which one they used:
+
+| Order | Candidate | Notes |
+|-------|-----------|-------|
+| 1 | `--glossary <path>` | When given, this is the **only** candidate — a missing or malformed file is a hard error, never a silent fallback |
+| 2 | `<cwd>/glossary/{language}.json`, `<cwd>/glossary-{language}.json` | Lets a project override the estate defaults by carrying its own glossary |
+| 3 | `{action-translation}/glossary/{language}.json` | The built-in glossary, resolved relative to the installed package — **not** to the working directory |
+
+Every run prints the glossary it loaded (`✓ Loaded built-in glossary for zh-cn — 357 terms (…)`) or warns that it found none and lists every path it tried. A malformed glossary is an error rather than a silent skip.
 
 ## Adding terms to a glossary
 

@@ -186,6 +186,7 @@ chapters:
       expect(stdout).toContain('--target');
       expect(stdout).toContain('--github');
       expect(stdout).toContain('--parallel');
+      expect(stdout).toContain('--glossary');
     });
   });
 

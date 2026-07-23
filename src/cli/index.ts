@@ -11,6 +11,8 @@
  * - setup:         Scaffold a new target translation repository
  */
 
+import * as path from 'path';
+import { fileURLToPath } from 'url';
 import { Command } from 'commander';
 import { runBackwardSingleFile, runBackwardBulk } from './commands/backward.js';
 import {
@@ -46,6 +48,16 @@ import { readConfig } from './translate-state.js';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { version } = require('../../package.json');
+
+// Packaged glossaries live at <package-root>/glossary, alongside dist/. Resolve
+// them relative to this module, never to process.cwd() — no edition repository
+// carries a glossary, so a CWD-relative lookup silently found nothing whenever
+// the CLI was run from anywhere but an action-translation checkout (#149).
+// This stays in the entry point deliberately: `import.meta.url` cannot be loaded
+// by the Jest CJS module registry, so the directory is threaded into the
+// commands as an option and the resolution logic lives in a testable module.
+const CLI_DIR = path.dirname(fileURLToPath(import.meta.url));
+const BUILT_IN_GLOSSARY_DIR = path.resolve(CLI_DIR, '..', '..', 'glossary');
 
 const program = new Command();
 
@@ -297,6 +309,10 @@ program
   .option('--test', 'Use deterministic mock responses (no LLM calls)', false)
   .option('--github <owner/repo>', 'Create one PR per file in TARGET repo')
   .option(
+    '--glossary <path>',
+    'Path to glossary JSON file (default: built-in glossary for the language)'
+  )
+  .option(
     '--exclude <pattern>',
     'Exclude files matching pattern (repeatable, comma-separated)',
     collectExclude,
@@ -324,6 +340,8 @@ program
       github: opts.github,
       parallel,
       apiKey: apiKey || 'test-key',
+      glossaryPath: opts.glossary,
+      builtInGlossaryDir: BUILT_IN_GLOSSARY_DIR,
     };
 
     try {
@@ -382,7 +400,10 @@ program
   .option('-f, --file <file>', 'Translate a single lecture file (e.g., cobweb.md)')
   .option('--resume-from <file>', 'Resume from a specific lecture file (e.g., cobweb.md)')
   .option('--skip-existing', 'Skip lectures already translated (reads .translate/state)', false)
-  .option('--glossary <path>', 'Path to glossary JSON file (default: glossary/<lang>.json)')
+  .option(
+    '--glossary <path>',
+    'Path to glossary JSON file (default: built-in glossary for the language)'
+  )
   .option(
     '--localize <rules>',
     `Localization rules for code cells (use "none" to disable)`,
@@ -425,6 +446,7 @@ program
       resumeFrom: opts.resumeFrom,
       skipExisting: opts.skipExisting,
       glossaryPath: opts.glossary,
+      builtInGlossaryDir: BUILT_IN_GLOSSARY_DIR,
       localize: localizeRules,
       dryRun: opts.dryRun,
       apiKey: apiKey || '',
