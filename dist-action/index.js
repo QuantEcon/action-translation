@@ -38107,29 +38107,39 @@ async function loadGlossary(targetLanguage, builtInGlossaryDir, customGlossaryPa
   if (customGlossaryPath) {
     let glossary;
     try {
-      const content = await import_fs.promises.readFile(customGlossaryPath, "utf-8");
-      glossary = JSON.parse(content);
+      glossary = await readGlossaryFile(customGlossaryPath);
     } catch (error3) {
-      throw new Error(`Could not load custom glossary from ${customGlossaryPath}: ${error3}`);
-    }
-    if (!glossary || !Array.isArray(glossary.terms)) {
-      throw new Error(`Custom glossary at ${customGlossaryPath} has no "terms" array`);
+      throw new Error(`Could not load custom glossary from ${customGlossaryPath}: ${errorMessage(error3)}`);
     }
     logger?.info(`\u2713 Loaded custom glossary from ${customGlossaryPath} with ${glossary.terms.length} terms`);
     return glossary;
   }
   const builtInPath = path4.join(builtInGlossaryDir, `${targetLanguage}.json`);
   try {
-    const content = await import_fs.promises.readFile(builtInPath, "utf-8");
-    const glossary = JSON.parse(content);
-    if (glossary) {
-      logger?.info(`\u2713 Loaded built-in glossary for ${targetLanguage} with ${glossary.terms.length} terms`);
-      return glossary;
-    }
+    const glossary = await readGlossaryFile(builtInPath);
+    logger?.info(`\u2713 Loaded built-in glossary for ${targetLanguage} with ${glossary.terms.length} terms`);
+    return glossary;
   } catch (error3) {
-    logger?.warning(`Could not load built-in glossary for ${targetLanguage}: ${error3}`);
+    logger?.warning(`Could not load built-in glossary for ${targetLanguage}: ${errorMessage(error3)}`);
   }
   return void 0;
+}
+function errorMessage(error3) {
+  const message = error3?.message;
+  return typeof message === "string" ? message : String(error3);
+}
+async function readGlossaryFile(file) {
+  const content = await import_fs.promises.readFile(file, "utf-8");
+  let glossary;
+  try {
+    glossary = JSON.parse(content);
+  } catch (error3) {
+    throw new Error(`${file} is not valid JSON: ${errorMessage(error3)}`);
+  }
+  if (!glossary || !Array.isArray(glossary.terms)) {
+    throw new Error(`${file} has no "terms" array`);
+  }
+  return glossary;
 }
 function formatGlossaryTerms(glossary, targetLanguage) {
   return glossary.terms.map((t) => `- "${t.en}" \u2192 "${t[targetLanguage] || ""}"${t.context ? ` (${t.context})` : ""}`).join("\n");
@@ -38216,9 +38226,9 @@ var SyncOrchestrator = class {
             break;
         }
       } catch (error3) {
-        const errorMessage = `Error processing ${file.filename}: ${error3}`;
-        this.logger.error(errorMessage);
-        result.errors.push(errorMessage);
+        const errorMessage2 = `Error processing ${file.filename}: ${error3}`;
+        this.logger.error(errorMessage2);
+        result.errors.push(errorMessage2);
       }
     }
     return result;

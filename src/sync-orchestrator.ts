@@ -127,13 +127,11 @@ export async function loadGlossary(
   if (customGlossaryPath) {
     let glossary: Glossary;
     try {
-      const content = await fs.readFile(customGlossaryPath, 'utf-8');
-      glossary = JSON.parse(content);
+      glossary = await readGlossaryFile(customGlossaryPath);
     } catch (error) {
-      throw new Error(`Could not load custom glossary from ${customGlossaryPath}: ${error}`);
-    }
-    if (!glossary || !Array.isArray(glossary.terms)) {
-      throw new Error(`Custom glossary at ${customGlossaryPath} has no "terms" array`);
+      throw new Error(
+        `Could not load custom glossary from ${customGlossaryPath}: ${errorMessage(error)}`
+      );
     }
     logger?.info(
       `✓ Loaded custom glossary from ${customGlossaryPath} with ${glossary.terms.length} terms`
@@ -141,21 +139,65 @@ export async function loadGlossary(
     return glossary;
   }
 
+  // Same validation, deliberately different consequence: a missing custom path
+  // is operator misconfiguration and fails the run, while a corrupt built-in
+  // glossary means a broken install — reported, but not the operator's fault.
   const builtInPath = path.join(builtInGlossaryDir, `${targetLanguage}.json`);
   try {
-    const content = await fs.readFile(builtInPath, 'utf-8');
-    const glossary: Glossary = JSON.parse(content);
-    if (glossary) {
-      logger?.info(
-        `✓ Loaded built-in glossary for ${targetLanguage} with ${glossary.terms.length} terms`
-      );
-      return glossary;
-    }
+    const glossary = await readGlossaryFile(builtInPath);
+    logger?.info(
+      `✓ Loaded built-in glossary for ${targetLanguage} with ${glossary.terms.length} terms`
+    );
+    return glossary;
   } catch (error) {
-    logger?.warning(`Could not load built-in glossary for ${targetLanguage}: ${error}`);
+    logger?.warning(
+      `Could not load built-in glossary for ${targetLanguage}: ${errorMessage(error)}`
+    );
   }
 
   return undefined;
+}
+
+/**
+ * Message text for a caught value, without the doubled `Error:` prefix that
+ * interpolating the error object itself produces.
+ *
+ * Deliberately duck-typed rather than the `error instanceof Error` idiom used
+ * elsewhere in this codebase: `fs.promises` rejections cross a realm boundary
+ * under Jest's vm context, so `instanceof Error` is **false** for them even
+ * though `constructor.name` is `Error` — the idiom silently falls through to
+ * `String(error)` and re-adds the prefix it was meant to strip. That is only a
+ * cosmetic difference in production (single realm, so `instanceof` holds), but
+ * it is the difference between this behaviour being testable and not.
+ */
+function errorMessage(error: unknown): string {
+  const message = (error as { message?: unknown } | null | undefined)?.message;
+  return typeof message === 'string' ? message : String(error);
+}
+
+/**
+ * Read and validate one glossary file.
+ *
+ * Validating `terms` here rather than at each call site keeps the two branches
+ * from drifting apart: a glossary whose `terms` is present but not an array used
+ * to be logged as `with undefined terms` and returned, then blew up downstream
+ * in `formatGlossaryTerms` or the translator, far from the cause.
+ */
+async function readGlossaryFile(file: string): Promise<Glossary> {
+  const content = await fs.readFile(file, 'utf-8');
+
+  let glossary: Glossary;
+  try {
+    glossary = JSON.parse(content);
+  } catch (error) {
+    throw new Error(`${file} is not valid JSON: ${errorMessage(error)}`);
+  }
+
+  if (!glossary || !Array.isArray(glossary.terms)) {
+    throw new Error(`${file} has no "terms" array`);
+  }
+
+  return glossary;
 }
 
 /**

@@ -246,6 +246,38 @@ describe('loadGlossary', () => {
       fs.unlinkSync(tmp);
     }
   });
+
+  it('should not double the "Error:" prefix in the thrown message', async () => {
+    // run() re-wraps with `Action failed: ${error.message}`, so interpolating the
+    // caught Error object put a second "Error:" in the middle of the line.
+    const message = await loadGlossary('zh-cn', glossaryDir, '/nonexistent/path.json').then(
+      () => 'did not throw',
+      (error: Error) => error.message
+    );
+
+    expect(message).toContain('ENOENT');
+    expect(message).not.toContain(': Error:');
+  });
+
+  // The built-in branch validates the same way the custom one does, so a
+  // malformed shipped glossary is reported rather than returned and blown up on
+  // downstream (it used to log "with undefined terms" and hand the object back).
+  it('should warn and return undefined when the built-in glossary is malformed', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'builtin-glossary-'));
+    fs.writeFileSync(path.join(dir, 'xx-broken.json'), JSON.stringify({ terms: {} }), 'utf-8');
+    const logger = createTestLogger();
+
+    try {
+      const glossary = await loadGlossary('xx-broken', dir, undefined, logger);
+
+      expect(glossary).toBeUndefined();
+      const warnings = logger.messages.filter((m) => m.level === 'warning');
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0].msg).toContain('terms');
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });
 
 // =============================================================================
