@@ -20,6 +20,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ReviewFinding, FindingSeverity, FindingCategory } from './types.js';
+import { DiffCheckSource } from './diff-checks.js';
 
 /** Marker naming the verdict block inside the review comment. */
 export const REVIEW_VERDICT_MARKER = 'translation-review-verdict';
@@ -41,6 +42,7 @@ const CATEGORIES: readonly FindingCategory[] = [
   'formatting',
   'syntax',
   'structure',
+  'diff-check',
   'other',
 ];
 
@@ -52,12 +54,17 @@ const CATEGORIES: readonly FindingCategory[] = [
  *
  * `fluency`, `formatting` and `structure` are absent deliberately: a minor
  * finding there is a style note, and for `structure` the authoritative signal
- * is the `diffChecks` booleans, which gate absolutely on their own.
+ * is the `diffChecks` booleans.
+ *
+ * `diff-check` gates because that is how a model-asserted diff check now
+ * reaches the gate at all (#148) — demoting it out of the boolean field must
+ * not quietly open the gate it used to close.
  */
 const GATING_CATEGORIES: readonly FindingCategory[] = [
   'accuracy',
   'terminology',
   'syntax',
+  'diff-check',
   'other',
 ];
 
@@ -65,12 +72,14 @@ const GATING_CATEGORIES: readonly FindingCategory[] = [
 const MAX_CRITERION_SCORE = 10;
 
 /** The four diff checks, enumerated so a missing key gates rather than vanishing. */
-const DIFF_CHECK_NAMES = [
+export const DIFF_CHECK_NAMES = [
   'scopeCorrect',
   'positionCorrect',
   'structurePreserved',
   'headingMapCorrect',
 ] as const;
+
+export type DiffCheckName = (typeof DIFF_CHECK_NAMES)[number];
 
 /**
  * Per-criterion floors for the auto-merge recommendation. PROVISIONAL:
@@ -127,6 +136,19 @@ export interface ReviewVerdictV2 {
     structurePreserved: boolean;
     headingMapCorrect: boolean;
   };
+  /**
+   * Provenance of each `diffChecks` entry (#148). Added rather than folded into
+   * `diffChecks` because changing those booleans to objects would be a type
+   * change, and the contract makes that a `schemaVersion` bump; this is a pure
+   * field addition. Absent on blocks written before v0.23.0 — treat those as
+   * entirely `model`, which is what they were.
+   *
+   * Only `deterministic` entries gate as checks. A `model` entry that reports
+   * failure gates through a `diff-check` finding instead, so routing is
+   * unchanged while shadow-mode calibration can report the two precisions
+   * separately rather than blending measured fact with model opinion.
+   */
+  diffCheckSources: Record<DiffCheckName, DiffCheckSource>;
   syntaxErrorCount: number;
   findings: ReviewFinding[];
 }
@@ -359,6 +381,12 @@ export interface RecommendationInput {
     structurePreserved: boolean;
     headingMapCorrect: boolean;
   };
+  /**
+   * Provenance of each diff check. A check absent from this map is treated as
+   * `deterministic` — the fail-closed direction, since that is the branch that
+   * gates. Model-asserted checks gate through `findings` instead (#148).
+   */
+  diffCheckSources?: Partial<Record<DiffCheckName, DiffCheckSource>>;
   syntaxErrorCount: number;
   findings: ReviewFinding[];
   findingsMalformed: boolean;
@@ -391,16 +419,24 @@ export function computeRecommendation(input: RecommendationInput): {
   if (input.syntaxErrorCount > 0) {
     reasons.push(`${input.syntaxErrorCount} syntax error(s)`);
   }
-  // Two hazards here, both fail-open if handled loosely.
+  // Three hazards here, all fail-open if handled loosely.
   //
-  // Strict identity, not truthiness: `evaluateDiff` reads these straight off
-  // model JSON, and a quoted "false" is a truthy string, so `!passed` would
-  // admit it as a passing check.
+  // Strict identity, not truthiness: a check read off model JSON can be a
+  // quoted "false", which is a truthy string, so `!passed` would admit it.
   //
-  // And a fixed list of names, not `Object.entries(input.diffChecks)`: that
+  // A fixed list of names, not `Object.entries(input.diffChecks)`: that
   // enumerates the object's own keys, so `{}` — or any object missing a key —
   // never enters the loop and reports no failures at all. Absent must gate.
+  //
+  // And only DETERMINISTIC checks gate here (#148). A model-asserted check is
+  // an opinion, and one hallucinated boolean routed a correct PR to `editor` on
+  // the second organic production PR under verdict v2. Such a check still gates
+  // — through a `diff-check` finding, which is a gating category — so routing is
+  // unchanged and fail-closed, but it is no longer recorded in the same field
+  // Stage 4 will treat as ground truth. Unknown provenance counts as
+  // deterministic: that is the branch that gates.
   for (const check of DIFF_CHECK_NAMES) {
+    if (input.diffCheckSources?.[check] === 'model') continue;
     if (input.diffChecks?.[check] !== true) reasons.push(`diff check failed: ${check}`);
   }
   if (input.findingsMalformed) {

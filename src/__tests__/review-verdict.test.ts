@@ -379,7 +379,14 @@ describe('getEngineVersion', () => {
 // ============================================================================
 
 const SOURCE_CONTENT = '# Aiyagari\n\nIntro.\n\n## Model\n\nSource text.\n';
-const TARGET_CONTENT = '# 艾亚加里\n\n介绍。\n\n## 模型\n\n译文。\n';
+// Carries a heading map because every synced production target does: 248 of the
+// 249 estate files with sections have one. The deterministic headingMapCorrect
+// check (#148) reads it, so a fixture without one is not a realistic document —
+// the inverse of the 2026-07-23 harness finding, where fixtures carried a legacy
+// shape production had already left behind.
+const TARGET_CONTENT =
+  '---\ntranslation:\n  title: 艾亚加里\n  headings:\n    Model: 模型\n---\n\n' +
+  '# 艾亚加里\n\n介绍。\n\n## 模型\n\n译文。\n';
 
 function b64(content: string): string {
   return Buffer.from(content, 'utf-8').toString('base64');
@@ -391,7 +398,7 @@ const SYNC_PR_BODY = `## Automated Translation Sync
 **[#5 - Update model section](https://github.com/QuantEcon/lecture-python-programming/pull/5)**
 `;
 
-function makeFakeOctokit() {
+function makeFakeOctokit(targetContent: string = TARGET_CONTENT) {
   return {
     rest: {
       pulls: {
@@ -409,7 +416,7 @@ function makeFakeOctokit() {
             content:
               params.repo === 'lecture-python-programming'
                 ? b64(SOURCE_CONTENT)
-                : b64(TARGET_CONTENT),
+                : b64(targetContent),
           },
         }),
       },
@@ -423,11 +430,12 @@ function makeFakeOctokit() {
 
 function makeReviewer(
   translationResponse: Record<string, unknown>,
-  captured: { comment?: string }
+  captured: { comment?: string },
+  opts: { targetContent?: string } = {}
 ) {
   const reviewer = new TranslationReviewer('fake-key', 'fake-token');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (reviewer as any).octokit = makeFakeOctokit();
+  (reviewer as any).octokit = makeFakeOctokit(opts.targetContent);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (reviewer as any).callWithRetry = async (_p: string, _m: number, operation: string) =>
     operation === 'evaluateTranslation'
@@ -564,7 +572,10 @@ describe('reviewPR verdict block emission', () => {
     expect(diffFinding!.severity).toBe('minor');
   });
 
-  it('a failed diffChecks boolean still gates absolutely', async () => {
+  // A model-asserted check still routes to a human, but through a `diff-check`
+  // finding rather than the boolean field Stage 4 treats as measured fact
+  // (#148). Routing is unchanged; provenance is now visible.
+  it('a model-asserted diffCheck gates via a diff-check finding, not the boolean', async () => {
     const captured: { comment?: string } = {};
     const reviewer = makeReviewer(CLEAN_RESPONSE, captured);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -596,7 +607,45 @@ describe('reviewPR verdict block emission', () => {
 
     expect(result.recommendation).toBe('editor');
     expect(result.wouldAutoMerge).toBe(false);
-    expect(result.recommendationReasons.join()).toContain('positionCorrect');
+
+    // Gated, but as a finding — not as `diff check failed: positionCorrect`.
+    expect(result.recommendationReasons.join()).toContain('gating categories');
+    expect(result.recommendationReasons.join()).not.toContain('diff check failed');
+
+    const parsed = parseReviewVerdict(captured.comment!);
+    expect(parsed!.diffCheckSources.positionCorrect).toBe('model');
+    const finding = parsed!.findings.find((f) => f.category === 'diff-check');
+    expect(finding).toBeDefined();
+    expect(finding!.description).toContain('positionCorrect');
+    expect(finding!.description).toContain('model judgement');
+  });
+
+  it('a deterministic diffCheck still gates as a check, naming itself', async () => {
+    const captured: { comment?: string } = {};
+    // Target without the heading map every synced document carries: the
+    // deterministic check computes this from the documents, so the model
+    // cannot talk it out of failing.
+    const reviewer = makeReviewer(CLEAN_RESPONSE, captured, {
+      targetContent: '# 艾亚加里\n\n介绍。\n\n## 模型\n\n译文。\n',
+    });
+
+    const result = await reviewer.reviewPR(
+      42,
+      'QuantEcon/lecture-python-programming',
+      'QuantEcon',
+      'lecture-python-programming.zh-cn',
+      'lectures',
+      undefined,
+      'zh-cn',
+      'shadow'
+    );
+
+    expect(result.recommendation).toBe('editor');
+    expect(result.recommendationReasons.join()).toContain('diff check failed: headingMapCorrect');
+
+    const parsed = parseReviewVerdict(captured.comment!);
+    expect(parsed!.diffChecks.headingMapCorrect).toBe(false);
+    expect(parsed!.diffCheckSources.headingMapCorrect).toBe('deterministic');
   });
 
   it('a gating finding flips the shadow decision and the reasons say why', async () => {
