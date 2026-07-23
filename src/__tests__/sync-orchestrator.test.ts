@@ -16,11 +16,14 @@
 import {
   classifyChangedFiles,
   loadGlossary,
+  formatGlossaryTerms,
   SyncOrchestrator,
   FileToSync,
   Logger,
   StateGenerationConfig,
 } from '../sync-orchestrator.js';
+import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
 
@@ -194,7 +197,7 @@ describe('loadGlossary', () => {
     expect(warnings.length).toBeGreaterThan(0);
   });
 
-  it('should fall back to custom glossary path', async () => {
+  it('should use the custom glossary path when given', async () => {
     // Use zh-cn glossary as "custom" path
     const customPath = path.join(glossaryDir, 'zh-cn.json');
     const glossary = await loadGlossary('xx-unknown', glossaryDir, customPath);
@@ -203,9 +206,93 @@ describe('loadGlossary', () => {
     expect(glossary!.terms.length).toBeGreaterThan(0);
   });
 
-  it('should return undefined when both built-in and custom fail', async () => {
-    const glossary = await loadGlossary('xx-unknown', glossaryDir, '/nonexistent/path.json');
-    expect(glossary).toBeUndefined();
+  // A custom glossary is an OVERRIDE, not a fallback (#146). It used to be tried
+  // only after the built-in one, so for every language that ships a glossary —
+  // the whole estate — `glossary-path` was silently dead.
+  it('should prefer the custom glossary over the built-in one', async () => {
+    const customPath = path.join(glossaryDir, 'fa.json');
+    const builtIn = await loadGlossary('zh-cn', glossaryDir);
+    const glossary = await loadGlossary('zh-cn', glossaryDir, customPath);
+
+    expect(glossary).toBeDefined();
+    expect(glossary).not.toEqual(builtIn);
+    expect(glossary).toEqual(await loadGlossary('fa', glossaryDir));
+  });
+
+  it('should report which glossary it used', async () => {
+    const logger = createTestLogger();
+    await loadGlossary('zh-cn', glossaryDir, path.join(glossaryDir, 'fa.json'), logger);
+
+    const info = logger.messages.filter((m) => m.level === 'info');
+    expect(info).toHaveLength(1);
+    expect(info[0].msg).toContain('custom glossary');
+    expect(info[0].msg).toContain('fa.json');
+  });
+
+  it('should throw rather than fall back when the custom path is unreadable', async () => {
+    // Silently degrading to different terminology is the failure being removed;
+    // a configured-but-missing glossary is a misconfiguration, so fail the run.
+    await expect(loadGlossary('zh-cn', glossaryDir, '/nonexistent/path.json')).rejects.toThrow(
+      /Could not load custom glossary/
+    );
+  });
+
+  it('should throw when the custom glossary has no terms array', async () => {
+    const tmp = path.join(os.tmpdir(), `glossary-no-terms-${process.pid}.json`);
+    fs.writeFileSync(tmp, JSON.stringify({ version: '1.0' }), 'utf-8');
+    try {
+      await expect(loadGlossary('zh-cn', glossaryDir, tmp)).rejects.toThrow(/no "terms" array/);
+    } finally {
+      fs.unlinkSync(tmp);
+    }
+  });
+});
+
+// =============================================================================
+// formatGlossaryTerms TESTS
+// =============================================================================
+
+describe('formatGlossaryTerms', () => {
+  it('renders one prompt line per term with the target rendering', () => {
+    const formatted = formatGlossaryTerms(
+      { version: '1.0', terms: [{ en: 'Marginal distribution', 'zh-cn': '边缘分布' }] },
+      'zh-cn'
+    );
+
+    expect(formatted).toBe('- "Marginal distribution" → "边缘分布"');
+  });
+
+  it('appends the disambiguating context when present', () => {
+    const formatted = formatGlossaryTerms(
+      {
+        version: '1.0',
+        terms: [{ en: 'Marginal revenue', 'zh-cn': '边际收入', context: 'microeconomics' }],
+      },
+      'zh-cn'
+    );
+
+    expect(formatted).toBe('- "Marginal revenue" → "边际收入" (microeconomics)');
+  });
+
+  it('renders an empty target for a term the glossary has not translated', () => {
+    const formatted = formatGlossaryTerms({ version: '1.0', terms: [{ en: 'Kernel' }] }, 'zh-cn');
+
+    expect(formatted).toBe('- "Kernel" → ""');
+  });
+
+  it('joins multiple terms one per line', () => {
+    const formatted = formatGlossaryTerms(
+      {
+        version: '1.0',
+        terms: [
+          { en: 'Eigenvector', 'zh-cn': '特征向量' },
+          { en: 'Markov chain', 'zh-cn': '马尔可夫链' },
+        ],
+      },
+      'zh-cn'
+    );
+
+    expect(formatted.split('\n')).toHaveLength(2);
   });
 });
 

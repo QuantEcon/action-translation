@@ -101,13 +101,20 @@ export interface SyncProcessingResult {
 
 /**
  * Load glossary for the target language.
- * Tries built-in glossary first, then falls back to custom glossary path.
+ *
+ * `glossary-path`, when set, is an **override**, not a fallback: it is the only
+ * candidate, and a file that cannot be read or parsed fails the run. It used to
+ * be tried *after* the built-in glossary, which meant a custom glossary was
+ * silently ignored for every language that ships one — i.e. for the whole
+ * estate — and an unreadable custom file quietly degraded to different
+ * terminology. Both are the silent-wrong-glossary class of #146/#149.
  *
  * @param targetLanguage - Target language code (e.g., 'zh-cn')
  * @param builtInGlossaryDir - Directory containing built-in glossary files
- * @param customGlossaryPath - Optional path to custom glossary file
+ * @param customGlossaryPath - Optional path to a custom glossary file (overrides the built-in)
  * @param logger - Optional logger for status messages
- * @returns Loaded glossary or undefined if not found
+ * @returns Loaded glossary, or undefined when the language has no built-in glossary
+ * @throws if `customGlossaryPath` is set but cannot be read or parsed
  */
 export async function loadGlossary(
   targetLanguage: string,
@@ -115,7 +122,25 @@ export async function loadGlossary(
   customGlossaryPath?: string,
   logger?: Logger
 ): Promise<Glossary | undefined> {
-  // Try built-in glossary first
+  // A custom glossary is an override — falling back to different terminology
+  // because the operator's file is missing is exactly the failure to avoid.
+  if (customGlossaryPath) {
+    let glossary: Glossary;
+    try {
+      const content = await fs.readFile(customGlossaryPath, 'utf-8');
+      glossary = JSON.parse(content);
+    } catch (error) {
+      throw new Error(`Could not load custom glossary from ${customGlossaryPath}: ${error}`);
+    }
+    if (!glossary || !Array.isArray(glossary.terms)) {
+      throw new Error(`Custom glossary at ${customGlossaryPath} has no "terms" array`);
+    }
+    logger?.info(
+      `✓ Loaded custom glossary from ${customGlossaryPath} with ${glossary.terms.length} terms`
+    );
+    return glossary;
+  }
+
   const builtInPath = path.join(builtInGlossaryDir, `${targetLanguage}.json`);
   try {
     const content = await fs.readFile(builtInPath, 'utf-8');
@@ -130,23 +155,21 @@ export async function loadGlossary(
     logger?.warning(`Could not load built-in glossary for ${targetLanguage}: ${error}`);
   }
 
-  // Fallback: try custom glossary path
-  if (customGlossaryPath) {
-    try {
-      const content = await fs.readFile(customGlossaryPath, 'utf-8');
-      const glossary: Glossary = JSON.parse(content);
-      if (glossary) {
-        logger?.info(
-          `✓ Loaded custom glossary from ${customGlossaryPath} with ${glossary.terms.length} terms`
-        );
-        return glossary;
-      }
-    } catch (error) {
-      logger?.warning(`Could not load custom glossary from ${customGlossaryPath}: ${error}`);
-    }
-  }
-
   return undefined;
+}
+
+/**
+ * Render a glossary as the prompt lines the reviewer consumes.
+ *
+ * The reviewer takes terminology as pre-formatted text while the translator
+ * takes the object, so this formatting has to live somewhere; it lived inline
+ * in `runReview`, where `import.meta.url` puts it beyond the reach of the Jest
+ * CJS registry and so beyond the reach of tests.
+ */
+export function formatGlossaryTerms(glossary: Glossary, targetLanguage: string): string {
+  return glossary.terms
+    .map((t) => `- "${t.en}" → "${t[targetLanguage] || ''}"${t.context ? ` (${t.context})` : ''}`)
+    .join('\n');
 }
 
 // =============================================================================
