@@ -1,4 +1,4 @@
-verified: 2026-07-22
+verified: 2026-07-23
 
 # STATE
 
@@ -11,6 +11,37 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   Glossary PR **#69** (ja) open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
 
 ## Recently landed
+
+- **v0.23.0** (2026-07-23) — **the glossary pair plus the diff-check provenance split**; all
+  three were "fix before shadow mode" blockers, so shadow calibration is now unblocked.
+  #150 fixed the CLI half of the glossary defect: `forward` and `init` resolved glossary
+  candidates only against `process.cwd()`, and **no edition repo carries a glossary** — they ship
+  inside this package — so a resync launched from the target repo translated with no glossary and
+  logged nothing either way. Production signature matched exactly: the `init`-seeded lectures in
+  lecture-python.zh-cn all use the glossary's 边缘分布 for "Marginal distribution" while the
+  2026-07-19 `forward` wave took `prob_matrix.md` from 12 wrong / 28 correct to 25 wrong / 35
+  correct. Resolution is now package-relative and reported, with `forward --glossary` added.
+  #151 fixed the Action half (#146: review mode never read `glossary-path`) and, in doing so,
+  surfaced a deeper defect the issue did not describe — the shared loader tried the built-in
+  glossary **first** and treated the custom path as a fallback, so `glossary-path` was silently
+  dead in **all three modes** for every language that ships a glossary, i.e. the whole estate.
+  It is now an override that fails the run when unreadable.
+  #152 (#148) split measured fact from model opinion in the four `diffChecks`, which gate
+  absolutely but were all model output — a hallucinated boolean routed a correct PR to `editor`
+  on the second organic production PR under verdict v2. `structurePreserved` and
+  `headingMapCorrect` are computed from ground truth the engine already holds;
+  `scopeCorrect`/`positionCorrect` stay model-asserted, are tagged in a new optional
+  `diffCheckSources` field, and gate through a `diff-check` finding instead of the boolean.
+  **Routing is unchanged**; the win is that Stage 4 can report the two precisions separately.
+  Note what it does *not* do: `positionCorrect` — the check that actually misfired — is still
+  model-driven, made visible rather than fixed, because deterministic change attribution across a
+  translated document would swap model false-gates for engine false-gates that are harder to spot.
+  **Verified against the live estate before shipping**: 248 of 249 production files with sections
+  carry a heading map, so the new deterministic check gates exactly one file fleet-wide —
+  lecture-python-programming.fa's `autodiff.md`, a genuine gap fixed in that edition's #142.
+  Harness-validated end to end on both target languages, including that `auto-merge` is still
+  reachable (the 2026-07-23 fixture trap) and that the check reads the **legacy** `heading-map:`
+  frontmatter key, so it will not false-gate an unmigrated repo.
 
 - **v0.22.0** (2026-07-22) — #144 delivered **reviewer verdict v2**, the machine-readable
   review contract (#103 prerequisite, specified in #66): every review comment now ends with a
