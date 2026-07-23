@@ -235,6 +235,7 @@ npx translate forward -s <source-path> -t <target-path> [options]
 | `-m, --model <model>` | `claude-sonnet-5` | Claude model |
 | `--test` | `false` | Use deterministic mock responses (no LLM) |
 | `--github <owner/repo>` | *(none)* | Create one PR per file in the target repo |
+| `--glossary <path>` | *(auto)* | Path to glossary JSON file (default: built-in glossary for the language) |
 | `--exclude <pattern>` | *(none)* | Exclude files matching pattern |
 
 **Single-file example:**
@@ -304,7 +305,7 @@ npx translate init -s <source-path> -t <target-path> --target-language <code> [o
 | `--resume-from <file>` | *(none)* | Resume from a specific lecture file |
 | `--skip-existing` | `false` | Skip lectures already translated (reads `.translate/state/`) |
 | `-j, --parallel <n>` | `1` | Number of parallel translations |
-| `--glossary <path>` | *(auto)* | Path to glossary JSON file (default: `glossary/<lang>.json`) |
+| `--glossary <path>` | *(auto)* | Path to glossary JSON file (default: built-in glossary for the language) |
 | `--localize <rules>` | `code-comments,figure-labels,i18n-font-config` | Localization rules for code cells (use `none` to disable) |
 | `--dry-run` | `false` | Preview lectures without translating |
 
@@ -343,7 +344,7 @@ Download: [Source Han Serif SC](https://github.com/adobe-fonts/source-han-serif/
 
 **7-phase pipeline:**
 
-1. **Load glossary** — looks for `glossary/<lang>.json` in the current working directory
+1. **Load glossary** — `--glossary` if given, else a repo-local `glossary/<lang>.json`, else the built-in glossary shipped with the package (see [Glossary](glossary.md#using-a-custom-glossary))
 2. **Parse `_toc.yml`** — discovers lectures from the source repo's table of contents
 3. **Setup target folder** — creates the target directory structure
 4. **Copy non-markdown files** — images, config, data files, CSS (preserves directory structure)

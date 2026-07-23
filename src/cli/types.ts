@@ -7,7 +7,7 @@
  * - forward: Translate SOURCE changes to TARGET (Phase 3)
  */
 
-import { Section } from '../types.js';
+import { Glossary, Section } from '../types.js';
 
 // ============================================================================
 // STAGE 1: DOCUMENT-LEVEL TRIAGE
@@ -279,6 +279,9 @@ export interface ForwardOptions {
   github?: string; // TARGET repo in owner/repo format for PR creation
   apiKey: string; // Anthropic API key
   parallel?: number; // Number of parallel translations (default: 5)
+  glossaryPath?: string; // Explicit path to glossary JSON file (--glossary)
+  builtInGlossaryDir?: string; // Packaged glossary directory (<package-root>/glossary)
+  glossary?: Glossary; // Pre-resolved glossary — bulk resolves once and threads it through
 }
 
 // ============================================================================
