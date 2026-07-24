@@ -307,7 +307,7 @@ describe('checkWorkflow', () => {
     fs.mkdirSync(workflowDir, { recursive: true });
     fs.writeFileSync(
       path.join(workflowDir, 'review-translations.yml'),
-      'uses: QuantEcon/action-translation@v0.8',
+      'uses: QuantEcon/action-translation@v0',
       'utf-8'
     );
 
@@ -402,6 +402,21 @@ describe('checkWorkflow', () => {
     expect(result.status).toBe('pass');
   });
 
+  test('warns when the workflow pins a fixed action version (#162)', () => {
+    const workflowDir = path.join(tmpDir, '.github', 'workflows');
+    fs.mkdirSync(workflowDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(workflowDir, 'review-translations.yml'),
+      'on:\n  pull_request:\n    types: [opened, labeled]\nuses: QuantEcon/action-translation@v0.9.0\nmode: review\n',
+      'utf-8'
+    );
+
+    const result = checkWorkflow(tmpDir);
+    expect(result.status).toBe('warn');
+    expect(result.message).toContain('@v0');
+    expect(result.details?.join('\n')).toContain('review-translations.yml');
+  });
+
   test('passes a review workflow with the labeled trigger', () => {
     const workflowDir = path.join(tmpDir, '.github', 'workflows');
     fs.mkdirSync(workflowDir, { recursive: true });
@@ -467,7 +482,7 @@ describe('runDoctor', () => {
     fs.mkdirSync(workflowDir, { recursive: true });
     fs.writeFileSync(
       path.join(workflowDir, 'review-translations.yml'),
-      'uses: QuantEcon/action-translation@v0.8',
+      'uses: QuantEcon/action-translation@v0',
       'utf-8'
     );
 

@@ -24,6 +24,7 @@ import {
   FileChange,
 } from './types.js';
 import { parseTranslationSyncMetadata, TranslationSyncMetadata } from './pr-creator.js';
+import { REVIEW_TRIGGER_LABEL } from './contracts.js';
 import { MystParser } from './parser.js';
 import { runDeterministicDiffChecks, ReviewedFilePair, DiffCheckSource } from './diff-checks.js';
 import { DEFAULT_CLAUDE_MODEL, MAX_TOKENS, DEFAULT_THINKING } from './models.js';
@@ -129,7 +130,7 @@ export function validateCriterionScores(result: Record<string, unknown>): {
 export function isActionReviewComment(body: string | undefined | null): boolean {
   if (!body) return false;
   if (body.startsWith(REVIEW_COMMENT_MARKER)) return true;
-  return LEGACY_REVIEW_HEADING.test(body) && body.includes('action-translation');
+  return LEGACY_REVIEW_HEADING.test(body) && body.includes(REVIEW_TRIGGER_LABEL);
 }
 
 /** Whether an Octokit error is a 404 — the comment was already deleted by a concurrent run. */

@@ -17,6 +17,7 @@ import * as path from 'path';
 import { spawnSync } from 'child_process';
 import { writeConfig } from '../translate-state.js';
 import { TranslateConfig } from '../types.js';
+import { FAILURE_ISSUE_LABEL, TARGET_REPO_LABELS } from '../../contracts.js';
 
 // ============================================================================
 // TYPES
@@ -274,6 +275,8 @@ export async function runSetup(
     console.log(`    .github/workflows/rebase-translations.yml`);
     console.log(`    .gitignore`);
     console.log(`    README.md`);
+    console.log(`  PR labels (target repo): ${TARGET_REPO_LABELS.join(', ')}`);
+    console.log(`  Failure-issue label (source repo): ${FAILURE_ISSUE_LABEL}`);
     if (options.sourceWorkflow) {
       console.log(`  Source repo workflow:`);
       console.log(`    ${options.sourceWorkflow}`);
@@ -393,7 +396,35 @@ export async function runSetup(
   console.log(`\n✅ Repository created: ${targetFullName}`);
   console.log(`   Local path: ${localPath}`);
 
-  // Step 5 (optional): Write source workflow file
+  // Step 5: Bootstrap the labels the pipeline gates on. `gh pr create --label`
+  // fails outright on a missing label, the Action's label call degrades to a
+  // PR the review workflow never fires on, and no code path created these
+  // until now (#162). `--force` makes each call idempotent.
+  console.log(`🏷️  Creating PR labels…`);
+  for (const label of TARGET_REPO_LABELS) {
+    const labelResult = ghRunner(['label', 'create', label, '-R', targetFullName, '--force']);
+    if (labelResult.status !== 0) {
+      console.warn(
+        `⚠️  Could not create label '${label}' — run manually: gh label create ${label} -R ${targetFullName} --force`
+      );
+    }
+  }
+  // The failure-issue label lives in the SOURCE repo, where failed syncs open issues.
+  const failureLabelResult = ghRunner([
+    'label',
+    'create',
+    FAILURE_ISSUE_LABEL,
+    '-R',
+    options.source,
+    '--force',
+  ]);
+  if (failureLabelResult.status !== 0) {
+    console.warn(
+      `⚠️  Could not create label '${FAILURE_ISSUE_LABEL}' in ${options.source} — run manually: gh label create ${FAILURE_ISSUE_LABEL} -R ${options.source} --force`
+    );
+  }
+
+  // Step 6 (optional): Write source workflow file
   if (options.sourceWorkflow) {
     const sourceWorkflowContent = generateSourceWorkflowYaml(
       targetFullName,

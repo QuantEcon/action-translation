@@ -2,6 +2,12 @@ import * as core from '@actions/core';
 import { ActionInputs, ReviewInputs, RebaseInputs } from './types.js';
 import { validateLanguageCode, getSupportedLanguages } from './language-config.js';
 import { DEFAULT_CLAUDE_MODEL, VALID_MODEL_PATTERNS } from './models.js';
+import {
+  AUTO_MERGE_MODES,
+  AutoMergeMode,
+  REVIEW_TRIGGER_LABEL,
+  SYNC_PR_LABELS,
+} from './contracts.js';
 
 /**
  * Validate Claude model name (warning only — the model is still used).
@@ -48,12 +54,20 @@ export function getInputs(): ActionInputs {
   const claudeModel = core.getInput('claude-model', { required: false }) || DEFAULT_CLAUDE_MODEL;
   const githubToken = core.getInput('github-token', { required: true });
 
-  const prLabelsRaw =
-    core.getInput('pr-labels', { required: false }) || 'action-translation,automated';
+  const prLabelsRaw = core.getInput('pr-labels', { required: false }) || SYNC_PR_LABELS.join(',');
   const prLabels = prLabelsRaw
     .split(',')
     .map((l: string) => l.trim())
     .filter((l: string) => l.length > 0);
+
+  // A custom label set that drops the trigger label produces PRs no review
+  // workflow ever fires on — the same silent no-review outcome as a missing
+  // `labeled` trigger, from the other side of the contract.
+  if (!prLabels.includes(REVIEW_TRIGGER_LABEL)) {
+    core.warning(
+      `pr-labels omits '${REVIEW_TRIGGER_LABEL}' — review workflows gate on that label, so translation PRs will not be reviewed`
+    );
+  }
 
   const prReviewersRaw = core.getInput('pr-reviewers', { required: false }) || '';
   const prReviewers = prReviewersRaw
@@ -152,7 +166,8 @@ export function getReviewInputs(): ReviewInputs {
   const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
   const claudeModel = core.getInput('claude-model', { required: false }) || DEFAULT_CLAUDE_MODEL;
   const githubToken = core.getInput('github-token', { required: true });
-  const autoMergeModeRaw = core.getInput('auto-merge-mode', { required: false }) || 'off';
+  const autoMergeModeRaw =
+    core.getInput('auto-merge-mode', { required: false }) || AUTO_MERGE_MODES[0];
 
   // Validate source repo format
   if (!sourceRepo.includes('/')) {
@@ -166,10 +181,12 @@ export function getReviewInputs(): ReviewInputs {
       "auto-merge-mode 'active' is not implemented — the active gate ships with a later release (#103); use 'shadow'"
     );
   }
-  if (autoMergeModeRaw !== 'off' && autoMergeModeRaw !== 'shadow') {
-    throw new Error(`Invalid auto-merge-mode: '${autoMergeModeRaw}'. Expected 'off' or 'shadow'.`);
+  if (!AUTO_MERGE_MODES.includes(autoMergeModeRaw as AutoMergeMode)) {
+    throw new Error(
+      `Invalid auto-merge-mode: '${autoMergeModeRaw}'. Expected ${AUTO_MERGE_MODES.map((m) => `'${m}'`).join(' or ')}.`
+    );
   }
-  const autoMergeMode: 'off' | 'shadow' = autoMergeModeRaw;
+  const autoMergeMode = autoMergeModeRaw as AutoMergeMode;
 
   // Validate Claude model (warning only, doesn't throw)
   validateClaudeModel(claudeModel);

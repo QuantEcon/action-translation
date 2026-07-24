@@ -21,6 +21,7 @@ import { MystParser } from '../../parser.js';
 import { extractHeadingMap } from '../../heading-map.js';
 import { readConfig, readFileState } from '../translate-state.js';
 import { discoverMarkdownFiles } from './status.js';
+import { REVIEW_TRIGGER_LABEL, TARGET_REPO_LABELS } from '../../contracts.js';
 
 // ============================================================================
 // TYPES
@@ -299,10 +300,11 @@ export function checkWorkflow(targetPath: string): CheckResult {
     };
   }
 
-  // Check if any workflow contains action-translation references
+  // Check if any workflow contains action-translation references — the label
+  // constant doubles as the action-slug substring, so one match covers both.
   const translationWorkflows = files.filter((f) => {
     const content = fs.readFileSync(path.join(workflowDir, f), 'utf-8');
-    return content.includes('action-translation');
+    return content.includes(REVIEW_TRIGGER_LABEL);
   });
 
   if (translationWorkflows.length === 0) {
@@ -338,6 +340,21 @@ export function checkWorkflow(targetPath: string): CheckResult {
         '`types: [opened, synchronize]` never sees it. Update the workflow from',
         'examples/review-translations.yml in the action-translation repo.',
       ],
+    };
+  }
+
+  // A version-pinned action (`@v0.9.0`-style) goes stale silently — the
+  // floating `@v0` is the supported pin, moved on every release.
+  const pinned = translationWorkflows.filter((f) => {
+    const content = fs.readFileSync(path.join(workflowDir, f), 'utf-8');
+    return /action-translation@v\d+\.\d/.test(content);
+  });
+  if (pinned.length > 0) {
+    return {
+      name: 'Workflow',
+      status: 'warn',
+      message: 'Workflow pins a fixed action version — use the floating @v0 tag',
+      details: pinned.map((f) => `Pinned: ${f}`),
     };
   }
 
@@ -426,6 +443,78 @@ export function checkGhCli(): CheckResult {
   }
 }
 
+/**
+ * Check: the TARGET repo carries every label the pipeline gates on.
+ *
+ * `gh pr create --label` fails outright on a missing label, and the Action's
+ * label call degrades to a PR the review workflow never fires on — the
+ * `action-translation` label is the sole gate in the review workflow, so its
+ * absence is a silent review outage. Needs network + gh auth, so it runs only
+ * under --check-gh, like checkGhCli.
+ */
+export function checkLabels(targetPath: string): CheckResult {
+  try {
+    const repoResult = spawnSync(
+      'gh',
+      ['repo', 'view', '--json', 'nameWithOwner', '-q', '.nameWithOwner'],
+      {
+        encoding: 'utf8',
+        timeout: 15_000,
+        cwd: targetPath,
+      }
+    );
+    if (repoResult.error || repoResult.status !== 0) {
+      return {
+        name: 'Labels',
+        status: 'warn',
+        message: 'Could not resolve the target GitHub repo (no gh remote?)',
+      };
+    }
+    const repoSlug = repoResult.stdout.trim();
+
+    const labelResult = spawnSync(
+      'gh',
+      ['label', 'list', '-R', repoSlug, '--json', 'name', '-q', '.[].name'],
+      {
+        encoding: 'utf8',
+        timeout: 15_000,
+      }
+    );
+    if (labelResult.error || labelResult.status !== 0) {
+      return {
+        name: 'Labels',
+        status: 'warn',
+        message: `Could not list labels for ${repoSlug}`,
+      };
+    }
+
+    const existing = new Set(labelResult.stdout.split('\n').map((l) => l.trim()));
+    const missing = TARGET_REPO_LABELS.filter((label) => !existing.has(label));
+    if (missing.length > 0) {
+      return {
+        name: 'Labels',
+        status: 'warn',
+        message: `${repoSlug} is missing ${missing.length} label(s) the pipeline gates on`,
+        details: missing.map(
+          (label) => `Create it: gh label create ${label} -R ${repoSlug} --force`
+        ),
+      };
+    }
+
+    return {
+      name: 'Labels',
+      status: 'pass',
+      message: `All ${TARGET_REPO_LABELS.length} pipeline labels exist in ${repoSlug}`,
+    };
+  } catch {
+    return {
+      name: 'Labels',
+      status: 'warn',
+      message: 'Could not check labels',
+    };
+  }
+}
+
 // ============================================================================
 // MAIN COMMAND
 // ============================================================================
@@ -464,9 +553,10 @@ export async function runDoctor(options: DoctorOptions): Promise<DoctorResult> {
     checks.push(await checkSectionAlignment(options.source, options.target, docsFolder));
   }
 
-  // 6. gh CLI check (only if requested)
+  // 6. gh CLI + label checks (only if requested — both need network + auth)
   if (options.checkGh) {
     checks.push(checkGhCli());
+    checks.push(checkLabels(options.target));
   }
 
   // Build summary

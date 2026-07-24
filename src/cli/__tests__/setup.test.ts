@@ -19,6 +19,7 @@ import {
   GitRunner,
 } from '../commands/setup.js';
 import { readConfig } from '../translate-state.js';
+import { FAILURE_ISSUE_LABEL, TARGET_REPO_LABELS } from '../../contracts.js';
 
 /** The packaged canonical templates — what the CLI entry threads in. */
 const EXAMPLES_DIR = path.join(__dirname, '..', '..', '..', 'examples');
@@ -325,6 +326,51 @@ describe('runSetup with mock runners', () => {
     try {
       const result = await runSetup(options, mockGhRunner(repoDir), failPushGitRunner);
       expect(result.success).toBe(false);
+    } finally {
+      process.chdir(origCwd);
+    }
+  });
+
+  test('bootstraps the pipeline labels in target and source repos (#162)', async () => {
+    const repoDir = path.join(tmpDir, 'lecture-python-intro.zh-cn');
+    const ghCalls: string[][] = [];
+    const recordingGh: GhRunner = (args) => {
+      ghCalls.push(args);
+      if (args[0] === 'repo' && args[1] === 'create') {
+        fs.mkdirSync(repoDir, { recursive: true });
+        fs.mkdirSync(path.join(repoDir, '.git'), { recursive: true });
+      }
+      return { stdout: '', stderr: '', status: 0 };
+    };
+
+    const options: SetupOptions = {
+      source: 'QuantEcon/lecture-python-intro',
+      targetLanguage: 'zh-cn',
+      sourceLanguage: 'en',
+      docsFolder: 'lectures',
+      visibility: 'public',
+      dryRun: false,
+      examplesDir: EXAMPLES_DIR,
+    };
+
+    const origCwd = process.cwd();
+    process.chdir(tmpDir);
+    try {
+      const result = await runSetup(options, recordingGh, mockGitRunner);
+      expect(result.success).toBe(true);
+
+      const labelCalls = ghCalls.filter((a) => a[0] === 'label' && a[1] === 'create');
+      // Every target-repo label, then the failure-issue label in the source repo.
+      expect(labelCalls.map((a) => a[2])).toEqual([...TARGET_REPO_LABELS, FAILURE_ISSUE_LABEL]);
+      for (const call of labelCalls) {
+        expect(call).toContain('--force'); // idempotent re-runs
+      }
+      const failureCall = labelCalls[labelCalls.length - 1];
+      expect(failureCall).toContain('QuantEcon/lecture-python-intro'); // source, not target
+      const targetCalls = labelCalls.slice(0, -1);
+      for (const call of targetCalls) {
+        expect(call).toContain('QuantEcon/lecture-python-intro.zh-cn');
+      }
     } finally {
       process.chdir(origCwd);
     }
