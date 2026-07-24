@@ -314,6 +314,28 @@ export function checkWorkflow(targetPath: string): CheckResult {
     };
   }
 
+  // A review workflow whose trigger list lacks `labeled` can never fire on
+  // Action sync PRs: the `action-translation` label is applied after the PR
+  // opens, so the label gate always sees an unlabeled PR (#161 — the shape
+  // behind six PRs of real translated content merging unreviewed in v0.21.0).
+  const unfireable = translationWorkflows.filter((f) => {
+    const content = fs.readFileSync(path.join(workflowDir, f), 'utf-8');
+    return content.includes('mode: review') && !content.includes('labeled');
+  });
+  if (unfireable.length > 0) {
+    return {
+      name: 'Workflow',
+      status: 'warn',
+      message: `Review workflow cannot fire on sync PRs — trigger list lacks \`labeled\``,
+      details: [
+        ...unfireable.map((f) => `Unfireable: ${f}`),
+        'The action-translation label is applied after the PR opens, so',
+        '`types: [opened, synchronize]` never sees it. Update the workflow from',
+        'examples/review-translations.yml in the action-translation repo.',
+      ],
+    };
+  }
+
   return {
     name: 'Workflow',
     status: 'pass',

@@ -434,11 +434,12 @@ jobs:
           mode: review
           source-repo: 'QuantEcon/lecture-python-intro'
           source-language: 'en'
-          target-language: 'zh-cn'
           docs-folder: 'lectures'
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+There is no `target-language` input here: review mode detects the language from the repository-name suffix (`lecture-python-intro.zh-cn` → `zh-cn`). A repo without a language suffix logs a warning and reviews without a glossary.
 
 :::{tip}
 The `labeled` event type is important — without it, the workflow won't trigger if the `action-translation` label is added after the PR is opened. The `github.event.label.name` check keeps it from firing again for each *other* label the sync applies, and the `concurrency` group collapses the `opened` and `labeled` events a single sync produces into one review. Without both, one sync bills several reviews of the same diff ([#96](https://github.com/QuantEcon/action-translation/issues/96)).

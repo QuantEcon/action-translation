@@ -284,11 +284,15 @@ name: Review Translations
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, labeled, reopened]
 
 jobs:
   review:
-    if: contains(github.event.pull_request.labels.*.name, 'action-translation')
+    # `labeled` matters: the sync applies its labels after opening the PR.
+    # The second clause ignores `labeled` events for every other label.
+    if: >
+      contains(github.event.pull_request.labels.*.name, 'action-translation') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'action-translation')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -306,11 +310,12 @@ jobs:
           mode: review
           source-repo: 'QuantEcon/lecture-python-intro'
           source-language: 'en'
-          target-language: 'ja'
           docs-folder: 'lectures'
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
+
+There is no `target-language` input in review mode — the language is detected from the repository-name suffix (`lecture-python-intro.ja` → `ja`).
 
 ### Secrets
 

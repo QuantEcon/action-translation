@@ -331,6 +331,47 @@ describe('checkWorkflow', () => {
     expect(result.status).toBe('warn');
     expect(result.message).toContain('none reference action-translation');
   });
+
+  test('warns when the review workflow cannot fire on sync PRs (#161)', () => {
+    const workflowDir = path.join(tmpDir, '.github', 'workflows');
+    fs.mkdirSync(workflowDir, { recursive: true });
+    // The pre-#161 scaffold: label-gated but no `labeled` trigger, so the
+    // gate always sees an unlabeled PR and the review never runs.
+    fs.writeFileSync(
+      path.join(workflowDir, 'review-translations.yml'),
+      [
+        'on:',
+        '  pull_request:',
+        '    types: [opened, synchronize]',
+        'jobs:',
+        '  review:',
+        "    if: contains(github.event.pull_request.labels.*.name, 'action-translation')",
+        '    steps:',
+        '      - uses: QuantEcon/action-translation@v0',
+        '        with:',
+        '          mode: review',
+      ].join('\n'),
+      'utf-8'
+    );
+
+    const result = checkWorkflow(tmpDir);
+    expect(result.status).toBe('warn');
+    expect(result.message).toContain('cannot fire');
+    expect(result.details?.join('\n')).toContain('review-translations.yml');
+  });
+
+  test('passes a review workflow with the labeled trigger', () => {
+    const workflowDir = path.join(tmpDir, '.github', 'workflows');
+    fs.mkdirSync(workflowDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(workflowDir, 'review-translations.yml'),
+      'on:\n  pull_request:\n    types: [opened, synchronize, labeled, reopened]\nuses: QuantEcon/action-translation@v0\nmode: review\n',
+      'utf-8'
+    );
+
+    const result = checkWorkflow(tmpDir);
+    expect(result.status).toBe('pass');
+  });
 });
 
 // ============================================================================

@@ -1,0 +1,54 @@
+# Review Translation PRs
+#
+# Install this workflow in the TARGET (translated) repository at:
+#   .github/workflows/review-translations.yml
+#
+# It posts an AI quality review on every translation PR the sync opens.
+# The review's target language is not an input: it is detected from the
+# repository-name suffix (lecture-python-intro.zh-cn -> zh-cn).
+#
+# This file is the single canonical template: `translate setup` scaffolds
+# new target repos from it (substituting source-repo, source-language and
+# docs-folder), and the docs quote the same shape. A drift test
+# (src/cli/__tests__/workflow-templates.test.ts) keeps every copy aligned.
+
+name: Review Translations
+
+on:
+  pull_request:
+    types: [opened, synchronize, labeled, reopened]
+
+jobs:
+  review:
+    # `labeled` in the trigger list matters: the sync applies its labels after
+    # opening the PR, so without it a PR labeled late is never reviewed. The
+    # second clause then ignores `labeled` events for every OTHER label — a
+    # sync applies labels one call at a time, and each would otherwise start
+    # a full (billed) review of the same diff (#96).
+    if: >
+      contains(github.event.pull_request.labels.*.name, 'action-translation') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'action-translation')
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    # One review per PR — supersede an in-flight review instead of running both
+    concurrency:
+      group: review-translations-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - uses: QuantEcon/action-translation@v0
+        with:
+          mode: review
+          source-repo: 'QuantEcon/lecture-python-intro'
+          source-language: 'en'
+          docs-folder: 'lectures'
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
