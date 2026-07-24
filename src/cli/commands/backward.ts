@@ -554,10 +554,26 @@ export async function runBackwardBulk(
 
   const filesToProcess = allFiles.filter((f) => !doneSet.has(f));
 
-  // Files being retried this run get a fresh verdict — drop their stale error
-  // records so the final counts reflect this run, not a double-count.
+  // Every carried-over error record is stale at this point: files still in
+  // scope are about to be retried and get a fresh verdict, and files no longer
+  // discovered (deleted, excluded, or newly skipped by the source-sha
+  // optimization) can never be re-verdicted — keeping their records would pin
+  // filesErrored > 0 and the exit code at 1 on every resume, forever. Drop
+  // them all, loudly for the ones that left the corpus.
   const retrySet = new Set(filesToProcess);
-  progress.erroredFiles = progress.erroredFiles.filter((e) => !retrySet.has(e.file));
+  for (const e of progress.erroredFiles) {
+    if (!retrySet.has(e.file)) {
+      logger.warn(`  ${e.file}: previously errored but no longer in scope — dropping its record.`);
+    }
+  }
+  if (progress.erroredFiles.length > 0) {
+    progress.erroredFiles = [];
+    // Persist the cleanup now — the per-batch checkpoint never runs when
+    // everything left was out of scope, and the stale records would reload
+    // on the next resume.
+    progress.lastUpdated = new Date().toISOString();
+    writeProgress(outputDir, progress);
+  }
 
   /**
    * Process a single file in the bulk pipeline.

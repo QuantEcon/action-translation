@@ -481,6 +481,33 @@ describe('runBackwardBulk with resume', () => {
     expect(after.erroredFiles).toEqual([]);
   });
 
+  it('drops stale error records for files no longer in scope, so resume converges', async () => {
+    const { sourceDir, targetDir } = setupMultiFileFixture();
+    const outputDir = path.join(tmpDir, 'reports');
+
+    const options = buildBulkOptions(sourceDir, targetDir, outputDir);
+    await runBackwardBulk(options, silentLogger);
+
+    const repoScopedDir = path.join(outputDir, path.basename(sourceDir));
+    const bulkFolder = fs.readdirSync(repoScopedDir).find((f) => f.startsWith('backward-'));
+    const bulkDir = path.join(repoScopedDir, bulkFolder!);
+
+    // Pretend cobweb.md errored on the first run — then exclude it on resume,
+    // taking it out of scope. Its record must not pin filesErrored > 0 forever.
+    const progress = readProgress(bulkDir)!;
+    progress.completedFiles = progress.completedFiles.filter((f) => f !== 'cobweb.md');
+    progress.erroredFiles = [{ file: 'cobweb.md', error: 'simulated crash' }];
+    writeProgress(bulkDir, progress);
+    fs.rmSync(path.join(bulkDir, '.resync', 'cobweb.json'), { force: true });
+
+    const resumeOptions = buildBulkOptions(sourceDir, targetDir, bulkDir);
+    const result = await runBackwardBulk(resumeOptions, silentLogger, ['cobweb.md'], true);
+
+    expect(result.filesAnalyzed).toBe(2);
+    expect(result.filesErrored).toBe(0);
+    expect(readProgress(bulkDir)!.erroredFiles).toEqual([]);
+  });
+
   it('should error when no resumable run exists', async () => {
     const emptyDir = path.join(tmpDir, 'no-runs');
     fs.mkdirSync(emptyDir, { recursive: true });
