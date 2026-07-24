@@ -228,8 +228,7 @@ export interface ForwardTriageResult {
  * Result of forward resync for a single file.
  *
  * Uses whole-file RESYNC: the entire document is sent to Claude in one call.
- * The `sections` field is kept for backward compatibility with PR body
- * formatting (it's always empty for whole-file resync).
+ * (The always-empty legacy `sections` field was deleted in #166.)
  */
 export interface ForwardFileResult {
   file: string;
