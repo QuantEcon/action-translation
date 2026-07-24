@@ -57,13 +57,21 @@ def strip_to_prose(text: str) -> str:
 
 
 def headings(text: str) -> list[str]:
+    # rstrip is deliberate: the gate compares heading text, not invisible
+    # trailing whitespace — a whitespace-only diff is not a translation defect.
     return [ln.rstrip() for ln in strip_to_prose(text).split("\n") if HEADING_RE.match(ln)]
 
 
 def term_pattern(term: str) -> re.Pattern[str]:
-    # Left boundary: not preceded by a Latin letter. Right: not followed by a
-    # lowercase Latin letter — this permits the hyphenated Malayalam suffix
-    # attachment the policy mandates (economy-യിലെ) and plural "s".
+    # Left boundary: not preceded by a Latin letter. Right: no further
+    # lowercase letter — which permits the hyphenated Malayalam suffix
+    # attachment the policy mandates (economy-യിലെ) but NOT English plurals.
+    # Plural folding is deliberately absent: "+s" collides with verbs the
+    # policy correctly translates (means, demands, yields → Malayalam), and on
+    # the reference lecture folding produced only a false FAIL ("mean" 2->0
+    # via the verb "means") and zero true extra matches. Exact matching is
+    # symmetric between source and output, so plural occurrences are merely
+    # invisible to the gate, never false failures.
     return re.compile(r"(?<![A-Za-z])" + re.escape(term) + r"(?![a-z])", re.IGNORECASE)
 
 
@@ -91,7 +99,13 @@ def paragraph_ratios(prose: str, min_letters: int = 12) -> list[float]:
 def ratio_stats(ratios: list[float]) -> dict:
     if not ratios:
         return {"n": 0}
-    qs = statistics.quantiles(ratios, n=10) if len(ratios) >= 3 else [min(ratios), max(ratios)]
+    if len(ratios) == 1:
+        v = round(ratios[0], 3)
+        return {"n": 1, "mean": v, "median": v, "p10": v, "p90": v}
+    # method='inclusive' never extrapolates beyond the observed min/max — the
+    # default exclusive method produces out-of-range quantiles (even negative
+    # "ratios") on small samples.
+    qs = statistics.quantiles(ratios, n=10, method="inclusive")
     return {
         "n": len(ratios),
         "mean": round(statistics.mean(ratios), 3),

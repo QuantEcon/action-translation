@@ -48,8 +48,8 @@ Phase numbering follows #189.
 
 | Metric | Gate | Definition |
 |---|---|---|
-| Heading fidelity | FAIL | heading sequence byte-identical to source |
-| Pinned-term retention | FAIL | every keep-English glossary term occurring in the source occurs at least as often in the output, in Latin script |
+| Heading fidelity | FAIL | heading sequence identical to source (trailing whitespace normalized — an invisible-whitespace diff is not a translation defect) |
+| Pinned-term retention | FAIL | every keep-English glossary term occurring in the source occurs at least as often in the output, in Latin script. Exact word match — plurals are deliberately not folded ("+s" collides with verbs the policy correctly translates: means, demands, yields), so plural-only occurrences are invisible to the gate rather than false failures |
 | Casing consistency | WARN | a retained term uses one surface form across the document (sentence-initial capitalization tolerated) |
 | Script-ratio band | WARN | per-paragraph Malayalam-vs-Latin letter ratio; output distribution compared against the reference's p10–p90 band. High = over-translation, low = untranslated prose |
 | Everyday-term usage | info | the 5 translated glossary words: exact-string counts only, since Malayalam inflection legitimately alters endings |
@@ -70,8 +70,9 @@ be graduated into `diff-checks.ts` later (Phase 3).
 the reference itself passes every gate — 27/27 headings identical (confirming
 the keep-headings-English rule empirically), all pinned terms retained, zero
 casing variants, and its top Malayalam tokens are all genuine function words
-(no transliterations). The script-ratio band from its 151 prose paragraphs:
-mean 0.485, median 0.525, p10 0.127, p90 0.707. Phase 1 outputs should land
+(no transliterations). The script-ratio band from its 151 prose paragraphs
+(inclusive-method quantiles, which never extrapolate beyond observed values):
+mean 0.485, median 0.525, p10 0.132, p90 0.707. Phase 1 outputs should land
 inside p10−0.05 … p90+0.05.
 
 ## 5. Open questions carried from #71 (unconfirmed by Adisankar)
