@@ -25,6 +25,7 @@ import {
 } from './types.js';
 import { parseTranslationSyncMetadata, TranslationSyncMetadata } from './pr-creator.js';
 import { REVIEW_TRIGGER_LABEL } from './contracts.js';
+import { getLanguageConfig } from './language-config.js';
 import { MystParser } from './parser.js';
 import { runDeterministicDiffChecks, ReviewedFilePair, DiffCheckSource } from './diff-checks.js';
 import { DEFAULT_CLAUDE_MODEL, MAX_TOKENS, DEFAULT_THINKING } from './models.js';
@@ -1128,6 +1129,7 @@ export class TranslationReviewer {
       de: 'German',
       ja: 'Japanese',
       ko: 'Korean',
+      ml: 'Malayalam',
     };
     const targetLangName = targetLanguage
       ? languageNames[targetLanguage] || targetLanguage
@@ -1136,6 +1138,16 @@ export class TranslationReviewer {
     const glossarySection = glossaryTerms
       ? `\n## Reference Glossary\nThe translation should follow this established terminology glossary:\n${glossaryTerms}\n`
       : '';
+
+    // The translator prompt enforces per-language rules (language-config
+    // additionalRules); the judge must evaluate against the same policy, or
+    // deliberate choices (e.g. Malayalam keeping technical terms in English)
+    // get misread as untranslated content and scored down.
+    const languageRules = targetLanguage ? getLanguageConfig(targetLanguage).additionalRules : [];
+    const languagePolicySection =
+      languageRules.length > 0
+        ? `\n## Language-Specific Translation Policy\nThe ${targetLangName} translation is REQUIRED to follow these rules. Compliance with them is correct behavior — do NOT flag it as an accuracy, fluency, or terminology issue. DO flag violations of these rules (category: terminology):\n${languageRules.map((r) => `- ${r}`).join('\n')}\n`
+        : '';
 
     const prompt = `You are a professional translator and quality evaluator specializing in technical/academic content translation from English to ${targetLangName}.
 
@@ -1151,7 +1163,7 @@ ${sourceEnglish}
 \`\`\`markdown
 ${targetTranslation}
 \`\`\`
-${glossarySection}
+${glossarySection}${languagePolicySection}
 ## IMPORTANT: About the Translation Metadata
 
 The ${targetLangName} translation contains a \`translation\` section in the YAML frontmatter that is NOT present in the English source. This is CORRECT and EXPECTED behavior:

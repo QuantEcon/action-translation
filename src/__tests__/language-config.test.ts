@@ -2,6 +2,8 @@
  * Tests for language-specific configuration
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import {
   getLanguageConfig,
   formatAdditionalRules,
@@ -31,6 +33,20 @@ describe('Language Configuration', () => {
 
       expect(config1).toEqual(config2);
       expect(config2).toEqual(config3);
+    });
+
+    it('should return Malayalam config with keep-English-dominant rules', () => {
+      const config = getLanguageConfig('ml');
+      expect(config.code).toBe('ml');
+      expect(config.name).toBe('Malayalam');
+      expect(config.additionalRules.length).toBeGreaterThan(0);
+      // The policy core: technical terms stay English, morphology attaches to
+      // English roots, headings stay English (issue #70 native-speaker review)
+      expect(config.additionalRules.join('\n')).toContain(
+        'do NOT translate or transliterate them into Malayalam script'
+      );
+      expect(config.additionalRules.join('\n')).toContain('economy-യിലെ');
+      expect(config.additionalRules.join('\n')).toContain('Keep section headings');
     });
 
     it('should return empty rules for unconfigured languages', () => {
@@ -124,6 +140,46 @@ describe('Language Configuration', () => {
     it('should fall back to code for unknown languages', () => {
       expect(languageLabel('ja')).toBe('ja (ja)');
       expect(languageLabel('es')).toBe('es (es)');
+    });
+  });
+
+  describe('Malayalam glossary (glossary/ml.json)', () => {
+    const glossaryPath = path.join(__dirname, '..', '..', 'glossary', 'ml.json');
+    type MlGlossaryTerm = { en: string; ml: string; context?: string };
+    const glossary: { terms: MlGlossaryTerm[] } = JSON.parse(
+      fs.readFileSync(glossaryPath, 'utf-8')
+    );
+
+    it('every term has en and ml string values', () => {
+      expect(glossary.terms.length).toBeGreaterThan(0);
+      for (const term of glossary.terms) {
+        expect(typeof term.en).toBe('string');
+        expect(typeof term.ml).toBe('string');
+      }
+    });
+
+    it('has no duplicate en keys', () => {
+      const keys = glossary.terms.map((t) => t.en);
+      expect(new Set(keys).size).toBe(keys.length);
+    });
+
+    it('is keep-English-dominant: technical terms pin ml == en, only everyday words translate', () => {
+      const kept = glossary.terms.filter((t) => t.en === t.ml);
+      const translated = glossary.terms.filter((t) => t.en !== t.ml);
+      expect(kept.length).toBeGreaterThan(translated.length);
+      // Translated entries are the reviewer-approved everyday words — function
+      // words (we, two, each, ...) are deliberately absent because they inflect
+      // with Malayalam grammar and must not be pinned term-level
+      expect(translated.map((t) => t.en).sort()).toEqual([
+        'country',
+        'increase',
+        'over time',
+        'relationship',
+        'year',
+      ]);
+      for (const t of translated) {
+        expect(t.context).toContain('everyday');
+      }
     });
   });
 });
