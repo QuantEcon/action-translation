@@ -145,7 +145,10 @@ describe('Language Configuration', () => {
 
   describe('Malayalam glossary (glossary/ml.json)', () => {
     const glossaryPath = path.join(__dirname, '..', '..', 'glossary', 'ml.json');
-    const glossary = JSON.parse(fs.readFileSync(glossaryPath, 'utf-8'));
+    type MlGlossaryTerm = { en: string; ml: string; context?: string };
+    const glossary: { terms: MlGlossaryTerm[] } = JSON.parse(
+      fs.readFileSync(glossaryPath, 'utf-8')
+    );
 
     it('every term has en and ml string values', () => {
       expect(glossary.terms.length).toBeGreaterThan(0);
@@ -156,18 +159,18 @@ describe('Language Configuration', () => {
     });
 
     it('has no duplicate en keys', () => {
-      const keys = glossary.terms.map((t: { en: string }) => t.en);
+      const keys = glossary.terms.map((t) => t.en);
       expect(new Set(keys).size).toBe(keys.length);
     });
 
     it('is keep-English-dominant: technical terms pin ml == en, only everyday words translate', () => {
-      const kept = glossary.terms.filter((t: { en: string; ml: string }) => t.en === t.ml);
-      const translated = glossary.terms.filter((t: { en: string; ml: string }) => t.en !== t.ml);
+      const kept = glossary.terms.filter((t) => t.en === t.ml);
+      const translated = glossary.terms.filter((t) => t.en !== t.ml);
       expect(kept.length).toBeGreaterThan(translated.length);
       // Translated entries are the reviewer-approved everyday words — function
       // words (we, two, each, ...) are deliberately absent because they inflect
       // with Malayalam grammar and must not be pinned term-level
-      expect(translated.map((t: { en: string }) => t.en).sort()).toEqual([
+      expect(translated.map((t) => t.en).sort()).toEqual([
         'country',
         'increase',
         'over time',
