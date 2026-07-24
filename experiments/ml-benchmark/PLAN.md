@@ -66,6 +66,14 @@ Run:
 Exit code is non-zero on any FAIL-gate breach, so the script can sit in CI or
 be graduated into `diff-checks.ts` later (Phase 3).
 
+**Calibration (measured 2026-07-24, reference vs the live English source):**
+the reference itself passes every gate — 27/27 headings identical (confirming
+the keep-headings-English rule empirically), all pinned terms retained, zero
+casing variants, and its top Malayalam tokens are all genuine function words
+(no transliterations). The script-ratio band from its 151 prose paragraphs:
+mean 0.485, median 0.525, p10 0.127, p90 0.707. Phase 1 outputs should land
+inside p10−0.05 … p90+0.05.
+
 ## 5. Open questions carried from #71 (unconfirmed by Adisankar)
 
 1. Headings stay fully English (rule shipped on the sample's evidence — confirm).
