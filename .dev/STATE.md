@@ -79,10 +79,15 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   with its lifecycle costs recorded (build trigger: first real human addition). Parity guard
   deliberately unchanged — the scan shows strict source/output equality is a true corpus
   invariant. **The P0 co-design gate is dissolved: #94 Phase 2 (round-trip invariant + real
-  `validateMyST`) is unblocked and next.** Also: init `-f` repo-scoped side effects filed as
+  `validateMyST`) is unblocked and next** — but the round-trip invariant as PLAN formulates it is
+  unachievable (13/78 files round-trip byte-for-byte; parity and idempotence hold 78/78), so
+  reformulate before building: see [`D-2026-07-24-tech-debt-audit-boundaries.md`](decisions/D-2026-07-24-tech-debt-audit-boundaries.md).
+  Also: init `-f` repo-scoped side effects filed as
   #134; tutorial `SOURCE_ONLY` row corrected to `init -f`.
-- **v0.20.0** (2026-07-21) — #128 closed #119 + #65: structural parity guard on every write
-  path (directive shapes byte-equal or presence-matched by class; anchors exact). Calibrated
+- **v0.20.0** (2026-07-21) — #128 closed #119 + #65: structural parity guard on the sync and
+  `forward` write paths — **not `init`**, corrected 2026-07-24 by the tech-debt audit; `init` is
+  the one unguarded model-output write path (#159)
+  (directive shapes byte-equal or presence-matched by class; anchors exact). Calibrated
   empirically: byte-equal draft over 211 real pairs → 362 false positives in 3 classes
   (contents/index titles, prf:* titles, code-cell kernel tags) → calibrated guard passes
   200/211, remainder pending-drift artifacts. Found live damage during calibration: sympy.fr
