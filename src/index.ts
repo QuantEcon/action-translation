@@ -27,6 +27,7 @@ import {
 } from './pr-creator.js';
 import { RebaseCache } from './types.js';
 import { isTranslationBranch } from './branch-naming.js';
+import { FAILURE_ISSUE_LABEL } from './contracts.js';
 import { refreshStaleBranch } from './rebase-siblings.js';
 import { stateFileRelativePath } from './cli/translate-state.js';
 import * as path from 'path';
@@ -1382,7 +1383,7 @@ async function createFailureIssue(
         owner: github.context.repo.owner,
         repo: github.context.repo.repo,
         issue_number: issue.number,
-        labels: ['translation-sync-failure'],
+        labels: [FAILURE_ISSUE_LABEL],
       });
     } catch (labelError) {
       core.warning(

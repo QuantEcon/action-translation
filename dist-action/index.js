@@ -26484,6 +26484,20 @@ var VALID_MODEL_PATTERNS = [
   // claude-3-haiku-20240307
 ];
 
+// dist/contracts.js
+var REVIEW_TRIGGER_LABEL = "action-translation";
+var SYNC_PR_LABELS = [REVIEW_TRIGGER_LABEL, "automated"];
+var RESYNC_PR_LABELS = [
+  REVIEW_TRIGGER_LABEL,
+  "action-translation-sync",
+  "resync"
+];
+var FAILURE_ISSUE_LABEL = "translation-sync-failure";
+var TARGET_REPO_LABELS = [
+  .../* @__PURE__ */ new Set([...SYNC_PR_LABELS, ...RESYNC_PR_LABELS])
+];
+var AUTO_MERGE_MODES = ["off", "shadow"];
+
 // dist/inputs.js
 function validateClaudeModel(model) {
   const isValid = VALID_MODEL_PATTERNS.some((pattern) => pattern.test(model));
@@ -26512,8 +26526,11 @@ function getInputs() {
   const anthropicApiKey = core.getInput("anthropic-api-key", { required: true });
   const claudeModel = core.getInput("claude-model", { required: false }) || DEFAULT_CLAUDE_MODEL;
   const githubToken = core.getInput("github-token", { required: true });
-  const prLabelsRaw = core.getInput("pr-labels", { required: false }) || "action-translation,automated";
+  const prLabelsRaw = core.getInput("pr-labels", { required: false }) || SYNC_PR_LABELS.join(",");
   const prLabels = prLabelsRaw.split(",").map((l) => l.trim()).filter((l) => l.length > 0);
+  if (!prLabels.includes(REVIEW_TRIGGER_LABEL)) {
+    core.warning(`pr-labels omits '${REVIEW_TRIGGER_LABEL}' \u2014 review workflows gate on that label, so translation PRs will not be reviewed`);
+  }
   const prReviewersRaw = core.getInput("pr-reviewers", { required: false }) || "";
   const prReviewers = prReviewersRaw.split(",").map((r) => r.trim()).filter((r) => r.length > 0);
   const prTeamReviewersRaw = core.getInput("pr-team-reviewers", { required: false }) || "";
@@ -26571,15 +26588,15 @@ function getReviewInputs() {
   const anthropicApiKey = core.getInput("anthropic-api-key", { required: true });
   const claudeModel = core.getInput("claude-model", { required: false }) || DEFAULT_CLAUDE_MODEL;
   const githubToken = core.getInput("github-token", { required: true });
-  const autoMergeModeRaw = core.getInput("auto-merge-mode", { required: false }) || "off";
+  const autoMergeModeRaw = core.getInput("auto-merge-mode", { required: false }) || AUTO_MERGE_MODES[0];
   if (!sourceRepo.includes("/")) {
     throw new Error(`Invalid source-repo format: ${sourceRepo}. Expected format: owner/repo`);
   }
   if (autoMergeModeRaw === "active") {
     throw new Error("auto-merge-mode 'active' is not implemented \u2014 the active gate ships with a later release (#103); use 'shadow'");
   }
-  if (autoMergeModeRaw !== "off" && autoMergeModeRaw !== "shadow") {
-    throw new Error(`Invalid auto-merge-mode: '${autoMergeModeRaw}'. Expected 'off' or 'shadow'.`);
+  if (!AUTO_MERGE_MODES.includes(autoMergeModeRaw)) {
+    throw new Error(`Invalid auto-merge-mode: '${autoMergeModeRaw}'. Expected ${AUTO_MERGE_MODES.map((m) => `'${m}'`).join(" or ")}.`);
   }
   const autoMergeMode = autoMergeModeRaw;
   validateClaudeModel(claudeModel);
@@ -35770,7 +35787,7 @@ function isActionReviewComment(body) {
     return false;
   if (body.startsWith(REVIEW_COMMENT_MARKER))
     return true;
-  return LEGACY_REVIEW_HEADING.test(body) && body.includes("action-translation");
+  return LEGACY_REVIEW_HEADING.test(body) && body.includes(REVIEW_TRIGGER_LABEL);
 }
 function isNotFoundError(error3) {
   return typeof error3 === "object" && error3 !== null && error3.status === 404;
@@ -39383,7 +39400,7 @@ async function createFailureIssue(octokit, prNumber, targetLanguage, targetRepo,
         owner: github2.context.repo.owner,
         repo: github2.context.repo.repo,
         issue_number: issue.number,
-        labels: ["translation-sync-failure"]
+        labels: [FAILURE_ISSUE_LABEL]
       });
     } catch (labelError) {
       core7.warning(`Could not add label to failure issue #${issue.number}: ${labelError instanceof Error ? labelError.message : String(labelError)}`);

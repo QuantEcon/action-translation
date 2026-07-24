@@ -21,6 +21,7 @@ import { spawnSync, SpawnSyncOptions } from 'child_process';
 import { ResyncSectionResult } from './types.js';
 import type { TranslationSyncMetadata } from '../pr-creator.js';
 import { SYNC_METADATA_SCHEMA_VERSION } from '../pr-creator.js';
+import { RESYNC_PR_LABELS } from '../contracts.js';
 import { RESYNC_BRANCH_PREFIX } from '../branch-naming.js';
 
 // ============================================================================
@@ -527,12 +528,7 @@ export function buildGhArgs(file: string, repo: string): string[] {
     title,
     '--body-file',
     '-',
-    '--label',
-    'action-translation',
-    '--label',
-    'action-translation-sync',
-    '--label',
-    'resync',
+    ...RESYNC_PR_LABELS.flatMap((label) => ['--label', label]),
   ];
 }
 
