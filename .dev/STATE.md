@@ -7,21 +7,29 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## In flight
 
-- **Tech-debt Wave 1** (#158–#168, milestone 1) — A (#158, guardrails) and B (#159, init
-  parity guard; corpus measured: 31/248 seeded pairs fail, 25 in intro.zh-cn) **merged**;
-  C (#160, failure reporting), D (#161, canonical review-workflow template) and E (#162,
-  contracts owner module + label bootstrap), F (#163, cheap correctness) and G (#164,
-  retry predicate + cost outputs) and H (#165, fail-closed everything) **merged**;
-  I (#166, ~900 LOC dead code) and J (#167, dead toc-file input) **merged**;
-  K (#168, docs truth + one module map + 2.1 MB off the bundle) open — the wave's last PR.
-  Next after merge: tidy-up pass + a work plan for Monday 2026-07-27 resuming into Phase 2
-  (round-trip reformulation first, per the boundaries record). Boundaries the wave must
-  respect:
-  [`D-2026-07-24-tech-debt-audit-boundaries.md`](decisions/D-2026-07-24-tech-debt-audit-boundaries.md).
+- **Week of 2026-07-27**: resume into Phase 2 per the work-plan issue (#198 — opened at
+  Wave 1 close). First gate: reformulate the round-trip invariant
+  ([`D-2026-07-24-tech-debt-audit-boundaries.md`](decisions/D-2026-07-24-tech-debt-audit-boundaries.md));
+  first decision: cut v0.24.0 (the Unreleased section is the whole wave, and moving `@v0`
+  deploys it estate-wide). Wave 2 of the audit (#169–#176 + backlog #177) remains available.
 - **PR #71** — Malayalam (`ml`) draft; awaiting native-reviewer calibration batch.
   Glossary PR **#69** (ja) open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
 
 ## Recently landed
+
+- **Tech-debt Wave 1 complete** (2026-07-24, one day): all eleven PRs #158–#168 merged
+  (#180, #183–#186, #188, #190, #193, #195–#197), retiring 51 audit findings. The shape:
+  guardrails first (type-checked tests, smoke freshness, `.dev` ref checker), then the
+  init parity guard (corpus measured: 31/248 seeded pairs fail, 25 in intro.zh-cn),
+  failure-is-not-optional (rebase can fail, bulk exits non-zero, `--resume` retries),
+  one canonical review workflow (five of six copies could never fire), a contracts owner
+  module with label bootstrap, seven cheap-correctness fixes, one retry predicate with
+  `maxRetries: 0` ×6 and cost outputs, fail-closed parsers + the fake validator deleted,
+  ~900 LOC of dead code out (coverage flat, bundle byte-identical), the dead `toc-file`
+  input gone, and docs that tell the truth with a locked single module map and 2.1 MB off
+  the shipped bundle. Suite: 62 suites / 1,357 tests, zero skips, fully type-checked.
+  Per-PR detail: `log/2026-07-24-pr-*.md`; boundaries honoured throughout per
+  `decisions/D-2026-07-24-tech-debt-audit-boundaries.md`.
 
 - **v0.23.0** (2026-07-23) — **the glossary pair plus the diff-check provenance split**; all
   three were "fix before shadow mode" blockers, so shadow calibration is now unblocked.
@@ -186,8 +194,9 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## Health & context
 
-- `main` green; 1,303 tests (55 suites, type-checked as of #158), lint covers all files
-  including the root `*.mjs` scripts (`--max-warnings 0`) and CI checks formatting.
+- `main` green; 1,357 tests (62 suites, zero skips, type-checked as of #158), lint covers
+  all files including the root `*.mjs` scripts (`--max-warnings 0`), CI checks formatting
+  and `.dev/` path:line references.
 - Highest-priority known bug: issue **#65** — translator drops `(label)=` anchors
   (PLAN Phase 2), plus the silent-data-loss family documented in REVIEW §6.1.
 - Prod dep advisories: **0** (cleared by #111's `@actions/*` CJS majors; the ESM-only
