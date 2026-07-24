@@ -19,7 +19,7 @@ npm install
 ## Development workflow
 
 ```bash
-npm test             # Run the full Jest suite (~1005 tests)
+npm test             # Run the full Jest suite
 npm run lint         # ESLint (must pass with no errors)
 npm run build        # tsc compile (dist/) + esbuild bundle (dist-action/index.js)
 npm run build:cli    # CLI-only TypeScript compile (dist/)

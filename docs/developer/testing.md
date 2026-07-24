@@ -4,7 +4,7 @@ title: Testing
 
 # Testing
 
-**Current**: 1005 tests | 39 suites | ~4s execution time
+**Current counts**: run `npm test` — the exact test and suite counts live in CI, not in prose.
 
 ## Running tests
 
@@ -24,54 +24,17 @@ npm test && npm run build
 
 ## Test structure
 
-### Core Action tests (12 suites)
+Two test roots, split by what they exercise: `src/__tests__/` covers the Action pipeline
+(parser, diff detection, translation, review, sync orchestration, inputs) and
+`src/cli/__tests__/` covers the CLI commands and their helpers. Suites are named
+`<module>.test.ts` after the module they cover, with focused suites like
+`<module>-<aspect>.test.ts` for regressions and cross-cutting behaviours.
 
-```
-src/__tests__/
-├── parser.test.ts               # MyST parsing, frontmatter extraction
-├── parser-components.test.ts    # Document component parsing
-├── diff-detector.test.ts        # Change detection, section comparison
-├── file-processor.test.ts       # Section matching, reconstruction, subsection duplication regression
-├── heading-map.test.ts          # Heading-map CRUD, subsection regression
-├── language-config.test.ts      # Language-specific rules, validation
-├── integration.test.ts          # Full parse → detect → translate → reconstruct
-├── e2e-fixtures.test.ts         # End-to-end fixture tests
-├── component-reconstruction.test.ts  # Component assembly
-├── reviewer.test.ts             # Review mode prompts, validation
-├── translator.test.ts           # Translation prompts, token estimation
-└── inputs.test.ts               # Mode validation, PR events, input parsing
-```
+The suite inventory is deliberately not enumerated here — the last several releases showed
+this page drifts the moment a suite is added. List them directly:
 
-### CLI tests — Backward/Status (12 suites)
-
-```
-src/cli/__tests__/
-├── document-comparator.test.ts  # Stage 1 triage
-├── backward-evaluator.test.ts   # Stage 2 evaluation
-├── section-matcher.test.ts      # Cross-language section matching
-├── git-metadata.test.ts         # Git metadata extraction
-├── report-generator.test.ts     # Markdown/JSON report formatting
-├── schema.test.ts               # Zod schema validation
-├── backward.test.ts             # Backward command integration
-├── bulk-backward.test.ts        # Bulk backward processing
-├── status.test.ts               # Status command
-├── sync-orchestrator.test.ts    # Sync pipeline
-├── pr-creator.test.ts           # PR creation
-└── translator-retry.test.ts     # Retry logic
-```
-
-### CLI tests — Review/Forward (8 suites)
-
-```
-src/cli/__tests__/
-├── review.test.ts               # Command loading, filtering, pipeline
-├── review-formatter.test.ts     # Chalk card rendering, categories
-├── review-session.test.ts       # Accept/skip/reject state machine
-├── issue-generator.test.ts      # Issue title, body, labels
-├── issue-creator.test.ts        # gh issue create calls
-├── forward.test.ts              # Forward command
-├── forward-triage.test.ts       # Content-vs-i18n filter
-└── forward-pr-creator.test.ts   # Git ops + PR creation
+```bash
+find src -name '*.test.ts' | sort
 ```
 
 ## Test philosophy

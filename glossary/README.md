@@ -72,7 +72,7 @@ When the action runs with `target-language: 'zh-cn'`:
 
 ### French (`fr.json`)
 
-**Status**: 🟡 Draft (357 terms) — pending native-speaker review
+**Status**: ✅ Complete (364 terms)
 
 **Contents**:
 - ~160 economic terms (PIB, équilibre, politique budgétaire, etc.)
