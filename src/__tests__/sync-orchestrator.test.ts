@@ -48,9 +48,6 @@ jest.mock('../file-processor', () => ({
     processSectionBased: jest.fn().mockImplementation(async (_old: string, newContent: string) => {
       return `[UPDATED] ${newContent}`;
     }),
-    validateMyST: jest.fn().mockImplementation(async () => ({
-      valid: true,
-    })),
   })),
 }));
 

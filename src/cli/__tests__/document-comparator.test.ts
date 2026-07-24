@@ -152,10 +152,12 @@ Let me know if you need more details.`;
       expect(result.notes).toBe('The target includes an extra paragraph.');
     });
 
-    it('should fall back to keyword detection when JSON is malformed', () => {
+    it('never downgrades unparseable prose to IN_SYNC — even prose that says so (#165)', () => {
+      // The deleted keyword fallback read this — and "not in sync" — as
+      // IN_SYNC, silently skipping the file. Unparseable now flags for review.
       const response = 'The documents appear to be in_sync with no substantive changes.';
       const result = parseTriageResponse(response);
-      expect(result.verdict).toBe('IN_SYNC');
+      expect(result.verdict).toBe('CHANGES_DETECTED');
     });
 
     it('should not accept invalid verdict values', () => {

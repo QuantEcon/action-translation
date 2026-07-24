@@ -71,10 +71,10 @@ describe('parseForwardTriageResponse', () => {
     expect(result.verdict).toBe('I18N_ONLY');
   });
 
-  it('falls back to keyword detection for "identical"', () => {
+  it('never downgrades unparseable prose to IDENTICAL (#165)', () => {
     const response = 'The documents are identical in content.';
     const result = parseForwardTriageResponse(response);
-    expect(result.verdict).toBe('IDENTICAL');
+    expect(result.verdict).toBe('CONTENT_CHANGES');
   });
 
   it('does not match "not identical" as IDENTICAL', () => {
@@ -83,10 +83,12 @@ describe('parseForwardTriageResponse', () => {
     expect(result.verdict).toBe('CONTENT_CHANGES');
   });
 
-  it('falls back to keyword detection for "i18n_only"', () => {
+  it('never downgrades unparseable prose to I18N_ONLY (#165)', () => {
+    // The prompt enumerates the verdict literals, so a model reasoning aloud
+    // tripped the deleted keyword scan and the file silently left the wave.
     const response = 'These are i18n only differences.';
     const result = parseForwardTriageResponse(response);
-    expect(result.verdict).toBe('I18N_ONLY');
+    expect(result.verdict).toBe('CONTENT_CHANGES');
   });
 
   it('defaults to CONTENT_CHANGES when unparseable', () => {
@@ -99,8 +101,8 @@ describe('parseForwardTriageResponse', () => {
   it('handles malformed JSON gracefully', () => {
     const response = '{verdict: CONTENT_CHANGES, reason:}';
     const result = parseForwardTriageResponse(response);
-    // Falls through to keyword or default
-    expect(['CONTENT_CHANGES', 'I18N_ONLY', 'IDENTICAL']).toContain(result.verdict);
+    // Falls through to the recall-biased default
+    expect(result.verdict).toBe('CONTENT_CHANGES');
   });
 
   it('handles JSON with extra text around it', () => {
@@ -138,10 +140,10 @@ describe('parseForwardTriageResponse', () => {
     expect(result.verdict).toBe('TARGET_HAS_ADDITIONS');
   });
 
-  it('falls back to keyword detection for "target_has_additions"', () => {
+  it('never downgrades unparseable prose to TARGET_HAS_ADDITIONS (#165)', () => {
     const response = 'The target_has_additions beyond what source provides.';
     const result = parseForwardTriageResponse(response);
-    expect(result.verdict).toBe('TARGET_HAS_ADDITIONS');
+    expect(result.verdict).toBe('CONTENT_CHANGES');
   });
 });
 

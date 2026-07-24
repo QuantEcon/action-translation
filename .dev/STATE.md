@@ -10,9 +10,10 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 - **Tech-debt Wave 1** (#158–#168, milestone 1) — A (#158, guardrails) and B (#159, init
   parity guard; corpus measured: 31/248 seeded pairs fail, 25 in intro.zh-cn) **merged**;
   C (#160, failure reporting), D (#161, canonical review-workflow template) and E (#162,
-  contracts owner module + label bootstrap) and F (#163, seven cheap-correctness fixes)
-  **merged**; G (#164, shared retry predicate + maxRetries:0 ×6 + cost outputs) open.
-  H–K follow in any order. Boundaries the wave must respect:
+  contracts owner module + label bootstrap), F (#163, cheap correctness) and G (#164,
+  retry predicate + cost outputs) **merged**; H (#165, fake validator deleted, fetch
+  errors surfaced, CLI parsers fail closed, corrupt state repairable) open. I–K remain.
+  Boundaries the wave must respect:
   [`D-2026-07-24-tech-debt-audit-boundaries.md`](decisions/D-2026-07-24-tech-debt-audit-boundaries.md).
 - **PR #71** — Malayalam (`ml`) draft; awaiting native-reviewer calibration batch.
   Glossary PR **#69** (ja) open, awaiting native review + a `LANGUAGE_CONFIGS` entry.

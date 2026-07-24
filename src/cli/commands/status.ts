@@ -27,7 +27,12 @@ import * as path from 'path';
 import { MystParser } from '../../parser.js';
 import { extractHeadingMap } from '../../heading-map.js';
 import { getFileGitMetadata } from '../git-metadata.js';
-import { readFileState, writeFileState, writeConfig } from '../translate-state.js';
+import {
+  readFileState,
+  writeFileState,
+  writeConfig,
+  stateFileRelativePath,
+} from '../translate-state.js';
 import { triageForward } from '../forward-triage.js';
 import { DEFAULT_CLAUDE_MODEL } from '../../models.js';
 import { languageLabel } from '../../language-config.js';
@@ -369,6 +374,7 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
     });
 
     const parser = new MystParser();
+    const corruptStateFiles: string[] = [];
     for (const entry of entries) {
       // Only bootstrap state for files that exist in both repos
       if (
@@ -393,6 +399,20 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
 
         // Preserve model from existing state if it was set by a prior command (e.g. forward)
         const existingState = readFileState(target, entry.file);
+
+        // A state file that exists but failed to read is corrupt, not absent.
+        // Overwriting it with current source HEAD and mode RESYNC would erase
+        // the real sync point (#165/F85) — refuse unless --force. Collected
+        // and thrown after the loop: this try's catch treats errors as
+        // skip-this-file, which is exactly the silent overwrite path.
+        if (
+          !existingState &&
+          fs.existsSync(path.join(target, stateFileRelativePath(entry.file))) &&
+          !options.force
+        ) {
+          corruptStateFiles.push(entry.file);
+          continue;
+        }
         const model =
           existingState?.model && existingState.model !== 'unknown'
             ? existingState.model
@@ -410,6 +430,14 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
       } catch {
         // Non-fatal: skip files where state can't be determined
       }
+    }
+
+    if (corruptStateFiles.length > 0) {
+      throw new Error(
+        `--write-state blocked: ${corruptStateFiles.length} state file(s) exist but are unreadable (corrupt YAML):\n` +
+          corruptStateFiles.map((f) => `  ${f}`).join('\n') +
+          '\n\nRepair or delete them, or use --force to overwrite them with current HEAD.'
+      );
     }
   }
 

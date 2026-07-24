@@ -508,6 +508,27 @@ describe('runBackwardBulk with resume', () => {
     expect(readProgress(bulkDir)!.erroredFiles).toEqual([]);
   });
 
+  it('rejects a schema-violating progress checkpoint instead of casting it (#165)', () => {
+    const runDir = path.join(tmpDir, 'run');
+    fs.mkdirSync(path.join(runDir, '.resync'), { recursive: true });
+    // completedFiles must be an array — the old unvalidated cast handed this
+    // straight to .filter()/.map().
+    fs.writeFileSync(
+      path.join(runDir, '.resync', '_progress.json'),
+      JSON.stringify({ startedAt: 'x', lastUpdated: 'x', totalFiles: 1, completedFiles: 'nope' }),
+      'utf-8'
+    );
+
+    const warnings: string[] = [];
+    const logger: BackwardLogger = {
+      info: () => {},
+      warn: (m) => warnings.push(m),
+      error: () => {},
+    };
+    expect(readProgress(runDir, logger)).toBeNull();
+    expect(warnings.join('\n')).toContain('Corrupt progress checkpoint');
+  });
+
   it('should error when no resumable run exists', async () => {
     const emptyDir = path.join(tmpDir, 'no-runs');
     fs.mkdirSync(emptyDir, { recursive: true });

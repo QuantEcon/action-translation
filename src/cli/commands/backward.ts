@@ -40,7 +40,7 @@ import {
   generateBulkJsonReport,
 } from '../report-generator.js';
 import { BackwardReport, BackwardOptions, BulkBackwardReport } from '../types.js';
-import { SCHEMA_VERSION } from '../schema.js';
+import { SCHEMA_VERSION, parseProgressCheckpoint } from '../schema.js';
 import { discoverMarkdownFiles, resolveFilePairs, applyExcludes } from './status.js';
 import { readFileState, isSourceChanged } from '../translate-state.js';
 import { languageLabel } from '../../language-config.js';
@@ -395,16 +395,20 @@ export interface BulkProgress {
 /**
  * Read existing progress from .resync/_progress.json, or return null if not found.
  */
-export function readProgress(outputDir: string): BulkProgress | null {
+export function readProgress(outputDir: string, logger?: BackwardLogger): BulkProgress | null {
   const progressPath = path.join(outputDir, '.resync', '_progress.json');
   if (!fs.existsSync(progressPath)) {
     return null;
   }
-  try {
-    return JSON.parse(fs.readFileSync(progressPath, 'utf-8'));
-  } catch {
+  // Validated, not cast (#165/F84): an unvalidated JSON.parse handed shapes
+  // like a missing erroredFiles array straight to .map(), and a corrupt
+  // checkpoint silently became a fresh start.
+  const result = parseProgressCheckpoint(fs.readFileSync(progressPath, 'utf-8'));
+  if (!result.success) {
+    logger?.warn(`Corrupt progress checkpoint at ${progressPath} — ignoring it: ${result.error}`);
     return null;
   }
+  return result.data;
 }
 
 /**
@@ -511,7 +515,7 @@ export async function runBackwardBulk(
 
   // Check for resume
   let progress: BulkProgress;
-  const existingProgress = resume ? readProgress(outputDir) : null;
+  const existingProgress = resume ? readProgress(outputDir, logger) : null;
   if (existingProgress) {
     // Only completed files count as done: errored files are retried, so a
     // resume converges on a clean run instead of silently skipping failures
@@ -540,14 +544,20 @@ export async function runBackwardBulk(
   const CONCURRENCY = options.parallel ?? 5;
 
   // Load any already-written reports for the aggregate (always from JSON sidecar)
+  let corruptSidecars = 0;
   for (const doneFile of progress.completedFiles) {
     const jsonPath = resolveReportPath(outputDir, doneFile, true);
     if (fs.existsSync(jsonPath)) {
       try {
         const report = JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as BackwardReport;
         fileReports.push(report);
-      } catch {
-        // Skip corrupted reports
+      } catch (error) {
+        // The file drops out of the aggregate — say so instead of silently
+        // shrinking the report (#165/F84).
+        corruptSidecars++;
+        logger.warn(
+          `Corrupt report sidecar for ${doneFile} — excluded from the aggregate: ${error}`
+        );
       }
     }
   }
@@ -727,6 +737,9 @@ export async function runBackwardBulk(
   }
   if (progress.erroredFiles.length > 0) {
     logger.info(`  Errors: ${progress.erroredFiles.length}`);
+  }
+  if (corruptSidecars > 0) {
+    logger.info(`  Corrupt sidecars excluded from aggregate: ${corruptSidecars}`);
   }
   logger.info(`\nReports: ${outputDir}`);
   logger.info(`Log: ${logPath}`);

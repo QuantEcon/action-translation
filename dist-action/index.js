@@ -31979,21 +31979,6 @@ var MystParser = class _MystParser {
     return sections[index];
   }
   /**
-   * Validate MyST syntax by attempting to parse
-   * Returns true if valid, false otherwise
-   */
-  async validateMyST(content, filepath) {
-    try {
-      await this.parseSections(content, filepath);
-      return { valid: true };
-    } catch (error3) {
-      return {
-        valid: false,
-        error: error3 instanceof Error ? error3.message : "Unknown validation error"
-      };
-    }
-  }
-  /**
    * Parse document into explicit components: CONFIG + TITLE + INTRO + SECTIONS
    *
    * This provides a more structured view of the document that ensures
@@ -38236,12 +38221,6 @@ ${translatedContent}`;
     }
     return parts.join("\n");
   }
-  /**
-   * Validate the translated content has valid MyST syntax
-   */
-  async validateMyST(content, filepath) {
-    return await this.parser.validateMyST(content, filepath);
-  }
 };
 
 // dist/sync-orchestrator.js
@@ -38474,10 +38453,6 @@ var SyncOrchestrator = class {
         this.logger.warning(`${file.filename}: removed ${dropped.length} target-only section(s) with no source counterpart \u2014 correct if upstream deleted them; destructive if human-added (see PR body)`);
       }
     }
-    const validation = await this.processor.validateMyST(translatedContent, file.filename);
-    if (!validation.valid) {
-      throw new Error(`Validation failed: ${validation.error}`);
-    }
     const parity = checkStructuralParity(file.newContent, translatedContent);
     if (!parity.ok) {
       throw new Error(formatParityViolations(file.filename, parity));
@@ -38515,10 +38490,6 @@ var SyncOrchestrator = class {
       }
     } else {
       translatedContent = await this.processor.processFull(file.newContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary);
-    }
-    const validation = await this.processor.validateMyST(translatedContent, file.filename);
-    if (!validation.valid) {
-      throw new Error(`Validation failed: ${validation.error}`);
     }
     const parity = checkStructuralParity(file.newContent, translatedContent);
     if (!parity.ok) {
@@ -38853,6 +38824,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
   const [sourceOwner, sourceRepoName] = metadata.sourceRepo.split("/");
   const sourceCommitSha = metadata.sourceCommitSha;
   const filesToSync = [];
+  const fetchErrors = [];
   for (const file of metadata.files) {
     const fileType = file.type || "markdown";
     try {
@@ -38958,7 +38930,11 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
       }
     } catch (error3) {
       core7.error(`Error fetching content for ${file.path}: ${error3}`);
+      fetchErrors.push(`${file.path}: ${error3}`);
     }
+  }
+  if (fetchErrors.length > 0) {
+    throw new Error(`content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join("; ")}`);
   }
   if (filesToSync.length === 0) {
     core7.info(`PR #${pr.number}: No files to process after content fetch. Skipping.`);
@@ -39117,7 +39093,7 @@ async function runSync() {
   const builtInGlossaryDir = path5.join(__dirname2, "..", "glossary");
   const glossary = await loadGlossary(inputs.targetLanguage, builtInGlossaryDir, inputs.glossaryPath || void 0, coreLogger);
   const [targetOwner, targetRepo] = inputs.targetRepo.split("/");
-  const filesToSync = await fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo, effectiveSha);
+  const { files: filesToSync, errors: fetchErrors } = await fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo, effectiveSha);
   const existingStateShas = await fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToSync, inputs.docsFolder);
   const stateConfig = {
     sourceCommitSha: effectiveSha,
@@ -39132,6 +39108,7 @@ async function runSync() {
     debugMode: true
   }, coreLogger, stateConfig);
   const result = await orchestrator.processFiles(filesToSync, glossary);
+  result.errors.unshift(...fetchErrors);
   const hasErrors = result.errors.length > 0;
   if (hasErrors) {
     core7.setFailed(`Translation completed with ${result.errors.length} errors`);
@@ -39210,6 +39187,7 @@ async function fetchFileContent(octokit, owner, repo, filepath, ref) {
 }
 async function fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo, commitSha) {
   const filesToSync = [];
+  const fetchErrors = [];
   const sourceOwner = github2.context.repo.owner;
   const sourceRepo = github2.context.repo.repo;
   const sha = commitSha || github2.context.sha;
@@ -39246,6 +39224,7 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
       });
     } catch (error3) {
       core7.error(`Error fetching content for ${file.filename}: ${error3}`);
+      fetchErrors.push(`Fetch failed (markdown): ${file.filename}: ${error3}`);
     }
   }
   for (const file of classified.renamedMarkdownFiles) {
@@ -39286,6 +39265,7 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
       });
     } catch (error3) {
       core7.error(`Error fetching content for renamed file ${file.filename}: ${error3}`);
+      fetchErrors.push(`Fetch failed (renamed): ${file.filename}: ${error3}`);
     }
   }
   for (const file of classified.changedTocFiles) {
@@ -39307,6 +39287,7 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
       });
     } catch (error3) {
       core7.error(`Error fetching content for TOC file ${file.filename}: ${error3}`);
+      fetchErrors.push(`Fetch failed (toc): ${file.filename}: ${error3}`);
     }
   }
   for (const file of [...classified.removedMarkdownFiles, ...classified.removedTocFiles]) {
@@ -39328,9 +39309,10 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
       }
     } catch (error3) {
       core7.error(`Error checking removal of ${file.filename}: ${error3}`);
+      fetchErrors.push(`Fetch failed (removed): ${file.filename}: ${error3}`);
     }
   }
-  return filesToSync;
+  return { files: filesToSync, errors: fetchErrors };
 }
 async function fetchSourcePrInfo(octokit, prNumber) {
   try {

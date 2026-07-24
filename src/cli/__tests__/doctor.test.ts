@@ -205,6 +205,20 @@ describe('checkStateFiles', () => {
     expect(result.status).toBe('warn');
     expect(result.message).toContain('No .md files');
   });
+
+  test('reports a corrupt state YAML as corrupt, not missing (#165)', () => {
+    // "Missing" sent users to `status --write-state`, which overwrote the
+    // corrupt file with current source HEAD and erased the real sync point.
+    writeMd(path.join(tmpDir, 'lectures', 'intro.md'), TARGET_WITH_MAP);
+    const statePath = path.join(tmpDir, '.translate', 'state', 'intro.md.yml');
+    fs.mkdirSync(path.dirname(statePath), { recursive: true });
+    fs.writeFileSync(statePath, '{{{ not yaml at all', 'utf-8');
+
+    const result = checkStateFiles(tmpDir, 'lectures');
+    expect(result.status).toBe('fail');
+    expect(result.message).toContain('unreadable');
+    expect(result.details?.some((d) => d.includes('Corrupt: intro.md'))).toBe(true);
+  });
 });
 
 // ============================================================================

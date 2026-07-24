@@ -110,6 +110,8 @@ export interface SectionSnapshot {
   content: string;
   startLine: number;
   endLine: number;
+  /** Recorded faithfully from parser output (#165/F84); absent on old sidecars. */
+  parentId?: string;
   subsections?: SectionSnapshot[];
 }
 
@@ -120,6 +122,7 @@ export const SectionSnapshotSchema: z.ZodType<SectionSnapshot> = z.object({
   content: z.string(),
   startLine: z.number().int().nonnegative(),
   endLine: z.number().int().nonnegative(),
+  parentId: z.string().optional(),
   subsections: z
     .lazy(() => z.array(SectionSnapshotSchema))
     .optional()

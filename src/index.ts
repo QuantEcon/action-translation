@@ -378,6 +378,7 @@ async function rebaseSinglePR(
 
   // Fetch content for each file and build FileToSync array
   const filesToSync: FileToSync[] = [];
+  const fetchErrors: string[] = [];
 
   for (const file of metadata.files) {
     // Determine file type from metadata (default to 'markdown' for backward compat)
@@ -521,7 +522,16 @@ async function rebaseSinglePR(
       }
     } catch (error) {
       core.error(`Error fetching content for ${file.path}: ${error}`);
+      fetchErrors.push(`${file.path}: ${error}`);
     }
+  }
+
+  // Same rule as translation errors (#160): throw BEFORE any branch reset —
+  // rebasing without a file the metadata says the PR carries would drop it.
+  if (fetchErrors.length > 0) {
+    throw new Error(
+      `content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join('; ')}`
+    );
   }
 
   if (filesToSync.length === 0) {
@@ -802,7 +812,7 @@ async function runSync(): Promise<void> {
 
   // Fetch content and build FileToSync array
   const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
-  const filesToSync = await fetchAllFileContents(
+  const { files: filesToSync, errors: fetchErrors } = await fetchAllFileContents(
     octokit,
     classified,
     inputs,
@@ -840,6 +850,10 @@ async function runSync(): Promise<void> {
   );
 
   const result = await orchestrator.processFiles(filesToSync, glossary);
+
+  // Fetch failures count as processing errors: they fail the run and open a
+  // failure issue instead of shipping a PR that silently misses files.
+  result.errors.unshift(...fetchErrors);
 
   // Report results
   const hasErrors = result.errors.length > 0;
@@ -996,8 +1010,12 @@ async function fetchAllFileContents(
   targetOwner: string,
   targetRepo: string,
   commitSha?: string
-): Promise<FileToSync[]> {
+): Promise<{ files: FileToSync[]; errors: string[] }> {
   const filesToSync: FileToSync[] = [];
+  // Fetch failures are returned, not swallowed: a transient 5xx on one file
+  // used to yield a PR missing that file plus a success comment and a green
+  // check (#165/F121 — #90 defect 3).
+  const fetchErrors: string[] = [];
   const sourceOwner = github.context.repo.owner;
   const sourceRepo = github.context.repo.repo;
   const sha = commitSha || github.context.sha;
@@ -1052,6 +1070,7 @@ async function fetchAllFileContents(
       });
     } catch (error) {
       core.error(`Error fetching content for ${file.filename}: ${error}`);
+      fetchErrors.push(`Fetch failed (markdown): ${file.filename}: ${error}`);
     }
   }
 
@@ -1112,6 +1131,7 @@ async function fetchAllFileContents(
       });
     } catch (error) {
       core.error(`Error fetching content for renamed file ${file.filename}: ${error}`);
+      fetchErrors.push(`Fetch failed (renamed): ${file.filename}: ${error}`);
     }
   }
 
@@ -1143,6 +1163,7 @@ async function fetchAllFileContents(
       });
     } catch (error) {
       core.error(`Error fetching content for TOC file ${file.filename}: ${error}`);
+      fetchErrors.push(`Fetch failed (toc): ${file.filename}: ${error}`);
     }
   }
 
@@ -1167,10 +1188,11 @@ async function fetchAllFileContents(
       }
     } catch (error) {
       core.error(`Error checking removal of ${file.filename}: ${error}`);
+      fetchErrors.push(`Fetch failed (removed): ${file.filename}: ${error}`);
     }
   }
 
-  return filesToSync;
+  return { files: filesToSync, errors: fetchErrors };
 }
 
 /**
