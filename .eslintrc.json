@@ -1,11 +1,15 @@
 {
+  "root": true,
   "parser": "@typescript-eslint/parser",
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended"
   ],
+  "env": {
+    "node": true
+  },
   "parserOptions": {
-    "ecmaVersion": 2020,
+    "ecmaVersion": 2022,
     "sourceType": "module"
   },
   "rules": {

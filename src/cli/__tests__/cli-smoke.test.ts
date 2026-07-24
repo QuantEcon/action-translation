@@ -17,12 +17,35 @@ import * as fs from 'fs';
 import * as os from 'os';
 
 const CLI = path.resolve(__dirname, '../../../dist/cli/index.js');
+const SRC = path.resolve(__dirname, '../../../src');
+
+/**
+ * Newest mtime under src/, skipping test files — they are excluded from the
+ * build (tsconfig excludes **\/*.test.ts), so editing them cannot stale dist/.
+ */
+function newestSourceMtime(dir: string): number {
+  let newest = 0;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      newest = Math.max(newest, newestSourceMtime(full));
+    } else if (/\.tsx?$/.test(entry.name) && !entry.name.endsWith('.test.ts')) {
+      newest = Math.max(newest, fs.statSync(full).mtimeMs);
+    }
+  }
+  return newest;
+}
 
 beforeAll(() => {
   if (!fs.existsSync(CLI)) {
     throw new Error(
       `CLI binary not found at ${CLI}. Run \`npm run build\` before running smoke tests.`
     );
+  }
+  // A stale binary makes every test below meaningless: they would validate
+  // whatever the last build happened to leave behind, not the current source.
+  if (newestSourceMtime(SRC) > fs.statSync(CLI).mtimeMs) {
+    throw new Error(`${CLI} is older than src/. Run \`npm run build\` before running smoke tests.`);
   }
 });
 

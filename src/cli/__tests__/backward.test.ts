@@ -68,7 +68,6 @@ describe('backward command', () => {
         json: false,
         test: true,
         minConfidence: 0.6,
-        estimate: false,
         apiKey: 'test-key',
       },
     };

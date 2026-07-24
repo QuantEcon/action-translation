@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **The test suite is now type-checked** (#158): `tsconfig.json` excludes `**/*.test.ts`, ESLint is not type-aware, and the root config's `isolatedModules: true` put ts-jest in transpile-only mode — so 55 test files (~25,000 LOC) were compiled by nothing and a type error in a test was invisible until someone read it. The ts-jest override in `jest.config.js` now sets `isolatedModules: false` (the root tsconfig keeps `true`; esbuild's file-by-file compile depends on it), which surfaced four latent errors, all fixed: a dead `estimate` option in `backward.test.ts` (the field no longer exists on `BackwardOptions`), two loose accesses in `review-verdict.test.ts`, and — in a production file — `review.ts`'s lazy `import('ink')` failing type resolution under the CJS test config, because ink v4 is ESM-only with an `exports`-only package invisible to node10 resolution (fixed with a test-scoped `paths` mapping; no source change). The audit predicted three errors, all in test files; the fourth exists because ts-jest checks every file the transform touches, not just tests.
+- **CLI smoke tests fail on a stale build instead of validating it** (#158): the guard checked only that `dist/cli/index.js` *exists*, so the 11 smoke tests exercised whatever the last build left behind. It now also fails, with a `run npm run build` message, when any non-test file under `src/` is newer than the binary.
+- **`npm run lint` works in git worktrees, and the build script is inside lint/format** (#158): `.eslintrc.json` gains `"root": true` (without it, ESLint kept walking up past the repo in a worktree), and the `lint`/`format`/`format:check` globs widen from `src/**` to include the root `*.mjs` scripts — `build-action.mjs`, which produces the shipped bundle, was outside both.
+
+### Added
+- **CI checks that `path:line` references in `.dev/` notes still resolve** (#158, after #179 shipped a decision record whose line ranges were wrong at every boundary and nothing caught it): `npm run check-dev-refs` scans `.dev/**/*.md` for `path:line` / `path:line-line` references and fails if the file does not exist or the line is past end-of-file — drift and typos, not meaning. It runs as a CI step on the normal trigger: source changes are what invalidate the references, so `.dev`-only PRs still skip CI entirely.
+
 ## [0.23.0] - 2026-07-23
 
 ### Changed

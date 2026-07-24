@@ -46,7 +46,7 @@ for (const file of fs.readdirSync('glossary')) {
 // dist-action/*.js as CommonJS (required for GitHub Actions runner)
 fs.writeFileSync(
   path.join(outdir, 'package.json'),
-  JSON.stringify({ type: 'commonjs' }, null, 2) + '\n',
+  JSON.stringify({ type: 'commonjs' }, null, 2) + '\n'
 );
 
 console.log(`✓ Action bundled to ${outdir}/index.js (CJS, node24)`);

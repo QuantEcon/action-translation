@@ -1,4 +1,4 @@
-verified: 2026-07-23
+verified: 2026-07-24
 
 # STATE
 
@@ -7,6 +7,10 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## In flight
 
+- **Tech-debt Wave 1** (#158–#168, milestone 1) — PR A (#158, guardrails: test suite
+  type-checked, smoke-test freshness, `.dev` reference checker) opened first and alone per
+  the wave plan; B–K follow. Boundaries the wave must respect:
+  [`D-2026-07-24-tech-debt-audit-boundaries.md`](decisions/D-2026-07-24-tech-debt-audit-boundaries.md).
 - **PR #71** — Malayalam (`ml`) draft; awaiting native-reviewer calibration batch.
   Glossary PR **#69** (ja) open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
 
@@ -175,8 +179,8 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## Health & context
 
-- `main` green; 1,143 tests (47 suites), lint covers all files
-  (`--max-warnings 0`) and CI checks formatting.
+- `main` green; 1,303 tests (55 suites, type-checked as of #158), lint covers all files
+  including the root `*.mjs` scripts (`--max-warnings 0`) and CI checks formatting.
 - Highest-priority known bug: issue **#65** — translator drops `(label)=` anchors
   (PLAN Phase 2), plus the silent-data-loss family documented in REVIEW §6.1.
 - Prod dep advisories: **0** (cleared by #111's `@actions/*` CJS majors; the ESM-only
