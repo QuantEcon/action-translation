@@ -8,13 +8,7 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
 import Anthropic from '@anthropic-ai/sdk';
-import {
-  APIError,
-  AuthenticationError,
-  RateLimitError,
-  APIConnectionError,
-  BadRequestError,
-} from '@anthropic-ai/sdk';
+import { AuthenticationError, BadRequestError } from '@anthropic-ai/sdk';
 import {
   TranslationQualityResult,
   DiffQualityResult,
@@ -27,7 +21,13 @@ import { parseTranslationSyncMetadata, TranslationSyncMetadata } from './pr-crea
 import { REVIEW_TRIGGER_LABEL } from './contracts.js';
 import { MystParser } from './parser.js';
 import { runDeterministicDiffChecks, ReviewedFilePair, DiffCheckSource } from './diff-checks.js';
-import { DEFAULT_CLAUDE_MODEL, MAX_TOKENS, DEFAULT_THINKING } from './models.js';
+import {
+  DEFAULT_CLAUDE_MODEL,
+  MAX_TOKENS,
+  DEFAULT_THINKING,
+  isRetryableAnthropicError,
+  ApiUsage,
+} from './models.js';
 import {
   ReviewVerdictV2,
   REVIEW_VERDICT_SCHEMA_VERSION,
@@ -88,16 +88,6 @@ export const REVIEW_CRITERIA = [
 export type CriterionScores = Record<(typeof REVIEW_CRITERIA)[number]['key'], number>;
 
 /**
- * Validate the criterion scores in a model review response (#102).
- *
- * A missing criterion previously flowed straight into the weighted sum —
- * `undefined * 0.15` → NaN → both verdict thresholds false → automatic FAIL
- * on a clean PR, rendered as "undefined/10" and "NaN/10". Scores must be
- * finite numbers; numeric strings ("9") are coerced as a mercy since the
- * model occasionally quotes values. Exported for testing.
- */
-
-/**
  * The PASS/WARN/FAIL rule, extracted pure (#163/F70) so the thresholds — and
  * the interaction where syntax errors hold a high-scoring review at WARN —
  * are testable outside reviewPR. The caller keeps its own rounding for the
@@ -120,6 +110,15 @@ export function computeVerdict(
   return { overallScore, verdict };
 }
 
+/**
+ * Validate the criterion scores in a model review response (#102).
+ *
+ * A missing criterion previously flowed straight into the weighted sum —
+ * `undefined * 0.15` → NaN → both verdict thresholds false → automatic FAIL
+ * on a clean PR, rendered as "undefined/10" and "NaN/10". Scores must be
+ * finite numbers; numeric strings ("9") are coerced as a mercy since the
+ * model occasionally quotes values. Exported for testing.
+ */
 export function validateCriterionScores(result: Record<string, unknown>): {
   valid: boolean;
   missing: string[];
@@ -398,6 +397,8 @@ export class TranslationReviewer {
   private maxSuggestions: number;
   /** Section parsing for the deterministic diff checks (#148). */
   private parser: MystParser;
+  // Counted at the chokepoint so retried/discarded attempts are included (#164/F53).
+  private usage: ApiUsage = { inputTokens: 0, outputTokens: 0, apiCalls: 0 };
 
   constructor(
     anthropicApiKey: string,
@@ -405,7 +406,8 @@ export class TranslationReviewer {
     model: string = DEFAULT_REVIEW_MODEL,
     maxSuggestions: number = 5
   ) {
-    this.anthropic = new Anthropic({ apiKey: anthropicApiKey });
+    // maxRetries: 0 — callWithRetry owns the whole retry budget (#164).
+    this.anthropic = new Anthropic({ apiKey: anthropicApiKey, maxRetries: 0 });
     this.octokit = github.getOctokit(githubToken);
     this.model = model;
     this.maxSuggestions = maxSuggestions;
@@ -414,6 +416,11 @@ export class TranslationReviewer {
 
   private sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /** Total API usage this instance has accumulated, retries included. */
+  getUsage(): ApiUsage {
+    return { ...this.usage };
   }
 
   /**
@@ -436,6 +443,9 @@ export class TranslationReviewer {
           messages: [{ role: 'user', content: prompt }],
         });
         const response = await stream.finalMessage();
+        this.usage.inputTokens += response.usage.input_tokens;
+        this.usage.outputTokens += response.usage.output_tokens;
+        this.usage.apiCalls += 1;
 
         // A max_tokens stop means the verdict JSON was cut off; retrying at
         // the same cap cannot succeed (generic Error is not retried below).
@@ -459,11 +469,11 @@ export class TranslationReviewer {
           throw error;
         }
 
-        // Retry on transient API errors or parse failures
-        const isApiRetryable =
-          error instanceof RateLimitError ||
-          error instanceof APIConnectionError ||
-          (error instanceof APIError && error.status !== undefined && error.status >= 500);
+        // Retry on transient API errors or parse failures. The shared
+        // predicate carries the overloaded_error branch this hand-copy
+        // lacked — an overload on either streamed review call aborted the
+        // whole review and re-paid both prompts (#164/F52).
+        const isApiRetryable = isRetryableAnthropicError(error);
         const isParseFailure =
           error instanceof SyntaxError ||
           (error instanceof Error && error.message.includes('No JSON object'));

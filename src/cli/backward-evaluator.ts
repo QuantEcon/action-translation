@@ -15,14 +15,13 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { MAX_TOKENS, DEFAULT_THINKING, TruncatedResponseError } from '../models.js';
 import {
-  APIError,
-  AuthenticationError,
-  RateLimitError,
-  APIConnectionError,
-  BadRequestError,
-} from '@anthropic-ai/sdk';
+  MAX_TOKENS,
+  DEFAULT_THINKING,
+  TruncatedResponseError,
+  isRetryableAnthropicError,
+} from '../models.js';
+import { AuthenticationError, BadRequestError } from '@anthropic-ai/sdk';
 import {
   BackportSuggestion,
   BackportCategory,
@@ -286,7 +285,7 @@ export async function evaluateSection(
     timeline
   );
 
-  const client = new Anthropic({ apiKey: options.apiKey });
+  const client = new Anthropic({ apiKey: options.apiKey, maxRetries: 0 });
   const { maxRetries, baseDelayMs } = RETRY_CONFIG;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -317,10 +316,7 @@ export async function evaluateSection(
         throw error;
       }
 
-      const isRetryable =
-        error instanceof RateLimitError ||
-        error instanceof APIConnectionError ||
-        (error instanceof APIError && error.status !== undefined && error.status >= 500);
+      const isRetryable = isRetryableAnthropicError(error);
 
       if (!isRetryable || attempt === maxRetries) {
         throw error;
@@ -616,7 +612,7 @@ export async function evaluateFile(
     timeline
   );
 
-  const client = new Anthropic({ apiKey: options.apiKey });
+  const client = new Anthropic({ apiKey: options.apiKey, maxRetries: 0 });
   const { maxRetries, baseDelayMs } = RETRY_CONFIG;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -645,11 +641,10 @@ export async function evaluateFile(
         throw error;
       }
 
+      // Truncation is retryable here — a rerun of a bounded JSON analysis can
+      // land under the cap — and is ORed onto the shared transport predicate.
       const isRetryable =
-        error instanceof RateLimitError ||
-        error instanceof APIConnectionError ||
-        error instanceof TruncatedResponseError ||
-        (error instanceof APIError && error.status !== undefined && error.status >= 500);
+        error instanceof TruncatedResponseError || isRetryableAnthropicError(error);
 
       if (!isRetryable || attempt === maxRetries) {
         throw error;

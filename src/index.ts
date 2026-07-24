@@ -134,6 +134,16 @@ async function runReview(): Promise<void> {
     core.setOutput('would-auto-merge', String(result.wouldAutoMerge));
   }
 
+  // Cost accounting — retries included (#164). Review runs on every
+  // translation PR and previously emitted no token or call count at all.
+  const usage = reviewer.getUsage();
+  core.setOutput('input-tokens', String(usage.inputTokens));
+  core.setOutput('output-tokens', String(usage.outputTokens));
+  core.setOutput('api-calls', String(usage.apiCalls));
+  core.info(
+    `API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens`
+  );
+
   core.info(
     `✅ Review complete: ${result.verdict} → ${result.recommendation} (Translation: ${result.translationQuality.score}/10, Diff: ${result.diffQuality.score}/10)`
   );
@@ -838,6 +848,15 @@ async function runSync(): Promise<void> {
   } else {
     core.info(`Successfully processed ${result.processedFiles.length} files`);
   }
+
+  // Cost accounting — retries included, which per-file token counts miss (#164).
+  const usage = orchestrator.getUsage();
+  core.setOutput('input-tokens', String(usage.inputTokens));
+  core.setOutput('output-tokens', String(usage.outputTokens));
+  core.setOutput('api-calls', String(usage.apiCalls));
+  core.info(
+    `API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens`
+  );
 
   // Create PR in target repo with translated content
   let prUrl: string | undefined;

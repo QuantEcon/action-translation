@@ -111,6 +111,14 @@ outputs:
   would-auto-merge:
     description: 'Shadow-gate decision, "true" or "false"; only set when auto-merge-mode is "shadow" (review mode)'
 
+  # Cost outputs (sync and review modes) — retries included
+  input-tokens:
+    description: 'Total input tokens across every Claude call this run made'
+  output-tokens:
+    description: 'Total output tokens across every Claude call this run made'
+  api-calls:
+    description: 'Number of Claude API calls this run made'
+
 runs:
   using: 'node24'
   # run.cjs enables source maps before loading index.js — a `runs:` block has
