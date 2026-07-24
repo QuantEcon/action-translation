@@ -8,7 +8,7 @@
  * error — never a verdict.
  */
 
-import { TranslationReviewer, validateCriterionScores } from '../reviewer.js';
+import { TranslationReviewer, computeVerdict, validateCriterionScores } from '../reviewer.js';
 
 function without(obj: Record<string, unknown>, key: string): Record<string, unknown> {
   const copy = { ...obj };
@@ -96,5 +96,39 @@ describe('evaluateTranslation criterion validation (#102)', () => {
     await expect(evaluate(makeReviewer([partial, partial]))).rejects.toThrow(
       'missing numeric criterion scores [formatting]'
     );
+  });
+
+  it('coerces a non-array strengths to [] instead of crashing the comment builder (#163)', async () => {
+    const result = await evaluate(makeReviewer([{ ...COMPLETE, strengths: 'good' }]));
+    expect(result.strengths).toEqual([]);
+  });
+});
+
+describe('computeVerdict thresholds (#163)', () => {
+  it('passes a clean review at exactly 8.0', () => {
+    // 8.0 * 0.7 + 8.0 * 0.3 = 8.0
+    expect(computeVerdict(8, 8, [])).toEqual({ overallScore: 8, verdict: 'PASS' });
+  });
+
+  it('holds a high-scoring review at WARN when syntax errors exist', () => {
+    // The previously-unasserted interaction term: scores alone would PASS.
+    expect(computeVerdict(10, 10, ['unclosed fence']).verdict).toBe('WARN');
+  });
+
+  it('warns between the thresholds', () => {
+    expect(computeVerdict(7, 7, []).verdict).toBe('WARN');
+  });
+
+  it('fails below 6 — including 6/6, which floating point puts a hair under', () => {
+    expect(computeVerdict(5.9, 5.9, []).verdict).toBe('FAIL');
+    // Characterization, not design: 6*0.7 + 6*0.3 === 5.999999999999999 in
+    // IEEE 754, so a review scoring exactly 6 on both axes has always been
+    // FAIL. The extraction preserves that; changing it is a behaviour change.
+    expect(computeVerdict(6, 6, []).verdict).toBe('FAIL');
+  });
+
+  it('weights translation 0.7 and diff 0.3', () => {
+    expect(computeVerdict(10, 0, []).overallScore).toBeCloseTo(7);
+    expect(computeVerdict(0, 10, []).overallScore).toBeCloseTo(3);
   });
 });

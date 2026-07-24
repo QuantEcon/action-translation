@@ -306,10 +306,15 @@ describe('formatGlossaryTerms', () => {
     expect(formatted).toBe('- "Marginal revenue" → "边际收入" (microeconomics)');
   });
 
-  it('renders an empty target for a term the glossary has not translated', () => {
-    const formatted = formatGlossaryTerms({ version: '1.0', terms: [{ en: 'Kernel' }] }, 'zh-cn');
+  it('skips a term the glossary has not translated, matching the translator (#163)', () => {
+    // The old behaviour — rendering `- "Kernel" → ""` — meant the reviewer
+    // judged against a term the translator had filtered out and never saw.
+    const formatted = formatGlossaryTerms(
+      { version: '1.0', terms: [{ en: 'Kernel' }, { en: 'Matrix', 'zh-cn': '矩阵' }] },
+      'zh-cn'
+    );
 
-    expect(formatted).toBe('- "Kernel" → ""');
+    expect(formatted).toBe('- "Matrix" → "矩阵"');
   });
 
   it('joins multiple terms one per line', () => {

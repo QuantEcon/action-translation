@@ -438,7 +438,7 @@ Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing t
     const languageConfig = getLanguageConfig(targetLanguage);
     const additionalRules =
       languageConfig.additionalRules.length > 0
-        ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join('\n')
+        ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join('\n')
         : '';
 
     const prompt = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
@@ -508,7 +508,7 @@ Provide ONLY the ${targetLanguage} translation. Do not include any markers, expl
     const languageConfig = getLanguageConfig(targetLanguage);
     const additionalRules =
       languageConfig.additionalRules.length > 0
-        ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join('\n')
+        ? languageConfig.additionalRules.map((rule, i) => `${10 + i}. ${rule}`).join('\n')
         : '';
 
     const prompt = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.

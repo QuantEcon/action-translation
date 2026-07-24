@@ -209,9 +209,16 @@ async function readGlossaryFile(file: string): Promise<Glossary> {
  * CJS registry and so beyond the reach of tests.
  */
 export function formatGlossaryTerms(glossary: Glossary, targetLanguage: string): string {
-  return glossary.terms
-    .map((t) => `- "${t.en}" → "${t[targetLanguage] || ''}"${t.context ? ` (${t.context})` : ''}`)
-    .join('\n');
+  return (
+    glossary.terms
+      // Match the translator's filter (#163/F79): a term with no translation for
+      // this language rendered as `- "term" → ""` here while the translation was
+      // produced without it — the reviewer judged against terminology the
+      // translator never saw.
+      .filter((t) => typeof t[targetLanguage] === 'string' && t[targetLanguage] !== '')
+      .map((t) => `- "${t.en}" → "${t[targetLanguage]}"${t.context ? ` (${t.context})` : ''}`)
+      .join('\n')
+  );
 }
 
 // =============================================================================

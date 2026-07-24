@@ -347,14 +347,26 @@ export function detectSourceRepo(
  *
  * Exported for testing.
  */
+/**
+ * Join docs-folder and file into the canonical single-slash repo-relative path
+ * (docs/user/metadata-contract.md `files[].path`). The Action's own canonical
+ * `docs-folder` form is `lectures/` — template concatenation emitted
+ * `lectures//pv.md`, which defeated rebase's exact-path overlap check, so a
+ * genuinely conflicting PR was silently never rebased (#163/F93).
+ */
+function joinDocsPath(docsFolder: string | undefined, file: string): string {
+  const effective =
+    docsFolder && docsFolder !== '.' && docsFolder !== '/' ? docsFolder.replace(/\/+$/, '') : '';
+  return effective ? `${effective}/${file}` : file;
+}
+
 export function buildForwardSyncMetadata(
   file: string,
   sourceRepo: string,
   docsFolder: string | undefined,
   info: ForwardResyncInfo
 ): TranslationSyncMetadata {
-  const effectiveFolder = docsFolder && docsFolder !== '.' && docsFolder !== '/' ? docsFolder : '';
-  const contentPath = effectiveFolder ? `${effectiveFolder}/${file}` : file;
+  const contentPath = joinDocsPath(docsFolder, file);
 
   const files: TranslationSyncMetadata['files'] = [{ path: contentPath, type: 'markdown' }];
   if (info.statePath) {
@@ -398,9 +410,7 @@ export function buildForwardPRBody(
 
   // Source reference
   if (sourceRepo) {
-    const effectiveFolder =
-      docsFolder && docsFolder !== '.' && docsFolder !== '/' ? docsFolder : '';
-    const sourcePath = effectiveFolder ? `${effectiveFolder}/${file}` : file;
+    const sourcePath = joinDocsPath(docsFolder, file);
     const sourceUrl = `https://github.com/${sourceRepo}/blob/main/${sourcePath}`;
     lines.push(
       `**Source**: [${sourceRepo}](https://github.com/${sourceRepo}) — [${sourcePath}](${sourceUrl})`

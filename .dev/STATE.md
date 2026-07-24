@@ -9,9 +9,11 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 - **Tech-debt Wave 1** (#158–#168, milestone 1) — A (#158, guardrails) and B (#159, init
   parity guard; corpus measured: 31/248 seeded pairs fail, 25 in intro.zh-cn) **merged**;
-  C (#160, failure reporting) and D (#161, canonical review-workflow template) **merged**;
-  E (#162, `src/contracts.ts` owns the label/mode contract; setup bootstraps labels,
-  doctor checks them) open. F–K follow in any order. Boundaries the wave must respect:
+  C (#160, failure reporting), D (#161, canonical review-workflow template) and E (#162,
+  contracts owner module + label bootstrap) **merged**; F (#163, seven cheap-correctness
+  fixes — docs-folder join, typed truncation retry, prompt ordinals, empty-source bail,
+  computeVerdict extraction) open. G–K follow in any order. Boundaries the wave must
+  respect:
   [`D-2026-07-24-tech-debt-audit-boundaries.md`](decisions/D-2026-07-24-tech-debt-audit-boundaries.md).
 - **PR #71** — Malayalam (`ml`) draft; awaiting native-reviewer calibration batch.
   Glossary PR **#69** (ja) open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
