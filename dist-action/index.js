@@ -26401,6 +26401,23 @@ var LANGUAGE_CONFIGS = {
       "Use French guillemets \xAB \xBB (with a non-breaking space inside each, e.g. \xAB citation \xBB) for quotations rather than straight or curly double quotes",
       'Insert a non-breaking space before the high punctuation marks ; : ! ? as required by French typography (e.g. "Bonjour !" not "Bonjour!")'
     ]
+  },
+  ml: {
+    code: "ml",
+    name: "Malayalam",
+    // Policy: keep-English-dominant (per native-speaker review, issue #70).
+    // Kerala STEM/finance learners use English technical terms natively;
+    // translating or transliterating them reads archaic. Keep technical terms
+    // in English; translate only the connective Malayalam prose.
+    additionalRules: [
+      "Keep ALL technical and domain terms in their original English/Latin form \u2014 do NOT translate or transliterate them into Malayalam script. This covers economics (inflation, GDP, recession, interest rate, demand, supply), finance (equity, bond, yield, portfolio, asset class), statistics (regression, correlation, standard deviation, normal distribution), mathematics, and programming (function, loop, library, variable, dataset, numpy, pandas), plus acronyms (GDP, RBI) and named institutions (Federal Reserve)",
+      "Translate only the surrounding Malayalam prose and common NON-technical everyday words that have a natural, in-use Malayalam equivalent (e.g. country \u2192 \u0D30\u0D3E\u0D1C\u0D4D\u0D2F\u0D02, year \u2192 \u0D35\u0D7C\u0D37\u0D02, increase \u2192 \u0D09\u0D2F\u0D7C\u0D24\u0D4D\u0D24\u0D41\u0D15, before \u2192 \u0D2E\u0D41\u0D2E\u0D4D\u0D2A\u0D4D)",
+      "Attach Malayalam case-suffixes, postpositions, and sandhi directly to the English term, hyphenated where natural (e.g. economy-\u0D2F\u0D3F\u0D32\u0D46, bond-\u0D28\u0D4D\u0D31\u0D46, asset classes-\u0D7D, consumers-\u0D28\u0D4D\u0D31\u0D46); for English verbs, use the English verb plus a Malayalam auxiliary (e.g. process \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D, return \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41, execute \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41)",
+      'Keep section headings in their original English form \u2014 do not translate them (e.g. "## Overview" stays "## Overview")',
+      "Keep proper names (economists, researchers, institutions) in English/Latin script \u2014 do not transliterate them",
+      "Handle every term consistently across the whole document \u2014 a term kept in English must remain English on every occurrence, and a word translated to Malayalam must reuse the same Malayalam root each time (normal grammatical inflection is fine)",
+      "Use a natural classroom/educational register, not a formal government-gazette style; where a Malayalam word genuinely aids comprehension for a borderline non-technical concept, it may be given with the English in parentheses on first use (e.g. \u0D2C\u0D28\u0D4D\u0D27\u0D02 (relationship)) \u2014 use sparingly"
+    ]
   }
   // Future language configurations can be added here:
   // 'ja': {
@@ -36412,13 +36429,20 @@ var TranslationReviewer = class {
       fr: "French",
       de: "German",
       ja: "Japanese",
-      ko: "Korean"
+      ko: "Korean",
+      ml: "Malayalam"
     };
     const targetLangName = targetLanguage ? languageNames[targetLanguage] || targetLanguage : "the target language";
     const glossarySection = glossaryTerms ? `
 ## Reference Glossary
 The translation should follow this established terminology glossary:
 ${glossaryTerms}
+` : "";
+    const languageRules = targetLanguage ? getLanguageConfig(targetLanguage).additionalRules : [];
+    const languagePolicySection = languageRules.length > 0 ? `
+## Language-Specific Translation Policy
+The ${targetLangName} translation is REQUIRED to follow these rules. Compliance with them is correct behavior \u2014 do NOT flag it as an accuracy, fluency, or terminology issue. DO flag violations of these rules (category: terminology):
+${languageRules.map((r) => `- ${r}`).join("\n")}
 ` : "";
     const prompt = `You are a professional translator and quality evaluator specializing in technical/academic content translation from English to ${targetLangName}.
 
@@ -36434,7 +36458,7 @@ ${sourceEnglish}
 \`\`\`markdown
 ${targetTranslation}
 \`\`\`
-${glossarySection}
+${glossarySection}${languagePolicySection}
 ## IMPORTANT: About the Translation Metadata
 
 The ${targetLangName} translation contains a \`translation\` section in the YAML frontmatter that is NOT present in the English source. This is CORRECT and EXPECTED behavior:
