@@ -15,9 +15,10 @@
     "build": "tsc && node build-action.mjs",
     "build:cli": "tsc",
     "test": "jest",
-    "lint": "eslint \"src/**/*.{ts,tsx}\" --max-warnings 0",
-    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx}\""
+    "lint": "eslint \"src/**/*.{ts,tsx}\" \"*.mjs\" --max-warnings 0",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"*.mjs\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"*.mjs\"",
+    "check-dev-refs": "node check-dev-refs.mjs"
   },
   "keywords": [
     "github-action",

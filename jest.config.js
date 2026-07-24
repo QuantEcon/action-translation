@@ -15,6 +15,16 @@ export default {
           module: 'commonjs',
           moduleResolution: 'node',
           jsx: 'react-jsx',
+          // The root tsconfig sets isolatedModules: true for esbuild's file-by-file
+          // compile; ts-jest reads it as "transpile only" and skips type-checking
+          // the whole test suite. Force full diagnostics here — tests only.
+          isolatedModules: false,
+          // ink v4 is ESM-only with an exports-only package.json, invisible to the
+          // node10 resolution this CJS override pins. Point type resolution at its
+          // real types; runtime is unaffected (tests never execute the ink path).
+          paths: {
+            ink: ['./node_modules/ink/build/index.d.ts'],
+          },
         },
       },
     ],

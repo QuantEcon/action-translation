@@ -34,6 +34,11 @@ jobs:
       - name: Format check
         run: npm run format:check
 
+      # Source changes are what invalidate .dev/ path:line references, so this
+      # runs on the normal CI trigger; .dev-only PRs still skip CI entirely.
+      - name: Check .dev references
+        run: npm run check-dev-refs
+
       - name: Build
         run: npm run build
 

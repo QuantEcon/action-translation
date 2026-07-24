@@ -619,7 +619,7 @@ describe('reviewPR verdict block emission', () => {
     expect(result.recommendationReasons.join()).not.toContain('diff check failed');
 
     const parsed = parseReviewVerdict(captured.comment!);
-    expect(parsed!.diffCheckSources.positionCorrect).toBe('model');
+    expect(parsed!.diffCheckSources!.positionCorrect).toBe('model');
     const finding = parsed!.findings.find((f) => f.category === 'diff-check');
     expect(finding).toBeDefined();
     expect(finding!.description).toContain('positionCorrect');
@@ -917,7 +917,7 @@ describe('parse and normalise survive arbitrary junk', () => {
     const OPTIONAL = ['wouldAutoMerge', 'diffCheckSources'];
     for (const key of Object.keys(complete)) {
       if (OPTIONAL.includes(key)) continue;
-      const partial = { ...(complete as Record<string, unknown>) };
+      const partial = { ...(complete as unknown as Record<string, unknown>) };
       delete partial[key];
       const body = `<!-- translation-review-verdict\n${JSON.stringify(partial, null, 2)}\n-->`;
       expect(parseReviewVerdict(body)).toBeUndefined();
