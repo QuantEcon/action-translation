@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0.0",
+  "file": "clarification.md",
+  "timestamp": "2026-03-04T10:10:00.000Z",
+  "model": "claude-sonnet-5",
+  "sourceRepo": "/fixtures/source",
+  "targetRepo": "/fixtures/target",
+  "sourceMetadata": null,
+  "targetMetadata": null,
+  "timeline": null,
+  "triageResult": {
+    "file": "clarification.md",
+    "verdict": "CHANGES_DETECTED",
+    "notes": "Translation adds a clarifying definition."
+  },
+  "suggestions": [
+    {
+      "sectionHeading": "## Definitions",
+      "recommendation": "BACKPORT",
+      "category": "CLARIFICATION",
+      "confidence": 0.7,
+      "summary": "The translation adds a one-line reminder of the row-stochastic property.",
+      "specificChanges": [],
+      "reasoning": "The added context helps first-time readers and is language-neutral."
+    }
+  ]
+}

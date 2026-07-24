@@ -119,7 +119,7 @@ src/cli/
 ├── types.ts              # CLI-specific types
 ├── schema.ts             # Zod schemas for backward report JSON
 ├── document-comparator.ts # Stage 1: whole-document LLM triage
-├── backward-evaluator.ts  # Stage 2: per-section LLM evaluation
+├── backward-evaluator.ts  # Stage 2: whole-file LLM evaluation
 ├── section-matcher.ts     # Cross-language section matching
 ├── git-metadata.ts        # File-level git metadata + commit timeline
 ├── report-generator.ts    # Markdown/JSON report formatting

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "file": "aligned.md",
+  "timestamp": "2026-03-04T10:00:00.000Z",
+  "model": "claude-sonnet-5",
+  "sourceRepo": "/fixtures/source",
+  "targetRepo": "/fixtures/target",
+  "sourceMetadata": null,
+  "targetMetadata": null,
+  "timeline": null,
+  "triageResult": {
+    "file": "aligned.md",
+    "verdict": "IN_SYNC",
+    "notes": "Documents are aligned."
+  },
+  "suggestions": []
+}

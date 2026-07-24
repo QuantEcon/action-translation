@@ -18,7 +18,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { spawnSync, SpawnSyncOptions } from 'child_process';
-import { ResyncSectionResult } from './types.js';
 import type { TranslationSyncMetadata } from '../pr-creator.js';
 import { SYNC_METADATA_SCHEMA_VERSION } from '../pr-creator.js';
 import { RESYNC_PR_LABELS } from '../contracts.js';
@@ -388,16 +387,14 @@ export function buildForwardSyncMetadata(
 }
 
 /**
- * Build the PR body summarizing the resync changes.
- *
- * Supports both whole-file resync (sectionResults empty) and legacy
- * section-by-section mode (sectionResults populated).
+ * Build the PR body summarizing the resync changes (whole-file resync — the
+ * legacy section-by-section branch was dead on arrival and deleted in #166;
+ * docs/developer/architecture.md records why forward is whole-file).
  *
  * Exported for testing.
  */
 export function buildForwardPRBody(
   file: string,
-  sectionResults: ResyncSectionResult[],
   sourceRepo?: string,
   docsFolder?: string,
   triageReason?: string,
@@ -431,55 +428,10 @@ export function buildForwardPRBody(
     lines.push('');
   }
 
-  if (sectionResults.length === 0) {
-    // Whole-file resync — no per-section breakdown
-    lines.push('### Changes');
-    lines.push('');
-    lines.push('Whole-file resync applied. The entire document was resynced in a single pass.');
-    lines.push('');
-  } else {
-    // Legacy section-by-section breakdown
-    const resynced = sectionResults.filter((r) => r.action === 'RESYNCED');
-    const newSections = sectionResults.filter((r) => r.action === 'NEW');
-    const removed = sectionResults.filter((r) => r.action === 'REMOVED');
-    const unchanged = sectionResults.filter((r) => r.action === 'UNCHANGED');
-    const errors = sectionResults.filter((r) => r.action === 'ERROR');
-
-    lines.push('### Changes');
-    lines.push('');
-    if (resynced.length > 0) {
-      lines.push(`**↻ Resynced** (${resynced.length}):`);
-      for (const s of resynced) {
-        lines.push(`- ${s.sectionHeading}`);
-      }
-      lines.push('');
-    }
-    if (newSections.length > 0) {
-      lines.push(`**+ New** (${newSections.length}):`);
-      for (const s of newSections) {
-        lines.push(`- ${s.sectionHeading}`);
-      }
-      lines.push('');
-    }
-    if (removed.length > 0) {
-      lines.push(`**- Removed** (${removed.length}):`);
-      for (const s of removed) {
-        lines.push(`- ${s.sectionHeading}`);
-      }
-      lines.push('');
-    }
-    if (unchanged.length > 0) {
-      lines.push(`**= Unchanged**: ${unchanged.length} section(s)`);
-      lines.push('');
-    }
-    if (errors.length > 0) {
-      lines.push(`**⚠️ Errors** (${errors.length}):`);
-      for (const s of errors) {
-        lines.push(`- ${s.sectionHeading}: ${s.error}`);
-      }
-      lines.push('');
-    }
-  }
+  lines.push('### Changes');
+  lines.push('');
+  lines.push('Whole-file resync applied. The entire document was resynced in a single pass.');
+  lines.push('');
 
   lines.push('---');
   lines.push(
@@ -550,7 +502,6 @@ export function buildGhArgs(file: string, repo: string): string[] {
  *
  * @param file           Filename (e.g., "cobweb.md")
  * @param content        Updated file content (currently unused, kept for API compat)
- * @param sectionResults Section-level results for PR body (empty for whole-file)
  * @param repo           TARGET repo in `owner/repo` format
  * @param runner         Injectable gh runner
  * @param sourceRepo     SOURCE repo in `owner/repo` format (optional, for PR body)
@@ -561,7 +512,6 @@ export function buildGhArgs(file: string, repo: string): string[] {
 export function createForwardPR(
   file: string,
   content: string,
-  sectionResults: ResyncSectionResult[],
   repo: string,
   runner: GhRunner = realGhRunner,
   sourceRepo?: string,
@@ -570,14 +520,7 @@ export function createForwardPR(
   resyncInfo?: ForwardResyncInfo
 ): ForwardPRResult {
   const args = buildGhArgs(file, repo);
-  const body = buildForwardPRBody(
-    file,
-    sectionResults,
-    sourceRepo,
-    docsFolder,
-    triageReason,
-    resyncInfo
-  );
+  const body = buildForwardPRBody(file, sourceRepo, docsFolder, triageReason, resyncInfo);
   const result = runner(args, body);
 
   if (result.status === 0 && result.stdout) {

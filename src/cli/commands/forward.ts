@@ -299,7 +299,6 @@ export async function resyncSingleFile(
     return {
       file,
       triageResult,
-      sections: [],
       summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 0 },
     };
   }
@@ -388,7 +387,6 @@ export async function resyncSingleFile(
         return {
           file,
           triageResult,
-          sections: [],
           summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
         };
       }
@@ -408,7 +406,6 @@ export async function resyncSingleFile(
         return {
           file,
           triageResult,
-          sections: [],
           summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
         };
       }
@@ -427,7 +424,6 @@ export async function resyncSingleFile(
         return {
           file,
           triageResult,
-          sections: [],
           summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
         };
       }
@@ -439,7 +435,6 @@ export async function resyncSingleFile(
       return {
         file,
         triageResult,
-        sections: [],
         summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
       };
     }
@@ -493,7 +488,6 @@ export async function resyncSingleFile(
         return {
           file,
           triageResult,
-          sections: [],
           outputContent,
           tokensUsed,
           summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
@@ -509,7 +503,6 @@ export async function resyncSingleFile(
       const prResult = createForwardPR(
         file,
         outputContent,
-        [], // No per-section results in whole-file mode
         options.github,
         runner,
         sourceGitHub,
@@ -532,7 +525,6 @@ export async function resyncSingleFile(
         return {
           file,
           triageResult,
-          sections: [],
           outputContent,
           tokensUsed,
           summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
@@ -555,7 +547,6 @@ export async function resyncSingleFile(
   return {
     file,
     triageResult,
-    sections: [], // Whole-file mode — no per-section tracking
     outputContent,
     prUrl,
     tokensUsed,
@@ -697,7 +688,6 @@ export async function runForwardBulk(
               verdict: 'CONTENT_CHANGES' as const,
               reason: 'Error during processing',
             },
-            sections: [],
             summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
           };
         }

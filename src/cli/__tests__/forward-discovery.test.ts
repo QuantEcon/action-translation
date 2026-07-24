@@ -77,7 +77,6 @@ function result(
   return {
     file,
     triageResult: { file, verdict, reason },
-    sections: [],
     tokensUsed: resynced > 0 ? 1000 : undefined,
     summary: { resynced, unchanged: 0, new: 0, removed: 0, errors },
   };

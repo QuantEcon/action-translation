@@ -225,37 +225,14 @@ export interface ForwardTriageResult {
 }
 
 /**
- * Per-section RESYNC result (legacy — retained for PR body formatting)
- */
-export type ResyncSectionAction =
-  | 'RESYNCED' // Section content updated to match SOURCE
-  | 'UNCHANGED' // Section already in sync
-  | 'NEW' // New section (SOURCE_ONLY) — translated fresh
-  | 'REMOVED' // Section deleted in SOURCE (TARGET_ONLY)
-  | 'ERROR'; // Translation failed for this section
-
-/**
- * Result of resyncing a single section (legacy — retained for PR body formatting)
- */
-export interface ResyncSectionResult {
-  sectionHeading: string;
-  action: ResyncSectionAction;
-  translatedContent?: string; // The resynced content (undefined for REMOVED/ERROR)
-  error?: string; // Error message if action is ERROR
-  tokensUsed?: number;
-}
-
-/**
  * Result of forward resync for a single file.
  *
  * Uses whole-file RESYNC: the entire document is sent to Claude in one call.
- * The `sections` field is kept for backward compatibility with PR body
- * formatting (it's always empty for whole-file resync).
+ * (The always-empty legacy `sections` field was deleted in #166.)
  */
 export interface ForwardFileResult {
   file: string;
   triageResult: ForwardTriageResult;
-  sections: ResyncSectionResult[]; // Empty for whole-file resync; kept for PR body compat
   outputContent?: string; // Full resynced TARGET file (undefined if skipped/errored)
   prUrl?: string; // PR URL if --github mode
   tokensUsed?: number; // Total tokens used for the RESYNC call

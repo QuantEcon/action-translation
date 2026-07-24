@@ -21,20 +21,9 @@ import {
   GhRunner,
   GitRunner,
 } from '../forward-pr-creator.js';
-import { ResyncSectionResult } from '../types.js';
 import { parseTranslationSyncMetadata } from '../../pr-creator.js';
 
 // ── fixtures ───────────────────────────────────────────────────────────────
-
-function makeResults(): ResyncSectionResult[] {
-  return [
-    { sectionHeading: '## Introduction', action: 'RESYNCED', translatedContent: '...' },
-    { sectionHeading: '## Theory', action: 'UNCHANGED' },
-    { sectionHeading: '## New Section', action: 'NEW', translatedContent: '...' },
-    { sectionHeading: '## Old Section', action: 'REMOVED' },
-    { sectionHeading: '## Broken', action: 'ERROR', error: 'API timeout' },
-  ];
-}
 
 function successRunner(url = 'https://github.com/Org/Repo/pull/7'): GhRunner {
   return (_args, _stdin) => ({ stdout: url, stderr: '', status: 0 });
@@ -132,56 +121,22 @@ describe('buildGhArgs', () => {
 // =============================================================================
 
 describe('buildForwardPRBody', () => {
-  const results = makeResults();
-  const body = buildForwardPRBody('cobweb.md', results);
+  const body = buildForwardPRBody('cobweb.md');
 
   it('includes the filename in the heading', () => {
     expect(body).toContain('## Forward Resync: cobweb.md');
   });
 
-  it('lists resynced sections', () => {
-    expect(body).toContain('↻ Resynced');
-    expect(body).toContain('## Introduction');
-  });
-
-  it('lists new sections', () => {
-    expect(body).toContain('+ New');
-    expect(body).toContain('## New Section');
-  });
-
-  it('lists removed sections', () => {
-    expect(body).toContain('- Removed');
-    expect(body).toContain('## Old Section');
-  });
-
-  it('lists unchanged count', () => {
-    expect(body).toContain('Unchanged');
-  });
-
-  it('lists errors with messages', () => {
-    expect(body).toContain('Errors');
-    expect(body).toContain('API timeout');
+  it('describes the whole-file resync', () => {
+    expect(body).toContain('Whole-file resync applied');
   });
 
   it('includes action-translation attribution', () => {
     expect(body).toContain('action-translation');
   });
 
-  it('handles empty results as whole-file resync', () => {
-    const emptyBody = buildForwardPRBody('empty.md', []);
-    expect(emptyBody).toContain('## Forward Resync: empty.md');
-    expect(emptyBody).toContain('Whole-file resync applied');
-    expect(emptyBody).not.toContain('Resynced');
-    expect(emptyBody).not.toContain('Errors');
-  });
-
   it('includes source repo link when provided', () => {
-    const bodyWithSource = buildForwardPRBody(
-      'cobweb.md',
-      [],
-      'QuantEcon/lecture-python',
-      'lectures'
-    );
+    const bodyWithSource = buildForwardPRBody('cobweb.md', 'QuantEcon/lecture-python', 'lectures');
     expect(bodyWithSource).toContain(
       '**Source**: [QuantEcon/lecture-python](https://github.com/QuantEcon/lecture-python)'
     );
@@ -191,12 +146,12 @@ describe('buildForwardPRBody', () => {
   });
 
   it('builds source path without docsFolder when not provided', () => {
-    const bodyNoFolder = buildForwardPRBody('cobweb.md', [], 'Org/Repo');
+    const bodyNoFolder = buildForwardPRBody('cobweb.md', 'Org/Repo');
     expect(bodyNoFolder).toContain('[cobweb.md](https://github.com/Org/Repo/blob/main/cobweb.md)');
   });
 
   it('treats docsFolder "." as root (no prefix)', () => {
-    const bodyDot = buildForwardPRBody('cobweb.md', [], 'Org/Repo', '.');
+    const bodyDot = buildForwardPRBody('cobweb.md', 'Org/Repo', '.');
     expect(bodyDot).toContain('[cobweb.md](https://github.com/Org/Repo/blob/main/cobweb.md)');
     expect(bodyDot).not.toContain('./');
   });
@@ -212,7 +167,6 @@ describe('buildForwardPRBody', () => {
     };
     const bodyWithMeta = buildForwardPRBody(
       'cobweb.md',
-      [],
       'QuantEcon/lecture-python',
       'lectures',
       'Content changes detected',
@@ -247,12 +201,12 @@ describe('buildForwardPRBody', () => {
     });
 
     it('omits the metadata block when no resync info is given', () => {
-      const plain = buildForwardPRBody('cobweb.md', [], 'Org/Repo', 'lectures');
+      const plain = buildForwardPRBody('cobweb.md', 'Org/Repo', 'lectures');
       expect(plain).not.toContain('translation-sync-metadata');
     });
 
     it('omits the source commit line for unknown SHAs', () => {
-      const bodyUnknown = buildForwardPRBody('cobweb.md', [], 'Org/Repo', 'lectures', undefined, {
+      const bodyUnknown = buildForwardPRBody('cobweb.md', 'Org/Repo', 'lectures', undefined, {
         ...resyncInfo,
         sourceCommitSha: 'unknown',
       });
@@ -265,7 +219,6 @@ describe('buildForwardPRBody', () => {
   it('includes triage reason when provided', () => {
     const bodyWithReason = buildForwardPRBody(
       'cobweb.md',
-      [],
       undefined,
       undefined,
       'New section added and formula updated'
@@ -274,7 +227,7 @@ describe('buildForwardPRBody', () => {
   });
 
   it('omits source and reason when not provided', () => {
-    const plainBody = buildForwardPRBody('cobweb.md', []);
+    const plainBody = buildForwardPRBody('cobweb.md');
     expect(plainBody).not.toContain('**Source**');
     expect(plainBody).not.toContain('**Reason**');
   });
@@ -289,7 +242,6 @@ describe('createForwardPR', () => {
     const result = createForwardPR(
       'cobweb.md',
       '# content',
-      makeResults(),
       'QuantEcon/lecture-python.zh-cn',
       successRunner()
     );
@@ -302,7 +254,6 @@ describe('createForwardPR', () => {
     const result = createForwardPR(
       'cobweb.md',
       '# content',
-      makeResults(),
       'QuantEcon/lecture-python.zh-cn',
       failRunner('permission denied')
     );
@@ -317,7 +268,7 @@ describe('createForwardPR', () => {
       return { stdout: 'https://example.com/pr/1', stderr: '', status: 0 };
     };
 
-    createForwardPR('test.md', '# content', makeResults(), 'Org/Repo', spyRunner);
+    createForwardPR('test.md', '# content', 'Org/Repo', spyRunner);
     expect(capturedStdin).toContain('Forward Resync: test.md');
   });
 
@@ -328,7 +279,7 @@ describe('createForwardPR', () => {
       return { stdout: 'https://example.com/pr/1', stderr: '', status: 0 };
     };
 
-    createForwardPR('solow.md', '# content', [], 'Org/Repo', spyRunner);
+    createForwardPR('solow.md', '# content', 'Org/Repo', spyRunner);
     expect(capturedArgs).toContain('pr');
     expect(capturedArgs).toContain('create');
     expect(capturedArgs).toContain('Org/Repo');
@@ -345,7 +296,6 @@ describe('createForwardPR', () => {
     createForwardPR(
       'cobweb.md',
       '# content',
-      [],
       'Org/Target',
       spyRunner,
       'Org/Source',

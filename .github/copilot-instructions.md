@@ -9,7 +9,7 @@
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 - **Rebase Mode**: Runs in TARGET repo, rebases conflicted translation PRs when a sibling PR is merged
 
-**Current Version**: v0.23.0 | **Tests**: 1,297+ (55 suites; exact count in CI) | **Glossary**: 357 terms (zh-cn, fa), 364 (fr)
+**Current Version**: v0.23.0 | **Tests**: 1,356+ (61 suites; exact count in CI) | **Glossary**: 357 terms (zh-cn, fa), 364 (fr)
 
 ---
 
@@ -35,7 +35,7 @@ src/
 │   ├── types.ts              # CLI-specific types
 │   ├── schema.ts             # Zod schemas for backward report JSON + load/filter utils
 │   ├── document-comparator.ts # Stage 1: whole-document LLM triage
-│   ├── backward-evaluator.ts  # Stage 2: per-section LLM evaluation
+│   ├── backward-evaluator.ts  # Stage 2: whole-file LLM evaluation
 │   ├── section-matcher.ts     # Cross-language section matching
 │   ├── git-metadata.ts        # File-level git metadata + commit timeline
 │   ├── report-generator.ts    # Markdown/JSON report formatting

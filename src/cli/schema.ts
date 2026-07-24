@@ -204,11 +204,8 @@ export const ProgressCheckpointSchema = z.object({
 // ============================================================================
 
 export type BackwardReportData = z.infer<typeof BackwardReportSchema>;
-export type BulkBackwardReportData = z.infer<typeof BulkBackwardReportSchema>;
 export type ProgressCheckpointData = z.infer<typeof ProgressCheckpointSchema>;
 export type BackportSuggestionData = z.infer<typeof BackportSuggestionSchema>;
-export type SpecificChangeData = z.infer<typeof SpecificChangeSchema>;
-export type TriageResultData = z.infer<typeof TriageResultSchema>;
 
 // ============================================================================
 // LOADER / VALIDATOR

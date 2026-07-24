@@ -50,7 +50,7 @@ Everything here is a contained fix with an obvious correct behaviour. Ship as on
 ### 1.3 Truncation detection (minimal version)
 - [x] **[H]** Check `response.stop_reason` after every Anthropic call and **fail the file** on
       `max_tokens` instead of committing truncated output. Sites: `src/translator.ts:279, 361,
-      433, 512, 622`; `src/reviewer.ts:755, 863`; CLI: `src/cli/backward-evaluator.ts:594`,
+      433, 512, 622`; `src/reviewer.ts:755, 863`; CLI: `src/cli/backward-evaluator.ts:364` (was :594 before the #166 dead-code deletion),
       `src/cli/document-comparator.ts:246`, `src/cli/forward-triage.ts:237`.
       (The full shared-client refactor is Phase 6; this is the per-site guard.)
 

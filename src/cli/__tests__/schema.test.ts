@@ -9,7 +9,6 @@
  * - Malformed input rejection
  */
 
-import * as fs from 'fs';
 import * as path from 'path';
 import {
   SCHEMA_VERSION,
@@ -463,20 +462,12 @@ describe('filterActionableSuggestions', () => {
 // ============================================================================
 
 describe('loadResyncDirectory', () => {
-  const fixtureDir = path.join(
-    __dirname,
-    '..',
-    '..',
-    '..',
-    'reports',
-    'backward-2026-03-04-whole-file',
-    '.resync'
-  );
+  // Committed anonymised fixture (#166): these six tests were previously
+  // guarded on a gitignored reports/ directory that exists on no machine —
+  // they had never run and could not fail.
+  const fixtureDir = path.join(__dirname, 'fixtures', 'resync-reports', '.resync');
 
-  // Only run these tests if the fixture directory exists
-  const hasFixtures = fs.existsSync(fixtureDir);
-
-  (hasFixtures ? it : it.skip)('loads real report files from fixture dir', () => {
+  it('loads real report files from fixture dir', () => {
     const { reports } = loadResyncDirectory(fixtureDir);
     expect(reports.length).toBeGreaterThan(0);
     // All loaded reports should have required fields
@@ -488,19 +479,19 @@ describe('loadResyncDirectory', () => {
     }
   });
 
-  (hasFixtures ? it : it.skip)('skips _progress.json and _log.txt', () => {
+  it('skips _progress.json and _log.txt', () => {
     const { reports } = loadResyncDirectory(fixtureDir);
     const filenames = reports.map((r) => r.file);
     expect(filenames).not.toContain('_progress.json');
     expect(filenames).not.toContain('_log.txt');
   });
 
-  (hasFixtures ? it : it.skip)('finds files with BACKPORT suggestions', () => {
+  it('finds files with BACKPORT suggestions', () => {
     const { reports } = loadResyncDirectory(fixtureDir);
     const withBackport = reports.filter((r) =>
       r.suggestions.some((s) => s.recommendation === 'BACKPORT')
     );
-    // We know from exploration that at least cagan_adaptive.json has BACKPORT suggestions
+    // bugfix.json and clarification.json carry BACKPORT suggestions
     expect(withBackport.length).toBeGreaterThan(0);
   });
 
