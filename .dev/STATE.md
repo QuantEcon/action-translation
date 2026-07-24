@@ -7,9 +7,10 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## In flight
 
-- **Tech-debt Wave 1** (#158–#168, milestone 1) — PR A (#158, guardrails: test suite
-  type-checked, smoke-test freshness, `.dev` reference checker) opened first and alone per
-  the wave plan; B–K follow. Boundaries the wave must respect:
+- **Tech-debt Wave 1** (#158–#168, milestone 1) — PR A (#158, guardrails) **merged**;
+  PR B (#159, init parity guard) open — corpus measured first per the wave brief: 31/248
+  seeded pairs would fail the check today, 25 of them in intro.zh-cn (pre-guard seed).
+  C–K follow in any order. Boundaries the wave must respect:
   [`D-2026-07-24-tech-debt-audit-boundaries.md`](decisions/D-2026-07-24-tech-debt-audit-boundaries.md).
 - **PR #71** — Malayalam (`ml`) draft; awaiting native-reviewer calibration batch.
   Glossary PR **#69** (ja) open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
@@ -89,8 +90,8 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   Also: init `-f` repo-scoped side effects filed as
   #134; tutorial `SOURCE_ONLY` row corrected to `init -f`.
 - **v0.20.0** (2026-07-21) — #128 closed #119 + #65: structural parity guard on the sync and
-  `forward` write paths — **not `init`**, corrected 2026-07-24 by the tech-debt audit; `init` is
-  the one unguarded model-output write path (#159)
+  `forward` write paths — **not `init`**, corrected 2026-07-24 by the tech-debt audit; that
+  gap closed the same day via #159 (Wave 1 PR B)
   (directive shapes byte-equal or presence-matched by class; anchors exact). Calibrated
   empirically: byte-equal draft over 211 real pairs → 362 false positives in 3 classes
   (contents/index titles, prf:* titles, code-cell kernel tags) → calibrated guard passes

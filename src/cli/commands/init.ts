@@ -23,6 +23,7 @@ import { MystParser } from '../../parser.js';
 import { Glossary } from '../../types.js';
 import { updateHeadingMap, injectHeadingMap } from '../../heading-map.js';
 import { applyTypography } from '../../typography.js';
+import { checkStructuralParity, formatParityViolations } from '../../structural-parity.js';
 import { RuleId, buildLocalizationPrompt, getFontRequirements } from '../../localization-rules.js';
 import { readFileState, writeConfig, writeFileState } from '../translate-state.js';
 import { getFileGitMetadata } from '../git-metadata.js';
@@ -227,8 +228,9 @@ async function generateHeadingMap(
 /**
  * Translate a single lecture file with retry logic.
  * Returns tokens used, or throws on permanent failure.
+ * Exported for tests; the CLI path goes through runInit.
  */
-async function translateLecture(
+export async function translateLecture(
   lectureFile: string,
   sourceRepoPath: string,
   targetPath: string,
@@ -279,6 +281,16 @@ async function translateLecture(
 
   // Inject translation metadata into frontmatter
   const finalContent = injectHeadingMap(translatedContent, headingMap, translatedTitle);
+
+  // Structural parity: directive shapes and target anchors must survive
+  // translation verbatim, same as the sync and forward write paths. init
+  // seeds whole editions — corruption here becomes the baseline the sync
+  // guard compares forward from, so it can never be re-examined. Checks the
+  // exact bytes that would be written; failing the file loudly is the point.
+  const parity = checkStructuralParity(sourceContent, finalContent);
+  if (!parity.ok) {
+    throw new Error(formatParityViolations(lectureFile, parity));
+  }
 
   // Write to target folder
   const targetBaseDir = path.resolve(targetPath, docsFolder);
