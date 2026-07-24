@@ -183,3 +183,28 @@ describe('Language Configuration', () => {
     });
   });
 });
+
+// ============================================================================
+// Docs drift guard (#167 — F126)
+// ============================================================================
+
+describe('the documented supported-language list matches the code', () => {
+  // Three user docs used to promise that any language code works while the
+  // Action throws on anything outside LANGUAGE_CONFIGS. The docs now state
+  // the real contract, and this guard fails when the sets drift — update the
+  // `supported-languages:` marker in docs/user/language-config.md (and the
+  // prose around it) when adding a language.
+  it('language-config.md marker names exactly the configured languages', () => {
+    const doc = fs.readFileSync(
+      path.join(__dirname, '..', '..', 'docs', 'user', 'language-config.md'),
+      'utf8'
+    );
+    const marker = doc.match(/<!-- supported-languages: ([^>]+) -->/);
+    expect(marker).not.toBeNull();
+    const documented = marker![1]
+      .split(',')
+      .map((s) => s.trim())
+      .sort();
+    expect(documented).toEqual([...getSupportedLanguages()].sort());
+  });
+});

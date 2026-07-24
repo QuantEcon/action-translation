@@ -47,9 +47,13 @@ CRITICAL RULES:
 
 Rules apply to all translation modes: UPDATE (incremental sync), NEW (full file), and RESYNC (drift recovery).
 
-## Using unsupported languages
+## Supported languages
 
-Any language code can be used as a `target-language` — it doesn't need to be pre-configured. If no configuration exists, the action uses the language code as-is with no additional rules. You can still provide a glossary for terminology consistency.
+<!-- supported-languages: en, zh-cn, fa, fr, ml -->
+
+The **GitHub Action** validates `target-language` against its configured language list — currently `en`, `zh-cn`, `fa`, `fr`, and `ml` — and fails immediately, before any work happens, on anything else. Adding a language means adding a `LANGUAGE_CONFIGS` entry in `src/language-config.ts` (a glossary alone does not enable a language); the drift test in `language-config.test.ts` keeps this page's list in sync with the code.
+
+The **CLI** (`translate init`, `forward`, `backward`) never validates the language code: any code works there, with no language-specific rules applied for unconfigured codes.
 
 ## Adding a new language
 
