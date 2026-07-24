@@ -18,8 +18,10 @@ import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
+// Leading `./`/`../` and dotfile names (`.eslintrc.json`) are part of the path —
+// without them the match starts mid-name and reports a mangled reference.
 const REF_PATTERN =
-  /(?<ref>[A-Za-z0-9_@][A-Za-z0-9_./-]*\.(?:ts|tsx|js|mjs|cjs|json|ya?ml|md)):(?<start>\d+)(?:-(?<end>\d+))?/g;
+  /(?<ref>(?:\.{1,2}\/)?\.?[A-Za-z0-9_@][A-Za-z0-9_./-]*\.(?:ts|tsx|js|mjs|cjs|json|ya?ml|md)):(?<start>\d+)(?:-(?<end>\d+))?/g;
 
 const trackedFiles = execSync('git ls-files', { encoding: 'utf8' }).split('\n').filter(Boolean);
 
@@ -50,9 +52,7 @@ for (const mdFile of findMarkdownFiles('.dev')) {
       const { ref, start, end } = match.groups;
       const lastLine = Number(end ?? start);
       const candidates = ref.includes('/')
-        ? fs.existsSync(ref)
-          ? [ref]
-          : []
+        ? [ref, path.join(path.dirname(mdFile), ref)].filter((f) => fs.existsSync(f))
         : trackedFiles.filter((f) => path.basename(f) === ref);
       checked++;
 
