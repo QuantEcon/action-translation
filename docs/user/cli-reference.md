@@ -517,7 +517,7 @@ The `.translate/` folder in the target repo stores persistent sync metadata. It 
 source-language: en
 target-language: zh-cn
 docs-folder: lectures
-tool-version: 0.8.0             # Version that last wrote this config
+tool-version: <tool version>    # Version that last wrote this config
 ```
 
 Provides defaults so CLI flags don't need to be repeated every invocation.
@@ -530,7 +530,7 @@ synced-at: "2026-03-06"        # ISO date of last sync
 model: claude-sonnet-5     # Model used for translation
 mode: NEW                      # Translation mode: NEW / UPDATE / RESYNC
 section-count: 5               # Source section count at sync time
-tool-version: 0.8.0            # Version that performed this sync
+tool-version: <tool version>   # Version that performed this sync
 ```
 
 ### How each command uses `.translate/`
@@ -592,7 +592,7 @@ npx translate setup --source <owner/repo> --target-language <code> [options]
 
 1. Derives target repo name: `{source-repo}.{lang}` (e.g., `lecture-python-intro.zh-cn`)
 2. Creates GitHub repo via `gh repo create` and clones it locally
-3. Writes `.translate/config.yml`, `.github/workflows/translation-sync.yml`, `.gitignore`, `README.md`
+3. Writes `.translate/config.yml`, `.github/workflows/review-translations.yml`, `.github/workflows/rebase-translations.yml`, `.gitignore`, `README.md`
 4. Makes initial commit and pushes
 
 **Requirements:** The `gh` CLI must be installed and authenticated (`gh auth login`).

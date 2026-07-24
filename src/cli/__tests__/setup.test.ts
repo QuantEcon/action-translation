@@ -12,12 +12,17 @@ import {
   deriveTargetRepoName,
   generateSourceWorkflowYaml,
   generateTargetWorkflowYaml,
+  loadWorkflowTemplate,
   runSetup,
   SetupOptions,
   GhRunner,
   GitRunner,
 } from '../commands/setup.js';
 import { readConfig } from '../translate-state.js';
+
+/** The packaged canonical templates — what the CLI entry threads in. */
+const EXAMPLES_DIR = path.join(__dirname, '..', '..', '..', 'examples');
+const REVIEW_TEMPLATE = loadWorkflowTemplate(EXAMPLES_DIR, 'review-translations.yml');
 
 // ============================================================================
 // SETUP
@@ -62,74 +67,96 @@ describe('deriveTargetRepoName', () => {
 // ============================================================================
 
 describe('generateSourceWorkflowYaml', () => {
-  test('generates pull_request:closed trigger for source repo', () => {
+  test('generates a workflow that can fire on merges and resync comments', () => {
     const yaml = generateSourceWorkflowYaml(
       'QuantEcon/lecture-python-intro.zh-cn',
       'zh-cn',
-      'lectures',
-      '0.8.0'
+      'lectures'
     );
 
     expect(yaml).toContain('name: Sync Translations');
     expect(yaml).toContain('pull_request:');
     expect(yaml).toContain('types: [closed]');
+    expect(yaml).toContain('issue_comment:');
+    expect(yaml).toContain('types: [created]');
+    expect(yaml).toContain("contains(github.event.comment.body, '\\translate-resync')");
+    expect(yaml).toContain('github.event.pull_request.merged == true');
     expect(yaml).toContain('paths:');
     expect(yaml).toContain("'lectures/**/*.md'");
     expect(yaml).toContain('target-repo: QuantEcon/lecture-python-intro.zh-cn');
     expect(yaml).toContain('target-language: zh-cn');
     expect(yaml).toContain('docs-folder: lectures');
-    expect(yaml).toContain('QuantEcon/action-translation@v0.8.0');
+    expect(yaml).toContain('QuantEcon/action-translation@v0');
+    // The floating tag, not a pinned @v0.x — the old scaffold shipped @v0.9.0.
+    expect(yaml).not.toMatch(/action-translation@v0\.\d/);
+    expect(yaml).toContain('actions/checkout@v7');
     expect(yaml).toContain('mode: sync');
     expect(yaml).toContain('${{ secrets.TRANSLATION_PAT }}');
     expect(yaml).not.toContain('repository_dispatch');
   });
 
   test('uses custom docs-folder in paths filter', () => {
-    const yaml = generateSourceWorkflowYaml('Owner/repo.fa', 'fa', 'docs', '1.0.0');
+    const yaml = generateSourceWorkflowYaml('Owner/repo.fa', 'fa', 'docs');
     expect(yaml).toContain("'docs/**/*.md'");
     expect(yaml).toContain('docs-folder: docs');
   });
 
-  test('normalizes root-level docs-folder in paths filter', () => {
-    const yaml1 = generateSourceWorkflowYaml('Owner/repo.fa', 'fa', '.', '1.0.0');
-    expect(yaml1).toContain("'**/*.md'");
-    expect(yaml1).not.toContain("'./**/*.md'");
-
-    const yaml2 = generateSourceWorkflowYaml('Owner/repo.fa', 'fa', '/', '1.0.0');
-    expect(yaml2).toContain("'**/*.md'");
+  test('normalizes root-level and decorated docs-folders in paths filter', () => {
+    for (const root of ['.', '/', '']) {
+      const yaml = generateSourceWorkflowYaml('Owner/repo.fa', 'fa', root);
+      expect(yaml).toContain("'**/*.md'");
+      expect(yaml).not.toContain("'./**/*.md'");
+    }
+    // `./lectures/` used to emit a broken `lectures//**/*.md` — the strip
+    // regex was missing its `g` flag, so only one decoration came off.
+    for (const decorated of ['lectures', 'lectures/', 'lectures//', './lectures/', '/lectures/']) {
+      const yaml = generateSourceWorkflowYaml('Owner/repo.fa', 'fa', decorated);
+      expect(yaml).toContain("'lectures/**/*.md'");
+      expect(yaml).not.toContain('//');
+    }
   });
 });
 
 describe('generateTargetWorkflowYaml', () => {
-  test('generates review workflow for target repo', () => {
+  test('renders the canonical template with substituted inputs', () => {
     const yaml = generateTargetWorkflowYaml(
-      'QuantEcon/lecture-python-intro',
-      'zh-cn',
-      'lectures',
-      '0.8.0'
+      REVIEW_TEMPLATE,
+      'QuantEcon/lecture-python-programming',
+      'docs',
+      'fr'
     );
 
     expect(yaml).toContain('name: Review Translations');
-    expect(yaml).toContain('pull_request:');
-    expect(yaml).toContain('action-translation');
+    expect(yaml).toContain('types: [opened, synchronize, labeled, reopened]');
+    expect(yaml).toContain("github.event.label.name == 'action-translation'");
+    expect(yaml).toContain('pull-requests: write');
+    expect(yaml).toContain('group: review-translations-${{ github.event.pull_request.number }}');
     expect(yaml).toContain('mode: review');
-    expect(yaml).toContain('source-repo: QuantEcon/lecture-python-intro');
-    expect(yaml).toContain('source-language: en');
-    expect(yaml).toContain('target-language: zh-cn');
-    expect(yaml).toContain('QuantEcon/action-translation@v0.8.0');
-    expect(yaml).toContain('${{ secrets.ANTHROPIC_API_KEY }}');
-    expect(yaml).toContain('${{ secrets.GITHUB_TOKEN }}');
+    expect(yaml).toContain("source-repo: 'QuantEcon/lecture-python-programming'");
+    expect(yaml).toContain("source-language: 'fr'");
+    expect(yaml).toContain("docs-folder: 'docs'");
+    expect(yaml).toContain('QuantEcon/action-translation@v0');
+    expect(yaml).not.toMatch(/action-translation@v0\.\d/);
+    expect(yaml).toContain('actions/checkout@v7');
+    // Review mode has no target-language input — it detects from the repo suffix.
+    expect(yaml).not.toContain('target-language');
   });
 
-  test('uses custom docs-folder', () => {
-    const yaml = generateTargetWorkflowYaml('Owner/repo', 'fa', 'docs', '1.0.0');
-    expect(yaml).toContain('docs-folder: docs');
+  test('rendering the template with its own example values is the identity', () => {
+    const yaml = generateTargetWorkflowYaml(
+      REVIEW_TEMPLATE,
+      'QuantEcon/lecture-python-intro',
+      'lectures',
+      'en'
+    );
+    expect(yaml).toBe(REVIEW_TEMPLATE);
   });
 
-  test('uses provided source-language', () => {
-    const yaml = generateTargetWorkflowYaml('Owner/repo', 'zh-cn', 'lectures', '1.0.0', 'ja');
-    expect(yaml).toContain('source-language: ja');
-    expect(yaml).not.toContain('source-language: en');
+  test('throws when the template loses a substitution key', () => {
+    const broken = REVIEW_TEMPLATE.replace(/^\s*source-repo:.*$/m, '');
+    expect(() => generateTargetWorkflowYaml(broken, 'Owner/repo', 'lectures')).toThrow(
+      /no `source-repo:` line/
+    );
   });
 });
 
@@ -146,6 +173,7 @@ describe('runSetup dry-run', () => {
       docsFolder: 'lectures',
       visibility: 'public',
       dryRun: true,
+      examplesDir: EXAMPLES_DIR,
     };
 
     const result = await runSetup(options);
@@ -155,6 +183,7 @@ describe('runSetup dry-run', () => {
     expect(result.repoFullName).toBe('QuantEcon/lecture-python-intro.zh-cn');
     expect(result.filesCreated).toContain('.translate/config.yml');
     expect(result.filesCreated).toContain('.github/workflows/review-translations.yml');
+    expect(result.filesCreated).toContain('.github/workflows/rebase-translations.yml');
 
     // No actual files created in dry run
     expect(fs.existsSync(path.join(result.localPath, '.translate'))).toBe(false);
@@ -192,6 +221,7 @@ describe('runSetup with mock runners', () => {
       docsFolder: 'lectures',
       visibility: 'public',
       dryRun: false,
+      examplesDir: EXAMPLES_DIR,
     };
 
     // Override cwd so path.resolve lands inside tmpDir
@@ -214,8 +244,17 @@ describe('runSetup with mock runners', () => {
       const workflowPath = path.join(repoDir, '.github', 'workflows', 'review-translations.yml');
       expect(fs.existsSync(workflowPath)).toBe(true);
       const workflowContent = fs.readFileSync(workflowPath, 'utf-8');
-      expect(workflowContent).toContain('source-repo: QuantEcon/lecture-python-intro');
+      expect(workflowContent).toContain("source-repo: 'QuantEcon/lecture-python-intro'");
       expect(workflowContent).toContain('mode: review');
+      expect(workflowContent).toContain('types: [opened, synchronize, labeled, reopened]');
+
+      // The rebase workflow is written verbatim from the canonical template
+      const rebasePath = path.join(repoDir, '.github', 'workflows', 'rebase-translations.yml');
+      expect(fs.existsSync(rebasePath)).toBe(true);
+      expect(fs.readFileSync(rebasePath, 'utf-8')).toBe(
+        loadWorkflowTemplate(EXAMPLES_DIR, 'rebase-translations.yml')
+      );
+      expect(result.filesCreated).toContain('.github/workflows/rebase-translations.yml');
 
       // Check .gitignore
       expect(fs.existsSync(path.join(repoDir, '.gitignore'))).toBe(true);
@@ -243,6 +282,7 @@ describe('runSetup with mock runners', () => {
       docsFolder: 'lectures',
       visibility: 'public',
       dryRun: false,
+      examplesDir: EXAMPLES_DIR,
     };
 
     const origCwd = process.cwd();
@@ -268,6 +308,7 @@ describe('runSetup with mock runners', () => {
       docsFolder: 'lectures',
       visibility: 'public',
       dryRun: false,
+      examplesDir: EXAMPLES_DIR,
     };
 
     const origCwd = process.cwd();
@@ -307,6 +348,7 @@ describe('runSetup with mock runners', () => {
       visibility: 'public',
       dryRun: false,
       sourceWorkflow: sourceWorkflowPath,
+      examplesDir: EXAMPLES_DIR,
     };
 
     const origCwd = process.cwd();

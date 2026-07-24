@@ -59,6 +59,9 @@ const { version } = require('../../package.json');
 // commands as an option and the resolution logic lives in a testable module.
 const CLI_DIR = path.dirname(fileURLToPath(import.meta.url));
 const BUILT_IN_GLOSSARY_DIR = path.resolve(CLI_DIR, '..', '..', 'glossary');
+// Canonical workflow templates (<package-root>/examples) — threaded into
+// `setup` the same way, and for the same Jest-CJS reason, as the glossary dir.
+const EXAMPLES_DIR = path.resolve(CLI_DIR, '..', '..', 'examples');
 
 const program = new Command();
 
@@ -605,6 +608,7 @@ program
       visibility: opts.visibility,
       dryRun: opts.dryRun,
       sourceWorkflow: opts.sourceWorkflow,
+      examplesDir: EXAMPLES_DIR,
     };
 
     try {

@@ -44,7 +44,7 @@ Runs in the **target** (translated) repository, triggered when a translation PR 
 
 | Input | Description |
 |-------|-------------|
-| `mode` | Operation mode: `sync` or `review` |
+| `mode` | Operation mode: `sync`, `review`, or `rebase` |
 | `anthropic-api-key` | Anthropic API key for Claude |
 | `github-token` | GitHub token for API access (cross-repo requires a PAT with `repo` scope) |
 
@@ -70,11 +70,12 @@ Runs in the **target** (translated) repository, triggered when a translation PR 
 |-------|---------|-------------|
 | `source-repo` | *(required)* | Source repository for English content (`owner/repo`) |
 | `source-language` | `en` | Source language code |
-| `target-language` | *(required for review)* | Target language code |
 | `docs-folder` | `lectures/` | Documentation folder |
 | `max-suggestions` | `5` | Maximum findings in review comment |
 | `claude-model` | `claude-sonnet-5` | Claude model for review |
 | `auto-merge-mode` | `off` | `off` or `shadow`. Shadow records the would-auto-merge decision in the verdict block and outputs without acting on it. `active` is not implemented and fails loudly ([#103](https://github.com/QuantEcon/action-translation/issues/103)) |
+
+There is no `target-language` input in review mode: the language is detected from the repository-name suffix (`lecture-python-intro.zh-cn` → `zh-cn`), which selects the glossary for terminology review. A repo whose name carries no language suffix logs a warning and reviews without a glossary.
 
 ### Rebase mode inputs
 
@@ -205,12 +206,26 @@ name: Review Translations
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, labeled, reopened]
 
 jobs:
   review:
-    if: contains(github.event.pull_request.labels.*.name, 'action-translation')
+    # `labeled` matters: the sync applies its labels after opening the PR.
+    # The second clause ignores `labeled` events for every other label.
+    if: >
+      contains(github.event.pull_request.labels.*.name, 'action-translation') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'action-translation')
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    # One review per PR — supersede an in-flight review instead of running both
+    concurrency:
+      group: review-translations-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+
     steps:
       - uses: actions/checkout@v7
         with:
@@ -221,7 +236,6 @@ jobs:
           mode: review
           source-repo: 'QuantEcon/lecture-python-intro'
           source-language: 'en'
-          target-language: 'zh-cn'
           docs-folder: 'lectures/'
           max-suggestions: 5
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}

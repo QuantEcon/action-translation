@@ -42,7 +42,7 @@ jobs:
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
       - uses: quantecon/action-translation@v0
