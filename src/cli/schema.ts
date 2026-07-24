@@ -110,6 +110,8 @@ export interface SectionSnapshot {
   content: string;
   startLine: number;
   endLine: number;
+  /** Recorded faithfully from parser output (#165/F84); absent on old sidecars. */
+  parentId?: string;
   subsections?: SectionSnapshot[];
 }
 
