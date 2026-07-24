@@ -326,18 +326,10 @@ describe('formatLoadSummary', () => {
 // ============================================================================
 
 describe('loadAndFlattenSuggestions — integration with real fixtures', () => {
-  const fixtureReportDir = path.join(
-    __dirname,
-    '..',
-    '..',
-    '..',
-    'reports',
-    'lecture-python-intro',
-    'backward-2026-03-04-section-by-section'
-  );
-  const hasFixtures = fs.existsSync(path.join(fixtureReportDir, '.resync'));
+  // Committed anonymised fixture (#166) — see schema.test.ts for the history.
+  const fixtureReportDir = path.join(__dirname, 'fixtures', 'resync-reports');
 
-  (hasFixtures ? it : it.skip)('loads real reports from fixture directory', () => {
+  it('loads real reports from fixture directory', () => {
     const result = loadAndFlattenSuggestions(fixtureReportDir, 0.6);
     expect(result.stats.filesLoaded).toBeGreaterThan(0);
     // All returned suggestions should be BACKPORT above threshold
@@ -348,7 +340,7 @@ describe('loadAndFlattenSuggestions — integration with real fixtures', () => {
     }
   });
 
-  (hasFixtures ? it : it.skip)('results are sorted by confidence descending', () => {
+  it('results are sorted by confidence descending', () => {
     const result = loadAndFlattenSuggestions(fixtureReportDir, 0);
     const confidences = result.suggestions.map((s) => s.suggestion.confidence);
     for (let i = 1; i < confidences.length; i++) {
@@ -356,7 +348,7 @@ describe('loadAndFlattenSuggestions — integration with real fixtures', () => {
     }
   });
 
-  (hasFixtures ? it : it.skip)('each suggestion has file context from its source report', () => {
+  it('each suggestion has file context from its source report', () => {
     const result = loadAndFlattenSuggestions(fixtureReportDir, 0.6);
     for (const item of result.suggestions) {
       expect(item.file).toBeTruthy();

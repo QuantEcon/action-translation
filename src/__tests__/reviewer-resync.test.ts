@@ -24,7 +24,6 @@ function b64(content: string): string {
 function makeResyncBody(): string {
   return buildForwardPRBody(
     'cobweb.md',
-    [],
     'QuantEcon/lecture-intro',
     'lectures',
     'Content changes detected',

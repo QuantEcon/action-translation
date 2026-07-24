@@ -94,7 +94,6 @@ describe('resyncSingleFile', () => {
         );
 
         expect(result.triageResult.verdict).toBe('IDENTICAL');
-        expect(result.sections).toHaveLength(0);
         expect(result.summary.resynced).toBe(0);
       } finally {
         fixture.cleanup();
@@ -123,7 +122,6 @@ describe('resyncSingleFile', () => {
         );
 
         expect(result.triageResult.verdict).toBe('I18N_ONLY');
-        expect(result.sections).toHaveLength(0);
       } finally {
         fixture.cleanup();
       }
@@ -221,34 +219,6 @@ describe('resyncSingleFile', () => {
         const targetPath = path.join(fixture.targetRepo, 'lectures', fixture.filename);
         const written = fs.readFileSync(targetPath, 'utf-8');
         expect(written).toContain('[TEST RESYNC]');
-      } finally {
-        fixture.cleanup();
-      }
-    });
-
-    it('returns empty sections array (whole-file mode)', async () => {
-      const fixture = createTempFixture({
-        sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## A\n\nContent A\n\n## B\n\nContent B',
-        targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## A翻译\n\n翻译A',
-        filename: 'sections-empty.md',
-      });
-
-      try {
-        const options = makeOptions({
-          source: fixture.sourceRepo,
-          target: fixture.targetRepo,
-        });
-        const result = await resyncSingleFile(
-          fixture.filename,
-          fixture.sourceRepo,
-          fixture.targetRepo,
-          'lectures',
-          options,
-          silentLogger
-        );
-
-        // Whole-file mode: sections array is always empty
-        expect(result.sections).toHaveLength(0);
       } finally {
         fixture.cleanup();
       }

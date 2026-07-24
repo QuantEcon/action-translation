@@ -246,7 +246,7 @@ path, and source repo from the target repo's `.translate/config.yml`, so per-rep
 become unnecessary.
 
 **Motivation & evidence**: `config.yml` was designed "so CLI flags don't need to be repeated"
-(`src/cli/types.ts:289-297`), but only `source-language` is resolved from it; `-l` silently
+(`src/cli/types.ts:275-283`), but only `source-language` is resolved from it; `-l` silently
 defaults to `zh-cn` and `-d` to `lectures` — a live trap for the new ml/fr/ja repos where a
 forgotten flag targets the wrong language.
 

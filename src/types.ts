@@ -234,13 +234,6 @@ export interface FileChange {
   previous_filename?: string; // For renamed files
 }
 
-export interface SyncResult {
-  success: boolean;
-  filesProcessed: number;
-  prUrl?: string;
-  errors: string[];
-}
-
 export interface TranslatedFile {
   path: string;
   content: string;
