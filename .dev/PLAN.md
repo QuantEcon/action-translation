@@ -281,7 +281,11 @@ but not sync; `overloaded` retry in the translator but not the reviewer or any C
       JSON extraction): replaces `translator.callWithRetry` (`src/translator.ts:153-190`),
       `reviewer.callWithRetry` (`src/reviewer.ts:281-330`), and the three CLI copies
       (`document-comparator.ts:241-286`, `backward-evaluator.ts:277-315, 589-627`,
-      `forward-triage.ts:232-277`); also stop stacking on the SDK's built-in 2 retries
+      `forward-triage.ts:232-277`).
+      *2026-07-24 (#164): the retry PREDICATE is now shared (`isRetryableAnthropicError`
+      in models.ts, overloaded branch included at all six sites) and the SDK stacking is
+      fixed (`maxRetries: 0` on all six clients — the budget is RETRY_CONFIG's 3, not 9).
+      What remains here is unifying the loop/backoff/JSON-extraction machinery itself.*
       (worst case today: 9 attempts)
 - [ ] **Move `.translate/` state out of `src/cli/`** into core — the action imports backwards
       from the CLI today (`src/index.ts:8`, `src/sync-orchestrator.ts:20-21`) (ARCHITECTURE.md R3)

@@ -324,6 +324,11 @@ export class SyncOrchestrator {
     this.parser = new MystParser();
   }
 
+  /** API usage across every Claude call this run made, retries included (#164). */
+  getUsage(): ReturnType<TranslationService['getUsage']> {
+    return this.translator.getUsage();
+  }
+
   /**
    * Process all files through the translation pipeline.
    *

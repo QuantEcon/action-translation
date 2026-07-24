@@ -1,4 +1,5 @@
 import type Anthropic from '@anthropic-ai/sdk';
+import { APIConnectionError, APIError, RateLimitError } from '@anthropic-ai/sdk';
 
 /**
  * Central Claude model configuration.
@@ -99,4 +100,35 @@ export class TruncatedResponseError extends Error {
     super(`Response truncated at max_tokens=${maxTokens}; refusing to interpret incomplete output`);
     this.name = 'TruncatedResponseError';
   }
+}
+
+/** Accumulated API usage across every call an instance makes, retries included. */
+export interface ApiUsage {
+  inputTokens: number;
+  outputTokens: number;
+  apiCalls: number;
+}
+
+/**
+ * The one transport-retry predicate for every Anthropic call site (#164/F78).
+ *
+ * Commit 40d63ef added the `overloaded_error` branch (an APIError with
+ * status === undefined on the streamed transport) to translator.ts only; the
+ * other five hand-copies never got it, so an overload at the reviewer's
+ * streamed calls aborted the whole review. One owner means the next hardening
+ * fix lands once. Deliberately excluded: AuthenticationError and
+ * BadRequestError (callers throw those before consulting this), and
+ * TruncatedResponseError — retrying truncation makes sense for the CLI's
+ * bounded JSON-analysis calls, which OR it in locally, but not for the
+ * full-document translation and review calls, where a rerun at the same cap
+ * cannot fit.
+ */
+export function isRetryableAnthropicError(error: unknown): boolean {
+  return (
+    error instanceof RateLimitError ||
+    error instanceof APIConnectionError ||
+    (error instanceof APIError &&
+      ((error.status !== undefined && error.status >= 500) ||
+        (error.status === undefined && error.message?.includes('overloaded'))))
+  );
 }

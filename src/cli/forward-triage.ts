@@ -12,14 +12,13 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { MAX_TOKENS, DEFAULT_THINKING, TruncatedResponseError } from '../models.js';
 import {
-  APIError,
-  AuthenticationError,
-  RateLimitError,
-  APIConnectionError,
-  BadRequestError,
-} from '@anthropic-ai/sdk';
+  MAX_TOKENS,
+  DEFAULT_THINKING,
+  TruncatedResponseError,
+  isRetryableAnthropicError,
+} from '../models.js';
+import { AuthenticationError, BadRequestError } from '@anthropic-ai/sdk';
 import { ForwardTriageResult, ForwardTriageVerdict } from './types.js';
 import { RETRY_CONFIG } from '../translator.js';
 
@@ -233,7 +232,7 @@ export async function triageForward(
     options.targetLanguage
   );
 
-  const client = new Anthropic({ apiKey: options.apiKey });
+  const client = new Anthropic({ apiKey: options.apiKey, maxRetries: 0 });
   const { maxRetries, baseDelayMs } = RETRY_CONFIG;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -269,11 +268,10 @@ export async function triageForward(
         throw error;
       }
 
+      // Truncation is retryable here — a rerun of a bounded JSON analysis can
+      // land under the cap — and is ORed onto the shared transport predicate.
       const isRetryable =
-        error instanceof RateLimitError ||
-        error instanceof APIConnectionError ||
-        error instanceof TruncatedResponseError ||
-        (error instanceof APIError && error.status !== undefined && error.status >= 500);
+        error instanceof TruncatedResponseError || isRetryableAnthropicError(error);
 
       if (!isRetryable || attempt === maxRetries) {
         throw error;

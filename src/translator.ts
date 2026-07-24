@@ -27,7 +27,13 @@ import {
 } from './types.js';
 import * as core from '@actions/core';
 import { getLanguageConfig } from './language-config.js';
-import { DEFAULT_CLAUDE_MODEL, MAX_TOKENS, DEFAULT_THINKING } from './models.js';
+import {
+  DEFAULT_CLAUDE_MODEL,
+  MAX_TOKENS,
+  DEFAULT_THINKING,
+  isRetryableAnthropicError,
+  ApiUsage,
+} from './models.js';
 
 /**
  * Constants
@@ -127,9 +133,15 @@ export class TranslationService {
   private client: Anthropic;
   private model: string;
   private debug: boolean;
+  // Counted at the chokepoint so retried/discarded attempts are included —
+  // the per-result tokensUsed fields miss them (#164/F53).
+  private usage: ApiUsage = { inputTokens: 0, outputTokens: 0, apiCalls: 0 };
 
   constructor(apiKey: string, model: string = DEFAULT_CLAUDE_MODEL, debug: boolean = false) {
-    this.client = new Anthropic({ apiKey });
+    // maxRetries: 0 — callWithRetry owns the whole retry budget. The SDK's
+    // default 2 silently multiplied the hand-rolled 3 into up to 9 HTTP
+    // attempts while the log said `attempt N/3` (#164).
+    this.client = new Anthropic({ apiKey, maxRetries: 0 });
     this.model = model;
     this.debug = debug;
   }
@@ -138,6 +150,11 @@ export class TranslationService {
     if (this.debug) {
       core.info(`[Translator] ${message}`);
     }
+  }
+
+  /** Total API usage this instance has accumulated, retries included. */
+  getUsage(): ApiUsage {
+    return { ...this.usage };
   }
 
   /**
@@ -178,6 +195,9 @@ export class TranslationService {
           thinking: DEFAULT_THINKING,
         } as Anthropic.MessageStreamParams);
         const message = await stream.finalMessage();
+        this.usage.inputTokens += message.usage.input_tokens;
+        this.usage.outputTokens += message.usage.output_tokens;
+        this.usage.apiCalls += 1;
         // A max_tokens stop means the output was cut off mid-document.
         // Committing it would silently truncate the translation, and the model
         // never gets to emit its incomplete-document marker — so fail the
@@ -196,12 +216,7 @@ export class TranslationService {
         }
 
         // Check for transient errors worth retrying
-        const isRetryable =
-          error instanceof RateLimitError ||
-          error instanceof APIConnectionError ||
-          (error instanceof APIError &&
-            ((error.status !== undefined && error.status >= 500) ||
-              (error.status === undefined && error.message?.includes('overloaded')))); // overloaded_error
+        const isRetryable = isRetryableAnthropicError(error);
 
         if (!isRetryable || attempt === maxRetries) {
           throw error;

@@ -26457,266 +26457,6 @@ function validateLanguageCode(languageCode) {
   }
 }
 
-// dist/models.js
-var DEFAULT_CLAUDE_MODEL = "claude-sonnet-5";
-var MAX_TOKENS = {
-  /** Section-level translation (update / resync / new). Streamed. */
-  section: 16384,
-  /** Whole-document translation / resync (init, forward RESYNC). Streamed. */
-  fullDocument: 64e3,
-  /** Quality / diff review verdicts. Streamed. */
-  review: 8192,
-  /** Analytical CLI judgments (backward eval, forward triage, doc compare). Non-streamed. */
-  analysis: 8192
-};
-var DEFAULT_THINKING = { type: "disabled" };
-var VALID_MODEL_PATTERNS = [
-  /^claude-sonnet-5$/,
-  // claude-sonnet-5 (current-generation Sonnet)
-  /^claude-opus-4-8$/,
-  // claude-opus-4-8 (current-generation Opus)
-  /^claude-opus-4-7$/,
-  // claude-opus-4-7 (current-generation Opus)
-  /^claude-haiku-4-5$/,
-  // claude-haiku-4-5 (current-generation Haiku, bare alias)
-  /^claude-sonnet-4-6$/,
-  // claude-sonnet-4-6 (previous-generation Sonnet)
-  /^claude-opus-4-6$/,
-  // claude-opus-4-6 (previous-generation Opus)
-  /^claude-sonnet-4-5-\d{8}$/,
-  // claude-sonnet-4-5-20250929
-  /^claude-opus-4-5-\d{8}$/,
-  // claude-opus-4-5-20251101
-  /^claude-haiku-4-5-\d{8}$/,
-  // claude-haiku-4-5-20251001
-  /^claude-3-5-sonnet-\d{8}$/,
-  // claude-3-5-sonnet-20241022
-  /^claude-3-5-haiku-\d{8}$/,
-  // claude-3-5-haiku-20241022
-  /^claude-3-opus-\d{8}$/,
-  // claude-3-opus-20240229
-  /^claude-3-sonnet-\d{8}$/,
-  // claude-3-sonnet-20240229
-  /^claude-3-haiku-\d{8}$/
-  // claude-3-haiku-20240307
-];
-
-// dist/contracts.js
-var REVIEW_TRIGGER_LABEL = "action-translation";
-var SYNC_PR_LABELS = [REVIEW_TRIGGER_LABEL, "automated"];
-var RESYNC_PR_LABELS = [
-  REVIEW_TRIGGER_LABEL,
-  "action-translation-sync",
-  "resync"
-];
-var FAILURE_ISSUE_LABEL = "translation-sync-failure";
-var TARGET_REPO_LABELS = [
-  .../* @__PURE__ */ new Set([...SYNC_PR_LABELS, ...RESYNC_PR_LABELS])
-];
-var AUTO_MERGE_MODES = ["off", "shadow"];
-
-// dist/inputs.js
-function validateClaudeModel(model) {
-  const isValid = VALID_MODEL_PATTERNS.some((pattern) => pattern.test(model));
-  if (!isValid) {
-    core.warning(`Unrecognized Claude model: '${model}'. Expected patterns like 'claude-sonnet-5' or 'claude-sonnet-4-5-YYYYMMDD'. The model will still be used, but verify it's correct.`);
-  }
-}
-function getMode() {
-  const mode = core.getInput("mode", { required: true });
-  if (!mode) {
-    throw new Error(`Missing required input: 'mode'. Expected 'sync', 'review', or 'rebase'.`);
-  }
-  if (mode !== "sync" && mode !== "review" && mode !== "rebase") {
-    throw new Error(`Invalid mode: '${mode}'. Expected 'sync', 'review', or 'rebase'.`);
-  }
-  return mode;
-}
-function getInputs() {
-  const targetRepo = core.getInput("target-repo", { required: true });
-  const targetLanguage = core.getInput("target-language", { required: true });
-  const docsFolderInput = core.getInput("docs-folder", { required: false });
-  const docsFolder = docsFolderInput === "." || docsFolderInput === "/" ? "" : docsFolderInput;
-  const sourceLanguage = core.getInput("source-language", { required: false }) || "en";
-  const glossaryPath = core.getInput("glossary-path", { required: false }) || "";
-  const tocFile = core.getInput("toc-file", { required: false }) || "_toc.yml";
-  const anthropicApiKey = core.getInput("anthropic-api-key", { required: true });
-  const claudeModel = core.getInput("claude-model", { required: false }) || DEFAULT_CLAUDE_MODEL;
-  const githubToken = core.getInput("github-token", { required: true });
-  const prLabelsRaw = core.getInput("pr-labels", { required: false }) || SYNC_PR_LABELS.join(",");
-  const prLabels = prLabelsRaw.split(",").map((l) => l.trim()).filter((l) => l.length > 0);
-  if (!prLabels.includes(REVIEW_TRIGGER_LABEL)) {
-    core.warning(`pr-labels omits '${REVIEW_TRIGGER_LABEL}' \u2014 review workflows gate on that label, so translation PRs will not be reviewed`);
-  }
-  const prReviewersRaw = core.getInput("pr-reviewers", { required: false }) || "";
-  const prReviewers = prReviewersRaw.split(",").map((r) => r.trim()).filter((r) => r.length > 0);
-  const prTeamReviewersRaw = core.getInput("pr-team-reviewers", { required: false }) || "";
-  const prTeamReviewers = prTeamReviewersRaw.split(",").map((t) => t.trim()).filter((t) => t.length > 0);
-  const testModeRaw = core.getInput("test-mode", { required: false }) || "false";
-  const testMode = testModeRaw.toLowerCase() === "true";
-  if (!targetRepo.includes("/")) {
-    throw new Error(`Invalid target-repo format: ${targetRepo}. Expected format: owner/repo`);
-  }
-  validateLanguageCode(targetLanguage);
-  validateClaudeModel(claudeModel);
-  const normalizedDocsFolder = docsFolder === "" ? "" : docsFolder.endsWith("/") ? docsFolder : `${docsFolder}/`;
-  return {
-    targetRepo,
-    targetLanguage,
-    docsFolder: normalizedDocsFolder,
-    sourceLanguage,
-    glossaryPath,
-    tocFile,
-    anthropicApiKey,
-    claudeModel,
-    githubToken,
-    prLabels,
-    prReviewers,
-    prTeamReviewers,
-    testMode
-  };
-}
-function getRebaseInputs() {
-  const docsFolderInput = core.getInput("docs-folder", { required: false });
-  const docsFolder = docsFolderInput === "." || docsFolderInput === "/" ? "" : docsFolderInput;
-  const glossaryPath = core.getInput("glossary-path", { required: false }) || "";
-  const anthropicApiKey = core.getInput("anthropic-api-key", { required: true });
-  const githubToken = core.getInput("github-token", { required: true });
-  const normalizedDocsFolder = docsFolder === "" ? "" : docsFolder.endsWith("/") ? docsFolder : `${docsFolder}/`;
-  return {
-    docsFolder: normalizedDocsFolder,
-    glossaryPath,
-    anthropicApiKey,
-    githubToken,
-    rebaseStaleSiblings: core.getInput("rebase-stale-siblings", { required: false }).toLowerCase() === "true"
-  };
-}
-function getReviewInputs() {
-  const sourceRepo = core.getInput("source-repo", { required: true });
-  const maxSuggestionsRaw = core.getInput("max-suggestions", { required: false }) || "5";
-  const maxSuggestions = parseInt(maxSuggestionsRaw, 10);
-  if (isNaN(maxSuggestions) || maxSuggestions < 0) {
-    throw new Error(`Invalid max-suggestions: '${maxSuggestionsRaw}'. Expected a non-negative integer.`);
-  }
-  const docsFolderInput = core.getInput("docs-folder", { required: false });
-  const docsFolder = docsFolderInput === "." || docsFolderInput === "/" ? "" : docsFolderInput;
-  const sourceLanguage = core.getInput("source-language", { required: false }) || "en";
-  const glossaryPath = core.getInput("glossary-path", { required: false }) || "";
-  const anthropicApiKey = core.getInput("anthropic-api-key", { required: true });
-  const claudeModel = core.getInput("claude-model", { required: false }) || DEFAULT_CLAUDE_MODEL;
-  const githubToken = core.getInput("github-token", { required: true });
-  const autoMergeModeRaw = core.getInput("auto-merge-mode", { required: false }) || AUTO_MERGE_MODES[0];
-  if (!sourceRepo.includes("/")) {
-    throw new Error(`Invalid source-repo format: ${sourceRepo}. Expected format: owner/repo`);
-  }
-  if (autoMergeModeRaw === "active") {
-    throw new Error("auto-merge-mode 'active' is not implemented \u2014 the active gate ships with a later release (#103); use 'shadow'");
-  }
-  if (!AUTO_MERGE_MODES.includes(autoMergeModeRaw)) {
-    throw new Error(`Invalid auto-merge-mode: '${autoMergeModeRaw}'. Expected ${AUTO_MERGE_MODES.map((m) => `'${m}'`).join(" or ")}.`);
-  }
-  const autoMergeMode = autoMergeModeRaw;
-  validateClaudeModel(claudeModel);
-  const normalizedDocsFolder = docsFolder === "" ? "" : docsFolder.endsWith("/") ? docsFolder : `${docsFolder}/`;
-  return {
-    sourceRepo,
-    maxSuggestions,
-    docsFolder: normalizedDocsFolder,
-    sourceLanguage,
-    glossaryPath,
-    anthropicApiKey,
-    claudeModel,
-    githubToken,
-    autoMergeMode
-  };
-}
-var RESYNC_COMMAND = "\\translate-resync";
-function validatePREvent(context2, testMode) {
-  const { eventName, payload } = context2;
-  if (eventName === "issue_comment") {
-    return validateResyncComment(payload);
-  }
-  if (eventName !== "pull_request") {
-    throw new Error(`This action only works on pull_request or issue_comment events. Got: ${eventName}. For manual testing, add the 'test-translation' label to a PR instead of using workflow_dispatch.`);
-  }
-  if (testMode || payload.action === "labeled" && payload.label?.name === "test-translation") {
-    const prNumber2 = payload.pull_request?.number;
-    if (!prNumber2) {
-      throw new Error("Could not determine PR number from event payload");
-    }
-    core.info(`\u{1F9EA} Running in TEST mode for PR #${prNumber2} (using PR head commit, not merge)`);
-    return { merged: true, prNumber: prNumber2, isTestMode: true, isResync: false };
-  }
-  if (payload.action !== "closed") {
-    throw new Error(`This action only runs when PRs are closed or labeled with test-translation. Got action: ${payload.action}`);
-  }
-  const merged = payload.pull_request?.merged === true;
-  const prNumber = payload.pull_request?.number;
-  if (!merged) {
-    core.info("PR was closed but not merged. Skipping sync.");
-  }
-  if (!prNumber) {
-    throw new Error("Could not determine PR number from event payload");
-  }
-  core.info(`\u{1F680} Running in PRODUCTION mode for merged PR #${prNumber}`);
-  return { merged, prNumber, isTestMode: false, isResync: false };
-}
-var TRUSTED_ASSOCIATIONS = /* @__PURE__ */ new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
-function validateResyncComment(payload) {
-  const noOp = { merged: false, prNumber: 0, isTestMode: false, isResync: false };
-  if (payload.action !== "created") {
-    core.info(`Ignoring issue_comment action: ${payload.action}. Only 'created' is supported for resync.`);
-    return noOp;
-  }
-  if (!payload.issue?.pull_request) {
-    core.info("Ignoring issue_comment on an issue (not a pull request). Resync only works on PRs.");
-    return noOp;
-  }
-  const commentBody = (payload.comment?.body || "").trim();
-  if (!commentBody.startsWith(RESYNC_COMMAND)) {
-    core.info("Ignoring issue_comment without resync command.");
-    return noOp;
-  }
-  const parts = commentBody.split(/\s+/);
-  const requestedLang = parts.length > 1 ? parts[1].toLowerCase() : void 0;
-  const supportedLanguages = new Set(getSupportedLanguages());
-  const resyncLanguage = requestedLang && supportedLanguages.has(requestedLang) ? requestedLang : void 0;
-  if (requestedLang && !resyncLanguage) {
-    core.warning(`Ignoring unsupported language '${requestedLang}' in ${RESYNC_COMMAND}. Proceeding with resync for all languages.`);
-  }
-  const association = payload.comment?.author_association || "";
-  if (!TRUSTED_ASSOCIATIONS.has(association)) {
-    core.warning(`Ignoring \\translate-resync from user with association '${association}'. Only OWNER, MEMBER, and COLLABORATOR can trigger resync.`);
-    return noOp;
-  }
-  const prNumber = payload.issue?.number;
-  if (!prNumber) {
-    throw new Error("Could not determine PR number from issue_comment payload");
-  }
-  if (resyncLanguage) {
-    core.info(`\u{1F504} RESYNC triggered by comment on PR #${prNumber} for language '${resyncLanguage}'`);
-  } else {
-    core.info(`\u{1F504} RESYNC triggered by comment on PR #${prNumber} (all languages)`);
-  }
-  return { merged: true, prNumber, isTestMode: false, isResync: true, resyncLanguage };
-}
-function validateReviewPREvent(context2) {
-  const { eventName, payload } = context2;
-  if (eventName !== "pull_request") {
-    throw new Error(`Review mode only works on pull_request events. Got: ${eventName}`);
-  }
-  const prNumber = payload.pull_request?.number;
-  if (!prNumber) {
-    throw new Error("Could not determine PR number from event payload");
-  }
-  core.info(`\u{1F4DD} Running REVIEW mode for PR #${prNumber}`);
-  return { prNumber };
-}
-
-// dist/reviewer.js
-var core3 = __toESM(require_core(), 1);
-var github = __toESM(require_github(), 1);
-
 // node_modules/@anthropic-ai/sdk/internal/tslib.mjs
 function __classPrivateFieldSet(receiver, state, value, kind, f) {
   if (kind === "m")
@@ -31560,6 +31300,269 @@ Anthropic.Messages = Messages2;
 Anthropic.Models = Models2;
 Anthropic.Beta = Beta;
 
+// dist/models.js
+var DEFAULT_CLAUDE_MODEL = "claude-sonnet-5";
+var MAX_TOKENS = {
+  /** Section-level translation (update / resync / new). Streamed. */
+  section: 16384,
+  /** Whole-document translation / resync (init, forward RESYNC). Streamed. */
+  fullDocument: 64e3,
+  /** Quality / diff review verdicts. Streamed. */
+  review: 8192,
+  /** Analytical CLI judgments (backward eval, forward triage, doc compare). Non-streamed. */
+  analysis: 8192
+};
+var DEFAULT_THINKING = { type: "disabled" };
+var VALID_MODEL_PATTERNS = [
+  /^claude-sonnet-5$/,
+  // claude-sonnet-5 (current-generation Sonnet)
+  /^claude-opus-4-8$/,
+  // claude-opus-4-8 (current-generation Opus)
+  /^claude-opus-4-7$/,
+  // claude-opus-4-7 (current-generation Opus)
+  /^claude-haiku-4-5$/,
+  // claude-haiku-4-5 (current-generation Haiku, bare alias)
+  /^claude-sonnet-4-6$/,
+  // claude-sonnet-4-6 (previous-generation Sonnet)
+  /^claude-opus-4-6$/,
+  // claude-opus-4-6 (previous-generation Opus)
+  /^claude-sonnet-4-5-\d{8}$/,
+  // claude-sonnet-4-5-20250929
+  /^claude-opus-4-5-\d{8}$/,
+  // claude-opus-4-5-20251101
+  /^claude-haiku-4-5-\d{8}$/,
+  // claude-haiku-4-5-20251001
+  /^claude-3-5-sonnet-\d{8}$/,
+  // claude-3-5-sonnet-20241022
+  /^claude-3-5-haiku-\d{8}$/,
+  // claude-3-5-haiku-20241022
+  /^claude-3-opus-\d{8}$/,
+  // claude-3-opus-20240229
+  /^claude-3-sonnet-\d{8}$/,
+  // claude-3-sonnet-20240229
+  /^claude-3-haiku-\d{8}$/
+  // claude-3-haiku-20240307
+];
+function isRetryableAnthropicError(error3) {
+  return error3 instanceof RateLimitError || error3 instanceof APIConnectionError || error3 instanceof APIError && (error3.status !== void 0 && error3.status >= 500 || error3.status === void 0 && error3.message?.includes("overloaded"));
+}
+
+// dist/contracts.js
+var REVIEW_TRIGGER_LABEL = "action-translation";
+var SYNC_PR_LABELS = [REVIEW_TRIGGER_LABEL, "automated"];
+var RESYNC_PR_LABELS = [
+  REVIEW_TRIGGER_LABEL,
+  "action-translation-sync",
+  "resync"
+];
+var FAILURE_ISSUE_LABEL = "translation-sync-failure";
+var TARGET_REPO_LABELS = [
+  .../* @__PURE__ */ new Set([...SYNC_PR_LABELS, ...RESYNC_PR_LABELS])
+];
+var AUTO_MERGE_MODES = ["off", "shadow"];
+
+// dist/inputs.js
+function validateClaudeModel(model) {
+  const isValid = VALID_MODEL_PATTERNS.some((pattern) => pattern.test(model));
+  if (!isValid) {
+    core.warning(`Unrecognized Claude model: '${model}'. Expected patterns like 'claude-sonnet-5' or 'claude-sonnet-4-5-YYYYMMDD'. The model will still be used, but verify it's correct.`);
+  }
+}
+function getMode() {
+  const mode = core.getInput("mode", { required: true });
+  if (!mode) {
+    throw new Error(`Missing required input: 'mode'. Expected 'sync', 'review', or 'rebase'.`);
+  }
+  if (mode !== "sync" && mode !== "review" && mode !== "rebase") {
+    throw new Error(`Invalid mode: '${mode}'. Expected 'sync', 'review', or 'rebase'.`);
+  }
+  return mode;
+}
+function getInputs() {
+  const targetRepo = core.getInput("target-repo", { required: true });
+  const targetLanguage = core.getInput("target-language", { required: true });
+  const docsFolderInput = core.getInput("docs-folder", { required: false });
+  const docsFolder = docsFolderInput === "." || docsFolderInput === "/" ? "" : docsFolderInput;
+  const sourceLanguage = core.getInput("source-language", { required: false }) || "en";
+  const glossaryPath = core.getInput("glossary-path", { required: false }) || "";
+  const tocFile = core.getInput("toc-file", { required: false }) || "_toc.yml";
+  const anthropicApiKey = core.getInput("anthropic-api-key", { required: true });
+  const claudeModel = core.getInput("claude-model", { required: false }) || DEFAULT_CLAUDE_MODEL;
+  const githubToken = core.getInput("github-token", { required: true });
+  const prLabelsRaw = core.getInput("pr-labels", { required: false }) || SYNC_PR_LABELS.join(",");
+  const prLabels = prLabelsRaw.split(",").map((l) => l.trim()).filter((l) => l.length > 0);
+  if (!prLabels.includes(REVIEW_TRIGGER_LABEL)) {
+    core.warning(`pr-labels omits '${REVIEW_TRIGGER_LABEL}' \u2014 review workflows gate on that label, so translation PRs will not be reviewed`);
+  }
+  const prReviewersRaw = core.getInput("pr-reviewers", { required: false }) || "";
+  const prReviewers = prReviewersRaw.split(",").map((r) => r.trim()).filter((r) => r.length > 0);
+  const prTeamReviewersRaw = core.getInput("pr-team-reviewers", { required: false }) || "";
+  const prTeamReviewers = prTeamReviewersRaw.split(",").map((t) => t.trim()).filter((t) => t.length > 0);
+  const testModeRaw = core.getInput("test-mode", { required: false }) || "false";
+  const testMode = testModeRaw.toLowerCase() === "true";
+  if (!targetRepo.includes("/")) {
+    throw new Error(`Invalid target-repo format: ${targetRepo}. Expected format: owner/repo`);
+  }
+  validateLanguageCode(targetLanguage);
+  validateClaudeModel(claudeModel);
+  const normalizedDocsFolder = docsFolder === "" ? "" : docsFolder.endsWith("/") ? docsFolder : `${docsFolder}/`;
+  return {
+    targetRepo,
+    targetLanguage,
+    docsFolder: normalizedDocsFolder,
+    sourceLanguage,
+    glossaryPath,
+    tocFile,
+    anthropicApiKey,
+    claudeModel,
+    githubToken,
+    prLabels,
+    prReviewers,
+    prTeamReviewers,
+    testMode
+  };
+}
+function getRebaseInputs() {
+  const docsFolderInput = core.getInput("docs-folder", { required: false });
+  const docsFolder = docsFolderInput === "." || docsFolderInput === "/" ? "" : docsFolderInput;
+  const glossaryPath = core.getInput("glossary-path", { required: false }) || "";
+  const anthropicApiKey = core.getInput("anthropic-api-key", { required: true });
+  const githubToken = core.getInput("github-token", { required: true });
+  const normalizedDocsFolder = docsFolder === "" ? "" : docsFolder.endsWith("/") ? docsFolder : `${docsFolder}/`;
+  return {
+    docsFolder: normalizedDocsFolder,
+    glossaryPath,
+    anthropicApiKey,
+    githubToken,
+    rebaseStaleSiblings: core.getInput("rebase-stale-siblings", { required: false }).toLowerCase() === "true"
+  };
+}
+function getReviewInputs() {
+  const sourceRepo = core.getInput("source-repo", { required: true });
+  const maxSuggestionsRaw = core.getInput("max-suggestions", { required: false }) || "5";
+  const maxSuggestions = parseInt(maxSuggestionsRaw, 10);
+  if (isNaN(maxSuggestions) || maxSuggestions < 0) {
+    throw new Error(`Invalid max-suggestions: '${maxSuggestionsRaw}'. Expected a non-negative integer.`);
+  }
+  const docsFolderInput = core.getInput("docs-folder", { required: false });
+  const docsFolder = docsFolderInput === "." || docsFolderInput === "/" ? "" : docsFolderInput;
+  const sourceLanguage = core.getInput("source-language", { required: false }) || "en";
+  const glossaryPath = core.getInput("glossary-path", { required: false }) || "";
+  const anthropicApiKey = core.getInput("anthropic-api-key", { required: true });
+  const claudeModel = core.getInput("claude-model", { required: false }) || DEFAULT_CLAUDE_MODEL;
+  const githubToken = core.getInput("github-token", { required: true });
+  const autoMergeModeRaw = core.getInput("auto-merge-mode", { required: false }) || AUTO_MERGE_MODES[0];
+  if (!sourceRepo.includes("/")) {
+    throw new Error(`Invalid source-repo format: ${sourceRepo}. Expected format: owner/repo`);
+  }
+  if (autoMergeModeRaw === "active") {
+    throw new Error("auto-merge-mode 'active' is not implemented \u2014 the active gate ships with a later release (#103); use 'shadow'");
+  }
+  if (!AUTO_MERGE_MODES.includes(autoMergeModeRaw)) {
+    throw new Error(`Invalid auto-merge-mode: '${autoMergeModeRaw}'. Expected ${AUTO_MERGE_MODES.map((m) => `'${m}'`).join(" or ")}.`);
+  }
+  const autoMergeMode = autoMergeModeRaw;
+  validateClaudeModel(claudeModel);
+  const normalizedDocsFolder = docsFolder === "" ? "" : docsFolder.endsWith("/") ? docsFolder : `${docsFolder}/`;
+  return {
+    sourceRepo,
+    maxSuggestions,
+    docsFolder: normalizedDocsFolder,
+    sourceLanguage,
+    glossaryPath,
+    anthropicApiKey,
+    claudeModel,
+    githubToken,
+    autoMergeMode
+  };
+}
+var RESYNC_COMMAND = "\\translate-resync";
+function validatePREvent(context2, testMode) {
+  const { eventName, payload } = context2;
+  if (eventName === "issue_comment") {
+    return validateResyncComment(payload);
+  }
+  if (eventName !== "pull_request") {
+    throw new Error(`This action only works on pull_request or issue_comment events. Got: ${eventName}. For manual testing, add the 'test-translation' label to a PR instead of using workflow_dispatch.`);
+  }
+  if (testMode || payload.action === "labeled" && payload.label?.name === "test-translation") {
+    const prNumber2 = payload.pull_request?.number;
+    if (!prNumber2) {
+      throw new Error("Could not determine PR number from event payload");
+    }
+    core.info(`\u{1F9EA} Running in TEST mode for PR #${prNumber2} (using PR head commit, not merge)`);
+    return { merged: true, prNumber: prNumber2, isTestMode: true, isResync: false };
+  }
+  if (payload.action !== "closed") {
+    throw new Error(`This action only runs when PRs are closed or labeled with test-translation. Got action: ${payload.action}`);
+  }
+  const merged = payload.pull_request?.merged === true;
+  const prNumber = payload.pull_request?.number;
+  if (!merged) {
+    core.info("PR was closed but not merged. Skipping sync.");
+  }
+  if (!prNumber) {
+    throw new Error("Could not determine PR number from event payload");
+  }
+  core.info(`\u{1F680} Running in PRODUCTION mode for merged PR #${prNumber}`);
+  return { merged, prNumber, isTestMode: false, isResync: false };
+}
+var TRUSTED_ASSOCIATIONS = /* @__PURE__ */ new Set(["OWNER", "MEMBER", "COLLABORATOR"]);
+function validateResyncComment(payload) {
+  const noOp = { merged: false, prNumber: 0, isTestMode: false, isResync: false };
+  if (payload.action !== "created") {
+    core.info(`Ignoring issue_comment action: ${payload.action}. Only 'created' is supported for resync.`);
+    return noOp;
+  }
+  if (!payload.issue?.pull_request) {
+    core.info("Ignoring issue_comment on an issue (not a pull request). Resync only works on PRs.");
+    return noOp;
+  }
+  const commentBody = (payload.comment?.body || "").trim();
+  if (!commentBody.startsWith(RESYNC_COMMAND)) {
+    core.info("Ignoring issue_comment without resync command.");
+    return noOp;
+  }
+  const parts = commentBody.split(/\s+/);
+  const requestedLang = parts.length > 1 ? parts[1].toLowerCase() : void 0;
+  const supportedLanguages = new Set(getSupportedLanguages());
+  const resyncLanguage = requestedLang && supportedLanguages.has(requestedLang) ? requestedLang : void 0;
+  if (requestedLang && !resyncLanguage) {
+    core.warning(`Ignoring unsupported language '${requestedLang}' in ${RESYNC_COMMAND}. Proceeding with resync for all languages.`);
+  }
+  const association = payload.comment?.author_association || "";
+  if (!TRUSTED_ASSOCIATIONS.has(association)) {
+    core.warning(`Ignoring \\translate-resync from user with association '${association}'. Only OWNER, MEMBER, and COLLABORATOR can trigger resync.`);
+    return noOp;
+  }
+  const prNumber = payload.issue?.number;
+  if (!prNumber) {
+    throw new Error("Could not determine PR number from issue_comment payload");
+  }
+  if (resyncLanguage) {
+    core.info(`\u{1F504} RESYNC triggered by comment on PR #${prNumber} for language '${resyncLanguage}'`);
+  } else {
+    core.info(`\u{1F504} RESYNC triggered by comment on PR #${prNumber} (all languages)`);
+  }
+  return { merged: true, prNumber, isTestMode: false, isResync: true, resyncLanguage };
+}
+function validateReviewPREvent(context2) {
+  const { eventName, payload } = context2;
+  if (eventName !== "pull_request") {
+    throw new Error(`Review mode only works on pull_request events. Got: ${eventName}`);
+  }
+  const prNumber = payload.pull_request?.number;
+  if (!prNumber) {
+    throw new Error("Could not determine PR number from event payload");
+  }
+  core.info(`\u{1F4DD} Running REVIEW mode for PR #${prNumber}`);
+  return { prNumber };
+}
+
+// dist/reviewer.js
+var core3 = __toESM(require_core(), 1);
+var github = __toESM(require_github(), 1);
+
 // dist/branch-naming.js
 var SYNC_BRANCH_PREFIX = "translation-sync-";
 var RESYNC_BRANCH_PREFIX = "resync/";
@@ -35971,8 +35974,10 @@ var TranslationReviewer = class {
   maxSuggestions;
   /** Section parsing for the deterministic diff checks (#148). */
   parser;
+  // Counted at the chokepoint so retried/discarded attempts are included (#164/F53).
+  usage = { inputTokens: 0, outputTokens: 0, apiCalls: 0 };
   constructor(anthropicApiKey, githubToken, model = DEFAULT_REVIEW_MODEL, maxSuggestions = 5) {
-    this.anthropic = new Anthropic({ apiKey: anthropicApiKey });
+    this.anthropic = new Anthropic({ apiKey: anthropicApiKey, maxRetries: 0 });
     this.octokit = github.getOctokit(githubToken);
     this.model = model;
     this.maxSuggestions = maxSuggestions;
@@ -35980,6 +35985,10 @@ var TranslationReviewer = class {
   }
   sleep(ms) {
     return new Promise((resolve3) => setTimeout(resolve3, ms));
+  }
+  /** Total API usage this instance has accumulated, retries included. */
+  getUsage() {
+    return { ...this.usage };
   }
   /**
    * Call Claude API with retry logic and exponential backoff.
@@ -35996,6 +36005,9 @@ var TranslationReviewer = class {
           messages: [{ role: "user", content: prompt }]
         });
         const response = await stream.finalMessage();
+        this.usage.inputTokens += response.usage.input_tokens;
+        this.usage.outputTokens += response.usage.output_tokens;
+        this.usage.apiCalls += 1;
         if (response.stop_reason === "max_tokens") {
           throw new Error(`${operationName}: response truncated at max_tokens=${maxTokens}; verdict JSON is incomplete`);
         }
@@ -36008,7 +36020,7 @@ var TranslationReviewer = class {
         if (error3 instanceof AuthenticationError || error3 instanceof BadRequestError) {
           throw error3;
         }
-        const isApiRetryable = error3 instanceof RateLimitError || error3 instanceof APIConnectionError || error3 instanceof APIError && error3.status !== void 0 && error3.status >= 500;
+        const isApiRetryable = isRetryableAnthropicError(error3);
         const isParseFailure = error3 instanceof SyntaxError || error3 instanceof Error && error3.message.includes("No JSON object");
         if (!isApiRetryable && !isParseFailure || attempt === maxRetries) {
           if (isParseFailure) {
@@ -36920,8 +36932,11 @@ var TranslationService = class {
   client;
   model;
   debug;
+  // Counted at the chokepoint so retried/discarded attempts are included —
+  // the per-result tokensUsed fields miss them (#164/F53).
+  usage = { inputTokens: 0, outputTokens: 0, apiCalls: 0 };
   constructor(apiKey, model = DEFAULT_CLAUDE_MODEL, debug = false) {
-    this.client = new Anthropic({ apiKey });
+    this.client = new Anthropic({ apiKey, maxRetries: 0 });
     this.model = model;
     this.debug = debug;
   }
@@ -36929,6 +36944,10 @@ var TranslationService = class {
     if (this.debug) {
       core4.info(`[Translator] ${message}`);
     }
+  }
+  /** Total API usage this instance has accumulated, retries included. */
+  getUsage() {
+    return { ...this.usage };
   }
   /**
    * Sleep for a given number of milliseconds
@@ -36959,6 +36978,9 @@ var TranslationService = class {
           thinking: DEFAULT_THINKING
         });
         const message = await stream.finalMessage();
+        this.usage.inputTokens += message.usage.input_tokens;
+        this.usage.outputTokens += message.usage.output_tokens;
+        this.usage.apiCalls += 1;
         if (message.stop_reason === "max_tokens") {
           throw new Error(`${operationName}: response truncated at max_tokens=${createParams.max_tokens}; refusing to use incomplete output`);
         }
@@ -36967,7 +36989,7 @@ var TranslationService = class {
         if (error3 instanceof AuthenticationError || error3 instanceof BadRequestError) {
           throw error3;
         }
-        const isRetryable = error3 instanceof RateLimitError || error3 instanceof APIConnectionError || error3 instanceof APIError && (error3.status !== void 0 && error3.status >= 500 || error3.status === void 0 && error3.message?.includes("overloaded"));
+        const isRetryable = isRetryableAnthropicError(error3);
         if (!isRetryable || attempt === maxRetries) {
           throw error3;
         }
@@ -38377,6 +38399,10 @@ var SyncOrchestrator = class {
     this.processor = new FileProcessor(this.translator, debugMode);
     this.parser = new MystParser();
   }
+  /** API usage across every Claude call this run made, retries included (#164). */
+  getUsage() {
+    return this.translator.getUsage();
+  }
   /**
    * Process all files through the translation pipeline.
    *
@@ -38679,6 +38705,11 @@ async function runReview() {
   if (result.wouldAutoMerge !== void 0) {
     core7.setOutput("would-auto-merge", String(result.wouldAutoMerge));
   }
+  const usage = reviewer.getUsage();
+  core7.setOutput("input-tokens", String(usage.inputTokens));
+  core7.setOutput("output-tokens", String(usage.outputTokens));
+  core7.setOutput("api-calls", String(usage.apiCalls));
+  core7.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens`);
   core7.info(`\u2705 Review complete: ${result.verdict} \u2192 ${result.recommendation} (Translation: ${result.translationQuality.score}/10, Diff: ${result.diffQuality.score}/10)`);
 }
 function detectTargetLanguage() {
@@ -39107,6 +39138,11 @@ async function runSync() {
   } else {
     core7.info(`Successfully processed ${result.processedFiles.length} files`);
   }
+  const usage = orchestrator.getUsage();
+  core7.setOutput("input-tokens", String(usage.inputTokens));
+  core7.setOutput("output-tokens", String(usage.outputTokens));
+  core7.setOutput("api-calls", String(usage.apiCalls));
+  core7.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens`);
   let prUrl;
   if (result.translatedFiles.length > 0 || result.filesToDelete.length > 0) {
     try {
