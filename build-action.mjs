@@ -49,4 +49,15 @@ fs.writeFileSync(
   JSON.stringify({ type: 'commonjs' }, null, 2) + '\n'
 );
 
+// Entry shim: enable source maps BEFORE the bundle is compiled, so terminal
+// stack traces decode through index.js.map to src/ locations. It must be a
+// separate file — a node24 action's `runs:` block has no `env:` key for
+// NODE_OPTIONS, and enabling inside the bundle itself is too late because the
+// module is already compiled by the time its first line executes (measured;
+// see the 2026-07 audit boundaries record). action.yml's `main:` points here.
+fs.writeFileSync(
+  path.join(outdir, 'run.cjs'),
+  ['process.setSourceMapsEnabled(true);', "require('./index.js');", ''].join('\n')
+);
+
 console.log(`✓ Action bundled to ${outdir}/index.js (CJS, node24)`);

@@ -53,6 +53,12 @@ async function run(): Promise<void> {
       await runReview();
     }
   } catch (error) {
+    // The stack is the only pointer into a 2.9 MB bundle — without it every
+    // terminal failure reads as its message alone (#160). The run.cjs shim
+    // enables source maps, so these frames decode to src/ locations.
+    if (error instanceof Error && error.stack) {
+      core.error(error.stack);
+    }
     core.setFailed(`Action failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
@@ -292,7 +298,13 @@ async function runRebase(): Promise<void> {
       core.info(`PR #${pr.number}: ${overlapping.length} overlapping file(s) — rebasing...`);
 
       // Re-run the sync pipeline for this PR
-      await rebaseSinglePR(octokit, pr, metadata, inputs);
+      const outcome = await rebaseSinglePR(octokit, pr, metadata, inputs);
+      if (outcome === 'skipped') {
+        // Nothing was translated or pushed — a "rebased" comment here would
+        // claim work that never happened.
+        skippedCount++;
+        continue;
+      }
       rebasedCount++;
 
       // Post a comment on the rebased PR
@@ -322,13 +334,24 @@ async function runRebase(): Promise<void> {
   }
 
   const refreshedNote = inputs.rebaseStaleSiblings ? `, ${refreshedCount} refreshed` : '';
-  core.info(
-    `♻️ Rebase complete: ${rebasedCount} rebased${refreshedNote}, ${skippedCount} skipped, ${errorCount} errors.`
-  );
+  const summary = `♻️ Rebase complete: ${rebasedCount} rebased${refreshedNote}, ${skippedCount} skipped, ${errorCount} errors.`;
+  if (errorCount > 0) {
+    // A rebase run that failed PRs must fail the workflow — every error above
+    // was caught per-PR, so without this the run reports green (#160/F37).
+    core.setFailed(summary);
+  } else {
+    core.info(summary);
+  }
 }
 
 /**
  * Re-run the sync pipeline for a single translation PR and force-push the result.
+ *
+ * Returns 'rebased' only when the branch was actually reset and re-pushed;
+ * 'skipped' when there was nothing to do. Throws — before any branch reset —
+ * when translation produced errors: force-resetting first and committing only
+ * the successful files would silently drop the errored files' translations
+ * from the PR while reporting success (#160/F37).
  */
 async function rebaseSinglePR(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -337,7 +360,7 @@ async function rebaseSinglePR(
   pr: any,
   metadata: TranslationSyncMetadata,
   inputs: ReturnType<typeof getRebaseInputs>
-): Promise<void> {
+): Promise<'rebased' | 'skipped'> {
   const { owner, repo } = github.context.repo;
   const [sourceOwner, sourceRepoName] = metadata.sourceRepo.split('/');
   const sourceCommitSha = metadata.sourceCommitSha;
@@ -492,7 +515,7 @@ async function rebaseSinglePR(
 
   if (filesToSync.length === 0) {
     core.info(`PR #${pr.number}: No files to process after content fetch. Skipping.`);
-    return;
+    return 'skipped';
   }
 
   // Load glossary
@@ -580,9 +603,18 @@ async function rebaseSinglePR(
 
   const result = await orchestrator.processFiles(filesToSync, glossary, rebaseCache);
 
+  // Throw BEFORE any branch reset: committing only the successful files onto a
+  // freshly-reset branch drops the errored files' previous translations from
+  // the PR, then the caller comments "content is preserved" on it.
+  if (result.errors.length > 0) {
+    throw new Error(
+      `translation produced ${result.errors.length} error(s); branch left untouched: ${result.errors.join('; ')}`
+    );
+  }
+
   if (result.translatedFiles.length === 0 && result.filesToDelete.length === 0) {
     core.info(`PR #${pr.number}: No translated files produced. Skipping force-push.`);
-    return;
+    return 'skipped';
   }
 
   // Force-push: delete the old branch and recreate from current main
@@ -649,6 +681,7 @@ async function rebaseSinglePR(
   core.info(
     `PR #${pr.number}: Successfully rebased with ${result.translatedFiles.length} file(s).`
   );
+  return 'rebased';
 }
 
 /**
@@ -887,6 +920,8 @@ async function runSync(): Promise<void> {
         prUrl,
         result.processedFiles
       );
+      // ...and close any failure issues earlier runs opened for this PR.
+      await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, prUrl);
     }
   }
 }
@@ -1250,6 +1285,57 @@ async function postSuccessComment(
     core.info(`Posted success comment on PR #${prNumber}`);
   } catch (error) {
     core.warning(`Could not post success comment on PR #${prNumber}: ${error}`);
+  }
+}
+
+/**
+ * Close open failure issues for this PR once a sync succeeds.
+ *
+ * Close-on-recovery is the deliberate half of the issue lifecycle: every failed
+ * run opens a fresh issue (deduping at creation is check-then-act, which races
+ * under this repo's concurrency — refused in D-2026-07-16), so a recovered PR
+ * is where the pile gets cleaned up. Issues are matched by their exact
+ * deterministic title, not by label — the label is applied best-effort and may
+ * be missing.
+ */
+async function closeFailureIssues(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  octokit: any,
+  prNumber: number,
+  targetLanguage: string,
+  prUrl: string
+): Promise<void> {
+  try {
+    const title = `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
+    const openIssues = await octokit.paginate(octokit.rest.issues.listForRepo, {
+      owner: github.context.repo.owner,
+      repo: github.context.repo.repo,
+      state: 'open',
+      per_page: 100,
+    });
+    const stale = openIssues.filter(
+      (issue: { title: string; pull_request?: unknown }) =>
+        issue.title === title && !issue.pull_request
+    );
+
+    for (const issue of stale) {
+      await octokit.rest.issues.createComment({
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        issue_number: issue.number,
+        body: `✅ A later sync for PR #${prNumber} (${targetLanguage}) succeeded: ${prUrl}\n\nClosing this failure report.`,
+      });
+      await octokit.rest.issues.update({
+        owner: github.context.repo.owner,
+        repo: github.context.repo.repo,
+        issue_number: issue.number,
+        state: 'closed',
+        state_reason: 'completed',
+      });
+      core.info(`Closed recovered failure issue #${issue.number}`);
+    }
+  } catch (error) {
+    core.warning(`Could not close failure issues for PR #${prNumber}: ${error}`);
   }
 }
 

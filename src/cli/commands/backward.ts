@@ -388,7 +388,7 @@ export interface BulkProgress {
   lastUpdated: string;
   totalFiles: number;
   completedFiles: string[];
-  /** Files that errored (still counted as "done" for resume purposes) */
+  /** Files that errored — retried on --resume (#160 reversed the original skip) */
   erroredFiles: { file: string; error: string }[];
 }
 
@@ -513,13 +513,14 @@ export async function runBackwardBulk(
   let progress: BulkProgress;
   const existingProgress = resume ? readProgress(outputDir) : null;
   if (existingProgress) {
-    const doneSet = new Set([
-      ...existingProgress.completedFiles,
-      ...existingProgress.erroredFiles.map((e) => e.file),
-    ]);
+    // Only completed files count as done: errored files are retried, so a
+    // resume converges on a clean run instead of silently skipping failures
+    // (#160 reversed the original choice, which treated errors as complete).
+    const doneSet = new Set(existingProgress.completedFiles);
     const remaining = allFiles.filter((f) => !doneSet.has(f));
+    const retrying = existingProgress.erroredFiles.filter((e) => remaining.includes(e.file)).length;
     logger.info(
-      `Resuming: ${existingProgress.completedFiles.length} already done, ${remaining.length} remaining.`
+      `Resuming: ${existingProgress.completedFiles.length} already done, ${remaining.length} remaining${retrying > 0 ? ` (retrying ${retrying} errored)` : ''}.`
     );
     progress = existingProgress;
   } else {
@@ -532,10 +533,7 @@ export async function runBackwardBulk(
     };
   }
 
-  const doneSet = new Set([
-    ...progress.completedFiles,
-    ...progress.erroredFiles.map((e) => e.file),
-  ]);
+  const doneSet = new Set(progress.completedFiles);
 
   // Process files with concurrency
   const fileReports: BackwardReport[] = [];
@@ -555,6 +553,11 @@ export async function runBackwardBulk(
   }
 
   const filesToProcess = allFiles.filter((f) => !doneSet.has(f));
+
+  // Files being retried this run get a fresh verdict — drop their stale error
+  // records so the final counts reflect this run, not a double-count.
+  const retrySet = new Set(filesToProcess);
+  progress.erroredFiles = progress.erroredFiles.filter((e) => !retrySet.has(e.file));
 
   /**
    * Process a single file in the bulk pipeline.
@@ -677,7 +680,14 @@ export async function runBackwardBulk(
   bar?.stop();
 
   // Build aggregate report
-  const bulkReport = buildBulkReport(source, target, language, fileReports, options.model);
+  const bulkReport = buildBulkReport(
+    source,
+    target,
+    language,
+    fileReports,
+    options.model,
+    progress.erroredFiles
+  );
 
   // Write aggregate summary
   if (options.json) {
@@ -716,7 +726,8 @@ export function buildBulkReport(
   targetRepo: string,
   language: string,
   fileReports: BackwardReport[],
-  model?: string
+  model?: string,
+  erroredFiles: Array<{ file: string; error: string }> = []
 ): BulkBackwardReport {
   const allSuggestions = fileReports.flatMap((r) =>
     r.suggestions.filter((s) => s.recommendation === 'BACKPORT')
@@ -729,6 +740,8 @@ export function buildBulkReport(
     sourceRepo,
     targetRepo,
     language,
+    filesErrored: erroredFiles.length,
+    erroredFiles,
     filesAnalyzed: fileReports.length,
     filesInSync: fileReports.filter((r) => r.triageResult.verdict === 'IN_SYNC').length,
     filesFlagged: fileReports.filter((r) =>

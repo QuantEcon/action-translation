@@ -162,6 +162,10 @@ export interface BulkBackwardReport {
   filesInSync: number;
   filesFlagged: number;
   filesSkipped: number;
+  /** Files that errored during analysis — optional: absent on pre-#160 reports */
+  filesErrored?: number;
+  /** Per-file error detail for the errored files (added with filesErrored) */
+  erroredFiles?: Array<{ file: string; error: string }>;
   totalSuggestions: number;
   highConfidence: number; // confidence >= 0.85
   mediumConfidence: number; // confidence 0.6-0.85

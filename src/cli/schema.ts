@@ -168,6 +168,9 @@ export const BulkBackwardReportSchema = z.object({
   filesInSync: z.number().int().nonnegative(),
   filesFlagged: z.number().int().nonnegative(),
   filesSkipped: z.number().int().nonnegative(),
+  // Added by #160; optional so pre-#160 aggregate reports still parse.
+  filesErrored: z.number().int().nonnegative().optional(),
+  erroredFiles: z.array(z.object({ file: z.string(), error: z.string() })).optional(),
   totalSuggestions: z.number().int().nonnegative(),
   highConfidence: z.number().int().nonnegative(),
   mediumConfidence: z.number().int().nonnegative(),
