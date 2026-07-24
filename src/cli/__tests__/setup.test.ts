@@ -86,7 +86,9 @@ describe('generateSourceWorkflowYaml', () => {
     expect(yaml).toContain('target-repo: QuantEcon/lecture-python-intro.zh-cn');
     expect(yaml).toContain('target-language: zh-cn');
     expect(yaml).toContain('docs-folder: lectures');
-    expect(yaml).toContain('QuantEcon/action-translation@v0\n');
+    expect(yaml).toContain('QuantEcon/action-translation@v0');
+    // The floating tag, not a pinned @v0.x — the old scaffold shipped @v0.9.0.
+    expect(yaml).not.toMatch(/action-translation@v0\.\d/);
     expect(yaml).toContain('actions/checkout@v7');
     expect(yaml).toContain('mode: sync');
     expect(yaml).toContain('${{ secrets.TRANSLATION_PAT }}');
@@ -107,7 +109,7 @@ describe('generateSourceWorkflowYaml', () => {
     }
     // `./lectures/` used to emit a broken `lectures//**/*.md` — the strip
     // regex was missing its `g` flag, so only one decoration came off.
-    for (const decorated of ['lectures', 'lectures/', './lectures/', '/lectures/']) {
+    for (const decorated of ['lectures', 'lectures/', 'lectures//', './lectures/', '/lectures/']) {
       const yaml = generateSourceWorkflowYaml('Owner/repo.fa', 'fa', decorated);
       expect(yaml).toContain("'lectures/**/*.md'");
       expect(yaml).not.toContain('//');
@@ -133,7 +135,8 @@ describe('generateTargetWorkflowYaml', () => {
     expect(yaml).toContain("source-repo: 'QuantEcon/lecture-python-programming'");
     expect(yaml).toContain("source-language: 'fr'");
     expect(yaml).toContain("docs-folder: 'docs'");
-    expect(yaml).toContain('QuantEcon/action-translation@v0\n');
+    expect(yaml).toContain('QuantEcon/action-translation@v0');
+    expect(yaml).not.toMatch(/action-translation@v0\.\d/);
     expect(yaml).toContain('actions/checkout@v7');
     // Review mode has no target-language input — it detects from the repo suffix.
     expect(yaml).not.toContain('target-language');

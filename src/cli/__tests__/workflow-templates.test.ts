@@ -29,8 +29,11 @@ const STRUCTURAL_LINES = [
   'group: review-translations-${{ github.event.pull_request.number }}',
   'cancel-in-progress: true',
   'actions/checkout@v7',
-  'QuantEcon/action-translation@v0\n',
+  'QuantEcon/action-translation@v0',
 ];
+
+/** The floating tag, not a pinned @v0.x — the old scaffold shipped @v0.9.0. */
+const PINNED_TAG = /action-translation@v0\.\d/;
 
 /** Doc pages that quote the review workflow. */
 const DOC_PAGES = [
@@ -51,6 +54,10 @@ describe('the canonical review workflow template', () => {
   it('has no target-language input — review mode detects it from the repo suffix', () => {
     expect(CANONICAL).not.toContain('target-language');
   });
+
+  it('uses the floating @v0 tag, not a pinned version', () => {
+    expect(CANONICAL).not.toMatch(PINNED_TAG);
+  });
 });
 
 describe('every documented copy of the review workflow', () => {
@@ -58,6 +65,7 @@ describe('every documented copy of the review workflow', () => {
     const content = fs.readFileSync(path.join(ROOT, page), 'utf8');
     const missing = STRUCTURAL_LINES.filter((line) => !content.includes(line));
     expect(missing).toEqual([]);
+    expect(content).not.toMatch(PINNED_TAG);
   });
 
   it.each(DOC_PAGES)('%s does not re-teach the dead review target-language knob', (page) => {

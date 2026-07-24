@@ -360,6 +360,48 @@ describe('checkWorkflow', () => {
     expect(result.details?.join('\n')).toContain('review-translations.yml');
   });
 
+  test('is not fooled by an if-guard that mentions labeled without the trigger', () => {
+    const workflowDir = path.join(tmpDir, '.github', 'workflows');
+    fs.mkdirSync(workflowDir, { recursive: true });
+    // A half-fixed workflow: carries the label guard in `if:` (which mentions
+    // 'labeled') but never added `labeled` to the trigger types.
+    fs.writeFileSync(
+      path.join(workflowDir, 'review-translations.yml'),
+      [
+        'on:',
+        '  pull_request:',
+        '    types: [opened, synchronize]',
+        'jobs:',
+        '  review:',
+        '    if: >',
+        "      contains(github.event.pull_request.labels.*.name, 'action-translation') &&",
+        "      (github.event.action != 'labeled' || github.event.label.name == 'action-translation')",
+        '    steps:',
+        '      - uses: QuantEcon/action-translation@v0',
+        '        with:',
+        '          mode: review',
+      ].join('\n'),
+      'utf-8'
+    );
+
+    const result = checkWorkflow(tmpDir);
+    expect(result.status).toBe('warn');
+    expect(result.message).toContain('cannot fire');
+  });
+
+  test('accepts the dash-list trigger form', () => {
+    const workflowDir = path.join(tmpDir, '.github', 'workflows');
+    fs.mkdirSync(workflowDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(workflowDir, 'review-translations.yml'),
+      'on:\n  pull_request:\n    types:\n      - opened\n      - labeled\nuses: QuantEcon/action-translation@v0\nmode: review\n',
+      'utf-8'
+    );
+
+    const result = checkWorkflow(tmpDir);
+    expect(result.status).toBe('pass');
+  });
+
   test('passes a review workflow with the labeled trigger', () => {
     const workflowDir = path.join(tmpDir, '.github', 'workflows');
     fs.mkdirSync(workflowDir, { recursive: true });

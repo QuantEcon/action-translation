@@ -320,7 +320,12 @@ export function checkWorkflow(targetPath: string): CheckResult {
   // behind six PRs of real translated content merging unreviewed in v0.21.0).
   const unfireable = translationWorkflows.filter((f) => {
     const content = fs.readFileSync(path.join(workflowDir, f), 'utf-8');
-    return content.includes('mode: review') && !content.includes('labeled');
+    if (!content.includes('mode: review')) return false;
+    // `labeled` must appear in a trigger `types:` list (inline or dash form) —
+    // an `if:` guard mentioning 'labeled' does not make the workflow fireable.
+    const triggerHasLabeled =
+      /types:\s*\[[^\]]*\blabeled\b[^\]]*\]/.test(content) || /^\s*-\s*labeled\b/m.test(content);
+    return !triggerHasLabeled;
   });
   if (unfireable.length > 0) {
     return {
