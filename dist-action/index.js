@@ -38595,6 +38595,9 @@ async function run() {
       await runReview();
     }
   } catch (error3) {
+    if (error3 instanceof Error && error3.stack) {
+      core7.error(error3.stack);
+    }
     core7.setFailed(`Action failed: ${error3 instanceof Error ? error3.message : String(error3)}`);
   }
 }
@@ -38719,7 +38722,11 @@ No content was changed \u2014 this PR's branch is simply still behind \`main\`. 
         continue;
       }
       core7.info(`PR #${pr.number}: ${overlapping.length} overlapping file(s) \u2014 rebasing...`);
-      await rebaseSinglePR(octokit, pr, metadata, inputs);
+      const outcome = await rebaseSinglePR(octokit, pr, metadata, inputs);
+      if (outcome === "skipped") {
+        skippedCount++;
+        continue;
+      }
       rebasedCount++;
       await octokit.rest.issues.createComment({
         owner,
@@ -38752,7 +38759,12 @@ You may need to manually resolve conflicts or run \`/translate-resync\` on the s
     }
   }
   const refreshedNote = inputs.rebaseStaleSiblings ? `, ${refreshedCount} refreshed` : "";
-  core7.info(`\u267B\uFE0F Rebase complete: ${rebasedCount} rebased${refreshedNote}, ${skippedCount} skipped, ${errorCount} errors.`);
+  const summary = `\u267B\uFE0F Rebase complete: ${rebasedCount} rebased${refreshedNote}, ${skippedCount} skipped, ${errorCount} errors.`;
+  if (errorCount > 0) {
+    core7.setFailed(summary);
+  } else {
+    core7.info(summary);
+  }
 }
 async function rebaseSinglePR(octokit, pr, metadata, inputs) {
   const { owner, repo } = github2.context.repo;
@@ -38868,7 +38880,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
   }
   if (filesToSync.length === 0) {
     core7.info(`PR #${pr.number}: No files to process after content fetch. Skipping.`);
-    return;
+    return "skipped";
   }
   const builtInGlossaryDir = path5.join(__dirname2, "..", "glossary");
   const glossary = await loadGlossary(metadata.targetLanguage, builtInGlossaryDir, inputs.glossaryPath || void 0, coreLogger);
@@ -38909,9 +38921,12 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
     debugMode: true
   }, coreLogger, stateConfig);
   const result = await orchestrator.processFiles(filesToSync, glossary, rebaseCache);
+  if (result.errors.length > 0) {
+    throw new Error(`translation produced ${result.errors.length} error(s); branch left untouched: ${result.errors.join("; ")}`);
+  }
   if (result.translatedFiles.length === 0 && result.filesToDelete.length === 0) {
     core7.info(`PR #${pr.number}: No translated files produced. Skipping force-push.`);
-    return;
+    return "skipped";
   }
   const branchName = pr.head.ref;
   const branchRef = `heads/${branchName}`;
@@ -38962,6 +38977,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
     }
   }
   core7.info(`PR #${pr.number}: Successfully rebased with ${result.translatedFiles.length} file(s).`);
+  return "rebased";
 }
 async function runSync() {
   core7.info("Getting action inputs...");
@@ -39083,6 +39099,7 @@ async function runSync() {
       await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, result.errors);
     } else if (prUrl) {
       await postSuccessComment(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, prUrl, result.processedFiles);
+      await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, prUrl);
     }
   }
 }
@@ -39302,6 +39319,38 @@ async function postSuccessComment(octokit, prNumber, targetLanguage, targetRepo,
     core7.info(`Posted success comment on PR #${prNumber}`);
   } catch (error3) {
     core7.warning(`Could not post success comment on PR #${prNumber}: ${error3}`);
+  }
+}
+async function closeFailureIssues(octokit, prNumber, targetLanguage, prUrl) {
+  try {
+    const title = `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
+    const openIssues = await octokit.paginate(octokit.rest.issues.listForRepo, {
+      owner: github2.context.repo.owner,
+      repo: github2.context.repo.repo,
+      state: "open",
+      per_page: 100
+    });
+    const stale = openIssues.filter((issue) => issue.title === title && !issue.pull_request);
+    for (const issue of stale) {
+      await octokit.rest.issues.createComment({
+        owner: github2.context.repo.owner,
+        repo: github2.context.repo.repo,
+        issue_number: issue.number,
+        body: `\u2705 A later sync for PR #${prNumber} (${targetLanguage}) succeeded: ${prUrl}
+
+Closing this failure report.`
+      });
+      await octokit.rest.issues.update({
+        owner: github2.context.repo.owner,
+        repo: github2.context.repo.repo,
+        issue_number: issue.number,
+        state: "closed",
+        state_reason: "completed"
+      });
+      core7.info(`Closed recovered failure issue #${issue.number}`);
+    }
+  } catch (error3) {
+    core7.warning(`Could not close failure issues for PR #${prNumber}: ${error3}`);
   }
 }
 async function createFailureIssue(octokit, prNumber, targetLanguage, targetRepo, errors) {

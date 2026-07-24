@@ -113,4 +113,6 @@ outputs:
 
 runs:
   using: 'node24'
-  main: 'dist-action/index.js'
+  # run.cjs enables source maps before loading index.js — a `runs:` block has
+  # no `env:` key, so NODE_OPTIONS cannot do it (#160/F29).
+  main: 'dist-action/run.cjs'

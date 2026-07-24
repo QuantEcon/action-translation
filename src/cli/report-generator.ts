@@ -227,6 +227,9 @@ export function generateBulkMarkdownReport(report: BulkBackwardReport): string {
   lines.push(`| Files in sync | ${report.filesInSync} |`);
   lines.push(`| Files with suggestions | ${report.filesFlagged} |`);
   lines.push(`| Files skipped (too large) | ${report.filesSkipped} |`);
+  if (report.filesErrored) {
+    lines.push(`| Files errored | ${report.filesErrored} |`);
+  }
   lines.push(`| Total suggestions | ${report.totalSuggestions} |`);
   lines.push(`| High confidence (≥0.85) | ${report.highConfidence} |`);
   lines.push(`| Medium confidence (0.6-0.85) | ${report.mediumConfidence} |`);

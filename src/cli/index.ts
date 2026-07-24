@@ -13,6 +13,7 @@
 
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import chalk from 'chalk';
 import { Command } from 'commander';
 import { runBackwardSingleFile, runBackwardBulk } from './commands/backward.js';
 import {
@@ -65,6 +66,19 @@ program
   .name('translate')
   .description('Translate and sync documentation between source and target repositories')
   .version(version);
+
+/**
+ * Terminal failure: print the message, then the stack the catch sites used to
+ * discard (#160/F29 — without it a crash in a bulk run reads as one message
+ * with no pointer into the code), and exit non-zero.
+ */
+function fail(error: unknown): never {
+  console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
+  if (error instanceof Error && error.stack) {
+    console.error(chalk.dim(error.stack));
+  }
+  process.exit(1);
+}
 
 /**
  * Validate --min-confidence value: must be a number in [0, 1].
@@ -185,16 +199,22 @@ program
           console.log('\n✅ No backport suggestions found.');
         }
       } catch (error) {
-        console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
-        process.exit(1);
+        fail(error);
       }
     } else {
       // Bulk mode
       try {
-        await runBackwardBulk(options, undefined, opts.exclude, opts.resume);
+        const report = await runBackwardBulk(options, undefined, opts.exclude, opts.resume);
+        // A run with errored files must not exit 0 — that reads as "analysis
+        // complete" when part of the corpus was never analyzed (#160/F39).
+        if ((report.filesErrored ?? 0) > 0) {
+          console.error(
+            `\n❌ ${report.filesErrored} file(s) failed — rerun with --resume to retry them.`
+          );
+          process.exit(1);
+        }
       } catch (error) {
-        console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
-        process.exit(1);
+        fail(error);
       }
     }
   });
@@ -259,8 +279,7 @@ program
         console.log(`\n📁 .translate/ metadata written to ${opts.target}`);
       }
     } catch (error) {
-      console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
-      process.exit(1);
+      fail(error);
     }
   });
 
@@ -289,8 +308,7 @@ program
     try {
       await runReview(options);
     } catch (error) {
-      console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
-      process.exit(1);
+      fail(error);
     }
   });
 
@@ -374,13 +392,22 @@ program
             `\n  ${opts.file}: ${summary.resynced} resynced, ${summary.new} new, ${summary.removed} removed, ${summary.unchanged} unchanged${summary.errors > 0 ? `, ${summary.errors} errors` : ''}`
           );
         }
+        if (summary.errors > 0) {
+          process.exit(1);
+        }
       } else {
         // Bulk mode
-        await runForwardBulk(options, undefined, opts.exclude);
+        const results = await runForwardBulk(options, undefined, opts.exclude);
+        // Errored files include failed pushes and PR creations — a wave where
+        // every PR failed used to exit 0 (#160/F66).
+        const errored = results.filter((r) => r.summary.errors > 0).length;
+        if (errored > 0) {
+          console.error(`\n❌ ${errored} file(s) failed — see the summary above.`);
+          process.exit(1);
+        }
       }
     } catch (error) {
-      console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
-      process.exit(1);
+      fail(error);
     }
   });
 
@@ -458,8 +485,7 @@ program
         process.exit(1);
       }
     } catch (error) {
-      console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
-      process.exit(1);
+      fail(error);
     }
   });
 
@@ -496,8 +522,7 @@ program
         process.exit(1);
       }
     } catch (error) {
-      console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
-      process.exit(1);
+      fail(error);
     }
   });
 
@@ -542,8 +567,7 @@ program
         console.log(formatHeadingmapTable(result, opts.dryRun));
       }
     } catch (error) {
-      console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
-      process.exit(1);
+      fail(error);
     }
   });
 
@@ -590,8 +614,7 @@ program
         process.exit(1);
       }
     } catch (error) {
-      console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
-      process.exit(1);
+      fail(error);
     }
   });
 
