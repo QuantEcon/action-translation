@@ -38,8 +38,6 @@ describe('the label sets are coherent', () => {
 });
 
 describe('no source file re-spells a contract literal', () => {
-  const SOURCE_DIRS = ['src', path.join('src', 'cli'), path.join('src', 'cli', 'commands')];
-
   // The npm package name shares bytes with the trigger label but is a
   // different concept — `pkg.name === 'action-translation'` in these files is
   // not the label contract and must not be forced through the constant.
@@ -50,21 +48,31 @@ describe('no source file re-spells a contract literal', () => {
   const stripComments = (source: string): string =>
     source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
 
+  /** Every production source file under src/, recursively — tests excluded. */
+  function sourceFiles(dir: string): string[] {
+    const results: string[] = [];
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== '__tests__') results.push(...sourceFiles(full));
+      } else if (/\.tsx?$/.test(entry.name) && !/\.(test|d)\.ts$/.test(entry.name)) {
+        results.push(full);
+      }
+    }
+    return results;
+  }
+
   it('keeps the label literals confined to contracts.ts', () => {
     const offenders: string[] = [];
 
-    for (const dir of SOURCE_DIRS) {
-      const abs = path.join(ROOT, dir);
-      for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
-        if (!entry.isFile() || !entry.name.endsWith('.ts')) continue;
-        if (entry.name === 'contracts.ts') continue;
-        if (PACKAGE_NAME_FILES.has(entry.name)) continue;
+    for (const file of sourceFiles(path.join(ROOT, 'src'))) {
+      const name = path.basename(file);
+      if (name === 'contracts.ts' || PACKAGE_NAME_FILES.has(name)) continue;
 
-        const code = stripComments(fs.readFileSync(path.join(abs, entry.name), 'utf8'));
-        for (const literal of CONFINED) {
-          if (code.includes(`'${literal}'`) || code.includes(`"${literal}"`)) {
-            offenders.push(`${dir}/${entry.name} re-spells '${literal}'`);
-          }
+      const code = stripComments(fs.readFileSync(file, 'utf8'));
+      for (const literal of CONFINED) {
+        if (code.includes(`'${literal}'`) || code.includes(`"${literal}"`)) {
+          offenders.push(`${path.relative(ROOT, file)} re-spells '${literal}'`);
         }
       }
     }

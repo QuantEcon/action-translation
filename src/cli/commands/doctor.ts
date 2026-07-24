@@ -344,10 +344,12 @@ export function checkWorkflow(targetPath: string): CheckResult {
   }
 
   // A version-pinned action (`@v0.9.0`-style) goes stale silently — the
-  // floating `@v0` is the supported pin, moved on every release.
+  // floating `@v0` is the supported pin, moved on every release. Built from
+  // the constant so the slug cannot drift from the contract's spelling.
+  const pinnedPattern = new RegExp(`${REVIEW_TRIGGER_LABEL}@v\\d+\\.\\d`);
   const pinned = translationWorkflows.filter((f) => {
     const content = fs.readFileSync(path.join(workflowDir, f), 'utf-8');
-    return /action-translation@v\d+\.\d/.test(content);
+    return pinnedPattern.test(content);
   });
   if (pinned.length > 0) {
     return {
