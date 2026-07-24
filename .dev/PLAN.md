@@ -125,7 +125,11 @@ the gate. See ARCHITECTURE.md R1 for the longer-term parser direction (mystmd AS
       interpolated string (`src/file-processor.ts:387`) — headings containing `$1`/`$&` corrupt;
       use a function replacer
 - [ ] **[L]** Prompt rule-numbering collisions when custom instructions are appended
-      (`src/translator.ts:395, 408-412, 459, 472-480`) — number rules programmatically
+      (`src/translator.ts:395, 408-412, 459, 472-480`) — number rules programmatically.
+      *2026-07-24 (#163): those line refs are stale, and the live defect was the hand-counted
+      `additionalRules` offsets, fixed with a rendered-prompt drift test
+      (`translator-prompts.test.ts`); what remains here is only the programmatic-numbering
+      refactor, and custom instructions are appended unnumbered today.*
 
 **Done when**: round-trip test green over all fixtures incl. new code-cell-with-`##` and
 anchor-before-heading fixtures; #65 closed; a deliberately truncated/malformed model response

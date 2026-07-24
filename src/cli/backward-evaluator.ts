@@ -15,7 +15,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import { MAX_TOKENS, DEFAULT_THINKING } from '../models.js';
+import { MAX_TOKENS, DEFAULT_THINKING, TruncatedResponseError } from '../models.js';
 import {
   APIError,
   AuthenticationError,
@@ -628,11 +628,9 @@ export async function evaluateFile(
         messages: [{ role: 'user', content: prompt }],
       });
       if (response.stop_reason === 'max_tokens') {
-        // Truncated output must not be interpreted: a cut-off analysis JSON
-        // otherwise falls through the parsers and reads as a clean verdict.
-        throw new Error(
-          `Response truncated at max_tokens=${MAX_TOKENS.analysis}; refusing to interpret incomplete output`
-        );
+        // Truncated output must not be interpreted — and the typed error is
+        // retryable, so one truncation no longer discards the paid analysis.
+        throw new TruncatedResponseError(MAX_TOKENS.analysis);
       }
 
       const responseText = response.content
@@ -650,6 +648,7 @@ export async function evaluateFile(
       const isRetryable =
         error instanceof RateLimitError ||
         error instanceof APIConnectionError ||
+        error instanceof TruncatedResponseError ||
         (error instanceof APIError && error.status !== undefined && error.status >= 500);
 
       if (!isRetryable || attempt === maxRetries) {

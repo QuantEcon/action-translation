@@ -96,6 +96,30 @@ export type CriterionScores = Record<(typeof REVIEW_CRITERIA)[number]['key'], nu
  * finite numbers; numeric strings ("9") are coerced as a mercy since the
  * model occasionally quotes values. Exported for testing.
  */
+
+/**
+ * The PASS/WARN/FAIL rule, extracted pure (#163/F70) so the thresholds — and
+ * the interaction where syntax errors hold a high-scoring review at WARN —
+ * are testable outside reviewPR. The caller keeps its own rounding for the
+ * published result field.
+ */
+export function computeVerdict(
+  translationScore: number,
+  diffScore: number,
+  syntaxErrors: string[]
+): { overallScore: number; verdict: 'PASS' | 'WARN' | 'FAIL' } {
+  const overallScore = translationScore * 0.7 + diffScore * 0.3;
+  let verdict: 'PASS' | 'WARN' | 'FAIL';
+  if (overallScore >= 8 && syntaxErrors.length === 0) {
+    verdict = 'PASS';
+  } else if (overallScore >= 6) {
+    verdict = 'WARN';
+  } else {
+    verdict = 'FAIL';
+  }
+  return { overallScore, verdict };
+}
+
 export function validateCriterionScores(result: Record<string, unknown>): {
   valid: boolean;
   missing: string[];
@@ -808,6 +832,16 @@ export class TranslationReviewer {
       changedSections.push(...detectedChanges);
     }
 
+    // A review against no source is a comparison against nothing — refuse
+    // BEFORE paying for two model calls (#163/F40). The verdict-stage
+    // sourceContentMissing gate routed this case to `editor`, but only after
+    // both evaluations ran and a "✅ PASS" header could still top the comment.
+    if (sourceEnglish.trim() === '') {
+      throw new Error(
+        `Review aborted: no source content could be fetched for ${filenames.join(', ')} — nothing to review against`
+      );
+    }
+
     // Evaluate translation quality
     const translationQuality = await this.evaluateTranslation(
       sourceEnglish,
@@ -890,15 +924,11 @@ export class TranslationReviewer {
     };
 
     // Calculate overall score and verdict
-    const overallScore = translationQuality.score * 0.7 + diffScore * 0.3;
-    let verdict: 'PASS' | 'WARN' | 'FAIL';
-    if (overallScore >= 8 && translationQuality.syntaxErrors.length === 0) {
-      verdict = 'PASS';
-    } else if (overallScore >= 6) {
-      verdict = 'WARN';
-    } else {
-      verdict = 'FAIL';
-    }
+    const { overallScore, verdict } = computeVerdict(
+      translationQuality.score,
+      diffScore,
+      translationQuality.syntaxErrors
+    );
 
     // Verdict v2 (#103, #66): unify every issue class into one findings array,
     // then compute the categorical routing recommendation.
@@ -1256,7 +1286,12 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
       findings,
       findingsMalformed: malformed,
       issues: findings.map(findingToDisplayString),
-      strengths: result.strengths || [],
+      // The one array read the syntaxErrors guard above didn't cover: a model
+      // answering `"strengths": "clear"` crashed the comment builder after
+      // both review calls were paid for (#163/F81).
+      strengths: Array.isArray(result.strengths)
+        ? result.strengths.map((s: unknown) => String(s))
+        : [],
       summary: result.summary || '',
     };
   }

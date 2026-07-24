@@ -12,10 +12,12 @@ import {
   buildPRTitle,
   buildGhArgs,
   buildForwardPRBody,
+  buildForwardSyncMetadata,
   createForwardPR,
   gitPrepareAndPush,
   parseGitHubRepo,
   detectSourceRepo,
+  ForwardResyncInfo,
   GhRunner,
   GitRunner,
 } from '../forward-pr-creator.js';
@@ -639,5 +641,49 @@ describe('detectSourceRepo', () => {
       status: 0,
     });
     expect(detectSourceRepo('/some/path', runner)).toBeUndefined();
+  });
+});
+
+// ============================================================================
+// buildForwardSyncMetadata (#163 — F93)
+// ============================================================================
+
+describe('buildForwardSyncMetadata', () => {
+  const INFO: ForwardResyncInfo = {
+    sourceCommitSha: 'abc1234',
+    targetBaseSha: 'def5678',
+    sourceLanguage: 'en',
+    targetLanguage: 'zh-cn',
+    model: 'test-model',
+  };
+
+  it("emits the canonical single-slash path for the Action's own `lectures/` form", () => {
+    // Template concatenation emitted `lectures//pv.md`, which never matched
+    // the merged PR's `lectures/pv.md` in rebase's exact-path overlap check —
+    // so a genuinely conflicting PR was silently left unrebased.
+    const withSlash = buildForwardSyncMetadata('pv.md', 'Owner/repo', 'lectures/', INFO);
+    const withoutSlash = buildForwardSyncMetadata('pv.md', 'Owner/repo', 'lectures', INFO);
+
+    expect(withSlash.files[0].path).toBe('lectures/pv.md');
+    expect(withSlash.files[0].path).toBe(withoutSlash.files[0].path);
+  });
+
+  it('treats root-level docs folders as no prefix', () => {
+    for (const root of [undefined, '.', '/']) {
+      expect(buildForwardSyncMetadata('pv.md', 'Owner/repo', root, INFO).files[0].path).toBe(
+        'pv.md'
+      );
+    }
+  });
+
+  it('carries the state file alongside the content file', () => {
+    const metadata = buildForwardSyncMetadata('pv.md', 'Owner/repo', 'lectures', {
+      ...INFO,
+      statePath: '.translate/state/pv.md.yml',
+    });
+    expect(metadata.files.map((f) => f.path)).toEqual([
+      'lectures/pv.md',
+      '.translate/state/pv.md.yml',
+    ]);
   });
 });

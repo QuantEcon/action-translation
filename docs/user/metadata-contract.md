@@ -49,7 +49,7 @@ Embedded at the end of every sync and resync PR body:
 | `targetBaseSha` | string | Target branch SHA the PR was based on |
 | `sourceLanguage` / `targetLanguage` | string | Language codes |
 | `claudeModel` | string | Model used for the translation |
-| `files[]` | array | Files the PR touches; `type` is one of `markdown`, `renamed`, `removed`, `toc`; renames carry `previousPath` |
+| `files[]` | array | Files the PR touches; `type` is one of `markdown`, `renamed`, `removed`, `toc`; renames carry `previousPath`. `path` is repo-relative in canonical single-slash form (`lectures/aiyagari.md` — never `lectures//aiyagari.md`); rebase mode matches these paths byte-for-byte against the merged PR's file list, so a doubled separator silently defeats the overlap check ([#163](https://github.com/QuantEcon/action-translation/issues/163)) |
 
 Internal consumers: rebase mode reconstructs pipeline inputs from it, and review mode uses it to review resync PRs (which have no source PR reference). External consumers group sync PRs by `sourcePR`/`sourceRepo` and language.
 

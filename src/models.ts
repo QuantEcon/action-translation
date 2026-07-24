@@ -86,3 +86,17 @@ export const VALID_MODEL_PATTERNS: RegExp[] = [
   /^claude-3-sonnet-\d{8}$/, // claude-3-sonnet-20240229
   /^claude-3-haiku-\d{8}$/, // claude-3-haiku-20240307
 ];
+
+/**
+ * Model output hit the max_tokens cap and must not be interpreted — a cut-off
+ * analysis JSON otherwise falls through the parsers and reads as a clean
+ * verdict. Typed so retry loops can treat truncation as retryable (#163/F87):
+ * it used to throw as a bare Error, which failed the isRetryable predicate and
+ * discarded a whole file's paid analysis on the first occurrence.
+ */
+export class TruncatedResponseError extends Error {
+  constructor(maxTokens: number) {
+    super(`Response truncated at max_tokens=${maxTokens}; refusing to interpret incomplete output`);
+    this.name = 'TruncatedResponseError';
+  }
+}

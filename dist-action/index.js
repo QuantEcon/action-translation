@@ -35768,6 +35768,18 @@ var REVIEW_CRITERIA = [
   { key: "terminology", weight: 0.25 },
   { key: "formatting", weight: 0.15 }
 ];
+function computeVerdict(translationScore, diffScore, syntaxErrors) {
+  const overallScore = translationScore * 0.7 + diffScore * 0.3;
+  let verdict;
+  if (overallScore >= 8 && syntaxErrors.length === 0) {
+    verdict = "PASS";
+  } else if (overallScore >= 6) {
+    verdict = "WARN";
+  } else {
+    verdict = "FAIL";
+  }
+  return { overallScore, verdict };
+}
 function validateCriterionScores(result) {
   const scores = {};
   const missing = [];
@@ -36217,6 +36229,9 @@ var TranslationReviewer = class {
       const detectedChanges = identifyChangedSections(sourceBefore, sourceEnglish, targetBefore, targetTranslation);
       changedSections.push(...detectedChanges);
     }
+    if (sourceEnglish.trim() === "") {
+      throw new Error(`Review aborted: no source content could be fetched for ${filenames.join(", ")} \u2014 nothing to review against`);
+    }
     const translationQuality = await this.evaluateTranslation(sourceEnglish, targetTranslation, changedSections, filenames, glossaryTerms, targetLanguage);
     const diffQuality = await this.evaluateDiff(resyncMetadata ? sourceEnglish : sourceBefore, sourceEnglish, targetBefore, targetTranslation, markdownFiles.map((f) => ({
       filename: f.filename,
@@ -36253,15 +36268,7 @@ var TranslationReviewer = class {
       ...diffChecks,
       score: diffScore
     };
-    const overallScore = translationQuality.score * 0.7 + diffScore * 0.3;
-    let verdict;
-    if (overallScore >= 8 && translationQuality.syntaxErrors.length === 0) {
-      verdict = "PASS";
-    } else if (overallScore >= 6) {
-      verdict = "WARN";
-    } else {
-      verdict = "FAIL";
-    }
+    const { overallScore, verdict } = computeVerdict(translationQuality.score, diffScore, translationQuality.syntaxErrors);
     const soleFile = filenames.length === 1 ? filenames[0] : null;
     const syntaxFindings = translationQuality.syntaxErrors.map((e) => ({
       severity: "blocker",
@@ -36531,7 +36538,10 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
       findings,
       findingsMalformed: malformed,
       issues: findings.map(findingToDisplayString),
-      strengths: result.strengths || [],
+      // The one array read the syntaxErrors guard above didn't cover: a model
+      // answering `"strengths": "clear"` crashed the comment builder after
+      // both review calls were paid for (#163/F81).
+      strengths: Array.isArray(result.strengths) ? result.strengths.map((s) => String(s)) : [],
       summary: result.summary || ""
     };
   }
@@ -37121,7 +37131,7 @@ Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing t
     }
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
     const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join("\n") : "";
+    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
     const prompt = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
 
 RULES:
@@ -37175,7 +37185,7 @@ Provide ONLY the ${targetLanguage} translation. Do not include any markers, expl
     const { content, sourceLanguage, targetLanguage, glossary } = request2;
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
     const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join("\n") : "";
+    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${10 + i}. ${rule}`).join("\n") : "";
     const prompt = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
 
 RULES:
@@ -38295,7 +38305,7 @@ async function readGlossaryFile(file) {
   return glossary;
 }
 function formatGlossaryTerms(glossary, targetLanguage) {
-  return glossary.terms.map((t) => `- "${t.en}" \u2192 "${t[targetLanguage] || ""}"${t.context ? ` (${t.context})` : ""}`).join("\n");
+  return glossary.terms.filter((t) => typeof t[targetLanguage] === "string" && t[targetLanguage] !== "").map((t) => `- "${t.en}" \u2192 "${t[targetLanguage]}"${t.context ? ` (${t.context})` : ""}`).join("\n");
 }
 function classifyChangedFiles(files, docsFolder) {
   const prefix = docsFolder;
