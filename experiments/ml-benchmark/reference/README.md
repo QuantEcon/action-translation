@@ -1,15 +1,15 @@
-# Reference translation (pending)
+# Reference translation
 
-This directory will hold Adisankar Manoj Thanuja's hand-crafted Malayalam
-translation of `getting_started.md` (source lecture:
-`lecture-python-programming`). It is the style ground truth for the ml
-benchmark (see `../PLAN.md`, issue #189).
+`getting_started.md` is Adisankar Manoj Thanuja's hand-crafted Malayalam
+translation of the `lecture-python-programming` lecture of the same name. It
+is the style ground truth for the ml benchmark (see `../PLAN.md`, issue #189).
 
-**Not yet committed** — the copy circulated by chat arrived with encoding
-damage (UTF-8 read as Latin-1, some bytes unrecoverable). The file must be
-committed from Adisankar's original, not reconstructed.
+**Provenance**: fetched byte-exact (GitHub contents API, base64) from
+[adisankarmt/quantecon-malayalam](https://github.com/adisankarmt/quantecon-malayalam)
+at commit `c30578f` (2026-07-10). Verified on commit: 6706 Malayalam
+codepoints, 10 ZWJ/ZWNJ preserved, 34342 bytes, no mojibake markers.
 
-## Verification before committing
+## Verification procedure (re-run after any update)
 
 Malayalam text depends on invisible characters (ZWJ/ZWNJ in chillu and
 conjunct formations) that copy-paste chains silently strip. After placing the
