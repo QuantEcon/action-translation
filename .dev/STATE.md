@@ -12,9 +12,11 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   C (#160, failure reporting), D (#161, canonical review-workflow template) and E (#162,
   contracts owner module + label bootstrap), F (#163, cheap correctness) and G (#164,
   retry predicate + cost outputs) and H (#165, fail-closed everything) **merged**;
-  I (#166, ~900 LOC dead code deleted) **merged**; J (#167, dead toc-file input deleted,
-  language-support docs corrected + drift guard) open. K (#168) remains. Boundaries the
-  wave must respect:
+  I (#166, ~900 LOC dead code) and J (#167, dead toc-file input) **merged**;
+  K (#168, docs truth + one module map + 2.1 MB off the bundle) open — the wave's last PR.
+  Next after merge: tidy-up pass + a work plan for Monday 2026-07-27 resuming into Phase 2
+  (round-trip reformulation first, per the boundaries record). Boundaries the wave must
+  respect:
   [`D-2026-07-24-tech-debt-audit-boundaries.md`](decisions/D-2026-07-24-tech-debt-audit-boundaries.md).
 - **PR #71** — Malayalam (`ml`) draft; awaiting native-reviewer calibration batch.
   Glossary PR **#69** (ja) open, awaiting native review + a `LANGUAGE_CONFIGS` entry.

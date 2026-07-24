@@ -115,6 +115,12 @@ npx translate backward -s <source-path> -t <target-path> [options]
 | `--min-confidence <n>` | `0.6` | Minimum confidence threshold for reporting |
 | `--exclude <pattern>` | *(none)* | Exclude files matching pattern |
 | `--resume` | `false` | Resume a previous bulk run from checkpoint |
+| `--source-language <code>` | *(config, then `en`)* | Source language code |
+| `-j, --parallel <n>` | `5` | Concurrent analyses in bulk mode (clamped to 1–10) |
+
+Bulk mode issues up to 5 concurrent Anthropic calls by default — `--parallel` is the
+concurrency (and cost-burst) control, clamped to `[1, 10]`. `--source-language` deliberately
+has no CLI default here: it resolves flag → `.translate/config.yml` `source-language` → `en`.
 
 **Single-file example:**
 
@@ -237,6 +243,12 @@ npx translate forward -s <source-path> -t <target-path> [options]
 | `--github <owner/repo>` | *(none)* | Create one PR per file in the target repo |
 | `--glossary <path>` | *(auto)* | Path to glossary JSON file (default: built-in glossary for the language) |
 | `--exclude <pattern>` | *(none)* | Exclude files matching pattern |
+| `--source-language <code>` | *(config, then `en`)* | Source language code |
+| `-j, --parallel <n>` | `5` | Concurrent resyncs in bulk mode (clamped to 1–10; forced to 1 with `--github`) |
+
+Bulk mode issues up to 5 concurrent Anthropic calls by default (`--parallel`, clamped to
+`[1, 10]`); with `--github` it runs sequentially, because parallel git operations in one
+worktree would race. `--source-language` resolves flag → `.translate/config.yml` → `en`.
 
 **Single-file example:**
 
@@ -370,7 +382,7 @@ Source:   /Users/you/repos/lecture-python-intro
 Target:   /Users/you/repos/lecture-python-intro.zh-cn
 Language: en → zh-cn
 Model:    claude-sonnet-5
-Glossary: 181 terms
+✓ Loaded built-in glossary for zh-cn — 357 terms (/path/to/action-translation/glossary/zh-cn.json)
 
 Found 51 lectures in _toc.yml
 
@@ -586,6 +598,7 @@ npx translate setup --source <owner/repo> --target-language <code> [options]
 | `--source-language <code>` | `en` | Source language code |
 | `-d, --docs-folder <folder>` | `lectures` | Documentation folder within repos |
 | `--visibility <type>` | `public` | Repository visibility (`public` or `private`) |
+| `--source-workflow <path>` | *(none)* | Also write the source repo's sync workflow to this file path |
 | `--dry-run` | `false` | Preview what would be created |
 
 **What it does:**

@@ -12,9 +12,10 @@ The glossary system ensures consistent translation of technical terminology acro
 |----------|------|-------|--------------|
 | Chinese (Simplified) | `glossary/zh-cn.json` | 357 | October 2025 |
 | Farsi | `glossary/fa.json` | 357 | December 2025 |
-| French | `glossary/fr.json` | 357 | June 2026 (draft) |
+| French | `glossary/fr.json` | 364 | July 2026 |
+| Malayalam | `glossary/ml.json` | 52 | July 2026 (draft) |
 
-These glossaries are bundled with the action and loaded automatically when the `target-language` matches. No configuration needed.
+These glossaries ship in the action repository (resolved from the checked-out repo at runtime — they are not baked into the bundle) and load automatically when the `target-language` matches. No configuration needed.
 
 > The French glossary is an initial draft pending native-speaker review.
 
@@ -38,7 +39,6 @@ Each glossary is a JSON file with this structure:
 
 ```json
 {
-  "language": "zh-cn",
   "version": "1.0",
   "description": "Technical terms for quantitative economics",
   "terms": [

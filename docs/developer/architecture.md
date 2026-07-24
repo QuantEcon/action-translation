@@ -4,7 +4,7 @@ title: Architecture
 
 # Architecture
 
-**Last Updated**: 15 July 2026 — v0.16.0  
+**Last Updated**: 24 July 2026 — v0.23.0  
 
 This document covers the complete system architecture: design philosophy, operational modes, module structure, data flow, and key design decisions.
 
@@ -105,8 +105,15 @@ src/
 ├── file-processor.ts    # Document reconstruction + subsection handling
 ├── heading-map.ts       # Heading-map extract/update/inject
 ├── language-config.ts   # Language-specific translation rules (prompt-side)
-├── typography.ts        # Language typography applied in code, not via the prompt (CLI init path)
-├── models.ts            # Model IDs, max_tokens budgets, thinking config — single source of truth
+├── localization-rules.ts # Code-cell localization rules for init (native-reviewer authored)
+├── typography.ts        # Language typography applied in code, not via the prompt (nesting-aware fence walker)
+├── models.ts            # Model IDs, max_tokens budgets, thinking config, shared retry predicate
+├── contracts.ts         # Cross-boundary constants: labels, auto-merge modes (owner module, #162)
+├── branch-naming.ts     # Translation branch prefixes — the one owner (#115)
+├── structural-parity.ts # Deterministic directive/anchor parity guard on every write path
+├── review-verdict.ts    # Verdict v2 block: build/parse/sanitize + recommendation logic
+├── diff-checks.ts       # Deterministic halves of the four review diffChecks (#148)
+├── rebase-siblings.ts   # Stale-sibling branch refresh for rebase mode (#123)
 ├── inputs.ts            # Action input validation + resync trigger
 └── types.ts             # TypeScript type definitions
 ```
@@ -129,6 +136,8 @@ src/cli/
 ├── issue-creator.ts       # gh issue create runner
 ├── forward-triage.ts      # Forward: content-vs-i18n LLM filter
 ├── forward-pr-creator.ts  # Forward: git ops + PR creation via gh CLI
+├── glossary-loader.ts     # Shared glossary resolution: --glossary > repo-local > built-in (#149)
+├── target-local-reads.ts  # Pins target-only data-source reads through resync (#140)
 ├── translate-state.ts     # .translate/ config + per-file state
 ├── components/
 │   └── ReviewSession.tsx  # Ink interactive review UI component
@@ -384,7 +393,7 @@ Only sections detected as changed are sent to Claude for translation. This typic
 ```bash
 npm run build        # tsc compile (dist/) + esbuild bundle (dist-action/index.js)
 npm run build:cli    # CLI-only TypeScript compile (dist/)
-npm test             # Run all 1005 tests
+npm test             # Run the full Jest suite
 ```
 
-The action is distributed as a single bundled file (`dist-action/index.js`) with no external dependencies at runtime. Glossary files are included in `dist-action/glossary/`.
+The action's code is distributed as a single bundled file (`dist-action/index.js`, entered via the `run.cjs` source-map shim) with no npm dependencies at runtime. Glossaries are NOT bundled: the runtime resolves `path.join(__dirname, '..', 'glossary')` — the repo root's `glossary/` directory, present because `uses: QuantEcon/action-translation@vN` checks out the whole repository.

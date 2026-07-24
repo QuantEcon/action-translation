@@ -29,18 +29,13 @@ await esbuild.build({
   banner: {
     js: 'const __importMetaUrl = require("url").pathToFileURL(__filename).href;',
   },
-  // Source maps for debugging action failures
+  // Source maps for debugging action failures. sourcesContent: false keeps
+  // the committed map at file/line mappings only (~0.8 MB instead of 2.9 MB
+  // with all 227 sources inlined) — the run.cjs shim decodes frames to
+  // src/ paths, and nothing ever reads the embedded source text (#168).
   sourcemap: true,
+  sourcesContent: false,
 });
-
-// Copy glossary files — loaded at runtime via fs.readFileSync()
-const glossaryDir = path.join(outdir, 'glossary');
-if (!fs.existsSync(glossaryDir)) fs.mkdirSync(glossaryDir, { recursive: true });
-for (const file of fs.readdirSync('glossary')) {
-  if (file.endsWith('.json')) {
-    fs.copyFileSync(path.join('glossary', file), path.join(glossaryDir, file));
-  }
-}
 
 // CJS package.json — overrides root "type": "module" so Node treats
 // dist-action/*.js as CommonJS (required for GitHub Actions runner)

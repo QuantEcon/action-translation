@@ -15,49 +15,11 @@
 
 ## Module Structure
 
-```
-src/
-├── index.ts             # GitHub Actions entry point + mode routing + sync notifications + rebase mode
-├── sync-orchestrator.ts # Sync processing pipeline — reusable by future CLI
-├── pr-creator.ts        # PR creation in target repo
-├── parser.ts            # MyST Markdown parser, stack-based, no AST
-├── diff-detector.ts     # Change detection, recursive subsection comparison
-├── translator.ts        # Claude API — UPDATE/NEW/RESYNC modes, retry logic
-├── reviewer.ts          # Claude API — review mode
-├── file-processor.ts    # Document reconstruction, subsection handling
-├── heading-map.ts       # Heading-map extract/update/inject
-├── language-config.ts   # Language-specific translation rules
-├── localization-rules.ts # Code-cell localization rules for init command
-├── inputs.ts            # Action inputs + validation
-├── types.ts             # TypeScript types
-├── cli/
-│   ├── index.ts              # CLI entry point (commander.js)
-│   ├── types.ts              # CLI-specific types
-│   ├── schema.ts             # Zod schemas for backward report JSON + load/filter utils
-│   ├── document-comparator.ts # Stage 1: whole-document LLM triage
-│   ├── backward-evaluator.ts  # Stage 2: whole-file LLM evaluation
-│   ├── section-matcher.ts     # Cross-language section matching
-│   ├── git-metadata.ts        # File-level git metadata + commit timeline
-│   ├── report-generator.ts    # Markdown/JSON report formatting
-│   ├── review-formatter.ts    # Chalk card renderer for review command
-│   ├── review-session.ts      # Pure session state machine (accept/skip/reject)
-│   ├── issue-generator.ts     # GitHub Issue title/body/label generator
-│   ├── issue-creator.ts       # gh issue create runner with injectable GhRunner
-│   ├── forward-triage.ts      # Forward: content-vs-i18n LLM filter
-│   ├── forward-pr-creator.ts  # Forward: git ops + PR creation via gh CLI
-│   ├── translate-state.ts     # .translate/ config + per-file state read/write + pure serializers
-│   ├── components/
-│   │   └── ReviewSession.tsx  # Ink interactive review UI component
-│   └── commands/
-│       ├── backward.ts        # Backward command orchestrator — single + bulk
-│       ├── doctor.ts          # Doctor command — health check for target repos
-│       ├── forward.ts         # Forward command — whole-file resync TARGET to SOURCE
-│       ├── headingmap.ts      # Headingmap command — generate heading-maps (no LLM)
-│       ├── init.ts            # Init command — bulk-translate new projects
-│       ├── review.ts          # Review command — full pipeline, Steps 1–5
-│       ├── setup.ts           # Setup command — scaffold target translation repo
-│       └── status.ts          # Status command — fast sync diagnostic
-```
+One module map is maintained, in [`docs/developer/architecture.md`](../docs/developer/architecture.md)
+(a structural test asserts it names every source module, so it cannot silently drift).
+Quick orientation: `src/` is the GitHub Action (entry `index.ts`, pipeline
+`sync-orchestrator.ts`, Claude calls in `translator.ts`/`reviewer.ts`), `src/cli/` is the
+`translate` CLI (entry `cli/index.ts`, one file per command under `cli/commands/`).
 
 Full module responsibilities: `docs/developer/architecture.md`
 

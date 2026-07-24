@@ -34,7 +34,7 @@ The system has two main components:
 
 - **Section-based translation** — Only changed sections are re-translated, not entire documents
 - **Heading-map system** — Robust cross-language section matching via explicit ID mapping in frontmatter
-- **Translation glossary** — 357-term glossaries (zh-cn, fa) for consistent technical terminology
+- **Translation glossary** — per-language glossaries (zh-cn, fa, fr, ml) for consistent technical terminology
 - **MyST Markdown aware** — Preserves code blocks, math equations, directives, and cross-references
 - **Language-extensible** — Configurable rules per target language (punctuation, typography)
 - **Multiple translation modes** — UPDATE (incremental), NEW (fresh), RESYNC (drift recovery)
@@ -82,7 +82,7 @@ Step-by-step guides for common scenarios:
 
 ## Current status
 
-**Version**: v0.16.0  
-**Tests**: 1,000+ (40 suites)  
-**Glossary**: 357 terms (zh-cn, fa, fr)  
-**Languages**: English → Simplified Chinese, Farsi, French (more planned)
+**Version**: v0.23.0  
+**Tests**: run `npm test` for current counts (exact count in CI)  
+**Glossary**: 357 terms (zh-cn, fa), 364 (fr), 52 (ml)  
+**Languages**: English → Simplified Chinese, Farsi, French, Malayalam (more planned)
