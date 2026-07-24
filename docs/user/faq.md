@@ -12,7 +12,7 @@ Only MyST Markdown (`.md`) files. The parser is specifically designed for MyST M
 
 ### What languages are supported?
 
-The GitHub Action supports the configured languages only — currently Chinese (`zh-cn`), Farsi (`fa`), French (`fr`), and Malayalam (`ml`), each with language rules and a glossary — and rejects any other `target-language` before doing any work. The CLI accepts any language code, using Claude's general translation ability with no language-specific rules for unconfigured codes. Adding a language to the Action means adding a `LANGUAGE_CONFIGS` entry (see [Language configuration](language-config.md)).
+The GitHub Action supports the configured languages only — the target languages are currently Chinese (`zh-cn`), Farsi (`fa`), French (`fr`), and Malayalam (`ml`), each with language rules and a glossary, and `en` is configured as the source language (it passes validation too) — anything else is rejected as `target-language` before any work happens. The CLI accepts any language code, using Claude's general translation ability with no language-specific rules for unconfigured codes. Adding a language to the Action means adding a `LANGUAGE_CONFIGS` entry (see [Language configuration](language-config.md)).
 
 ### How much does it cost to run?
 
