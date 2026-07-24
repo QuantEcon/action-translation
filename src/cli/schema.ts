@@ -120,6 +120,7 @@ export const SectionSnapshotSchema: z.ZodType<SectionSnapshot> = z.object({
   content: z.string(),
   startLine: z.number().int().nonnegative(),
   endLine: z.number().int().nonnegative(),
+  parentId: z.string().optional(),
   subsections: z
     .lazy(() => z.array(SectionSnapshotSchema))
     .optional()

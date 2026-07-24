@@ -5,6 +5,7 @@
  * Does NOT make real LLM calls.
  */
 
+import { LlmResponseParseError } from '../../models.js';
 import {
   buildEvaluationPrompt,
   parseEvaluationResponse,
@@ -540,12 +541,13 @@ describe('backward-evaluator', () => {
       expect(results[2].recommendation).toBe('NO_BACKPORT');
     });
 
-    it('should handle completely unparseable response', () => {
-      const results = parseFileEvaluationResponse('I cannot process this request.', matchedPairs);
-      expect(results).toHaveLength(3);
-      expect(results[0].recommendation).toBe('NO_BACKPORT');
-      expect(results[0].confidence).toBe(0);
-      expect(results[0].summary).toContain('Unable to parse');
+    it('fails closed on a completely unparseable response (#165)', () => {
+      // The old fallback fabricated NO_BACKPORT for every section, making an
+      // unparseable analysis indistinguishable from a clean file. The retry
+      // loop re-asks; a final failure errors the file loudly.
+      expect(() =>
+        parseFileEvaluationResponse('I cannot process this request.', matchedPairs)
+      ).toThrow(LlmResponseParseError);
     });
 
     it('should clamp confidence values', () => {

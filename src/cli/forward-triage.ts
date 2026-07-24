@@ -128,18 +128,9 @@ export function parseForwardTriageResponse(responseText: string): {
     }
   }
 
-  // Strategy 3: Keyword detection (order: most specific first)
-  const lower = responseText.toLowerCase();
-  if (lower.includes('target_has_additions') || lower.includes('target has additions')) {
-    return { verdict: 'TARGET_HAS_ADDITIONS', reason: 'Detected via keyword in response' };
-  }
-  if (lower.includes('i18n_only') || lower.includes('i18n only')) {
-    return { verdict: 'I18N_ONLY', reason: 'Detected via keyword in response' };
-  }
-  if (/\bidentical\b/.test(lower) && !/\bnot\s+identical\b/.test(lower)) {
-    return { verdict: 'IDENTICAL', reason: '' };
-  }
-
+  // No keyword fallback (#165/F54): the prompt enumerates the verdict
+  // literals, so a model reasoning aloud about its options tripped them and
+  // an unparseable answer became a silently skipped resync.
   // Default to CONTENT_CHANGES (safe: will proceed to RESYNC)
   return {
     verdict: 'CONTENT_CHANGES',

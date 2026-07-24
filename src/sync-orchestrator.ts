@@ -437,13 +437,10 @@ export class SyncOrchestrator {
       }
     }
 
-    // Validate translated content
-    const validation = await this.processor.validateMyST(translatedContent, file.filename);
-    if (!validation.valid) {
-      throw new Error(`Validation failed: ${validation.error}`);
-    }
-
-    // Structural parity: directive shapes and target anchors must survive
+    // Structural parity — the single honest guard on this path (#165: the
+    // former validateMyST gate could never fail; parseSections has no throw
+    // path, so it read as protection and was not): directive shapes and
+    // target anchors must survive
     // translation verbatim (#119, #65). Failing the file loudly here is the
     // point — every defect in this class previously shipped as a success and
     // surfaced weeks later on a downstream strict build.
@@ -526,13 +523,8 @@ export class SyncOrchestrator {
       );
     }
 
-    // Validate
-    const validation = await this.processor.validateMyST(translatedContent, file.filename);
-    if (!validation.valid) {
-      throw new Error(`Validation failed: ${validation.error}`);
-    }
-
-    // Structural parity — same guard as processMarkdownFile (#119, #65).
+    // Structural parity — same (and only) guard as processMarkdownFile
+    // (#119, #65; the dead validateMyST gate was deleted in #165).
     const parity = checkStructuralParity(file.newContent, translatedContent);
     if (!parity.ok) {
       throw new Error(formatParityViolations(file.filename, parity));

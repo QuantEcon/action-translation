@@ -901,14 +901,4 @@ ${translatedContent}`;
 
     return parts.join('\n');
   }
-
-  /**
-   * Validate the translated content has valid MyST syntax
-   */
-  async validateMyST(
-    content: string,
-    filepath: string
-  ): Promise<{ valid: boolean; error?: string }> {
-    return await this.parser.validateMyST(content, filepath);
-  }
 }

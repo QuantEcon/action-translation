@@ -215,25 +215,6 @@ export class MystParser {
   }
 
   /**
-   * Validate MyST syntax by attempting to parse
-   * Returns true if valid, false otherwise
-   */
-  async validateMyST(
-    content: string,
-    filepath: string
-  ): Promise<{ valid: boolean; error?: string }> {
-    try {
-      await this.parseSections(content, filepath);
-      return { valid: true };
-    } catch (error) {
-      return {
-        valid: false,
-        error: error instanceof Error ? error.message : 'Unknown validation error',
-      };
-    }
-  }
-
-  /**
    * Parse document into explicit components: CONFIG + TITLE + INTRO + SECTIONS
    *
    * This provides a more structured view of the document that ensures

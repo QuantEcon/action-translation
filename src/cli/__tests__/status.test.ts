@@ -661,6 +661,39 @@ describe('--write-state safeguard', () => {
     expect(fs.existsSync(path.join(tmpDir, 'target', '.translate', 'config.yml'))).toBe(true);
   });
 
+  it('refuses to overwrite a corrupt state file without --force (#165)', async () => {
+    const sourceDir = path.join(tmpDir, 'source', 'lectures');
+    const targetDir = path.join(tmpDir, 'target', 'lectures');
+    writeMd(path.join(sourceDir, 'intro.md'), SOURCE_2_SECTIONS);
+    writeMd(path.join(targetDir, 'intro.md'), TARGET_2_SECTIONS_WITH_MAP);
+    const statePath = path.join(tmpDir, 'target', '.translate', 'state', 'intro.md.yml');
+    fs.mkdirSync(path.dirname(statePath), { recursive: true });
+    fs.writeFileSync(statePath, '{{{ not yaml at all', 'utf-8');
+
+    await expect(
+      runStatus({
+        source: path.join(tmpDir, 'source'),
+        target: path.join(tmpDir, 'target'),
+        docsFolder: 'lectures',
+        language: 'zh-cn',
+        exclude: [],
+        writeState: true,
+      })
+    ).rejects.toThrow(/corrupt/i);
+
+    // --force is the explicit escape hatch
+    const result = await runStatus({
+      source: path.join(tmpDir, 'source'),
+      target: path.join(tmpDir, 'target'),
+      docsFolder: 'lectures',
+      language: 'zh-cn',
+      exclude: [],
+      writeState: true,
+      force: true,
+    });
+    expect(result.entries).toHaveLength(1);
+  });
+
   it('should allow --write-state with --force even when dates would block', async () => {
     const sourceDir = path.join(tmpDir, 'source', 'lectures');
     const targetDir = path.join(tmpDir, 'target', 'lectures');

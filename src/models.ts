@@ -102,6 +102,21 @@ export class TruncatedResponseError extends Error {
   }
 }
 
+/**
+ * A model response that could not be parsed into the expected verdict shape.
+ * Typed so the CLI retry loops can re-ask (the Action reviewer already retries
+ * parse failures) — and so an unparseable analysis FAILS the file instead of
+ * fabricating a benign work-skipping verdict indistinguishable from a clean
+ * one (#165/F54: three parsers synthesized IN_SYNC/IDENTICAL/NO_BACKPORT
+ * defaults on garbage).
+ */
+export class LlmResponseParseError extends Error {
+  constructor(operation: string, responseText: string) {
+    super(`${operation}: could not parse model response. Raw head: ${responseText.slice(0, 200)}`);
+    this.name = 'LlmResponseParseError';
+  }
+}
+
 /** Accumulated API usage across every call an instance makes, retries included. */
 export interface ApiUsage {
   inputTokens: number;

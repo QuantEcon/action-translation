@@ -19,6 +19,7 @@ import {
   MAX_TOKENS,
   DEFAULT_THINKING,
   TruncatedResponseError,
+  LlmResponseParseError,
   isRetryableAnthropicError,
 } from '../models.js';
 import { AuthenticationError, BadRequestError } from '@anthropic-ai/sdk';
@@ -524,16 +525,10 @@ export function parseFileEvaluationResponse(
     }
   }
 
-  // Fallback: return NO_BACKPORT for all sections
-  return matchedPairs.map((pair) => ({
-    sectionHeading: pair.heading,
-    recommendation: 'NO_BACKPORT' as const,
-    category: 'NO_CHANGE' as BackportCategory,
-    confidence: 0,
-    summary: 'Unable to parse LLM evaluation response.',
-    specificChanges: [],
-    reasoning: 'Response parsing failed. Manual review may be needed.',
-  }));
+  // Fail closed (#165/F54): the old fallback fabricated NO_BACKPORT for
+  // every section, so an unparseable analysis was indistinguishable from a
+  // clean file. The retry loop re-asks; a final failure errors the file.
+  throw new LlmResponseParseError('evaluateFile', responseText);
 }
 
 /**
@@ -641,10 +636,13 @@ export async function evaluateFile(
         throw error;
       }
 
-      // Truncation is retryable here — a rerun of a bounded JSON analysis can
-      // land under the cap — and is ORed onto the shared transport predicate.
+      // Truncation and parse failures are retryable here — a rerun of a
+      // bounded JSON analysis can land under the cap or parse cleanly — and
+      // are ORed onto the shared transport predicate.
       const isRetryable =
-        error instanceof TruncatedResponseError || isRetryableAnthropicError(error);
+        error instanceof TruncatedResponseError ||
+        error instanceof LlmResponseParseError ||
+        isRetryableAnthropicError(error);
 
       if (!isRetryable || attempt === maxRetries) {
         throw error;

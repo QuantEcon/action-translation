@@ -150,12 +150,8 @@ export function parseTriageResponse(responseText: string): {
     }
   }
 
-  // Strategy 3: Look for keywords in the response
-  const lower = responseText.toLowerCase();
-  if (lower.includes('in_sync') || lower.includes('in sync') || lower.includes('no substantive')) {
-    return { verdict: 'IN_SYNC', notes: '' };
-  }
-
+  // No keyword fallback (#165/F54): scanning garbled text for "in sync"
+  // read prose like "not in sync" as IN_SYNC and silently skipped the file.
   // Default to CHANGES_DETECTED (recall-biased: when in doubt, flag it)
   return {
     verdict: 'CHANGES_DETECTED',
