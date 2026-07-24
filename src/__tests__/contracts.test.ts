@@ -92,10 +92,16 @@ describe('artefacts that cannot import TypeScript agree with the constants', () 
     expect(actionYml).toContain(`default: '${DEFAULT_CLAUDE_MODEL}'`);
   });
 
-  it('action.yml documents exactly the valid auto-merge modes', () => {
+  it('the auto-merge-mode input description names every valid mode', () => {
+    // Scoped to the input's own block — the description also mentions
+    // "active" deliberately (the mode that fails loudly), so whole-file
+    // exactness is neither achievable nor the contract. What must hold is
+    // that every mode the code accepts is documented where the input is.
     const actionYml = fs.readFileSync(path.join(ROOT, 'action.yml'), 'utf8');
+    const block = actionYml.match(/^ {2}auto-merge-mode:\n(?: {4}.*\n)+/m)?.[0];
+    expect(block).toBeDefined();
     for (const mode of AUTO_MERGE_MODES) {
-      expect(actionYml).toContain(`"${mode}"`);
+      expect(block).toContain(`"${mode}"`);
     }
   });
 
