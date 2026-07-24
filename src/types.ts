@@ -18,7 +18,6 @@ export interface ActionInputs {
   docsFolder: string;
   sourceLanguage: string;
   glossaryPath: string;
-  tocFile: string;
   anthropicApiKey: string;
   claudeModel: string;
   githubToken: string;

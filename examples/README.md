@@ -47,8 +47,8 @@ jobs:
 ## Multi-Language Support
 
 You can sync to multiple target repositories. Each target language needs a
-`LANGUAGE_CONFIGS` entry in the action (currently: `zh-cn`, `fa`, `fr`) — a glossary
-alone does not enable a language.
+`LANGUAGE_CONFIGS` entry in the action (target languages currently: `zh-cn`, `fa`, `fr`,
+`ml`; `en` is configured for the source side) — a glossary alone does not enable a language.
 
 ```yaml
 name: Sync Translations

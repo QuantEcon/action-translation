@@ -49,10 +49,6 @@ inputs:
     description: 'Path to custom translation glossary JSON file (optional - built-in glossary used by default)'
     required: false
     default: ''
-  toc-file:
-    description: 'Table of contents file name'
-    required: false
-    default: '_toc.yml'
   anthropic-api-key:
     description: 'Anthropic API key for Claude'
     required: true

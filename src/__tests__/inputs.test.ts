@@ -139,12 +139,6 @@ describe('getInputs (sync mode)', () => {
       expect(result.sourceLanguage).toBe('en');
     });
 
-    it('should use default toc file', () => {
-      setMockInputs(validInputs);
-      const result = getInputs();
-      expect(result.tocFile).toBe('_toc.yml');
-    });
-
     it('should use default pr labels', () => {
       setMockInputs(validInputs);
       const result = getInputs();

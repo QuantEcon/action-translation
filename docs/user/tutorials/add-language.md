@@ -365,7 +365,7 @@ Any ❌ items should be addressed before moving to production.
 
 ## Working without a glossary or language config
 
-Both the glossary and language config are **optional**. The system works with any language code — you just get fewer guardrails:
+The glossary is **optional**; the language config is optional **only for the CLI**. The GitHub Action requires a `LANGUAGE_CONFIGS` entry for the target language and fails on any unconfigured code — the CLI (`init`, `forward`, `backward`) is what works with any language code, with fewer guardrails:
 
 | Component | Without it | Impact |
 |---|---|---|

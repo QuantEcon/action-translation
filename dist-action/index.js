@@ -31385,7 +31385,6 @@ function getInputs() {
   const docsFolder = docsFolderInput === "." || docsFolderInput === "/" ? "" : docsFolderInput;
   const sourceLanguage = core.getInput("source-language", { required: false }) || "en";
   const glossaryPath = core.getInput("glossary-path", { required: false }) || "";
-  const tocFile = core.getInput("toc-file", { required: false }) || "_toc.yml";
   const anthropicApiKey = core.getInput("anthropic-api-key", { required: true });
   const claudeModel = core.getInput("claude-model", { required: false }) || DEFAULT_CLAUDE_MODEL;
   const githubToken = core.getInput("github-token", { required: true });
@@ -31412,7 +31411,6 @@ function getInputs() {
     docsFolder: normalizedDocsFolder,
     sourceLanguage,
     glossaryPath,
-    tocFile,
     anthropicApiKey,
     claudeModel,
     githubToken,
