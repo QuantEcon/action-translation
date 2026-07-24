@@ -29,11 +29,24 @@ function sourceFiles(dir: string): string[] {
 }
 
 describe('the architecture module map', () => {
-  it('names every production source module', () => {
+  it('names every production source module in its own tree block', () => {
     const map = fs.readFileSync(path.join(ROOT, 'docs', 'developer', 'architecture.md'), 'utf8');
-    const missing = sourceFiles(path.join(ROOT, 'src'))
-      .map((f) => path.basename(f))
-      .filter((name) => !map.includes(name));
+
+    // Scope each file's lookup to the fenced block for its root — index.ts
+    // and types.ts exist under both src/ and src/cli/, so a whole-file
+    // containment check would let one mention mask the other's absence.
+    const blocks = [...map.matchAll(/```\n(src\/[^\n]*\n[\s\S]*?)```/g)].map((m) => m[1]);
+    const actionBlock = blocks.find((b) => b.startsWith('src/\n'));
+    const cliBlock = blocks.find((b) => b.startsWith('src/cli/\n'));
+    expect(actionBlock).toBeDefined();
+    expect(cliBlock).toBeDefined();
+
+    const srcRoot = path.join(ROOT, 'src');
+    const missing = sourceFiles(srcRoot).filter((f) => {
+      const rel = path.relative(srcRoot, f);
+      const block = rel.startsWith('cli' + path.sep) ? cliBlock! : actionBlock!;
+      return !block.includes(path.basename(f));
+    });
     expect(missing).toEqual([]);
   });
 });
