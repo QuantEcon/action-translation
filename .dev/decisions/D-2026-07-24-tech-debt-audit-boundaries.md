@@ -36,9 +36,16 @@ edit what they *encode*.
   three behaviours down to these two. Unifying further reintroduces CWD-relative lookup in the Action.
 - **`chalk` pinned at `^4`** is load-bearing, not stale: `^4` is the last CJS release and the ts-jest
   CJS harness requires it.
-- **Inside `backward-evaluator.ts`'s dead range**, `validateCategory`, `parseSpecificChanges` and
-  `sleep` are called by the *live* whole-file path. Delete lines 37-187, 222-235, 244-335 — not 192,
-  not 169, not 236-239.
+- **Inside `backward-evaluator.ts`, delete by function name, not by line range.** Dead (per-section
+  path, safe to remove): `buildEvaluationPrompt`, `parseEvaluationResponse`, `mockEvaluationResponse`,
+  `evaluateSection` — the last has zero callers anywhere, and the other three are reachable only
+  from it. **Preserve `validateCategory`, `parseSpecificChanges`, `sleep` and `buildSectionPairsBlock`**:
+  all four sit among the dead functions but are called by the *live* whole-file path
+  (`parseFileEvaluationResponse` at `:516` and `:522`, `evaluateFile` at `:660`,
+  `buildFileEvaluationPrompt` at `:413`). `buildSectionPairsBlock` is the likeliest casualty — its
+  name suggests it belongs to the per-section cluster and it does not. The audit report's line
+  ranges for this deletion are approximate at every boundary; prefer the names above and re-derive
+  the ranges by grep at deletion time.
 - **`translateSectionResync`** (`translator.ts:230`) is a live sync-mode path, unrelated to the dead
   CLI section types. Do not sweep it into that deletion.
 
