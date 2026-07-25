@@ -137,6 +137,29 @@ describe('the E2E harness workflow rendering', () => {
     expect(script).not.toContain("require('$REPO_ROOT/package.json').version");
   });
 
+  it('enters the source clone before running git in the main shell', () => {
+    // Steps 1-2 subshell their work, so the main shell's cwd is still the
+    // caller's directory. Steps 3-4 then run `git branch -D`, `git commit` and
+    // `git push -f` — against the CALLER'S repo unless something cd's first.
+    // The code this replaced relied on a trailing `cd ..; cd "$SOURCE_REPO"`
+    // from the last reset block, which the subshells removed.
+    // Scope to Step 3 onward: the helper functions defined above it also run
+    // git, but each is invoked inside a subshell that cd's for itself.
+    const mainShell = script.slice(script.indexOf('# STEP 3'));
+    const guardIdx = mainShell.indexOf('cd "$WORK_DIR/$SOURCE_REPO"');
+    expect(guardIdx).toBeGreaterThan(-1);
+
+    const destructive = /^\s*git (branch .*-D|commit|push|checkout|mv|rm) /gm;
+    const before = [...mainShell.matchAll(destructive)].filter((m) => m.index! < guardIdx);
+    expect(before.map((m) => m[0].trim())).toEqual([]);
+  });
+
+  it('refuses to run git if the source clone is missing', () => {
+    // Without this, a failed clone would silently hand the scenario loop the
+    // caller's working tree.
+    expect(script).toContain('is not a git clone — refusing to run git here');
+  });
+
   it('deletes .github/ only where it also re-renders it', () => {
     // The fa reset used to delete .github/ without rewriting it, which
     // destroyed that target's review and rebase workflows on every run.

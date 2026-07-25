@@ -423,6 +423,23 @@ echo ""
 #
 echo -e "${BLUE}Step 3: Closing all open PRs...${NC}"
 
+# Steps 3 and 4 run `git` against the SOURCE CLONE from the main shell — branch
+# cleanup, and one branch + commit + force-push per scenario. Steps 1-2 do their
+# work in subshells, so unlike the code this replaced (which left the shell
+# inside the clone via a trailing `cd ..; cd "$SOURCE_REPO"`) the cwd is still
+# wherever the script was launched from. Without this cd that is the CALLER'S
+# repo: `git branch -D` would delete their local branches and the scenario loop
+# would commit fixtures over their working tree and force-push 26 branches to
+# whatever `origin` points at. Enter the clone explicitly, and fail loudly if it
+# is not there rather than operating on whatever directory happens to be.
+if [ "$DRY_RUN" = false ]; then
+    if [ ! -d "$WORK_DIR/$SOURCE_REPO/.git" ]; then
+        echo -e "${RED}✗ $WORK_DIR/$SOURCE_REPO is not a git clone — refusing to run git here${NC}" >&2
+        exit 1
+    fi
+    cd "$WORK_DIR/$SOURCE_REPO"
+fi
+
 # Close PRs on source repo
 if [ "$DRY_RUN" = true ]; then
     OPEN_PRS=$(gh pr list --repo "$OWNER/$SOURCE_REPO" --state open --json number --jq '.[].number' 2>/dev/null || echo "")
