@@ -104,6 +104,18 @@ npm run build    # Compile TypeScript + bundle dist-action/index.js
 - Always work on a branch, never commit directly to `main`
 - Use PRs for all changes, including docs
 - **Always use create/edit file tools** for file content — never heredoc or shell string escaping
+- **Never trust a bulk find-and-replace; verify the result, not the command's exit code.**
+  Scripted edits fail *silently* and look successful. Four real examples from one session:
+  a slice whose end marker matched earlier in the file produced `""`, and
+  `str.replace("", new)` inserted between every character — 232 lines became 46,677;
+  a blanket rename rewrote a path to `.github/AGENTS.md`, which does not exist;
+  another rewrote an append-only decision record it should never have touched;
+  and a `printf` whose format string held an em-dash aborted, leaving the extracted
+  value empty so every branch took the "nothing to do" path and 24 GitHub release
+  titles were overwritten instead of migrated. In each case the command reported
+  success. After any scripted edit: `grep` for what should be gone, `grep` for what
+  should be there, and check the file still parses or renders. Prefer exact-match
+  edits over pattern replacement whenever the target is known.
 - Multi-line commit messages: write to `.dev/scratch/` first, then use `-F`:
   ```bash
   git commit -F .dev/scratch/msg.txt
