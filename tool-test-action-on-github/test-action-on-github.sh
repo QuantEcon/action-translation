@@ -31,9 +31,28 @@ set -e  # Exit on error
 
 # Parse arguments
 DRY_RUN=false
-if [[ "$1" == "--dry-run" ]]; then
-    DRY_RUN=true
-fi
+ACTION_REF=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --dry-run)
+            DRY_RUN=true
+            shift
+            ;;
+        --action-ref)
+            ACTION_REF="$2"
+            if [ -z "$ACTION_REF" ]; then
+                echo "--action-ref requires a value (a tag, branch or SHA)" >&2
+                exit 1
+            fi
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            echo "Usage: $0 [--dry-run] [--action-ref <tag|branch|sha>]" >&2
+            exit 1
+            ;;
+    esac
+done
 
 # Configuration
 OWNER="QuantEcon"
@@ -53,6 +72,84 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
+
+#
+# Resolve the action version under test.
+#
+# The harness has two halves and they resolve the action differently:
+#
+#   sync   — the workflow templates check out this repo at an explicit ref and
+#            run `uses: ./action`. That ref is substituted below, so it is never
+#            hand-maintained. It used to be hard-coded, and sat at v0.16.1 for
+#            eight releases while the docs claimed it tracked `main`.
+#   review — `review-translations.yml` lives in the target repos and runs
+#            `uses: QuantEcon/action-translation@v0`, deliberately, so the
+#            harness exercises whether the floating tag resolves (see #109).
+#            That means the review half tests whatever `@v0` points at *now*,
+#            which is not necessarily the ref under test. We report both rather
+#            than silently conflating them.
+#
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+ACTION_REPO_URL="https://github.com/$OWNER/action-translation.git"
+
+# Resolve a remote ref to the commit it ultimately points at, and echo nothing if
+# it does not exist. An annotated tag resolves to a *tag object*, with the commit
+# on the peeled `^{}` ref — prefer that, or v0.23.0 and v0 compare unequal while
+# naming the same commit.
+resolve_remote_commit() {
+    git ls-remote "$ACTION_REPO_URL" \
+        "refs/tags/$1^{}" "refs/tags/$1" "refs/heads/$1" 2>/dev/null \
+        | awk '{ if (substr($2, length($2) - 2) == "^{}") peeled = $1
+                 else if (!first) first = $1 }
+               END { print (peeled ? peeled : first) }'
+}
+
+if [ -z "$ACTION_REF" ]; then
+    ACTION_REF="v$(node -p "require('$REPO_ROOT/package.json').version")"
+    ACTION_REF_SOURCE="package.json"
+else
+    ACTION_REF_SOURCE="--action-ref"
+fi
+
+# Fail closed: a ref that does not exist on the remote would make every workflow
+# run fail at checkout, 26 PRs deep, for a reason nothing here would explain.
+ACTION_REF_SHA="$(resolve_remote_commit "$ACTION_REF")"
+if [ -z "$ACTION_REF_SHA" ]; then
+    echo -e "${RED}✗ Action ref '$ACTION_REF' (from $ACTION_REF_SOURCE) does not exist on $OWNER/action-translation.${NC}" >&2
+    echo "" >&2
+    echo "  If you are testing an unreleased version, push the tag first, or pass" >&2
+    echo "  an existing ref explicitly:" >&2
+    echo "" >&2
+    echo "    $0 --action-ref main" >&2
+    echo "" >&2
+    exit 1
+fi
+
+# What the review half will actually run, which may differ from the above.
+V0_SHA="$(resolve_remote_commit v0)"
+# Annotated tags list their tag-object SHA, with the commit on a peeled `^{}`
+# line, so strip that suffix before comparing or v0 never matches a release tag.
+V0_DESC="$(git ls-remote --tags "$ACTION_REPO_URL" 2>/dev/null \
+    | awk -v sha="$V0_SHA" '
+        { ref = $2
+          if (substr(ref, length(ref) - 2) == "^{}") ref = substr(ref, 1, length(ref) - 3)
+          if ($1 == sha && ref ~ /^refs\/tags\/v[0-9]+\.[0-9]+\.[0-9]+$/) {
+              sub("refs/tags/", "", ref); print ref
+          } }' \
+    | head -1)"
+
+echo -e "${BLUE}========================================${NC}"
+echo -e "${BLUE}Action version under test${NC}"
+echo -e "${BLUE}========================================${NC}"
+echo -e "  sync workflows   ${GREEN}${ACTION_REF}${NC} (${ACTION_REF_SHA:0:7}, from $ACTION_REF_SOURCE)"
+if [ -n "$V0_SHA" ] && [ "$V0_SHA" = "$ACTION_REF_SHA" ]; then
+    echo -e "  review workflow  ${GREEN}@v0${NC} → ${GREEN}${V0_DESC:-${V0_SHA:0:7}}${NC} — same code"
+else
+    echo -e "  review workflow  ${YELLOW}@v0${NC} → ${YELLOW}${V0_DESC:-${V0_SHA:0:7}}${NC}"
+    echo -e "  ${YELLOW}⚠ The review half is NOT testing $ACTION_REF. Move the v0 tag, or read${NC}"
+    echo -e "  ${YELLOW}  review results as applying to ${V0_DESC:-${V0_SHA:0:7}} only.${NC}"
+fi
+echo ""
 
 if [ "$DRY_RUN" = true ]; then
     echo -e "${CYAN}========================================${NC}"
@@ -174,10 +271,19 @@ else
     cp "$DATA_DIR/base-lecture.md" "$TEST_FILE_LECTURE"
     cp "$DATA_DIR/base-toc.yml" "_toc.yml"
 
-    # Ensure workflow exists
+    # Ensure workflow exists, pinned to the ref reported in the banner above
     mkdir -p .github/workflows
-    cp "$DATA_DIR/workflow-template.yml" .github/workflows/translation-sync.yml
-    cp "$DATA_DIR/workflow-template-fa.yml" .github/workflows/sync-translations-fa.yml
+    sed "s|__ACTION_REF__|$ACTION_REF|g" "$DATA_DIR/workflow-template.yml" \
+        > .github/workflows/translation-sync.yml
+    sed "s|__ACTION_REF__|$ACTION_REF|g" "$DATA_DIR/workflow-template-fa.yml" \
+        > .github/workflows/sync-translations-fa.yml
+
+    # A leftover placeholder means the substitution silently missed.
+    if grep -q '__ACTION_REF__' .github/workflows/translation-sync.yml \
+                                .github/workflows/sync-translations-fa.yml; then
+        echo -e "${RED}✗ Action ref placeholder survived substitution${NC}" >&2
+        exit 1
+    fi
 
     # Force push to main
     git add -A
@@ -578,7 +684,9 @@ if [ "$DRY_RUN" = true ]; then
     echo -e "${YELLOW}To actually run these changes, execute without --dry-run:${NC}"
     echo "  ./tool-test-action-on-github/test-action-on-github.sh"
 else
-    echo -e "${GREEN}Created 24 test PRs in ${SOURCE_REPO}${NC}"
+    echo -e "${GREEN}Created ${#scenarios[@]} test PRs in ${SOURCE_REPO}${NC}"
+    echo -e "Testing action ${GREEN}${ACTION_REF}${NC} (${ACTION_REF_SHA:0:7}) in the sync workflows;"
+    echo -e "the review workflow runs @v0 → ${V0_DESC:-${V0_SHA:0:7}}."
     echo ""
     echo "Test Coverage:"
     echo "  - Basic structure changes (8 tests)"

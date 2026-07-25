@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **The E2E harness says which version it is testing, and stops testing an eight-release-old one**: the sync-workflow templates pinned `ref: v0.16.1` — hard-coded, bumped by nothing, checked by nothing — while both `tool-test-action-on-github/README.md` and `.github/copilot-instructions.md` claimed the harness built from `main` and "always exercise[s] the latest code". A full 26-PR run therefore validated v0.16.1, and said so nowhere. The ref is now substituted at run time from `package.json` (overridable with `--action-ref <tag|branch|sha>`), verified to exist on the remote before any PR is created rather than failing 26 workflow runs deep at checkout, and printed in a banner before the run starts. The harness's two halves resolve the action differently and the banner now reports **both**: the sync half at the ref under test, and the review half at whatever `QuantEcon/action-translation@v0` currently points to — deliberately the floating tag, per #109, which means a freshly-cut release is not covered by the review half until `v0` is moved. When they disagree the banner warns. A drift guard in `workflow-templates.test.ts` fails if either template regains a hard-coded version (it fails 2 ways on the pre-fix templates), and the run summary's hand-written "Created 24 test PRs" — the array has 26 — is now derived.
+
 ## [0.24.0] - 2026-07-25
 
 ### Changed
