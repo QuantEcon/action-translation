@@ -865,11 +865,21 @@ else
     echo -e "${GREEN}Created ${#scenarios[@]} test PRs in ${SOURCE_REPO}${NC}"
     echo -e "All ${TOTAL_WORKFLOWS} workflows ran ${GREEN}${ACTION_REF}${NC} (${ACTION_REF_SHA:0:7})."
     echo ""
-    echo "Test Coverage (${#scenarios[@]} scenarios):"
-    echo "  - Basic structure changes (8 tests)"
-    echo "  - Scientific content (code cells, math) (8 tests)"
-    echo "  - Document lifecycle (CRUD operations) (4 tests)"
-    echo "  - Edge cases (preamble, nesting, special chars, empty) (4 tests)"
+    echo "Test Coverage (${#scenarios[@]} scenario(s) run):"
+    _b=0; _s=0; _d=0; _e=0
+    for sc in "${scenarios[@]}"; do
+        n=$(echo "${sc%%:*}" | grep -o '^[0-9]\+' | sed 's/^0//')
+        if   [ "$n" -le 8 ];  then _b=$((_b + 1))
+        elif [ "$n" -le 16 ]; then _s=$((_s + 1))
+        elif [ "$n" -le 20 ]; then _d=$((_d + 1))
+        else                       _e=$((_e + 1))
+        fi
+    done
+    [ "$_b" -gt 0 ] && echo "  - Basic structure changes ($_b)"
+    [ "$_s" -gt 0 ] && echo "  - Scientific content, code cells and math ($_s)"
+    [ "$_d" -gt 0 ] && echo "  - Document lifecycle, CRUD ($_d)"
+    [ "$_e" -gt 0 ] && echo "  - Edge cases: preamble, nesting, special chars, empty ($_e)"
+    true
     echo ""
     echo "Next steps:"
     echo "1. Each PR has the 'test-translation' label"
