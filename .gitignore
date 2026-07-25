@@ -33,9 +33,9 @@ docs/_build/
 /reports/
 
 # Test repositories (cloned locally for testing)
-test-translation-sync/
-test-translation-sync.zh-cn/
-test-translation-sync.fa/
-tool-test-action-on-github/test-translation-sync/
-tool-test-action-on-github/test-translation-sync.zh-cn/
-tool-test-action-on-github/test-translation-sync.fa/
+# Globbed, not enumerated: adding a language is meant to be one line in the
+# harness's LANGUAGES array, and an enumerated list makes .gitignore a fourth
+# file to remember. ml was added without one, so a real run would have left an
+# embedded clone that `git add -A` stages as a gitlink.
+test-translation-sync*/
+tool-test-action-on-github/test-translation-sync*/

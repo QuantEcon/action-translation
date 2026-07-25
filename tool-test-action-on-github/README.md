@@ -64,7 +64,7 @@ One line in the `LANGUAGES` array in `test-action-on-github.sh`, plus three base
 
 ### Cost
 
-**TEST mode makes real, billed Claude API calls.** The `test-mode` input suppresses PR side effects, not model calls. A full three-language run is roughly 78 workflow runs; measured on two languages it was ~1.4M input tokens. Budget accordingly, and prefer `--action-ref main` runs during development over repeatedly re-running the full matrix.
+**TEST mode makes real, billed Claude API calls.** `test-mode` suppresses PR side effects (failure issues, success comments), not model calls. A three-language run is ~78 **sync** runs plus ~78 **review** runs — this PR is what installs `review-translations.yml` in every target, so each translation PR now fires a second billed call. The ~1.4M input tokens measured across two languages **pre-dates that review coverage** and therefore undercounts the current cost; treat it as a floor, not an estimate. Prefer `--action-ref main` during development over re-running the full matrix.
 
 ## Usage
 

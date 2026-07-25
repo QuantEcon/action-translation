@@ -184,13 +184,24 @@ render_target_workflows() {   # (cwd = target clone)
         "$EXAMPLES_DIR/review-translations.yml" \
         > ".github/workflows/review-translations.yml"
 
-    # The rebase template carries NO docs-folder, so a plain substitution
-    # no-ops and the workflow silently takes action.yml's `lectures/` default —
-    # but the harness repos keep their lectures at the root. Rebase would then
-    # filter on a prefix no test file has and rebase nothing, reporting success.
-    # Insert the line rather than substituting it. (%c/39 sidesteps nesting a
-    # single quote inside the awk program.)
+    # Two divergences from the canonical rebase template, both deliberate:
+    #
+    #  * docs-folder — the template carries none, so a substitution would no-op
+    #    and the workflow would take action.yml's `lectures/` default while the
+    #    harness repos keep lectures at the root. Rebase would filter on a
+    #    prefix no test file has and rebase nothing, reporting success. Insert
+    #    it. (%c/39 sidesteps nesting a single quote inside the awk program.)
+    #
+    #  * github-token — the template ships GITHUB_TOKEN with a caveat that
+    #    commits pushed with it do not trigger workflows. The live harness and
+    #    all five production editions run the PAT instead, on the strength of an
+    #    A/B recorded in the workflow itself (2026-07-21: zero runs under
+    #    GITHUB_TOKEN, review triggered under the PAT — #125). Re-rendering
+    #    without this would silently revert that, and the reset now deletes
+    #    .github/ so the old file is gone. Review stays on GITHUB_TOKEN, which
+    #    is correct for it — it posts a review rather than pushing commits.
     sed -e "s|QuantEcon/action-translation@v0|QuantEcon/action-translation@$ACTION_REF|g" \
+        -e "s|secrets.GITHUB_TOKEN|secrets.QUANTECON_SERVICES_PAT|g" \
         "$EXAMPLES_DIR/rebase-translations.yml" \
       | awk '{ print }
              /^[[:space:]]*mode:[[:space:]]*rebase[[:space:]]*$/ {
@@ -198,6 +209,34 @@ render_target_workflows() {   # (cwd = target clone)
                  printf "%sdocs-folder: %c.%c\n", substr($0, 1, RLENGTH), 39, 39
              }' \
         > ".github/workflows/rebase-translations.yml"
+
+    assert_rendered_target_workflows
+}
+
+# Post-conditions on the END STATE, not on the substitutions having been
+# attempted. `assert_no_placeholders` is vacuous here — examples/*.yml carry no
+# placeholder tokens — so a sed or awk whose anchor stops matching would leave a
+# silently wrong workflow. Every anchor below has already drifted at least once
+# somewhere in this repo's history.
+assert_rendered_target_workflows() {   # (cwd = target clone)
+    local wf err
+    for wf in review rebase; do
+        err=""
+        f=".github/workflows/$wf-translations.yml"
+        grep -q "QuantEcon/action-translation@$ACTION_REF" "$f" || err="$err ref-not-substituted"
+        grep -q 'lecture-python-intro' "$f" && err="$err source-repo-not-substituted"
+        if [ "$wf" = review ]; then
+            grep -q "source-repo: '$OWNER/$SOURCE_REPO'" "$f" || err="$err missing-source-repo"
+        fi
+        grep -q "docs-folder: '\.'" "$f" || err="$err missing-root-docs-folder"
+        if [ "$wf" = rebase ]; then
+            grep -q 'QUANTECON_SERVICES_PAT' "$f" || err="$err rebase-token-not-pat"
+        fi
+        if [ -n "$err" ]; then
+            echo -e "${RED}✗ rendered $f is wrong:$err${NC}" >&2
+            exit 1
+        fi
+    done
 }
 
 # Fails the run rather than letting a placeholder reach GitHub, where it would
@@ -240,7 +279,8 @@ if [ -z "$ACTION_REF_SHA" ]; then
     exit 1
 fi
 
-# What the review half will actually run, which may differ from the above.
+# What @v0 currently points at. Every workflow this run writes uses ACTION_REF,
+# so this is reported for contrast, not because any workflow reads it.
 V0_SHA="$(resolve_remote_commit v0)"
 # Annotated tags list their tag-object SHA, with the commit on a peeled `^{}`
 # line, so strip that suffix before comparing or v0 never matches a release tag.
@@ -679,9 +719,9 @@ echo ""
 if [ "$DRY_RUN" = true ]; then
     echo -e "${CYAN}Summary of what would be done:${NC}"
     echo ""
-    echo "1. Reset all three repositories to base state (with _toc.yml)"
-    echo "2. Close all open PRs on source, zh-cn target, and fa target repos"
-    echo "3. Create 24 new test PRs:"
+    echo "1. Reset the source repo and ${#LANGUAGES[@]} target repo(s) to base state (with _toc.yml)"
+    echo "2. Close all open PRs on the source repo and every target repo"
+    echo "3. Create ${#scenarios[@]} new test PRs:"
     echo "   Basic Tests (01-08):"
     echo "     - 01: Intro text updated"
     echo "     - 02: Title changed"
@@ -718,10 +758,9 @@ if [ "$DRY_RUN" = true ]; then
     echo "  ./tool-test-action-on-github/test-action-on-github.sh"
 else
     echo -e "${GREEN}Created ${#scenarios[@]} test PRs in ${SOURCE_REPO}${NC}"
-    echo -e "Testing action ${GREEN}${ACTION_REF}${NC} (${ACTION_REF_SHA:0:7}) in the sync workflows;"
-    echo -e "the review workflow runs @v0 → ${V0_DESC:-${V0_SHA:0:7}}."
+    echo -e "All ${TOTAL_WORKFLOWS} workflows ran ${GREEN}${ACTION_REF}${NC} (${ACTION_REF_SHA:0:7})."
     echo ""
-    echo "Test Coverage:"
+    echo "Test Coverage (${#scenarios[@]} scenarios):"
     echo "  - Basic structure changes (8 tests)"
     echo "  - Scientific content (code cells, math) (8 tests)"
     echo "  - Document lifecycle (CRUD operations) (4 tests)"

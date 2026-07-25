@@ -147,7 +147,7 @@ End-to-end testing against real GitHub repos. Creates test PRs that trigger the 
 
 **What the script does**: resets all repos to clean state (force-push `main`), closes all open PRs, creates 26 draft PRs with `test-translation` label. The label triggers one sync workflow per configured language.
 
-**⚠ Real API spend**: `test-mode` suppresses PR side effects, not model calls — a run makes real, billed Claude calls. Two languages measured ~1.4M input tokens; three is ~78 workflow runs.
+**⚠ Real API spend**: `test-mode` suppresses PR side effects, not model calls — a run makes real, billed Claude calls. A three-language run is ~78 sync runs **plus ~78 review runs**. The ~1.4M input tokens measured on two languages pre-dates review coverage, so it is a floor, not an estimate.
 
 **⚠ Terminal timeout**: The script creates 26 PRs sequentially and can take 5+ minutes. Set a generous timeout (≥ 600000ms) or run without one.
 
