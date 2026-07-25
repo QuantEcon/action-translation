@@ -40,7 +40,7 @@ Working notes — state, decisions, design ideas — live in [`.dev/`](.dev/READ
 
 ## Module Structure
 
-One module map is maintained, in [`docs/developer/architecture.md`](../docs/developer/architecture.md)
+One module map is maintained, in [`docs/developer/architecture.md`](docs/developer/architecture.md)
 (a structural test asserts it names every source module, so it cannot silently drift).
 Quick orientation: `src/` is the GitHub Action (entry `index.ts`, pipeline
 `sync-orchestrator.ts`, Claude calls in `translator.ts`/`reviewer.ts`), `src/cli/` is the
