@@ -153,8 +153,9 @@ The tool tests translation scenarios across four phases:
 tool-test-action-on-github/
 ├── test-action-on-github.sh     # Main test script
 ├── test-action-on-github-data/  # Test scenario files
+│   ├── sync-workflow-template.yml  # ONE sync workflow, rendered per language
 │   ├── base-minimal.md          # Base English doc
-│   ├── base-minimal-zh-cn.md    # Base Chinese doc
+│   ├── base-minimal-<lang>.md   # Base translated doc, one per LANGUAGES entry
 │   ├── 01-intro-change-*.md     # Test scenarios
 │   └── ...
 ├── evaluate/                     # Quality evaluation tool
@@ -172,11 +173,12 @@ tool-test-action-on-github/
 
 ## Test Mode
 
-The script uses **TEST mode** which:
-- Uses PR head commit (not merge commit)
-- Skips actual translation (returns placeholder text)
-- Validates workflow mechanics without API costs
+The script uses **TEST mode**, which changes exactly two things — see `isTestMode` in `src/index.ts`:
+- Uses the PR head commit rather than the merge commit, so an OPEN PR can drive a sync
+- Suppresses post-sync notifications (failure issues and success comments)
 - **Triggered by adding the `test-translation` label** to source PRs
+
+**It does NOT skip translation and is NOT free.** Every sync and review still makes real, billed Claude calls — measured at 23k–103k input tokens per sync run. The name is misleading; treat a TEST-mode run as a full-price run that keeps its side effects off the source PR.
 
 ### Label-Triggered Workflow
 

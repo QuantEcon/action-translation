@@ -43,6 +43,8 @@ set -e  # Exit on error
 # Parse arguments
 DRY_RUN=false
 ACTION_REF=""
+ONLY_LANGUAGES=""
+ONLY_SCENARIOS=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --dry-run)
@@ -57,9 +59,26 @@ while [[ $# -gt 0 ]]; do
             fi
             shift 2
             ;;
+        --languages)
+            ONLY_LANGUAGES="$2"
+            if [ -z "$ONLY_LANGUAGES" ]; then
+                echo "--languages requires a comma-separated list of codes" >&2
+                exit 1
+            fi
+            shift 2
+            ;;
+        --scenarios)
+            ONLY_SCENARIOS="$2"
+            if [ -z "$ONLY_SCENARIOS" ]; then
+                echo "--scenarios requires a comma-separated list of prefixes" >&2
+                exit 1
+            fi
+            shift 2
+            ;;
         *)
             echo "Unknown option: $1" >&2
             echo "Usage: $0 [--dry-run] [--action-ref <tag|branch>]" >&2
+            echo "                 [--languages <code,...>] [--scenarios <prefix,...>]" >&2
             exit 1
             ;;
     esac
@@ -94,6 +113,34 @@ LANGUAGES=(
 
 lang_code() { echo "${1%%|*}"; }
 lang_name() { echo "${1##*|}"; }
+
+# --languages narrows the run to a subset. This exists so a change can be
+# smoke-tested for ONE language at ~1/Nth the spend before committing to the
+# full matrix — a full run is ~78 sync plus ~78 billed review runs.
+#
+# It genuinely narrows: the source reset re-renders .github/ from LANGUAGES, so
+# a scoped run leaves the source repo carrying ONLY the scoped languages' sync
+# workflows. That is what keeps the cost down (an unscoped workflow would still
+# fire on every labelled PR), but it means the estate is left partial until an
+# unscoped run restores it. Say so loudly rather than let it be discovered.
+SCOPED_LANGUAGES=false
+if [ -n "$ONLY_LANGUAGES" ]; then
+    SCOPED_LANGUAGES=true
+    _filtered=()
+    IFS=',' read -ra _want <<< "$ONLY_LANGUAGES"
+    for _w in "${_want[@]}"; do
+        _w="$(echo "$_w" | tr -d '[:space:]')"
+        _hit=false
+        for L in "${LANGUAGES[@]}"; do
+            if [ "$(lang_code "$L")" = "$_w" ]; then _filtered+=("$L"); _hit=true; fi
+        done
+        if [ "$_hit" = false ]; then
+            echo "Unknown language '$_w'. Configured: $(for L in "${LANGUAGES[@]}"; do printf '%s ' "$(lang_code "$L")"; done)" >&2
+            exit 1
+        fi
+    done
+    LANGUAGES=("${_filtered[@]}")
+fi
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -317,8 +364,19 @@ for L in "${LANGUAGES[@]}"; do
     printf "    %-30s %-28s ${GREEN}@%s${NC}\n" "${SOURCE_REPO}.${c}" "review + rebase" "$ACTION_REF"
 done
 echo ""
+if [ "$SCOPED_LANGUAGES" = true ]; then
+    echo -e "  ${YELLOW}⚠ SCOPED RUN — only: ${ONLY_LANGUAGES}${NC}"
+    echo -e "  ${YELLOW}  The source reset re-renders .github/ from this list, so the other${NC}"
+    echo -e "  ${YELLOW}  languages' sync workflows are DELETED until an unscoped run restores${NC}"
+    echo -e "  ${YELLOW}  them. This is a smoke test, not a release gate.${NC}"
+    echo ""
+fi
 TOTAL_WORKFLOWS=$(( ${#LANGUAGES[@]} * 3 ))
-echo -e "  ${GREEN}${TOTAL_WORKFLOWS}/${TOTAL_WORKFLOWS} workflows on one ref${NC} — a full run tests exactly one version."
+if [ "$SCOPED_LANGUAGES" = true ] || [ -n "$ONLY_SCENARIOS" ]; then
+    echo -e "  ${YELLOW}${TOTAL_WORKFLOWS}/${TOTAL_WORKFLOWS} scoped workflows on one ref — this is a SMOKE TEST, not a gate.${NC}"
+else
+    echo -e "  ${GREEN}${TOTAL_WORKFLOWS}/${TOTAL_WORKFLOWS} workflows on one ref${NC} — a full run tests exactly one version."
+fi
 if [ "$ACTION_REF" = "v0" ]; then
     echo -e "  ${CYAN}Floating-tag mode: every workflow reads @v0 → ${V0_DESC:-${V0_SHA:0:7}}.${NC}"
     echo -e "  ${CYAN}This is the post-release smoke that exercises tag resolution (#109).${NC}"
@@ -594,6 +652,27 @@ declare -a scenarios=(
     "25-pre-title-content-lecture:Pre-title content (anchor + raw block):lecture"
     "26-heading-case-change-lecture:Heading case change (title-case → sentence-case):lecture"
 )
+
+# --scenarios narrows to specific test cases by file-prefix (e.g. 01, or
+# 01-intro-change-minimal). Matching is prefix-based so the short number works.
+if [ -n "$ONLY_SCENARIOS" ]; then
+    _keep=()
+    IFS=',' read -ra _want <<< "$ONLY_SCENARIOS"
+    for _w in "${_want[@]}"; do
+        _w="$(echo "$_w" | tr -d '[:space:]')"
+        _hit=false
+        for sc in "${scenarios[@]}"; do
+            case "${sc%%:*}" in "$_w"*) _keep+=("$sc"); _hit=true ;; esac
+        done
+        if [ "$_hit" = false ]; then
+            echo "Unknown scenario '$_w'. Valid prefixes are 01..26." >&2
+            exit 1
+        fi
+    done
+    scenarios=("${_keep[@]}")
+    echo -e "${YELLOW}Scoped run: ${#scenarios[@]} of 26 scenarios (${ONLY_SCENARIOS})${NC}"
+    echo ""
+fi
 
 # Note: Tests 01-08 modify lecture-minimal.md, tests 09-15 modify lecture.md, test 16 tests pure reordering
 

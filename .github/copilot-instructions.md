@@ -158,8 +158,7 @@ tool-test-action-on-github/
 ├── test-action-on-github.sh           # Main test script
 ├── README.md                          # Detailed docs (scenarios, evaluation)
 ├── test-action-on-github-data/        # Test fixtures + workflow templates
-│   ├── workflow-template.yml          # zh-cn workflow (checkout from main)
-│   ├── workflow-template-fa.yml       # fa workflow (checkout from main)
+│   ├── sync-workflow-template.yml     # ONE sync workflow, rendered per language
 │   ├── base-*.md / base-*.yml        # Base state files for source + targets
 │   └── 01-*.md ... 26-*.md           # Test scenario files (26 total)
 ├── evaluate/                          # Phase 2: LLM-based quality evaluation
