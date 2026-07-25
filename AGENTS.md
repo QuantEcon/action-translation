@@ -104,6 +104,18 @@ npm run build    # Compile TypeScript + bundle dist-action/index.js
 - Always work on a branch, never commit directly to `main`
 - Use PRs for all changes, including docs
 - **Always use create/edit file tools** for file content — never heredoc or shell string escaping
+- **Never trust a bulk find-and-replace; verify the result, not the command's exit code.**
+  Scripted edits fail *silently* and look successful. Four real examples from one session:
+  a slice whose end marker matched earlier in the file produced `""`, and
+  `str.replace("", new)` inserted between every character — 232 lines became 46,677;
+  a blanket rename rewrote a path to `.github/AGENTS.md`, which does not exist;
+  another rewrote an append-only decision record it should never have touched;
+  and a `printf` whose format string held an em-dash aborted, leaving the extracted
+  value empty so every branch took the "nothing to do" path and 24 GitHub release
+  titles were overwritten instead of migrated. In each case the command reported
+  success. After any scripted edit: `grep` for what should be gone, `grep` for what
+  should be there, and check the file still parses or renders. Prefer exact-match
+  edits over pattern replacement whenever the target is known.
 - Multi-line commit messages: write to `.dev/scratch/` first, then use `-F`:
   ```bash
   git commit -F .dev/scratch/msg.txt
@@ -120,8 +132,9 @@ gh pr view 123 > .dev/scratch/pr.txt && cat .dev/scratch/pr.txt
 # Create PR (write body with file tool first, then:)
 gh pr create --title "..." --body-file .dev/scratch/pr-body.txt --base main > .dev/scratch/pr-result.txt && cat .dev/scratch/pr-result.txt
 
-# Create release (write notes with file tool first, then:)
-gh release create vX.Y.Z --title "..." --notes-file .dev/scratch/release-notes.md > .dev/scratch/release-result.txt && cat .dev/scratch/release-result.txt
+# Create release (write notes with file tool first; title is the tag alone — see the
+# release checklist for why)
+gh release create vX.Y.Z --title "vX.Y.Z" --notes-file .dev/scratch/release-notes.md > .dev/scratch/release-result.txt && cat .dev/scratch/release-result.txt
 ```
 
 The `.dev/scratch/` folder is committed (via `.gitkeep`) but its contents are git-ignored.
@@ -239,7 +252,17 @@ Before creating a release, verify the following:
    ```bash
    ./tool-test-action-on-github/test-action-on-github.sh --action-ref v0 --scenarios 01
    ```
-6. **Create GitHub release** — `gh release create vX.Y.Z --title "..." --notes-file .dev/scratch/release-notes.md`
+6. **Create GitHub release** — the title is **the tag and nothing else**:
+
+   ```bash
+   gh release create vX.Y.Z --title "vX.Y.Z" --notes-file .dev/scratch/release-notes.md
+   ```
+
+   The repo sidebar and the releases list truncate long titles, so a descriptive
+   suffix is cut off exactly where it stops being readable — `v0.24.0 — tech-debt
+   Wave…` tells a visitor less than `v0.24.0` does. Put the headline in the **notes
+   body** instead, as the first line: it renders in full on the release page, in the
+   Atom feed, and in email notifications, none of which truncate.
 
 ---
 
