@@ -33,14 +33,14 @@ Each test PR triggers **both** workflows.
 
 The two halves of the harness resolve the action differently, and the script prints both before it creates any PRs — read that banner rather than assuming.
 
-The **sync** workflows check out this repo at an explicit ref and run `uses: ./action`. The ref defaults to the version in `package.json` and is substituted into the templates at run time, so it cannot go stale. Override it with `--action-ref` when you need to test something other than the current working version:
+The **sync** workflows check out this repo at an explicit ref and run `uses: ./action`. The ref defaults to the version in `package.json` and is substituted into the templates at run time, so it cannot go stale. Override it with `--action-ref <tag|branch>` when you need to test something other than the current working version:
 
 ```bash
 ./test-action-on-github.sh --action-ref main
 ./test-action-on-github.sh --action-ref v0.23.0
 ```
 
-The script fails immediately if the ref does not exist on the remote, rather than letting 26 workflow runs fail at checkout.
+The script fails immediately if the ref does not exist on the remote, rather than letting 26 workflow runs fail at checkout. A raw commit SHA is not accepted — `git ls-remote` cannot verify one, and pinning to a ref the script cannot confirm exists is the failure mode this replaced.
 
 The **review** workflow (`review-translations.yml`, which lives in the target repos) runs `uses: QuantEcon/action-translation@v0` deliberately, so the harness exercises whether the floating tag resolves — see #109. This means the review half tests whatever `@v0` points at *now*, which is **not** necessarily the ref under test. When the two differ the banner says so and warns; a newly-cut release is only covered by the review half once `v0` has been moved to it.
 

@@ -5,10 +5,15 @@
 # This script resets and sets up the test-translation-sync repositories for 
 # comprehensive end-to-end testing of the translation action.
 #
-# Usage: ./tool-test-action-on-github/test-action-on-github.sh [--dry-run]
+# Usage: ./tool-test-action-on-github/test-action-on-github.sh [--dry-run] [--action-ref <tag|branch>]
 #
 # Options:
-#   --dry-run    Show what would be done without making any changes
+#   --dry-run       Show what would be done without making any changes
+#   --action-ref    Tag or branch of action-translation the sync workflows check
+#                   out. Defaults to v<package.json version>. Raw commit SHAs are
+#                   not accepted: `git ls-remote` cannot verify one, and pinning
+#                   to a ref this script cannot confirm exists is how the harness
+#                   ended up silently testing v0.16.1 in the first place.
 #
 # Prerequisites:
 # - GitHub CLI (gh) must be installed and authenticated
@@ -41,14 +46,14 @@ while [[ $# -gt 0 ]]; do
         --action-ref)
             ACTION_REF="$2"
             if [ -z "$ACTION_REF" ]; then
-                echo "--action-ref requires a value (a tag, branch or SHA)" >&2
+                echo "--action-ref requires a value (a tag or branch)" >&2
                 exit 1
             fi
             shift 2
             ;;
         *)
             echo "Unknown option: $1" >&2
-            echo "Usage: $0 [--dry-run] [--action-ref <tag|branch|sha>]" >&2
+            echo "Usage: $0 [--dry-run] [--action-ref <tag|branch>]" >&2
             exit 1
             ;;
     esac
