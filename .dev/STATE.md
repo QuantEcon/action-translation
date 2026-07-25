@@ -12,10 +12,30 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   ([`D-2026-07-24-tech-debt-audit-boundaries.md`](decisions/D-2026-07-24-tech-debt-audit-boundaries.md)).
   The release decision is taken — v0.24.0 is cut (below). Wave 2 of the audit
   (#169–#176 + backlog #177) remains available.
-- **PR #71** — Malayalam (`ml`) draft; awaiting native-reviewer calibration batch.
-  Glossary PR **#69** (ja) open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
+- **Malayalam** — `ml` config landed in v0.24.0 (PR #71). The harness now drives it as a
+  first-class third language and it passes 26/26. Its two seed reference translations are
+  machine drafts awaiting native review (#207); the benchmark's Phase 1 (#194) is unrun.
+- **Glossary PR #69** (ja) — open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
+- **#210** — review mode fails the run on a *deliberately deleted* source document. Found by
+  the first full E2E run; the v0.24.0 F40 guard cannot tell a failed fetch from an intended
+  deletion, so a healthy pipeline goes red on every deletion. Renames likely need the same fix.
 
 ## Recently landed
+
+- **The E2E harness tests one version, everywhere** (2026-07-25, #206 + #209). A "full run"
+  used to pin **2 of 9** workflows; the rest floated on `@v0`, so one run tested two versions
+  and reported it as one. Two were worse than unpinned: the fa reset deleted `.github/`
+  without re-rendering (so fa's review path had *never* fired), and a hand-made ml sync
+  workflow failed on all 26 PRs of every run, unreported. Now one `LANGUAGES` array drives
+  everything, all nine workflows render from templates carrying a substituted ref, and a
+  per-workflow census prints before any PR is created. `@v0` is preserved as a *post-release
+  smoke* (`--action-ref v0`) rather than by leaving workflows floating — which is what broke
+  #202's circular gate. Default ref is now `main`; release gating is an explicit
+  `--action-ref vX.Y.Z` step **that still needs adding to the release checklist**.
+  **Verified by a full run**: 78/78 sync green (26/26 × zh-cn/fa/ml), 26 translation PRs per
+  target, zero failure issues — plus a `@v0` smoke confirming tag resolution. ml went from
+  0/26 to 26/26. Scope limiter `--languages`/`--scenarios` added for cheap smokes; note the
+  write path is unexercised by `--dry-run`, which is where both bugs in the rewrite lived.
 
 - **v0.24.0** (2026-07-25) — **Wave 1, shipped whole**. The release carries nothing but the
   wave below; the significant fact is that cutting it moved the floating `@v0` tag, so every
