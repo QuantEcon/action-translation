@@ -20,7 +20,11 @@ jobs:
           repository: QuantEcon/action-translation
           # Pin to the release under test — tracking the default branch makes a run
           # unreproducible and silently retests whatever landed on main last.
-          ref: v0.16.1
+          # Substituted by test-action-on-github.sh, which defaults to the version
+          # in package.json and prints what it resolved before creating any PRs.
+          # Do not hard-code a version here: this line read v0.16.1 for eight
+          # releases because nothing bumped it and nothing checked it.
+          ref: __ACTION_REF__
           path: action
       
       - name: Setup Node.js

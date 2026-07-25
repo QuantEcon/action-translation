@@ -133,13 +133,14 @@ End-to-end testing against real GitHub repos. Creates test PRs that trigger the 
 | `QuantEcon/test-translation-sync.zh-cn` | Target (Chinese) — translation PRs land here |
 | `QuantEcon/test-translation-sync.fa` | Target (Farsi) — translation PRs land here |
 
-Both target workflows checkout & build `action-translation` from `main` (not a pinned release), so tests always exercise the latest code.
+**Which version gets tested** — the script prints this before creating any PRs; read the banner rather than assuming. The **sync** workflows check out this repo at an explicit ref (defaulted from `package.json`, substituted at run time, overridable with `--action-ref`) and run `uses: ./action`. The **review** workflow runs `QuantEcon/action-translation@v0` deliberately, to exercise the floating tag (#109) — so it tests whatever `v0` points at now, which for a freshly-cut release is the *previous* version until the tag is moved. The banner warns when the two disagree.
 
 ### Running
 
 ```bash
-./tool-test-action-on-github/test-action-on-github.sh          # Full run (26 test PRs)
-./tool-test-action-on-github/test-action-on-github.sh --dry-run # Preview only
+./tool-test-action-on-github/test-action-on-github.sh                    # Full run (26 test PRs)
+./tool-test-action-on-github/test-action-on-github.sh --dry-run          # Preview only
+./tool-test-action-on-github/test-action-on-github.sh --action-ref main  # Test a specific ref
 ```
 
 **What the script does**: resets all 3 repos to clean state (force-push `main`), closes all open PRs, creates 26 draft PRs with `test-translation` label. The label triggers both zh-cn and fa workflows in TEST mode (no Claude API calls).
