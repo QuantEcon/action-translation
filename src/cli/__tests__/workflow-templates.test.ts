@@ -162,12 +162,15 @@ describe('the E2E harness workflow rendering', () => {
     const doc = fs.readFileSync(path.join(ROOT, '.github', 'copilot-instructions.md'), 'utf8');
     expect(doc.split('\n').length).toBeLessThan(1000);
 
-    const documented = [...doc.matchAll(/`QuantEcon\/test-translation-sync\.([a-z-]+)`/g)].map(
-      (m) => m[1]
-    );
-    for (const lang of HARNESS_LANGUAGES) {
-      expect(documented).toContain(lang);
-    }
+    // Exact set, not a subset: a documented target repo the harness does not
+    // drive is misleading guidance in the same way a missing one is, and the
+    // test name promises "exactly".
+    const documented = [
+      ...new Set(
+        [...doc.matchAll(/`QuantEcon\/test-translation-sync\.([a-z-]+)`/g)].map((m) => m[1])
+      ),
+    ].sort();
+    expect(documented).toEqual([...HARNESS_LANGUAGES].sort());
   });
 
   it('gives the rendered rebase workflow a root docs-folder', () => {
