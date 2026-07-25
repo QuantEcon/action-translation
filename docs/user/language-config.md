@@ -13,6 +13,7 @@ Each target language can have specific translation rules that are automatically 
 | `zh-cn` | Chinese (Simplified) | ✅ Configured |
 | `fa` | Farsi (Persian) | ✅ Configured |
 | `fr` | French | ✅ Configured (draft glossary) |
+| `ml` | Malayalam | ✅ Configured (keep-English policy; glossary in review) |
 | `ja` | Japanese | Planned |
 | `es` | Spanish | Planned |
 
@@ -54,6 +55,12 @@ Rules apply to all translation modes: UPDATE (incremental sync), NEW (full file)
 The **GitHub Action** validates `target-language` against its configured language list — currently `en`, `zh-cn`, `fa`, `fr`, and `ml` — and fails immediately, before any work happens, on anything else. Adding a language means adding a `LANGUAGE_CONFIGS` entry in `src/language-config.ts` (a glossary alone does not enable a language); the drift test in `language-config.test.ts` keeps this page's list in sync with the code.
 
 The **CLI** (`translate init`, `forward`, `backward`) never validates the language code: any code works there, with no language-specific rules applied for unconfigured codes.
+
+### Malayalam — `ml`
+
+Malayalam is **keep-English-dominant**, unlike every other configured language. Technical and domain terms stay in their original English/Latin form rather than being translated or transliterated; only the connective prose is Malayalam, with case-suffixes and sandhi attached to the English roots (`economy-യിലെ`, `bond-ന്റെ`, `supply-യും`). Section headings stay in English.
+
+The reason is register, not convenience: Kerala has no Malayalam-medium STEM university or active classroom term bank, and learners meet these terms in English from first exposure — so translating them reads archaic rather than accessible. This is native-speaker guidance recorded in issue #70 and implemented in #71, and it inverts the full-translation pattern `zh-cn` and `fa` follow. The glossary's role flips accordingly: it is a small everyday-word consistency list (52 terms) rather than a technical dictionary.
 
 ## Adding a new language
 

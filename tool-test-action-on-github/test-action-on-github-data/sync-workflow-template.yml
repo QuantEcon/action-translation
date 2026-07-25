@@ -1,0 +1,74 @@
+# Translation Sync — __LANG_NAME__
+#
+# ONE template renders the source repo's sync workflow for EVERY harness
+# language. `test-action-on-github.sh` substitutes __ACTION_REF__, __LANG__ and
+# __LANG_NAME__ at reset time and force-pushes the result, so there is no
+# hand-maintained copy per language and no hand-maintained version anywhere.
+#
+# VERSION: do not hard-code a ref here. The harness substitutes it (defaulting
+# to `main`, overridable with `--action-ref`) and prints what it resolved before
+# creating any PRs. The predecessors of this file pinned `ref: v0.16.1` for
+# eight releases because nothing bumped it and nothing checked it, while two
+# doc pages claimed the harness tracked `main`.
+#
+# WHY THE MARKETPLACE FORM: `uses: QuantEcon/action-translation@<ref>` rather
+# than checkout + `uses: ./action`. The committed `dist-action/` bundle is what
+# executes either way, so nothing is lost — and this form additionally exercises
+# ref resolution (does the ref exist, does action.yml parse, is the bundle
+# loadable) on every workflow on every run. It is also what lets ONE knob reach
+# every workflow: rendering with `--action-ref v0` produces a literal `@v0`
+# here, which is the post-release smoke that keeps QuantEcon/action-translation#109's
+# floating-tag check alive without embedding two versions in one run (#202).
+#
+# Consequence: uncommitted code cannot be tested. Push the branch first.
+#
+# HARNESS-ONLY DIVERGENCES from the production template, kept deliberately:
+#   * the `test-translation` label trigger + `test-mode`, so a sync can be fired
+#     from an OPEN fixture PR without merging anything to main;
+#   * `target-repo` derived from ${{ github.repository }} so a fork of the
+#     harness points at its own targets.
+name: Translation Sync (__LANG_NAME__)
+
+on:
+  pull_request:
+    types: [closed, labeled]
+  issue_comment:
+    types: [created]
+
+jobs:
+  sync-translation-__LANG__:
+    # Merged PR (production path) OR the `test-translation` label on an open PR
+    # (harness path) OR `\translate-resync` on a merged PR (production path).
+    if: >
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'test-translation') ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, '\translate-resync'))
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Determine mode
+        id: mode
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "labeled" ]]; then
+            echo "test-mode=true" >> $GITHUB_OUTPUT
+            echo "🧪 TEST mode — fired by the test-translation label on an open PR"
+          else
+            echo "test-mode=false" >> $GITHUB_OUTPUT
+            echo "🚀 PRODUCTION mode — merged PR or \translate-resync"
+          fi
+
+      - uses: QuantEcon/action-translation@__ACTION_REF__
+        with:
+          mode: sync
+          target-repo: ${{ github.repository }}.__LANG__
+          target-language: __LANG__
+          source-language: en
+          docs-folder: '.'
+          anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github-token: ${{ secrets.QUANTECON_SERVICES_PAT }}
+          test-mode: ${{ steps.mode.outputs.test-mode }}

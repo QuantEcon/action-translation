@@ -207,4 +207,24 @@ describe('the documented supported-language list matches the code', () => {
       .sort();
     expect(documented).toEqual([...getSupportedLanguages()].sort());
   });
+
+  // The marker is a hidden HTML comment, so it can be correct while the
+  // human-readable table above it is stale — which is exactly what happened
+  // when ml shipped in v0.24.0: the marker listed it, the table did not, and
+  // the guard passed. Readers see the table, so the table is what must agree.
+  it('language-config.md supported-languages TABLE names every configured language', () => {
+    const doc = fs.readFileSync(
+      path.join(__dirname, '..', '..', 'docs', 'user', 'language-config.md'),
+      'utf8'
+    );
+    const section = doc.slice(doc.indexOf('## Supported languages'));
+    const table = section.slice(0, section.indexOf('\n## '));
+    const rows = [...table.matchAll(/^\|\s*`([a-z-]+)`\s*\|/gm)].map((m) => m[1]);
+
+    // `en` is the source language and has no row; every other configured
+    // language must appear.
+    const expected = [...getSupportedLanguages()].filter((c) => c !== 'en').sort();
+    const missing = expected.filter((c) => !rows.includes(c));
+    expect(missing).toEqual([]);
+  });
 });

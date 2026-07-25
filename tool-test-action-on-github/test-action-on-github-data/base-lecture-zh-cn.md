@@ -7,14 +7,15 @@ kernelspec:
   display_name: Python 3
   language: python
   name: python3
-heading-map:
-  Linear Algebra Foundations: 线性代数基础
-  Vector Spaces: 向量空间
-  Vector Spaces::Basic Properties: 基本性质
-  Vector Spaces::Basic Properties::Applications in Economics: 在经济学中的应用
-  Matrix Operations: 矩阵运算
-  Matrix Operations::Applications in Economics: 经济学应用
-  Eigenvalues and Eigenvectors: 特征值与特征向量
+translation:
+  title: 线性代数基础
+  headings:
+    Vector Spaces: 向量空间
+    Vector Spaces::Basic Properties: 基本性质
+    Vector Spaces::Basic Properties::Applications in Economics: 在经济学中的应用
+    Matrix Operations: 矩阵运算
+    Matrix Operations::Applications in Economics: 经济学应用
+    Eigenvalues and Eigenvectors: 特征值与特征向量
 ---
 
 # 线性代数基础

@@ -9,25 +9,31 @@
 #
 # Options:
 #   --dry-run       Show what would be done without making any changes
-#   --action-ref    Tag or branch of action-translation the sync workflows check
-#                   out. Defaults to v<package.json version>. Raw commit SHAs are
-#                   not accepted: `git ls-remote` cannot verify one, and pinning
-#                   to a ref this script cannot confirm exists is how the harness
-#                   ended up silently testing v0.16.1 in the first place.
+#   --action-ref    Tag or branch of action-translation that EVERY workflow this
+#                   harness writes will run. Defaults to `main`. Raw commit SHAs
+#                   are not accepted: `git ls-remote` cannot verify one, and
+#                   pinning to a ref this script cannot confirm exists is how
+#                   the harness ended up silently testing v0.16.1 for eight
+#                   releases.
+#
+#                   `--action-ref v0` renders the floating tag into every
+#                   workflow, which is the post-release smoke that exercises tag
+#                   resolution (QuantEcon/action-translation#109) without
+#                   embedding two versions in one run (#202).
 #
 # Prerequisites:
-# - GitHub CLI (gh) must be installed and authenticated
-# - Repositories must already exist on GitHub:
-#   - QuantEcon/test-translation-sync
-#   - QuantEcon/test-translation-sync.zh-cn
-#   - QuantEcon/test-translation-sync.fa
-# - ANTHROPIC_API_KEY secret must be configured in test-translation-sync
+# - GitHub CLI (gh) must be installed and authenticated, with the `workflow`
+#   scope — this script pushes .github/workflows/ to four repos.
+# - The source repo and one target repo per entry in LANGUAGES must exist.
+# - ANTHROPIC_API_KEY and QUANTECON_SERVICES_PAT secrets configured.
 #
 # What this script does:
-# 1. Clones/updates both test repositories
-# 2. Force pushes base state to main (clean slate)
-# 3. Closes all open PRs on both source and target repos
-# 4. Creates 26 fresh test PRs covering the scenario matrix (see the `scenarios` array below)
+# 1. Clones/updates the source repo and every target repo
+# 2. Force pushes base state to main (clean slate), rendering ALL workflows —
+#    one sync workflow per language in the source repo, plus review and rebase
+#    in each target — every one pinned to the same ref
+# 3. Closes all open PRs on the source and every target repo
+# 4. Creates fresh test PRs covering the scenario matrix (see `scenarios` below)
 # 5. Adds 'test-translation' label to each PR
 # 6. Prints summary of created PRs
 #
@@ -37,6 +43,8 @@ set -e  # Exit on error
 # Parse arguments
 DRY_RUN=false
 ACTION_REF=""
+ONLY_LANGUAGES=""
+ONLY_SCENARIOS=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --dry-run)
@@ -51,9 +59,26 @@ while [[ $# -gt 0 ]]; do
             fi
             shift 2
             ;;
+        --languages)
+            ONLY_LANGUAGES="$2"
+            if [ -z "$ONLY_LANGUAGES" ]; then
+                echo "--languages requires a comma-separated list of codes" >&2
+                exit 1
+            fi
+            shift 2
+            ;;
+        --scenarios)
+            ONLY_SCENARIOS="$2"
+            if [ -z "$ONLY_SCENARIOS" ]; then
+                echo "--scenarios requires a comma-separated list of prefixes" >&2
+                exit 1
+            fi
+            shift 2
+            ;;
         *)
             echo "Unknown option: $1" >&2
             echo "Usage: $0 [--dry-run] [--action-ref <tag|branch>]" >&2
+            echo "                 [--languages <code,...>] [--scenarios <prefix,...>]" >&2
             exit 1
             ;;
     esac
@@ -62,13 +87,60 @@ done
 # Configuration
 OWNER="QuantEcon"
 SOURCE_REPO="test-translation-sync"
-TARGET_REPO="test-translation-sync.zh-cn"
-TARGET_REPO_FA="test-translation-sync.fa"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DATA_DIR="$SCRIPT_DIR/test-action-on-github-data"
-WORK_DIR="."  # Clone to current directory
+EXAMPLES_DIR="$(cd "$SCRIPT_DIR/../examples" && pwd)"
+WORK_DIR="$(pwd)"   # repos are cloned here; every step cd's from it absolutely
 TEST_FILE_MINIMAL="lecture-minimal.md"
 TEST_FILE_LECTURE="lecture.md"
+
+# Every language the harness drives, as `code|Display name`. Everything else is
+# derived, so adding a language is one line here plus its three base fixtures:
+#   target repo    = $SOURCE_REPO.<code>
+#   sync workflow  = .github/workflows/sync-translations-<code>.yml
+#   fixtures       = base-{minimal,lecture}-<code>.md, base-toc-<code>.yml
+#
+# This replaced three near-duplicate per-repo blocks that had already drifted
+# three ways: `.github/` was deleted in the fa reset but not zh-cn's (which
+# destroyed fa's review and rebase workflows on every run), `.translate/` was
+# deleted in the targets but not the source, and ml was absent entirely while
+# its hand-made workflow fired and failed on all 26 PRs of every run.
+LANGUAGES=(
+  "zh-cn|Chinese"
+  "fa|Farsi"
+  "ml|Malayalam"
+)
+
+lang_code() { echo "${1%%|*}"; }
+lang_name() { echo "${1##*|}"; }
+
+# --languages narrows the run to a subset. This exists so a change can be
+# smoke-tested for ONE language at ~1/Nth the spend before committing to the
+# full matrix — a full run is ~78 sync plus ~78 billed review runs.
+#
+# It genuinely narrows: the source reset re-renders .github/ from LANGUAGES, so
+# a scoped run leaves the source repo carrying ONLY the scoped languages' sync
+# workflows. That is what keeps the cost down (an unscoped workflow would still
+# fire on every labelled PR), but it means the estate is left partial until an
+# unscoped run restores it. Say so loudly rather than let it be discovered.
+SCOPED_LANGUAGES=false
+if [ -n "$ONLY_LANGUAGES" ]; then
+    SCOPED_LANGUAGES=true
+    _filtered=()
+    IFS=',' read -ra _want <<< "$ONLY_LANGUAGES"
+    for _w in "${_want[@]}"; do
+        _w="$(echo "$_w" | tr -d '[:space:]')"
+        _hit=false
+        for L in "${LANGUAGES[@]}"; do
+            if [ "$(lang_code "$L")" = "$_w" ]; then _filtered+=("$L"); _hit=true; fi
+        done
+        if [ "$_hit" = false ]; then
+            echo "Unknown language '$_w'. Configured: $(for L in "${LANGUAGES[@]}"; do printf '%s ' "$(lang_code "$L")"; done)" >&2
+            exit 1
+        fi
+    done
+    LANGUAGES=("${_filtered[@]}")
+fi
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -81,18 +153,19 @@ NC='\033[0m' # No Color
 #
 # Resolve the action version under test.
 #
-# The harness has two halves and they resolve the action differently:
+# ONE ref reaches every workflow. This used to be two independent halves — sync
+# workflows at an explicit ref, target-repo workflows permanently on `@v0` — so
+# a single run tested two versions at once and reported it as one. Worse, the
+# split was not even honest: the hand-made ml sync workflow was ALSO on `@v0`,
+# invisible to the banner, failing on all 26 PRs of every run.
 #
-#   sync   — the workflow templates check out this repo at an explicit ref and
-#            run `uses: ./action`. That ref is substituted below, so it is never
-#            hand-maintained. It used to be hard-coded, and sat at v0.16.1 for
-#            eight releases while the docs claimed it tracked `main`.
-#   review — `review-translations.yml` lives in the target repos and runs
-#            `uses: QuantEcon/action-translation@v0`, deliberately, so the
-#            harness exercises whether the floating tag resolves (see #109).
-#            That means the review half tests whatever `@v0` points at *now*,
-#            which is not necessarily the ref under test. We report both rather
-#            than silently conflating them.
+# Every template now carries the ref on its `uses:` line, so `--action-ref`
+# reaches all of them. The floating-tag check that #109 wanted is preserved by
+# making `--action-ref v0` a first-class mode rather than by leaving some
+# workflow permanently floating: run the release gate pinned, move the tag, then
+# re-run with `--action-ref v0`. Nothing is repointed and no check is deleted —
+# the check moves to after the tag move, which is the only point where its
+# answer means anything (#202).
 #
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 ACTION_REPO_URL="https://github.com/$OWNER/action-translation.git"
@@ -109,9 +182,132 @@ resolve_remote_commit() {
                END { print (peeled ? peeled : first) }'
 }
 
+# ── Repo helpers ────────────────────────────────────────────────────────────
+# Every one runs its body in a subshell with an absolute cd, so no step depends
+# on the working directory another step happened to leave behind.
+
+clone_or_refresh() {   # $1 = repo name
+    cd "$WORK_DIR"
+    if [ -d "$1" ]; then
+        ( cd "$1" && git fetch origin -q && git checkout -q main && git reset -q --hard origin/main )
+    else
+        git clone -q "https://github.com/$OWNER/$1.git"
+    fi
+}
+
+commit_and_push() {    # $1 = commit message   (cwd = a clone)
+    git add -A
+    if ! git diff --cached --quiet; then
+        git commit -q -m "$1"
+    fi
+    # A swallowed commit failure must not masquerade as a clean no-op reset:
+    # the old code ran `git commit || echo "No changes to commit"` and pushed
+    # regardless, so a genuine failure looked identical to nothing-to-do.
+    if [ -n "$(git status --porcelain)" ]; then
+        echo -e "${RED}✗ reset left uncommitted changes in $(pwd)${NC}" >&2
+        exit 1
+    fi
+    git push -f -q origin main
+}
+
+render_sync_workflow() {   # $1 = code, $2 = display name   (cwd = source clone)
+    sed -e "s|__ACTION_REF__|$ACTION_REF|g" \
+        -e "s|__LANG_NAME__|$2|g" \
+        -e "s|__LANG__|$1|g" \
+        "$DATA_DIR/sync-workflow-template.yml" \
+        > ".github/workflows/sync-translations-$1.yml"
+}
+
+# Target-repo workflows are rendered from examples/ — the canonical templates
+# users receive (#161) — rather than from harness copies, so the harness cannot
+# drift from what it is supposed to be testing. Only the ref, the source repo
+# and the docs folder differ.
+render_target_workflows() {   # (cwd = target clone)
+    mkdir -p .github/workflows
+
+    sed -e "s|QuantEcon/action-translation@v0|QuantEcon/action-translation@$ACTION_REF|g" \
+        -e "s|QuantEcon/lecture-python-intro|$OWNER/$SOURCE_REPO|g" \
+        -e "s|docs-folder: 'lectures'|docs-folder: '.'|g" \
+        "$EXAMPLES_DIR/review-translations.yml" \
+        > ".github/workflows/review-translations.yml"
+
+    # Two divergences from the canonical rebase template, both deliberate:
+    #
+    #  * docs-folder — the template carries none, so a substitution would no-op
+    #    and the workflow would take action.yml's `lectures/` default while the
+    #    harness repos keep lectures at the root. Rebase would filter on a
+    #    prefix no test file has and rebase nothing, reporting success. Insert
+    #    it. (%c/39 sidesteps nesting a single quote inside the awk program.)
+    #
+    #  * github-token — the template ships GITHUB_TOKEN with a caveat that
+    #    commits pushed with it do not trigger workflows. The live harness and
+    #    all five production editions run the PAT instead, on the strength of an
+    #    A/B recorded in the workflow itself (2026-07-21: zero runs under
+    #    GITHUB_TOKEN, review triggered under the PAT — #125). Re-rendering
+    #    without this would silently revert that, and the reset now deletes
+    #    .github/ so the old file is gone. Review stays on GITHUB_TOKEN, which
+    #    is correct for it — it posts a review rather than pushing commits.
+    sed -e "s|QuantEcon/action-translation@v0|QuantEcon/action-translation@$ACTION_REF|g" \
+        -e "s|secrets.GITHUB_TOKEN|secrets.QUANTECON_SERVICES_PAT|g" \
+        "$EXAMPLES_DIR/rebase-translations.yml" \
+      | awk '{ print }
+             /^[[:space:]]*mode:[[:space:]]*rebase[[:space:]]*$/ {
+                 match($0, /^[[:space:]]*/)
+                 printf "%sdocs-folder: %c.%c\n", substr($0, 1, RLENGTH), 39, 39
+             }' \
+        > ".github/workflows/rebase-translations.yml"
+
+    assert_rendered_target_workflows
+}
+
+# Post-conditions on the END STATE, not on the substitutions having been
+# attempted. `assert_no_placeholders` is vacuous here — examples/*.yml carry no
+# placeholder tokens — so a sed or awk whose anchor stops matching would leave a
+# silently wrong workflow. Every anchor below has already drifted at least once
+# somewhere in this repo's history.
+assert_rendered_target_workflows() {   # (cwd = target clone)
+    local wf err
+    for wf in review rebase; do
+        err=""
+        f=".github/workflows/$wf-translations.yml"
+        grep -q "QuantEcon/action-translation@$ACTION_REF" "$f" || err="$err ref-not-substituted"
+        grep -q 'lecture-python-intro' "$f" && err="$err source-repo-not-substituted"
+        if [ "$wf" = review ]; then
+            grep -q "source-repo: '$OWNER/$SOURCE_REPO'" "$f" || err="$err missing-source-repo"
+        fi
+        grep -q "docs-folder: '\.'" "$f" || err="$err missing-root-docs-folder"
+        if [ "$wf" = rebase ]; then
+            grep -q 'QUANTECON_SERVICES_PAT' "$f" || err="$err rebase-token-not-pat"
+        fi
+        if [ -n "$err" ]; then
+            echo -e "${RED}✗ rendered $f is wrong:$err${NC}" >&2
+            exit 1
+        fi
+    done
+}
+
+# Fails the run rather than letting a placeholder reach GitHub, where it would
+# surface as an unresolvable action 26 PRs deep.
+assert_no_placeholders() {   # (cwd = a clone)
+    local leftover
+    leftover="$(grep -rl '__ACTION_REF__\|__LANG__\|__LANG_NAME__\|__SOURCE_REPO__' .github/workflows 2>/dev/null || true)"
+    if [ -n "$leftover" ]; then
+        echo -e "${RED}✗ placeholder survived substitution in: $leftover${NC}" >&2
+        exit 1
+    fi
+}
+
+# Default to `main`, not the package.json version. The version bump happens IN
+# the release commit, so between releases package.json holds the LAST RELEASED
+# version — a package.json default therefore tested the previous release rather
+# than the code under development, and refused to run at all during a release
+# PR (the tag does not exist yet). Release gating is now an explicit
+# `--action-ref vX.Y.Z` step in the release checklist. The banner prints the
+# resolved SHA either way, so a `main` run is still attributable after the fact;
+# the old objection to `main` was that it was SILENT, and it no longer is.
 if [ -z "$ACTION_REF" ]; then
-    ACTION_REF="v$(node -p "require('$REPO_ROOT/package.json').version")"
-    ACTION_REF_SOURCE="package.json"
+    ACTION_REF="main"
+    ACTION_REF_SOURCE="default"
 else
     ACTION_REF_SOURCE="--action-ref"
 fi
@@ -130,7 +326,8 @@ if [ -z "$ACTION_REF_SHA" ]; then
     exit 1
 fi
 
-# What the review half will actually run, which may differ from the above.
+# What @v0 currently points at. Every workflow this run writes uses ACTION_REF,
+# so this is reported for contrast, not because any workflow reads it.
 V0_SHA="$(resolve_remote_commit v0)"
 # Annotated tags list their tag-object SHA, with the commit on a peeled `^{}`
 # line, so strip that suffix before comparing or v0 never matches a release tag.
@@ -143,16 +340,49 @@ V0_DESC="$(git ls-remote --tags "$ACTION_REPO_URL" 2>/dev/null \
           } }' \
     | head -1)"
 
+# Census, not a summary. Every workflow the harness writes is listed by name,
+# so "the harness tests version X" is falsifiable at run time instead of being
+# asserted in a comment. The predecessor of this block reported two aggregate
+# lines — "sync workflows" and "review workflow" — and both were wrong: one of
+# the sync workflows (ml) floated on @v0 and was invisible here, and the fa
+# target had no review workflow at all because the reset deleted it.
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}Action version under test${NC}"
 echo -e "${BLUE}========================================${NC}"
-echo -e "  sync workflows   ${GREEN}${ACTION_REF}${NC} (${ACTION_REF_SHA:0:7}, from $ACTION_REF_SOURCE)"
-if [ -n "$V0_SHA" ] && [ "$V0_SHA" = "$ACTION_REF_SHA" ]; then
-    echo -e "  review workflow  ${GREEN}@v0${NC} → ${GREEN}${V0_DESC:-${V0_SHA:0:7}}${NC} — same code"
+echo -e "  ref  ${GREEN}${ACTION_REF}${NC} (${ACTION_REF_SHA:0:7}, from ${ACTION_REF_SOURCE})"
+if [ -n "$(git ls-remote "$ACTION_REPO_URL" "refs/heads/$ACTION_REF" 2>/dev/null)" ]; then
+    echo -e "       ${YELLOW}branch ref — runs whatever dist-action/ that branch has committed${NC}"
+fi
+echo ""
+echo -e "  Workflows this run writes and pins:"
+for L in "${LANGUAGES[@]}"; do
+    c="$(lang_code "$L")"
+    printf "    %-30s %-28s ${GREEN}@%s${NC}\n" "$SOURCE_REPO" "sync-translations-${c}.yml" "$ACTION_REF"
+done
+for L in "${LANGUAGES[@]}"; do
+    c="$(lang_code "$L")"
+    printf "    %-30s %-28s ${GREEN}@%s${NC}\n" "${SOURCE_REPO}.${c}" "review + rebase" "$ACTION_REF"
+done
+echo ""
+if [ "$SCOPED_LANGUAGES" = true ]; then
+    echo -e "  ${YELLOW}⚠ SCOPED RUN — only: ${ONLY_LANGUAGES}${NC}"
+    echo -e "  ${YELLOW}  The source reset re-renders .github/ from this list, so the other${NC}"
+    echo -e "  ${YELLOW}  languages' sync workflows are DELETED until an unscoped run restores${NC}"
+    echo -e "  ${YELLOW}  them. This is a smoke test, not a release gate.${NC}"
+    echo ""
+fi
+TOTAL_WORKFLOWS=$(( ${#LANGUAGES[@]} * 3 ))
+if [ "$SCOPED_LANGUAGES" = true ] || [ -n "$ONLY_SCENARIOS" ]; then
+    echo -e "  ${YELLOW}${TOTAL_WORKFLOWS}/${TOTAL_WORKFLOWS} scoped workflows on one ref — this is a SMOKE TEST, not a gate.${NC}"
 else
-    echo -e "  review workflow  ${YELLOW}@v0${NC} → ${YELLOW}${V0_DESC:-${V0_SHA:0:7}}${NC}"
-    echo -e "  ${YELLOW}⚠ The review half is NOT testing $ACTION_REF. Move the v0 tag, or read${NC}"
-    echo -e "  ${YELLOW}  review results as applying to ${V0_DESC:-${V0_SHA:0:7}} only.${NC}"
+    echo -e "  ${GREEN}${TOTAL_WORKFLOWS}/${TOTAL_WORKFLOWS} workflows on one ref${NC} — a full run tests exactly one version."
+fi
+if [ "$ACTION_REF" = "v0" ]; then
+    echo -e "  ${CYAN}Floating-tag mode: every workflow reads @v0 → ${V0_DESC:-${V0_SHA:0:7}}.${NC}"
+    echo -e "  ${CYAN}This is the post-release smoke that exercises tag resolution (#109).${NC}"
+else
+    echo -e "  ${CYAN}@v0 currently resolves to ${V0_DESC:-${V0_SHA:0:7}} and is NOT exercised by this run.${NC}"
+    echo -e "  ${CYAN}After moving the tag, re-run with --action-ref v0 to check it (#109/#202).${NC}"
 fi
 echo ""
 
@@ -181,216 +411,122 @@ if ! gh auth status &> /dev/null; then
     exit 1
 fi
 
-# Check if repos exist
-if ! gh repo view "$OWNER/$SOURCE_REPO" &> /dev/null; then
-    echo -e "${RED}Error: Repository $OWNER/$SOURCE_REPO does not exist.${NC}"
-    echo "Please create it first on GitHub."
-    exit 1
+# Check every repo the run will touch. The predecessor of this block checked
+# the same three repos twice — once fatally, then again dry-run-tolerantly —
+# so the second block's REPOS_EXIST logic was unreachable dead code.
+REPOS_EXIST=true
+missing=()
+for repo in "$SOURCE_REPO" $(for L in "${LANGUAGES[@]}"; do echo "$SOURCE_REPO.$(lang_code "$L")"; done); do
+    if ! gh repo view "$OWNER/$repo" &> /dev/null; then
+        missing+=("$OWNER/$repo")
+    fi
+done
+
+if [ ${#missing[@]} -gt 0 ]; then
+    if [ "$DRY_RUN" = false ]; then
+        echo -e "${RED}Error: these repositories do not exist:${NC}"
+        printf '  %s\n' "${missing[@]}"
+        echo "Create them first, or remove the language from LANGUAGES."
+        exit 1
+    fi
+    REPOS_EXIST=false
+    echo -e "${YELLOW}Note: these repositories do not exist yet:${NC}"
+    printf '  %s\n' "${missing[@]}"
 fi
 
-if ! gh repo view "$OWNER/$TARGET_REPO" &> /dev/null; then
-    echo -e "${RED}Error: Repository $OWNER/$TARGET_REPO does not exist.${NC}"
-    echo "Please create it first on GitHub."
-    exit 1
-fi
-
-if ! gh repo view "$OWNER/$TARGET_REPO_FA" &> /dev/null; then
-    echo -e "${RED}Error: Repository $OWNER/$TARGET_REPO_FA does not exist.${NC}"
-    echo "Please create it first on GitHub."
+# Pushing .github/workflows/ needs the `workflow` OAuth scope. Without it the
+# run dies mid-push after already force-pushing content, leaving repos in a
+# half-reset state — so check before touching anything.
+if [ "$DRY_RUN" = false ] && ! gh auth status 2>&1 | grep -q "'workflow'"; then
+    echo -e "${RED}Error: the gh token lacks the 'workflow' scope.${NC}"
+    echo "This script writes .github/workflows/ to $(( ${#LANGUAGES[@]} + 1 )) repos."
+    echo "Run: gh auth refresh -h github.com -s workflow"
     exit 1
 fi
 
 echo -e "${GREEN}✓${NC} Prerequisites check passed"
 echo ""
 
-# Check if repos exist (skip validation in dry-run)
-REPOS_EXIST=true
-if ! gh repo view "$OWNER/$SOURCE_REPO" &> /dev/null; then
-    if [ "$DRY_RUN" = false ]; then
-        echo -e "${RED}Error: Repository $OWNER/$SOURCE_REPO does not exist.${NC}"
-        echo "Please create it first on GitHub."
-        exit 1
-    else
-        REPOS_EXIST=false
-        echo -e "${YELLOW}Note: Repository $OWNER/$SOURCE_REPO does not exist yet.${NC}"
-    fi
-fi
-
-if ! gh repo view "$OWNER/$TARGET_REPO" &> /dev/null; then
-    if [ "$DRY_RUN" = false ]; then
-        echo -e "${RED}Error: Repository $OWNER/$TARGET_REPO does not exist.${NC}"
-        echo "Please create it first on GitHub."
-        exit 1
-    else
-        REPOS_EXIST=false
-        echo -e "${YELLOW}Note: Repository $OWNER/$TARGET_REPO does not exist yet.${NC}"
-    fi
-fi
-
-if ! gh repo view "$OWNER/$TARGET_REPO_FA" &> /dev/null; then
-    if [ "$DRY_RUN" = false ]; then
-        echo -e "${RED}Error: Repository $OWNER/$TARGET_REPO_FA does not exist.${NC}"
-        echo "Please create it first on GitHub."
-        exit 1
-    else
-        REPOS_EXIST=false
-        echo -e "${YELLOW}Note: Repository $OWNER/$TARGET_REPO_FA does not exist yet.${NC}"
-    fi
-fi
-
 if [ "$DRY_RUN" = true ] && [ "$REPOS_EXIST" = false ]; then
     echo -e "${CYAN}[DRY RUN] This shows what would happen if repos existed.${NC}"
 fi
 
 #
-# STEP 1: Clone or update source repository
+# STEP 1: Reset the source repository and render every sync workflow
 #
 echo -e "${BLUE}Step 1: Preparing source repository...${NC}"
 
 if [ "$DRY_RUN" = true ]; then
-    echo -e "${CYAN}[DRY RUN] Would clone/update $OWNER/$SOURCE_REPO${NC}"
-    echo -e "${CYAN}[DRY RUN] Would reset to two base files:${NC}"
-    echo -e "${CYAN}  - lecture-minimal.md (from base-minimal.md)${NC}"
-    echo -e "${CYAN}  - lecture.md (from base-lecture.md)${NC}"
-    echo -e "${CYAN}[DRY RUN] Would ensure workflow file exists${NC}"
+    echo -e "${CYAN}[DRY RUN] Would reset $OWNER/$SOURCE_REPO to base state:${NC}"
+    echo -e "${CYAN}  - lecture-minimal.md, lecture.md, _toc.yml${NC}"
+    for L in "${LANGUAGES[@]}"; do
+        echo -e "${CYAN}  - .github/workflows/sync-translations-$(lang_code "$L").yml @ $ACTION_REF${NC}"
+    done
     echo -e "${CYAN}[DRY RUN] Would force push to main${NC}"
 else
-    if [ -d "$SOURCE_REPO" ]; then
-        echo "Repository already cloned, updating..."
-        cd "$SOURCE_REPO"
-        git fetch origin
-        git checkout main
-        git reset --hard origin/main
-        cd ..
-    else
-        echo "Cloning source repository..."
-        git clone "https://github.com/$OWNER/$SOURCE_REPO.git"
-    fi
+    (
+        set -e
+        clone_or_refresh "$SOURCE_REPO"
+        cd "$WORK_DIR/$SOURCE_REPO"
 
-    cd "$SOURCE_REPO"
+        # `.github/` is deleted and re-rendered, never left in place: an orphan
+        # workflow from a previous run would keep firing against a version this
+        # run knows nothing about. That is what the hand-made ml sync workflow
+        # was doing — failing on all 26 PRs of every run, unreported.
+        rm -rf ./*.md ./*.yml lectures/ .github/
+        cp "$DATA_DIR/base-minimal.md" "$TEST_FILE_MINIMAL"
+        cp "$DATA_DIR/base-lecture.md" "$TEST_FILE_LECTURE"
+        cp "$DATA_DIR/base-toc.yml" "_toc.yml"
 
-    # Reset to base state
-    echo "Resetting to base state..."
-    rm -rf *.md *.yml lectures/
-    cp "$DATA_DIR/base-minimal.md" "$TEST_FILE_MINIMAL"
-    cp "$DATA_DIR/base-lecture.md" "$TEST_FILE_LECTURE"
-    cp "$DATA_DIR/base-toc.yml" "_toc.yml"
+        mkdir -p .github/workflows
+        for L in "${LANGUAGES[@]}"; do
+            render_sync_workflow "$(lang_code "$L")" "$(lang_name "$L")"
+        done
+        assert_no_placeholders
 
-    # Ensure workflow exists, pinned to the ref reported in the banner above
-    mkdir -p .github/workflows
-    sed "s|__ACTION_REF__|$ACTION_REF|g" "$DATA_DIR/workflow-template.yml" \
-        > .github/workflows/translation-sync.yml
-    sed "s|__ACTION_REF__|$ACTION_REF|g" "$DATA_DIR/workflow-template-fa.yml" \
-        > .github/workflows/sync-translations-fa.yml
-
-    # A leftover placeholder means the substitution silently missed.
-    if grep -q '__ACTION_REF__' .github/workflows/translation-sync.yml \
-                                .github/workflows/sync-translations-fa.yml; then
-        echo -e "${RED}✗ Action ref placeholder survived substitution${NC}" >&2
-        exit 1
-    fi
-
-    # Force push to main
-    git add -A
-    git commit -m "Reset: base state for testing" || echo "No changes to commit"
-    git push -f origin main
-
-    echo -e "${GREEN}✓${NC} Source repo reset to base state"
-
-    cd ..
+        commit_and_push "Reset: base state for testing [$ACTION_REF]"
+    )
+    echo -e "${GREEN}✓${NC} Source repo reset; ${#LANGUAGES[@]} sync workflow(s) rendered @ $ACTION_REF"
 fi
 
 #
-# STEP 2: Clone or update target repository
+# STEP 2: Reset every target repository
 #
-echo -e "${BLUE}Step 2: Preparing target repository...${NC}"
+echo -e "${BLUE}Step 2: Preparing target repositories...${NC}"
 
-if [ "$DRY_RUN" = true ]; then
-    echo -e "${CYAN}[DRY RUN] Would clone/update $OWNER/$TARGET_REPO${NC}"
-    echo -e "${CYAN}[DRY RUN] Would reset to two base Chinese files:${NC}"
-    echo -e "${CYAN}  - lecture-minimal.md (from base-minimal-zh-cn.md)${NC}"
-    echo -e "${CYAN}  - lecture.md (from base-lecture-zh-cn.md)${NC}"
-    echo -e "${CYAN}[DRY RUN] Would force push to main${NC}"
-else
-    if [ -d "$TARGET_REPO" ]; then
-        echo "Repository already cloned, updating..."
-        cd "$TARGET_REPO"
-        git fetch origin
-        git checkout main
-        git reset --hard origin/main
-        cd ..
-    else
-        echo "Cloning target repository..."
-        git clone "https://github.com/$OWNER/$TARGET_REPO.git"
+for L in "${LANGUAGES[@]}"; do
+    code="$(lang_code "$L")"
+    name="$(lang_name "$L")"
+    repo="$SOURCE_REPO.$code"
+
+    if [ "$DRY_RUN" = true ]; then
+        echo -e "${CYAN}[DRY RUN] Would reset $OWNER/$repo ($name):${NC}"
+        echo -e "${CYAN}  - base-minimal-$code.md, base-lecture-$code.md, base-toc-$code.yml${NC}"
+        echo -e "${CYAN}  - .github/workflows/{review,rebase}-translations.yml @ $ACTION_REF${NC}"
+        continue
     fi
 
-    cd "$TARGET_REPO"
+    (
+        set -e
+        clone_or_refresh "$repo"
+        cd "$WORK_DIR/$repo"
 
-    # Reset to base state
-    echo "Resetting to base state..."
-    rm -rf *.md *.yml lectures/ .translate/
-    cp "$DATA_DIR/base-minimal-zh-cn.md" "$TEST_FILE_MINIMAL"
-    cp "$DATA_DIR/base-lecture-zh-cn.md" "$TEST_FILE_LECTURE"
-    cp "$DATA_DIR/base-toc-zh-cn.yml" "_toc.yml"
+        # Deleting `.github/` is only safe because render_target_workflows puts
+        # it back on the next line. The fa block used to do the delete WITHOUT
+        # the render, which silently destroyed that target's review and rebase
+        # workflows on every run — fa had none at all until this change.
+        rm -rf ./*.md ./*.yml lectures/ .translate/ .github/
+        cp "$DATA_DIR/base-minimal-$code.md" "$TEST_FILE_MINIMAL"
+        cp "$DATA_DIR/base-lecture-$code.md" "$TEST_FILE_LECTURE"
+        cp "$DATA_DIR/base-toc-$code.yml" "_toc.yml"
 
-    # Force push to main
-    git add -A
-    git commit -m "Reset: base state for testing (Chinese)" || echo "No changes to commit"
-    git push -f origin main
+        render_target_workflows
+        assert_no_placeholders
 
-    echo -e "${GREEN}✓${NC} Target repo reset to base state"
-
-    cd "../$SOURCE_REPO"
-fi
-
-echo ""
-
-#
-# STEP 2b: Clone or update Farsi target repository
-#
-echo -e "${BLUE}Step 2b: Preparing Farsi target repository...${NC}"
-
-if [ "$DRY_RUN" = true ]; then
-    echo -e "${CYAN}[DRY RUN] Would clone/update $OWNER/$TARGET_REPO_FA${NC}"
-    echo -e "${CYAN}[DRY RUN] Would reset to two base Farsi files:${NC}"
-    echo -e "${CYAN}  - lecture-minimal.md (from base-minimal-fa.md)${NC}"
-    echo -e "${CYAN}  - lecture.md (from base-lecture-fa.md)${NC}"
-    echo -e "${CYAN}[DRY RUN] Would force push to main${NC}"
-else
-    # Step 2 left us inside the source repo — go back to parent first
-    cd ..
-
-    if [ -d "$TARGET_REPO_FA" ]; then
-        echo "Repository already cloned, updating..."
-        cd "$TARGET_REPO_FA"
-        git fetch origin
-        git checkout main
-        git reset --hard origin/main
-        cd ..
-    else
-        echo "Cloning Farsi target repository..."
-        git clone "https://github.com/$OWNER/$TARGET_REPO_FA.git"
-    fi
-
-    cd "$TARGET_REPO_FA"
-
-    # Reset to base state
-    echo "Resetting to base state..."
-    rm -rf *.md *.yml lectures/ .translate/ .github/
-    cp "$DATA_DIR/base-minimal-fa.md" "$TEST_FILE_MINIMAL"
-    cp "$DATA_DIR/base-lecture-fa.md" "$TEST_FILE_LECTURE"
-    cp "$DATA_DIR/base-toc-fa.yml" "_toc.yml"
-
-    # Force push to main
-    git add -A
-    git commit -m "Reset: base state for testing (Farsi)" || echo "No changes to commit"
-    git push -f origin main
-
-    echo -e "${GREEN}✓${NC} Farsi target repo reset to base state"
-
-    cd ..
-    cd "$SOURCE_REPO"
-fi
+        commit_and_push "Reset: base state for testing ($name) [$ACTION_REF]"
+    )
+    echo -e "${GREEN}✓${NC} $name target reset; review + rebase rendered @ $ACTION_REF"
+done
 
 echo ""
 
@@ -398,6 +534,23 @@ echo ""
 # STEP 3: Close all open PRs
 #
 echo -e "${BLUE}Step 3: Closing all open PRs...${NC}"
+
+# Steps 3 and 4 run `git` against the SOURCE CLONE from the main shell — branch
+# cleanup, and one branch + commit + force-push per scenario. Steps 1-2 do their
+# work in subshells, so unlike the code this replaced (which left the shell
+# inside the clone via a trailing `cd ..; cd "$SOURCE_REPO"`) the cwd is still
+# wherever the script was launched from. Without this cd that is the CALLER'S
+# repo: `git branch -D` would delete their local branches and the scenario loop
+# would commit fixtures over their working tree and force-push 26 branches to
+# whatever `origin` points at. Enter the clone explicitly, and fail loudly if it
+# is not there rather than operating on whatever directory happens to be.
+if [ "$DRY_RUN" = false ]; then
+    if [ ! -d "$WORK_DIR/$SOURCE_REPO/.git" ]; then
+        echo -e "${RED}✗ $WORK_DIR/$SOURCE_REPO is not a git clone — refusing to run git here${NC}" >&2
+        exit 1
+    fi
+    cd "$WORK_DIR/$SOURCE_REPO"
+fi
 
 # Close PRs on source repo
 if [ "$DRY_RUN" = true ]; then
@@ -428,53 +581,26 @@ else
     git branch | grep -v "main" | xargs -r git branch -D 2>/dev/null || true
 fi
 
-# Close PRs on target repo
-if [ "$DRY_RUN" = true ]; then
-    TARGET_PRS=$(gh pr list --repo "$OWNER/$TARGET_REPO" --state open --json number --jq '.[].number' 2>/dev/null || echo "")
+# Close PRs on every target repo
+for L in "${LANGUAGES[@]}"; do
+    code="$(lang_code "$L")"
+    name="$(lang_name "$L")"
+    repo="$OWNER/$SOURCE_REPO.$code"
+
+    TARGET_PRS=$(gh pr list --repo "$repo" --state open --json number --jq '.[].number' 2>/dev/null || echo "")
     if [ -z "$TARGET_PRS" ]; then
-        echo -e "${CYAN}[DRY RUN] No open PRs to close on target repo${NC}"
-    else
-        echo -e "${CYAN}[DRY RUN] Would close the following PRs on target repo:${NC}"
-        for pr_number in $TARGET_PRS; do
-            echo -e "${CYAN}  - PR #${pr_number}${NC}"
-        done
+        echo "No open PRs to close on $name target repo"
+        continue
     fi
-else
-    TARGET_PRS=$(gh pr list --repo "$OWNER/$TARGET_REPO" --state open --json number --jq '.[].number')
-
-    if [ -z "$TARGET_PRS" ]; then
-        echo "No open PRs to close on target repo"
-    else
-        for pr_number in $TARGET_PRS; do
-            gh pr close "$pr_number" --repo "$OWNER/$TARGET_REPO" --comment "Closing for test reset"
-            echo -e "${GREEN}✓${NC} Closed PR #${pr_number} on target repo"
-        done
-    fi
-fi
-
-# Close PRs on Farsi target repo
-if [ "$DRY_RUN" = true ]; then
-    FA_PRS=$(gh pr list --repo "$OWNER/$TARGET_REPO_FA" --state open --json number --jq '.[].number' 2>/dev/null || echo "")
-    if [ -z "$FA_PRS" ]; then
-        echo -e "${CYAN}[DRY RUN] No open PRs to close on Farsi target repo${NC}"
-    else
-        echo -e "${CYAN}[DRY RUN] Would close the following PRs on Farsi target repo:${NC}"
-        for pr_number in $FA_PRS; do
-            echo -e "${CYAN}  - PR #${pr_number}${NC}"
-        done
-    fi
-else
-    FA_PRS=$(gh pr list --repo "$OWNER/$TARGET_REPO_FA" --state open --json number --jq '.[].number')
-
-    if [ -z "$FA_PRS" ]; then
-        echo "No open PRs to close on Farsi target repo"
-    else
-        for pr_number in $FA_PRS; do
-            gh pr close "$pr_number" --repo "$OWNER/$TARGET_REPO_FA" --comment "Closing for test reset"
-            echo -e "${GREEN}✓${NC} Closed PR #${pr_number} on Farsi target repo"
-        done
-    fi
-fi
+    for pr_number in $TARGET_PRS; do
+        if [ "$DRY_RUN" = true ]; then
+            echo -e "${CYAN}[DRY RUN] Would close PR #${pr_number} on $name target${NC}"
+        else
+            gh pr close "$pr_number" --repo "$repo" --comment "Closing for test reset"
+            echo -e "${GREEN}✓${NC} Closed PR #${pr_number} on $name target"
+        fi
+    done
+done
 
 echo ""
 
@@ -526,6 +652,27 @@ declare -a scenarios=(
     "25-pre-title-content-lecture:Pre-title content (anchor + raw block):lecture"
     "26-heading-case-change-lecture:Heading case change (title-case → sentence-case):lecture"
 )
+
+# --scenarios narrows to specific test cases by file-prefix (e.g. 01, or
+# 01-intro-change-minimal). Matching is prefix-based so the short number works.
+if [ -n "$ONLY_SCENARIOS" ]; then
+    _keep=()
+    IFS=',' read -ra _want <<< "$ONLY_SCENARIOS"
+    for _w in "${_want[@]}"; do
+        _w="$(echo "$_w" | tr -d '[:space:]')"
+        _hit=false
+        for sc in "${scenarios[@]}"; do
+            case "${sc%%:*}" in "$_w"*) _keep+=("$sc"); _hit=true ;; esac
+        done
+        if [ "$_hit" = false ]; then
+            echo "Unknown scenario '$_w'. Valid prefixes are 01..26." >&2
+            exit 1
+        fi
+    done
+    scenarios=("${_keep[@]}")
+    echo -e "${YELLOW}Scoped run: ${#scenarios[@]} of 26 scenarios (${ONLY_SCENARIOS})${NC}"
+    echo ""
+fi
 
 # Note: Tests 01-08 modify lecture-minimal.md, tests 09-15 modify lecture.md, test 16 tests pure reordering
 
@@ -651,9 +798,9 @@ echo ""
 if [ "$DRY_RUN" = true ]; then
     echo -e "${CYAN}Summary of what would be done:${NC}"
     echo ""
-    echo "1. Reset all three repositories to base state (with _toc.yml)"
-    echo "2. Close all open PRs on source, zh-cn target, and fa target repos"
-    echo "3. Create 24 new test PRs:"
+    echo "1. Reset the source repo and ${#LANGUAGES[@]} target repo(s) to base state (with _toc.yml)"
+    echo "2. Close all open PRs on the source repo and every target repo"
+    echo "3. Create ${#scenarios[@]} new test PRs:"
     echo "   Basic Tests (01-08):"
     echo "     - 01: Intro text updated"
     echo "     - 02: Title changed"
@@ -690,10 +837,9 @@ if [ "$DRY_RUN" = true ]; then
     echo "  ./tool-test-action-on-github/test-action-on-github.sh"
 else
     echo -e "${GREEN}Created ${#scenarios[@]} test PRs in ${SOURCE_REPO}${NC}"
-    echo -e "Testing action ${GREEN}${ACTION_REF}${NC} (${ACTION_REF_SHA:0:7}) in the sync workflows;"
-    echo -e "the review workflow runs @v0 → ${V0_DESC:-${V0_SHA:0:7}}."
+    echo -e "All ${TOTAL_WORKFLOWS} workflows ran ${GREEN}${ACTION_REF}${NC} (${ACTION_REF_SHA:0:7})."
     echo ""
-    echo "Test Coverage:"
+    echo "Test Coverage (${#scenarios[@]} scenarios):"
     echo "  - Basic structure changes (8 tests)"
     echo "  - Scientific content (code cells, math) (8 tests)"
     echo "  - Document lifecycle (CRUD operations) (4 tests)"
@@ -701,17 +847,19 @@ else
     echo ""
     echo "Next steps:"
     echo "1. Each PR has the 'test-translation' label"
-    echo "2. The GitHub Action should trigger automatically"
-    echo "3. Check ${TARGET_REPO} and ${TARGET_REPO_FA} for translation PRs"
+    echo "2. Every workflow is pinned to $ACTION_REF (${ACTION_REF_SHA:0:7})"
+    echo "3. Check each target repo for translation PRs:"
+    for L in "${LANGUAGES[@]}"; do
+        echo "     gh pr list --repo $OWNER/$SOURCE_REPO.$(lang_code "$L")   # $(lang_name "$L")"
+    done
     echo ""
-    echo "View all PRs:"
+    echo "View source PRs:"
     echo "  gh pr list --repo $OWNER/$SOURCE_REPO"
     echo ""
-    echo "Monitor translation PRs (Chinese):"
-    echo "  gh pr list --repo $OWNER/$TARGET_REPO"
-    echo ""
-    echo "Monitor translation PRs (Farsi):"
-    echo "  gh pr list --repo $OWNER/$TARGET_REPO_FA"
-    echo ""
+    if [ "$ACTION_REF" != "v0" ]; then
+        echo "After moving the v0 tag, verify floating-tag resolution (#109):"
+        echo "  $0 --action-ref v0"
+        echo ""
+    fi
     echo "To reset and run again, just execute this script again!"
 fi

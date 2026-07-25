@@ -9,7 +9,7 @@
 - **Review Mode**: Runs in TARGET repo, posts quality review comments on translation PRs
 - **Rebase Mode**: Runs in TARGET repo, rebases conflicted translation PRs when a sibling PR is merged
 
-**Current Version**: v0.24.0 | **Tests**: 1,357+ (62 suites; exact count in CI) | **Glossary**: 357 terms (zh-cn, fa), 364 (fr)
+**Current Version**: v0.24.0 | **Tests**: 1,374+ (62 suites; exact count in CI) | **Glossary**: 357 terms (zh-cn, fa), 364 (fr)
 
 ---
 
@@ -132,18 +132,22 @@ End-to-end testing against real GitHub repos. Creates test PRs that trigger the 
 | `QuantEcon/test-translation-sync` | Source (English) — PRs created here |
 | `QuantEcon/test-translation-sync.zh-cn` | Target (Chinese) — translation PRs land here |
 | `QuantEcon/test-translation-sync.fa` | Target (Farsi) — translation PRs land here |
+| `QuantEcon/test-translation-sync.ml` | Target (Malayalam) — translation PRs land here |
 
-**Which version gets tested** — the script prints this before creating any PRs; read the banner rather than assuming. The **sync** workflows check out this repo at an explicit ref (defaulted from `package.json`, substituted at run time, overridable with `--action-ref`) and run `uses: ./action`. The **review** workflow runs `QuantEcon/action-translation@v0` deliberately, to exercise the floating tag (#109) — so it tests whatever `v0` points at now, which for a freshly-cut release is the *previous* version until the tag is moved. The banner warns when the two disagree.
+**Which version gets tested** — the harness writes **every** workflow across all four repos (one sync per language, plus review and rebase in each target) and pins them all to the same ref, printing a per-workflow census before creating any PRs. Read the census rather than assuming. The ref defaults to **`main`**; `--action-ref vX.Y.Z` is the release gate and `--action-ref v0` is the post-release smoke that checks floating-tag resolution (#109/#202). Adding a language is one line in the script's `LANGUAGES` array plus three `base-*-<code>` fixtures — and a target repo that already exists.
 
 ### Running
 
 ```bash
-./tool-test-action-on-github/test-action-on-github.sh                    # Full run (26 test PRs)
-./tool-test-action-on-github/test-action-on-github.sh --dry-run          # Preview only
-./tool-test-action-on-github/test-action-on-github.sh --action-ref main  # Test a specific ref
+./tool-test-action-on-github/test-action-on-github.sh                       # main HEAD
+./tool-test-action-on-github/test-action-on-github.sh --dry-run             # Preview only
+./tool-test-action-on-github/test-action-on-github.sh --action-ref v0.24.0  # Release gate
+./tool-test-action-on-github/test-action-on-github.sh --action-ref v0       # Post-release smoke
 ```
 
-**What the script does**: resets all 3 repos to clean state (force-push `main`), closes all open PRs, creates 26 draft PRs with `test-translation` label. The label triggers both zh-cn and fa workflows in TEST mode (no Claude API calls).
+**What the script does**: resets all repos to clean state (force-push `main`), closes all open PRs, creates 26 draft PRs with `test-translation` label. The label triggers one sync workflow per configured language.
+
+**⚠ Real API spend**: `test-mode` suppresses PR side effects, not model calls — a run makes real, billed Claude calls. A three-language run is ~78 sync runs **plus ~78 review runs**. The ~1.4M input tokens measured on two languages pre-dates review coverage, so it is a floor, not an estimate.
 
 **⚠ Terminal timeout**: The script creates 26 PRs sequentially and can take 5+ minutes. Set a generous timeout (≥ 600000ms) or run without one.
 
@@ -154,8 +158,7 @@ tool-test-action-on-github/
 ├── test-action-on-github.sh           # Main test script
 ├── README.md                          # Detailed docs (scenarios, evaluation)
 ├── test-action-on-github-data/        # Test fixtures + workflow templates
-│   ├── workflow-template.yml          # zh-cn workflow (checkout from main)
-│   ├── workflow-template-fa.yml       # fa workflow (checkout from main)
+│   ├── sync-workflow-template.yml     # ONE sync workflow, rendered per language
 │   ├── base-*.md / base-*.yml        # Base state files for source + targets
 │   └── 01-*.md ... 26-*.md           # Test scenario files (26 total)
 ├── evaluate/                          # Phase 2: LLM-based quality evaluation

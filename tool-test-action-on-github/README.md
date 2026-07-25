@@ -16,7 +16,7 @@ The test script creates and manages test PRs in source and target repositories t
 
 - GitHub CLI (`gh`) installed and authenticated
 - Push access to test repositories
-- Action configured in source repository (zh-cn and fa workflows)
+- `gh` token carrying the `workflow` scope — the harness writes `.github/workflows/` to all four repos
 - For evaluation: `ANTHROPIC_API_KEY` and `GITHUB_TOKEN` environment variables
 
 ## Test Repositories
@@ -25,24 +25,46 @@ The test script creates and manages test PRs in source and target repositories t
 |------------|---------|-----|
 | **Source** | English content, triggers sync | `QuantEcon/test-translation-sync` |
 | **Target (zh-cn)** | Chinese translations (built from source) | `QuantEcon/test-translation-sync.zh-cn` |
-| **Target (fa)** | Farsi translations (uses published action) | `QuantEcon/test-translation-sync.fa` |
+| **Target (fa)** | Farsi translations | `QuantEcon/test-translation-sync.fa` |
+| **Target (ml)** | Malayalam translations | `QuantEcon/test-translation-sync.ml` |
 
-Each test PR triggers **both** workflows.
+Each test PR triggers one sync workflow **per language**.
 
 ### Which version gets tested
 
-The two halves of the harness resolve the action differently, and the script prints both before it creates any PRs — read that banner rather than assuming.
+**One ref, every workflow.** The harness writes all nine workflow files across all four repos — one sync workflow per language in the source repo, plus `review-translations.yml` and `rebase-translations.yml` in each target — and pins every one of them to the same ref. It prints a per-workflow census before creating any PRs, so "this run tested version X" is falsifiable rather than asserted.
 
-The **sync** workflows check out this repo at an explicit ref and run `uses: ./action`. The ref defaults to the version in `package.json` and is substituted into the templates at run time, so it cannot go stale. Override it with `--action-ref <tag|branch>` when you need to test something other than the current working version:
+The ref defaults to `main`, which is the code you are working on. Override it for release gating:
 
 ```bash
-./test-action-on-github.sh --action-ref main
-./test-action-on-github.sh --action-ref v0.23.0
+./test-action-on-github.sh                       # main HEAD (development)
+./test-action-on-github.sh --action-ref v0.24.0  # a specific release (the gate)
+./test-action-on-github.sh --action-ref v0       # the floating tag (post-release smoke)
 ```
 
-The script fails immediately if the ref does not exist on the remote, rather than letting 26 workflow runs fail at checkout. A raw commit SHA is not accepted — `git ls-remote` cannot verify one, and pinning to a ref the script cannot confirm exists is the failure mode this replaced.
+The script fails immediately if the ref does not exist on the remote, rather than letting 26 workflow runs fail at resolution. A raw commit SHA is not accepted — `git ls-remote` cannot verify one, and pinning to a ref the script cannot confirm exists is the failure mode this replaced.
 
-The **review** workflow (`review-translations.yml`, which lives in the target repos) runs `uses: QuantEcon/action-translation@v0` deliberately, so the harness exercises whether the floating tag resolves — see #109. This means the review half tests whatever `@v0` points at *now*, which is **not** necessarily the ref under test. When the two differ the banner says so and warns; a newly-cut release is only covered by the review half once `v0` has been moved to it.
+Because every workflow uses the marketplace form `uses: QuantEcon/action-translation@<ref>` rather than checking out and building locally, **uncommitted code cannot be tested — push the branch first**. The committed `dist-action/` bundle is what executes either way, so nothing is lost, and this form additionally exercises ref resolution on every workflow on every run.
+
+### The release sequence
+
+| Step | Command | What it proves |
+|---|---|---|
+| 1 | `./test-action-on-github.sh` | `main` works before you cut anything |
+| 2 | — | cut the release |
+| 3 | `./test-action-on-github.sh --action-ref vX.Y.Z` | the *tagged bytes* work — this is the gate |
+| 4 | — | move the `v0` alias |
+| 5 | `./test-action-on-github.sh --action-ref v0` | the floating tag resolves to the new release |
+
+Step 5 is what keeps [#109](https://github.com/QuantEcon/action-translation/issues/109)'s floating-tag check alive. It used to be embedded in every run by leaving the target-repo workflows permanently on `@v0`, which meant a single run tested two versions at once and a freshly-cut release was never covered by the review half at all ([#202](https://github.com/QuantEcon/action-translation/issues/202)). Moving the check *after* the tag move is the only point where its answer means anything.
+
+### Adding a language
+
+One line in the `LANGUAGES` array in `test-action-on-github.sh`, plus three base fixtures (`base-minimal-<code>.md`, `base-lecture-<code>.md`, `base-toc-<code>.yml`). Everything else — target repo name, sync workflow, reset, PR cleanup, summary — derives from the code. Seed the fixtures with `translate init` so they carry the current `translation:` frontmatter and pass the structural parity guard; do not hand-write them.
+
+### Cost
+
+**TEST mode makes real, billed Claude API calls.** `test-mode` suppresses PR side effects (failure issues, success comments), not model calls. A three-language run is ~78 **sync** runs plus ~78 **review** runs — this PR is what installs `review-translations.yml` in every target, so each translation PR now fires a second billed call. The ~1.4M input tokens measured across two languages **pre-dates that review coverage** and therefore undercounts the current cost; treat it as a floor, not an estimate. Prefer `--action-ref main` during development over re-running the full matrix.
 
 ## Usage
 
@@ -57,7 +79,7 @@ The script will:
 1. Reset test repositories to clean state
 2. Run 26 automated test scenarios
 3. Create PRs in source repository with `test-translation` label
-4. Label triggers action → creates translation PRs in **both** target repositories
+4. Label triggers action → creates translation PRs in **every** target repository
 5. Report results
 
 Both source and target PRs remain **open** for evaluation.
@@ -131,8 +153,9 @@ The tool tests translation scenarios across four phases:
 tool-test-action-on-github/
 ├── test-action-on-github.sh     # Main test script
 ├── test-action-on-github-data/  # Test scenario files
+│   ├── sync-workflow-template.yml  # ONE sync workflow, rendered per language
 │   ├── base-minimal.md          # Base English doc
-│   ├── base-minimal-zh-cn.md    # Base Chinese doc
+│   ├── base-minimal-<lang>.md   # Base translated doc, one per LANGUAGES entry
 │   ├── 01-intro-change-*.md     # Test scenarios
 │   └── ...
 ├── evaluate/                     # Quality evaluation tool
@@ -150,11 +173,12 @@ tool-test-action-on-github/
 
 ## Test Mode
 
-The script uses **TEST mode** which:
-- Uses PR head commit (not merge commit)
-- Skips actual translation (returns placeholder text)
-- Validates workflow mechanics without API costs
+The script uses **TEST mode**, which changes exactly two things — see `isTestMode` in `src/index.ts`:
+- Uses the PR head commit rather than the merge commit, so an OPEN PR can drive a sync
+- Suppresses post-sync notifications (failure issues and success comments)
 - **Triggered by adding the `test-translation` label** to source PRs
+
+**It does NOT skip translation and is NOT free.** Every sync and review still makes real, billed Claude calls — measured at 23k–103k input tokens per sync run. The name is misleading; treat a TEST-mode run as a full-price run that keeps its side effects off the source PR.
 
 ### Label-Triggered Workflow
 
