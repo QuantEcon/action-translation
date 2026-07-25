@@ -195,7 +195,28 @@ clone_or_refresh() {   # $1 = repo name
     fi
 }
 
+# Every repo this harness writes to is `test-translation-sync[.<lang>]`, so the
+# remote name is a cheap, total safety rail: refuse to force-push anywhere else.
+#
+# This is defence in depth over the cwd fix, and it catches the whole class
+# rather than the one instance. The subshell refactor briefly left Steps 3-4
+# running git in the CALLER'S checkout, where `git push -f` would have pushed
+# 26 test branches to QuantEcon/action-translation itself. A cwd bug, a bad
+# clone, or a hand-edited SOURCE_REPO all fail here instead of on GitHub.
+assert_test_remote() {   # (cwd = a clone)
+    local url
+    url="$(git remote get-url origin 2>/dev/null || echo '')"
+    case "$url" in
+        *"/$SOURCE_REPO".git|*"/$SOURCE_REPO"|*"/$SOURCE_REPO".*.git|*"/$SOURCE_REPO".*)
+            return 0 ;;
+    esac
+    echo -e "${RED}✗ refusing to force-push: origin is '$url'${NC}" >&2
+    echo -e "${RED}  Expected a $SOURCE_REPO[.<lang>] remote. Wrong directory?${NC}" >&2
+    exit 1
+}
+
 commit_and_push() {    # $1 = commit message   (cwd = a clone)
+    assert_test_remote
     git add -A
     if ! git diff --cached --quiet; then
         git commit -q -m "$1"
@@ -271,7 +292,11 @@ assert_rendered_target_workflows() {   # (cwd = target clone)
         err=""
         f=".github/workflows/$wf-translations.yml"
         grep -q "QuantEcon/action-translation@$ACTION_REF" "$f" || err="$err ref-not-substituted"
-        grep -q 'lecture-python-intro' "$f" && err="$err source-repo-not-substituted"
+        # Check the `source-repo:` VALUE, not the whole file: the template's
+        # header comment mentions `lecture-python-intro.zh-cn` without the
+        # `QuantEcon/` prefix to illustrate suffix detection, so the sed
+        # correctly leaves it and a blanket grep false-positives on it.
+        grep -qE "^\s*source-repo:.*lecture-python-intro" "$f" && err="$err source-repo-not-substituted"
         if [ "$wf" = review ]; then
             grep -q "source-repo: '$OWNER/$SOURCE_REPO'" "$f" || err="$err missing-source-repo"
         fi
@@ -748,6 +773,7 @@ for scenario in "${scenarios[@]}"; do
         git commit -m "Test: ${description}"
         
         # Push branch (force push to overwrite if exists)
+        assert_test_remote
         git push -f origin "$branch_name"
         
         # Create draft PR with label
