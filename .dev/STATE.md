@@ -15,7 +15,7 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 - **Malayalam** — `ml` config landed in v0.24.0 (PR #71). The harness now drives it as a
   first-class third language and it passes 26/26. Its two seed reference translations are
   machine drafts awaiting native review (#207); the benchmark's Phase 1 (#194) is unrun.
-  Glossary PR **#69** (ja) open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
+- **Glossary PR #69** (ja) — open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
 - **#210** — review mode fails the run on a *deliberately deleted* source document. Found by
   the first full E2E run; the v0.24.0 F40 guard cannot tell a failed fetch from an intended
   deletion, so a healthy pipeline goes red on every deletion. Renames likely need the same fix.
