@@ -1,4 +1,4 @@
-verified: 2026-07-24
+verified: 2026-07-25
 
 # STATE
 
@@ -9,13 +9,20 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 - **Week of 2026-07-27**: resume into Phase 2 per the work-plan issue (#198 — opened at
   Wave 1 close). First gate: reformulate the round-trip invariant
-  ([`D-2026-07-24-tech-debt-audit-boundaries.md`](decisions/D-2026-07-24-tech-debt-audit-boundaries.md));
-  first decision: cut v0.24.0 (the Unreleased section is the whole wave, and moving `@v0`
-  deploys it estate-wide). Wave 2 of the audit (#169–#176 + backlog #177) remains available.
+  ([`D-2026-07-24-tech-debt-audit-boundaries.md`](decisions/D-2026-07-24-tech-debt-audit-boundaries.md)).
+  The release decision is taken — v0.24.0 is cut (below). Wave 2 of the audit
+  (#169–#176 + backlog #177) remains available.
 - **PR #71** — Malayalam (`ml`) draft; awaiting native-reviewer calibration batch.
   Glossary PR **#69** (ja) open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
 
 ## Recently landed
+
+- **v0.24.0** (2026-07-25) — **Wave 1, shipped whole**. The release carries nothing but the
+  wave below; the significant fact is that cutting it moved the floating `@v0` tag, so every
+  Wave 1 change deployed estate-wide at once — including the red-by-design behaviours
+  (rebase runs that now fail on error, bulk runs that now exit non-zero) and the reviewer's
+  missing overload-retry. Expect previously-green runs to go red where they were already
+  failing silently. Watch the first organic sync and review after the tag move.
 
 - **Tech-debt Wave 1 complete** (2026-07-24, one day): all eleven PRs #158–#168 merged
   (#180, #183–#186, #188, #190, #193, #195–#197), retiring 51 audit findings. The shape:

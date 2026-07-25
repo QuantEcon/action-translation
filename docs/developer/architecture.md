@@ -4,7 +4,7 @@ title: Architecture
 
 # Architecture
 
-**Last Updated**: 24 July 2026 — v0.23.0  
+**Last Updated**: 25 July 2026 — v0.24.0  
 
 This document covers the complete system architecture: design philosophy, operational modes, module structure, data flow, and key design decisions.
 
