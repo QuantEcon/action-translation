@@ -296,7 +296,10 @@ assert_rendered_target_workflows() {   # (cwd = target clone)
         # header comment mentions `lecture-python-intro.zh-cn` without the
         # `QuantEcon/` prefix to illustrate suffix detection, so the sed
         # correctly leaves it and a blanket grep false-positives on it.
-        grep -qE "^\s*source-repo:.*lecture-python-intro" "$f" && err="$err source-repo-not-substituted"
+        # `[[:space:]]`, not `\s`: the latter is a GNU/PCRE extension rather than
+        # POSIX ERE. Both greps on this machine happen to support it, which is
+        # exactly why it would rot silently somewhere that does not.
+        grep -qE "^[[:space:]]*source-repo:.*lecture-python-intro" "$f" && err="$err source-repo-not-substituted"
         if [ "$wf" = review ]; then
             grep -q "source-repo: '$OWNER/$SOURCE_REPO'" "$f" || err="$err missing-source-repo"
         fi
