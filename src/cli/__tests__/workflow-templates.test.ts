@@ -36,15 +36,18 @@ const STRUCTURAL_LINES = [
 const PINNED_TAG = /action-translation@v0\.\d/;
 
 /**
- * The E2E harness's sync-workflow templates. Their `ref:` is substituted at run
- * time from package.json, so it cannot go stale — it read a hard-coded v0.16.1
- * for eight releases while two doc pages claimed the harness tracked `main`,
- * which meant a "full E2E run" silently validated eight-release-old code.
+ * The E2E harness renders every workflow it deploys from a template carrying a
+ * substituted ref, so no version is ever hand-maintained. One template now
+ * serves all languages; its predecessors were per-language copies that pinned a
+ * hard-coded `ref: v0.16.1` for eight releases while two doc pages claimed the
+ * harness tracked `main` — so a "full E2E run" silently validated stale code.
  */
-const HARNESS_TEMPLATES = [
-  'tool-test-action-on-github/test-action-on-github-data/workflow-template.yml',
-  'tool-test-action-on-github/test-action-on-github-data/workflow-template-fa.yml',
-];
+const HARNESS_SYNC_TEMPLATE =
+  'tool-test-action-on-github/test-action-on-github-data/sync-workflow-template.yml';
+const HARNESS_SCRIPT = 'tool-test-action-on-github/test-action-on-github.sh';
+
+/** Languages the harness drives; each needs three base fixtures. */
+const HARNESS_LANGUAGES = ['zh-cn', 'fa', 'ml'];
 
 /** Doc pages that quote the review workflow. */
 const DOC_PAGES = [
@@ -91,25 +94,82 @@ describe('every documented copy of the review workflow', () => {
   });
 });
 
-describe('the E2E harness sync-workflow templates', () => {
-  it.each(HARNESS_TEMPLATES)('%s takes its action ref from the placeholder', (template) => {
-    const content = fs.readFileSync(path.join(ROOT, template), 'utf8');
-    expect(content).toContain('ref: __ACTION_REF__');
+describe('the E2E harness workflow rendering', () => {
+  const template = fs.readFileSync(path.join(ROOT, HARNESS_SYNC_TEMPLATE), 'utf8');
+  const script = fs.readFileSync(path.join(ROOT, HARNESS_SCRIPT), 'utf8');
+
+  it('takes its action ref from the placeholder, and hard-codes no version', () => {
+    expect(template).toContain('uses: QuantEcon/action-translation@__ACTION_REF__');
+    // Comments explain the v0.16.1 history, so scan the `uses:` lines only.
+    const pins = [...template.matchAll(/^\s*(?:- )?uses:\s*QuantEcon\/action-translation@(\S+)/gm)];
+    expect(pins.map((m) => m[1])).toEqual(['__ACTION_REF__']);
+    expect(template).not.toMatch(/^\s*ref:\s*v\d/m);
   });
 
-  it.each(HARNESS_TEMPLATES)('%s hard-codes no action version', (template) => {
-    const content = fs.readFileSync(path.join(ROOT, template), 'utf8');
-    // Comments explain the v0.16.1 history, so scan the ref: line itself.
-    const refs = [...content.matchAll(/^\s*ref:\s*(\S+)/gm)].map((m) => m[1]);
-    expect(refs).toEqual(['__ACTION_REF__']);
+  it('is language-parameterised rather than copied per language', () => {
+    expect(template).toContain('__LANG__');
+    expect(template).toContain('__LANG_NAME__');
+    // The per-language copies this replaced drifted three separate ways.
+    expect(fs.existsSync(path.join(ROOT, 'tool-test-action-on-github/test-action-on-github-data/workflow-template-fa.yml'))).toBe(false);
   });
 
-  it('are substituted by the harness script, which defaults to package.json', () => {
-    const script = fs.readFileSync(
-      path.join(ROOT, 'tool-test-action-on-github', 'test-action-on-github.sh'),
-      'utf8'
-    );
+  it('substitutes the ref into the source and target workflows alike', () => {
     expect(script).toContain('s|__ACTION_REF__|$ACTION_REF|g');
-    expect(script).toContain("require('$REPO_ROOT/package.json').version");
+    // Target-repo workflows are rendered from examples/, so one knob reaches
+    // all of them rather than leaving five permanently on the floating tag.
+    expect(script).toContain('QuantEcon/action-translation@v0|QuantEcon/action-translation@$ACTION_REF');
+    expect(script).toContain('assert_no_placeholders');
+  });
+
+  it('defaults to main, not the package.json version', () => {
+    // package.json holds the LAST RELEASED version between releases, so that
+    // default tested the previous release instead of the code under change.
+    expect(script).toMatch(/ACTION_REF="main"/);
+    expect(script).not.toContain("require('$REPO_ROOT/package.json').version");
+  });
+
+  it('deletes .github/ only where it also re-renders it', () => {
+    // The fa reset used to delete .github/ without rewriting it, which
+    // destroyed that target's review and rebase workflows on every run.
+    const deletions = [...script.matchAll(/^\s*rm -rf .*\.github\/.*$/gm)];
+    expect(deletions.length).toBeGreaterThan(0);
+    for (const del of deletions) {
+      const after = script.slice(del.index!);
+      const block = after.slice(0, after.indexOf('commit_and_push'));
+      expect(block).toMatch(/render_(sync|target)_workflows?|render_sync_workflow/);
+    }
+  });
+
+  it.each(HARNESS_LANGUAGES)('%s has all three base fixtures', (lang) => {
+    const dir = 'tool-test-action-on-github/test-action-on-github-data';
+    for (const f of [`base-minimal-${lang}.md`, `base-lecture-${lang}.md`, `base-toc-${lang}.yml`]) {
+      expect(fs.existsSync(path.join(ROOT, dir, f))).toBe(true);
+    }
+  });
+
+  it.each(HARNESS_LANGUAGES)('%s fixtures use the current translation: format', (lang) => {
+    const dir = 'tool-test-action-on-github/test-action-on-github-data';
+    for (const f of [`base-minimal-${lang}.md`, `base-lecture-${lang}.md`]) {
+      const content = fs.readFileSync(path.join(ROOT, dir, f), 'utf8');
+      // `heading-map:` is the legacy key; the writer deletes it on rewrite, so
+      // a fixture using it mutates the harness baseline on the first sync.
+      expect(content).not.toMatch(/^heading-map:/m);
+      expect(content).toMatch(/^translation:/m);
+      expect(content).toMatch(/^ {2}headings:/m);
+      expect(content.endsWith('\n')).toBe(true);
+    }
+  });
+
+  it.each(HARNESS_LANGUAGES)('%s lecture fixture matches source structure', (lang) => {
+    const dir = path.join(ROOT, 'tool-test-action-on-github/test-action-on-github-data');
+    const src = fs.readFileSync(path.join(dir, 'base-lecture.md'), 'utf8');
+    const tgt = fs.readFileSync(path.join(dir, `base-lecture-${lang}.md`), 'utf8');
+    const count = (s: string, rx: RegExp) => (s.match(rx) ?? []).length;
+    // A structurally divergent baseline is the corruption the #159 guard
+    // exists to prevent, and it would poison every later sync comparison.
+    expect(count(tgt, /^#{1,6} /gm)).toBe(count(src, /^#{1,6} /gm));
+    expect(count(tgt, /^```/gm)).toBe(count(src, /^```/gm));
+    expect(count(tgt, /^\$\$/gm)).toBe(count(src, /^\$\$/gm));
+    expect(count(tgt, /^```\{[a-z-]+\}/gm)).toBe(count(src, /^```\{[a-z-]+\}/gm));
   });
 });
