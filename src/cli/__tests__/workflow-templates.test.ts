@@ -154,6 +154,35 @@ describe('the E2E harness workflow rendering', () => {
     expect(before.map((m) => m[0].trim())).toEqual([]);
   });
 
+  it('copilot-instructions documents exactly the harness languages', () => {
+    // Doubles as a corruption tripwire. A scripted edit to this file once
+    // produced an empty match and `str.replace('', new)`, which inserts between
+    // every character — 232 lines became 46,677 and no test noticed, because
+    // nothing read the file at all.
+    const doc = fs.readFileSync(path.join(ROOT, '.github', 'copilot-instructions.md'), 'utf8');
+    expect(doc.split('\n').length).toBeLessThan(1000);
+
+    const documented = [...doc.matchAll(/`QuantEcon\/test-translation-sync\.([a-z-]+)`/g)].map(
+      (m) => m[1]
+    );
+    for (const lang of HARNESS_LANGUAGES) {
+      expect(documented).toContain(lang);
+    }
+  });
+
+  it('gives the rendered rebase workflow a root docs-folder', () => {
+    // examples/rebase-translations.yml carries no docs-folder, so substitution
+    // no-ops and the workflow inherits action.yml's `lectures/` default — while
+    // the harness repos keep lectures at the root. Rebase would then filter on
+    // a prefix no test file has and rebase nothing while reporting success.
+    const rebaseTemplate = fs.readFileSync(
+      path.join(ROOT, 'examples', 'rebase-translations.yml'),
+      'utf8'
+    );
+    expect(rebaseTemplate).not.toMatch(/^\s*docs-folder:/m); // the premise
+    expect(script).toMatch(/docs-folder: %c\.%c/); // the insert that compensates
+  });
+
   it('refuses to run git if the source clone is missing', () => {
     // Without this, a failed clone would silently hand the scenario loop the
     // caller's working tree.

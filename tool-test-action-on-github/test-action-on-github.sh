@@ -177,13 +177,27 @@ render_sync_workflow() {   # $1 = code, $2 = display name   (cwd = source clone)
 # and the docs folder differ.
 render_target_workflows() {   # (cwd = target clone)
     mkdir -p .github/workflows
-    for wf in review rebase; do
-        sed -e "s|QuantEcon/action-translation@v0|QuantEcon/action-translation@$ACTION_REF|g" \
-            -e "s|QuantEcon/lecture-python-intro|$OWNER/$SOURCE_REPO|g" \
-            -e "s|docs-folder: 'lectures'|docs-folder: '.'|g" \
-            "$EXAMPLES_DIR/$wf-translations.yml" \
-            > ".github/workflows/$wf-translations.yml"
-    done
+
+    sed -e "s|QuantEcon/action-translation@v0|QuantEcon/action-translation@$ACTION_REF|g" \
+        -e "s|QuantEcon/lecture-python-intro|$OWNER/$SOURCE_REPO|g" \
+        -e "s|docs-folder: 'lectures'|docs-folder: '.'|g" \
+        "$EXAMPLES_DIR/review-translations.yml" \
+        > ".github/workflows/review-translations.yml"
+
+    # The rebase template carries NO docs-folder, so a plain substitution
+    # no-ops and the workflow silently takes action.yml's `lectures/` default —
+    # but the harness repos keep their lectures at the root. Rebase would then
+    # filter on a prefix no test file has and rebase nothing, reporting success.
+    # Insert the line rather than substituting it. (%c/39 sidesteps nesting a
+    # single quote inside the awk program.)
+    sed -e "s|QuantEcon/action-translation@v0|QuantEcon/action-translation@$ACTION_REF|g" \
+        "$EXAMPLES_DIR/rebase-translations.yml" \
+      | awk '{ print }
+             /^[[:space:]]*mode:[[:space:]]*rebase[[:space:]]*$/ {
+                 match($0, /^[[:space:]]*/)
+                 printf "%sdocs-folder: %c.%c\n", substr($0, 1, RLENGTH), 39, 39
+             }' \
+        > ".github/workflows/rebase-translations.yml"
 }
 
 # Fails the run rather than letting a placeholder reach GitHub, where it would
