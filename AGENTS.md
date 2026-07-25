@@ -120,8 +120,9 @@ gh pr view 123 > .dev/scratch/pr.txt && cat .dev/scratch/pr.txt
 # Create PR (write body with file tool first, then:)
 gh pr create --title "..." --body-file .dev/scratch/pr-body.txt --base main > .dev/scratch/pr-result.txt && cat .dev/scratch/pr-result.txt
 
-# Create release (write notes with file tool first, then:)
-gh release create vX.Y.Z --title "..." --notes-file .dev/scratch/release-notes.md > .dev/scratch/release-result.txt && cat .dev/scratch/release-result.txt
+# Create release (write notes with file tool first; title is the tag alone — see the
+# release checklist for why)
+gh release create vX.Y.Z --title "vX.Y.Z" --notes-file .dev/scratch/release-notes.md > .dev/scratch/release-result.txt && cat .dev/scratch/release-result.txt
 ```
 
 The `.dev/scratch/` folder is committed (via `.gitkeep`) but its contents are git-ignored.
@@ -239,7 +240,17 @@ Before creating a release, verify the following:
    ```bash
    ./tool-test-action-on-github/test-action-on-github.sh --action-ref v0 --scenarios 01
    ```
-6. **Create GitHub release** — `gh release create vX.Y.Z --title "..." --notes-file .dev/scratch/release-notes.md`
+6. **Create GitHub release** — the title is **the tag and nothing else**:
+
+   ```bash
+   gh release create vX.Y.Z --title "vX.Y.Z" --notes-file .dev/scratch/release-notes.md
+   ```
+
+   The repo sidebar and the releases list truncate long titles, so a descriptive
+   suffix is cut off exactly where it stops being readable — `v0.24.0 — tech-debt
+   Wave…` tells a visitor less than `v0.24.0` does. Put the headline in the **notes
+   body** instead, as the first line: it renders in full on the release page, in the
+   Atom feed, and in email notifications, none of which truncate.
 
 ---
 
