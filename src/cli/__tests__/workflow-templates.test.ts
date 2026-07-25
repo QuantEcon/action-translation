@@ -110,14 +110,23 @@ describe('the E2E harness workflow rendering', () => {
     expect(template).toContain('__LANG__');
     expect(template).toContain('__LANG_NAME__');
     // The per-language copies this replaced drifted three separate ways.
-    expect(fs.existsSync(path.join(ROOT, 'tool-test-action-on-github/test-action-on-github-data/workflow-template-fa.yml'))).toBe(false);
+    expect(
+      fs.existsSync(
+        path.join(
+          ROOT,
+          'tool-test-action-on-github/test-action-on-github-data/workflow-template-fa.yml'
+        )
+      )
+    ).toBe(false);
   });
 
   it('substitutes the ref into the source and target workflows alike', () => {
     expect(script).toContain('s|__ACTION_REF__|$ACTION_REF|g');
     // Target-repo workflows are rendered from examples/, so one knob reaches
     // all of them rather than leaving five permanently on the floating tag.
-    expect(script).toContain('QuantEcon/action-translation@v0|QuantEcon/action-translation@$ACTION_REF');
+    expect(script).toContain(
+      'QuantEcon/action-translation@v0|QuantEcon/action-translation@$ACTION_REF'
+    );
     expect(script).toContain('assert_no_placeholders');
   });
 
@@ -142,7 +151,11 @@ describe('the E2E harness workflow rendering', () => {
 
   it.each(HARNESS_LANGUAGES)('%s has all three base fixtures', (lang) => {
     const dir = 'tool-test-action-on-github/test-action-on-github-data';
-    for (const f of [`base-minimal-${lang}.md`, `base-lecture-${lang}.md`, `base-toc-${lang}.yml`]) {
+    for (const f of [
+      `base-minimal-${lang}.md`,
+      `base-lecture-${lang}.md`,
+      `base-toc-${lang}.yml`,
+    ]) {
       expect(fs.existsSync(path.join(ROOT, dir, f))).toBe(true);
     }
   });
