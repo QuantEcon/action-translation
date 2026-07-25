@@ -154,12 +154,13 @@ describe('the E2E harness workflow rendering', () => {
     expect(before.map((m) => m[0].trim())).toEqual([]);
   });
 
-  it('copilot-instructions documents exactly the harness languages', () => {
-    // Doubles as a corruption tripwire. A scripted edit to this file once
-    // produced an empty match and `str.replace('', new)`, which inserts between
-    // every character — 232 lines became 46,677 and no test noticed, because
-    // nothing read the file at all.
-    const doc = fs.readFileSync(path.join(ROOT, '.github', 'copilot-instructions.md'), 'utf8');
+  it('AGENTS.md documents exactly the harness languages', () => {
+    // Doubles as a corruption tripwire. A scripted edit to this file's
+    // predecessor (.github/copilot-instructions.md, since merged into AGENTS.md)
+    // once produced an empty match and `str.replace('', new)`, which inserts
+    // between every character — 232 lines became 46,677 and no test noticed,
+    // because nothing read that file at all.
+    const doc = fs.readFileSync(path.join(ROOT, 'AGENTS.md'), 'utf8');
     expect(doc.split('\n').length).toBeLessThan(1000);
 
     // Exact set, not a subset: a documented target repo the harness does not

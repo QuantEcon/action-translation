@@ -346,7 +346,7 @@ but not sync; `overloaded` retry in the translator but not the reviewer or any C
       `language` field at line 37; omits ml), `docs/user/language-config.md`, FAQ
 - [ ] Retire `src/cli/README.md` (documents the old `resync` binary, 1 of 8 commands) — replace
       with a pointer to `docs/user/cli-reference.md`
-- [ ] `.github/copilot-instructions.md`: reconcile 1005 vs "1001 tests", add ml
+- [ ] `AGENTS.md`: reconcile 1005 vs "1001 tests", add ml
 - [ ] Fix `tool-test-action-on-github/test-action-on-github.sh:25` header ("9 PRs" → 26)
 - [ ] Document `.translate/` state files appearing in translation PRs (action side) in
       `docs/user/action-reference.md`
