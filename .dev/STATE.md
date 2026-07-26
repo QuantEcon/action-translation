@@ -31,38 +31,33 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   Scenario 20 took the ordinary review path (GitHub reported `renamed`, so the old path never
   went missing), which leaves the **delete+add rename form covered by unit tests only** —
   filed as #216.
-- **#192 — canonical fix merged to `main`, unreleased; the estate is still exposed**
-  (2026-07-26, #219). The `\translate-resync` trigger ran a secrets-bearing workflow for any
-  commenter; the `if:` now requires a comment on a PR, the command, and an
-  `OWNER`/`MEMBER`/`COLLABORATOR` author, and the job declares `permissions: contents: read`.
-  Landed in all fourteen in-repo copies with a sweeping drift guard
-  (`workflow-templates.test.ts`), plus the FAQ.
-  [`D-2026-07-26-resync-trust-gate-association-set.md`](decisions/D-2026-07-26-resync-trust-gate-association-set.md)
-  settles the `CONTRIBUTOR` question #138 left open.
-  **What merging did and did not change.** The docs are live the moment they are on `main` —
-  that is where the estate gets configured from — but the scaffolder's copy reaches users only
-  on the next release, so `translate setup` still writes the ungated shape from `@v0`. Nothing
-  already deployed moved: the gate is in the workflow file, not the action, so an `@v0` pin
-  does not carry it.
-  **Step 2 is DONE and E2E-CONFIRMED** (2026-07-26, scoped harness run `--scenarios 01` at
-  `main` 59f7c56). All three `test-translation-sync` sync workflows now audit
-  `isPR=1 assoc=1 perms=1`. Both branches of the rewritten `if:` were exercised on the real
-  Actions path, which is what the unit guard cannot do:
-  the **label/merge branch** fired all three syncs (`pull_request`, all green, three
-  translation PRs opened) — the load-bearing check, since a mis-folded expression would
-  silently kill the merge path and look like "nothing was merged lately"; and the **resync
-  branch** was fired by a `\translate-resync` comment from a `MEMBER`, which the gate
-  **admitted** — three `issue_comment` runs started and logged
-  `🔄 RESYNC triggered by comment on PR #729`, then exited on `PR #729 is not merged` with no
-  model calls. That is the regression risk that mattered (a botched `author_association`
-  clause would have silently locked legitimate users out) and it is now measured, not argued.
-  The *rejection* half remains unverifiable in-house — it needs an account outside the org.
-  **Step 3 is not done**: the four production workflows — `lecture-python-intro` ×1,
-  `lecture-python-programming` ×3 — still need the same edit by hand, tracked in **#220** with
-  a per-file audit. All three repos are public. `lecture-python.myst` already carries it; that
-  is where the shape came from.
 
 ## Recently landed
+
+- **#192 — the `\translate-resync` trust gate, CLOSED across all three rollout steps**
+  (2026-07-26, #219 + QuantEcon/lecture-python-intro#805 +
+  QuantEcon/lecture-python-programming#586; estate tracked in #220, also closed). The trigger
+  ran a secrets-bearing workflow for **any** commenter on public repos; the `if:` now requires
+  a comment on a PR, the command, and an `OWNER`/`MEMBER`/`COLLABORATOR` author, and the job
+  declares `permissions: contents: read`. Fourteen in-repo copies plus the four production
+  workflows. **Closing audit: 8/8 deployed workflows gated**, re-fetched from their default
+  branches and *parsed* rather than grepped, with an org-wide sweep confirming the set is
+  complete rather than merely matching the original report's list.
+  [`D-2026-07-26-resync-trust-gate-association-set.md`](decisions/D-2026-07-26-resync-trust-gate-association-set.md)
+  settles the `CONTRIBUTOR` question #138 left open — the deciding argument is that
+  `inputs.ts` already enforces that exact set, so a looser workflow gate would only buy a
+  billed run that no-ops.
+  **E2E-confirmed, both branches** (scoped harness run, `--scenarios 01` at 59f7c56): the
+  merge branch fired three green syncs and three translation PRs — the load-bearing check,
+  since a mis-folded scalar does not error, it silently stops the workflow firing; and a
+  `MEMBER`'s `\translate-resync` comment was **admitted**, jobs starting and logging the
+  resync line before exiting on "not merged" with no model calls. The *rejection* half stays
+  unverified — it needs an account outside the org.
+  **Two residuals, neither blocking**: `translate setup` still scaffolds the ungated shape
+  until the next release (the fixed scaffolder ships in the action; `[Unreleased]` entry is in
+  place, and no newly-scaffolded repos exist yet), and **#221** records that GitHub Apps always
+  report `author_association=NONE`, so an App-based sync bot would silently lose the ability to
+  resync while a `quantecon-services` machine user needs no change at all.
 
 - **The E2E harness tests one version, everywhere** (2026-07-25, #206 + #209). A "full run"
   used to pin **2 of 9** workflows; the rest floated on `@v0`, so one run tested two versions
