@@ -365,15 +365,19 @@ new-language adopter can go from zero to a working target repo following only pu
 
 ## Phase 8 — Issue-tracker gardening & ops
 
-- [ ] Close **#4** (all six findings fixed in v0.6.1; residual tracked in QuantEcon/meta#268)
-- [ ] Close **#6** (implemented + tested; point to #65 for the translator-side remainder)
-- [ ] Close **#48** (all four referenced PRs closed unmerged; superseded by #63/#64)
-- [ ] Close **#1** (decision "accept, monitor" — recorded in
+- [x] Close **#4** (all six findings fixed in v0.6.1; residual tracked in QuantEcon/meta#268)
+- [x] Close **#6** (implemented + tested; point to #65 for the translator-side remainder)
+- [x] Close **#48** (all four referenced PRs closed unmerged; superseded by #63/#64)
+- [x] Close **#1** (decision "accept, monitor" — recorded in
       decisions/D-2025-10-01-accept-llm-translation-improvements.md; close with a pointer)
-- [ ] Close **#3** (superseded by #51/#52 `translation:` frontmatter + `.translate/`; fold any
+- [x] Close **#3** (superseded by #51/#52 `translation:` frontmatter + `.translate/`; fold any
       residue into #66)
-- [ ] Close or retitle **#2** to the narrow "cross-model (GPT) reviewer" remainder
-      (FUTURE.md idea 9)
+- [x] Close or retitle **#2** to the narrow "cross-model (GPT) reviewer" remainder
+      (FUTURE.md idea 9) — closed; FUTURE.md idea 9 holds the remainder
+- [x] Gardening pass 2026-07-26 also closed **#70** (ml shipped v0.24.0; `help wanted` moved to
+      #207), **#73** (`.dev/` pilot complete), **#95** (fixed by #197), **#147** (verdict v2
+      validated; calibration → #103/#154), **#138** (duplicate → #192, items copied across).
+      **#66** closes on #176's completion — recorded as a checklist item there
 - [ ] Finish **#53** — legacy `heading-map:` fallback removal (`src/heading-map.ts:41`); the
       self-imposed v0.15.0 deadline has passed and target repos are migrated
 - [ ] **#61** — create the `quantecon-services` PAT, grant repo access, rotate secrets in the
