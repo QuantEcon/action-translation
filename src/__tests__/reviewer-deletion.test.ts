@@ -56,6 +56,8 @@ interface Harness {
   targetBaseContent?: Record<string, string>;
   /** Make listing the source PR blow up, as a transient API failure would. */
   failSourceListing?: boolean;
+  /** Throw this instead of serving target content — a non-404 API failure. */
+  targetFetchError?: Error;
 }
 
 interface Recorder {
@@ -90,6 +92,7 @@ function makeReviewer(h: Harness, rec: Recorder): TranslationReviewer {
       },
       repos: {
         getContent: async (p: { repo: string; path: string; ref: string }) => {
+          if (h.targetFetchError && p.repo === TARGET_REPO) throw h.targetFetchError;
           const table =
             p.repo === TARGET_REPO
               ? p.ref === TARGET_HEAD
@@ -312,6 +315,28 @@ describe('reviewPR on deletion PRs (#210)', () => {
     expect(result.verdict).toBe('PASS');
     const verdict = parseReviewVerdict(result.reviewComment);
     expect(verdict?.findings.filter((f) => f.severity === 'blocker')).toHaveLength(0);
+  });
+
+  it('fails the run when the target fetch fails for a reason other than 404', async () => {
+    const rec = newRecorder();
+    // Narrowing the per-file catch created a new way to review against
+    // nothing: with the source fetch no longer skipped, a rate-limited target
+    // fetch would leave a real document compared to an empty target and get
+    // reported as a catastrophic translation defect. Infrastructure failures
+    // must not be laundered into review verdicts.
+    const rateLimited = Object.assign(new Error('API rate limit exceeded'), { status: 403 });
+    const reviewer = makeReviewer(
+      {
+        targetFiles: [modified('lectures/intro.md')],
+        sourceFiles: [modified('lectures/intro.md')],
+        sourceContent: { 'lectures/intro.md': SOURCE_INTRO },
+        targetFetchError: rateLimited,
+      },
+      rec
+    );
+
+    await expect(run(reviewer)).rejects.toThrow(/rate limit/);
+    expect(rec.modelCalls).toEqual([]);
   });
 
   it('still aborts when source content is missing for a file that was NOT deleted (F40)', async () => {

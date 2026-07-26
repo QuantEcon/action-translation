@@ -36233,45 +36233,45 @@ var TranslationReviewer = class {
     const filePairs = /* @__PURE__ */ new Map();
     for (const file of reviewableFiles) {
       try {
-        try {
-          const { data: targetData } = await this.octokit.rest.repos.getContent({
-            owner: targetOwner,
-            repo: targetRepo,
-            path: file.filename,
-            ref: pr.head.sha
-          });
-          if ("content" in targetData) {
-            const content = Buffer.from(targetData.content, "base64").toString("utf-8");
-            targetTranslation += content + "\n\n";
-            filePairs.set(file.filename, { ...filePairs.get(file.filename), target: content });
-          }
-        } catch (error3) {
-          core3.warning(`Target content not found for ${file.filename} @ ${pr.head.sha.substring(0, 7)}: ${error3}` + (file.status === "removed" ? " \u2014 the translation PR removes this file, and it was not matched to a deletion in the source PR" : ""));
-        }
-        try {
-          const { data: targetBeforeData } = await this.octokit.rest.repos.getContent({
-            owner: targetOwner,
-            repo: targetRepo,
-            path: file.filename,
-            ref: pr.base.sha
-          });
-          if ("content" in targetBeforeData) {
-            targetBefore += Buffer.from(targetBeforeData.content, "base64").toString("utf-8") + "\n\n";
-          }
-        } catch {
-        }
-        if (sourceAfterMap.has(file.filename)) {
-          const content = sourceAfterMap.get(file.filename);
-          sourceEnglish += content + "\n\n";
-          filePairs.set(file.filename, { ...filePairs.get(file.filename), source: content });
-        } else {
-          core3.warning(`Source content not found for ${file.filename} in ${resyncMetadata ? `source @ ${resyncMetadata.sourceCommitSha.substring(0, 7)}` : `source PR #${sourcePrNumber}`}`);
-        }
-        if (sourceBeforeMap.has(file.filename)) {
-          sourceBefore += sourceBeforeMap.get(file.filename) + "\n\n";
+        const { data: targetData } = await this.octokit.rest.repos.getContent({
+          owner: targetOwner,
+          repo: targetRepo,
+          path: file.filename,
+          ref: pr.head.sha
+        });
+        if ("content" in targetData) {
+          const content = Buffer.from(targetData.content, "base64").toString("utf-8");
+          targetTranslation += content + "\n\n";
+          filePairs.set(file.filename, { ...filePairs.get(file.filename), target: content });
         }
       } catch (error3) {
-        core3.warning(`Error processing ${file.filename}: ${error3}`);
+        if (!isNotFoundError(error3))
+          throw error3;
+        core3.warning(`Target content not found for ${file.filename} @ ${pr.head.sha.substring(0, 7)}` + (file.status === "removed" ? " \u2014 the translation PR removes this file, and it was not matched to a deletion in the source PR" : ""));
+      }
+      try {
+        const { data: targetBeforeData } = await this.octokit.rest.repos.getContent({
+          owner: targetOwner,
+          repo: targetRepo,
+          path: file.filename,
+          ref: pr.base.sha
+        });
+        if ("content" in targetBeforeData) {
+          targetBefore += Buffer.from(targetBeforeData.content, "base64").toString("utf-8") + "\n\n";
+        }
+      } catch (error3) {
+        if (!isNotFoundError(error3))
+          throw error3;
+      }
+      if (sourceAfterMap.has(file.filename)) {
+        const content = sourceAfterMap.get(file.filename);
+        sourceEnglish += content + "\n\n";
+        filePairs.set(file.filename, { ...filePairs.get(file.filename), source: content });
+      } else {
+        core3.warning(`Source content not found for ${file.filename} in ${resyncMetadata ? `source @ ${resyncMetadata.sourceCommitSha.substring(0, 7)}` : `source PR #${sourcePrNumber}`}`);
+      }
+      if (sourceBeforeMap.has(file.filename)) {
+        sourceBefore += sourceBeforeMap.get(file.filename) + "\n\n";
       }
     }
     if (resyncMetadata) {

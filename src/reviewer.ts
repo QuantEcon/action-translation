@@ -823,9 +823,15 @@ export class TranslationReviewer {
       });
     }
 
-    // Everything downstream reports on what was actually reviewed, so a skipped
-    // deletion must not appear in the prompt's file list, the abort message, or
-    // the `soleFile` attribution on findings.
+    // What gets *reviewed*, as distinct from what the PR *did*. A skipped
+    // deletion must not appear in the translation prompt's file list, the
+    // abort message, or the `soleFile` attribution on findings — all three
+    // report on files that were actually compared.
+    //
+    // `evaluateDiff` deliberately keeps the full `markdownFiles` list: its
+    // argument is a change manifest (status/additions/deletions), not a list
+    // of files under review, and a diff evaluator judging scope needs to know
+    // the PR also removed a document.
     const reviewableFilenames = reviewableFiles.map((f) => f.filename);
 
     // Build content strings for evaluation
@@ -840,78 +846,84 @@ export class TranslationReviewer {
     // per-document properties.
     const filePairs = new Map<string, { source?: string; target?: string }>();
 
+    // No catch-all around this body. There used to be one, and it was the
+    // second half of #210: it wrapped the target fetch and the source fetch
+    // together, so the 404 every deletion raises skipped the source fetch that
+    // would have succeeded — emptying `sourceEnglish` and taking the run down
+    // under a misleading "Error processing" line. Each fetch below now owns the
+    // failures it can actually expect, and anything else propagates: a review
+    // that silently lost a file's content is not a review.
     for (const file of reviewableFiles) {
+      // Get target (translation) content - after changes.
       try {
-        // Get target (translation) content - after changes.
-        //
-        // Scoped try: this fetch 404s whenever the translation PR removes the
-        // file, and a shared catch let that one expected failure skip the rest
-        // of the loop body — including the SOURCE fetch, which would have
-        // succeeded. That is how a single deletion emptied `sourceEnglish` and
-        // took the whole run down with a misleading "Error processing" line
-        // (#210). Report it and keep going; the missing target is itself the
-        // finding.
-        try {
-          const { data: targetData } = await this.octokit.rest.repos.getContent({
-            owner: targetOwner,
-            repo: targetRepo,
-            path: file.filename,
-            ref: pr.head.sha,
-          });
+        const { data: targetData } = await this.octokit.rest.repos.getContent({
+          owner: targetOwner,
+          repo: targetRepo,
+          path: file.filename,
+          ref: pr.head.sha,
+        });
 
-          if ('content' in targetData) {
-            const content = Buffer.from(targetData.content, 'base64').toString('utf-8');
-            targetTranslation += content + '\n\n';
-            filePairs.set(file.filename, { ...filePairs.get(file.filename), target: content });
-          }
-        } catch (error) {
-          core.warning(
-            `Target content not found for ${file.filename} @ ${pr.head.sha.substring(0, 7)}: ${error}` +
-              (file.status === 'removed'
-                ? ' — the translation PR removes this file, and it was not matched to a deletion in the source PR'
-                : '')
-          );
+        if ('content' in targetData) {
+          const content = Buffer.from(targetData.content, 'base64').toString('utf-8');
+          targetTranslation += content + '\n\n';
+          filePairs.set(file.filename, { ...filePairs.get(file.filename), target: content });
         }
-
-        // Get target content before changes (base branch)
-        try {
-          const { data: targetBeforeData } = await this.octokit.rest.repos.getContent({
-            owner: targetOwner,
-            repo: targetRepo,
-            path: file.filename,
-            ref: pr.base.sha,
-          });
-          if ('content' in targetBeforeData) {
-            targetBefore +=
-              Buffer.from(targetBeforeData.content, 'base64').toString('utf-8') + '\n\n';
-          }
-        } catch {
-          // File is new in target
-        }
-
-        // Get source (English) content from source PR diff
-        if (sourceAfterMap.has(file.filename)) {
-          const content = sourceAfterMap.get(file.filename) as string;
-          sourceEnglish += content + '\n\n';
-          filePairs.set(file.filename, { ...filePairs.get(file.filename), source: content });
-        } else {
-          core.warning(
-            `Source content not found for ${file.filename} in ${
-              resyncMetadata
-                ? `source @ ${resyncMetadata.sourceCommitSha.substring(0, 7)}`
-                : `source PR #${sourcePrNumber}`
-            }`
-          );
-        }
-
-        // Get source content before from source PR diff
-        if (sourceBeforeMap.has(file.filename)) {
-          sourceBefore += sourceBeforeMap.get(file.filename) + '\n\n';
-        }
-        // Note: sourceBefore may be empty for new files, which is correct
       } catch (error) {
-        core.warning(`Error processing ${file.filename}: ${error}`);
+        // Only a 404 is expected here — the file is genuinely absent at head
+        // because the PR removed it. Every other failure (rate limit, 5xx,
+        // permissions) is infrastructure, and swallowing it would leave this
+        // file's target content empty while its source content loaded fine:
+        // the review would then compare a real document against nothing and
+        // report an API blip as a catastrophic translation defect. That is the
+        // F40 case with the sides swapped, so it fails the run instead
+        // (#160 — failure is not optional).
+        if (!isNotFoundError(error)) throw error;
+        core.warning(
+          `Target content not found for ${file.filename} @ ${pr.head.sha.substring(0, 7)}` +
+            (file.status === 'removed'
+              ? ' — the translation PR removes this file, and it was not matched to a deletion in the source PR'
+              : '')
+        );
       }
+
+      // Get target content before changes (base branch)
+      try {
+        const { data: targetBeforeData } = await this.octokit.rest.repos.getContent({
+          owner: targetOwner,
+          repo: targetRepo,
+          path: file.filename,
+          ref: pr.base.sha,
+        });
+        if ('content' in targetBeforeData) {
+          targetBefore +=
+            Buffer.from(targetBeforeData.content, 'base64').toString('utf-8') + '\n\n';
+        }
+      } catch (error) {
+        // A 404 means the file is new in the target — a normal state, and the
+        // "before" side is legitimately empty. Anything else is infrastructure.
+        if (!isNotFoundError(error)) throw error;
+      }
+
+      // Get source (English) content from source PR diff
+      if (sourceAfterMap.has(file.filename)) {
+        const content = sourceAfterMap.get(file.filename) as string;
+        sourceEnglish += content + '\n\n';
+        filePairs.set(file.filename, { ...filePairs.get(file.filename), source: content });
+      } else {
+        core.warning(
+          `Source content not found for ${file.filename} in ${
+            resyncMetadata
+              ? `source @ ${resyncMetadata.sourceCommitSha.substring(0, 7)}`
+              : `source PR #${sourcePrNumber}`
+          }`
+        );
+      }
+
+      // Get source content before from source PR diff
+      if (sourceBeforeMap.has(file.filename)) {
+        sourceBefore += sourceBeforeMap.get(file.filename) + '\n\n';
+      }
+      // Note: sourceBefore may be empty for new files, which is correct
     }
 
     // Identify changed sections.
