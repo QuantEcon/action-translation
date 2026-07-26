@@ -1,4 +1,4 @@
-verified: 2026-07-25
+verified: 2026-07-26
 
 # STATE
 
@@ -16,11 +16,15 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   first-class third language and it passes 26/26. Its two seed reference translations are
   machine drafts awaiting native review (#207); the benchmark's Phase 1 (#194) is unrun.
 - **Glossary PR #69** (ja) — open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
-- **#210** — **fixed, unreleased** (branch `fix/210-review-deletion-only`). Review mode
-  partitions source-PR deletions out before the F40 guard, reports a deletion-only PR with no
-  model calls and an `editor` route, and gates a target deletion the source PR did not make as
-  a blocker. Guard stays fatal (and fail-closed) everywhere else. **Not yet re-run through the
-  harness** — scenario 18 in all three languages is the confirmation.
+- **#210 — merged to `main`, unreleased and UNCONFIRMED end-to-end** (#214, 2026-07-26).
+  Review mode partitions source-PR deletions out before the F40 guard, reports a deletion-only
+  PR with no model calls and an `editor` route, and gates a target deletion the source PR did
+  not make as a blocker. Non-404 target-fetch failures now fail the run (the loop's catch-all
+  is gone), so a rate-limited fetch can no longer be laundered into a translation verdict.
+  Everything is unit-tested against a mocked octokit; the `removed` status was verified against
+  the real source PR from the failed run. **The Actions path is untested** — scenarios 18
+  (deletion) and 20 (rename) have not been run since the fix. That run is owed before the next
+  release regardless, per the E2E gate in [AGENTS.md](../AGENTS.md).
 
 ## Recently landed
 
