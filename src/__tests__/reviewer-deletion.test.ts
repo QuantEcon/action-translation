@@ -160,7 +160,12 @@ function newRecorder(): Recorder {
   return { comments: [], modelCalls: [], warnings: [] };
 }
 
-const removed = (filename: string): PrFile => ({ filename, status: 'removed', additions: 0, deletions: 175 });
+const removed = (filename: string): PrFile => ({
+  filename,
+  status: 'removed',
+  additions: 0,
+  deletions: 175,
+});
 const modified = (filename: string): PrFile => ({
   filename,
   status: 'modified',
