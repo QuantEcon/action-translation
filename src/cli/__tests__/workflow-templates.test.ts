@@ -1,5 +1,6 @@
 /**
- * Drift guard for the review-workflow template (#161 — audit F7/F136).
+ * Drift guards for the workflow templates this repo publishes (#161 — audit
+ * F7/F136; #192 for the sync half).
  *
  * The review workflow existed in six divergent copies, five of which could
  * never fire on Action sync PRs: the `action-translation` label is applied
@@ -9,10 +10,20 @@
  * canonical template — the scaffolder renders it and the docs quote it — and
  * this test fails loudly when any copy drifts. Same mold as
  * branch-naming.test.ts's guard over examples/rebase-translations.yml.
+ *
+ * The sync workflow has no single canonical file (the scaffolder generates it
+ * and the docs quote it), so its guard works the other way round: it sweeps
+ * every publishable surface, parses each workflow it finds, and requires the
+ * `\translate-resync` gate on every job that carries one. That shape is what
+ * #192 needed — the trust condition was missing from all twelve documented
+ * copies at once, and an enumerated whitelist would not have covered the
+ * thirteenth.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
+import * as yaml from 'js-yaml';
+import { generateSourceWorkflowYaml } from '../commands/setup.js';
 
 const ROOT = path.join(__dirname, '..', '..', '..');
 const CANONICAL = fs.readFileSync(path.join(ROOT, 'examples', 'review-translations.yml'), 'utf8');
@@ -240,5 +251,148 @@ describe('the E2E harness workflow rendering', () => {
     expect(count(tgt, /^```/gm)).toBe(count(src, /^```/gm));
     expect(count(tgt, /^\$\$/gm)).toBe(count(src, /^\$\$/gm));
     expect(count(tgt, /^```\{[a-z-]+\}/gm)).toBe(count(src, /^```\{[a-z-]+\}/gm));
+  });
+});
+
+// ============================================================================
+// THE SYNC WORKFLOW'S RESYNC GATE (#192)
+// ============================================================================
+
+/**
+ * The roots that can hold a workflow a user might copy. Directories are swept
+ * recursively, so a new doc page is covered the day it lands — the #192
+ * exposure was twelve copies deep precisely because each new page copied the
+ * shape from an older one and no test knew the set had grown. Deliberately
+ * NOT a repo-wide walk: the `test-translation-sync*` clones are gitignored but
+ * present in a working tree, and a test that reads them passes or fails by
+ * what happens to be on disk.
+ */
+const SYNC_WORKFLOW_ROOTS = [
+  'README.md',
+  'examples',
+  'docs',
+  'tool-test-action-on-github',
+  '.github',
+];
+
+/** Every copy of the gate lived at a different indent, so match on content. */
+const RESYNC_GATE = {
+  'requires a comment on a PR, not a bare issue': 'github.event.issue.pull_request',
+  'requires the resync command': "contains(github.event.comment.body, '\\translate-resync')",
+  'requires a trusted commenter': `contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)`,
+};
+
+/** The pre-#192 shape, in the form every copy carried it. */
+const UNGATED = "github.event_name == 'issue_comment' && contains(github.event.comment.body,";
+
+interface SyncJob {
+  where: string;
+  condition: string;
+  permissions: unknown;
+}
+
+function walk(target: string): string[] {
+  const abs = path.join(ROOT, target);
+  if (!fs.existsSync(abs)) return [];
+  if (fs.statSync(abs).isFile()) return [target];
+  return fs
+    .readdirSync(abs, { withFileTypes: true })
+    .flatMap((e) => walk(path.join(target, e.name)));
+}
+
+/** Workflow YAML as published: whole `.yml` files, fenced blocks in `.md`. */
+function workflowSources(relPath: string): string[] {
+  const text = fs.readFileSync(path.join(ROOT, relPath), 'utf8');
+  const blocks = relPath.endsWith('.md')
+    ? [...text.matchAll(/```yaml\n([\s\S]*?)```/g)].map((m) => m[1])
+    : /\.ya?ml$/.test(relPath)
+      ? [text]
+      : [];
+  // Frontmatter samples are also fenced `yaml` and are multi-document, which
+  // js-yaml rejects — discriminate on content rather than swallowing errors,
+  // so a genuinely broken workflow block still fails loudly below.
+  return blocks.filter((b) => /^jobs:/m.test(b));
+}
+
+/** Placeholders the harness substitutes at render time; `on` is unaffected. */
+function render(source: string): string {
+  return source
+    .replace(/__ACTION_REF__/g, 'main')
+    .replace(/__LANG_NAME__/g, 'Farsi')
+    .replace(/__LANG__/g, 'fa');
+}
+
+function syncJobsIn(where: string, source: string): SyncJob[] {
+  // A parse error here is the failure, not something to skip: the #192 fix
+  // rewrote a folded `if:` in fourteen places and a mis-folded one would
+  // silently stop the workflow firing on merges at all.
+  const doc = yaml.load(render(source)) as { jobs?: Record<string, Record<string, unknown>> };
+  return Object.entries(doc?.jobs ?? {})
+    .filter(([, job]) => typeof job?.if === 'string' && job.if.includes('issue_comment'))
+    .map(([name, job]) => ({
+      where: `${where} :: ${name}`,
+      condition: job.if as string,
+      permissions: job.permissions,
+    }));
+}
+
+const DOCUMENTED_SYNC_JOBS: SyncJob[] = SYNC_WORKFLOW_ROOTS.flatMap(walk).flatMap((f) =>
+  workflowSources(f).flatMap((src) => syncJobsIn(f, src))
+);
+
+/** The scaffolder's output is a fifteenth copy that lives in TypeScript. */
+const SCAFFOLDED_SYNC_JOBS = syncJobsIn(
+  'src/cli/commands/setup.ts (generated)',
+  generateSourceWorkflowYaml('QuantEcon/lecture-python-intro.zh-cn', 'zh-cn', 'lectures')
+);
+
+const ALL_SYNC_JOBS = [...DOCUMENTED_SYNC_JOBS, ...SCAFFOLDED_SYNC_JOBS];
+
+describe('the \\translate-resync trigger gate', () => {
+  it('finds the sync jobs at all', () => {
+    // Without this the suite passes vacuously the day the extractor breaks or
+    // a fence is renamed — every assertion below is per-job.
+    expect(DOCUMENTED_SYNC_JOBS.length).toBeGreaterThanOrEqual(13);
+    expect(SCAFFOLDED_SYNC_JOBS).toHaveLength(1);
+  });
+
+  describe.each(Object.entries(RESYNC_GATE))('%s', (_label, clause) => {
+    it.each(ALL_SYNC_JOBS.map((j) => [j.where, j] as const))('%s', (_where, job) => {
+      // Folding collapses the newlines a reader sees into single spaces, so
+      // compare against what GitHub actually evaluates.
+      expect(job.condition.replace(/\s+/g, ' ')).toContain(clause);
+    });
+  });
+
+  it.each(ALL_SYNC_JOBS.map((j) => [j.where, j] as const))(
+    '%s keeps the ambient GITHUB_TOKEN read-only',
+    (_where, job) => {
+      // The action authenticates with the PAT input; checkout is the only
+      // consumer of the job token, so nothing needs write.
+      expect(job.permissions).toEqual({ contents: 'read' });
+    }
+  );
+
+  it('leaves no copy of the pre-#192 ungated form anywhere', () => {
+    const offenders = SYNC_WORKFLOW_ROOTS.flatMap(walk).filter((f) =>
+      fs.readFileSync(path.join(ROOT, f), 'utf8').includes(UNGATED)
+    );
+    expect(offenders).toEqual([]);
+  });
+
+  it('matches the association set the action enforces internally', () => {
+    // A workflow that admitted CONTRIBUTOR would start a billed run that
+    // inputs.ts then no-ops — the two gates have to agree, and the tighter
+    // one has to be the outer one.
+    const inputs = fs.readFileSync(path.join(ROOT, 'src', 'inputs.ts'), 'utf8');
+    const declared = inputs.match(/TRUSTED_ASSOCIATIONS = new Set\(\[([^\]]*)\]\)/);
+    expect(declared).not.toBeNull();
+    const enforced = [...declared![1].matchAll(/'([A-Z_]+)'/g)].map((m) => m[1]);
+    expect(enforced).toEqual(['OWNER', 'MEMBER', 'COLLABORATOR']);
+    for (const job of ALL_SYNC_JOBS) {
+      for (const association of enforced) {
+        expect(job.condition).toContain(`"${association}"`);
+      }
+    }
   });
 });

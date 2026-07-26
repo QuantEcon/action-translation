@@ -126,10 +126,22 @@ on:
 
 jobs:
   sync-to-chinese:
+    # The issue_comment path requires all three: a comment on a PR (not a bare
+    # issue), the command, and a trusted author — otherwise any account could
+    # fire a secrets-bearing run (Anthropic spend plus the PAT) from any comment.
     if: >
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '\translate-resync') &&
+       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
+
+    # The action authenticates with TRANSLATION_PAT; the ambient GITHUB_TOKEN
+    # is unused beyond checkout, so keep it read-only.
+    permissions:
+      contents: read
+
     steps:
       - uses: actions/checkout@v7
         with:
@@ -146,6 +158,8 @@ jobs:
 ```
 
 The `issue_comment` trigger enables the `\translate-resync` command — comment it on any merged PR to retry a failed sync. To retrigger only one language, add the language code: `\translate-resync fa` or `\translate-resync zh-cn`. Bare `\translate-resync` retriggers all languages.
+
+**The four conditions on that clause are load-bearing.** `issue_comment` workflows run in default-branch context with full access to secrets, and GitHub cannot filter the event by comment body at the trigger level — so the `if:` is the only gate. It checks that the comment is on a **pull request** (`github.event.issue.pull_request`; plain issues raise the same event), that it carries the command, and that its author is an `OWNER`, `MEMBER` or `COLLABORATOR`. Without the last one, any GitHub account can spend your Anthropic credits by commenting on a merged PR. `CONTRIBUTOR` — anyone with one merged PR — is deliberately excluded, and the action enforces the same set internally, so widening the workflow alone would only buy a run that no-ops. `permissions: contents: read` completes the picture: the action authenticates to the target repo with `TRANSLATION_PAT`, so the ambient `GITHUB_TOKEN` never needs write.
 
 ### Multi-language sync
 
@@ -164,10 +178,17 @@ on:
 
 jobs:
   sync-to-chinese:
+    # Every job carries the same guard — the trust gate belongs on each one,
+    # not on the first.
     if: >
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '\translate-resync') &&
+       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -183,8 +204,13 @@ jobs:
   sync-to-farsi:
     if: >
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '\translate-resync') &&
+       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:

@@ -31,6 +31,17 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   Scenario 20 took the ordinary review path (GitHub reported `renamed`, so the old path never
   went missing), which leaves the **delete+add rename form covered by unit tests only** —
   filed as #216.
+- **#192 — canonical rollout in review, estate still exposed** (2026-07-26). The
+  `\translate-resync` trigger ran a secrets-bearing workflow for any commenter; the `if:` now
+  requires a comment on a PR, the command, and an `OWNER`/`MEMBER`/`COLLABORATOR` author, and
+  the job declares `permissions: contents: read`. Landed in all fourteen in-repo copies with a
+  sweeping drift guard (`workflow-templates.test.ts`), plus the FAQ.
+  [`D-2026-07-26-resync-trust-gate-association-set.md`](decisions/D-2026-07-26-resync-trust-gate-association-set.md)
+  settles the `CONTRIBUTOR` question #138 left open. **Steps 2 and 3 of the issue's rollout
+  are not done**: `test-translation-sync`'s three sync workflows pick the gate up on the next
+  harness run (the template is fixed here), and the production source repos —
+  `lecture-python-intro`, `lecture-python-programming` ×3 — still need the same edit by hand.
+  `lecture-python.myst` already carries it; that is where the shape came from.
 
 ## Recently landed
 

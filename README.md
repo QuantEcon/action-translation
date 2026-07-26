@@ -37,10 +37,17 @@ on:
 
 jobs:
   sync:
+    # The issue_comment path needs a comment on a PR, the command, and a
+    # trusted author — see the resync note below.
     if: >
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '\translate-resync') &&
+       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -55,7 +62,7 @@ jobs:
           github-token: ${{ secrets.TRANSLATION_PAT }}
 ```
 
-The `issue_comment` trigger enables the `\translate-resync` command — comment it on any merged PR to re-trigger sync (useful for recovering from failures). To retrigger only one language, add the code: `\translate-resync fa` or `\translate-resync zh-cn`.
+The `issue_comment` trigger enables the `\translate-resync` command — comment it on any merged PR to re-trigger sync (useful for recovering from failures). To retrigger only one language, add the code: `\translate-resync fa` or `\translate-resync zh-cn`. The run costs Anthropic credits and uses the target-repo PAT, so the `if:` admits only repo owners, org members and collaborators; comments from anyone else are ignored at the workflow level and never start a job.
 
 ### CLI
 

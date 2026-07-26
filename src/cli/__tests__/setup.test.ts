@@ -82,6 +82,16 @@ describe('generateSourceWorkflowYaml', () => {
     expect(yaml).toContain('types: [created]');
     expect(yaml).toContain("contains(github.event.comment.body, '\\translate-resync')");
     expect(yaml).toContain('github.event.pull_request.merged == true');
+    // #192: the resync clause is a trust gate, not a convenience. Without the
+    // author check any account can fire a run that spends Anthropic credits
+    // and carries the PAT; without the issue.pull_request check a comment on
+    // a plain issue fires it too. workflow-templates.test.ts holds the same
+    // line for every documented copy.
+    expect(yaml).toContain('github.event.issue.pull_request');
+    expect(yaml).toContain(
+      'contains(fromJSON(\'["OWNER", "MEMBER", "COLLABORATOR"]\'), github.event.comment.author_association)'
+    );
+    expect(yaml).toContain('permissions:\n      contents: read');
     expect(yaml).toContain('paths:');
     expect(yaml).toContain("'lectures/**/*.md'");
     expect(yaml).toContain('target-repo: QuantEcon/lecture-python-intro.zh-cn');
