@@ -57,6 +57,8 @@ To retrigger only a specific language, add the language code:
 
 Requirements:
 - The workflow must include the `issue_comment` trigger (see [Action Reference](action-reference.md) for the YAML)
+- The comment must be on a pull request, not a plain issue — GitHub raises `issue_comment` for both
+- You must be an `OWNER`, `MEMBER` or `COLLABORATOR` of the source repo. A resync run spends Anthropic credits and uses the target-repo PAT, so comments from anyone else are ignored — at the workflow level (no job starts) and again inside the action. `CONTRIBUTOR` (anyone with one merged PR) is deliberately not enough
 - The PR must be merged (resync on open PRs is ignored)
 - The comment body must start with `\translate-resync`
 - The language code (if provided) must match a supported language; unsupported values are ignored with a warning and fall back to all-language resync

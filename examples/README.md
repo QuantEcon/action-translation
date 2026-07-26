@@ -25,10 +25,21 @@ on:
 
 jobs:
   sync-to-chinese:
+    # The issue_comment path requires all three: a comment on a PR (not a bare
+    # issue), the command, and a trusted author — otherwise any account could
+    # fire a secrets-bearing run (Anthropic spend plus the PAT) from any comment.
     if: >
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '\translate-resync') &&
+       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
+
+    # The action authenticates with TRANSLATION_PAT; the ambient GITHUB_TOKEN
+    # is unused beyond checkout, so keep it read-only.
+    permissions:
+      contents: read
 
     steps:
       - name: Sync translations
@@ -43,6 +54,17 @@ jobs:
           github-token: ${{ secrets.TRANSLATION_PAT }}
           pr-reviewers: 'translation-team'
 ```
+
+### Who can trigger a resync
+
+The `issue_comment` clause of the `if:` is a trust gate, not decoration. `issue_comment`
+workflows run in default-branch context with full access to secrets, so without it any
+GitHub account could comment `\translate-resync` on a merged PR and spend Anthropic credits
+and runner minutes at will. The three checks are: the comment is on a **pull request**
+(`github.event.issue.pull_request` — issues fire the same event), it carries the command,
+and its author is an `OWNER`, `MEMBER` or `COLLABORATOR`. `CONTRIBUTOR` — anyone with one
+merged PR — is deliberately excluded; the action applies the same three-way set internally,
+so admitting it here would only produce a run that no-ops.
 
 ## Multi-Language Support
 
@@ -63,10 +85,17 @@ on:
 
 jobs:
   sync-to-chinese:
+    # Every job carries the same guard — the trust gate belongs on each one,
+    # not on the first.
     if: >
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '\translate-resync') &&
+       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: quantecon/action-translation@v0
         with:
@@ -80,8 +109,13 @@ jobs:
   sync-to-french:
     if: >
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '\translate-resync') &&
+       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: quantecon/action-translation@v0
         with:

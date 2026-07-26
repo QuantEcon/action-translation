@@ -40,10 +40,21 @@ on:
 
 jobs:
   sync-to-chinese:
+    # The issue_comment path requires all three: a comment on a PR (not a bare
+    # issue), the command, and a trusted author — otherwise any account could
+    # fire a secrets-bearing run (Anthropic spend plus the PAT) from any comment.
     if: >
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '\translate-resync') &&
+       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
+
+    # The action authenticates with TRANSLATION_PAT; the ambient GITHUB_TOKEN
+    # is unused beyond checkout, so keep it read-only.
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v7
@@ -61,6 +72,8 @@ jobs:
 ```
 
 This workflow triggers whenever a PR that touches Markdown files in `lectures/` is merged. It detects which sections changed and creates a translation PR in the target repository. The `issue_comment` trigger enables re-syncing by commenting `\translate-resync` on a merged PR. To retrigger only one language, add the language code (e.g., `\translate-resync zh-cn`).
+
+The `author_association` check on that clause is a trust gate: an `issue_comment` workflow runs with full access to your secrets, so without it any GitHub account could spend Anthropic credits by commenting on a merged PR. Keep all four conditions — dropping any one of them re-opens that.
 
 ## Step 3: Add the review workflow (optional)
 

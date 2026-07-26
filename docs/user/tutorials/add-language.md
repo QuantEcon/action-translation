@@ -237,10 +237,18 @@ on:
 
 jobs:
   sync-to-chinese:
+    # Every job carries the same guard — the trust gate belongs on each one,
+    # not on the first. The issue_comment path requires a comment on a PR (not
+    # a bare issue), the command, and a trusted author.
     if: >
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '\translate-resync') &&
+       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -257,8 +265,13 @@ jobs:
   sync-to-japanese:
     if: >
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '\translate-resync'))
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '\translate-resync') &&
+       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
