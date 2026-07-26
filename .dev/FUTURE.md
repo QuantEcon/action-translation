@@ -340,3 +340,45 @@ Kept as one section; promote items individually if they become real.
   limit; invalid heading-map; oversized documents; graceful degradation with warnings.
 - **Digest of dropped-anchor damage** (issue #65 follow-up): one-off scan of past translation
   output for silently dropped `(label)=` anchors across zh-cn/fa repos.
+
+---
+
+## 13. Sync-bot identity migration, and what it does to the resync gate (issue #221)
+
+**Status**: not scheduled; blocking finding recorded so the migration does not trip on it.
+
+**Summary**: the bot currently posts as `mmcky` via `QUANTECON_SERVICES_PAT`. The plan is to
+move it to a `quantecon-services` machine user or a GitHub App. Those two choices behave
+completely differently against the #192 trust gate.
+
+**Motivation & evidence**: the gate admits `OWNER`/`MEMBER`/`COLLABORATOR` by
+`github.event.comment.author_association`. **GitHub Apps always report `NONE`** — measured
+2026-07-26 on three unrelated Apps in QuantEcon repos (`github-actions[bot]`, `netlify[bot]`,
+`Copilot`). It is structural, not a quirk: the field describes a *person's membership*, and an
+App is an installation with permissions but no membership, so no grant of access changes it. A
+machine user is an ordinary account and reports `MEMBER`/`COLLABORATOR` normally.
+
+**Design sketch**: the machine-user path needs **no code change** — add the account to the org
+or repo. The App path needs an explicit login allowlist ORed into the gate, in all seventeen
+places it is spelled, plus `TRUSTED_ASSOCIATIONS` in `src/inputs.ts` (the two layers must
+agree; `workflow-templates.test.ts` fails a one-sided change by design). Hard-coding a login
+seventeen times re-creates the drift #192 existed to fix, so an org-level
+`vars.TRANSLATION_BOT_LOGIN` is the better shape — it also fails closed when unset. A third
+option avoids the question: route bot-initiated resync through `workflow_dispatch` /
+`repository_dispatch` instead of comments.
+
+**Open questions**: does the migration actually need an App, or is a machine user enough? Is
+the bot's resync need programmatic (favouring dispatch) or human-shaped? Does `vars` resolve
+in `jobs.<job_id>.if` as documented — worth a smoke test, since a mistake there is a silently
+open gate rather than an error.
+
+**Two adjacent constraints**: comments posted with `secrets.GITHUB_TOKEN` do not trigger
+workflow runs at all, so the credential decides whether the event exists before the gate is
+consulted; and nothing the bot posts may contain the command string — no loop risk today
+(`postSuccessComment` omits it) but it becomes load-bearing once the bot can trigger.
+
+**Effort**: machine user ≈ zero. App ≈ one PR here plus two estate PRs, plus superseding
+[`D-2026-07-26-resync-trust-gate-association-set.md`](decisions/D-2026-07-26-resync-trust-gate-association-set.md)
+with a new record rather than editing it.
+
+**References**: #221 (full write-up), #192, #219, #220.
