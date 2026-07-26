@@ -31,18 +31,31 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   Scenario 20 took the ordinary review path (GitHub reported `renamed`, so the old path never
   went missing), which leaves the **delete+add rename form covered by unit tests only** —
   filed as #216.
-- **#192 — canonical rollout in review, estate still exposed** (2026-07-26). The
-  `\translate-resync` trigger ran a secrets-bearing workflow for any commenter; the `if:` now
-  requires a comment on a PR, the command, and an `OWNER`/`MEMBER`/`COLLABORATOR` author, and
-  the job declares `permissions: contents: read`. Landed in all fourteen in-repo copies with a
-  sweeping drift guard (`workflow-templates.test.ts`), plus the FAQ.
+- **#192 — canonical fix merged to `main`, unreleased; the estate is still exposed**
+  (2026-07-26, #219). The `\translate-resync` trigger ran a secrets-bearing workflow for any
+  commenter; the `if:` now requires a comment on a PR, the command, and an
+  `OWNER`/`MEMBER`/`COLLABORATOR` author, and the job declares `permissions: contents: read`.
+  Landed in all fourteen in-repo copies with a sweeping drift guard
+  (`workflow-templates.test.ts`), plus the FAQ.
   [`D-2026-07-26-resync-trust-gate-association-set.md`](decisions/D-2026-07-26-resync-trust-gate-association-set.md)
-  settles the `CONTRIBUTOR` question #138 left open. **Steps 2 and 3 of the issue's rollout
-  are not done**: `test-translation-sync`'s three sync workflows pick the gate up on the next
-  harness run (the template is fixed here, so a hand-edit would be overwritten), and the four
-  production workflows — `lecture-python-intro` ×1, `lecture-python-programming` ×3 — still
-  need the same edit by hand, tracked in **#220** with a per-file audit. All three repos are
-  public. `lecture-python.myst` already carries it; that is where the shape came from.
+  settles the `CONTRIBUTOR` question #138 left open.
+  **What merging did and did not change.** The docs are live the moment they are on `main` —
+  that is where the estate gets configured from — but the scaffolder's copy reaches users only
+  on the next release, so `translate setup` still writes the ungated shape from `@v0`. Nothing
+  already deployed moved: the gate is in the workflow file, not the action, so an `@v0` pin
+  does not carry it.
+  **Steps 2 and 3 of the issue's rollout are not done**: `test-translation-sync`'s three sync
+  workflows pick the gate up on the next harness run (the template is fixed on `main`, so a
+  hand-edit would be overwritten), and the four production workflows —
+  `lecture-python-intro` ×1, `lecture-python-programming` ×3 — still need the same edit by
+  hand, tracked in **#220** with a per-file audit. All three repos are public.
+  `lecture-python.myst` already carries it; that is where the shape came from.
+  **E2E status: unconfirmed, and only partly confirmable.** The harness fires its syncs via the
+  `test-translation` label, so a run exercises whether the rewritten `if:` still parses and
+  fires *at all* — which is the risk that matters, since a mis-folded expression would silently
+  kill the merge path too. It does not exercise the resync clause itself; that path has only
+  the unit guard plus the fact that the identical shape has been firing on
+  `lecture-python.myst` since 2026-07-22.
 
 ## Recently landed
 
