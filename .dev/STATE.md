@@ -16,15 +16,19 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   first-class third language and it passes 26/26. Its two seed reference translations are
   machine drafts awaiting native review (#207); the benchmark's Phase 1 (#194) is unrun.
 - **Glossary PR #69** (ja) — open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
-- **#210 — merged to `main`, unreleased and UNCONFIRMED end-to-end** (#214, 2026-07-26).
-  Review mode partitions source-PR deletions out before the F40 guard, reports a deletion-only
-  PR with no model calls and an `editor` route, and gates a target deletion the source PR did
-  not make as a blocker. Non-404 target-fetch failures now fail the run (the loop's catch-all
-  is gone), so a rate-limited fetch can no longer be laundered into a translation verdict.
-  Everything is unit-tested against a mocked octokit; the `removed` status was verified against
-  the real source PR from the failed run. **The Actions path is untested** — scenarios 18
-  (deletion) and 20 (rename) have not been run since the fix. That run is owed before the next
-  release regardless, per the E2E gate in [AGENTS.md](../AGENTS.md).
+- **#210 — merged to `main` and CONFIRMED end-to-end; unreleased** (#214, 2026-07-26). Review
+  mode partitions source-PR deletions out before the F40 guard, reports a deletion-only PR with
+  no model calls and an `editor` route, and gates a target deletion the source PR did not make
+  as a blocker. Non-404 target-fetch failures now fail the run (the loop's catch-all is gone),
+  so a rate-limited fetch can no longer be laundered into a translation verdict.
+  **Verified on the Actions path** by a scoped smoke against `main` (`--languages zh-cn
+  --scenarios 18,20`, run `30187281445`): scenario 18 green, deletion-only comment posted, and
+  `API usage: 0 call(s), 0 input + 0 output tokens` — the zero-cost claim measured in
+  production, not asserted. Scenario 20 took the ordinary review path (GitHub reported
+  `renamed`, so the old path never went missing) and passed on content.
+  **That smoke left the estate scoped**: the source repo now carries only the zh-cn sync
+  workflow; fa and ml are deleted until an unscoped run restores them. The release-gate run
+  does that — do not read a missing fa/ml workflow as a regression.
 
 ## Recently landed
 

@@ -33,6 +33,12 @@ Details in the CHANGELOG entry; decisions that outlive the PR:
 - **Resync path untouched.** `getSourceAtCommit` returns an empty `removed` set by
   construction — a commit is a state, not a diff. Deletions on the resync path (if forward
   ever produces one) remain fatal and unhandled; noted, not fixed.
+- **E2E confirmation (post-merge, scoped smoke against `main`).** Scenario 18 green in
+  zh-cn; the deletion-only comment rendered as designed and the run reported `API usage:
+  0 call(s)`. Scenario 20 came back as GitHub-reported `renamed`, so it took the ordinary
+  review path — which means **the delete+add rename form is still only unit-tested**. It is
+  reachable in production (heavy edits defeat rename detection) and no harness scenario
+  produces it. If a rename ever fails review, that is the shape to suspect.
 - **Renames need no separate fix.** The GitHub-reported `renamed` case never had the bug (new
   path exists at both heads); the delete+add form GitHub falls back to when heavy edits defeat
   rename detection is the deletion case and is covered by the same partition. Tested both.
