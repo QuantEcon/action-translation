@@ -37,12 +37,40 @@ What else outlives the PR:
 - **`dist-action/` is byte-identical.** The change is CLI + docs + a test; the action bundle
   does not move. Rebuilt and confirmed no drift.
 
-**Not done here** — rollout steps 2 and 3 of the issue, which are other repos. Filed as #220
-with a per-file audit, so #192 does not have to stay open as the only record:
+**Step 2 landed the same day, via a scoped harness run** (`--scenarios 01`, all three
+languages, `main` 59f7c56 — deliberately not `--languages`, which re-renders `.github/` from
+the scoped list and would have *deleted* the other two languages' sync workflows). The reset
+force-pushes every workflow before it creates any PRs, so one scenario deploys all nine and
+costs ~1/26th of a full run. All three harness sync workflows now audit
+`isPR=1 assoc=1 perms=1`.
 
-- The harness *template* is updated in this PR, so `test-translation-sync`'s three sync
-  workflows pick the gate up on the next harness run (it force-pushes what it renders) — a
-  hand-edit there would be overwritten, which is why step 2 is not a checklist item.
+What that bought beyond deployment — both branches of the rewritten `if:` exercised on the
+real Actions path:
+
+- **Label/merge branch**: three syncs fired and went green, opening three translation PRs.
+  This is the check that mattered most. A mis-folded folded-scalar would not error; it would
+  quietly stop the workflow firing on merges, which is indistinguishable from "nothing has
+  been merged lately". Now measured.
+- **Resync branch**: a `\translate-resync` comment from a `MEMBER` was **admitted** by the
+  gate — three `issue_comment` runs started, logged `🔄 RESYNC triggered by comment on PR
+  #729`, then exited on `PR #729 is not merged` with no model calls. Deliberately run against
+  an *unmerged* PR: `runSync` returns cleanly there (`index.ts`), so the test costs nothing
+  and still proves the gate does not lock legitimate users out — which is the actual
+  regression risk of this change, and the one thing the unit guard structurally cannot cover.
+- **The rejection half is not verifiable in-house.** Confirming an untrusted commenter is
+  *blocked* needs an account outside the org. The gate is `contains(fromJSON(...), assoc)` on
+  a set the action independently enforces, so the exposure of leaving it unmeasured is small,
+  but it is unmeasured and should be said so.
+
+**Incidental finding, logged against the existing PLAN item** rather than filed: the
+verification comment read `\translate-resync\n\n(Verifying …)` and the run warned
+`Ignoring unsupported language '(verifying'`. The known `[L]` fail-open is wider than
+"user typos a language code" — the parser splits the *whole body* on whitespace and reads
+token 2, so any prose after the command is parsed as a language argument. A fix should scope
+the parse to the first line, not merely reject unknown codes.
+
+**Still not done** — rollout step 3, tracked in #220 with a per-file audit:
+
 - The estate is untouched: `lecture-python-intro/sync-translations-zh-cn.yml`,
   `lecture-python-programming/sync-translations-{zh-cn,fa,fr}.yml`.
   `lecture-python.myst` already carries the fix — it is where the shape came from.

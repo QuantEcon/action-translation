@@ -44,18 +44,23 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   on the next release, so `translate setup` still writes the ungated shape from `@v0`. Nothing
   already deployed moved: the gate is in the workflow file, not the action, so an `@v0` pin
   does not carry it.
-  **Steps 2 and 3 of the issue's rollout are not done**: `test-translation-sync`'s three sync
-  workflows pick the gate up on the next harness run (the template is fixed on `main`, so a
-  hand-edit would be overwritten), and the four production workflows —
-  `lecture-python-intro` ×1, `lecture-python-programming` ×3 — still need the same edit by
-  hand, tracked in **#220** with a per-file audit. All three repos are public.
-  `lecture-python.myst` already carries it; that is where the shape came from.
-  **E2E status: unconfirmed, and only partly confirmable.** The harness fires its syncs via the
-  `test-translation` label, so a run exercises whether the rewritten `if:` still parses and
-  fires *at all* — which is the risk that matters, since a mis-folded expression would silently
-  kill the merge path too. It does not exercise the resync clause itself; that path has only
-  the unit guard plus the fact that the identical shape has been firing on
-  `lecture-python.myst` since 2026-07-22.
+  **Step 2 is DONE and E2E-CONFIRMED** (2026-07-26, scoped harness run `--scenarios 01` at
+  `main` 59f7c56). All three `test-translation-sync` sync workflows now audit
+  `isPR=1 assoc=1 perms=1`. Both branches of the rewritten `if:` were exercised on the real
+  Actions path, which is what the unit guard cannot do:
+  the **label/merge branch** fired all three syncs (`pull_request`, all green, three
+  translation PRs opened) — the load-bearing check, since a mis-folded expression would
+  silently kill the merge path and look like "nothing was merged lately"; and the **resync
+  branch** was fired by a `\translate-resync` comment from a `MEMBER`, which the gate
+  **admitted** — three `issue_comment` runs started and logged
+  `🔄 RESYNC triggered by comment on PR #729`, then exited on `PR #729 is not merged` with no
+  model calls. That is the regression risk that mattered (a botched `author_association`
+  clause would have silently locked legitimate users out) and it is now measured, not argued.
+  The *rejection* half remains unverifiable in-house — it needs an account outside the org.
+  **Step 3 is not done**: the four production workflows — `lecture-python-intro` ×1,
+  `lecture-python-programming` ×3 — still need the same edit by hand, tracked in **#220** with
+  a per-file audit. All three repos are public. `lecture-python.myst` already carries it; that
+  is where the shape came from.
 
 ## Recently landed
 

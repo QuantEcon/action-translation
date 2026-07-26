@@ -40,7 +40,14 @@ Everything here is a contained fix with an obvious correct behaviour. Ship as on
 - [x] **[M]** Glossary terms missing the target language render as `"term" → "undefined"` in
       prompts (`src/translator.ts:664`) — skip such terms (and log)
 - [ ] **[L]** `\translate-resync zh` (unsupported code) proceeds with **all** languages
-      (`src/inputs.ts:281`) — fail closed with an explanatory comment instead
+      (`src/inputs.ts:281`) — fail closed with an explanatory comment instead.
+      Observed live 2026-07-26 during the #192 step-2 verification, and the manifestation is
+      wider than "user typos a language code": the parser splits the **whole body** on
+      whitespace and reads token 2, so a bare `\translate-resync` followed by a blank line and
+      any prose takes the first word of that prose as the language. The real comment read
+      `\translate-resync\n\n(Verifying …)` and logged
+      `Ignoring unsupported language '(verifying'`. Fixing this should scope the parse to the
+      first line, not just reject unknown codes.
 - [ ] **[M]** Primary sync path uses `context.sha` (`src/index.ts:544`); for `pull_request:
       closed` events this can be a stale synthetic merge-ref SHA. Use `pr.merge_commit_sha`
       as the resync path already does (`src/index.ts:548-563`)
