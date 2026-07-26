@@ -16,15 +16,21 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   first-class third language and it passes 26/26. Its two seed reference translations are
   machine drafts awaiting native review (#207); the benchmark's Phase 1 (#194) is unrun.
 - **Glossary PR #69** (ja) — open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
-- **#210 — merged to `main`, unreleased and UNCONFIRMED end-to-end** (#214, 2026-07-26).
-  Review mode partitions source-PR deletions out before the F40 guard, reports a deletion-only
-  PR with no model calls and an `editor` route, and gates a target deletion the source PR did
-  not make as a blocker. Non-404 target-fetch failures now fail the run (the loop's catch-all
-  is gone), so a rate-limited fetch can no longer be laundered into a translation verdict.
-  Everything is unit-tested against a mocked octokit; the `removed` status was verified against
-  the real source PR from the failed run. **The Actions path is untested** — scenarios 18
-  (deletion) and 20 (rename) have not been run since the fix. That run is owed before the next
-  release regardless, per the E2E gate in [AGENTS.md](../AGENTS.md).
+- **#210 — merged to `main` and CONFIRMED end-to-end; unreleased** (#214, 2026-07-26). Review
+  mode partitions source-PR deletions out before the F40 guard, reports a deletion-only PR with
+  no model calls and an `editor` route, and gates a target deletion the source PR did not make
+  as a blocker. Non-404 target-fetch failures now fail the run (the loop's catch-all is gone),
+  so a rate-limited fetch can no longer be laundered into a translation verdict.
+  **Verified on the Actions path in all three languages.** A scoped smoke first
+  (`--languages zh-cn --scenarios 18,20`, run `30187281445`), then the estate-restoring reset
+  (`--scenarios 18`, all 9 workflows @ `main`) which re-ran scenario 18 across zh-cn, fa and
+  ml: all three green, all three posting the deletion-only comment and routing to `editor`.
+  The zh-cn run measured `API usage: 0 call(s), 0 input + 0 output tokens` — the zero-cost
+  claim observed in production, not asserted from a mock with no model to call. The exact
+  matrix that was red in #210 is now green.
+  Scenario 20 took the ordinary review path (GitHub reported `renamed`, so the old path never
+  went missing), which leaves the **delete+add rename form covered by unit tests only** —
+  filed as #216.
 
 ## Recently landed
 

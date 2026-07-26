@@ -33,6 +33,19 @@ Details in the CHANGELOG entry; decisions that outlive the PR:
 - **Resync path untouched.** `getSourceAtCommit` returns an empty `removed` set by
   construction — a commit is a state, not a diff. Deletions on the resync path (if forward
   ever produces one) remain fatal and unhandled; noted, not fixed.
+- **E2E confirmation (post-merge, against `main`).** Scenario 18 green in **all three
+  languages** — zh-cn from the scoped smoke, then zh-cn/fa/ml again from the estate-restoring
+  reset — each posting the deletion-only comment and routing to `editor`. zh-cn measured
+  `API usage: 0 call(s)`. The exact matrix #210 reported red is green.
+- **Restoring the estate is cheap, so spend the run on something.** The reset had to happen
+  anyway (a scoped run leaves the source repo carrying only the scoped language's sync
+  workflow). Running it with `--scenarios 18` instead of `01` cost the same and bought the
+  fa/ml confirmation. There is no reset-only mode; the minimal restore is an unscoped-language
+  run with one scenario, so **always pick the scenario that answers an open question**.
+- **Scenario 20 does not test what its name suggests.** It renames with no content change, so
+  similarity is 100% and GitHub always reports `renamed` — the path that never had the bug.
+  The delete+add form is the deletion case in disguise and is unit-tested only. Filed as #216;
+  if a rename ever fails review, that is the shape to suspect.
 - **Renames need no separate fix.** The GitHub-reported `renamed` case never had the bug (new
   path exists at both heads); the delete+add form GitHub falls back to when heavy edits defeat
   rename detection is the deletion case and is covered by the same partition. Tested both.
