@@ -37,11 +37,16 @@ What else outlives the PR:
 - **`dist-action/` is byte-identical.** The change is CLI + docs + a test; the action bundle
   does not move. Rebuilt and confirmed no drift.
 
-**Not done here** — rollout steps 2 and 3 of the issue, which are other repos:
+**Not done here** — rollout steps 2 and 3 of the issue, which are other repos. Filed as #220
+with a per-file audit, so #192 does not have to stay open as the only record:
 
 - The harness *template* is updated in this PR, so `test-translation-sync`'s three sync
-  workflows pick the gate up on the next harness run (it force-pushes what it renders). The
-  three files as they sit on that repo right now are still ungated.
+  workflows pick the gate up on the next harness run (it force-pushes what it renders) — a
+  hand-edit there would be overwritten, which is why step 2 is not a checklist item.
 - The estate is untouched: `lecture-python-intro/sync-translations-zh-cn.yml`,
   `lecture-python-programming/sync-translations-{zh-cn,fa,fr}.yml`.
   `lecture-python.myst` already carries the fix — it is where the shape came from.
+- Audited all eight deployed workflows before filing rather than trusting #192's list: an
+  org-wide code search for `translate-resync` returns exactly those eight outside this repo,
+  and each was fetched and checked for the three conditions. #192's list was accurate. Worth
+  noting for priority: all three production repos are **public**, 30–58 forks each.

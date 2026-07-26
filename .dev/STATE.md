@@ -39,9 +39,10 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   [`D-2026-07-26-resync-trust-gate-association-set.md`](decisions/D-2026-07-26-resync-trust-gate-association-set.md)
   settles the `CONTRIBUTOR` question #138 left open. **Steps 2 and 3 of the issue's rollout
   are not done**: `test-translation-sync`'s three sync workflows pick the gate up on the next
-  harness run (the template is fixed here), and the production source repos —
-  `lecture-python-intro`, `lecture-python-programming` ×3 — still need the same edit by hand.
-  `lecture-python.myst` already carries it; that is where the shape came from.
+  harness run (the template is fixed here, so a hand-edit would be overwritten), and the four
+  production workflows — `lecture-python-intro` ×1, `lecture-python-programming` ×3 — still
+  need the same edit by hand, tracked in **#220** with a per-file audit. All three repos are
+  public. `lecture-python.myst` already carries it; that is where the shape came from.
 
 ## Recently landed
 
