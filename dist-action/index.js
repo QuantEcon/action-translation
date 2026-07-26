@@ -36033,10 +36033,22 @@ var TranslationReviewer = class {
   }
   /**
    * Get source PR diff (English before/after)
+   *
+   * `removed` names the files the source PR **deleted**, which is why the
+   * `after` fetch is skipped for them below. Reporting it lets the caller tell
+   * "there is no source content because the document was deleted on purpose"
+   * from "the fetch failed" — two states the F40 guard could not distinguish,
+   * so every deletion PR failed its review run (#210).
+   *
+   * Fail-closed by construction: if listing the source PR throws, the outer
+   * catch returns an EMPTY `removed` set, so no file is excused and absent
+   * source content stays fatal. Absence of evidence is never read as evidence
+   * of deletion.
    */
   async getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames) {
     const before = /* @__PURE__ */ new Map();
     const after = /* @__PURE__ */ new Map();
+    const removed = /* @__PURE__ */ new Set();
     try {
       const { data: sourcePr } = await this.octokit.rest.pulls.get({
         owner: sourceOwner,
@@ -36050,6 +36062,9 @@ var TranslationReviewer = class {
       });
       for (const filename of filenames) {
         const sourceFile = sourceFiles.find((f) => f.filename === filename);
+        if (sourceFile?.status === "removed") {
+          removed.add(filename);
+        }
         const beforeFilename = sourceFile?.status === "renamed" && sourceFile.previous_filename ? sourceFile.previous_filename : filename;
         if (!sourceFile || sourceFile.status !== "added") {
           try {
@@ -36084,13 +36099,18 @@ var TranslationReviewer = class {
     } catch (error3) {
       core3.warning(`Could not fetch source PR #${sourcePrNumber}: ${error3}`);
     }
-    return { before, after };
+    return { before, after, removed };
   }
   /**
    * Get source content at a specific commit (for resync PRs, which have no
    * source PR). Returns the same shape as getSourceDiff with an empty
    * `before` map — a resync review compares the whole target against the
    * current source, not against a source-side diff.
+   *
+   * `removed` is always empty: a commit is a state, not a diff, so there is no
+   * "this file was deleted by the change under review" to read off it. Absent
+   * source content on the resync path therefore stays fatal, exactly as before
+   * (#210 is a sync-path fix).
    */
   async getSourceAtCommit(sourceOwner, sourceRepoName, commitSha, filenames) {
     const before = /* @__PURE__ */ new Map();
@@ -36111,7 +36131,7 @@ var TranslationReviewer = class {
       }
     }
     core3.info(`\u2713 Fetched source @ ${commitSha.substring(0, 7)} for ${after.size}/${filenames.length} file(s)`);
-    return { before, after };
+    return { before, after, removed: /* @__PURE__ */ new Set() };
   }
   /**
    * Review a translation PR
@@ -36186,14 +36206,32 @@ var TranslationReviewer = class {
       core3.info(`Found source PR reference: #${sourcePrNumber}`);
     }
     const filenames = markdownFiles.map((f) => f.filename);
-    const { before: sourceBeforeMap, after: sourceAfterMap } = resyncMetadata ? await this.getSourceAtCommit(sourceOwner, sourceRepoName, resyncMetadata.sourceCommitSha, filenames) : await this.getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames);
+    const { before: sourceBeforeMap, after: sourceAfterMap, removed: sourceRemoved } = resyncMetadata ? await this.getSourceAtCommit(sourceOwner, sourceRepoName, resyncMetadata.sourceCommitSha, filenames) : await this.getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames);
+    const deletedFiles = markdownFiles.filter((f) => sourceRemoved.has(f.filename));
+    const reviewableFiles = markdownFiles.filter((f) => !sourceRemoved.has(f.filename));
+    for (const file of deletedFiles) {
+      core3.info(`Skipping ${file.filename} \u2014 deleted in source PR #${sourcePrNumber}; there is no source content to review against`);
+    }
+    if (reviewableFiles.length === 0 && deletedFiles.length > 0) {
+      return await this.reviewDeletionOnlyPR({
+        prNumber,
+        pr,
+        sourceRepo,
+        targetOwner,
+        targetRepo,
+        deletedFiles: deletedFiles.map((f) => f.filename),
+        sourcePrNumber,
+        autoMergeMode
+      });
+    }
+    const reviewableFilenames = reviewableFiles.map((f) => f.filename);
     let sourceEnglish = "";
     let targetTranslation = "";
     let sourceBefore = "";
     let targetBefore = "";
     const changedSections = [];
     const filePairs = /* @__PURE__ */ new Map();
-    for (const file of markdownFiles) {
+    for (const file of reviewableFiles) {
       try {
         const { data: targetData } = await this.octokit.rest.repos.getContent({
           owner: targetOwner,
@@ -36206,30 +36244,34 @@ var TranslationReviewer = class {
           targetTranslation += content + "\n\n";
           filePairs.set(file.filename, { ...filePairs.get(file.filename), target: content });
         }
-        try {
-          const { data: targetBeforeData } = await this.octokit.rest.repos.getContent({
-            owner: targetOwner,
-            repo: targetRepo,
-            path: file.filename,
-            ref: pr.base.sha
-          });
-          if ("content" in targetBeforeData) {
-            targetBefore += Buffer.from(targetBeforeData.content, "base64").toString("utf-8") + "\n\n";
-          }
-        } catch {
-        }
-        if (sourceAfterMap.has(file.filename)) {
-          const content = sourceAfterMap.get(file.filename);
-          sourceEnglish += content + "\n\n";
-          filePairs.set(file.filename, { ...filePairs.get(file.filename), source: content });
-        } else {
-          core3.warning(`Source content not found for ${file.filename} in ${resyncMetadata ? `source @ ${resyncMetadata.sourceCommitSha.substring(0, 7)}` : `source PR #${sourcePrNumber}`}`);
-        }
-        if (sourceBeforeMap.has(file.filename)) {
-          sourceBefore += sourceBeforeMap.get(file.filename) + "\n\n";
+      } catch (error3) {
+        if (!isNotFoundError(error3))
+          throw error3;
+        core3.warning(`Target content not found for ${file.filename} @ ${pr.head.sha.substring(0, 7)}` + (file.status === "removed" ? " \u2014 the translation PR removes this file, and it was not matched to a deletion in the source PR" : ""));
+      }
+      try {
+        const { data: targetBeforeData } = await this.octokit.rest.repos.getContent({
+          owner: targetOwner,
+          repo: targetRepo,
+          path: file.filename,
+          ref: pr.base.sha
+        });
+        if ("content" in targetBeforeData) {
+          targetBefore += Buffer.from(targetBeforeData.content, "base64").toString("utf-8") + "\n\n";
         }
       } catch (error3) {
-        core3.warning(`Error processing ${file.filename}: ${error3}`);
+        if (!isNotFoundError(error3))
+          throw error3;
+      }
+      if (sourceAfterMap.has(file.filename)) {
+        const content = sourceAfterMap.get(file.filename);
+        sourceEnglish += content + "\n\n";
+        filePairs.set(file.filename, { ...filePairs.get(file.filename), source: content });
+      } else {
+        core3.warning(`Source content not found for ${file.filename} in ${resyncMetadata ? `source @ ${resyncMetadata.sourceCommitSha.substring(0, 7)}` : `source PR #${sourcePrNumber}`}`);
+      }
+      if (sourceBeforeMap.has(file.filename)) {
+        sourceBefore += sourceBeforeMap.get(file.filename) + "\n\n";
       }
     }
     if (resyncMetadata) {
@@ -36242,9 +36284,9 @@ var TranslationReviewer = class {
       changedSections.push(...detectedChanges);
     }
     if (sourceEnglish.trim() === "") {
-      throw new Error(`Review aborted: no source content could be fetched for ${filenames.join(", ")} \u2014 nothing to review against`);
+      throw new Error(`Review aborted: no source content could be fetched for ${reviewableFilenames.join(", ")} \u2014 nothing to review against`);
     }
-    const translationQuality = await this.evaluateTranslation(sourceEnglish, targetTranslation, changedSections, filenames, glossaryTerms, targetLanguage);
+    const translationQuality = await this.evaluateTranslation(sourceEnglish, targetTranslation, changedSections, reviewableFilenames, glossaryTerms, targetLanguage);
     const diffQuality = await this.evaluateDiff(resyncMetadata ? sourceEnglish : sourceBefore, sourceEnglish, targetBefore, targetTranslation, markdownFiles.map((f) => ({
       filename: f.filename,
       status: f.status,
@@ -36281,7 +36323,7 @@ var TranslationReviewer = class {
       score: diffScore
     };
     const { overallScore, verdict } = computeVerdict(translationQuality.score, diffScore, translationQuality.syntaxErrors);
-    const soleFile = filenames.length === 1 ? filenames[0] : null;
+    const soleFile = reviewableFilenames.length === 1 ? reviewableFilenames[0] : null;
     const syntaxFindings = translationQuality.syntaxErrors.map((e) => ({
       severity: "blocker",
       category: "syntax",
@@ -36296,6 +36338,14 @@ var TranslationReviewer = class {
       file: soleFile,
       location: null,
       description: truncateField(i),
+      suggestion: null
+    }));
+    const unexpectedDeletionFindings = resyncMetadata ? [] : reviewableFiles.filter((f) => f.status === "removed").map((f) => ({
+      severity: "blocker",
+      category: "structure",
+      file: f.filename,
+      location: null,
+      description: truncateField(`${f.filename} is deleted by this translation PR, but source PR #${sourcePrNumber} does not delete it. The translation would drop a document the source still has.`),
       suggestion: null
     }));
     const modelCheckFindings = ["scopeCorrect", "positionCorrect"].filter((name) => diffChecks[name] !== true).map((name) => ({
@@ -36318,6 +36368,7 @@ var TranslationReviewer = class {
       ...translationQuality.findings,
       ...syntaxFindings,
       ...diffFindings,
+      ...unexpectedDeletionFindings,
       ...modelCheckFindings,
       ...deterministicFindings
     ]);
@@ -36397,6 +36448,126 @@ var TranslationReviewer = class {
       reviewComment
     };
     return result;
+  }
+  /**
+   * Report on a translation PR that only deletes documents (#210).
+   *
+   * A deletion PR has no translation to evaluate: the source document is gone,
+   * the target document is gone, and there is no text on either side to
+   * compare. Review mode used to abort the whole run here, because the F40
+   * guard read "no source content" as a failed fetch. Deletions are a routine
+   * editorial operation, so that turned a healthy pipeline red on every one —
+   * and a red that is always expected is exactly what trains people to ignore
+   * the reds F40 exists to raise.
+   *
+   * Two calls deliberately NOT made:
+   *
+   * - **No model calls.** There is nothing to send them. This returns before
+   *   `evaluateTranslation`/`evaluateDiff`, so a deletion PR costs no tokens.
+   * - **No `auto-merge`.** Deleting a translated document is consequential and
+   *   nothing about the *content* was verified, so this always routes to a
+   *   human, with the reason recorded rather than implied.
+   *
+   * The scores below are 10s because no criterion was evaluated, not because
+   * the translation is good — matching the existing "no markdown files"
+   * branch. The load-bearing fields are `recommendation` and its reasons, and
+   * the comment says in plain text that nothing was compared, so this cannot
+   * become the "✅ PASS over nothing" that F40 was raised about.
+   */
+  async reviewDeletionOnlyPR(params) {
+    const { prNumber, pr, sourceRepo, targetOwner, targetRepo, deletedFiles, sourcePrNumber, autoMergeMode } = params;
+    core3.info(`Deletion-only PR: ${deletedFiles.length} file(s) removed, all matching deletions in source PR #${sourcePrNumber} \u2014 no content to review`);
+    const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
+    const recommendationReasons = [
+      "deletion-only PR \u2014 no translation content was evaluated; file removals are matched against the source PR but merging a deletion is an editorial decision"
+    ];
+    const diffChecks = {
+      scopeCorrect: true,
+      positionCorrect: true,
+      structurePreserved: true,
+      headingMapCorrect: true
+    };
+    const scores = {
+      accuracy: 10,
+      fluency: 10,
+      terminology: 10,
+      formatting: 10,
+      translation: 10,
+      diff: 10,
+      overall: 10
+    };
+    const summary = `Deletion-only PR: ${deletedFiles.length} translated document(s) removed to match source PR #${sourcePrNumber}. No translation content was evaluated.`;
+    const fileRows = deletedFiles.map((f) => `| \`${f}\` | removed in #${sourcePrNumber} |`);
+    const reviewComment = `## \u{1F5D1}\uFE0F Translation Review \u2014 deletion only
+
+This PR removes translated document(s) and adds no content, so there is nothing to compare against the source. **No translation quality evaluation was performed.**
+
+| File | Source |
+| --- | --- |
+${fileRows.join("\n")}
+
+Every file removed here is also deleted by source PR #${sourcePrNumber}, so the removal is expected. Routing to a human for the merge decision.
+
+` + buildVerdictBlock({
+      schemaVersion: REVIEW_VERDICT_SCHEMA_VERSION,
+      engineVersion: getEngineVersion(),
+      reviewerModel: this.model,
+      reviewedHeadSha: pr.head.sha,
+      targetBaseSha: pr.base.sha,
+      sourceRepo,
+      prNumber,
+      timestamp: timestamp2,
+      verdict: "PASS",
+      recommendation: "editor",
+      recommendationReasons,
+      autoMergeMode,
+      ...autoMergeMode === "shadow" ? { wouldAutoMerge: false } : {},
+      scores,
+      diffChecks,
+      diffCheckSources: {
+        scopeCorrect: "deterministic",
+        positionCorrect: "deterministic",
+        structurePreserved: "deterministic",
+        headingMapCorrect: "deterministic"
+      },
+      syntaxErrorCount: 0,
+      findings: []
+    });
+    await this.postReviewComment(prNumber, targetOwner, targetRepo, reviewComment);
+    return {
+      prNumber,
+      timestamp: timestamp2,
+      translationQuality: {
+        score: 10,
+        accuracy: 10,
+        fluency: 10,
+        terminology: 10,
+        formatting: 10,
+        syntaxErrors: [],
+        findings: [],
+        findingsMalformed: false,
+        issues: [],
+        strengths: [],
+        summary
+      },
+      diffQuality: {
+        score: 10,
+        ...diffChecks,
+        issues: [],
+        summary,
+        scopeDetails: `All ${deletedFiles.length} removed file(s) match deletions in source PR #${sourcePrNumber}.`,
+        positionDetails: "N/A \u2014 deletion only.",
+        structureDetails: "N/A \u2014 deletion only."
+      },
+      overallScore: 10,
+      verdict: "PASS",
+      recommendation: "editor",
+      recommendationReasons,
+      autoMergeMode,
+      ...autoMergeMode === "shadow" ? { wouldAutoMerge: false } : {},
+      reviewedHeadSha: pr.head.sha,
+      reviewComment
+    };
   }
   /**
    * Evaluate translation quality using Claude
