@@ -21,14 +21,16 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   no model calls and an `editor` route, and gates a target deletion the source PR did not make
   as a blocker. Non-404 target-fetch failures now fail the run (the loop's catch-all is gone),
   so a rate-limited fetch can no longer be laundered into a translation verdict.
-  **Verified on the Actions path** by a scoped smoke against `main` (`--languages zh-cn
-  --scenarios 18,20`, run `30187281445`): scenario 18 green, deletion-only comment posted, and
-  `API usage: 0 call(s), 0 input + 0 output tokens` — the zero-cost claim measured in
-  production, not asserted. Scenario 20 took the ordinary review path (GitHub reported
-  `renamed`, so the old path never went missing) and passed on content.
-  **That smoke left the estate scoped**: the source repo now carries only the zh-cn sync
-  workflow; fa and ml are deleted until an unscoped run restores them. The release-gate run
-  does that — do not read a missing fa/ml workflow as a regression.
+  **Verified on the Actions path in all three languages.** A scoped smoke first
+  (`--languages zh-cn --scenarios 18,20`, run `30187281445`), then the estate-restoring reset
+  (`--scenarios 18`, all 9 workflows @ `main`) which re-ran scenario 18 across zh-cn, fa and
+  ml: all three green, all three posting the deletion-only comment and routing to `editor`.
+  The zh-cn run measured `API usage: 0 call(s), 0 input + 0 output tokens` — the zero-cost
+  claim observed in production, not asserted from a mock with no model to call. The exact
+  matrix that was red in #210 is now green.
+  Scenario 20 took the ordinary review path (GitHub reported `renamed`, so the old path never
+  went missing), which leaves the **delete+add rename form covered by unit tests only** —
+  filed as #216.
 
 ## Recently landed
 
