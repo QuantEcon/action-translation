@@ -43,7 +43,7 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   per-workflow census prints before any PR is created. `@v0` is preserved as a *post-release
   smoke* (`--action-ref v0`) rather than by leaving workflows floating — which is what broke
   #202's circular gate. Default ref is now `main`; release gating is an explicit
-  `--action-ref vX.Y.Z` step **that still needs adding to the release checklist**.
+  `--action-ref vX.Y.Z` step, added to the release checklist as AGENTS.md §4a (#212).
   **Verified by a full run**: 78/78 sync green (26/26 × zh-cn/fa/ml), 26 translation PRs per
   target, zero failure issues — plus a `@v0` smoke confirming tag resolution. ml went from
   0/26 to 26/26. Scope limiter `--languages`/`--scenarios` added for cheap smokes; note the
@@ -159,7 +159,7 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   (run 29799241099). The A/B that decided #125's token question ran the same day on the same
   repo: 13 GITHUB_TOKEN-rebased heads got **zero** workflow runs; the one PAT-refreshed head got
   its review run. Production rollout of the PAT (5 edition repos: org-secret grant + one-line
-  workflow edit each) is #125, awaiting maintainer sign-off. Harness targets aligned to
+  workflow edit each) shipped as #125, closed completed 2026-07-21. Harness targets aligned to
   production shape (both now carry review+rebase on `@v0`, PAT in steady state) — #109.
 - **v0.18.1** (2026-07-21) — #121 closed #115: rebase mode ignored `resync/*` PRs, so a
   drift-recovery wave left 60+ PRs going stale with every merge. The prefix turned out to be
@@ -236,8 +236,10 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 - `main` green; 1,357 tests (62 suites, zero skips, type-checked as of #158), lint covers
   all files including the root `*.mjs` scripts (`--max-warnings 0`), CI checks formatting
   and `.dev/` path:line references.
-- Highest-priority known bug: issue **#65** — translator drops `(label)=` anchors
-  (PLAN Phase 2), plus the silent-data-loss family documented in REVIEW §6.1.
+- Highest-priority known bug class: the silent-data-loss family documented in REVIEW §6.1.
+  Issue #65 (translator drops `(label)=` anchors) is **closed** — the parity guard (#128,
+  v0.20.0) makes it fail loudly instead of writing; the parser-level anchor-binding fix is
+  the PLAN Phase 2 remainder. The class is live, the issue is not.
 - Prod dep advisories: **0** (cleared by #111's `@actions/*` CJS majors; the ESM-only
   3.x/9.x lines remain tracked in #89).
 
