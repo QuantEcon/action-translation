@@ -38726,12 +38726,7 @@ var SyncOrchestrator = class {
     }
     let translatedContent;
     if (file.isNewFile) {
-      const rules = this.config.localizationRules ?? DEFAULT_RULES;
-      const localizationPrompt = rules.length > 0 ? buildLocalizationPrompt(rules, this.config.targetLanguage) : "";
-      if (localizationPrompt) {
-        this.logger.info(`${file.filename}: new file \u2014 applying localisation rules (${rules.join(", ")})`);
-      }
-      translatedContent = await this.processor.processFull(file.newContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary, localizationPrompt || void 0);
+      translatedContent = await this.processor.processFull(file.newContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary, this.localizationPromptForNewFile(file.filename));
     } else {
       const skipped = [];
       const dropped = [];
@@ -38759,6 +38754,28 @@ var SyncOrchestrator = class {
     await this.maybeGenerateStateFile(file.filename, file.newContent, file.sourceCommitSha, file.isNewFile ? "NEW" : "UPDATE", result);
   }
   /**
+   * Localisation instructions for a document this run creates from scratch (#178).
+   *
+   * `init` has always applied these rules; sync applied none of them, so every
+   * lecture arriving through the automated path landed with English figure
+   * labels and no font config. Only first-time translations need them — an
+   * existing translation already carries its localisation and the translator
+   * prompts preserve it (#107).
+   *
+   * Returns undefined when the edition has opted out, so the caller can pass it
+   * straight through.
+   */
+  localizationPromptForNewFile(filename) {
+    const rules = this.config.localizationRules ?? DEFAULT_RULES;
+    if (rules.length === 0)
+      return void 0;
+    const prompt = buildLocalizationPrompt(rules, this.config.targetLanguage);
+    if (!prompt)
+      return void 0;
+    this.logger.info(`${filename}: first-time translation \u2014 applying localisation rules (${rules.join(", ")})`);
+    return prompt;
+  }
+  /**
    * Process a renamed markdown file.
    * Preserves existing translation at new path, deletes old path.
    */
@@ -38781,7 +38798,7 @@ var SyncOrchestrator = class {
         this.logger.warning(`${file.filename}: removed ${dropped.length} target-only section(s) with no source counterpart \u2014 correct if upstream deleted them; destructive if human-added (see PR body)`);
       }
     } else {
-      translatedContent = await this.processor.processFull(file.newContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary);
+      translatedContent = await this.processor.processFull(file.newContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary, this.localizationPromptForNewFile(file.filename));
     }
     const parity = checkStructuralParity(file.newContent, translatedContent);
     if (!parity.ok) {

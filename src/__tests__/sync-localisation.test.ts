@@ -127,4 +127,62 @@ describe('sync path localisation (#178)', () => {
     expect(processFullMock).not.toHaveBeenCalled();
     expect(processSectionBasedMock).toHaveBeenCalledTimes(1);
   });
+
+  // A rename whose old path was never translated is a first-time translation.
+  // GitHub's rename detection is a similarity heuristic, so this is reachable
+  // whenever a heavily-edited file is reported as a rename — not only on a
+  // literal `git mv`. Missed in the first cut of #178; caught in review.
+  it('applies the rules to a renamed file that has no existing translation', async () => {
+    const renamedWithoutTranslation: FileToSync[] = [
+      {
+        filename: 'lectures/new_name.md',
+        type: 'renamed',
+        previousFilename: 'lectures/old_name.md',
+        newContent: '# Introduction\n\nSome content',
+        isNewFile: false,
+      },
+    ];
+
+    await makeOrchestrator().processFiles(renamedWithoutTranslation);
+
+    expect(processFullMock).toHaveBeenCalledTimes(1);
+    expect(customInstructionsArg()).toBeTruthy();
+    expect(customInstructionsArg()).toContain('Inject font configuration');
+  });
+
+  it('leaves a renamed file that already has a translation on the section path', async () => {
+    const renamedWithTranslation: FileToSync[] = [
+      {
+        filename: 'lectures/new_name.md',
+        type: 'renamed',
+        previousFilename: 'lectures/old_name.md',
+        oldContent: '# Introduction\n\nOld',
+        newContent: '# Introduction\n\nNew',
+        targetContent: '# 简介\n\n旧',
+        isNewFile: false,
+      },
+    ];
+
+    await makeOrchestrator().processFiles(renamedWithTranslation);
+
+    expect(processFullMock).not.toHaveBeenCalled();
+    expect(processSectionBasedMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('honours the opt-out on the renamed-file path too', async () => {
+    const renamedWithoutTranslation: FileToSync[] = [
+      {
+        filename: 'lectures/new_name.md',
+        type: 'renamed',
+        previousFilename: 'lectures/old_name.md',
+        newContent: '# Introduction\n\nSome content',
+        isNewFile: false,
+      },
+    ];
+
+    await makeOrchestrator([]).processFiles(renamedWithoutTranslation);
+
+    expect(processFullMock).toHaveBeenCalledTimes(1);
+    expect(customInstructionsArg()).toBeUndefined();
+  });
 });
