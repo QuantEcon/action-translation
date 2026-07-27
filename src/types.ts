@@ -25,6 +25,8 @@ export interface ActionInputs {
   prReviewers: string[];
   prTeamReviewers: string[];
   testMode: boolean; // If true, run on PR head instead of merge commit
+  /** How to handle citations a sync introduces that the target bibliography lacks (#117) */
+  bibliographyMode: import('./bibliography.js').BibliographyMode;
 }
 
 export interface ReviewInputs {
@@ -49,6 +51,8 @@ export interface RebaseInputs {
    * Off by default — see action.yml for why this is opt-in rather than automatic.
    */
   rebaseStaleSiblings: boolean;
+  /** How to handle citations a rebase introduces that the target bibliography lacks (#117) */
+  bibliographyMode: import('./bibliography.js').BibliographyMode;
 }
 
 // ============================================================================

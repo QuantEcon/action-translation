@@ -26364,6 +26364,11 @@ var require_github = __commonJS({
 });
 
 // dist/index.js
+var index_exports = {};
+__export(index_exports, {
+  fetchBibliographies: () => fetchBibliographies
+});
+module.exports = __toCommonJS(index_exports);
 var core7 = __toESM(require_core(), 1);
 var github2 = __toESM(require_github(), 1);
 
@@ -31347,6 +31352,310 @@ function isRetryableAnthropicError(error3) {
   return error3 instanceof RateLimitError || error3 instanceof APIConnectionError || error3 instanceof APIError && (error3.status !== void 0 && error3.status >= 500 || error3.status === void 0 && error3.message?.includes("overloaded"));
 }
 
+// dist/bibliography.js
+var BIBLIOGRAPHY_MODES = ["backfill", "lint", "off"];
+var DEFAULT_BIBLIOGRAPHY_MODE = "backfill";
+function parseBibliographyMode(raw) {
+  const trimmed = raw.trim().toLowerCase();
+  if (!trimmed)
+    return DEFAULT_BIBLIOGRAPHY_MODE;
+  if (BIBLIOGRAPHY_MODES.includes(trimmed)) {
+    return trimmed;
+  }
+  throw new Error(`Unknown bibliography mode: '${raw}'. Expected one of: ${BIBLIOGRAPHY_MODES.join(", ")}.`);
+}
+var FENCE_LINE = /^\s*(`{3,}|~{3,})(.*)$/;
+var DIRECTIVE_INFO = /^\{([A-Za-z0-9_+:.-]+)\}\s*(.*)$/;
+var OPAQUE_DIRECTIVES = /* @__PURE__ */ new Set([
+  "code-cell",
+  "code-block",
+  "code",
+  "literalinclude",
+  "raw",
+  "math",
+  "mermaid"
+]);
+var CITE_ROLE = /\{(?:foot)?cite(?::[a-zA-Z]+)?\}`([^`]*)`/g;
+function extractCitationKeys(content) {
+  const refs = [];
+  const stack = [];
+  let opaqueFrom = null;
+  const lines = content.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const fence = FENCE_LINE.exec(line);
+    if (fence) {
+      const marker = fence[1];
+      const info7 = (fence[2] || "").trim();
+      const char = marker[0];
+      const top = stack[stack.length - 1];
+      if (top && char === top.char && marker.length >= top.length && info7 === "") {
+        stack.pop();
+        if (opaqueFrom !== null && stack.length < opaqueFrom) {
+          opaqueFrom = null;
+        }
+        continue;
+      }
+      stack.push({ char, length: marker.length });
+      if (opaqueFrom === null) {
+        const directive = DIRECTIVE_INFO.exec(info7);
+        const isOpaque = directive ? OPAQUE_DIRECTIVES.has(directive[1]) : true;
+        if (isOpaque) {
+          opaqueFrom = stack.length;
+        }
+      }
+      continue;
+    }
+    if (opaqueFrom !== null)
+      continue;
+    CITE_ROLE.lastIndex = 0;
+    let match;
+    while ((match = CITE_ROLE.exec(line)) !== null) {
+      for (const raw of match[1].split(",")) {
+        const key = raw.trim();
+        if (key)
+          refs.push({ key, line: i + 1 });
+      }
+    }
+  }
+  return refs;
+}
+var ENTRY_HEAD = /^[ \t]*@([A-Za-z]+)[ \t]*[{(][ \t]*([^,\s{}()]+)[ \t]*,/gm;
+var NON_ENTRY_TYPES = /* @__PURE__ */ new Set(["string", "comment", "preamble"]);
+function parseBib(content) {
+  const entries = [];
+  const byKey = /* @__PURE__ */ new Map();
+  const unterminated = [];
+  ENTRY_HEAD.lastIndex = 0;
+  let match;
+  while ((match = ENTRY_HEAD.exec(content)) !== null) {
+    const type2 = match[1].toLowerCase();
+    const key = match[2];
+    if (NON_ENTRY_TYPES.has(type2))
+      continue;
+    const atIndex = content.indexOf("@", match.index);
+    const openIndex = atIndex + 1 + match[1].length;
+    let open = -1;
+    for (let i = openIndex; i < content.length; i++) {
+      const c = content[i];
+      if (c === "{" || c === "(") {
+        open = i;
+        break;
+      }
+      if (c !== " " && c !== "	")
+        break;
+    }
+    if (open === -1)
+      continue;
+    const closer = content[open] === "{" ? "}" : ")";
+    const opener = content[open];
+    let depth = 0;
+    let end = -1;
+    for (let i = open; i < content.length; i++) {
+      const c = content[i];
+      if (c === "\\") {
+        i++;
+        continue;
+      }
+      if (c === opener)
+        depth++;
+      else if (c === closer) {
+        depth--;
+        if (depth === 0) {
+          end = i;
+          break;
+        }
+      }
+    }
+    if (end === -1) {
+      unterminated.push(key);
+      continue;
+    }
+    const entry = {
+      type: type2,
+      key,
+      raw: content.slice(atIndex, end + 1),
+      line: content.slice(0, atIndex).split("\n").length
+    };
+    entries.push(entry);
+    const bucket = byKey.get(key);
+    if (bucket)
+      bucket.push(entry);
+    else
+      byKey.set(key, [entry]);
+  }
+  return { entries, byKey, unterminated };
+}
+function appendBibEntries(targetBib, entries) {
+  if (entries.length === 0)
+    return targetBib;
+  const base = targetBib.replace(/\s*$/, "");
+  const block = entries.map((e) => e.raw.trim()).join("\n\n");
+  const header = "% --- Entries below added automatically by action-translation (#117) ---";
+  const needsHeader = !targetBib.includes(header);
+  return `${base}
+
+${needsHeader ? `${header}
+
+` : ""}${block}
+`;
+}
+function parseBibtexBibfiles(configYaml) {
+  const lines = configYaml.split("\n");
+  const paths = [];
+  let inBlock = false;
+  let indent = 0;
+  for (const line of lines) {
+    if (!inBlock) {
+      const m = /^(\s*)bibtex_bibfiles\s*:\s*(.*)$/.exec(line);
+      if (!m)
+        continue;
+      const inline = m[2].trim();
+      if (inline.startsWith("[")) {
+        for (const item of inline.replace(/^\[|\]$/g, "").split(",")) {
+          const v = item.trim().replace(/^['"]|['"]$/g, "");
+          if (v)
+            paths.push(v);
+        }
+        return paths;
+      }
+      inBlock = true;
+      indent = m[1].length;
+      continue;
+    }
+    if (!line.trim())
+      continue;
+    const itemMatch = /^(\s*)-\s*(.+?)\s*$/.exec(line);
+    if (itemMatch && itemMatch[1].length > indent) {
+      paths.push(itemMatch[2].replace(/^['"]|['"]$/g, ""));
+      continue;
+    }
+    const lineIndent = line.length - line.trimStart().length;
+    if (lineIndent <= indent)
+      break;
+  }
+  return paths;
+}
+function planCitationBackfill(input) {
+  const { docs, bib, mode, ledger } = input;
+  const plan = {
+    backfilled: /* @__PURE__ */ new Map(),
+    unresolved: /* @__PURE__ */ new Map(),
+    preExisting: /* @__PURE__ */ new Map(),
+    errors: [],
+    warnings: []
+  };
+  const targetParsed = bib.targets.map((t) => parseBib(t.content));
+  const sourceParsed = bib.sources.map((s) => parseBib(s.content));
+  const targetKeys = /* @__PURE__ */ new Set();
+  const targetKeysLower = /* @__PURE__ */ new Map();
+  for (const parsed of targetParsed) {
+    for (const key of parsed.byKey.keys()) {
+      targetKeys.add(key);
+      targetKeysLower.set(key.toLowerCase(), key);
+    }
+    for (const key of parsed.unterminated) {
+      plan.warnings.push(`target bibliography has an unterminated entry for '${key}' \u2014 it is not counted as present`);
+    }
+  }
+  const sourceByKey = /* @__PURE__ */ new Map();
+  for (const parsed of sourceParsed) {
+    for (const [key, list] of parsed.byKey) {
+      const existing = sourceByKey.get(key);
+      if (existing)
+        existing.push(...list);
+      else
+        sourceByKey.set(key, [...list]);
+    }
+  }
+  const toAppend = [];
+  const appended = /* @__PURE__ */ new Set();
+  for (const doc of docs) {
+    const beforeKeys = new Set(extractCitationKeys(doc.before).map((r) => r.key));
+    const afterRefs = extractCitationKeys(doc.after);
+    const introduced = /* @__PURE__ */ new Map();
+    const carried = /* @__PURE__ */ new Map();
+    for (const ref of afterRefs) {
+      const bucket = beforeKeys.has(ref.key) ? carried : introduced;
+      if (!bucket.has(ref.key))
+        bucket.set(ref.key, ref.line);
+    }
+    for (const [key, line] of carried) {
+      if (!targetKeys.has(key) && !appended.has(key)) {
+        push(plan.preExisting, doc.file, key);
+        plan.warnings.push(`${doc.file}:${line}: '${key}' was already dangling before this run \u2014 not introduced here, left alone`);
+      }
+    }
+    for (const [key, line] of introduced) {
+      if (targetKeys.has(key) || appended.has(key))
+        continue;
+      if (ledger?.has(key)) {
+        continue;
+      }
+      const sourceEntries = sourceByKey.get(key);
+      if (!sourceEntries || sourceEntries.length === 0) {
+        push(plan.unresolved, doc.file, key);
+        const near = nearestKey(key, targetKeysLower, sourceByKey);
+        plan.errors.push(`${doc.file}:${line}: citation '${key}' resolves in neither the target nor the source bibliography` + (near ? ` (nearest existing key: '${near}')` : ""));
+        continue;
+      }
+      if (sourceEntries.length > 1) {
+        push(plan.unresolved, doc.file, key);
+        plan.errors.push(`${doc.file}:${line}: citation '${key}' is declared ${sourceEntries.length} times in the source bibliography \u2014 resolve the duplicate upstream before it can be copied`);
+        continue;
+      }
+      const collision = targetKeysLower.get(key.toLowerCase());
+      if (collision && collision !== key) {
+        push(plan.unresolved, doc.file, key);
+        plan.errors.push(`${doc.file}:${line}: citation '${key}' differs only in case from '${collision}' already in the target bibliography \u2014 appending would create an ambiguous reference`);
+        continue;
+      }
+      if (mode === "backfill") {
+        toAppend.push(sourceEntries[0]);
+        appended.add(key);
+        ledger?.add(key);
+        push(plan.backfilled, doc.file, key);
+      } else {
+        push(plan.unresolved, doc.file, key);
+        plan.errors.push(`${doc.file}:${line}: citation '${key}' is missing from the target bibliography (bibliography mode is 'lint', so it was not copied)`);
+      }
+    }
+  }
+  if (toAppend.length > 0 && bib.targets.length > 0) {
+    const primary = bib.targets[0];
+    plan.bibPath = primary.path;
+    plan.bibSha = primary.sha;
+    plan.mergedBib = appendBibEntries(primary.content, toAppend);
+  }
+  return plan;
+}
+function push(map2, file, key) {
+  const list = map2.get(file);
+  if (list)
+    list.push(key);
+  else
+    map2.set(file, [key]);
+}
+function nearestKey(key, targetLower, sourceByKey) {
+  const lower = key.toLowerCase();
+  const inTarget = targetLower.get(lower);
+  if (inTarget)
+    return inTarget;
+  for (const candidate of sourceByKey.keys()) {
+    if (candidate.toLowerCase() === lower)
+      return candidate;
+  }
+  return void 0;
+}
+function formatCitationErrors(plan) {
+  if (plan.errors.length === 0)
+    return "";
+  return [
+    `Unresolved citation key(s) \u2014 the target would not build:`,
+    ...plan.errors.map((e) => `  - ${e}`)
+  ].join("\n");
+}
+
 // dist/contracts.js
 var REVIEW_TRIGGER_LABEL = "action-translation";
 var SYNC_PR_LABELS = [REVIEW_TRIGGER_LABEL, "automated"];
@@ -31388,6 +31697,7 @@ function getInputs() {
   const anthropicApiKey = core.getInput("anthropic-api-key", { required: true });
   const claudeModel = core.getInput("claude-model", { required: false }) || DEFAULT_CLAUDE_MODEL;
   const githubToken = core.getInput("github-token", { required: true });
+  const bibliographyMode = parseBibliographyMode(core.getInput("bibliography", { required: false }));
   const prLabelsRaw = core.getInput("pr-labels", { required: false }) || SYNC_PR_LABELS.join(",");
   const prLabels = prLabelsRaw.split(",").map((l) => l.trim()).filter((l) => l.length > 0);
   if (!prLabels.includes(REVIEW_TRIGGER_LABEL)) {
@@ -31417,7 +31727,8 @@ function getInputs() {
     prLabels,
     prReviewers,
     prTeamReviewers,
-    testMode
+    testMode,
+    bibliographyMode
   };
 }
 function getRebaseInputs() {
@@ -31432,7 +31743,8 @@ function getRebaseInputs() {
     glossaryPath,
     anthropicApiKey,
     githubToken,
-    rebaseStaleSiblings: core.getInput("rebase-stale-siblings", { required: false }).toLowerCase() === "true"
+    rebaseStaleSiblings: core.getInput("rebase-stale-siblings", { required: false }).toLowerCase() === "true",
+    bibliographyMode: parseBibliographyMode(core.getInput("bibliography", { required: false }))
   };
 }
 function getReviewInputs() {
@@ -32064,8 +32376,8 @@ var FLEXIBLE_ARG_PREFIX = "prf:";
 function isFlexibleArgDirective(name) {
   return FLEXIBLE_ARG_DIRECTIVES.has(name) || name.startsWith(FLEXIBLE_ARG_PREFIX);
 }
-var FENCE_LINE = /^\s*(`{3,}|~{3,})(.*)$/;
-var DIRECTIVE_INFO = /^\{([A-Za-z0-9_+:.-]+)\}\s*(.*)$/;
+var FENCE_LINE2 = /^\s*(`{3,}|~{3,})(.*)$/;
+var DIRECTIVE_INFO2 = /^\{([A-Za-z0-9_+:.-]+)\}\s*(.*)$/;
 var ANCHOR_LINE = /^\(([^()\s]+)\)=\s*$/;
 function extractStructuralTokens(content) {
   const directives = [];
@@ -32074,7 +32386,7 @@ function extractStructuralTokens(content) {
   const lines = content.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    const fence = FENCE_LINE.exec(line);
+    const fence = FENCE_LINE2.exec(line);
     if (openFence) {
       if (fence && fence[1][0] === openFence.char && fence[1].length >= openFence.length && fence[2].trim() === "") {
         openFence = null;
@@ -32083,7 +32395,7 @@ function extractStructuralTokens(content) {
     }
     if (fence) {
       openFence = { char: fence[1][0], length: fence[1].length };
-      const info7 = DIRECTIVE_INFO.exec(fence[2].trim());
+      const info7 = DIRECTIVE_INFO2.exec(fence[2].trim());
       if (info7) {
         directives.push({ name: info7[1], arg: info7[2].trim(), line: i + 1 });
       }
@@ -38561,7 +38873,7 @@ var SyncOrchestrator = class {
    * @param glossary - Optional glossary for translation
    * @returns Aggregated results across all files
    */
-  async processFiles(files, glossary, rebaseCache) {
+  async processFiles(files, glossary, rebaseCache, bibliography) {
     const result = {
       translatedFiles: [],
       filesToDelete: [],
@@ -38592,7 +38904,52 @@ var SyncOrchestrator = class {
         result.errors.push(errorMessage2);
       }
     }
+    this.backfillCitations(files, result, bibliography);
     return result;
+  }
+  /**
+   * Carry bibliography entries for citations this run introduces (#117).
+   *
+   * Runs after translation, over the bytes that will actually be committed, and
+   * is demand-driven: the trigger is a `{cite}` key that is new to the target
+   * document and does not resolve there, whatever the source diff contained.
+   * A diff-driven design misses the larger class, where the target simply had
+   * not translated a citing lecture yet and no source PR touches the bib.
+   *
+   * Append-only, and a key that already resolves in the target is never a
+   * candidate — so an edition that has localised an entry cannot have it
+   * clobbered.
+   */
+  backfillCitations(files, result, bibliography) {
+    const mode = this.config.bibliographyMode ?? DEFAULT_BIBLIOGRAPHY_MODE;
+    if (mode === "off" || !bibliography || bibliography.targets.length === 0)
+      return;
+    const beforeByPath = new Map(files.map((f) => [f.filename, f.targetContent || ""]));
+    const docs = result.translatedFiles.filter((f) => f.path.endsWith(".md")).map((f) => ({
+      file: f.path,
+      before: beforeByPath.get(f.path) ?? "",
+      after: f.content
+    }));
+    if (docs.length === 0)
+      return;
+    const plan = planCitationBackfill({ docs, bib: bibliography, mode });
+    for (const warning5 of plan.warnings)
+      this.logger.warning(warning5);
+    if (plan.mergedBib && plan.bibPath) {
+      const total = [...plan.backfilled.values()].reduce((n, keys) => n + keys.length, 0);
+      this.logger.info(`Bibliography: appended ${total} entr${total === 1 ? "y" : "ies"} to ${plan.bibPath} for citations this sync introduced`);
+      result.translatedFiles.push({
+        path: plan.bibPath,
+        content: plan.mergedBib,
+        sha: plan.bibSha
+      });
+    }
+    if (plan.errors.length > 0) {
+      const message = formatCitationErrors(plan);
+      this.logger.error(message);
+      result.errors.push(message);
+    }
+    result.citationBackfill = plan;
   }
   // ---------------------------------------------------------------------------
   // Private: File type handlers
@@ -39145,9 +39502,11 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
     targetLanguage: metadata.targetLanguage,
     claudeModel: metadata.claudeModel,
     anthropicApiKey: inputs.anthropicApiKey,
-    debugMode: true
+    debugMode: true,
+    bibliographyMode: inputs.bibliographyMode
   }, coreLogger, stateConfig);
-  const result = await orchestrator.processFiles(filesToSync, glossary, rebaseCache);
+  const bibliography = inputs.bibliographyMode === "off" ? void 0 : await fetchBibliographies(octokit, { owner: metadata.sourceRepo.split("/")[0], repo: metadata.sourceRepo.split("/")[1] }, { owner, repo }, inputs.docsFolder);
+  const result = await orchestrator.processFiles(filesToSync, glossary, rebaseCache, bibliography);
   if (result.errors.length > 0) {
     throw new Error(`translation produced ${result.errors.length} error(s); branch left untouched: ${result.errors.join("; ")}`);
   }
@@ -39274,9 +39633,11 @@ async function runSync() {
     targetLanguage: inputs.targetLanguage,
     claudeModel: inputs.claudeModel,
     anthropicApiKey: inputs.anthropicApiKey,
-    debugMode: true
+    debugMode: true,
+    bibliographyMode: inputs.bibliographyMode
   }, coreLogger, stateConfig);
-  const result = await orchestrator.processFiles(filesToSync, glossary);
+  const bibliography = inputs.bibliographyMode === "off" ? void 0 : await fetchBibliographies(octokit, { owner: github2.context.repo.owner, repo: github2.context.repo.repo, ref: effectiveSha }, { owner: targetOwner, repo: targetRepo }, inputs.docsFolder);
+  const result = await orchestrator.processFiles(filesToSync, glossary, void 0, bibliography);
   result.errors.unshift(...fetchErrors);
   const hasErrors = result.errors.length > 0;
   if (hasErrors) {
@@ -39632,6 +39993,79 @@ async function createFailureIssue(octokit, prNumber, targetLanguage, targetRepo,
   }
 }
 run();
+async function fetchBibliographies(octokit, source, target, docsFolder) {
+  const configPath = `${docsFolder}_config.yml`;
+  let configYaml;
+  try {
+    const { data } = await octokit.rest.repos.getContent({
+      owner: target.owner,
+      repo: target.repo,
+      path: configPath
+    });
+    if (!("content" in data))
+      return void 0;
+    configYaml = Buffer.from(data.content, "base64").toString("utf8");
+  } catch (error3) {
+    const status = error3?.status;
+    if (status !== 404) {
+      throw new Error(`Could not read ${configPath} from ${target.owner}/${target.repo} (status ${status ?? "unknown"}): ${error3}`);
+    }
+    core7.info(`No ${configPath} in target repo \u2014 bibliography backfill not applicable`);
+    return void 0;
+  }
+  const bibPaths = parseBibtexBibfiles(configYaml);
+  if (bibPaths.length === 0) {
+    core7.info(`No bibtex_bibfiles in ${configPath} \u2014 bibliography backfill not applicable`);
+    return void 0;
+  }
+  const targets = [];
+  const sources = [];
+  for (const rel of bibPaths) {
+    const repoPath = `${docsFolder}${rel}`;
+    try {
+      const { data } = await octokit.rest.repos.getContent({
+        owner: target.owner,
+        repo: target.repo,
+        path: repoPath
+      });
+      if (!("content" in data))
+        throw new Error("not a file");
+      targets.push({
+        path: repoPath,
+        content: Buffer.from(data.content, "base64").toString("utf8"),
+        sha: data.sha
+      });
+    } catch (error3) {
+      throw new Error(`Target ${configPath} configures bibtex_bibfiles '${rel}' but ${repoPath} could not be read: ${error3}`);
+    }
+    try {
+      const { data } = await octokit.rest.repos.getContent({
+        owner: source.owner,
+        repo: source.repo,
+        path: repoPath,
+        ...source.ref ? { ref: source.ref } : {}
+      });
+      if ("content" in data) {
+        sources.push({
+          path: repoPath,
+          content: Buffer.from(data.content, "base64").toString("utf8")
+        });
+      }
+    } catch (error3) {
+      const status = error3?.status;
+      if (status !== 404) {
+        throw new Error(`Could not read ${repoPath} from source ${source.owner}/${source.repo} (status ${status ?? "unknown"}): ${error3}`);
+      }
+      core7.info(`Source has no ${repoPath} \u2014 nothing to backfill from`);
+    }
+  }
+  core7.info(`Bibliography: ${targets.length} target file(s), ${sources.length} source file(s) available for backfill`);
+  return { targets, sources };
+}
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  fetchBibliographies
+});
 /*! Bundled license information:
 
 undici/lib/web/fetch/body.js:
