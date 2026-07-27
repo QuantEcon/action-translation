@@ -26,6 +26,7 @@ import {
   TranslationSyncMetadata,
 } from './pr-creator.js';
 import { RebaseCache } from './types.js';
+import { BibliographySources, BibFile, parseBibtexBibfiles } from './bibliography.js';
 import { isTranslationBranch } from './branch-naming.js';
 import { FAILURE_ISSUE_LABEL } from './contracts.js';
 import { refreshStaleBranch } from './rebase-siblings.js';
@@ -617,12 +618,23 @@ async function rebaseSinglePR(
       claudeModel: metadata.claudeModel,
       anthropicApiKey: inputs.anthropicApiKey,
       debugMode: true,
+      bibliographyMode: inputs.bibliographyMode,
     },
     coreLogger,
     stateConfig
   );
 
-  const result = await orchestrator.processFiles(filesToSync, glossary, rebaseCache);
+  const bibliography =
+    inputs.bibliographyMode === 'off'
+      ? undefined
+      : await fetchBibliographies(
+          octokit,
+          { owner: metadata.sourceRepo.split('/')[0], repo: metadata.sourceRepo.split('/')[1] },
+          { owner, repo },
+          inputs.docsFolder
+        );
+
+  const result = await orchestrator.processFiles(filesToSync, glossary, rebaseCache, bibliography);
 
   // Throw BEFORE any branch reset: committing only the successful files onto a
   // freshly-reset branch drops the errored files' previous translations from
@@ -844,12 +856,25 @@ async function runSync(): Promise<void> {
       claudeModel: inputs.claudeModel,
       anthropicApiKey: inputs.anthropicApiKey,
       debugMode: true,
+      bibliographyMode: inputs.bibliographyMode,
     },
     coreLogger,
     stateConfig
   );
 
-  const result = await orchestrator.processFiles(filesToSync, glossary);
+  // Citations this sync introduces need their bibliography entries to cross
+  // with them, or the target stops building under -W (#117).
+  const bibliography =
+    inputs.bibliographyMode === 'off'
+      ? undefined
+      : await fetchBibliographies(
+          octokit,
+          { owner: github.context.repo.owner, repo: github.context.repo.repo, ref: effectiveSha },
+          { owner: targetOwner, repo: targetRepo },
+          inputs.docsFolder
+        );
+
+  const result = await orchestrator.processFiles(filesToSync, glossary, undefined, bibliography);
 
   // Fetch failures count as processing errors: they fail the run and open a
   // failure issue instead of shipping a PR that silently misses files.
@@ -1440,3 +1465,93 @@ async function createFailureIssue(
 
 // Run the action
 run();
+
+/**
+ * Fetch the bibliographies a citation backfill needs (#117).
+ *
+ * The target's `_config.yml` names them via `bibtex_bibfiles`; the source is
+ * read at the same docs-relative paths. Returns undefined when the target
+ * configures no bibliography (correct for editions that have none, and for the
+ * harness repos, which have no `_config.yml` at all).
+ *
+ * Fails closed on a configured-but-unreadable bibliography: silently skipping
+ * would restore the exact silence this guard exists to remove.
+ */
+export async function fetchBibliographies(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  octokit: any,
+  source: { owner: string; repo: string; ref?: string },
+  target: { owner: string; repo: string },
+  docsFolder: string
+): Promise<BibliographySources | undefined> {
+  const configPath = `${docsFolder}_config.yml`;
+
+  let configYaml: string;
+  try {
+    const { data } = await octokit.rest.repos.getContent({
+      owner: target.owner,
+      repo: target.repo,
+      path: configPath,
+    });
+    if (!('content' in data)) return undefined;
+    configYaml = Buffer.from(data.content, 'base64').toString('utf8');
+  } catch {
+    core.info(`No ${configPath} in target repo — bibliography backfill not applicable`);
+    return undefined;
+  }
+
+  const bibPaths = parseBibtexBibfiles(configYaml);
+  if (bibPaths.length === 0) {
+    core.info(`No bibtex_bibfiles in ${configPath} — bibliography backfill not applicable`);
+    return undefined;
+  }
+
+  const targets: BibFile[] = [];
+  const sources: BibFile[] = [];
+
+  for (const rel of bibPaths) {
+    const repoPath = `${docsFolder}${rel}`;
+
+    try {
+      const { data } = await octokit.rest.repos.getContent({
+        owner: target.owner,
+        repo: target.repo,
+        path: repoPath,
+      });
+      if (!('content' in data)) throw new Error('not a file');
+      targets.push({
+        path: repoPath,
+        content: Buffer.from(data.content, 'base64').toString('utf8'),
+        sha: data.sha,
+      });
+    } catch (error) {
+      throw new Error(
+        `Target ${configPath} configures bibtex_bibfiles '${rel}' but ${repoPath} could not be read: ${error}`
+      );
+    }
+
+    try {
+      const { data } = await octokit.rest.repos.getContent({
+        owner: source.owner,
+        repo: source.repo,
+        path: repoPath,
+        ...(source.ref ? { ref: source.ref } : {}),
+      });
+      if ('content' in data) {
+        sources.push({
+          path: repoPath,
+          content: Buffer.from(data.content, 'base64').toString('utf8'),
+        });
+      }
+    } catch {
+      // A source without this bibliography is not an error: nothing to copy
+      // from, and any unresolved key is reported by the planner.
+      core.info(`Source has no ${repoPath} — nothing to backfill from`);
+    }
+  }
+
+  core.info(
+    `Bibliography: ${targets.length} target file(s), ${sources.length} source file(s) available for backfill`
+  );
+  return { targets, sources };
+}

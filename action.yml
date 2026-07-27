@@ -57,6 +57,16 @@ inputs:
     required: false
     # Keep in sync with DEFAULT_CLAUDE_MODEL in src/models.ts
     default: 'claude-sonnet-5'
+  bibliography:
+    description: >-
+      How to handle citations a run introduces that the target bibliography lacks:
+      "backfill" (default) copies the entry from the source bibliography, "lint"
+      reports and fails without copying, "off" disables the check. Entries are only
+      ever appended — a key that already resolves in the target is never touched,
+      so localised entries are safe.
+    required: false
+    # Keep in sync with DEFAULT_BIBLIOGRAPHY_MODE in src/bibliography.ts
+    default: 'backfill'
   github-token:
     description: 'GitHub token for API access'
     required: true

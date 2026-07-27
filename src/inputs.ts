@@ -2,6 +2,7 @@ import * as core from '@actions/core';
 import { ActionInputs, ReviewInputs, RebaseInputs } from './types.js';
 import { validateLanguageCode, getSupportedLanguages } from './language-config.js';
 import { DEFAULT_CLAUDE_MODEL, VALID_MODEL_PATTERNS } from './models.js';
+import { parseBibliographyMode } from './bibliography.js';
 import {
   AUTO_MERGE_MODES,
   AutoMergeMode,
@@ -52,6 +53,13 @@ export function getInputs(): ActionInputs {
   const anthropicApiKey = core.getInput('anthropic-api-key', { required: true });
   const claudeModel = core.getInput('claude-model', { required: false }) || DEFAULT_CLAUDE_MODEL;
   const githubToken = core.getInput('github-token', { required: true });
+
+  // Citations a sync introduces need their bibliography entries (#117). An
+  // unrecognised value throws rather than defaulting — a disabled guard looks
+  // exactly like a passing one until a target repo stops building.
+  const bibliographyMode = parseBibliographyMode(
+    core.getInput('bibliography', { required: false })
+  );
 
   const prLabelsRaw = core.getInput('pr-labels', { required: false }) || SYNC_PR_LABELS.join(',');
   const prLabels = prLabelsRaw
@@ -112,6 +120,7 @@ export function getInputs(): ActionInputs {
     prReviewers,
     prTeamReviewers,
     testMode,
+    bibliographyMode,
   };
 }
 
@@ -138,6 +147,7 @@ export function getRebaseInputs(): RebaseInputs {
     githubToken,
     rebaseStaleSiblings:
       core.getInput('rebase-stale-siblings', { required: false }).toLowerCase() === 'true',
+    bibliographyMode: parseBibliographyMode(core.getInput('bibliography', { required: false })),
   };
 }
 

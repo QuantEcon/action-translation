@@ -15,6 +15,15 @@ import { TranslationService } from './translator.js';
 import { FileProcessor } from './file-processor.js';
 import { MystParser } from './parser.js';
 import { checkStructuralParity, formatParityViolations } from './structural-parity.js';
+import {
+  BibliographyMode,
+  BibliographySources,
+  CitationDoc,
+  CitationPlan,
+  DEFAULT_BIBLIOGRAPHY_MODE,
+  formatCitationErrors,
+  planCitationBackfill,
+} from './bibliography.js';
 import { Glossary, TranslatedFile, RebaseCache } from './types.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -48,6 +57,11 @@ export interface SyncConfig {
   claudeModel: string;
   anthropicApiKey: string;
   debugMode?: boolean;
+  /**
+   * How to handle citations this run introduces that the target bibliography
+   * lacks (#117). Defaults to 'backfill'.
+   */
+  bibliographyMode?: BibliographyMode;
 }
 
 /**
@@ -93,6 +107,8 @@ export interface SyncProcessingResult {
   skippedSections: Map<string, string[]>;
   /** Target-only sections removed per file: present in the target but with no counterpart in the current source (#90 defect 2 — upstream drift or human-added content; the PR body surfaces them so a reviewer decides which). */
   droppedTargetSections: Map<string, string[]>;
+  /** What the bibliography backfill did, when it ran (#117). */
+  citationBackfill?: CitationPlan;
 }
 
 // =============================================================================
@@ -342,7 +358,8 @@ export class SyncOrchestrator {
   async processFiles(
     files: FileToSync[],
     glossary?: Glossary,
-    rebaseCache?: RebaseCache
+    rebaseCache?: RebaseCache,
+    bibliography?: BibliographySources
   ): Promise<SyncProcessingResult> {
     const result: SyncProcessingResult = {
       translatedFiles: [],
@@ -376,7 +393,70 @@ export class SyncOrchestrator {
       }
     }
 
+    this.backfillCitations(files, result, bibliography);
+
     return result;
+  }
+
+  /**
+   * Carry bibliography entries for citations this run introduces (#117).
+   *
+   * Runs after translation, over the bytes that will actually be committed, and
+   * is demand-driven: the trigger is a `{cite}` key that is new to the target
+   * document and does not resolve there, whatever the source diff contained.
+   * A diff-driven design misses the larger class, where the target simply had
+   * not translated a citing lecture yet and no source PR touches the bib.
+   *
+   * Append-only, and a key that already resolves in the target is never a
+   * candidate — so an edition that has localised an entry cannot have it
+   * clobbered.
+   */
+  private backfillCitations(
+    files: FileToSync[],
+    result: SyncProcessingResult,
+    bibliography?: BibliographySources
+  ): void {
+    const mode = this.config.bibliographyMode ?? DEFAULT_BIBLIOGRAPHY_MODE;
+    if (mode === 'off' || !bibliography || bibliography.targets.length === 0) return;
+
+    // Only markdown documents carry citations, and only the ones this run
+    // actually produced are in scope.
+    const beforeByPath = new Map(files.map((f) => [f.filename, f.targetContent || '']));
+    const docs: CitationDoc[] = result.translatedFiles
+      .filter((f) => f.path.endsWith('.md'))
+      .map((f) => ({
+        file: f.path,
+        before: beforeByPath.get(f.path) ?? '',
+        after: f.content,
+      }));
+    if (docs.length === 0) return;
+
+    const plan = planCitationBackfill({ docs, bib: bibliography, mode });
+
+    for (const warning of plan.warnings) this.logger.warning(warning);
+
+    if (plan.mergedBib && plan.bibPath) {
+      const total = [...plan.backfilled.values()].reduce((n, keys) => n + keys.length, 0);
+      this.logger.info(
+        `Bibliography: appended ${total} entr${total === 1 ? 'y' : 'ies'} to ${plan.bibPath} for citations this sync introduced`
+      );
+      result.translatedFiles.push({
+        path: plan.bibPath,
+        content: plan.mergedBib,
+        sha: plan.bibSha,
+      });
+    }
+
+    if (plan.errors.length > 0) {
+      // A citation that resolves nowhere means the target cannot build. Failing
+      // here is the point: this class previously shipped green and surfaced as a
+      // broken build in the target repo days later.
+      const message = formatCitationErrors(plan);
+      this.logger.error(message);
+      result.errors.push(message);
+    }
+
+    result.citationBackfill = plan;
   }
 
   // ---------------------------------------------------------------------------
