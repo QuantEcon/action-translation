@@ -25,12 +25,17 @@
  *
  * ## Why the fence walk has a stack
  *
- * 45 of 872 `{cite}` roles in `lecture-python.myst` — 5.2% — live inside
- * non-code fenced containers such as `{note}`, `{exercise}` and `{admonition}`.
- * A walker that skips every fence body would miss one citation in twenty. So
- * this walker descends into directive fences and only goes opaque inside ones
- * that hold verbatim text (code cells, raw, math). Do not "simplify" it back
- * into `extractStructuralTokens`.
+ * Citations are not confined to running prose. Measured over the 139 lectures
+ * of `lecture-python.myst` at `a4fbd86` (2026-07-27), 71 of 922 `{cite}` roles
+ * — 7.7%, of which 65 are in `{note}` alone — live inside non-code fenced
+ * containers such as `{note}`, `{exercise}`, `{warning}` and `{prf:*}`. A
+ * walker that skips every fence body misses all of them.
+ *
+ * So this walker descends into directive fences and only goes opaque inside
+ * ones holding verbatim text (code cells, raw, math). Do not "simplify" it
+ * back into `extractStructuralTokens`. The proportion above is indicative and
+ * will drift with the corpus — nothing depends on its exact value, and it is
+ * quoted only to make clear that the containers are common enough to matter.
  *
  * There are three fence walkers in this codebase and they differ deliberately:
  *

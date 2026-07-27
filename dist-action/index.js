@@ -40005,7 +40005,11 @@ async function fetchBibliographies(octokit, source, target, docsFolder) {
     if (!("content" in data))
       return void 0;
     configYaml = Buffer.from(data.content, "base64").toString("utf8");
-  } catch {
+  } catch (error3) {
+    const status = error3?.status;
+    if (status !== 404) {
+      throw new Error(`Could not read ${configPath} from ${target.owner}/${target.repo} (status ${status ?? "unknown"}): ${error3}`);
+    }
     core7.info(`No ${configPath} in target repo \u2014 bibliography backfill not applicable`);
     return void 0;
   }
@@ -40047,7 +40051,11 @@ async function fetchBibliographies(octokit, source, target, docsFolder) {
           content: Buffer.from(data.content, "base64").toString("utf8")
         });
       }
-    } catch {
+    } catch (error3) {
+      const status = error3?.status;
+      if (status !== 404) {
+        throw new Error(`Could not read ${repoPath} from source ${source.owner}/${source.repo} (status ${status ?? "unknown"}): ${error3}`);
+      }
       core7.info(`Source has no ${repoPath} \u2014 nothing to backfill from`);
     }
   }

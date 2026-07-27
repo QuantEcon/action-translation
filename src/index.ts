@@ -1495,7 +1495,18 @@ export async function fetchBibliographies(
     });
     if (!('content' in data)) return undefined;
     configYaml = Buffer.from(data.content, 'base64').toString('utf8');
-  } catch {
+  } catch (error) {
+    // Only a genuine 404 means "this edition has no jupyter-book config", which
+    // is a legitimate skip. Any other status — rate limit, 5xx, permissions —
+    // must fail the run: swallowing it would disable the guard silently on a
+    // transient error, which is the exact failure mode this module removes.
+    const status = (error as { status?: number } | null | undefined)?.status;
+    if (status !== 404) {
+      throw new Error(
+        `Could not read ${configPath} from ${target.owner}/${target.repo} ` +
+          `(status ${status ?? 'unknown'}): ${error}`
+      );
+    }
     core.info(`No ${configPath} in target repo — bibliography backfill not applicable`);
     return undefined;
   }
@@ -1543,9 +1554,19 @@ export async function fetchBibliographies(
           content: Buffer.from(data.content, 'base64').toString('utf8'),
         });
       }
-    } catch {
-      // A source without this bibliography is not an error: nothing to copy
-      // from, and any unresolved key is reported by the planner.
+    } catch (error) {
+      // A source that genuinely lacks this bibliography is not an error:
+      // nothing to copy from, and any unresolved key is reported by the
+      // planner. A transient failure is a different thing entirely — treating
+      // it as "no entries available" would turn it into a misleading
+      // "resolves in neither bibliography" error against the wrong cause.
+      const status = (error as { status?: number } | null | undefined)?.status;
+      if (status !== 404) {
+        throw new Error(
+          `Could not read ${repoPath} from source ${source.owner}/${source.repo} ` +
+            `(status ${status ?? 'unknown'}): ${error}`
+        );
+      }
       core.info(`Source has no ${repoPath} — nothing to backfill from`);
     }
   }
