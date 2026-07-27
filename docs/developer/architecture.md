@@ -111,6 +111,7 @@ src/
 ├── contracts.ts         # Cross-boundary constants: labels, auto-merge modes (owner module, #162)
 ├── branch-naming.ts     # Translation branch prefixes — the one owner (#115)
 ├── structural-parity.ts # Deterministic directive/anchor parity guard on every write path
+├── bibliography.ts      # Citation-key extraction + bibliography backfill for shared .bib assets (#117)
 ├── review-verdict.ts    # Verdict v2 block: build/parse/sanitize + recommendation logic
 ├── diff-checks.ts       # Deterministic halves of the four review diffChecks (#148)
 ├── rebase-siblings.ts   # Stale-sibling branch refresh for rebase mode (#123)
