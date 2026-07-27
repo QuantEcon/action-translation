@@ -617,6 +617,7 @@ async function rebaseSinglePR(
       claudeModel: metadata.claudeModel,
       anthropicApiKey: inputs.anthropicApiKey,
       debugMode: true,
+      localizationRules: inputs.localizationRules,
     },
     coreLogger,
     stateConfig
@@ -844,6 +845,7 @@ async function runSync(): Promise<void> {
       claudeModel: inputs.claudeModel,
       anthropicApiKey: inputs.anthropicApiKey,
       debugMode: true,
+      localizationRules: inputs.localizationRules,
     },
     coreLogger,
     stateConfig

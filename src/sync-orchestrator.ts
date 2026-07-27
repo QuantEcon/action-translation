@@ -15,6 +15,7 @@ import { TranslationService } from './translator.js';
 import { FileProcessor } from './file-processor.js';
 import { MystParser } from './parser.js';
 import { checkStructuralParity, formatParityViolations } from './structural-parity.js';
+import { RuleId, DEFAULT_RULES, buildLocalizationPrompt } from './localization-rules.js';
 import { Glossary, TranslatedFile, RebaseCache } from './types.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
@@ -48,6 +49,13 @@ export interface SyncConfig {
   claudeModel: string;
   anthropicApiKey: string;
   debugMode?: boolean;
+  /**
+   * Localisation rules applied when this run creates a NEW file (#178).
+   * Defaults to every rule; pass an empty array to opt out entirely.
+   * Existing files are untouched by this — a translated file already carries
+   * its localisation, and the translator prompts preserve it (#107).
+   */
+  localizationRules?: RuleId[];
 }
 
 /**
@@ -401,12 +409,24 @@ export class SyncOrchestrator {
 
     let translatedContent: string;
     if (file.isNewFile) {
+      // A new file has no existing localisation to preserve, so the rules have
+      // to be applied here or the lecture lands with English figure labels and
+      // no font config (#178). `init` has always done this; sync never did.
+      const rules = this.config.localizationRules ?? DEFAULT_RULES;
+      const localizationPrompt =
+        rules.length > 0 ? buildLocalizationPrompt(rules, this.config.targetLanguage) : '';
+      if (localizationPrompt) {
+        this.logger.info(
+          `${file.filename}: new file — applying localisation rules (${rules.join(', ')})`
+        );
+      }
       translatedContent = await this.processor.processFull(
         file.newContent,
         file.filename,
         this.config.sourceLanguage,
         this.config.targetLanguage,
-        glossary
+        glossary,
+        localizationPrompt || undefined
       );
     } else {
       const skipped: string[] = [];

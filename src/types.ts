@@ -25,6 +25,8 @@ export interface ActionInputs {
   prReviewers: string[];
   prTeamReviewers: string[];
   testMode: boolean; // If true, run on PR head instead of merge commit
+  /** Localisation rules applied to files this run creates for the first time (#178) */
+  localizationRules: import('./localization-rules.js').RuleId[];
 }
 
 export interface ReviewInputs {
@@ -49,6 +51,8 @@ export interface RebaseInputs {
    * Off by default — see action.yml for why this is opt-in rather than automatic.
    */
   rebaseStaleSiblings: boolean;
+  /** Localisation rules applied to files a rebase re-creates from scratch (#178) */
+  localizationRules: import('./localization-rules.js').RuleId[];
 }
 
 // ============================================================================

@@ -58,6 +58,7 @@ Runs in the **target** (translated) repository, triggered when a translation PR 
 | `source-language` | `en` | Source language code |
 | `glossary-path` | *(empty)* | Path to custom glossary JSON file. **Overrides** the built-in glossary for the target language; if empty, the built-in one is used. Honoured by all three modes — sync, rebase and review. A path that cannot be read or parsed **fails the run** rather than falling back to different terminology |
 | `claude-model` | `claude-sonnet-5` | Claude model for translation |
+| `localize` | `code-comments,figure-labels,i18n-font-config` | Localisation rules applied to files this run creates **for the first time**: any comma-separated subset of the three rules, or `none` to disable. Existing translations are never touched — their localisation is already on disk and the translator preserves it. An unrecognised rule name **fails the run** rather than silently shipping an unlocalised lecture |
 | `pr-labels` | `action-translation,automated` | Comma-separated labels for created PRs |
 | `pr-reviewers` | *(empty)* | GitHub usernames to request as reviewers |
 | `pr-team-reviewers` | *(empty)* | GitHub team slugs to request as reviewers |

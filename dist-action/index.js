@@ -31347,6 +31347,112 @@ function isRetryableAnthropicError(error3) {
   return error3 instanceof RateLimitError || error3 instanceof APIConnectionError || error3 instanceof APIError && (error3.status !== void 0 && error3.status >= 500 || error3.status === void 0 && error3.message?.includes("overloaded"));
 }
 
+// dist/localization-rules.js
+var codeCommentsRule = {
+  id: "code-comments",
+  label: "Code Comments",
+  description: "Translate comments inside code cells to the target language",
+  buildPrompt(targetLanguage) {
+    const example = getCommentExample(targetLanguage);
+    return `**Localize code comments**: Translate Python comments (lines starting with #) inside code cells to ${targetLanguage}. Keep variable names, function names, and code unchanged \u2014 only translate the human-readable comment text.${example}`;
+  }
+};
+var figureLabelsRule = {
+  id: "figure-labels",
+  label: "Figure Labels",
+  description: "Translate plot titles, axis labels, and legend entries",
+  buildPrompt(targetLanguage) {
+    const example = getFigureLabelExample(targetLanguage);
+    return `**Localize figure labels**: Translate user-visible strings in plotting calls \u2014 including plt.title(), plt.xlabel(), plt.ylabel(), plt.legend() labels, ax.set_title(), ax.set_xlabel(), ax.set_ylabel(), and label= keyword arguments. Keep code structure, variable names, and non-label strings unchanged.${example}`;
+  }
+};
+var i18nFontConfigRule = {
+  id: "i18n-font-config",
+  label: "Font Configuration",
+  description: "Inject font configuration for CJK/RTL scripts into first matplotlib code cell",
+  buildPrompt(targetLanguage) {
+    const config = getFontConfigSnippet(targetLanguage);
+    if (!config)
+      return "";
+    return `**Inject font configuration**: In the FIRST code cell that imports matplotlib, append the following lines immediately after the existing imports (before any other code). These lines ensure that ${targetLanguage} characters render correctly in plots. Add them even though they do not exist in the source document \u2014 this is intentional localization. Mark the added lines with a \`# i18n\` comment.
+
+Lines to add:
+\`\`\`python
+${config}
+\`\`\``;
+  }
+};
+var RULES = {
+  "code-comments": codeCommentsRule,
+  "figure-labels": figureLabelsRule,
+  "i18n-font-config": i18nFontConfigRule
+};
+var ALL_RULE_IDS = Object.keys(RULES);
+var DEFAULT_RULES = [...ALL_RULE_IDS];
+function parseLocalizationRules(input) {
+  const trimmed = input.trim().toLowerCase();
+  if (trimmed === "none")
+    return [];
+  const ids = trimmed.split(",").map((s) => s.trim()).filter(Boolean);
+  const invalid = ids.filter((id) => !RULES[id]);
+  if (invalid.length > 0) {
+    throw new Error(`Unknown localization rule(s): ${invalid.join(", ")}. Available: ${ALL_RULE_IDS.join(", ")}, none`);
+  }
+  return ids;
+}
+function buildLocalizationPrompt(rules, targetLanguage) {
+  if (rules.length === 0)
+    return "";
+  const parts = rules.map((id) => RULES[id].buildPrompt(targetLanguage)).filter(Boolean);
+  if (parts.length === 0)
+    return "";
+  return `
+## Code-Cell Localization
+
+The following localization rules OVERRIDE the default "keep code as-is" rule for specific elements within code cells:
+
+${parts.map((p, i) => `${i + 1}. ${p}`).join("\n\n")}`;
+}
+function getCommentExample(targetLanguage) {
+  const examples = {
+    "zh-cn": `
+Example:
+  Before: # Calculate the steady state
+  After:  # \u8BA1\u7B97\u7A33\u6001`,
+    fa: `
+Example:
+  Before: # Calculate the steady state
+  After:  # \u0645\u062D\u0627\u0633\u0628\u0647 \u062D\u0627\u0644\u062A \u067E\u0627\u06CC\u062F\u0627\u0631`
+  };
+  return examples[targetLanguage] || "";
+}
+function getFontConfigSnippet(targetLanguage) {
+  const snippets = {
+    "zh-cn": `import matplotlib as mpl  # i18n
+FONTPATH = "_fonts/SourceHanSerifSC-SemiBold.otf"  # i18n
+mpl.font_manager.fontManager.addfont(FONTPATH)  # i18n
+mpl.rcParams['font.family'] = ['Source Han Serif SC']  # i18n`
+  };
+  return snippets[targetLanguage] || "";
+}
+function getFigureLabelExample(targetLanguage) {
+  const examples = {
+    "zh-cn": `
+Example:
+  Before: plt.title('Price Dynamics')
+  After:  plt.title('\u4EF7\u683C\u52A8\u6001')
+  Before: ax.set_xlabel('Time')
+  After:  ax.set_xlabel('\u65F6\u95F4')`,
+    fa: `
+Example:
+  Before: plt.title('Price Dynamics')
+  After:  plt.title('\u062F\u06CC\u0646\u0627\u0645\u06CC\u06A9 \u0642\u06CC\u0645\u062A')
+  Before: ax.set_xlabel('Time')
+  After:  ax.set_xlabel('\u0632\u0645\u0627\u0646')`
+  };
+  return examples[targetLanguage] || "";
+}
+
 // dist/contracts.js
 var REVIEW_TRIGGER_LABEL = "action-translation";
 var SYNC_PR_LABELS = [REVIEW_TRIGGER_LABEL, "automated"];
@@ -31388,6 +31494,8 @@ function getInputs() {
   const anthropicApiKey = core.getInput("anthropic-api-key", { required: true });
   const claudeModel = core.getInput("claude-model", { required: false }) || DEFAULT_CLAUDE_MODEL;
   const githubToken = core.getInput("github-token", { required: true });
+  const localizeRaw = core.getInput("localize", { required: false });
+  const localizationRules = localizeRaw ? parseLocalizationRules(localizeRaw) : DEFAULT_RULES;
   const prLabelsRaw = core.getInput("pr-labels", { required: false }) || SYNC_PR_LABELS.join(",");
   const prLabels = prLabelsRaw.split(",").map((l) => l.trim()).filter((l) => l.length > 0);
   if (!prLabels.includes(REVIEW_TRIGGER_LABEL)) {
@@ -31417,7 +31525,8 @@ function getInputs() {
     prLabels,
     prReviewers,
     prTeamReviewers,
-    testMode
+    testMode,
+    localizationRules
   };
 }
 function getRebaseInputs() {
@@ -31427,12 +31536,15 @@ function getRebaseInputs() {
   const anthropicApiKey = core.getInput("anthropic-api-key", { required: true });
   const githubToken = core.getInput("github-token", { required: true });
   const normalizedDocsFolder = docsFolder === "" ? "" : docsFolder.endsWith("/") ? docsFolder : `${docsFolder}/`;
+  const rebaseLocalizeRaw = core.getInput("localize", { required: false });
+  const localizationRules = rebaseLocalizeRaw ? parseLocalizationRules(rebaseLocalizeRaw) : DEFAULT_RULES;
   return {
     docsFolder: normalizedDocsFolder,
     glossaryPath,
     anthropicApiKey,
     githubToken,
-    rebaseStaleSiblings: core.getInput("rebase-stale-siblings", { required: false }).toLowerCase() === "true"
+    rebaseStaleSiblings: core.getInput("rebase-stale-siblings", { required: false }).toLowerCase() === "true",
+    localizationRules
   };
 }
 function getReviewInputs() {
@@ -37869,9 +37981,9 @@ function applyToProse(line, rule) {
   }
   return out;
 }
-var RULES = /* @__PURE__ */ new Map([["fr", applyFrenchSpacing]]);
+var RULES2 = /* @__PURE__ */ new Map([["fr", applyFrenchSpacing]]);
 function applyTypography(content, language) {
-  const rule = RULES.get(language);
+  const rule = RULES2.get(language);
   if (!rule)
     return content;
   const lines = content.split("\n");
@@ -38245,14 +38357,20 @@ ${bodyLines.join("\n")}`;
   }
   /**
    * Process a full document (for new files)
+   *
+   * `customInstructions` carries the localisation rules (code comments, figure
+   * labels, i18n font config). A new file has no existing localisation to
+   * preserve, so unless these are passed the document lands with English figure
+   * labels and no font block — see #178.
    */
-  async processFull(content, filepath, sourceLanguage, targetLanguage, glossary) {
+  async processFull(content, filepath, sourceLanguage, targetLanguage, glossary, customInstructions) {
     this.log(`Processing full document: ${filepath}`);
     const result = await this.translator.translateFullDocument({
       sourceLanguage,
       targetLanguage,
       glossary,
-      content
+      content,
+      customInstructions
     });
     if (!result.success) {
       throw new Error(`Full translation failed: ${result.error}`);
@@ -38608,7 +38726,12 @@ var SyncOrchestrator = class {
     }
     let translatedContent;
     if (file.isNewFile) {
-      translatedContent = await this.processor.processFull(file.newContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary);
+      const rules = this.config.localizationRules ?? DEFAULT_RULES;
+      const localizationPrompt = rules.length > 0 ? buildLocalizationPrompt(rules, this.config.targetLanguage) : "";
+      if (localizationPrompt) {
+        this.logger.info(`${file.filename}: new file \u2014 applying localisation rules (${rules.join(", ")})`);
+      }
+      translatedContent = await this.processor.processFull(file.newContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary, localizationPrompt || void 0);
     } else {
       const skipped = [];
       const dropped = [];
@@ -39145,7 +39268,8 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
     targetLanguage: metadata.targetLanguage,
     claudeModel: metadata.claudeModel,
     anthropicApiKey: inputs.anthropicApiKey,
-    debugMode: true
+    debugMode: true,
+    localizationRules: inputs.localizationRules
   }, coreLogger, stateConfig);
   const result = await orchestrator.processFiles(filesToSync, glossary, rebaseCache);
   if (result.errors.length > 0) {
@@ -39274,7 +39398,8 @@ async function runSync() {
     targetLanguage: inputs.targetLanguage,
     claudeModel: inputs.claudeModel,
     anthropicApiKey: inputs.anthropicApiKey,
-    debugMode: true
+    debugMode: true,
+    localizationRules: inputs.localizationRules
   }, coreLogger, stateConfig);
   const result = await orchestrator.processFiles(filesToSync, glossary);
   result.errors.unshift(...fetchErrors);
