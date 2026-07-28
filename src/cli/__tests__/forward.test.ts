@@ -219,6 +219,41 @@ describe('resyncSingleFile', () => {
         const targetPath = path.join(fixture.targetRepo, 'lectures', fixture.filename);
         const written = fs.readFileSync(targetPath, 'utf-8');
         expect(written).toContain('[TEST RESYNC]');
+        expect(written.endsWith('\n')).toBe(true);
+      } finally {
+        fixture.cleanup();
+      }
+    });
+
+    it.each([
+      ['LF', '\n'],
+      ['CRLF', '\r\n'],
+    ])('preserves an existing %s ending byte-for-byte', async (_label, ending) => {
+      const targetContent = `---\ntitle: Test\n---\n\n# 标题\n\n旧内容。${ending}`;
+      const fixture = createTempFixture({
+        sourceContent: '---\ntitle: Test\n---\n\n# Title\n\nNew content.',
+        targetContent,
+        filename: `preserve-${_label.toLowerCase()}.md`,
+      });
+
+      try {
+        const options = makeOptions({
+          source: fixture.sourceRepo,
+          target: fixture.targetRepo,
+        });
+        const result = await resyncSingleFile(
+          fixture.filename,
+          fixture.sourceRepo,
+          fixture.targetRepo,
+          'lectures',
+          options,
+          silentLogger
+        );
+        const expected = `[TEST RESYNC]\n${targetContent}`;
+        const targetPath = path.join(fixture.targetRepo, 'lectures', fixture.filename);
+
+        expect(result.outputContent).toBe(expected);
+        expect(fs.readFileSync(targetPath, 'utf-8')).toBe(expected);
       } finally {
         fixture.cleanup();
       }
@@ -337,6 +372,7 @@ describe('resyncSingleFile', () => {
         // In test mode the file triggers CONTENT_CHANGES and whole-file resync
         // produces output, so PR should be created.
         expect(result.outputContent).toBeDefined();
+        expect(result.outputContent?.endsWith('\n')).toBe(true);
         expect(result.prUrl).toBe('https://github.com/Org/Repo/pull/1');
         expect(capturedGhArgs).toContain('Org/Repo');
 
