@@ -1,0 +1,327 @@
+# REPORT: Malayalam Stage 1–2 — divergence inventory and content-mix catalog
+
+**Date**: 2026-07-28 · **Status**: Stages 1 and 2 complete; Stage 3 (English-knowns
+checklist) in progress. **Tracking**: #228 (re-scoped Phase 1 of #189).
+
+This is the internal report. The reviewer-facing artifact is `PACKET.md` — numbered
+questions only. Everything below the question cap lives here as evidence.
+
+## TL;DR
+
+The shipped ml config produces output that **passes every deterministic FAIL gate**
+(27/27 headings identical, no pinned term lost, no casing variants) and is
+recognisably the right shape: technical terms in Latin, Malayalam as connective
+tissue, math and MyST structure untouched. Three things that the gates did *not*
+say, in descending order of consequence:
+
+1. **Every machine rendering is systematically more Malayalam than the native
+   reference**, at every quantile — the over-translation direction #189 names as
+   ml's inverted primary risk. The effect replicates across independent runs.
+2. **The script-ratio gate cannot see it**, because it compares the output's *mean*
+   against the reference's *p10–p90* interval — a point against a wide band.
+3. **Transliterations occur** — `ക്ലിക്ക്` for "click", `ഓപ്ഷൻ` for "option",
+   `സെറ്റ്` for "set" — against a policy target of zero, and they are *not* stable
+   across runs of the same model. The native reference has none.
+
+None of this is a model-selection result and none of it may be read as one; see
+[Discipline on model claims](#discipline-on-model-claims).
+
+## What we ran
+
+| Rendering | Model | Path | Provenance |
+|---|---|---|---|
+| **Native reference** | — | hand-written | Adisankar, committed byte-exact in `reference/` (#191) |
+| **Opus 5 arm** | `claude-opus-5` | `init -f`, `--localize none` | Stage 1, this run |
+| **Opus 5 seed** | `claude-opus-5` | `glossary-review` seed role | Stage 3, same document, independent run |
+| **Sonnet 5 probe** | `claude-sonnet-5` | `glossary-review` probe role | Stage 3, same document |
+
+Source: `QuantEcon/lecture-python-programming@5816589` `lectures/getting_started.md`.
+Engine: `main` at `2c3d624` (post-v0.24.0). Glossary: `glossary/ml.json` v0.1.0-draft,
+52 terms, of which **7 occur in this source** — a fact worth stating plainly, because
+"pinned-term retention 100%" is a weaker result than it sounds when the denominator is 7.
+
+Stage 1 wall time 4.8 min, 23,212 tokens. No structural-parity failure: the
+`{raw} jupyter` head block at line 13 survived, so the `--localize none` mitigation
+held on this run. That is one observation, not a rate — see the hazard note in #228.
+
+## Findings
+
+### 1. Systematic over-translation, reproducible
+
+Per-paragraph Malayalam share of alphabetic characters, prose only (code fences and
+headings stripped, ≥12 letters per paragraph):
+
+| Rendering | n | mean | median | p10 | p25 | p75 | p90 |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| **Native reference** | 151 | 0.485 | 0.525 | 0.132 | 0.401 | 0.628 | 0.707 |
+| Opus 5 arm | 150 | 0.577 | 0.604 | 0.348 | 0.478 | 0.718 | 0.810 |
+| Opus 5 seed | 150 | 0.567 | 0.584 | 0.317 | 0.462 | 0.717 | 0.816 |
+| Sonnet 5 probe | 150 | 0.516 | 0.540 | 0.251 | 0.407 | 0.662 | 0.777 |
+
+Every machine rendering sits above the reference at **every** quantile. Against the
+reference (Mann–Whitney U, two-sided, 151 vs 150 paragraphs):
+
+| Rendering | z | p | paragraphs ≥75% ML (ref: 10) | paragraphs ≤15% ML (ref: 16) |
+|---|--:|--:|--:|--:|
+| Opus 5 arm | −4.009 | **6.1e-05** | 31 | 9 |
+| Opus 5 seed | −3.483 | **0.0005** | 29 | 9 |
+| Sonnet 5 probe | −1.020 | 0.308 | 19 | 10 |
+
+Two independent Opus 5 runs of the same document agree closely (means 0.577 and
+0.567; 31 and 29 heavily-translated paragraphs), so the shift is a reproducible
+property of the pipeline on this document rather than run noise.
+
+The **p10 column is the sharpest reading**. The reference's lowest decile sits at
+0.132 — one paragraph in ten is essentially all-English. No machine rendering gets
+below 0.251. The native speaker writes near-fully-English paragraphs; the tool
+does not. That is the concrete form of open question 2 from #71 ("whole-English
+sentences: acceptable, or draft remnants?") and it is now answerable by pointing at
+text rather than in the abstract.
+
+### 2. The script-ratio gate is structurally unable to detect finding 1
+
+`PLAN.md` describes the check as "output distribution compared against the
+reference's p10–p90 band". The implementation compares one number against an
+interval: output **mean** 0.577 against `[ref p10 − 0.05, ref p90 + 0.05]` =
+`[0.082, 0.757]`. A mean will fall inside a p10–p90 band under almost any
+distribution, so the check fires only on gross failure — a document that is nearly
+all English or nearly all Malayalam. It reported "all gates clean" on a rendering
+whose distribution differs from the reference at p = 6.1e-05.
+
+This is the metric that was supposed to catch over- and under-translation in one
+measure, and over-translation is ml's stated primary risk. Recommend it be replaced
+by a two-sample test on the paragraph-ratio distributions (candidate for Phase 3
+graduation into `diff-checks.ts`). Filed separately rather than fixed here, per
+#228's instruction to keep incidental defects out of the phase.
+
+### 3. Transliterations, against a target of zero
+
+A transliteration writes an English word phonetically in Malayalam script instead of
+leaving it in Latin — `ക്ലിക്ക്` is not a Malayalam word, it is "click" spelled in
+Malayalam letters. #189 sets the target at 0 instances.
+
+| Rendering | Transliterations | Detail |
+|---|--:|---|
+| **Native reference** | **0** | across all 57 checked terms, 353 distinct Malayalam tokens |
+| Opus 5 arm | 6 | `ക്ലിക്ക്` — **6 of 6** source occurrences of "click" |
+| Opus 5 seed | 0 | — |
+| Sonnet 5 probe | 5 | `ഓപ്ഷൻ` — 3 of 7 "option"; `സെറ്റ്` ×2 |
+
+Three things follow.
+
+**The reference having zero is the strongest empirical confirmation of the
+keep-English policy we have**, and it also establishes that the detector has no
+false positives on a known-good document.
+
+**`option` at 3 of 7 is a consistency failure inside a single document** — the same
+term kept Latin four times and transliterated three times. Consistency is the
+primary ml risk named in #70, and this is the first field instance of it.
+
+**It does not replicate.** Opus 5 produced 6 transliterations in one run of this
+document and 0 in another. The occurrence is real; the *rate* is unknown, and n=2
+establishes only that it is not deterministic. That makes frequency a `bench/`
+question (#227) and severity an Adisankar question.
+
+Widening to every rendering produced in this phase — 5 lectures, 2 models — gives a
+better base than one document:
+
+| Lecture | Opus 5 | Sonnet 5 |
+|---|---|---|
+| `getting_started` (Stage 1 arm) | `ക്ലിക്ക്` click ×6 | — |
+| `getting_started` (Stage 3) | 0 | `ഓപ്ഷൻ` option ×3, `സെറ്റ്` set ×2 |
+| `python_by_example` | 0 | `ടൈപ്പ്` type ×2 |
+| `python_essentials` | 0 | 0 |
+| `numpy` | 0 | *(pending)* |
+
+**Transliteration occurred in 3 of 7 completed renderings, affecting 4 distinct
+English terms: click, option, set, type. None of the four is in the 52-term
+glossary.** That is the actionable finding, and it is what makes Stage 3's checklist
+the highest-leverage artifact in the packet: pinning these terms should prevent the
+whole class.
+
+The split across models (Opus 1-of-5 renderings, Sonnet 2-of-3) is **not** reportable
+as a model property. Seven renderings with no replicates cannot support a rate, and the
+one model-level comparison available in this data points the *opposite* way from the
+over-translation measurement in finding 1. Both belong to #227.
+
+### 4. Headings: the rule is confirmed, not merely plausible
+
+All four documents carry **27/27 headings byte-identical to the English source** —
+the native reference plus three independent machine renderings. #71's open question
+1 ("headings stay fully English — confirm") can be put to Adisankar as a
+one-line confirmation rather than a discussion.
+
+### 5. Code comments are translated, inconsistently, and this contradicts Stage 1
+
+The harness seed `base-lecture-ml.md` was produced by `init` at v0.24.0 under
+**default** localisation, which includes `code-comments`. Result: 8 of its 10 Python
+comments are translated, 2 are kept identical.
+
+| English comment | Malayalam |
+|---|---|
+| `# Create two vectors` | `# രണ്ട് vectors സൃഷ്ടിക്കുക` |
+| `# Visualize vectors` | `# Vectors visualize ചെയ്യുക` |
+| `# Sectors: Agriculture, Manufacturing, Services` | *identical* |
+| `# States: Employed, Unemployed` | *identical* |
+| `# Final demand vector (in billions)` | `# Final demand vector (billions-ൽ)` |
+
+The two kept identical are the two that are entirely proper nouns, which is
+defensible behaviour — but nothing in the config asks for that distinction, so it is
+incidental rather than designed. Meanwhile Stage 1 runs `--localize none`, so its
+rendering leaves comments in English. **The packet therefore shows the reviewer two
+contradictory treatments of the same construct**, and must ask about it explicitly
+rather than let him notice the inconsistency and lose confidence in the rest.
+
+### 6. Three corrections to the recorded structure of the harness seeds
+
+Stage 2 was specified against figures that turn out to be wrong, so the catalog was
+re-sourced. All three counts are re-derivable with `scripts/passage_pairs.py`.
+
+**`base-lecture-ml.md` has 7 markdown headings, not 17.** Both #207 and the #194
+comment record 17. Ten of those seventeen are **Python comments inside code cells** —
+`# Create two vectors` matches a naive `^#+\s` heading pattern. The 5-directive count
+is right; the "8 display-math blocks" is 4 blocks (8 `$$` fence *lines*).
+
+**Neither seed contains a single admonition or figure.** #228's Stage 2 requires
+"admonition and exercise prose" and "figure and caption text" as content situations.
+Both are absent from both seed documents, so those situations were re-sourced from the
+Stage 3 lectures, which carry 12 admonitions and 17 exercise/solution directives —
+at no extra cost, since those translations were already being produced.
+
+**"Figure and caption text" is a vacuous situation for this corpus.** Of **47
+`{figure}` directives across the whole programming series, 0 have caption prose** —
+every one carries only `:scale:`. There is no caption text to translate, so there is
+no question to ask. Recorded rather than invented.
+
+Only two content situations survive from the seeds as specified (`math-intro` ×6,
+`nested-subsection` ×2, plus `code-comment` ×10, which was not in the spec and is the
+most interesting of them — see finding 5).
+
+## Method corrections made during this run
+
+Recorded because both were wrong in ways that would have reached the reviewer.
+
+**Paragraph pairing by index is invalid and fails silently.** The first divergence
+inventory paired reference and output paragraphs by position. The reference splits a
+paragraph the output keeps whole (reference index 20), so everything after it was
+off by one, and the ratio-outlier class filled with comparisons between an anchor
+line like `(install_anaconda)=` and an unrelated prose sentence — ten such items
+were queued for the packet. **A count check does not detect this**: both documents
+have exactly 156 prose paragraphs, because splits and merges offset. Replaced with
+content-anchored alignment (Needleman–Wunsch over Jaccard similarity of Latin-token
+sets, which survive translation): **145 of 156 paragraphs aligned, mean similarity
+0.781**, 9 below the confidence floor and 2+2 unmatched, all reported rather than
+guessed. Note the earlier distributional finding is unaffected — a two-sample test
+on the two ratio populations does not depend on pairing.
+
+**A strict block-signature check cries wolf on healthy documents.** `passage_pairs.py`
+first refused to run on `python_essentials`, reporting MISALIGNED where the source had
+a `{code-cell}` and the target a paragraph — which looks exactly like the #118/#203
+transposition class. It was not: the rendering had **one extra paragraph** (309 vs
+308 blocks) because the translator split a paragraph earlier, shifting everything by
+one. Every code cell was present and in order. Verified by comparing the *skeleton*
+only — directives, math fences and headings — which is what the engine's own parity
+guard cares about: **all six Stage 3 renderings are skeleton-identical to their
+sources.** The script now separates the two conditions, treating a skeleton mismatch
+as a structural defect and a paragraph-count difference as benign, and in the benign
+case emits only the directive-anchored situations.
+
+**Enumerating divergences is not the same as ranking them.** Raw extraction gave 38
+term-treatment rows led by `use`, `top`, `right`, `green` — thirty glossary questions
+whose real answer is a single config rule about how far keep-English extends into
+ordinary vocabulary. The inventory now clusters: 32 ordinary words collapse into one
+register question, and morphology clusters by *transformation* rather than root (the
+reference writes `-ലെ` where the output writes `-യിലെ`, on both `directory` and
+`numpy` — one rule, not two). Cap allocation also changed: #228 ranks the classes
+1-2-3, but filling 30 slots in strict class order left **zero** ratio-outliers in the
+packet, and those are the sharpest items. The cap is now a per-class quota (8/12/10).
+
+## Divergence inventory
+
+96 divergences after clustering; 30 above the question cap.
+
+| Class | Found | In packet | Resolves to |
+|---|--:|--:|---|
+| Term treatment | 4 | 4 | glossary entry, or one config rule |
+| Morphology | 26 | 12 | rule change or accepted-as-is |
+| Ratio outlier | 53 (of 145 aligned pairs) | 10 | depends on direction |
+
+Regenerate with:
+
+    python3 experiments/ml-benchmark/scripts/divergences.py \
+      --source <EN>/lectures/getting_started.md \
+      --reference experiments/ml-benchmark/reference/getting_started.md \
+      --output <ARM>/lectures/getting_started.md \
+      --glossary glossary/ml.json --cap 30 --json
+
+### The ordinary-vocabulary cluster (packet item A1)
+
+32 ordinary English words the reference keeps in Latin script and the Opus 5 arm
+renders in Malayalam: already, best, choose, click, create, detail, efficient,
+example, explore, free, green, here, hit, hopefully, idea, important, instruction,
+interact, open, popular, possible, process, provide, right, select, share, similar,
+simple, top, try, use — and one in the other direction (`box`).
+
+This is the word-level shadow of finding 1 and the single highest-yield question in
+the packet: if the answer is "yes, keep those English too", it is one
+`additionalRules` change, not 32 glossary entries.
+
+### Morphology clusters (packet items A2–A4)
+
+| Reference writes | Output writes | On roots |
+|---|---|---|
+| `-ലെ` | `-യിലെ` | directory, numpy |
+| `-ഉം` | *(absent)* | border, file |
+| *(absent)* | `-മായി` | files, message, page |
+
+Plus individually-reported single-root differences where the two renderings choose
+different cases altogether — `cursor` (`-ഉം` vs `-നൊപ്പം`), `option` (`-നെ` vs
+`-നെക്കാൾ`, a comparative that may simply be wrong), `list` (`-ൽ` vs `-ന്`).
+
+Also worth a native eye: the Opus 5 seed renders "hit the `Esc` key" with
+`അടിക്കുക` — the literal *strike* sense of "hit". The reference keeps `hit` in
+English. That is a candidate mistranslation rather than a style question.
+
+## Cost
+
+| Item | Model | Cost |
+|---|---|--:|
+| Stage 1 arm, 1 lecture | `claude-opus-5` | **not reported** (see below) |
+| Stage 3, `getting_started` probe | `claude-sonnet-5` | $0.235 |
+| Stage 3, `python_by_example` probe | `claude-sonnet-5` | $0.227 |
+
+**The cost tracker reports `$0.000` for every `claude-opus-5` call.** The model is
+absent from `VALID_MODEL_PATTERNS` in `src/models.ts` (a known staleness item in
+`.dev/FUTURE.md`) and evidently from the pricing table too, so Opus spend is
+invisible rather than merely unvalidated. Sonnet 5 measures ~$0.23/lecture; Opus 5
+list price is $5/$25 per MTok against Sonnet's $3/$15, so the true Opus figure is
+roughly $0.4–0.5/lecture. Filed separately.
+
+## Discipline on model claims
+
+This report contains three renderings by two models and it would be easy to read a
+model comparison out of it. It is not one, and #227 owns that question.
+
+What is defensible: the over-translation *direction* holds for all three renderings;
+its magnitude is reproducible across two Opus 5 runs of the same document.
+
+What is **not** defensible from this data: that Sonnet 5 is better suited to ml
+because its shift was not significant. That is one run of one document. Sonnet 5
+also produced *more* transliterations than either Opus run and showed the
+within-document consistency failure on `option`. The two metrics point in opposite
+directions, which is exactly why a per-language default needs replicate-based rates
+from `bench/` rather than a table like this one.
+
+## Artifacts
+
+| File | Contents |
+|---|---|
+| `PACKET.md` | reviewer-facing; numbered questions only |
+| `scripts/ml_metrics.py` | the shipped gate suite (#191) |
+| `scripts/divergences.py` | ranked, clustered, content-aligned divergence inventory |
+| `scripts/transliteration_check.py` | targeted + novel-token transliteration detection |
+| `scripts/passage_pairs.py` | byte-exact aligned passage extraction for the catalog |
+
+Scripts quote by slicing, never by retyping, so Malayalam ZWJ/ZWNJ survive — the
+hazard `reference/README.md` documents for the reference commit applies equally to
+anything built out of these documents.

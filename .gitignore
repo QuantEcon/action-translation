@@ -39,3 +39,7 @@ docs/_build/
 # embedded clone that `git add -A` stages as a gitlink.
 test-translation-sync*/
 tool-test-action-on-github/test-translation-sync*/
+
+# Python bytecode (experiments/ carry .py analysis scripts)
+__pycache__/
+*.pyc
