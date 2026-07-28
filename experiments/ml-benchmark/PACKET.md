@@ -227,19 +227,74 @@ is nothing to ask, and we are recording that rather than inventing a question.
 
 ---
 
-## Section C — the English-knowns checklist
+## Section C — which terms to pin
 
-*(In preparation — the underlying translations are still running. This section will be a
-tick-box table: a frequency-ranked list of technical terms from the programming series
-that are **not** yet in the glossary, showing how two different models each treated the
-term, restricted to the terms where they disagreed about whether to keep it English.
-Terms both models keep in English need no ruling from you and will not appear.)*
+**First, the good news, because it changes what we need from you here.** We translated
+five lectures from the programming series with two different models and extracted every
+technical term each one produced — **203 distinct terms**. Both models kept **all 203 in
+English**. Not one was rendered in Malayalam script. Only 6 of them are pinned in the
+glossary today, so the policy is holding on nearly two hundred terms it was never
+explicitly told about.
 
-`click`, `option`, `set` and `type` from A15 will head the list.
+That means we cannot bring you the list we planned. We intended to show you the terms
+where the two models *disagreed* about keeping a term English, on the theory that
+disagreement marks the terms needing a ruling. There is no disagreement to show: the two
+models differed on ten terms and every difference was singular-versus-plural (`tuple` /
+`tuples`, `coefficient` / `coefficients`) or spacing (`deadweight loss` / `dead weight
+loss`). Nothing substantive. So the question below is a different and simpler one.
 
-This is the cheapest section for you to answer and the most directly useful: every
-"keep English" tick becomes a glossary entry that stops the term drifting in every
-future translation.
+**Why pin anything, if the policy already holds?** Because it held for these 203 terms
+and failed for four others. Three of the words that came back transliterated — `click`,
+`option`, `type` from A15 — are interface verbs rather than domain terms, so they were
+never extracted as terminology and nothing was protecting them. The fourth, `set`, *is*
+in the list below. Either way none of the four is pinned, and pinning is what makes a
+term's treatment reliable rather than lucky.
+
+**C1–C20. Below are the 20 most frequent unpinned terms, all currently kept in English
+by both models. Tick any you think should be pinned so a future model cannot change its
+mind — and flag any you think should actually be *translated*.**
+
+Please don't feel obliged to work through all twenty. The top ten matter most, and blanket
+answers are genuinely useful: "all of these keep English" or "everything down to C20 is
+fine" saves you time and tells us what we need.
+
+| # | Term | Occurrences | Lectures | Keep English? |
+|---|---|--:|--:|---|
+| C1 | `array` | 45 | 2 | ☐ keep ☐ translate |
+| C2 | `method` | 40 | 3 | ☐ keep ☐ translate |
+| C3 | `class` | 30 | 1 | ☐ keep ☐ translate |
+| C4 | `broadcasting` | 20 | 1 | ☐ keep ☐ translate |
+| C5 | `cell` | 20 | 1 | ☐ keep ☐ translate |
+| C6 | `consumer` | 20 | 1 | ☐ keep ☐ translate |
+| C7 | `data` | 20 | 1 | ☐ keep ☐ translate |
+| C8 | `instance` | 20 | 1 | ☐ keep ☐ translate |
+| C9 | `data type` | 16 | 2 | ☐ keep ☐ translate |
+| C10 | `dimension` | 15 | 1 | ☐ keep ☐ translate |
+| C11 | `object` | 15 | 1 | ☐ keep ☐ translate |
+| C12 | `shape` | 15 | 1 | ☐ keep ☐ translate |
+| C13 | `wealth` | 15 | 1 | ☐ keep ☐ translate |
+| C14 | `time series` | 13 | 2 | ☐ keep ☐ translate |
+| C15 | `element-wise` | 12 | 1 | ☐ keep ☐ translate |
+| C16 | `package` | 12 | 2 | ☐ keep ☐ translate |
+| C17 | `steady state` | 12 | 1 | ☐ keep ☐ translate |
+| C18 | `code block` | 10 | 1 | ☐ keep ☐ translate |
+| C19 | `command` | 10 | 1 | ☐ keep ☐ translate |
+| C20 | `instance data` | 10 | 1 | ☐ keep ☐ translate |
+
+*(Fourteen further terms sit just below these, and would be numbered C21–C34, in descending frequency: `sequence`,
+`expression`, `indentation`, `area`, `attribute`, `index`, `market`, `polynomial`, `set`,
+`string`, `terminal`, `text editor`, `tuple`, `coefficient`. Happy to send them as a
+follow-up — we did not want the length of the table to be the reason this goes
+unanswered.)*
+
+**C35. Is there any term in these lists you would *translate* rather than keep?** That is
+the more interesting direction. Our own guesses at candidates are the economics words
+rather than the programming ones — `consumer` (C6), `wealth` (C13), `market` — where
+everyday Malayalam may have a better rendering than the English.
+
+**C36. `set` is on the follow-up list and is also one of the four words that came back
+transliterated (A15).** It is the one term where we have direct evidence of instability,
+so it is worth a specific answer even if you skip the rest.
 
 ---
 

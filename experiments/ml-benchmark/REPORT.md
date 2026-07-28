@@ -1,7 +1,7 @@
 # REPORT: Malayalam Stage 1–2 — divergence inventory and content-mix catalog
 
-**Date**: 2026-07-28 · **Status**: Stages 1 and 2 complete; Stage 3 (English-knowns
-checklist) in progress. **Tracking**: #228 (re-scoped Phase 1 of #189).
+**Date**: 2026-07-28 · **Status**: Stages 1–3 complete; packet ready to send.
+**Tracking**: #228 (re-scoped Phase 1 of #189), folding in #207.
 
 This is the internal report. The reviewer-facing artifact is `PACKET.md` — numbered
 questions only. Everything below the question cap lives here as evidence.
@@ -19,9 +19,19 @@ say, in descending order of consequence:
    ml's inverted primary risk. The effect replicates across independent runs.
 2. **The script-ratio gate cannot see it**, because it compares the output's *mean*
    against the reference's *p10–p90* interval — a point against a wide band.
-3. **Transliterations occur** — `ക്ലിക്ക്` for "click", `ഓപ്ഷൻ` for "option",
-   `സെറ്റ്` for "set" — against a policy target of zero, and they are *not* stable
-   across runs of the same model. The native reference has none.
+3. **Transliterations occur** — `click`, `option`, `set`, `type` written phonetically in
+   Malayalam script — against a policy target of zero, in 3 of 11 renderings, and *not*
+   stable across runs of the same model. The native reference has none, across 57
+   checked terms.
+
+Set against that, the strongest positive finding of the phase: across five lectures and
+two models, **203 distinct technical terms were extracted and all 203 were kept in
+English**, only 6 of them pinned. The policy generalises far beyond what it was told.
+Structure also held on all eleven renderings.
+
+The Stage 3 method did not survive contact with ml: the `glossary-review` disagreement
+filter produces zero real candidates for a keep-English language, for a structural
+reason, and this **corrects a revision I made to #228** — see finding 8.
 
 None of this is a model-selection result and none of it may be read as one; see
 [Discipline on model claims](#discipline-on-model-claims).
@@ -32,10 +42,16 @@ None of this is a model-selection result and none of it may be read as one; see
 |---|---|---|---|
 | **Native reference** | — | hand-written | Adisankar, committed byte-exact in `reference/` (#191) |
 | **Opus 5 arm** | `claude-opus-5` | `init -f`, `--localize none` | Stage 1, this run |
-| **Opus 5 seed** | `claude-opus-5` | `glossary-review` seed role | Stage 3, same document, independent run |
-| **Sonnet 5 probe** | `claude-sonnet-5` | `glossary-review` probe role | Stage 3, same document |
+| **Opus 5 seed** | `claude-opus-5` | `glossary-review` seed role | Stage 3, 5 lectures |
+| **Sonnet 5 probe** | `claude-sonnet-5` | `glossary-review` probe role | Stage 3, 5 lectures |
 
-Source: `QuantEcon/lecture-python-programming@5816589` `lectures/getting_started.md`.
+Eleven renderings in total: the Stage 1 arm plus Stage 3's 5 lectures × 2 roles. Stage 3
+covers `getting_started`, `python_by_example`, `python_essentials`, `numpy` and
+`python_oop` — chosen as the domain-dense lectures that introduce the series' core
+vocabulary, with `getting_started` included so Stages 1 and 3 share a document and the
+native reference applies to both.
+
+Source: `QuantEcon/lecture-python-programming@5816589`, `lectures/`.
 Engine: `main` at `2c3d624` (post-v0.24.0). Glossary: `glossary/ml.json` v0.1.0-draft,
 52 terms, of which **7 occur in this source** — a fact worth stating plainly, because
 "pinned-term retention 100%" is a weaker result than it sounds when the denominator is 7.
@@ -122,8 +138,8 @@ document and 0 in another. The occurrence is real; the *rate* is unknown, and n=
 establishes only that it is not deterministic. That makes frequency a `bench/`
 question (#227) and severity an Adisankar question.
 
-Widening to every rendering produced in this phase — 5 lectures, 2 models — gives a
-better base than one document:
+Widening to every rendering produced in this phase — 5 lectures × 2 models, plus the
+Stage 1 arm — gives a much better base than one document:
 
 | Lecture | Opus 5 | Sonnet 5 |
 |---|---|---|
@@ -131,18 +147,29 @@ better base than one document:
 | `getting_started` (Stage 3) | 0 | `ഓപ്ഷൻ` option ×3, `സെറ്റ്` set ×2 |
 | `python_by_example` | 0 | `ടൈപ്പ്` type ×2 |
 | `python_essentials` | 0 | 0 |
-| `numpy` | 0 | *(pending)* |
+| `numpy` | 0 | 0 |
+| `python_oop` | 0 | 0 |
 
-**Transliteration occurred in 3 of 7 completed renderings, affecting 4 distinct
-English terms: click, option, set, type. None of the four is in the 52-term
-glossary.** That is the actionable finding, and it is what makes Stage 3's checklist
-the highest-leverage artifact in the packet: pinning these terms should prevent the
-whole class.
+**Transliteration occurred in 3 of 11 renderings, affecting 4 distinct English terms:
+click, option, set, type. None of the four is in the 52-term glossary.** That is the
+actionable finding, and it is what makes Stage 3's checklist the highest-leverage
+artifact in the packet: pinning these terms should prevent the whole class.
 
-The split across models (Opus 1-of-5 renderings, Sonnet 2-of-3) is **not** reportable
-as a model property. Seven renderings with no replicates cannot support a rate, and the
-one model-level comparison available in this data points the *opposite* way from the
-over-translation measurement in finding 1. Both belong to #227.
+Two cautions on reading the table.
+
+**It is sparse, and sparse in a way that flatters.** Eight of eleven renderings are
+clean, but the three that are not include the *only* two renderings of
+`getting_started` by different models — the most UI-heavy lecture in the sample. The
+lectures with zero (`numpy`, `python_oop`, `python_essentials`) are the ones with least
+UI vocabulary to transliterate. So the clean rows are weak evidence of compliance
+rather than strong evidence of it.
+
+**The model split is not reportable as a model property.** Opus 1-of-6 renderings,
+Sonnet 2-of-5. Eleven renderings with no replicates cannot support a rate, and this
+comparison points the *opposite* way from the over-translation measurement in finding 1
+— where the two Opus runs shifted furthest from the reference and Sonnet least. Two
+metrics, opposite orderings, no replicates: exactly the situation #227 exists to
+resolve, and exactly the inference this report must not make.
 
 ### 4. Headings: the rule is confirmed, not merely plausible
 
@@ -172,7 +199,31 @@ rendering leaves comments in English. **The packet therefore shows the reviewer 
 contradictory treatments of the same construct**, and must ask about it explicitly
 rather than let him notice the inconsistency and lose confidence in the rest.
 
-### 6. Three corrections to the recorded structure of the harness seeds
+### 6. Structure held on all eleven renderings
+
+Every rendering produced in this phase is **skeleton-identical to its English source** —
+directive sequence, math fences and headings all matching, including `numpy` at 165
+structural items:
+
+| Lecture | Structural items | Opus 5 | Sonnet 5 |
+|---|--:|---|---|
+| `getting_started` | 63 | identical | identical |
+| `python_by_example` | 82 | identical | identical |
+| `python_essentials` | 152 | identical | identical |
+| `numpy` | 165 | identical | identical |
+| `python_oop` | 70 | identical | identical |
+
+Plus the Stage 1 arm, which also passed the engine's own #159 parity guard on write.
+
+Worth stating what this is and is not. It is eleven full-document translations with no
+lost, added or transposed code cell, math block or heading — a genuinely reassuring
+result for a language whose morphology attaches to text immediately adjacent to those
+constructs. It is **not** a pass rate for the #118 head-block defect class: these are
+eleven *different* documents, not replicates of one cell, and only `getting_started`
+carries the `(label)=` + `{raw} jupyter` head block that defect needs. A rate still
+requires #227.
+
+### 7. Three corrections to the recorded structure of the harness seeds
 
 Stage 2 was specified against figures that turn out to be wrong, so the catalog was
 re-sourced. All three counts are re-derivable with `scripts/passage_pairs.py`.
@@ -196,6 +247,63 @@ no question to ask. Recorded rather than invented.
 Only two content situations survive from the seeds as specified (`math-intro` ×6,
 `nested-subsection` ×2, plus `code-comment` ×10, which was not in the spec and is the
 most interesting of them — see finding 5).
+
+### 8. Stage 3: keep-English holds on 203 terms, and the disagreement mechanism does not transfer to ml
+
+Two results, one strongly positive and one that invalidates the method this stage was
+built on — including the correction I made to #228 to enable it.
+
+**The positive result is the strongest compliance evidence in the phase.** Five lectures
+× two models, with every technical term extracted from each rendering: **203 distinct
+terms, and both models kept all 203 in English.** Zero rendered in Malayalam script; the
+extractor's per-lecture notes read "kept in English" 359 times. Only 6 of the 203 are
+pinned in `glossary/ml.json`.
+
+That is a far better compliance measurement than the FAIL gate provides. Pinned-term
+retention checked 7 terms because only 7 of the glossary's 52 occur in
+`getting_started.md`; this covers 203 unpinned terms across five lectures and two models.
+The keep-English policy generalises well beyond what it was explicitly told.
+
+**The negative result: the `glossary-review` disagreement filter yields nothing for a
+keep-English language.** `compare-models.mjs` surfaced 10 candidates. Every one is a
+singular/plural variant (`tuple`/`tuples`, `coefficient`/`coefficients`,
+`scalar`/`scalars`) or a spacing variant (`deadweight loss`/`dead weight loss`) — the
+exact categories the skill's step 4 instructs you to drop. **Zero survive hand
+assessment.**
+
+The reason is structural, not a bad run. The filter measures variation in *translation
+choice*: for fr it caught the seed saying `mutable` where the probe drifted to `muable`,
+and cut 176 proposed terms to 11 real candidates. ml's policy removes translation choice
+for precisely the terms being extracted — both models keep the term in English, so the
+recorded "rendering" *is* the English term, and cross-model disagreement degenerates to
+whether each model happened to record the singular or the plural. Within-role drift was
+similarly empty: 4 items for the seed and 2 for the probe, all plural-only.
+
+**This corrects my own revision of #228.** I argued the probe run was necessary because
+the skill is emphatic that drift alone finds nothing, and that a single-arm Stage 3 would
+have no ranking axis. The first half was right — drift alone did find nothing, 4 and 2
+plural-only items. The second half was right for the wrong reason: a single arm has no
+ranking axis, but neither does a double arm, because the axis itself is empty for ml. The
+probe was worth its ~$1.50 for what it established rather than for what it was meant to
+rank: the 203-term compliance result, the `type` transliteration, and the fact that this
+mechanism should not be reached for again on a keep-English language.
+
+**What Stage 3's artifact became.** Not a disagreement-ranked list but a
+frequency-ranked confirmation list: 152 terms both models kept English, top 20 in the
+packet, asking which to pin so the treatment is guaranteed rather than incidental. The
+motivation is direct — the four terms that *were* transliterated (`click`, `option`,
+`set`, `type`) are unpinned, and three of them are interface verbs the terminology
+extractor never proposes, so no terminology-driven process would ever have protected
+them. For ml the axis with signal is "did anything get rendered in Malayalam or
+transliterated at all", which is what `transliteration_check.py` and the novel-token
+detector measure, not "which rendering wins".
+
+**One caution about LLM-derived notes.** The extraction model annotated `key` in
+`python_essentials` as "kept in English; transliterated variants also appear". There are
+**zero** occurrences of `കീ` in either rendering of that lecture — the note is a
+fabrication. It was checked because it would otherwise have entered this report as a
+fifth transliterated term. Consistent with #227's design constraint that no LLM-judged
+metric gates anything.
 
 ## Method corrections made during this run
 
@@ -238,13 +346,20 @@ packet, and those are the sharpest items. The cap is now a per-class quota (8/12
 
 ## Divergence inventory
 
-96 divergences after clustering; 30 above the question cap.
+**39** divergences after clustering and after the false-positive fix below; all 39 fit
+inside the 30-item cap once clustered, so nothing of substance was dropped.
 
 | Class | Found | In packet | Resolves to |
 |---|--:|--:|---|
-| Term treatment | 4 | 4 | glossary entry, or one config rule |
-| Morphology | 26 | 12 | rule change or accepted-as-is |
-| Ratio outlier | 53 (of 145 aligned pairs) | 10 | depends on direction |
+| Term treatment | 4 (1 cluster of 32 words + 3) | 4 | one config rule, or a glossary entry |
+| Morphology | 26 (3 clusters + 23 single-root) | 12 | rule change or accepted-as-is |
+| Ratio outlier | 9 (of 145 aligned pairs) | 9 | depends on direction |
+
+The ratio-outlier count was **53** before the band-membership trigger was removed; 44 of
+those 53 were pairs where the two renderings agreed and the paragraph merely sat in a
+distribution tail. All 9 survivors run in the same direction — more Malayalam in the
+output — with no counter-examples, which is what let the packet ask one question about a
+construction rather than nine about paragraphs.
 
 Regenerate with:
 
@@ -284,18 +399,28 @@ English. That is a candidate mistranslation rather than a style question.
 
 ## Cost
 
-| Item | Model | Cost |
-|---|---|--:|
-| Stage 1 arm, 1 lecture | `claude-opus-5` | **not reported** (see below) |
-| Stage 3, `getting_started` probe | `claude-sonnet-5` | $0.235 |
-| Stage 3, `python_by_example` probe | `claude-sonnet-5` | $0.227 |
+| Item | Model | Reported | Estimated true |
+|---|---|--:|--:|
+| Stage 1 arm, 1 lecture | `claude-opus-5` | *no cost line* | ~$0.45 |
+| Stage 3 translation, 5 lectures, seed | `claude-opus-5` | **$0.000** | ~$2.25 |
+| Stage 3 translation, 5 lectures, probe | `claude-sonnet-5` | $1.47 | $1.47 |
+| Stage 3 term extraction, seed | `claude-opus-4-8` | $0.88 | $0.88 |
+| Stage 3 term extraction, probe | `claude-opus-4-8` | $0.85 | $0.85 |
+| **Total** | | **$3.20** | **~$5.90** |
+
+The estimate lands inside the **$4–8** range the revised #228 predicted for this phase,
+and roughly double the $3.20 the tooling reports.
 
 **The cost tracker reports `$0.000` for every `claude-opus-5` call.** The model is
 absent from `VALID_MODEL_PATTERNS` in `src/models.ts` (a known staleness item in
 `.dev/FUTURE.md`) and evidently from the pricing table too, so Opus spend is
 invisible rather than merely unvalidated. Sonnet 5 measures ~$0.23/lecture; Opus 5
 list price is $5/$25 per MTok against Sonnet's $3/$15, so the true Opus figure is
-roughly $0.4–0.5/lecture. Filed separately.
+roughly $0.4–0.5/lecture. Filed as **#230**.
+
+Note `claude-opus-4-8` prices correctly, so the gap is specific to the newer ID rather
+than to Opus generally — which is what makes it a stale-table problem rather than a
+design one.
 
 ## Discipline on model claims
 
@@ -321,6 +446,7 @@ from `bench/` rather than a table like this one.
 | `scripts/divergences.py` | ranked, clustered, content-aligned divergence inventory |
 | `scripts/transliteration_check.py` | targeted + novel-token transliteration detection |
 | `scripts/passage_pairs.py` | byte-exact aligned passage extraction for the catalog |
+| `../ml-glossary-programming/data/` | Stage 3 term extractions and candidate table (gitignored; regenerate with the `glossary-review` scripts) |
 
 Scripts quote by slicing, never by retyping, so Malayalam ZWJ/ZWNJ survive — the
 hazard `reference/README.md` documents for the reference commit applies equally to
