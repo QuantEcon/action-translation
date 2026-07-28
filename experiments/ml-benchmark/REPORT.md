@@ -315,12 +315,39 @@ paragraph the output keeps whole (reference index 20), so everything after it wa
 off by one, and the ratio-outlier class filled with comparisons between an anchor
 line like `(install_anaconda)=` and an unrelated prose sentence — ten such items
 were queued for the packet. **A count check does not detect this**: both documents
-have exactly 156 prose paragraphs, because splits and merges offset. Replaced with
+have exactly 155 prose paragraphs, because splits and merges offset. Replaced with
 content-anchored alignment (Needleman–Wunsch over Jaccard similarity of Latin-token
-sets, which survive translation): **145 of 156 paragraphs aligned, mean similarity
-0.781**, 9 below the confidence floor and 2+2 unmatched, all reported rather than
+sets, which survive translation): **145 of 155 paragraphs aligned, mean similarity
+0.781**, 8 below the confidence floor and 2+2 unmatched, all reported rather than
 guessed. Note the earlier distributional finding is unaffected — a two-sample test
 on the two ratio populations does not depend on pairing.
+
+**Two `strip_to_prose` copies claimed parity with `ml_metrics.py` and did not strip
+YAML frontmatter** (found in Copilot's review of #231). Every QuantEcon lecture opens
+with a jupytext `---` block, so its Latin keys were counted as prose. Impact was
+measured rather than assumed: **no finding moved** — term-treatment 4, morphology 26,
+ratio-outlier 9, total 39 with the block in or out, because it is identical in both
+renderings and cancels; and `transliteration_check.py`'s output is byte-identical,
+since a YAML block contains no Malayalam and none of the 57 targeted forms. The two
+figures above are the only numbers that changed (156→155 paragraphs, 9→8 below floor).
+The headline distributions were never at risk: they were computed by importing
+`ml_metrics.strip_to_prose`, which does strip frontmatter. The latent risk was a
+masked term-treatment divergence for any word the frontmatter also uses — `python`,
+`language`, `name` — where a body-level translation would be hidden by the
+frontmatter occurrence keeping the count non-zero.
+
+**`passage_pairs.blocks()` did not recognise plain fences** (same review). It matched
+only ```` ```{directive} ````, so ```` ```python ````, `~~~` and bare fences fell
+through to the paragraph scan and their contents were extracted as prose. `FENCE_PLAIN`
+was defined in the file and never used, which is fair evidence the case was intended
+and missed. No document in this experiment triggered it — every fence in the ml corpus
+is a braced MyST directive, and closing fences were already consumed by the forward
+scan — but the harness fixture `23-special-chars-lecture.md` is 7 plain fences and 0
+directives: before the fix, **4 of its prose blocks contained live Python** including
+the fence markers; after, **0**. Plain fences now form their own `codefence` block
+kind, count toward the structural skeleton (a lost ```` ```python ```` block is a real
+defect), bound the paragraph scan, and contribute their comment lines to the
+`code-comment` situation.
 
 **A strict block-signature check cries wolf on healthy documents.** `passage_pairs.py`
 first refused to run on `python_essentials`, reporting MISALIGNED where the source had

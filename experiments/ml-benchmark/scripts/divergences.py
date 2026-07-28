@@ -55,9 +55,28 @@ one two three first second next last e.g i.e etc via per""".split())
 
 
 def strip_to_prose(text: str) -> str:
-    """Drop fenced blocks and headings — the same convention ml_metrics.py uses."""
+    """Drop YAML frontmatter, fenced blocks and headings.
+
+    Follows `ml_metrics.py`'s convention, with one deliberate difference: the fence
+    pattern here also matches indented fences and runs of four or more backticks,
+    so it is a superset rather than an exact match. Frontmatter stripping was
+    missing until 2026-07-28 — every QuantEcon lecture opens with a jupytext
+    `---` block, so its Latin keys were being counted as prose. It changed no
+    finding on `getting_started.md` (term-treatment 4, morphology 26,
+    ratio-outlier 9 either way) because the block is identical in both renderings
+    and so cancels, but it inflated the paragraph count by one and could mask a
+    term-treatment divergence for any word the frontmatter also uses (`python`,
+    `language`, `name`).
+    """
+    lines = text.split("\n")
+    start = 0
+    if lines and lines[0].strip() == "---":
+        start = 1
+        while start < len(lines) and lines[start].strip() != "---":
+            start += 1
+        start += 1
     out, in_fence, marker = [], False, ""
-    for line in text.split("\n"):
+    for line in lines[start:]:
         m = FENCE.match(line)
         if m:
             tok = m.group(1)

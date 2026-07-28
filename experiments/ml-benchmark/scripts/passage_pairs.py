@@ -23,7 +23,9 @@ import re
 import sys
 
 FENCE = re.compile(r'^\s*(`{3,})\{([\w-]+)\}')
-FENCE_PLAIN = re.compile(r'^\s*(`{3,})\s*$')
+# Any fence opener that is NOT a `{directive}`: ```python, ~~~, or a bare ```.
+# Must be tried only after FENCE, which claims the braced form.
+FENCE_PLAIN = re.compile(r'^\s*(`{3,}|~{3,})([^\s{][^\n]*)?\s*$')
 HEADING = re.compile(r'^(#{1,6})\s+(.*)$')
 DOLLAR = re.compile(r'^\$\$\s*$')
 ML_RANGE = (0x0D00, 0x0D7F)
@@ -52,8 +54,11 @@ def blocks(lines):
     """Segment a document into typed blocks, tracking fenced regions.
 
     Returns a list of dicts: {kind, name, start, end, lines}. `kind` is one of
-    heading / directive / mathfence / para / blank. Code and math fences are kept
-    whole so prose extraction never reaches inside one.
+    heading / directive / codefence / mathfence / para. Code and math fences are
+    kept whole so prose extraction never reaches inside one.
+
+    `codefence` covers a fence with no `{directive}` — ```python, ~~~, or a bare
+    ```. Its `name` is the language tag if there is one, else None.
     """
     out = []
     i = 0
@@ -64,10 +69,28 @@ def blocks(lines):
         if m:
             ticks, name = m.group(1), m.group(2)
             j = i + 1
-            close = re.compile(r'^\s*`{%d,}\s*$' % len(ticks))
+            close = re.compile(r'^\s*%s{%d,}\s*$' % (re.escape(ticks[0]), len(ticks)))
             while j < n and not close.match(lines[j]):
                 j += 1
             out.append({'kind': 'directive', 'name': name, 'start': i, 'end': min(j, n - 1),
+                        'lines': lines[i:min(j + 1, n)]})
+            i = j + 1
+            continue
+        m = FENCE_PLAIN.match(line)
+        if m:
+            # A fence with no `{directive}` — ```python, ~~~, or a bare ```. Consumed
+            # whole, exactly like a directive: before this branch existed the opener
+            # fell through to the paragraph scan and the code inside was extracted as
+            # prose. No document in this experiment triggered it (every fence in the
+            # ml corpus is a braced MyST directive), but harness fixtures such as
+            # `23-special-chars-lecture.md` are all plain fences and would have been
+            # read as prose end to end.
+            ticks, lang = m.group(1), (m.group(2) or '').strip() or None
+            j = i + 1
+            close = re.compile(r'^\s*%s{%d,}\s*$' % (re.escape(ticks[0]), len(ticks)))
+            while j < n and not close.match(lines[j]):
+                j += 1
+            out.append({'kind': 'codefence', 'name': lang, 'start': i, 'end': min(j, n - 1),
                         'lines': lines[i:min(j + 1, n)]})
             i = j + 1
             continue
@@ -88,10 +111,13 @@ def blocks(lines):
         if line.strip() == '':
             i += 1
             continue
-        # a paragraph runs to the next blank line or structural marker
+        # A paragraph runs to the next blank line or structural marker. FENCE_PLAIN
+        # belongs in this list too: without it a paragraph immediately followed by
+        # ```python swallowed the fence and its code.
         j = i
         while (j < n and lines[j].strip() != '' and not FENCE.match(lines[j])
-               and not DOLLAR.match(lines[j]) and not HEADING.match(lines[j])):
+               and not FENCE_PLAIN.match(lines[j]) and not DOLLAR.match(lines[j])
+               and not HEADING.match(lines[j])):
             j += 1
         out.append({'kind': 'para', 'name': None, 'start': i, 'end': j - 1, 'lines': lines[i:j]})
         i = j
@@ -113,7 +139,7 @@ def skeleton(bs):
     would actually mean: a lost or transposed code cell, math block or heading.
     """
     return [(b['kind'], b['name']) for b in bs
-            if b['kind'] in ('directive', 'mathfence', 'heading')]
+            if b['kind'] in ('directive', 'mathfence', 'heading', 'codefence')]
 
 
 def code_comments(block):
@@ -128,6 +154,17 @@ def code_comments(block):
 
 ADMONITIONS = ('note', 'hint', 'warning', 'tip', 'important', 'admonition',
                'exercise', 'exercise-start', 'solution-start', 'epigraph', 'seealso')
+
+
+def emit_code_comments(pairs, a, b, i):
+    """Pair up the comment lines inside two corresponding code fences."""
+    for (oa, la), (ob, lb) in zip(code_comments(a), code_comments(b)):
+        pairs.append({'situation': 'code-comment', 'block': i,
+                      'source_line': a['start'] + oa + 1,
+                      'target_line': b['start'] + ob + 1,
+                      'en': la, 'ml': lb,
+                      'identical': la.rstrip() == lb.rstrip(),
+                      'ml_codepoints': ml_codepoints(lb)})
 
 
 def emit_block_pair(pairs, a, b, i, bs=None):
@@ -153,13 +190,11 @@ def emit_block_pair(pairs, a, b, i, bs=None):
                           'source_line': a['start'] + 1, 'target_line': b['start'] + 1,
                           'en': '\n'.join(a['lines']), 'ml': '\n'.join(b['lines'])})
         if a['name'] in ('code-cell', 'code-block'):
-            for (oa, la), (ob, lb) in zip(code_comments(a), code_comments(b)):
-                pairs.append({'situation': 'code-comment', 'block': i,
-                              'source_line': a['start'] + oa + 1,
-                              'target_line': b['start'] + ob + 1,
-                              'en': la, 'ml': lb,
-                              'identical': la.rstrip() == lb.rstrip(),
-                              'ml_codepoints': ml_codepoints(lb)})
+            emit_code_comments(pairs, a, b, i)
+        return
+    if a['kind'] == 'codefence':
+        # A plain fence carries comments worth reviewing just as a code-cell does.
+        emit_code_comments(pairs, a, b, i)
         return
     if bs is None:
         return
@@ -202,6 +237,8 @@ def classify(bs, idx):
     if nxt and nxt['kind'] == 'directive' and nxt['name'] == 'math':
         sits.append('math-intro')
     if nxt and nxt['kind'] == 'directive' and nxt['name'] in ('code-cell', 'code-block'):
+        sits.append('code-intro')
+    if nxt and nxt['kind'] == 'codefence':
         sits.append('code-intro')
     # depth of the most recent heading
     depth = 0
@@ -272,9 +309,9 @@ def main():
               f"directive-anchored situations only", file=sys.stderr)
         pairs = []
         s_idx = [i for i, b in enumerate(bs)
-                 if b['kind'] in ('directive', 'mathfence', 'heading')]
+                 if b['kind'] in ('directive', 'mathfence', 'heading', 'codefence')]
         t_idx = [i for i, b in enumerate(bt)
-                 if b['kind'] in ('directive', 'mathfence', 'heading')]
+                 if b['kind'] in ('directive', 'mathfence', 'heading', 'codefence')]
         for si_, ti_ in zip(s_idx, t_idx):
             emit_block_pair(pairs, bs[si_], bt[ti_], si_)
     else:

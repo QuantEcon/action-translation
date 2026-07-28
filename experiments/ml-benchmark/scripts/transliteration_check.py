@@ -103,9 +103,25 @@ TRANSLITERATIONS: dict[str, list[str]] = {
 
 
 def strip_to_prose(text: str) -> str:
-    """Drop fenced blocks and headings, matching ml_metrics.py's convention."""
+    """Drop YAML frontmatter, fenced blocks and headings.
+
+    Follows `ml_metrics.py`'s convention, with one deliberate difference: the fence
+    pattern here also matches indented fences and runs of four or more backticks,
+    so it is a superset rather than an exact match. Frontmatter stripping was
+    missing until 2026-07-28. It changed no output — a jupytext `---` block
+    contains no Malayalam and none of the targeted transliteration forms, so both
+    detectors were already blind to it — but the docstring claimed parity with
+    `ml_metrics.py`, which does strip it.
+    """
+    lines = text.split("\n")
+    start = 0
+    if lines and lines[0].strip() == "---":
+        start = 1
+        while start < len(lines) and lines[start].strip() != "---":
+            start += 1
+        start += 1
     out, in_fence, marker = [], False, ""
-    for line in text.split("\n"):
+    for line in lines[start:]:
         m = FENCE.match(line)
         if m:
             tok = m.group(1)
