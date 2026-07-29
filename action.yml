@@ -57,6 +57,14 @@ inputs:
     required: false
     # Keep in sync with DEFAULT_CLAUDE_MODEL in src/models.ts
     default: 'claude-sonnet-5'
+  localize:
+    description: >-
+      Localisation rules applied to files this run creates for the first time:
+      comma-separated subset of code-comments, figure-labels, i18n-font-config.
+      Use "none" to disable. Existing translations are unaffected.
+    required: false
+    # Keep in sync with DEFAULT_RULES in src/localization-rules.ts
+    default: 'code-comments,figure-labels,i18n-font-config'
   bibliography:
     description: >-
       How to handle citations a run introduces that the target bibliography lacks:

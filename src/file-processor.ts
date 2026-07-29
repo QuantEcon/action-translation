@@ -663,13 +663,19 @@ export class FileProcessor {
 
   /**
    * Process a full document (for new files)
+   *
+   * `customInstructions` carries the localisation rules (code comments, figure
+   * labels, i18n font config). A new file has no existing localisation to
+   * preserve, so unless these are passed the document lands with English figure
+   * labels and no font block — see #178.
    */
   async processFull(
     content: string,
     filepath: string,
     sourceLanguage: string,
     targetLanguage: string,
-    glossary?: Glossary
+    glossary?: Glossary,
+    customInstructions?: string
   ): Promise<string> {
     this.log(`Processing full document: ${filepath}`);
 
@@ -678,6 +684,7 @@ export class FileProcessor {
       targetLanguage,
       glossary,
       content,
+      customInstructions,
     });
 
     if (!result.success) {

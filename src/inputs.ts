@@ -2,6 +2,7 @@ import * as core from '@actions/core';
 import { ActionInputs, ReviewInputs, RebaseInputs } from './types.js';
 import { validateLanguageCode, getSupportedLanguages } from './language-config.js';
 import { DEFAULT_CLAUDE_MODEL, VALID_MODEL_PATTERNS } from './models.js';
+import { DEFAULT_RULES, parseLocalizationRules } from './localization-rules.js';
 import { parseBibliographyMode } from './bibliography.js';
 import {
   AUTO_MERGE_MODES,
@@ -54,6 +55,11 @@ export function getInputs(): ActionInputs {
   const claudeModel = core.getInput('claude-model', { required: false }) || DEFAULT_CLAUDE_MODEL;
   const githubToken = core.getInput('github-token', { required: true });
 
+  // Localisation rules for files this run creates for the first time (#178).
+  // An invalid value throws rather than silently falling back — a typo here
+  // would ship a whole lecture unlocalised, and nothing downstream fails on it.
+  const localizeRaw = core.getInput('localize', { required: false });
+  const localizationRules = localizeRaw ? parseLocalizationRules(localizeRaw) : DEFAULT_RULES;
   // Citations a sync introduces need their bibliography entries (#117). An
   // unrecognised value throws rather than defaulting — a disabled guard looks
   // exactly like a passing one until a target repo stops building.
@@ -120,6 +126,7 @@ export function getInputs(): ActionInputs {
     prReviewers,
     prTeamReviewers,
     testMode,
+    localizationRules,
     bibliographyMode,
   };
 }
@@ -140,6 +147,13 @@ export function getRebaseInputs(): RebaseInputs {
   const normalizedDocsFolder =
     docsFolder === '' ? '' : docsFolder.endsWith('/') ? docsFolder : `${docsFolder}/`;
 
+  // Same rule set as sync — a rebase can re-create a file from scratch, and
+  // that output needs localising for the same reason (#178).
+  const rebaseLocalizeRaw = core.getInput('localize', { required: false });
+  const localizationRules = rebaseLocalizeRaw
+    ? parseLocalizationRules(rebaseLocalizeRaw)
+    : DEFAULT_RULES;
+
   return {
     docsFolder: normalizedDocsFolder,
     glossaryPath,
@@ -147,6 +161,7 @@ export function getRebaseInputs(): RebaseInputs {
     githubToken,
     rebaseStaleSiblings:
       core.getInput('rebase-stale-siblings', { required: false }).toLowerCase() === 'true',
+    localizationRules,
     bibliographyMode: parseBibliographyMode(core.getInput('bibliography', { required: false })),
   };
 }

@@ -15,6 +15,7 @@ import { TranslationService } from './translator.js';
 import { FileProcessor } from './file-processor.js';
 import { MystParser } from './parser.js';
 import { checkStructuralParity, formatParityViolations } from './structural-parity.js';
+import { RuleId, DEFAULT_RULES, buildLocalizationPrompt } from './localization-rules.js';
 import {
   BibliographyMode,
   BibliographySources,
@@ -57,6 +58,13 @@ export interface SyncConfig {
   claudeModel: string;
   anthropicApiKey: string;
   debugMode?: boolean;
+  /**
+   * Localisation rules applied when this run creates a NEW file (#178).
+   * Defaults to every rule; pass an empty array to opt out entirely.
+   * Existing files are untouched by this — a translated file already carries
+   * its localisation, and the translator prompts preserve it (#107).
+   */
+  localizationRules?: RuleId[];
   /**
    * How to handle citations this run introduces that the target bibliography
    * lacks (#117). Defaults to 'backfill'.
@@ -486,7 +494,8 @@ export class SyncOrchestrator {
         file.filename,
         this.config.sourceLanguage,
         this.config.targetLanguage,
-        glossary
+        glossary,
+        this.localizationPromptForNewFile(file.filename)
       );
     } else {
       const skipped: string[] = [];
@@ -548,6 +557,29 @@ export class SyncOrchestrator {
   }
 
   /**
+   * Localisation instructions for a document this run creates from scratch (#178).
+   *
+   * `init` has always applied these rules; sync applied none of them, so every
+   * lecture arriving through the automated path landed with English figure
+   * labels and no font config. Only first-time translations need them — an
+   * existing translation already carries its localisation and the translator
+   * prompts preserve it (#107).
+   *
+   * Returns undefined when the edition has opted out, so the caller can pass it
+   * straight through.
+   */
+  private localizationPromptForNewFile(filename: string): string | undefined {
+    const rules = this.config.localizationRules ?? DEFAULT_RULES;
+    if (rules.length === 0) return undefined;
+    const prompt = buildLocalizationPrompt(rules, this.config.targetLanguage);
+    if (!prompt) return undefined;
+    this.logger.info(
+      `${filename}: first-time translation — applying localisation rules (${rules.join(', ')})`
+    );
+    return prompt;
+  }
+
+  /**
    * Process a renamed markdown file.
    * Preserves existing translation at new path, deletes old path.
    */
@@ -593,13 +625,19 @@ export class SyncOrchestrator {
         );
       }
     } else {
-      // No existing translation — full translation
+      // No existing translation — full translation. A rename whose old path
+      // was never translated is a first-time translation in every respect, so
+      // it needs the localisation rules for the same reason a new file does
+      // (#178). GitHub's rename detection is a similarity heuristic, so this
+      // branch is reachable whenever a heavily-edited file is reported as a
+      // rename, not only on a literal `git mv`.
       translatedContent = await this.processor.processFull(
         file.newContent,
         file.filename,
         this.config.sourceLanguage,
         this.config.targetLanguage,
-        glossary
+        glossary,
+        this.localizationPromptForNewFile(file.filename)
       );
     }
 

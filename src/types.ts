@@ -25,6 +25,8 @@ export interface ActionInputs {
   prReviewers: string[];
   prTeamReviewers: string[];
   testMode: boolean; // If true, run on PR head instead of merge commit
+  /** Localisation rules applied to files this run creates for the first time (#178) */
+  localizationRules: import('./localization-rules.js').RuleId[];
   /** How to handle citations a sync introduces that the target bibliography lacks (#117) */
   bibliographyMode: import('./bibliography.js').BibliographyMode;
 }
@@ -51,6 +53,8 @@ export interface RebaseInputs {
    * Off by default — see action.yml for why this is opt-in rather than automatic.
    */
   rebaseStaleSiblings: boolean;
+  /** Localisation rules applied to files a rebase re-creates from scratch (#178) */
+  localizationRules: import('./localization-rules.js').RuleId[];
   /** How to handle citations a rebase introduces that the target bibliography lacks (#117) */
   bibliographyMode: import('./bibliography.js').BibliographyMode;
 }
