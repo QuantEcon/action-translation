@@ -12,10 +12,11 @@ rather than something to re-read by hand. Blank boxes are reported as skipped, s
 "which questions still need an answer" is a fact rather than an impression.
 
 Byte fidelity is the point of doing this in a script. Malayalam uses ZWJ/ZWNJ
-(U+200D/U+200C) in chillu formations and they do not survive some editors or
-clipboards; answers are sliced from the file, never retyped. `--check-zw` reports
-whether any arrived stripped, which is worth knowing before an answer becomes a
-glossary entry.
+(U+200D/U+200C) and they do not survive some editors or clipboards; answers are
+sliced from the file, never retyped. `--check-zw` *counts* those characters so a
+returned file can be compared against what was sent — it does not judge whether
+any were stripped, because no reliable local test for that exists (see
+`zero_width_report`).
 
 Usage:
     python3 parse_responses.py --filled PACKET-adisankar.md
@@ -28,7 +29,6 @@ import argparse
 import json
 import re
 import sys
-import unicodedata
 from pathlib import Path
 
 # ```answer A1   ...   ```
@@ -37,9 +37,17 @@ ANSWER_BLOCK = re.compile(
     re.M | re.S,
 )
 
-ZWJ, ZWNJ = "‍", "‌"
+# Escapes rather than literals, deliberately. A script whose whole subject is
+# zero-width characters getting silently stripped in transit should not carry
+# invisible ones in its own source: an edit that passed through a stripping tool
+# would turn these into empty strings, and `body.count("")` returns len+1 rather
+# than raising — so the report would fill with absurd counts instead of failing.
+ZWJ, ZWNJ = "\u200D", "\u200C"
+
 MALAYALAM = re.compile(r"[ഀ-ൿ]")
-# Chillu letters, and the consonant+virama sequences that ought to carry a ZWJ.
+# U+0D7A-U+0D7F only: the six ATOMIC chillu codepoints. It deliberately does not
+# match the legacy consonant + virama + ZWJ spelling of the same letters, which is
+# the distinction the zero-width report turns on — see zero_width_report().
 CHILLU = re.compile(r"[ൺ-ൿ]")
 
 
@@ -102,7 +110,8 @@ def main() -> int:
     ap.add_argument("--template", type=Path,
                     help="the blank packet, to list questions that were skipped")
     ap.add_argument("--check-zw", action="store_true",
-                    help="report zero-width-joiner health of Malayalam answers")
+                    help="count zero-width characters in Malayalam answers "
+                         "(counts only, not a corruption verdict)")
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args()
 
