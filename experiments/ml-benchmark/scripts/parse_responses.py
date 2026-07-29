@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Extract a reviewer's answers from a filled-in PACKET.md.
+"""Extract a reviewer's answers from a filled-in malayalam-review-questions.md.
 
-`PACKET.md` puts every question above a fenced block tagged with its id:
+`malayalam-review-questions.md` puts every question above a fenced block
+tagged with its id:
 
     ```answer A1
     Yes, deliberate — those read as loanwords to a Kerala student.
@@ -19,8 +20,13 @@ any were stripped, because no reliable local test for that exists (see
 `zero_width_report`).
 
 Usage:
-    python3 parse_responses.py --filled PACKET-adisankar.md
-    python3 parse_responses.py --filled reply.md --template PACKET.md --json
+    python3 parse_responses.py --filled malayalam-review-answers-adisankar.md
+    python3 parse_responses.py --filled malayalam-review-answers-adisankar.md \
+        --template malayalam-review-questions.md --check-zw --json
+
+Convention: the blank questions file goes out unchanged and the reply comes
+back under an answers name, so a returned copy never overwrites the template
+and `--template` always has something to compare against.
 """
 
 from __future__ import annotations
@@ -106,9 +112,9 @@ def zero_width_report(ans: dict[str, str]) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--filled", type=Path, required=True,
-                    help="the returned, filled-in packet")
+                    help="the returned file, with answers typed into the boxes")
     ap.add_argument("--template", type=Path,
-                    help="the blank packet, to list questions that were skipped")
+                    help="the blank questions file, to list which were skipped")
     ap.add_argument("--check-zw", action="store_true",
                     help="count zero-width characters in Malayalam answers "
                          "(counts only, not a corruption verdict)")

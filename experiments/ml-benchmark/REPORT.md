@@ -3,7 +3,7 @@
 **Date**: 2026-07-28 · **Status**: Stages 1–3 complete; packet ready to send.
 **Tracking**: #228 (re-scoped Phase 1 of #189), folding in #207.
 
-This is the internal report. The reviewer-facing artifact is `PACKET.md` — numbered
+This is the internal report. The reviewer-facing artifact is `malayalam-review-questions.md` — numbered
 questions only. Everything below the question cap lives here as evidence.
 
 ## TL;DR
@@ -468,7 +468,8 @@ from `bench/` rather than a table like this one.
 
 | File | Contents |
 |---|---|
-| `PACKET.md` | reviewer-facing; numbered questions only |
+| `malayalam-review-questions.md` | reviewer-facing; numbered questions, each with an answer box |
+| `scripts/parse_responses.py` | extracts the returned answers as JSON or a summary |
 | `scripts/ml_metrics.py` | the shipped gate suite (#191) |
 | `scripts/divergences.py` | ranked, clustered, content-aligned divergence inventory |
 | `scripts/transliteration_check.py` | targeted + novel-token transliteration detection |
