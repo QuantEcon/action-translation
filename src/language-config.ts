@@ -48,9 +48,17 @@ export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
   fr: {
     code: 'fr',
     name: 'French',
+    // Register and anti-calque rules derived from the first native-editor review
+    // of machine output: Emile (@Honaminto), lecture-python-programming.fr PRs
+    // #24/#25 (2026-08). Every rule generalises a correction he made at least
+    // twice across those two lectures.
     additionalRules: [
       'Use French guillemets « » (with a non-breaking space inside each, e.g. « citation ») for quotations rather than straight or curly double quotes',
       'Insert a non-breaking space before the high punctuation marks ; : ! ? as required by French typography (e.g. "Bonjour !" not "Bonjour!")',
+      'Use the impersonal academic register of French course materials rather than calquing the English direct address: render exercise set-ups as "On pose $T = 200$" (not "Posez..."), task statements as "L\'objectif de cet exercice est de..." (not "Votre tâche consiste à..."), and drop chatty asides addressed to the reader (e.g. "prenez votre temps et vous comprendrez")',
+      'Do not calque English discourse formulas word-for-word — render the function, not the words: "We can and will examine..." becomes "Nous verrons plus loin..." (never "Nous pouvons et allons..."), "worth knowing" becomes "utile à connaître" (not "vaut la peine d\'être connue"), and a heading "The Task: ..." becomes "Objectif : ..." (not "La tâche : ...")',
+      'In display math, hints and code comments, translate ordinary English words used as descriptive symbols (e.g. $area = \\pi * radius^2$ becomes $aire = \\pi * rayon^2$, and the comment "division par radius**2" becomes "division par rayon**2"); never rename identifiers that executable code defines or uses',
+      'Prefer natural French sentence structure over mirroring the English: split long English sentences into two French ones and reword constructions that read as translationese — fidelity is owed to meaning and technical content, not to English syntax',
     ],
   },
   ml: {

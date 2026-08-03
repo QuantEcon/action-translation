@@ -12,12 +12,12 @@ The glossary system ensures consistent translation of technical terminology acro
 |----------|------|-------|--------------|
 | Chinese (Simplified) | `glossary/zh-cn.json` | 357 | October 2025 |
 | Farsi | `glossary/fa.json` | 357 | December 2025 |
-| French | `glossary/fr.json` | 364 | July 2026 |
+| French | `glossary/fr.json` | 367 | August 2026 |
 | Malayalam | `glossary/ml.json` | 52 | July 2026 (draft) |
 
 These glossaries ship in the action repository (resolved from the checked-out repo at runtime — they are not baked into the bundle) and load automatically when the `target-language` matches. No configuration needed.
 
-> The French glossary is an initial draft pending native-speaker review.
+> The French glossary began as a machine-drafted economics glossary; native-speaker review is incorporated incrementally — programming-domain terms were reviewed in #78 and extended from the first native-editor lecture reviews (lecture-python-programming.fr #24/#25, August 2026).
 
 ## How it works
 
