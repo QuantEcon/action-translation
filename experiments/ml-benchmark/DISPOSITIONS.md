@@ -21,7 +21,8 @@ The reply came back exactly as requested: the `.md` file itself, edited in place
 
 Zero zero-width characters on both sides means nothing was stripped in transit
 (the packet's Malayalam already used atomic chillus, which need no joiner — see
-`parse_responses.py:zero_width_report` for why zero is not itself a signal). His
+`scripts/parse_responses.py:zero_width_report` for why zero is not itself a
+signal). His
 answers add 266 Malayalam codepoints, all intact. A conversation-pasted copy of the
 same file rendered as mojibake, which is the same failure the reference survived in
 #191 — the ask-for-the-raw-file rule stays.
@@ -30,7 +31,7 @@ Files:
 
 - `malayalam-review-answers-adisankar.md` — byte-exact copy of the returned file
 - `malayalam-review-answers-adisankar.json` — parsed answers
-  (`parse_responses.py --check-zw --json`)
+  (`scripts/parse_responses.py --check-zw --json`, run from this directory)
 
 We designed for a partial reply — the covering note said A1, A9 and D1 alone would
 be enough. He answered everything, and twice supplied his own improved renderings

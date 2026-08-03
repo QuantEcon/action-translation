@@ -6,7 +6,7 @@ Thank you — all 23 answers arrived intact (we byte-checked the Malayalam: noth
 was stripped in transit) and every one of them is already turned into a rule
 change, a glossary entry, or a confirmed defect. In particular: the light-verb
 rule (A9) is now the tool's default for software actions, `click`/`option`/`set`/
-`type`/`press` are pinned keep-English, keyboard instructions normalise to
+`type`/`press` are now pinned to stay in English, keyboard instructions normalise to
 `press ചെയ്യുക` (A8), code comments stay English (B4), and the Phase 2 batch is
 the five lectures you chose (D1) — they will arrive as pull requests once the
 rule changes are verified.
