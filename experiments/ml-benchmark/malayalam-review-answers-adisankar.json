@@ -1,0 +1,111 @@
+{
+  "source": "experiments/ml-benchmark/malayalam-review-answers-adisankar.md",
+  "questions": 23,
+  "answered": 23,
+  "blank": [],
+  "unexpected_ids": [],
+  "answers": {
+    "A1": "Deliberate rule. Keeping ordinary English words like \"hopefully\", \"click\", and \"example\" in Latin script is intentional — these words are in everyday use among educated Malayalam speakers and translating them feels unnatural and overly formal in a classroom context.",
+    "A2": "The tool's form -യിലെ is correct. My use of -ലെ was incidental — -യിലെ is the more natural attachment when the English root ends in a vowel sound. This should be the rule.",
+    "A3": "My form -ഉം is correct. The tool dropping the ending entirely loses the meaning — when the sentence calls for \"also/and\", the suffix must be attached. -ഉം should be the rule for these cases.",
+    "A4": "The tool's -മായി is acceptable, but the preferred form is -ുമായി (with chandrakala) — this flows more naturally in written Malayalam. If the tool can produce -ുമായി consistently, that should be the rule over plain -മായി.",
+    "A5": "I need to see the full sentence in context to give a definitive ruling. In isolation: -ഉം means \"and/also\" while -നൊപ്പം means \"along with\" — these carry different meanings and the correct form depends on what the original English sentence actually says. Please share the full sentence and I will rule immediately.",
+    "A6": "Agreed with your suspicion — -നെക്കാൾ is comparative (\"more than option\") and if the source sentence is not comparative, this is an error, not a variant. Again, please share the full sentence to confirm, but I am confident this is a tool error.",
+    "A7": "I need the full sentence to rule correctly. -ൽ means \"in the list\" (location) and -ന്  means \"to/for the list\" (dative) — they are not interchangeable and the right choice depends entirely on the source sentence meaning.",
+    "A8": "Yes, `അടിക്കുക` is a mistranslation — it carries the physical strike sense which is wrong in a keyboard context. \"Hit the Esc key\" means press the key. I would prefer keeping `press` in English consistently for all keyboard instructions — so \"hit the Esc key\" should become \"Esc key press ചെയ്യുക\" rather than using either `hit` or `അടിക്കുക`.",
+    "A9": "Yes, the `<English verb> + ചെയ്യുക/ആകും` pattern is the correct default for software action verbs (just as we saw in A8). This is deliberate, not incidental.\n\nWhen a student reads `click ചെയ്താൽ` or `enable ആകും`, they immediately connect it to what they see on their screen — because these interface words appear in English on every device they use. Replacing them with pure Malayalam verbs like `അടയ്ക്കുന്നു` or \n`പ്രവർത്തനക്ഷമമാകും` forces the student to mentally translate back to the interface word, adding unnecessary friction.\n\nThe correct rule is:\n- Software action verbs: keep English verb + attach ചെയ്യുക/ആകും\n- Example: `click ചെയ്യുക`, `press ചെയ്യുക`, `enable ആകും`,   `close ആകും`, `check ചെയ്യാം`\n- Do NOT replace with pure Malayalam verbs for software actions",
+    "A10": "Deliberate, but with a nuance worth noting.\n\nWhen a sentence is short and the majority of its content is already staying in English — a URL, a command, a code reference — translating the small remaining prose feels unnecessary and fragments the instruction. In those cases I kept the whole sentence in English for clarity and flow.\n\nFor longer sentences where code or a URL appears mid-sentence, I would translate the surrounding prose normally and leave only the code/URL untouched. The length and proportion of English content in the sentence determines the approach.\n\nMy recommendation: if a sentence is short and majority of its content is code, URL, or command text, keep the full sentence in English. Otherwise translate the prose portions normally.",
+    "A11": "Yes, both are errors, not variants.",
+    "A12": "Confirmed. It is intentional.",
+    "A13": "Confirmed. It is intentional.",
+    "A14": "This is a serious error, not merely awkward.\nPlease treat any transliteration as a defect, not a variant.",
+    "B1": "The mix is broadly correct — mathematical terms, symbols, and \"Mathematically,\" stay in English, with Malayalam connective prose around them. \nHowever the tool's word order and phrasing can be improved.\n\nI would have translated it as:\n\n`Mathematically, $\\mathbf{v} \\in \\mathbb{R}^n$ എന്ന ഒരു vector-നെ ഇങ്ങനെ represent ചെയ്യാം:`\n\n`matrix $A$-യുടെ ഒരു eigenvector $v$, താഴെപറയുന്നവ satisfy ചെയ്യുന്നു:` \n(where the source implies \"satisfies the following\")",
+    "B2": "The translation seems okay to me. \nHowever I want to make sure I understand the question correctly — could you clarify what \"read more plainly\" means here?",
+    "B3": "The register is right.\n\nI would have translated it as:\nExercise 1-ന്റെ നിങ്ങളുടെ solution-ൽ നിന്ന് തുടങ്ങി, $\\alpha=0$, $\\alpha=0.8$, $\\alpha=0.98$ എന്ന മൂന്ന് case-നും, ഓരോ simulated time series plot ചെയ്യുക.\n\nAs discussed previously, if the exercise sentence is short, it may be retained in English.",
+    "B4": "No — Python comments inside code cells need not be translated. Leave them in English.",
+    "B5": "n/a",
+    "C1": "All 34 terms should stay in English. None should be translated into Malayalam.",
+    "C2": "Yes — please pin all four.",
+    "D1": "I have not gone through all the lectures in detail, so my selection is based on what I know.\n\npython_by_example\nnumpy\npandas\nmatplotlib\nfunctions\n\nIf the team has a different view on variety or sequencing based on the tool's current capabilities, I am happy to defer — you know the technical constraints better than I do.",
+    "D2": "In the getting_started.md translation, I removed a pop culture reference (Nicki Minaj). When western cultural references, idioms, or examples appear in the lectures, I would recommend to flag these for human review rather than translate them literally — a translated Nicki Minaj reference is no more relevant to our learners than the English original. In some cases removal is the right call, in others a locally relevant substitute might work better."
+  },
+  "zero_width": {
+    "answers_with_malayalam": [
+      {
+        "id": "A2",
+        "malayalam_chars": 10,
+        "zwj": 0,
+        "zwnj": 0,
+        "atomic_chillu": 0
+      },
+      {
+        "id": "A3",
+        "malayalam_chars": 4,
+        "zwj": 0,
+        "zwnj": 0,
+        "atomic_chillu": 0
+      },
+      {
+        "id": "A4",
+        "malayalam_chars": 18,
+        "zwj": 0,
+        "zwnj": 0,
+        "atomic_chillu": 0
+      },
+      {
+        "id": "A5",
+        "malayalam_chars": 8,
+        "zwj": 0,
+        "zwnj": 0,
+        "atomic_chillu": 0
+      },
+      {
+        "id": "A6",
+        "malayalam_chars": 7,
+        "zwj": 0,
+        "zwnj": 0,
+        "atomic_chillu": 1
+      },
+      {
+        "id": "A7",
+        "malayalam_chars": 3,
+        "zwj": 0,
+        "zwnj": 0,
+        "atomic_chillu": 1
+      },
+      {
+        "id": "A8",
+        "malayalam_chars": 23,
+        "zwj": 0,
+        "zwnj": 0,
+        "atomic_chillu": 0
+      },
+      {
+        "id": "A9",
+        "malayalam_chars": 92,
+        "zwj": 0,
+        "zwnj": 0,
+        "atomic_chillu": 2
+      },
+      {
+        "id": "B1",
+        "malayalam_chars": 51,
+        "zwj": 0,
+        "zwnj": 0,
+        "atomic_chillu": 0
+      },
+      {
+        "id": "B3",
+        "malayalam_chars": 50,
+        "zwj": 0,
+        "zwnj": 0,
+        "atomic_chillu": 1
+      }
+    ],
+    "totals": {
+      "zwj": 0,
+      "zwnj": 0,
+      "malayalam_chars": 266
+    }
+  }
+}
