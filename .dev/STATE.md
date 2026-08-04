@@ -10,14 +10,13 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 - **Week of 2026-07-27**: resume into Phase 2 per the work-plan issue (#198 — opened at
   Wave 1 close). First gate: reformulate the round-trip invariant
   ([`D-2026-07-24-tech-debt-audit-boundaries.md`](decisions/D-2026-07-24-tech-debt-audit-boundaries.md)).
-  v0.24.0 is cut; **v0.25.0 is prepared but not yet released** — PR #242 is open and the three
-  tags are uncut, so `@v0` still resolves to v0.24.0. Wave 2 of the audit
+  v0.25.0 is **released and deployed** (2026-08-04; below). Wave 2 of the audit
   (#169–#176 + backlog #177) remains available.
 - **Malayalam** — `ml` config landed in v0.24.0 (PR #71). The harness now drives it as a
   first-class third language and it passes 26/26. Its two seed reference translations are
   machine drafts awaiting native review (#207); the benchmark's Phase 1 (#194) is unrun.
 - **Glossary PR #69** (ja) — open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
-- **#210 — merged to `main` and CONFIRMED end-to-end; lands in v0.25.0** (#214, 2026-07-26). Review
+- **#210 — merged to `main` and CONFIRMED end-to-end; shipped in v0.25.0** (#214, 2026-07-26). Review
   mode partitions source-PR deletions out before the F40 guard, reports a deletion-only PR with
   no model calls and an `editor` route, and gates a target deletion the source PR did not make
   as a blocker. Non-404 target-fetch failures now fail the run (the loop's catch-all is gone),
@@ -39,11 +38,24 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   templates, #117 demand-driven bibliography backfill (turns previously-green runs red by
   design when a key resolves nowhere), #210 deletion partitioning (deletion-only PRs stop
   failing review), the #202 one-version E2E harness, #237 ml packet rulings and #241 fr
-  editor rules + glossary v1.1. Moving `@v0` deploys all of it estate-wide at once. Watch:
-  the first organic **fr** review after the tag move — the new register rules feed review
-  mode and could not be exercised locally (no fr harness lane). The deployed estate's sync
-  workflows were already hand-gated (#220, closed); this release makes `translate setup`
-  and every documented template ship the gated shape.
+  editor rules + glossary v1.1. **Released and deployed 2026-08-04**: #242 squash-merged
+  (`c74e3aa`), three tags cut, `@v0` peels to `c74e3aa`. Gated per AGENTS.md §4a at the tag
+  with a **scoped** run (scenario 01 × zh-cn/fa/ml — full matrix ran 78/78 at `main`
+  2026-07-25, and the fixtures carry zero `{cite}` keys so #117 is unexercisable on the
+  harness at any scope), then the `@v0` smoke after the tag move: both rounds green on all
+  three lanes, every verdict block `engineVersion: 0.25.0`. zh-cn/fa recommended
+  `auto-merge` clean both rounds; ml PASSed but routed `editor` on minor gating findings
+  both rounds — first field data on the #237 rules, worth watching. **The shadow gate is
+  field-validated** (Stage 4 of QuantEcon/project-translation#15): `auto-merge-mode:
+  shadow` on the zh-cn harness review workflow produced `wouldAutoMerge: true` in the
+  block, the workflow notice, and no action — PR left open. Two operational findings from
+  that validation: a `pull_request` run resolves its workflow from the PR's **frozen merge
+  ref**, so label-cycling never picks up a workflow edit (`update-branch` is the reliable
+  re-fire); and review mode updates its existing comment in place, so a re-review leaves
+  one comment. Watch: the first organic **fr** review after the tag move — the new
+  register rules feed review mode and could not be exercised locally (no fr harness lane).
+  The deployed estate's sync workflows were already hand-gated (#220, closed); this
+  release makes `translate setup` and every documented template ship the gated shape.
 
 - **#192 — the `\translate-resync` trust gate, CLOSED across all three rollout steps**
   (2026-07-26, #219 + QuantEcon/lecture-python-intro#805 +
