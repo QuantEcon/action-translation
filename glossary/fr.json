@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "description": "Translation glossary for QuantEcon lectures (English to French)",
   "terms": [
     {
@@ -116,6 +116,11 @@
       "en": "Bivariate uniform distribution",
       "fr": "Loi uniforme bivariée",
       "context": "probability"
+    },
+    {
+      "en": "Boolean mask",
+      "fr": "Masque booléen",
+      "context": "NumPy indexing"
     },
     {
       "en": "Broadcasting",
@@ -526,6 +531,11 @@
       "en": "Fiscal theory of price levels",
       "fr": "Théorie budgétaire du niveau des prix",
       "context": "monetary economics"
+    },
+    {
+      "en": "Flat array",
+      "fr": "Tableau unidimensionnel",
+      "context": "NumPy — do not render as 'tableau plat'"
     },
     {
       "en": "Flow utility function",
@@ -1076,6 +1086,11 @@
       "en": "Oil Crisis",
       "fr": "Choc pétrolier",
       "context": "economic history"
+    },
+    {
+      "en": "One-dimensional array",
+      "fr": "Tableau unidimensionnel",
+      "context": "NumPy"
     },
     {
       "en": "Open market operations",

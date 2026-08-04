@@ -33,6 +33,12 @@ Each target language can have specific translation rules that are automatically 
 
 - Use French guillemets « » (with a non-breaking space inside each) for quotations rather than straight or curly double quotes
 - Insert a non-breaking space before the high punctuation marks ; : ! ? as required by French typography
+- Use the impersonal academic register of French course materials rather than calquing the English direct address ("On pose $T = 200$", "L'objectif de cet exercice est de…")
+- Do not calque English discourse formulas word-for-word — render the function, not the words ("We can and will examine…" → "Nous verrons plus loin…")
+- In display math and exercise hints, translate ordinary English words used as descriptive symbols ($aire = \pi * rayon^2$); never rename identifiers that executable code defines or uses. Where code comments are being localized (the `code-comments` localization rule), the same descriptive-symbol translation applies there
+- Prefer natural French sentence structure over mirroring the English — fidelity is owed to meaning and technical content, not to English syntax
+
+The register and anti-calque rules encode the first native-editor review of machine output (Emile, lecture-python-programming.fr PRs #24/#25, August 2026); each generalises a correction made at least twice across those lectures.
 
 ## How rules are applied
 

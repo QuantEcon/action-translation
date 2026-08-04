@@ -26402,9 +26402,17 @@ var LANGUAGE_CONFIGS = {
   fr: {
     code: "fr",
     name: "French",
+    // Register and anti-calque rules derived from the first native-editor review
+    // of machine output: Emile (@Honaminto), lecture-python-programming.fr PRs
+    // #24/#25 (2026-08). Every rule generalises a correction he made at least
+    // twice across those two lectures.
     additionalRules: [
       "Use French guillemets \xAB \xBB (with a non-breaking space inside each, e.g. \xAB citation \xBB) for quotations rather than straight or curly double quotes",
-      'Insert a non-breaking space before the high punctuation marks ; : ! ? as required by French typography (e.g. "Bonjour !" not "Bonjour!")'
+      'Insert a non-breaking space before the high punctuation marks ; : ! ? as required by French typography (e.g. "Bonjour !" not "Bonjour!")',
+      `Use the impersonal academic register of French course materials rather than calquing the English direct address: render exercise set-ups as "On pose $T = 200$" (not "Posez..."), task statements as "L'objectif de cet exercice est de..." (not "Votre t\xE2che consiste \xE0..."), and drop chatty asides addressed to the reader (e.g. "prenez votre temps et vous comprendrez")`,
+      `Do not calque English discourse formulas word-for-word \u2014 render the function, not the words: "We can and will examine..." becomes "Nous verrons plus loin..." (never "Nous pouvons et allons..."), "worth knowing" becomes "utile \xE0 conna\xEEtre" (not "vaut la peine d'\xEAtre connue"), and a heading "The Task: ..." becomes "Objectif : ..." (not "La t\xE2che : ...")`,
+      'In display math and exercise hints, translate ordinary English words used as descriptive symbols (e.g. $area = \\pi * radius^2$ becomes $aire = \\pi * rayon^2$); never rename identifiers that executable code defines or uses. Where code comments are being localized (the code-comments localization rule), apply the same descriptive-symbol translation there (e.g. "division par radius**2" becomes "division par rayon**2")',
+      "Prefer natural French sentence structure over mirroring the English: split long English sentences into two French ones and reword constructions that read as translationese \u2014 fidelity is owed to meaning and technical content, not to English syntax"
     ]
   },
   ml: {

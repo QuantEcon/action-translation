@@ -49,6 +49,21 @@ describe('Language Configuration', () => {
       expect(config.additionalRules.join('\n')).toContain('Keep section headings');
     });
 
+    it('should return French config with typography and register rules', () => {
+      const config = getLanguageConfig('fr');
+      expect(config.code).toBe('fr');
+      expect(config.name).toBe('French');
+      expect(config.additionalRules).toHaveLength(6);
+      // Two typography rules plus the native-editor register/anti-calque
+      // rulings encoded from lecture-python-programming.fr PRs #24/#25
+      expect(config.additionalRules.join('\n')).toContain('non-breaking space');
+      expect(config.additionalRules.join('\n')).toContain('On pose $T = 200$');
+      expect(config.additionalRules.join('\n')).toContain('Nous verrons plus loin');
+      expect(config.additionalRules.join('\n')).toContain(
+        'never rename identifiers that executable code defines or uses'
+      );
+    });
+
     it('should return empty rules for unconfigured languages', () => {
       const config = getLanguageConfig('ja');
       expect(config.code).toBe('ja');
