@@ -38,7 +38,7 @@ The ref defaults to `main`, which is the code you are working on. Override it fo
 
 ```bash
 ./test-action-on-github.sh                       # main HEAD (development)
-./test-action-on-github.sh --action-ref v0.24.0  # a specific release (the gate)
+./test-action-on-github.sh --action-ref vX.Y.Z   # a specific release (the gate)
 ./test-action-on-github.sh --action-ref v0       # the floating tag (post-release smoke)
 ```
 

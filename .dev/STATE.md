@@ -1,4 +1,4 @@
-verified: 2026-07-26
+verified: 2026-08-04
 
 # STATE
 
@@ -10,13 +10,14 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 - **Week of 2026-07-27**: resume into Phase 2 per the work-plan issue (#198 — opened at
   Wave 1 close). First gate: reformulate the round-trip invariant
   ([`D-2026-07-24-tech-debt-audit-boundaries.md`](decisions/D-2026-07-24-tech-debt-audit-boundaries.md)).
-  The release decision is taken — v0.24.0 is cut (below). Wave 2 of the audit
+  v0.24.0 is cut; **v0.25.0 is prepared but not yet released** — PR #242 is open and the three
+  tags are uncut, so `@v0` still resolves to v0.24.0. Wave 2 of the audit
   (#169–#176 + backlog #177) remains available.
 - **Malayalam** — `ml` config landed in v0.24.0 (PR #71). The harness now drives it as a
   first-class third language and it passes 26/26. Its two seed reference translations are
   machine drafts awaiting native review (#207); the benchmark's Phase 1 (#194) is unrun.
 - **Glossary PR #69** (ja) — open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
-- **#210 — merged to `main` and CONFIRMED end-to-end; released in v0.25.0** (#214, 2026-07-26). Review
+- **#210 — merged to `main` and CONFIRMED end-to-end; lands in v0.25.0** (#214, 2026-07-26). Review
   mode partitions source-PR deletions out before the F40 guard, reports a deletion-only PR with
   no model calls and an `editor` route, and gates a target deletion the source PR did not make
   as a blocker. Non-404 target-fetch failures now fail the run (the loop's catch-all is gone),
