@@ -44,7 +44,7 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   2026-07-25, and the fixtures carry zero `{cite}` keys so #117 is unexercisable on the
   harness at any scope), then the `@v0` smoke after the tag move: both rounds green on all
   three lanes, every verdict block `engineVersion: 0.25.0`. zh-cn/fa recommended
-  `auto-merge` clean both rounds; ml PASSed but routed `editor` on minor gating findings
+  `auto-merge` clean both rounds; ml passed but routed `editor` on minor gating findings
   both rounds — first field data on the #237 rules, worth watching. **The shadow gate is
   field-validated** (Stage 4 of QuantEcon/project-translation#15): `auto-merge-mode:
   shadow` on the zh-cn harness review workflow produced `wouldAutoMerge: true` in the
