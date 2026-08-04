@@ -16,7 +16,7 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   first-class third language and it passes 26/26. Its two seed reference translations are
   machine drafts awaiting native review (#207); the benchmark's Phase 1 (#194) is unrun.
 - **Glossary PR #69** (ja) — open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
-- **#210 — merged to `main` and CONFIRMED end-to-end; unreleased** (#214, 2026-07-26). Review
+- **#210 — merged to `main` and CONFIRMED end-to-end; released in v0.25.0** (#214, 2026-07-26). Review
   mode partitions source-PR deletions out before the F40 guard, reports a deletion-only PR with
   no model calls and an `editor` route, and gates a target deletion the source PR did not make
   as a blocker. Non-404 target-fetch failures now fail the run (the loop's catch-all is gone),
@@ -33,6 +33,16 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
   filed as #216.
 
 ## Recently landed
+
+- **v0.25.0** (2026-08-04) — ships everything since Wave 1: the #192 trust-gated workflow
+  templates, #117 demand-driven bibliography backfill (turns previously-green runs red by
+  design when a key resolves nowhere), #210 deletion partitioning (deletion-only PRs stop
+  failing review), the #202 one-version E2E harness, #237 ml packet rulings and #241 fr
+  editor rules + glossary v1.1. Moving `@v0` deploys all of it estate-wide at once. Watch:
+  the first organic **fr** review after the tag move — the new register rules feed review
+  mode and could not be exercised locally (no fr harness lane). The deployed estate's sync
+  workflows were already hand-gated (#220, closed); this release makes `translate setup`
+  and every documented template ship the gated shape.
 
 - **#192 — the `\translate-resync` trust gate, CLOSED across all three rollout steps**
   (2026-07-26, #219 + QuantEcon/lecture-python-intro#805 +

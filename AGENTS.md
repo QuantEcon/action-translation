@@ -179,7 +179,7 @@ End-to-end testing against real GitHub repos. Creates test PRs that trigger the 
 ```bash
 ./tool-test-action-on-github/test-action-on-github.sh                       # main HEAD
 ./tool-test-action-on-github/test-action-on-github.sh --dry-run             # Preview only
-./tool-test-action-on-github/test-action-on-github.sh --action-ref v0.24.0  # Release gate
+./tool-test-action-on-github/test-action-on-github.sh --action-ref v0.25.0  # Release gate
 ./tool-test-action-on-github/test-action-on-github.sh --action-ref v0       # Post-release smoke
 ```
 
