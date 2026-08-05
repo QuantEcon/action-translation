@@ -17,6 +17,7 @@ import {
   findingToDisplayString,
   getEngineVersion,
   getEngineRef,
+  formatEngineVersion,
   normalizeFindings,
   parseReviewVerdict,
   sanitizeCommentText,
@@ -438,6 +439,27 @@ describe('getEngineVersion / getEngineRef (#244)', () => {
     expect(getEngineRef()).toBeUndefined();
     process.env.GITHUB_ACTION_REF = ' v0 ';
     expect(getEngineRef()).toBe('v0');
+  });
+
+  // The pure rule, including the branch getEngineVersion cannot reach in Jest:
+  // the 'unknown' sentinel must survive unsuffixed (Copilot catch on #247) —
+  // the contract documents the exact string and engineRef already carries the
+  // ref, so 'unknown+main' would break consumers for zero information gain.
+  it('formatEngineVersion never suffixes the unknown sentinel', () => {
+    expect(formatEngineVersion('unknown', 'main')).toBe('unknown');
+    expect(formatEngineVersion('unknown', 'feat/x')).toBe('unknown');
+    expect(formatEngineVersion('unknown', undefined)).toBe('unknown');
+  });
+
+  it('formatEngineVersion applies the documented suffix rule', () => {
+    expect(formatEngineVersion('0.25.0', undefined)).toBe('0.25.0');
+    expect(formatEngineVersion('0.25.0', 'v0')).toBe('0.25.0');
+    expect(formatEngineVersion('0.25.0', 'v0.25')).toBe('0.25.0');
+    expect(formatEngineVersion('0.25.0', 'v0.25.0')).toBe('0.25.0');
+    expect(formatEngineVersion('0.25.0', 'main')).toBe('0.25.0+main');
+    expect(formatEngineVersion('0.25.0', 'feat/fr-editor-feedback')).toBe(
+      '0.25.0+feat-fr-editor-feedback'
+    );
   });
 });
 

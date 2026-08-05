@@ -35943,13 +35943,16 @@ function getEngineRef() {
   return ref ? ref : void 0;
 }
 var RELEASE_TAG_RE = /^v\d+(\.\d+){0,2}$/;
-function getEngineVersion() {
-  const version = resolvePackageVersion();
-  const ref = getEngineRef();
+function formatEngineVersion(version, ref) {
+  if (version === "unknown")
+    return version;
   if (ref !== void 0 && !RELEASE_TAG_RE.test(ref)) {
     return `${version}+${ref.replace(/[^0-9A-Za-z.-]/g, "-")}`;
   }
   return version;
+}
+function getEngineVersion() {
+  return formatEngineVersion(resolvePackageVersion(), getEngineRef());
 }
 var isPlainObject3 = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
 function truncateField(value) {

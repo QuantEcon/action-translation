@@ -223,6 +223,24 @@ export function getEngineRef(): string | undefined {
 const RELEASE_TAG_RE = /^v\d+(\.\d+){0,2}$/;
 
 /**
+ * Pure suffix rule for engineVersion, exported for direct testing (the
+ * `unknown` branch is unreachable in Jest through getEngineVersion, where
+ * package.json always resolves). A non-release ref is appended as semver
+ * build metadata, sanitised; a release-shaped tag keeps the bare version.
+ * The `unknown` sentinel is never suffixed: the contract documents the exact
+ * string, consumers key off it, and the ref is already carried verbatim in
+ * `engineRef`, so `unknown+main` would break the sentinel while adding
+ * nothing.
+ */
+export function formatEngineVersion(version: string, ref: string | undefined): string {
+  if (version === 'unknown') return version;
+  if (ref !== undefined && !RELEASE_TAG_RE.test(ref)) {
+    return `${version}+${ref.replace(/[^0-9A-Za-z.-]/g, '-')}`;
+  }
+  return version;
+}
+
+/**
  * Engine version for verdict provenance (#244). package.json on a branch
  * carries the *previous* release's number until a release commit bumps it, so
  * a bare version from a non-release ref asserts a release that did not produce
@@ -232,12 +250,7 @@ const RELEASE_TAG_RE = /^v\d+(\.\d+){0,2}$/;
  * checkout is the one case where the bare version is already truthful.
  */
 export function getEngineVersion(): string {
-  const version = resolvePackageVersion();
-  const ref = getEngineRef();
-  if (ref !== undefined && !RELEASE_TAG_RE.test(ref)) {
-    return `${version}+${ref.replace(/[^0-9A-Za-z.-]/g, '-')}`;
-  }
-  return version;
+  return formatEngineVersion(resolvePackageVersion(), getEngineRef());
 }
 
 // ============================================================================
