@@ -339,6 +339,36 @@ describe('reviewPR on deletion PRs (#210)', () => {
     expect(rec.modelCalls).toEqual([]);
   });
 
+  // #244 wiring for the deletion-path block: without this, deleting
+  // `engineRef: getEngineRef()` from the deletion verdict construction leaves
+  // the suite green (Jest has no GITHUB_ACTION_REF, so the field is absent
+  // either way).
+  it('wires engineRef and the suffixed engineVersion into the deletion verdict (#244)', async () => {
+    const savedRef = process.env.GITHUB_ACTION_REF;
+    process.env.GITHUB_ACTION_REF = 'main';
+    try {
+      const rec = newRecorder();
+      const reviewer = makeReviewer(
+        {
+          targetFiles: [removed('lectures/lecture.md')],
+          sourceFiles: [removed('lectures/lecture.md')],
+          sourceContent: {},
+          targetHeadContent: {},
+        },
+        rec
+      );
+
+      const result = await run(reviewer);
+
+      const verdict = parseReviewVerdict(result.reviewComment);
+      expect(verdict?.engineRef).toBe('main');
+      expect(verdict?.engineVersion).toMatch(/^\d+\.\d+\.\d+\+main$/);
+    } finally {
+      if (savedRef === undefined) delete process.env.GITHUB_ACTION_REF;
+      else process.env.GITHUB_ACTION_REF = savedRef;
+    }
+  });
+
   it('still aborts when source content is missing for a file that was NOT deleted (F40)', async () => {
     const rec = newRecorder();
     const reviewer = makeReviewer(

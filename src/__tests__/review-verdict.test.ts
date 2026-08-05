@@ -16,6 +16,7 @@ import {
   computeRecommendation,
   findingToDisplayString,
   getEngineVersion,
+  getEngineRef,
   normalizeFindings,
   parseReviewVerdict,
   sanitizeCommentText,
@@ -360,6 +361,24 @@ describe('buildVerdictBlock / parseReviewVerdict', () => {
       parseReviewVerdict(buildVerdictBlock(makeVerdict({ findings: 'none' as never })))
     ).toBeUndefined();
   });
+
+  // #244: engineRef is optional — absent on pre-#244 blocks and outside GitHub
+  // Actions — but present-but-malformed is a wrong-shape block.
+  it('round-trips engineRef when present, omits it when absent', () => {
+    const withRef = parseReviewVerdict(buildVerdictBlock(makeVerdict({ engineRef: 'v0' })));
+    expect(withRef?.engineRef).toBe('v0');
+
+    const without = parseReviewVerdict(buildVerdictBlock(makeVerdict()));
+    expect(without).toBeDefined();
+    expect('engineRef' in (without as object)).toBe(false);
+  });
+
+  it('rejects a present-but-malformed engineRef', () => {
+    expect(
+      parseReviewVerdict(buildVerdictBlock(makeVerdict({ engineRef: 42 as never })))
+    ).toBeUndefined();
+    expect(parseReviewVerdict(buildVerdictBlock(makeVerdict({ engineRef: '' })))).toBeUndefined();
+  });
 });
 
 describe('findingToDisplayString', () => {
@@ -374,9 +393,51 @@ describe('findingToDisplayString', () => {
   });
 });
 
-describe('getEngineVersion', () => {
-  it('resolves the package version', () => {
+describe('getEngineVersion / getEngineRef (#244)', () => {
+  let savedRef: string | undefined;
+
+  beforeEach(() => {
+    savedRef = process.env.GITHUB_ACTION_REF;
+    delete process.env.GITHUB_ACTION_REF;
+  });
+
+  afterEach(() => {
+    if (savedRef === undefined) delete process.env.GITHUB_ACTION_REF;
+    else process.env.GITHUB_ACTION_REF = savedRef;
+  });
+
+  it('resolves the bare package version outside GitHub Actions', () => {
     expect(getEngineVersion()).toMatch(/^\d+\.\d+\.\d+$/);
+  });
+
+  it('keeps the bare version on a release-shaped ref, where package.json is truthful', () => {
+    for (const ref of ['v0', 'v0.25', 'v0.25.0']) {
+      process.env.GITHUB_ACTION_REF = ref;
+      expect(getEngineVersion()).toMatch(/^\d+\.\d+\.\d+$/);
+    }
+  });
+
+  it('suffixes a branch ref as build metadata — package.json there names the previous release', () => {
+    process.env.GITHUB_ACTION_REF = 'main';
+    expect(getEngineVersion()).toMatch(/^\d+\.\d+\.\d+\+main$/);
+  });
+
+  it('sanitises ref characters that are invalid in semver build metadata', () => {
+    process.env.GITHUB_ACTION_REF = 'feat/fr-editor-feedback';
+    expect(getEngineVersion()).toMatch(/\+feat-fr-editor-feedback$/);
+  });
+
+  it('suffixes a pinned-SHA ref, giving exact tree attribution for free', () => {
+    process.env.GITHUB_ACTION_REF = 'c74e3aa0deadbeef';
+    expect(getEngineVersion()).toMatch(/\+c74e3aa0deadbeef$/);
+  });
+
+  it('getEngineRef returns the ref verbatim (trimmed), undefined when absent or empty', () => {
+    expect(getEngineRef()).toBeUndefined();
+    process.env.GITHUB_ACTION_REF = '';
+    expect(getEngineRef()).toBeUndefined();
+    process.env.GITHUB_ACTION_REF = ' v0 ';
+    expect(getEngineRef()).toBe('v0');
   });
 });
 
@@ -519,6 +580,28 @@ describe('reviewPR verdict block emission', () => {
     expect(block!.scores.overall).toBe(result.overallScore);
     expect(block!.reviewerModel).toBeTruthy();
     expect(block!.engineVersion).toMatch(/^\d+\.\d+\.\d+$/);
+    // Outside GitHub Actions the ref is unknowable and the field is absent.
+    expect('engineRef' in block!).toBe(false);
+  });
+
+  // #244 wiring: without this, deleting `engineRef: getEngineRef()` from the
+  // verdict construction leaves the whole suite green, because Jest has no
+  // GITHUB_ACTION_REF and JSON.stringify drops the undefined field.
+  it('wires engineRef and the suffixed engineVersion into the emitted block (#244)', async () => {
+    const savedRef = process.env.GITHUB_ACTION_REF;
+    process.env.GITHUB_ACTION_REF = 'main';
+    try {
+      const captured: { comment?: string } = {};
+      const result = await runReview(CLEAN_RESPONSE, 'off', captured);
+
+      expect(result.verdict).toBe('PASS');
+      const block = parseReviewVerdict(captured.comment!);
+      expect(block!.engineRef).toBe('main');
+      expect(block!.engineVersion).toMatch(/^\d+\.\d+\.\d+\+main$/);
+    } finally {
+      if (savedRef === undefined) delete process.env.GITHUB_ACTION_REF;
+      else process.env.GITHUB_ACTION_REF = savedRef;
+    }
   });
 
   it('records the shadow decision without acting', async () => {

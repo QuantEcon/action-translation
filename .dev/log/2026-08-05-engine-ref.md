@@ -1,0 +1,9 @@
+# 2026-08-05 — verdict provenance: engineRef + falsifiable engineVersion (#244)
+
+`getEngineVersion` now suffixes the package version with the executing ref (`0.25.0+main`, semver build metadata) when `GITHUB_ACTION_REF` is not a release-shaped tag, and the verdict block gains an optional `engineRef` field carrying the ref verbatim. Release-tag checkouts keep the bare version — production `@v0` verdicts were always correct; the mislabel was confined to `@main` (i.e. every harness verdict).
+
+Mechanism decision, argued in the issue thread (2026-08-05 review comment): **runtime env read, not build-time embedding**. Build-time git state in `build-action.mjs` would break the release pre-flight's byte-identical `dist-action/` rebuild check, make version bumps require rebuilds, and embed the parent commit's SHA (the bundle at commit C is built before C exists). `GITHUB_ACTION_REF` costs nothing, needs no build change, and a SHA-pinned workflow gets exact attribution for free. Ref-level attribution on `@main` is lineage, not an exact tree — accepted; verdict timestamp + harness run logs resolve it when needed, and an API resolve at review time would add a failure mode and a race for marginal value.
+
+Contract: pure field addition — no `schemaVersion` bump, per the contract's own versioning rules and the `diffCheckSources` precedent. Validator treats present-but-malformed `engineRef` as a wrong-shape block (fail-closed, like `wouldAutoMerge`).
+
+Motivation: QuantEcon/project-translation#22's edit-density-per-engine-version analysis and the Stage 4 floor calibration both need verdicts attributable to the code that produced them; the suffix distinguishes `@v0` production data from `@main` harness data in exactly the way the pre-registered analysis rules on QuantEcon/project-translation#15 want them split. Land before the WS8 dashboard lanes create the block's first real consumers.
