@@ -159,7 +159,7 @@ export function writeConfig(targetPath: string, config: TranslateConfig): void {
       parsed = yaml.load(raw, { schema: yaml.CORE_SCHEMA });
     } catch (err) {
       throw new Error(
-        `${configPath} exists but is not valid YAML — fix or remove it, then re-run ` +
+        `${configPath} exists but is not valid YAML — fix or remove it, then re-run the command ` +
           `(refusing to overwrite it: rebuilding would silently delete its contents). ` +
           `Parse error: ${err instanceof Error ? err.message : String(err)}`
       );
@@ -176,7 +176,7 @@ export function writeConfig(targetPath: string, config: TranslateConfig): void {
         (proto !== Object.prototype && proto !== null)
       ) {
         throw new Error(
-          `${configPath} exists but is not a YAML mapping — fix or remove it, then re-run ` +
+          `${configPath} exists but is not a YAML mapping — fix or remove it, then re-run the command ` +
             `(refusing to overwrite it: rebuilding would silently delete its contents).`
         );
       }
