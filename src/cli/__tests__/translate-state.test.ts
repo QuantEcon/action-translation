@@ -5,6 +5,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import * as yaml from 'js-yaml';
 import {
   readConfig,
   writeConfig,
@@ -108,6 +109,142 @@ describe('config read/write', () => {
     const result = readConfig(tmpDir);
     expect(result?.['target-language']).toBe('fa');
     expect(result?.['docs-folder']).toBe('docs');
+  });
+
+  // #243: bootstrap commands rebuild config.yml from the three core fields, so
+  // any key they do not know about — the `editors:` routing block being the
+  // motivating case — must survive the rewrite rather than being deleted.
+  describe('writeConfig merge (#243)', () => {
+    const coreConfig: TranslateConfig = {
+      'source-language': 'en',
+      'target-language': 'zh-cn',
+      'docs-folder': 'lectures',
+    };
+
+    const configPath = () => path.join(tmpDir, '.translate', 'config.yml');
+
+    const writeRaw = (content: string) => {
+      fs.mkdirSync(path.join(tmpDir, '.translate'), { recursive: true });
+      fs.writeFileSync(configPath(), content, 'utf-8');
+    };
+
+    test('unknown top-level keys survive a writeConfig round trip', () => {
+      writeRaw(
+        'source-language: en\n' +
+          'target-language: zh-cn\n' +
+          'docs-folder: lectures\n' +
+          'editors:\n' +
+          '  primary: HumphreyYang\n' +
+          '  secondary:\n' +
+          '    - nisha617\n' +
+          'custom-flag: strict\n'
+      );
+
+      writeConfig(tmpDir, coreConfig);
+
+      const result = yaml.load(fs.readFileSync(configPath(), 'utf-8')) as Record<string, unknown>;
+      expect(result['editors']).toEqual({ primary: 'HumphreyYang', secondary: ['nisha617'] });
+      expect(result['custom-flag']).toBe('strict');
+      expect(result['source-language']).toBe('en');
+      expect(result['tool-version']).toBe(getToolVersion());
+    });
+
+    test('unknown keys survive even when core fields are missing (mid-repair config)', () => {
+      // readConfig would reject this file; the merge read must not.
+      writeRaw('editors:\n  primary: Zahra-khanzadeh\n');
+
+      writeConfig(tmpDir, coreConfig);
+
+      const result = readConfig(tmpDir) as unknown as Record<string, unknown>;
+      expect(result['editors']).toEqual({ primary: 'Zahra-khanzadeh' });
+      expect(result['docs-folder']).toBe('lectures');
+    });
+
+    test('caller wins per top-level key, and the merge is shallow', () => {
+      writeRaw('docs-folder: old-folder\neditors:\n  primary: Honaminto\n');
+
+      writeConfig(tmpDir, coreConfig);
+
+      const result = yaml.load(fs.readFileSync(configPath(), 'utf-8')) as Record<string, unknown>;
+      expect(result['docs-folder']).toBe('lectures');
+      expect(result['editors']).toEqual({ primary: 'Honaminto' });
+    });
+
+    test('existing key order is preserved (minimal diff churn in committed files)', () => {
+      writeRaw('editors:\n  primary: adisankarmt\nsource-language: en\n');
+
+      writeConfig(tmpDir, coreConfig);
+
+      const content = fs.readFileSync(configPath(), 'utf-8');
+      expect(content.indexOf('editors:')).toBeLessThan(content.indexOf('source-language:'));
+    });
+
+    test('throws on unparseable YAML and leaves the file untouched', () => {
+      const broken = 'editors:\n  primary: [unclosed\n';
+      writeRaw(broken);
+
+      expect(() => writeConfig(tmpDir, coreConfig)).toThrow(/not valid YAML/);
+      expect(fs.readFileSync(configPath(), 'utf-8')).toBe(broken);
+    });
+
+    test('throws when the existing file is not a YAML mapping', () => {
+      writeRaw('- a\n- b\n');
+
+      expect(() => writeConfig(tmpDir, coreConfig)).toThrow(/not a YAML mapping/);
+    });
+
+    test('an empty existing file is treated as an empty mapping', () => {
+      writeRaw('');
+
+      writeConfig(tmpDir, coreConfig);
+
+      expect(readConfig(tmpDir)).toMatchObject(coreConfig);
+    });
+
+    test('bare-date values in preserved keys round-trip as written (no timestamp coercion)', () => {
+      // DEFAULT_SCHEMA would parse this to a JS Date and rewrite it as
+      // 2026-08-05T00:00:00.000Z; CORE_SCHEMA keeps it a plain string.
+      writeRaw('editors:\n  primary: HumphreyYang\n  since: 2026-08-05\n');
+
+      writeConfig(tmpDir, coreConfig);
+
+      const content = fs.readFileSync(configPath(), 'utf-8');
+      expect(content).toContain('since: 2026-08-05\n');
+      expect(content).not.toContain('T00:00:00');
+    });
+
+    test('throws when the existing file is a bare scalar', () => {
+      writeRaw('just a scalar\n');
+
+      expect(() => writeConfig(tmpDir, coreConfig)).toThrow(/not a YAML mapping/);
+    });
+
+    test('throws when the existing file is a bare date scalar (not silently rebuilt)', () => {
+      // Under DEFAULT_SCHEMA this loads as a Date — an object that passes a
+      // typeof guard and spreads to {}, i.e. a silent rebuild. It must throw.
+      writeRaw('2026-08-05\n');
+
+      expect(() => writeConfig(tmpDir, coreConfig)).toThrow(/not a YAML mapping/);
+    });
+
+    test('throws on typed non-mapping documents rather than merging garbage', () => {
+      // Under DEFAULT_SCHEMA !!binary loads as a Uint8Array whose numeric
+      // index keys would be spread into the rewritten config. Under
+      // CORE_SCHEMA the unknown tag fails the parse — either way, loud.
+      writeRaw('!!binary "SGVsbG8="\n');
+
+      expect(() => writeConfig(tmpDir, coreConfig)).toThrow(/not valid YAML|not a YAML mapping/);
+    });
+
+    test('YAML comments in the existing file are not preserved (documented limitation)', () => {
+      writeRaw('editors:\n  # zh lead\n  primary: HumphreyYang\n');
+
+      writeConfig(tmpDir, coreConfig);
+
+      const content = fs.readFileSync(configPath(), 'utf-8');
+      expect(content).toContain('primary: HumphreyYang');
+      expect(content).not.toContain('# zh lead');
+    });
   });
 });
 

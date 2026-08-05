@@ -126,13 +126,70 @@ export function readConfig(targetPath: string): TranslateConfig | undefined {
 /**
  * Write .translate/config.yml to the target repo.
  * Creates the .translate/ directory if it doesn't exist.
+ *
+ * Read-modify-write (#243): top-level keys the caller does not pass — e.g. a
+ * hand-maintained `editors:` block — survive bootstrap rewrites. The merge is
+ * shallow with the caller winning per key, so the core fields stay
+ * authoritative and removing a key is a hand edit, never a bootstrap side
+ * effect. The read here is deliberately lenient, unlike readConfig: a config
+ * mid-repair (core field missing or mistyped) still contributes its extra
+ * keys. An existing file that cannot be parsed as a YAML mapping fails the
+ * write loudly — rebuilding it would silently delete whatever the operator
+ * had there, and a vanished block is indistinguishable from one never added.
+ *
+ * Both load and dump use CORE_SCHEMA: DEFAULT_SCHEMA would re-type a bare
+ * date like `since: 2026-08-05` into a JS Date and rewrite it as a full ISO
+ * timestamp, silently mutating hand-maintained values; under CORE_SCHEMA
+ * scalars round-trip as written, and typed documents (`!!binary` etc.) fail
+ * the parse loudly instead of merging as garbage. Known limitation: YAML
+ * comments and formatting in the existing file are NOT preserved — js-yaml
+ * round-trips values only — so routing rationale belongs in commit messages,
+ * not comments the next bootstrap run deletes.
  */
 export function writeConfig(targetPath: string, config: TranslateConfig): void {
   const dir = path.join(targetPath, TRANSLATE_DIR);
   fs.mkdirSync(dir, { recursive: true });
   const configPath = path.join(dir, CONFIG_FILE);
-  const withVersion = { ...config, 'tool-version': getToolVersion() };
-  const content = yaml.dump(withVersion, { lineWidth: -1, quotingType: '"' });
+
+  let existing: Record<string, unknown> = {};
+  if (fs.existsSync(configPath)) {
+    const raw = fs.readFileSync(configPath, 'utf-8');
+    let parsed: unknown;
+    try {
+      parsed = yaml.load(raw, { schema: yaml.CORE_SCHEMA });
+    } catch (err) {
+      throw new Error(
+        `${configPath} exists but is not valid YAML — fix or remove it, then re-run the command ` +
+          `(refusing to overwrite it: rebuilding would silently delete its contents). ` +
+          `Parse error: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+    if (parsed !== undefined && parsed !== null) {
+      // Plain-mapping check, not just typeof: schema-typed scalars (a Date
+      // under DEFAULT_SCHEMA, a !!binary Uint8Array) are objects that would
+      // pass typeof and then spread to {} or numeric-index garbage — the
+      // silent outcomes the throw exists to prevent.
+      const proto = Object.getPrototypeOf(parsed);
+      if (
+        typeof parsed !== 'object' ||
+        Array.isArray(parsed) ||
+        (proto !== Object.prototype && proto !== null)
+      ) {
+        throw new Error(
+          `${configPath} exists but is not a YAML mapping — fix or remove it, then re-run the command ` +
+            `(refusing to overwrite it: rebuilding would silently delete its contents).`
+        );
+      }
+      existing = parsed as Record<string, unknown>;
+    }
+  }
+
+  const merged = { ...existing, ...config, 'tool-version': getToolVersion() };
+  const content = yaml.dump(merged, {
+    lineWidth: -1,
+    quotingType: '"',
+    schema: yaml.CORE_SCHEMA,
+  });
   fs.writeFileSync(configPath, content, 'utf-8');
 }
 

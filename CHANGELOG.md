@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **`writeConfig` no longer deletes config keys it does not know about** (#243): every config writer (`init`, `setup`, `status --write-state`) rebuilt `.translate/config.yml` from the three core fields, so any other top-level key — the `editors:` routing block QuantEcon/project-translation#15 Stage 2 needs being the motivating case — was silently destroyed on the next bootstrap run, and a vanished block is indistinguishable from one never added. `writeConfig` is now read-modify-write: existing top-level keys survive, the caller wins per key (core fields stay authoritative), and the merge read is deliberately lenient so a config mid-repair still contributes its extra keys. Fail-loud polarity: an existing file that cannot be parsed as a YAML mapping now fails the write with a pointed error instead of being silently rebuilt — all three callers are operator-run CLI commands, and a hand-edited block one syntax error away from valid should stop the command, not evaporate. Existing key order is preserved on rewrite, keeping diffs minimal in edition repos where the file is committed. Scalars round-trip as written (CORE_SCHEMA on load and dump — DEFAULT_SCHEMA would silently re-type a bare date like `since: 2026-08-05` into a full ISO timestamp), and typed non-mapping documents (`!!binary`, a bare date scalar) hit the fail-loud path rather than merging as garbage or silently rebuilding. Two documented limitations: YAML comments and formatting in the existing file are **not** preserved (js-yaml round-trips values only — keep routing rationale in commit messages, not comments the next bootstrap run deletes), and a file containing only comments reads as an empty document per YAML semantics, taking the empty-file path.
+
 ## [0.25.0] - 2026-08-04
 
 ### Security
