@@ -62,6 +62,7 @@ Embedded at the end of the review comment (the comment whose first line is the `
 {
   "schemaVersion": 1,
   "engineVersion": "0.22.0",
+  "engineRef": "v0",
   "reviewerModel": "claude-sonnet-5",
   "reviewedHeadSha": "abc123…",
   "targetBaseSha": "def456…",
@@ -103,7 +104,8 @@ Embedded at the end of the review comment (the comment whose first line is the `
 | Field | Type | Meaning |
 |-------|------|---------|
 | `schemaVersion` | number | Contract version |
-| `engineVersion` | string | action-translation version that produced the verdict (`unknown` if unresolvable) |
+| `engineVersion` | string | action-translation version that produced the verdict (`unknown` if unresolvable). When the action ran from a non-release ref, the ref is appended as semver build metadata after replacing characters outside `[0-9A-Za-z.-]` with `-` (e.g. `0.25.0+main`; ref `feat/x` → `0.25.0+feat-x`, so the suffix is **not** guaranteed to equal `engineRef`) — `package.json` on a branch carries the previous release's number, so the bare version would assert a release that did not produce the verdict (#244). The `unknown` sentinel is never suffixed |
+| `engineRef` | string (optional) | Ref the action executed from (`GITHUB_ACTION_REF`, verbatim: `v0`, `main`, a pinned SHA). Absent outside GitHub Actions and on pre-#244 blocks. Field addition — no `schemaVersion` bump |
 | `reviewerModel` | string | Model that performed the review |
 | `sourceRepo` | string | English source repository the review compared against (`owner/repo`) |
 | `prNumber` | number | The reviewed PR |

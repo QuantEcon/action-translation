@@ -104,6 +104,13 @@ export const CRITERION_FLOORS: Record<
 export interface ReviewVerdictV2 {
   schemaVersion: number;
   engineVersion: string;
+  /**
+   * Ref the action executed from (`GITHUB_ACTION_REF`: `v0`, `main`, a pinned
+   * SHA), verbatim. Absent outside GitHub Actions. Pure field addition (#244)
+   * — consumers ignore unknown fields, so no schemaVersion bump, per the
+   * `diffCheckSources` precedent.
+   */
+  engineRef?: string;
   reviewerModel: string;
   /** Head SHA of the PR the verdict was computed against — any push invalidates it. */
   reviewedHeadSha: string;
@@ -163,24 +170,24 @@ export interface ReviewVerdictV2 {
 // ENGINE VERSION
 // ============================================================================
 
-let _cachedEngineVersion: string | undefined;
+let _cachedPackageVersion: string | undefined;
 
 /**
- * Engine version from package.json, for verdict provenance. The action runs
- * from its tag checkout so package.json sits beside dist-action/; in Jest,
- * __dirname is src/. Memoized; 'unknown' when it cannot be located — a
- * missing version must never fail a review.
+ * Package version from package.json. The action runs from its ref checkout so
+ * package.json sits beside dist-action/; in Jest, __dirname is src/. Memoized;
+ * 'unknown' when it cannot be located — a missing version must never fail a
+ * review.
  */
-export function getEngineVersion(): string {
-  if (_cachedEngineVersion !== undefined) return _cachedEngineVersion;
+function resolvePackageVersion(): string {
+  if (_cachedPackageVersion !== undefined) return _cachedPackageVersion;
 
   if (typeof __dirname === 'string') {
     try {
       const pkgPath = path.resolve(__dirname, '../package.json');
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
       if (pkg.name === 'action-translation' && typeof pkg.version === 'string') {
-        _cachedEngineVersion = pkg.version;
-        return _cachedEngineVersion!;
+        _cachedPackageVersion = pkg.version;
+        return _cachedPackageVersion!;
       }
     } catch {
       /* fall through */
@@ -189,16 +196,61 @@ export function getEngineVersion(): string {
       const pkgPath = path.resolve(__dirname, '../../package.json');
       const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
       if (pkg.name === 'action-translation' && typeof pkg.version === 'string') {
-        _cachedEngineVersion = pkg.version;
-        return _cachedEngineVersion!;
+        _cachedPackageVersion = pkg.version;
+        return _cachedPackageVersion!;
       }
     } catch {
       /* fall through */
     }
   }
 
-  _cachedEngineVersion = 'unknown';
-  return _cachedEngineVersion;
+  _cachedPackageVersion = 'unknown';
+  return _cachedPackageVersion;
+}
+
+/**
+ * Ref the action is executing from — GITHUB_ACTION_REF, which the runner sets
+ * for the executing action step (`v0`, `main`, a pinned SHA). Undefined
+ * outside GitHub Actions (Jest, CLI). Returned verbatim; sanitisation happens
+ * only where the ref is folded into the engineVersion suffix.
+ */
+export function getEngineRef(): string | undefined {
+  const ref = process.env.GITHUB_ACTION_REF?.trim();
+  return ref ? ref : undefined;
+}
+
+/** Release-shaped ref (`v0`, `v0.25`, `v0.25.0`) — package.json is authoritative there. */
+const RELEASE_TAG_RE = /^v\d+(\.\d+){0,2}$/;
+
+/**
+ * Pure suffix rule for engineVersion, exported for direct testing (the
+ * `unknown` branch is unreachable in Jest through getEngineVersion, where
+ * package.json always resolves). A non-release ref is appended as semver
+ * build metadata, sanitised; a release-shaped tag keeps the bare version.
+ * The `unknown` sentinel is never suffixed: the contract documents the exact
+ * string, consumers key off it, and the ref is already carried verbatim in
+ * `engineRef`, so `unknown+main` would break the sentinel while adding
+ * nothing.
+ */
+export function formatEngineVersion(version: string, ref: string | undefined): string {
+  if (version === 'unknown') return version;
+  if (ref !== undefined && !RELEASE_TAG_RE.test(ref)) {
+    return `${version}+${ref.replace(/[^0-9A-Za-z.-]/g, '-')}`;
+  }
+  return version;
+}
+
+/**
+ * Engine version for verdict provenance (#244). package.json on a branch
+ * carries the *previous* release's number until a release commit bumps it, so
+ * a bare version from a non-release ref asserts a release that did not produce
+ * the verdict — every `@main` harness verdict was mislabelled this way. When
+ * the executing ref is not a release-shaped tag, the ref is appended as semver
+ * build metadata (`0.25.0+main`) so the value is falsifiable; a release-tag
+ * checkout is the one case where the bare version is already truthful.
+ */
+export function getEngineVersion(): string {
+  return formatEngineVersion(resolvePackageVersion(), getEngineRef());
 }
 
 // ============================================================================
@@ -598,6 +650,9 @@ function isWellFormedVerdict(parsed: unknown): boolean {
 
   if (!isNonEmptyString(b.reviewedHeadSha)) return false;
   if (!isString(b.engineVersion) || !isString(b.reviewerModel)) return false;
+  // Optional like wouldAutoMerge/diffCheckSources: absent is fine, present
+  // but malformed is a wrong-shape block.
+  if (b.engineRef !== undefined && !isNonEmptyString(b.engineRef)) return false;
   if (!isString(b.targetBaseSha) || !isString(b.sourceRepo) || !isString(b.timestamp)) return false;
   if (!isFiniteNumber(b.prNumber) || !isFiniteNumber(b.syntaxErrorCount)) return false;
 

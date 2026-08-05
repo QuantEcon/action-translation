@@ -36,6 +36,7 @@ import {
   computeRecommendation,
   findingToDisplayString,
   getEngineVersion,
+  getEngineRef,
   normalizeFindings,
   sanitizeCommentText,
   sortAndCapFindings,
@@ -1188,6 +1189,7 @@ export class TranslationReviewer {
     const verdictV2: ReviewVerdictV2 = {
       schemaVersion: REVIEW_VERDICT_SCHEMA_VERSION,
       engineVersion: getEngineVersion(),
+      engineRef: getEngineRef(),
       reviewerModel: this.model,
       reviewedHeadSha: pr.head.sha,
       targetBaseSha: pr.base.sha,
@@ -1335,6 +1337,7 @@ export class TranslationReviewer {
       buildVerdictBlock({
         schemaVersion: REVIEW_VERDICT_SCHEMA_VERSION,
         engineVersion: getEngineVersion(),
+        engineRef: getEngineRef(),
         reviewerModel: this.model,
         reviewedHeadSha: pr.head.sha,
         targetBaseSha: pr.base.sha,

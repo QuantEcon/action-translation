@@ -35911,17 +35911,17 @@ var CRITERION_FLOORS = {
   fluency: 8,
   formatting: 8
 };
-var _cachedEngineVersion;
-function getEngineVersion() {
-  if (_cachedEngineVersion !== void 0)
-    return _cachedEngineVersion;
+var _cachedPackageVersion;
+function resolvePackageVersion() {
+  if (_cachedPackageVersion !== void 0)
+    return _cachedPackageVersion;
   if (typeof __dirname === "string") {
     try {
       const pkgPath = path2.resolve(__dirname, "../package.json");
       const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
       if (pkg.name === "action-translation" && typeof pkg.version === "string") {
-        _cachedEngineVersion = pkg.version;
-        return _cachedEngineVersion;
+        _cachedPackageVersion = pkg.version;
+        return _cachedPackageVersion;
       }
     } catch {
     }
@@ -35929,14 +35929,30 @@ function getEngineVersion() {
       const pkgPath = path2.resolve(__dirname, "../../package.json");
       const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
       if (pkg.name === "action-translation" && typeof pkg.version === "string") {
-        _cachedEngineVersion = pkg.version;
-        return _cachedEngineVersion;
+        _cachedPackageVersion = pkg.version;
+        return _cachedPackageVersion;
       }
     } catch {
     }
   }
-  _cachedEngineVersion = "unknown";
-  return _cachedEngineVersion;
+  _cachedPackageVersion = "unknown";
+  return _cachedPackageVersion;
+}
+function getEngineRef() {
+  const ref = process.env.GITHUB_ACTION_REF?.trim();
+  return ref ? ref : void 0;
+}
+var RELEASE_TAG_RE = /^v\d+(\.\d+){0,2}$/;
+function formatEngineVersion(version, ref) {
+  if (version === "unknown")
+    return version;
+  if (ref !== void 0 && !RELEASE_TAG_RE.test(ref)) {
+    return `${version}+${ref.replace(/[^0-9A-Za-z.-]/g, "-")}`;
+  }
+  return version;
+}
+function getEngineVersion() {
+  return formatEngineVersion(resolvePackageVersion(), getEngineRef());
 }
 var isPlainObject3 = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
 function truncateField(value) {
@@ -36727,6 +36743,7 @@ var TranslationReviewer = class {
     const verdictV2 = {
       schemaVersion: REVIEW_VERDICT_SCHEMA_VERSION,
       engineVersion: getEngineVersion(),
+      engineRef: getEngineRef(),
       reviewerModel: this.model,
       reviewedHeadSha: pr.head.sha,
       targetBaseSha: pr.base.sha,
@@ -36836,6 +36853,7 @@ Every file removed here is also deleted by source PR #${sourcePrNumber}, so the 
 ` + buildVerdictBlock({
       schemaVersion: REVIEW_VERDICT_SCHEMA_VERSION,
       engineVersion: getEngineVersion(),
+      engineRef: getEngineRef(),
       reviewerModel: this.model,
       reviewedHeadSha: pr.head.sha,
       targetBaseSha: pr.base.sha,
