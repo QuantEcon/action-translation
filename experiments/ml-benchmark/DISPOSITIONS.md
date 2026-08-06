@@ -198,10 +198,94 @@ out as `test-translation-sync.ml` PRs for inline flagging.
 ## Next actions
 
 1. ~~Commit reply + parsed JSON + this report~~ (this PR)
-2. Follow-up to Adisankar: `malayalam-review-followup.md` (A5/A6/A7 with
-   sentences, B2 clarification) — email, same raw-file round-trip
+2. ~~Follow-up to Adisankar: `malayalam-review-followup.md` (A5/A6/A7 with
+   sentences, B2 clarification) — email, same raw-file round-trip~~ — returned
+   2026-08-06, all three resolved; see "Follow-up round" below
 3. Companion PR: rules rewrite + glossary v0.2.0 + regeneration evidence
 4. Phase 2 batch through `test-translation-sync.ml` after merge
 5. New issue: cultural-reference flagging (D2)
 6. Phase 3 carries: transliteration gate graduation (A14), judge calibration
    against B1/B3 renderings, A11 defects as seeded-violation test cases
+
+## Follow-up round (F1–F3) — returned 2026-08-06
+
+The three re-posed A5–A7 questions came back answered 3 of 3, closing the last
+open threads from the packet: every question either round asked is now resolved,
+and Phase 2's only remaining dependency is his inline review of
+`lecture-python-programming.ml` PRs 1–5.
+
+### Provenance and integrity
+
+| Check | Sent | Returned |
+|---|--:|--:|
+| Valid UTF-8 | yes | yes |
+| Malayalam codepoints (whole file) | 209 | 407 |
+| ZWJ / ZWNJ (whole file) | 0 / 0 | 0 / 0 |
+| Answer boxes filled | 0 of 3 | **3 of 3** |
+
+One difference the first round did not have: a single line of **our covering
+prose** came back reworded ("are now pinned to stay in English" → "are pinned
+keep-English") — outside any answer box, and git confirms the sent version had
+the former. Harmless (he tightened our sentence into our own jargon), but it
+means "returned exactly as sent" is a per-round observation, not an assumption:
+the outside-the-boxes diff is now part of the check.
+
+Files:
+
+- `malayalam-review-followup-answers-adisankar.md` — byte-exact copy of the
+  returned file
+- `malayalam-review-followup-answers-adisankar.json` — parsed answers
+  (`scripts/parse_responses.py --filled … --template malayalam-review-followup.md
+  --check-zw --json`)
+
+### Dispositions
+
+| ID | His ruling | Disposition |
+|---|---|---|
+| F1 | Both renderings wrong: "the cell with the flashing cursor" *identifies which cell*; correct form is the relative participle `flashing cursor ഉള്ള cell-ൽ` | **Rule change + live defect** — the post-packet regeneration still renders accompaniment; fix rides v0.3. His full sentence joins the example bank and the Phase 3 judge ground truth (third reviewer-supplied rendering, after B1/B3) |
+| F2 | `-നെക്കാൾ` is an acceptable colloquial variant of `-നെ അപേക്ഷിച്ച്`; `കുറച്ചു` must be dropped alongside it, since the suffix already carries the comparative | **Accepted as-is + narrow rule** — A6 formally reclassifies from suspected error to acceptable variant, as predicted above. All five delivered PRs scanned: zero instances of the banned stack |
+| F3 | (a) `-ൽ നിന്നും` correct and preferred for "selecting from"; (b) `list-ന് താഴെ` correct for "below the list" | **Accepted as-is** — A7's false-pairing hypothesis confirmed; both forms → regression inventory |
+
+### What verification against live output added
+
+- **F1 is reproducible, not historical.** The post-packet regeneration
+  (`arms/2026-08-03-postpacket-opus5/getting_started.md`) renders the sentence
+  `…flashing cursor-നോടൊപ്പം cell-ൽ appear ചെയ്യും` — the same accompaniment
+  reading, under the current rules, in a different model. The rule gap is
+  general: English "the N with X" as an identifying modifier → `X ഉള്ള N`. The
+  accompaniment rendering is a seeded-violation candidate for Phase 3.
+- **F2 compliance is already true of the batch.** The diffs of
+  lecture-python-programming.ml PRs 1–5 contain five comparative-suffix
+  sentences; none stacks `കുറച്ചു` (checked at paragraph level). Nothing to fix,
+  nothing for him to re-review.
+- **F3's exoneration is visible in the regeneration**, which renders the
+  sentence `menu items-ന്റെ list-ന് തൊട്ടു താഴെയുള്ള Code drop-down box-ൽ
+  നിന്ന്…` — near-verbatim his second natural form, with `തൊട്ടു` even
+  capturing "just below". The tool's `list-ന്` was the menu-items slot all
+  along; the packet compared two different grammatical slots, as suspected.
+
+### Watch list (seen, deliberately not acted on)
+
+- **`കൂടുതൽ` as load-bearing quantifier next to `-നെക്കാൾ`** ("more work
+  than", "gives more than") is *outside* the F2 ruling, which named only the
+  downtoner `കുറച്ചു`. The regeneration renders the F2 source sentence itself
+  this way (`option-നെക്കാൾ കൂടുതൽ work … ആവശ്യമാണ്`), and PR 4 (pandas) has
+  the same structure (`Series NumPy arrays-നേക്കാൾ കൂടുതൽ നൽകുന്നു`) — under
+  his active review, so the PR round adjudicates it organically. Extending the
+  ruling to `കൂടുതൽ` without evidence would repeat the A6 error in the other
+  direction.
+- **`നിന്ന്` vs `നിന്നും`** — he calls `-ൽ നിന്നും` "preferred"; the tool
+  writes `-ൽ നിന്ന്` throughout the five PRs. Soft-watch: if it matters, it
+  surfaces as an inline flag.
+
+### Sequencing
+
+No standalone release and no re-regeneration now: the F1 rule/example change,
+the `കുറച്ചു` constraint, and the F3 morphology examples fold into **v0.3 with
+the PR-review flags**, exactly as the batch sequencing above records. Nothing
+further is owed to the reviewer; the acknowledgement says so explicitly.
+
+Calibration note for the record: F1 is the third time he has ruled against his
+own reference (A2, the B1/B3 reorderings, now the `-ഉം` cursor sentence). The
+reference remains strong ground truth held by an adjudicating, not defending,
+reviewer.
