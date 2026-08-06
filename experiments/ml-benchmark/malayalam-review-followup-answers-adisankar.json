@@ -1,0 +1,42 @@
+{
+  "source": "malayalam-review-followup-answers-adisankar.md",
+  "questions": 3,
+  "answered": 3,
+  "blank": [],
+  "unexpected_ids": [],
+  "answers": {
+    "F1": "Neither `-ഉം` nor `-നൊപ്പം` fits. Both miss the \"which cell\" reading. The cursor is identifying which cell is active, not appearing alongside the typed text.\n\nMy preferred rendering:\n\n`ഈ mode-ൽ നിങ്ങൾ എന്ത് type ചെയ്താലും അത് flashing cursor ഉള്ള cell-ൽ നിങ്ങൾക്ക് കാണാം`\n\n`flashing cursor ഉള്ള cell-ൽ` — \"in the cell that has the flashing cursor\" — correctly identifies which cell rather than implying the cursor appears alongside the typing.",
+    "F2": "Both forms are acceptable for a comparative sentence.\n\n`-നെ അപേക്ഷിച്ച്` is the more formal version and works with `കുറച്ചു` — `option-നെ അപേക്ഷിച്ച്, local installs കുറച്ചു പ്രയാസമാണ്`\n\n`-നെക്കാൾ` is the shorter colloquial version and is also acceptable — but `കുറച്ചു` must be dropped when using it, since `-നെക്കാൾ` already carries the comparative meaning. \n\nCorrect form: `option-നെക്കാൾ, local installs പ്രയാസമാണ്`\n\nFor classroom use either is fine. If the tool defaults to `-നെക്കാൾ`, please ensure `കുറച്ചു` is not retained alongside it.",
+    "F3": "(a) Yes — `-ൽ നിന്നും` is the correct and preferred suffix for \"selecting from\" something. `drop-down list-ൽ നിന്നും` is natural.\n\n(b) Yes — `list-ന് താഴെ` is correct for \"below the list.\"\n\nTwo natural Malayalam forms work here:\n\n`menu items list-ന് താഴെ` — \"below the menu items list\"\n`menu items-ന്റെ list-ന് താഴെ` — \"below the list of menu items\"\n\nBoth are acceptable. "
+  },
+  "zero_width": {
+    "answers_with_malayalam": [
+      {
+        "id": "F1",
+        "malayalam_chars": 58,
+        "zwj": 0,
+        "zwnj": 0,
+        "atomic_chillu": 5
+      },
+      {
+        "id": "F2",
+        "malayalam_chars": 102,
+        "zwj": 0,
+        "zwnj": 0,
+        "atomic_chillu": 4
+      },
+      {
+        "id": "F3",
+        "malayalam_chars": 38,
+        "zwj": 0,
+        "zwnj": 0,
+        "atomic_chillu": 2
+      }
+    ],
+    "totals": {
+      "zwj": 0,
+      "zwnj": 0,
+      "malayalam_chars": 198
+    }
+  }
+}
