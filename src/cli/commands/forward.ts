@@ -441,6 +441,12 @@ export async function resyncSingleFile(
   }
 
   // ──── Step 3: Output ─────────────────────────────────────────────────────
+  // Keep generated Markdown POSIX-friendly at the shared output boundary so
+  // local writes and --github branches cannot diverge.
+  if (outputContent && !outputContent.endsWith('\n')) {
+    outputContent += '\n';
+  }
+
   let prUrl: string | undefined;
 
   // Compute per-file state once — committed alongside the content in --github
