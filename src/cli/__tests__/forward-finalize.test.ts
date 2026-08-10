@@ -163,12 +163,7 @@ describe('finalizeResyncContent', () => {
     // The translator trims the model's response, so finalize is where the
     // unterminated bytes arrive — every Track B resync PR carried
     // `\ No newline at end of file` because nothing added one back.
-    const result = await finalizeResyncContent(
-      MODEL_OUTPUT.trimEnd(),
-      SOURCE,
-      TARGET,
-      'cobweb.md'
-    );
+    const result = await finalizeResyncContent(MODEL_OUTPUT.trimEnd(), SOURCE, TARGET, 'cobweb.md');
 
     expect(result.endsWith('\n')).toBe(true);
     expect(result.endsWith('\n\n')).toBe(false);
