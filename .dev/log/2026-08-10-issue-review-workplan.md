@@ -171,7 +171,7 @@ against what was delivered. Five production instances so far, the latest on v0.2
 
 | Verified mechanism | Where (today) |
 |---|---|
-| ~~Per-file fetch failure logged and dropped~~ **Corrected on verification**: the four fetch sites are fail-closed (`:525` throws pre-reset; `:1097/:1158/:1190` → `result.errors` at `:881` → run fails + failure issue). The live gaps: the fr#29 drop recorded **no error at all** (drop path is upstream of fetch), and a partial PR still ships when errors exist | `src/index.ts:525`, `:881–886`, `:902` |
+| ~~Per-file fetch failure logged and dropped~~ **Corrected on verification**: the four fetch sites are fail-closed (`:525` collects into `fetchErrors`, `:533–535` throws pre-reset; `:1097/:1158/:1190` → `result.errors` at `:881` → run fails + failure issue). The live gaps: the fr#29 drop recorded **no error at all** (drop path is upstream of fetch), and a partial PR still ships when errors exist | `src/index.ts:525–535`, `:881–886`, `:902` |
 | Run error set never consulted by TOC processing, PR body, or the reviewer | `src/sync-orchestrator.ts` (TOC), `src/pr-creator.ts` (body), #157 |
 | Sync escalates a missing target file to a full first translation (`NEW` mode), undisclosed | `src/sync-orchestrator.ts:545`, `:650` |
 | `pulls.create` throw treated as "PR does not exist" — timeout after success reads as failure; naive retry would duplicate | `src/pr-creator.ts:192` (no adopt-existing check) |
