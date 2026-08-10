@@ -77,6 +77,23 @@ const defaultLogger: ForwardLogger = {
 // ============================================================================
 
 /**
+ * Terminate the document with a trailing newline.
+ *
+ * The translator trims the model's response (`translator.ts`), so without this
+ * every resynced file is written with no terminator on its last line: the
+ * Track B wave put `\ No newline at end of file` in all 69 PR diffs, which
+ * dirties the next edit's diff on each of those files and trips POSIX-minded
+ * tooling (#116). Empty content is left alone so a `''` output stays falsy and
+ * skips the write rather than becoming a one-byte file.
+ *
+ * Exported for testing.
+ */
+export function ensureTrailingNewline(content: string): string {
+  if (content.length === 0 || content.endsWith('\n')) return content;
+  return `${content}\n`;
+}
+
+/**
  * Split a document into frontmatter YAML and body.
  *
  * A leading `---` only counts as a frontmatter opener when a closing `---`
@@ -186,6 +203,9 @@ export function findEmbeddedFrontmatter(content: string, signatureKeys: Set<stri
  *    current source and resynced sections, matching what the action's
  *    processFull() path writes — without it every resynced file stays
  *    MISSING_HEADINGMAP and section-level sync cannot match it.
+ * 4. Terminate the document with a newline (#116) — the returned string is
+ *    the exact bytes that get written or committed, so the guarantee belongs
+ *    here rather than at each of the two write sites.
  *
  * Exported for testing.
  */
@@ -241,7 +261,7 @@ export async function finalizeResyncContent(
     logger.warn(`Could not build heading map for ${file}: ${msg}`);
   }
 
-  return merged;
+  return ensureTrailingNewline(merged);
 }
 
 // ============================================================================
@@ -327,8 +347,9 @@ export async function resyncSingleFile(
   let tokensUsed: number | undefined;
 
   if (options.test) {
-    // Test mode: mock resync — prefix target content with marker
-    outputContent = `[TEST RESYNC]\n${targetContent}`;
+    // Test mode: mock resync — prefix target content with marker.
+    // Terminated like the real path (#116) so --test exercises the same bytes.
+    outputContent = ensureTrailingNewline(`[TEST RESYNC]\n${targetContent}`);
     logger.info(`  ✅ Test mode — mock resync applied`);
   } else {
     // Target-local data reads (#107): code lines loading files that exist only
