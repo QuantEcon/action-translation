@@ -171,7 +171,7 @@ against what was delivered. Five production instances so far, the latest on v0.2
 
 | Verified mechanism | Where (today) |
 |---|---|
-| Per-file fetch failure logged and dropped (`core.error` is an annotation, not a failure) | `src/index.ts:525`, `:1097`, `:1158`, `:1190` |
+| ~~Per-file fetch failure logged and dropped~~ **Corrected on verification**: the four fetch sites are fail-closed (`:525` throws pre-reset; `:1097/:1158/:1190` → `result.errors` at `:881` → run fails + failure issue). The live gaps: the fr#29 drop recorded **no error at all** (drop path is upstream of fetch), and a partial PR still ships when errors exist | `src/index.ts:525`, `:881–886`, `:902` |
 | Run error set never consulted by TOC processing, PR body, or the reviewer | `src/sync-orchestrator.ts` (TOC), `src/pr-creator.ts` (body), #157 |
 | Sync escalates a missing target file to a full first translation (`NEW` mode), undisclosed | `src/sync-orchestrator.ts:545`, `:650` |
 | `pulls.create` throw treated as "PR does not exist" — timeout after success reads as failure; naive retry would duplicate | `src/pr-creator.ts:192` (no adopt-existing check) |
@@ -382,9 +382,11 @@ debt.
 The detection layer for cluster A/B. Everything here is deterministic engine work.
 
 1. **Declared-vs-delivered assertion** — every metadata `files` entry ends the run changed or
-   recorded "no change required + reason"; unexplained empty ⇒ run fails. Fail-closed content
-   fetching (`{files, errors}`; fetch errors = processing errors) at the four `index.ts` sites.
-   (#90.3, #156-B, #222-B, #256.1)
+   recorded "no change required + reason"; unexplained empty ⇒ run fails. The assertion must be
+   independent of the error plumbing: the four `index.ts` fetch sites are already fail-closed
+   (verified), yet the fr#29 drop reported success — trace and close the no-error drop path,
+   and decide whether PR creation may proceed when the error set is non-empty (`index.ts:902`
+   ships the partial PR today). (#90.3, #156-B, #222-B, #256.1)
 2. **TOC structured merge** — entries only, never captions, skip target-missing docs — plus
    the caption-script assertion. (#254, #156.1, #256.2; unblocks the concurrent-PR coupling)
 3. **PR body from the computed set** (#256.5) and a "Files failed" section linking the failure
