@@ -104,7 +104,7 @@ TEST_FILE_LECTURE="lecture.md"
 # three ways: `.github/` was deleted in the fa reset but not zh-cn's (which
 # destroyed fa's review and rebase workflows on every run), `.translate/` was
 # deleted in the targets but not the source, and ml was absent entirely while
-# its hand-made workflow fired and failed on all 26 PRs of every run.
+# its hand-made workflow fired and failed on every PR of every run.
 LANGUAGES=(
   "zh-cn|Chinese"
   "fa|Farsi"
@@ -157,7 +157,7 @@ NC='\033[0m' # No Color
 # workflows at an explicit ref, target-repo workflows permanently on `@v0` — so
 # a single run tested two versions at once and reported it as one. Worse, the
 # split was not even honest: the hand-made ml sync workflow was ALSO on `@v0`,
-# invisible to the banner, failing on all 26 PRs of every run.
+# invisible to the banner, failing on every PR of every run.
 #
 # Every template now carries the ref on its `uses:` line, so `--action-ref`
 # reaches all of them. The floating-tag check that #109 wanted is preserved by
@@ -500,14 +500,16 @@ else
         # `.github/` is deleted and re-rendered, never left in place: an orphan
         # workflow from a previous run would keep firing against a version this
         # run knows nothing about. That is what the hand-made ml sync workflow
-        # was doing — failing on all 26 PRs of every run, unreported.
+        # was doing — failing on every PR of every run, unreported.
         rm -rf ./*.md ./*.yml ./*.bib lectures/ .github/
         cp "$DATA_DIR/base-minimal.md" "$TEST_FILE_MINIMAL"
         cp "$DATA_DIR/base-lecture.md" "$TEST_FILE_LECTURE"
         cp "$DATA_DIR/base-toc.yml" "_toc.yml"
         # Source bibliography (#117 / scenario 27): carries ArrowDebreu1954,
-        # the key the backfill must copy across. Read from source MAIN, not the
-        # PR head, so it lives in the reset rather than the scenario branch.
+        # the key the backfill must copy across. It must land in THIS reset
+        # commit on the test repo's default branch: fetchBibliographies reads
+        # the source bib with no ref, i.e. from the default branch — a
+        # scenario branch adding the bib would be invisible to the action.
         cp "$DATA_DIR/base-references.bib" "references.bib"
 
         mkdir -p .github/workflows

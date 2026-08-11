@@ -175,7 +175,7 @@ _(new files, drift recovery)_
 ## In Production
 
 - lecture-python.zh-cn
-- lecture-python-programming .zh-cn / .fa / .fr
+- lecture-python-programming (zh-cn / fa / fr)
 
 </div>
 <div>
