@@ -25,6 +25,7 @@ import { updateHeadingMap, injectHeadingMap } from '../../heading-map.js';
 import { applyTypography } from '../../typography.js';
 import { checkStructuralParity, formatParityViolations } from '../../structural-parity.js';
 import { RuleId, buildLocalizationPrompt, getFontRequirements } from '../../localization-rules.js';
+import { ensureTrailingNewline } from './forward.js';
 import { readFileState, writeConfig, writeFileState } from '../translate-state.js';
 import { getFileGitMetadata } from '../git-metadata.js';
 import { loadGlossary } from '../glossary-loader.js';
@@ -279,8 +280,15 @@ export async function translateLecture(
     translatedContent
   );
 
-  // Inject translation metadata into frontmatter
-  const finalContent = injectHeadingMap(translatedContent, headingMap, translatedTitle);
+  // Inject translation metadata into frontmatter, then terminate the document
+  // with a newline — the translator trims the model's response and neither
+  // typography nor heading-map injection restores the terminator, so every
+  // seeded file was written with `\ No newline at end of file` (forward's #116,
+  // same defect on this writer). Applied before the parity guard so the guard
+  // checks the exact bytes that get written, same as forward's finalize path.
+  const finalContent = ensureTrailingNewline(
+    injectHeadingMap(translatedContent, headingMap, translatedTitle)
+  );
 
   // Structural parity: directive shapes and target anchors must survive
   // translation verbatim, same as the sync and forward write paths. init
