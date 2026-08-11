@@ -1,6 +1,6 @@
 # Presentations
 
-Modern presentation for the Translation Sync Action project built with Marp and Mermaid.
+Marp + Mermaid slide deck for the action-translation project. Content refreshed 2026-08-11 against v0.25.0 (#7); regenerate with `./build.sh` after editing the source.
 
 ## Quick Start
 
@@ -11,13 +11,13 @@ Build the presentation:
 ```
 
 This generates:
-- `action-translation-sync.pdf` - PDF presentation
-- `action-translation-sync.html` - HTML presentation  
+- `action-translation.pdf` - PDF presentation
+- `action-translation.html` - HTML presentation  
 - `diagrams/workflow.png` - Pre-rendered Mermaid diagram
 
 ## Files
 
-- `action-translation-sync.md` - Marp Markdown source (default theme)
+- `action-translation.md` - Marp Markdown source (default theme)
 - `diagrams/workflow.mmd` - Mermaid diagram source
 - `diagrams/workflow.png` - Generated diagram (created by build script)
 - `build.sh` - Automated build script
@@ -56,12 +56,12 @@ mmdc -i diagrams/workflow.mmd -o diagrams/workflow.png -t neutral -b transparent
 
 Build PDF:
 ```bash
-marp action-translation-sync.md -o action-translation-sync.pdf --allow-local-files
+marp action-translation.md -o action-translation.pdf --allow-local-files
 ```
 
 Build HTML:
 ```bash
-marp action-translation-sync.md -o action-translation-sync.html --allow-local-files
+marp action-translation.md -o action-translation.html --allow-local-files
 ```
 
 ## Presentation Contents
@@ -79,7 +79,7 @@ marp action-translation-sync.md -o action-translation-sync.html --allow-local-fi
 
 ### Markdown Source
 
-Edit `action-translation-sync.md` - standard Markdown with Marp directives.
+Edit `action-translation.md` - standard Markdown with Marp directives.
 
 The presentation uses Marp's **default theme** with custom CSS for two-column layouts.
 
@@ -95,8 +95,8 @@ Using Marp's built-in **default** theme - clean and simple, works well for conte
 
 ## Presenting
 
-**PDF:** Open `action-translation-sync.pdf` in any PDF viewer  
-**HTML:** Open `action-translation-sync.html` in a browser (arrow keys to navigate)
+**PDF:** Open `action-translation.pdf` in any PDF viewer  
+**HTML:** Open `action-translation.html` in a browser (arrow keys to navigate)
 
 ## Changelog
 

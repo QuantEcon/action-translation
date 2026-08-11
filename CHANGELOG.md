@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **E2E harness scenario 27: citation backfill is now exercisable end-to-end** (#256 defect 3 verification): the harness fixtures carried zero `{cite}` keys, which is why #117 was unexercisable at v0.25.0 release gating. Target repos now reset with a minimal `_config.yml` (whose `bibtex_bibfiles` is what arms the guard) plus a `references.bib` deliberately missing the test key; the source repo carries the key. Scenario 27 introduces the citation and the sync PR must deliver the backfilled entry. Verified against the deployed release on first run: `--action-ref v0` (= v0.25.0), sync green, test-translation-sync.zh-cn#710 delivered the translated citation, the appended bib entry, and the state file. Observation recorded for the W1 declared-vs-delivered work: the metadata `files[]` block declares only the markdown, not the bib or state file it also delivers.
+
 ### Deprecated
 - **Reading the legacy `heading-map:` frontmatter format now logs a deprecation warning** (#53): every writer has emitted the `translation:` format since v0.13.0, so a legacy read means the file predates the migration. The warning names the migration command (`npx translate headingmap`) and fires once per process — the reader has no filename to report, so per-read repeats would add noise without information. The fallback itself is scheduled for removal in a later release (work plan W6); the warning is the notice period.
 

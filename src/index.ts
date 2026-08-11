@@ -1471,8 +1471,9 @@ run();
  *
  * The target's `_config.yml` names them via `bibtex_bibfiles`; the source is
  * read at the same docs-relative paths. Returns undefined when the target
- * configures no bibliography (correct for editions that have none, and for the
- * harness repos, which have no `_config.yml` at all).
+ * configures no bibliography — correct for editions that have none. (The E2E
+ * harness targets DO carry a minimal `_config.yml` + `references.bib` since
+ * scenario 27, precisely so this path is exercisable end-to-end.)
  *
  * Fails closed on a configured-but-unreadable bibliography: silently skipping
  * would restore the exact silence this guard exists to remove.
