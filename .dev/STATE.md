@@ -1,4 +1,4 @@
-verified: 2026-08-11 (end of day — W0 closed)
+verified: 2026-08-11
 
 # STATE
 
@@ -18,7 +18,7 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   not App; #221 closed, #61 stays as the migration task); **#256.3** verified on the
   harness rather than the calendar (scenario 27 @ `v0`=v0.25.0 — the backfilled entry
   delivered in test-translation-sync.zh-cn#710; evidence in #256); **#7** refreshed
-  rather than wontfixed (deck renamed + rewritten against v0.25.0, regenerated).
+  rather than marked `wontfix` (deck renamed + rewritten against v0.25.0, regenerated).
   Two carry-forwards: the sync metadata `files[]` **under-declares** (bib + state
   delivered, undeclared — benign inverse of #256 defect 1, belongs in W1's assertion),
   and the test source repo carries only the zh-cn sync workflow until the next
