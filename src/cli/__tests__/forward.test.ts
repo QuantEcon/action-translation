@@ -256,6 +256,43 @@ describe('resyncSingleFile', () => {
         fixture.cleanup();
       }
     });
+
+    // Adopted from PR #232 (@LunaMeerkats): pin that already-terminated
+    // content survives byte-for-byte — CRLF included, since `endsWith('\n')`
+    // is true for `\r\n` and must not earn a second terminator.
+    it.each([
+      ['LF', '\n'],
+      ['CRLF', '\r\n'],
+    ])('preserves an existing %s ending byte-for-byte (#116)', async (label, ending) => {
+      const targetContent = `---\ntitle: Test\n---\n\n# 标题\n\n## 部分\n\n旧内容。${ending}`;
+      const fixture = createTempFixture({
+        sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## Section\n\nNew content.',
+        targetContent,
+        filename: `preserve-${label.toLowerCase()}.md`,
+      });
+
+      try {
+        const options = makeOptions({
+          source: fixture.sourceRepo,
+          target: fixture.targetRepo,
+        });
+        const result = await resyncSingleFile(
+          fixture.filename,
+          fixture.sourceRepo,
+          fixture.targetRepo,
+          'lectures',
+          options,
+          silentLogger
+        );
+
+        const expected = `[TEST RESYNC]\n${targetContent}`;
+        const targetPath = path.join(fixture.targetRepo, 'lectures', fixture.filename);
+        expect(result.outputContent).toBe(expected);
+        expect(fs.readFileSync(targetPath, 'utf-8')).toBe(expected);
+      } finally {
+        fixture.cleanup();
+      }
+    });
   });
 
   describe('error handling', () => {
