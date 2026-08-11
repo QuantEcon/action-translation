@@ -102,4 +102,18 @@ describe('translateLecture structural-parity guard', () => {
     expect(written).toContain('{code-cell}');
     expect(written).toContain('测试讲座');
   });
+
+  it('writes a file that ends with a newline (sibling of #116)', async () => {
+    // The real translator trims the model's response, so translateLecture
+    // receives unterminated content — mimic that with trimEnd(). Before the
+    // fix every seeded edition file was written without a terminator.
+    const clean = SOURCE.replace('# Test Lecture', '# 测试讲座')
+      .replace('## Introduction', '## 介绍')
+      .replace('Some text.', '一些文字。')
+      .trimEnd();
+    await run(clean);
+    const written = fs.readFileSync(targetFile(), 'utf-8');
+    expect(written.endsWith('\n')).toBe(true);
+    expect(written.endsWith('\n\n')).toBe(false);
+  });
 });
