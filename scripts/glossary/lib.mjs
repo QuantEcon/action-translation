@@ -54,13 +54,31 @@ export const MAX_TOKENS_EXTRACT = 8192;
 
 // Standard per-M-token pricing (USD).
 export const PRICING = {
+  'claude-fable-5': { in: 10, out: 50 },
+  'claude-opus-5': { in: 5, out: 25 },
   'claude-sonnet-5': { in: 3, out: 15 },
   'claude-sonnet-4-6': { in: 3, out: 15 },
   'claude-opus-4-8': { in: 5, out: 25 },
   'claude-opus-4-7': { in: 5, out: 25 },
+  'claude-haiku-4-5': { in: 1, out: 5 },
 };
+const warnedUnpricedModels = new Set();
 export function costUSD(model, usage) {
-  const p = PRICING[model] || { in: 0, out: 0 };
+  const p = PRICING[model];
+  if (!p) {
+    // A missing entry fails in the direction that hides spend: claude-opus-5
+    // priced every call at $0.000 for weeks and nothing looked wrong (#230).
+    // Zero is a legitimate value (cache-only responses), so "unknown" must be
+    // loud rather than encoded as a price. Warn once per model, not per call.
+    if (!warnedUnpricedModels.has(model)) {
+      warnedUnpricedModels.add(model);
+      console.warn(
+        `⚠️  No pricing entry for model '${model}' — reporting $0.000. ` +
+          `Real spend is hidden until PRICING in scripts/glossary/lib.mjs gains an entry.`
+      );
+    }
+    return 0;
+  }
   return ((usage?.input_tokens ?? 0) / 1e6) * p.in + ((usage?.output_tokens ?? 0) / 1e6) * p.out;
 }
 

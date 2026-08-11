@@ -134,7 +134,7 @@ jobs:
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
       (github.event_name == 'issue_comment' &&
        github.event.issue.pull_request &&
-       contains(github.event.comment.body, '\translate-resync') &&
+       startsWith(github.event.comment.body, '\translate-resync') &&
        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
 
@@ -158,7 +158,7 @@ jobs:
           github-token: ${{ secrets.TRANSLATION_PAT }}
 ```
 
-The `issue_comment` trigger enables the `\translate-resync` command — comment it on any merged PR to retry a failed sync. To retrigger only one language, add the language code: `\translate-resync fa` or `\translate-resync zh-cn`. Bare `\translate-resync` retriggers all languages.
+The `issue_comment` trigger enables the `\translate-resync` command — comment it on any merged PR to retry a failed sync. The command must start the comment (both the workflow gate and the action check for it there — a comment merely mentioning it mid-text does nothing). To retrigger only one language, add the language code: `\translate-resync fa` or `\translate-resync zh-cn`. Bare `\translate-resync` retriggers all languages.
 
 **The four conditions on that clause are load-bearing.** `issue_comment` workflows run in default-branch context with full access to secrets, and GitHub cannot filter the event by comment body at the trigger level — so the `if:` is the only gate. It checks that the comment is on a **pull request** (`github.event.issue.pull_request`; plain issues raise the same event), that it carries the command, and that its author is an `OWNER`, `MEMBER` or `COLLABORATOR`. Without the last one, any GitHub account can spend your Anthropic credits by commenting on a merged PR. `CONTRIBUTOR` — anyone with one merged PR — is deliberately excluded, and the action enforces the same set internally, so widening the workflow alone would only buy a run that no-ops. `permissions: contents: read` completes the picture: the action authenticates to the target repo with `TRANSLATION_PAT`, so the ambient `GITHUB_TOKEN` never needs write.
 
@@ -185,7 +185,7 @@ jobs:
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
       (github.event_name == 'issue_comment' &&
        github.event.issue.pull_request &&
-       contains(github.event.comment.body, '\translate-resync') &&
+       startsWith(github.event.comment.body, '\translate-resync') &&
        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
     permissions:
@@ -207,7 +207,7 @@ jobs:
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
       (github.event_name == 'issue_comment' &&
        github.event.issue.pull_request &&
-       contains(github.event.comment.body, '\translate-resync') &&
+       startsWith(github.event.comment.body, '\translate-resync') &&
        contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
     runs-on: ubuntu-latest
     permissions:

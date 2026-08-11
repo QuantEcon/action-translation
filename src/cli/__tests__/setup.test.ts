@@ -80,7 +80,7 @@ describe('generateSourceWorkflowYaml', () => {
     expect(yaml).toContain('types: [closed]');
     expect(yaml).toContain('issue_comment:');
     expect(yaml).toContain('types: [created]');
-    expect(yaml).toContain("contains(github.event.comment.body, '\\translate-resync')");
+    expect(yaml).toContain("startsWith(github.event.comment.body, '\\translate-resync')");
     expect(yaml).toContain('github.event.pull_request.merged == true');
     // #192: the resync clause is a trust gate, not a convenience. Without the
     // author check any account can fire a run that spends Anthropic credits

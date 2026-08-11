@@ -1,258 +1,61 @@
-verified: 2026-08-04
+verified: 2026-08-11
 
 # STATE
 
 Where things stand, ~1 page. Read this first; trust it less as the `verified:` date ages.
-Roadmap detail lives in [PLAN.md](PLAN.md), not here.
+Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predates it).
 
 ## In flight
 
-- **Week of 2026-07-27**: resume into Phase 2 per the work-plan issue (#198 — opened at
-  Wave 1 close). First gate: reformulate the round-trip invariant
-  ([`D-2026-07-24-tech-debt-audit-boundaries.md`](decisions/D-2026-07-24-tech-debt-audit-boundaries.md)).
-  v0.25.0 is **released and deployed** (2026-08-04; below). Wave 2 of the audit
-  (#169–#176 + backlog #177) remains available.
-- **Malayalam** — `ml` config landed in v0.24.0 (PR #71). The harness now drives it as a
-  first-class third language and it passes 26/26. Its two seed reference translations are
-  machine drafts awaiting native review (#207); the benchmark's Phase 1 (#194) is unrun.
+- **The standing plan is tracker #257** (2026-08-10 backlog review; supersedes #94/#198):
+  all 67 open issues triaged and verified against v0.25.0, phases W0–W6 filed as
+  sub-issues #258–#264. The dominant failure shape it names: **the failure path produces
+  a success-shaped artifact** (#90-class). Doctrine: decisions and external clocks first;
+  detection before repair; foundations before dependents.
+- **W0 (#258) is nearly closed.** Done: D2 decided (no first-translate; partial PRs ship
+  annotated — `decisions/D-2026-08-10-*.md`), label migration, closures (#89/#94/#198),
+  #116 trailing newline (forward #266 + the init sibling #267, 2026-08-11), and the
+  S-fix batch #230/#234.4/#53/#91 (this change). Remaining, none engineering-blocked:
+  **D1** (global font mechanism — deferred to W2 kickoff), **D3** (bot identity —
+  deferred until a migration is imminent; #221 closes when recorded), **#256.3** (`.bib`
+  backfill — verify on the next organic sync batch), **#7** (presentation rename or
+  `wontfix` — owner call).
+- **W1 (#259) is the next P0** — declared-vs-delivered assertion + TOC structured merge,
+  v0.26.0. Fully unblocked; the one gate is #169 first or alongside.
+- **Malayalam** — first-class harness language (26/26); its two seed reference
+  translations await native review (#207); benchmark Phase 1 (#194) unrun.
 - **Glossary PR #69** (ja) — open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
-- **#210 — merged to `main` and CONFIRMED end-to-end; shipped in v0.25.0** (#214, 2026-07-26). Review
-  mode partitions source-PR deletions out before the F40 guard, reports a deletion-only PR with
-  no model calls and an `editor` route, and gates a target deletion the source PR did not make
-  as a blocker. Non-404 target-fetch failures now fail the run (the loop's catch-all is gone),
-  so a rate-limited fetch can no longer be laundered into a translation verdict.
-  **Verified on the Actions path in all three languages.** A scoped smoke first
-  (`--languages zh-cn --scenarios 18,20`, run `30187281445`), then the estate-restoring reset
-  (`--scenarios 18`, all 9 workflows @ `main`) which re-ran scenario 18 across zh-cn, fa and
-  ml: all three green, all three posting the deletion-only comment and routing to `editor`.
-  The zh-cn run measured `API usage: 0 call(s), 0 input + 0 output tokens` — the zero-cost
-  claim observed in production, not asserted from a mock with no model to call. The exact
-  matrix that was red in #210 is now green.
-  Scenario 20 took the ordinary review path (GitHub reported `renamed`, so the old path never
-  went missing), which leaves the **delete+add rename form covered by unit tests only** —
-  filed as #216.
 
 ## Recently landed
 
-- **v0.25.0** (2026-08-04) — ships everything since Wave 1: the #192 trust-gated workflow
-  templates, #117 demand-driven bibliography backfill (turns previously-green runs red by
-  design when a key resolves nowhere), #210 deletion partitioning (deletion-only PRs stop
-  failing review), the #202 one-version E2E harness, #237 ml packet rulings and #241 fr
-  editor rules + glossary v1.1. **Released and deployed 2026-08-04**: #242 squash-merged
-  (`c74e3aa`), three tags cut, `@v0` peels to `c74e3aa`. Gated per AGENTS.md §4a at the tag
-  with a **scoped** run (scenario 01 × zh-cn/fa/ml — full matrix ran 78/78 at `main`
-  2026-07-25, and the fixtures carry zero `{cite}` keys so #117 is unexercisable on the
-  harness at any scope), then the `@v0` smoke after the tag move: both rounds green on all
-  three lanes, every verdict block `engineVersion: 0.25.0`. zh-cn/fa recommended
-  `auto-merge` clean both rounds; ml passed but routed `editor` on minor gating findings
-  both rounds — first field data on the #237 rules, worth watching. **The shadow gate is
-  field-validated** (Stage 4 of QuantEcon/project-translation#15): `auto-merge-mode:
-  shadow` on the zh-cn harness review workflow produced `wouldAutoMerge: true` in the
-  block, the workflow notice, and no action — PR left open. Two operational findings from
-  that validation: a `pull_request` run resolves its workflow from the PR's **frozen merge
-  ref**, so label-cycling never picks up a workflow edit (`update-branch` is the reliable
-  re-fire); and review mode updates its existing comment in place, so a re-review leaves
-  one comment. Watch: the first organic **fr** review after the tag move — the new
-  register rules feed review mode and could not be exercised locally (no fr harness lane).
-  The deployed estate's sync workflows were already hand-gated (#220, closed); this
-  release makes `translate setup` and every documented template ship the gated shape.
-
-- **#192 — the `\translate-resync` trust gate, CLOSED across all three rollout steps**
-  (2026-07-26, #219 + QuantEcon/lecture-python-intro#805 +
-  QuantEcon/lecture-python-programming#586; estate tracked in #220, also closed). The trigger
-  ran a secrets-bearing workflow for **any** commenter on public repos; the `if:` now requires
-  a comment on a PR, the command, and an `OWNER`/`MEMBER`/`COLLABORATOR` author, and the job
-  declares `permissions: contents: read`. Fourteen in-repo copies plus the four production
-  workflows. **Closing audit: 8/8 deployed workflows gated**, re-fetched from their default
-  branches and *parsed* rather than grepped, with an org-wide sweep confirming the set is
-  complete rather than merely matching the original report's list.
-  [`D-2026-07-26-resync-trust-gate-association-set.md`](decisions/D-2026-07-26-resync-trust-gate-association-set.md)
-  settles the `CONTRIBUTOR` question #138 left open — the deciding argument is that
-  `inputs.ts` already enforces that exact set, so a looser workflow gate would only buy a
-  billed run that no-ops.
-  **E2E-confirmed, both branches** (scoped harness run, `--scenarios 01` at 59f7c56): the
-  merge branch fired three green syncs and three translation PRs — the load-bearing check,
-  since a mis-folded scalar does not error, it silently stops the workflow firing; and a
-  `MEMBER`'s `\translate-resync` comment was **admitted**, jobs starting and logging the
-  resync line before exiting on "not merged" with no model calls. The *rejection* half stays
-  unverified — it needs an account outside the org.
-  **Two residuals, neither blocking**: `translate setup` still scaffolds the ungated shape
-  until the next release (the fixed scaffolder ships in the action; `[Unreleased]` entry is in
-  place, and no newly-scaffolded repos exist yet), and **#221** records that GitHub Apps always
-  report `author_association=NONE`, so an App-based sync bot would silently lose the ability to
-  resync while a `quantecon-services` machine user needs no change at all.
-
-- **The E2E harness tests one version, everywhere** (2026-07-25, #206 + #209). A "full run"
-  used to pin **2 of 9** workflows; the rest floated on `@v0`, so one run tested two versions
-  and reported it as one. Two were worse than unpinned: the fa reset deleted `.github/`
-  without re-rendering (so fa's review path had *never* fired), and a hand-made ml sync
-  workflow failed on all 26 PRs of every run, unreported. Now one `LANGUAGES` array drives
-  everything, all nine workflows render from templates carrying a substituted ref, and a
-  per-workflow census prints before any PR is created. `@v0` is preserved as a *post-release
-  smoke* (`--action-ref v0`) rather than by leaving workflows floating — which is what broke
-  #202's circular gate. Default ref is now `main`; release gating is an explicit
-  `--action-ref vX.Y.Z` step, added to the release checklist as AGENTS.md §4a (#212).
-  **Verified by a full run**: 78/78 sync green (26/26 × zh-cn/fa/ml), 26 translation PRs per
-  target, zero failure issues — plus a `@v0` smoke confirming tag resolution. ml went from
-  0/26 to 26/26. Scope limiter `--languages`/`--scenarios` added for cheap smokes; note the
-  write path is unexercised by `--dry-run`, which is where both bugs in the rewrite lived.
-
-- **v0.24.0** (2026-07-25) — **Wave 1, shipped whole**. The release carries nothing but the
-  wave below; the significant fact is that cutting it moved the floating `@v0` tag, so every
-  Wave 1 change deployed estate-wide at once — including the red-by-design behaviours
-  (rebase runs that now fail on error, bulk runs that now exit non-zero) and the reviewer's
-  missing overload-retry. Expect previously-green runs to go red where they were already
-  failing silently. Watch the first organic sync and review after the tag move.
-
-- **Tech-debt Wave 1 complete** (2026-07-24, one day): all eleven PRs #158–#168 merged
-  (#180, #183–#186, #188, #190, #193, #195–#197), retiring 51 audit findings. The shape:
-  guardrails first (type-checked tests, smoke freshness, `.dev` ref checker), then the
-  init parity guard (corpus measured: 31/248 seeded pairs fail, 25 in intro.zh-cn),
-  failure-is-not-optional (rebase can fail, bulk exits non-zero, `--resume` retries),
-  one canonical review workflow (five of six copies could never fire), a contracts owner
-  module with label bootstrap, seven cheap-correctness fixes, one retry predicate with
-  `maxRetries: 0` ×6 and cost outputs, fail-closed parsers + the fake validator deleted,
-  ~900 LOC of dead code out (coverage flat, bundle byte-identical), the dead `toc-file`
-  input gone, and docs that tell the truth with a locked single module map and 2.1 MB off
-  the shipped bundle. Suite: 62 suites / 1,357 tests, zero skips, fully type-checked.
-  Per-PR detail: `log/2026-07-24-pr-*.md`; boundaries honoured throughout per
-  `decisions/D-2026-07-24-tech-debt-audit-boundaries.md`.
-
-- **v0.23.0** (2026-07-23) — **the glossary pair plus the diff-check provenance split**; all
-  three were "fix before shadow mode" blockers, so shadow calibration is now unblocked.
-  #150 fixed the CLI half of the glossary defect: `forward` and `init` resolved glossary
-  candidates only against `process.cwd()`, and **no edition repo carries a glossary** — they ship
-  inside this package — so a resync launched from the target repo translated with no glossary and
-  logged nothing either way. Production signature matched exactly: the `init`-seeded lectures in
-  lecture-python.zh-cn all use the glossary's 边缘分布 for "Marginal distribution" while the
-  2026-07-19 `forward` wave took `prob_matrix.md` from 12 wrong / 28 correct to 25 wrong / 35
-  correct. Resolution is now package-relative and reported, with `forward --glossary` added.
-  #151 fixed the Action half (#146: review mode never read `glossary-path`) and, in doing so,
-  surfaced a deeper defect the issue did not describe — the shared loader tried the built-in
-  glossary **first** and treated the custom path as a fallback, so `glossary-path` was silently
-  dead in **all three modes** for every language that ships a glossary, i.e. the whole estate.
-  It is now an override that fails the run when unreadable.
-  #152 (#148) split measured fact from model opinion in the four `diffChecks`, which gate
-  absolutely but were all model output — a hallucinated boolean routed a correct PR to `editor`
-  on the second organic production PR under verdict v2. `structurePreserved` and
-  `headingMapCorrect` are computed from ground truth the engine already holds;
-  `scopeCorrect`/`positionCorrect` stay model-asserted, are tagged in a new optional
-  `diffCheckSources` field, and gate through a `diff-check` finding instead of the boolean.
-  **Routing is unchanged**; the win is that Stage 4 can report the two precisions separately.
-  Note what it does *not* do: `positionCorrect` — the check that actually misfired — is still
-  model-driven, made visible rather than fixed, because deterministic change attribution across a
-  translated document would swap model false-gates for engine false-gates that are harder to spot.
-  **Verified against the live estate before shipping**: 248 of 249 production files with sections
-  carry a heading map, so the new deterministic check gates exactly one file fleet-wide —
-  lecture-python-programming.fa's `autodiff.md`, a genuine gap fixed in that edition's #142.
-  Harness-validated end to end on both target languages, including that `auto-merge` is still
-  reachable (the 2026-07-23 fixture trap) and that the check reads the **legacy** `heading-map:`
-  frontmatter key, so it will not false-gate an unmigrated repo.
-
-- **v0.22.0** (2026-07-22) — #144 delivered **reviewer verdict v2**, the machine-readable
-  review contract (#103 prerequisite, specified in #66): every review comment now ends with a
-  `translation-review-verdict` JSON block carrying per-criterion scores, the composite that was
-  computed but never printed, the four diff checks, structured findings, a **categorical
-  `auto-merge`/`editor` recommendation from rubric logic rather than the blended score**, the
-  reviewer model, the engine version, and the **head SHA the verdict was computed against**.
-  New input `auto-merge-mode: off | shadow` records the would-auto-merge decision without acting
-  (`active` fails loudly); new outputs `review-recommendation`, `reviewed-head-sha`,
-  `would-auto-merge`. `translation-sync-metadata` gains `schemaVersion: 1` from both writers and
-  both blocks are documented as a public contract in `docs/user/metadata-contract.md`.
-  **Validation is the story**: six live harness runs (driving the built bundle against real PRs,
-  per the harness convention) plus an adversarial audit and Copilot's review found **fourteen
-  defects across five rounds**, most fail-open — a **verdict forgery** smuggled through
-  model-authored prose that beat a first-match parser and yielded `auto-merge` against an
-  attacker-chosen SHA; truthiness-tested `diffChecks` where a quoted `"false"` passed all four;
-  an empty `diffChecks` object gating nothing; lower-bounded-only floors that a 0–100-scale
-  response cleared; a failed source fetch scoring the target against nothing. Every one was the
-  same class — untrusted input becoming a typed value without a full shape check — and a fuzz
-  pass over the trust boundary now covers the class, not instances. **Consumer rule (breaking if
-  ignored): parse the LAST verdict block and fail closed on a malformed one.** Corrects the
-  program risk register, which held that prompt injection cannot change a verdict. Also in this
-  release: #140 (resync pins target-local data reads and strips model preamble, verifying both)
-  and #78 (fr programming-domain glossary, 364 terms). **`auto-merge-mode` defaults to `off`, so
-  nothing changes behaviourally on upgrade** — editions emit the block; no gate acts.
-- **v0.21.0** (2026-07-22) — #132 closed #131: `forward --github` PRs now carry
-  `action-translation`, the label the review workflow template gates on — every CLI resync PR
-  had been completing review as `skipped`, silently (all six of the zh-cn post-wave mini-wave).
-  #137 resolved #90 defect 2 as **removal-with-visibility**: a fence-aware estate scan (211
-  pairs, five editions, `##` and `###`) found **zero** human-authored target-only sections, and
-  the one cited case (ifp_egm's 练习) reclassified as upstream drift — the old source's
-  Exercises, deleted upstream in b27f1eb0a, correctly removed by the wave. Sync PR bodies now
-  enumerate removed target-only sections; target-only **files** documented as the supported
-  pattern for edition-specific content; the `translation.additions` design **shelved** in #90
-  with its lifecycle costs recorded (build trigger: first real human addition). Parity guard
-  deliberately unchanged — the scan shows strict source/output equality is a true corpus
-  invariant. **The P0 co-design gate is dissolved: #94 Phase 2 (round-trip invariant + real
-  `validateMyST`) is unblocked and next** — but the round-trip invariant as PLAN formulates it is
-  unachievable (13/78 files round-trip byte-for-byte; parity and idempotence hold 78/78), so
-  reformulate before building: see [`D-2026-07-24-tech-debt-audit-boundaries.md`](decisions/D-2026-07-24-tech-debt-audit-boundaries.md).
-  Also: init `-f` repo-scoped side effects filed as
-  #134; tutorial `SOURCE_ONLY` row corrected to `init -f`.
-- **v0.20.0** (2026-07-21) — #128 closed #119 + #65: structural parity guard on the sync and
-  `forward` write paths — **not `init`**, corrected 2026-07-24 by the tech-debt audit; that
-  gap closed the same day via #159 (Wave 1 PR B)
-  (directive shapes byte-equal or presence-matched by class; anchors exact). Calibrated
-  empirically: byte-equal draft over 211 real pairs → 362 false positives in 3 classes
-  (contents/index titles, prf:* titles, code-cell kernel tags) → calibrated guard passes
-  200/211, remainder pending-drift artifacts. Found live damage during calibration: sympy.fr
-  dropped (sympy)= anchor (restored, .fr#16). First wave after this may loudly fail files
-  with pre-existing anchor damage — that is the guard working the backlog. Next P0 item:
-  round-trip invariant (#94 Phase 2); nested-directive coverage belongs there.
-- **v0.19.0** (2026-07-21) — #124 closed #123: `rebase-stale-siblings` (default off) refreshes
-  non-overlapping sibling PRs during waves via update-branch — no re-translation, message-gated
-  422s. **Harness-validated pre-release** under the harness-first policy: pinned workflow to the
-  PR head, PAT token, two resync PRs, one merged → sibling refreshed and its checks re-triggered
-  (run 29799241099). The A/B that decided #125's token question ran the same day on the same
-  repo: 13 GITHUB_TOKEN-rebased heads got **zero** workflow runs; the one PAT-refreshed head got
-  its review run. Production rollout of the PAT (5 edition repos: org-secret grant + one-line
-  workflow edit each) shipped as #125, closed completed 2026-07-21. Harness targets aligned to
-  production shape (both now carry review+rebase on `@v0`, PAT in steady state) — #109.
-- **v0.18.1** (2026-07-21) — #121 closed #115: rebase mode ignored `resync/*` PRs, so a
-  drift-recovery wave left 60+ PRs going stale with every merge. The prefix turned out to be
-  enforced in **three** places, not the two the issue and the first fix assumed —
-  `runRebase`'s early return was the third, and missing it made that fix a silent no-op.
-  Caught in review, not by the suite: `src/index.ts` has **no unit coverage**, and the drift
-  test written for this very class only compared the workflow template against the predicate.
-  New `src/branch-naming.ts` owns both prefixes; a structural test now asserts no other source
-  file re-spells one, verified against the reintroduced defect. **Carry forward**: the 0%
-  coverage on `src/index.ts` is a demonstrated liability now — it holds mode dispatch and
-  rebase logic, and Phase 2's guards land next door.
-- **v0.18.0** (2026-07-18; tagged + published on merge) — forward-resync integrity day:
-  #108 fixed the `forward --github` Tier-1 cluster from the intro.zh-cn drift wave —
-  #105 (state + heading map committed with content, target frontmatter carried, stray `---`
-  fixed), #104 (resync PRs reviewable via `translation-sync-metadata` fallback), the
-  mechanical halves of #106 (flag-based discovery, outcome-based summary), #107 prompt
-  hardening (localisation as ground truth — **unvalidated**, needs a wave). #110 closed
-  #102 (criterion-score validation; incomplete review = retry/error, never FAIL). #111
-  declared node24 + bumped `@actions/*` to the CJS majors — prod advisories now 0.
-  Smoke-tested live on test-translation-sync.fa#78 (both halves). Estate pins on v0.16.1 —
-  two releases behind; bumping them is the natural next step.
-- **v0.17.0** (2026-07-16; tagged + published on merge of #101) — typography-erosion day:
-  #99 wired `applyTypography`
-  into the sync path (issue #97: every fr sync stripped the seed's NBSP; numba.md 27→14 in
-  one merge, restored by .fr#9 backfill), #100 made heading matching typography-insensitive
-  (`normalizeHeadingForMatch`, exact-first + ambiguity guard; also forward-resync typesetting,
-  headingmap/apply.mjs ping-pong, role-stripped key lookups, the deleted `[0.16.1]` CHANGELOG
-  header). #98 fixed duplicate review comments under concurrent runs.
-- **Estate upgraded to v0.16.1** — all 9 pins across 4 repos (lecture-python-programming#575,
-  .zh-cn#69, .fa#132, .fr#5). First time the estate is on one version; it spanned
-  v0.13.0–v0.16.0 that morning. **zh-cn and fa now translate with Sonnet 5.** Deployment
-  catalogue: QuantEcon/project-translation#7.
-- **v0.16.0 and v0.16.1 released** — v0.16.0 was the Sonnet 5 default + `models.ts` + fr
-  typography (`init` path only; sync wiring is #81); v0.16.1 the deep-review fixes (#83).
-  `v0`/`v0.16` now move as an explicit, spelled-out release-checklist step — `v0` had sat on
-  v0.7.0-era code for 9 releases while the README recommended it.
-- **Sonnet 5 validated for zh-cn/fa** — 26/26 correct PRs per language; 9.4/10 translation vs
-  the Dec-2025 Sonnet 4.5 baseline's 9.5 (same judge), 9.6 under Opus 4.8. Answers
-  QuantEcon/project-translation#5; note 4.6 — what they ran before — was never measured.
-  See decisions/D-2026-07-15-sonnet5-validated.md.
-- **Harness made trustworthy** (#86, #87) — it had been confidently wrong three ways: rubric
-  frozen at the pre-v0.13.0 `heading-map:` format, documents truncated at 4000 chars
-  (asymmetric en↔zh), pairs dropped silently. Baselines now committed — `.gitignore`'s bare
-  `reports/` had been swallowing them since 2025-12.
-- **fr footnote corruption repaired** — lecture-python-programming.fr#4.
+- **2026-08-11 — W0 S-fixes** (this change): #230 `claude-opus-5` pricing entry
+  ($5/$25/MTok; Opus 5 spend had reported as $0.000) + warn-once on unpriced models +
+  `VALID_MODEL_PATTERNS` gains opus-5/fable-5; #234.4 resync gate aligned to the
+  parser's `startsWith` across the scaffolder, all docs, and the harness template;
+  #53 legacy `heading-map:` deprecation warning (removal is W6); #91 heading-maps.md
+  now documents the real key format (heading text verbatim + `::` paths — the docs
+  taught lowercase-hyphenated IDs no writer ever produced).
+- **2026-08-11 — #116 closed both ways**: `forward` (#266) and `init` (#267) terminate
+  written files with a newline; all three writers now do (sync always did). Helper
+  lives in `commands/forward.ts` until #172's `finalizeTranslatedDocument` consolidates
+  finalization. Competing external PR #232 closed with credit; its LF/CRLF
+  byte-for-byte tests adopted.
+- **2026-08-10 — the backlog review shipped** (#265, `77f09da`): report + two decision
+  records on main, tracker + 7 phase issues filed, QEP-0002 labels applied.
+- **Post-v0.25.0 fixes on main**: #244 falsifiable `engineVersion` + `engineRef`
+  (`842528b`); #243 `writeConfig` read-modify-write, unknown keys survive (`597b2be`).
+- **v0.25.0** (2026-08-04) — everything since Wave 1: #192 trust-gated workflow
+  templates, #117 demand-driven bibliography backfill (red-by-design when a key
+  resolves nowhere), #210 deletion partitioning (deletion-only PRs stop failing
+  review; non-404 target-fetch failures fail the run), #202 one-version E2E harness,
+  #237 ml packet rulings, #241 fr editor rules + glossary v1.1. Released, deployed,
+  gated per AGENTS.md §4a; shadow gate field-validated (`wouldAutoMerge: true`
+  recorded, no action). Watch item still open: the first organic **fr** review since
+  the tag move exercises the new register rules for the first time.
+- **Older releases** (detail in git history and `log/`): v0.24.0 = tech-debt Wave 1
+  (#158–#168, 51 findings); v0.23.0 = glossary resolution fixed both halves +
+  diff-check provenance split; v0.22.0 = verdict v2 + `auto-merge-mode: shadow`;
+  v0.21.0 and earlier per CHANGELOG.
 
 ## Blocked
 
@@ -260,39 +63,28 @@ Roadmap detail lives in [PLAN.md](PLAN.md), not here.
 
 ## Next
 
-- **Watch the first real zh-cn/fa syncs** — the estate upgrade landed, so the next merged
-  lecture PR is the first production Sonnet 5 translation. Two things to expect that look
-  like regressions but are not: the new truncation guard may fail a long lecture that
-  previously produced silently-truncated output (#83), and pagination now processes >30-file
-  PRs completely, so a large PR costs more and produces a bigger diff than before.
-- **PLAN Phase 1 remainder**: rebase no-op comments, `context.sha` vs `merge_commit_sha`,
-  resync fail-closed, `@actions/*` + SDK major bumps (pair with node24, PLAN 5.8),
-  rebase input-validation hardening (1.5).
-- **#90 silent data loss in the sync merge path** — five ways translations vanish or English
-  leaks in while the run reports success (REVIEW §6.1). Not covered by PLAN Phase 2; the
-  Phase 2 round-trip test would catch three of them as a class, so Phase 2 first.
-- Smaller review-round follow-ups: **#91** (heading-maps.md documents a key format the action
-  has never written — nearly caused a bad rubric fix), **#92** (PR creation reports failure
-  when the API times out *after* succeeding; naive retry would duplicate — #96 flags a
-  possible second sighting: four `labeled` events recorded for two `addLabels` calls,
-  unreproduced, mechanism unknown).
-- Earlier review-round issues: **#81** (typography on sync path), **#82** (model-swap
-  eval — see REVIEW §7.4 for a concrete deterministic design).
+- **W1 (#259)**: declared-vs-delivered + TOC merge, with #169 first/alongside.
+- **W0 tail**: verify #256.3 on the next organic batch; owner decisions D1 (at W2
+  kickoff — start the editions-side conversation early), D3, #7.
+- **Watch**: first organic fr review (register rules); first organic sync batch after
+  v0.25.0 (#117 backfill turns missing-bib-key runs red by design).
+- **W4 prompt work** waits for the shadow-freeze lift (~2026-09-01); any model change
+  gates on #82's frozen eval set first.
 
 ## Health & context
 
-- `main` green; 1,357 tests (62 suites, zero skips, type-checked as of #158), lint covers
-  all files including the root `*.mjs` scripts (`--max-warnings 0`), CI checks formatting
-  and `.dev/` path:line references.
-- Highest-priority known bug class: the silent-data-loss family documented in REVIEW §6.1.
-  Issue #65 (translator drops `(label)=` anchors) is **closed** — the parity guard (#128,
-  v0.20.0) makes it fail loudly instead of writing; the parser-level anchor-binding fix is
-  the PLAN Phase 2 remainder. The class is live, the issue is not.
-- Prod dep advisories: **0** (cleared by #111's `@actions/*` CJS majors; the ESM-only
-  3.x/9.x lines remain tracked in #89).
+- `main` green; 1,516 tests (64 suites, zero skips, type-checked), lint at
+  `--max-warnings 0` including root `*.mjs`, CI checks formatting and `.dev/`
+  path:line references.
+- Highest-priority known bug class: silent partial delivery (#90 defects 3–5 as a
+  class, freshest instance 2026-08-10 fr#29 — reported success, no error recorded).
+  W1 is its detection layer.
+- Prod dep advisories: **0**. ESM-only `@actions/*` 3.x/9.x majors tracked as
+  #177 F35.
 
 ## Map
 
-[PLAN.md](PLAN.md) roadmap · [FUTURE.md](FUTURE.md) feature ideas ·
-[ARCHITECTURE.md](ARCHITECTURE.md) design questions · [decisions/](decisions/) settled calls ·
-[log/](log/) session notes · [README.md](README.md) the convention.
+[PLAN.md](PLAN.md) roadmap (pre-#257; tracker wins where they differ) ·
+[FUTURE.md](FUTURE.md) feature ideas · [ARCHITECTURE.md](ARCHITECTURE.md) design
+questions · [decisions/](decisions/) settled calls · [log/](log/) session notes ·
+[README.md](README.md) the convention.

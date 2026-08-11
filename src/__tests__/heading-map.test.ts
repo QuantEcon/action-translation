@@ -86,6 +86,54 @@ Content`;
     });
   });
 
+  describe('legacy heading-map deprecation warning (#53)', () => {
+    // The warning fires once per process, so these tests need a fresh module
+    // instance — isolateModules gives each one its own warned-flag.
+    const LEGACY = `---\nheading-map:\n  Introduction: 简介\n---\n\nContent`;
+    const CURRENT = `---\ntranslation:\n  headings:\n    Introduction: 简介\n---\n\nContent`;
+
+    let warnSpy: jest.SpyInstance;
+    beforeEach(() => {
+      warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+    afterEach(() => {
+      warnSpy.mockRestore();
+    });
+
+    function freshExtract(): typeof extractHeadingMap {
+      let fn: typeof extractHeadingMap | undefined;
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires -- fresh module instance for the once-per-process flag
+        fn = require('../heading-map.js').extractHeadingMap;
+      });
+      return fn!;
+    }
+
+    it('warns once per process when reading the legacy format', () => {
+      const extract = freshExtract();
+      extract(LEGACY);
+      extract(LEGACY); // second read must not warn again
+
+      const deprecations = warnSpy.mock.calls.filter((c) =>
+        String(c[0]).includes('translate headingmap')
+      );
+      expect(deprecations).toHaveLength(1);
+      expect(String(deprecations[0][0])).toContain('#53');
+    });
+
+    it('still reads the legacy map correctly while warning', () => {
+      const map = freshExtract()(LEGACY);
+      expect(map.get('Introduction')).toBe('简介');
+    });
+
+    it('does not warn on the current translation: format', () => {
+      freshExtract()(CURRENT);
+      expect(
+        warnSpy.mock.calls.filter((c) => String(c[0]).includes('translate headingmap'))
+      ).toHaveLength(0);
+    });
+  });
+
   describe('updateHeadingMap', () => {
     const createSection = (heading: string, subsections: Section[] = []): Section => ({
       heading,
