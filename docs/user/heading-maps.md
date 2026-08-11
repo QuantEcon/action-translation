@@ -4,7 +4,7 @@ title: Heading Maps
 
 # Heading Maps
 
-Heading maps are the mechanism that allows **action-translation** to reliably match sections across languages. They live in the YAML frontmatter of each translated document and map English section IDs to translated headings.
+Heading maps are the mechanism that allows **action-translation** to reliably match sections across languages. They live in the YAML frontmatter of each translated document and map English heading text to translated heading text.
 
 ## The problem
 
@@ -22,28 +22,29 @@ title: 蛛网模型
 translation:
   title: 蛛网模型
   headings:
-    overview: "概述"
-    equilibrium: "均衡"
-    exercises: "练习"
+    Overview: "概述"
+    Equilibrium: "均衡"
+    Exercises: "练习"
 ---
 ```
 
-The `translation.title` field stores the translated document title. The `translation.headings` is a flat map where **keys** are the English section IDs (the heading text lowercased and hyphenated, as MyST would generate) and **values** are the translated heading text as it appears in the target document.
+The `translation.title` field stores the translated document title. The `translation.headings` is a flat map where **keys** are the English heading text — `#` markers and MyST roles stripped, otherwise untouched (no lowercasing, no hyphenation) — and **values** are the translated heading text as it appears in the target document. Nested headings use `::` path keys (see the example below).
 
 :::{note}
-Legacy documents may use the older `heading-map:` format (a flat key-value block without `translation:` wrapper). The system reads both formats but always writes the new `translation:` format. Legacy documents are automatically migrated on next sync or headingmap rebuild.
+Legacy documents may use the older `heading-map:` format (a flat key-value block without `translation:` wrapper). The system reads both formats but always writes the new `translation:` format, and logs a deprecation warning when it reads the legacy one — the fallback will be removed in a future release. Legacy documents are automatically migrated on next sync or headingmap rebuild, or explicitly with `npx translate headingmap`.
 :::
 
 When the action needs to match sections, it:
-1. Parses the English document to find section headings and generate IDs
-2. Looks up each ID in the heading-map to find the corresponding translated heading
+1. Parses the English document to find section headings and cleans each one (strips the `#` markers and any MyST roles)
+2. Looks up the cleaned heading — or its `::` path, for nested sections — in the heading-map to find the corresponding translated heading
 3. Uses heading-map matches first, falls back to position matching for any unmatched sections
 
 ## Format rules
 
-- **Flat structure** — the map is a single-level key-value mapping, regardless of heading depth
+- **Flat structure** — the map is a single-level key-value mapping, regardless of heading depth; nesting is encoded in the key itself via `::` paths, never as nested YAML
 - **All heading levels** — includes `##`, `###`, `####`, etc.
-- **ID generation** — keys follow MyST's ID rules: lowercase, spaces become hyphens, punctuation removed
+- **Keys are heading text** — the English heading with `#` markers and MyST roles stripped, otherwise verbatim: capitalization, spaces, and punctuation are all preserved (`Supply and Demand`, not `supply-and-demand`)
+- **Nested headings use `::` paths** — a subsection's key is its parent chain joined with `::`, at any depth: `Model Description::Assumptions`
 - **Auto-populated** — the heading-map is created automatically on first translation and updated whenever sections change
 
 **Example with nested headings:**
@@ -60,10 +61,10 @@ Target translation metadata:
 ```yaml
 translation:
   headings:
-    model-description: "模型描述"
-    assumptions: "假设"
-    equilibrium-conditions: "均衡条件"
-    numerical-examples: "数值示例"
+    Model Description: "模型描述"
+    Model Description::Assumptions: "假设"
+    Model Description::Equilibrium Conditions: "均衡条件"
+    Numerical Examples: "数值示例"
 ```
 
 ## When heading maps are created
@@ -90,16 +91,15 @@ If a target document has no translation metadata, the action falls back to **pos
 
 The `status` CLI command reports files with missing heading maps as `MISSING_HEADINGMAP`.
 
-## ID generation rules
+## Key generation rules
 
-The heading-map key is generated from the English heading text:
+The heading-map key is the English heading text with the `#` markers and any MyST roles stripped — nothing else changes. Capitalization, spaces, and punctuation are preserved exactly:
 
-| English heading | Generated ID |
+| English heading | Heading-map key |
 |----------------|-------------|
-| `## Introduction` | `introduction` |
-| `## Model Description` | `model-description` |
-| `## Equilibrium Conditions` | `equilibrium-conditions` |
-| `### The Bellman Equation` | `the-bellman-equation` |
-| `## Exercise 1.1` | `exercise-11` |
+| `## Introduction` | `Introduction` |
+| `## Model Description` | `Model Description` |
+| `### The Bellman Equation` (under `## Model Description`) | `Model Description::The Bellman Equation` |
+| `## Exercise 1.1` | `Exercise 1.1` |
 
-Special characters are removed, spaces become hyphens, everything is lowercased.
+Top-level sections use the bare heading; nested sections prefix the parent chain joined with `::`, at any depth (`International Trade::Regional Trade Agreements::Implementation Mechanisms`). Values are always the bare translated heading text, never a path.

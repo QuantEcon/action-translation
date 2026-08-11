@@ -72,9 +72,11 @@ export const DEFAULT_THINKING: Anthropic.ThinkingConfigParam = { type: 'disabled
  * passed through to the API. Add new aliases here as generations ship.
  */
 export const VALID_MODEL_PATTERNS: RegExp[] = [
+  /^claude-fable-5$/, // claude-fable-5 (highest-capability tier)
+  /^claude-opus-5$/, // claude-opus-5 (current-generation Opus) — absent until #230: priced at $0.000 by the glossary scripts while passing validation nowhere
   /^claude-sonnet-5$/, // claude-sonnet-5 (current-generation Sonnet)
-  /^claude-opus-4-8$/, // claude-opus-4-8 (current-generation Opus)
-  /^claude-opus-4-7$/, // claude-opus-4-7 (current-generation Opus)
+  /^claude-opus-4-8$/, // claude-opus-4-8 (previous-generation Opus)
+  /^claude-opus-4-7$/, // claude-opus-4-7 (previous-generation Opus)
   /^claude-haiku-4-5$/, // claude-haiku-4-5 (current-generation Haiku, bare alias)
   /^claude-sonnet-4-6$/, // claude-sonnet-4-6 (previous-generation Sonnet)
   /^claude-opus-4-6$/, // claude-opus-4-6 (previous-generation Opus)

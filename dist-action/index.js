@@ -31332,12 +31332,16 @@ var MAX_TOKENS = {
 };
 var DEFAULT_THINKING = { type: "disabled" };
 var VALID_MODEL_PATTERNS = [
+  /^claude-fable-5$/,
+  // claude-fable-5 (highest-capability tier)
+  /^claude-opus-5$/,
+  // claude-opus-5 (current-generation Opus) — absent until #230: priced at $0.000 by the glossary scripts while passing validation nowhere
   /^claude-sonnet-5$/,
   // claude-sonnet-5 (current-generation Sonnet)
   /^claude-opus-4-8$/,
-  // claude-opus-4-8 (current-generation Opus)
+  // claude-opus-4-8 (previous-generation Opus)
   /^claude-opus-4-7$/,
-  // claude-opus-4-7 (current-generation Opus)
+  // claude-opus-4-7 (previous-generation Opus)
   /^claude-haiku-4-5$/,
   // claude-haiku-4-5 (current-generation Haiku, bare alias)
   /^claude-sonnet-4-6$/,
@@ -35566,6 +35570,7 @@ function normalizeHeadingForMatch(heading) {
 function cleanHeadingText(heading) {
   return MystParser.stripMystRoles(heading.replace(/^#+\s+/, "").trim());
 }
+var legacyHeadingMapWarned = false;
 function extractHeadingMap(content) {
   const map2 = /* @__PURE__ */ new Map();
   const frontmatterMatch = content.match(/^---\n(.*?)\n---/s);
@@ -35575,6 +35580,10 @@ function extractHeadingMap(content) {
   try {
     const frontmatter = load(frontmatterMatch[1]);
     const headingMapData = frontmatter?.translation?.headings ?? frontmatter?.["heading-map"];
+    if (!legacyHeadingMapWarned && frontmatter?.translation?.headings === void 0 && frontmatter?.["heading-map"]) {
+      legacyHeadingMapWarned = true;
+      console.warn(`\u26A0\uFE0F  Legacy 'heading-map:' frontmatter format detected. Run 'npx translate headingmap' to migrate to the 'translation:' format \u2014 the legacy fallback will be removed in a future release (#53).`);
+    }
     if (headingMapData && typeof headingMapData === "object") {
       Object.entries(headingMapData).forEach(([key, value]) => {
         if (typeof value === "string") {

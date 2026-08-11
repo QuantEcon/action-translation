@@ -278,7 +278,7 @@ const SYNC_WORKFLOW_ROOTS = [
 /** Every copy of the gate lived at a different indent, so match on content. */
 const RESYNC_GATE = {
   'requires a comment on a PR, not a bare issue': 'github.event.issue.pull_request',
-  'requires the resync command': "contains(github.event.comment.body, '\\translate-resync')",
+  'requires the resync command': "startsWith(github.event.comment.body, '\\translate-resync')",
   'requires a trusted commenter': `contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)`,
 };
 

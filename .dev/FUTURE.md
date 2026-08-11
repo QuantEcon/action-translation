@@ -73,7 +73,7 @@ same problem from another angle.
 **Design sketch**:
 - Extend `LanguageConfig` with optional `defaultModel`, and resolution order:
   action input `claude-model` (explicit) > language default > global default
-- Add `claude-opus-4-8`/current-generation IDs to the allowlist or drop pattern validation
+- ~~Add current-generation IDs to the allowlist~~ done through claude-opus-5/claude-fable-5 (#230, 2026-08-11); the structural question — drop pattern validation vs keep chasing releases — stays open
 - Per-language glossary policy field (the deferred `treatment` schema from #70) only if the
   ml calibration shows prompt rules alone are insufficient — v1 stays zero-schema-change
 - Document per-language cost implications (Opus vs Sonnet) in the language-config docs page

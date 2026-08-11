@@ -75,9 +75,9 @@ if (docsFolder === '.' || docsFolder === '/') docsFolder = '';
 translation:
   title: 经济学导论
   headings:
-    introduction: "介绍"   # English ID → translated heading
+    Introduction: "介绍"   # English heading text → translated heading
 ```
-Title is stored explicitly; headings are flat (no nesting), include all heading levels, auto-populated on first translation. Reads legacy `heading-map:` format, always writes `translation:` format.
+Title is stored explicitly; headings are a flat YAML map (nesting is encoded in the key as `Parent::Child` paths, never as nested YAML), include all heading levels, auto-populated on first translation. Keys are heading text verbatim minus `#` markers and MyST roles — no lowercasing or hyphenation (#91). Reads legacy `heading-map:` format (with a deprecation warning, #53), always writes `translation:` format.
 
 **Retry logic** (`translator.ts`) — retries `RateLimitError`, `APIConnectionError`, 5xx; never retries `AuthenticationError` or `BadRequestError`.
 

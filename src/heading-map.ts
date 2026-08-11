@@ -64,6 +64,9 @@ export function cleanHeadingText(heading: string): string {
  * Extract heading map from target document frontmatter.
  * Reads from `translation.headings` (new format) with `heading-map` fallback (legacy).
  */
+/** One warning per process for the legacy format — see the #53 note below. */
+let legacyHeadingMapWarned = false;
+
 export function extractHeadingMap(content: string): HeadingMap {
   const map = new Map<string, string>();
 
@@ -79,6 +82,25 @@ export function extractHeadingMap(content: string): HeadingMap {
 
     // New format: translation.headings
     const headingMapData = frontmatter?.translation?.headings ?? frontmatter?.['heading-map'];
+
+    // Deprecation warning on the legacy fallback (#53): every writer emits
+    // `translation:` since v0.13.0, so a legacy read means the file predates
+    // the migration. The fallback itself is scheduled for removal (W6) — warn
+    // now so remaining files get migrated before reads start failing. Once
+    // per process, not per read: the caller has no filename to report, so N
+    // repeats add noise without adding information.
+    if (
+      !legacyHeadingMapWarned &&
+      frontmatter?.translation?.headings === undefined &&
+      frontmatter?.['heading-map']
+    ) {
+      legacyHeadingMapWarned = true;
+      console.warn(
+        `⚠️  Legacy 'heading-map:' frontmatter format detected. ` +
+          `Run 'npx translate headingmap' to migrate to the 'translation:' format — ` +
+          `the legacy fallback will be removed in a future release (#53).`
+      );
+    }
 
     if (headingMapData && typeof headingMapData === 'object') {
       // Convert YAML object to Map
