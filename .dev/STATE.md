@@ -12,14 +12,17 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   sub-issues #258–#264. The dominant failure shape it names: **the failure path produces
   a success-shaped artifact** (#90-class). Doctrine: decisions and external clocks first;
   detection before repair; foundations before dependents.
-- **W0 (#258) is nearly closed.** Done: D2 decided (no first-translate; partial PRs ship
-  annotated — `decisions/D-2026-08-10-*.md`), label migration, closures (#89/#94/#198),
-  #116 trailing newline (forward #266 + the init sibling #267, 2026-08-11), and the
-  S-fix batch #230/#234.4/#53/#91 (this change). Remaining, none engineering-blocked:
-  **D1** (global font mechanism — deferred to W2 kickoff), **D3** (bot identity —
-  deferred until a migration is imminent; #221 closes when recorded), **#256.3** (`.bib`
-  backfill — verify on the next organic sync batch), **#7** (presentation rename or
-  `wontfix` — owner call).
+- **W0 (#258) CLOSED 2026-08-11** — all twelve boxes, PRs #266–#269. The tail, decided
+  by the owner one-by-one: **D1** deferred to W2 kickoff (box moved to #260 as a gate);
+  **D3** recorded (`decisions/D-2026-08-11-bot-identity-machine-user.md` — machine user,
+  not App; #221 closed, #61 stays as the migration task); **#256.3** verified on the
+  harness rather than the calendar (scenario 27 @ `v0`=v0.25.0 — the backfilled entry
+  delivered in test-translation-sync.zh-cn#710; evidence in #256); **#7** refreshed
+  rather than marked `wontfix` (deck renamed + rewritten against v0.25.0, regenerated).
+  Two carry-forwards: the sync metadata `files[]` **under-declares** (bib + state
+  delivered, undeclared — benign inverse of #256 defect 1, belongs in W1's assertion),
+  and the test source repo carries only the zh-cn sync workflow until the next
+  unscoped harness run.
 - **W1 (#259) is the next P0** — declared-vs-delivered assertion + TOC structured merge,
   v0.26.0. Fully unblocked; the one gate is #169 first or alongside.
 - **Malayalam** — first-class harness language (26/26); its two seed reference
@@ -63,9 +66,10 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## Next
 
-- **W1 (#259)**: declared-vs-delivered + TOC merge, with #169 first/alongside.
-- **W0 tail**: verify #256.3 on the next organic batch; owner decisions D1 (at W2
-  kickoff — start the editions-side conversation early), D3, #7.
+- **W1 (#259)**: declared-vs-delivered + TOC merge, with #169 first/alongside. Fold in
+  the 2026-08-11 finding: metadata `files[]` must declare everything delivered (bib,
+  state), not just the markdown — reconcile both directions.
+- **D1** at W2 (#260) kickoff — start the editions-side conversation early.
 - **Watch**: first organic fr review (register rules); first organic sync batch after
   v0.25.0 (#117 backfill turns missing-bib-key runs red by design).
 - **W4 prompt work** waits for the shadow-freeze lift (~2026-09-01); any model change
