@@ -11,6 +11,7 @@
  */
 
 import {
+  ensureTrailingNewline,
   finalizeResyncContent,
   findEmbeddedFrontmatter,
   frontmatterSignatureKeys,
@@ -156,6 +157,42 @@ describe('finalizeResyncContent', () => {
     const result = await finalizeResyncContent(modelOutput, source, target, 'odd.md', quietLogger);
 
     expect(result).toBe('只有更新的文字。\n');
+  });
+
+  it('terminates the output with a newline (#116)', async () => {
+    // The translator trims the model's response, so finalize is where the
+    // unterminated bytes arrive — every Track B resync PR carried
+    // `\ No newline at end of file` because nothing added one back.
+    const result = await finalizeResyncContent(MODEL_OUTPUT.trimEnd(), SOURCE, TARGET, 'cobweb.md');
+
+    expect(result.endsWith('\n')).toBe(true);
+    expect(result.endsWith('\n\n')).toBe(false);
+  });
+
+  it('does not add a second newline when the model output already ends with one', async () => {
+    const result = await finalizeResyncContent(MODEL_OUTPUT, SOURCE, TARGET, 'cobweb.md');
+
+    expect(result.endsWith('\n')).toBe(true);
+    expect(result.endsWith('\n\n')).toBe(false);
+  });
+});
+
+describe('ensureTrailingNewline', () => {
+  it('appends a newline when the content lacks one', () => {
+    expect(ensureTrailingNewline('# Title\n\nBody.')).toBe('# Title\n\nBody.\n');
+  });
+
+  it('leaves already-terminated content byte-identical', () => {
+    expect(ensureTrailingNewline('# Title\n\nBody.\n')).toBe('# Title\n\nBody.\n');
+  });
+
+  it('preserves trailing blank lines rather than collapsing them', () => {
+    // Narrow fix: add the missing terminator, change nothing else
+    expect(ensureTrailingNewline('Body.\n\n')).toBe('Body.\n\n');
+  });
+
+  it('leaves empty content empty so it stays falsy and skips the write', () => {
+    expect(ensureTrailingNewline('')).toBe('');
   });
 });
 
