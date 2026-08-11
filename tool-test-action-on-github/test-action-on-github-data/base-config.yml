@@ -1,0 +1,9 @@
+# Target-repo _config.yml — minimal jupyter-book config whose only load-bearing
+# key is bibtex_bibfiles: it is what switches the action's bibliography
+# backfill on (#117). fetchBibliographies reads THIS repo's config, then reads
+# the named bib at the same docs-relative path in both repos. Removing this
+# file (or the key) silently turns scenario 27 into a no-op — the backfill
+# "not applicable" path — rather than failing it.
+title: Test Translation Sync
+bibtex_bibfiles:
+  - references.bib

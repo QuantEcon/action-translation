@@ -77,7 +77,7 @@ cd /path/to/action-translation/tool-test-action-on-github
 
 The script will:
 1. Reset test repositories to clean state
-2. Run 26 automated test scenarios
+2. Run 27 automated test scenarios
 3. Create PRs in source repository with `test-translation` label
 4. Label triggers action → creates translation PRs in **every** target repository
 5. Report results
@@ -101,7 +101,7 @@ Evaluation uses **Claude Opus 4.5** to assess:
 
 Reports are saved to `reports/evaluation-<date>.md`.
 
-## Test Scenarios (26 total)
+## Test Scenarios (27 total)
 
 The tool tests translation scenarios across four phases:
 
@@ -146,6 +146,11 @@ The tool tests translation scenarios across four phases:
 | 24 | Empty sections | Sections with headings but no content |
 | 25 | Pre-title content | Anchor (`(label)=`) + `{raw}` block before `# title` |
 | 26 | Heading case change | Title-case → sentence-case headings (heading-map lookup) |
+
+### Phase 5: Shared Assets (Test 27)
+| # | Scenario | Description |
+|---|----------|-------------|
+| 27 | Citation backfill | `{cite}` role introduced; the cited key lives in the source's `references.bib` but not the target's, so the sync PR must carry the backfilled entry (#117; verifies action-translation#256 defect 3). The target repos' `_config.yml` + `references.bib` fixtures are what arm the guard — see `base-config.yml`. |
 
 ## Directory Structure
 

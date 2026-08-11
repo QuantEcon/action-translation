@@ -486,7 +486,7 @@ echo -e "${BLUE}Step 1: Preparing source repository...${NC}"
 
 if [ "$DRY_RUN" = true ]; then
     echo -e "${CYAN}[DRY RUN] Would reset $OWNER/$SOURCE_REPO to base state:${NC}"
-    echo -e "${CYAN}  - lecture-minimal.md, lecture.md, _toc.yml${NC}"
+    echo -e "${CYAN}  - lecture-minimal.md, lecture.md, _toc.yml, references.bib${NC}"
     for L in "${LANGUAGES[@]}"; do
         echo -e "${CYAN}  - .github/workflows/sync-translations-$(lang_code "$L").yml @ $ACTION_REF${NC}"
     done
@@ -501,10 +501,14 @@ else
         # workflow from a previous run would keep firing against a version this
         # run knows nothing about. That is what the hand-made ml sync workflow
         # was doing — failing on all 26 PRs of every run, unreported.
-        rm -rf ./*.md ./*.yml lectures/ .github/
+        rm -rf ./*.md ./*.yml ./*.bib lectures/ .github/
         cp "$DATA_DIR/base-minimal.md" "$TEST_FILE_MINIMAL"
         cp "$DATA_DIR/base-lecture.md" "$TEST_FILE_LECTURE"
         cp "$DATA_DIR/base-toc.yml" "_toc.yml"
+        # Source bibliography (#117 / scenario 27): carries ArrowDebreu1954,
+        # the key the backfill must copy across. Read from source MAIN, not the
+        # PR head, so it lives in the reset rather than the scenario branch.
+        cp "$DATA_DIR/base-references.bib" "references.bib"
 
         mkdir -p .github/workflows
         for L in "${LANGUAGES[@]}"; do
@@ -529,7 +533,7 @@ for L in "${LANGUAGES[@]}"; do
 
     if [ "$DRY_RUN" = true ]; then
         echo -e "${CYAN}[DRY RUN] Would reset $OWNER/$repo ($name):${NC}"
-        echo -e "${CYAN}  - base-minimal-$code.md, base-lecture-$code.md, base-toc-$code.yml${NC}"
+        echo -e "${CYAN}  - base-minimal-$code.md, base-lecture-$code.md, base-toc-$code.yml, _config.yml, references.bib${NC}"
         echo -e "${CYAN}  - .github/workflows/{review,rebase}-translations.yml @ $ACTION_REF${NC}"
         continue
     fi
@@ -543,10 +547,17 @@ for L in "${LANGUAGES[@]}"; do
         # it back on the next line. The fa block used to do the delete WITHOUT
         # the render, which silently destroyed that target's review and rebase
         # workflows on every run — fa had none at all until this change.
-        rm -rf ./*.md ./*.yml lectures/ .translate/ .github/
+        rm -rf ./*.md ./*.yml ./*.bib lectures/ .translate/ .github/
         cp "$DATA_DIR/base-minimal-$code.md" "$TEST_FILE_MINIMAL"
         cp "$DATA_DIR/base-lecture-$code.md" "$TEST_FILE_LECTURE"
         cp "$DATA_DIR/base-toc-$code.yml" "_toc.yml"
+        # Bibliography backfill wiring (#117 / scenario 27): the TARGET's
+        # _config.yml naming bibtex_bibfiles is what turns the guard on, and a
+        # configured-but-missing bib fails the run closed — so both files ship
+        # together. The target bib deliberately lacks ArrowDebreu1954 (the
+        # backfill candidate); language-independent, so one fixture serves all.
+        cp "$DATA_DIR/base-config.yml" "_config.yml"
+        cp "$DATA_DIR/base-references-target.bib" "references.bib"
 
         render_target_workflows
         assert_no_placeholders
@@ -679,6 +690,7 @@ declare -a scenarios=(
     "24-empty-sections-minimal:Empty sections (heading only):minimal"
     "25-pre-title-content-lecture:Pre-title content (anchor + raw block):lecture"
     "26-heading-case-change-lecture:Heading case change (title-case → sentence-case):lecture"
+    "27-add-citation-minimal:Citation introduced ({cite} role + .bib backfill, #117/#256.3):minimal"
 )
 
 # --scenarios narrows to specific test cases by file-prefix (e.g. 01, or
@@ -693,12 +705,12 @@ if [ -n "$ONLY_SCENARIOS" ]; then
             case "${sc%%:*}" in "$_w"*) _keep+=("$sc"); _hit=true ;; esac
         done
         if [ "$_hit" = false ]; then
-            echo "Unknown scenario '$_w'. Valid prefixes are 01..26." >&2
+            echo "Unknown scenario '$_w'. Valid prefixes are 01..27." >&2
             exit 1
         fi
     done
     scenarios=("${_keep[@]}")
-    echo -e "${YELLOW}Scoped run: ${#scenarios[@]} of 26 scenarios (${ONLY_SCENARIOS})${NC}"
+    echo -e "${YELLOW}Scoped run: ${#scenarios[@]} of 27 scenarios (${ONLY_SCENARIOS})${NC}"
     echo ""
 fi
 
