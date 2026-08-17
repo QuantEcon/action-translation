@@ -7,6 +7,14 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## In flight
 
+- **v0.26.0 release cut 2026-08-17** — headline: the first inline native-review round
+  encoded (ml glossary v0.3.0 + 18-rule set, #272; regeneration-verified, #273), plus
+  verdict provenance (#247), config-preserving writers (#243), newline-terminated
+  writers (#266/#267), harness scenario 27, and the resync-gate `startsWith` alignment.
+  §4a gate pending post-merge: tag → E2E `--action-ref v0.26.0` → floating tags →
+  `@v0` smoke → GitHub release. The ml calibration programme is now
+  one-lecture-per-round: stale seeds ml#2–#5 closed, round 2 open (ml#7, `functions`,
+  engine `8625221`).
 - **The standing plan is tracker #257** (2026-08-10 backlog review; supersedes #94/#198):
   all 67 open issues triaged and verified against v0.25.0, phases W0–W6 filed as
   sub-issues #258–#264. The dominant failure shape it names: **the failure path produces
