@@ -84,5 +84,5 @@ Step-by-step guides for common scenarios:
 
 **Version**: v0.26.0  
 **Tests**: run `npm test` for current counts (exact count in CI)  
-**Glossary**: 357 terms (zh-cn, fa), 367 (fr), 57 (ml)  
+**Glossary**: 357 terms (zh-cn, fa), 367 (fr), 61 (ml)  
 **Languages**: English → Simplified Chinese, Farsi, French, Malayalam (more planned)
