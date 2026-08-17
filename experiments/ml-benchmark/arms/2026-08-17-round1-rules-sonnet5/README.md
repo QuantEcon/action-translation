@@ -4,8 +4,8 @@ The regeneration run that checks the round-1 rule changes generalise (#272 — t
 100-flag inline review on lecture-python-programming.ml#1, dispositions in
 QuantEcon/project-translation
 `reports/2026-08-17-ml-python-by-example-review-disposition.md`). Archived per
-the DISPOSITIONS.md process rule: any machine output an analysis quotes gets
-committed. The Phase 2 (#189) closing check.
+the DISPOSITIONS.md process rule: any machine output that an analysis quotes
+gets committed. The Phase 2 (#189) closing check.
 
 ## Provenance
 
