@@ -563,9 +563,13 @@ for L in "${LANGUAGES[@]}"; do
 
         # Production editions all carry `.translate/config.yml` with an
         # `editors:` block (project-translation#24), so the harness does too —
-        # block style with `primary:` first, the only form readConfig parses,
-        # and the shape writeConfig's unknown-key merge (#246) must preserve
-        # across bootstrap rewrites. The handle is deliberately mmcky rather
+        # block style with `primary:` first. That shape is not for the
+        # engine's own readConfig (js-yaml, style- and order-agnostic): it is
+        # what the status-translations collector's line-based parser requires,
+        # which returns None on the flow form and would take the first
+        # `- handle` of a leading `secondary:` list as primary. It is also the
+        # shape writeConfig's unknown-key merge (#246) must preserve across
+        # bootstrap rewrites. The handle is deliberately mmcky rather
         # than an edition's real editor: verdict-driven routing (#103) will
         # read this block, and a harness run must never assign or ping a real
         # editor from a test repo (nor could it — they are not collaborators
