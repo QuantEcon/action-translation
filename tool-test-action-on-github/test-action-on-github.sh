@@ -561,6 +561,26 @@ for L in "${LANGUAGES[@]}"; do
         cp "$DATA_DIR/base-config.yml" "_config.yml"
         cp "$DATA_DIR/base-references-target.bib" "references.bib"
 
+        # Production editions all carry `.translate/config.yml` with an
+        # `editors:` block (project-translation#24), so the harness does too —
+        # block style with `primary:` first, the only form readConfig parses,
+        # and the shape writeConfig's unknown-key merge (#246) must preserve
+        # across bootstrap rewrites. The handle is deliberately mmcky rather
+        # than an edition's real editor: verdict-driven routing (#103) will
+        # read this block, and a harness run must never assign or ping a real
+        # editor from a test repo (nor could it — they are not collaborators
+        # here). tool-version is left absent until a CLI write stamps it;
+        # readConfig does not require it, and a hardcoded pin would go stale.
+        mkdir -p .translate
+        cat > .translate/config.yml <<EOF
+source-language: en
+target-language: $code
+docs-folder: .
+editors:
+  primary: mmcky
+  secondary: []
+EOF
+
         render_target_workflows
         assert_no_placeholders
 
