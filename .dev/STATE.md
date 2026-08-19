@@ -38,15 +38,18 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   a stale-resync detection box (#276 guard — code cells modulo localized
   comments/docstrings) and the both-directions rule on the assertion (`files[]`
   under-declares: bib + state delivered undeclared).
-- **#169 slice 1 is open as #278** — `runReview` extracted to `src/action/review.ts`
-  with 17 tests, the first ever to reach entry-point logic. CI green, MERGEABLE/CLEAN,
-  **awaiting review/merge**. `import.meta.url` now lives alone in `src/runtime-paths.ts`
-  (F123), which is what makes `src/action/*` loadable under Jest's CJS registry; the
-  pattern for every later slice is **pass runtime-derived values in as arguments**.
-  Semantics checked against the built bundle, not asserted: identical `core.setOutput`
-  set before/after, `action.yml` entry untouched, `import.meta.url` resolving through
-  the same esbuild banner (so `../glossary` still lands on the repo-root glossary).
-  Repeat that bundle check on every slice.
+- **#169 is underway — the W1 gate, one slice per PR.** Slice 1 landed 2026-08-19
+  (#278, `228a317`); slice 2 (`src/github-content.ts`) is next, then the `metadata.mode`
+  dispatch (F19) and the tri-state metadata parser (F139/F140). **The pattern each
+  remaining slice follows**, established by slice 1: pass runtime-derived values in as
+  arguments rather than importing them — `import.meta.url` lives alone in
+  `src/runtime-paths.ts` (F123) on the Action side, which is what makes `src/action/*`
+  loadable under Jest's CJS registry. **Verify against the built bundle rather than
+  asserting**: identical `core.setOutput` set before/after, `action.yml` entry
+  untouched, `import.meta.url` resolving through the same esbuild banner (so
+  `../glossary` still lands on the repo-root glossary). **And grep for comments that
+  explain whatever moved** — slice 1 left two files asserting that `index.ts` holds
+  `import.meta.url` after it no longer did; nothing but a grep catches that.
 - **#276 (sixth instance of the class, resync path)** — `\translate-resync`
   regenerates from the source PR's merge-time snapshot; fired in the field
   2026-08-18. Fully measured 2026-08-19 (ledger in #276): zh-cn clean; fr numpy
@@ -61,14 +64,19 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## Recently landed
 
-- **2026-08-19 — #169 slice 1 written** (this change, open as #278): see In flight.
-  Body figures on #169 re-verified against `main` first and corrected in place — the
-  file is **1,579 lines** now (1,314 at audit time), churn 24 commits/6 months, all
-  line references moved. Two audit claims amended rather than repeated: "zero exports"
-  is really *no usable exports* (`fetchBibliographies` at `:1481` has no importer
-  anywhere), and F17's `dist-action/glossary/` half was already fixed by #197 — only
-  its coverage half is live. The module-map guard (#168) caught the three new modules'
-  absence from `docs/developer/architecture.md`, which is the guard working.
+- **2026-08-19 — #169 slice 1** (#278, `228a317`): `runReview` extracted to
+  `src/action/review.ts` with 17 tests — the first ever to reach entry-point logic —
+  plus `src/runtime-paths.ts` and a shared `core-logger.ts`. `index.ts` loses 124 lines
+  and both its `path`/`url` imports; suite 1,516 → 1,533. The issue's figures were
+  re-verified against `main` before starting and corrected in place: the file is
+  **1,579 lines** (1,314 at audit time), churn 24 commits/6 months, all line references
+  moved. Two audit claims amended rather than repeated — "zero exports" is really *no
+  usable exports* (`fetchBibliographies` has no importer anywhere), and F17's
+  `dist-action/glossary/` half was already fixed by #197, leaving only its coverage
+  half live. Two guards earned their keep: the module-map test (#168) caught the new
+  modules' absence from `docs/developer/architecture.md`, and Copilot's review caught
+  an overclaiming comment, which led to two more that the extraction itself had
+  falsified (`05ce0ce`).
 - **2026-08-19 — #276 triaged, measured, and repaired**: labels
   + tracker/W1 bodies updated in place (sixth instance; W1 → v0.27.0; guard box with
   the localized-docstring caveat; label migration marked done-verified). Full
@@ -120,21 +128,17 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 **Resume here (2026-08-20):**
 
-1. **Merge #278** (#169 slice 1 — green and clean; Copilot reviewed, its one comment
-   addressed and replied to in `05ce0ce`, which also corrected two comments the
-   extraction had made false in `rebase-siblings.ts` and `sync-orchestrator.ts`).
-   Standing lesson for the later slices: each one invalidates prose in *other* files,
-   so grep for comments explaining whatever moved — explanations don't travel with
-   the code, and only the bundle diff and a grep will catch it.
-2. **#169 slice 2: `src/github-content.ts`** — `tryFetchFileContent` plus **one**
+1. **#169 slice 2: `src/github-content.ts`** — `tryFetchFileContent` plus **one**
    `buildFilesToSync` over a narrow `ContentClient` interface, replacing the two
-   independently-maintained builders (now `index.ts:381` and `:1038`) that have already
-   diverged on the renamed-file case. This is the slice that makes F44's divergence and
-   F36's error coercion disappear by construction rather than by patch — and unlike
-   slice 1 it **can change behaviour on the rename path**, so decide explicitly which
-   builder's semantics win and say so in the PR. Branch from `main` *after* #278 merges
-   (the repo squash-merges; stacking would force a rebase).
-3. Then the rest of #169 — `metadata.mode` dispatch (F19), tri-state metadata parser
+   independently-maintained builders (`index.ts:381` and `:1038` as of `228a317`) that
+   have already diverged on the renamed-file case. This is the slice that makes F44's
+   divergence and F36's error coercion disappear by construction rather than by patch —
+   and unlike slice 1 it **can change behaviour on the rename path**: `:381` fetches the
+   target's content from `previousPath` and so preserves an existing translation across
+   a rename, while `:1038` has no rename branch at all. Unifying them picks a winner, so
+   decide that explicitly, say so in the PR, and pin it with a test — this is the
+   finding where an existing translation can be discarded.
+2. Then the rest of #169 — `metadata.mode` dispatch (F19), tri-state metadata parser
    (F139/F140) — then W1 (#259) proper.
 
 - **D1** at W2 (#260) kickoff — start the editions-side conversation early.
@@ -146,10 +150,10 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## Health & context
 
-- `main` green; 1,516 tests (64 suites, zero skips, type-checked) — **1,533 across 65
-  suites on #278**; lint at `--max-warnings 0` including root `*.mjs`, CI checks
-  formatting and `.dev/` path:line references. Note `npm test` fails 11 cli-smoke tests
-  on a stale `dist/` — run `npm run build` first; that guard is deliberate, not a break.
+- `main` green; **1,533 tests across 65 suites** (zero skips, type-checked) as of
+  `228a317`; lint at `--max-warnings 0` including root `*.mjs`, CI checks formatting
+  and `.dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale
+  `dist/` — run `npm run build` first; that guard is deliberate, not a break.
 - Highest-priority known bug class: the success-shaped failure (#90 defects 3–5 plus
   #276's two resync mechanisms; freshest instance 2026-08-18, stale regeneration
   merged on fa). W1 is its detection layer.
