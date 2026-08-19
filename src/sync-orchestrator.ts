@@ -221,8 +221,10 @@ async function readGlossaryFile(file: string): Promise<Glossary> {
  *
  * The reviewer takes terminology as pre-formatted text while the translator
  * takes the object, so this formatting has to live somewhere; it lived inline
- * in `runReview`, where `import.meta.url` puts it beyond the reach of the Jest
- * CJS registry and so beyond the reach of tests.
+ * in `runReview` back when that ran inside the untestable entry point. #169
+ * moved the runner to `src/action/review.ts`, so its use of this function is
+ * now covered by tests — but the formatting stays here, next to the loader
+ * whose output it renders.
  */
 export function formatGlossaryTerms(glossary: Glossary, targetLanguage: string): string {
   return (

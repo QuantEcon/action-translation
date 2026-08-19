@@ -11,10 +11,11 @@
  * See https://github.com/QuantEcon/action-translation/issues/123 (and #115, whose reported
  * symptom — dozens of stale checks re-enqueued by hand — this addresses).
  *
- * This lives outside src/index.ts deliberately. index.ts uses `import.meta.url`, which the
- * Jest CJS module registry cannot load, so nothing in it can be unit tested; that gap is
- * how a third hard-coded branch prefix survived the first fix for #115. New rebase logic
- * goes in testable modules.
+ * This lives outside src/index.ts deliberately: nothing in that file can be unit tested,
+ * because it calls `run()` at module scope and exposes no usable exports, so importing any
+ * part of it executes the whole Action. That gap is how a third hard-coded branch prefix
+ * survived the first fix for #115. New rebase logic goes in testable modules — and #169 is
+ * moving the entry point's own logic out to join them, one runner at a time.
  */
 
 /** The subset of Octokit this module needs. */
