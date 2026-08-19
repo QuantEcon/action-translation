@@ -38,19 +38,38 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   a stale-resync detection box (#276 guard — code cells modulo localized
   comments/docstrings) and the both-directions rule on the assertion (`files[]`
   under-declares: bib + state delivered undeclared).
+- **#169 slice 1 is open as #278** — `runReview` extracted to `src/action/review.ts`
+  with 17 tests, the first ever to reach entry-point logic. CI green, MERGEABLE/CLEAN,
+  **awaiting review/merge**. `import.meta.url` now lives alone in `src/runtime-paths.ts`
+  (F123), which is what makes `src/action/*` loadable under Jest's CJS registry; the
+  pattern for every later slice is **pass runtime-derived values in as arguments**.
+  Semantics checked against the built bundle, not asserted: identical `core.setOutput`
+  set before/after, `action.yml` entry untouched, `import.meta.url` resolving through
+  the same esbuild banner (so `../glossary` still lands on the repo-root glossary).
+  Repeat that bundle check on every slice.
 - **#276 (sixth instance of the class, resync path)** — `\translate-resync`
   regenerates from the source PR's merge-time snapshot; fired in the field
   2026-08-18. Fully measured 2026-08-19 (ledger in #276): zh-cn clean; fr numpy
   missed #595 (regeneration silently dropped the file — second mechanism); fa two
   stale state files + a pandas_panel divergence the hand-restore introduced.
-  Repair PRs open: fa#158, fr#38. **Resync moratorium until the guard lands.**
+  **Fallout repaired and byte-verified 2026-08-19** (fa#158, fr#38 merged; recorded-vs-
+  actual mismatch set now zero). The bug itself stays open — W1 carries the detection
+  guard. **Resync moratorium until the guard lands.**
 - **Malayalam** — first-class harness language (26/26); its two seed reference
   translations await native review (#207); benchmark Phase 1 (#194) unrun.
 - **Glossary PR #69** (ja) — open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
 
 ## Recently landed
 
-- **2026-08-19 — #276 triaged, measured, and repairs opened** (this change): labels
+- **2026-08-19 — #169 slice 1 written** (this change, open as #278): see In flight.
+  Body figures on #169 re-verified against `main` first and corrected in place — the
+  file is **1,579 lines** now (1,314 at audit time), churn 24 commits/6 months, all
+  line references moved. Two audit claims amended rather than repeated: "zero exports"
+  is really *no usable exports* (`fetchBibliographies` at `:1481` has no importer
+  anywhere), and F17's `dist-action/glossary/` half was already fixed by #197 — only
+  its coverage half is live. The module-map guard (#168) caught the three new modules'
+  absence from `docs/developer/architecture.md`, which is the guard working.
+- **2026-08-19 — #276 triaged, measured, and repaired**: labels
   + tracker/W1 bodies updated in place (sixth instance; W1 → v0.27.0; guard box with
   the localized-docstring caveat; label migration marked done-verified). Full
   recorded-vs-actual measurement of all 21 state files across fa/fr/zh-cn plus
@@ -59,9 +78,11 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   a silent per-file drop by the regeneration, not stale state. Repair PRs:
   lecture-python-programming.fa#158 (two state files + pandas_panel URL form),
   lecture-python-programming.fr#38 (hand-port of the two #595 numpy edits — never
-  `forward` a natively-reviewed lecture). Settle-week interaction checked: the
-  workspace-lectures republish→delete sequence is unblocked (pandas/polars byte-clean
-  on all three targets).
+  `forward` a natively-reviewed lecture); **both merged and byte-verified 03:33Z**.
+  Settle-week interaction checked: the workspace-lectures republish→delete sequence is
+  unblocked (pandas/polars byte-clean on all three targets), and that plan's six-repo
+  merge-order table was re-measured and updated (QuantEcon/workspace-lectures#48 — all
+  four programming-family republishes ran green overnight).
 - **2026-08-11 — W0 S-fixes**: #230 `claude-opus-5` pricing entry
   ($5/$25/MTok; Opus 5 spend had reported as $0.000) + warn-once on unpriced models +
   `VALID_MODEL_PATTERNS` gains opus-5/fable-5; #234.4 resync gate aligned to the
@@ -97,21 +118,33 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## Next
 
-- **W1 (#259)**: #169 first/alongside, then the boxes — declared-vs-delivered (both
-  directions, folded into the body 2026-08-19), TOC merge, partial-PR annotation,
-  #276 guard.
+**Resume here (2026-08-20):**
+
+1. **Merge #278** (#169 slice 1 — green, clean, unreviewed as of 04:20Z).
+2. **#169 slice 2: `src/github-content.ts`** — `tryFetchFileContent` plus **one**
+   `buildFilesToSync` over a narrow `ContentClient` interface, replacing the two
+   independently-maintained builders (now `index.ts:381` and `:1038`) that have already
+   diverged on the renamed-file case. This is the slice that makes F44's divergence and
+   F36's error coercion disappear by construction rather than by patch — and unlike
+   slice 1 it **can change behaviour on the rename path**, so decide explicitly which
+   builder's semantics win and say so in the PR. Branch from `main` *after* #278 merges
+   (the repo squash-merges; stacking would force a rebase).
+3. Then the rest of #169 — `metadata.mode` dispatch (F19), tri-state metadata parser
+   (F139/F140) — then W1 (#259) proper.
+
 - **D1** at W2 (#260) kickoff — start the editions-side conversation early.
-- **Merge the #276 repair PRs** (fa#158, fr#38) and hold the resync moratorium.
 - **Watch**: first organic fr review (register rules); first organic sync batch after
-  v0.25.0 (#117 backfill turns missing-bib-key runs red by design).
+  v0.25.0 (#117 backfill turns missing-bib-key runs red by design). Hold the resync
+  moratorium until #276's guard ships.
 - **W4 prompt work** waits for the shadow-freeze lift (~2026-09-01); any model change
   gates on #82's frozen eval set first.
 
 ## Health & context
 
-- `main` green; 1,516 tests (64 suites, zero skips, type-checked), lint at
-  `--max-warnings 0` including root `*.mjs`, CI checks formatting and `.dev/`
-  path:line references.
+- `main` green; 1,516 tests (64 suites, zero skips, type-checked) — **1,533 across 65
+  suites on #278**; lint at `--max-warnings 0` including root `*.mjs`, CI checks
+  formatting and `.dev/` path:line references. Note `npm test` fails 11 cli-smoke tests
+  on a stale `dist/` — run `npm run build` first; that guard is deliberate, not a break.
 - Highest-priority known bug class: the success-shaped failure (#90 defects 3–5 plus
   #276's two resync mechanisms; freshest instance 2026-08-18, stale regeneration
   merged on fa). W1 is its detection layer.
