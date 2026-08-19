@@ -443,18 +443,18 @@ var require_tunnel = __commonJS({
             res.statusCode
           );
           socket.destroy();
-          var error3 = new Error("tunneling socket could not be established, statusCode=" + res.statusCode);
-          error3.code = "ECONNRESET";
-          options.request.emit("error", error3);
+          var error4 = new Error("tunneling socket could not be established, statusCode=" + res.statusCode);
+          error4.code = "ECONNRESET";
+          options.request.emit("error", error4);
           self.removeSocket(placeholder);
           return;
         }
         if (head.length > 0) {
           debug("got illegal response body from proxy");
           socket.destroy();
-          var error3 = new Error("got illegal response body from proxy");
-          error3.code = "ECONNRESET";
-          options.request.emit("error", error3);
+          var error4 = new Error("got illegal response body from proxy");
+          error4.code = "ECONNRESET";
+          options.request.emit("error", error4);
           self.removeSocket(placeholder);
           return;
         }
@@ -469,9 +469,9 @@ var require_tunnel = __commonJS({
           cause.message,
           cause.stack
         );
-        var error3 = new Error("tunneling socket could not be established, cause=" + cause.message);
-        error3.code = "ECONNRESET";
-        options.request.emit("error", error3);
+        var error4 = new Error("tunneling socket could not be established, cause=" + cause.message);
+        error4.code = "ECONNRESET";
+        options.request.emit("error", error4);
         self.removeSocket(placeholder);
       }
     };
@@ -1800,14 +1800,14 @@ var require_diagnostics = __commonJS({
       diagnosticsChannel.channel("undici:client:connectError").subscribe((evt) => {
         const {
           connectParams: { version, protocol, port, host },
-          error: error3
+          error: error4
         } = evt;
         debuglog(
           "connection to %s using %s%s errored - %s",
           `${host}${port ? `:${port}` : ""}`,
           protocol,
           version,
-          error3.message
+          error4.message
         );
       });
       diagnosticsChannel.channel("undici:client:sendHeaders").subscribe((evt) => {
@@ -1838,14 +1838,14 @@ var require_diagnostics = __commonJS({
       diagnosticsChannel.channel("undici:request:error").subscribe((evt) => {
         const {
           request: { method, path: path6, origin },
-          error: error3
+          error: error4
         } = evt;
         debuglog(
           "request to %s %s/%s errored - %s",
           method,
           origin,
           path6,
-          error3.message
+          error4.message
         );
       });
       isClientSet = true;
@@ -1880,7 +1880,7 @@ var require_diagnostics = __commonJS({
         diagnosticsChannel.channel("undici:client:connectError").subscribe((evt) => {
           const {
             connectParams: { version, protocol, port, host },
-            error: error3
+            error: error4
           } = evt;
           debuglog(
             "connection to %s%s using %s%s errored - %s",
@@ -1888,7 +1888,7 @@ var require_diagnostics = __commonJS({
             port ? `:${port}` : "",
             protocol,
             version,
-            error3.message
+            error4.message
           );
         });
         diagnosticsChannel.channel("undici:client:sendHeaders").subscribe((evt) => {
@@ -2158,16 +2158,16 @@ var require_request = __commonJS({
           this.onError(err);
         }
       }
-      onError(error3) {
+      onError(error4) {
         this.onFinally();
         if (channels.error.hasSubscribers) {
-          channels.error.publish({ request: this, error: error3 });
+          channels.error.publish({ request: this, error: error4 });
         }
         if (this.aborted) {
           return;
         }
         this.aborted = true;
-        return this[kHandler].onError(error3);
+        return this[kHandler].onError(error4);
       }
       onFinally() {
         if (this.errorHandler) {
@@ -3876,18 +3876,18 @@ var require_webidl = __commonJS({
     webidl.errors.exception = function(message) {
       return new TypeError(`${message.header}: ${message.message}`);
     };
-    webidl.errors.conversionFailed = function(context2) {
-      const plural = context2.types.length === 1 ? "" : " one of";
-      const message = `${context2.argument} could not be converted to${plural}: ${context2.types.join(", ")}.`;
+    webidl.errors.conversionFailed = function(context3) {
+      const plural = context3.types.length === 1 ? "" : " one of";
+      const message = `${context3.argument} could not be converted to${plural}: ${context3.types.join(", ")}.`;
       return webidl.errors.exception({
-        header: context2.prefix,
+        header: context3.prefix,
         message
       });
     };
-    webidl.errors.invalidArgument = function(context2) {
+    webidl.errors.invalidArgument = function(context3) {
       return webidl.errors.exception({
-        header: context2.prefix,
-        message: `"${context2.value}" is an invalid ${context2.type}.`
+        header: context3.prefix,
+        message: `"${context3.value}" is an invalid ${context3.type}.`
       });
     };
     webidl.brandCheck = function(V, I, opts) {
@@ -5898,7 +5898,7 @@ Content-Type: ${value.type || "application/octet-stream"}\r
       }
       throwIfAborted(object[kState]);
       const promise = createDeferredPromise();
-      const errorSteps = (error3) => promise.reject(error3);
+      const errorSteps = (error4) => promise.reject(error4);
       const successSteps = (data) => {
         try {
           promise.resolve(convertBytesToJSValue(data));
@@ -7502,8 +7502,8 @@ var require_client_h2 = __commonJS({
         }
         request2.onRequestSent();
         client[kResume]();
-      } catch (error3) {
-        abort(error3);
+      } catch (error4) {
+        abort(error4);
       }
     }
     function writeStream(abort, socket, expectsPayload, h2stream, body, client, request2, contentLength) {
@@ -7658,8 +7658,8 @@ var require_redirect_handler = __commonJS({
       onUpgrade(statusCode, headers, socket) {
         this.handler.onUpgrade(statusCode, headers, socket);
       }
-      onError(error3) {
-        this.handler.onError(error3);
+      onError(error4) {
+        this.handler.onError(error4);
       }
       onHeaders(statusCode, headers, resume, statusText) {
         this.location = this.history.length >= this.maxRedirections || util.isDisturbed(this.opts.body) ? null : parseLocation(statusCode, headers);
@@ -8588,7 +8588,7 @@ var require_pool = __commonJS({
         this[kOptions] = { ...util.deepClone(options), connect, allowH2 };
         this[kOptions].interceptors = options.interceptors ? { ...options.interceptors } : void 0;
         this[kFactory] = factory;
-        this.on("connectionError", (origin2, targets, error3) => {
+        this.on("connectionError", (origin2, targets, error4) => {
           for (const target of targets) {
             const idx = this[kClients].indexOf(target);
             if (idx !== -1) {
@@ -9980,17 +9980,17 @@ var require_api_request = __commonJS({
           }
         }
       }
-      onConnect(abort, context2) {
+      onConnect(abort, context3) {
         if (this.reason) {
           abort(this.reason);
           return;
         }
         assert(this.callback);
         this.abort = abort;
-        this.context = context2;
+        this.context = context3;
       }
       onHeaders(statusCode, rawHeaders, resume, statusMessage) {
-        const { callback, opaque, abort, context: context2, responseHeaders, highWaterMark } = this;
+        const { callback, opaque, abort, context: context3, responseHeaders, highWaterMark } = this;
         const headers = responseHeaders === "raw" ? util.parseRawHeaders(rawHeaders) : util.parseHeaders(rawHeaders);
         if (statusCode < 200) {
           if (this.onInfo) {
@@ -10027,7 +10027,7 @@ var require_api_request = __commonJS({
               trailers: this.trailers,
               opaque,
               body: res,
-              context: context2
+              context: context3
             });
           }
         }
@@ -10196,17 +10196,17 @@ var require_api_stream = __commonJS({
         }
         addSignal(this, signal);
       }
-      onConnect(abort, context2) {
+      onConnect(abort, context3) {
         if (this.reason) {
           abort(this.reason);
           return;
         }
         assert(this.callback);
         this.abort = abort;
-        this.context = context2;
+        this.context = context3;
       }
       onHeaders(statusCode, rawHeaders, resume, statusMessage) {
-        const { factory, opaque, context: context2, callback, responseHeaders } = this;
+        const { factory, opaque, context: context3, callback, responseHeaders } = this;
         const headers = responseHeaders === "raw" ? util.parseRawHeaders(rawHeaders) : util.parseHeaders(rawHeaders);
         if (statusCode < 200) {
           if (this.onInfo) {
@@ -10234,7 +10234,7 @@ var require_api_stream = __commonJS({
             statusCode,
             headers,
             opaque,
-            context: context2
+            context: context3
           });
           if (!res || typeof res.write !== "function" || typeof res.end !== "function" || typeof res.on !== "function") {
             throw new InvalidReturnValueError("expected Writable");
@@ -10426,7 +10426,7 @@ var require_api_pipeline = __commonJS({
         this.res = null;
         addSignal(this, signal);
       }
-      onConnect(abort, context2) {
+      onConnect(abort, context3) {
         const { ret, res } = this;
         if (this.reason) {
           abort(this.reason);
@@ -10435,10 +10435,10 @@ var require_api_pipeline = __commonJS({
         assert(!res, "pipeline cannot be retried");
         assert(!ret.destroyed);
         this.abort = abort;
-        this.context = context2;
+        this.context = context3;
       }
       onHeaders(statusCode, rawHeaders, resume) {
-        const { opaque, handler: handler2, context: context2 } = this;
+        const { opaque, handler: handler2, context: context3 } = this;
         if (statusCode < 200) {
           if (this.onInfo) {
             const headers = this.responseHeaders === "raw" ? util.parseRawHeaders(rawHeaders) : util.parseHeaders(rawHeaders);
@@ -10456,7 +10456,7 @@ var require_api_pipeline = __commonJS({
             headers,
             opaque,
             body: this.res,
-            context: context2
+            context: context3
           });
         } catch (err) {
           this.res.on("error", util.nop);
@@ -10540,7 +10540,7 @@ var require_api_upgrade = __commonJS({
         this.context = null;
         addSignal(this, signal);
       }
-      onConnect(abort, context2) {
+      onConnect(abort, context3) {
         if (this.reason) {
           abort(this.reason);
           return;
@@ -10554,7 +10554,7 @@ var require_api_upgrade = __commonJS({
       }
       onUpgrade(statusCode, rawHeaders, socket) {
         assert(statusCode === 101);
-        const { callback, opaque, context: context2 } = this;
+        const { callback, opaque, context: context3 } = this;
         removeSignal(this);
         this.callback = null;
         const headers = this.responseHeaders === "raw" ? util.parseRawHeaders(rawHeaders) : util.parseHeaders(rawHeaders);
@@ -10562,7 +10562,7 @@ var require_api_upgrade = __commonJS({
           headers,
           socket,
           opaque,
-          context: context2
+          context: context3
         });
       }
       onError(err) {
@@ -10631,20 +10631,20 @@ var require_api_connect = __commonJS({
         this.abort = null;
         addSignal(this, signal);
       }
-      onConnect(abort, context2) {
+      onConnect(abort, context3) {
         if (this.reason) {
           abort(this.reason);
           return;
         }
         assert(this.callback);
         this.abort = abort;
-        this.context = context2;
+        this.context = context3;
       }
       onHeaders() {
         throw new SocketError("bad connect", null);
       }
       onUpgrade(statusCode, rawHeaders, socket) {
-        const { callback, opaque, context: context2 } = this;
+        const { callback, opaque, context: context3 } = this;
         removeSignal(this);
         this.callback = null;
         let headers = rawHeaders;
@@ -10656,7 +10656,7 @@ var require_api_connect = __commonJS({
           headers,
           socket,
           opaque,
-          context: context2
+          context: context3
         });
       }
       onError(err) {
@@ -10955,13 +10955,13 @@ var require_mock_utils = __commonJS({
       if (mockDispatch2.data.callback) {
         mockDispatch2.data = { ...mockDispatch2.data, ...mockDispatch2.data.callback(opts) };
       }
-      const { data: { statusCode, data, headers, trailers, error: error3 }, delay, persist } = mockDispatch2;
+      const { data: { statusCode, data, headers, trailers, error: error4 }, delay, persist } = mockDispatch2;
       const { timesInvoked, times } = mockDispatch2;
       mockDispatch2.consumed = !persist && timesInvoked >= times;
       mockDispatch2.pending = timesInvoked < times;
-      if (error3 !== null) {
+      if (error4 !== null) {
         deleteMockDispatch(this[kDispatches], key);
-        handler2.onError(error3);
+        handler2.onError(error4);
         return true;
       }
       if (typeof delay === "number" && delay > 0) {
@@ -10999,19 +10999,19 @@ var require_mock_utils = __commonJS({
         if (agent.isMockActive) {
           try {
             mockDispatch.call(this, opts, handler2);
-          } catch (error3) {
-            if (error3 instanceof MockNotMatchedError) {
+          } catch (error4) {
+            if (error4 instanceof MockNotMatchedError) {
               const netConnect = agent[kGetNetConnect]();
               if (netConnect === false) {
-                throw new MockNotMatchedError(`${error3.message}: subsequent request to origin ${origin} was not allowed (net.connect disabled)`);
+                throw new MockNotMatchedError(`${error4.message}: subsequent request to origin ${origin} was not allowed (net.connect disabled)`);
               }
               if (checkNetConnect(netConnect, origin)) {
                 originalDispatch.call(this, opts, handler2);
               } else {
-                throw new MockNotMatchedError(`${error3.message}: subsequent request to origin ${origin} was not allowed (net.connect is not enabled for this origin)`);
+                throw new MockNotMatchedError(`${error4.message}: subsequent request to origin ${origin} was not allowed (net.connect is not enabled for this origin)`);
               }
             } else {
-              throw error3;
+              throw error4;
             }
           }
         } else {
@@ -11176,11 +11176,11 @@ var require_mock_interceptor = __commonJS({
       /**
        * Mock an undici request with a defined error.
        */
-      replyWithError(error3) {
-        if (typeof error3 === "undefined") {
+      replyWithError(error4) {
+        if (typeof error4 === "undefined") {
           throw new InvalidArgumentError("error must be defined");
         }
-        const newMockDispatch = addMockDispatch(this[kDispatches], this[kDispatchKey], { error: error3 });
+        const newMockDispatch = addMockDispatch(this[kDispatches], this[kDispatchKey], { error: error4 });
         return new MockScope(newMockDispatch);
       }
       /**
@@ -13698,17 +13698,17 @@ var require_fetch = __commonJS({
         this.emit("terminated", reason);
       }
       // https://fetch.spec.whatwg.org/#fetch-controller-abort
-      abort(error3) {
+      abort(error4) {
         if (this.state !== "ongoing") {
           return;
         }
         this.state = "aborted";
-        if (!error3) {
-          error3 = new DOMException("The operation was aborted.", "AbortError");
+        if (!error4) {
+          error4 = new DOMException("The operation was aborted.", "AbortError");
         }
-        this.serializedAbortReason = error3;
-        this.connection?.destroy(error3);
-        this.emit("terminated", error3);
+        this.serializedAbortReason = error4;
+        this.connection?.destroy(error4);
+        this.emit("terminated", error4);
       }
     };
     function handleFetchDone(response) {
@@ -13804,12 +13804,12 @@ var require_fetch = __commonJS({
       );
     }
     var markResourceTiming = performance.markResourceTiming;
-    function abortFetch(p, request2, responseObject, error3) {
+    function abortFetch(p, request2, responseObject, error4) {
       if (p) {
-        p.reject(error3);
+        p.reject(error4);
       }
       if (request2.body != null && isReadable(request2.body?.stream)) {
-        request2.body.stream.cancel(error3).catch((err) => {
+        request2.body.stream.cancel(error4).catch((err) => {
           if (err.code === "ERR_INVALID_STATE") {
             return;
           }
@@ -13821,7 +13821,7 @@ var require_fetch = __commonJS({
       }
       const response = responseObject[kState];
       if (response.body != null && isReadable(response.body?.stream)) {
-        response.body.stream.cancel(error3).catch((err) => {
+        response.body.stream.cancel(error4).catch((err) => {
           if (err.code === "ERR_INVALID_STATE") {
             return;
           }
@@ -14642,13 +14642,13 @@ var require_fetch = __commonJS({
               fetchParams.controller.ended = true;
               this.body.push(null);
             },
-            onError(error3) {
+            onError(error4) {
               if (this.abort) {
                 fetchParams.controller.off("terminated", this.abort);
               }
-              this.body?.destroy(error3);
-              fetchParams.controller.terminate(error3);
-              reject(error3);
+              this.body?.destroy(error4);
+              fetchParams.controller.terminate(error4);
+              reject(error4);
             },
             onUpgrade(status, rawHeaders, socket) {
               if (status !== 101) {
@@ -15111,8 +15111,8 @@ var require_util4 = __commonJS({
                   }
                   fr[kResult] = result;
                   fireAProgressEvent("load", fr);
-                } catch (error3) {
-                  fr[kError] = error3;
+                } catch (error4) {
+                  fr[kError] = error4;
                   fireAProgressEvent("error", fr);
                 }
                 if (fr[kState] !== "loading") {
@@ -15121,13 +15121,13 @@ var require_util4 = __commonJS({
               });
               break;
             }
-          } catch (error3) {
+          } catch (error4) {
             if (fr[kAborted]) {
               return;
             }
             queueMicrotask(() => {
               fr[kState] = "done";
-              fr[kError] = error3;
+              fr[kError] = error4;
               fireAProgressEvent("error", fr);
               if (fr[kState] !== "loading") {
                 fireAProgressEvent("loadend", fr);
@@ -17395,11 +17395,11 @@ var require_connection = __commonJS({
         });
       }
     }
-    function onSocketError(error3) {
+    function onSocketError(error4) {
       const { ws } = this;
       ws[kReadyState] = states.CLOSING;
       if (channels.socketError.hasSubscribers) {
-        channels.socketError.publish(error3);
+        channels.socketError.publish(error4);
       }
       this.destroy();
     }
@@ -17690,10 +17690,10 @@ var require_receiver = __commonJS({
                 this.#extensions.get("permessage-deflate").decompress(
                   body,
                   this.#info.fin,
-                  (error3, data) => {
-                    if (error3) {
-                      const code = error3 instanceof MessageSizeExceededError ? 1009 : 1007;
-                      failWebsocketConnectionWithCode(this.ws, code, error3.message);
+                  (error4, data) => {
+                    if (error4) {
+                      const code = error4 instanceof MessageSizeExceededError ? 1009 : 1007;
+                      failWebsocketConnectionWithCode(this.ws, code, error4.message);
                       return;
                     }
                     if (!this.writeFragments(data)) {
@@ -18757,8 +18757,8 @@ var require_eventsource = __commonJS({
           pipeline(
             response.body.stream,
             eventSourceStream,
-            (error3) => {
-              if (error3?.aborted === false) {
+            (error4) => {
+              if (error4?.aborted === false) {
                 this.close();
                 this.dispatchEvent(new Event("error"));
               }
@@ -19338,12 +19338,12 @@ var require_lib = __commonJS({
             throw new Error("Client has already been disposed.");
           }
           const parsedUrl = new URL(requestUrl);
-          let info7 = this._prepareRequest(verb, parsedUrl, headers);
+          let info9 = this._prepareRequest(verb, parsedUrl, headers);
           const maxTries = this._allowRetries && RetryableHttpVerbs.includes(verb) ? this._maxRetries + 1 : 1;
           let numTries = 0;
           let response;
           do {
-            response = yield this.requestRaw(info7, data);
+            response = yield this.requestRaw(info9, data);
             if (response && response.message && response.message.statusCode === HttpCodes.Unauthorized) {
               let authenticationHandler;
               for (const handler2 of this.handlers) {
@@ -19353,7 +19353,7 @@ var require_lib = __commonJS({
                 }
               }
               if (authenticationHandler) {
-                return authenticationHandler.handleAuthentication(this, info7, data);
+                return authenticationHandler.handleAuthentication(this, info9, data);
               } else {
                 return response;
               }
@@ -19376,8 +19376,8 @@ var require_lib = __commonJS({
                   }
                 }
               }
-              info7 = this._prepareRequest(verb, parsedRedirectUrl, headers);
-              response = yield this.requestRaw(info7, data);
+              info9 = this._prepareRequest(verb, parsedRedirectUrl, headers);
+              response = yield this.requestRaw(info9, data);
               redirectsRemaining--;
             }
             if (!response.message.statusCode || !HttpResponseRetryCodes.includes(response.message.statusCode)) {
@@ -19406,7 +19406,7 @@ var require_lib = __commonJS({
        * @param info
        * @param data
        */
-      requestRaw(info7, data) {
+      requestRaw(info9, data) {
         return __awaiter(this, void 0, void 0, function* () {
           return new Promise((resolve3, reject) => {
             function callbackForResult(err, res) {
@@ -19418,7 +19418,7 @@ var require_lib = __commonJS({
                 resolve3(res);
               }
             }
-            this.requestRawWithCallback(info7, data, callbackForResult);
+            this.requestRawWithCallback(info9, data, callbackForResult);
           });
         });
       }
@@ -19428,12 +19428,12 @@ var require_lib = __commonJS({
        * @param data
        * @param onResult
        */
-      requestRawWithCallback(info7, data, onResult) {
+      requestRawWithCallback(info9, data, onResult) {
         if (typeof data === "string") {
-          if (!info7.options.headers) {
-            info7.options.headers = {};
+          if (!info9.options.headers) {
+            info9.options.headers = {};
           }
-          info7.options.headers["Content-Length"] = Buffer.byteLength(data, "utf8");
+          info9.options.headers["Content-Length"] = Buffer.byteLength(data, "utf8");
         }
         let callbackCalled = false;
         function handleResult(err, res) {
@@ -19442,7 +19442,7 @@ var require_lib = __commonJS({
             onResult(err, res);
           }
         }
-        const req = info7.httpModule.request(info7.options, (msg) => {
+        const req = info9.httpModule.request(info9.options, (msg) => {
           const res = new HttpClientResponse(msg);
           handleResult(void 0, res);
         });
@@ -19454,7 +19454,7 @@ var require_lib = __commonJS({
           if (socket) {
             socket.end();
           }
-          handleResult(new Error(`Request timeout: ${info7.options.path}`));
+          handleResult(new Error(`Request timeout: ${info9.options.path}`));
         });
         req.on("error", function(err) {
           handleResult(err);
@@ -19490,27 +19490,27 @@ var require_lib = __commonJS({
         return this._getProxyAgentDispatcher(parsedUrl, proxyUrl);
       }
       _prepareRequest(method, requestUrl, headers) {
-        const info7 = {};
-        info7.parsedUrl = requestUrl;
-        const usingSsl = info7.parsedUrl.protocol === "https:";
-        info7.httpModule = usingSsl ? https : http;
+        const info9 = {};
+        info9.parsedUrl = requestUrl;
+        const usingSsl = info9.parsedUrl.protocol === "https:";
+        info9.httpModule = usingSsl ? https : http;
         const defaultPort = usingSsl ? 443 : 80;
-        info7.options = {};
-        info7.options.host = info7.parsedUrl.hostname;
-        info7.options.port = info7.parsedUrl.port ? parseInt(info7.parsedUrl.port) : defaultPort;
-        info7.options.path = (info7.parsedUrl.pathname || "") + (info7.parsedUrl.search || "");
-        info7.options.method = method;
-        info7.options.headers = this._mergeHeaders(headers);
+        info9.options = {};
+        info9.options.host = info9.parsedUrl.hostname;
+        info9.options.port = info9.parsedUrl.port ? parseInt(info9.parsedUrl.port) : defaultPort;
+        info9.options.path = (info9.parsedUrl.pathname || "") + (info9.parsedUrl.search || "");
+        info9.options.method = method;
+        info9.options.headers = this._mergeHeaders(headers);
         if (this.userAgent != null) {
-          info7.options.headers["user-agent"] = this.userAgent;
+          info9.options.headers["user-agent"] = this.userAgent;
         }
-        info7.options.agent = this._getAgent(info7.parsedUrl);
+        info9.options.agent = this._getAgent(info9.parsedUrl);
         if (this.handlers) {
           for (const handler2 of this.handlers) {
-            handler2.prepareRequest(info7.options);
+            handler2.prepareRequest(info9.options);
           }
         }
-        return info7;
+        return info9;
       }
       _mergeHeaders(headers) {
         if (this.requestOptions && this.requestOptions.headers) {
@@ -19888,12 +19888,12 @@ var require_oidc_utils = __commonJS({
         return __awaiter(this, void 0, void 0, function* () {
           var _a2;
           const httpclient = _OidcClient.createHttpClient();
-          const res = yield httpclient.getJson(id_token_url).catch((error3) => {
+          const res = yield httpclient.getJson(id_token_url).catch((error4) => {
             throw new Error(`Failed to get ID Token. 
  
-        Error Code : ${error3.statusCode}
+        Error Code : ${error4.statusCode}
  
-        Error Message: ${error3.message}`);
+        Error Message: ${error4.message}`);
           });
           const id_token = (_a2 = res.result) === null || _a2 === void 0 ? void 0 : _a2.value;
           if (!id_token) {
@@ -19914,8 +19914,8 @@ var require_oidc_utils = __commonJS({
             const id_token = yield _OidcClient.getCall(id_token_url);
             (0, core_1.setSecret)(id_token);
             return id_token;
-          } catch (error3) {
-            throw new Error(`Error message: ${error3.message}`);
+          } catch (error4) {
+            throw new Error(`Error message: ${error4.message}`);
           }
         });
       }
@@ -21098,7 +21098,7 @@ var require_toolrunner = __commonJS({
               this._debug(`STDIO streams have closed for tool '${this.toolPath}'`);
               state.CheckComplete();
             });
-            state.on("done", (error3, exitCode) => {
+            state.on("done", (error4, exitCode) => {
               if (stdbuffer.length > 0) {
                 this.emit("stdline", stdbuffer);
               }
@@ -21106,8 +21106,8 @@ var require_toolrunner = __commonJS({
                 this.emit("errline", errbuffer);
               }
               cp.removeAllListeners();
-              if (error3) {
-                reject(error3);
+              if (error4) {
+                reject(error4);
               } else {
                 resolve3(exitCode);
               }
@@ -21201,14 +21201,14 @@ var require_toolrunner = __commonJS({
         this.emit("debug", message);
       }
       _setResult() {
-        let error3;
+        let error4;
         if (this.processExited) {
           if (this.processError) {
-            error3 = new Error(`There was an error when attempting to execute the process '${this.toolPath}'. This may indicate the process failed to start. Error: ${this.processError}`);
+            error4 = new Error(`There was an error when attempting to execute the process '${this.toolPath}'. This may indicate the process failed to start. Error: ${this.processError}`);
           } else if (this.processExitCode !== 0 && !this.options.ignoreReturnCode) {
-            error3 = new Error(`The process '${this.toolPath}' failed with exit code ${this.processExitCode}`);
+            error4 = new Error(`The process '${this.toolPath}' failed with exit code ${this.processExitCode}`);
           } else if (this.processStderr && this.options.failOnStdErr) {
-            error3 = new Error(`The process '${this.toolPath}' failed because one or more lines were written to the STDERR stream`);
+            error4 = new Error(`The process '${this.toolPath}' failed because one or more lines were written to the STDERR stream`);
           }
         }
         if (this.timeout) {
@@ -21216,7 +21216,7 @@ var require_toolrunner = __commonJS({
           this.timeout = null;
         }
         this.done = true;
-        this.emit("done", error3, this.processExitCode);
+        this.emit("done", error4, this.processExitCode);
       }
       static HandleTimeout(state) {
         if (state.done) {
@@ -21557,15 +21557,15 @@ var require_core = __commonJS({
     exports2.getInput = getInput2;
     exports2.getMultilineInput = getMultilineInput;
     exports2.getBooleanInput = getBooleanInput;
-    exports2.setOutput = setOutput2;
+    exports2.setOutput = setOutput3;
     exports2.setCommandEcho = setCommandEcho;
     exports2.setFailed = setFailed2;
     exports2.isDebug = isDebug;
     exports2.debug = debug;
-    exports2.error = error3;
-    exports2.warning = warning5;
+    exports2.error = error4;
+    exports2.warning = warning7;
     exports2.notice = notice2;
-    exports2.info = info7;
+    exports2.info = info9;
     exports2.startGroup = startGroup;
     exports2.endGroup = endGroup;
     exports2.group = group;
@@ -21632,7 +21632,7 @@ var require_core = __commonJS({
       throw new TypeError(`Input does not meet YAML 1.2 "Core Schema" specification: ${name}
 Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
     }
-    function setOutput2(name, value) {
+    function setOutput3(name, value) {
       const filePath = process.env["GITHUB_OUTPUT"] || "";
       if (filePath) {
         return (0, file_command_1.issueFileCommand)("OUTPUT", (0, file_command_1.prepareKeyValueMessage)(name, value));
@@ -21645,7 +21645,7 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
     }
     function setFailed2(message) {
       process.exitCode = ExitCode.Failure;
-      error3(message);
+      error4(message);
     }
     function isDebug() {
       return process.env["RUNNER_DEBUG"] === "1";
@@ -21653,16 +21653,16 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
     function debug(message) {
       (0, command_1.issueCommand)("debug", {}, message);
     }
-    function error3(message, properties = {}) {
+    function error4(message, properties = {}) {
       (0, command_1.issueCommand)("error", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
-    function warning5(message, properties = {}) {
+    function warning7(message, properties = {}) {
       (0, command_1.issueCommand)("warning", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
     function notice2(message, properties = {}) {
       (0, command_1.issueCommand)("notice", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
-    function info7(message) {
+    function info9(message) {
       process.stdout.write(message + os.EOL);
     }
     function startGroup(name) {
@@ -21950,8 +21950,8 @@ function addHook(state, kind, name, hook2) {
   }
   if (kind === "error") {
     hook2 = (method, options) => {
-      return Promise.resolve().then(method.bind(null, options)).catch((error3) => {
-        return orig(error3, options);
+      return Promise.resolve().then(method.bind(null, options)).catch((error4) => {
+        return orig(error4, options);
       });
     };
   }
@@ -22143,8 +22143,8 @@ function isDefined(value) {
 function isKeyOperator(operator) {
   return operator === ";" || operator === "&" || operator === "?";
 }
-function getValues(context2, operator, key, modifier) {
-  var value = context2[key], result = [];
+function getValues(context3, operator, key, modifier) {
+  var value = context3[key], result = [];
   if (isDefined(value) && value !== "") {
     if (typeof value === "string" || typeof value === "number" || typeof value === "bigint" || typeof value === "boolean") {
       value = value.toString();
@@ -22208,7 +22208,7 @@ function parseUrl(template) {
     expand: expand.bind(null, template)
   };
 }
-function expand(template, context2) {
+function expand(template, context3) {
   var operators = ["+", "#", ".", "/", ";", "?", "&"];
   template = template.replace(
     /\{([^\{\}]+)\}|([^\{\}]+)/g,
@@ -22222,7 +22222,7 @@ function expand(template, context2) {
         }
         expression.split(/,/g).forEach(function(variable) {
           var tmp = /([^:\*]*)(?::(\d+)|(\*))?/.exec(variable);
-          values.push(getValues(context2, operator, tmp[1], tmp[2] || tmp[3]));
+          values.push(getValues(context3, operator, tmp[1], tmp[2] || tmp[3]));
         });
         if (operator && operator !== "+") {
           var separator = ",";
@@ -22681,8 +22681,8 @@ var init_json_with_bigint = __esm({
         );
         const denoisedJSON = processedJSON.replace(noiseStringify, "$1$2$3");
         return denoisedJSON;
-      } catch (error3) {
-        if (error3 instanceof RangeError) {
+      } catch (error4) {
+        if (error4 instanceof RangeError) {
           const convertedJSON = stringifyIteratively(value, replacer, space);
           if (convertedJSON === void 0) return void 0;
           const supportsRawJSON = "rawJSON" in JSON;
@@ -22690,7 +22690,7 @@ var init_json_with_bigint = __esm({
           const processedJSON = convertedJSON.replace(bigIntsStringify, "$1$2$3");
           return processedJSON.replace(noiseStringify, "$1$2$3");
         }
-        throw error3;
+        throw error4;
       }
     };
     featureCache = /* @__PURE__ */ new Map();
@@ -22702,7 +22702,7 @@ var init_json_with_bigint = __esm({
       try {
         const result = JSON.parse(
           "1",
-          (_, __, context2) => !!context2?.source && context2.source === "1"
+          (_, __, context3) => !!context3?.source && context3.source === "1"
         );
         featureCache.set(parseFingerprint, result);
         return result;
@@ -22711,26 +22711,26 @@ var init_json_with_bigint = __esm({
         return false;
       }
     };
-    convertMarkedBigIntsReviver = (key, value, context2, userReviver) => {
+    convertMarkedBigIntsReviver = (key, value, context3, userReviver) => {
       const isCustomFormatBigInt = typeof value === "string" && customFormat.test(value);
       if (isCustomFormatBigInt) return BigInt(value.slice(0, -1));
       const isNoiseValue = typeof value === "string" && noiseValue.test(value);
       if (isNoiseValue) return value.slice(0, -1);
       const hasUserReviver = typeof userReviver === "function";
       if (!hasUserReviver) return value;
-      return userReviver(key, value, context2);
+      return userReviver(key, value, context3);
     };
     JSONParseV2 = (text, reviver) => {
-      return JSON.parse(text, (key, value, context2) => {
+      return JSON.parse(text, (key, value, context3) => {
         const isNumber = typeof value === "number";
         const isOutOfBounds = value > Number.MAX_SAFE_INTEGER || value < Number.MIN_SAFE_INTEGER;
         const isBigNumber = isNumber && isOutOfBounds;
-        const isInt = context2 && intRegex.test(context2.source);
+        const isInt = context3 && intRegex.test(context3.source);
         const isBigInt = isBigNumber && isInt;
-        if (isBigInt) return BigInt(context2.source);
+        if (isBigInt) return BigInt(context3.source);
         const hasCustomReviver = typeof reviver === "function";
         if (!hasCustomReviver) return value;
-        return reviver(key, value, context2);
+        return reviver(key, value, context3);
       });
     };
     MAX_INT = Number.MAX_SAFE_INTEGER.toString();
@@ -22801,15 +22801,15 @@ var init_json_with_bigint = __esm({
         const serializedData = serializeBigInts(text);
         return originalParse(
           serializedData,
-          (key, value, context2) => convertMarkedBigIntsReviver(key, value, context2, reviver)
+          (key, value, context3) => convertMarkedBigIntsReviver(key, value, context3, reviver)
         );
-      } catch (error3) {
-        if (error3 instanceof RangeError) {
+      } catch (error4) {
+        if (error4 instanceof RangeError) {
           const serializedData = serializeBigInts(text);
           const parsed = originalParse(serializedData);
           return applyReviverIteratively(parsed, reviver);
         }
-        throw error3;
+        throw error4;
       }
     };
   }
@@ -22896,26 +22896,26 @@ async function fetchWrapper(requestOptions) {
       // See https://fetch.spec.whatwg.org/#dom-requestinit-duplex.
       ...requestOptions.body && { duplex: "half" }
     });
-  } catch (error3) {
+  } catch (error4) {
     let message = "Unknown Error";
-    if (error3 instanceof Error) {
-      if (error3.name === "AbortError") {
-        error3.status = 500;
-        throw error3;
+    if (error4 instanceof Error) {
+      if (error4.name === "AbortError") {
+        error4.status = 500;
+        throw error4;
       }
-      message = error3.message;
-      if (error3.name === "TypeError" && "cause" in error3) {
-        if (error3.cause instanceof Error) {
-          message = error3.cause.message;
-        } else if (typeof error3.cause === "string") {
-          message = error3.cause;
+      message = error4.message;
+      if (error4.name === "TypeError" && "cause" in error4) {
+        if (error4.cause instanceof Error) {
+          message = error4.cause.message;
+        } else if (typeof error4.cause === "string") {
+          message = error4.cause;
         }
       }
     }
     const requestError = new RequestError(message, 500, {
       request: requestOptions
     });
-    requestError.cause = error3;
+    requestError.cause = error4;
     throw requestError;
   }
   const status = fetchResponse.status;
@@ -25896,8 +25896,8 @@ function iterator(octokit, route, parameters) {
             }
           }
           return { value: normalizedResponse };
-        } catch (error3) {
-          if (error3.status !== 409) throw error3;
+        } catch (error4) {
+          if (error4.status !== 409) throw error4;
           url = "";
           return {
             value: {
@@ -26369,8 +26369,8 @@ __export(index_exports, {
   fetchBibliographies: () => fetchBibliographies
 });
 module.exports = __toCommonJS(index_exports);
-var core7 = __toESM(require_core(), 1);
-var github2 = __toESM(require_github(), 1);
+var core9 = __toESM(require_core(), 1);
+var github3 = __toESM(require_github(), 1);
 
 // dist/inputs.js
 var core = __toESM(require_core(), 1);
@@ -26531,14 +26531,14 @@ var castToError = (err) => {
   if (typeof err === "object" && err !== null) {
     try {
       if (Object.prototype.toString.call(err) === "[object Error]") {
-        const error3 = new Error(err.message, err.cause ? { cause: err.cause } : {});
+        const error4 = new Error(err.message, err.cause ? { cause: err.cause } : {});
         if (err.stack)
-          error3.stack = err.stack;
-        if (err.cause && !error3.cause)
-          error3.cause = err.cause;
+          error4.stack = err.stack;
+        if (err.cause && !error4.cause)
+          error4.cause = err.cause;
         if (err.name)
-          error3.name = err.name;
-        return error3;
+          error4.name = err.name;
+        return error4;
       }
     } catch {
     }
@@ -26554,15 +26554,15 @@ var castToError = (err) => {
 var AnthropicError = class extends Error {
 };
 var APIError = class _APIError extends AnthropicError {
-  constructor(status, error3, message, headers) {
-    super(`${_APIError.makeMessage(status, error3, message)}`);
+  constructor(status, error4, message, headers) {
+    super(`${_APIError.makeMessage(status, error4, message)}`);
     this.status = status;
     this.headers = headers;
     this.requestID = headers?.get("request-id");
-    this.error = error3;
+    this.error = error4;
   }
-  static makeMessage(status, error3, message) {
-    const msg = error3?.message ? typeof error3.message === "string" ? error3.message : JSON.stringify(error3.message) : error3 ? JSON.stringify(error3) : message;
+  static makeMessage(status, error4, message) {
+    const msg = error4?.message ? typeof error4.message === "string" ? error4.message : JSON.stringify(error4.message) : error4 ? JSON.stringify(error4) : message;
     if (status && msg) {
       return `${status} ${msg}`;
     }
@@ -26578,32 +26578,32 @@ var APIError = class _APIError extends AnthropicError {
     if (!status || !headers) {
       return new APIConnectionError({ message, cause: castToError(errorResponse) });
     }
-    const error3 = errorResponse;
+    const error4 = errorResponse;
     if (status === 400) {
-      return new BadRequestError(status, error3, message, headers);
+      return new BadRequestError(status, error4, message, headers);
     }
     if (status === 401) {
-      return new AuthenticationError(status, error3, message, headers);
+      return new AuthenticationError(status, error4, message, headers);
     }
     if (status === 403) {
-      return new PermissionDeniedError(status, error3, message, headers);
+      return new PermissionDeniedError(status, error4, message, headers);
     }
     if (status === 404) {
-      return new NotFoundError(status, error3, message, headers);
+      return new NotFoundError(status, error4, message, headers);
     }
     if (status === 409) {
-      return new ConflictError(status, error3, message, headers);
+      return new ConflictError(status, error4, message, headers);
     }
     if (status === 422) {
-      return new UnprocessableEntityError(status, error3, message, headers);
+      return new UnprocessableEntityError(status, error4, message, headers);
     }
     if (status === 429) {
-      return new RateLimitError(status, error3, message, headers);
+      return new RateLimitError(status, error4, message, headers);
     }
     if (status >= 500) {
-      return new InternalServerError(status, error3, message, headers);
+      return new InternalServerError(status, error4, message, headers);
     }
-    return new _APIError(status, error3, message, headers);
+    return new _APIError(status, error4, message, headers);
   }
 };
 var APIUserAbortError = class extends APIError {
@@ -28119,8 +28119,8 @@ function parseBetaOutputFormat(params, content) {
       return outputFormat.parse(content);
     }
     return JSON.parse(content);
-  } catch (error3) {
-    throw new AnthropicError(`Failed to parse structured output: ${error3}`);
+  } catch (error4) {
+    throw new AnthropicError(`Failed to parse structured output: ${error4}`);
   }
 }
 
@@ -28399,24 +28399,24 @@ var BetaMessageStream = class _BetaMessageStream {
     _BetaMessageStream_response.set(this, void 0);
     _BetaMessageStream_request_id.set(this, void 0);
     _BetaMessageStream_logger.set(this, void 0);
-    _BetaMessageStream_handleError.set(this, (error3) => {
+    _BetaMessageStream_handleError.set(this, (error4) => {
       __classPrivateFieldSet(this, _BetaMessageStream_errored, true, "f");
-      if (isAbortError(error3)) {
-        error3 = new APIUserAbortError();
+      if (isAbortError(error4)) {
+        error4 = new APIUserAbortError();
       }
-      if (error3 instanceof APIUserAbortError) {
+      if (error4 instanceof APIUserAbortError) {
         __classPrivateFieldSet(this, _BetaMessageStream_aborted, true, "f");
-        return this._emit("abort", error3);
+        return this._emit("abort", error4);
       }
-      if (error3 instanceof AnthropicError) {
-        return this._emit("error", error3);
+      if (error4 instanceof AnthropicError) {
+        return this._emit("error", error4);
       }
-      if (error3 instanceof Error) {
-        const anthropicError = new AnthropicError(error3.message);
-        anthropicError.cause = error3;
+      if (error4 instanceof Error) {
+        const anthropicError = new AnthropicError(error4.message);
+        anthropicError.cause = error4;
         return this._emit("error", anthropicError);
       }
-      return this._emit("error", new AnthropicError(String(error3)));
+      return this._emit("error", new AnthropicError(String(error4)));
     });
     __classPrivateFieldSet(this, _BetaMessageStream_connectedPromise, new Promise((resolve3, reject) => {
       __classPrivateFieldSet(this, _BetaMessageStream_resolveConnectedPromise, resolve3, "f");
@@ -28638,22 +28638,22 @@ var BetaMessageStream = class _BetaMessageStream {
       listeners.forEach(({ listener }) => listener(...args));
     }
     if (event === "abort") {
-      const error3 = args[0];
+      const error4 = args[0];
       if (!__classPrivateFieldGet(this, _BetaMessageStream_catchingPromiseCreated, "f") && !listeners?.length) {
-        Promise.reject(error3);
+        Promise.reject(error4);
       }
-      __classPrivateFieldGet(this, _BetaMessageStream_rejectConnectedPromise, "f").call(this, error3);
-      __classPrivateFieldGet(this, _BetaMessageStream_rejectEndPromise, "f").call(this, error3);
+      __classPrivateFieldGet(this, _BetaMessageStream_rejectConnectedPromise, "f").call(this, error4);
+      __classPrivateFieldGet(this, _BetaMessageStream_rejectEndPromise, "f").call(this, error4);
       this._emit("end");
       return;
     }
     if (event === "error") {
-      const error3 = args[0];
+      const error4 = args[0];
       if (!__classPrivateFieldGet(this, _BetaMessageStream_catchingPromiseCreated, "f") && !listeners?.length) {
-        Promise.reject(error3);
+        Promise.reject(error4);
       }
-      __classPrivateFieldGet(this, _BetaMessageStream_rejectConnectedPromise, "f").call(this, error3);
-      __classPrivateFieldGet(this, _BetaMessageStream_rejectEndPromise, "f").call(this, error3);
+      __classPrivateFieldGet(this, _BetaMessageStream_rejectConnectedPromise, "f").call(this, error4);
+      __classPrivateFieldGet(this, _BetaMessageStream_rejectEndPromise, "f").call(this, error4);
       this._emit("end");
     }
   }
@@ -28858,8 +28858,8 @@ var BetaMessageStream = class _BetaMessageStream {
                 try {
                   newContent.input = partialParse(jsonBuf);
                 } catch (err) {
-                  const error3 = new AnthropicError(`Unable to parse tool parameter JSON from model. Please retry your request or adjust your prompt. Error: ${err}. JSON: ${jsonBuf}`);
-                  __classPrivateFieldGet(this, _BetaMessageStream_handleError, "f").call(this, error3);
+                  const error4 = new AnthropicError(`Unable to parse tool parameter JSON from model. Please retry your request or adjust your prompt. Error: ${err}. JSON: ${jsonBuf}`);
+                  __classPrivateFieldGet(this, _BetaMessageStream_handleError, "f").call(this, error4);
                 }
               }
               snapshot.content[event.index] = newContent;
@@ -29163,13 +29163,13 @@ var BetaToolRunner = class {
         throw new AnthropicError("ToolRunner concluded without a message from the server");
       }
       __classPrivateFieldGet(this, _BetaToolRunner_completion, "f").resolve(await __classPrivateFieldGet(this, _BetaToolRunner_message, "f"));
-    } catch (error3) {
+    } catch (error4) {
       __classPrivateFieldSet(this, _BetaToolRunner_consumed, false, "f");
       __classPrivateFieldGet(this, _BetaToolRunner_completion, "f").promise.catch(() => {
       });
-      __classPrivateFieldGet(this, _BetaToolRunner_completion, "f").reject(error3);
+      __classPrivateFieldGet(this, _BetaToolRunner_completion, "f").reject(error4);
       __classPrivateFieldSet(this, _BetaToolRunner_completion, promiseWithResolvers(), "f");
-      throw error3;
+      throw error4;
     }
   }
   setMessagesParams(paramsOrMutator) {
@@ -29319,11 +29319,11 @@ async function generateToolResponse(params, lastMessage = params.messages.at(-1)
         tool_use_id: toolUse.id,
         content: result
       };
-    } catch (error3) {
+    } catch (error4) {
       return {
         type: "tool_result",
         tool_use_id: toolUse.id,
-        content: error3 instanceof ToolError ? error3.content : `Error: ${error3 instanceof Error ? error3.message : String(error3)}`,
+        content: error4 instanceof ToolError ? error4.content : `Error: ${error4 instanceof Error ? error4.message : String(error4)}`,
         is_error: true
       };
     }
@@ -29957,8 +29957,8 @@ function parseOutputFormat(params, content) {
       return outputFormat.parse(content);
     }
     return JSON.parse(content);
-  } catch (error3) {
-    throw new AnthropicError(`Failed to parse structured output: ${error3}`);
+  } catch (error4) {
+    throw new AnthropicError(`Failed to parse structured output: ${error4}`);
   }
 }
 
@@ -30017,24 +30017,24 @@ var MessageStream = class _MessageStream {
     _MessageStream_response.set(this, void 0);
     _MessageStream_request_id.set(this, void 0);
     _MessageStream_logger.set(this, void 0);
-    _MessageStream_handleError.set(this, (error3) => {
+    _MessageStream_handleError.set(this, (error4) => {
       __classPrivateFieldSet(this, _MessageStream_errored, true, "f");
-      if (isAbortError(error3)) {
-        error3 = new APIUserAbortError();
+      if (isAbortError(error4)) {
+        error4 = new APIUserAbortError();
       }
-      if (error3 instanceof APIUserAbortError) {
+      if (error4 instanceof APIUserAbortError) {
         __classPrivateFieldSet(this, _MessageStream_aborted, true, "f");
-        return this._emit("abort", error3);
+        return this._emit("abort", error4);
       }
-      if (error3 instanceof AnthropicError) {
-        return this._emit("error", error3);
+      if (error4 instanceof AnthropicError) {
+        return this._emit("error", error4);
       }
-      if (error3 instanceof Error) {
-        const anthropicError = new AnthropicError(error3.message);
-        anthropicError.cause = error3;
+      if (error4 instanceof Error) {
+        const anthropicError = new AnthropicError(error4.message);
+        anthropicError.cause = error4;
         return this._emit("error", anthropicError);
       }
-      return this._emit("error", new AnthropicError(String(error3)));
+      return this._emit("error", new AnthropicError(String(error4)));
     });
     __classPrivateFieldSet(this, _MessageStream_connectedPromise, new Promise((resolve3, reject) => {
       __classPrivateFieldSet(this, _MessageStream_resolveConnectedPromise, resolve3, "f");
@@ -30256,22 +30256,22 @@ var MessageStream = class _MessageStream {
       listeners.forEach(({ listener }) => listener(...args));
     }
     if (event === "abort") {
-      const error3 = args[0];
+      const error4 = args[0];
       if (!__classPrivateFieldGet(this, _MessageStream_catchingPromiseCreated, "f") && !listeners?.length) {
-        Promise.reject(error3);
+        Promise.reject(error4);
       }
-      __classPrivateFieldGet(this, _MessageStream_rejectConnectedPromise, "f").call(this, error3);
-      __classPrivateFieldGet(this, _MessageStream_rejectEndPromise, "f").call(this, error3);
+      __classPrivateFieldGet(this, _MessageStream_rejectConnectedPromise, "f").call(this, error4);
+      __classPrivateFieldGet(this, _MessageStream_rejectEndPromise, "f").call(this, error4);
       this._emit("end");
       return;
     }
     if (event === "error") {
-      const error3 = args[0];
+      const error4 = args[0];
       if (!__classPrivateFieldGet(this, _MessageStream_catchingPromiseCreated, "f") && !listeners?.length) {
-        Promise.reject(error3);
+        Promise.reject(error4);
       }
-      __classPrivateFieldGet(this, _MessageStream_rejectConnectedPromise, "f").call(this, error3);
-      __classPrivateFieldGet(this, _MessageStream_rejectEndPromise, "f").call(this, error3);
+      __classPrivateFieldGet(this, _MessageStream_rejectConnectedPromise, "f").call(this, error4);
+      __classPrivateFieldGet(this, _MessageStream_rejectEndPromise, "f").call(this, error4);
       this._emit("end");
     }
   }
@@ -30977,8 +30977,8 @@ var BaseAnthropic = class {
   defaultIdempotencyKey() {
     return `stainless-node-retry-${uuid4()}`;
   }
-  makeStatusError(status, error3, message, headers) {
-    return APIError.generate(status, error3, message, headers);
+  makeStatusError(status, error4, message, headers) {
+    return APIError.generate(status, error4, message, headers);
   }
   buildURL(path6, query, defaultBaseURL) {
     const baseURL = !__classPrivateFieldGet(this, _BaseAnthropic_instances, "m", _BaseAnthropic_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
@@ -31379,8 +31379,8 @@ var VALID_MODEL_PATTERNS = [
   /^claude-3-haiku-\d{8}$/
   // claude-3-haiku-20240307
 ];
-function isRetryableAnthropicError(error3) {
-  return error3 instanceof RateLimitError || error3 instanceof APIConnectionError || error3 instanceof APIError && (error3.status !== void 0 && error3.status >= 500 || error3.status === void 0 && error3.message?.includes("overloaded"));
+function isRetryableAnthropicError(error4) {
+  return error4 instanceof RateLimitError || error4 instanceof APIConnectionError || error4 instanceof APIError && (error4.status !== void 0 && error4.status >= 500 || error4.status === void 0 && error4.message?.includes("overloaded"));
 }
 
 // dist/bibliography.js
@@ -31417,10 +31417,10 @@ function extractCitationKeys(content) {
     const fence = FENCE_LINE.exec(line);
     if (fence) {
       const marker = fence[1];
-      const info7 = (fence[2] || "").trim();
+      const info9 = (fence[2] || "").trim();
       const char = marker[0];
       const top = stack[stack.length - 1];
-      if (top && char === top.char && marker.length >= top.length && info7 === "") {
+      if (top && char === top.char && marker.length >= top.length && info9 === "") {
         stack.pop();
         if (opaqueFrom !== null && stack.length < opaqueFrom) {
           opaqueFrom = null;
@@ -31429,7 +31429,7 @@ function extractCitationKeys(content) {
       }
       stack.push({ char, length: marker.length });
       if (opaqueFrom === null) {
-        const directive = DIRECTIVE_INFO.exec(info7);
+        const directive = DIRECTIVE_INFO.exec(info9);
         const isOpaque = directive ? OPAQUE_DIRECTIVES.has(directive[1]) : true;
         if (isOpaque) {
           opaqueFrom = stack.length;
@@ -31818,8 +31818,8 @@ function getReviewInputs() {
   };
 }
 var RESYNC_COMMAND = "\\translate-resync";
-function validatePREvent(context2, testMode) {
-  const { eventName, payload } = context2;
+function validatePREvent(context3, testMode) {
+  const { eventName, payload } = context3;
   if (eventName === "issue_comment") {
     return validateResyncComment(payload);
   }
@@ -31887,8 +31887,8 @@ function validateResyncComment(payload) {
   }
   return { merged: true, prNumber, isTestMode: false, isResync: true, resyncLanguage };
 }
-function validateReviewPREvent(context2) {
-  const { eventName, payload } = context2;
+function validateReviewPREvent(context3) {
+  const { eventName, payload } = context3;
   if (eventName !== "pull_request") {
     throw new Error(`Review mode only works on pull_request events. Got: ${eventName}`);
   }
@@ -31900,280 +31900,562 @@ function validateReviewPREvent(context2) {
   return { prNumber };
 }
 
-// dist/reviewer.js
-var core3 = __toESM(require_core(), 1);
-var github = __toESM(require_github(), 1);
-
-// dist/branch-naming.js
-var SYNC_BRANCH_PREFIX = "translation-sync-";
-var RESYNC_BRANCH_PREFIX = "resync/";
-var TRANSLATION_BRANCH_PREFIXES = [SYNC_BRANCH_PREFIX, RESYNC_BRANCH_PREFIX];
-function isTranslationBranch(ref) {
-  return TRANSLATION_BRANCH_PREFIXES.some((prefix) => ref.startsWith(prefix) && ref.length > prefix.length);
+// dist/translator.js
+var core2 = __toESM(require_core(), 1);
+var INCOMPLETE_DOCUMENT_MARKER = "-----> INCOMPLETE DOCUMENT <------";
+var RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 1e3
+  // 1s, 2s, 4s with exponential backoff
+};
+function estimateOutputTokens(sourceLength, targetLanguage) {
+  const baseTokens = Math.ceil(sourceLength / 4);
+  let expansionFactor = 1.5;
+  if (["ar", "fa", "he"].includes(targetLanguage)) {
+    expansionFactor = 1.8;
+  }
+  if (["zh", "zh-cn", "zh-tw", "ja", "ko"].includes(targetLanguage)) {
+    expansionFactor = 1.3;
+  }
+  const estimatedTokens = Math.ceil(baseTokens * expansionFactor);
+  const buffer = 2e3;
+  return estimatedTokens + buffer;
 }
-
-// dist/pr-creator.js
-var SYNC_METADATA_SCHEMA_VERSION = 1;
-async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections) {
-  const { targetOwner, targetRepo } = config;
-  const { data: targetRepoData } = await octokit.rest.repos.get({
-    owner: targetOwner,
-    repo: targetRepo
-  });
-  const defaultBranch = targetRepoData.default_branch;
-  const { data: refData } = await octokit.rest.git.getRef({
-    owner: targetOwner,
-    repo: targetRepo,
-    ref: `heads/${defaultBranch}`
-  });
-  const baseSha = refData.object.sha;
-  const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-").slice(0, -5);
-  const branchName = `${SYNC_BRANCH_PREFIX}${timestamp2}-pr-${config.prNumber}`;
-  await octokit.rest.git.createRef({
-    owner: targetOwner,
-    repo: targetRepo,
-    ref: `refs/heads/${branchName}`,
-    sha: baseSha
-  });
-  logger.info(`Created branch: ${branchName}`);
-  for (const file of translatedFiles) {
-    await octokit.rest.repos.createOrUpdateFileContents({
-      owner: targetOwner,
-      repo: targetRepo,
-      path: file.path,
-      message: `Update translation: ${file.path}`,
-      content: Buffer.from(file.content).toString("base64"),
-      branch: branchName,
-      sha: file.sha
-      // Include SHA if updating existing file
-    });
-    logger.info(`Committed: ${file.path}`);
+function checkDocumentSize(sourceLength, targetLanguage) {
+  const estimated = estimateOutputTokens(sourceLength, targetLanguage);
+  const API_MAX_TOKENS = MAX_TOKENS.fullDocument;
+  if (estimated > API_MAX_TOKENS) {
+    return `Document too large: estimated ${estimated} tokens exceeds API maximum of ${API_MAX_TOKENS} tokens. This document needs section-by-section translation rather than bulk translation.`;
   }
-  for (const file of filesToDelete) {
-    await octokit.rest.repos.deleteFile({
-      owner: targetOwner,
-      repo: targetRepo,
-      path: file.path,
-      message: `Delete removed file: ${file.path}`,
-      branch: branchName,
-      sha: file.sha
-    });
-    logger.info(`Deleted: ${file.path}`);
+  if (process.env.TRANSLATE_DEBUG) {
+    console.log(`Pre-flight check: source=${sourceLength} chars, estimated output=${estimated} tokens, using max_tokens=${API_MAX_TOKENS}`);
   }
-  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections);
-  const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
-  const { data: pr } = await octokit.rest.pulls.create({
-    owner: targetOwner,
-    repo: targetRepo,
-    title: prTitle,
-    body: prBody,
-    head: branchName,
-    base: defaultBranch
-  });
-  logger.info(`Created PR: ${pr.html_url}`);
-  const labelsToAdd = buildLabelSet(config.prLabels, sourcePrInfo?.labels);
-  if (labelsToAdd.length > 0) {
-    const maxAttempts = 3;
-    const delayMs = 2e3;
-    let labeled = false;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+  return null;
+}
+function formatApiError(error4) {
+  if (error4 instanceof AuthenticationError) {
+    return "Authentication failed: Invalid or expired API key. Check your anthropic-api-key secret.";
+  }
+  if (error4 instanceof RateLimitError) {
+    return "Rate limit exceeded: Too many requests. The action will retry automatically, or try again later.";
+  }
+  if (error4 instanceof APIConnectionError) {
+    return "Connection error: Unable to reach Anthropic API. Check network connectivity.";
+  }
+  if (error4 instanceof BadRequestError) {
+    return `Bad request: ${error4.message}. This may indicate an issue with the prompt or content.`;
+  }
+  if (error4 instanceof APIError) {
+    if (error4.message?.includes("overloaded")) {
+      return "Anthropic API is temporarily overloaded. Retries exhausted \u2014 please try again later.";
+    }
+    return `API error (${error4.status}): ${error4.message}`;
+  }
+  if (error4 instanceof Error) {
+    return error4.message;
+  }
+  return "Unknown translation error";
+}
+var TranslationService = class {
+  client;
+  model;
+  debug;
+  // Counted at the chokepoint so retried/discarded attempts are included —
+  // the per-result tokensUsed fields miss them (#164/F53).
+  usage = { inputTokens: 0, outputTokens: 0, apiCalls: 0 };
+  constructor(apiKey, model = DEFAULT_CLAUDE_MODEL, debug = false) {
+    this.client = new Anthropic({ apiKey, maxRetries: 0 });
+    this.model = model;
+    this.debug = debug;
+  }
+  log(message) {
+    if (this.debug) {
+      core2.info(`[Translator] ${message}`);
+    }
+  }
+  /** Total API usage this instance has accumulated, retries included. */
+  getUsage() {
+    return { ...this.usage };
+  }
+  /**
+   * Sleep for a given number of milliseconds
+   */
+  sleep(ms) {
+    return new Promise((resolve3) => setTimeout(resolve3, ms));
+  }
+  /**
+   * Call Claude API with retry logic and exponential backoff.
+   *
+   * Retries on transient errors:
+   * - RateLimitError (429)
+   * - APIConnectionError (network issues)
+   * - APIError with 5xx status (server errors)
+   * - APIError with overloaded_error (status undefined)
+   *
+   * Does NOT retry on:
+   * - AuthenticationError (invalid API key)
+   * - BadRequestError (prompt issues)
+   * - Other non-transient errors
+   */
+  async callWithRetry(createParams, operationName) {
+    const { maxRetries, baseDelayMs } = RETRY_CONFIG;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        await octokit.rest.issues.addLabels({
-          owner: targetOwner,
-          repo: targetRepo,
-          issue_number: pr.number,
-          labels: labelsToAdd
+        const stream = this.client.messages.stream({
+          ...createParams,
+          thinking: DEFAULT_THINKING
         });
-        logger.info(`Added labels: ${labelsToAdd.join(", ")}`);
-        labeled = true;
-        break;
-      } catch (labelError) {
-        if (attempt < maxAttempts) {
-          logger.info(`Label attempt ${attempt}/${maxAttempts} failed, retrying in ${delayMs}ms...`);
-          await new Promise((resolve3) => setTimeout(resolve3, delayMs));
-        } else {
-          logger.warning(`Could not add labels to PR #${pr.number} after ${maxAttempts} attempts: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
+        const message = await stream.finalMessage();
+        this.usage.inputTokens += message.usage.input_tokens;
+        this.usage.outputTokens += message.usage.output_tokens;
+        this.usage.apiCalls += 1;
+        if (message.stop_reason === "max_tokens") {
+          throw new Error(`${operationName}: response truncated at max_tokens=${createParams.max_tokens}; refusing to use incomplete output`);
         }
+        return message;
+      } catch (error4) {
+        if (error4 instanceof AuthenticationError || error4 instanceof BadRequestError) {
+          throw error4;
+        }
+        const isRetryable = isRetryableAnthropicError(error4);
+        if (!isRetryable || attempt === maxRetries) {
+          throw error4;
+        }
+        const delay = baseDelayMs * Math.pow(2, attempt - 1);
+        this.log(`${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error4 instanceof Error ? error4.message : error4}. Retrying in ${delay}ms...`);
+        await this.sleep(delay);
       }
     }
-    if (!labeled) {
-      logger.warning(`PR #${pr.number} created successfully but labels could not be applied. Downstream workflows that filter by label may not trigger.`);
+    throw new Error("Unexpected: retry loop completed without result");
+  }
+  /**
+   * Translate a section (update, new, or resync)
+   */
+  async translateSection(request2) {
+    try {
+      if (request2.mode === "update") {
+        return await this.translateSectionUpdate(request2);
+      } else if (request2.mode === "resync") {
+        return await this.translateSectionResync(request2);
+      } else {
+        return await this.translateNewSection(request2);
+      }
+    } catch (error4) {
+      return {
+        success: false,
+        error: formatApiError(error4)
+      };
     }
   }
-  await requestReviewers(octokit, targetOwner, targetRepo, pr.number, config, logger);
-  return {
-    prUrl: pr.html_url,
-    branchName,
-    prNumber: pr.number
-  };
-}
-function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections) {
-  const newFiles = translatedFiles.filter((f) => !f.sha);
-  const updatedFiles = translatedFiles.filter((f) => f.sha);
-  let filesChangedSection = "";
-  if (newFiles.length > 0) {
-    filesChangedSection += "### Files Added\n" + newFiles.map((f) => `- \u2705 \`${f.path}\``).join("\n");
-  }
-  if (updatedFiles.length > 0) {
-    if (filesChangedSection)
-      filesChangedSection += "\n\n";
-    filesChangedSection += "### Files Updated\n" + updatedFiles.map((f) => `- \u270F\uFE0F \`${f.path}\``).join("\n");
-  }
-  if (filesToDelete.length > 0) {
-    if (filesChangedSection)
-      filesChangedSection += "\n\n";
-    filesChangedSection += "### Files Deleted\n" + filesToDelete.map((f) => `- \u274C \`${f.path}\``).join("\n");
-  }
-  const sourcePrTitle = sourcePrInfo?.title || "";
-  const { sourceRepoOwner, sourceRepoName, prNumber } = config;
-  let skippedNotice = "";
-  if (skippedSections && skippedSections.size > 0) {
-    const lines = [];
-    for (const [file, headings] of skippedSections) {
-      lines.push(`- \`${file}\`: ${headings.map((h) => `\`${h.replace(/`/g, "\\`")}\``).join(", ")}`);
+  /**
+   * Update existing section (mode='update')
+   * Claude sees: old English, new English, current translation → produces updated translation
+   */
+  async translateSectionUpdate(request2) {
+    const { oldEnglish, newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } = request2;
+    if (!oldEnglish || !newEnglish || !currentTranslation) {
+      return {
+        success: false,
+        error: "Update mode requires oldEnglish, newEnglish, and currentTranslation"
+      };
     }
-    skippedNotice = `
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
+    const prompt = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
 
-### \u26A0\uFE0F Sections Pending Earlier Translation PR
+TASK: The ${sourceLanguage} section has been modified. Update the existing ${targetLanguage} translation to reflect these changes.
 
-The following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. If that PR is abandoned, run \`/translate-resync\` to recover.
+CRITICAL RULES:
+1. Compare the OLD and NEW ${sourceLanguage} versions to understand what changed
+2. Update the CURRENT ${targetLanguage} translation to reflect these changes
+3. Maintain consistency with the existing ${targetLanguage} style and terminology
+4. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
+5. DO NOT translate code, math, URLs, or technical identifiers
+6. **NEVER remove i18n/localization code from code cells.** The translation may contain extra code inside code cells that does NOT exist in the source \u2014 this is intentional localization (e.g., font configuration like \`from matplotlib import font_manager\`, \`fontP.set_family('SimHei')\`, \`plt.rcParams\` settings, or lines marked \`# i18n\`). Always preserve these.
+7. Use the glossary for consistent terminology
+8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters
+   - Math blocks must have matching $$ delimiters
+   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
+${additionalRules}
+${additionalRules ? "" : "9. "}Return ONLY the updated ${targetLanguage} section, no explanations
+${request2.customInstructions || ""}
+${glossarySection}
 
-${lines.join("\n")}`;
-  }
-  let droppedNotice = "";
-  if (droppedTargetSections && droppedTargetSections.size > 0) {
-    const lines = [];
-    for (const [file, headings] of droppedTargetSections) {
-      lines.push(`- \`${file}\`: ${headings.map((h) => `\`${h.replace(/`/g, "\\`")}\``).join(", ")}`);
+[OLD ${sourceLanguage} VERSION]
+${oldEnglish}
+[/OLD ${sourceLanguage} VERSION]
+
+[NEW ${sourceLanguage} VERSION]
+${newEnglish}
+[/NEW ${sourceLanguage} VERSION]
+
+[CURRENT ${targetLanguage} TRANSLATION]
+${currentTranslation}
+[/CURRENT ${targetLanguage} TRANSLATION]
+
+Provide ONLY the updated ${targetLanguage} translation. Do not include any markers, explanations, or comments.`;
+    this.log(`Translating section update, mode=update`);
+    this.log(`Old ${sourceLanguage} length: ${oldEnglish.length}`);
+    this.log(`New ${sourceLanguage} length: ${newEnglish.length}`);
+    this.log(`Current ${targetLanguage} length: ${currentTranslation.length}`);
+    const response = await this.callWithRetry({
+      model: this.model,
+      max_tokens: MAX_TOKENS.section,
+      messages: [{ role: "user", content: prompt }]
+    }, "translateSectionUpdate");
+    const content = response.content[0];
+    if (!content || content.type !== "text") {
+      return {
+        success: false,
+        error: "Unexpected response format from Claude"
+      };
     }
-    droppedNotice = `
-
-### \u26A0\uFE0F Target-Only Sections Removed
-
-The following sections exist in the current translation but have **no counterpart in the source document**, so this sync removes them (the translation mirrors the source's structure). If the source deleted these sections, this removal is correct \u2014 merge as usual. If they are human-authored additions you want to keep, move them into a target-only file before merging (see [adding content to a translated edition](https://github.com/QuantEcon/action-translation/blob/main/docs/user/faq.md#how-do-i-add-content-to-a-translated-edition-that-isnt-in-the-source)).
-
-${lines.join("\n")}`;
-  }
-  const metadataFiles = fileMetadata ? fileMetadata.map((f) => {
-    const entry = {
-      path: f.path,
-      type: f.type
+    this.log(`Translated section length: ${content.text.length}`);
+    return {
+      success: true,
+      translatedSection: content.text.trim(),
+      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
     };
-    if (f.previousPath)
-      entry.previousPath = f.previousPath;
-    return entry;
-  }) : [
-    ...translatedFiles.map((f) => ({ path: f.path })),
-    ...filesToDelete.map((f) => ({ path: f.path }))
-  ];
-  const metadata = {
-    schemaVersion: SYNC_METADATA_SCHEMA_VERSION,
-    sourceRepo: `${sourceRepoOwner}/${sourceRepoName}`,
-    sourcePR: prNumber,
-    mode: "sync",
-    sourceCommitSha: config.sourceCommitSha,
-    targetBaseSha: targetBaseSha || "",
-    sourceLanguage: config.sourceLanguage,
-    targetLanguage: config.targetLanguage,
-    claudeModel: config.claudeModel,
-    files: metadataFiles
-  };
-  const metadataBlock = `<!-- translation-sync-metadata
-${JSON.stringify(metadata, null, 2)}
--->`;
-  return `## Automated Translation Sync
+  }
+  /**
+   * Resync existing section (mode='resync')
+   * Claude sees: current English + current translation → produces resynced translation
+   *
+   * Used for drift recovery when no baseline (old English) is available.
+   * Preserves existing translation style, terminology, and localization
+   * wherever the meaning hasn't changed.
+   */
+  async translateSectionResync(request2) {
+    const { newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } = request2;
+    if (!newEnglish || !currentTranslation) {
+      return {
+        success: false,
+        error: "Resync mode requires newEnglish (current source) and currentTranslation"
+      };
+    }
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join("\n") : "";
+    const prompt = `You are resyncing a ${targetLanguage} translation to match the current ${sourceLanguage} source.
 
-This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoName}](https://github.com/${sourceRepoOwner}/${sourceRepoName}).
+TASK: The ${sourceLanguage} source may have changed since the translation was made. Update the ${targetLanguage} translation to accurately reflect the current source content.
 
-### Source PR
-**[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ""}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
+CRITICAL RULES:
+1. Preserve the existing ${targetLanguage} translation style, terminology choices, and localization decisions wherever the meaning hasn't changed
+2. Only modify parts of the translation where the ${sourceLanguage} source has different content
+3. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
+4. DO NOT translate code, math, URLs, or technical identifiers
+5. **NEVER remove i18n/localization code from code cells.** The translation may contain extra code inside code cells that does NOT exist in the source \u2014 this is intentional localization (e.g., font configuration like \`from matplotlib import font_manager\`, \`fontP.set_family('SimHei')\`, \`plt.rcParams\` settings, or lines marked \`# i18n\`). Always preserve these.
+6. Use the glossary for consistent terminology
+7. MARKDOWN SYNTAX: Ensure proper markdown syntax:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters
+   - Math blocks must have matching $$ delimiters
+   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
+${additionalRules}
+${additionalRules ? "" : "8. "}Return ONLY the updated ${targetLanguage} section, no explanations
+${request2.customInstructions || ""}
+${glossarySection}
 
-${filesChangedSection}${skippedNotice}${droppedNotice}
+[CURRENT ${sourceLanguage} SOURCE]
+${newEnglish}
+[/CURRENT ${sourceLanguage} SOURCE]
 
-### Details
-- **Source Language**: ${config.sourceLanguage}
-- **Target Language**: ${config.targetLanguage}
-- **Model**: ${config.claudeModel}
+[EXISTING ${targetLanguage} TRANSLATION]
+${currentTranslation}
+[/EXISTING ${targetLanguage} TRANSLATION]
 
----
-*This PR was created automatically by the [translation action](https://github.com/quantecon/action-translation).*
+Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing translation's style and only change what's needed to match the current source. Do not include any markers, explanations, or comments.`;
+    this.log(`Translating section resync, mode=resync`);
+    this.log(`Current ${sourceLanguage} length: ${newEnglish.length}`);
+    this.log(`Existing ${targetLanguage} length: ${currentTranslation.length}`);
+    const response = await this.callWithRetry({
+      model: this.model,
+      max_tokens: MAX_TOKENS.section,
+      messages: [{ role: "user", content: prompt }]
+    }, "translateSectionResync");
+    const content = response.content[0];
+    if (!content || content.type !== "text") {
+      return {
+        success: false,
+        error: "Unexpected response format from Claude"
+      };
+    }
+    this.log(`Resynced section length: ${content.text.length}`);
+    return {
+      success: true,
+      translatedSection: content.text.trim(),
+      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
+    };
+  }
+  /**
+   * Translate new section (mode='new')
+   * Claude sees: English section → produces translation
+   */
+  async translateNewSection(request2) {
+    const { englishSection, sourceLanguage, targetLanguage, glossary } = request2;
+    if (!englishSection) {
+      return {
+        success: false,
+        error: "New mode requires englishSection"
+      };
+    }
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
+    const prompt = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
 
-${metadataBlock}`;
-}
-function buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo) {
-  if (sourcePrInfo?.title) {
-    return `\u{1F310} [translation-sync] ${sourcePrInfo.title}`;
+RULES:
+1. Translate all prose content accurately
+2. Preserve all MyST Markdown formatting, structure, and directives
+3. DO NOT translate code blocks (keep code as-is)
+4. DO NOT translate mathematical equations (keep LaTeX as-is)
+5. DO NOT translate URLs, file paths, or technical identifiers
+6. Use the glossary for consistent terminology
+7. Maintain heading structure and levels
+8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters
+   - Math blocks must have matching $$ delimiters
+   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
+${additionalRules}
+${additionalRules ? "" : "9. "}Return ONLY the translated section, no explanations
+${request2.customInstructions || ""}
+${glossarySection}
+
+[${sourceLanguage} SECTION TO TRANSLATE]
+${englishSection}
+[/END SECTION]
+
+Provide ONLY the ${targetLanguage} translation. Do not include any markers, explanations, or comments.`;
+    this.log(`Translating new section, mode=new`);
+    this.log(`${sourceLanguage} section length: ${englishSection.length}`);
+    const response = await this.callWithRetry({
+      model: this.model,
+      max_tokens: MAX_TOKENS.section,
+      messages: [{ role: "user", content: prompt }]
+    }, "translateNewSection");
+    const content = response.content[0];
+    if (!content || content.type !== "text") {
+      return {
+        success: false,
+        error: "Unexpected response format from Claude"
+      };
+    }
+    this.log(`Translated section length: ${content.text.length}`);
+    return {
+      success: true,
+      translatedSection: content.text.trim(),
+      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
+    };
   }
-  const allFiles = [...translatedFiles.map((f) => f.path), ...filesToDelete.map((f) => f.path)];
-  let titleFileList;
-  if (allFiles.length === 1) {
-    titleFileList = allFiles[0];
-  } else if (allFiles.length === 2) {
-    titleFileList = `${allFiles[0]} + 1 more`;
-  } else {
-    titleFileList = `${allFiles.length} files`;
+  /**
+   * Translate full document (for new files)
+   */
+  async translateFullDocument(request2) {
+    const { content, sourceLanguage, targetLanguage, glossary } = request2;
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${10 + i}. ${rule}`).join("\n") : "";
+    const prompt = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
+
+RULES:
+1. Translate all prose content
+2. Preserve all MyST Markdown directives and structure exactly
+3. DO NOT translate code blocks (keep code as-is)
+4. DO NOT translate mathematical equations (keep LaTeX as-is)
+5. DO NOT translate URLs, file paths, or technical identifiers
+6. Use the provided glossary for consistent terminology
+7. Maintain the exact same heading structure and anchors
+8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters  
+   - Math blocks must have matching $$ delimiters
+   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
+9. DIRECTIVE BLOCKS: MyST directive blocks MUST be balanced:
+   - Every \`\`\`{exercise-start} MUST have matching \`\`\`{exercise-end}
+   - Every \`\`\`{solution-start} MUST have matching \`\`\`{solution-end}
+   - Every \`\`\`{code-cell} MUST have closing \`\`\`
+${additionalRules}
+${request2.customInstructions || ""}
+${glossarySection}
+
+IMPORTANT: You MUST translate the ENTIRE document. Do not stop mid-sentence or mid-code.
+If you are approaching token limits and cannot complete the translation, print:
+"${INCOMPLETE_DOCUMENT_MARKER}"
+
+CONTENT:
+${content}
+
+Provide the complete translated document maintaining exact MyST structure.`;
+    const sizeError = checkDocumentSize(content.length, targetLanguage);
+    if (sizeError) {
+      throw new Error(sizeError);
+    }
+    const maxTokens = MAX_TOKENS.fullDocument;
+    this.log(`Translating full document`);
+    this.log(`Content length: ${content.length} chars`);
+    const response = await this.callWithRetry({
+      model: this.model,
+      max_tokens: maxTokens,
+      messages: [{ role: "user", content: prompt }]
+    }, "translateFullDocument");
+    const result = response.content[0];
+    if (!result || result.type !== "text") {
+      return {
+        success: false,
+        error: "Unexpected response format from Claude"
+      };
+    }
+    const translatedText = result.text.trim();
+    if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
+      return {
+        success: false,
+        error: `Document exceeded token limits and was truncated. This document needs section-by-section translation rather than bulk translation.`
+      };
+    }
+    this.log(`Translation complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
+    return {
+      success: true,
+      translatedSection: translatedText,
+      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
+    };
   }
-  return `\u{1F310} [translation-sync] ${titleFileList}`;
-}
-function buildLabelSet(inputLabels, sourcePrLabels) {
-  const labelsToAdd = /* @__PURE__ */ new Set();
-  for (const label of inputLabels) {
-    labelsToAdd.add(label);
-  }
-  if (sourcePrLabels) {
-    for (const label of sourcePrLabels) {
-      labelsToAdd.add(label);
+  /**
+   * Resync a full document (whole-file RESYNC for forward command).
+   *
+   * Claude sees the complete SOURCE document and the complete existing TARGET
+   * translation, and produces an updated translation that faithfully reflects
+   * the current source while preserving the existing translation's style,
+   * terminology choices, and localization additions.
+   *
+   * This is the recommended approach over section-by-section RESYNC because:
+   * - Preserves cross-section context (localized plot labels, font config)
+   * - 2-3× cheaper (glossary sent once, not per-section)
+   * - Fewer diff lines (more surgical changes)
+   */
+  async translateDocumentResync(request2) {
+    const { sourceContent, targetContent, sourceLanguage, targetLanguage, glossary } = request2;
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
+    const prompt = `You are a professional translator specialising in quantitative economics.
+
+You are given:
+1. The **current ${sourceLanguage} source** document (authoritative)
+2. The **current ${targetLanguage} translation** (may be outdated or have errors)
+
+Your task: produce an **updated ${targetLanguage} translation** that accurately reflects the current ${sourceLanguage} source.
+
+## Critical rules
+
+1. **Preserve the existing translation's style, terminology, and localization choices** wherever the meaning hasn't changed. Do NOT re-translate sections that are already correct \u2014 keep them exactly as-is.
+2. **Fix any errors** in the translation \u2014 missing content, incorrect formulas, wrong code, structural differences.
+3. **Add any missing content** that exists in the source but not in the translation.
+4. **Remove any content** that exists in the translation but not in the source \u2014 EXCEPT for i18n/localization additions (see rule 6).
+5. **Preserve all MyST Markdown syntax** exactly \u2014 directives, roles, code blocks, math blocks, cross-references, frontmatter.
+6. **The existing translation's in-code localization is ground truth \u2014 NEVER revert it to ${sourceLanguage}.** Code cells in the translation often deliberately differ from the source: every line containing ${targetLanguage} text or other localization was added on purpose, usually by hand. Apply these rules line by line:
+   - If the source code around a localized line is unchanged: keep that line EXACTLY as it is in the translation.
+   - If the source changed the surrounding code: carry the localization into the updated code \u2014 keep the label/mapping machinery and translate any new user-visible strings to match.
+   - Drop a localized line only when the source removed the code it belongs to entirely.
+   - NEVER replace a localized string with its ${sourceLanguage} source equivalent.
+   Common localization patterns that MUST be preserved:
+   - Font configuration: \`from matplotlib import font_manager\`, \`fontP = font_manager.FontProperties()\`, \`fontP.set_family('SimHei')\`, \`fontP.set_size(14)\`
+   - rcParams: \`plt.rcParams['font.sans-serif'] = ['SimHei']\`, \`plt.rcParams['axes.unicode_minus'] = False\`
+   - Translated plot strings: \`set_xlabel\`/\`set_ylabel\`/\`set_title\`/\`legend\`/\`annotate\`/\`ax.text\` labels, legend-label lists, plotly trace names
+   - Label-translation dicts and column mappings: \`DataFrame.rename\` maps, CSV column-name mappings, country/category name lists, date formatters
+   - Data-source substitutions that load localized data: a read of a file that exists only in the translation repo (e.g. \`pd.read_csv("datasets/country_code_cn.csv")\` or a localized JSON/CSV mapping) and the localized column names selected from it. The file is invisible to you because it lives only in the translation repo \u2014 that is exactly why the substitution was made by hand. Keep the translation's read and its column choices even when the source derives the same data differently, and apply source-side data updates (new rows, categories, entities) THROUGH the localized mechanism rather than reverting to the source's derivation.
+   - Translated \`print()\` strings and docstrings
+   - Any imports, variable assignments, or configuration lines that appear in the translation's code cells but not in the source's code cells
+   - Locale-appropriate reference links
+   - Full-width punctuation where conventionally used
+   - Lines marked with \`# i18n\` comments
+   Keep localized label text as plain strings \u2014 NEVER wrap ${targetLanguage} text in math delimiters (\`$...$\`).
+   When in doubt about whether a code line in the translation is localization, **keep the translation's version**.
+7. **Preserve the frontmatter (YAML between --- markers) from the TARGET translation** \u2014 do not replace it with the source frontmatter. Only update the heading-map if section headings changed.
+8. **Use the glossary below for consistent terminology** \u2014 when a term from the glossary appears, use the specified translation.
+${additionalRules}
+${request2.customInstructions || ""}
+${glossarySection}
+
+## Output format
+
+Return ONLY the complete updated ${targetLanguage} document. No explanations, no commentary, no code fences wrapping the document. Start directly with the document's first line: the frontmatter \`---\` marker if the ${targetLanguage} translation has frontmatter, otherwise its first content line. NEVER add a \`---\` marker to a document that does not have frontmatter.
+
+## Current ${sourceLanguage} Source
+
+${sourceContent}
+
+## Current ${targetLanguage} Translation
+
+${targetContent}`;
+    const sizeError = checkDocumentSize(sourceContent.length + targetContent.length, targetLanguage);
+    if (sizeError) {
+      throw new Error(sizeError);
+    }
+    const maxTokens = MAX_TOKENS.fullDocument;
+    this.log(`Resyncing full document`);
+    this.log(`Source length: ${sourceContent.length} chars`);
+    this.log(`Target length: ${targetContent.length} chars`);
+    try {
+      const response = await this.callWithRetry({
+        model: this.model,
+        max_tokens: maxTokens,
+        messages: [{ role: "user", content: prompt }]
+      }, "translateDocumentResync");
+      const result = response.content[0];
+      if (!result || result.type !== "text") {
+        return {
+          success: false,
+          error: "Unexpected response format from Claude"
+        };
+      }
+      const translatedText = result.text.trim();
+      if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
+        return {
+          success: false,
+          error: `Document exceeded token limits and was truncated. This document may need a simpler resync approach.`
+        };
+      }
+      this.log(`Resync complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
+      return {
+        success: true,
+        translatedSection: translatedText,
+        tokensUsed: response.usage.input_tokens + response.usage.output_tokens
+      };
+    } catch (error4) {
+      return {
+        success: false,
+        error: formatApiError(error4)
+      };
     }
   }
-  return Array.from(labelsToAdd);
-}
-async function requestReviewers(octokit, targetOwner, targetRepo, prNumber, config, logger) {
-  if (config.prReviewers.length === 0 && config.prTeamReviewers.length === 0) {
-    return;
+  /**
+   * Format glossary for inclusion in prompt
+   */
+  formatGlossary(glossary, targetLanguage) {
+    if (!glossary.terms || glossary.terms.length === 0) {
+      return "";
+    }
+    const terms = glossary.terms.filter((term) => {
+      if (typeof term[targetLanguage] === "string" && term[targetLanguage] !== "") {
+        return true;
+      }
+      this.log(`Glossary term "${term.en}" has no ${targetLanguage} translation \u2014 skipped`);
+      return false;
+    }).map((term) => {
+      const translation = term[targetLanguage];
+      const context3 = term.context ? ` (${term.context})` : "";
+      return `  - "${term.en}" \u2192 "${translation}"${context3}`;
+    }).join("\n");
+    return `GLOSSARY:
+${terms}
+`;
   }
-  try {
-    const reviewRequest = {};
-    if (config.prReviewers.length > 0) {
-      reviewRequest.reviewers = config.prReviewers;
-    }
-    if (config.prTeamReviewers.length > 0) {
-      reviewRequest.team_reviewers = config.prTeamReviewers;
-    }
-    await octokit.rest.pulls.requestReviewers({
-      owner: targetOwner,
-      repo: targetRepo,
-      pull_number: prNumber,
-      ...reviewRequest
-    });
-    const reviewersList = [];
-    if (config.prReviewers.length > 0) {
-      reviewersList.push(`users: ${config.prReviewers.join(", ")}`);
-    }
-    if (config.prTeamReviewers.length > 0) {
-      reviewersList.push(`teams: ${config.prTeamReviewers.join(", ")}`);
-    }
-    logger.info(`Requested reviewers: ${reviewersList.join("; ")}`);
-  } catch (reviewerError) {
-    logger.warning(`Could not request reviewers: ${reviewerError instanceof Error ? reviewerError.message : String(reviewerError)}`);
-  }
-}
-function parseTranslationSyncMetadata(prBody) {
-  const match = prBody.match(/<!-- translation-sync-metadata\r?\n([\s\S]*?)\r?\n-->/);
-  if (!match)
-    return void 0;
-  try {
-    const parsed = JSON.parse(match[1]);
-    if (typeof parsed.sourceRepo !== "string" || typeof parsed.sourcePR !== "number" || typeof parsed.sourceCommitSha !== "string" || typeof parsed.sourceLanguage !== "string" || typeof parsed.targetLanguage !== "string" || typeof parsed.claudeModel !== "string" || !Array.isArray(parsed.files)) {
-      return void 0;
-    }
-    if (!parsed.targetBaseSha) {
-      parsed.targetBaseSha = "";
-    }
-    return parsed;
-  } catch {
-    return void 0;
-  }
-}
+};
 
 // dist/parser.js
 var MystParser = class _MystParser {
@@ -32390,133 +32672,304 @@ var MystParser = class _MystParser {
   }
 };
 
-// dist/structural-parity.js
-var FLEXIBLE_ARG_DIRECTIVES = /* @__PURE__ */ new Set([
-  "admonition",
-  "dropdown",
-  "card",
-  "grid-item-card",
-  "tab-item",
-  "exercise",
-  "exercise-start",
-  "contents",
-  "index",
-  "code-cell"
-]);
-var FLEXIBLE_ARG_PREFIX = "prf:";
-function isFlexibleArgDirective(name) {
-  return FLEXIBLE_ARG_DIRECTIVES.has(name) || name.startsWith(FLEXIBLE_ARG_PREFIX);
-}
-var FENCE_LINE2 = /^\s*(`{3,}|~{3,})(.*)$/;
-var DIRECTIVE_INFO2 = /^\{([A-Za-z0-9_+:.-]+)\}\s*(.*)$/;
-var ANCHOR_LINE = /^\(([^()\s]+)\)=\s*$/;
-function extractStructuralTokens(content) {
-  const directives = [];
-  const anchors = [];
-  let openFence = null;
-  const lines = content.split("\n");
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const fence = FENCE_LINE2.exec(line);
-    if (openFence) {
-      if (fence && fence[1][0] === openFence.char && fence[1].length >= openFence.length && fence[2].trim() === "") {
-        openFence = null;
-      }
-      continue;
-    }
-    if (fence) {
-      openFence = { char: fence[1][0], length: fence[1].length };
-      const info7 = DIRECTIVE_INFO2.exec(fence[2].trim());
-      if (info7) {
-        directives.push({ name: info7[1], arg: info7[2].trim(), line: i + 1 });
-      }
-      continue;
-    }
-    const anchor = ANCHOR_LINE.exec(line);
-    if (anchor) {
-      anchors.push({ label: anchor[1], line: i + 1 });
+// dist/diff-detector.js
+var core3 = __toESM(require_core(), 1);
+var DiffDetector = class {
+  parser;
+  debug;
+  constructor(debug = false) {
+    this.parser = new MystParser();
+    this.debug = debug;
+  }
+  log(message) {
+    if (this.debug) {
+      core3.info(`[DiffDetector] ${message}`);
     }
   }
-  return { directives, anchors };
-}
-function checkStructuralParity(sourceContent, outputContent) {
-  const source = extractStructuralTokens(sourceContent);
-  const output = extractStructuralTokens(outputContent);
-  const violations = [];
-  if (source.directives.length !== output.directives.length) {
-    violations.push({
-      message: `directive count differs: source has ${source.directives.length}, output has ${output.directives.length} \u2014 a wholesale mismatch usually means the document was re-fenced or truncated`
-    });
-  }
-  const pairCount = Math.min(source.directives.length, output.directives.length);
-  for (let i = 0; i < pairCount; i++) {
-    const s = source.directives[i];
-    const o = output.directives[i];
-    if (s.name !== o.name) {
-      violations.push({
-        message: `directive #${i + 1} name changed: source line ${s.line} has {${s.name}}, output line ${o.line} has {${o.name}}`
-      });
-      continue;
-    }
-    if (isFlexibleArgDirective(s.name)) {
-      const sHas = s.arg !== "";
-      const oHas = o.arg !== "";
-      if (sHas !== oHas) {
-        violations.push({
-          message: `directive #${i + 1} {${s.name}} ${sHas ? "lost" : "gained"} its argument: source line ${s.line} has ${sHas ? `"${s.arg}"` : "no argument"}, output line ${o.line} has ${oHas ? `"${o.arg}"` : "none"}`
+  /**
+   * Detect section-level changes between old and new documents
+   * Also detects preamble changes (title and intro before first ## section)
+   */
+  async detectSectionChanges(oldContent, newContent, filepath) {
+    this.log(`Detecting section changes in ${filepath}`);
+    const oldSections = await this.parser.parseSections(oldContent, filepath);
+    const newSections = await this.parser.parseSections(newContent, filepath);
+    this.log(`Old document: ${oldSections.sections.length} sections`);
+    this.log(`New document: ${newSections.sections.length} sections`);
+    const changes = [];
+    const processedOldSections = /* @__PURE__ */ new Set();
+    if (oldSections.preamble !== newSections.preamble) {
+      const oldPreamble = oldSections.preamble?.trim() || "";
+      const newPreamble = newSections.preamble?.trim() || "";
+      if (oldPreamble !== newPreamble) {
+        this.log(`PREAMBLE MODIFIED: Content changed`);
+        changes.push({
+          type: "modified",
+          oldSection: {
+            id: "_preamble",
+            heading: "",
+            // Preamble has no heading
+            level: 0,
+            // Special level for preamble
+            content: oldPreamble,
+            startLine: 1,
+            endLine: 1,
+            subsections: []
+          },
+          newSection: {
+            id: "_preamble",
+            heading: "",
+            level: 0,
+            content: newPreamble,
+            startLine: 1,
+            endLine: 1,
+            subsections: []
+          }
         });
       }
-    } else if (s.arg !== o.arg) {
-      violations.push({
-        message: `directive #${i + 1} {${s.name}} argument changed: source line ${s.line} has "${s.arg}", output line ${o.line} has "${o.arg}" \u2014 structural arguments are never translated`
-      });
     }
+    for (let i = 0; i < newSections.sections.length; i++) {
+      const newSection = newSections.sections[i];
+      const oldSectionByPosition = oldSections.sections[i];
+      const oldSectionById = this.parser.findSectionById(oldSections.sections, newSection.id);
+      let matchedOldSection;
+      if (oldSectionByPosition && this.sectionsMatch(oldSectionByPosition, newSection)) {
+        matchedOldSection = oldSectionByPosition;
+        this.log(`Matched section "${newSection.heading}" by position ${i}`);
+      } else if (oldSectionById) {
+        matchedOldSection = oldSectionById;
+        this.log(`Matched section "${newSection.heading}" by ID "${newSection.id}"`);
+      }
+      if (!matchedOldSection) {
+        this.log(`ADDED: Section "${newSection.heading}" at position ${i}`);
+        changes.push({
+          type: "added",
+          newSection,
+          position: {
+            index: i,
+            afterSectionId: i > 0 ? newSections.sections[i - 1].id : void 0
+          }
+        });
+      } else {
+        processedOldSections.add(matchedOldSection.id);
+        if (!this.sectionContentEqual(matchedOldSection, newSection)) {
+          this.log(`MODIFIED: Section "${newSection.heading}"`);
+          changes.push({
+            type: "modified",
+            oldSection: matchedOldSection,
+            newSection
+          });
+        } else {
+          this.log(`UNCHANGED: Section "${newSection.heading}"`);
+        }
+      }
+    }
+    for (const oldSection of oldSections.sections) {
+      if (!processedOldSections.has(oldSection.id)) {
+        this.log(`DELETED: Section "${oldSection.heading}"`);
+        changes.push({
+          type: "deleted",
+          oldSection
+        });
+      }
+    }
+    this.log(`Total section changes detected: ${changes.length}`);
+    return changes;
   }
-  const sourceLabels = source.anchors.map((a) => a.label);
-  const outputLabels = output.anchors.map((a) => a.label);
-  if (sourceLabels.join("\n") !== outputLabels.join("\n")) {
-    const counts = (labels) => {
-      const m = /* @__PURE__ */ new Map();
-      for (const l of labels)
-        m.set(l, (m.get(l) ?? 0) + 1);
-      return m;
-    };
-    const describe = (label, n) => n > 1 ? `(${label})= \xD7${n}` : `(${label})=`;
-    const sourceCounts = counts(sourceLabels);
-    const outputCounts = counts(outputLabels);
-    const missing = [];
-    const invented = [];
-    for (const [label, n] of sourceCounts) {
-      const d = n - (outputCounts.get(label) ?? 0);
-      if (d > 0)
-        missing.push(describe(label, d));
+  /**
+   * Check if two sections match (for position-based matching)
+   * Sections match if they have the same ID (heading)
+   *
+   * Note: We used to check structural similarity (level + subsection count),
+   * but this caused false matches when inserting new sections.
+   * Now we require ID match for position-based matching.
+   */
+  sectionsMatch(section1, section2) {
+    return section1.id === section2.id;
+  }
+  /**
+   * Check if section content has changed (including all nested subsections recursively)
+   */
+  sectionContentEqual(section1, section2) {
+    if (section1.content.trim() !== section2.content.trim()) {
+      return false;
     }
-    for (const [label, n] of outputCounts) {
-      const d = n - (sourceCounts.get(label) ?? 0);
-      if (d > 0)
-        invented.push(describe(label, d));
+    if (section1.subsections.length !== section2.subsections.length) {
+      return false;
     }
-    const parts = [];
-    if (missing.length > 0) {
-      parts.push(`missing from output: ${missing.join(", ")}`);
+    for (let i = 0; i < section1.subsections.length; i++) {
+      if (!this.sectionContentEqual(section1.subsections[i], section2.subsections[i])) {
+        return false;
+      }
     }
-    if (invented.length > 0) {
-      parts.push(`not in source: ${invented.join(", ")}`);
+    return true;
+  }
+};
+
+// dist/typography.js
+var NBSP = "\xA0";
+var EXISTING_NBSP = /[\u00A0\u202F]/;
+var HIGH_PUNCTUATION = /[;:!?]/;
+var PROSE_DIRECTIVES = /* @__PURE__ */ new Set([
+  "admonition",
+  "attention",
+  "caution",
+  "danger",
+  "error",
+  "hint",
+  "important",
+  "note",
+  "seealso",
+  "tip",
+  "warning",
+  "exercise",
+  "exercise-start",
+  "exercise-end",
+  "solution",
+  "solution-start",
+  "solution-end",
+  "epigraph",
+  "margin",
+  "sidebar",
+  "topic",
+  "card",
+  "grid-item-card",
+  "proof",
+  "theorem",
+  "lemma",
+  "corollary",
+  "definition",
+  "remark",
+  "conjecture"
+]);
+var FENCE_OPEN = /^(\s{0,3})(`{3,}|~{3,}|:{3,})\s*(?:\{([\w:-]+)\})?/;
+var DIRECTIVE_OPTION = /^\s*:[a-zA-Z][\w-]*:/;
+var MATH_DELIM = /\$\$/g;
+function classifyLines(lines) {
+  const eligible = new Array(lines.length).fill(false);
+  const stack = [];
+  let inFrontmatter = false;
+  let inMathBlock = false;
+  let awaitingOptions = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (i === 0 && line.trim() === "---") {
+      inFrontmatter = true;
+      continue;
     }
-    if (parts.length === 0) {
-      parts.push(`same labels, different order \u2014 source: ${sourceLabels.join(", ")}; output: ${outputLabels.join(", ")}`);
+    if (inFrontmatter) {
+      if (line.trim() === "---")
+        inFrontmatter = false;
+      continue;
     }
-    violations.push({
-      message: `target anchors diverge \u2014 ${parts.join("; ")}`
+    const top = stack[stack.length - 1];
+    const open = FENCE_OPEN.exec(line);
+    if (top && !top.prose) {
+      if (open) {
+        const [, , marker, directive] = open;
+        if (!directive && marker[0] === top.marker[0] && marker.length >= top.marker.length)
+          stack.pop();
+      }
+      continue;
+    }
+    const delimiters = (line.match(MATH_DELIM) || []).length;
+    if (inMathBlock || delimiters > 0) {
+      if (delimiters % 2 === 1)
+        inMathBlock = !inMathBlock;
+      continue;
+    }
+    if (open) {
+      const [, , marker, directive] = open;
+      if (top && !directive && marker[0] === top.marker[0] && marker.length >= top.marker.length) {
+        stack.pop();
+        continue;
+      }
+      const prose = Boolean(directive) && PROSE_DIRECTIVES.has(directive.toLowerCase());
+      stack.push({ marker, prose });
+      awaitingOptions = prose;
+      continue;
+    }
+    if (!top) {
+      eligible[i] = true;
+      continue;
+    }
+    if (awaitingOptions) {
+      if (DIRECTIVE_OPTION.test(line))
+        continue;
+      if (line.trim() === "")
+        continue;
+      awaitingOptions = false;
+    }
+    eligible[i] = true;
+  }
+  return eligible;
+}
+var INLINE_PROTECTED = [
+  /\$[^$\n]+\$/g,
+  // inline math
+  /`[^`\n]+`/g,
+  // inline code — also covers MyST roles: {doc}`intro <sec:intro>`
+  /!?\[[^\]]*\]\([^)]*\)/g,
+  // links and images, including the URL
+  /<[^>\n]+>/g,
+  // HTML tags and autolinks
+  /&(?:[a-zA-Z]+\d*|#\d+|#x[0-9a-fA-F]+);/g,
+  // HTML entities — &nbsp; ends in ;
+  /https?:\/\/\S+/g
+  // bare URLs
+];
+var PLACEHOLDER = "\0";
+function applyFrenchSpacing(text) {
+  return text.replace(/(\S)([ \t]*)([;:!?]+)(?=[\s)\]»"'.,]|$)/g, (match, before, gap, run2) => {
+    if (EXISTING_NBSP.test(before))
+      return match;
+    if (before === "\\")
+      return match;
+    if (HIGH_PUNCTUATION.test(before))
+      return match;
+    if (gap.length === 0 && /\d/.test(before) && run2 === ":")
+      return match;
+    return `${before}${NBSP}${run2}`;
+  });
+}
+var DEFINITION_LABEL = /^\s{0,3}\[[^\]]*\]:/;
+var DEFINITION_CORRUPTED = /^(\s{0,3}\[[^\]]*\])[\u00A0\u202F]+:/;
+function applyToProse(line, rule) {
+  const chunks = [];
+  let masked = line.replace(DEFINITION_CORRUPTED, "$1:");
+  masked = masked.replace(DEFINITION_LABEL, (m) => {
+    chunks.push(m);
+    return `${PLACEHOLDER}${chunks.length - 1}${PLACEHOLDER}`;
+  });
+  for (const pattern of INLINE_PROTECTED) {
+    masked = masked.replace(pattern, (m) => {
+      chunks.push(m);
+      return `${PLACEHOLDER}${chunks.length - 1}${PLACEHOLDER}`;
     });
   }
-  return { ok: violations.length === 0, violations };
+  if (/^\s*\([^)\n]*\)=\s*$/.test(masked))
+    return line;
+  let out = rule(masked);
+  for (let i = 0; i < INLINE_PROTECTED.length + 1; i++) {
+    const next = out.replace(new RegExp(`${PLACEHOLDER}(\\d+)${PLACEHOLDER}`, "g"), (_, idx) => chunks[Number(idx)] ?? "");
+    if (next === out)
+      break;
+    out = next;
+  }
+  return out;
 }
-function formatParityViolations(filename, result) {
-  const bullets = result.violations.map((v) => `  - ${v.message}`).join("\n");
-  return `structural parity check failed for ${filename}:
-${bullets}`;
+var RULES = /* @__PURE__ */ new Map([["fr", applyFrenchSpacing]]);
+function applyTypography(content, language) {
+  const rule = RULES.get(language);
+  if (!rule)
+    return content;
+  const lines = content.split("\n");
+  const eligible = classifyLines(lines);
+  return lines.map((line, i) => eligible[i] ? applyToProse(line, rule) : line).join("\n");
 }
+
+// dist/file-processor.js
+var core5 = __toESM(require_core(), 1);
 
 // node_modules/js-yaml/dist/js-yaml.mjs
 function getDefaultExportFromCjs(x) {
@@ -33192,13 +33645,13 @@ function requireJson() {
   });
   return json;
 }
-var core2;
+var core4;
 var hasRequiredCore;
 function requireCore() {
-  if (hasRequiredCore) return core2;
+  if (hasRequiredCore) return core4;
   hasRequiredCore = 1;
-  core2 = requireJson();
-  return core2;
+  core4 = requireJson();
+  return core4;
 }
 var timestamp;
 var hasRequiredTimestamp;
@@ -35605,8 +36058,8 @@ function extractHeadingMap(content) {
         }
       });
     }
-  } catch (error3) {
-    console.warn("Failed to parse heading-map from frontmatter:", error3);
+  } catch (error4) {
+    console.warn("Failed to parse heading-map from frontmatter:", error4);
   }
   return map2;
 }
@@ -35743,7 +36196,7 @@ ${content}`;
 ${newYaml}
 ---
 ${bodyContent}`;
-  } catch (error3) {
+  } catch (error4) {
     if (headingMap.size > 0 || title) {
       try {
         const lines = existingYaml.split("\n");
@@ -35777,7 +36230,7 @@ ${bodyContent}`;
         return content;
       }
     }
-    console.error("Failed to update frontmatter with translation:", error3);
+    console.error("Failed to update frontmatter with translation:", error4);
     return content;
   }
 }
@@ -35813,2440 +36266,7 @@ function buildHeadingMap(sourceSections, targetSections) {
   return { map: map2, warnings };
 }
 
-// dist/diff-checks.js
-var MAX_DETAILS = 10;
-function levelSequence(sections) {
-  const levels = [];
-  const walk = (secs) => {
-    for (const s of secs) {
-      levels.push(s.level);
-      walk(s.subsections);
-    }
-  };
-  walk(sections);
-  return levels;
-}
-async function checkStructurePreserved(parser, pairs2) {
-  const details = [];
-  for (const pair of pairs2) {
-    const parity = checkStructuralParity(pair.source, pair.target);
-    if (!parity.ok) {
-      for (const violation of parity.violations) {
-        details.push(`${pair.filename}: ${violation.message}`);
-      }
-    }
-    const [sourceParsed, targetParsed] = await Promise.all([
-      parser.parseSections(pair.source, pair.filename),
-      parser.parseSections(pair.target, pair.filename)
-    ]);
-    const sourceLevels = levelSequence(sourceParsed.sections);
-    const targetLevels = levelSequence(targetParsed.sections);
-    if (sourceLevels.join(",") !== targetLevels.join(",")) {
-      details.push(`${pair.filename}: heading level sequence differs \u2014 source [${sourceLevels.join(", ")}] vs target [${targetLevels.join(", ")}]`);
-    }
-  }
-  return { passed: details.length === 0, details: details.slice(0, MAX_DETAILS) };
-}
-async function checkHeadingMapCorrect(parser, pairs2) {
-  const details = [];
-  for (const pair of pairs2) {
-    const [sourceParsed, targetParsed] = await Promise.all([
-      parser.parseSections(pair.source, pair.filename),
-      parser.parseSections(pair.target, pair.filename)
-    ]);
-    const { map: expected, warnings } = buildHeadingMap(sourceParsed.sections, targetParsed.sections);
-    for (const warning5 of warnings) {
-      details.push(`${pair.filename}: ${warning5}`);
-    }
-    if (expected.size === 0)
-      continue;
-    const recorded = extractHeadingMap(pair.target);
-    if (recorded.size === 0) {
-      details.push(`${pair.filename}: no heading map in frontmatter (expected ${expected.size})`);
-      continue;
-    }
-    for (const [key, value] of expected) {
-      const actual = recorded.get(key);
-      if (actual === void 0) {
-        details.push(`${pair.filename}: heading map missing entry for "${key}"`);
-      } else if (normalizeHeadingForMatch(actual) !== normalizeHeadingForMatch(value)) {
-        details.push(`${pair.filename}: heading map entry for "${key}" is "${actual}", document has "${value}"`);
-      }
-    }
-  }
-  return { passed: details.length === 0, details: details.slice(0, MAX_DETAILS) };
-}
-async function runDeterministicDiffChecks(parser, pairs2) {
-  const guard = async (name, fn) => {
-    try {
-      return await fn();
-    } catch (error3) {
-      const message = error3?.message;
-      return {
-        passed: false,
-        details: [
-          `${name} could not be evaluated: ${typeof message === "string" ? message : String(error3)}`
-        ]
-      };
-    }
-  };
-  return {
-    structurePreserved: await guard("structurePreserved", () => checkStructurePreserved(parser, pairs2)),
-    headingMapCorrect: await guard("headingMapCorrect", () => checkHeadingMapCorrect(parser, pairs2))
-  };
-}
-
-// dist/review-verdict.js
-var fs = __toESM(require("fs"), 1);
-var path2 = __toESM(require("path"), 1);
-var REVIEW_VERDICT_MARKER = "translation-review-verdict";
-var REVIEW_VERDICT_SCHEMA_VERSION = 1;
-var MAX_FINDINGS = 20;
-var MAX_FIELD_LENGTH = 400;
-var SEVERITIES = ["blocker", "major", "minor", "nit"];
-var CATEGORIES = [
-  "accuracy",
-  "fluency",
-  "terminology",
-  "formatting",
-  "syntax",
-  "structure",
-  "diff-check",
-  "other"
-];
-var GATING_CATEGORIES = [
-  "accuracy",
-  "terminology",
-  "syntax",
-  "diff-check",
-  "other"
-];
-var MAX_CRITERION_SCORE = 10;
-var DIFF_CHECK_NAMES = [
-  "scopeCorrect",
-  "positionCorrect",
-  "structurePreserved",
-  "headingMapCorrect"
-];
-var CRITERION_FLOORS = {
-  accuracy: 9,
-  terminology: 9,
-  fluency: 8,
-  formatting: 8
-};
-var _cachedPackageVersion;
-function resolvePackageVersion() {
-  if (_cachedPackageVersion !== void 0)
-    return _cachedPackageVersion;
-  if (typeof __dirname === "string") {
-    try {
-      const pkgPath = path2.resolve(__dirname, "../package.json");
-      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-      if (pkg.name === "action-translation" && typeof pkg.version === "string") {
-        _cachedPackageVersion = pkg.version;
-        return _cachedPackageVersion;
-      }
-    } catch {
-    }
-    try {
-      const pkgPath = path2.resolve(__dirname, "../../package.json");
-      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
-      if (pkg.name === "action-translation" && typeof pkg.version === "string") {
-        _cachedPackageVersion = pkg.version;
-        return _cachedPackageVersion;
-      }
-    } catch {
-    }
-  }
-  _cachedPackageVersion = "unknown";
-  return _cachedPackageVersion;
-}
-function getEngineRef() {
-  const ref = process.env.GITHUB_ACTION_REF?.trim();
-  return ref ? ref : void 0;
-}
-var RELEASE_TAG_RE = /^v\d+(\.\d+){0,2}$/;
-function formatEngineVersion(version, ref) {
-  if (version === "unknown")
-    return version;
-  if (ref !== void 0 && !RELEASE_TAG_RE.test(ref)) {
-    return `${version}+${ref.replace(/[^0-9A-Za-z.-]/g, "-")}`;
-  }
-  return version;
-}
-function getEngineVersion() {
-  return formatEngineVersion(resolvePackageVersion(), getEngineRef());
-}
-var isPlainObject3 = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
-function truncateField(value) {
-  return truncate(value);
-}
-function truncate(value) {
-  const s = typeof value === "string" ? value : String(value);
-  return s.length > MAX_FIELD_LENGTH ? `${s.slice(0, MAX_FIELD_LENGTH - 1)}\u2026` : s;
-}
-function asOptionalText(value) {
-  if (typeof value !== "string" || value.trim() === "")
-    return null;
-  return truncate(value);
-}
-function describeLooseObject(obj) {
-  const description = obj.description || obj.issue || obj.problem || obj.message;
-  if (description)
-    return truncate(description);
-  const original = obj.original || obj.current || obj.translated || obj.text;
-  const suggestion = obj.suggestion || obj.recommended || obj.fix || obj.correction;
-  if (original && suggestion)
-    return truncate(`"${original}" \u2192 "${suggestion}"`);
-  return truncate(JSON.stringify(obj));
-}
-function severityRank(severity) {
-  return SEVERITIES.indexOf(severity);
-}
-function normalizeFindings(rawFindings, legacyIssues, validFiles) {
-  const soleFile = validFiles.length === 1 ? validFiles[0] : null;
-  const toFinding = (item, forceConservative2) => {
-    if (typeof item === "object" && item !== null && !Array.isArray(item)) {
-      const obj = item;
-      const severity = !forceConservative2 && SEVERITIES.includes(obj.severity) ? obj.severity : "major";
-      const category = !forceConservative2 && CATEGORIES.includes(obj.category) ? obj.category : "other";
-      const claimedFile = typeof obj.file === "string" ? obj.file : null;
-      const file = soleFile ?? (claimedFile && validFiles.includes(claimedFile) ? claimedFile : null);
-      return {
-        severity,
-        category,
-        file,
-        location: asOptionalText(obj.location),
-        description: describeLooseObject(obj),
-        suggestion: asOptionalText(obj.suggestion)
-      };
-    }
-    return {
-      severity: "major",
-      category: "other",
-      file: soleFile,
-      location: null,
-      description: truncate(item),
-      suggestion: null
-    };
-  };
-  let items;
-  let forceConservative = false;
-  let malformed = false;
-  if (Array.isArray(rawFindings) && rawFindings.length > 0) {
-    items = rawFindings;
-  } else if (Array.isArray(rawFindings) && rawFindings.length === 0 && Array.isArray(legacyIssues) && legacyIssues.length > 0) {
-    items = legacyIssues;
-    forceConservative = true;
-  } else if (Array.isArray(rawFindings)) {
-    items = rawFindings;
-  } else if (rawFindings === void 0 && Array.isArray(legacyIssues)) {
-    items = legacyIssues;
-    forceConservative = true;
-    malformed = true;
-  } else {
-    items = [];
-    malformed = true;
-  }
-  const findings = items.map((item) => toFinding(item, forceConservative)).filter((f) => f.description !== "" && f.description !== "{}").sort((a, b) => severityRank(a.severity) - severityRank(b.severity)).slice(0, MAX_FINDINGS);
-  if (items.length > 0 && findings.length === 0) {
-    malformed = true;
-  }
-  return { findings, malformed };
-}
-function sortAndCapFindings(findings) {
-  return [...findings].sort((a, b) => severityRank(a.severity) - severityRank(b.severity)).slice(0, MAX_FINDINGS);
-}
-function findingToDisplayString(finding) {
-  const tag = `**[${finding.severity} \xB7 ${finding.category}]**`;
-  const where = [finding.file, finding.location].filter(Boolean).join(" \u2014 ");
-  const suggestion = finding.suggestion ? ` \u2192 ${finding.suggestion}` : "";
-  return where ? `${tag} ${where}: ${finding.description}${suggestion}` : `${tag} ${finding.description}${suggestion}`;
-}
-function computeRecommendation(input) {
-  const reasons = [];
-  if (input.verdict !== "PASS") {
-    reasons.push(`verdict ${input.verdict} (auto-merge requires PASS)`);
-  }
-  if (input.syntaxErrorCount > 0) {
-    reasons.push(`${input.syntaxErrorCount} syntax error(s)`);
-  }
-  for (const check of DIFF_CHECK_NAMES) {
-    if (input.diffCheckSources?.[check] === "model")
-      continue;
-    if (input.diffChecks?.[check] !== true)
-      reasons.push(`diff check failed: ${check}`);
-  }
-  if (input.findingsMalformed) {
-    reasons.push("findings payload missing or malformed (fail-closed)");
-  }
-  if (input.sourceContentMissing) {
-    reasons.push("source content could not be fetched \u2014 the review compared against nothing");
-  }
-  if (input.findingsSuppressed) {
-    reasons.push("findings suppressed by max-suggestions=0 \u2014 the findings half of the gate is blind");
-  }
-  const blockers = input.findings.filter((f) => f.severity === "blocker").length;
-  const majors = input.findings.filter((f) => f.severity === "major").length;
-  const gatingMinors = input.findings.filter((f) => f.severity === "minor" && GATING_CATEGORIES.includes(f.category)).length;
-  if (blockers > 0)
-    reasons.push(`${blockers} blocker finding(s)`);
-  if (majors > 0)
-    reasons.push(`${majors} major finding(s)`);
-  if (gatingMinors > 0) {
-    reasons.push(`${gatingMinors} minor finding(s) in gating categories (${GATING_CATEGORIES.join("/")})`);
-  }
-  const scores = isPlainObject3(input.scores) ? input.scores : {};
-  for (const [criterion, floor] of Object.entries(CRITERION_FLOORS)) {
-    const score = scores[criterion];
-    if (typeof score !== "number" || !Number.isFinite(score)) {
-      reasons.push(`${criterion} score missing or non-numeric`);
-    } else if (!(score >= floor)) {
-      reasons.push(`${criterion} ${score} below floor ${floor}`);
-    } else if (!(score <= MAX_CRITERION_SCORE)) {
-      reasons.push(`${criterion} ${score} above the ${MAX_CRITERION_SCORE}-point scale`);
-    }
-  }
-  return { recommendation: reasons.length === 0 ? "auto-merge" : "editor", reasons };
-}
-function sanitizeCommentText(text) {
-  return text.replace(/<!--/g, "&lt;!--");
-}
-function buildVerdictBlock(verdict) {
-  const json2 = JSON.stringify(verdict, null, 2).replace(/-->/g, "--\\u003e").replace(/--!>/g, "--!\\u003e");
-  return `<!-- ${REVIEW_VERDICT_MARKER}
-${json2}
--->`;
-}
-
-// dist/reviewer.js
-var DEFAULT_REVIEW_MODEL = DEFAULT_CLAUDE_MODEL;
-var REVIEW_RETRY_CONFIG = {
-  maxRetries: 3,
-  baseDelayMs: 1e3
-  // 1s, 2s, 4s with exponential backoff
-};
-var REVIEW_COMMENT_MARKER = "<!-- action-translation-review -->";
-var LEGACY_REVIEW_HEADING = /^#{2} .*Translation Quality Review/;
-var REVIEW_COMMENT_UPSERT_ATTEMPTS = 3;
-var REVIEW_CRITERIA = [
-  { key: "accuracy", weight: 0.35 },
-  { key: "fluency", weight: 0.25 },
-  { key: "terminology", weight: 0.25 },
-  { key: "formatting", weight: 0.15 }
-];
-function computeVerdict(translationScore, diffScore, syntaxErrors) {
-  const overallScore = translationScore * 0.7 + diffScore * 0.3;
-  let verdict;
-  if (overallScore >= 8 && syntaxErrors.length === 0) {
-    verdict = "PASS";
-  } else if (overallScore >= 6) {
-    verdict = "WARN";
-  } else {
-    verdict = "FAIL";
-  }
-  return { overallScore, verdict };
-}
-function validateCriterionScores(result) {
-  const scores = {};
-  const missing = [];
-  for (const { key } of REVIEW_CRITERIA) {
-    const raw = result[key];
-    const value = typeof raw === "number" ? raw : typeof raw === "string" && raw !== "" ? Number(raw) : NaN;
-    if (Number.isFinite(value) && value >= 0 && value <= 10) {
-      scores[key] = value;
-    } else {
-      missing.push(key);
-    }
-  }
-  return missing.length === 0 ? { valid: true, missing, scores } : { valid: false, missing };
-}
-function isActionReviewComment(body) {
-  if (!body)
-    return false;
-  if (body.startsWith(REVIEW_COMMENT_MARKER))
-    return true;
-  return LEGACY_REVIEW_HEADING.test(body) && body.includes(REVIEW_TRIGGER_LABEL);
-}
-function isNotFoundError(error3) {
-  return typeof error3 === "object" && error3 !== null && error3.status === 404;
-}
-function parseJsonResponse(text) {
-  let parsed;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-  }
-  if (parsed === void 0) {
-    const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-    if (codeBlockMatch) {
-      const content = codeBlockMatch[1].trim();
-      try {
-        parsed = JSON.parse(content);
-      } catch {
-      }
-    }
-  }
-  if (parsed === void 0) {
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      parsed = JSON.parse(jsonMatch[0]);
-    }
-  }
-  if (parsed === void 0) {
-    throw new Error("No JSON object found in response");
-  }
-  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
-    throw new Error("Response JSON is not an object");
-  }
-  return parsed;
-}
-function extractPreamble(content) {
-  const lines = content.split("\n");
-  const preambleLines = [];
-  for (const line of lines) {
-    if (line.match(/^#{1,6}\s+/)) {
-      break;
-    }
-    preambleLines.push(line);
-  }
-  return preambleLines.join("\n").trim();
-}
-function extractSections(content) {
-  const sections = [];
-  const lines = content.split("\n");
-  let currentHeading = "";
-  let currentContent = [];
-  let inSection = false;
-  for (const line of lines) {
-    const headingMatch = line.match(/^(#{2,6})\s+(.+)$/);
-    if (headingMatch) {
-      if (inSection && currentHeading) {
-        sections.push({
-          heading: currentHeading,
-          content: currentContent.join("\n").trim()
-        });
-      }
-      currentHeading = line;
-      currentContent = [];
-      inSection = true;
-    } else if (inSection) {
-      currentContent.push(line);
-    }
-  }
-  if (inSection && currentHeading) {
-    sections.push({
-      heading: currentHeading,
-      content: currentContent.join("\n").trim()
-    });
-  }
-  return sections;
-}
-function headingToId(heading) {
-  return heading.replace(/^#{2,6}\s+/, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
-}
-function identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter) {
-  const changedSections = [];
-  if (!sourceAfter && !targetAfter) {
-    return [{ heading: "(document deleted)", changeType: "deleted" }];
-  }
-  if (!sourceBefore && !targetBefore) {
-    const sections = extractSections(sourceAfter);
-    if (sections.length === 0) {
-      return [{ heading: "(new document)", changeType: "added", englishContent: sourceAfter }];
-    }
-    return sections.map((s) => ({
-      heading: s.heading,
-      changeType: "added",
-      englishContent: s.content
-    }));
-  }
-  const normalizeForComparison = (s) => s.replace(/\r\n/g, "\n").trim();
-  if (normalizeForComparison(sourceBefore) === normalizeForComparison(sourceAfter) && normalizeForComparison(targetBefore) === normalizeForComparison(targetAfter)) {
-    return [{ heading: "(no content changes - file renamed)", changeType: "modified" }];
-  }
-  const sourcePreambleBefore = extractPreamble(sourceBefore);
-  const sourcePreambleAfter = extractPreamble(sourceAfter);
-  const targetPreambleBefore = extractPreamble(targetBefore);
-  const targetPreambleAfter = extractPreamble(targetAfter);
-  if (sourcePreambleBefore !== sourcePreambleAfter || targetPreambleBefore !== targetPreambleAfter) {
-    changedSections.push({
-      heading: "(preamble/frontmatter)",
-      changeType: "modified",
-      englishContent: sourcePreambleAfter,
-      translatedContent: targetPreambleAfter
-    });
-  }
-  const sourceBeforeSections = extractSections(sourceBefore);
-  const sourceAfterSections = extractSections(sourceAfter);
-  const targetAfterSections = extractSections(targetAfter);
-  const beforeById = new Map(sourceBeforeSections.map((s) => [headingToId(s.heading), s]));
-  const afterById = new Map(sourceAfterSections.map((s) => [headingToId(s.heading), s]));
-  for (let i = 0; i < sourceAfterSections.length; i++) {
-    const section = sourceAfterSections[i];
-    const id = headingToId(section.heading);
-    const beforeSection = beforeById.get(id);
-    const targetSection = targetAfterSections[i];
-    if (!beforeSection) {
-      changedSections.push({
-        heading: section.heading,
-        changeType: "added",
-        englishContent: section.content,
-        translatedContent: targetSection?.content
-      });
-    } else if (beforeSection.content !== section.content || beforeSection.heading !== section.heading) {
-      changedSections.push({
-        heading: section.heading,
-        changeType: "modified",
-        englishContent: section.content,
-        translatedContent: targetSection?.content
-      });
-    }
-  }
-  for (const section of sourceBeforeSections) {
-    const id = headingToId(section.heading);
-    if (!afterById.has(id)) {
-      changedSections.push({
-        heading: section.heading,
-        changeType: "deleted"
-      });
-    }
-  }
-  return changedSections;
-}
-var TranslationReviewer = class {
-  anthropic;
-  octokit;
-  model;
-  maxSuggestions;
-  /** Section parsing for the deterministic diff checks (#148). */
-  parser;
-  // Counted at the chokepoint so retried/discarded attempts are included (#164/F53).
-  usage = { inputTokens: 0, outputTokens: 0, apiCalls: 0 };
-  constructor(anthropicApiKey, githubToken, model = DEFAULT_REVIEW_MODEL, maxSuggestions = 5) {
-    this.anthropic = new Anthropic({ apiKey: anthropicApiKey, maxRetries: 0 });
-    this.octokit = github.getOctokit(githubToken);
-    this.model = model;
-    this.maxSuggestions = maxSuggestions;
-    this.parser = new MystParser();
-  }
-  sleep(ms) {
-    return new Promise((resolve3) => setTimeout(resolve3, ms));
-  }
-  /** Total API usage this instance has accumulated, retries included. */
-  getUsage() {
-    return { ...this.usage };
-  }
-  /**
-   * Call Claude API with retry logic and exponential backoff.
-   * Retries on transient API errors and parse failures.
-   */
-  async callWithRetry(prompt, maxTokens, operationName) {
-    const { maxRetries, baseDelayMs } = REVIEW_RETRY_CONFIG;
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const stream = this.anthropic.messages.stream({
-          model: this.model,
-          max_tokens: maxTokens,
-          thinking: DEFAULT_THINKING,
-          messages: [{ role: "user", content: prompt }]
-        });
-        const response = await stream.finalMessage();
-        this.usage.inputTokens += response.usage.input_tokens;
-        this.usage.outputTokens += response.usage.output_tokens;
-        this.usage.apiCalls += 1;
-        if (response.stop_reason === "max_tokens") {
-          throw new Error(`${operationName}: response truncated at max_tokens=${maxTokens}; verdict JSON is incomplete`);
-        }
-        const content = response.content[0];
-        if (!content || content.type !== "text") {
-          throw new Error(`Unexpected response from Claude: ${content ? content.type : `empty content (stop_reason: ${response.stop_reason})`}`);
-        }
-        return parseJsonResponse(content.text);
-      } catch (error3) {
-        if (error3 instanceof AuthenticationError || error3 instanceof BadRequestError) {
-          throw error3;
-        }
-        const isApiRetryable = isRetryableAnthropicError(error3);
-        const isParseFailure = error3 instanceof SyntaxError || error3 instanceof Error && error3.message.includes("No JSON object");
-        if (!isApiRetryable && !isParseFailure || attempt === maxRetries) {
-          if (isParseFailure) {
-            core3.error(`${operationName}: Failed to parse response after ${maxRetries} attempts`);
-          }
-          throw error3;
-        }
-        const delay = baseDelayMs * Math.pow(2, attempt - 1);
-        core3.info(`${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error3 instanceof Error ? error3.message : error3}. Retrying in ${delay}ms...`);
-        await this.sleep(delay);
-      }
-    }
-    throw new Error("Unexpected: retry loop completed without result");
-  }
-  /**
-   * Parse source PR number from translation PR body
-   * Looks for: ### Source PR\n**[#123 - ...
-   */
-  parseSourcePRNumber(prBody) {
-    if (!prBody)
-      return null;
-    const match = prBody.match(/### Source PR\r?\n\*\*\[#(\d+)/);
-    if (match) {
-      return parseInt(match[1], 10);
-    }
-    return null;
-  }
-  /**
-   * Get source PR diff (English before/after)
-   *
-   * `removed` names the files the source PR **deleted**, which is why the
-   * `after` fetch is skipped for them below. Reporting it lets the caller tell
-   * "there is no source content because the document was deleted on purpose"
-   * from "the fetch failed" — two states the F40 guard could not distinguish,
-   * so every deletion PR failed its review run (#210).
-   *
-   * Fail-closed by construction: if listing the source PR throws, the outer
-   * catch returns an EMPTY `removed` set, so no file is excused and absent
-   * source content stays fatal. Absence of evidence is never read as evidence
-   * of deletion.
-   */
-  async getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames) {
-    const before = /* @__PURE__ */ new Map();
-    const after = /* @__PURE__ */ new Map();
-    const removed = /* @__PURE__ */ new Set();
-    try {
-      const { data: sourcePr } = await this.octokit.rest.pulls.get({
-        owner: sourceOwner,
-        repo: sourceRepoName,
-        pull_number: sourcePrNumber
-      });
-      const sourceFiles = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
-        owner: sourceOwner,
-        repo: sourceRepoName,
-        pull_number: sourcePrNumber
-      });
-      for (const filename of filenames) {
-        const sourceFile = sourceFiles.find((f) => f.filename === filename);
-        if (sourceFile?.status === "removed") {
-          removed.add(filename);
-        }
-        const beforeFilename = sourceFile?.status === "renamed" && sourceFile.previous_filename ? sourceFile.previous_filename : filename;
-        if (!sourceFile || sourceFile.status !== "added") {
-          try {
-            const { data: beforeData } = await this.octokit.rest.repos.getContent({
-              owner: sourceOwner,
-              repo: sourceRepoName,
-              path: beforeFilename,
-              ref: sourcePr.base.sha
-            });
-            if ("content" in beforeData) {
-              before.set(filename, Buffer.from(beforeData.content, "base64").toString("utf-8"));
-            }
-          } catch {
-          }
-        }
-        if (!sourceFile || sourceFile.status !== "removed") {
-          try {
-            const { data: afterData } = await this.octokit.rest.repos.getContent({
-              owner: sourceOwner,
-              repo: sourceRepoName,
-              path: filename,
-              ref: sourcePr.head.sha
-            });
-            if ("content" in afterData) {
-              after.set(filename, Buffer.from(afterData.content, "base64").toString("utf-8"));
-            }
-          } catch {
-          }
-        }
-      }
-      core3.info(`\u2713 Fetched source PR #${sourcePrNumber} diff for ${filenames.length} file(s)`);
-    } catch (error3) {
-      core3.warning(`Could not fetch source PR #${sourcePrNumber}: ${error3}`);
-    }
-    return { before, after, removed };
-  }
-  /**
-   * Get source content at a specific commit (for resync PRs, which have no
-   * source PR). Returns the same shape as getSourceDiff with an empty
-   * `before` map — a resync review compares the whole target against the
-   * current source, not against a source-side diff.
-   *
-   * `removed` is always empty: a commit is a state, not a diff, so there is no
-   * "this file was deleted by the change under review" to read off it. Absent
-   * source content on the resync path therefore stays fatal, exactly as before
-   * (#210 is a sync-path fix).
-   */
-  async getSourceAtCommit(sourceOwner, sourceRepoName, commitSha, filenames) {
-    const before = /* @__PURE__ */ new Map();
-    const after = /* @__PURE__ */ new Map();
-    for (const filename of filenames) {
-      try {
-        const { data } = await this.octokit.rest.repos.getContent({
-          owner: sourceOwner,
-          repo: sourceRepoName,
-          path: filename,
-          ref: commitSha
-        });
-        if ("content" in data) {
-          after.set(filename, Buffer.from(data.content, "base64").toString("utf-8"));
-        }
-      } catch (error3) {
-        core3.warning(`Could not fetch ${filename} @ ${commitSha.substring(0, 7)}: ${error3}`);
-      }
-    }
-    core3.info(`\u2713 Fetched source @ ${commitSha.substring(0, 7)} for ${after.size}/${filenames.length} file(s)`);
-    return { before, after, removed: /* @__PURE__ */ new Set() };
-  }
-  /**
-   * Review a translation PR
-   */
-  async reviewPR(prNumber, sourceRepo, targetOwner, targetRepo, docsFolder, glossaryTerms, targetLanguage, autoMergeMode = "off") {
-    core3.info(`Starting review of PR #${prNumber}...`);
-    const { data: pr } = await this.octokit.rest.pulls.get({
-      owner: targetOwner,
-      repo: targetRepo,
-      pull_number: prNumber
-    });
-    const files = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
-      owner: targetOwner,
-      repo: targetRepo,
-      pull_number: prNumber
-    });
-    const markdownFiles = files.filter((f) => f.filename.startsWith(docsFolder) && f.filename.endsWith(".md"));
-    if (markdownFiles.length === 0) {
-      core3.info("No markdown files to review");
-      const emptyResult = {
-        prNumber,
-        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
-        translationQuality: {
-          score: 10,
-          accuracy: 10,
-          fluency: 10,
-          terminology: 10,
-          formatting: 10,
-          syntaxErrors: [],
-          findings: [],
-          findingsMalformed: false,
-          issues: [],
-          strengths: ["No markdown files to review"],
-          summary: "No markdown files changed in this PR."
-        },
-        diffQuality: {
-          score: 10,
-          scopeCorrect: true,
-          positionCorrect: true,
-          structurePreserved: true,
-          headingMapCorrect: true,
-          issues: [],
-          summary: "No changes to evaluate.",
-          scopeDetails: "No markdown files changed.",
-          positionDetails: "N/A",
-          structureDetails: "N/A"
-        },
-        overallScore: 10,
-        verdict: "PASS",
-        // Fail-closed: with nothing reviewed there is nothing to gate on.
-        recommendation: "editor",
-        recommendationReasons: ["no markdown files reviewed \u2014 nothing to gate"],
-        autoMergeMode,
-        ...autoMergeMode === "shadow" ? { wouldAutoMerge: false } : {},
-        reviewedHeadSha: pr.head.sha,
-        reviewComment: "No markdown files to review in this PR."
-      };
-      return emptyResult;
-    }
-    const [sourceOwner, sourceRepoName] = sourceRepo.split("/");
-    const sourcePrNumber = this.parseSourcePRNumber(pr.body);
-    let resyncMetadata;
-    if (!sourcePrNumber) {
-      const metadata = parseTranslationSyncMetadata(pr.body || "");
-      if (metadata && !metadata.sourcePR && metadata.sourceCommitSha) {
-        resyncMetadata = metadata;
-        core3.info(`No source PR reference \u2014 resync PR detected; reviewing against source @ ${metadata.sourceCommitSha.substring(0, 7)}`);
-      } else {
-        throw new Error('Could not find source PR reference in translation PR body. This PR may not have been created by the translation action. Expected format: "### Source PR\\n**[#123..." (or a translation-sync-metadata block for resync PRs)');
-      }
-    } else {
-      core3.info(`Found source PR reference: #${sourcePrNumber}`);
-    }
-    const filenames = markdownFiles.map((f) => f.filename);
-    const { before: sourceBeforeMap, after: sourceAfterMap, removed: sourceRemoved } = resyncMetadata ? await this.getSourceAtCommit(sourceOwner, sourceRepoName, resyncMetadata.sourceCommitSha, filenames) : await this.getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames);
-    const deletedFiles = markdownFiles.filter((f) => sourceRemoved.has(f.filename));
-    const reviewableFiles = markdownFiles.filter((f) => !sourceRemoved.has(f.filename));
-    for (const file of deletedFiles) {
-      core3.info(`Skipping ${file.filename} \u2014 deleted in source PR #${sourcePrNumber}; there is no source content to review against`);
-    }
-    if (reviewableFiles.length === 0 && deletedFiles.length > 0) {
-      return await this.reviewDeletionOnlyPR({
-        prNumber,
-        pr,
-        sourceRepo,
-        targetOwner,
-        targetRepo,
-        deletedFiles: deletedFiles.map((f) => f.filename),
-        sourcePrNumber,
-        autoMergeMode
-      });
-    }
-    const reviewableFilenames = reviewableFiles.map((f) => f.filename);
-    let sourceEnglish = "";
-    let targetTranslation = "";
-    let sourceBefore = "";
-    let targetBefore = "";
-    const changedSections = [];
-    const filePairs = /* @__PURE__ */ new Map();
-    for (const file of reviewableFiles) {
-      try {
-        const { data: targetData } = await this.octokit.rest.repos.getContent({
-          owner: targetOwner,
-          repo: targetRepo,
-          path: file.filename,
-          ref: pr.head.sha
-        });
-        if ("content" in targetData) {
-          const content = Buffer.from(targetData.content, "base64").toString("utf-8");
-          targetTranslation += content + "\n\n";
-          filePairs.set(file.filename, { ...filePairs.get(file.filename), target: content });
-        }
-      } catch (error3) {
-        if (!isNotFoundError(error3))
-          throw error3;
-        core3.warning(`Target content not found for ${file.filename} @ ${pr.head.sha.substring(0, 7)}` + (file.status === "removed" ? " \u2014 the translation PR removes this file, and it was not matched to a deletion in the source PR" : ""));
-      }
-      try {
-        const { data: targetBeforeData } = await this.octokit.rest.repos.getContent({
-          owner: targetOwner,
-          repo: targetRepo,
-          path: file.filename,
-          ref: pr.base.sha
-        });
-        if ("content" in targetBeforeData) {
-          targetBefore += Buffer.from(targetBeforeData.content, "base64").toString("utf-8") + "\n\n";
-        }
-      } catch (error3) {
-        if (!isNotFoundError(error3))
-          throw error3;
-      }
-      if (sourceAfterMap.has(file.filename)) {
-        const content = sourceAfterMap.get(file.filename);
-        sourceEnglish += content + "\n\n";
-        filePairs.set(file.filename, { ...filePairs.get(file.filename), source: content });
-      } else {
-        core3.warning(`Source content not found for ${file.filename} in ${resyncMetadata ? `source @ ${resyncMetadata.sourceCommitSha.substring(0, 7)}` : `source PR #${sourcePrNumber}`}`);
-      }
-      if (sourceBeforeMap.has(file.filename)) {
-        sourceBefore += sourceBeforeMap.get(file.filename) + "\n\n";
-      }
-    }
-    if (resyncMetadata) {
-      changedSections.push({
-        heading: "(whole-file resync \u2014 the entire document was re-aligned to the current source)",
-        changeType: "modified"
-      });
-    } else {
-      const detectedChanges = identifyChangedSections(sourceBefore, sourceEnglish, targetBefore, targetTranslation);
-      changedSections.push(...detectedChanges);
-    }
-    if (sourceEnglish.trim() === "") {
-      throw new Error(`Review aborted: no source content could be fetched for ${reviewableFilenames.join(", ")} \u2014 nothing to review against`);
-    }
-    const translationQuality = await this.evaluateTranslation(sourceEnglish, targetTranslation, changedSections, reviewableFilenames, glossaryTerms, targetLanguage);
-    const diffQuality = await this.evaluateDiff(resyncMetadata ? sourceEnglish : sourceBefore, sourceEnglish, targetBefore, targetTranslation, markdownFiles.map((f) => ({
-      filename: f.filename,
-      status: f.status,
-      additions: f.additions,
-      deletions: f.deletions
-    })), resyncMetadata !== void 0);
-    const reviewedPairs = [...filePairs.entries()].filter(([, v]) => v.source !== void 0 && v.target !== void 0).map(([filename, v]) => ({
-      filename,
-      source: v.source,
-      target: v.target
-    }));
-    const deterministic = await runDeterministicDiffChecks(this.parser, reviewedPairs);
-    const diffChecks = {
-      scopeCorrect: diffQuality.scopeCorrect,
-      positionCorrect: diffQuality.positionCorrect,
-      structurePreserved: deterministic.structurePreserved.passed,
-      headingMapCorrect: deterministic.headingMapCorrect.passed
-    };
-    const diffCheckSources = {
-      scopeCorrect: "model",
-      positionCorrect: "model",
-      structurePreserved: "deterministic",
-      headingMapCorrect: "deterministic"
-    };
-    for (const [name, result2] of Object.entries(deterministic)) {
-      if (!result2.passed) {
-        core3.warning(`Deterministic diff check failed \u2014 ${name}: ${result2.details.join("; ")}`);
-      }
-    }
-    const diffScore = Math.round(Object.values(diffChecks).filter(Boolean).length / DIFF_CHECK_NAMES.length * 10 * 10) / 10;
-    const mergedDiffQuality = {
-      ...diffQuality,
-      ...diffChecks,
-      score: diffScore
-    };
-    const { overallScore, verdict } = computeVerdict(translationQuality.score, diffScore, translationQuality.syntaxErrors);
-    const soleFile = reviewableFilenames.length === 1 ? reviewableFilenames[0] : null;
-    const syntaxFindings = translationQuality.syntaxErrors.map((e) => ({
-      severity: "blocker",
-      category: "syntax",
-      file: soleFile,
-      location: null,
-      description: truncateField(e),
-      suggestion: null
-    }));
-    const diffFindings = mergedDiffQuality.issues.map((i) => ({
-      severity: "minor",
-      category: "structure",
-      file: soleFile,
-      location: null,
-      description: truncateField(i),
-      suggestion: null
-    }));
-    const unexpectedDeletionFindings = resyncMetadata ? [] : reviewableFiles.filter((f) => f.status === "removed").map((f) => ({
-      severity: "blocker",
-      category: "structure",
-      file: f.filename,
-      location: null,
-      description: truncateField(`${f.filename} is deleted by this translation PR, but source PR #${sourcePrNumber} does not delete it. The translation would drop a document the source still has.`),
-      suggestion: null
-    }));
-    const modelCheckFindings = ["scopeCorrect", "positionCorrect"].filter((name) => diffChecks[name] !== true).map((name) => ({
-      severity: "minor",
-      category: "diff-check",
-      file: soleFile,
-      location: null,
-      description: truncateField(`${name}: the reviewer reported this check as failed. This is a model judgement, not a deterministic check \u2014 verify against the source diff before treating it as a defect (#148).`),
-      suggestion: null
-    }));
-    const deterministicFindings = Object.values(deterministic).flatMap((result2) => result2.details).map((detail) => ({
-      severity: "minor",
-      category: "structure",
-      file: soleFile,
-      location: null,
-      description: truncateField(detail),
-      suggestion: null
-    }));
-    const allFindings = sortAndCapFindings([
-      ...translationQuality.findings,
-      ...syntaxFindings,
-      ...diffFindings,
-      ...unexpectedDeletionFindings,
-      ...modelCheckFindings,
-      ...deterministicFindings
-    ]);
-    const sourceContentMissing = sourceEnglish.trim() === "";
-    if (sourceContentMissing) {
-      core3.warning("No source content was fetched for any reviewed file \u2014 the verdict is not a real comparison and routes to editor");
-    }
-    const { recommendation, reasons } = computeRecommendation({
-      verdict,
-      scores: {
-        accuracy: translationQuality.accuracy,
-        fluency: translationQuality.fluency,
-        terminology: translationQuality.terminology,
-        formatting: translationQuality.formatting
-      },
-      diffChecks,
-      diffCheckSources,
-      syntaxErrorCount: translationQuality.syntaxErrors.length,
-      findings: allFindings,
-      findingsMalformed: translationQuality.findingsMalformed,
-      sourceContentMissing,
-      // With max-suggestions: 0 the prompt asks for no findings at all, so an
-      // empty findings array is not evidence of a clean translation.
-      findingsSuppressed: this.maxSuggestions === 0
-    });
-    const wouldAutoMerge = autoMergeMode === "shadow" ? recommendation === "auto-merge" : void 0;
-    if (autoMergeMode === "shadow") {
-      core3.notice(`Shadow auto-merge gate: would ${wouldAutoMerge ? "" : "NOT "}auto-merge PR #${prNumber}` + (wouldAutoMerge ? "" : ` \u2014 ${reasons.join("; ")}`) + " (recorded in the verdict block; no action taken)");
-    }
-    const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
-    const verdictV2 = {
-      schemaVersion: REVIEW_VERDICT_SCHEMA_VERSION,
-      engineVersion: getEngineVersion(),
-      engineRef: getEngineRef(),
-      reviewerModel: this.model,
-      reviewedHeadSha: pr.head.sha,
-      targetBaseSha: pr.base.sha,
-      sourceRepo,
-      prNumber,
-      timestamp: timestamp2,
-      verdict,
-      recommendation,
-      recommendationReasons: reasons,
-      autoMergeMode,
-      ...wouldAutoMerge !== void 0 ? { wouldAutoMerge } : {},
-      scores: {
-        accuracy: translationQuality.accuracy,
-        fluency: translationQuality.fluency,
-        terminology: translationQuality.terminology,
-        formatting: translationQuality.formatting,
-        translation: translationQuality.score,
-        diff: mergedDiffQuality.score,
-        overall: Math.round(overallScore * 10) / 10
-      },
-      diffChecks,
-      diffCheckSources,
-      syntaxErrorCount: translationQuality.syntaxErrors.length,
-      findings: allFindings
-    };
-    const reviewComment = this.generateReviewComment(translationQuality, mergedDiffQuality, verdict, {
-      recommendation,
-      reasons,
-      wouldAutoMerge
-    }) + "\n\n" + buildVerdictBlock(verdictV2);
-    await this.postReviewComment(prNumber, targetOwner, targetRepo, reviewComment);
-    const result = {
-      prNumber,
-      timestamp: timestamp2,
-      translationQuality,
-      diffQuality: mergedDiffQuality,
-      overallScore: Math.round(overallScore * 10) / 10,
-      verdict,
-      recommendation,
-      recommendationReasons: reasons,
-      autoMergeMode,
-      ...wouldAutoMerge !== void 0 ? { wouldAutoMerge } : {},
-      reviewedHeadSha: pr.head.sha,
-      reviewComment
-    };
-    return result;
-  }
-  /**
-   * Report on a translation PR that only deletes documents (#210).
-   *
-   * A deletion PR has no translation to evaluate: the source document is gone,
-   * the target document is gone, and there is no text on either side to
-   * compare. Review mode used to abort the whole run here, because the F40
-   * guard read "no source content" as a failed fetch. Deletions are a routine
-   * editorial operation, so that turned a healthy pipeline red on every one —
-   * and a red that is always expected is exactly what trains people to ignore
-   * the reds F40 exists to raise.
-   *
-   * Two calls deliberately NOT made:
-   *
-   * - **No model calls.** There is nothing to send them. This returns before
-   *   `evaluateTranslation`/`evaluateDiff`, so a deletion PR costs no tokens.
-   * - **No `auto-merge`.** Deleting a translated document is consequential and
-   *   nothing about the *content* was verified, so this always routes to a
-   *   human, with the reason recorded rather than implied.
-   *
-   * The scores below are 10s because no criterion was evaluated, not because
-   * the translation is good — matching the existing "no markdown files"
-   * branch. The load-bearing fields are `recommendation` and its reasons, and
-   * the comment says in plain text that nothing was compared, so this cannot
-   * become the "✅ PASS over nothing" that F40 was raised about.
-   */
-  async reviewDeletionOnlyPR(params) {
-    const { prNumber, pr, sourceRepo, targetOwner, targetRepo, deletedFiles, sourcePrNumber, autoMergeMode } = params;
-    core3.info(`Deletion-only PR: ${deletedFiles.length} file(s) removed, all matching deletions in source PR #${sourcePrNumber} \u2014 no content to review`);
-    const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
-    const recommendationReasons = [
-      "deletion-only PR \u2014 no translation content was evaluated; file removals are matched against the source PR but merging a deletion is an editorial decision"
-    ];
-    const diffChecks = {
-      scopeCorrect: true,
-      positionCorrect: true,
-      structurePreserved: true,
-      headingMapCorrect: true
-    };
-    const scores = {
-      accuracy: 10,
-      fluency: 10,
-      terminology: 10,
-      formatting: 10,
-      translation: 10,
-      diff: 10,
-      overall: 10
-    };
-    const summary = `Deletion-only PR: ${deletedFiles.length} translated document(s) removed to match source PR #${sourcePrNumber}. No translation content was evaluated.`;
-    const fileRows = deletedFiles.map((f) => `| \`${f}\` | removed in #${sourcePrNumber} |`);
-    const reviewComment = `## \u{1F5D1}\uFE0F Translation Review \u2014 deletion only
-
-This PR removes translated document(s) and adds no content, so there is nothing to compare against the source. **No translation quality evaluation was performed.**
-
-| File | Source |
-| --- | --- |
-${fileRows.join("\n")}
-
-Every file removed here is also deleted by source PR #${sourcePrNumber}, so the removal is expected. Routing to a human for the merge decision.
-
-` + buildVerdictBlock({
-      schemaVersion: REVIEW_VERDICT_SCHEMA_VERSION,
-      engineVersion: getEngineVersion(),
-      engineRef: getEngineRef(),
-      reviewerModel: this.model,
-      reviewedHeadSha: pr.head.sha,
-      targetBaseSha: pr.base.sha,
-      sourceRepo,
-      prNumber,
-      timestamp: timestamp2,
-      verdict: "PASS",
-      recommendation: "editor",
-      recommendationReasons,
-      autoMergeMode,
-      ...autoMergeMode === "shadow" ? { wouldAutoMerge: false } : {},
-      scores,
-      diffChecks,
-      diffCheckSources: {
-        scopeCorrect: "deterministic",
-        positionCorrect: "deterministic",
-        structurePreserved: "deterministic",
-        headingMapCorrect: "deterministic"
-      },
-      syntaxErrorCount: 0,
-      findings: []
-    });
-    await this.postReviewComment(prNumber, targetOwner, targetRepo, reviewComment);
-    return {
-      prNumber,
-      timestamp: timestamp2,
-      translationQuality: {
-        score: 10,
-        accuracy: 10,
-        fluency: 10,
-        terminology: 10,
-        formatting: 10,
-        syntaxErrors: [],
-        findings: [],
-        findingsMalformed: false,
-        issues: [],
-        strengths: [],
-        summary
-      },
-      diffQuality: {
-        score: 10,
-        ...diffChecks,
-        issues: [],
-        summary,
-        scopeDetails: `All ${deletedFiles.length} removed file(s) match deletions in source PR #${sourcePrNumber}.`,
-        positionDetails: "N/A \u2014 deletion only.",
-        structureDetails: "N/A \u2014 deletion only."
-      },
-      overallScore: 10,
-      verdict: "PASS",
-      recommendation: "editor",
-      recommendationReasons,
-      autoMergeMode,
-      ...autoMergeMode === "shadow" ? { wouldAutoMerge: false } : {},
-      reviewedHeadSha: pr.head.sha,
-      reviewComment
-    };
-  }
-  /**
-   * Evaluate translation quality using Claude
-   */
-  async evaluateTranslation(sourceEnglish, targetTranslation, changedSections, filenames, glossaryTerms, targetLanguage) {
-    const changedSectionsPrompt = this.formatChangedSections(changedSections);
-    const filesList = filenames.map((f) => `- ${f}`).join("\n");
-    const languageNames = {
-      "zh-cn": "Simplified Chinese",
-      "zh-tw": "Traditional Chinese",
-      fa: "Persian (Farsi)",
-      es: "Spanish",
-      fr: "French",
-      de: "German",
-      ja: "Japanese",
-      ko: "Korean",
-      ml: "Malayalam"
-    };
-    const targetLangName = targetLanguage ? languageNames[targetLanguage] || targetLanguage : "the target language";
-    const glossarySection = glossaryTerms ? `
-## Reference Glossary
-The translation should follow this established terminology glossary:
-${glossaryTerms}
-` : "";
-    const languageRules = targetLanguage ? getLanguageConfig(targetLanguage).additionalRules : [];
-    const languagePolicySection = languageRules.length > 0 ? `
-## Language-Specific Translation Policy
-The ${targetLangName} translation is REQUIRED to follow these rules. Compliance with them is correct behavior \u2014 do NOT flag it as an accuracy, fluency, or terminology issue. DO flag violations of these rules (category: terminology):
-${languageRules.map((r) => `- ${r}`).join("\n")}
-` : "";
-    const prompt = `You are a professional translator and quality evaluator specializing in technical/academic content translation from English to ${targetLangName}.
-
-## Task
-Evaluate the quality of the ${targetLangName} translation compared to the English source.
-${changedSectionsPrompt}
-## English Source Document
-\`\`\`markdown
-${sourceEnglish}
-\`\`\`
-
-## ${targetLangName} Translation
-\`\`\`markdown
-${targetTranslation}
-\`\`\`
-${glossarySection}${languagePolicySection}
-## IMPORTANT: About the Translation Metadata
-
-The ${targetLangName} translation contains a \`translation\` section in the YAML frontmatter that is NOT present in the English source. This is CORRECT and EXPECTED behavior:
-
-\`\`\`yaml
-translation:
-  title: "\u4ECB\u7ECD"
-  headings:
-    introduction: "\u4ECB\u7ECD"
-    background: "\u80CC\u666F"
-\`\`\`
-
-This is a feature of the translation sync system that maps English heading IDs to ${targetLangName} headings for section matching across languages. The \`title\` field tracks the translated document title. Do NOT flag this as an issue or formatting problem - it is intentional and does not affect Jupyter Book compilation.
-
-**Note on double-colon notation**: The headings may use \`section::subsection\` notation (e.g., \`supply-and-demand::market-dynamics\`) to represent hierarchical headings. This double-colon \`::\` syntax is intentional and valid - it represents the relationship between a section and its nested subsection. This is safe in YAML because YAML only treats \`:\` as a key-value separator when followed by a space.
-
-## Evaluation Criteria
-Rate each criterion from 1-10:
-
-1. **Accuracy** (1-10): Does the translation accurately convey the meaning of the English source?
-   - Technical terms translated correctly
-   - No missing or added information
-   - Mathematical concepts preserved
-
-2. **Fluency** (1-10): Does the translation read naturally in ${targetLangName}?
-   - Natural sentence structure
-   - Appropriate academic register
-   - No awkward phrasing
-
-3. **Terminology** (1-10): Is technical terminology consistent and correct?
-   - Does the translation follow the reference glossary above?
-   - Domain-specific terms handled appropriately
-   - Consistent translation of repeated terms
-   - Proper use of established ${targetLangName} terminology
-
-4. **Formatting** (1-10): Is MyST/Markdown formatting preserved?
-   - Math equations (LaTeX) intact
-   - Code blocks preserved
-   - Headings, lists, and structure maintained
-   - Links and references correct
-
-5. **Syntax** (check for errors): Check for markdown/MyST syntax errors in the translation:
-   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
-   - Code blocks must have matching \`\`\` delimiters
-   - Math blocks must have matching $$ delimiters
-   - MyST directives must use correct syntax: \`\`\`{directive}
-   - Report any syntax errors found - these are CRITICAL issues that must be fixed
-
-## Files Under Review
-The changed markdown files in this PR are (the document blocks above concatenate them in this order):
-${filesList}
-
-## Response Format
-Respond with ONLY valid JSON in this exact format (no markdown code blocks):
-{
-  "accuracy": <number 1-10>,
-  "fluency": <number 1-10>,
-  "terminology": <number 1-10>,
-  "formatting": <number 1-10>,
-  "syntaxErrors": ["error 1 with line/location if possible", "error 2"],
-  "findings": [
-    {
-      "severity": "blocker|major|minor|nit",
-      "category": "accuracy|fluency|terminology|formatting",
-      "file": "<one of the file paths listed under Files Under Review, or null>",
-      "location": "<section heading or a short quote locating the finding, or null>",
-      "description": "<what is wrong, specific and self-contained>",
-      "suggestion": "<proposed replacement text, or null>"
-    }
-  ],
-  "strengths": ["strength 1", "strength 2"],
-  "summary": "Brief overall assessment"
-}
-
-Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors are found. Syntax errors are CRITICAL and should always be reported even if the array would otherwise be empty.
-
-## Findings Guidelines
-- The "findings" array can contain **0 to ${this.maxSuggestions} findings** - an empty array [] is perfectly valid for excellent translations
-- Severity meanings:
-  - "blocker": meaning inversion, wrong mathematics or code, or broken MyST that will not build
-  - "major": an accuracy or terminology error a reader would be misled by
-  - "minor": correct but awkward phrasing, or a minor terminology inconsistency
-  - "nit": a stylistic preference
-- "category" must name the criterion the finding counts against
-- "file" must be one of the listed file paths (or null if you cannot attribute the finding)
-- Each finding must be specific and actionable; prioritize by importance: accuracy first, then fluency, terminology, formatting
-- Do NOT invent findings just to fill the array - quality over quantity
-
-**CRITICAL**: Findings MUST relate ONLY to the sections that were changed in this PR. Do not report findings for unchanged parts of the document.`;
-    let result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateTranslation");
-    let check = validateCriterionScores(result);
-    if (!check.valid) {
-      core3.warning(`evaluateTranslation: response missing numeric criteria [${check.missing.join(", ")}] \u2014 retrying`);
-      result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateTranslation");
-      check = validateCriterionScores(result);
-      if (!check.valid) {
-        throw new Error(`evaluateTranslation: response still missing numeric criterion scores [${check.missing.join(", ")}] after retry \u2014 refusing to compute a verdict from an incomplete review`);
-      }
-    }
-    const scores = check.scores;
-    const score = REVIEW_CRITERIA.reduce((sum, c) => sum + scores[c.key] * c.weight, 0);
-    const { findings, malformed } = normalizeFindings(result.findings, result.issues, filenames);
-    if (malformed) {
-      core3.warning("evaluateTranslation: findings payload missing or malformed \u2014 recommendation will fail closed to editor");
-    }
-    return {
-      score: Math.round(score * 10) / 10,
-      accuracy: scores.accuracy,
-      fluency: scores.fluency,
-      terminology: scores.terminology,
-      formatting: scores.formatting,
-      syntaxErrors: Array.isArray(result.syntaxErrors) ? result.syntaxErrors.map((e) => String(e)) : [],
-      findings,
-      findingsMalformed: malformed,
-      issues: findings.map(findingToDisplayString),
-      // The one array read the syntaxErrors guard above didn't cover: a model
-      // answering `"strengths": "clear"` crashed the comment builder after
-      // both review calls were paid for (#163/F81).
-      strengths: Array.isArray(result.strengths) ? result.strengths.map((s) => String(s)) : [],
-      summary: result.summary || ""
-    };
-  }
-  /**
-   * Evaluate diff quality using Claude
-   */
-  async evaluateDiff(sourceBefore, sourceAfter, targetBefore, targetAfter, targetFiles, isResync = false) {
-    const contextNote = isResync ? `A whole-file resync re-aligned the target document to the current source: the source "Before" and "After" below are identical (the current source), and the target diff may legitimately be large \u2014 do not penalize its size. Evaluate whether the final target matches the current source's structure and content. We need to verify:` : `A translation sync action detected changes in an English source document and created corresponding changes in the target document. We need to verify:`;
-    const prompt = `You are an expert code reviewer specializing in translation sync workflows. Your task is to verify that translation changes are correctly positioned in the target document.
-
-## Context
-${contextNote}
-
-1. **Scope**: Only the correct files were modified
-2. **Position**: Changes appear in the same relative positions
-3. **Structure**: Document structure is preserved
-4. **Translation metadata**: The translation metadata in frontmatter is correctly updated
-
-## IMPORTANT: About the Translation Metadata System
-
-The \`translation\` section in the frontmatter is a CRITICAL feature of this translation system, NOT a bug. Here's how it works:
-
-- English headings generate IDs from English text: \`## Introduction\` \u2192 ID: \`introduction\`
-- Translated headings generate IDs from translated text: \`## \u4ECB\u7ECD\` \u2192 ID: \`\u4ECB\u7ECD\`
-- The translation headings bridge this gap by mapping English IDs to translated headings
-
-Example:
-\`\`\`yaml
-translation:
-  title: "\u4ECB\u7ECD"
-  headings:
-    introduction: "\u4ECB\u7ECD"
-    supply-and-demand: "\u4F9B\u9700\u5206\u6790"
-\`\`\`
-
-**Note on double-colon notation**: The headings may use \`section::subsection\` notation to represent hierarchical headings. This is intentional and valid YAML.
-
-## Source Document (English)
-### Before:
-\`\`\`markdown
-${sourceBefore}
-\`\`\`
-
-### After:
-\`\`\`markdown
-${sourceAfter}
-\`\`\`
-
-## Target Document (Translation)
-### Before:
-\`\`\`markdown
-${targetBefore}
-\`\`\`
-
-### After:
-\`\`\`markdown
-${targetAfter}
-\`\`\`
-
-### Files Changed:
-${targetFiles.map((f) => `- ${f.filename}: ${f.status} (+${f.additions}/-${f.deletions})`).join("\n")}
-
-## Verification Checks
-Evaluate each criterion:
-
-1. **Scope Correct**: Were only the necessary files modified? The target should change the same files as the source.
-2. **Position Correct**: Do changes appear in the same sections as source? Section order should match.
-3. **Structure Preserved**: Is the document structure (heading levels, nesting) maintained?
-4. **Heading-map Correct**: Is the heading-map updated with new/changed headings?
-
-## Response Format
-Respond with ONLY valid JSON:
-{
-  "scopeCorrect": true/false,
-  "positionCorrect": true/false,
-  "structurePreserved": true/false,
-  "headingMapCorrect": true/false,
-  "issues": ["issue 1 if any"],
-  "summary": "One sentence overall summary",
-  "scopeDetails": "Brief explanation of scope check",
-  "positionDetails": "Brief explanation of position check",
-  "structureDetails": "Brief explanation of structure check"
-}`;
-    const result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateDiff");
-    const isTrue = (v) => v === true;
-    const scopeCorrect = isTrue(result.scopeCorrect);
-    const positionCorrect = isTrue(result.positionCorrect);
-    const structurePreserved = isTrue(result.structurePreserved);
-    const headingMapCorrect = isTrue(result.headingMapCorrect);
-    const checks = [scopeCorrect, positionCorrect, structurePreserved, headingMapCorrect];
-    const passedChecks = checks.filter(Boolean).length;
-    const score = passedChecks / checks.length * 10;
-    return {
-      score: Math.round(score * 10) / 10,
-      scopeCorrect,
-      positionCorrect,
-      structurePreserved,
-      headingMapCorrect,
-      issues: Array.isArray(result.issues) ? result.issues.map((i) => String(i)) : [],
-      summary: result.summary || "",
-      scopeDetails: result.scopeDetails || "",
-      positionDetails: result.positionDetails || "",
-      structureDetails: result.structureDetails || ""
-    };
-  }
-  /**
-   * Format changed sections for the prompt
-   */
-  formatChangedSections(changedSections) {
-    if (changedSections.length === 0) {
-      return "";
-    }
-    const sectionsList = changedSections.map((s) => {
-      if (s.changeType === "deleted") {
-        return `- **DELETED**: ${s.heading}`;
-      }
-      return `- **${s.changeType.toUpperCase()}**: ${s.heading}`;
-    }).join("\n");
-    return `
-## IMPORTANT: Changed Sections in This PR
-
-The following sections were actually modified in this PR. **Your suggestions MUST focus ONLY on these changed sections**. Do NOT suggest improvements for unchanged parts of the document.
-
-${sectionsList}
-
-**Rule**: Any suggestions you make must be about the translation quality of the changed sections listed above. Ignore any issues in other parts of the document - those can be addressed in a separate comprehensive review.
-`;
-  }
-  /**
-   * Generate review comment
-   */
-  generateReviewComment(translationResult, diffResult, verdict, routing) {
-    const emoji = verdict === "PASS" ? "\u2705" : verdict === "WARN" ? "\u26A0\uFE0F" : "\u274C";
-    let routingLines = "";
-    if (routing) {
-      routingLines = `
-**Routing**: \`${routing.recommendation}\`${routing.reasons.length > 0 ? ` \u2014 ${routing.reasons.join("; ")}` : " \u2014 no gating findings; floors met"}`;
-      if (routing.wouldAutoMerge !== void 0) {
-        routingLines += `
-**Shadow gate**: would ${routing.wouldAutoMerge ? "" : "NOT "}auto-merge (recorded only; no action taken)`;
-      }
-    }
-    let comment = `## ${emoji} Translation Quality Review
-
-**Verdict**: ${verdict} | **Model**: ${this.model} | **Date**: ${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}${routingLines}
-
----
-
-### \u{1F4DD} Translation Quality
-
-| Criterion | Score |
-|-----------|-------|
-| Accuracy | ${translationResult.accuracy}/10 |
-| Fluency | ${translationResult.fluency}/10 |
-| Terminology | ${translationResult.terminology}/10 |
-| Formatting | ${translationResult.formatting}/10 |
-| **Overall** | **${translationResult.score}/10** |
-
-**Summary**: ${sanitizeCommentText(translationResult.summary)}`;
-    if (translationResult.strengths.length > 0) {
-      comment += ` ${sanitizeCommentText(translationResult.strengths.join(" "))}`;
-    }
-    if (translationResult.syntaxErrors && translationResult.syntaxErrors.length > 0) {
-      comment += `
-
-### \u26A0\uFE0F Markdown Syntax Errors (CRITICAL)
-${translationResult.syntaxErrors.map((e) => `- \u{1F534} ${sanitizeCommentText(String(e))}`).join("\n")}`;
-    }
-    if (translationResult.issues.length > 0) {
-      comment += `
-
-**Suggestions**:
-${translationResult.issues.map((i) => `- ${sanitizeCommentText(i)}`).join("\n")}`;
-    }
-    comment += `
-
----
-
-### \u{1F50D} Diff Quality
-
-| Check | Status |
-|-------|--------|
-| Scope Correct | ${diffResult.scopeCorrect ? "\u2705" : "\u274C"} |
-| Position Correct | ${diffResult.positionCorrect ? "\u2705" : "\u274C"} |
-| Structure Preserved | ${diffResult.structurePreserved ? "\u2705" : "\u274C"} |
-| Heading-map Correct | ${diffResult.headingMapCorrect ? "\u2705" : "\u274C"} |
-| **Overall** | **${diffResult.score}/10** |
-
-**Summary**: ${sanitizeCommentText(diffResult.summary)}`;
-    if (diffResult.issues.length > 0) {
-      comment += `
-
-**Issues**:
-${diffResult.issues.map((i) => `- ${sanitizeCommentText(String(i))}`).join("\n")}`;
-    }
-    comment += `
-
----
-*This review was generated automatically by [action-translation](https://github.com/quantecon/action-translation) review mode.*`;
-    return comment;
-  }
-  /**
-   * Our review comments on the PR, oldest first.
-   *
-   * Paginated: beyond 30 comments the existing one is missed and duplicates accumulate.
-   */
-  async listOwnReviewComments(prNumber, owner, repo) {
-    const comments = await this.octokit.paginate(this.octokit.rest.issues.listComments, {
-      owner,
-      repo,
-      issue_number: prNumber,
-      per_page: 100
-    });
-    return comments.filter((c) => isActionReviewComment(c.body)).sort((a, b) => a.id - b.id);
-  }
-  /**
-   * Delete our review comments older than `keepId` — duplicates left by concurrent runs.
-   *
-   * Best effort: a duplicate comment is not worth failing a review that posted successfully.
-   */
-  async deleteOlderReviewComments(prNumber, owner, repo, keepId) {
-    let duplicates;
-    try {
-      duplicates = (await this.listOwnReviewComments(prNumber, owner, repo)).filter((c) => c.id < keepId);
-    } catch (error3) {
-      core3.warning(`Could not check PR #${prNumber} for duplicate review comments: ${error3}`);
-      return;
-    }
-    for (const duplicate of duplicates) {
-      try {
-        await this.octokit.rest.issues.deleteComment({ owner, repo, comment_id: duplicate.id });
-        core3.info(`Removed duplicate review comment ${duplicate.id} on PR #${prNumber}`);
-      } catch (error3) {
-        if (isNotFoundError(error3))
-          continue;
-        core3.warning(`Could not remove duplicate review comment ${duplicate.id} on PR #${prNumber}: ${error3}`);
-      }
-    }
-  }
-  /**
-   * Post the review, leaving exactly one review comment on the PR.
-   *
-   * Concurrent review runs are routine — one sync fires `opened` plus a `labeled` event per
-   * label — and list-then-create is a check-then-act race: every run sees "no comment yet"
-   * and creates one (issue #96). Issue comments have no conditional-write primitive, so each
-   * run instead reconciles after writing, deleting every *older* review comment of ours.
-   * Ids increase with creation time and each run lists after it writes, so the run holding the
-   * highest id necessarily sees the others and removes them: one comment survives any
-   * interleaving. (Deleting *newer* ids instead would not converge — a run that lists before
-   * a slower run creates would leave both.)
-   */
-  async postReviewComment(prNumber, owner, repo, comment) {
-    const body = `${REVIEW_COMMENT_MARKER}
-${comment}`;
-    try {
-      for (let attempt = 1; attempt <= REVIEW_COMMENT_UPSERT_ATTEMPTS; attempt++) {
-        const existing = await this.listOwnReviewComments(prNumber, owner, repo);
-        if (existing.length === 0) {
-          const { data: created } = await this.octokit.rest.issues.createComment({
-            owner,
-            repo,
-            issue_number: prNumber,
-            body
-          });
-          core3.info(`Posted review comment on PR #${prNumber}`);
-          await this.deleteOlderReviewComments(prNumber, owner, repo, created.id);
-          return;
-        }
-        const target = existing[existing.length - 1];
-        try {
-          await this.octokit.rest.issues.updateComment({
-            owner,
-            repo,
-            comment_id: target.id,
-            body
-          });
-        } catch (error3) {
-          if (isNotFoundError(error3) && attempt < REVIEW_COMMENT_UPSERT_ATTEMPTS) {
-            core3.info(`Review comment ${target.id} was removed by a concurrent run, retrying (${attempt})`);
-            continue;
-          }
-          throw error3;
-        }
-        core3.info(`Updated existing review comment on PR #${prNumber}`);
-        await this.deleteOlderReviewComments(prNumber, owner, repo, target.id);
-        return;
-      }
-    } catch (error3) {
-      core3.error(`Failed to post review comment: ${error3}`);
-      throw error3;
-    }
-  }
-};
-
-// dist/translator.js
-var core4 = __toESM(require_core(), 1);
-var INCOMPLETE_DOCUMENT_MARKER = "-----> INCOMPLETE DOCUMENT <------";
-var RETRY_CONFIG = {
-  maxRetries: 3,
-  baseDelayMs: 1e3
-  // 1s, 2s, 4s with exponential backoff
-};
-function estimateOutputTokens(sourceLength, targetLanguage) {
-  const baseTokens = Math.ceil(sourceLength / 4);
-  let expansionFactor = 1.5;
-  if (["ar", "fa", "he"].includes(targetLanguage)) {
-    expansionFactor = 1.8;
-  }
-  if (["zh", "zh-cn", "zh-tw", "ja", "ko"].includes(targetLanguage)) {
-    expansionFactor = 1.3;
-  }
-  const estimatedTokens = Math.ceil(baseTokens * expansionFactor);
-  const buffer = 2e3;
-  return estimatedTokens + buffer;
-}
-function checkDocumentSize(sourceLength, targetLanguage) {
-  const estimated = estimateOutputTokens(sourceLength, targetLanguage);
-  const API_MAX_TOKENS = MAX_TOKENS.fullDocument;
-  if (estimated > API_MAX_TOKENS) {
-    return `Document too large: estimated ${estimated} tokens exceeds API maximum of ${API_MAX_TOKENS} tokens. This document needs section-by-section translation rather than bulk translation.`;
-  }
-  if (process.env.TRANSLATE_DEBUG) {
-    console.log(`Pre-flight check: source=${sourceLength} chars, estimated output=${estimated} tokens, using max_tokens=${API_MAX_TOKENS}`);
-  }
-  return null;
-}
-function formatApiError(error3) {
-  if (error3 instanceof AuthenticationError) {
-    return "Authentication failed: Invalid or expired API key. Check your anthropic-api-key secret.";
-  }
-  if (error3 instanceof RateLimitError) {
-    return "Rate limit exceeded: Too many requests. The action will retry automatically, or try again later.";
-  }
-  if (error3 instanceof APIConnectionError) {
-    return "Connection error: Unable to reach Anthropic API. Check network connectivity.";
-  }
-  if (error3 instanceof BadRequestError) {
-    return `Bad request: ${error3.message}. This may indicate an issue with the prompt or content.`;
-  }
-  if (error3 instanceof APIError) {
-    if (error3.message?.includes("overloaded")) {
-      return "Anthropic API is temporarily overloaded. Retries exhausted \u2014 please try again later.";
-    }
-    return `API error (${error3.status}): ${error3.message}`;
-  }
-  if (error3 instanceof Error) {
-    return error3.message;
-  }
-  return "Unknown translation error";
-}
-var TranslationService = class {
-  client;
-  model;
-  debug;
-  // Counted at the chokepoint so retried/discarded attempts are included —
-  // the per-result tokensUsed fields miss them (#164/F53).
-  usage = { inputTokens: 0, outputTokens: 0, apiCalls: 0 };
-  constructor(apiKey, model = DEFAULT_CLAUDE_MODEL, debug = false) {
-    this.client = new Anthropic({ apiKey, maxRetries: 0 });
-    this.model = model;
-    this.debug = debug;
-  }
-  log(message) {
-    if (this.debug) {
-      core4.info(`[Translator] ${message}`);
-    }
-  }
-  /** Total API usage this instance has accumulated, retries included. */
-  getUsage() {
-    return { ...this.usage };
-  }
-  /**
-   * Sleep for a given number of milliseconds
-   */
-  sleep(ms) {
-    return new Promise((resolve3) => setTimeout(resolve3, ms));
-  }
-  /**
-   * Call Claude API with retry logic and exponential backoff.
-   *
-   * Retries on transient errors:
-   * - RateLimitError (429)
-   * - APIConnectionError (network issues)
-   * - APIError with 5xx status (server errors)
-   * - APIError with overloaded_error (status undefined)
-   *
-   * Does NOT retry on:
-   * - AuthenticationError (invalid API key)
-   * - BadRequestError (prompt issues)
-   * - Other non-transient errors
-   */
-  async callWithRetry(createParams, operationName) {
-    const { maxRetries, baseDelayMs } = RETRY_CONFIG;
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const stream = this.client.messages.stream({
-          ...createParams,
-          thinking: DEFAULT_THINKING
-        });
-        const message = await stream.finalMessage();
-        this.usage.inputTokens += message.usage.input_tokens;
-        this.usage.outputTokens += message.usage.output_tokens;
-        this.usage.apiCalls += 1;
-        if (message.stop_reason === "max_tokens") {
-          throw new Error(`${operationName}: response truncated at max_tokens=${createParams.max_tokens}; refusing to use incomplete output`);
-        }
-        return message;
-      } catch (error3) {
-        if (error3 instanceof AuthenticationError || error3 instanceof BadRequestError) {
-          throw error3;
-        }
-        const isRetryable = isRetryableAnthropicError(error3);
-        if (!isRetryable || attempt === maxRetries) {
-          throw error3;
-        }
-        const delay = baseDelayMs * Math.pow(2, attempt - 1);
-        this.log(`${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error3 instanceof Error ? error3.message : error3}. Retrying in ${delay}ms...`);
-        await this.sleep(delay);
-      }
-    }
-    throw new Error("Unexpected: retry loop completed without result");
-  }
-  /**
-   * Translate a section (update, new, or resync)
-   */
-  async translateSection(request2) {
-    try {
-      if (request2.mode === "update") {
-        return await this.translateSectionUpdate(request2);
-      } else if (request2.mode === "resync") {
-        return await this.translateSectionResync(request2);
-      } else {
-        return await this.translateNewSection(request2);
-      }
-    } catch (error3) {
-      return {
-        success: false,
-        error: formatApiError(error3)
-      };
-    }
-  }
-  /**
-   * Update existing section (mode='update')
-   * Claude sees: old English, new English, current translation → produces updated translation
-   */
-  async translateSectionUpdate(request2) {
-    const { oldEnglish, newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } = request2;
-    if (!oldEnglish || !newEnglish || !currentTranslation) {
-      return {
-        success: false,
-        error: "Update mode requires oldEnglish, newEnglish, and currentTranslation"
-      };
-    }
-    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
-    const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
-
-TASK: The ${sourceLanguage} section has been modified. Update the existing ${targetLanguage} translation to reflect these changes.
-
-CRITICAL RULES:
-1. Compare the OLD and NEW ${sourceLanguage} versions to understand what changed
-2. Update the CURRENT ${targetLanguage} translation to reflect these changes
-3. Maintain consistency with the existing ${targetLanguage} style and terminology
-4. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
-5. DO NOT translate code, math, URLs, or technical identifiers
-6. **NEVER remove i18n/localization code from code cells.** The translation may contain extra code inside code cells that does NOT exist in the source \u2014 this is intentional localization (e.g., font configuration like \`from matplotlib import font_manager\`, \`fontP.set_family('SimHei')\`, \`plt.rcParams\` settings, or lines marked \`# i18n\`). Always preserve these.
-7. Use the glossary for consistent terminology
-8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
-   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
-   - Code blocks must have matching \`\`\` delimiters
-   - Math blocks must have matching $$ delimiters
-   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
-${additionalRules}
-${additionalRules ? "" : "9. "}Return ONLY the updated ${targetLanguage} section, no explanations
-${request2.customInstructions || ""}
-${glossarySection}
-
-[OLD ${sourceLanguage} VERSION]
-${oldEnglish}
-[/OLD ${sourceLanguage} VERSION]
-
-[NEW ${sourceLanguage} VERSION]
-${newEnglish}
-[/NEW ${sourceLanguage} VERSION]
-
-[CURRENT ${targetLanguage} TRANSLATION]
-${currentTranslation}
-[/CURRENT ${targetLanguage} TRANSLATION]
-
-Provide ONLY the updated ${targetLanguage} translation. Do not include any markers, explanations, or comments.`;
-    this.log(`Translating section update, mode=update`);
-    this.log(`Old ${sourceLanguage} length: ${oldEnglish.length}`);
-    this.log(`New ${sourceLanguage} length: ${newEnglish.length}`);
-    this.log(`Current ${targetLanguage} length: ${currentTranslation.length}`);
-    const response = await this.callWithRetry({
-      model: this.model,
-      max_tokens: MAX_TOKENS.section,
-      messages: [{ role: "user", content: prompt }]
-    }, "translateSectionUpdate");
-    const content = response.content[0];
-    if (!content || content.type !== "text") {
-      return {
-        success: false,
-        error: "Unexpected response format from Claude"
-      };
-    }
-    this.log(`Translated section length: ${content.text.length}`);
-    return {
-      success: true,
-      translatedSection: content.text.trim(),
-      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
-    };
-  }
-  /**
-   * Resync existing section (mode='resync')
-   * Claude sees: current English + current translation → produces resynced translation
-   *
-   * Used for drift recovery when no baseline (old English) is available.
-   * Preserves existing translation style, terminology, and localization
-   * wherever the meaning hasn't changed.
-   */
-  async translateSectionResync(request2) {
-    const { newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } = request2;
-    if (!newEnglish || !currentTranslation) {
-      return {
-        success: false,
-        error: "Resync mode requires newEnglish (current source) and currentTranslation"
-      };
-    }
-    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
-    const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are resyncing a ${targetLanguage} translation to match the current ${sourceLanguage} source.
-
-TASK: The ${sourceLanguage} source may have changed since the translation was made. Update the ${targetLanguage} translation to accurately reflect the current source content.
-
-CRITICAL RULES:
-1. Preserve the existing ${targetLanguage} translation style, terminology choices, and localization decisions wherever the meaning hasn't changed
-2. Only modify parts of the translation where the ${sourceLanguage} source has different content
-3. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
-4. DO NOT translate code, math, URLs, or technical identifiers
-5. **NEVER remove i18n/localization code from code cells.** The translation may contain extra code inside code cells that does NOT exist in the source \u2014 this is intentional localization (e.g., font configuration like \`from matplotlib import font_manager\`, \`fontP.set_family('SimHei')\`, \`plt.rcParams\` settings, or lines marked \`# i18n\`). Always preserve these.
-6. Use the glossary for consistent terminology
-7. MARKDOWN SYNTAX: Ensure proper markdown syntax:
-   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
-   - Code blocks must have matching \`\`\` delimiters
-   - Math blocks must have matching $$ delimiters
-   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
-${additionalRules}
-${additionalRules ? "" : "8. "}Return ONLY the updated ${targetLanguage} section, no explanations
-${request2.customInstructions || ""}
-${glossarySection}
-
-[CURRENT ${sourceLanguage} SOURCE]
-${newEnglish}
-[/CURRENT ${sourceLanguage} SOURCE]
-
-[EXISTING ${targetLanguage} TRANSLATION]
-${currentTranslation}
-[/EXISTING ${targetLanguage} TRANSLATION]
-
-Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing translation's style and only change what's needed to match the current source. Do not include any markers, explanations, or comments.`;
-    this.log(`Translating section resync, mode=resync`);
-    this.log(`Current ${sourceLanguage} length: ${newEnglish.length}`);
-    this.log(`Existing ${targetLanguage} length: ${currentTranslation.length}`);
-    const response = await this.callWithRetry({
-      model: this.model,
-      max_tokens: MAX_TOKENS.section,
-      messages: [{ role: "user", content: prompt }]
-    }, "translateSectionResync");
-    const content = response.content[0];
-    if (!content || content.type !== "text") {
-      return {
-        success: false,
-        error: "Unexpected response format from Claude"
-      };
-    }
-    this.log(`Resynced section length: ${content.text.length}`);
-    return {
-      success: true,
-      translatedSection: content.text.trim(),
-      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
-    };
-  }
-  /**
-   * Translate new section (mode='new')
-   * Claude sees: English section → produces translation
-   */
-  async translateNewSection(request2) {
-    const { englishSection, sourceLanguage, targetLanguage, glossary } = request2;
-    if (!englishSection) {
-      return {
-        success: false,
-        error: "New mode requires englishSection"
-      };
-    }
-    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
-    const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
-
-RULES:
-1. Translate all prose content accurately
-2. Preserve all MyST Markdown formatting, structure, and directives
-3. DO NOT translate code blocks (keep code as-is)
-4. DO NOT translate mathematical equations (keep LaTeX as-is)
-5. DO NOT translate URLs, file paths, or technical identifiers
-6. Use the glossary for consistent terminology
-7. Maintain heading structure and levels
-8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
-   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
-   - Code blocks must have matching \`\`\` delimiters
-   - Math blocks must have matching $$ delimiters
-   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
-${additionalRules}
-${additionalRules ? "" : "9. "}Return ONLY the translated section, no explanations
-${request2.customInstructions || ""}
-${glossarySection}
-
-[${sourceLanguage} SECTION TO TRANSLATE]
-${englishSection}
-[/END SECTION]
-
-Provide ONLY the ${targetLanguage} translation. Do not include any markers, explanations, or comments.`;
-    this.log(`Translating new section, mode=new`);
-    this.log(`${sourceLanguage} section length: ${englishSection.length}`);
-    const response = await this.callWithRetry({
-      model: this.model,
-      max_tokens: MAX_TOKENS.section,
-      messages: [{ role: "user", content: prompt }]
-    }, "translateNewSection");
-    const content = response.content[0];
-    if (!content || content.type !== "text") {
-      return {
-        success: false,
-        error: "Unexpected response format from Claude"
-      };
-    }
-    this.log(`Translated section length: ${content.text.length}`);
-    return {
-      success: true,
-      translatedSection: content.text.trim(),
-      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
-    };
-  }
-  /**
-   * Translate full document (for new files)
-   */
-  async translateFullDocument(request2) {
-    const { content, sourceLanguage, targetLanguage, glossary } = request2;
-    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
-    const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${10 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
-
-RULES:
-1. Translate all prose content
-2. Preserve all MyST Markdown directives and structure exactly
-3. DO NOT translate code blocks (keep code as-is)
-4. DO NOT translate mathematical equations (keep LaTeX as-is)
-5. DO NOT translate URLs, file paths, or technical identifiers
-6. Use the provided glossary for consistent terminology
-7. Maintain the exact same heading structure and anchors
-8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
-   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
-   - Code blocks must have matching \`\`\` delimiters  
-   - Math blocks must have matching $$ delimiters
-   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
-9. DIRECTIVE BLOCKS: MyST directive blocks MUST be balanced:
-   - Every \`\`\`{exercise-start} MUST have matching \`\`\`{exercise-end}
-   - Every \`\`\`{solution-start} MUST have matching \`\`\`{solution-end}
-   - Every \`\`\`{code-cell} MUST have closing \`\`\`
-${additionalRules}
-${request2.customInstructions || ""}
-${glossarySection}
-
-IMPORTANT: You MUST translate the ENTIRE document. Do not stop mid-sentence or mid-code.
-If you are approaching token limits and cannot complete the translation, print:
-"${INCOMPLETE_DOCUMENT_MARKER}"
-
-CONTENT:
-${content}
-
-Provide the complete translated document maintaining exact MyST structure.`;
-    const sizeError = checkDocumentSize(content.length, targetLanguage);
-    if (sizeError) {
-      throw new Error(sizeError);
-    }
-    const maxTokens = MAX_TOKENS.fullDocument;
-    this.log(`Translating full document`);
-    this.log(`Content length: ${content.length} chars`);
-    const response = await this.callWithRetry({
-      model: this.model,
-      max_tokens: maxTokens,
-      messages: [{ role: "user", content: prompt }]
-    }, "translateFullDocument");
-    const result = response.content[0];
-    if (!result || result.type !== "text") {
-      return {
-        success: false,
-        error: "Unexpected response format from Claude"
-      };
-    }
-    const translatedText = result.text.trim();
-    if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
-      return {
-        success: false,
-        error: `Document exceeded token limits and was truncated. This document needs section-by-section translation rather than bulk translation.`
-      };
-    }
-    this.log(`Translation complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
-    return {
-      success: true,
-      translatedSection: translatedText,
-      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
-    };
-  }
-  /**
-   * Resync a full document (whole-file RESYNC for forward command).
-   *
-   * Claude sees the complete SOURCE document and the complete existing TARGET
-   * translation, and produces an updated translation that faithfully reflects
-   * the current source while preserving the existing translation's style,
-   * terminology choices, and localization additions.
-   *
-   * This is the recommended approach over section-by-section RESYNC because:
-   * - Preserves cross-section context (localized plot labels, font config)
-   * - 2-3× cheaper (glossary sent once, not per-section)
-   * - Fewer diff lines (more surgical changes)
-   */
-  async translateDocumentResync(request2) {
-    const { sourceContent, targetContent, sourceLanguage, targetLanguage, glossary } = request2;
-    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
-    const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are a professional translator specialising in quantitative economics.
-
-You are given:
-1. The **current ${sourceLanguage} source** document (authoritative)
-2. The **current ${targetLanguage} translation** (may be outdated or have errors)
-
-Your task: produce an **updated ${targetLanguage} translation** that accurately reflects the current ${sourceLanguage} source.
-
-## Critical rules
-
-1. **Preserve the existing translation's style, terminology, and localization choices** wherever the meaning hasn't changed. Do NOT re-translate sections that are already correct \u2014 keep them exactly as-is.
-2. **Fix any errors** in the translation \u2014 missing content, incorrect formulas, wrong code, structural differences.
-3. **Add any missing content** that exists in the source but not in the translation.
-4. **Remove any content** that exists in the translation but not in the source \u2014 EXCEPT for i18n/localization additions (see rule 6).
-5. **Preserve all MyST Markdown syntax** exactly \u2014 directives, roles, code blocks, math blocks, cross-references, frontmatter.
-6. **The existing translation's in-code localization is ground truth \u2014 NEVER revert it to ${sourceLanguage}.** Code cells in the translation often deliberately differ from the source: every line containing ${targetLanguage} text or other localization was added on purpose, usually by hand. Apply these rules line by line:
-   - If the source code around a localized line is unchanged: keep that line EXACTLY as it is in the translation.
-   - If the source changed the surrounding code: carry the localization into the updated code \u2014 keep the label/mapping machinery and translate any new user-visible strings to match.
-   - Drop a localized line only when the source removed the code it belongs to entirely.
-   - NEVER replace a localized string with its ${sourceLanguage} source equivalent.
-   Common localization patterns that MUST be preserved:
-   - Font configuration: \`from matplotlib import font_manager\`, \`fontP = font_manager.FontProperties()\`, \`fontP.set_family('SimHei')\`, \`fontP.set_size(14)\`
-   - rcParams: \`plt.rcParams['font.sans-serif'] = ['SimHei']\`, \`plt.rcParams['axes.unicode_minus'] = False\`
-   - Translated plot strings: \`set_xlabel\`/\`set_ylabel\`/\`set_title\`/\`legend\`/\`annotate\`/\`ax.text\` labels, legend-label lists, plotly trace names
-   - Label-translation dicts and column mappings: \`DataFrame.rename\` maps, CSV column-name mappings, country/category name lists, date formatters
-   - Data-source substitutions that load localized data: a read of a file that exists only in the translation repo (e.g. \`pd.read_csv("datasets/country_code_cn.csv")\` or a localized JSON/CSV mapping) and the localized column names selected from it. The file is invisible to you because it lives only in the translation repo \u2014 that is exactly why the substitution was made by hand. Keep the translation's read and its column choices even when the source derives the same data differently, and apply source-side data updates (new rows, categories, entities) THROUGH the localized mechanism rather than reverting to the source's derivation.
-   - Translated \`print()\` strings and docstrings
-   - Any imports, variable assignments, or configuration lines that appear in the translation's code cells but not in the source's code cells
-   - Locale-appropriate reference links
-   - Full-width punctuation where conventionally used
-   - Lines marked with \`# i18n\` comments
-   Keep localized label text as plain strings \u2014 NEVER wrap ${targetLanguage} text in math delimiters (\`$...$\`).
-   When in doubt about whether a code line in the translation is localization, **keep the translation's version**.
-7. **Preserve the frontmatter (YAML between --- markers) from the TARGET translation** \u2014 do not replace it with the source frontmatter. Only update the heading-map if section headings changed.
-8. **Use the glossary below for consistent terminology** \u2014 when a term from the glossary appears, use the specified translation.
-${additionalRules}
-${request2.customInstructions || ""}
-${glossarySection}
-
-## Output format
-
-Return ONLY the complete updated ${targetLanguage} document. No explanations, no commentary, no code fences wrapping the document. Start directly with the document's first line: the frontmatter \`---\` marker if the ${targetLanguage} translation has frontmatter, otherwise its first content line. NEVER add a \`---\` marker to a document that does not have frontmatter.
-
-## Current ${sourceLanguage} Source
-
-${sourceContent}
-
-## Current ${targetLanguage} Translation
-
-${targetContent}`;
-    const sizeError = checkDocumentSize(sourceContent.length + targetContent.length, targetLanguage);
-    if (sizeError) {
-      throw new Error(sizeError);
-    }
-    const maxTokens = MAX_TOKENS.fullDocument;
-    this.log(`Resyncing full document`);
-    this.log(`Source length: ${sourceContent.length} chars`);
-    this.log(`Target length: ${targetContent.length} chars`);
-    try {
-      const response = await this.callWithRetry({
-        model: this.model,
-        max_tokens: maxTokens,
-        messages: [{ role: "user", content: prompt }]
-      }, "translateDocumentResync");
-      const result = response.content[0];
-      if (!result || result.type !== "text") {
-        return {
-          success: false,
-          error: "Unexpected response format from Claude"
-        };
-      }
-      const translatedText = result.text.trim();
-      if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
-        return {
-          success: false,
-          error: `Document exceeded token limits and was truncated. This document may need a simpler resync approach.`
-        };
-      }
-      this.log(`Resync complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
-      return {
-        success: true,
-        translatedSection: translatedText,
-        tokensUsed: response.usage.input_tokens + response.usage.output_tokens
-      };
-    } catch (error3) {
-      return {
-        success: false,
-        error: formatApiError(error3)
-      };
-    }
-  }
-  /**
-   * Format glossary for inclusion in prompt
-   */
-  formatGlossary(glossary, targetLanguage) {
-    if (!glossary.terms || glossary.terms.length === 0) {
-      return "";
-    }
-    const terms = glossary.terms.filter((term) => {
-      if (typeof term[targetLanguage] === "string" && term[targetLanguage] !== "") {
-        return true;
-      }
-      this.log(`Glossary term "${term.en}" has no ${targetLanguage} translation \u2014 skipped`);
-      return false;
-    }).map((term) => {
-      const translation = term[targetLanguage];
-      const context2 = term.context ? ` (${term.context})` : "";
-      return `  - "${term.en}" \u2192 "${translation}"${context2}`;
-    }).join("\n");
-    return `GLOSSARY:
-${terms}
-`;
-  }
-};
-
-// dist/diff-detector.js
-var core5 = __toESM(require_core(), 1);
-var DiffDetector = class {
-  parser;
-  debug;
-  constructor(debug = false) {
-    this.parser = new MystParser();
-    this.debug = debug;
-  }
-  log(message) {
-    if (this.debug) {
-      core5.info(`[DiffDetector] ${message}`);
-    }
-  }
-  /**
-   * Detect section-level changes between old and new documents
-   * Also detects preamble changes (title and intro before first ## section)
-   */
-  async detectSectionChanges(oldContent, newContent, filepath) {
-    this.log(`Detecting section changes in ${filepath}`);
-    const oldSections = await this.parser.parseSections(oldContent, filepath);
-    const newSections = await this.parser.parseSections(newContent, filepath);
-    this.log(`Old document: ${oldSections.sections.length} sections`);
-    this.log(`New document: ${newSections.sections.length} sections`);
-    const changes = [];
-    const processedOldSections = /* @__PURE__ */ new Set();
-    if (oldSections.preamble !== newSections.preamble) {
-      const oldPreamble = oldSections.preamble?.trim() || "";
-      const newPreamble = newSections.preamble?.trim() || "";
-      if (oldPreamble !== newPreamble) {
-        this.log(`PREAMBLE MODIFIED: Content changed`);
-        changes.push({
-          type: "modified",
-          oldSection: {
-            id: "_preamble",
-            heading: "",
-            // Preamble has no heading
-            level: 0,
-            // Special level for preamble
-            content: oldPreamble,
-            startLine: 1,
-            endLine: 1,
-            subsections: []
-          },
-          newSection: {
-            id: "_preamble",
-            heading: "",
-            level: 0,
-            content: newPreamble,
-            startLine: 1,
-            endLine: 1,
-            subsections: []
-          }
-        });
-      }
-    }
-    for (let i = 0; i < newSections.sections.length; i++) {
-      const newSection = newSections.sections[i];
-      const oldSectionByPosition = oldSections.sections[i];
-      const oldSectionById = this.parser.findSectionById(oldSections.sections, newSection.id);
-      let matchedOldSection;
-      if (oldSectionByPosition && this.sectionsMatch(oldSectionByPosition, newSection)) {
-        matchedOldSection = oldSectionByPosition;
-        this.log(`Matched section "${newSection.heading}" by position ${i}`);
-      } else if (oldSectionById) {
-        matchedOldSection = oldSectionById;
-        this.log(`Matched section "${newSection.heading}" by ID "${newSection.id}"`);
-      }
-      if (!matchedOldSection) {
-        this.log(`ADDED: Section "${newSection.heading}" at position ${i}`);
-        changes.push({
-          type: "added",
-          newSection,
-          position: {
-            index: i,
-            afterSectionId: i > 0 ? newSections.sections[i - 1].id : void 0
-          }
-        });
-      } else {
-        processedOldSections.add(matchedOldSection.id);
-        if (!this.sectionContentEqual(matchedOldSection, newSection)) {
-          this.log(`MODIFIED: Section "${newSection.heading}"`);
-          changes.push({
-            type: "modified",
-            oldSection: matchedOldSection,
-            newSection
-          });
-        } else {
-          this.log(`UNCHANGED: Section "${newSection.heading}"`);
-        }
-      }
-    }
-    for (const oldSection of oldSections.sections) {
-      if (!processedOldSections.has(oldSection.id)) {
-        this.log(`DELETED: Section "${oldSection.heading}"`);
-        changes.push({
-          type: "deleted",
-          oldSection
-        });
-      }
-    }
-    this.log(`Total section changes detected: ${changes.length}`);
-    return changes;
-  }
-  /**
-   * Check if two sections match (for position-based matching)
-   * Sections match if they have the same ID (heading)
-   *
-   * Note: We used to check structural similarity (level + subsection count),
-   * but this caused false matches when inserting new sections.
-   * Now we require ID match for position-based matching.
-   */
-  sectionsMatch(section1, section2) {
-    return section1.id === section2.id;
-  }
-  /**
-   * Check if section content has changed (including all nested subsections recursively)
-   */
-  sectionContentEqual(section1, section2) {
-    if (section1.content.trim() !== section2.content.trim()) {
-      return false;
-    }
-    if (section1.subsections.length !== section2.subsections.length) {
-      return false;
-    }
-    for (let i = 0; i < section1.subsections.length; i++) {
-      if (!this.sectionContentEqual(section1.subsections[i], section2.subsections[i])) {
-        return false;
-      }
-    }
-    return true;
-  }
-};
-
-// dist/typography.js
-var NBSP = "\xA0";
-var EXISTING_NBSP = /[\u00A0\u202F]/;
-var HIGH_PUNCTUATION = /[;:!?]/;
-var PROSE_DIRECTIVES = /* @__PURE__ */ new Set([
-  "admonition",
-  "attention",
-  "caution",
-  "danger",
-  "error",
-  "hint",
-  "important",
-  "note",
-  "seealso",
-  "tip",
-  "warning",
-  "exercise",
-  "exercise-start",
-  "exercise-end",
-  "solution",
-  "solution-start",
-  "solution-end",
-  "epigraph",
-  "margin",
-  "sidebar",
-  "topic",
-  "card",
-  "grid-item-card",
-  "proof",
-  "theorem",
-  "lemma",
-  "corollary",
-  "definition",
-  "remark",
-  "conjecture"
-]);
-var FENCE_OPEN = /^(\s{0,3})(`{3,}|~{3,}|:{3,})\s*(?:\{([\w:-]+)\})?/;
-var DIRECTIVE_OPTION = /^\s*:[a-zA-Z][\w-]*:/;
-var MATH_DELIM = /\$\$/g;
-function classifyLines(lines) {
-  const eligible = new Array(lines.length).fill(false);
-  const stack = [];
-  let inFrontmatter = false;
-  let inMathBlock = false;
-  let awaitingOptions = false;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (i === 0 && line.trim() === "---") {
-      inFrontmatter = true;
-      continue;
-    }
-    if (inFrontmatter) {
-      if (line.trim() === "---")
-        inFrontmatter = false;
-      continue;
-    }
-    const top = stack[stack.length - 1];
-    const open = FENCE_OPEN.exec(line);
-    if (top && !top.prose) {
-      if (open) {
-        const [, , marker, directive] = open;
-        if (!directive && marker[0] === top.marker[0] && marker.length >= top.marker.length)
-          stack.pop();
-      }
-      continue;
-    }
-    const delimiters = (line.match(MATH_DELIM) || []).length;
-    if (inMathBlock || delimiters > 0) {
-      if (delimiters % 2 === 1)
-        inMathBlock = !inMathBlock;
-      continue;
-    }
-    if (open) {
-      const [, , marker, directive] = open;
-      if (top && !directive && marker[0] === top.marker[0] && marker.length >= top.marker.length) {
-        stack.pop();
-        continue;
-      }
-      const prose = Boolean(directive) && PROSE_DIRECTIVES.has(directive.toLowerCase());
-      stack.push({ marker, prose });
-      awaitingOptions = prose;
-      continue;
-    }
-    if (!top) {
-      eligible[i] = true;
-      continue;
-    }
-    if (awaitingOptions) {
-      if (DIRECTIVE_OPTION.test(line))
-        continue;
-      if (line.trim() === "")
-        continue;
-      awaitingOptions = false;
-    }
-    eligible[i] = true;
-  }
-  return eligible;
-}
-var INLINE_PROTECTED = [
-  /\$[^$\n]+\$/g,
-  // inline math
-  /`[^`\n]+`/g,
-  // inline code — also covers MyST roles: {doc}`intro <sec:intro>`
-  /!?\[[^\]]*\]\([^)]*\)/g,
-  // links and images, including the URL
-  /<[^>\n]+>/g,
-  // HTML tags and autolinks
-  /&(?:[a-zA-Z]+\d*|#\d+|#x[0-9a-fA-F]+);/g,
-  // HTML entities — &nbsp; ends in ;
-  /https?:\/\/\S+/g
-  // bare URLs
-];
-var PLACEHOLDER = "\0";
-function applyFrenchSpacing(text) {
-  return text.replace(/(\S)([ \t]*)([;:!?]+)(?=[\s)\]»"'.,]|$)/g, (match, before, gap, run2) => {
-    if (EXISTING_NBSP.test(before))
-      return match;
-    if (before === "\\")
-      return match;
-    if (HIGH_PUNCTUATION.test(before))
-      return match;
-    if (gap.length === 0 && /\d/.test(before) && run2 === ":")
-      return match;
-    return `${before}${NBSP}${run2}`;
-  });
-}
-var DEFINITION_LABEL = /^\s{0,3}\[[^\]]*\]:/;
-var DEFINITION_CORRUPTED = /^(\s{0,3}\[[^\]]*\])[\u00A0\u202F]+:/;
-function applyToProse(line, rule) {
-  const chunks = [];
-  let masked = line.replace(DEFINITION_CORRUPTED, "$1:");
-  masked = masked.replace(DEFINITION_LABEL, (m) => {
-    chunks.push(m);
-    return `${PLACEHOLDER}${chunks.length - 1}${PLACEHOLDER}`;
-  });
-  for (const pattern of INLINE_PROTECTED) {
-    masked = masked.replace(pattern, (m) => {
-      chunks.push(m);
-      return `${PLACEHOLDER}${chunks.length - 1}${PLACEHOLDER}`;
-    });
-  }
-  if (/^\s*\([^)\n]*\)=\s*$/.test(masked))
-    return line;
-  let out = rule(masked);
-  for (let i = 0; i < INLINE_PROTECTED.length + 1; i++) {
-    const next = out.replace(new RegExp(`${PLACEHOLDER}(\\d+)${PLACEHOLDER}`, "g"), (_, idx) => chunks[Number(idx)] ?? "");
-    if (next === out)
-      break;
-    out = next;
-  }
-  return out;
-}
-var RULES = /* @__PURE__ */ new Map([["fr", applyFrenchSpacing]]);
-function applyTypography(content, language) {
-  const rule = RULES.get(language);
-  if (!rule)
-    return content;
-  const lines = content.split("\n");
-  const eligible = classifyLines(lines);
-  return lines.map((line, i) => eligible[i] ? applyToProse(line, rule) : line).join("\n");
-}
-
 // dist/file-processor.js
-var core6 = __toESM(require_core(), 1);
 var FileProcessor = class {
   parser;
   diffDetector;
@@ -38260,7 +36280,7 @@ var FileProcessor = class {
   }
   log(message) {
     if (this.debug) {
-      core6.info(`[FileProcessor] ${message}`);
+      core5.info(`[FileProcessor] ${message}`);
     }
   }
   /**
@@ -38291,8 +36311,8 @@ var FileProcessor = class {
         cachedSectionById = new Map(cachedParsed.sections.map((s) => [s.id, s]));
         cachedHeadingMap = extractHeadingMap(rebaseCache.previousTranslation);
         this.log(`Rebase cache loaded: ${cachedParsed.sections.length} cached sections, ${oldTargetParsed.sections.length} old target sections`);
-      } catch (error3) {
-        const msg = error3 instanceof Error ? error3.message : String(error3);
+      } catch (error4) {
+        const msg = error4 instanceof Error ? error4.message : String(error4);
         this.log(`Rebase cache parse failed \u2014 will re-translate: ${msg}`);
         cachedParsed = void 0;
         oldTargetParsed = void 0;
@@ -38633,9 +36653,9 @@ ${bodyLines.join("\n")}`;
         this.log(`Injecting heading-map with ${headingMap.size} entries and title "${translatedTitle}"`);
         return injectHeadingMap(translatedContent, headingMap, translatedTitle);
       }
-    } catch (error3) {
-      const msg = error3 instanceof Error ? error3.message : String(error3);
-      core6.warning(`Failed to build heading-map for ${filepath}: ${msg}. Returning translated content without heading-map.`);
+    } catch (error4) {
+      const msg = error4 instanceof Error ? error4.message : String(error4);
+      core5.warning(`Failed to build heading-map for ${filepath}: ${msg}. Returning translated content without heading-map.`);
     }
     return translatedContent;
   }
@@ -38684,8 +36704,8 @@ ${translatedContent}`;
           contentWithoutSubsections
         };
       }
-    } catch (error3) {
-      this.log(`Warning: Failed to parse subsections from translated content: ${error3}`);
+    } catch (error4) {
+      this.log(`Warning: Failed to parse subsections from translated content: ${error4}`);
     }
     return {
       subsections: [],
@@ -38758,13 +36778,141 @@ ${translatedContent}`;
   }
 };
 
+// dist/structural-parity.js
+var FLEXIBLE_ARG_DIRECTIVES = /* @__PURE__ */ new Set([
+  "admonition",
+  "dropdown",
+  "card",
+  "grid-item-card",
+  "tab-item",
+  "exercise",
+  "exercise-start",
+  "contents",
+  "index",
+  "code-cell"
+]);
+var FLEXIBLE_ARG_PREFIX = "prf:";
+function isFlexibleArgDirective(name) {
+  return FLEXIBLE_ARG_DIRECTIVES.has(name) || name.startsWith(FLEXIBLE_ARG_PREFIX);
+}
+var FENCE_LINE2 = /^\s*(`{3,}|~{3,})(.*)$/;
+var DIRECTIVE_INFO2 = /^\{([A-Za-z0-9_+:.-]+)\}\s*(.*)$/;
+var ANCHOR_LINE = /^\(([^()\s]+)\)=\s*$/;
+function extractStructuralTokens(content) {
+  const directives = [];
+  const anchors = [];
+  let openFence = null;
+  const lines = content.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const fence = FENCE_LINE2.exec(line);
+    if (openFence) {
+      if (fence && fence[1][0] === openFence.char && fence[1].length >= openFence.length && fence[2].trim() === "") {
+        openFence = null;
+      }
+      continue;
+    }
+    if (fence) {
+      openFence = { char: fence[1][0], length: fence[1].length };
+      const info9 = DIRECTIVE_INFO2.exec(fence[2].trim());
+      if (info9) {
+        directives.push({ name: info9[1], arg: info9[2].trim(), line: i + 1 });
+      }
+      continue;
+    }
+    const anchor = ANCHOR_LINE.exec(line);
+    if (anchor) {
+      anchors.push({ label: anchor[1], line: i + 1 });
+    }
+  }
+  return { directives, anchors };
+}
+function checkStructuralParity(sourceContent, outputContent) {
+  const source = extractStructuralTokens(sourceContent);
+  const output = extractStructuralTokens(outputContent);
+  const violations = [];
+  if (source.directives.length !== output.directives.length) {
+    violations.push({
+      message: `directive count differs: source has ${source.directives.length}, output has ${output.directives.length} \u2014 a wholesale mismatch usually means the document was re-fenced or truncated`
+    });
+  }
+  const pairCount = Math.min(source.directives.length, output.directives.length);
+  for (let i = 0; i < pairCount; i++) {
+    const s = source.directives[i];
+    const o = output.directives[i];
+    if (s.name !== o.name) {
+      violations.push({
+        message: `directive #${i + 1} name changed: source line ${s.line} has {${s.name}}, output line ${o.line} has {${o.name}}`
+      });
+      continue;
+    }
+    if (isFlexibleArgDirective(s.name)) {
+      const sHas = s.arg !== "";
+      const oHas = o.arg !== "";
+      if (sHas !== oHas) {
+        violations.push({
+          message: `directive #${i + 1} {${s.name}} ${sHas ? "lost" : "gained"} its argument: source line ${s.line} has ${sHas ? `"${s.arg}"` : "no argument"}, output line ${o.line} has ${oHas ? `"${o.arg}"` : "none"}`
+        });
+      }
+    } else if (s.arg !== o.arg) {
+      violations.push({
+        message: `directive #${i + 1} {${s.name}} argument changed: source line ${s.line} has "${s.arg}", output line ${o.line} has "${o.arg}" \u2014 structural arguments are never translated`
+      });
+    }
+  }
+  const sourceLabels = source.anchors.map((a) => a.label);
+  const outputLabels = output.anchors.map((a) => a.label);
+  if (sourceLabels.join("\n") !== outputLabels.join("\n")) {
+    const counts = (labels) => {
+      const m = /* @__PURE__ */ new Map();
+      for (const l of labels)
+        m.set(l, (m.get(l) ?? 0) + 1);
+      return m;
+    };
+    const describe = (label, n) => n > 1 ? `(${label})= \xD7${n}` : `(${label})=`;
+    const sourceCounts = counts(sourceLabels);
+    const outputCounts = counts(outputLabels);
+    const missing = [];
+    const invented = [];
+    for (const [label, n] of sourceCounts) {
+      const d = n - (outputCounts.get(label) ?? 0);
+      if (d > 0)
+        missing.push(describe(label, d));
+    }
+    for (const [label, n] of outputCounts) {
+      const d = n - (sourceCounts.get(label) ?? 0);
+      if (d > 0)
+        invented.push(describe(label, d));
+    }
+    const parts = [];
+    if (missing.length > 0) {
+      parts.push(`missing from output: ${missing.join(", ")}`);
+    }
+    if (invented.length > 0) {
+      parts.push(`not in source: ${invented.join(", ")}`);
+    }
+    if (parts.length === 0) {
+      parts.push(`same labels, different order \u2014 source: ${sourceLabels.join(", ")}; output: ${outputLabels.join(", ")}`);
+    }
+    violations.push({
+      message: `target anchors diverge \u2014 ${parts.join("; ")}`
+    });
+  }
+  return { ok: violations.length === 0, violations };
+}
+function formatParityViolations(filename, result) {
+  const bullets = result.violations.map((v) => `  - ${v.message}`).join("\n");
+  return `structural parity check failed for ${filename}:
+${bullets}`;
+}
+
 // dist/sync-orchestrator.js
 var import_fs = require("fs");
-var path4 = __toESM(require("path"), 1);
+var path3 = __toESM(require("path"), 1);
 
 // dist/cli/translate-state.js
-var fs2 = __toESM(require("fs"), 1);
-var path3 = __toESM(require("path"), 1);
+var fs = __toESM(require("fs"), 1);
+var path2 = __toESM(require("path"), 1);
 var TRANSLATE_DIR = ".translate";
 var STATE_DIR = "state";
 var _cachedVersion;
@@ -38773,24 +36921,24 @@ function getToolVersion() {
     return _cachedVersion;
   if (typeof __dirname === "string") {
     try {
-      const pkgPath = path3.resolve(__dirname, "../../package.json");
-      _cachedVersion = JSON.parse(fs2.readFileSync(pkgPath, "utf-8")).version;
+      const pkgPath = path2.resolve(__dirname, "../../package.json");
+      _cachedVersion = JSON.parse(fs.readFileSync(pkgPath, "utf-8")).version;
       return _cachedVersion;
     } catch {
     }
   }
   try {
-    let dir = path3.dirname(process.argv[1]);
+    let dir = path2.dirname(process.argv[1]);
     for (let i = 0; i < 5; i++) {
-      const pkgPath = path3.join(dir, "package.json");
-      if (fs2.existsSync(pkgPath)) {
-        const pkg = JSON.parse(fs2.readFileSync(pkgPath, "utf-8"));
+      const pkgPath = path2.join(dir, "package.json");
+      if (fs.existsSync(pkgPath)) {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
         if (pkg.name === "action-translation") {
           _cachedVersion = pkg.version;
           return _cachedVersion;
         }
       }
-      const parent = path3.dirname(dir);
+      const parent = path2.dirname(dir);
       if (parent === dir)
         break;
       dir = parent;
@@ -38800,15 +36948,15 @@ function getToolVersion() {
   try {
     let dir = process.cwd();
     for (let i = 0; i < 5; i++) {
-      const pkgPath = path3.join(dir, "package.json");
-      if (fs2.existsSync(pkgPath)) {
-        const pkg = JSON.parse(fs2.readFileSync(pkgPath, "utf-8"));
+      const pkgPath = path2.join(dir, "package.json");
+      if (fs.existsSync(pkgPath)) {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
         if (pkg.name === "action-translation") {
           _cachedVersion = pkg.version;
           return _cachedVersion;
         }
       }
-      const parent = path3.dirname(dir);
+      const parent = path2.dirname(dir);
       if (parent === dir)
         break;
       dir = parent;
@@ -38831,33 +36979,33 @@ async function loadGlossary(targetLanguage, builtInGlossaryDir, customGlossaryPa
     let glossary;
     try {
       glossary = await readGlossaryFile(customGlossaryPath);
-    } catch (error3) {
-      throw new Error(`Could not load custom glossary from ${customGlossaryPath}: ${errorMessage(error3)}`);
+    } catch (error4) {
+      throw new Error(`Could not load custom glossary from ${customGlossaryPath}: ${errorMessage(error4)}`);
     }
     logger?.info(`\u2713 Loaded custom glossary from ${customGlossaryPath} with ${glossary.terms.length} terms`);
     return glossary;
   }
-  const builtInPath = path4.join(builtInGlossaryDir, `${targetLanguage}.json`);
+  const builtInPath = path3.join(builtInGlossaryDir, `${targetLanguage}.json`);
   try {
     const glossary = await readGlossaryFile(builtInPath);
     logger?.info(`\u2713 Loaded built-in glossary for ${targetLanguage} with ${glossary.terms.length} terms`);
     return glossary;
-  } catch (error3) {
-    logger?.warning(`Could not load built-in glossary for ${targetLanguage}: ${errorMessage(error3)}`);
+  } catch (error4) {
+    logger?.warning(`Could not load built-in glossary for ${targetLanguage}: ${errorMessage(error4)}`);
   }
   return void 0;
 }
-function errorMessage(error3) {
-  const message = error3?.message;
-  return typeof message === "string" ? message : String(error3);
+function errorMessage(error4) {
+  const message = error4?.message;
+  return typeof message === "string" ? message : String(error4);
 }
 async function readGlossaryFile(file) {
   const content = await import_fs.promises.readFile(file, "utf-8");
   let glossary;
   try {
     glossary = JSON.parse(content);
-  } catch (error3) {
-    throw new Error(`${file} is not valid JSON: ${errorMessage(error3)}`);
+  } catch (error4) {
+    throw new Error(`${file} is not valid JSON: ${errorMessage(error4)}`);
   }
   if (!glossary || !Array.isArray(glossary.terms)) {
     throw new Error(`${file} has no "terms" array`);
@@ -38952,8 +37100,8 @@ var SyncOrchestrator = class {
             this.processRemovedFile(file, result);
             break;
         }
-      } catch (error3) {
-        const errorMessage2 = `Error processing ${file.filename}: ${error3}`;
+      } catch (error4) {
+        const errorMessage2 = `Error processing ${file.filename}: ${error4}`;
         this.logger.error(errorMessage2);
         result.errors.push(errorMessage2);
       }
@@ -38987,8 +37135,8 @@ var SyncOrchestrator = class {
     if (docs.length === 0)
       return;
     const plan = planCitationBackfill({ docs, bib: bibliography, mode });
-    for (const warning5 of plan.warnings)
-      this.logger.warning(warning5);
+    for (const warning7 of plan.warnings)
+      this.logger.warning(warning7);
     if (plan.mergedBib && plan.bibPath) {
       const total = [...plan.backfilled.values()].reduce((n, keys) => n + keys.length, 0);
       this.logger.info(`Bibliography: appended ${total} entr${total === 1 ? "y" : "ies"} to ${plan.bibPath} for citations this sync introduced`);
@@ -39172,8 +37320,8 @@ var SyncOrchestrator = class {
         sha: existingSha
       });
       this.logger.info(`Generated state file: ${statePath}`);
-    } catch (error3) {
-      this.logger.warning(`Could not generate state for ${filename}: ${error3}`);
+    } catch (error4) {
+      this.logger.warning(`Could not generate state for ${filename}: ${error4}`);
     }
   }
   /**
@@ -39191,100 +37339,1972 @@ var SyncOrchestrator = class {
   }
 };
 
+// dist/branch-naming.js
+var SYNC_BRANCH_PREFIX = "translation-sync-";
+var RESYNC_BRANCH_PREFIX = "resync/";
+var TRANSLATION_BRANCH_PREFIXES = [SYNC_BRANCH_PREFIX, RESYNC_BRANCH_PREFIX];
+function isTranslationBranch(ref) {
+  return TRANSLATION_BRANCH_PREFIXES.some((prefix) => ref.startsWith(prefix) && ref.length > prefix.length);
+}
+
+// dist/pr-creator.js
+var SYNC_METADATA_SCHEMA_VERSION = 1;
+async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections) {
+  const { targetOwner, targetRepo } = config;
+  const { data: targetRepoData } = await octokit.rest.repos.get({
+    owner: targetOwner,
+    repo: targetRepo
+  });
+  const defaultBranch = targetRepoData.default_branch;
+  const { data: refData } = await octokit.rest.git.getRef({
+    owner: targetOwner,
+    repo: targetRepo,
+    ref: `heads/${defaultBranch}`
+  });
+  const baseSha = refData.object.sha;
+  const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-").slice(0, -5);
+  const branchName = `${SYNC_BRANCH_PREFIX}${timestamp2}-pr-${config.prNumber}`;
+  await octokit.rest.git.createRef({
+    owner: targetOwner,
+    repo: targetRepo,
+    ref: `refs/heads/${branchName}`,
+    sha: baseSha
+  });
+  logger.info(`Created branch: ${branchName}`);
+  for (const file of translatedFiles) {
+    await octokit.rest.repos.createOrUpdateFileContents({
+      owner: targetOwner,
+      repo: targetRepo,
+      path: file.path,
+      message: `Update translation: ${file.path}`,
+      content: Buffer.from(file.content).toString("base64"),
+      branch: branchName,
+      sha: file.sha
+      // Include SHA if updating existing file
+    });
+    logger.info(`Committed: ${file.path}`);
+  }
+  for (const file of filesToDelete) {
+    await octokit.rest.repos.deleteFile({
+      owner: targetOwner,
+      repo: targetRepo,
+      path: file.path,
+      message: `Delete removed file: ${file.path}`,
+      branch: branchName,
+      sha: file.sha
+    });
+    logger.info(`Deleted: ${file.path}`);
+  }
+  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections);
+  const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
+  const { data: pr } = await octokit.rest.pulls.create({
+    owner: targetOwner,
+    repo: targetRepo,
+    title: prTitle,
+    body: prBody,
+    head: branchName,
+    base: defaultBranch
+  });
+  logger.info(`Created PR: ${pr.html_url}`);
+  const labelsToAdd = buildLabelSet(config.prLabels, sourcePrInfo?.labels);
+  if (labelsToAdd.length > 0) {
+    const maxAttempts = 3;
+    const delayMs = 2e3;
+    let labeled = false;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await octokit.rest.issues.addLabels({
+          owner: targetOwner,
+          repo: targetRepo,
+          issue_number: pr.number,
+          labels: labelsToAdd
+        });
+        logger.info(`Added labels: ${labelsToAdd.join(", ")}`);
+        labeled = true;
+        break;
+      } catch (labelError) {
+        if (attempt < maxAttempts) {
+          logger.info(`Label attempt ${attempt}/${maxAttempts} failed, retrying in ${delayMs}ms...`);
+          await new Promise((resolve3) => setTimeout(resolve3, delayMs));
+        } else {
+          logger.warning(`Could not add labels to PR #${pr.number} after ${maxAttempts} attempts: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
+        }
+      }
+    }
+    if (!labeled) {
+      logger.warning(`PR #${pr.number} created successfully but labels could not be applied. Downstream workflows that filter by label may not trigger.`);
+    }
+  }
+  await requestReviewers(octokit, targetOwner, targetRepo, pr.number, config, logger);
+  return {
+    prUrl: pr.html_url,
+    branchName,
+    prNumber: pr.number
+  };
+}
+function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections) {
+  const newFiles = translatedFiles.filter((f) => !f.sha);
+  const updatedFiles = translatedFiles.filter((f) => f.sha);
+  let filesChangedSection = "";
+  if (newFiles.length > 0) {
+    filesChangedSection += "### Files Added\n" + newFiles.map((f) => `- \u2705 \`${f.path}\``).join("\n");
+  }
+  if (updatedFiles.length > 0) {
+    if (filesChangedSection)
+      filesChangedSection += "\n\n";
+    filesChangedSection += "### Files Updated\n" + updatedFiles.map((f) => `- \u270F\uFE0F \`${f.path}\``).join("\n");
+  }
+  if (filesToDelete.length > 0) {
+    if (filesChangedSection)
+      filesChangedSection += "\n\n";
+    filesChangedSection += "### Files Deleted\n" + filesToDelete.map((f) => `- \u274C \`${f.path}\``).join("\n");
+  }
+  const sourcePrTitle = sourcePrInfo?.title || "";
+  const { sourceRepoOwner, sourceRepoName, prNumber } = config;
+  let skippedNotice = "";
+  if (skippedSections && skippedSections.size > 0) {
+    const lines = [];
+    for (const [file, headings] of skippedSections) {
+      lines.push(`- \`${file}\`: ${headings.map((h) => `\`${h.replace(/`/g, "\\`")}\``).join(", ")}`);
+    }
+    skippedNotice = `
+
+### \u26A0\uFE0F Sections Pending Earlier Translation PR
+
+The following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. If that PR is abandoned, run \`/translate-resync\` to recover.
+
+${lines.join("\n")}`;
+  }
+  let droppedNotice = "";
+  if (droppedTargetSections && droppedTargetSections.size > 0) {
+    const lines = [];
+    for (const [file, headings] of droppedTargetSections) {
+      lines.push(`- \`${file}\`: ${headings.map((h) => `\`${h.replace(/`/g, "\\`")}\``).join(", ")}`);
+    }
+    droppedNotice = `
+
+### \u26A0\uFE0F Target-Only Sections Removed
+
+The following sections exist in the current translation but have **no counterpart in the source document**, so this sync removes them (the translation mirrors the source's structure). If the source deleted these sections, this removal is correct \u2014 merge as usual. If they are human-authored additions you want to keep, move them into a target-only file before merging (see [adding content to a translated edition](https://github.com/QuantEcon/action-translation/blob/main/docs/user/faq.md#how-do-i-add-content-to-a-translated-edition-that-isnt-in-the-source)).
+
+${lines.join("\n")}`;
+  }
+  const metadataFiles = fileMetadata ? fileMetadata.map((f) => {
+    const entry = {
+      path: f.path,
+      type: f.type
+    };
+    if (f.previousPath)
+      entry.previousPath = f.previousPath;
+    return entry;
+  }) : [
+    ...translatedFiles.map((f) => ({ path: f.path })),
+    ...filesToDelete.map((f) => ({ path: f.path }))
+  ];
+  const metadata = {
+    schemaVersion: SYNC_METADATA_SCHEMA_VERSION,
+    sourceRepo: `${sourceRepoOwner}/${sourceRepoName}`,
+    sourcePR: prNumber,
+    mode: "sync",
+    sourceCommitSha: config.sourceCommitSha,
+    targetBaseSha: targetBaseSha || "",
+    sourceLanguage: config.sourceLanguage,
+    targetLanguage: config.targetLanguage,
+    claudeModel: config.claudeModel,
+    files: metadataFiles
+  };
+  const metadataBlock = `<!-- translation-sync-metadata
+${JSON.stringify(metadata, null, 2)}
+-->`;
+  return `## Automated Translation Sync
+
+This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoName}](https://github.com/${sourceRepoOwner}/${sourceRepoName}).
+
+### Source PR
+**[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ""}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
+
+${filesChangedSection}${skippedNotice}${droppedNotice}
+
+### Details
+- **Source Language**: ${config.sourceLanguage}
+- **Target Language**: ${config.targetLanguage}
+- **Model**: ${config.claudeModel}
+
+---
+*This PR was created automatically by the [translation action](https://github.com/quantecon/action-translation).*
+
+${metadataBlock}`;
+}
+function buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo) {
+  if (sourcePrInfo?.title) {
+    return `\u{1F310} [translation-sync] ${sourcePrInfo.title}`;
+  }
+  const allFiles = [...translatedFiles.map((f) => f.path), ...filesToDelete.map((f) => f.path)];
+  let titleFileList;
+  if (allFiles.length === 1) {
+    titleFileList = allFiles[0];
+  } else if (allFiles.length === 2) {
+    titleFileList = `${allFiles[0]} + 1 more`;
+  } else {
+    titleFileList = `${allFiles.length} files`;
+  }
+  return `\u{1F310} [translation-sync] ${titleFileList}`;
+}
+function buildLabelSet(inputLabels, sourcePrLabels) {
+  const labelsToAdd = /* @__PURE__ */ new Set();
+  for (const label of inputLabels) {
+    labelsToAdd.add(label);
+  }
+  if (sourcePrLabels) {
+    for (const label of sourcePrLabels) {
+      labelsToAdd.add(label);
+    }
+  }
+  return Array.from(labelsToAdd);
+}
+async function requestReviewers(octokit, targetOwner, targetRepo, prNumber, config, logger) {
+  if (config.prReviewers.length === 0 && config.prTeamReviewers.length === 0) {
+    return;
+  }
+  try {
+    const reviewRequest = {};
+    if (config.prReviewers.length > 0) {
+      reviewRequest.reviewers = config.prReviewers;
+    }
+    if (config.prTeamReviewers.length > 0) {
+      reviewRequest.team_reviewers = config.prTeamReviewers;
+    }
+    await octokit.rest.pulls.requestReviewers({
+      owner: targetOwner,
+      repo: targetRepo,
+      pull_number: prNumber,
+      ...reviewRequest
+    });
+    const reviewersList = [];
+    if (config.prReviewers.length > 0) {
+      reviewersList.push(`users: ${config.prReviewers.join(", ")}`);
+    }
+    if (config.prTeamReviewers.length > 0) {
+      reviewersList.push(`teams: ${config.prTeamReviewers.join(", ")}`);
+    }
+    logger.info(`Requested reviewers: ${reviewersList.join("; ")}`);
+  } catch (reviewerError) {
+    logger.warning(`Could not request reviewers: ${reviewerError instanceof Error ? reviewerError.message : String(reviewerError)}`);
+  }
+}
+function parseTranslationSyncMetadata(prBody) {
+  const match = prBody.match(/<!-- translation-sync-metadata\r?\n([\s\S]*?)\r?\n-->/);
+  if (!match)
+    return void 0;
+  try {
+    const parsed = JSON.parse(match[1]);
+    if (typeof parsed.sourceRepo !== "string" || typeof parsed.sourcePR !== "number" || typeof parsed.sourceCommitSha !== "string" || typeof parsed.sourceLanguage !== "string" || typeof parsed.targetLanguage !== "string" || typeof parsed.claudeModel !== "string" || !Array.isArray(parsed.files)) {
+      return void 0;
+    }
+    if (!parsed.targetBaseSha) {
+      parsed.targetBaseSha = "";
+    }
+    return parsed;
+  } catch {
+    return void 0;
+  }
+}
+
 // dist/rebase-siblings.js
 var BENIGN_422 = /no new commits|not behind|already up to date/i;
 async function refreshStaleBranch(octokit, owner, repo, prNumber) {
   try {
     await octokit.rest.pulls.updateBranch({ owner, repo, pull_number: prNumber });
     return true;
-  } catch (error3) {
-    const { status, message } = error3;
+  } catch (error4) {
+    const { status, message } = error4;
     if (status === 422 && BENIGN_422.test(message ?? "")) {
       return false;
     }
-    throw error3;
+    throw error4;
   }
 }
 
-// dist/index.js
-var path5 = __toESM(require("path"), 1);
-var import_url = require("url");
-var __filename = (0, import_url.fileURLToPath)(__importMetaUrl);
-var __dirname2 = path5.dirname(__filename);
-async function run() {
-  try {
-    const mode = getMode();
-    core7.info(`\u{1F680} Running in ${mode.toUpperCase()} mode`);
-    if (mode === "sync") {
-      await runSync();
-    } else if (mode === "rebase") {
-      await runRebase();
-    } else {
-      await runReview();
+// dist/action/review.js
+var core8 = __toESM(require_core(), 1);
+var github2 = __toESM(require_github(), 1);
+
+// dist/reviewer.js
+var core6 = __toESM(require_core(), 1);
+var github = __toESM(require_github(), 1);
+
+// dist/diff-checks.js
+var MAX_DETAILS = 10;
+function levelSequence(sections) {
+  const levels = [];
+  const walk = (secs) => {
+    for (const s of secs) {
+      levels.push(s.level);
+      walk(s.subsections);
     }
-  } catch (error3) {
-    if (error3 instanceof Error && error3.stack) {
-      core7.error(error3.stack);
-    }
-    core7.setFailed(`Action failed: ${error3 instanceof Error ? error3.message : String(error3)}`);
-  }
+  };
+  walk(sections);
+  return levels;
 }
-async function runReview() {
-  core7.info("Getting review mode inputs...");
+async function checkStructurePreserved(parser, pairs2) {
+  const details = [];
+  for (const pair of pairs2) {
+    const parity = checkStructuralParity(pair.source, pair.target);
+    if (!parity.ok) {
+      for (const violation of parity.violations) {
+        details.push(`${pair.filename}: ${violation.message}`);
+      }
+    }
+    const [sourceParsed, targetParsed] = await Promise.all([
+      parser.parseSections(pair.source, pair.filename),
+      parser.parseSections(pair.target, pair.filename)
+    ]);
+    const sourceLevels = levelSequence(sourceParsed.sections);
+    const targetLevels = levelSequence(targetParsed.sections);
+    if (sourceLevels.join(",") !== targetLevels.join(",")) {
+      details.push(`${pair.filename}: heading level sequence differs \u2014 source [${sourceLevels.join(", ")}] vs target [${targetLevels.join(", ")}]`);
+    }
+  }
+  return { passed: details.length === 0, details: details.slice(0, MAX_DETAILS) };
+}
+async function checkHeadingMapCorrect(parser, pairs2) {
+  const details = [];
+  for (const pair of pairs2) {
+    const [sourceParsed, targetParsed] = await Promise.all([
+      parser.parseSections(pair.source, pair.filename),
+      parser.parseSections(pair.target, pair.filename)
+    ]);
+    const { map: expected, warnings } = buildHeadingMap(sourceParsed.sections, targetParsed.sections);
+    for (const warning7 of warnings) {
+      details.push(`${pair.filename}: ${warning7}`);
+    }
+    if (expected.size === 0)
+      continue;
+    const recorded = extractHeadingMap(pair.target);
+    if (recorded.size === 0) {
+      details.push(`${pair.filename}: no heading map in frontmatter (expected ${expected.size})`);
+      continue;
+    }
+    for (const [key, value] of expected) {
+      const actual = recorded.get(key);
+      if (actual === void 0) {
+        details.push(`${pair.filename}: heading map missing entry for "${key}"`);
+      } else if (normalizeHeadingForMatch(actual) !== normalizeHeadingForMatch(value)) {
+        details.push(`${pair.filename}: heading map entry for "${key}" is "${actual}", document has "${value}"`);
+      }
+    }
+  }
+  return { passed: details.length === 0, details: details.slice(0, MAX_DETAILS) };
+}
+async function runDeterministicDiffChecks(parser, pairs2) {
+  const guard = async (name, fn) => {
+    try {
+      return await fn();
+    } catch (error4) {
+      const message = error4?.message;
+      return {
+        passed: false,
+        details: [
+          `${name} could not be evaluated: ${typeof message === "string" ? message : String(error4)}`
+        ]
+      };
+    }
+  };
+  return {
+    structurePreserved: await guard("structurePreserved", () => checkStructurePreserved(parser, pairs2)),
+    headingMapCorrect: await guard("headingMapCorrect", () => checkHeadingMapCorrect(parser, pairs2))
+  };
+}
+
+// dist/review-verdict.js
+var fs3 = __toESM(require("fs"), 1);
+var path4 = __toESM(require("path"), 1);
+var REVIEW_VERDICT_MARKER = "translation-review-verdict";
+var REVIEW_VERDICT_SCHEMA_VERSION = 1;
+var MAX_FINDINGS = 20;
+var MAX_FIELD_LENGTH = 400;
+var SEVERITIES = ["blocker", "major", "minor", "nit"];
+var CATEGORIES = [
+  "accuracy",
+  "fluency",
+  "terminology",
+  "formatting",
+  "syntax",
+  "structure",
+  "diff-check",
+  "other"
+];
+var GATING_CATEGORIES = [
+  "accuracy",
+  "terminology",
+  "syntax",
+  "diff-check",
+  "other"
+];
+var MAX_CRITERION_SCORE = 10;
+var DIFF_CHECK_NAMES = [
+  "scopeCorrect",
+  "positionCorrect",
+  "structurePreserved",
+  "headingMapCorrect"
+];
+var CRITERION_FLOORS = {
+  accuracy: 9,
+  terminology: 9,
+  fluency: 8,
+  formatting: 8
+};
+var _cachedPackageVersion;
+function resolvePackageVersion() {
+  if (_cachedPackageVersion !== void 0)
+    return _cachedPackageVersion;
+  if (typeof __dirname === "string") {
+    try {
+      const pkgPath = path4.resolve(__dirname, "../package.json");
+      const pkg = JSON.parse(fs3.readFileSync(pkgPath, "utf-8"));
+      if (pkg.name === "action-translation" && typeof pkg.version === "string") {
+        _cachedPackageVersion = pkg.version;
+        return _cachedPackageVersion;
+      }
+    } catch {
+    }
+    try {
+      const pkgPath = path4.resolve(__dirname, "../../package.json");
+      const pkg = JSON.parse(fs3.readFileSync(pkgPath, "utf-8"));
+      if (pkg.name === "action-translation" && typeof pkg.version === "string") {
+        _cachedPackageVersion = pkg.version;
+        return _cachedPackageVersion;
+      }
+    } catch {
+    }
+  }
+  _cachedPackageVersion = "unknown";
+  return _cachedPackageVersion;
+}
+function getEngineRef() {
+  const ref = process.env.GITHUB_ACTION_REF?.trim();
+  return ref ? ref : void 0;
+}
+var RELEASE_TAG_RE = /^v\d+(\.\d+){0,2}$/;
+function formatEngineVersion(version, ref) {
+  if (version === "unknown")
+    return version;
+  if (ref !== void 0 && !RELEASE_TAG_RE.test(ref)) {
+    return `${version}+${ref.replace(/[^0-9A-Za-z.-]/g, "-")}`;
+  }
+  return version;
+}
+function getEngineVersion() {
+  return formatEngineVersion(resolvePackageVersion(), getEngineRef());
+}
+var isPlainObject3 = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
+function truncateField(value) {
+  return truncate(value);
+}
+function truncate(value) {
+  const s = typeof value === "string" ? value : String(value);
+  return s.length > MAX_FIELD_LENGTH ? `${s.slice(0, MAX_FIELD_LENGTH - 1)}\u2026` : s;
+}
+function asOptionalText(value) {
+  if (typeof value !== "string" || value.trim() === "")
+    return null;
+  return truncate(value);
+}
+function describeLooseObject(obj) {
+  const description = obj.description || obj.issue || obj.problem || obj.message;
+  if (description)
+    return truncate(description);
+  const original = obj.original || obj.current || obj.translated || obj.text;
+  const suggestion = obj.suggestion || obj.recommended || obj.fix || obj.correction;
+  if (original && suggestion)
+    return truncate(`"${original}" \u2192 "${suggestion}"`);
+  return truncate(JSON.stringify(obj));
+}
+function severityRank(severity) {
+  return SEVERITIES.indexOf(severity);
+}
+function normalizeFindings(rawFindings, legacyIssues, validFiles) {
+  const soleFile = validFiles.length === 1 ? validFiles[0] : null;
+  const toFinding = (item, forceConservative2) => {
+    if (typeof item === "object" && item !== null && !Array.isArray(item)) {
+      const obj = item;
+      const severity = !forceConservative2 && SEVERITIES.includes(obj.severity) ? obj.severity : "major";
+      const category = !forceConservative2 && CATEGORIES.includes(obj.category) ? obj.category : "other";
+      const claimedFile = typeof obj.file === "string" ? obj.file : null;
+      const file = soleFile ?? (claimedFile && validFiles.includes(claimedFile) ? claimedFile : null);
+      return {
+        severity,
+        category,
+        file,
+        location: asOptionalText(obj.location),
+        description: describeLooseObject(obj),
+        suggestion: asOptionalText(obj.suggestion)
+      };
+    }
+    return {
+      severity: "major",
+      category: "other",
+      file: soleFile,
+      location: null,
+      description: truncate(item),
+      suggestion: null
+    };
+  };
+  let items;
+  let forceConservative = false;
+  let malformed = false;
+  if (Array.isArray(rawFindings) && rawFindings.length > 0) {
+    items = rawFindings;
+  } else if (Array.isArray(rawFindings) && rawFindings.length === 0 && Array.isArray(legacyIssues) && legacyIssues.length > 0) {
+    items = legacyIssues;
+    forceConservative = true;
+  } else if (Array.isArray(rawFindings)) {
+    items = rawFindings;
+  } else if (rawFindings === void 0 && Array.isArray(legacyIssues)) {
+    items = legacyIssues;
+    forceConservative = true;
+    malformed = true;
+  } else {
+    items = [];
+    malformed = true;
+  }
+  const findings = items.map((item) => toFinding(item, forceConservative)).filter((f) => f.description !== "" && f.description !== "{}").sort((a, b) => severityRank(a.severity) - severityRank(b.severity)).slice(0, MAX_FINDINGS);
+  if (items.length > 0 && findings.length === 0) {
+    malformed = true;
+  }
+  return { findings, malformed };
+}
+function sortAndCapFindings(findings) {
+  return [...findings].sort((a, b) => severityRank(a.severity) - severityRank(b.severity)).slice(0, MAX_FINDINGS);
+}
+function findingToDisplayString(finding) {
+  const tag = `**[${finding.severity} \xB7 ${finding.category}]**`;
+  const where = [finding.file, finding.location].filter(Boolean).join(" \u2014 ");
+  const suggestion = finding.suggestion ? ` \u2192 ${finding.suggestion}` : "";
+  return where ? `${tag} ${where}: ${finding.description}${suggestion}` : `${tag} ${finding.description}${suggestion}`;
+}
+function computeRecommendation(input) {
+  const reasons = [];
+  if (input.verdict !== "PASS") {
+    reasons.push(`verdict ${input.verdict} (auto-merge requires PASS)`);
+  }
+  if (input.syntaxErrorCount > 0) {
+    reasons.push(`${input.syntaxErrorCount} syntax error(s)`);
+  }
+  for (const check of DIFF_CHECK_NAMES) {
+    if (input.diffCheckSources?.[check] === "model")
+      continue;
+    if (input.diffChecks?.[check] !== true)
+      reasons.push(`diff check failed: ${check}`);
+  }
+  if (input.findingsMalformed) {
+    reasons.push("findings payload missing or malformed (fail-closed)");
+  }
+  if (input.sourceContentMissing) {
+    reasons.push("source content could not be fetched \u2014 the review compared against nothing");
+  }
+  if (input.findingsSuppressed) {
+    reasons.push("findings suppressed by max-suggestions=0 \u2014 the findings half of the gate is blind");
+  }
+  const blockers = input.findings.filter((f) => f.severity === "blocker").length;
+  const majors = input.findings.filter((f) => f.severity === "major").length;
+  const gatingMinors = input.findings.filter((f) => f.severity === "minor" && GATING_CATEGORIES.includes(f.category)).length;
+  if (blockers > 0)
+    reasons.push(`${blockers} blocker finding(s)`);
+  if (majors > 0)
+    reasons.push(`${majors} major finding(s)`);
+  if (gatingMinors > 0) {
+    reasons.push(`${gatingMinors} minor finding(s) in gating categories (${GATING_CATEGORIES.join("/")})`);
+  }
+  const scores = isPlainObject3(input.scores) ? input.scores : {};
+  for (const [criterion, floor] of Object.entries(CRITERION_FLOORS)) {
+    const score = scores[criterion];
+    if (typeof score !== "number" || !Number.isFinite(score)) {
+      reasons.push(`${criterion} score missing or non-numeric`);
+    } else if (!(score >= floor)) {
+      reasons.push(`${criterion} ${score} below floor ${floor}`);
+    } else if (!(score <= MAX_CRITERION_SCORE)) {
+      reasons.push(`${criterion} ${score} above the ${MAX_CRITERION_SCORE}-point scale`);
+    }
+  }
+  return { recommendation: reasons.length === 0 ? "auto-merge" : "editor", reasons };
+}
+function sanitizeCommentText(text) {
+  return text.replace(/<!--/g, "&lt;!--");
+}
+function buildVerdictBlock(verdict) {
+  const json2 = JSON.stringify(verdict, null, 2).replace(/-->/g, "--\\u003e").replace(/--!>/g, "--!\\u003e");
+  return `<!-- ${REVIEW_VERDICT_MARKER}
+${json2}
+-->`;
+}
+
+// dist/reviewer.js
+var DEFAULT_REVIEW_MODEL = DEFAULT_CLAUDE_MODEL;
+var REVIEW_RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 1e3
+  // 1s, 2s, 4s with exponential backoff
+};
+var REVIEW_COMMENT_MARKER = "<!-- action-translation-review -->";
+var LEGACY_REVIEW_HEADING = /^#{2} .*Translation Quality Review/;
+var REVIEW_COMMENT_UPSERT_ATTEMPTS = 3;
+var REVIEW_CRITERIA = [
+  { key: "accuracy", weight: 0.35 },
+  { key: "fluency", weight: 0.25 },
+  { key: "terminology", weight: 0.25 },
+  { key: "formatting", weight: 0.15 }
+];
+function computeVerdict(translationScore, diffScore, syntaxErrors) {
+  const overallScore = translationScore * 0.7 + diffScore * 0.3;
+  let verdict;
+  if (overallScore >= 8 && syntaxErrors.length === 0) {
+    verdict = "PASS";
+  } else if (overallScore >= 6) {
+    verdict = "WARN";
+  } else {
+    verdict = "FAIL";
+  }
+  return { overallScore, verdict };
+}
+function validateCriterionScores(result) {
+  const scores = {};
+  const missing = [];
+  for (const { key } of REVIEW_CRITERIA) {
+    const raw = result[key];
+    const value = typeof raw === "number" ? raw : typeof raw === "string" && raw !== "" ? Number(raw) : NaN;
+    if (Number.isFinite(value) && value >= 0 && value <= 10) {
+      scores[key] = value;
+    } else {
+      missing.push(key);
+    }
+  }
+  return missing.length === 0 ? { valid: true, missing, scores } : { valid: false, missing };
+}
+function isActionReviewComment(body) {
+  if (!body)
+    return false;
+  if (body.startsWith(REVIEW_COMMENT_MARKER))
+    return true;
+  return LEGACY_REVIEW_HEADING.test(body) && body.includes(REVIEW_TRIGGER_LABEL);
+}
+function isNotFoundError(error4) {
+  return typeof error4 === "object" && error4 !== null && error4.status === 404;
+}
+function parseJsonResponse(text) {
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+  }
+  if (parsed === void 0) {
+    const codeBlockMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+    if (codeBlockMatch) {
+      const content = codeBlockMatch[1].trim();
+      try {
+        parsed = JSON.parse(content);
+      } catch {
+      }
+    }
+  }
+  if (parsed === void 0) {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      parsed = JSON.parse(jsonMatch[0]);
+    }
+  }
+  if (parsed === void 0) {
+    throw new Error("No JSON object found in response");
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error("Response JSON is not an object");
+  }
+  return parsed;
+}
+function extractPreamble(content) {
+  const lines = content.split("\n");
+  const preambleLines = [];
+  for (const line of lines) {
+    if (line.match(/^#{1,6}\s+/)) {
+      break;
+    }
+    preambleLines.push(line);
+  }
+  return preambleLines.join("\n").trim();
+}
+function extractSections(content) {
+  const sections = [];
+  const lines = content.split("\n");
+  let currentHeading = "";
+  let currentContent = [];
+  let inSection = false;
+  for (const line of lines) {
+    const headingMatch = line.match(/^(#{2,6})\s+(.+)$/);
+    if (headingMatch) {
+      if (inSection && currentHeading) {
+        sections.push({
+          heading: currentHeading,
+          content: currentContent.join("\n").trim()
+        });
+      }
+      currentHeading = line;
+      currentContent = [];
+      inSection = true;
+    } else if (inSection) {
+      currentContent.push(line);
+    }
+  }
+  if (inSection && currentHeading) {
+    sections.push({
+      heading: currentHeading,
+      content: currentContent.join("\n").trim()
+    });
+  }
+  return sections;
+}
+function headingToId(heading) {
+  return heading.replace(/^#{2,6}\s+/, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
+}
+function identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter) {
+  const changedSections = [];
+  if (!sourceAfter && !targetAfter) {
+    return [{ heading: "(document deleted)", changeType: "deleted" }];
+  }
+  if (!sourceBefore && !targetBefore) {
+    const sections = extractSections(sourceAfter);
+    if (sections.length === 0) {
+      return [{ heading: "(new document)", changeType: "added", englishContent: sourceAfter }];
+    }
+    return sections.map((s) => ({
+      heading: s.heading,
+      changeType: "added",
+      englishContent: s.content
+    }));
+  }
+  const normalizeForComparison = (s) => s.replace(/\r\n/g, "\n").trim();
+  if (normalizeForComparison(sourceBefore) === normalizeForComparison(sourceAfter) && normalizeForComparison(targetBefore) === normalizeForComparison(targetAfter)) {
+    return [{ heading: "(no content changes - file renamed)", changeType: "modified" }];
+  }
+  const sourcePreambleBefore = extractPreamble(sourceBefore);
+  const sourcePreambleAfter = extractPreamble(sourceAfter);
+  const targetPreambleBefore = extractPreamble(targetBefore);
+  const targetPreambleAfter = extractPreamble(targetAfter);
+  if (sourcePreambleBefore !== sourcePreambleAfter || targetPreambleBefore !== targetPreambleAfter) {
+    changedSections.push({
+      heading: "(preamble/frontmatter)",
+      changeType: "modified",
+      englishContent: sourcePreambleAfter,
+      translatedContent: targetPreambleAfter
+    });
+  }
+  const sourceBeforeSections = extractSections(sourceBefore);
+  const sourceAfterSections = extractSections(sourceAfter);
+  const targetAfterSections = extractSections(targetAfter);
+  const beforeById = new Map(sourceBeforeSections.map((s) => [headingToId(s.heading), s]));
+  const afterById = new Map(sourceAfterSections.map((s) => [headingToId(s.heading), s]));
+  for (let i = 0; i < sourceAfterSections.length; i++) {
+    const section = sourceAfterSections[i];
+    const id = headingToId(section.heading);
+    const beforeSection = beforeById.get(id);
+    const targetSection = targetAfterSections[i];
+    if (!beforeSection) {
+      changedSections.push({
+        heading: section.heading,
+        changeType: "added",
+        englishContent: section.content,
+        translatedContent: targetSection?.content
+      });
+    } else if (beforeSection.content !== section.content || beforeSection.heading !== section.heading) {
+      changedSections.push({
+        heading: section.heading,
+        changeType: "modified",
+        englishContent: section.content,
+        translatedContent: targetSection?.content
+      });
+    }
+  }
+  for (const section of sourceBeforeSections) {
+    const id = headingToId(section.heading);
+    if (!afterById.has(id)) {
+      changedSections.push({
+        heading: section.heading,
+        changeType: "deleted"
+      });
+    }
+  }
+  return changedSections;
+}
+var TranslationReviewer = class {
+  anthropic;
+  octokit;
+  model;
+  maxSuggestions;
+  /** Section parsing for the deterministic diff checks (#148). */
+  parser;
+  // Counted at the chokepoint so retried/discarded attempts are included (#164/F53).
+  usage = { inputTokens: 0, outputTokens: 0, apiCalls: 0 };
+  constructor(anthropicApiKey, githubToken, model = DEFAULT_REVIEW_MODEL, maxSuggestions = 5) {
+    this.anthropic = new Anthropic({ apiKey: anthropicApiKey, maxRetries: 0 });
+    this.octokit = github.getOctokit(githubToken);
+    this.model = model;
+    this.maxSuggestions = maxSuggestions;
+    this.parser = new MystParser();
+  }
+  sleep(ms) {
+    return new Promise((resolve3) => setTimeout(resolve3, ms));
+  }
+  /** Total API usage this instance has accumulated, retries included. */
+  getUsage() {
+    return { ...this.usage };
+  }
+  /**
+   * Call Claude API with retry logic and exponential backoff.
+   * Retries on transient API errors and parse failures.
+   */
+  async callWithRetry(prompt, maxTokens, operationName) {
+    const { maxRetries, baseDelayMs } = REVIEW_RETRY_CONFIG;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const stream = this.anthropic.messages.stream({
+          model: this.model,
+          max_tokens: maxTokens,
+          thinking: DEFAULT_THINKING,
+          messages: [{ role: "user", content: prompt }]
+        });
+        const response = await stream.finalMessage();
+        this.usage.inputTokens += response.usage.input_tokens;
+        this.usage.outputTokens += response.usage.output_tokens;
+        this.usage.apiCalls += 1;
+        if (response.stop_reason === "max_tokens") {
+          throw new Error(`${operationName}: response truncated at max_tokens=${maxTokens}; verdict JSON is incomplete`);
+        }
+        const content = response.content[0];
+        if (!content || content.type !== "text") {
+          throw new Error(`Unexpected response from Claude: ${content ? content.type : `empty content (stop_reason: ${response.stop_reason})`}`);
+        }
+        return parseJsonResponse(content.text);
+      } catch (error4) {
+        if (error4 instanceof AuthenticationError || error4 instanceof BadRequestError) {
+          throw error4;
+        }
+        const isApiRetryable = isRetryableAnthropicError(error4);
+        const isParseFailure = error4 instanceof SyntaxError || error4 instanceof Error && error4.message.includes("No JSON object");
+        if (!isApiRetryable && !isParseFailure || attempt === maxRetries) {
+          if (isParseFailure) {
+            core6.error(`${operationName}: Failed to parse response after ${maxRetries} attempts`);
+          }
+          throw error4;
+        }
+        const delay = baseDelayMs * Math.pow(2, attempt - 1);
+        core6.info(`${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error4 instanceof Error ? error4.message : error4}. Retrying in ${delay}ms...`);
+        await this.sleep(delay);
+      }
+    }
+    throw new Error("Unexpected: retry loop completed without result");
+  }
+  /**
+   * Parse source PR number from translation PR body
+   * Looks for: ### Source PR\n**[#123 - ...
+   */
+  parseSourcePRNumber(prBody) {
+    if (!prBody)
+      return null;
+    const match = prBody.match(/### Source PR\r?\n\*\*\[#(\d+)/);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+    return null;
+  }
+  /**
+   * Get source PR diff (English before/after)
+   *
+   * `removed` names the files the source PR **deleted**, which is why the
+   * `after` fetch is skipped for them below. Reporting it lets the caller tell
+   * "there is no source content because the document was deleted on purpose"
+   * from "the fetch failed" — two states the F40 guard could not distinguish,
+   * so every deletion PR failed its review run (#210).
+   *
+   * Fail-closed by construction: if listing the source PR throws, the outer
+   * catch returns an EMPTY `removed` set, so no file is excused and absent
+   * source content stays fatal. Absence of evidence is never read as evidence
+   * of deletion.
+   */
+  async getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames) {
+    const before = /* @__PURE__ */ new Map();
+    const after = /* @__PURE__ */ new Map();
+    const removed = /* @__PURE__ */ new Set();
+    try {
+      const { data: sourcePr } = await this.octokit.rest.pulls.get({
+        owner: sourceOwner,
+        repo: sourceRepoName,
+        pull_number: sourcePrNumber
+      });
+      const sourceFiles = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
+        owner: sourceOwner,
+        repo: sourceRepoName,
+        pull_number: sourcePrNumber
+      });
+      for (const filename of filenames) {
+        const sourceFile = sourceFiles.find((f) => f.filename === filename);
+        if (sourceFile?.status === "removed") {
+          removed.add(filename);
+        }
+        const beforeFilename = sourceFile?.status === "renamed" && sourceFile.previous_filename ? sourceFile.previous_filename : filename;
+        if (!sourceFile || sourceFile.status !== "added") {
+          try {
+            const { data: beforeData } = await this.octokit.rest.repos.getContent({
+              owner: sourceOwner,
+              repo: sourceRepoName,
+              path: beforeFilename,
+              ref: sourcePr.base.sha
+            });
+            if ("content" in beforeData) {
+              before.set(filename, Buffer.from(beforeData.content, "base64").toString("utf-8"));
+            }
+          } catch {
+          }
+        }
+        if (!sourceFile || sourceFile.status !== "removed") {
+          try {
+            const { data: afterData } = await this.octokit.rest.repos.getContent({
+              owner: sourceOwner,
+              repo: sourceRepoName,
+              path: filename,
+              ref: sourcePr.head.sha
+            });
+            if ("content" in afterData) {
+              after.set(filename, Buffer.from(afterData.content, "base64").toString("utf-8"));
+            }
+          } catch {
+          }
+        }
+      }
+      core6.info(`\u2713 Fetched source PR #${sourcePrNumber} diff for ${filenames.length} file(s)`);
+    } catch (error4) {
+      core6.warning(`Could not fetch source PR #${sourcePrNumber}: ${error4}`);
+    }
+    return { before, after, removed };
+  }
+  /**
+   * Get source content at a specific commit (for resync PRs, which have no
+   * source PR). Returns the same shape as getSourceDiff with an empty
+   * `before` map — a resync review compares the whole target against the
+   * current source, not against a source-side diff.
+   *
+   * `removed` is always empty: a commit is a state, not a diff, so there is no
+   * "this file was deleted by the change under review" to read off it. Absent
+   * source content on the resync path therefore stays fatal, exactly as before
+   * (#210 is a sync-path fix).
+   */
+  async getSourceAtCommit(sourceOwner, sourceRepoName, commitSha, filenames) {
+    const before = /* @__PURE__ */ new Map();
+    const after = /* @__PURE__ */ new Map();
+    for (const filename of filenames) {
+      try {
+        const { data } = await this.octokit.rest.repos.getContent({
+          owner: sourceOwner,
+          repo: sourceRepoName,
+          path: filename,
+          ref: commitSha
+        });
+        if ("content" in data) {
+          after.set(filename, Buffer.from(data.content, "base64").toString("utf-8"));
+        }
+      } catch (error4) {
+        core6.warning(`Could not fetch ${filename} @ ${commitSha.substring(0, 7)}: ${error4}`);
+      }
+    }
+    core6.info(`\u2713 Fetched source @ ${commitSha.substring(0, 7)} for ${after.size}/${filenames.length} file(s)`);
+    return { before, after, removed: /* @__PURE__ */ new Set() };
+  }
+  /**
+   * Review a translation PR
+   */
+  async reviewPR(prNumber, sourceRepo, targetOwner, targetRepo, docsFolder, glossaryTerms, targetLanguage, autoMergeMode = "off") {
+    core6.info(`Starting review of PR #${prNumber}...`);
+    const { data: pr } = await this.octokit.rest.pulls.get({
+      owner: targetOwner,
+      repo: targetRepo,
+      pull_number: prNumber
+    });
+    const files = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
+      owner: targetOwner,
+      repo: targetRepo,
+      pull_number: prNumber
+    });
+    const markdownFiles = files.filter((f) => f.filename.startsWith(docsFolder) && f.filename.endsWith(".md"));
+    if (markdownFiles.length === 0) {
+      core6.info("No markdown files to review");
+      const emptyResult = {
+        prNumber,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+        translationQuality: {
+          score: 10,
+          accuracy: 10,
+          fluency: 10,
+          terminology: 10,
+          formatting: 10,
+          syntaxErrors: [],
+          findings: [],
+          findingsMalformed: false,
+          issues: [],
+          strengths: ["No markdown files to review"],
+          summary: "No markdown files changed in this PR."
+        },
+        diffQuality: {
+          score: 10,
+          scopeCorrect: true,
+          positionCorrect: true,
+          structurePreserved: true,
+          headingMapCorrect: true,
+          issues: [],
+          summary: "No changes to evaluate.",
+          scopeDetails: "No markdown files changed.",
+          positionDetails: "N/A",
+          structureDetails: "N/A"
+        },
+        overallScore: 10,
+        verdict: "PASS",
+        // Fail-closed: with nothing reviewed there is nothing to gate on.
+        recommendation: "editor",
+        recommendationReasons: ["no markdown files reviewed \u2014 nothing to gate"],
+        autoMergeMode,
+        ...autoMergeMode === "shadow" ? { wouldAutoMerge: false } : {},
+        reviewedHeadSha: pr.head.sha,
+        reviewComment: "No markdown files to review in this PR."
+      };
+      return emptyResult;
+    }
+    const [sourceOwner, sourceRepoName] = sourceRepo.split("/");
+    const sourcePrNumber = this.parseSourcePRNumber(pr.body);
+    let resyncMetadata;
+    if (!sourcePrNumber) {
+      const metadata = parseTranslationSyncMetadata(pr.body || "");
+      if (metadata && !metadata.sourcePR && metadata.sourceCommitSha) {
+        resyncMetadata = metadata;
+        core6.info(`No source PR reference \u2014 resync PR detected; reviewing against source @ ${metadata.sourceCommitSha.substring(0, 7)}`);
+      } else {
+        throw new Error('Could not find source PR reference in translation PR body. This PR may not have been created by the translation action. Expected format: "### Source PR\\n**[#123..." (or a translation-sync-metadata block for resync PRs)');
+      }
+    } else {
+      core6.info(`Found source PR reference: #${sourcePrNumber}`);
+    }
+    const filenames = markdownFiles.map((f) => f.filename);
+    const { before: sourceBeforeMap, after: sourceAfterMap, removed: sourceRemoved } = resyncMetadata ? await this.getSourceAtCommit(sourceOwner, sourceRepoName, resyncMetadata.sourceCommitSha, filenames) : await this.getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames);
+    const deletedFiles = markdownFiles.filter((f) => sourceRemoved.has(f.filename));
+    const reviewableFiles = markdownFiles.filter((f) => !sourceRemoved.has(f.filename));
+    for (const file of deletedFiles) {
+      core6.info(`Skipping ${file.filename} \u2014 deleted in source PR #${sourcePrNumber}; there is no source content to review against`);
+    }
+    if (reviewableFiles.length === 0 && deletedFiles.length > 0) {
+      return await this.reviewDeletionOnlyPR({
+        prNumber,
+        pr,
+        sourceRepo,
+        targetOwner,
+        targetRepo,
+        deletedFiles: deletedFiles.map((f) => f.filename),
+        sourcePrNumber,
+        autoMergeMode
+      });
+    }
+    const reviewableFilenames = reviewableFiles.map((f) => f.filename);
+    let sourceEnglish = "";
+    let targetTranslation = "";
+    let sourceBefore = "";
+    let targetBefore = "";
+    const changedSections = [];
+    const filePairs = /* @__PURE__ */ new Map();
+    for (const file of reviewableFiles) {
+      try {
+        const { data: targetData } = await this.octokit.rest.repos.getContent({
+          owner: targetOwner,
+          repo: targetRepo,
+          path: file.filename,
+          ref: pr.head.sha
+        });
+        if ("content" in targetData) {
+          const content = Buffer.from(targetData.content, "base64").toString("utf-8");
+          targetTranslation += content + "\n\n";
+          filePairs.set(file.filename, { ...filePairs.get(file.filename), target: content });
+        }
+      } catch (error4) {
+        if (!isNotFoundError(error4))
+          throw error4;
+        core6.warning(`Target content not found for ${file.filename} @ ${pr.head.sha.substring(0, 7)}` + (file.status === "removed" ? " \u2014 the translation PR removes this file, and it was not matched to a deletion in the source PR" : ""));
+      }
+      try {
+        const { data: targetBeforeData } = await this.octokit.rest.repos.getContent({
+          owner: targetOwner,
+          repo: targetRepo,
+          path: file.filename,
+          ref: pr.base.sha
+        });
+        if ("content" in targetBeforeData) {
+          targetBefore += Buffer.from(targetBeforeData.content, "base64").toString("utf-8") + "\n\n";
+        }
+      } catch (error4) {
+        if (!isNotFoundError(error4))
+          throw error4;
+      }
+      if (sourceAfterMap.has(file.filename)) {
+        const content = sourceAfterMap.get(file.filename);
+        sourceEnglish += content + "\n\n";
+        filePairs.set(file.filename, { ...filePairs.get(file.filename), source: content });
+      } else {
+        core6.warning(`Source content not found for ${file.filename} in ${resyncMetadata ? `source @ ${resyncMetadata.sourceCommitSha.substring(0, 7)}` : `source PR #${sourcePrNumber}`}`);
+      }
+      if (sourceBeforeMap.has(file.filename)) {
+        sourceBefore += sourceBeforeMap.get(file.filename) + "\n\n";
+      }
+    }
+    if (resyncMetadata) {
+      changedSections.push({
+        heading: "(whole-file resync \u2014 the entire document was re-aligned to the current source)",
+        changeType: "modified"
+      });
+    } else {
+      const detectedChanges = identifyChangedSections(sourceBefore, sourceEnglish, targetBefore, targetTranslation);
+      changedSections.push(...detectedChanges);
+    }
+    if (sourceEnglish.trim() === "") {
+      throw new Error(`Review aborted: no source content could be fetched for ${reviewableFilenames.join(", ")} \u2014 nothing to review against`);
+    }
+    const translationQuality = await this.evaluateTranslation(sourceEnglish, targetTranslation, changedSections, reviewableFilenames, glossaryTerms, targetLanguage);
+    const diffQuality = await this.evaluateDiff(resyncMetadata ? sourceEnglish : sourceBefore, sourceEnglish, targetBefore, targetTranslation, markdownFiles.map((f) => ({
+      filename: f.filename,
+      status: f.status,
+      additions: f.additions,
+      deletions: f.deletions
+    })), resyncMetadata !== void 0);
+    const reviewedPairs = [...filePairs.entries()].filter(([, v]) => v.source !== void 0 && v.target !== void 0).map(([filename, v]) => ({
+      filename,
+      source: v.source,
+      target: v.target
+    }));
+    const deterministic = await runDeterministicDiffChecks(this.parser, reviewedPairs);
+    const diffChecks = {
+      scopeCorrect: diffQuality.scopeCorrect,
+      positionCorrect: diffQuality.positionCorrect,
+      structurePreserved: deterministic.structurePreserved.passed,
+      headingMapCorrect: deterministic.headingMapCorrect.passed
+    };
+    const diffCheckSources = {
+      scopeCorrect: "model",
+      positionCorrect: "model",
+      structurePreserved: "deterministic",
+      headingMapCorrect: "deterministic"
+    };
+    for (const [name, result2] of Object.entries(deterministic)) {
+      if (!result2.passed) {
+        core6.warning(`Deterministic diff check failed \u2014 ${name}: ${result2.details.join("; ")}`);
+      }
+    }
+    const diffScore = Math.round(Object.values(diffChecks).filter(Boolean).length / DIFF_CHECK_NAMES.length * 10 * 10) / 10;
+    const mergedDiffQuality = {
+      ...diffQuality,
+      ...diffChecks,
+      score: diffScore
+    };
+    const { overallScore, verdict } = computeVerdict(translationQuality.score, diffScore, translationQuality.syntaxErrors);
+    const soleFile = reviewableFilenames.length === 1 ? reviewableFilenames[0] : null;
+    const syntaxFindings = translationQuality.syntaxErrors.map((e) => ({
+      severity: "blocker",
+      category: "syntax",
+      file: soleFile,
+      location: null,
+      description: truncateField(e),
+      suggestion: null
+    }));
+    const diffFindings = mergedDiffQuality.issues.map((i) => ({
+      severity: "minor",
+      category: "structure",
+      file: soleFile,
+      location: null,
+      description: truncateField(i),
+      suggestion: null
+    }));
+    const unexpectedDeletionFindings = resyncMetadata ? [] : reviewableFiles.filter((f) => f.status === "removed").map((f) => ({
+      severity: "blocker",
+      category: "structure",
+      file: f.filename,
+      location: null,
+      description: truncateField(`${f.filename} is deleted by this translation PR, but source PR #${sourcePrNumber} does not delete it. The translation would drop a document the source still has.`),
+      suggestion: null
+    }));
+    const modelCheckFindings = ["scopeCorrect", "positionCorrect"].filter((name) => diffChecks[name] !== true).map((name) => ({
+      severity: "minor",
+      category: "diff-check",
+      file: soleFile,
+      location: null,
+      description: truncateField(`${name}: the reviewer reported this check as failed. This is a model judgement, not a deterministic check \u2014 verify against the source diff before treating it as a defect (#148).`),
+      suggestion: null
+    }));
+    const deterministicFindings = Object.values(deterministic).flatMap((result2) => result2.details).map((detail) => ({
+      severity: "minor",
+      category: "structure",
+      file: soleFile,
+      location: null,
+      description: truncateField(detail),
+      suggestion: null
+    }));
+    const allFindings = sortAndCapFindings([
+      ...translationQuality.findings,
+      ...syntaxFindings,
+      ...diffFindings,
+      ...unexpectedDeletionFindings,
+      ...modelCheckFindings,
+      ...deterministicFindings
+    ]);
+    const sourceContentMissing = sourceEnglish.trim() === "";
+    if (sourceContentMissing) {
+      core6.warning("No source content was fetched for any reviewed file \u2014 the verdict is not a real comparison and routes to editor");
+    }
+    const { recommendation, reasons } = computeRecommendation({
+      verdict,
+      scores: {
+        accuracy: translationQuality.accuracy,
+        fluency: translationQuality.fluency,
+        terminology: translationQuality.terminology,
+        formatting: translationQuality.formatting
+      },
+      diffChecks,
+      diffCheckSources,
+      syntaxErrorCount: translationQuality.syntaxErrors.length,
+      findings: allFindings,
+      findingsMalformed: translationQuality.findingsMalformed,
+      sourceContentMissing,
+      // With max-suggestions: 0 the prompt asks for no findings at all, so an
+      // empty findings array is not evidence of a clean translation.
+      findingsSuppressed: this.maxSuggestions === 0
+    });
+    const wouldAutoMerge = autoMergeMode === "shadow" ? recommendation === "auto-merge" : void 0;
+    if (autoMergeMode === "shadow") {
+      core6.notice(`Shadow auto-merge gate: would ${wouldAutoMerge ? "" : "NOT "}auto-merge PR #${prNumber}` + (wouldAutoMerge ? "" : ` \u2014 ${reasons.join("; ")}`) + " (recorded in the verdict block; no action taken)");
+    }
+    const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
+    const verdictV2 = {
+      schemaVersion: REVIEW_VERDICT_SCHEMA_VERSION,
+      engineVersion: getEngineVersion(),
+      engineRef: getEngineRef(),
+      reviewerModel: this.model,
+      reviewedHeadSha: pr.head.sha,
+      targetBaseSha: pr.base.sha,
+      sourceRepo,
+      prNumber,
+      timestamp: timestamp2,
+      verdict,
+      recommendation,
+      recommendationReasons: reasons,
+      autoMergeMode,
+      ...wouldAutoMerge !== void 0 ? { wouldAutoMerge } : {},
+      scores: {
+        accuracy: translationQuality.accuracy,
+        fluency: translationQuality.fluency,
+        terminology: translationQuality.terminology,
+        formatting: translationQuality.formatting,
+        translation: translationQuality.score,
+        diff: mergedDiffQuality.score,
+        overall: Math.round(overallScore * 10) / 10
+      },
+      diffChecks,
+      diffCheckSources,
+      syntaxErrorCount: translationQuality.syntaxErrors.length,
+      findings: allFindings
+    };
+    const reviewComment = this.generateReviewComment(translationQuality, mergedDiffQuality, verdict, {
+      recommendation,
+      reasons,
+      wouldAutoMerge
+    }) + "\n\n" + buildVerdictBlock(verdictV2);
+    await this.postReviewComment(prNumber, targetOwner, targetRepo, reviewComment);
+    const result = {
+      prNumber,
+      timestamp: timestamp2,
+      translationQuality,
+      diffQuality: mergedDiffQuality,
+      overallScore: Math.round(overallScore * 10) / 10,
+      verdict,
+      recommendation,
+      recommendationReasons: reasons,
+      autoMergeMode,
+      ...wouldAutoMerge !== void 0 ? { wouldAutoMerge } : {},
+      reviewedHeadSha: pr.head.sha,
+      reviewComment
+    };
+    return result;
+  }
+  /**
+   * Report on a translation PR that only deletes documents (#210).
+   *
+   * A deletion PR has no translation to evaluate: the source document is gone,
+   * the target document is gone, and there is no text on either side to
+   * compare. Review mode used to abort the whole run here, because the F40
+   * guard read "no source content" as a failed fetch. Deletions are a routine
+   * editorial operation, so that turned a healthy pipeline red on every one —
+   * and a red that is always expected is exactly what trains people to ignore
+   * the reds F40 exists to raise.
+   *
+   * Two calls deliberately NOT made:
+   *
+   * - **No model calls.** There is nothing to send them. This returns before
+   *   `evaluateTranslation`/`evaluateDiff`, so a deletion PR costs no tokens.
+   * - **No `auto-merge`.** Deleting a translated document is consequential and
+   *   nothing about the *content* was verified, so this always routes to a
+   *   human, with the reason recorded rather than implied.
+   *
+   * The scores below are 10s because no criterion was evaluated, not because
+   * the translation is good — matching the existing "no markdown files"
+   * branch. The load-bearing fields are `recommendation` and its reasons, and
+   * the comment says in plain text that nothing was compared, so this cannot
+   * become the "✅ PASS over nothing" that F40 was raised about.
+   */
+  async reviewDeletionOnlyPR(params) {
+    const { prNumber, pr, sourceRepo, targetOwner, targetRepo, deletedFiles, sourcePrNumber, autoMergeMode } = params;
+    core6.info(`Deletion-only PR: ${deletedFiles.length} file(s) removed, all matching deletions in source PR #${sourcePrNumber} \u2014 no content to review`);
+    const timestamp2 = (/* @__PURE__ */ new Date()).toISOString();
+    const recommendationReasons = [
+      "deletion-only PR \u2014 no translation content was evaluated; file removals are matched against the source PR but merging a deletion is an editorial decision"
+    ];
+    const diffChecks = {
+      scopeCorrect: true,
+      positionCorrect: true,
+      structurePreserved: true,
+      headingMapCorrect: true
+    };
+    const scores = {
+      accuracy: 10,
+      fluency: 10,
+      terminology: 10,
+      formatting: 10,
+      translation: 10,
+      diff: 10,
+      overall: 10
+    };
+    const summary = `Deletion-only PR: ${deletedFiles.length} translated document(s) removed to match source PR #${sourcePrNumber}. No translation content was evaluated.`;
+    const fileRows = deletedFiles.map((f) => `| \`${f}\` | removed in #${sourcePrNumber} |`);
+    const reviewComment = `## \u{1F5D1}\uFE0F Translation Review \u2014 deletion only
+
+This PR removes translated document(s) and adds no content, so there is nothing to compare against the source. **No translation quality evaluation was performed.**
+
+| File | Source |
+| --- | --- |
+${fileRows.join("\n")}
+
+Every file removed here is also deleted by source PR #${sourcePrNumber}, so the removal is expected. Routing to a human for the merge decision.
+
+` + buildVerdictBlock({
+      schemaVersion: REVIEW_VERDICT_SCHEMA_VERSION,
+      engineVersion: getEngineVersion(),
+      engineRef: getEngineRef(),
+      reviewerModel: this.model,
+      reviewedHeadSha: pr.head.sha,
+      targetBaseSha: pr.base.sha,
+      sourceRepo,
+      prNumber,
+      timestamp: timestamp2,
+      verdict: "PASS",
+      recommendation: "editor",
+      recommendationReasons,
+      autoMergeMode,
+      ...autoMergeMode === "shadow" ? { wouldAutoMerge: false } : {},
+      scores,
+      diffChecks,
+      diffCheckSources: {
+        scopeCorrect: "deterministic",
+        positionCorrect: "deterministic",
+        structurePreserved: "deterministic",
+        headingMapCorrect: "deterministic"
+      },
+      syntaxErrorCount: 0,
+      findings: []
+    });
+    await this.postReviewComment(prNumber, targetOwner, targetRepo, reviewComment);
+    return {
+      prNumber,
+      timestamp: timestamp2,
+      translationQuality: {
+        score: 10,
+        accuracy: 10,
+        fluency: 10,
+        terminology: 10,
+        formatting: 10,
+        syntaxErrors: [],
+        findings: [],
+        findingsMalformed: false,
+        issues: [],
+        strengths: [],
+        summary
+      },
+      diffQuality: {
+        score: 10,
+        ...diffChecks,
+        issues: [],
+        summary,
+        scopeDetails: `All ${deletedFiles.length} removed file(s) match deletions in source PR #${sourcePrNumber}.`,
+        positionDetails: "N/A \u2014 deletion only.",
+        structureDetails: "N/A \u2014 deletion only."
+      },
+      overallScore: 10,
+      verdict: "PASS",
+      recommendation: "editor",
+      recommendationReasons,
+      autoMergeMode,
+      ...autoMergeMode === "shadow" ? { wouldAutoMerge: false } : {},
+      reviewedHeadSha: pr.head.sha,
+      reviewComment
+    };
+  }
+  /**
+   * Evaluate translation quality using Claude
+   */
+  async evaluateTranslation(sourceEnglish, targetTranslation, changedSections, filenames, glossaryTerms, targetLanguage) {
+    const changedSectionsPrompt = this.formatChangedSections(changedSections);
+    const filesList = filenames.map((f) => `- ${f}`).join("\n");
+    const languageNames = {
+      "zh-cn": "Simplified Chinese",
+      "zh-tw": "Traditional Chinese",
+      fa: "Persian (Farsi)",
+      es: "Spanish",
+      fr: "French",
+      de: "German",
+      ja: "Japanese",
+      ko: "Korean",
+      ml: "Malayalam"
+    };
+    const targetLangName = targetLanguage ? languageNames[targetLanguage] || targetLanguage : "the target language";
+    const glossarySection = glossaryTerms ? `
+## Reference Glossary
+The translation should follow this established terminology glossary:
+${glossaryTerms}
+` : "";
+    const languageRules = targetLanguage ? getLanguageConfig(targetLanguage).additionalRules : [];
+    const languagePolicySection = languageRules.length > 0 ? `
+## Language-Specific Translation Policy
+The ${targetLangName} translation is REQUIRED to follow these rules. Compliance with them is correct behavior \u2014 do NOT flag it as an accuracy, fluency, or terminology issue. DO flag violations of these rules (category: terminology):
+${languageRules.map((r) => `- ${r}`).join("\n")}
+` : "";
+    const prompt = `You are a professional translator and quality evaluator specializing in technical/academic content translation from English to ${targetLangName}.
+
+## Task
+Evaluate the quality of the ${targetLangName} translation compared to the English source.
+${changedSectionsPrompt}
+## English Source Document
+\`\`\`markdown
+${sourceEnglish}
+\`\`\`
+
+## ${targetLangName} Translation
+\`\`\`markdown
+${targetTranslation}
+\`\`\`
+${glossarySection}${languagePolicySection}
+## IMPORTANT: About the Translation Metadata
+
+The ${targetLangName} translation contains a \`translation\` section in the YAML frontmatter that is NOT present in the English source. This is CORRECT and EXPECTED behavior:
+
+\`\`\`yaml
+translation:
+  title: "\u4ECB\u7ECD"
+  headings:
+    introduction: "\u4ECB\u7ECD"
+    background: "\u80CC\u666F"
+\`\`\`
+
+This is a feature of the translation sync system that maps English heading IDs to ${targetLangName} headings for section matching across languages. The \`title\` field tracks the translated document title. Do NOT flag this as an issue or formatting problem - it is intentional and does not affect Jupyter Book compilation.
+
+**Note on double-colon notation**: The headings may use \`section::subsection\` notation (e.g., \`supply-and-demand::market-dynamics\`) to represent hierarchical headings. This double-colon \`::\` syntax is intentional and valid - it represents the relationship between a section and its nested subsection. This is safe in YAML because YAML only treats \`:\` as a key-value separator when followed by a space.
+
+## Evaluation Criteria
+Rate each criterion from 1-10:
+
+1. **Accuracy** (1-10): Does the translation accurately convey the meaning of the English source?
+   - Technical terms translated correctly
+   - No missing or added information
+   - Mathematical concepts preserved
+
+2. **Fluency** (1-10): Does the translation read naturally in ${targetLangName}?
+   - Natural sentence structure
+   - Appropriate academic register
+   - No awkward phrasing
+
+3. **Terminology** (1-10): Is technical terminology consistent and correct?
+   - Does the translation follow the reference glossary above?
+   - Domain-specific terms handled appropriately
+   - Consistent translation of repeated terms
+   - Proper use of established ${targetLangName} terminology
+
+4. **Formatting** (1-10): Is MyST/Markdown formatting preserved?
+   - Math equations (LaTeX) intact
+   - Code blocks preserved
+   - Headings, lists, and structure maintained
+   - Links and references correct
+
+5. **Syntax** (check for errors): Check for markdown/MyST syntax errors in the translation:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters
+   - Math blocks must have matching $$ delimiters
+   - MyST directives must use correct syntax: \`\`\`{directive}
+   - Report any syntax errors found - these are CRITICAL issues that must be fixed
+
+## Files Under Review
+The changed markdown files in this PR are (the document blocks above concatenate them in this order):
+${filesList}
+
+## Response Format
+Respond with ONLY valid JSON in this exact format (no markdown code blocks):
+{
+  "accuracy": <number 1-10>,
+  "fluency": <number 1-10>,
+  "terminology": <number 1-10>,
+  "formatting": <number 1-10>,
+  "syntaxErrors": ["error 1 with line/location if possible", "error 2"],
+  "findings": [
+    {
+      "severity": "blocker|major|minor|nit",
+      "category": "accuracy|fluency|terminology|formatting",
+      "file": "<one of the file paths listed under Files Under Review, or null>",
+      "location": "<section heading or a short quote locating the finding, or null>",
+      "description": "<what is wrong, specific and self-contained>",
+      "suggestion": "<proposed replacement text, or null>"
+    }
+  ],
+  "strengths": ["strength 1", "strength 2"],
+  "summary": "Brief overall assessment"
+}
+
+Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors are found. Syntax errors are CRITICAL and should always be reported even if the array would otherwise be empty.
+
+## Findings Guidelines
+- The "findings" array can contain **0 to ${this.maxSuggestions} findings** - an empty array [] is perfectly valid for excellent translations
+- Severity meanings:
+  - "blocker": meaning inversion, wrong mathematics or code, or broken MyST that will not build
+  - "major": an accuracy or terminology error a reader would be misled by
+  - "minor": correct but awkward phrasing, or a minor terminology inconsistency
+  - "nit": a stylistic preference
+- "category" must name the criterion the finding counts against
+- "file" must be one of the listed file paths (or null if you cannot attribute the finding)
+- Each finding must be specific and actionable; prioritize by importance: accuracy first, then fluency, terminology, formatting
+- Do NOT invent findings just to fill the array - quality over quantity
+
+**CRITICAL**: Findings MUST relate ONLY to the sections that were changed in this PR. Do not report findings for unchanged parts of the document.`;
+    let result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateTranslation");
+    let check = validateCriterionScores(result);
+    if (!check.valid) {
+      core6.warning(`evaluateTranslation: response missing numeric criteria [${check.missing.join(", ")}] \u2014 retrying`);
+      result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateTranslation");
+      check = validateCriterionScores(result);
+      if (!check.valid) {
+        throw new Error(`evaluateTranslation: response still missing numeric criterion scores [${check.missing.join(", ")}] after retry \u2014 refusing to compute a verdict from an incomplete review`);
+      }
+    }
+    const scores = check.scores;
+    const score = REVIEW_CRITERIA.reduce((sum, c) => sum + scores[c.key] * c.weight, 0);
+    const { findings, malformed } = normalizeFindings(result.findings, result.issues, filenames);
+    if (malformed) {
+      core6.warning("evaluateTranslation: findings payload missing or malformed \u2014 recommendation will fail closed to editor");
+    }
+    return {
+      score: Math.round(score * 10) / 10,
+      accuracy: scores.accuracy,
+      fluency: scores.fluency,
+      terminology: scores.terminology,
+      formatting: scores.formatting,
+      syntaxErrors: Array.isArray(result.syntaxErrors) ? result.syntaxErrors.map((e) => String(e)) : [],
+      findings,
+      findingsMalformed: malformed,
+      issues: findings.map(findingToDisplayString),
+      // The one array read the syntaxErrors guard above didn't cover: a model
+      // answering `"strengths": "clear"` crashed the comment builder after
+      // both review calls were paid for (#163/F81).
+      strengths: Array.isArray(result.strengths) ? result.strengths.map((s) => String(s)) : [],
+      summary: result.summary || ""
+    };
+  }
+  /**
+   * Evaluate diff quality using Claude
+   */
+  async evaluateDiff(sourceBefore, sourceAfter, targetBefore, targetAfter, targetFiles, isResync = false) {
+    const contextNote = isResync ? `A whole-file resync re-aligned the target document to the current source: the source "Before" and "After" below are identical (the current source), and the target diff may legitimately be large \u2014 do not penalize its size. Evaluate whether the final target matches the current source's structure and content. We need to verify:` : `A translation sync action detected changes in an English source document and created corresponding changes in the target document. We need to verify:`;
+    const prompt = `You are an expert code reviewer specializing in translation sync workflows. Your task is to verify that translation changes are correctly positioned in the target document.
+
+## Context
+${contextNote}
+
+1. **Scope**: Only the correct files were modified
+2. **Position**: Changes appear in the same relative positions
+3. **Structure**: Document structure is preserved
+4. **Translation metadata**: The translation metadata in frontmatter is correctly updated
+
+## IMPORTANT: About the Translation Metadata System
+
+The \`translation\` section in the frontmatter is a CRITICAL feature of this translation system, NOT a bug. Here's how it works:
+
+- English headings generate IDs from English text: \`## Introduction\` \u2192 ID: \`introduction\`
+- Translated headings generate IDs from translated text: \`## \u4ECB\u7ECD\` \u2192 ID: \`\u4ECB\u7ECD\`
+- The translation headings bridge this gap by mapping English IDs to translated headings
+
+Example:
+\`\`\`yaml
+translation:
+  title: "\u4ECB\u7ECD"
+  headings:
+    introduction: "\u4ECB\u7ECD"
+    supply-and-demand: "\u4F9B\u9700\u5206\u6790"
+\`\`\`
+
+**Note on double-colon notation**: The headings may use \`section::subsection\` notation to represent hierarchical headings. This is intentional and valid YAML.
+
+## Source Document (English)
+### Before:
+\`\`\`markdown
+${sourceBefore}
+\`\`\`
+
+### After:
+\`\`\`markdown
+${sourceAfter}
+\`\`\`
+
+## Target Document (Translation)
+### Before:
+\`\`\`markdown
+${targetBefore}
+\`\`\`
+
+### After:
+\`\`\`markdown
+${targetAfter}
+\`\`\`
+
+### Files Changed:
+${targetFiles.map((f) => `- ${f.filename}: ${f.status} (+${f.additions}/-${f.deletions})`).join("\n")}
+
+## Verification Checks
+Evaluate each criterion:
+
+1. **Scope Correct**: Were only the necessary files modified? The target should change the same files as the source.
+2. **Position Correct**: Do changes appear in the same sections as source? Section order should match.
+3. **Structure Preserved**: Is the document structure (heading levels, nesting) maintained?
+4. **Heading-map Correct**: Is the heading-map updated with new/changed headings?
+
+## Response Format
+Respond with ONLY valid JSON:
+{
+  "scopeCorrect": true/false,
+  "positionCorrect": true/false,
+  "structurePreserved": true/false,
+  "headingMapCorrect": true/false,
+  "issues": ["issue 1 if any"],
+  "summary": "One sentence overall summary",
+  "scopeDetails": "Brief explanation of scope check",
+  "positionDetails": "Brief explanation of position check",
+  "structureDetails": "Brief explanation of structure check"
+}`;
+    const result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateDiff");
+    const isTrue = (v) => v === true;
+    const scopeCorrect = isTrue(result.scopeCorrect);
+    const positionCorrect = isTrue(result.positionCorrect);
+    const structurePreserved = isTrue(result.structurePreserved);
+    const headingMapCorrect = isTrue(result.headingMapCorrect);
+    const checks = [scopeCorrect, positionCorrect, structurePreserved, headingMapCorrect];
+    const passedChecks = checks.filter(Boolean).length;
+    const score = passedChecks / checks.length * 10;
+    return {
+      score: Math.round(score * 10) / 10,
+      scopeCorrect,
+      positionCorrect,
+      structurePreserved,
+      headingMapCorrect,
+      issues: Array.isArray(result.issues) ? result.issues.map((i) => String(i)) : [],
+      summary: result.summary || "",
+      scopeDetails: result.scopeDetails || "",
+      positionDetails: result.positionDetails || "",
+      structureDetails: result.structureDetails || ""
+    };
+  }
+  /**
+   * Format changed sections for the prompt
+   */
+  formatChangedSections(changedSections) {
+    if (changedSections.length === 0) {
+      return "";
+    }
+    const sectionsList = changedSections.map((s) => {
+      if (s.changeType === "deleted") {
+        return `- **DELETED**: ${s.heading}`;
+      }
+      return `- **${s.changeType.toUpperCase()}**: ${s.heading}`;
+    }).join("\n");
+    return `
+## IMPORTANT: Changed Sections in This PR
+
+The following sections were actually modified in this PR. **Your suggestions MUST focus ONLY on these changed sections**. Do NOT suggest improvements for unchanged parts of the document.
+
+${sectionsList}
+
+**Rule**: Any suggestions you make must be about the translation quality of the changed sections listed above. Ignore any issues in other parts of the document - those can be addressed in a separate comprehensive review.
+`;
+  }
+  /**
+   * Generate review comment
+   */
+  generateReviewComment(translationResult, diffResult, verdict, routing) {
+    const emoji = verdict === "PASS" ? "\u2705" : verdict === "WARN" ? "\u26A0\uFE0F" : "\u274C";
+    let routingLines = "";
+    if (routing) {
+      routingLines = `
+**Routing**: \`${routing.recommendation}\`${routing.reasons.length > 0 ? ` \u2014 ${routing.reasons.join("; ")}` : " \u2014 no gating findings; floors met"}`;
+      if (routing.wouldAutoMerge !== void 0) {
+        routingLines += `
+**Shadow gate**: would ${routing.wouldAutoMerge ? "" : "NOT "}auto-merge (recorded only; no action taken)`;
+      }
+    }
+    let comment = `## ${emoji} Translation Quality Review
+
+**Verdict**: ${verdict} | **Model**: ${this.model} | **Date**: ${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}${routingLines}
+
+---
+
+### \u{1F4DD} Translation Quality
+
+| Criterion | Score |
+|-----------|-------|
+| Accuracy | ${translationResult.accuracy}/10 |
+| Fluency | ${translationResult.fluency}/10 |
+| Terminology | ${translationResult.terminology}/10 |
+| Formatting | ${translationResult.formatting}/10 |
+| **Overall** | **${translationResult.score}/10** |
+
+**Summary**: ${sanitizeCommentText(translationResult.summary)}`;
+    if (translationResult.strengths.length > 0) {
+      comment += ` ${sanitizeCommentText(translationResult.strengths.join(" "))}`;
+    }
+    if (translationResult.syntaxErrors && translationResult.syntaxErrors.length > 0) {
+      comment += `
+
+### \u26A0\uFE0F Markdown Syntax Errors (CRITICAL)
+${translationResult.syntaxErrors.map((e) => `- \u{1F534} ${sanitizeCommentText(String(e))}`).join("\n")}`;
+    }
+    if (translationResult.issues.length > 0) {
+      comment += `
+
+**Suggestions**:
+${translationResult.issues.map((i) => `- ${sanitizeCommentText(i)}`).join("\n")}`;
+    }
+    comment += `
+
+---
+
+### \u{1F50D} Diff Quality
+
+| Check | Status |
+|-------|--------|
+| Scope Correct | ${diffResult.scopeCorrect ? "\u2705" : "\u274C"} |
+| Position Correct | ${diffResult.positionCorrect ? "\u2705" : "\u274C"} |
+| Structure Preserved | ${diffResult.structurePreserved ? "\u2705" : "\u274C"} |
+| Heading-map Correct | ${diffResult.headingMapCorrect ? "\u2705" : "\u274C"} |
+| **Overall** | **${diffResult.score}/10** |
+
+**Summary**: ${sanitizeCommentText(diffResult.summary)}`;
+    if (diffResult.issues.length > 0) {
+      comment += `
+
+**Issues**:
+${diffResult.issues.map((i) => `- ${sanitizeCommentText(String(i))}`).join("\n")}`;
+    }
+    comment += `
+
+---
+*This review was generated automatically by [action-translation](https://github.com/quantecon/action-translation) review mode.*`;
+    return comment;
+  }
+  /**
+   * Our review comments on the PR, oldest first.
+   *
+   * Paginated: beyond 30 comments the existing one is missed and duplicates accumulate.
+   */
+  async listOwnReviewComments(prNumber, owner, repo) {
+    const comments = await this.octokit.paginate(this.octokit.rest.issues.listComments, {
+      owner,
+      repo,
+      issue_number: prNumber,
+      per_page: 100
+    });
+    return comments.filter((c) => isActionReviewComment(c.body)).sort((a, b) => a.id - b.id);
+  }
+  /**
+   * Delete our review comments older than `keepId` — duplicates left by concurrent runs.
+   *
+   * Best effort: a duplicate comment is not worth failing a review that posted successfully.
+   */
+  async deleteOlderReviewComments(prNumber, owner, repo, keepId) {
+    let duplicates;
+    try {
+      duplicates = (await this.listOwnReviewComments(prNumber, owner, repo)).filter((c) => c.id < keepId);
+    } catch (error4) {
+      core6.warning(`Could not check PR #${prNumber} for duplicate review comments: ${error4}`);
+      return;
+    }
+    for (const duplicate of duplicates) {
+      try {
+        await this.octokit.rest.issues.deleteComment({ owner, repo, comment_id: duplicate.id });
+        core6.info(`Removed duplicate review comment ${duplicate.id} on PR #${prNumber}`);
+      } catch (error4) {
+        if (isNotFoundError(error4))
+          continue;
+        core6.warning(`Could not remove duplicate review comment ${duplicate.id} on PR #${prNumber}: ${error4}`);
+      }
+    }
+  }
+  /**
+   * Post the review, leaving exactly one review comment on the PR.
+   *
+   * Concurrent review runs are routine — one sync fires `opened` plus a `labeled` event per
+   * label — and list-then-create is a check-then-act race: every run sees "no comment yet"
+   * and creates one (issue #96). Issue comments have no conditional-write primitive, so each
+   * run instead reconciles after writing, deleting every *older* review comment of ours.
+   * Ids increase with creation time and each run lists after it writes, so the run holding the
+   * highest id necessarily sees the others and removes them: one comment survives any
+   * interleaving. (Deleting *newer* ids instead would not converge — a run that lists before
+   * a slower run creates would leave both.)
+   */
+  async postReviewComment(prNumber, owner, repo, comment) {
+    const body = `${REVIEW_COMMENT_MARKER}
+${comment}`;
+    try {
+      for (let attempt = 1; attempt <= REVIEW_COMMENT_UPSERT_ATTEMPTS; attempt++) {
+        const existing = await this.listOwnReviewComments(prNumber, owner, repo);
+        if (existing.length === 0) {
+          const { data: created } = await this.octokit.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number: prNumber,
+            body
+          });
+          core6.info(`Posted review comment on PR #${prNumber}`);
+          await this.deleteOlderReviewComments(prNumber, owner, repo, created.id);
+          return;
+        }
+        const target = existing[existing.length - 1];
+        try {
+          await this.octokit.rest.issues.updateComment({
+            owner,
+            repo,
+            comment_id: target.id,
+            body
+          });
+        } catch (error4) {
+          if (isNotFoundError(error4) && attempt < REVIEW_COMMENT_UPSERT_ATTEMPTS) {
+            core6.info(`Review comment ${target.id} was removed by a concurrent run, retrying (${attempt})`);
+            continue;
+          }
+          throw error4;
+        }
+        core6.info(`Updated existing review comment on PR #${prNumber}`);
+        await this.deleteOlderReviewComments(prNumber, owner, repo, target.id);
+        return;
+      }
+    } catch (error4) {
+      core6.error(`Failed to post review comment: ${error4}`);
+      throw error4;
+    }
+  }
+};
+
+// dist/action/core-logger.js
+var core7 = __toESM(require_core(), 1);
+var coreLogger = {
+  info: (msg) => core7.info(msg),
+  error: (msg) => core7.error(msg),
+  warning: (msg) => core7.warning(msg)
+};
+
+// dist/action/review.js
+async function runReview(builtInGlossaryDir) {
+  core8.info("Getting review mode inputs...");
   const inputs = getReviewInputs();
-  core7.info("Validating PR event...");
+  core8.info("Validating PR event...");
   const { prNumber } = validateReviewPREvent(github2.context);
-  core7.info(`\u{1F4DD} Reviewing translation PR #${prNumber}`);
+  core8.info(`\u{1F4DD} Reviewing translation PR #${prNumber}`);
   const reviewer = new TranslationReviewer(inputs.anthropicApiKey, inputs.githubToken, inputs.claudeModel, inputs.maxSuggestions);
   let glossaryTerms;
-  const targetLanguage = detectTargetLanguage();
+  const targetLanguage = detectTargetLanguage(github2.context.repo.repo);
   if (targetLanguage) {
-    const builtInGlossaryDir = path5.join(__dirname2, "..", "glossary");
     const glossary = await loadGlossary(targetLanguage, builtInGlossaryDir, inputs.glossaryPath || void 0, coreLogger);
     if (glossary) {
       glossaryTerms = formatGlossaryTerms(glossary, targetLanguage);
     }
   } else {
-    core7.warning(`Could not detect a target language from repository name '${github2.context.repo.repo}' \u2014 reviewing WITHOUT a glossary, so terminology findings are unreliable.`);
+    core8.warning(`Could not detect a target language from repository name '${github2.context.repo.repo}' \u2014 reviewing WITHOUT a glossary, so terminology findings are unreliable.`);
   }
   const result = await reviewer.reviewPR(prNumber, inputs.sourceRepo, github2.context.repo.owner, github2.context.repo.repo, inputs.docsFolder, glossaryTerms, targetLanguage, inputs.autoMergeMode);
-  core7.setOutput("review-verdict", result.verdict);
-  core7.setOutput("translation-score", result.translationQuality.score.toString());
-  core7.setOutput("diff-score", result.diffQuality.score.toString());
-  core7.setOutput("review-recommendation", result.recommendation);
-  core7.setOutput("reviewed-head-sha", result.reviewedHeadSha);
+  core8.setOutput("review-verdict", result.verdict);
+  core8.setOutput("translation-score", result.translationQuality.score.toString());
+  core8.setOutput("diff-score", result.diffQuality.score.toString());
+  core8.setOutput("review-recommendation", result.recommendation);
+  core8.setOutput("reviewed-head-sha", result.reviewedHeadSha);
   if (result.wouldAutoMerge !== void 0) {
-    core7.setOutput("would-auto-merge", String(result.wouldAutoMerge));
+    core8.setOutput("would-auto-merge", String(result.wouldAutoMerge));
   }
   const usage = reviewer.getUsage();
-  core7.setOutput("input-tokens", String(usage.inputTokens));
-  core7.setOutput("output-tokens", String(usage.outputTokens));
-  core7.setOutput("api-calls", String(usage.apiCalls));
-  core7.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens`);
-  core7.info(`\u2705 Review complete: ${result.verdict} \u2192 ${result.recommendation} (Translation: ${result.translationQuality.score}/10, Diff: ${result.diffQuality.score}/10)`);
+  core8.setOutput("input-tokens", String(usage.inputTokens));
+  core8.setOutput("output-tokens", String(usage.outputTokens));
+  core8.setOutput("api-calls", String(usage.apiCalls));
+  core8.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens`);
+  core8.info(`\u2705 Review complete: ${result.verdict} \u2192 ${result.recommendation} (Translation: ${result.translationQuality.score}/10, Diff: ${result.diffQuality.score}/10)`);
 }
-function detectTargetLanguage() {
-  const repoName = github2.context.repo.repo;
+function detectTargetLanguage(repoName) {
   const match = repoName.match(/\.([a-z]{2}(?:-[a-z]{2})?)$/);
   return match ? match[1] : void 0;
 }
+
+// dist/runtime-paths.js
+var path5 = __toESM(require("path"), 1);
+var import_url = require("url");
+function getModuleDir() {
+  return path5.dirname((0, import_url.fileURLToPath)(__importMetaUrl));
+}
+function getBuiltInGlossaryDir() {
+  return path5.join(getModuleDir(), "..", "glossary");
+}
+
+// dist/index.js
+async function run() {
+  try {
+    const mode = getMode();
+    core9.info(`\u{1F680} Running in ${mode.toUpperCase()} mode`);
+    if (mode === "sync") {
+      await runSync();
+    } else if (mode === "rebase") {
+      await runRebase();
+    } else {
+      await runReview(getBuiltInGlossaryDir());
+    }
+  } catch (error4) {
+    if (error4 instanceof Error && error4.stack) {
+      core9.error(error4.stack);
+    }
+    core9.setFailed(`Action failed: ${error4 instanceof Error ? error4.message : String(error4)}`);
+  }
+}
 async function runRebase() {
-  core7.info("Getting rebase mode inputs...");
+  core9.info("Getting rebase mode inputs...");
   const inputs = getRebaseInputs();
-  const { eventName, payload } = github2.context;
+  const { eventName, payload } = github3.context;
   if (eventName !== "pull_request" || payload.action !== "closed" || !payload.pull_request?.merged) {
-    core7.info("Rebase mode requires a merged pull_request event. Exiting.");
+    core9.info("Rebase mode requires a merged pull_request event. Exiting.");
     return;
   }
   const mergedPrNumber = payload.pull_request.number;
   const mergedBranch = payload.pull_request.head?.ref || "";
   if (!isTranslationBranch(mergedBranch)) {
-    core7.info(`Merged PR #${mergedPrNumber} is not a translation PR (branch: ${mergedBranch}). Exiting.`);
+    core9.info(`Merged PR #${mergedPrNumber} is not a translation PR (branch: ${mergedBranch}). Exiting.`);
     return;
   }
-  core7.info(`\u267B\uFE0F Translation PR #${mergedPrNumber} was merged. Checking for conflicted sibling PRs...`);
-  const octokit = github2.getOctokit(inputs.githubToken);
-  const { owner, repo } = github2.context.repo;
+  core9.info(`\u267B\uFE0F Translation PR #${mergedPrNumber} was merged. Checking for conflicted sibling PRs...`);
+  const octokit = github3.getOctokit(inputs.githubToken);
+  const { owner, repo } = github3.context.repo;
   const mergedPrFiles = await octokit.paginate(octokit.rest.pulls.listFiles, {
     owner,
     repo,
@@ -39300,10 +39320,10 @@ async function runRebase() {
   });
   const siblingPRs = openPRs.filter((pr) => isTranslationBranch(pr.head.ref) && pr.number !== mergedPrNumber);
   if (siblingPRs.length === 0) {
-    core7.info("No other open translation PRs found. Nothing to rebase.");
+    core9.info("No other open translation PRs found. Nothing to rebase.");
     return;
   }
-  core7.info(`Found ${siblingPRs.length} open translation PR(s). Checking for file overlaps...`);
+  core9.info(`Found ${siblingPRs.length} open translation PR(s). Checking for file overlaps...`);
   let rebasedCount = 0;
   let refreshedCount = 0;
   let skippedCount = 0;
@@ -39312,7 +39332,7 @@ async function runRebase() {
     try {
       const metadata = parseTranslationSyncMetadata(pr.body || "");
       if (!metadata) {
-        core7.info(`PR #${pr.number}: No translation-sync metadata found \u2014 skipping (pre-metadata PR).`);
+        core9.info(`PR #${pr.number}: No translation-sync metadata found \u2014 skipping (pre-metadata PR).`);
         skippedCount++;
         continue;
       }
@@ -39320,22 +39340,22 @@ async function runRebase() {
       const overlapping = prFilePaths.filter((p) => mergedFilePaths.has(p));
       if (overlapping.length === 0) {
         if (!inputs.rebaseStaleSiblings) {
-          core7.info(`PR #${pr.number}: No file overlap with merged PR \u2014 skipping.`);
+          core9.info(`PR #${pr.number}: No file overlap with merged PR \u2014 skipping.`);
           skippedCount++;
           continue;
         }
         try {
           const refreshed = await refreshStaleBranch(octokit, owner, repo, pr.number);
           if (refreshed) {
-            core7.info(`PR #${pr.number}: No overlap \u2014 refreshed against the new base.`);
+            core9.info(`PR #${pr.number}: No overlap \u2014 refreshed against the new base.`);
             refreshedCount++;
           } else {
-            core7.info(`PR #${pr.number}: No overlap and already up to date \u2014 skipping.`);
+            core9.info(`PR #${pr.number}: No overlap and already up to date \u2014 skipping.`);
             skippedCount++;
           }
         } catch (refreshError) {
           const msg = refreshError instanceof Error ? refreshError.message : String(refreshError);
-          core7.error(`PR #${pr.number}: Branch refresh failed \u2014 ${msg}`);
+          core9.error(`PR #${pr.number}: Branch refresh failed \u2014 ${msg}`);
           errorCount++;
           try {
             await octokit.rest.issues.createComment({
@@ -39349,12 +39369,12 @@ Error: ${msg}
 No content was changed \u2014 this PR's branch is simply still behind \`main\`. Use the **Update branch** button on this PR, or merge \`main\` into the branch manually.`
             });
           } catch {
-            core7.warning(`Could not post refresh-failure comment on PR #${pr.number}`);
+            core9.warning(`Could not post refresh-failure comment on PR #${pr.number}`);
           }
         }
         continue;
       }
-      core7.info(`PR #${pr.number}: ${overlapping.length} overlapping file(s) \u2014 rebasing...`);
+      core9.info(`PR #${pr.number}: ${overlapping.length} overlapping file(s) \u2014 rebasing...`);
       const outcome = await rebaseSinglePR(octokit, pr, metadata, inputs);
       if (outcome === "skipped") {
         skippedCount++;
@@ -39371,9 +39391,9 @@ Overlapping files: ${overlapping.map((f) => `\`${f}\``).join(", ")}
 
 The translation content is preserved; only unchanged sections were updated to match the current \`main\` branch. Please re-review if needed.`
       });
-    } catch (error3) {
-      const msg = error3 instanceof Error ? error3.message : String(error3);
-      core7.error(`PR #${pr.number}: Rebase failed \u2014 ${msg}`);
+    } catch (error4) {
+      const msg = error4 instanceof Error ? error4.message : String(error4);
+      core9.error(`PR #${pr.number}: Rebase failed \u2014 ${msg}`);
       errorCount++;
       try {
         await octokit.rest.issues.createComment({
@@ -39387,20 +39407,20 @@ Error: ${msg}
 You may need to manually resolve conflicts or run \`/translate-resync\` on the source PR.`
         });
       } catch {
-        core7.warning(`Could not post error comment on PR #${pr.number}`);
+        core9.warning(`Could not post error comment on PR #${pr.number}`);
       }
     }
   }
   const refreshedNote = inputs.rebaseStaleSiblings ? `, ${refreshedCount} refreshed` : "";
   const summary = `\u267B\uFE0F Rebase complete: ${rebasedCount} rebased${refreshedNote}, ${skippedCount} skipped, ${errorCount} errors.`;
   if (errorCount > 0) {
-    core7.setFailed(summary);
+    core9.setFailed(summary);
   } else {
-    core7.info(summary);
+    core9.info(summary);
   }
 }
 async function rebaseSinglePR(octokit, pr, metadata, inputs) {
-  const { owner, repo } = github2.context.repo;
+  const { owner, repo } = github3.context.repo;
   const [sourceOwner, sourceRepoName] = metadata.sourceRepo.split("/");
   const sourceCommitSha = metadata.sourceCommitSha;
   const filesToSync = [];
@@ -39414,7 +39434,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
           const result2 = await fetchFileContent(octokit, owner, repo, file.path);
           existingFileSha = result2.sha;
         } catch {
-          core7.info(`${file.path}: Already gone from target repo \u2014 skip deletion`);
+          core9.info(`${file.path}: Already gone from target repo \u2014 skip deletion`);
           continue;
         }
         filesToSync.push({
@@ -39431,7 +39451,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
           const { content } = await fetchFileContent(octokit, sourceOwner, sourceRepoName, file.path, sourceCommitSha);
           newContent2 = content;
         } catch {
-          core7.info(`${file.path}: Could not fetch TOC content \u2014 skipping`);
+          core9.info(`${file.path}: Could not fetch TOC content \u2014 skipping`);
           continue;
         }
         let existingFileSha;
@@ -39454,7 +39474,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
         const { content } = await fetchFileContent(octokit, sourceOwner, sourceRepoName, file.path, sourceCommitSha);
         newContent = content;
       } catch {
-        core7.info(`${file.path}: Could not fetch source content at ${sourceCommitSha} \u2014 skipping`);
+        core9.info(`${file.path}: Could not fetch source content at ${sourceCommitSha} \u2014 skipping`);
         continue;
       }
       let oldContent = "";
@@ -39462,7 +39482,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
         const result2 = await fetchFileContent(octokit, sourceOwner, sourceRepoName, file.path, `${sourceCommitSha}^`);
         oldContent = result2.content;
       } catch {
-        core7.info(`${file.path}: New file (no parent commit content)`);
+        core9.info(`${file.path}: New file (no parent commit content)`);
       }
       if (fileType === "renamed" && file.previousPath) {
         let targetContent = "";
@@ -39472,7 +39492,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
           targetContent = result2.content;
           oldFileSha = result2.sha;
         } catch {
-          core7.info(`${file.previousPath}: Previous path not found in target repo`);
+          core9.info(`${file.previousPath}: Previous path not found in target repo`);
         }
         filesToSync.push({
           filename: file.path,
@@ -39495,7 +39515,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
           existingFileSha = result2.sha;
         } catch {
           isNewFile = true;
-          core7.info(`${file.path}: Not found in target repo \u2014 treating as new file`);
+          core9.info(`${file.path}: Not found in target repo \u2014 treating as new file`);
         }
         filesToSync.push({
           filename: file.path,
@@ -39508,19 +39528,19 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
           sourceCommitSha
         });
       }
-    } catch (error3) {
-      core7.error(`Error fetching content for ${file.path}: ${error3}`);
-      fetchErrors.push(`${file.path}: ${error3}`);
+    } catch (error4) {
+      core9.error(`Error fetching content for ${file.path}: ${error4}`);
+      fetchErrors.push(`${file.path}: ${error4}`);
     }
   }
   if (fetchErrors.length > 0) {
     throw new Error(`content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join("; ")}`);
   }
   if (filesToSync.length === 0) {
-    core7.info(`PR #${pr.number}: No files to process after content fetch. Skipping.`);
+    core9.info(`PR #${pr.number}: No files to process after content fetch. Skipping.`);
     return "skipped";
   }
-  const builtInGlossaryDir = path5.join(__dirname2, "..", "glossary");
+  const builtInGlossaryDir = getBuiltInGlossaryDir();
   const glossary = await loadGlossary(metadata.targetLanguage, builtInGlossaryDir, inputs.glossaryPath || void 0, coreLogger);
   let rebaseCache;
   const targetBaseSha = metadata.targetBaseSha;
@@ -39532,18 +39552,18 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
         const { content: previousTranslation } = await fetchFileContent(octokit, owner, repo, file.filename, prBranch);
         const { content: oldTargetContent } = await fetchFileContent(octokit, owner, repo, file.filename, targetBaseSha);
         rebaseCache.set(file.filename, { previousTranslation, oldTargetContent });
-        core7.info(`${file.filename}: Loaded rebase cache (previous translation + old baseline)`);
+        core9.info(`${file.filename}: Loaded rebase cache (previous translation + old baseline)`);
       } catch {
-        core7.info(`${file.filename}: Could not load rebase cache \u2014 will re-translate`);
+        core9.info(`${file.filename}: Could not load rebase cache \u2014 will re-translate`);
       }
     }
     if (rebaseCache.size > 0) {
-      core7.info(`Rebase cache loaded for ${rebaseCache.size} file(s) \u2014 unchanged sections will skip Claude API calls`);
+      core9.info(`Rebase cache loaded for ${rebaseCache.size} file(s) \u2014 unchanged sections will skip Claude API calls`);
     } else {
       rebaseCache = void 0;
     }
   } else {
-    core7.info("No targetBaseSha in metadata \u2014 rebase cache unavailable (pre-cache PR)");
+    core9.info("No targetBaseSha in metadata \u2014 rebase cache unavailable (pre-cache PR)");
   }
   const existingStateShas = await fetchExistingStateShas(octokit, owner, repo, filesToSync, inputs.docsFolder);
   const stateConfig = {
@@ -39565,7 +39585,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
     throw new Error(`translation produced ${result.errors.length} error(s); branch left untouched: ${result.errors.join("; ")}`);
   }
   if (result.translatedFiles.length === 0 && result.filesToDelete.length === 0) {
-    core7.info(`PR #${pr.number}: No translated files produced. Skipping force-push.`);
+    core9.info(`PR #${pr.number}: No translated files produced. Skipping force-push.`);
     return "skipped";
   }
   const branchName = pr.head.ref;
@@ -39613,66 +39633,66 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
         sha
       });
     } catch {
-      core7.info(`${file.path}: Not found on branch \u2014 skip deletion`);
+      core9.info(`${file.path}: Not found on branch \u2014 skip deletion`);
     }
   }
-  core7.info(`PR #${pr.number}: Successfully rebased with ${result.translatedFiles.length} file(s).`);
+  core9.info(`PR #${pr.number}: Successfully rebased with ${result.translatedFiles.length} file(s).`);
   return "rebased";
 }
 async function runSync() {
-  core7.info("Getting action inputs...");
+  core9.info("Getting action inputs...");
   const inputs = getInputs();
-  core7.info("Validating PR event...");
-  const { merged, prNumber, isTestMode, isResync, resyncLanguage } = validatePREvent(github2.context, inputs.testMode);
+  core9.info("Validating PR event...");
+  const { merged, prNumber, isTestMode, isResync, resyncLanguage } = validatePREvent(github3.context, inputs.testMode);
   if (!merged) {
-    core7.info("PR was not merged. Exiting.");
+    core9.info("PR was not merged. Exiting.");
     return;
   }
   if (isResync && resyncLanguage && resyncLanguage !== inputs.targetLanguage) {
-    core7.info(`Resync requested for '${resyncLanguage}', skipping (this workflow targets '${inputs.targetLanguage}').`);
+    core9.info(`Resync requested for '${resyncLanguage}', skipping (this workflow targets '${inputs.targetLanguage}').`);
     return;
   }
-  const octokit = github2.getOctokit(inputs.githubToken);
-  let effectiveSha = github2.context.sha;
+  const octokit = github3.getOctokit(inputs.githubToken);
+  let effectiveSha = github3.context.sha;
   if (isResync) {
     const { data: pr } = await octokit.rest.pulls.get({
-      owner: github2.context.repo.owner,
-      repo: github2.context.repo.repo,
+      owner: github3.context.repo.owner,
+      repo: github3.context.repo.repo,
       pull_number: prNumber
     });
     if (!pr.merged) {
-      core7.info(`PR #${prNumber} is not merged. Resync only works on merged PRs.`);
+      core9.info(`PR #${prNumber} is not merged. Resync only works on merged PRs.`);
       return;
     }
     if (pr.merge_commit_sha) {
       effectiveSha = pr.merge_commit_sha;
-      core7.info(`\u{1F504} RESYNC: PR #${prNumber} is merged \u2014 using merge commit ${effectiveSha}`);
+      core9.info(`\u{1F504} RESYNC: PR #${prNumber} is merged \u2014 using merge commit ${effectiveSha}`);
     } else {
-      core7.warning(`PR #${prNumber} has no merge_commit_sha, falling back to context.sha`);
-      core7.info(`\u{1F504} RESYNC: PR #${prNumber} is merged \u2014 proceeding with translation sync`);
+      core9.warning(`PR #${prNumber} has no merge_commit_sha, falling back to context.sha`);
+      core9.info(`\u{1F504} RESYNC: PR #${prNumber} is merged \u2014 proceeding with translation sync`);
     }
   }
   if (isTestMode) {
-    core7.info(`\u{1F9EA} TEST MODE: Processing PR #${prNumber} (using head commit)`);
+    core9.info(`\u{1F9EA} TEST MODE: Processing PR #${prNumber} (using head commit)`);
   } else if (!isResync) {
-    core7.info(`Processing merged PR #${prNumber}`);
+    core9.info(`Processing merged PR #${prNumber}`);
   }
   const files = await octokit.paginate(octokit.rest.pulls.listFiles, {
-    owner: github2.context.repo.owner,
-    repo: github2.context.repo.repo,
+    owner: github3.context.repo.owner,
+    repo: github3.context.repo.repo,
     pull_number: prNumber
   });
   const classified = classifyChangedFiles(files, inputs.docsFolder);
   if (classified.changedMarkdownFiles.length === 0 && classified.changedTocFiles.length === 0 && classified.removedMarkdownFiles.length === 0 && classified.removedTocFiles.length === 0 && classified.renamedMarkdownFiles.length === 0) {
-    core7.info("No markdown or TOC files changed in docs folder. Exiting.");
+    core9.info("No markdown or TOC files changed in docs folder. Exiting.");
     return;
   }
-  core7.info(`Found ${classified.changedMarkdownFiles.length} changed markdown files`);
-  core7.info(`Found ${classified.renamedMarkdownFiles.length} renamed markdown files`);
-  core7.info(`Found ${classified.changedTocFiles.length} changed TOC files`);
-  core7.info(`Found ${classified.removedMarkdownFiles.length} removed markdown files`);
-  core7.info(`Found ${classified.removedTocFiles.length} removed TOC files`);
-  const builtInGlossaryDir = path5.join(__dirname2, "..", "glossary");
+  core9.info(`Found ${classified.changedMarkdownFiles.length} changed markdown files`);
+  core9.info(`Found ${classified.renamedMarkdownFiles.length} renamed markdown files`);
+  core9.info(`Found ${classified.changedTocFiles.length} changed TOC files`);
+  core9.info(`Found ${classified.removedMarkdownFiles.length} removed markdown files`);
+  core9.info(`Found ${classified.removedTocFiles.length} removed TOC files`);
+  const builtInGlossaryDir = getBuiltInGlossaryDir();
   const glossary = await loadGlossary(inputs.targetLanguage, builtInGlossaryDir, inputs.glossaryPath || void 0, coreLogger);
   const [targetOwner, targetRepo] = inputs.targetRepo.split("/");
   const { files: filesToSync, errors: fetchErrors } = await fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo, effectiveSha);
@@ -39690,24 +39710,24 @@ async function runSync() {
     debugMode: true,
     bibliographyMode: inputs.bibliographyMode
   }, coreLogger, stateConfig);
-  const bibliography = inputs.bibliographyMode === "off" ? void 0 : await fetchBibliographies(octokit, { owner: github2.context.repo.owner, repo: github2.context.repo.repo, ref: effectiveSha }, { owner: targetOwner, repo: targetRepo }, inputs.docsFolder);
+  const bibliography = inputs.bibliographyMode === "off" ? void 0 : await fetchBibliographies(octokit, { owner: github3.context.repo.owner, repo: github3.context.repo.repo, ref: effectiveSha }, { owner: targetOwner, repo: targetRepo }, inputs.docsFolder);
   const result = await orchestrator.processFiles(filesToSync, glossary, void 0, bibliography);
   result.errors.unshift(...fetchErrors);
   const hasErrors = result.errors.length > 0;
   if (hasErrors) {
-    core7.setFailed(`Translation completed with ${result.errors.length} errors`);
+    core9.setFailed(`Translation completed with ${result.errors.length} errors`);
   } else {
-    core7.info(`Successfully processed ${result.processedFiles.length} files`);
+    core9.info(`Successfully processed ${result.processedFiles.length} files`);
   }
   const usage = orchestrator.getUsage();
-  core7.setOutput("input-tokens", String(usage.inputTokens));
-  core7.setOutput("output-tokens", String(usage.outputTokens));
-  core7.setOutput("api-calls", String(usage.apiCalls));
-  core7.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens`);
+  core9.setOutput("input-tokens", String(usage.inputTokens));
+  core9.setOutput("output-tokens", String(usage.outputTokens));
+  core9.setOutput("api-calls", String(usage.apiCalls));
+  core9.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens`);
   let prUrl;
   if (result.translatedFiles.length > 0 || result.filesToDelete.length > 0) {
     try {
-      core7.info("Creating PR in target repository...");
+      core9.info("Creating PR in target repository...");
       const sourcePrInfo = await fetchSourcePrInfo(octokit, prNumber);
       const prConfig = {
         targetOwner,
@@ -39715,8 +39735,8 @@ async function runSync() {
         sourceLanguage: inputs.sourceLanguage,
         targetLanguage: inputs.targetLanguage,
         claudeModel: inputs.claudeModel,
-        sourceRepoOwner: github2.context.repo.owner,
-        sourceRepoName: github2.context.repo.repo,
+        sourceRepoOwner: github3.context.repo.owner,
+        sourceRepoName: github3.context.repo.repo,
         prNumber,
         sourceCommitSha: effectiveSha,
         prLabels: inputs.prLabels,
@@ -39735,10 +39755,10 @@ async function runSync() {
       });
       const prResult = await createTranslationPR(octokit, result.translatedFiles, result.filesToDelete, prConfig, coreLogger, sourcePrInfo, result.skippedSections, fileMetadata, result.droppedTargetSections);
       prUrl = prResult.prUrl;
-      core7.setOutput("pr-url", prResult.prUrl);
-      core7.setOutput("files-synced", result.processedFiles.length.toString());
+      core9.setOutput("pr-url", prResult.prUrl);
+      core9.setOutput("files-synced", result.processedFiles.length.toString());
     } catch (prError) {
-      core7.setFailed(`Failed to create PR: ${prError instanceof Error ? prError.message : String(prError)}`);
+      core9.setFailed(`Failed to create PR: ${prError instanceof Error ? prError.message : String(prError)}`);
       result.errors.push(`PR creation failed: ${prError instanceof Error ? prError.message : String(prError)}`);
     }
   }
@@ -39751,11 +39771,6 @@ async function runSync() {
     }
   }
 }
-var coreLogger = {
-  info: (msg) => core7.info(msg),
-  error: (msg) => core7.error(msg),
-  warning: (msg) => core7.warning(msg)
-};
 async function fetchFileContent(octokit, owner, repo, filepath, ref) {
   const params = { owner, repo, path: filepath };
   if (ref)
@@ -39772,9 +39787,9 @@ async function fetchFileContent(octokit, owner, repo, filepath, ref) {
 async function fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo, commitSha) {
   const filesToSync = [];
   const fetchErrors = [];
-  const sourceOwner = github2.context.repo.owner;
-  const sourceRepo = github2.context.repo.repo;
-  const sha = commitSha || github2.context.sha;
+  const sourceOwner = github3.context.repo.owner;
+  const sourceRepo = github3.context.repo.repo;
+  const sha = commitSha || github3.context.sha;
   for (const file of classified.changedMarkdownFiles) {
     try {
       const { content: newContent } = await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, sha);
@@ -39783,7 +39798,7 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
         const result = await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, `${sha}^`);
         oldContent = result.content;
       } catch {
-        core7.info(`${file.filename} is a new file`);
+        core9.info(`${file.filename} is a new file`);
       }
       let targetContent = "";
       let existingFileSha;
@@ -39794,7 +39809,7 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
         existingFileSha = result.sha;
       } catch {
         isNewFile = true;
-        core7.info(`${file.filename} does not exist in target repo - will create it`);
+        core9.info(`${file.filename} does not exist in target repo - will create it`);
       }
       filesToSync.push({
         filename: file.filename,
@@ -39806,9 +39821,9 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
         isNewFile,
         sourceCommitSha: sha
       });
-    } catch (error3) {
-      core7.error(`Error fetching content for ${file.filename}: ${error3}`);
-      fetchErrors.push(`Fetch failed (markdown): ${file.filename}: ${error3}`);
+    } catch (error4) {
+      core9.error(`Error fetching content for ${file.filename}: ${error4}`);
+      fetchErrors.push(`Fetch failed (markdown): ${file.filename}: ${error4}`);
     }
   }
   for (const file of classified.renamedMarkdownFiles) {
@@ -39821,7 +39836,7 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
           const result = await fetchFileContent(octokit, sourceOwner, sourceRepo, previousFilename, `${sha}^`);
           oldContent = result.content;
         } catch {
-          core7.info(`Could not get old content from ${previousFilename}`);
+          core9.info(`Could not get old content from ${previousFilename}`);
         }
       }
       let targetContent = "";
@@ -39831,9 +39846,9 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
           const result = await fetchFileContent(octokit, targetOwner, targetRepo, previousFilename);
           targetContent = result.content;
           oldFileSha = result.sha;
-          core7.info(`Found existing translation at ${previousFilename} - will transfer to ${file.filename}`);
+          core9.info(`Found existing translation at ${previousFilename} - will transfer to ${file.filename}`);
         } catch {
-          core7.info(`${previousFilename} does not exist in target repo`);
+          core9.info(`${previousFilename} does not exist in target repo`);
         }
       }
       filesToSync.push({
@@ -39847,9 +39862,9 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
         isNewFile: !targetContent,
         sourceCommitSha: sha
       });
-    } catch (error3) {
-      core7.error(`Error fetching content for renamed file ${file.filename}: ${error3}`);
-      fetchErrors.push(`Fetch failed (renamed): ${file.filename}: ${error3}`);
+    } catch (error4) {
+      core9.error(`Error fetching content for renamed file ${file.filename}: ${error4}`);
+      fetchErrors.push(`Fetch failed (renamed): ${file.filename}: ${error4}`);
     }
   }
   for (const file of classified.changedTocFiles) {
@@ -39860,7 +39875,7 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
         const result = await fetchFileContent(octokit, targetOwner, targetRepo, file.filename);
         existingFileSha = result.sha;
       } catch {
-        core7.info(`${file.filename} does not exist in target repo - will create it`);
+        core9.info(`${file.filename} does not exist in target repo - will create it`);
       }
       filesToSync.push({
         filename: file.filename,
@@ -39869,9 +39884,9 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
         existingFileSha,
         isNewFile: !existingFileSha
       });
-    } catch (error3) {
-      core7.error(`Error fetching content for TOC file ${file.filename}: ${error3}`);
-      fetchErrors.push(`Fetch failed (toc): ${file.filename}: ${error3}`);
+    } catch (error4) {
+      core9.error(`Error fetching content for TOC file ${file.filename}: ${error4}`);
+      fetchErrors.push(`Fetch failed (toc): ${file.filename}: ${error4}`);
     }
   }
   for (const file of [...classified.removedMarkdownFiles, ...classified.removedTocFiles]) {
@@ -39881,7 +39896,7 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
         const result = await fetchFileContent(octokit, targetOwner, targetRepo, file.filename);
         existingFileSha = result.sha;
       } catch {
-        core7.info(`${file.filename} does not exist in target repo - skipping deletion`);
+        core9.info(`${file.filename} does not exist in target repo - skipping deletion`);
       }
       if (existingFileSha) {
         filesToSync.push({
@@ -39891,9 +39906,9 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
           isNewFile: false
         });
       }
-    } catch (error3) {
-      core7.error(`Error checking removal of ${file.filename}: ${error3}`);
-      fetchErrors.push(`Fetch failed (removed): ${file.filename}: ${error3}`);
+    } catch (error4) {
+      core9.error(`Error checking removal of ${file.filename}: ${error4}`);
+      fetchErrors.push(`Fetch failed (removed): ${file.filename}: ${error4}`);
     }
   }
   return { files: filesToSync, errors: fetchErrors };
@@ -39901,16 +39916,16 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
 async function fetchSourcePrInfo(octokit, prNumber) {
   try {
     const { data: sourcePr } = await octokit.rest.pulls.get({
-      owner: github2.context.repo.owner,
-      repo: github2.context.repo.repo,
+      owner: github3.context.repo.owner,
+      repo: github3.context.repo.repo,
       pull_number: prNumber
     });
     return {
       title: sourcePr.title,
       labels: sourcePr.labels.map((label) => typeof label === "string" ? label : label.name || "").filter((name) => name && name !== "test-translation")
     };
-  } catch (error3) {
-    core7.warning(`Could not fetch source PR details: ${error3}`);
+  } catch (error4) {
+    core9.warning(`Could not fetch source PR details: ${error4}`);
     return void 0;
   }
 }
@@ -39948,7 +39963,7 @@ async function fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToS
     }
   }
   if (shas.size > 0) {
-    core7.info(`Found ${shas.size} existing state file(s) in target repo`);
+    core9.info(`Found ${shas.size} existing state file(s) in target repo`);
   }
   return shas;
 }
@@ -39964,46 +39979,46 @@ async function postSuccessComment(octokit, prNumber, targetLanguage, targetRepo,
       fileList
     ].join("\n");
     await octokit.rest.issues.createComment({
-      owner: github2.context.repo.owner,
-      repo: github2.context.repo.repo,
+      owner: github3.context.repo.owner,
+      repo: github3.context.repo.repo,
       issue_number: prNumber,
       body
     });
-    core7.info(`Posted success comment on PR #${prNumber}`);
-  } catch (error3) {
-    core7.warning(`Could not post success comment on PR #${prNumber}: ${error3}`);
+    core9.info(`Posted success comment on PR #${prNumber}`);
+  } catch (error4) {
+    core9.warning(`Could not post success comment on PR #${prNumber}: ${error4}`);
   }
 }
 async function closeFailureIssues(octokit, prNumber, targetLanguage, prUrl) {
   try {
     const title = `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
     const openIssues = await octokit.paginate(octokit.rest.issues.listForRepo, {
-      owner: github2.context.repo.owner,
-      repo: github2.context.repo.repo,
+      owner: github3.context.repo.owner,
+      repo: github3.context.repo.repo,
       state: "open",
       per_page: 100
     });
     const stale = openIssues.filter((issue) => issue.title === title && !issue.pull_request);
     for (const issue of stale) {
       await octokit.rest.issues.createComment({
-        owner: github2.context.repo.owner,
-        repo: github2.context.repo.repo,
+        owner: github3.context.repo.owner,
+        repo: github3.context.repo.repo,
         issue_number: issue.number,
         body: `\u2705 A later sync for PR #${prNumber} (${targetLanguage}) succeeded: ${prUrl}
 
 Closing this failure report.`
       });
       await octokit.rest.issues.update({
-        owner: github2.context.repo.owner,
-        repo: github2.context.repo.repo,
+        owner: github3.context.repo.owner,
+        repo: github3.context.repo.repo,
         issue_number: issue.number,
         state: "closed",
         state_reason: "completed"
       });
-      core7.info(`Closed recovered failure issue #${issue.number}`);
+      core9.info(`Closed recovered failure issue #${issue.number}`);
     }
-  } catch (error3) {
-    core7.warning(`Could not close failure issues for PR #${prNumber}: ${error3}`);
+  } catch (error4) {
+    core9.warning(`Could not close failure issues for PR #${prNumber}: ${error4}`);
   }
 }
 async function createFailureIssue(octokit, prNumber, targetLanguage, targetRepo, errors) {
@@ -40026,24 +40041,24 @@ async function createFailureIssue(octokit, prNumber, targetLanguage, targetRepo,
       `Once the issue is resolved, comment \`\\translate-resync\` on PR #${prNumber} to retry.`
     ].join("\n");
     const { data: issue } = await octokit.rest.issues.create({
-      owner: github2.context.repo.owner,
-      repo: github2.context.repo.repo,
+      owner: github3.context.repo.owner,
+      repo: github3.context.repo.repo,
       title,
       body
     });
     try {
       await octokit.rest.issues.addLabels({
-        owner: github2.context.repo.owner,
-        repo: github2.context.repo.repo,
+        owner: github3.context.repo.owner,
+        repo: github3.context.repo.repo,
         issue_number: issue.number,
         labels: [FAILURE_ISSUE_LABEL]
       });
     } catch (labelError) {
-      core7.warning(`Could not add label to failure issue #${issue.number}: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
+      core9.warning(`Could not add label to failure issue #${issue.number}: ${labelError instanceof Error ? labelError.message : String(labelError)}`);
     }
-    core7.info(`Created failure issue #${issue.number}: ${issue.html_url}`);
-  } catch (error3) {
-    core7.warning(`Could not create failure issue: ${error3}`);
+    core9.info(`Created failure issue #${issue.number}: ${issue.html_url}`);
+  } catch (error4) {
+    core9.warning(`Could not create failure issue: ${error4}`);
   }
 }
 run();
@@ -40059,17 +40074,17 @@ async function fetchBibliographies(octokit, source, target, docsFolder) {
     if (!("content" in data))
       return void 0;
     configYaml = Buffer.from(data.content, "base64").toString("utf8");
-  } catch (error3) {
-    const status = error3?.status;
+  } catch (error4) {
+    const status = error4?.status;
     if (status !== 404) {
-      throw new Error(`Could not read ${configPath} from ${target.owner}/${target.repo} (status ${status ?? "unknown"}): ${error3}`);
+      throw new Error(`Could not read ${configPath} from ${target.owner}/${target.repo} (status ${status ?? "unknown"}): ${error4}`);
     }
-    core7.info(`No ${configPath} in target repo \u2014 bibliography backfill not applicable`);
+    core9.info(`No ${configPath} in target repo \u2014 bibliography backfill not applicable`);
     return void 0;
   }
   const bibPaths = parseBibtexBibfiles(configYaml);
   if (bibPaths.length === 0) {
-    core7.info(`No bibtex_bibfiles in ${configPath} \u2014 bibliography backfill not applicable`);
+    core9.info(`No bibtex_bibfiles in ${configPath} \u2014 bibliography backfill not applicable`);
     return void 0;
   }
   const targets = [];
@@ -40089,8 +40104,8 @@ async function fetchBibliographies(octokit, source, target, docsFolder) {
         content: Buffer.from(data.content, "base64").toString("utf8"),
         sha: data.sha
       });
-    } catch (error3) {
-      throw new Error(`Target ${configPath} configures bibtex_bibfiles '${rel}' but ${repoPath} could not be read: ${error3}`);
+    } catch (error4) {
+      throw new Error(`Target ${configPath} configures bibtex_bibfiles '${rel}' but ${repoPath} could not be read: ${error4}`);
     }
     try {
       const { data } = await octokit.rest.repos.getContent({
@@ -40105,15 +40120,15 @@ async function fetchBibliographies(octokit, source, target, docsFolder) {
           content: Buffer.from(data.content, "base64").toString("utf8")
         });
       }
-    } catch (error3) {
-      const status = error3?.status;
+    } catch (error4) {
+      const status = error4?.status;
       if (status !== 404) {
-        throw new Error(`Could not read ${repoPath} from source ${source.owner}/${source.repo} (status ${status ?? "unknown"}): ${error3}`);
+        throw new Error(`Could not read ${repoPath} from source ${source.owner}/${source.repo} (status ${status ?? "unknown"}): ${error4}`);
       }
-      core7.info(`Source has no ${repoPath} \u2014 nothing to backfill from`);
+      core9.info(`Source has no ${repoPath} \u2014 nothing to backfill from`);
     }
   }
-  core7.info(`Bibliography: ${targets.length} target file(s), ${sources.length} source file(s) available for backfill`);
+  core9.info(`Bibliography: ${targets.length} target file(s), ${sources.length} source file(s) available for backfill`);
   return { targets, sources };
 }
 // Annotate the CommonJS export names for ESM import in node:
