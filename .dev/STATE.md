@@ -120,7 +120,12 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 **Resume here (2026-08-20):**
 
-1. **Merge #278** (#169 slice 1 — green, clean, unreviewed as of 04:20Z).
+1. **Merge #278** (#169 slice 1 — green and clean; Copilot reviewed, its one comment
+   addressed and replied to in `05ce0ce`, which also corrected two comments the
+   extraction had made false in `rebase-siblings.ts` and `sync-orchestrator.ts`).
+   Standing lesson for the later slices: each one invalidates prose in *other* files,
+   so grep for comments explaining whatever moved — explanations don't travel with
+   the code, and only the bundle diff and a grep will catch it.
 2. **#169 slice 2: `src/github-content.ts`** — `tryFetchFileContent` plus **one**
    `buildFilesToSync` over a narrow `ContentClient` interface, replacing the two
    independently-maintained builders (now `index.ts:381` and `:1038`) that have already
