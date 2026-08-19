@@ -96,6 +96,10 @@ The translator (`translator.ts`) supports three translation modes, each with dif
 ```
 src/
 ├── index.ts             # GitHub Actions entry point + mode routing + sync notifications
+├── runtime-paths.ts     # The one module holding `import.meta.url` — keeps src/action/* CJS-loadable (#169)
+├── action/
+│   ├── review.ts        # REVIEW mode runner, extracted from index.ts and directly tested (#169)
+│   └── core-logger.ts   # @actions/core → Logger adapter, shared by the entry point and mode runners
 ├── sync-orchestrator.ts # Sync processing pipeline
 ├── pr-creator.ts        # PR creation in target repo
 ├── parser.ts            # MyST Markdown parser (stack-based, line-by-line)

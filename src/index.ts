@@ -1,21 +1,11 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import {
-  getMode,
-  getInputs,
-  getReviewInputs,
-  getRebaseInputs,
-  validatePREvent,
-  validateReviewPREvent,
-} from './inputs.js';
-import { TranslationReviewer } from './reviewer.js';
+import { getMode, getInputs, getRebaseInputs, validatePREvent } from './inputs.js';
 import {
   SyncOrchestrator,
   classifyChangedFiles,
   loadGlossary,
-  formatGlossaryTerms,
   FileToSync,
-  Logger,
   StateGenerationConfig,
 } from './sync-orchestrator.js';
 import {
@@ -31,12 +21,9 @@ import { isTranslationBranch } from './branch-naming.js';
 import { FAILURE_ISSUE_LABEL } from './contracts.js';
 import { refreshStaleBranch } from './rebase-siblings.js';
 import { stateFileRelativePath } from './cli/translate-state.js';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
-
-// ESM equivalent of __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { runReview } from './action/review.js';
+import { coreLogger } from './action/core-logger.js';
+import { getBuiltInGlossaryDir } from './runtime-paths.js';
 
 /**
  * Main entry point for the GitHub Action
@@ -52,7 +39,7 @@ async function run(): Promise<void> {
     } else if (mode === 'rebase') {
       await runRebase();
     } else {
-      await runReview();
+      await runReview(getBuiltInGlossaryDir());
     }
   } catch (error) {
     // The stack is the only pointer into a 2.9 MB bundle — without it every
@@ -63,101 +50,6 @@ async function run(): Promise<void> {
     }
     core.setFailed(`Action failed: ${error instanceof Error ? error.message : String(error)}`);
   }
-}
-
-/**
- * Run the REVIEW mode - evaluate translation quality on a PR
- */
-async function runReview(): Promise<void> {
-  // Get and validate inputs
-  core.info('Getting review mode inputs...');
-  const inputs = getReviewInputs();
-
-  // Validate this is a PR event
-  core.info('Validating PR event...');
-  const { prNumber } = validateReviewPREvent(github.context);
-
-  core.info(`📝 Reviewing translation PR #${prNumber}`);
-
-  // Initialize reviewer
-  const reviewer = new TranslationReviewer(
-    inputs.anthropicApiKey,
-    inputs.githubToken,
-    inputs.claudeModel,
-    inputs.maxSuggestions
-  );
-
-  // Load glossary — through the same loader sync and rebase use, so a repo with
-  // a custom glossary is reviewed against the terminology it was translated
-  // against. Review used to read the built-in file directly and ignore
-  // `glossary-path` entirely (#146), which mattered once verdict v2 made
-  // `terminology` a gating category: judging against the wrong glossary
-  // suppresses the gate and biases the shadow calibration data.
-  let glossaryTerms: string | undefined;
-  const targetLanguage = detectTargetLanguage();
-  if (targetLanguage) {
-    const builtInGlossaryDir = path.join(__dirname, '..', 'glossary');
-    const glossary = await loadGlossary(
-      targetLanguage,
-      builtInGlossaryDir,
-      inputs.glossaryPath || undefined,
-      coreLogger
-    );
-    if (glossary) {
-      glossaryTerms = formatGlossaryTerms(glossary, targetLanguage);
-    }
-  } else {
-    core.warning(
-      `Could not detect a target language from repository name '${github.context.repo.repo}' — ` +
-        `reviewing WITHOUT a glossary, so terminology findings are unreliable.`
-    );
-  }
-
-  // Run review
-  const result = await reviewer.reviewPR(
-    prNumber,
-    inputs.sourceRepo,
-    github.context.repo.owner,
-    github.context.repo.repo,
-    inputs.docsFolder,
-    glossaryTerms,
-    targetLanguage,
-    inputs.autoMergeMode
-  );
-
-  // Set outputs
-  core.setOutput('review-verdict', result.verdict);
-  core.setOutput('translation-score', result.translationQuality.score.toString());
-  core.setOutput('diff-score', result.diffQuality.score.toString());
-  core.setOutput('review-recommendation', result.recommendation);
-  core.setOutput('reviewed-head-sha', result.reviewedHeadSha);
-  if (result.wouldAutoMerge !== undefined) {
-    core.setOutput('would-auto-merge', String(result.wouldAutoMerge));
-  }
-
-  // Cost accounting — retries included (#164). Review runs on every
-  // translation PR and previously emitted no token or call count at all.
-  const usage = reviewer.getUsage();
-  core.setOutput('input-tokens', String(usage.inputTokens));
-  core.setOutput('output-tokens', String(usage.outputTokens));
-  core.setOutput('api-calls', String(usage.apiCalls));
-  core.info(
-    `API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens`
-  );
-
-  core.info(
-    `✅ Review complete: ${result.verdict} → ${result.recommendation} (Translation: ${result.translationQuality.score}/10, Diff: ${result.diffQuality.score}/10)`
-  );
-}
-
-/**
- * Detect target language from repository name
- * e.g., 'lecture-python.zh-cn' -> 'zh-cn'
- */
-function detectTargetLanguage(): string | undefined {
-  const repoName = github.context.repo.repo;
-  const match = repoName.match(/\.([a-z]{2}(?:-[a-z]{2})?)$/);
-  return match ? match[1] : undefined;
 }
 
 // =============================================================================
@@ -541,7 +433,7 @@ async function rebaseSinglePR(
   }
 
   // Load glossary
-  const builtInGlossaryDir = path.join(__dirname, '..', 'glossary');
+  const builtInGlossaryDir = getBuiltInGlossaryDir();
   const glossary = await loadGlossary(
     metadata.targetLanguage,
     builtInGlossaryDir,
@@ -814,7 +706,7 @@ async function runSync(): Promise<void> {
   core.info(`Found ${classified.removedTocFiles.length} removed TOC files`);
 
   // Load glossary
-  const builtInGlossaryDir = path.join(__dirname, '..', 'glossary');
+  const builtInGlossaryDir = getBuiltInGlossaryDir();
   const glossary = await loadGlossary(
     inputs.targetLanguage,
     builtInGlossaryDir,
@@ -988,15 +880,6 @@ async function runSync(): Promise<void> {
 // =============================================================================
 // HELPERS - GitHub API content fetching
 // =============================================================================
-
-/**
- * Logger adapter: maps @actions/core to the Logger interface
- */
-const coreLogger: Logger = {
-  info: (msg: string) => core.info(msg),
-  error: (msg: string) => core.error(msg),
-  warning: (msg: string) => core.warning(msg),
-};
 
 /**
  * Fetch file content from a GitHub repo at a specific ref.
