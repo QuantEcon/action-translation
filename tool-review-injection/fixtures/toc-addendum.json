@@ -1,0 +1,25 @@
+[
+  {
+    "id": "deloc-toc-captions-english",
+    "defectClass": "de-localisation (sync path)",
+    "tier": "m0-core",
+    "group": "m0-core",
+    "recipe": "The .md translation is correct, and the same PR gives _toc.yml English part captions in a zh-cn edition — the shape that produced two real false-PASS auto-merges.",
+    "site": "B",
+    "file": "lecture.md",
+    "edits": [],
+    "allowNoEdits": true,
+    "extraFiles": [
+      {
+        "path": "_toc.yml",
+        "content": "format: jb-book\nroot: index\nparts:\n  - caption: Foundations\n    chapters:\n      - file: lecture-minimal\n  - caption: Linear Algebra\n    chapters:\n      - file: lecture\n"
+      }
+    ],
+    "groundTruth": "A zh-cn edition's table-of-contents captions must be Chinese. Introducing English captions is the de-localisation shape observed on lecture-intro.zh-cn#278 (auto-merge, PASS 9/9/9/9, 14 reverted captions) and #296 (PASS 9.3), and two lectures gained their first English captions during the 2026-08-19 drain.",
+    "defectMarker": "caption: Linear Algebra",
+    "expectedCategory": "formatting",
+    "expectedMinSeverity": "major",
+    "replicates": 3,
+    "notes": "Deliberately structural, not linguistic. The .md half is the site-B clean control, so any difference from control-B's verdict is attributable to _toc.yml alone. reviewPR filters the PR's files to those ending .md before any model call, so the prediction is that _toc.yml is never seen and the verdict is indistinguishable from control-B — i.e. catch rate exactly zero for reasons no severity-definition change can reach. Uses the harness's real caption-free _toc.yml as the base, so the fixture reproduces 'gained their first English captions' rather than 'reverted existing ones'; both are the same defect from the reader's side."
+  }
+]

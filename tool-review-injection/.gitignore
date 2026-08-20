@@ -1,0 +1,11 @@
+# Run artefacts. A run's verdicts are archived deliberately in
+# QuantEcon/project-translation `research/<date>-...` — review mode overwrites its
+# comment in place, so the bodies survive nowhere else — and they are far too
+# large to carry here as well.
+runs/
+
+# Derived from fixtures/base + fixtures.json by `build-sites.py` and `run.mjs plan`.
+# Regenerate rather than commit: a stale copy that no longer matches the base
+# state is exactly the silent-drift class this whole tool exists to measure.
+fixtures/sites/
+fixtures/variants/
