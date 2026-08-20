@@ -26,17 +26,37 @@ const rawRows = fs
   .filter(Boolean)
   .map((l) => JSON.parse(l));
 
-// One review, one row. Two capture processes running concurrently can each load
-// state, each see a verdict as uncaptured, and each append it — the append is
-// not atomic across processes. `reviewedHeadSha` identifies the review itself,
-// so it is the key that dedupes; counting a review twice would inflate whichever
-// outcome it happened to have.
+/**
+ * Identity of the review a row describes, for de-duplication.
+ *
+ * Two capture processes running concurrently can each load state, each see a
+ * review as uncaptured, and each append it — the append is not atomic across
+ * processes, and it happened once in the 2026-08-20 run.
+ *
+ * Every row shape needs a key, not just the ones carrying a verdict. A row with
+ * no verdict is exactly the row a duplicate is hardest to notice on, because it
+ * contributes to the denominator without contributing a finding to look at:
+ *
+ *  - a normal row is the review at `reviewedHeadSha`;
+ *  - a `reviewFailed` row is the run that died at `headSha`;
+ *  - an `unparseable` row is the comment revision at `commentUpdatedAt`.
+ *
+ * Falling back to `fixtureId#replicate` as a last resort is deliberate: the
+ * replicate counter is assigned from `captured.length`, so two racing processes
+ * can produce the same value — which is what makes it a de-dup key rather than
+ * a reason to keep both.
+ */
+function reviewIdentity(r) {
+  const sha = r.verdict?.reviewedHeadSha || r.headSha;
+  if (sha) return `${r.fixtureId}@${sha}`;
+  if (r.commentUpdatedAt) return `${r.fixtureId}@comment:${r.commentUpdatedAt}`;
+  return `${r.fixtureId}#${r.replicate}`;
+}
+
 const seenHead = new Set();
 const duplicates = [];
 const rows = rawRows.filter((r) => {
-  const sha = r.verdict?.reviewedHeadSha;
-  if (!sha) return true; // failed runs carry no verdict; keyed by fixture+replicate instead
-  const key = `${r.fixtureId}@${sha}`;
+  const key = reviewIdentity(r);
   if (seenHead.has(key)) { duplicates.push(key); return false; }
   seenHead.add(key);
   return true;
@@ -76,8 +96,8 @@ const ci = (k, n) => { const [lo, hi] = wilson(k, n); return `[${pct(lo)}, ${pct
 /** Background signature of the site's clean control — rule 2. */
 const controlSignatures = {};
 for (const r of rows) {
-  if (r.kind !== 'control' || r.unparseable || r.reviewFailed) continue;
-  const site = r.site;
+  if (fixtureById[r.fixtureId]?.kind !== 'control' || r.unparseable || r.reviewFailed) continue;
+  const site = fixtureById[r.fixtureId]?.site ?? r.site;
   controlSignatures[site] = controlSignatures[site] || [];
   controlSignatures[site].push(surfaces(r.verdict).signature);
 }
@@ -142,11 +162,35 @@ function group(pred, keyFn) {
   return out;
 }
 
-const injections = (r) => r.kind === 'injection';
-const negatives = (r) => r.kind === 'negative';
-const controls = (r) => r.kind === 'control';
+/**
+ * Partition on the fixture, not on whatever the row happened to record.
+ *
+ * A row written by an older runner — or by a path that did not carry the full
+ * fixture identity — has no `kind`, and partitioning on `r.kind` alone drops it
+ * from every aggregate: it disappears from the denominator instead of counting
+ * as the fail-closed datum it is. `fixtureById` is keyed by `fixtureId`, which
+ * every row carries, so it is always the better authority. Rows that need the
+ * fallback are counted and reported rather than quietly repaired.
+ */
+// Counted per ROW, not per lookup: the predicates below are re-evaluated on
+// every `group()` call, so a per-lookup counter would report a multiple of the
+// real number and read as a much bigger anomaly than it is.
+const fellBack = new Set();
+const fixtureFieldOf = (r, field) => {
+  if (r[field] !== undefined && r[field] !== null) return r[field];
+  const f = fixtureById[r.fixtureId];
+  if (f && f[field] !== undefined && f[field] !== null) {
+    fellBack.add(`${r.fixtureId}#${r.replicate}`);
+    return f[field];
+  }
+  return undefined;
+};
 
-const byClass = group(injections, (r) => r.defectClass);
+const injections = (r) => fixtureFieldOf(r, 'kind') === 'injection';
+const negatives = (r) => fixtureFieldOf(r, 'kind') === 'negative';
+const controls = (r) => fixtureFieldOf(r, 'kind') === 'control';
+
+const byClass = group(injections, (r) => fixtureFieldOf(r, 'defectClass'));
 const byFixture = group(injections, (r) => r.fixtureId);
 
 const lines = [];
@@ -288,6 +332,7 @@ const unattributed = scored.filter((r) => r.gatingUnattributed).length;
 P(`- reviews captured: **${scored.length}**` + (duplicates.length ? ` (after removing ${duplicates.length} duplicate row(s) from a concurrent-capture race: ${duplicates.join(', ')})` : ''));
 P(`- unparseable verdict blocks: ${unparse}`);
 P(`- review runs that failed before posting a verdict: ${failedRuns}`);
+P(`- rows whose fixture identity had to be recovered from the fixture set: ${fellBack.size}`);
 P(`- injected reviews with no attribution adjudication: ${unadjudicated}`);
 P(`- gating findings that fired but were NOT attributed to the injection: ${unattributed}`);
 const engineVersions = [...new Set(scored.map((r) => r.verdict?.engineVersion).filter(Boolean))];

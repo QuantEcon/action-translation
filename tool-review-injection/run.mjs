@@ -290,6 +290,31 @@ async function cmdFire() {
 // capture
 // ===========================================================================
 
+/**
+ * The fixture identity every `verdicts.jsonl` row carries, whatever happened to
+ * the review.
+ *
+ * A row that omits these is not merely thinner — `score.mjs` partitions on
+ * `kind` and groups on `defectClass`, so a row without them is excluded from
+ * every aggregate and vanishes from the denominator. That is the one outcome
+ * pre-registered rule 8 forbids, and the rows most likely to lack them (a review
+ * that died, a block that would not parse) are exactly the ones the rule was
+ * written for.
+ */
+function fixtureFields(f) {
+  return {
+    fixtureId: f.id,
+    kind: f.kind,
+    tier: f.tier,
+    defectClass: f.defectClass,
+    recipe: f.recipe,
+    site: f.site,
+    expectedCategory: f.expectedCategory,
+    expectedMinSeverity: f.expectedMinSeverity,
+    defectMarker: f.defectMarker,
+  };
+}
+
 /** Did the review run for this PR's current head sha fail outright? */
 function failedRun(t) {
   try {
@@ -330,7 +355,7 @@ async function cmdCapture() {
       if (failedRun(t)) {
         t.captured.push({ failedRun: true, sha: t.headSha, at: new Date().toISOString() });
         appendJsonl(RUN_ID, 'verdicts.jsonl', {
-          fixtureId: f.id, kind: f.kind, defectClass: f.defectClass,
+          ...fixtureFields(f),
           pr: t.number, replicate: t.captured.length, reviewFailed: true,
           headSha: t.headSha, capturedAt: new Date().toISOString(),
         });
@@ -349,7 +374,8 @@ async function cmdCapture() {
         if (!t.captured.some((c) => c.commentUpdatedAt === comment.updated_at)) {
           t.captured.push({ unparseable: true, commentUpdatedAt: comment.updated_at });
           appendJsonl(RUN_ID, 'verdicts.jsonl', {
-            fixtureId: f.id, pr: t.number, unparseable: true,
+            ...fixtureFields(f),
+            pr: t.number, replicate: t.captured.length, unparseable: true,
             commentUpdatedAt: comment.updated_at, capturedAt: new Date().toISOString(),
           });
           got++;
@@ -364,15 +390,7 @@ async function cmdCapture() {
         recommendation: verdict.recommendation,
       });
       appendJsonl(RUN_ID, 'verdicts.jsonl', {
-        fixtureId: f.id,
-        kind: f.kind,
-        tier: f.tier,
-        defectClass: f.defectClass,
-        recipe: f.recipe,
-        site: f.site,
-        expectedCategory: f.expectedCategory,
-        expectedMinSeverity: f.expectedMinSeverity,
-        defectMarker: f.defectMarker,
+        ...fixtureFields(f),
         pr: t.number,
         replicate: t.captured.length,
         commentId: comment.id,
