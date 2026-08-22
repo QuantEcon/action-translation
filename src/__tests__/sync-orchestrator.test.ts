@@ -17,6 +17,7 @@ import {
   classifyChangedFiles,
   loadGlossary,
   formatGlossaryTerms,
+  removeTocFileEntries,
   SyncOrchestrator,
   FileToSync,
   Logger,
@@ -849,5 +850,290 @@ describe('SyncOrchestrator', () => {
       // 3 top-level sections (## headings)
       expect(state['section-count']).toBe(3);
     });
+  });
+});
+
+// =============================================================================
+// removeTocFileEntries TESTS
+// =============================================================================
+
+describe('removeTocFileEntries', () => {
+  const flatToc = `format: jb-book
+root: intro
+chapters:
+  - file: intro
+  - file: lecture-a
+  - file: lecture-b
+`;
+
+  const partsToc = `format: jb-book
+root: intro
+parts:
+  - caption: Basics
+    chapters:
+      - file: intro
+      - file: lecture-a
+  - caption: Advanced
+    chapters:
+      - file: lecture-b
+      - file: lecture-c
+`;
+
+  it('removes matching entries from flat chapters list', () => {
+    const result = removeTocFileEntries(flatToc, new Set(['lecture-a']));
+
+    const doc = yaml.load(result) as Record<string, unknown>;
+    const chapters = doc.chapters as Array<{ file: string }>;
+    expect(chapters).toHaveLength(2);
+    expect(chapters.map((c) => c.file)).toEqual(['intro', 'lecture-b']);
+  });
+
+  it('removes matching entries from parts chapters lists', () => {
+    const result = removeTocFileEntries(partsToc, new Set(['lecture-a', 'lecture-c']));
+
+    const doc = yaml.load(result) as Record<string, unknown>;
+    const parts = doc.parts as Array<{ chapters: Array<{ file: string }> }>;
+    expect(parts[0].chapters.map((c) => c.file)).toEqual(['intro']);
+    expect(parts[1].chapters.map((c) => c.file)).toEqual(['lecture-b']);
+  });
+
+  it('returns the original string unchanged when no entries match', () => {
+    const result = removeTocFileEntries(flatToc, new Set(['nonexistent']));
+    expect(result).toBe(flatToc);
+  });
+
+  it('returns the original string unchanged for an empty drop set', () => {
+    const result = removeTocFileEntries(flatToc, new Set());
+    expect(result).toBe(flatToc);
+  });
+
+  it('handles subdirectory file stems correctly', () => {
+    const toc = `format: jb-book
+root: intro
+chapters:
+  - file: subdir/lecture-a
+  - file: lecture-b
+`;
+    const result = removeTocFileEntries(toc, new Set(['subdir/lecture-a']));
+    const doc = yaml.load(result) as Record<string, unknown>;
+    const chapters = doc.chapters as Array<{ file: string }>;
+    expect(chapters).toHaveLength(1);
+    expect(chapters[0].file).toBe('lecture-b');
+  });
+
+  it('keeps all entries when drop set is empty', () => {
+    const result = removeTocFileEntries(flatToc, new Set());
+    expect(result).toBe(flatToc);
+  });
+});
+
+// =============================================================================
+// SyncOrchestrator — TOC filtering for failed new files (#156)
+// =============================================================================
+
+describe('SyncOrchestrator — TOC filtering for failed new files (#156)', () => {
+  let orchestrator: SyncOrchestrator;
+  let logger: ReturnType<typeof createTestLogger>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    logger = createTestLogger();
+    orchestrator = new SyncOrchestrator(
+      {
+        sourceLanguage: 'en',
+        targetLanguage: 'zh-cn',
+        claudeModel: 'claude-sonnet-4-20250514',
+        anthropicApiKey: 'test-key',
+        debugMode: false,
+      },
+      logger
+    );
+  });
+
+  it('removes TOC entry for a new file that failed to translate', async () => {
+    const toc = `format: jb-book
+root: intro
+chapters:
+  - file: intro
+  - file: failed-lecture
+  - file: good-lecture
+`;
+    const files: FileToSync[] = [
+      {
+        filename: 'lectures/good-lecture.md',
+        type: 'markdown',
+        newContent: '# Good\n\nContent',
+        isNewFile: true,
+      },
+      {
+        filename: 'lectures/failed-lecture.md',
+        type: 'markdown',
+        // no newContent → will throw "No content provided" inside the loop
+        isNewFile: true,
+      },
+      {
+        filename: 'lectures/_toc.yml',
+        type: 'toc',
+        newContent: toc,
+        isNewFile: false,
+      },
+    ];
+
+    const result = await orchestrator.processFiles(files);
+
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]).toContain('failed-lecture.md');
+
+    const tocEntry = result.translatedFiles.find((f) => f.path === 'lectures/_toc.yml');
+    expect(tocEntry).toBeDefined();
+
+    const doc = yaml.load(tocEntry!.content) as Record<string, unknown>;
+    const chapters = doc.chapters as Array<{ file: string }>;
+    expect(chapters.map((c) => c.file)).not.toContain('failed-lecture');
+    expect(chapters.map((c) => c.file)).toContain('good-lecture');
+    expect(chapters.map((c) => c.file)).toContain('intro');
+  });
+
+  it('keeps TOC entry for an existing file that errored (file already in target)', async () => {
+    const toc = `format: jb-book
+root: intro
+chapters:
+  - file: intro
+  - file: existing-lecture
+`;
+    const files: FileToSync[] = [
+      {
+        filename: 'lectures/existing-lecture.md',
+        type: 'markdown',
+        // no newContent → will throw, but isNewFile is false
+        isNewFile: false,
+        existingFileSha: 'sha-abc',
+      },
+      {
+        filename: 'lectures/_toc.yml',
+        type: 'toc',
+        newContent: toc,
+        isNewFile: false,
+      },
+    ];
+
+    const result = await orchestrator.processFiles(files);
+
+    expect(result.errors).toHaveLength(1);
+
+    const tocEntry = result.translatedFiles.find((f) => f.path === 'lectures/_toc.yml');
+    const doc = yaml.load(tocEntry!.content) as Record<string, unknown>;
+    const chapters = doc.chapters as Array<{ file: string }>;
+    // existing file's TOC entry must stay — the file is already in the target
+    expect(chapters.map((c) => c.file)).toContain('existing-lecture');
+  });
+
+  it('leaves TOC unchanged when no errors occurred', async () => {
+    const toc = `format: jb-book
+root: intro
+chapters:
+  - file: intro
+  - file: lecture-a
+`;
+    const files: FileToSync[] = [
+      {
+        filename: 'lectures/lecture-a.md',
+        type: 'markdown',
+        newContent: '# A\n\nContent',
+        isNewFile: true,
+      },
+      {
+        filename: 'lectures/_toc.yml',
+        type: 'toc',
+        newContent: toc,
+        isNewFile: false,
+      },
+    ];
+
+    const result = await orchestrator.processFiles(files);
+
+    expect(result.errors).toHaveLength(0);
+    const tocEntry = result.translatedFiles.find((f) => f.path === 'lectures/_toc.yml');
+    expect(tocEntry!.content).toBe(toc);
+  });
+
+  it('sets result.failedNewFiles to the filenames of filtered-out files', async () => {
+    const toc = `format: jb-book
+root: intro
+chapters:
+  - file: failed-a
+  - file: failed-b
+  - file: good
+`;
+    const files: FileToSync[] = [
+      { filename: 'lectures/failed-a.md', type: 'markdown', isNewFile: true },
+      { filename: 'lectures/failed-b.md', type: 'markdown', isNewFile: true },
+      {
+        filename: 'lectures/good.md',
+        type: 'markdown',
+        newContent: '# Good\n\nContent',
+        isNewFile: true,
+      },
+      { filename: 'lectures/_toc.yml', type: 'toc', newContent: toc, isNewFile: false },
+    ];
+
+    const result = await orchestrator.processFiles(files);
+
+    expect(result.failedNewFiles).toEqual(
+      expect.arrayContaining(['lectures/failed-a.md', 'lectures/failed-b.md'])
+    );
+    expect(result.failedNewFiles).toHaveLength(2);
+  });
+
+  it('emits a warning log entry when TOC entries are removed', async () => {
+    const toc = `format: jb-book
+root: intro
+chapters:
+  - file: failed-lecture
+`;
+    const files: FileToSync[] = [
+      { filename: 'lectures/failed-lecture.md', type: 'markdown', isNewFile: true },
+      { filename: 'lectures/_toc.yml', type: 'toc', newContent: toc, isNewFile: false },
+    ];
+
+    await orchestrator.processFiles(files);
+
+    const warnings = logger.messages.filter((m) => m.level === 'warning');
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings.some((w) => w.msg.includes('failed-lecture'))).toBe(true);
+    expect(warnings.some((w) => w.msg.includes('_toc.yml'))).toBe(true);
+  });
+
+  it('handles parts-style TOC with a failed new file in one part', async () => {
+    const toc = `format: jb-book
+root: intro
+parts:
+  - caption: Basics
+    chapters:
+      - file: intro
+      - file: failed-lecture
+  - caption: Advanced
+    chapters:
+      - file: advanced
+`;
+    const files: FileToSync[] = [
+      { filename: 'lectures/failed-lecture.md', type: 'markdown', isNewFile: true },
+      {
+        filename: 'lectures/advanced.md',
+        type: 'markdown',
+        newContent: '# Advanced\n\nContent',
+        isNewFile: true,
+      },
+      { filename: 'lectures/_toc.yml', type: 'toc', newContent: toc, isNewFile: false },
+    ];
+
+    const result = await orchestrator.processFiles(files);
+
+    const tocEntry = result.translatedFiles.find((f) => f.path === 'lectures/_toc.yml');
+    const doc = yaml.load(tocEntry!.content) as Record<string, unknown>;
+    const parts = doc.parts as Array<{ caption: string; chapters: Array<{ file: string }> }>;
+
+    expect(parts[0].chapters.map((c) => c.file)).toEqual(['intro']);
+    expect(parts[1].chapters.map((c) => c.file)).toEqual(['advanced']);
   });
 });
