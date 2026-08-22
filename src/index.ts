@@ -834,7 +834,8 @@ async function runSync(): Promise<void> {
         sourcePrInfo,
         result.skippedSections,
         fileMetadata,
-        result.droppedTargetSections
+        result.droppedTargetSections,
+        result.failedNewFiles
       );
 
       prUrl = prResult.prUrl;

@@ -11,6 +11,7 @@
  * Extracted from index.ts for reuse by both GitHub Action and CLI.
  */
 
+import * as yaml from 'js-yaml';
 import { TranslationService } from './translator.js';
 import { FileProcessor } from './file-processor.js';
 import { MystParser } from './parser.js';
@@ -109,6 +110,13 @@ export interface SyncProcessingResult {
   droppedTargetSections: Map<string, string[]>;
   /** What the bibliography backfill did, when it ran (#117). */
   citationBackfill?: CitationPlan;
+  /**
+   * Filenames of *new* files that failed to translate and were therefore
+   * removed from any TOC entries in this run (#156).  Absent when no new
+   * files errored.  The PR creator uses this to add a warning section so
+   * the reviewer understands why the TOC and the file list diverge.
+   */
+  failedNewFiles?: string[];
 }
 
 // =============================================================================
@@ -312,6 +320,69 @@ export function classifyChangedFiles(
 }
 
 // =============================================================================
+// TOC FILTERING
+// =============================================================================
+
+/**
+ * Remove `file:` entries from a _toc.yml YAML string for a given set of
+ * stems (paths relative to the TOC file's directory, without the .md
+ * extension).  Handles both flat `chapters:` and `parts: [{chapters: …}]`
+ * layouts, and recurses into nested chapter lists.
+ *
+ * Returns the *original* string unchanged when no entries match — callers
+ * detect whether filtering occurred by reference equality.
+ *
+ * Exported for unit testing.
+ */
+export function removeTocFileEntries(tocContent: string, entriesToDrop: Set<string>): string {
+  if (entriesToDrop.size === 0) return tocContent;
+
+  const doc = yaml.load(tocContent) as Record<string, unknown> | null;
+  if (!doc || typeof doc !== 'object') return tocContent;
+
+  let changed = false;
+
+  const filterChapters = (chapters: unknown[]): unknown[] => {
+    const kept = chapters.filter((entry) => {
+      if (typeof entry !== 'object' || entry === null) return true;
+      const e = entry as Record<string, unknown>;
+      if (typeof e.file === 'string' && entriesToDrop.has(e.file)) {
+        changed = true;
+        return false;
+      }
+      return true;
+    });
+    for (const entry of kept) {
+      if (typeof entry === 'object' && entry !== null) {
+        const e = entry as Record<string, unknown>;
+        if (Array.isArray(e.chapters)) {
+          e.chapters = filterChapters(e.chapters as unknown[]);
+        }
+      }
+    }
+    return kept;
+  };
+
+  if (Array.isArray(doc.chapters)) {
+    doc.chapters = filterChapters(doc.chapters as unknown[]);
+  }
+  if (Array.isArray(doc.parts)) {
+    for (const part of doc.parts) {
+      if (typeof part === 'object' && part !== null) {
+        const p = part as Record<string, unknown>;
+        if (Array.isArray(p.chapters)) {
+          p.chapters = filterChapters(p.chapters as unknown[]);
+        }
+      }
+    }
+  }
+
+  if (!changed) return tocContent;
+
+  return yaml.dump(doc, { lineWidth: -1 });
+}
+
+// =============================================================================
 // SYNC ORCHESTRATOR
 // =============================================================================
 
@@ -396,6 +467,7 @@ export class SyncOrchestrator {
     }
 
     this.backfillCitations(files, result, bibliography);
+    this.filterTocForFailedNewFiles(files, result);
 
     return result;
   }
@@ -673,6 +745,59 @@ export class SyncOrchestrator {
     });
 
     this.logger.info(`Successfully processed ${file.filename}`);
+  }
+
+  /**
+   * After all per-file processing, drop TOC entries that reference new files
+   * which failed to translate (#156).
+   *
+   * A new file that errored is absent from the target repo — its TOC entry
+   * would create a dangling reference that breaks the target build under
+   * `-n -W` and corrupts cross-references in every sibling lecture that cites
+   * it.  Only new files are candidates: if a file already existed in the
+   * target, its entry belongs in the TOC regardless of whether this run's
+   * update succeeded.
+   */
+  private filterTocForFailedNewFiles(files: FileToSync[], result: SyncProcessingResult): void {
+    if (result.errors.length === 0) return;
+
+    const processedSet = new Set(result.processedFiles);
+
+    const failedNewFiles = files.filter(
+      (f) =>
+        (f.type === 'markdown' || f.type === 'renamed') &&
+        f.isNewFile &&
+        !processedSet.has(f.filename)
+    );
+
+    if (failedNewFiles.length === 0) return;
+
+    result.failedNewFiles = failedNewFiles.map((f) => f.filename);
+
+    for (const translated of result.translatedFiles) {
+      if (!translated.path.endsWith('_toc.yml')) continue;
+
+      const tocDir = path.dirname(translated.path);
+
+      // Convert full filenames to TOC-relative stems (no .md extension)
+      const entriesToDrop = new Set(
+        failedNewFiles.map((f) => {
+          const rel = tocDir === '.' ? f.filename : path.relative(tocDir, f.filename);
+          return rel.replace(/\.md$/, '');
+        })
+      );
+
+      const before = translated.content;
+      const filtered = removeTocFileEntries(before, entriesToDrop);
+
+      if (filtered !== before) {
+        translated.content = filtered;
+        const names = failedNewFiles.map((f) => path.basename(f.filename, '.md')).join(', ');
+        this.logger.warning(
+          `${translated.path}: removed ${names} from TOC — file(s) failed to translate and are absent from the target`
+        );
+      }
+    }
   }
 
   /**

@@ -205,6 +205,33 @@ describe('buildPrBody', () => {
       buildPrBody([], [], baseConfig, undefined, undefined, undefined, undefined, new Map())
     ).not.toContain('Target-Only Sections Removed');
   });
+
+  it('should include failed files notice when failedNewFiles is provided (#156)', () => {
+    const body = buildPrBody(
+      [],
+      [],
+      baseConfig,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      ['lectures/failed-lecture.md', 'lectures/another-failed.md']
+    );
+
+    expect(body).toContain('### ⚠️ Files Failed to Translate');
+    expect(body).toContain('`lectures/failed-lecture.md`');
+    expect(body).toContain('`lectures/another-failed.md`');
+    expect(body).toContain('_toc.yml');
+    expect(body).toContain('failure issue');
+  });
+
+  it('should not include failed files notice when failedNewFiles is absent or empty', () => {
+    expect(buildPrBody([], [], baseConfig)).not.toContain('Files Failed to Translate');
+    expect(
+      buildPrBody([], [], baseConfig, undefined, undefined, undefined, undefined, undefined, [])
+    ).not.toContain('Files Failed to Translate');
+  });
 });
 
 // =============================================================================
