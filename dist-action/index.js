@@ -31900,1077 +31900,6 @@ function validateReviewPREvent(context3) {
   return { prNumber };
 }
 
-// dist/translator.js
-var core2 = __toESM(require_core(), 1);
-var INCOMPLETE_DOCUMENT_MARKER = "-----> INCOMPLETE DOCUMENT <------";
-var RETRY_CONFIG = {
-  maxRetries: 3,
-  baseDelayMs: 1e3
-  // 1s, 2s, 4s with exponential backoff
-};
-function estimateOutputTokens(sourceLength, targetLanguage) {
-  const baseTokens = Math.ceil(sourceLength / 4);
-  let expansionFactor = 1.5;
-  if (["ar", "fa", "he"].includes(targetLanguage)) {
-    expansionFactor = 1.8;
-  }
-  if (["zh", "zh-cn", "zh-tw", "ja", "ko"].includes(targetLanguage)) {
-    expansionFactor = 1.3;
-  }
-  const estimatedTokens = Math.ceil(baseTokens * expansionFactor);
-  const buffer = 2e3;
-  return estimatedTokens + buffer;
-}
-function checkDocumentSize(sourceLength, targetLanguage) {
-  const estimated = estimateOutputTokens(sourceLength, targetLanguage);
-  const API_MAX_TOKENS = MAX_TOKENS.fullDocument;
-  if (estimated > API_MAX_TOKENS) {
-    return `Document too large: estimated ${estimated} tokens exceeds API maximum of ${API_MAX_TOKENS} tokens. This document needs section-by-section translation rather than bulk translation.`;
-  }
-  if (process.env.TRANSLATE_DEBUG) {
-    console.log(`Pre-flight check: source=${sourceLength} chars, estimated output=${estimated} tokens, using max_tokens=${API_MAX_TOKENS}`);
-  }
-  return null;
-}
-function formatApiError(error4) {
-  if (error4 instanceof AuthenticationError) {
-    return "Authentication failed: Invalid or expired API key. Check your anthropic-api-key secret.";
-  }
-  if (error4 instanceof RateLimitError) {
-    return "Rate limit exceeded: Too many requests. The action will retry automatically, or try again later.";
-  }
-  if (error4 instanceof APIConnectionError) {
-    return "Connection error: Unable to reach Anthropic API. Check network connectivity.";
-  }
-  if (error4 instanceof BadRequestError) {
-    return `Bad request: ${error4.message}. This may indicate an issue with the prompt or content.`;
-  }
-  if (error4 instanceof APIError) {
-    if (error4.message?.includes("overloaded")) {
-      return "Anthropic API is temporarily overloaded. Retries exhausted \u2014 please try again later.";
-    }
-    return `API error (${error4.status}): ${error4.message}`;
-  }
-  if (error4 instanceof Error) {
-    return error4.message;
-  }
-  return "Unknown translation error";
-}
-var TranslationService = class {
-  client;
-  model;
-  debug;
-  // Counted at the chokepoint so retried/discarded attempts are included —
-  // the per-result tokensUsed fields miss them (#164/F53).
-  usage = { inputTokens: 0, outputTokens: 0, apiCalls: 0 };
-  constructor(apiKey, model = DEFAULT_CLAUDE_MODEL, debug = false) {
-    this.client = new Anthropic({ apiKey, maxRetries: 0 });
-    this.model = model;
-    this.debug = debug;
-  }
-  log(message) {
-    if (this.debug) {
-      core2.info(`[Translator] ${message}`);
-    }
-  }
-  /** Total API usage this instance has accumulated, retries included. */
-  getUsage() {
-    return { ...this.usage };
-  }
-  /**
-   * Sleep for a given number of milliseconds
-   */
-  sleep(ms) {
-    return new Promise((resolve3) => setTimeout(resolve3, ms));
-  }
-  /**
-   * Call Claude API with retry logic and exponential backoff.
-   *
-   * Retries on transient errors:
-   * - RateLimitError (429)
-   * - APIConnectionError (network issues)
-   * - APIError with 5xx status (server errors)
-   * - APIError with overloaded_error (status undefined)
-   *
-   * Does NOT retry on:
-   * - AuthenticationError (invalid API key)
-   * - BadRequestError (prompt issues)
-   * - Other non-transient errors
-   */
-  async callWithRetry(createParams, operationName) {
-    const { maxRetries, baseDelayMs } = RETRY_CONFIG;
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const stream = this.client.messages.stream({
-          ...createParams,
-          thinking: DEFAULT_THINKING
-        });
-        const message = await stream.finalMessage();
-        this.usage.inputTokens += message.usage.input_tokens;
-        this.usage.outputTokens += message.usage.output_tokens;
-        this.usage.apiCalls += 1;
-        if (message.stop_reason === "max_tokens") {
-          throw new Error(`${operationName}: response truncated at max_tokens=${createParams.max_tokens}; refusing to use incomplete output`);
-        }
-        return message;
-      } catch (error4) {
-        if (error4 instanceof AuthenticationError || error4 instanceof BadRequestError) {
-          throw error4;
-        }
-        const isRetryable = isRetryableAnthropicError(error4);
-        if (!isRetryable || attempt === maxRetries) {
-          throw error4;
-        }
-        const delay = baseDelayMs * Math.pow(2, attempt - 1);
-        this.log(`${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error4 instanceof Error ? error4.message : error4}. Retrying in ${delay}ms...`);
-        await this.sleep(delay);
-      }
-    }
-    throw new Error("Unexpected: retry loop completed without result");
-  }
-  /**
-   * Translate a section (update, new, or resync)
-   */
-  async translateSection(request2) {
-    try {
-      if (request2.mode === "update") {
-        return await this.translateSectionUpdate(request2);
-      } else if (request2.mode === "resync") {
-        return await this.translateSectionResync(request2);
-      } else {
-        return await this.translateNewSection(request2);
-      }
-    } catch (error4) {
-      return {
-        success: false,
-        error: formatApiError(error4)
-      };
-    }
-  }
-  /**
-   * Update existing section (mode='update')
-   * Claude sees: old English, new English, current translation → produces updated translation
-   */
-  async translateSectionUpdate(request2) {
-    const { oldEnglish, newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } = request2;
-    if (!oldEnglish || !newEnglish || !currentTranslation) {
-      return {
-        success: false,
-        error: "Update mode requires oldEnglish, newEnglish, and currentTranslation"
-      };
-    }
-    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
-    const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
-
-TASK: The ${sourceLanguage} section has been modified. Update the existing ${targetLanguage} translation to reflect these changes.
-
-CRITICAL RULES:
-1. Compare the OLD and NEW ${sourceLanguage} versions to understand what changed
-2. Update the CURRENT ${targetLanguage} translation to reflect these changes
-3. Maintain consistency with the existing ${targetLanguage} style and terminology
-4. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
-5. DO NOT translate code, math, URLs, or technical identifiers
-6. **NEVER remove i18n/localization code from code cells.** The translation may contain extra code inside code cells that does NOT exist in the source \u2014 this is intentional localization (e.g., font configuration like \`from matplotlib import font_manager\`, \`fontP.set_family('SimHei')\`, \`plt.rcParams\` settings, or lines marked \`# i18n\`). Always preserve these.
-7. Use the glossary for consistent terminology
-8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
-   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
-   - Code blocks must have matching \`\`\` delimiters
-   - Math blocks must have matching $$ delimiters
-   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
-${additionalRules}
-${additionalRules ? "" : "9. "}Return ONLY the updated ${targetLanguage} section, no explanations
-${request2.customInstructions || ""}
-${glossarySection}
-
-[OLD ${sourceLanguage} VERSION]
-${oldEnglish}
-[/OLD ${sourceLanguage} VERSION]
-
-[NEW ${sourceLanguage} VERSION]
-${newEnglish}
-[/NEW ${sourceLanguage} VERSION]
-
-[CURRENT ${targetLanguage} TRANSLATION]
-${currentTranslation}
-[/CURRENT ${targetLanguage} TRANSLATION]
-
-Provide ONLY the updated ${targetLanguage} translation. Do not include any markers, explanations, or comments.`;
-    this.log(`Translating section update, mode=update`);
-    this.log(`Old ${sourceLanguage} length: ${oldEnglish.length}`);
-    this.log(`New ${sourceLanguage} length: ${newEnglish.length}`);
-    this.log(`Current ${targetLanguage} length: ${currentTranslation.length}`);
-    const response = await this.callWithRetry({
-      model: this.model,
-      max_tokens: MAX_TOKENS.section,
-      messages: [{ role: "user", content: prompt }]
-    }, "translateSectionUpdate");
-    const content = response.content[0];
-    if (!content || content.type !== "text") {
-      return {
-        success: false,
-        error: "Unexpected response format from Claude"
-      };
-    }
-    this.log(`Translated section length: ${content.text.length}`);
-    return {
-      success: true,
-      translatedSection: content.text.trim(),
-      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
-    };
-  }
-  /**
-   * Resync existing section (mode='resync')
-   * Claude sees: current English + current translation → produces resynced translation
-   *
-   * Used for drift recovery when no baseline (old English) is available.
-   * Preserves existing translation style, terminology, and localization
-   * wherever the meaning hasn't changed.
-   */
-  async translateSectionResync(request2) {
-    const { newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } = request2;
-    if (!newEnglish || !currentTranslation) {
-      return {
-        success: false,
-        error: "Resync mode requires newEnglish (current source) and currentTranslation"
-      };
-    }
-    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
-    const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are resyncing a ${targetLanguage} translation to match the current ${sourceLanguage} source.
-
-TASK: The ${sourceLanguage} source may have changed since the translation was made. Update the ${targetLanguage} translation to accurately reflect the current source content.
-
-CRITICAL RULES:
-1. Preserve the existing ${targetLanguage} translation style, terminology choices, and localization decisions wherever the meaning hasn't changed
-2. Only modify parts of the translation where the ${sourceLanguage} source has different content
-3. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
-4. DO NOT translate code, math, URLs, or technical identifiers
-5. **NEVER remove i18n/localization code from code cells.** The translation may contain extra code inside code cells that does NOT exist in the source \u2014 this is intentional localization (e.g., font configuration like \`from matplotlib import font_manager\`, \`fontP.set_family('SimHei')\`, \`plt.rcParams\` settings, or lines marked \`# i18n\`). Always preserve these.
-6. Use the glossary for consistent terminology
-7. MARKDOWN SYNTAX: Ensure proper markdown syntax:
-   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
-   - Code blocks must have matching \`\`\` delimiters
-   - Math blocks must have matching $$ delimiters
-   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
-${additionalRules}
-${additionalRules ? "" : "8. "}Return ONLY the updated ${targetLanguage} section, no explanations
-${request2.customInstructions || ""}
-${glossarySection}
-
-[CURRENT ${sourceLanguage} SOURCE]
-${newEnglish}
-[/CURRENT ${sourceLanguage} SOURCE]
-
-[EXISTING ${targetLanguage} TRANSLATION]
-${currentTranslation}
-[/EXISTING ${targetLanguage} TRANSLATION]
-
-Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing translation's style and only change what's needed to match the current source. Do not include any markers, explanations, or comments.`;
-    this.log(`Translating section resync, mode=resync`);
-    this.log(`Current ${sourceLanguage} length: ${newEnglish.length}`);
-    this.log(`Existing ${targetLanguage} length: ${currentTranslation.length}`);
-    const response = await this.callWithRetry({
-      model: this.model,
-      max_tokens: MAX_TOKENS.section,
-      messages: [{ role: "user", content: prompt }]
-    }, "translateSectionResync");
-    const content = response.content[0];
-    if (!content || content.type !== "text") {
-      return {
-        success: false,
-        error: "Unexpected response format from Claude"
-      };
-    }
-    this.log(`Resynced section length: ${content.text.length}`);
-    return {
-      success: true,
-      translatedSection: content.text.trim(),
-      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
-    };
-  }
-  /**
-   * Translate new section (mode='new')
-   * Claude sees: English section → produces translation
-   */
-  async translateNewSection(request2) {
-    const { englishSection, sourceLanguage, targetLanguage, glossary } = request2;
-    if (!englishSection) {
-      return {
-        success: false,
-        error: "New mode requires englishSection"
-      };
-    }
-    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
-    const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
-
-RULES:
-1. Translate all prose content accurately
-2. Preserve all MyST Markdown formatting, structure, and directives
-3. DO NOT translate code blocks (keep code as-is)
-4. DO NOT translate mathematical equations (keep LaTeX as-is)
-5. DO NOT translate URLs, file paths, or technical identifiers
-6. Use the glossary for consistent terminology
-7. Maintain heading structure and levels
-8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
-   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
-   - Code blocks must have matching \`\`\` delimiters
-   - Math blocks must have matching $$ delimiters
-   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
-${additionalRules}
-${additionalRules ? "" : "9. "}Return ONLY the translated section, no explanations
-${request2.customInstructions || ""}
-${glossarySection}
-
-[${sourceLanguage} SECTION TO TRANSLATE]
-${englishSection}
-[/END SECTION]
-
-Provide ONLY the ${targetLanguage} translation. Do not include any markers, explanations, or comments.`;
-    this.log(`Translating new section, mode=new`);
-    this.log(`${sourceLanguage} section length: ${englishSection.length}`);
-    const response = await this.callWithRetry({
-      model: this.model,
-      max_tokens: MAX_TOKENS.section,
-      messages: [{ role: "user", content: prompt }]
-    }, "translateNewSection");
-    const content = response.content[0];
-    if (!content || content.type !== "text") {
-      return {
-        success: false,
-        error: "Unexpected response format from Claude"
-      };
-    }
-    this.log(`Translated section length: ${content.text.length}`);
-    return {
-      success: true,
-      translatedSection: content.text.trim(),
-      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
-    };
-  }
-  /**
-   * Translate full document (for new files)
-   */
-  async translateFullDocument(request2) {
-    const { content, sourceLanguage, targetLanguage, glossary } = request2;
-    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
-    const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${10 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
-
-RULES:
-1. Translate all prose content
-2. Preserve all MyST Markdown directives and structure exactly
-3. DO NOT translate code blocks (keep code as-is)
-4. DO NOT translate mathematical equations (keep LaTeX as-is)
-5. DO NOT translate URLs, file paths, or technical identifiers
-6. Use the provided glossary for consistent terminology
-7. Maintain the exact same heading structure and anchors
-8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
-   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
-   - Code blocks must have matching \`\`\` delimiters  
-   - Math blocks must have matching $$ delimiters
-   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
-9. DIRECTIVE BLOCKS: MyST directive blocks MUST be balanced:
-   - Every \`\`\`{exercise-start} MUST have matching \`\`\`{exercise-end}
-   - Every \`\`\`{solution-start} MUST have matching \`\`\`{solution-end}
-   - Every \`\`\`{code-cell} MUST have closing \`\`\`
-${additionalRules}
-${request2.customInstructions || ""}
-${glossarySection}
-
-IMPORTANT: You MUST translate the ENTIRE document. Do not stop mid-sentence or mid-code.
-If you are approaching token limits and cannot complete the translation, print:
-"${INCOMPLETE_DOCUMENT_MARKER}"
-
-CONTENT:
-${content}
-
-Provide the complete translated document maintaining exact MyST structure.`;
-    const sizeError = checkDocumentSize(content.length, targetLanguage);
-    if (sizeError) {
-      throw new Error(sizeError);
-    }
-    const maxTokens = MAX_TOKENS.fullDocument;
-    this.log(`Translating full document`);
-    this.log(`Content length: ${content.length} chars`);
-    const response = await this.callWithRetry({
-      model: this.model,
-      max_tokens: maxTokens,
-      messages: [{ role: "user", content: prompt }]
-    }, "translateFullDocument");
-    const result = response.content[0];
-    if (!result || result.type !== "text") {
-      return {
-        success: false,
-        error: "Unexpected response format from Claude"
-      };
-    }
-    const translatedText = result.text.trim();
-    if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
-      return {
-        success: false,
-        error: `Document exceeded token limits and was truncated. This document needs section-by-section translation rather than bulk translation.`
-      };
-    }
-    this.log(`Translation complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
-    return {
-      success: true,
-      translatedSection: translatedText,
-      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
-    };
-  }
-  /**
-   * Resync a full document (whole-file RESYNC for forward command).
-   *
-   * Claude sees the complete SOURCE document and the complete existing TARGET
-   * translation, and produces an updated translation that faithfully reflects
-   * the current source while preserving the existing translation's style,
-   * terminology choices, and localization additions.
-   *
-   * This is the recommended approach over section-by-section RESYNC because:
-   * - Preserves cross-section context (localized plot labels, font config)
-   * - 2-3× cheaper (glossary sent once, not per-section)
-   * - Fewer diff lines (more surgical changes)
-   */
-  async translateDocumentResync(request2) {
-    const { sourceContent, targetContent, sourceLanguage, targetLanguage, glossary } = request2;
-    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
-    const languageConfig = getLanguageConfig(targetLanguage);
-    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are a professional translator specialising in quantitative economics.
-
-You are given:
-1. The **current ${sourceLanguage} source** document (authoritative)
-2. The **current ${targetLanguage} translation** (may be outdated or have errors)
-
-Your task: produce an **updated ${targetLanguage} translation** that accurately reflects the current ${sourceLanguage} source.
-
-## Critical rules
-
-1. **Preserve the existing translation's style, terminology, and localization choices** wherever the meaning hasn't changed. Do NOT re-translate sections that are already correct \u2014 keep them exactly as-is.
-2. **Fix any errors** in the translation \u2014 missing content, incorrect formulas, wrong code, structural differences.
-3. **Add any missing content** that exists in the source but not in the translation.
-4. **Remove any content** that exists in the translation but not in the source \u2014 EXCEPT for i18n/localization additions (see rule 6).
-5. **Preserve all MyST Markdown syntax** exactly \u2014 directives, roles, code blocks, math blocks, cross-references, frontmatter.
-6. **The existing translation's in-code localization is ground truth \u2014 NEVER revert it to ${sourceLanguage}.** Code cells in the translation often deliberately differ from the source: every line containing ${targetLanguage} text or other localization was added on purpose, usually by hand. Apply these rules line by line:
-   - If the source code around a localized line is unchanged: keep that line EXACTLY as it is in the translation.
-   - If the source changed the surrounding code: carry the localization into the updated code \u2014 keep the label/mapping machinery and translate any new user-visible strings to match.
-   - Drop a localized line only when the source removed the code it belongs to entirely.
-   - NEVER replace a localized string with its ${sourceLanguage} source equivalent.
-   Common localization patterns that MUST be preserved:
-   - Font configuration: \`from matplotlib import font_manager\`, \`fontP = font_manager.FontProperties()\`, \`fontP.set_family('SimHei')\`, \`fontP.set_size(14)\`
-   - rcParams: \`plt.rcParams['font.sans-serif'] = ['SimHei']\`, \`plt.rcParams['axes.unicode_minus'] = False\`
-   - Translated plot strings: \`set_xlabel\`/\`set_ylabel\`/\`set_title\`/\`legend\`/\`annotate\`/\`ax.text\` labels, legend-label lists, plotly trace names
-   - Label-translation dicts and column mappings: \`DataFrame.rename\` maps, CSV column-name mappings, country/category name lists, date formatters
-   - Data-source substitutions that load localized data: a read of a file that exists only in the translation repo (e.g. \`pd.read_csv("datasets/country_code_cn.csv")\` or a localized JSON/CSV mapping) and the localized column names selected from it. The file is invisible to you because it lives only in the translation repo \u2014 that is exactly why the substitution was made by hand. Keep the translation's read and its column choices even when the source derives the same data differently, and apply source-side data updates (new rows, categories, entities) THROUGH the localized mechanism rather than reverting to the source's derivation.
-   - Translated \`print()\` strings and docstrings
-   - Any imports, variable assignments, or configuration lines that appear in the translation's code cells but not in the source's code cells
-   - Locale-appropriate reference links
-   - Full-width punctuation where conventionally used
-   - Lines marked with \`# i18n\` comments
-   Keep localized label text as plain strings \u2014 NEVER wrap ${targetLanguage} text in math delimiters (\`$...$\`).
-   When in doubt about whether a code line in the translation is localization, **keep the translation's version**.
-7. **Preserve the frontmatter (YAML between --- markers) from the TARGET translation** \u2014 do not replace it with the source frontmatter. Only update the heading-map if section headings changed.
-8. **Use the glossary below for consistent terminology** \u2014 when a term from the glossary appears, use the specified translation.
-${additionalRules}
-${request2.customInstructions || ""}
-${glossarySection}
-
-## Output format
-
-Return ONLY the complete updated ${targetLanguage} document. No explanations, no commentary, no code fences wrapping the document. Start directly with the document's first line: the frontmatter \`---\` marker if the ${targetLanguage} translation has frontmatter, otherwise its first content line. NEVER add a \`---\` marker to a document that does not have frontmatter.
-
-## Current ${sourceLanguage} Source
-
-${sourceContent}
-
-## Current ${targetLanguage} Translation
-
-${targetContent}`;
-    const sizeError = checkDocumentSize(sourceContent.length + targetContent.length, targetLanguage);
-    if (sizeError) {
-      throw new Error(sizeError);
-    }
-    const maxTokens = MAX_TOKENS.fullDocument;
-    this.log(`Resyncing full document`);
-    this.log(`Source length: ${sourceContent.length} chars`);
-    this.log(`Target length: ${targetContent.length} chars`);
-    try {
-      const response = await this.callWithRetry({
-        model: this.model,
-        max_tokens: maxTokens,
-        messages: [{ role: "user", content: prompt }]
-      }, "translateDocumentResync");
-      const result = response.content[0];
-      if (!result || result.type !== "text") {
-        return {
-          success: false,
-          error: "Unexpected response format from Claude"
-        };
-      }
-      const translatedText = result.text.trim();
-      if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
-        return {
-          success: false,
-          error: `Document exceeded token limits and was truncated. This document may need a simpler resync approach.`
-        };
-      }
-      this.log(`Resync complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
-      return {
-        success: true,
-        translatedSection: translatedText,
-        tokensUsed: response.usage.input_tokens + response.usage.output_tokens
-      };
-    } catch (error4) {
-      return {
-        success: false,
-        error: formatApiError(error4)
-      };
-    }
-  }
-  /**
-   * Format glossary for inclusion in prompt
-   */
-  formatGlossary(glossary, targetLanguage) {
-    if (!glossary.terms || glossary.terms.length === 0) {
-      return "";
-    }
-    const terms = glossary.terms.filter((term) => {
-      if (typeof term[targetLanguage] === "string" && term[targetLanguage] !== "") {
-        return true;
-      }
-      this.log(`Glossary term "${term.en}" has no ${targetLanguage} translation \u2014 skipped`);
-      return false;
-    }).map((term) => {
-      const translation = term[targetLanguage];
-      const context3 = term.context ? ` (${term.context})` : "";
-      return `  - "${term.en}" \u2192 "${translation}"${context3}`;
-    }).join("\n");
-    return `GLOSSARY:
-${terms}
-`;
-  }
-};
-
-// dist/parser.js
-var MystParser = class _MystParser {
-  /**
-   * Parse markdown content into sections based on ## headings
-   * Each section includes all content until the next ## heading
-   * Handles arbitrary nesting depth (##, ###, ####, #####, ######)
-   */
-  async parseSections(content, filepath) {
-    const lines = content.split("\n");
-    const sections = [];
-    let frontmatter;
-    let preamble;
-    let contentStartIndex = 0;
-    if (lines[0] === "---") {
-      const endIndex = lines.slice(1).findIndex((line) => line === "---");
-      if (endIndex !== -1) {
-        frontmatter = lines.slice(0, endIndex + 2).join("\n");
-        contentStartIndex = endIndex + 2;
-      }
-    }
-    const firstSectionIndex = lines.slice(contentStartIndex).findIndex((line) => line.match(/^##\s+/));
-    if (firstSectionIndex !== -1) {
-      const preambleLines = lines.slice(contentStartIndex, contentStartIndex + firstSectionIndex);
-      const preambleText = preambleLines.join("\n").trim();
-      if (preambleText) {
-        preamble = preambleText;
-      }
-      contentStartIndex = contentStartIndex + firstSectionIndex;
-    } else {
-      const preambleLines = lines.slice(contentStartIndex);
-      const preambleText = preambleLines.join("\n").trim();
-      if (preambleText) {
-        preamble = preambleText;
-      }
-      contentStartIndex = lines.length;
-    }
-    const sectionStack = [];
-    for (let i = contentStartIndex; i < lines.length; i++) {
-      const line = lines[i];
-      const lineNum = i + 1;
-      const headingMatch = line.match(/^(#{2,6})\s+(.+)$/);
-      if (headingMatch) {
-        const level = headingMatch[1].length;
-        const headingText = headingMatch[2];
-        const id = this.generateHeadingId(headingText);
-        const newSection = {
-          heading: line,
-          level,
-          id,
-          content: line + "\n",
-          startLine: lineNum,
-          endLine: lineNum,
-          subsections: []
-        };
-        if (level > 2 && sectionStack.length > 0) {
-          newSection.parentId = sectionStack[sectionStack.length - 1].id;
-        }
-        while (sectionStack.length > 0 && sectionStack[sectionStack.length - 1].level >= level) {
-          const completed = sectionStack.pop();
-          completed.endLine = lineNum - 1;
-          if (sectionStack.length > 0) {
-            sectionStack[sectionStack.length - 1].subsections.push(completed);
-          } else {
-            sections.push(completed);
-          }
-        }
-        sectionStack.push(newSection);
-        continue;
-      }
-      if (sectionStack.length > 0) {
-        const currentDeepest = sectionStack[sectionStack.length - 1];
-        currentDeepest.content += line + "\n";
-        currentDeepest.endLine = lineNum;
-      }
-    }
-    while (sectionStack.length > 0) {
-      const completed = sectionStack.pop();
-      if (sectionStack.length > 0) {
-        sectionStack[sectionStack.length - 1].subsections.push(completed);
-      } else {
-        sections.push(completed);
-      }
-    }
-    const trimSection = (section) => {
-      section.content = section.content.trimEnd();
-      section.subsections.forEach(trimSection);
-    };
-    sections.forEach(trimSection);
-    return {
-      sections,
-      frontmatter,
-      preamble,
-      metadata: {
-        filepath,
-        totalLines: lines.length,
-        sectionCount: sections.length
-      }
-    };
-  }
-  /**
-   * Strip MyST inline roles from heading text to extract display text.
-   * Handles single roles, multiple roles, and mixed role+text headings.
-   * e.g. "{index}`Pandas <single: Pandas>`" → "Pandas"
-   *      "{role}`Simple Text`" → "Simple Text"
-   *      "The {index}`Newton-Raphson Method <single: Newton-Raphson Method>`" → "The Newton-Raphson Method"
-   *      "{index}`Mutable <single: Mutable>` Versus {index}`Immutable <single: Immutable>` Parameters" → "Mutable Versus Immutable Parameters"
-   *      "Plain Heading" → "Plain Heading"
-   */
-  static stripMystRoles(text) {
-    let result = text;
-    result = result.replace(/\{[^}]+\}`([^`]+?)\s*<[^>]+>`/g, (_match, display) => display.trim());
-    result = result.replace(/\{[^}]+\}`([^`]+?)`/g, (_match, display) => display.trim());
-    return result.trim();
-  }
-  /**
-   * Generate heading ID/anchor from heading text
-   * Follows the same rules as MyST/Sphinx for consistency.
-   * Uses Unicode-aware matching to preserve non-Latin scripts
-   * (Chinese, Arabic, Japanese, etc.) in heading IDs.
-   */
-  generateHeadingId(text) {
-    return text.toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim();
-  }
-  /**
-   * Find a section by ID (searches recursively through subsections)
-   */
-  findSectionById(sections, id) {
-    for (const section of sections) {
-      if (section.id === id) {
-        return section;
-      }
-      const found = this.findSectionById(section.subsections, id);
-      if (found) {
-        return found;
-      }
-    }
-    return void 0;
-  }
-  /**
-   * Find section by position/index
-   */
-  findSectionByPosition(sections, index) {
-    return sections[index];
-  }
-  /**
-   * Parse document into explicit components: CONFIG + TITLE + INTRO + SECTIONS
-   *
-   * This provides a more structured view of the document that ensures
-   * complete reconstruction by always including all components.
-   *
-   * @param content - The markdown content to parse
-   * @param filepath - Path to the file (for metadata)
-   * @returns DocumentComponents with all parts explicitly separated
-   */
-  async parseDocumentComponents(content, filepath) {
-    const parsed = await this.parseSections(content, filepath);
-    const lines = content.split("\n");
-    let contentStartIndex = 0;
-    const config = parsed.frontmatter || "";
-    if (config) {
-      const configLines = config.split("\n");
-      contentStartIndex = configLines.length;
-    }
-    let title = "";
-    let titleText = "";
-    const preTitleLines = [];
-    let titleEndIndex = contentStartIndex;
-    let insideFence = false;
-    while (titleEndIndex < lines.length) {
-      const line = lines[titleEndIndex];
-      if (line.match(/^(`{3,}|~{3,})/)) {
-        insideFence = !insideFence;
-        preTitleLines.push(line);
-        titleEndIndex++;
-        continue;
-      }
-      if (insideFence) {
-        preTitleLines.push(line);
-        titleEndIndex++;
-        continue;
-      }
-      const titleMatch = line.match(/^#\s+(.+)$/);
-      if (titleMatch) {
-        title = line;
-        titleText = _MystParser.stripMystRoles(titleMatch[1]);
-        titleEndIndex++;
-        break;
-      }
-      preTitleLines.push(line);
-      titleEndIndex++;
-    }
-    const preTitle = preTitleLines.join("\n").trim();
-    if (!title) {
-      throw new Error("Document must have a # title heading");
-    }
-    let intro = "";
-    const introEndIndex = parsed.sections.length > 0 ? parsed.sections[0].startLine - 1 : lines.length;
-    intro = lines.slice(titleEndIndex, introEndIndex).join("\n").trim();
-    const sections = parsed.sections;
-    return {
-      config,
-      preTitle,
-      title,
-      titleText,
-      intro,
-      sections,
-      metadata: {
-        filepath,
-        totalLines: lines.length,
-        sectionCount: sections.length
-      }
-    };
-  }
-};
-
-// dist/diff-detector.js
-var core3 = __toESM(require_core(), 1);
-var DiffDetector = class {
-  parser;
-  debug;
-  constructor(debug = false) {
-    this.parser = new MystParser();
-    this.debug = debug;
-  }
-  log(message) {
-    if (this.debug) {
-      core3.info(`[DiffDetector] ${message}`);
-    }
-  }
-  /**
-   * Detect section-level changes between old and new documents
-   * Also detects preamble changes (title and intro before first ## section)
-   */
-  async detectSectionChanges(oldContent, newContent, filepath) {
-    this.log(`Detecting section changes in ${filepath}`);
-    const oldSections = await this.parser.parseSections(oldContent, filepath);
-    const newSections = await this.parser.parseSections(newContent, filepath);
-    this.log(`Old document: ${oldSections.sections.length} sections`);
-    this.log(`New document: ${newSections.sections.length} sections`);
-    const changes = [];
-    const processedOldSections = /* @__PURE__ */ new Set();
-    if (oldSections.preamble !== newSections.preamble) {
-      const oldPreamble = oldSections.preamble?.trim() || "";
-      const newPreamble = newSections.preamble?.trim() || "";
-      if (oldPreamble !== newPreamble) {
-        this.log(`PREAMBLE MODIFIED: Content changed`);
-        changes.push({
-          type: "modified",
-          oldSection: {
-            id: "_preamble",
-            heading: "",
-            // Preamble has no heading
-            level: 0,
-            // Special level for preamble
-            content: oldPreamble,
-            startLine: 1,
-            endLine: 1,
-            subsections: []
-          },
-          newSection: {
-            id: "_preamble",
-            heading: "",
-            level: 0,
-            content: newPreamble,
-            startLine: 1,
-            endLine: 1,
-            subsections: []
-          }
-        });
-      }
-    }
-    for (let i = 0; i < newSections.sections.length; i++) {
-      const newSection = newSections.sections[i];
-      const oldSectionByPosition = oldSections.sections[i];
-      const oldSectionById = this.parser.findSectionById(oldSections.sections, newSection.id);
-      let matchedOldSection;
-      if (oldSectionByPosition && this.sectionsMatch(oldSectionByPosition, newSection)) {
-        matchedOldSection = oldSectionByPosition;
-        this.log(`Matched section "${newSection.heading}" by position ${i}`);
-      } else if (oldSectionById) {
-        matchedOldSection = oldSectionById;
-        this.log(`Matched section "${newSection.heading}" by ID "${newSection.id}"`);
-      }
-      if (!matchedOldSection) {
-        this.log(`ADDED: Section "${newSection.heading}" at position ${i}`);
-        changes.push({
-          type: "added",
-          newSection,
-          position: {
-            index: i,
-            afterSectionId: i > 0 ? newSections.sections[i - 1].id : void 0
-          }
-        });
-      } else {
-        processedOldSections.add(matchedOldSection.id);
-        if (!this.sectionContentEqual(matchedOldSection, newSection)) {
-          this.log(`MODIFIED: Section "${newSection.heading}"`);
-          changes.push({
-            type: "modified",
-            oldSection: matchedOldSection,
-            newSection
-          });
-        } else {
-          this.log(`UNCHANGED: Section "${newSection.heading}"`);
-        }
-      }
-    }
-    for (const oldSection of oldSections.sections) {
-      if (!processedOldSections.has(oldSection.id)) {
-        this.log(`DELETED: Section "${oldSection.heading}"`);
-        changes.push({
-          type: "deleted",
-          oldSection
-        });
-      }
-    }
-    this.log(`Total section changes detected: ${changes.length}`);
-    return changes;
-  }
-  /**
-   * Check if two sections match (for position-based matching)
-   * Sections match if they have the same ID (heading)
-   *
-   * Note: We used to check structural similarity (level + subsection count),
-   * but this caused false matches when inserting new sections.
-   * Now we require ID match for position-based matching.
-   */
-  sectionsMatch(section1, section2) {
-    return section1.id === section2.id;
-  }
-  /**
-   * Check if section content has changed (including all nested subsections recursively)
-   */
-  sectionContentEqual(section1, section2) {
-    if (section1.content.trim() !== section2.content.trim()) {
-      return false;
-    }
-    if (section1.subsections.length !== section2.subsections.length) {
-      return false;
-    }
-    for (let i = 0; i < section1.subsections.length; i++) {
-      if (!this.sectionContentEqual(section1.subsections[i], section2.subsections[i])) {
-        return false;
-      }
-    }
-    return true;
-  }
-};
-
-// dist/typography.js
-var NBSP = "\xA0";
-var EXISTING_NBSP = /[\u00A0\u202F]/;
-var HIGH_PUNCTUATION = /[;:!?]/;
-var PROSE_DIRECTIVES = /* @__PURE__ */ new Set([
-  "admonition",
-  "attention",
-  "caution",
-  "danger",
-  "error",
-  "hint",
-  "important",
-  "note",
-  "seealso",
-  "tip",
-  "warning",
-  "exercise",
-  "exercise-start",
-  "exercise-end",
-  "solution",
-  "solution-start",
-  "solution-end",
-  "epigraph",
-  "margin",
-  "sidebar",
-  "topic",
-  "card",
-  "grid-item-card",
-  "proof",
-  "theorem",
-  "lemma",
-  "corollary",
-  "definition",
-  "remark",
-  "conjecture"
-]);
-var FENCE_OPEN = /^(\s{0,3})(`{3,}|~{3,}|:{3,})\s*(?:\{([\w:-]+)\})?/;
-var DIRECTIVE_OPTION = /^\s*:[a-zA-Z][\w-]*:/;
-var MATH_DELIM = /\$\$/g;
-function classifyLines(lines) {
-  const eligible = new Array(lines.length).fill(false);
-  const stack = [];
-  let inFrontmatter = false;
-  let inMathBlock = false;
-  let awaitingOptions = false;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (i === 0 && line.trim() === "---") {
-      inFrontmatter = true;
-      continue;
-    }
-    if (inFrontmatter) {
-      if (line.trim() === "---")
-        inFrontmatter = false;
-      continue;
-    }
-    const top = stack[stack.length - 1];
-    const open = FENCE_OPEN.exec(line);
-    if (top && !top.prose) {
-      if (open) {
-        const [, , marker, directive] = open;
-        if (!directive && marker[0] === top.marker[0] && marker.length >= top.marker.length)
-          stack.pop();
-      }
-      continue;
-    }
-    const delimiters = (line.match(MATH_DELIM) || []).length;
-    if (inMathBlock || delimiters > 0) {
-      if (delimiters % 2 === 1)
-        inMathBlock = !inMathBlock;
-      continue;
-    }
-    if (open) {
-      const [, , marker, directive] = open;
-      if (top && !directive && marker[0] === top.marker[0] && marker.length >= top.marker.length) {
-        stack.pop();
-        continue;
-      }
-      const prose = Boolean(directive) && PROSE_DIRECTIVES.has(directive.toLowerCase());
-      stack.push({ marker, prose });
-      awaitingOptions = prose;
-      continue;
-    }
-    if (!top) {
-      eligible[i] = true;
-      continue;
-    }
-    if (awaitingOptions) {
-      if (DIRECTIVE_OPTION.test(line))
-        continue;
-      if (line.trim() === "")
-        continue;
-      awaitingOptions = false;
-    }
-    eligible[i] = true;
-  }
-  return eligible;
-}
-var INLINE_PROTECTED = [
-  /\$[^$\n]+\$/g,
-  // inline math
-  /`[^`\n]+`/g,
-  // inline code — also covers MyST roles: {doc}`intro <sec:intro>`
-  /!?\[[^\]]*\]\([^)]*\)/g,
-  // links and images, including the URL
-  /<[^>\n]+>/g,
-  // HTML tags and autolinks
-  /&(?:[a-zA-Z]+\d*|#\d+|#x[0-9a-fA-F]+);/g,
-  // HTML entities — &nbsp; ends in ;
-  /https?:\/\/\S+/g
-  // bare URLs
-];
-var PLACEHOLDER = "\0";
-function applyFrenchSpacing(text) {
-  return text.replace(/(\S)([ \t]*)([;:!?]+)(?=[\s)\]»"'.,]|$)/g, (match, before, gap, run2) => {
-    if (EXISTING_NBSP.test(before))
-      return match;
-    if (before === "\\")
-      return match;
-    if (HIGH_PUNCTUATION.test(before))
-      return match;
-    if (gap.length === 0 && /\d/.test(before) && run2 === ":")
-      return match;
-    return `${before}${NBSP}${run2}`;
-  });
-}
-var DEFINITION_LABEL = /^\s{0,3}\[[^\]]*\]:/;
-var DEFINITION_CORRUPTED = /^(\s{0,3}\[[^\]]*\])[\u00A0\u202F]+:/;
-function applyToProse(line, rule) {
-  const chunks = [];
-  let masked = line.replace(DEFINITION_CORRUPTED, "$1:");
-  masked = masked.replace(DEFINITION_LABEL, (m) => {
-    chunks.push(m);
-    return `${PLACEHOLDER}${chunks.length - 1}${PLACEHOLDER}`;
-  });
-  for (const pattern of INLINE_PROTECTED) {
-    masked = masked.replace(pattern, (m) => {
-      chunks.push(m);
-      return `${PLACEHOLDER}${chunks.length - 1}${PLACEHOLDER}`;
-    });
-  }
-  if (/^\s*\([^)\n]*\)=\s*$/.test(masked))
-    return line;
-  let out = rule(masked);
-  for (let i = 0; i < INLINE_PROTECTED.length + 1; i++) {
-    const next = out.replace(new RegExp(`${PLACEHOLDER}(\\d+)${PLACEHOLDER}`, "g"), (_, idx) => chunks[Number(idx)] ?? "");
-    if (next === out)
-      break;
-    out = next;
-  }
-  return out;
-}
-var RULES = /* @__PURE__ */ new Map([["fr", applyFrenchSpacing]]);
-function applyTypography(content, language) {
-  const rule = RULES.get(language);
-  if (!rule)
-    return content;
-  const lines = content.split("\n");
-  const eligible = classifyLines(lines);
-  return lines.map((line, i) => eligible[i] ? applyToProse(line, rule) : line).join("\n");
-}
-
-// dist/file-processor.js
-var core5 = __toESM(require_core(), 1);
-
 // node_modules/js-yaml/dist/js-yaml.mjs
 function getDefaultExportFromCjs(x) {
   return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, "default") ? x["default"] : x;
@@ -33645,13 +32574,13 @@ function requireJson() {
   });
   return json;
 }
-var core4;
+var core2;
 var hasRequiredCore;
 function requireCore() {
-  if (hasRequiredCore) return core4;
+  if (hasRequiredCore) return core2;
   hasRequiredCore = 1;
-  core4 = requireJson();
-  return core4;
+  core2 = requireJson();
+  return core2;
 }
 var timestamp;
 var hasRequiredTimestamp;
@@ -36029,6 +34958,1077 @@ var {
   safeDump
 } = yaml;
 
+// dist/translator.js
+var core3 = __toESM(require_core(), 1);
+var INCOMPLETE_DOCUMENT_MARKER = "-----> INCOMPLETE DOCUMENT <------";
+var RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 1e3
+  // 1s, 2s, 4s with exponential backoff
+};
+function estimateOutputTokens(sourceLength, targetLanguage) {
+  const baseTokens = Math.ceil(sourceLength / 4);
+  let expansionFactor = 1.5;
+  if (["ar", "fa", "he"].includes(targetLanguage)) {
+    expansionFactor = 1.8;
+  }
+  if (["zh", "zh-cn", "zh-tw", "ja", "ko"].includes(targetLanguage)) {
+    expansionFactor = 1.3;
+  }
+  const estimatedTokens = Math.ceil(baseTokens * expansionFactor);
+  const buffer = 2e3;
+  return estimatedTokens + buffer;
+}
+function checkDocumentSize(sourceLength, targetLanguage) {
+  const estimated = estimateOutputTokens(sourceLength, targetLanguage);
+  const API_MAX_TOKENS = MAX_TOKENS.fullDocument;
+  if (estimated > API_MAX_TOKENS) {
+    return `Document too large: estimated ${estimated} tokens exceeds API maximum of ${API_MAX_TOKENS} tokens. This document needs section-by-section translation rather than bulk translation.`;
+  }
+  if (process.env.TRANSLATE_DEBUG) {
+    console.log(`Pre-flight check: source=${sourceLength} chars, estimated output=${estimated} tokens, using max_tokens=${API_MAX_TOKENS}`);
+  }
+  return null;
+}
+function formatApiError(error4) {
+  if (error4 instanceof AuthenticationError) {
+    return "Authentication failed: Invalid or expired API key. Check your anthropic-api-key secret.";
+  }
+  if (error4 instanceof RateLimitError) {
+    return "Rate limit exceeded: Too many requests. The action will retry automatically, or try again later.";
+  }
+  if (error4 instanceof APIConnectionError) {
+    return "Connection error: Unable to reach Anthropic API. Check network connectivity.";
+  }
+  if (error4 instanceof BadRequestError) {
+    return `Bad request: ${error4.message}. This may indicate an issue with the prompt or content.`;
+  }
+  if (error4 instanceof APIError) {
+    if (error4.message?.includes("overloaded")) {
+      return "Anthropic API is temporarily overloaded. Retries exhausted \u2014 please try again later.";
+    }
+    return `API error (${error4.status}): ${error4.message}`;
+  }
+  if (error4 instanceof Error) {
+    return error4.message;
+  }
+  return "Unknown translation error";
+}
+var TranslationService = class {
+  client;
+  model;
+  debug;
+  // Counted at the chokepoint so retried/discarded attempts are included —
+  // the per-result tokensUsed fields miss them (#164/F53).
+  usage = { inputTokens: 0, outputTokens: 0, apiCalls: 0 };
+  constructor(apiKey, model = DEFAULT_CLAUDE_MODEL, debug = false) {
+    this.client = new Anthropic({ apiKey, maxRetries: 0 });
+    this.model = model;
+    this.debug = debug;
+  }
+  log(message) {
+    if (this.debug) {
+      core3.info(`[Translator] ${message}`);
+    }
+  }
+  /** Total API usage this instance has accumulated, retries included. */
+  getUsage() {
+    return { ...this.usage };
+  }
+  /**
+   * Sleep for a given number of milliseconds
+   */
+  sleep(ms) {
+    return new Promise((resolve3) => setTimeout(resolve3, ms));
+  }
+  /**
+   * Call Claude API with retry logic and exponential backoff.
+   *
+   * Retries on transient errors:
+   * - RateLimitError (429)
+   * - APIConnectionError (network issues)
+   * - APIError with 5xx status (server errors)
+   * - APIError with overloaded_error (status undefined)
+   *
+   * Does NOT retry on:
+   * - AuthenticationError (invalid API key)
+   * - BadRequestError (prompt issues)
+   * - Other non-transient errors
+   */
+  async callWithRetry(createParams, operationName) {
+    const { maxRetries, baseDelayMs } = RETRY_CONFIG;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const stream = this.client.messages.stream({
+          ...createParams,
+          thinking: DEFAULT_THINKING
+        });
+        const message = await stream.finalMessage();
+        this.usage.inputTokens += message.usage.input_tokens;
+        this.usage.outputTokens += message.usage.output_tokens;
+        this.usage.apiCalls += 1;
+        if (message.stop_reason === "max_tokens") {
+          throw new Error(`${operationName}: response truncated at max_tokens=${createParams.max_tokens}; refusing to use incomplete output`);
+        }
+        return message;
+      } catch (error4) {
+        if (error4 instanceof AuthenticationError || error4 instanceof BadRequestError) {
+          throw error4;
+        }
+        const isRetryable = isRetryableAnthropicError(error4);
+        if (!isRetryable || attempt === maxRetries) {
+          throw error4;
+        }
+        const delay = baseDelayMs * Math.pow(2, attempt - 1);
+        this.log(`${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error4 instanceof Error ? error4.message : error4}. Retrying in ${delay}ms...`);
+        await this.sleep(delay);
+      }
+    }
+    throw new Error("Unexpected: retry loop completed without result");
+  }
+  /**
+   * Translate a section (update, new, or resync)
+   */
+  async translateSection(request2) {
+    try {
+      if (request2.mode === "update") {
+        return await this.translateSectionUpdate(request2);
+      } else if (request2.mode === "resync") {
+        return await this.translateSectionResync(request2);
+      } else {
+        return await this.translateNewSection(request2);
+      }
+    } catch (error4) {
+      return {
+        success: false,
+        error: formatApiError(error4)
+      };
+    }
+  }
+  /**
+   * Update existing section (mode='update')
+   * Claude sees: old English, new English, current translation → produces updated translation
+   */
+  async translateSectionUpdate(request2) {
+    const { oldEnglish, newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } = request2;
+    if (!oldEnglish || !newEnglish || !currentTranslation) {
+      return {
+        success: false,
+        error: "Update mode requires oldEnglish, newEnglish, and currentTranslation"
+      };
+    }
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
+    const prompt = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
+
+TASK: The ${sourceLanguage} section has been modified. Update the existing ${targetLanguage} translation to reflect these changes.
+
+CRITICAL RULES:
+1. Compare the OLD and NEW ${sourceLanguage} versions to understand what changed
+2. Update the CURRENT ${targetLanguage} translation to reflect these changes
+3. Maintain consistency with the existing ${targetLanguage} style and terminology
+4. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
+5. DO NOT translate code, math, URLs, or technical identifiers
+6. **NEVER remove i18n/localization code from code cells.** The translation may contain extra code inside code cells that does NOT exist in the source \u2014 this is intentional localization (e.g., font configuration like \`from matplotlib import font_manager\`, \`fontP.set_family('SimHei')\`, \`plt.rcParams\` settings, or lines marked \`# i18n\`). Always preserve these.
+7. Use the glossary for consistent terminology
+8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters
+   - Math blocks must have matching $$ delimiters
+   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
+${additionalRules}
+${additionalRules ? "" : "9. "}Return ONLY the updated ${targetLanguage} section, no explanations
+${request2.customInstructions || ""}
+${glossarySection}
+
+[OLD ${sourceLanguage} VERSION]
+${oldEnglish}
+[/OLD ${sourceLanguage} VERSION]
+
+[NEW ${sourceLanguage} VERSION]
+${newEnglish}
+[/NEW ${sourceLanguage} VERSION]
+
+[CURRENT ${targetLanguage} TRANSLATION]
+${currentTranslation}
+[/CURRENT ${targetLanguage} TRANSLATION]
+
+Provide ONLY the updated ${targetLanguage} translation. Do not include any markers, explanations, or comments.`;
+    this.log(`Translating section update, mode=update`);
+    this.log(`Old ${sourceLanguage} length: ${oldEnglish.length}`);
+    this.log(`New ${sourceLanguage} length: ${newEnglish.length}`);
+    this.log(`Current ${targetLanguage} length: ${currentTranslation.length}`);
+    const response = await this.callWithRetry({
+      model: this.model,
+      max_tokens: MAX_TOKENS.section,
+      messages: [{ role: "user", content: prompt }]
+    }, "translateSectionUpdate");
+    const content = response.content[0];
+    if (!content || content.type !== "text") {
+      return {
+        success: false,
+        error: "Unexpected response format from Claude"
+      };
+    }
+    this.log(`Translated section length: ${content.text.length}`);
+    return {
+      success: true,
+      translatedSection: content.text.trim(),
+      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
+    };
+  }
+  /**
+   * Resync existing section (mode='resync')
+   * Claude sees: current English + current translation → produces resynced translation
+   *
+   * Used for drift recovery when no baseline (old English) is available.
+   * Preserves existing translation style, terminology, and localization
+   * wherever the meaning hasn't changed.
+   */
+  async translateSectionResync(request2) {
+    const { newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary } = request2;
+    if (!newEnglish || !currentTranslation) {
+      return {
+        success: false,
+        error: "Resync mode requires newEnglish (current source) and currentTranslation"
+      };
+    }
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join("\n") : "";
+    const prompt = `You are resyncing a ${targetLanguage} translation to match the current ${sourceLanguage} source.
+
+TASK: The ${sourceLanguage} source may have changed since the translation was made. Update the ${targetLanguage} translation to accurately reflect the current source content.
+
+CRITICAL RULES:
+1. Preserve the existing ${targetLanguage} translation style, terminology choices, and localization decisions wherever the meaning hasn't changed
+2. Only modify parts of the translation where the ${sourceLanguage} source has different content
+3. Preserve all MyST Markdown formatting, code blocks, math equations, and directives
+4. DO NOT translate code, math, URLs, or technical identifiers
+5. **NEVER remove i18n/localization code from code cells.** The translation may contain extra code inside code cells that does NOT exist in the source \u2014 this is intentional localization (e.g., font configuration like \`from matplotlib import font_manager\`, \`fontP.set_family('SimHei')\`, \`plt.rcParams\` settings, or lines marked \`# i18n\`). Always preserve these.
+6. Use the glossary for consistent terminology
+7. MARKDOWN SYNTAX: Ensure proper markdown syntax:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters
+   - Math blocks must have matching $$ delimiters
+   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
+${additionalRules}
+${additionalRules ? "" : "8. "}Return ONLY the updated ${targetLanguage} section, no explanations
+${request2.customInstructions || ""}
+${glossarySection}
+
+[CURRENT ${sourceLanguage} SOURCE]
+${newEnglish}
+[/CURRENT ${sourceLanguage} SOURCE]
+
+[EXISTING ${targetLanguage} TRANSLATION]
+${currentTranslation}
+[/EXISTING ${targetLanguage} TRANSLATION]
+
+Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing translation's style and only change what's needed to match the current source. Do not include any markers, explanations, or comments.`;
+    this.log(`Translating section resync, mode=resync`);
+    this.log(`Current ${sourceLanguage} length: ${newEnglish.length}`);
+    this.log(`Existing ${targetLanguage} length: ${currentTranslation.length}`);
+    const response = await this.callWithRetry({
+      model: this.model,
+      max_tokens: MAX_TOKENS.section,
+      messages: [{ role: "user", content: prompt }]
+    }, "translateSectionResync");
+    const content = response.content[0];
+    if (!content || content.type !== "text") {
+      return {
+        success: false,
+        error: "Unexpected response format from Claude"
+      };
+    }
+    this.log(`Resynced section length: ${content.text.length}`);
+    return {
+      success: true,
+      translatedSection: content.text.trim(),
+      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
+    };
+  }
+  /**
+   * Translate new section (mode='new')
+   * Claude sees: English section → produces translation
+   */
+  async translateNewSection(request2) {
+    const { englishSection, sourceLanguage, targetLanguage, glossary } = request2;
+    if (!englishSection) {
+      return {
+        success: false,
+        error: "New mode requires englishSection"
+      };
+    }
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
+    const prompt = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
+
+RULES:
+1. Translate all prose content accurately
+2. Preserve all MyST Markdown formatting, structure, and directives
+3. DO NOT translate code blocks (keep code as-is)
+4. DO NOT translate mathematical equations (keep LaTeX as-is)
+5. DO NOT translate URLs, file paths, or technical identifiers
+6. Use the glossary for consistent terminology
+7. Maintain heading structure and levels
+8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters
+   - Math blocks must have matching $$ delimiters
+   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
+${additionalRules}
+${additionalRules ? "" : "9. "}Return ONLY the translated section, no explanations
+${request2.customInstructions || ""}
+${glossarySection}
+
+[${sourceLanguage} SECTION TO TRANSLATE]
+${englishSection}
+[/END SECTION]
+
+Provide ONLY the ${targetLanguage} translation. Do not include any markers, explanations, or comments.`;
+    this.log(`Translating new section, mode=new`);
+    this.log(`${sourceLanguage} section length: ${englishSection.length}`);
+    const response = await this.callWithRetry({
+      model: this.model,
+      max_tokens: MAX_TOKENS.section,
+      messages: [{ role: "user", content: prompt }]
+    }, "translateNewSection");
+    const content = response.content[0];
+    if (!content || content.type !== "text") {
+      return {
+        success: false,
+        error: "Unexpected response format from Claude"
+      };
+    }
+    this.log(`Translated section length: ${content.text.length}`);
+    return {
+      success: true,
+      translatedSection: content.text.trim(),
+      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
+    };
+  }
+  /**
+   * Translate full document (for new files)
+   */
+  async translateFullDocument(request2) {
+    const { content, sourceLanguage, targetLanguage, glossary } = request2;
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${10 + i}. ${rule}`).join("\n") : "";
+    const prompt = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
+
+RULES:
+1. Translate all prose content
+2. Preserve all MyST Markdown directives and structure exactly
+3. DO NOT translate code blocks (keep code as-is)
+4. DO NOT translate mathematical equations (keep LaTeX as-is)
+5. DO NOT translate URLs, file paths, or technical identifiers
+6. Use the provided glossary for consistent terminology
+7. Maintain the exact same heading structure and anchors
+8. MARKDOWN SYNTAX: Ensure proper markdown syntax in your output:
+   - Headings MUST have a space after # (e.g., "## Title" not "##Title")
+   - Code blocks must have matching \`\`\` delimiters  
+   - Math blocks must have matching $$ delimiters
+   - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
+9. DIRECTIVE BLOCKS: MyST directive blocks MUST be balanced:
+   - Every \`\`\`{exercise-start} MUST have matching \`\`\`{exercise-end}
+   - Every \`\`\`{solution-start} MUST have matching \`\`\`{solution-end}
+   - Every \`\`\`{code-cell} MUST have closing \`\`\`
+${additionalRules}
+${request2.customInstructions || ""}
+${glossarySection}
+
+IMPORTANT: You MUST translate the ENTIRE document. Do not stop mid-sentence or mid-code.
+If you are approaching token limits and cannot complete the translation, print:
+"${INCOMPLETE_DOCUMENT_MARKER}"
+
+CONTENT:
+${content}
+
+Provide the complete translated document maintaining exact MyST structure.`;
+    const sizeError = checkDocumentSize(content.length, targetLanguage);
+    if (sizeError) {
+      throw new Error(sizeError);
+    }
+    const maxTokens = MAX_TOKENS.fullDocument;
+    this.log(`Translating full document`);
+    this.log(`Content length: ${content.length} chars`);
+    const response = await this.callWithRetry({
+      model: this.model,
+      max_tokens: maxTokens,
+      messages: [{ role: "user", content: prompt }]
+    }, "translateFullDocument");
+    const result = response.content[0];
+    if (!result || result.type !== "text") {
+      return {
+        success: false,
+        error: "Unexpected response format from Claude"
+      };
+    }
+    const translatedText = result.text.trim();
+    if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
+      return {
+        success: false,
+        error: `Document exceeded token limits and was truncated. This document needs section-by-section translation rather than bulk translation.`
+      };
+    }
+    this.log(`Translation complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
+    return {
+      success: true,
+      translatedSection: translatedText,
+      tokensUsed: response.usage.input_tokens + response.usage.output_tokens
+    };
+  }
+  /**
+   * Resync a full document (whole-file RESYNC for forward command).
+   *
+   * Claude sees the complete SOURCE document and the complete existing TARGET
+   * translation, and produces an updated translation that faithfully reflects
+   * the current source while preserving the existing translation's style,
+   * terminology choices, and localization additions.
+   *
+   * This is the recommended approach over section-by-section RESYNC because:
+   * - Preserves cross-section context (localized plot labels, font config)
+   * - 2-3× cheaper (glossary sent once, not per-section)
+   * - Fewer diff lines (more surgical changes)
+   */
+  async translateDocumentResync(request2) {
+    const { sourceContent, targetContent, sourceLanguage, targetLanguage, glossary } = request2;
+    const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
+    const languageConfig = getLanguageConfig(targetLanguage);
+    const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
+    const prompt = `You are a professional translator specialising in quantitative economics.
+
+You are given:
+1. The **current ${sourceLanguage} source** document (authoritative)
+2. The **current ${targetLanguage} translation** (may be outdated or have errors)
+
+Your task: produce an **updated ${targetLanguage} translation** that accurately reflects the current ${sourceLanguage} source.
+
+## Critical rules
+
+1. **Preserve the existing translation's style, terminology, and localization choices** wherever the meaning hasn't changed. Do NOT re-translate sections that are already correct \u2014 keep them exactly as-is.
+2. **Fix any errors** in the translation \u2014 missing content, incorrect formulas, wrong code, structural differences.
+3. **Add any missing content** that exists in the source but not in the translation.
+4. **Remove any content** that exists in the translation but not in the source \u2014 EXCEPT for i18n/localization additions (see rule 6).
+5. **Preserve all MyST Markdown syntax** exactly \u2014 directives, roles, code blocks, math blocks, cross-references, frontmatter.
+6. **The existing translation's in-code localization is ground truth \u2014 NEVER revert it to ${sourceLanguage}.** Code cells in the translation often deliberately differ from the source: every line containing ${targetLanguage} text or other localization was added on purpose, usually by hand. Apply these rules line by line:
+   - If the source code around a localized line is unchanged: keep that line EXACTLY as it is in the translation.
+   - If the source changed the surrounding code: carry the localization into the updated code \u2014 keep the label/mapping machinery and translate any new user-visible strings to match.
+   - Drop a localized line only when the source removed the code it belongs to entirely.
+   - NEVER replace a localized string with its ${sourceLanguage} source equivalent.
+   Common localization patterns that MUST be preserved:
+   - Font configuration: \`from matplotlib import font_manager\`, \`fontP = font_manager.FontProperties()\`, \`fontP.set_family('SimHei')\`, \`fontP.set_size(14)\`
+   - rcParams: \`plt.rcParams['font.sans-serif'] = ['SimHei']\`, \`plt.rcParams['axes.unicode_minus'] = False\`
+   - Translated plot strings: \`set_xlabel\`/\`set_ylabel\`/\`set_title\`/\`legend\`/\`annotate\`/\`ax.text\` labels, legend-label lists, plotly trace names
+   - Label-translation dicts and column mappings: \`DataFrame.rename\` maps, CSV column-name mappings, country/category name lists, date formatters
+   - Data-source substitutions that load localized data: a read of a file that exists only in the translation repo (e.g. \`pd.read_csv("datasets/country_code_cn.csv")\` or a localized JSON/CSV mapping) and the localized column names selected from it. The file is invisible to you because it lives only in the translation repo \u2014 that is exactly why the substitution was made by hand. Keep the translation's read and its column choices even when the source derives the same data differently, and apply source-side data updates (new rows, categories, entities) THROUGH the localized mechanism rather than reverting to the source's derivation.
+   - Translated \`print()\` strings and docstrings
+   - Any imports, variable assignments, or configuration lines that appear in the translation's code cells but not in the source's code cells
+   - Locale-appropriate reference links
+   - Full-width punctuation where conventionally used
+   - Lines marked with \`# i18n\` comments
+   Keep localized label text as plain strings \u2014 NEVER wrap ${targetLanguage} text in math delimiters (\`$...$\`).
+   When in doubt about whether a code line in the translation is localization, **keep the translation's version**.
+7. **Preserve the frontmatter (YAML between --- markers) from the TARGET translation** \u2014 do not replace it with the source frontmatter. Only update the heading-map if section headings changed.
+8. **Use the glossary below for consistent terminology** \u2014 when a term from the glossary appears, use the specified translation.
+${additionalRules}
+${request2.customInstructions || ""}
+${glossarySection}
+
+## Output format
+
+Return ONLY the complete updated ${targetLanguage} document. No explanations, no commentary, no code fences wrapping the document. Start directly with the document's first line: the frontmatter \`---\` marker if the ${targetLanguage} translation has frontmatter, otherwise its first content line. NEVER add a \`---\` marker to a document that does not have frontmatter.
+
+## Current ${sourceLanguage} Source
+
+${sourceContent}
+
+## Current ${targetLanguage} Translation
+
+${targetContent}`;
+    const sizeError = checkDocumentSize(sourceContent.length + targetContent.length, targetLanguage);
+    if (sizeError) {
+      throw new Error(sizeError);
+    }
+    const maxTokens = MAX_TOKENS.fullDocument;
+    this.log(`Resyncing full document`);
+    this.log(`Source length: ${sourceContent.length} chars`);
+    this.log(`Target length: ${targetContent.length} chars`);
+    try {
+      const response = await this.callWithRetry({
+        model: this.model,
+        max_tokens: maxTokens,
+        messages: [{ role: "user", content: prompt }]
+      }, "translateDocumentResync");
+      const result = response.content[0];
+      if (!result || result.type !== "text") {
+        return {
+          success: false,
+          error: "Unexpected response format from Claude"
+        };
+      }
+      const translatedText = result.text.trim();
+      if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
+        return {
+          success: false,
+          error: `Document exceeded token limits and was truncated. This document may need a simpler resync approach.`
+        };
+      }
+      this.log(`Resync complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
+      return {
+        success: true,
+        translatedSection: translatedText,
+        tokensUsed: response.usage.input_tokens + response.usage.output_tokens
+      };
+    } catch (error4) {
+      return {
+        success: false,
+        error: formatApiError(error4)
+      };
+    }
+  }
+  /**
+   * Format glossary for inclusion in prompt
+   */
+  formatGlossary(glossary, targetLanguage) {
+    if (!glossary.terms || glossary.terms.length === 0) {
+      return "";
+    }
+    const terms = glossary.terms.filter((term) => {
+      if (typeof term[targetLanguage] === "string" && term[targetLanguage] !== "") {
+        return true;
+      }
+      this.log(`Glossary term "${term.en}" has no ${targetLanguage} translation \u2014 skipped`);
+      return false;
+    }).map((term) => {
+      const translation = term[targetLanguage];
+      const context3 = term.context ? ` (${term.context})` : "";
+      return `  - "${term.en}" \u2192 "${translation}"${context3}`;
+    }).join("\n");
+    return `GLOSSARY:
+${terms}
+`;
+  }
+};
+
+// dist/parser.js
+var MystParser = class _MystParser {
+  /**
+   * Parse markdown content into sections based on ## headings
+   * Each section includes all content until the next ## heading
+   * Handles arbitrary nesting depth (##, ###, ####, #####, ######)
+   */
+  async parseSections(content, filepath) {
+    const lines = content.split("\n");
+    const sections = [];
+    let frontmatter;
+    let preamble;
+    let contentStartIndex = 0;
+    if (lines[0] === "---") {
+      const endIndex = lines.slice(1).findIndex((line) => line === "---");
+      if (endIndex !== -1) {
+        frontmatter = lines.slice(0, endIndex + 2).join("\n");
+        contentStartIndex = endIndex + 2;
+      }
+    }
+    const firstSectionIndex = lines.slice(contentStartIndex).findIndex((line) => line.match(/^##\s+/));
+    if (firstSectionIndex !== -1) {
+      const preambleLines = lines.slice(contentStartIndex, contentStartIndex + firstSectionIndex);
+      const preambleText = preambleLines.join("\n").trim();
+      if (preambleText) {
+        preamble = preambleText;
+      }
+      contentStartIndex = contentStartIndex + firstSectionIndex;
+    } else {
+      const preambleLines = lines.slice(contentStartIndex);
+      const preambleText = preambleLines.join("\n").trim();
+      if (preambleText) {
+        preamble = preambleText;
+      }
+      contentStartIndex = lines.length;
+    }
+    const sectionStack = [];
+    for (let i = contentStartIndex; i < lines.length; i++) {
+      const line = lines[i];
+      const lineNum = i + 1;
+      const headingMatch = line.match(/^(#{2,6})\s+(.+)$/);
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        const headingText = headingMatch[2];
+        const id = this.generateHeadingId(headingText);
+        const newSection = {
+          heading: line,
+          level,
+          id,
+          content: line + "\n",
+          startLine: lineNum,
+          endLine: lineNum,
+          subsections: []
+        };
+        if (level > 2 && sectionStack.length > 0) {
+          newSection.parentId = sectionStack[sectionStack.length - 1].id;
+        }
+        while (sectionStack.length > 0 && sectionStack[sectionStack.length - 1].level >= level) {
+          const completed = sectionStack.pop();
+          completed.endLine = lineNum - 1;
+          if (sectionStack.length > 0) {
+            sectionStack[sectionStack.length - 1].subsections.push(completed);
+          } else {
+            sections.push(completed);
+          }
+        }
+        sectionStack.push(newSection);
+        continue;
+      }
+      if (sectionStack.length > 0) {
+        const currentDeepest = sectionStack[sectionStack.length - 1];
+        currentDeepest.content += line + "\n";
+        currentDeepest.endLine = lineNum;
+      }
+    }
+    while (sectionStack.length > 0) {
+      const completed = sectionStack.pop();
+      if (sectionStack.length > 0) {
+        sectionStack[sectionStack.length - 1].subsections.push(completed);
+      } else {
+        sections.push(completed);
+      }
+    }
+    const trimSection = (section) => {
+      section.content = section.content.trimEnd();
+      section.subsections.forEach(trimSection);
+    };
+    sections.forEach(trimSection);
+    return {
+      sections,
+      frontmatter,
+      preamble,
+      metadata: {
+        filepath,
+        totalLines: lines.length,
+        sectionCount: sections.length
+      }
+    };
+  }
+  /**
+   * Strip MyST inline roles from heading text to extract display text.
+   * Handles single roles, multiple roles, and mixed role+text headings.
+   * e.g. "{index}`Pandas <single: Pandas>`" → "Pandas"
+   *      "{role}`Simple Text`" → "Simple Text"
+   *      "The {index}`Newton-Raphson Method <single: Newton-Raphson Method>`" → "The Newton-Raphson Method"
+   *      "{index}`Mutable <single: Mutable>` Versus {index}`Immutable <single: Immutable>` Parameters" → "Mutable Versus Immutable Parameters"
+   *      "Plain Heading" → "Plain Heading"
+   */
+  static stripMystRoles(text) {
+    let result = text;
+    result = result.replace(/\{[^}]+\}`([^`]+?)\s*<[^>]+>`/g, (_match, display) => display.trim());
+    result = result.replace(/\{[^}]+\}`([^`]+?)`/g, (_match, display) => display.trim());
+    return result.trim();
+  }
+  /**
+   * Generate heading ID/anchor from heading text
+   * Follows the same rules as MyST/Sphinx for consistency.
+   * Uses Unicode-aware matching to preserve non-Latin scripts
+   * (Chinese, Arabic, Japanese, etc.) in heading IDs.
+   */
+  generateHeadingId(text) {
+    return text.toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, "").replace(/\s+/g, "-").replace(/-+/g, "-").trim();
+  }
+  /**
+   * Find a section by ID (searches recursively through subsections)
+   */
+  findSectionById(sections, id) {
+    for (const section of sections) {
+      if (section.id === id) {
+        return section;
+      }
+      const found = this.findSectionById(section.subsections, id);
+      if (found) {
+        return found;
+      }
+    }
+    return void 0;
+  }
+  /**
+   * Find section by position/index
+   */
+  findSectionByPosition(sections, index) {
+    return sections[index];
+  }
+  /**
+   * Parse document into explicit components: CONFIG + TITLE + INTRO + SECTIONS
+   *
+   * This provides a more structured view of the document that ensures
+   * complete reconstruction by always including all components.
+   *
+   * @param content - The markdown content to parse
+   * @param filepath - Path to the file (for metadata)
+   * @returns DocumentComponents with all parts explicitly separated
+   */
+  async parseDocumentComponents(content, filepath) {
+    const parsed = await this.parseSections(content, filepath);
+    const lines = content.split("\n");
+    let contentStartIndex = 0;
+    const config = parsed.frontmatter || "";
+    if (config) {
+      const configLines = config.split("\n");
+      contentStartIndex = configLines.length;
+    }
+    let title = "";
+    let titleText = "";
+    const preTitleLines = [];
+    let titleEndIndex = contentStartIndex;
+    let insideFence = false;
+    while (titleEndIndex < lines.length) {
+      const line = lines[titleEndIndex];
+      if (line.match(/^(`{3,}|~{3,})/)) {
+        insideFence = !insideFence;
+        preTitleLines.push(line);
+        titleEndIndex++;
+        continue;
+      }
+      if (insideFence) {
+        preTitleLines.push(line);
+        titleEndIndex++;
+        continue;
+      }
+      const titleMatch = line.match(/^#\s+(.+)$/);
+      if (titleMatch) {
+        title = line;
+        titleText = _MystParser.stripMystRoles(titleMatch[1]);
+        titleEndIndex++;
+        break;
+      }
+      preTitleLines.push(line);
+      titleEndIndex++;
+    }
+    const preTitle = preTitleLines.join("\n").trim();
+    if (!title) {
+      throw new Error("Document must have a # title heading");
+    }
+    let intro = "";
+    const introEndIndex = parsed.sections.length > 0 ? parsed.sections[0].startLine - 1 : lines.length;
+    intro = lines.slice(titleEndIndex, introEndIndex).join("\n").trim();
+    const sections = parsed.sections;
+    return {
+      config,
+      preTitle,
+      title,
+      titleText,
+      intro,
+      sections,
+      metadata: {
+        filepath,
+        totalLines: lines.length,
+        sectionCount: sections.length
+      }
+    };
+  }
+};
+
+// dist/diff-detector.js
+var core4 = __toESM(require_core(), 1);
+var DiffDetector = class {
+  parser;
+  debug;
+  constructor(debug = false) {
+    this.parser = new MystParser();
+    this.debug = debug;
+  }
+  log(message) {
+    if (this.debug) {
+      core4.info(`[DiffDetector] ${message}`);
+    }
+  }
+  /**
+   * Detect section-level changes between old and new documents
+   * Also detects preamble changes (title and intro before first ## section)
+   */
+  async detectSectionChanges(oldContent, newContent, filepath) {
+    this.log(`Detecting section changes in ${filepath}`);
+    const oldSections = await this.parser.parseSections(oldContent, filepath);
+    const newSections = await this.parser.parseSections(newContent, filepath);
+    this.log(`Old document: ${oldSections.sections.length} sections`);
+    this.log(`New document: ${newSections.sections.length} sections`);
+    const changes = [];
+    const processedOldSections = /* @__PURE__ */ new Set();
+    if (oldSections.preamble !== newSections.preamble) {
+      const oldPreamble = oldSections.preamble?.trim() || "";
+      const newPreamble = newSections.preamble?.trim() || "";
+      if (oldPreamble !== newPreamble) {
+        this.log(`PREAMBLE MODIFIED: Content changed`);
+        changes.push({
+          type: "modified",
+          oldSection: {
+            id: "_preamble",
+            heading: "",
+            // Preamble has no heading
+            level: 0,
+            // Special level for preamble
+            content: oldPreamble,
+            startLine: 1,
+            endLine: 1,
+            subsections: []
+          },
+          newSection: {
+            id: "_preamble",
+            heading: "",
+            level: 0,
+            content: newPreamble,
+            startLine: 1,
+            endLine: 1,
+            subsections: []
+          }
+        });
+      }
+    }
+    for (let i = 0; i < newSections.sections.length; i++) {
+      const newSection = newSections.sections[i];
+      const oldSectionByPosition = oldSections.sections[i];
+      const oldSectionById = this.parser.findSectionById(oldSections.sections, newSection.id);
+      let matchedOldSection;
+      if (oldSectionByPosition && this.sectionsMatch(oldSectionByPosition, newSection)) {
+        matchedOldSection = oldSectionByPosition;
+        this.log(`Matched section "${newSection.heading}" by position ${i}`);
+      } else if (oldSectionById) {
+        matchedOldSection = oldSectionById;
+        this.log(`Matched section "${newSection.heading}" by ID "${newSection.id}"`);
+      }
+      if (!matchedOldSection) {
+        this.log(`ADDED: Section "${newSection.heading}" at position ${i}`);
+        changes.push({
+          type: "added",
+          newSection,
+          position: {
+            index: i,
+            afterSectionId: i > 0 ? newSections.sections[i - 1].id : void 0
+          }
+        });
+      } else {
+        processedOldSections.add(matchedOldSection.id);
+        if (!this.sectionContentEqual(matchedOldSection, newSection)) {
+          this.log(`MODIFIED: Section "${newSection.heading}"`);
+          changes.push({
+            type: "modified",
+            oldSection: matchedOldSection,
+            newSection
+          });
+        } else {
+          this.log(`UNCHANGED: Section "${newSection.heading}"`);
+        }
+      }
+    }
+    for (const oldSection of oldSections.sections) {
+      if (!processedOldSections.has(oldSection.id)) {
+        this.log(`DELETED: Section "${oldSection.heading}"`);
+        changes.push({
+          type: "deleted",
+          oldSection
+        });
+      }
+    }
+    this.log(`Total section changes detected: ${changes.length}`);
+    return changes;
+  }
+  /**
+   * Check if two sections match (for position-based matching)
+   * Sections match if they have the same ID (heading)
+   *
+   * Note: We used to check structural similarity (level + subsection count),
+   * but this caused false matches when inserting new sections.
+   * Now we require ID match for position-based matching.
+   */
+  sectionsMatch(section1, section2) {
+    return section1.id === section2.id;
+  }
+  /**
+   * Check if section content has changed (including all nested subsections recursively)
+   */
+  sectionContentEqual(section1, section2) {
+    if (section1.content.trim() !== section2.content.trim()) {
+      return false;
+    }
+    if (section1.subsections.length !== section2.subsections.length) {
+      return false;
+    }
+    for (let i = 0; i < section1.subsections.length; i++) {
+      if (!this.sectionContentEqual(section1.subsections[i], section2.subsections[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
+
+// dist/typography.js
+var NBSP = "\xA0";
+var EXISTING_NBSP = /[\u00A0\u202F]/;
+var HIGH_PUNCTUATION = /[;:!?]/;
+var PROSE_DIRECTIVES = /* @__PURE__ */ new Set([
+  "admonition",
+  "attention",
+  "caution",
+  "danger",
+  "error",
+  "hint",
+  "important",
+  "note",
+  "seealso",
+  "tip",
+  "warning",
+  "exercise",
+  "exercise-start",
+  "exercise-end",
+  "solution",
+  "solution-start",
+  "solution-end",
+  "epigraph",
+  "margin",
+  "sidebar",
+  "topic",
+  "card",
+  "grid-item-card",
+  "proof",
+  "theorem",
+  "lemma",
+  "corollary",
+  "definition",
+  "remark",
+  "conjecture"
+]);
+var FENCE_OPEN = /^(\s{0,3})(`{3,}|~{3,}|:{3,})\s*(?:\{([\w:-]+)\})?/;
+var DIRECTIVE_OPTION = /^\s*:[a-zA-Z][\w-]*:/;
+var MATH_DELIM = /\$\$/g;
+function classifyLines(lines) {
+  const eligible = new Array(lines.length).fill(false);
+  const stack = [];
+  let inFrontmatter = false;
+  let inMathBlock = false;
+  let awaitingOptions = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (i === 0 && line.trim() === "---") {
+      inFrontmatter = true;
+      continue;
+    }
+    if (inFrontmatter) {
+      if (line.trim() === "---")
+        inFrontmatter = false;
+      continue;
+    }
+    const top = stack[stack.length - 1];
+    const open = FENCE_OPEN.exec(line);
+    if (top && !top.prose) {
+      if (open) {
+        const [, , marker, directive] = open;
+        if (!directive && marker[0] === top.marker[0] && marker.length >= top.marker.length)
+          stack.pop();
+      }
+      continue;
+    }
+    const delimiters = (line.match(MATH_DELIM) || []).length;
+    if (inMathBlock || delimiters > 0) {
+      if (delimiters % 2 === 1)
+        inMathBlock = !inMathBlock;
+      continue;
+    }
+    if (open) {
+      const [, , marker, directive] = open;
+      if (top && !directive && marker[0] === top.marker[0] && marker.length >= top.marker.length) {
+        stack.pop();
+        continue;
+      }
+      const prose = Boolean(directive) && PROSE_DIRECTIVES.has(directive.toLowerCase());
+      stack.push({ marker, prose });
+      awaitingOptions = prose;
+      continue;
+    }
+    if (!top) {
+      eligible[i] = true;
+      continue;
+    }
+    if (awaitingOptions) {
+      if (DIRECTIVE_OPTION.test(line))
+        continue;
+      if (line.trim() === "")
+        continue;
+      awaitingOptions = false;
+    }
+    eligible[i] = true;
+  }
+  return eligible;
+}
+var INLINE_PROTECTED = [
+  /\$[^$\n]+\$/g,
+  // inline math
+  /`[^`\n]+`/g,
+  // inline code — also covers MyST roles: {doc}`intro <sec:intro>`
+  /!?\[[^\]]*\]\([^)]*\)/g,
+  // links and images, including the URL
+  /<[^>\n]+>/g,
+  // HTML tags and autolinks
+  /&(?:[a-zA-Z]+\d*|#\d+|#x[0-9a-fA-F]+);/g,
+  // HTML entities — &nbsp; ends in ;
+  /https?:\/\/\S+/g
+  // bare URLs
+];
+var PLACEHOLDER = "\0";
+function applyFrenchSpacing(text) {
+  return text.replace(/(\S)([ \t]*)([;:!?]+)(?=[\s)\]»"'.,]|$)/g, (match, before, gap, run2) => {
+    if (EXISTING_NBSP.test(before))
+      return match;
+    if (before === "\\")
+      return match;
+    if (HIGH_PUNCTUATION.test(before))
+      return match;
+    if (gap.length === 0 && /\d/.test(before) && run2 === ":")
+      return match;
+    return `${before}${NBSP}${run2}`;
+  });
+}
+var DEFINITION_LABEL = /^\s{0,3}\[[^\]]*\]:/;
+var DEFINITION_CORRUPTED = /^(\s{0,3}\[[^\]]*\])[\u00A0\u202F]+:/;
+function applyToProse(line, rule) {
+  const chunks = [];
+  let masked = line.replace(DEFINITION_CORRUPTED, "$1:");
+  masked = masked.replace(DEFINITION_LABEL, (m) => {
+    chunks.push(m);
+    return `${PLACEHOLDER}${chunks.length - 1}${PLACEHOLDER}`;
+  });
+  for (const pattern of INLINE_PROTECTED) {
+    masked = masked.replace(pattern, (m) => {
+      chunks.push(m);
+      return `${PLACEHOLDER}${chunks.length - 1}${PLACEHOLDER}`;
+    });
+  }
+  if (/^\s*\([^)\n]*\)=\s*$/.test(masked))
+    return line;
+  let out = rule(masked);
+  for (let i = 0; i < INLINE_PROTECTED.length + 1; i++) {
+    const next = out.replace(new RegExp(`${PLACEHOLDER}(\\d+)${PLACEHOLDER}`, "g"), (_, idx) => chunks[Number(idx)] ?? "");
+    if (next === out)
+      break;
+    out = next;
+  }
+  return out;
+}
+var RULES = /* @__PURE__ */ new Map([["fr", applyFrenchSpacing]]);
+function applyTypography(content, language) {
+  const rule = RULES.get(language);
+  if (!rule)
+    return content;
+  const lines = content.split("\n");
+  const eligible = classifyLines(lines);
+  return lines.map((line, i) => eligible[i] ? applyToProse(line, rule) : line).join("\n");
+}
+
+// dist/file-processor.js
+var core5 = __toESM(require_core(), 1);
+
 // dist/heading-map.js
 var PATH_SEPARATOR = "::";
 function normalizeHeadingForMatch(heading) {
@@ -37045,6 +37045,51 @@ function classifyChangedFiles(files, docsFolder) {
     removedTocFiles
   };
 }
+function removeTocFileEntries(tocContent, entriesToDrop) {
+  if (entriesToDrop.size === 0)
+    return tocContent;
+  const doc = load(tocContent);
+  if (!doc || typeof doc !== "object")
+    return tocContent;
+  let changed = false;
+  const filterChapters = (chapters) => {
+    const kept = chapters.filter((entry) => {
+      if (typeof entry !== "object" || entry === null)
+        return true;
+      const e = entry;
+      if (typeof e.file === "string" && entriesToDrop.has(e.file)) {
+        changed = true;
+        return false;
+      }
+      return true;
+    });
+    for (const entry of kept) {
+      if (typeof entry === "object" && entry !== null) {
+        const e = entry;
+        if (Array.isArray(e.chapters)) {
+          e.chapters = filterChapters(e.chapters);
+        }
+      }
+    }
+    return kept;
+  };
+  if (Array.isArray(doc.chapters)) {
+    doc.chapters = filterChapters(doc.chapters);
+  }
+  if (Array.isArray(doc.parts)) {
+    for (const part of doc.parts) {
+      if (typeof part === "object" && part !== null) {
+        const p = part;
+        if (Array.isArray(p.chapters)) {
+          p.chapters = filterChapters(p.chapters);
+        }
+      }
+    }
+  }
+  if (!changed)
+    return tocContent;
+  return dump(doc, { lineWidth: -1 });
+}
 var SyncOrchestrator = class {
   translator;
   processor;
@@ -37107,6 +37152,7 @@ var SyncOrchestrator = class {
       }
     }
     this.backfillCitations(files, result, bibliography);
+    this.filterTocForFailedNewFiles(files, result);
     return result;
   }
   /**
@@ -37266,6 +37312,42 @@ var SyncOrchestrator = class {
     this.logger.info(`Successfully processed ${file.filename}`);
   }
   /**
+   * After all per-file processing, drop TOC entries that reference new files
+   * which failed to translate (#156).
+   *
+   * A new file that errored is absent from the target repo — its TOC entry
+   * would create a dangling reference that breaks the target build under
+   * `-n -W` and corrupts cross-references in every sibling lecture that cites
+   * it.  Only new files are candidates: if a file already existed in the
+   * target, its entry belongs in the TOC regardless of whether this run's
+   * update succeeded.
+   */
+  filterTocForFailedNewFiles(files, result) {
+    if (result.errors.length === 0)
+      return;
+    const processedSet = new Set(result.processedFiles);
+    const failedNewFiles = files.filter((f) => (f.type === "markdown" || f.type === "renamed") && f.isNewFile && !processedSet.has(f.filename));
+    if (failedNewFiles.length === 0)
+      return;
+    result.failedNewFiles = failedNewFiles.map((f) => f.filename);
+    for (const translated of result.translatedFiles) {
+      if (!translated.path.endsWith("_toc.yml"))
+        continue;
+      const tocDir = path3.dirname(translated.path);
+      const entriesToDrop = new Set(failedNewFiles.map((f) => {
+        const rel = tocDir === "." ? f.filename : path3.relative(tocDir, f.filename);
+        return rel.replace(/\.md$/, "");
+      }));
+      const before = translated.content;
+      const filtered = removeTocFileEntries(before, entriesToDrop);
+      if (filtered !== before) {
+        translated.content = filtered;
+        const names = failedNewFiles.map((f) => path3.basename(f.filename, ".md")).join(", ");
+        this.logger.warning(`${translated.path}: removed ${names} from TOC \u2014 file(s) failed to translate and are absent from the target`);
+      }
+    }
+  }
+  /**
    * Process a removed file (track for deletion in target repo).
    */
   processRemovedFile(file, result) {
@@ -37349,7 +37431,7 @@ function isTranslationBranch(ref) {
 
 // dist/pr-creator.js
 var SYNC_METADATA_SCHEMA_VERSION = 1;
-async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections) {
+async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections, failedNewFiles) {
   const { targetOwner, targetRepo } = config;
   const { data: targetRepoData } = await octokit.rest.repos.get({
     owner: targetOwner,
@@ -37395,7 +37477,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     });
     logger.info(`Deleted: ${file.path}`);
   }
-  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections);
+  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections, failedNewFiles);
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
   const { data: pr } = await octokit.rest.pulls.create({
     owner: targetOwner,
@@ -37442,7 +37524,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     prNumber: pr.number
   };
 }
-function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections) {
+function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections, failedNewFiles) {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);
   let filesChangedSection = "";
@@ -37489,6 +37571,17 @@ The following sections exist in the current translation but have **no counterpar
 
 ${lines.join("\n")}`;
   }
+  let failedFilesNotice = "";
+  if (failedNewFiles && failedNewFiles.length > 0) {
+    const lines = failedNewFiles.map((f) => `- \u274C \`${f}\``);
+    failedFilesNotice = `
+
+### \u26A0\uFE0F Files Failed to Translate
+
+The following new file(s) encountered errors and are **absent from this PR**. Their \`_toc.yml\` entries have been removed so the target build stays green. A failure issue has been filed on the source PR with the error details and recovery steps.
+
+${lines.join("\n")}`;
+  }
   const metadataFiles = fileMetadata ? fileMetadata.map((f) => {
     const entry = {
       path: f.path,
@@ -37523,7 +37616,7 @@ This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoNam
 ### Source PR
 **[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ""}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
 
-${filesChangedSection}${skippedNotice}${droppedNotice}
+${filesChangedSection}${failedFilesNotice}${skippedNotice}${droppedNotice}
 
 ### Details
 - **Source Language**: ${config.sourceLanguage}
@@ -39753,7 +39846,7 @@ async function runSync() {
         }
         return entry;
       });
-      const prResult = await createTranslationPR(octokit, result.translatedFiles, result.filesToDelete, prConfig, coreLogger, sourcePrInfo, result.skippedSections, fileMetadata, result.droppedTargetSections);
+      const prResult = await createTranslationPR(octokit, result.translatedFiles, result.filesToDelete, prConfig, coreLogger, sourcePrInfo, result.skippedSections, fileMetadata, result.droppedTargetSections, result.failedNewFiles);
       prUrl = prResult.prUrl;
       core9.setOutput("pr-url", prResult.prUrl);
       core9.setOutput("files-synced", result.processedFiles.length.toString());
