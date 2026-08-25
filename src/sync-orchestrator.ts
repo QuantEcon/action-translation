@@ -346,7 +346,11 @@ function partKey(chapters: unknown[]): string {
  *
  * Exported for unit testing.
  */
-export function mergeTargetCaptions(sourceYaml: string, targetYaml: string, logger?: Logger): string {
+export function mergeTargetCaptions(
+  sourceYaml: string,
+  targetYaml: string,
+  logger?: Logger
+): string {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let source: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
