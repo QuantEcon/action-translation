@@ -1055,9 +1055,11 @@ async function fetchAllFileContents(
       );
 
       let existingFileSha: string | undefined;
+      let targetContent: string | undefined;
       try {
         const result = await fetchFileContent(octokit, targetOwner, targetRepo, file.filename);
         existingFileSha = result.sha;
+        targetContent = result.content;
       } catch {
         core.info(`${file.filename} does not exist in target repo - will create it`);
       }
@@ -1066,6 +1068,7 @@ async function fetchAllFileContents(
         filename: file.filename,
         type: 'toc',
         newContent,
+        targetContent,
         existingFileSha,
         isNewFile: !existingFileSha,
       });

@@ -4,10 +4,11 @@
  * Tests:
  * - File classification (classifyChangedFiles)
  * - Glossary loading (loadGlossary)
+ * - mergeTargetCaptions (TOC caption preservation)
  * - SyncOrchestrator file processing pipeline
  *   - Markdown files (new + existing)
  *   - Renamed files (with + without existing translation)
- *   - TOC files (copy directly)
+ *   - TOC files (caption preservation + copy)
  *   - Removed files
  *   - Error recovery (one file fails, others continue)
  *   - Multi-file processing
@@ -17,6 +18,7 @@ import {
   classifyChangedFiles,
   loadGlossary,
   formatGlossaryTerms,
+  mergeTargetCaptions,
   SyncOrchestrator,
   FileToSync,
   Logger,
@@ -331,6 +333,95 @@ describe('formatGlossaryTerms', () => {
 });
 
 // =============================================================================
+// mergeTargetCaptions TESTS
+// =============================================================================
+
+describe('mergeTargetCaptions', () => {
+  it('preserves target captions for parts with identical file membership', () => {
+    const source = yaml.dump({
+      format: 'jb-book',
+      root: 'intro',
+      parts: [
+        { caption: 'Introduction', chapters: [{ file: 'lectures/intro' }] },
+        { caption: 'Economic Data', chapters: [{ file: 'lectures/data' }] },
+      ],
+    });
+    const target = yaml.dump({
+      format: 'jb-book',
+      root: 'intro',
+      parts: [
+        { caption: '导言', chapters: [{ file: 'lectures/intro' }] },
+        { caption: '经济数据', chapters: [{ file: 'lectures/data' }] },
+      ],
+    });
+
+    const result = yaml.load(mergeTargetCaptions(source, target)) as any;
+    expect(result.parts[0].caption).toBe('导言');
+    expect(result.parts[1].caption).toBe('经济数据');
+  });
+
+  it('keeps source caption for new parts with no matching target part', () => {
+    const source = yaml.dump({
+      format: 'jb-book',
+      root: 'intro',
+      parts: [
+        { caption: 'Existing', chapters: [{ file: 'lectures/existing' }] },
+        { caption: 'New Part', chapters: [{ file: 'lectures/new' }] },
+      ],
+    });
+    const target = yaml.dump({
+      format: 'jb-book',
+      root: 'intro',
+      parts: [{ caption: '现有', chapters: [{ file: 'lectures/existing' }] }],
+    });
+
+    const result = yaml.load(mergeTargetCaptions(source, target)) as any;
+    expect(result.parts[0].caption).toBe('现有');
+    expect(result.parts[1].caption).toBe('New Part');
+  });
+
+  it('returns source unchanged when neither side has parts', () => {
+    const source = 'format: jb-book\nroot: intro\nchapters:\n  - file: lectures/intro\n';
+    const target = 'format: jb-book\nroot: intro\nchapters:\n  - file: lectures/intro\n';
+    expect(mergeTargetCaptions(source, target)).toBe(source);
+  });
+
+  it('returns source unchanged when target YAML is malformed', () => {
+    const source = yaml.dump({
+      format: 'jb-book',
+      parts: [{ caption: 'Introduction', chapters: [{ file: 'lectures/intro' }] }],
+    });
+    expect(mergeTargetCaptions(source, ': bad: yaml: [')).toBe(source);
+  });
+
+  it('matches parts by file set regardless of order within chapters', () => {
+    const source = yaml.dump({
+      format: 'jb-book',
+      root: 'intro',
+      parts: [
+        {
+          caption: 'Group',
+          chapters: [{ file: 'lectures/b' }, { file: 'lectures/a' }],
+        },
+      ],
+    });
+    const target = yaml.dump({
+      format: 'jb-book',
+      root: 'intro',
+      parts: [
+        {
+          caption: '组',
+          chapters: [{ file: 'lectures/a' }, { file: 'lectures/b' }],
+        },
+      ],
+    });
+
+    const result = yaml.load(mergeTargetCaptions(source, target)) as any;
+    expect(result.parts[0].caption).toBe('组');
+  });
+});
+
+// =============================================================================
 // SyncOrchestrator TESTS
 // =============================================================================
 
@@ -477,6 +568,63 @@ describe('SyncOrchestrator', () => {
       expect(result.translatedFiles).toHaveLength(1);
       expect(result.translatedFiles[0].content).toBe('format: jb-book\nroot: intro');
       expect(result.translatedFiles[0].sha).toBe('toc-sha-123');
+    });
+
+    it('should preserve localised part captions from target when file sets match', async () => {
+      const sourceYaml = yaml.dump({
+        format: 'jb-book',
+        root: 'intro',
+        parts: [
+          { caption: 'Introduction', chapters: [{ file: 'lectures/intro' }] },
+          { caption: 'Economic Data', chapters: [{ file: 'lectures/data' }] },
+          { caption: 'New Part', chapters: [{ file: 'lectures/new' }] },
+        ],
+      });
+      const targetYaml = yaml.dump({
+        format: 'jb-book',
+        root: 'intro',
+        parts: [
+          { caption: '导言', chapters: [{ file: 'lectures/intro' }] },
+          { caption: '经济数据', chapters: [{ file: 'lectures/data' }] },
+        ],
+      });
+
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/_toc.yml',
+          type: 'toc',
+          newContent: sourceYaml,
+          targetContent: targetYaml,
+          existingFileSha: 'sha-abc',
+          isNewFile: false,
+        },
+      ];
+
+      const result = await orchestrator.processFiles(files);
+
+      const out = yaml.load(result.translatedFiles[0].content) as any;
+      expect(out.parts[0].caption).toBe('导言');
+      expect(out.parts[1].caption).toBe('经济数据');
+      // New part has no target caption — keeps source caption
+      expect(out.parts[2].caption).toBe('New Part');
+    });
+
+    it('should use source content unchanged when TOC has no parts', async () => {
+      const sourceYaml = 'format: jb-book\nroot: intro\nchapters:\n  - file: lectures/intro\n';
+      const targetYaml = 'format: jb-book\nroot: intro\nchapters:\n  - file: lectures/intro\n';
+
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/_toc.yml',
+          type: 'toc',
+          newContent: sourceYaml,
+          targetContent: targetYaml,
+          isNewFile: false,
+        },
+      ];
+
+      const result = await orchestrator.processFiles(files);
+      expect(result.translatedFiles[0].content).toBe(sourceYaml);
     });
   });
 

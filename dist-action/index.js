@@ -37045,6 +37045,58 @@ function classifyChangedFiles(files, docsFolder) {
     removedTocFiles
   };
 }
+function collectTocFiles(entries) {
+  const files = [];
+  for (const entry of entries ?? []) {
+    if (entry.file)
+      files.push(String(entry.file));
+    if (entry.chapters)
+      files.push(...collectTocFiles(entry.chapters));
+    if (entry.sections)
+      files.push(...collectTocFiles(entry.sections));
+  }
+  return files;
+}
+function partKey(chapters) {
+  return collectTocFiles(chapters).slice().sort().join("\0");
+}
+function mergeTargetCaptions(sourceYaml, targetYaml, logger) {
+  let source;
+  let target;
+  try {
+    source = load(sourceYaml);
+    target = load(targetYaml);
+  } catch {
+    logger?.warning("Could not parse _toc.yml for caption merge \u2014 using source as-is");
+    return sourceYaml;
+  }
+  if (!source || typeof source !== "object" || !target || typeof target !== "object" || !Array.isArray(source.parts) || !Array.isArray(target.parts)) {
+    return sourceYaml;
+  }
+  const targetCaptions = /* @__PURE__ */ new Map();
+  for (const part of target.parts) {
+    if (part.caption && Array.isArray(part.chapters)) {
+      const key = partKey(part.chapters);
+      if (key)
+        targetCaptions.set(key, String(part.caption));
+    }
+  }
+  let preserved = 0;
+  for (const part of source.parts) {
+    if (!Array.isArray(part.chapters))
+      continue;
+    const key = partKey(part.chapters);
+    const localCaption = targetCaptions.get(key);
+    if (localCaption) {
+      part.caption = localCaption;
+      preserved++;
+    }
+  }
+  if (preserved > 0) {
+    logger?.info(`Preserved ${preserved} localised TOC part caption(s) from target`);
+  }
+  return dump(source, { lineWidth: -1 });
+}
 var SyncOrchestrator = class {
   translator;
   processor;
@@ -37250,17 +37302,21 @@ var SyncOrchestrator = class {
     }
   }
   /**
-   * Process a TOC file (copied directly without translation).
+   * Process a TOC file, preserving any localised part captions from the target.
    */
   processTocFile(file, result) {
     this.logger.info(`Processing TOC file ${file.filename}...`);
     if (!file.newContent) {
       throw new Error(`No content provided for ${file.filename}`);
     }
+    let content = file.newContent;
+    if (file.targetContent) {
+      content = mergeTargetCaptions(file.newContent, file.targetContent, this.logger);
+    }
     result.processedFiles.push(file.filename);
     result.translatedFiles.push({
       path: file.filename,
-      content: file.newContent,
+      content,
       sha: file.existingFileSha
     });
     this.logger.info(`Successfully processed ${file.filename}`);
@@ -39871,9 +39927,11 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
     try {
       const { content: newContent } = await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, sha);
       let existingFileSha;
+      let targetContent;
       try {
         const result = await fetchFileContent(octokit, targetOwner, targetRepo, file.filename);
         existingFileSha = result.sha;
+        targetContent = result.content;
       } catch {
         core9.info(`${file.filename} does not exist in target repo - will create it`);
       }
@@ -39881,6 +39939,7 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
         filename: file.filename,
         type: "toc",
         newContent,
+        targetContent,
         existingFileSha,
         isNewFile: !existingFileSha
       });
