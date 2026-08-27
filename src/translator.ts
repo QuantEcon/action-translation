@@ -33,6 +33,8 @@ import {
   DEFAULT_THINKING,
   isRetryableAnthropicError,
   ApiUsage,
+  emptyApiUsage,
+  addUsage,
 } from './models.js';
 
 /**
@@ -135,7 +137,7 @@ export class TranslationService {
   private debug: boolean;
   // Counted at the chokepoint so retried/discarded attempts are included —
   // the per-result tokensUsed fields miss them (#164/F53).
-  private usage: ApiUsage = { inputTokens: 0, outputTokens: 0, apiCalls: 0 };
+  private usage: ApiUsage = emptyApiUsage();
 
   constructor(apiKey: string, model: string = DEFAULT_CLAUDE_MODEL, debug: boolean = false) {
     // maxRetries: 0 — callWithRetry owns the whole retry budget. The SDK's
@@ -182,7 +184,7 @@ export class TranslationService {
     createParams: {
       model: string;
       max_tokens: number;
-      messages: Array<{ role: string; content: string }>;
+      messages: Anthropic.MessageParam[];
     },
     operationName: string
   ): Promise<Anthropic.Message> {
@@ -195,9 +197,10 @@ export class TranslationService {
           thinking: DEFAULT_THINKING,
         } as Anthropic.MessageStreamParams);
         const message = await stream.finalMessage();
-        this.usage.inputTokens += message.usage.input_tokens;
-        this.usage.outputTokens += message.usage.output_tokens;
-        this.usage.apiCalls += 1;
+        addUsage(this.usage, message.usage);
+        this.log(
+          `${operationName}: tokens in=${message.usage.input_tokens} out=${message.usage.output_tokens} cacheRead=${message.usage.cache_read_input_tokens ?? 0} cacheWrite=${message.usage.cache_creation_input_tokens ?? 0}`
+        );
         // A max_tokens stop means the output was cut off mid-document.
         // Committing it would silently truncate the translation, and the model
         // never gets to emit its incomplete-document marker — so fail the
@@ -232,6 +235,35 @@ export class TranslationService {
 
     // Should never reach here
     throw new Error('Unexpected: retry loop completed without result');
+  }
+
+  /**
+   * One user message split at the stable / per-call boundary, with a
+   * cache_control breakpoint on the stable block (#292).
+   *
+   * The stable block (operation rules + language rules + glossary) must be
+   * byte-identical across calls to the SAME prompt builder — each builder's
+   * rules differ, so each writes its own cache entry rather than sharing one
+   * across all translator operations (a typical run is dominated by a single
+   * builder, so this costs little). Anything per-call (customInstructions,
+   * document content) belongs in the volatile block. Repeat calls then read
+   * the stable block at ~0.1× the input rate (5-minute TTL, refreshed by
+   * every read). Below the model's minimum cacheable prefix the marker is
+   * silently ignored, which is harmless.
+   */
+  private cachedPromptMessages(
+    stablePrefix: string,
+    volatileSuffix: string
+  ): Anthropic.MessageParam[] {
+    return [
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: stablePrefix, cache_control: { type: 'ephemeral' } },
+          { type: 'text', text: volatileSuffix },
+        ],
+      },
+    ];
   }
 
   /**
@@ -278,7 +310,7 @@ export class TranslationService {
         ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join('\n')
         : '';
 
-    const prompt = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
+    const stablePrefix = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
 
 TASK: The ${sourceLanguage} section has been modified. Update the existing ${targetLanguage} translation to reflect these changes.
 
@@ -297,8 +329,11 @@ CRITICAL RULES:
    - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
 ${additionalRules}
 ${additionalRules ? '' : '9. '}Return ONLY the updated ${targetLanguage} section, no explanations
-${request.customInstructions || ''}
-${glossarySection}
+${glossarySection}`;
+
+    // customInstructions is per-file, so it sits below the glossary in the
+    // volatile block to keep the cacheable prefix byte-identical (#292).
+    const volatileSuffix = `${request.customInstructions || ''}
 
 [OLD ${sourceLanguage} VERSION]
 ${oldEnglish}
@@ -323,7 +358,7 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
       {
         model: this.model,
         max_tokens: MAX_TOKENS.section,
-        messages: [{ role: 'user', content: prompt }],
+        messages: this.cachedPromptMessages(stablePrefix, volatileSuffix),
       },
       'translateSectionUpdate'
     );
@@ -372,7 +407,7 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
         ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join('\n')
         : '';
 
-    const prompt = `You are resyncing a ${targetLanguage} translation to match the current ${sourceLanguage} source.
+    const stablePrefix = `You are resyncing a ${targetLanguage} translation to match the current ${sourceLanguage} source.
 
 TASK: The ${sourceLanguage} source may have changed since the translation was made. Update the ${targetLanguage} translation to accurately reflect the current source content.
 
@@ -390,8 +425,9 @@ CRITICAL RULES:
    - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
 ${additionalRules}
 ${additionalRules ? '' : '8. '}Return ONLY the updated ${targetLanguage} section, no explanations
-${request.customInstructions || ''}
-${glossarySection}
+${glossarySection}`;
+
+    const volatileSuffix = `${request.customInstructions || ''}
 
 [CURRENT ${sourceLanguage} SOURCE]
 ${newEnglish}
@@ -411,7 +447,7 @@ Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing t
       {
         model: this.model,
         max_tokens: MAX_TOKENS.section,
-        messages: [{ role: 'user', content: prompt }],
+        messages: this.cachedPromptMessages(stablePrefix, volatileSuffix),
       },
       'translateSectionResync'
     );
@@ -456,7 +492,7 @@ Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing t
         ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join('\n')
         : '';
 
-    const prompt = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
+    const stablePrefix = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
 
 RULES:
 1. Translate all prose content accurately
@@ -473,8 +509,9 @@ RULES:
    - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
 ${additionalRules}
 ${additionalRules ? '' : '9. '}Return ONLY the translated section, no explanations
-${request.customInstructions || ''}
-${glossarySection}
+${glossarySection}`;
+
+    const volatileSuffix = `${request.customInstructions || ''}
 
 [${sourceLanguage} SECTION TO TRANSLATE]
 ${englishSection}
@@ -489,7 +526,7 @@ Provide ONLY the ${targetLanguage} translation. Do not include any markers, expl
       {
         model: this.model,
         max_tokens: MAX_TOKENS.section,
-        messages: [{ role: 'user', content: prompt }],
+        messages: this.cachedPromptMessages(stablePrefix, volatileSuffix),
       },
       'translateNewSection'
     );
@@ -526,7 +563,7 @@ Provide ONLY the ${targetLanguage} translation. Do not include any markers, expl
         ? languageConfig.additionalRules.map((rule, i) => `${10 + i}. ${rule}`).join('\n')
         : '';
 
-    const prompt = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
+    const stablePrefix = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
 
 RULES:
 1. Translate all prose content
@@ -546,12 +583,14 @@ RULES:
    - Every \`\`\`{solution-start} MUST have matching \`\`\`{solution-end}
    - Every \`\`\`{code-cell} MUST have closing \`\`\`
 ${additionalRules}
-${request.customInstructions || ''}
 ${glossarySection}
 
 IMPORTANT: You MUST translate the ENTIRE document. Do not stop mid-sentence or mid-code.
 If you are approaching token limits and cannot complete the translation, print:
 "${INCOMPLETE_DOCUMENT_MARKER}"
+`;
+
+    const volatileSuffix = `${request.customInstructions || ''}
 
 CONTENT:
 ${content}
@@ -574,7 +613,7 @@ Provide the complete translated document maintaining exact MyST structure.`;
       {
         model: this.model,
         max_tokens: maxTokens,
-        messages: [{ role: 'user', content: prompt }],
+        messages: this.cachedPromptMessages(stablePrefix, volatileSuffix),
       },
       'translateFullDocument'
     );
@@ -633,7 +672,7 @@ Provide the complete translated document maintaining exact MyST structure.`;
         ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join('\n')
         : '';
 
-    const prompt = `You are a professional translator specialising in quantitative economics.
+    const stablePrefix = `You are a professional translator specialising in quantitative economics.
 
 You are given:
 1. The **current ${sourceLanguage} source** document (authoritative)
@@ -669,12 +708,14 @@ Your task: produce an **updated ${targetLanguage} translation** that accurately 
 7. **Preserve the frontmatter (YAML between --- markers) from the TARGET translation** — do not replace it with the source frontmatter. Only update the heading-map if section headings changed.
 8. **Use the glossary below for consistent terminology** — when a term from the glossary appears, use the specified translation.
 ${additionalRules}
-${request.customInstructions || ''}
 ${glossarySection}
 
 ## Output format
 
 Return ONLY the complete updated ${targetLanguage} document. No explanations, no commentary, no code fences wrapping the document. Start directly with the document's first line: the frontmatter \`---\` marker if the ${targetLanguage} translation has frontmatter, otherwise its first content line. NEVER add a \`---\` marker to a document that does not have frontmatter.
+`;
+
+    const volatileSuffix = `${request.customInstructions || ''}
 
 ## Current ${sourceLanguage} Source
 
@@ -704,7 +745,7 @@ ${targetContent}`;
         {
           model: this.model,
           max_tokens: maxTokens,
-          messages: [{ role: 'user', content: prompt }],
+          messages: this.cachedPromptMessages(stablePrefix, volatileSuffix),
         },
         'translateDocumentResync'
       );
