@@ -78,7 +78,11 @@ describe('every prompt builder numbers its rules contiguously', () => {
 
   function lastPrompt(): string {
     const calls = mockStream.mock.calls;
-    return calls[calls.length - 1][0].messages[0].content as string;
+    const content = calls[calls.length - 1][0].messages[0].content;
+    // Prompts are split into [stable-cacheable, volatile] text blocks (#292);
+    // rejoin them so the ordinal assertions see the full rendered prompt.
+    if (typeof content === 'string') return content;
+    return content.map((block: { text: string }) => block.text).join('\n');
   }
 
   it.each(LANGUAGES)('section update (%s)', async (lang) => {

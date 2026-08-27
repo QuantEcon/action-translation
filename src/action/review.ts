@@ -84,9 +84,11 @@ export async function runReview(builtInGlossaryDir: string): Promise<void> {
   const usage = reviewer.getUsage();
   core.setOutput('input-tokens', String(usage.inputTokens));
   core.setOutput('output-tokens', String(usage.outputTokens));
+  core.setOutput('cache-creation-input-tokens', String(usage.cacheCreationInputTokens));
+  core.setOutput('cache-read-input-tokens', String(usage.cacheReadInputTokens));
   core.setOutput('api-calls', String(usage.apiCalls));
   core.info(
-    `API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens`
+    `API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens, cache: ${usage.cacheReadInputTokens} read + ${usage.cacheCreationInputTokens} written`
   );
 
   core.info(
