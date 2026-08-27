@@ -32044,15 +32044,18 @@ var TranslationService = class {
     throw new Error("Unexpected: retry loop completed without result");
   }
   /**
-   * One user message split at the run-stable / per-call boundary, with a
+   * One user message split at the stable / per-call boundary, with a
    * cache_control breakpoint on the stable block (#292).
    *
-   * The stable block (rules + language rules + glossary) must be byte-identical
-   * across calls in a run for the prefix cache to hit — anything per-call
-   * (customInstructions, document content) belongs in the volatile block.
-   * Repeat calls then read the stable block at ~0.1× the input rate (5-minute
-   * TTL, refreshed by every read). Below the model's minimum cacheable prefix
-   * the marker is silently ignored, which is harmless.
+   * The stable block (operation rules + language rules + glossary) must be
+   * byte-identical across calls to the SAME prompt builder — each builder's
+   * rules differ, so each writes its own cache entry rather than sharing one
+   * across all translator operations (a typical run is dominated by a single
+   * builder, so this costs little). Anything per-call (customInstructions,
+   * document content) belongs in the volatile block. Repeat calls then read
+   * the stable block at ~0.1× the input rate (5-minute TTL, refreshed by
+   * every read). Below the model's minimum cacheable prefix the marker is
+   * silently ignored, which is harmless.
    */
   cachedPromptMessages(stablePrefix, volatileSuffix) {
     return [

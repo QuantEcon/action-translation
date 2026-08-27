@@ -80,9 +80,11 @@ describe('every prompt builder numbers its rules contiguously', () => {
     const calls = mockStream.mock.calls;
     const content = calls[calls.length - 1][0].messages[0].content;
     // Prompts are split into [stable-cacheable, volatile] text blocks (#292);
-    // rejoin them so the ordinal assertions see the full rendered prompt.
+    // rejoin them without inserting a delimiter the API never sees. The
+    // ordinal assertions are insensitive to the boundary either way: every
+    // stable block ends with a newline, so no `^N. ` match can span it.
     if (typeof content === 'string') return content;
-    return content.map((block: { text: string }) => block.text).join('\n');
+    return content.map((block: { text: string }) => block.text).join('');
   }
 
   it.each(LANGUAGES)('section update (%s)', async (lang) => {
