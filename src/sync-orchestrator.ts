@@ -33,6 +33,7 @@ import {
   getToolVersion,
 } from './cli/translate-state.js';
 import { FileState } from './cli/types.js';
+import { mergeTargetCaptions } from './toc-captions.js';
 
 // =============================================================================
 // INTERFACES
@@ -656,7 +657,9 @@ export class SyncOrchestrator {
   }
 
   /**
-   * Process a TOC file (copied directly without translation).
+   * Process a TOC file: the source is mirrored, with the target's localised
+   * part captions carried forward (#254; see `toc-captions.ts`).  No target
+   * content means a first delivery, which takes the source verbatim.
    */
   private processTocFile(file: FileToSync, result: SyncProcessingResult): void {
     this.logger.info(`Processing TOC file ${file.filename}...`);
@@ -665,10 +668,15 @@ export class SyncOrchestrator {
       throw new Error(`No content provided for ${file.filename}`);
     }
 
+    let content = file.newContent;
+    if (file.targetContent) {
+      content = mergeTargetCaptions(file.newContent, file.targetContent, this.logger);
+    }
+
     result.processedFiles.push(file.filename);
     result.translatedFiles.push({
       path: file.filename,
-      content: file.newContent,
+      content,
       sha: file.existingFileSha,
     });
 

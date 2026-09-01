@@ -7,7 +7,7 @@
  * - SyncOrchestrator file processing pipeline
  *   - Markdown files (new + existing)
  *   - Renamed files (with + without existing translation)
- *   - TOC files (copy directly)
+ *   - TOC files (caption preservation + copy)
  *   - Removed files
  *   - Error recovery (one file fails, others continue)
  *   - Multi-file processing
@@ -477,6 +477,75 @@ describe('SyncOrchestrator', () => {
       expect(result.translatedFiles).toHaveLength(1);
       expect(result.translatedFiles[0].content).toBe('format: jb-book\nroot: intro');
       expect(result.translatedFiles[0].sha).toBe('toc-sha-123');
+    });
+
+    it('carries the target part captions forward byte-for-byte, changing only caption lines (#254)', async () => {
+      const sourceYaml = `format: jb-book
+root: intro
+parts:
+- caption: Introduction
+  chapters:
+  - file: intro
+- caption: Economic Data
+  numbered: true
+  chapters:
+  - file: data
+  - file: data_new
+- caption: New Part
+  chapters:
+  - file: new
+`;
+      const targetYaml = `format: jb-book
+root: intro
+parts:
+- caption: 导言
+  chapters:
+  - file: intro
+- caption: 经济数据
+  numbered: true
+  chapters:
+  - file: data
+`;
+
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/_toc.yml',
+          type: 'toc',
+          newContent: sourceYaml,
+          targetContent: targetYaml,
+          existingFileSha: 'sha-abc',
+          isNewFile: false,
+        },
+      ];
+
+      const result = await orchestrator.processFiles(files);
+
+      // The part that gained a lecture keeps its caption; the new part keeps the
+      // source caption; nothing but the two caption lines changed.
+      expect(result.translatedFiles[0].content).toBe(
+        sourceYaml
+          .replace('- caption: Introduction\n', '- caption: 导言\n')
+          .replace('- caption: Economic Data\n', '- caption: 经济数据\n')
+      );
+      expect(result.translatedFiles[0].sha).toBe('sha-abc');
+    });
+
+    it('should use source content unchanged when TOC has no parts', async () => {
+      const sourceYaml = 'format: jb-book\nroot: intro\nchapters:\n  - file: lectures/intro\n';
+      const targetYaml = 'format: jb-book\nroot: intro\nchapters:\n  - file: lectures/intro\n';
+
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/_toc.yml',
+          type: 'toc',
+          newContent: sourceYaml,
+          targetContent: targetYaml,
+          isNewFile: false,
+        },
+      ];
+
+      const result = await orchestrator.processFiles(files);
+      expect(result.translatedFiles[0].content).toBe(sourceYaml);
     });
   });
 
