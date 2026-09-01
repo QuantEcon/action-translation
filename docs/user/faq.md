@@ -17,6 +17,7 @@ The GitHub Action supports the configured languages only — the target language
 ### How much does it cost to run?
 
 Costs depend on document size and the Claude model used. With `claude-sonnet-5` at standard pricing ($3 / $15 per M input/output tokens; ~13% lower during the introductory rate through 2026-08-31):
+
 - **Sync mode** (per PR): ~$0.06–0.25 depending on how many sections changed
 - **Backward analysis** (51 files): ~$1.10 total
 - **Forward resync** (per file): ~$0.16–0.22
@@ -32,6 +33,7 @@ Yes, for any operation that involves translation or analysis. The `status` CLI c
 ### Why did the action create a PR with no changes?
 
 This can happen if:
+
 - The merged PR changed files outside the `docs-folder` pattern
 - The changed files were not `.md` files
 - The translation of the changed sections is identical to what was already in the target
@@ -39,6 +41,7 @@ This can happen if:
 ### The action created a PR but some sections weren't translated
 
 Check that:
+
 1. The changed sections are detected correctly — the action compares the PR's base and head for each file
 2. The heading-map in the target file is up to date (see [Heading Maps](heading-maps.md))
 3. The document structure hasn't diverged significantly between source and target
@@ -56,6 +59,7 @@ To retrigger only a specific language, add the language code:
 ```
 
 Requirements:
+
 - The workflow must include the `issue_comment` trigger (see [Action Reference](action-reference.md) for the YAML)
 - The comment must be on a pull request, not a plain issue — GitHub raises `issue_comment` for both
 - You must be an `OWNER`, `MEMBER` or `COLLABORATOR` of the source repo. A resync run spends Anthropic credits and uses the target-repo PAT, so comments from anyone else are ignored — at the workflow level (no job starts) and again inside the action. `CONTRIBUTOR` (anyone with one merged PR) is deliberately not enough
@@ -68,6 +72,7 @@ For drift recovery beyond a single PR, use the CLI `forward` command instead —
 ### What happens when the sync workflow fails?
 
 When the sync workflow encounters an error (API failure, parsing error, etc.), it automatically opens a **GitHub Issue** in the source repository with:
+
 - The title `Translation sync failed for PR #N (language)`
 - A list of errors encountered
 - Recovery instructions including the `\translate-resync` command
@@ -78,6 +83,7 @@ To recover, fix the underlying issue and comment `\translate-resync` on the orig
 ### Does the action post any status updates?
 
 Yes. On successful sync, the action posts a **confirmation comment** on the source PR with:
+
 - A link to the translation PR in the target repo
 - A list of translated files
 
@@ -102,13 +108,22 @@ Put it in a **target-only file** — a new `.md` file in the target repo's docs 
 
 Do **not** add extra sections inside a synced file. The sync mirrors the source document's structure, so a section that has no counterpart in the source is removed on the next sync of that file. The removal is deliberate — it is how upstream deletions propagate — and the sync PR lists every removed target-only section under "Target-Only Sections Removed" so a reviewer can catch the case where the content was human-authored. If that happens, restore the content into a target-only file and merge the sync.
 
-If the addition is an *improvement to existing content* rather than new material, consider contributing it to the source repository instead (`translate backward` helps capture such improvements) — then every language edition benefits and the sync carries it back to yours.
+If the addition is an _improvement to existing content_ rather than new material, consider contributing it to the source repository instead (`translate backward` helps capture such improvements) — then every language edition benefits and the sync carries it back to yours.
+
+### A sync PR says some files "failed to translate" — is the PR safe to merge?
+
+Yes, as far as the build goes. When a _new_ lecture in the source PR cannot be delivered (most often the structural-parity guard refusing a translation whose directive sequence came back scrambled, sometimes a failed content fetch), the sync PR is opened without it and lists it under **Files Failed to Translate**. The lecture's `_toc.yml` entry is removed from the same PR so the target builds cleanly, and the removal touches only that line — the rest of the TOC is byte-identical. The entry comes back with the file when a later rebase delivers it; the machine-readable metadata block still declares the file for exactly that reason.
+
+Read the notice's second sentence carefully. If it names the TOC the entry was removed from, the PR is self-consistent. If it says _no `_toc.yml` was part of this sync_, nothing was removed because nothing needed to be in this changeset — but the target's existing TOC may already list the file (for example, from a concurrent sync that mirrored the whole source TOC), and the build will fail until the file arrives. The failure issue opened on the source repository carries the error details and the recovery steps.
+
+Only new files are ever removed from the TOC. A lecture that already exists in the target and merely failed to _update_ keeps its entry — the previous translation is still there and still correct to link.
 
 ### The `forward` command changed too many lines
 
 The RESYNC translation mode is designed to preserve existing style and only change what's needed. However, Claude may occasionally rephrase sections unnecessarily.
 
 Mitigation:
+
 - Review changes with `git diff` before committing
 - Use `git restore .` to undo all changes
 - Use `git restore <file>` to undo specific files
@@ -120,14 +135,14 @@ This is expected for well-maintained translations. The backward analysis is desi
 
 ### What's the difference between `forward` and the sync Action?
 
-| Aspect | Sync Action | Forward CLI |
-|--------|------------|-------------|
-| **Trigger** | PR merge event | Manual command |
-| **Change signal** | Git diff from PR | Whole-document comparison |
-| **Translation mode** | UPDATE (section-level) | RESYNC (whole-file) |
-| **Scope** | Files changed in that PR | Any drifted files |
-| **Output** | PR in target repo | Local file update (or PR with `--github`) |
-| **Use case** | Ongoing maintenance | Drift recovery, onboarding |
+| Aspect               | Sync Action              | Forward CLI                               |
+| -------------------- | ------------------------ | ----------------------------------------- |
+| **Trigger**          | PR merge event           | Manual command                            |
+| **Change signal**    | Git diff from PR         | Whole-document comparison                 |
+| **Translation mode** | UPDATE (section-level)   | RESYNC (whole-file)                       |
+| **Scope**            | Files changed in that PR | Any drifted files                         |
+| **Output**           | PR in target repo        | Local file update (or PR with `--github`) |
+| **Use case**         | Ongoing maintenance      | Drift recovery, onboarding                |
 
 ### I get "ANTHROPIC_API_KEY not set" errors
 
@@ -144,6 +159,7 @@ Or use `--test` for development without API calls.
 ### My heading map is missing or incomplete
 
 The `status` command reports missing heading maps. To fix:
+
 1. Run `npx translate forward -f <file>` to regenerate the translation (heading map is included automatically)
 2. Or manually add the heading-map to the target file's frontmatter (see [Heading Maps](heading-maps.md))
 
@@ -154,7 +170,7 @@ Yes. The `translation.headings` value must exactly match the heading text in the
 ```yaml
 translation:
   headings:
-    Introduction: "引言"  # was "介绍"
+    Introduction: '引言' # was "介绍"
 ```
 
 ## Troubleshooting
@@ -166,6 +182,7 @@ If you hit Anthropic rate limits during bulk operations, the system automaticall
 ### Large documents fail
 
 Very large documents (30K+ tokens per side) may exceed Claude's context window. The action reports these as `SKIPPED_TOO_LARGE`. Consider:
+
 - Splitting large documents into smaller files
 - Using a model with a larger context window
 

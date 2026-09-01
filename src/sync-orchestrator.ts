@@ -11,7 +11,6 @@
  * Extracted from index.ts for reuse by both GitHub Action and CLI.
  */
 
-import * as yaml from 'js-yaml';
 import { TranslationService } from './translator.js';
 import { FileProcessor } from './file-processor.js';
 import { MystParser } from './parser.js';
@@ -28,6 +27,7 @@ import {
 import { Glossary, TranslatedFile, RebaseCache } from './types.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import * as yaml from 'js-yaml';
 import {
   serializeFileState,
   stateFileRelativePath,
@@ -111,12 +111,19 @@ export interface SyncProcessingResult {
   /** What the bibliography backfill did, when it ran (#117). */
   citationBackfill?: CitationPlan;
   /**
-   * Filenames of *new* files that failed to translate and were therefore
-   * removed from any TOC entries in this run (#156).  Absent when no new
-   * files errored.  The PR creator uses this to add a warning section so
-   * the reviewer understands why the TOC and the file list diverge.
+   * Source paths of *new* files this run did not deliver (#156): translation
+   * failed, or the source content could not be fetched.  Absent when every new
+   * file landed.  The PR creator surfaces these so the reviewer understands why
+   * the PR is intentionally partial.
    */
   failedNewFiles?: string[];
+  /**
+   * `_toc.yml` paths from which the failed new files' entries were removed.
+   * Empty when `failedNewFiles` is set but no TOC was in this run's changeset —
+   * the PR body words the notice differently in that case, because nothing
+   * was removed and a pre-existing target entry may still dangle.
+   */
+  filteredTocPaths?: string[];
 }
 
 // =============================================================================
@@ -324,62 +331,163 @@ export function classifyChangedFiles(
 // =============================================================================
 
 /**
- * Remove `file:` entries from a _toc.yml YAML string for a given set of
- * stems (paths relative to the TOC file's directory, without the .md
- * extension).  Handles both flat `chapters:` and `parts: [{chapters: …}]`
- * layouts, and recurses into nested chapter lists.
- *
- * Returns the *original* string unchanged when no entries match — callers
- * detect whether filtering occurred by reference equality.
- *
- * Exported for unit testing.
+ * A `- file:` line in a block-style `_toc.yml`, in any of YAML's scalar
+ * quotings, with an optional trailing comment.  Group 1 is the indent of the
+ * dash; groups 2-4 carry the stem.
  */
-export function removeTocFileEntries(tocContent: string, entriesToDrop: Set<string>): string {
-  if (entriesToDrop.size === 0) return tocContent;
+const TOC_FILE_LINE_RE = /^(\s*)-\s+file:\s*(?:"([^"]*)"|'([^']*)'|([^\s#]+))\s*(?:#.*)?$/;
 
-  const doc = yaml.load(tocContent) as Record<string, unknown> | null;
-  if (!doc || typeof doc !== 'object') return tocContent;
-
-  let changed = false;
-
-  const filterChapters = (chapters: unknown[]): unknown[] => {
-    const kept = chapters.filter((entry) => {
-      if (typeof entry !== 'object' || entry === null) return true;
+/**
+ * Every `file:` value in a parsed TOC, in document order, at any depth —
+ * `chapters:` and `sections:` under the root, under a part, or nested under
+ * an entry.  Exported for unit testing.
+ */
+export function collectTocFiles(doc: unknown): string[] {
+  const out: string[] = [];
+  const visit = (entries: unknown): void => {
+    if (!Array.isArray(entries)) return;
+    for (const entry of entries) {
+      if (typeof entry !== 'object' || entry === null) continue;
       const e = entry as Record<string, unknown>;
-      if (typeof e.file === 'string' && entriesToDrop.has(e.file)) {
-        changed = true;
-        return false;
+      if (typeof e.file === 'string') out.push(e.file);
+      visit(e.chapters);
+      visit(e.sections);
+    }
+  };
+  if (!doc || typeof doc !== 'object') return out;
+  const root = doc as Record<string, unknown>;
+  visit(root.chapters);
+  visit(root.sections);
+  if (Array.isArray(root.parts)) {
+    for (const part of root.parts) {
+      if (typeof part === 'object' && part !== null) {
+        visit((part as Record<string, unknown>).chapters);
       }
-      return true;
+    }
+  }
+  return out;
+}
+
+/**
+ * Splice the lines of the dropped entries out of the original TOC text.  An
+ * entry is its `- file:` line plus every following line indented deeper than
+ * the dash (`title:`, `sections:` and their children); blank lines that turn
+ * out to separate entries are left in place.  Everything else — indentation
+ * style, quoting, comments, trailing whitespace — is untouched, so the
+ * target's diff shows exactly the removed entries and nothing else.
+ */
+function spliceTocEntryLines(tocContent: string, entriesToDrop: Set<string>): string {
+  const lines = tocContent.split('\n');
+  const out: string[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    const m = TOC_FILE_LINE_RE.exec(lines[i]);
+    const stem = m ? (m[2] ?? m[3] ?? m[4]) : undefined;
+    if (m && stem !== undefined && entriesToDrop.has(stem)) {
+      const dashIndent = m[1].length;
+      let j = i + 1;
+      while (j < lines.length) {
+        const line = lines[j];
+        if (line.trim() === '') {
+          j++;
+          continue;
+        }
+        const indent = line.length - line.trimStart().length;
+        if (indent <= dashIndent) break;
+        j++;
+      }
+      while (j > i + 1 && lines[j - 1].trim() === '') j--;
+      i = j;
+      continue;
+    }
+    out.push(lines[i]);
+    i++;
+  }
+  return out.join('\n');
+}
+
+/** Filter the parsed TOC in place; the fallback serialiser's input. */
+function filterTocDocument(doc: Record<string, unknown>, entriesToDrop: Set<string>): void {
+  const filterList = (entries: unknown): unknown => {
+    if (!Array.isArray(entries)) return entries;
+    const kept = entries.filter((entry) => {
+      if (typeof entry !== 'object' || entry === null) return true;
+      const file = (entry as Record<string, unknown>).file;
+      return !(typeof file === 'string' && entriesToDrop.has(file));
     });
     for (const entry of kept) {
       if (typeof entry === 'object' && entry !== null) {
         const e = entry as Record<string, unknown>;
-        if (Array.isArray(e.chapters)) {
-          e.chapters = filterChapters(e.chapters as unknown[]);
-        }
+        if ('chapters' in e) e.chapters = filterList(e.chapters);
+        if ('sections' in e) e.sections = filterList(e.sections);
       }
     }
     return kept;
   };
-
-  if (Array.isArray(doc.chapters)) {
-    doc.chapters = filterChapters(doc.chapters as unknown[]);
-  }
+  if ('chapters' in doc) doc.chapters = filterList(doc.chapters);
+  if ('sections' in doc) doc.sections = filterList(doc.sections);
   if (Array.isArray(doc.parts)) {
     for (const part of doc.parts) {
       if (typeof part === 'object' && part !== null) {
         const p = part as Record<string, unknown>;
-        if (Array.isArray(p.chapters)) {
-          p.chapters = filterChapters(p.chapters as unknown[]);
-        }
+        if ('chapters' in p) p.chapters = filterList(p.chapters);
       }
     }
   }
+}
 
-  if (!changed) return tocContent;
+/**
+ * Remove `file:` entries from a `_toc.yml` string for a set of stems (paths
+ * relative to the TOC file's directory, without the `.md` extension).  Handles
+ * the flat `chapters:` and `parts: [{chapters: …}]` layouts and nested
+ * `sections:` / `chapters:` lists at any depth.
+ *
+ * The result is byte-identical to the input apart from the removed entries'
+ * lines.  QuantEcon TOCs are written in the zero-indent block style
+ * (`parts:\n- caption:`), which js-yaml would re-indent on a round trip —
+ * turning a one-line removal into a whole-file rewrite that hides the change
+ * from the reviewer and flips back on the next verbatim sync.  So the entries
+ * are spliced out of the original text, and the splice is *verified* by
+ * parsing the result: the surviving `file:` list must equal what filtering
+ * the parsed document yields.  Only if that check fails — a layout the line
+ * splice does not recognise, such as a dash on its own line — does the
+ * function fall back to filtering the parsed document and re-serialising.
+ *
+ * Returns the *original* string (same reference) when nothing matches, so
+ * callers can detect a no-op by identity.  Exported for unit testing.
+ */
+export function removeTocFileEntries(tocContent: string, entriesToDrop: Set<string>): string {
+  if (entriesToDrop.size === 0) return tocContent;
 
-  return yaml.dump(doc, { lineWidth: -1 });
+  let doc: unknown;
+  try {
+    doc = yaml.load(tocContent);
+  } catch {
+    return tocContent;
+  }
+  if (!doc || typeof doc !== 'object') return tocContent;
+
+  const before = collectTocFiles(doc);
+  if (!before.some((f) => entriesToDrop.has(f))) return tocContent;
+
+  // The filtered document is the oracle: a dropped entry takes its nested
+  // sections with it, so "original minus the stems" would under-count.
+  filterTocDocument(doc as Record<string, unknown>, entriesToDrop);
+  const expected = collectTocFiles(doc);
+
+  const spliced = spliceTocEntryLines(tocContent, entriesToDrop);
+  if (tocFilesAre(spliced, expected)) return spliced;
+
+  return yaml.dump(doc, { lineWidth: -1, noArrayIndent: true });
+}
+
+function tocFilesAre(content: string, expected: string[]): boolean {
+  try {
+    const files = collectTocFiles(yaml.load(content));
+    return files.length === expected.length && files.every((f, i) => f === expected[i]);
+  } catch {
+    return false;
+  }
 }
 
 // =============================================================================
@@ -432,7 +540,8 @@ export class SyncOrchestrator {
     files: FileToSync[],
     glossary?: Glossary,
     rebaseCache?: RebaseCache,
-    bibliography?: BibliographySources
+    bibliography?: BibliographySources,
+    fetchFailedNewFiles: string[] = []
   ): Promise<SyncProcessingResult> {
     const result: SyncProcessingResult = {
       translatedFiles: [],
@@ -467,7 +576,7 @@ export class SyncOrchestrator {
     }
 
     this.backfillCitations(files, result, bibliography);
-    this.filterTocForFailedNewFiles(files, result);
+    this.filterTocForFailedNewFiles(files, result, fetchFailedNewFiles);
 
     return result;
   }
@@ -749,7 +858,7 @@ export class SyncOrchestrator {
 
   /**
    * After all per-file processing, drop TOC entries that reference new files
-   * which failed to translate (#156).
+   * this run did not deliver (#156).
    *
    * A new file that errored is absent from the target repo — its TOC entry
    * would create a dangling reference that breaks the target build under
@@ -757,32 +866,48 @@ export class SyncOrchestrator {
    * it.  Only new files are candidates: if a file already existed in the
    * target, its entry belongs in the TOC regardless of whether this run's
    * update succeeded.
+   *
+   * Two ways a new file fails to arrive: translation errored inside this loop
+   * (the file is in `files`, `isNewFile`, and not in `processedFiles`), or its
+   * source content could not be fetched, in which case the caller never built
+   * a `FileToSync` for it and passes it in as `fetchFailedNewFiles` instead.
+   * Both must leave the TOC, or the build breaks either way.
    */
-  private filterTocForFailedNewFiles(files: FileToSync[], result: SyncProcessingResult): void {
-    if (result.errors.length === 0) return;
+  private filterTocForFailedNewFiles(
+    files: FileToSync[],
+    result: SyncProcessingResult,
+    fetchFailedNewFiles: string[]
+  ): void {
+    if (result.errors.length === 0 && fetchFailedNewFiles.length === 0) return;
 
     const processedSet = new Set(result.processedFiles);
 
-    const failedNewFiles = files.filter(
-      (f) =>
-        (f.type === 'markdown' || f.type === 'renamed') &&
-        f.isNewFile &&
-        !processedSet.has(f.filename)
-    );
+    const failedNewFiles = files
+      .filter(
+        (f) =>
+          (f.type === 'markdown' || f.type === 'renamed') &&
+          f.isNewFile &&
+          !processedSet.has(f.filename)
+      )
+      .map((f) => f.filename);
+    for (const filename of fetchFailedNewFiles) {
+      if (!failedNewFiles.includes(filename)) failedNewFiles.push(filename);
+    }
 
     if (failedNewFiles.length === 0) return;
 
-    result.failedNewFiles = failedNewFiles.map((f) => f.filename);
+    result.failedNewFiles = failedNewFiles;
+    result.filteredTocPaths = [];
 
     for (const translated of result.translatedFiles) {
-      if (!translated.path.endsWith('_toc.yml')) continue;
+      if (path.basename(translated.path) !== '_toc.yml') continue;
 
       const tocDir = path.dirname(translated.path);
 
       // Convert full filenames to TOC-relative stems (no .md extension)
       const entriesToDrop = new Set(
-        failedNewFiles.map((f) => {
-          const rel = tocDir === '.' ? f.filename : path.relative(tocDir, f.filename);
+        failedNewFiles.map((filename) => {
+          const rel = tocDir === '.' ? filename : path.relative(tocDir, filename);
           return rel.replace(/\.md$/, '');
         })
       );
@@ -792,9 +917,10 @@ export class SyncOrchestrator {
 
       if (filtered !== before) {
         translated.content = filtered;
-        const names = failedNewFiles.map((f) => path.basename(f.filename, '.md')).join(', ');
+        result.filteredTocPaths.push(translated.path);
+        const names = failedNewFiles.map((f) => path.basename(f, '.md')).join(', ');
         this.logger.warning(
-          `${translated.path}: removed ${names} from TOC — file(s) failed to translate and are absent from the target`
+          `${translated.path}: removed ${names} from TOC — file(s) were not delivered and are absent from the target`
         );
       }
     }

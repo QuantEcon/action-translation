@@ -80,6 +80,19 @@ export interface SourcePrInfo {
 /**
  * Result of PR creation
  */
+/**
+ * New files a sync run did not deliver, for the PR-body notice (#156).
+ */
+export interface FailedNewFilesNotice {
+  /** Source paths of the undelivered new files. */
+  files: string[];
+  /**
+   * `_toc.yml` paths their entries were removed from.  Empty when no TOC was
+   * in the run's changeset, so nothing was removed.
+   */
+  filteredTocPaths: string[];
+}
+
 export interface PrCreationResult {
   prUrl: string;
   branchName: string;
@@ -115,7 +128,7 @@ export async function createTranslationPR(
   skippedSections?: Map<string, string[]>,
   fileMetadata?: Array<{ path: string; type: string; previousPath?: string }>,
   droppedTargetSections?: Map<string, string[]>,
-  failedNewFiles?: string[]
+  failedNewFiles?: FailedNewFilesNotice
 ): Promise<PrCreationResult> {
   const { targetOwner, targetRepo } = config;
 
@@ -267,7 +280,7 @@ export function buildPrBody(
   targetBaseSha?: string,
   fileMetadata?: Array<{ path: string; type: string; previousPath?: string }>,
   droppedTargetSections?: Map<string, string[]>,
-  failedNewFiles?: string[]
+  failedNewFiles?: FailedNewFilesNotice
 ): string {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);
@@ -320,13 +333,24 @@ export function buildPrBody(
     droppedNotice = `\n\n### ⚠️ Target-Only Sections Removed\n\nThe following sections exist in the current translation but have **no counterpart in the source document**, so this sync removes them (the translation mirrors the source's structure). If the source deleted these sections, this removal is correct — merge as usual. If they are human-authored additions you want to keep, move them into a target-only file before merging (see [adding content to a translated edition](https://github.com/QuantEcon/action-translation/blob/main/docs/user/faq.md#how-do-i-add-content-to-a-translated-edition-that-isnt-in-the-source)).\n\n${lines.join('\n')}`;
   }
 
-  // Build failed-files notice (#156): new files that errored are absent from the
-  // target, and their TOC entries have been removed to keep the build green.
-  // Surface them here so the reviewer knows the PR is intentionally partial.
+  // Build failed-files notice (#156): new files that were not delivered are
+  // absent from the target.  Surface them so the reviewer knows the PR is
+  // intentionally partial, and say precisely what happened to their TOC
+  // entries — removed from a TOC in this changeset, or nothing to remove
+  // because no TOC was part of the run (in which case a pre-existing target
+  // entry may still dangle, and the reviewer needs to know that too).
   let failedFilesNotice = '';
-  if (failedNewFiles && failedNewFiles.length > 0) {
-    const lines = failedNewFiles.map((f) => `- ❌ \`${f}\``);
-    failedFilesNotice = `\n\n### ⚠️ Files Failed to Translate\n\nThe following new file(s) encountered errors and are **absent from this PR**. Their \`_toc.yml\` entries have been removed so the target build stays green. A failure issue has been filed on the source PR with the error details and recovery steps.\n\n${lines.join('\n')}`;
+  if (failedNewFiles && failedNewFiles.files.length > 0) {
+    const lines = failedNewFiles.files.map((f) => `- ❌ \`${f}\``);
+    const tocSentence =
+      failedNewFiles.filteredTocPaths.length > 0
+        ? `Their entries have been removed from ${failedNewFiles.filteredTocPaths
+            .map((p) => `\`${p}\``)
+            .join(
+              ', '
+            )} so the target build stays green; the entries return with the files once they are delivered.`
+        : `No \`_toc.yml\` was part of this sync, so nothing was removed from it — if the target's TOC already lists these files, its build will fail until they are delivered.`;
+    failedFilesNotice = `\n\n### ⚠️ Files Failed to Translate\n\nThe following new file(s) could not be translated and are **absent from this PR**. ${tocSentence} The error details and recovery steps are in the failure issue this run opens on the source repository.\n\n${lines.join('\n')}`;
   }
 
   // Build machine-readable metadata for rebase mode

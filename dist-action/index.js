@@ -37100,6 +37100,131 @@ function classifyChangedFiles(files, docsFolder) {
     removedTocFiles
   };
 }
+var TOC_FILE_LINE_RE = /^(\s*)-\s+file:\s*(?:"([^"]*)"|'([^']*)'|([^\s#]+))\s*(?:#.*)?$/;
+function collectTocFiles(doc) {
+  const out = [];
+  const visit = (entries) => {
+    if (!Array.isArray(entries))
+      return;
+    for (const entry of entries) {
+      if (typeof entry !== "object" || entry === null)
+        continue;
+      const e = entry;
+      if (typeof e.file === "string")
+        out.push(e.file);
+      visit(e.chapters);
+      visit(e.sections);
+    }
+  };
+  if (!doc || typeof doc !== "object")
+    return out;
+  const root = doc;
+  visit(root.chapters);
+  visit(root.sections);
+  if (Array.isArray(root.parts)) {
+    for (const part of root.parts) {
+      if (typeof part === "object" && part !== null) {
+        visit(part.chapters);
+      }
+    }
+  }
+  return out;
+}
+function spliceTocEntryLines(tocContent, entriesToDrop) {
+  const lines = tocContent.split("\n");
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const m = TOC_FILE_LINE_RE.exec(lines[i]);
+    const stem = m ? m[2] ?? m[3] ?? m[4] : void 0;
+    if (m && stem !== void 0 && entriesToDrop.has(stem)) {
+      const dashIndent = m[1].length;
+      let j = i + 1;
+      while (j < lines.length) {
+        const line = lines[j];
+        if (line.trim() === "") {
+          j++;
+          continue;
+        }
+        const indent = line.length - line.trimStart().length;
+        if (indent <= dashIndent)
+          break;
+        j++;
+      }
+      while (j > i + 1 && lines[j - 1].trim() === "")
+        j--;
+      i = j;
+      continue;
+    }
+    out.push(lines[i]);
+    i++;
+  }
+  return out.join("\n");
+}
+function filterTocDocument(doc, entriesToDrop) {
+  const filterList = (entries) => {
+    if (!Array.isArray(entries))
+      return entries;
+    const kept = entries.filter((entry) => {
+      if (typeof entry !== "object" || entry === null)
+        return true;
+      const file = entry.file;
+      return !(typeof file === "string" && entriesToDrop.has(file));
+    });
+    for (const entry of kept) {
+      if (typeof entry === "object" && entry !== null) {
+        const e = entry;
+        if ("chapters" in e)
+          e.chapters = filterList(e.chapters);
+        if ("sections" in e)
+          e.sections = filterList(e.sections);
+      }
+    }
+    return kept;
+  };
+  if ("chapters" in doc)
+    doc.chapters = filterList(doc.chapters);
+  if ("sections" in doc)
+    doc.sections = filterList(doc.sections);
+  if (Array.isArray(doc.parts)) {
+    for (const part of doc.parts) {
+      if (typeof part === "object" && part !== null) {
+        const p = part;
+        if ("chapters" in p)
+          p.chapters = filterList(p.chapters);
+      }
+    }
+  }
+}
+function removeTocFileEntries(tocContent, entriesToDrop) {
+  if (entriesToDrop.size === 0)
+    return tocContent;
+  let doc;
+  try {
+    doc = load(tocContent);
+  } catch {
+    return tocContent;
+  }
+  if (!doc || typeof doc !== "object")
+    return tocContent;
+  const before = collectTocFiles(doc);
+  if (!before.some((f) => entriesToDrop.has(f)))
+    return tocContent;
+  filterTocDocument(doc, entriesToDrop);
+  const expected = collectTocFiles(doc);
+  const spliced = spliceTocEntryLines(tocContent, entriesToDrop);
+  if (tocFilesAre(spliced, expected))
+    return spliced;
+  return dump(doc, { lineWidth: -1, noArrayIndent: true });
+}
+function tocFilesAre(content, expected) {
+  try {
+    const files = collectTocFiles(load(content));
+    return files.length === expected.length && files.every((f, i) => f === expected[i]);
+  } catch {
+    return false;
+  }
+}
 var SyncOrchestrator = class {
   translator;
   processor;
@@ -37130,7 +37255,7 @@ var SyncOrchestrator = class {
    * @param glossary - Optional glossary for translation
    * @returns Aggregated results across all files
    */
-  async processFiles(files, glossary, rebaseCache, bibliography) {
+  async processFiles(files, glossary, rebaseCache, bibliography, fetchFailedNewFiles = []) {
     const result = {
       translatedFiles: [],
       filesToDelete: [],
@@ -37162,6 +37287,7 @@ var SyncOrchestrator = class {
       }
     }
     this.backfillCitations(files, result, bibliography);
+    this.filterTocForFailedNewFiles(files, result, fetchFailedNewFiles);
     return result;
   }
   /**
@@ -37321,6 +37447,54 @@ var SyncOrchestrator = class {
     this.logger.info(`Successfully processed ${file.filename}`);
   }
   /**
+   * After all per-file processing, drop TOC entries that reference new files
+   * this run did not deliver (#156).
+   *
+   * A new file that errored is absent from the target repo — its TOC entry
+   * would create a dangling reference that breaks the target build under
+   * `-n -W` and corrupts cross-references in every sibling lecture that cites
+   * it.  Only new files are candidates: if a file already existed in the
+   * target, its entry belongs in the TOC regardless of whether this run's
+   * update succeeded.
+   *
+   * Two ways a new file fails to arrive: translation errored inside this loop
+   * (the file is in `files`, `isNewFile`, and not in `processedFiles`), or its
+   * source content could not be fetched, in which case the caller never built
+   * a `FileToSync` for it and passes it in as `fetchFailedNewFiles` instead.
+   * Both must leave the TOC, or the build breaks either way.
+   */
+  filterTocForFailedNewFiles(files, result, fetchFailedNewFiles) {
+    if (result.errors.length === 0 && fetchFailedNewFiles.length === 0)
+      return;
+    const processedSet = new Set(result.processedFiles);
+    const failedNewFiles = files.filter((f) => (f.type === "markdown" || f.type === "renamed") && f.isNewFile && !processedSet.has(f.filename)).map((f) => f.filename);
+    for (const filename of fetchFailedNewFiles) {
+      if (!failedNewFiles.includes(filename))
+        failedNewFiles.push(filename);
+    }
+    if (failedNewFiles.length === 0)
+      return;
+    result.failedNewFiles = failedNewFiles;
+    result.filteredTocPaths = [];
+    for (const translated of result.translatedFiles) {
+      if (path3.basename(translated.path) !== "_toc.yml")
+        continue;
+      const tocDir = path3.dirname(translated.path);
+      const entriesToDrop = new Set(failedNewFiles.map((filename) => {
+        const rel = tocDir === "." ? filename : path3.relative(tocDir, filename);
+        return rel.replace(/\.md$/, "");
+      }));
+      const before = translated.content;
+      const filtered = removeTocFileEntries(before, entriesToDrop);
+      if (filtered !== before) {
+        translated.content = filtered;
+        result.filteredTocPaths.push(translated.path);
+        const names = failedNewFiles.map((f) => path3.basename(f, ".md")).join(", ");
+        this.logger.warning(`${translated.path}: removed ${names} from TOC \u2014 file(s) were not delivered and are absent from the target`);
+      }
+    }
+  }
+  /**
    * Process a removed file (track for deletion in target repo).
    */
   processRemovedFile(file, result) {
@@ -37404,7 +37578,7 @@ function isTranslationBranch(ref) {
 
 // dist/pr-creator.js
 var SYNC_METADATA_SCHEMA_VERSION = 1;
-async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections) {
+async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections, failedNewFiles) {
   const { targetOwner, targetRepo } = config;
   const { data: targetRepoData } = await octokit.rest.repos.get({
     owner: targetOwner,
@@ -37450,7 +37624,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     });
     logger.info(`Deleted: ${file.path}`);
   }
-  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections);
+  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections, failedNewFiles);
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
   const { data: pr } = await octokit.rest.pulls.create({
     owner: targetOwner,
@@ -37497,7 +37671,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     prNumber: pr.number
   };
 }
-function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections) {
+function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections, failedNewFiles) {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);
   let filesChangedSection = "";
@@ -37544,6 +37718,18 @@ The following sections exist in the current translation but have **no counterpar
 
 ${lines.join("\n")}`;
   }
+  let failedFilesNotice = "";
+  if (failedNewFiles && failedNewFiles.files.length > 0) {
+    const lines = failedNewFiles.files.map((f) => `- \u274C \`${f}\``);
+    const tocSentence = failedNewFiles.filteredTocPaths.length > 0 ? `Their entries have been removed from ${failedNewFiles.filteredTocPaths.map((p) => `\`${p}\``).join(", ")} so the target build stays green; the entries return with the files once they are delivered.` : `No \`_toc.yml\` was part of this sync, so nothing was removed from it \u2014 if the target's TOC already lists these files, its build will fail until they are delivered.`;
+    failedFilesNotice = `
+
+### \u26A0\uFE0F Files Failed to Translate
+
+The following new file(s) could not be translated and are **absent from this PR**. ${tocSentence} The error details and recovery steps are in the failure issue this run opens on the source repository.
+
+${lines.join("\n")}`;
+  }
   const metadataFiles = fileMetadata ? fileMetadata.map((f) => {
     const entry = {
       path: f.path,
@@ -37578,7 +37764,7 @@ This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoNam
 ### Source PR
 **[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ""}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
 
-${filesChangedSection}${skippedNotice}${droppedNotice}
+${filesChangedSection}${failedFilesNotice}${skippedNotice}${droppedNotice}
 
 ### Details
 - **Source Language**: ${config.sourceLanguage}
@@ -39750,7 +39936,7 @@ async function runSync() {
   const builtInGlossaryDir = getBuiltInGlossaryDir();
   const glossary = await loadGlossary(inputs.targetLanguage, builtInGlossaryDir, inputs.glossaryPath || void 0, coreLogger);
   const [targetOwner, targetRepo] = inputs.targetRepo.split("/");
-  const { files: filesToSync, errors: fetchErrors } = await fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo, effectiveSha);
+  const { files: filesToSync, errors: fetchErrors, fetchFailedNewFiles } = await fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo, effectiveSha);
   const existingStateShas = await fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToSync, inputs.docsFolder);
   const stateConfig = {
     sourceCommitSha: effectiveSha,
@@ -39766,7 +39952,7 @@ async function runSync() {
     bibliographyMode: inputs.bibliographyMode
   }, coreLogger, stateConfig);
   const bibliography = inputs.bibliographyMode === "off" ? void 0 : await fetchBibliographies(octokit, { owner: github3.context.repo.owner, repo: github3.context.repo.repo, ref: effectiveSha }, { owner: targetOwner, repo: targetRepo }, inputs.docsFolder);
-  const result = await orchestrator.processFiles(filesToSync, glossary, void 0, bibliography);
+  const result = await orchestrator.processFiles(filesToSync, glossary, void 0, bibliography, fetchFailedNewFiles);
   result.errors.unshift(...fetchErrors);
   const hasErrors = result.errors.length > 0;
   if (hasErrors) {
@@ -39810,7 +39996,7 @@ async function runSync() {
         }
         return entry;
       });
-      const prResult = await createTranslationPR(octokit, result.translatedFiles, result.filesToDelete, prConfig, coreLogger, sourcePrInfo, result.skippedSections, fileMetadata, result.droppedTargetSections);
+      const prResult = await createTranslationPR(octokit, result.translatedFiles, result.filesToDelete, prConfig, coreLogger, sourcePrInfo, result.skippedSections, fileMetadata, result.droppedTargetSections, result.failedNewFiles ? { files: result.failedNewFiles, filteredTocPaths: result.filteredTocPaths ?? [] } : void 0);
       prUrl = prResult.prUrl;
       core9.setOutput("pr-url", prResult.prUrl);
       core9.setOutput("files-synced", result.processedFiles.length.toString());
@@ -39844,6 +40030,7 @@ async function fetchFileContent(octokit, owner, repo, filepath, ref) {
 async function fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo, commitSha) {
   const filesToSync = [];
   const fetchErrors = [];
+  const fetchFailedNewFiles = [];
   const sourceOwner = github3.context.repo.owner;
   const sourceRepo = github3.context.repo.repo;
   const sha = commitSha || github3.context.sha;
@@ -39881,6 +40068,9 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
     } catch (error4) {
       core9.error(`Error fetching content for ${file.filename}: ${error4}`);
       fetchErrors.push(`Fetch failed (markdown): ${file.filename}: ${error4}`);
+      if (await targetFileIsMissing(octokit, targetOwner, targetRepo, file.filename)) {
+        fetchFailedNewFiles.push(file.filename);
+      }
     }
   }
   for (const file of classified.renamedMarkdownFiles) {
@@ -39968,7 +40158,15 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
       fetchErrors.push(`Fetch failed (removed): ${file.filename}: ${error4}`);
     }
   }
-  return { files: filesToSync, errors: fetchErrors };
+  return { files: filesToSync, errors: fetchErrors, fetchFailedNewFiles };
+}
+async function targetFileIsMissing(octokit, owner, repo, filePath) {
+  try {
+    await fetchFileContent(octokit, owner, repo, filePath);
+    return false;
+  } catch (error4) {
+    return error4?.status === 404;
+  }
 }
 async function fetchSourcePrInfo(octokit, prNumber) {
   try {

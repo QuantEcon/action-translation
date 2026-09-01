@@ -716,7 +716,11 @@ async function runSync(): Promise<void> {
 
   // Fetch content and build FileToSync array
   const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
-  const { files: filesToSync, errors: fetchErrors } = await fetchAllFileContents(
+  const {
+    files: filesToSync,
+    errors: fetchErrors,
+    fetchFailedNewFiles,
+  } = await fetchAllFileContents(
     octokit,
     classified,
     inputs,
@@ -766,7 +770,13 @@ async function runSync(): Promise<void> {
           inputs.docsFolder
         );
 
-  const result = await orchestrator.processFiles(filesToSync, glossary, undefined, bibliography);
+  const result = await orchestrator.processFiles(
+    filesToSync,
+    glossary,
+    undefined,
+    bibliography,
+    fetchFailedNewFiles
+  );
 
   // Fetch failures count as processing errors: they fail the run and open a
   // failure issue instead of shipping a PR that silently misses files.
@@ -838,6 +848,8 @@ async function runSync(): Promise<void> {
         fileMetadata,
         result.droppedTargetSections,
         result.failedNewFiles
+          ? { files: result.failedNewFiles, filteredTocPaths: result.filteredTocPaths ?? [] }
+          : undefined
       );
 
       prUrl = prResult.prUrl;
@@ -921,12 +933,18 @@ async function fetchAllFileContents(
   targetOwner: string,
   targetRepo: string,
   commitSha?: string
-): Promise<{ files: FileToSync[]; errors: string[] }> {
+): Promise<{ files: FileToSync[]; errors: string[]; fetchFailedNewFiles: string[] }> {
   const filesToSync: FileToSync[] = [];
   // Fetch failures are returned, not swallowed: a transient 5xx on one file
   // used to yield a PR missing that file plus a success comment and a green
   // check (#165/F121 — #90 defect 3).
   const fetchErrors: string[] = [];
+  // Markdown files whose source fetch failed AND which the target does not
+  // have: nothing will be delivered under that name, so their `_toc.yml`
+  // entries must go the same way as a translation failure's (#156).  Renamed
+  // files are not classified here — dropping the new stem would orphan the
+  // old file from the toctree, which fails the strict build just the same.
+  const fetchFailedNewFiles: string[] = [];
   const sourceOwner = github.context.repo.owner;
   const sourceRepo = github.context.repo.repo;
   const sha = commitSha || github.context.sha;
@@ -982,6 +1000,9 @@ async function fetchAllFileContents(
     } catch (error) {
       core.error(`Error fetching content for ${file.filename}: ${error}`);
       fetchErrors.push(`Fetch failed (markdown): ${file.filename}: ${error}`);
+      if (await targetFileIsMissing(octokit, targetOwner, targetRepo, file.filename)) {
+        fetchFailedNewFiles.push(file.filename);
+      }
     }
   }
 
@@ -1103,7 +1124,28 @@ async function fetchAllFileContents(
     }
   }
 
-  return { files: filesToSync, errors: fetchErrors };
+  return { files: filesToSync, errors: fetchErrors, fetchFailedNewFiles };
+}
+
+/**
+ * True only when the target repo answers 404 for `filePath`.  Any other
+ * failure (rate limit, network, 5xx) reads as "unknown" — an outage must never
+ * remove a live TOC entry, so the caller keeps the entry and lets the run's
+ * fetch error fail it instead.
+ */
+async function targetFileIsMissing(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  octokit: any,
+  owner: string,
+  repo: string,
+  filePath: string
+): Promise<boolean> {
+  try {
+    await fetchFileContent(octokit, owner, repo, filePath);
+    return false;
+  } catch (error) {
+    return (error as { status?: number } | null)?.status === 404;
+  }
 }
 
 /**
