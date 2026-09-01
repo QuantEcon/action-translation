@@ -119,9 +119,13 @@ outputs:
 
   # Cost outputs (sync and review modes) — retries included
   input-tokens:
-    description: 'Total input tokens across every Claude call this run made'
+    description: 'Uncached input tokens (full price) across every Claude call this run made'
   output-tokens:
     description: 'Total output tokens across every Claude call this run made'
+  cache-creation-input-tokens:
+    description: 'Input tokens written to the prompt cache this run (billed at 1.25x input price)'
+  cache-read-input-tokens:
+    description: 'Input tokens served from the prompt cache this run (billed at ~0.1x input price); 0 on a multi-call run means the cacheable prefix broke'
   api-calls:
     description: 'Number of Claude API calls this run made'
 

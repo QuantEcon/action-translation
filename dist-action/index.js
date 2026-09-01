@@ -31392,6 +31392,22 @@ var VALID_MODEL_PATTERNS = [
   /^claude-3-haiku-\d{8}$/
   // claude-3-haiku-20240307
 ];
+function emptyApiUsage() {
+  return {
+    inputTokens: 0,
+    outputTokens: 0,
+    cacheCreationInputTokens: 0,
+    cacheReadInputTokens: 0,
+    apiCalls: 0
+  };
+}
+function addUsage(usage, responseUsage) {
+  usage.inputTokens += responseUsage.input_tokens;
+  usage.outputTokens += responseUsage.output_tokens;
+  usage.cacheCreationInputTokens += responseUsage.cache_creation_input_tokens ?? 0;
+  usage.cacheReadInputTokens += responseUsage.cache_read_input_tokens ?? 0;
+  usage.apiCalls += 1;
+}
 function isRetryableAnthropicError(error4) {
   return error4 instanceof RateLimitError || error4 instanceof APIConnectionError || error4 instanceof APIError && (error4.status !== void 0 && error4.status >= 500 || error4.status === void 0 && error4.message?.includes("overloaded"));
 }
@@ -31975,7 +31991,7 @@ var TranslationService = class {
   debug;
   // Counted at the chokepoint so retried/discarded attempts are included —
   // the per-result tokensUsed fields miss them (#164/F53).
-  usage = { inputTokens: 0, outputTokens: 0, apiCalls: 0 };
+  usage = emptyApiUsage();
   constructor(apiKey, model = DEFAULT_CLAUDE_MODEL, debug = false) {
     this.client = new Anthropic({ apiKey, maxRetries: 0 });
     this.model = model;
@@ -32019,9 +32035,8 @@ var TranslationService = class {
           thinking: DEFAULT_THINKING
         });
         const message = await stream.finalMessage();
-        this.usage.inputTokens += message.usage.input_tokens;
-        this.usage.outputTokens += message.usage.output_tokens;
-        this.usage.apiCalls += 1;
+        addUsage(this.usage, message.usage);
+        this.log(`${operationName}: tokens in=${message.usage.input_tokens} out=${message.usage.output_tokens} cacheRead=${message.usage.cache_read_input_tokens ?? 0} cacheWrite=${message.usage.cache_creation_input_tokens ?? 0}`);
         if (message.stop_reason === "max_tokens") {
           throw new Error(`${operationName}: response truncated at max_tokens=${createParams.max_tokens}; refusing to use incomplete output`);
         }
@@ -32040,6 +32055,31 @@ var TranslationService = class {
       }
     }
     throw new Error("Unexpected: retry loop completed without result");
+  }
+  /**
+   * One user message split at the stable / per-call boundary, with a
+   * cache_control breakpoint on the stable block (#292).
+   *
+   * The stable block (operation rules + language rules + glossary) must be
+   * byte-identical across calls to the SAME prompt builder — each builder's
+   * rules differ, so each writes its own cache entry rather than sharing one
+   * across all translator operations (a typical run is dominated by a single
+   * builder, so this costs little). Anything per-call (customInstructions,
+   * document content) belongs in the volatile block. Repeat calls then read
+   * the stable block at ~0.1× the input rate (5-minute TTL, refreshed by
+   * every read). Below the model's minimum cacheable prefix the marker is
+   * silently ignored, which is harmless.
+   */
+  cachedPromptMessages(stablePrefix, volatileSuffix) {
+    return [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: stablePrefix, cache_control: { type: "ephemeral" } },
+          { type: "text", text: volatileSuffix }
+        ]
+      }
+    ];
   }
   /**
    * Translate a section (update, new, or resync)
@@ -32075,7 +32115,7 @@ var TranslationService = class {
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
     const languageConfig = getLanguageConfig(targetLanguage);
     const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
+    const stablePrefix = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
 
 TASK: The ${sourceLanguage} section has been modified. Update the existing ${targetLanguage} translation to reflect these changes.
 
@@ -32094,8 +32134,8 @@ CRITICAL RULES:
    - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
 ${additionalRules}
 ${additionalRules ? "" : "9. "}Return ONLY the updated ${targetLanguage} section, no explanations
-${request2.customInstructions || ""}
-${glossarySection}
+${glossarySection}`;
+    const volatileSuffix = `${request2.customInstructions || ""}
 
 [OLD ${sourceLanguage} VERSION]
 ${oldEnglish}
@@ -32117,7 +32157,7 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
     const response = await this.callWithRetry({
       model: this.model,
       max_tokens: MAX_TOKENS.section,
-      messages: [{ role: "user", content: prompt }]
+      messages: this.cachedPromptMessages(stablePrefix, volatileSuffix)
     }, "translateSectionUpdate");
     const content = response.content[0];
     if (!content || content.type !== "text") {
@@ -32152,7 +32192,7 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
     const languageConfig = getLanguageConfig(targetLanguage);
     const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are resyncing a ${targetLanguage} translation to match the current ${sourceLanguage} source.
+    const stablePrefix = `You are resyncing a ${targetLanguage} translation to match the current ${sourceLanguage} source.
 
 TASK: The ${sourceLanguage} source may have changed since the translation was made. Update the ${targetLanguage} translation to accurately reflect the current source content.
 
@@ -32170,8 +32210,8 @@ CRITICAL RULES:
    - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
 ${additionalRules}
 ${additionalRules ? "" : "8. "}Return ONLY the updated ${targetLanguage} section, no explanations
-${request2.customInstructions || ""}
-${glossarySection}
+${glossarySection}`;
+    const volatileSuffix = `${request2.customInstructions || ""}
 
 [CURRENT ${sourceLanguage} SOURCE]
 ${newEnglish}
@@ -32188,7 +32228,7 @@ Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing t
     const response = await this.callWithRetry({
       model: this.model,
       max_tokens: MAX_TOKENS.section,
-      messages: [{ role: "user", content: prompt }]
+      messages: this.cachedPromptMessages(stablePrefix, volatileSuffix)
     }, "translateSectionResync");
     const content = response.content[0];
     if (!content || content.type !== "text") {
@@ -32219,7 +32259,7 @@ Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing t
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
     const languageConfig = getLanguageConfig(targetLanguage);
     const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
+    const stablePrefix = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
 
 RULES:
 1. Translate all prose content accurately
@@ -32236,8 +32276,8 @@ RULES:
    - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
 ${additionalRules}
 ${additionalRules ? "" : "9. "}Return ONLY the translated section, no explanations
-${request2.customInstructions || ""}
-${glossarySection}
+${glossarySection}`;
+    const volatileSuffix = `${request2.customInstructions || ""}
 
 [${sourceLanguage} SECTION TO TRANSLATE]
 ${englishSection}
@@ -32249,7 +32289,7 @@ Provide ONLY the ${targetLanguage} translation. Do not include any markers, expl
     const response = await this.callWithRetry({
       model: this.model,
       max_tokens: MAX_TOKENS.section,
-      messages: [{ role: "user", content: prompt }]
+      messages: this.cachedPromptMessages(stablePrefix, volatileSuffix)
     }, "translateNewSection");
     const content = response.content[0];
     if (!content || content.type !== "text") {
@@ -32273,7 +32313,7 @@ Provide ONLY the ${targetLanguage} translation. Do not include any markers, expl
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
     const languageConfig = getLanguageConfig(targetLanguage);
     const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${10 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
+    const stablePrefix = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
 
 RULES:
 1. Translate all prose content
@@ -32293,12 +32333,13 @@ RULES:
    - Every \`\`\`{solution-start} MUST have matching \`\`\`{solution-end}
    - Every \`\`\`{code-cell} MUST have closing \`\`\`
 ${additionalRules}
-${request2.customInstructions || ""}
 ${glossarySection}
 
 IMPORTANT: You MUST translate the ENTIRE document. Do not stop mid-sentence or mid-code.
 If you are approaching token limits and cannot complete the translation, print:
 "${INCOMPLETE_DOCUMENT_MARKER}"
+`;
+    const volatileSuffix = `${request2.customInstructions || ""}
 
 CONTENT:
 ${content}
@@ -32314,7 +32355,7 @@ Provide the complete translated document maintaining exact MyST structure.`;
     const response = await this.callWithRetry({
       model: this.model,
       max_tokens: maxTokens,
-      messages: [{ role: "user", content: prompt }]
+      messages: this.cachedPromptMessages(stablePrefix, volatileSuffix)
     }, "translateFullDocument");
     const result = response.content[0];
     if (!result || result.type !== "text") {
@@ -32355,7 +32396,7 @@ Provide the complete translated document maintaining exact MyST structure.`;
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
     const languageConfig = getLanguageConfig(targetLanguage);
     const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are a professional translator specialising in quantitative economics.
+    const stablePrefix = `You are a professional translator specialising in quantitative economics.
 
 You are given:
 1. The **current ${sourceLanguage} source** document (authoritative)
@@ -32391,12 +32432,13 @@ Your task: produce an **updated ${targetLanguage} translation** that accurately 
 7. **Preserve the frontmatter (YAML between --- markers) from the TARGET translation** \u2014 do not replace it with the source frontmatter. Only update the heading-map if section headings changed.
 8. **Use the glossary below for consistent terminology** \u2014 when a term from the glossary appears, use the specified translation.
 ${additionalRules}
-${request2.customInstructions || ""}
 ${glossarySection}
 
 ## Output format
 
 Return ONLY the complete updated ${targetLanguage} document. No explanations, no commentary, no code fences wrapping the document. Start directly with the document's first line: the frontmatter \`---\` marker if the ${targetLanguage} translation has frontmatter, otherwise its first content line. NEVER add a \`---\` marker to a document that does not have frontmatter.
+`;
+    const volatileSuffix = `${request2.customInstructions || ""}
 
 ## Current ${sourceLanguage} Source
 
@@ -32417,7 +32459,7 @@ ${targetContent}`;
       const response = await this.callWithRetry({
         model: this.model,
         max_tokens: maxTokens,
-        messages: [{ role: "user", content: prompt }]
+        messages: this.cachedPromptMessages(stablePrefix, volatileSuffix)
       }, "translateDocumentResync");
       const result = response.content[0];
       if (!result || result.type !== "text") {
@@ -38155,7 +38197,7 @@ var TranslationReviewer = class {
   /** Section parsing for the deterministic diff checks (#148). */
   parser;
   // Counted at the chokepoint so retried/discarded attempts are included (#164/F53).
-  usage = { inputTokens: 0, outputTokens: 0, apiCalls: 0 };
+  usage = emptyApiUsage();
   constructor(anthropicApiKey, githubToken, model = DEFAULT_REVIEW_MODEL, maxSuggestions = 5) {
     this.anthropic = new Anthropic({ apiKey: anthropicApiKey, maxRetries: 0 });
     this.octokit = github.getOctokit(githubToken);
@@ -38185,9 +38227,7 @@ var TranslationReviewer = class {
           messages: [{ role: "user", content: prompt }]
         });
         const response = await stream.finalMessage();
-        this.usage.inputTokens += response.usage.input_tokens;
-        this.usage.outputTokens += response.usage.output_tokens;
-        this.usage.apiCalls += 1;
+        addUsage(this.usage, response.usage);
         if (response.stop_reason === "max_tokens") {
           throw new Error(`${operationName}: response truncated at max_tokens=${maxTokens}; verdict JSON is incomplete`);
         }
@@ -39263,8 +39303,10 @@ async function runReview(builtInGlossaryDir) {
   const usage = reviewer.getUsage();
   core8.setOutput("input-tokens", String(usage.inputTokens));
   core8.setOutput("output-tokens", String(usage.outputTokens));
+  core8.setOutput("cache-creation-input-tokens", String(usage.cacheCreationInputTokens));
+  core8.setOutput("cache-read-input-tokens", String(usage.cacheReadInputTokens));
   core8.setOutput("api-calls", String(usage.apiCalls));
-  core8.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens`);
+  core8.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens, cache: ${usage.cacheReadInputTokens} read + ${usage.cacheCreationInputTokens} written`);
   core8.info(`\u2705 Review complete: ${result.verdict} \u2192 ${result.recommendation} (Translation: ${result.translationQuality.score}/10, Diff: ${result.diffQuality.score}/10)`);
 }
 function detectTargetLanguage(repoName) {
@@ -39735,8 +39777,10 @@ async function runSync() {
   const usage = orchestrator.getUsage();
   core9.setOutput("input-tokens", String(usage.inputTokens));
   core9.setOutput("output-tokens", String(usage.outputTokens));
+  core9.setOutput("cache-creation-input-tokens", String(usage.cacheCreationInputTokens));
+  core9.setOutput("cache-read-input-tokens", String(usage.cacheReadInputTokens));
   core9.setOutput("api-calls", String(usage.apiCalls));
-  core9.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens`);
+  core9.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens, cache: ${usage.cacheReadInputTokens} read + ${usage.cacheCreationInputTokens} written`);
   let prUrl;
   if (result.translatedFiles.length > 0 || result.filesToDelete.length > 0) {
     try {
