@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Japanese (`ja`) is a configured target language with a native-speaker-reviewed glossary** (#69): `glossary/ja.json` v1.1 — 357 terms mirroring the `zh-cn` / `fa` term set — and a `LANGUAGE_CONFIGS` entry, so `target-language: ja` validates and the glossary loads automatically. The v1.0 draft opened for review in June; four reviewers (Chihiro2000GitHub's whole-glossary pass, sayaikegawa, xuanguang-li, and jstac's policy rulings) settled one rule between July 29 and August 18 — *Japanese where a well-known, standard Japanese counterpart exists, English otherwise; if in doubt, English* — and v1.1 applies it: all 42 personal names revert to Latin script (no katakana transliteration, no guessed kanji — jstac's own name was the counter-example); six terms with no established Japanese form go back to English or keep the proper-name part English (`lake モデル`, `cost-to-go 関数`, `Forcing variable`, `Forward-looking difference equation`, `Authority centrality`, `Survey of Consumer Finances` — 消費者金融調査 means the consumer-*lending* industry); fourteen term corrections from the review table (固有値分解, カーネル, 逆行列の計算, マネタリストの不愉快な算術, 真正手形説, …); the resolved questions (コミュニケートする状態, 状態条件付き請求権, 相補累積分布関数（CCDF）, 改革開放 for the PRC's "reform and liberalization", 市場清算 kept because 市場均衡 would collide with equilibrium → 均衡); ・ rather than ＝ in every compound name; and two Wikipedia cross-check adoptions (限界収益, 割引現在価値). The same policy is carried into the prompt as seven `ja` rules (typography, keep-English-when-in-doubt, names in Latin script, ・ joins, abbreviation expansion) so the glossary and the rules pull the same way on terms the glossary does not cover. Guards: the glossary test suite gains a `ja.json` block (en/ja present, no duplicate keys, term set identical to `zh-cn`, every name `ja == en`, no ＝); the docs drift tests cover the new language. Decision record `.dev/decisions/D-2026-09-01-ja-terminology-policy.md`.
+
 ## [0.27.0] - 2026-09-01
 
 ### Added

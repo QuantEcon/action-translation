@@ -110,14 +110,25 @@ export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
       'English-retained terms carrying Malayalam case-suffixes (relationships-ൽ, concepts-ന്റെ, NumPy-യുടെ) and English section headings are the REQUIRED form of compliant Malayalam prose under this policy — never treat them as partial translation, untranslated content, or a terminology inconsistency',
     ],
   },
+  ja: {
+    code: 'ja',
+    name: 'Japanese',
+    // Terminology policy from the native-speaker review of the glossary draft on
+    // PR #69 (2026-07-29 → 2026-08-18): whole-glossary pass by Chihiro2000GitHub
+    // (native speaker), confirmations by sayaikegawa and xuanguang-li, policy
+    // rulings by jstac. Recorded in
+    // .dev/decisions/D-2026-09-01-ja-terminology-policy.md.
+    additionalRules: [
+      'Use proper full-width Japanese punctuation marks (、。「」) not ASCII punctuation (,.) in prose text',
+      'Always insert a space between Japanese characters and inline MyST directives ({doc}, {ref}, {any}, {term}, etc.) or Markdown links ([text](url))',
+      'Use the Japanese term only where a well-known, standard Japanese counterpart exists (e.g. 予算制約 for budget constraint, 行列 for matrix, 均衡 for equilibrium, 世代重複モデル for the OLG model); otherwise keep the English term in Latin script — if in doubt, keep English. Japanese readers of economics are comfortable with English technical words inside Japanese sentences (value function, Bellman equation)',
+      'Where only the generic head noun has a Japanese equivalent, keep the proper-name part in English and translate the head noun (lake モデル, cost-to-go 関数) — never invent a katakana rendering for a term that has no established Japanese form',
+      'Keep ALL personal names in Latin script exactly as in the source (Robert Solow, not ロバート・ソロー) — do not transliterate names to katakana, and never guess kanji for Japanese or Chinese researchers',
+      'Join the parts of a compound name with ・ (ソロー・スワン成長モデル, コブ・ダグラス型生産関数, ハミルトン・ヤコビ・ベルマン方程式), never with ＝',
+      'On first use, render an abbreviation as the full Japanese term with the English abbreviation in full-width parentheses (国内総生産（GDP）, 最小二乗法（OLS）), then the abbreviation alone; named datasets and surveys keep their English name (FRED, Survey of Consumer Finances)',
+    ],
+  },
   // Future language configurations can be added here:
-  // 'ja': {
-  //   code: 'ja',
-  //   name: 'Japanese',
-  //   additionalRules: [
-  //     'Use proper Japanese punctuation marks (、。「」)',
-  //   ],
-  // },
   // 'es': {
   //   code: 'es',
   //   name: 'Spanish',
