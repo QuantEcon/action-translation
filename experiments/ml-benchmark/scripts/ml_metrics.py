@@ -133,7 +133,12 @@ def malayalam_tokens(prose: str, top: int) -> list[tuple[str, int]]:
 
 CELL_OR_MATH_RE = re.compile(r"^\s*(```|~~~)\{(code-cell|math)\}")
 LIST_ITEM_RE = re.compile(r"^\s*([*+-]|\d+\.)\s+")
-DIRECTIVE_LINE_RE = re.compile(r"^\s*(:|\(|\+\+\+|```|~~~|\{[a-z-]+\}`|<!--)")
+# Directive bodies live inside fences (already excluded); this only skips
+# directive options (`:class: dropdown`), labels (`(name)=`), cell breaks and
+# comments. A prose line that opens with a MyST role ({ref}`…`, {doc}`…`) is
+# prose and must NOT be skipped — the rules name sentence-initial link text.
+DIRECTIVE_LINE_RE = re.compile(r"^\s*(:|\(|\+\+\+|```|~~~|<!--)")
+ROLE_PREFIX_RE = re.compile(r"^\{[a-z-]+\}`")
 BANNED_RENDERINGS: list[tuple[str, str]] = [
     # (substring, what the rules say instead) — one entry per rule-bound rendering
     ("ഒരു നൽകിയ", "'a given N' → തന്നിരിക്കുന്ന N"),
@@ -214,6 +219,9 @@ def round2_lints(text: str) -> dict:
                 punct.append({"line": n, "kind": "paragraph without terminal punctuation", "text": body[-60:]})
         if has_ml:
             head = LIST_ITEM_RE.sub("", body).lstrip("(")
+            # A sentence may open with a MyST role — test the link text, since
+            # the rule requires {ref}`Previous lecture …`, not `previous`.
+            head = ROLE_PREFIX_RE.sub("", head)
             # A plain lowercase English word opening the sentence; identifiers
             # and code-like tokens (if/else, np.random, x_t) are exempt.
             if re.match(r"[a-z][a-z-]*(\s|$)", head):

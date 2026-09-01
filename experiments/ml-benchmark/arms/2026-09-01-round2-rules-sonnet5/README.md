@@ -29,7 +29,7 @@ renderings / future-hortative watch); "−" should fall toward the reviewed coun
 
 | Signature | dir | seed | reviewed | this arm |
 |---|---|---|---|---|
-| bare-ending / lowercase-initial / banned / hortative-watch (lints) | − | 23/17/15/6 | 1/0/2/1 | **16/5/1/3** |
+| bare-ending / lowercase-initial / banned / hortative-watch (lints) | − | 24/19/16/6 | 1/1/2/1 | **18/5/1/3** |
 | colon-terminated Malayalam paragraphs | + | 4 | 18 | **6** |
 | തന്നിരിക്കുന്ന (a given) | + | 0 | 3 | **4** |
 | ഒരു നൽകിയ (a given, banned) | − | 3 | 0 | **0** |
@@ -62,16 +62,16 @@ are in this README's table labels; the lint counts come from `ml_metrics.py --js
 
 ## Misses and new findings (one rendering, one model, one document — direction, not a rate; #227 discipline applies)
 
-1. **Terminal punctuation is the weak rule: 23 → 16 bare endings, not → 1.** The
+1. **Terminal punctuation is the weak rule: 24 → 18 bare endings, not → 1.** The
    prompt rule fires on a third of the cases; the model still mirrors an
-   unpunctuated English line. Every one of the 16 is a Malayalam sentence
+   unpunctuated English line. Every one of the 18 is a Malayalam sentence
    immediately before a code cell, and in the reviewed text every such line
    carries a colon or a full stop. This is the clearest case yet for a
    **deterministic post-processing step** rather than more prompt: a bare
    Malayalam ending before a `{code-cell}` gets `:` (the reviewer's choice in
    every forward-pointing case). Candidate for W2 (#260) deterministic
    localisation; the lint already detects it on every sync PR.
-2. **Capitalisation: 17 → 5, all five on bullet items** (`built-in ആയ …`,
+2. **Capitalisation: 19 → 5, all five on bullet items** (`built-in ആയ …`,
    `code reuse …`, `data …`, `function calls …`). Paragraph starts are all
    fixed; list items are not. Sharpen the rule text with a bullet example
    ("* Code reuse …"), or fold into the same post-processing step (a
@@ -112,3 +112,15 @@ the two the new lints detect on every PR, so nothing ships silently. Two
 one-instance regressions (`set` transliterated, `refer` calqued) and one scope
 over-application (ex5) are logged; the ex5 negative example is worth adding
 before release, the rest are watch items.
+
+## Revision 2026-09-01 (Copilot review on #297)
+
+The lint originally skipped any prose line opening with a MyST role
+(`{ref}`…`, `{doc}`…`) and never looked inside link text, so the reviewer's
+own capitalisation flag at seed line 229 (`{ref}`previous lecture` →
+`Previous lecture`) was invisible to it. Fixed (role-initial lines are prose;
+the lowercase check tests the link text). Counts above are the corrected
+ones: seed 23/17/15/6 → 24/19/16/6, arm 16/5/1/3 → 18/5/1/3, and the reviewed
+text 1/0/2/1 → **1/1/2/1** — the new reviewed hit is his own inconsistency
+(`{ref}`Previous lecture` at 229 but `{doc}`previous lecture` at 290), watch-only
+and a candidate for ml#12.
