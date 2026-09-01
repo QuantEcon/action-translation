@@ -24,8 +24,9 @@ Glossary files are named using **language codes**:
 - `zh-cn.json` - Simplified Chinese (中文简体)
 - `fa.json` - Persian/Farsi (فارسی)
 - `fr.json` - French (Français)
+- `ml.json` - Malayalam (മലയാളം)
+- `ja.json` - Japanese (日本語)
 - `zh-tw.json` - Traditional Chinese (中文繁體) - future
-- `ja.json` - Japanese (日本語) - future
 - `es.json` - Spanish (Español) - future
 
 The filename **must match** the `target-language` input in the workflow configuration.
@@ -88,9 +89,26 @@ recommended before promoting to ✅ Complete.
 
 ### Japanese (`ja.json`)
 
-**Status**: 🚧 Planned
+**Status**: ✅ Complete (357 terms, v1.1)
 
-Will include translations for all terms in the existing glossaries.
+**Contents**: Mirrors the English term set of the `zh-cn` / `fa` glossaries
+(economics, macro/micro, finance, linear algebra, probability/statistics, time
+series, network science, economist and mathematician names).
+
+**Notes**: Machine-drafted as v1.0, then reviewed term-by-term by native speakers
+on PR #69 (July–August 2026: Chihiro2000GitHub, sayaikegawa, xuanguang-li; policy
+rulings by jstac). v1.1 applies that review under one rule — *Japanese where a
+well-known, standard Japanese counterpart exists, English otherwise; if in doubt,
+English*: all personal names stay in Latin script (no katakana, no guessed kanji);
+terms with no established Japanese form stay in English (`Forcing variable`,
+`Survey of Consumer Finances`) or keep the proper-name part English (`lake モデル`,
+`cost-to-go 関数`); compound names use ・ (コブ・ダグラス), never ＝; abbreviations
+expand with the English acronym in full-width parentheses (国内総生産（GDP）).
+Decision record `.dev/decisions/D-2026-09-01-ja-terminology-policy.md`.
+
+**Maintained by**: QuantEcon team
+
+**Last updated**: September 2026
 
 ### Spanish (`es.json`)
 
@@ -211,7 +229,7 @@ and changes nothing. Prefer specialist terms that vary; skip the obvious ones.
 ### Version History
 
 - **v1.0** (October 2025): Initial Chinese glossary (342 terms)
-- **v1.1** (Future): Expanded Chinese glossary, added Japanese
+- **v1.1** (2026): French, Malayalam and Japanese glossaries added
 - **v2.0** (Future): Multi-language support with 5+ languages
 
 ### Updating Glossaries

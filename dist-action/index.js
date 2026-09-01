@@ -26463,15 +26463,26 @@ var LANGUAGE_CONFIGS = {
       "Use a natural classroom/educational register, not a formal government-gazette style; where a Malayalam word genuinely aids comprehension for a borderline non-technical concept, it may be given with the English in parentheses on first use (e.g. \u0D2C\u0D28\u0D4D\u0D27\u0D02 (relationship)) \u2014 use sparingly",
       "English-retained terms carrying Malayalam case-suffixes (relationships-\u0D7D, concepts-\u0D28\u0D4D\u0D31\u0D46, NumPy-\u0D2F\u0D41\u0D1F\u0D46) and English section headings are the REQUIRED form of compliant Malayalam prose under this policy \u2014 never treat them as partial translation, untranslated content, or a terminology inconsistency"
     ]
+  },
+  ja: {
+    code: "ja",
+    name: "Japanese",
+    // Terminology policy from the native-speaker review of the glossary draft on
+    // PR #69 (2026-07-29 → 2026-08-18): whole-glossary pass by Chihiro2000GitHub
+    // (native speaker), confirmations by sayaikegawa and xuanguang-li, policy
+    // rulings by jstac. Recorded in
+    // .dev/decisions/D-2026-09-01-ja-terminology-policy.md.
+    additionalRules: [
+      "Use proper full-width Japanese punctuation marks (\u3001\u3002\u300C\u300D) not ASCII punctuation (,.) in prose text",
+      "Always insert a space between Japanese characters and inline MyST directives ({doc}, {ref}, {any}, {term}, etc.) or Markdown links ([text](url))",
+      "Use the Japanese term only where a well-known, standard Japanese counterpart exists (e.g. \u4E88\u7B97\u5236\u7D04 for budget constraint, \u884C\u5217 for matrix, \u5747\u8861 for equilibrium, \u4E16\u4EE3\u91CD\u8907\u30E2\u30C7\u30EB for the OLG model); otherwise keep the English term in Latin script \u2014 if in doubt, keep English. Japanese readers of economics are comfortable with English technical words inside Japanese sentences (value function, Bellman equation)",
+      "Where only the generic head noun has a Japanese equivalent, keep the proper-name part in English and translate the head noun (lake \u30E2\u30C7\u30EB, cost-to-go \u95A2\u6570) \u2014 never invent a katakana rendering for a term that has no established Japanese form",
+      "Keep ALL personal names in Latin script exactly as in the source (Robert Solow, not \u30ED\u30D0\u30FC\u30C8\u30FB\u30BD\u30ED\u30FC) \u2014 do not transliterate names to katakana, and never guess kanji for Japanese or Chinese researchers",
+      "Join the parts of a compound name with \u30FB (\u30BD\u30ED\u30FC\u30FB\u30B9\u30EF\u30F3\u6210\u9577\u30E2\u30C7\u30EB, \u30B3\u30D6\u30FB\u30C0\u30B0\u30E9\u30B9\u578B\u751F\u7523\u95A2\u6570, \u30CF\u30DF\u30EB\u30C8\u30F3\u30FB\u30E4\u30B3\u30D3\u30FB\u30D9\u30EB\u30DE\u30F3\u65B9\u7A0B\u5F0F), never with \uFF1D",
+      "On first use, render an abbreviation as the full Japanese term with the English abbreviation in full-width parentheses (\u56FD\u5185\u7DCF\u751F\u7523\uFF08GDP\uFF09, \u6700\u5C0F\u4E8C\u4E57\u6CD5\uFF08OLS\uFF09), then the abbreviation alone; named datasets and surveys keep their English name (FRED, Survey of Consumer Finances)"
+    ]
   }
   // Future language configurations can be added here:
-  // 'ja': {
-  //   code: 'ja',
-  //   name: 'Japanese',
-  //   additionalRules: [
-  //     'Use proper Japanese punctuation marks (、。「」)',
-  //   ],
-  // },
   // 'es': {
   //   code: 'es',
   //   name: 'Spanish',

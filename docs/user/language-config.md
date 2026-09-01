@@ -14,7 +14,7 @@ Each target language can have specific translation rules that are automatically 
 | `fa` | Farsi (Persian) | ✅ Configured |
 | `fr` | French | ✅ Configured (draft glossary) |
 | `ml` | Malayalam | ✅ Configured (keep-English policy; glossary in review) |
-| `ja` | Japanese | Planned |
+| `ja` | Japanese | ✅ Configured (glossary native-speaker reviewed, August 2026) |
 | `es` | Spanish | Planned |
 
 ## Current rules
@@ -40,6 +40,18 @@ Each target language can have specific translation rules that are automatically 
 
 The register and anti-calque rules encode the first native-editor review of machine output (Emile, lecture-python-programming.fr PRs #24/#25, August 2026); each generalises a correction made at least twice across those lectures.
 
+### Japanese — `ja`
+
+- Use proper full-width Japanese punctuation marks (、。「」) not ASCII punctuation (,.) in prose text
+- Insert a space between Japanese characters and inline MyST directives or Markdown links
+- Use the Japanese term only where a well-known, standard Japanese counterpart exists (予算制約, 行列, 均衡, 世代重複モデル); otherwise keep the English term in Latin script — if in doubt, keep English
+- Where only the generic head noun has a Japanese equivalent, keep the proper-name part in English and translate the head noun (lake モデル, cost-to-go 関数); never invent a katakana rendering
+- Keep all personal names in Latin script (Robert Solow, not ロバート・ソロー) — no katakana transliteration, no guessed kanji
+- Join compound names with ・ (ソロー・スワン, コブ・ダグラス), never ＝
+- Render an abbreviation on first use as the full Japanese term with the English abbreviation in full-width parentheses (国内総生産（GDP）); named datasets and surveys keep their English name (FRED, Survey of Consumer Finances)
+
+The terminology rules encode the native-speaker review of the glossary draft on PR #69 (July–August 2026): a whole-glossary pass by Chihiro2000GitHub with confirmations by sayaikegawa and xuanguang-li, and the policy rulings by jstac — Japanese where a standard term exists, English otherwise, if in doubt English. Decision record `D-2026-09-01-ja-terminology-policy`.
+
 ## How rules are applied
 
 Language rules are appended to every translation prompt as numbered rules after the standard instructions. For example, when translating to `zh-cn`, Claude's prompt includes:
@@ -56,9 +68,9 @@ Rules apply to all translation modes: UPDATE (incremental sync), NEW (full file)
 
 ## Supported languages
 
-<!-- supported-languages: en, zh-cn, fa, fr, ml -->
+<!-- supported-languages: en, zh-cn, fa, fr, ml, ja -->
 
-The **GitHub Action** validates `target-language` against its configured language list — currently `en`, `zh-cn`, `fa`, `fr`, and `ml` — and fails immediately, before any work happens, on anything else. Adding a language means adding a `LANGUAGE_CONFIGS` entry in `src/language-config.ts` (a glossary alone does not enable a language); the drift test in `language-config.test.ts` keeps this page's list in sync with the code.
+The **GitHub Action** validates `target-language` against its configured language list — currently `en`, `zh-cn`, `fa`, `fr`, `ml`, and `ja` — and fails immediately, before any work happens, on anything else. Adding a language means adding a `LANGUAGE_CONFIGS` entry in `src/language-config.ts` (a glossary alone does not enable a language); the drift test in `language-config.test.ts` keeps this page's list in sync with the code.
 
 The **CLI** (`translate init`, `forward`, `backward`) never validates the language code: any code works there, with no language-specific rules applied for unconfigured codes.
 
@@ -80,11 +92,11 @@ export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
   'fa': { /* ... */ },
 
   // Add new language:
-  'ja': {
-    code: 'ja',
-    name: 'Japanese',
+  'es': {
+    code: 'es',
+    name: 'Spanish',
     additionalRules: [
-      'Use proper Japanese punctuation marks (、。「」)',
+      'Use inverted punctuation marks (¿?) for questions and (¡!) for exclamations',
     ],
   },
 };

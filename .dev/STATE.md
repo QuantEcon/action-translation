@@ -73,7 +73,7 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   guard. **Resync moratorium until the guard lands.**
 - **Malayalam** — first-class harness language (26/26); its two seed reference
   translations await native review (#207); benchmark Phase 1 (#194) unrun.
-- **Glossary PR #69** (ja) — open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
+- **Glossary PR #69** (ja) — native review complete (thread 2026-07-29 → 08-18); rebuilt on main 2026-09-01 with the `ja` `LANGUAGE_CONFIGS` entry and 72 review edits applied (`ja.json` v1.1, decision `D-2026-09-01-ja-terminology-policy`); awaiting the reviewers' confirming pass, then merge.
 
 ## Recently landed
 

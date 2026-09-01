@@ -14,10 +14,13 @@ The glossary system ensures consistent translation of technical terminology acro
 | Farsi | `glossary/fa.json` | 357 | December 2025 |
 | French | `glossary/fr.json` | 367 | August 2026 |
 | Malayalam | `glossary/ml.json` | 77 | September 2026 (v0.4.0) |
+| Japanese | `glossary/ja.json` | 357 | September 2026 (v1.1) |
 
 These glossaries ship in the action repository (resolved from the checked-out repo at runtime — they are not baked into the bundle) and load automatically when the `target-language` matches. No configuration needed.
 
 > The French glossary began as a machine-drafted economics glossary; native-speaker review is incorporated incrementally — programming-domain terms were reviewed in #78 and extended from the first native-editor lecture reviews (lecture-python-programming.fr #24/#25, August 2026).
+
+> The Japanese glossary was machine-drafted (v1.0) and then reviewed term-by-term by native speakers on PR #69 (July–August 2026). v1.1 applies that review: personal names stay in Latin script, terms with no established Japanese form stay in English (if in doubt, English), and compound names use ・. See [Language Configuration](language-config.md#japanese--ja) for the prompt rules that carry the same policy.
 
 ## How it works
 
@@ -109,12 +112,12 @@ Every run prints the glossary it loaded (`✓ Loaded built-in glossary for zh-cn
 
 To add glossary support for a new language:
 
-1. Create `glossary/{lang-code}.json` (e.g., `glossary/ja.json`)
+1. Create `glossary/{lang-code}.json` (e.g., `glossary/es.json`)
 2. Use the same JSON structure as existing glossaries
-3. The target language field should match the language code (e.g., `"ja"` for Japanese)
+3. The target language field should match the language code (e.g., `"es"` for Spanish)
 4. The glossary is loaded automatically when `target-language` matches the file name
 
-**Planned languages:** Japanese (`ja`), Spanish (`es`)
+**Planned languages:** Spanish (`es`)
 
 ## Context categories
 

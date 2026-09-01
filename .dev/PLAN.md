@@ -390,9 +390,11 @@ new-language adopter can go from zero to a working target repo following only pu
 - [ ] **#61** — create the `quantecon-services` PAT, grant repo access, rotate secrets in the
       ~6 workflow repos (pure ops; recent translation PRs still author as `mmcky`)
 - [ ] **#7** — resolve alongside the `presentations/` decision in Phase 7
-- [ ] For PRs **#68** (fr) / **#69** (ja): before merge, add the missing `LANGUAGE_CONFIGS`
+- [x] For PRs **#68** (fr) / **#69** (ja): before merge, add the missing `LANGUAGE_CONFIGS`
       entries (Copilot's catch — a glossary alone does not enable a language), resolve the
       flagged term-choice judgment calls with native speakers, rebase whichever lands second
+      — #68 merged 2026-07-14; #69 rebuilt on main 2026-09-01 with the `ja` config entry and
+      the native-review edits applied (72 terms), awaiting the reviewers' confirming pass
 
 **Done when**: open-issue list contains only live work; translation PRs author as
 `quantecon-services`.
