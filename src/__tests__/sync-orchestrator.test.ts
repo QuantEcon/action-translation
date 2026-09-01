@@ -4,7 +4,6 @@
  * Tests:
  * - File classification (classifyChangedFiles)
  * - Glossary loading (loadGlossary)
- * - mergeTargetCaptions (TOC caption preservation)
  * - SyncOrchestrator file processing pipeline
  *   - Markdown files (new + existing)
  *   - Renamed files (with + without existing translation)
@@ -18,7 +17,6 @@ import {
   classifyChangedFiles,
   loadGlossary,
   formatGlossaryTerms,
-  mergeTargetCaptions,
   SyncOrchestrator,
   FileToSync,
   Logger,
@@ -333,95 +331,6 @@ describe('formatGlossaryTerms', () => {
 });
 
 // =============================================================================
-// mergeTargetCaptions TESTS
-// =============================================================================
-
-describe('mergeTargetCaptions', () => {
-  it('preserves target captions for parts with identical file membership', () => {
-    const source = yaml.dump({
-      format: 'jb-book',
-      root: 'intro',
-      parts: [
-        { caption: 'Introduction', chapters: [{ file: 'lectures/intro' }] },
-        { caption: 'Economic Data', chapters: [{ file: 'lectures/data' }] },
-      ],
-    });
-    const target = yaml.dump({
-      format: 'jb-book',
-      root: 'intro',
-      parts: [
-        { caption: '导言', chapters: [{ file: 'lectures/intro' }] },
-        { caption: '经济数据', chapters: [{ file: 'lectures/data' }] },
-      ],
-    });
-
-    const result = yaml.load(mergeTargetCaptions(source, target)) as any;
-    expect(result.parts[0].caption).toBe('导言');
-    expect(result.parts[1].caption).toBe('经济数据');
-  });
-
-  it('keeps source caption for new parts with no matching target part', () => {
-    const source = yaml.dump({
-      format: 'jb-book',
-      root: 'intro',
-      parts: [
-        { caption: 'Existing', chapters: [{ file: 'lectures/existing' }] },
-        { caption: 'New Part', chapters: [{ file: 'lectures/new' }] },
-      ],
-    });
-    const target = yaml.dump({
-      format: 'jb-book',
-      root: 'intro',
-      parts: [{ caption: '现有', chapters: [{ file: 'lectures/existing' }] }],
-    });
-
-    const result = yaml.load(mergeTargetCaptions(source, target)) as any;
-    expect(result.parts[0].caption).toBe('现有');
-    expect(result.parts[1].caption).toBe('New Part');
-  });
-
-  it('returns source unchanged when neither side has parts', () => {
-    const source = 'format: jb-book\nroot: intro\nchapters:\n  - file: lectures/intro\n';
-    const target = 'format: jb-book\nroot: intro\nchapters:\n  - file: lectures/intro\n';
-    expect(mergeTargetCaptions(source, target)).toBe(source);
-  });
-
-  it('returns source unchanged when target YAML is malformed', () => {
-    const source = yaml.dump({
-      format: 'jb-book',
-      parts: [{ caption: 'Introduction', chapters: [{ file: 'lectures/intro' }] }],
-    });
-    expect(mergeTargetCaptions(source, ': bad: yaml: [')).toBe(source);
-  });
-
-  it('matches parts by file set regardless of order within chapters', () => {
-    const source = yaml.dump({
-      format: 'jb-book',
-      root: 'intro',
-      parts: [
-        {
-          caption: 'Group',
-          chapters: [{ file: 'lectures/b' }, { file: 'lectures/a' }],
-        },
-      ],
-    });
-    const target = yaml.dump({
-      format: 'jb-book',
-      root: 'intro',
-      parts: [
-        {
-          caption: '组',
-          chapters: [{ file: 'lectures/a' }, { file: 'lectures/b' }],
-        },
-      ],
-    });
-
-    const result = yaml.load(mergeTargetCaptions(source, target)) as any;
-    expect(result.parts[0].caption).toBe('组');
-  });
-});
-
-// =============================================================================
 // SyncOrchestrator TESTS
 // =============================================================================
 
@@ -570,24 +479,33 @@ describe('SyncOrchestrator', () => {
       expect(result.translatedFiles[0].sha).toBe('toc-sha-123');
     });
 
-    it('should preserve localised part captions from target when file sets match', async () => {
-      const sourceYaml = yaml.dump({
-        format: 'jb-book',
-        root: 'intro',
-        parts: [
-          { caption: 'Introduction', chapters: [{ file: 'lectures/intro' }] },
-          { caption: 'Economic Data', chapters: [{ file: 'lectures/data' }] },
-          { caption: 'New Part', chapters: [{ file: 'lectures/new' }] },
-        ],
-      });
-      const targetYaml = yaml.dump({
-        format: 'jb-book',
-        root: 'intro',
-        parts: [
-          { caption: '导言', chapters: [{ file: 'lectures/intro' }] },
-          { caption: '经济数据', chapters: [{ file: 'lectures/data' }] },
-        ],
-      });
+    it('carries the target part captions forward byte-for-byte, changing only caption lines (#254)', async () => {
+      const sourceYaml = `format: jb-book
+root: intro
+parts:
+- caption: Introduction
+  chapters:
+  - file: intro
+- caption: Economic Data
+  numbered: true
+  chapters:
+  - file: data
+  - file: data_new
+- caption: New Part
+  chapters:
+  - file: new
+`;
+      const targetYaml = `format: jb-book
+root: intro
+parts:
+- caption: 导言
+  chapters:
+  - file: intro
+- caption: 经济数据
+  numbered: true
+  chapters:
+  - file: data
+`;
 
       const files: FileToSync[] = [
         {
@@ -602,11 +520,14 @@ describe('SyncOrchestrator', () => {
 
       const result = await orchestrator.processFiles(files);
 
-      const out = yaml.load(result.translatedFiles[0].content) as any;
-      expect(out.parts[0].caption).toBe('导言');
-      expect(out.parts[1].caption).toBe('经济数据');
-      // New part has no target caption — keeps source caption
-      expect(out.parts[2].caption).toBe('New Part');
+      // The part that gained a lecture keeps its caption; the new part keeps the
+      // source caption; nothing but the two caption lines changed.
+      expect(result.translatedFiles[0].content).toBe(
+        sourceYaml
+          .replace('- caption: Introduction\n', '- caption: 导言\n')
+          .replace('- caption: Economic Data\n', '- caption: 经济数据\n')
+      );
+      expect(result.translatedFiles[0].sha).toBe('sha-abc');
     });
 
     it('should use source content unchanged when TOC has no parts', async () => {

@@ -101,6 +101,7 @@ src/
 │   ├── review.ts        # REVIEW mode runner, extracted from index.ts and directly tested (#169)
 │   └── core-logger.ts   # @actions/core → Logger adapter, shared by the entry point and mode runners
 ├── sync-orchestrator.ts # Sync processing pipeline
+├── toc-captions.ts      # _toc.yml part-caption preservation on sync (#254)
 ├── pr-creator.ts        # PR creation in target repo
 ├── parser.ts            # MyST Markdown parser (stack-based, line-by-line)
 ├── diff-detector.ts     # Change detection via section comparison

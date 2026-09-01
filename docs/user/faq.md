@@ -96,6 +96,12 @@ Because success comments are posted via the GitHub API on the source PR, they tr
 
 See [Language Configuration](language-config.md) for details.
 
+### Why did the translated section captions in `_toc.yml` revert to English after a sync?
+
+They should no longer. A sync mirrors the source `_toc.yml` so that lecture additions, removals and reorderings propagate, and until v0.28.0 it mirrored the part captions too, overwriting whatever the edition had translated — silently, because English captions build fine and review mode never looks at the TOC. The sync now reads the target's current `_toc.yml` and carries each part's translated caption forward, matching parts by the lectures they contain rather than by name or position, so a part that gains or loses a lecture keeps its caption. Only the caption lines change; the rest of the TOC is byte-identical to the source.
+
+Two cases still land in English, both on purpose. A **new part** — one sharing no lectures with any part in the target — arrives with its source caption, and the run log warns `has no counterpart in the target TOC`; translate it in the sync PR before merging. A part whose caption was **never translated** (byte-identical to the source in the target already) stays that way and is logged as `not localised`; that is the state to fix once in the edition, after which every later sync preserves it.
+
 ### How do I add content to a translated edition that isn't in the source?
 
 Put it in a **target-only file** — a new `.md` file in the target repo's docs folder, added to the target's `_toc.yml`. Sync only ever touches files that exist in the source, so a target-only file is never modified, resynced, or removed by automation. The `status` command lists such files as `TARGET_ONLY` so they stay visible.

@@ -299,7 +299,8 @@ async function rebaseSinglePR(
       }
 
       if (fileType === 'toc') {
-        // TOC files: copy from source as-is (no translation)
+        // TOC files: mirrored from source, with the target's localised part
+        // captions carried forward (#254) — same as the sync path.
         let newContent = '';
         try {
           const { content } = await fetchFileContent(
@@ -316,17 +317,28 @@ async function rebaseSinglePR(
         }
 
         let existingFileSha: string | undefined;
+        let targetContent: string | undefined;
         try {
           const result = await fetchFileContent(octokit, owner, repo, file.path);
           existingFileSha = result.sha;
-        } catch {
-          // New TOC file
+          targetContent = result.content;
+        } catch (error) {
+          // Same rule as the sync path: 404 is a first delivery; anything else
+          // fails the fetch rather than silently re-copying English captions.
+          const status = (error as { status?: number } | null | undefined)?.status;
+          if (status !== 404) {
+            throw new Error(
+              `Could not read ${file.path} from ${owner}/${repo} ` +
+                `(status ${status ?? 'unknown'}): ${error}`
+            );
+          }
         }
 
         filesToSync.push({
           filename: file.path,
           type: 'toc',
           newContent,
+          targetContent,
           existingFileSha,
           isNewFile: !existingFileSha,
         });
@@ -1062,7 +1074,18 @@ async function fetchAllFileContents(
         const result = await fetchFileContent(octokit, targetOwner, targetRepo, file.filename);
         existingFileSha = result.sha;
         targetContent = result.content;
-      } catch {
+      } catch (error) {
+        // Only a genuine 404 means "first delivery of this TOC". Any other
+        // status must fail the fetch: swallowing it would drop the target's
+        // localised captions on a transient error (#254) — the outer catch
+        // records it as a fetch error and the run fails loudly.
+        const status = (error as { status?: number } | null | undefined)?.status;
+        if (status !== 404) {
+          throw new Error(
+            `Could not read ${file.filename} from ${targetOwner}/${targetRepo} ` +
+              `(status ${status ?? 'unknown'}): ${error}`
+          );
+        }
         core.info(`${file.filename} does not exist in target repo - will create it`);
       }
 

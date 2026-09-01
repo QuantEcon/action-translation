@@ -37028,6 +37028,142 @@ function stateFileRelativePath(filename) {
   return `${TRANSLATE_DIR}/${STATE_DIR}/${filename}.yml`;
 }
 
+// dist/toc-captions.js
+var CAPTION_LINE_RE = /^(\s*(?:-\s+)?caption:\s*)(.*?)(\s*)$/;
+function partFiles(part) {
+  const out = /* @__PURE__ */ new Set();
+  const visit = (entries) => {
+    if (!Array.isArray(entries))
+      return;
+    for (const entry of entries) {
+      if (typeof entry !== "object" || entry === null)
+        continue;
+      const e = entry;
+      if (typeof e.file === "string")
+        out.add(e.file);
+      visit(e.chapters);
+      visit(e.sections);
+    }
+  };
+  visit(part.chapters);
+  return out;
+}
+function partsOf(doc) {
+  if (!doc || typeof doc !== "object")
+    return void 0;
+  const parts = doc.parts;
+  if (!Array.isArray(parts))
+    return void 0;
+  return parts.filter((p) => typeof p === "object" && p !== null);
+}
+function matchPartsByOverlap(source, target) {
+  const candidates = [];
+  source.forEach((s, i) => {
+    target.forEach((t, j) => {
+      let overlap = 0;
+      for (const f of s)
+        if (t.has(f))
+          overlap++;
+      if (overlap > 0)
+        candidates.push({ i, j, overlap });
+    });
+  });
+  candidates.sort((a, b) => b.overlap - a.overlap || Math.abs(a.i - a.j) - Math.abs(b.i - b.j) || a.i - b.i);
+  const matched = /* @__PURE__ */ new Map();
+  const claimed = /* @__PURE__ */ new Set();
+  for (const { i, j } of candidates) {
+    if (matched.has(i) || claimed.has(j))
+      continue;
+    matched.set(i, j);
+    claimed.add(j);
+  }
+  return matched;
+}
+function renderCaption(value) {
+  return dump(value, { lineWidth: -1 }).replace(/\n$/, "");
+}
+function substituteCaptionLines(sourceYaml, captions) {
+  const lines = sourceYaml.split("\n");
+  let k = -1;
+  for (let n = 0; n < lines.length; n++) {
+    if (lines[n].trimStart().startsWith("#"))
+      continue;
+    const m = CAPTION_LINE_RE.exec(lines[n]);
+    if (!m)
+      continue;
+    k++;
+    const wanted = captions.get(k);
+    if (wanted === void 0)
+      continue;
+    lines[n] = `${m[1]}${renderCaption(wanted)}${m[3]}`;
+  }
+  return lines.join("\n");
+}
+function sameDocument(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+function mergeTargetCaptions(sourceYaml, targetYaml, logger) {
+  let source;
+  let target;
+  try {
+    source = load(sourceYaml);
+    target = load(targetYaml);
+  } catch {
+    logger?.warning("Could not parse _toc.yml for caption merge \u2014 using source as-is");
+    return sourceYaml;
+  }
+  const sourceParts = partsOf(source);
+  const targetParts = partsOf(target);
+  if (!sourceParts || !targetParts || sourceParts.length === 0 || targetParts.length === 0) {
+    return sourceYaml;
+  }
+  const matched = matchPartsByOverlap(sourceParts.map(partFiles), targetParts.map(partFiles));
+  const captions = /* @__PURE__ */ new Map();
+  const notLocalised = [];
+  const unmatched = [];
+  sourceParts.forEach((part, i) => {
+    const sourceCaption = typeof part.caption === "string" ? part.caption : void 0;
+    const j = matched.get(i);
+    if (j === void 0) {
+      if (sourceCaption !== void 0)
+        unmatched.push(sourceCaption);
+      return;
+    }
+    const targetCaption = targetParts[j].caption;
+    if (typeof targetCaption !== "string" || targetCaption === "")
+      return;
+    if (targetCaption === sourceCaption) {
+      notLocalised.push(sourceCaption);
+      return;
+    }
+    captions.set(i, targetCaption);
+  });
+  for (const caption of unmatched) {
+    logger?.warning(`_toc.yml part "${caption}" has no counterpart in the target TOC \u2014 caption left as in source`);
+  }
+  if (notLocalised.length > 0) {
+    logger?.info(`_toc.yml: ${notLocalised.length} part caption(s) identical in source and target (not localised): ${notLocalised.map((c) => `"${c}"`).join(", ")}`);
+  }
+  if (captions.size === 0)
+    return sourceYaml;
+  const expected = load(sourceYaml);
+  const expectedParts = partsOf(expected);
+  for (const [i, caption] of captions)
+    expectedParts[i].caption = caption;
+  const substituted = substituteCaptionLines(sourceYaml, captions);
+  let verified = false;
+  try {
+    verified = sameDocument(load(substituted), expected);
+  } catch {
+    verified = false;
+  }
+  logger?.info(`Preserved ${captions.size} localised TOC part caption(s) from target`);
+  if (verified)
+    return substituted;
+  logger?.warning("_toc.yml caption merge could not be applied in place \u2014 re-serialising the document");
+  return dump(expected, { lineWidth: -1, noArrayIndent: true });
+}
+
 // dist/sync-orchestrator.js
 async function loadGlossary(targetLanguage, builtInGlossaryDir, customGlossaryPath, logger) {
   if (customGlossaryPath) {
@@ -37305,17 +37441,23 @@ var SyncOrchestrator = class {
     }
   }
   /**
-   * Process a TOC file (copied directly without translation).
+   * Process a TOC file: the source is mirrored, with the target's localised
+   * part captions carried forward (#254; see `toc-captions.ts`).  No target
+   * content means a first delivery, which takes the source verbatim.
    */
   processTocFile(file, result) {
     this.logger.info(`Processing TOC file ${file.filename}...`);
     if (!file.newContent) {
       throw new Error(`No content provided for ${file.filename}`);
     }
+    let content = file.newContent;
+    if (file.targetContent) {
+      content = mergeTargetCaptions(file.newContent, file.targetContent, this.logger);
+    }
     result.processedFiles.push(file.filename);
     result.translatedFiles.push({
       path: file.filename,
-      content: file.newContent,
+      content,
       sha: file.existingFileSha
     });
     this.logger.info(`Successfully processed ${file.filename}`);
@@ -39510,15 +39652,22 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
           continue;
         }
         let existingFileSha;
+        let targetContent;
         try {
           const result2 = await fetchFileContent(octokit, owner, repo, file.path);
           existingFileSha = result2.sha;
-        } catch {
+          targetContent = result2.content;
+        } catch (error4) {
+          const status = error4?.status;
+          if (status !== 404) {
+            throw new Error(`Could not read ${file.path} from ${owner}/${repo} (status ${status ?? "unknown"}): ${error4}`);
+          }
         }
         filesToSync.push({
           filename: file.path,
           type: "toc",
           newContent: newContent2,
+          targetContent,
           existingFileSha,
           isNewFile: !existingFileSha
         });
@@ -39928,16 +40077,23 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
     try {
       const { content: newContent } = await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, sha);
       let existingFileSha;
+      let targetContent;
       try {
         const result = await fetchFileContent(octokit, targetOwner, targetRepo, file.filename);
         existingFileSha = result.sha;
-      } catch {
+        targetContent = result.content;
+      } catch (error4) {
+        const status = error4?.status;
+        if (status !== 404) {
+          throw new Error(`Could not read ${file.filename} from ${targetOwner}/${targetRepo} (status ${status ?? "unknown"}): ${error4}`);
+        }
         core9.info(`${file.filename} does not exist in target repo - will create it`);
       }
       filesToSync.push({
         filename: file.filename,
         type: "toc",
         newContent,
+        targetContent,
         existingFileSha,
         isNewFile: !existingFileSha
       });

@@ -27,13 +27,13 @@ import {
 import { Glossary, TranslatedFile, RebaseCache } from './types.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import * as yaml from 'js-yaml';
 import {
   serializeFileState,
   stateFileRelativePath,
   getToolVersion,
 } from './cli/translate-state.js';
 import { FileState } from './cli/types.js';
+import { mergeTargetCaptions } from './toc-captions.js';
 
 // =============================================================================
 // INTERFACES
@@ -310,95 +310,6 @@ export function classifyChangedFiles(
     removedMarkdownFiles,
     removedTocFiles,
   };
-}
-
-// =============================================================================
-// TOC CAPTION PRESERVATION
-// =============================================================================
-
-/** Collect all file refs from a list of toc entries (chapters/sections). */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function collectTocFiles(entries: any[]): string[] {
-  const files: string[] = [];
-  for (const entry of entries ?? []) {
-    if (entry.file) files.push(String(entry.file));
-    if (entry.chapters) files.push(...collectTocFiles(entry.chapters));
-    if (entry.sections) files.push(...collectTocFiles(entry.sections));
-  }
-  return files;
-}
-
-/**
- * Return a canonical, order-independent key for a set of TOC file refs.
- * Used to match source and target parts by membership.
- */
-function partKey(chapters: unknown[]): string {
-  return collectTocFiles(chapters as never[])
-    .slice()
-    .sort()
-    .join('\0');
-}
-
-/**
- * Merge localised part captions from the target _toc.yml into the source
- * _toc.yml, preserving any translated caption for parts whose file membership
- * is unchanged.
- *
- * Exported for unit testing.
- */
-export function mergeTargetCaptions(
-  sourceYaml: string,
-  targetYaml: string,
-  logger?: Logger
-): string {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let source: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let target: any;
-  try {
-    source = yaml.load(sourceYaml);
-    target = yaml.load(targetYaml);
-  } catch {
-    logger?.warning('Could not parse _toc.yml for caption merge — using source as-is');
-    return sourceYaml;
-  }
-
-  if (
-    !source ||
-    typeof source !== 'object' ||
-    !target ||
-    typeof target !== 'object' ||
-    !Array.isArray(source.parts) ||
-    !Array.isArray(target.parts)
-  ) {
-    return sourceYaml;
-  }
-
-  // Build map: file-set key → localised caption from target parts.
-  const targetCaptions = new Map<string, string>();
-  for (const part of target.parts) {
-    if (part.caption && Array.isArray(part.chapters)) {
-      const key = partKey(part.chapters);
-      if (key) targetCaptions.set(key, String(part.caption));
-    }
-  }
-
-  let preserved = 0;
-  for (const part of source.parts) {
-    if (!Array.isArray(part.chapters)) continue;
-    const key = partKey(part.chapters);
-    const localCaption = targetCaptions.get(key);
-    if (localCaption) {
-      part.caption = localCaption;
-      preserved++;
-    }
-  }
-
-  if (preserved > 0) {
-    logger?.info(`Preserved ${preserved} localised TOC part caption(s) from target`);
-  }
-
-  return yaml.dump(source, { lineWidth: -1 });
 }
 
 // =============================================================================
@@ -746,7 +657,9 @@ export class SyncOrchestrator {
   }
 
   /**
-   * Process a TOC file, preserving any localised part captions from the target.
+   * Process a TOC file: the source is mirrored, with the target's localised
+   * part captions carried forward (#254; see `toc-captions.ts`).  No target
+   * content means a first delivery, which takes the source verbatim.
    */
   private processTocFile(file: FileToSync, result: SyncProcessingResult): void {
     this.logger.info(`Processing TOC file ${file.filename}...`);
