@@ -212,28 +212,34 @@ static-hosted SPA + minimal API. Defer: scoring, leaderboards, prompt feedback.
 
 ## 7. Prompt caching + real token counting
 
-**Status**: Unexplored; pure cost/latency win.
+**Status**: Caching half SHIPPED (#292 → PR #293, merged 2026-08-28). Token-counting half
+remains open.
 
-**Summary**: Restructure prompts so the static prefix (system rules + language rules +
-glossary — easily several thousand tokens) carries a `cache_control` breakpoint, and replace
-the chars/4 heuristic with the `count_tokens` API.
+**Shipped**: every translator prompt now sends `[stable(cache_control), volatile]` blocks —
+stable = operation rules + language rules + glossary (byte-identical per builder, ~10-12K
+tokens for zh-cn/fa/fr, ~5K for ml), volatile = customInstructions + content. Cache
+read/write tokens are accumulated in `ApiUsage` and emitted as action outputs
+(`cache-read-input-tokens` zero on a multi-call run = broken prefix, the silent-regression
+signal). Live-verified: second call read the full 10,053-token zh-cn prefix with 88 uncached
+input tokens. Measured forecast (issue #292): sync runs ~45-50% cheaper, init/forward
+~11-14% (output-dominated). Deliberately not cached: CLI triage rubrics (below the
+1024-token cacheable minimum) and the reviewer prompt (rubric sits after the volatile
+documents; restructuring wasn't worth the quality risk for 2-3 calls/run).
 
-**Motivation & evidence**: A sync run issues dozens of sequential calls per language with an
-identical prefix; cached input tokens are ~10× cheaper. `estimateOutputTokens`
-(`src/translator.ts:40-64`) guesses chars/4 with a 2000-token buffer and drives both the
-32768 "API maximum" rejection and `max_tokens` sizing — miscalibration causes both H2-class
-truncation and false "document too large" rejections.
-
-**Design sketch**: order prompts static-first (rules + glossary, then document content);
-add `cache_control: {type: 'ephemeral'}` on the static block; measure hit rates in action
-logs; use `count_tokens` before full-document calls to pick `max_tokens` and split decisions.
-Do after PLAN Phase 6's shared client exists (one place to implement).
+**Remaining — real token counting**: replace the chars/4 heuristic with the `count_tokens`
+API. `estimateOutputTokens` (`src/translator.ts`) guesses chars/4 with a 2000-token buffer
+and drives both the "API maximum" rejection and `max_tokens` sizing — miscalibration causes
+both H2-class truncation and false "document too large" rejections. Split into its own issue
+when picked up (#292 scoped it out). Also follow-up: a standing E2E assertion that a run's
+second call shows `cache_read_input_tokens > 0` (PR #293 left it to ride the next harness
+change).
 
 **Open questions**: none blocking — measure and ship.
 
-**Effort**: S (after Phase 6).
+**Effort**: S (token-counting half).
 
-**References**: PLAN Phase 6, review finding on `checkDocumentSize` (PLAN Phase 4).
+**References**: issue #292 (measured forecast), PR #293; PLAN Phase 6, review finding on
+`checkDocumentSize` (PLAN Phase 4).
 
 ---
 

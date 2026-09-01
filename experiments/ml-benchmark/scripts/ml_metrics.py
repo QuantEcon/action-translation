@@ -123,6 +123,122 @@ def malayalam_tokens(prose: str, top: int) -> list[tuple[str, int]]:
     return sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))[:top]
 
 
+# -- Round-2 lints (lecture-python-programming.ml#7, 2026-09-01) -------------
+# Deterministic proxies for the three largest classes of the second native
+# review round, per QuantEcon/project-translation
+# reports/2026-09-01-ml-functions-review-disposition.md. Prototype status:
+# they report as LINT (never FAIL) until #189 Phase 3 decides what graduates
+# into diff-checks. Calibration: the reviewed text of `functions` (ml main
+# c1200fa) must come out clean; the pre-review seed (5ffae4e) should light up.
+
+CELL_OR_MATH_RE = re.compile(r"^\s*(```|~~~)\{(code-cell|math)\}")
+LIST_ITEM_RE = re.compile(r"^\s*([*+-]|\d+\.)\s+")
+# Directive bodies live inside fences (already excluded); this only skips
+# directive options (`:class: dropdown`), labels (`(name)=`), cell breaks and
+# comments. A prose line that opens with a MyST role ({ref}`…`, {doc}`…`) is
+# prose and must NOT be skipped — the rules name sentence-initial link text.
+DIRECTIVE_LINE_RE = re.compile(r"^\s*(:|\(|\+\+\+|```|~~~|<!--)")
+ROLE_PREFIX_RE = re.compile(r"^\{[a-z-]+\}`")
+BANNED_RENDERINGS: list[tuple[str, str]] = [
+    # (substring, what the rules say instead) — one entry per rule-bound rendering
+    ("ഒരു നൽകിയ", "'a given N' → തന്നിരിക്കുന്ന N"),
+    ("കണക്കിലെടുക്ക", "'consider X' → X നോക്കാം (കണക്കിലെടുക്കുക only for 'take into account' — check the sense)"),
+    ("കുറച്ചുകൂടെ", "spelling → കുറച്ചുകൂടി"),
+    ("ഉപയോഗപ്രദ", "'useful' stays English"),
+    ("ആവശ്യപ്പെടുന്നു", "'is required' → ആവശ്യമായിവരുന്നു"),
+    ("കൈകാര്യം", "'cover' → cover ചെയ്യും"),
+    ("മറ്റൊരു വിധത്തിൽ പറഞ്ഞാൽ", "'in other words' → അതായത്"),
+    ("മിക്കവാറും എപ്പോഴും", "'almost always' → മിക്ക സമയത്തും"),
+    ("വാസ്തവത്തിൽ", "'In fact,' stays English"),
+    ("മറുവശത്ത്", "'On the other hand,' stays English"),
+    ("ആവർത്തിച്ച്", "'repeatedly' stays English"),
+    ("സൂചിപ്പിക്കുന്നു", "'refer' → refer ചെയ്യുന്നു"),
+]
+# The future-hortative signature: a sentence with subject നമ്മൾ ending on a
+# -ും verb ("we will …") where the teacher's voice wants നമുക്ക് … -ആം. Noisy
+# by design (-ും is also the additive suffix) — a watch list, not a gate.
+FUTURE_HORTATIVE_RE = re.compile(r"നമ്മൾ[^.:!?\n]*\S+ും[.:]?\s*$")
+
+
+def prose_lines(text: str) -> list[tuple[int, str, str | None]]:
+    """(1-based line number, line, next non-blank line) for every prose line
+    outside frontmatter and fences; headings and directive options excluded."""
+    lines = text.split("\n")
+    out: list[tuple[int, str, str | None]] = []
+    i = 0
+    if lines and lines[0].strip() == "---":
+        i = 1
+        while i < len(lines) and lines[i].strip() != "---":
+            i += 1
+        i += 1
+    in_fence = False
+    fence_marker = ""
+    for idx in range(i, len(lines)):
+        line = lines[idx]
+        stripped = line.lstrip()
+        m = FENCE_RE.match(stripped)
+        if m:
+            if not in_fence:
+                in_fence, fence_marker = True, m.group(1)
+            elif stripped.startswith(fence_marker):
+                in_fence = False
+            continue
+        if in_fence or not stripped or HEADING_RE.match(stripped) or DIRECTIVE_LINE_RE.match(line):
+            continue
+        nxt = None
+        for j in range(idx + 1, len(lines)):
+            if lines[j].strip():
+                nxt = lines[j]
+                break
+        out.append((idx + 1, line, nxt))
+    return out
+
+
+def round2_lints(text: str) -> dict:
+    """Terminal punctuation, sentence-initial capitalisation, banned renderings,
+    and the future-hortative watch — only on lines that carry Malayalam, so an
+    English-retained line (kept byte-identical to source) is never flagged."""
+    punct: list[dict] = []
+    caps: list[dict] = []
+    banned: list[dict] = []
+    hortative: list[dict] = []
+    for n, line, nxt in prose_lines(text):
+        has_ml = bool(MALAYALAM_RE.search(line))
+        body = line.rstrip()
+        is_item = bool(LIST_ITEM_RE.match(body))
+        if has_ml and not is_item:
+            # The editor's own convention (ml#7): a colon when the sentence
+            # points forward ("… താഴെ കാണാം:"), a full stop when it merely
+            # precedes the cell, a comma before a list it opens. Only a BARE
+            # ending — the engine's habit of mirroring an unpunctuated English
+            # line — is a defect, so that is all this flags.
+            introduces = nxt is not None and (CELL_OR_MATH_RE.match(nxt) or LIST_ITEM_RE.match(nxt))
+            if introduces and not re.search(r"[.:,]$", body):
+                punct.append({"line": n, "kind": "bare ending before a cell or list (colon or full stop expected)", "text": body[-60:]})
+            elif not introduces and not re.search(r"[.:?!)]$", body):
+                punct.append({"line": n, "kind": "paragraph without terminal punctuation", "text": body[-60:]})
+        if has_ml:
+            head = LIST_ITEM_RE.sub("", body).lstrip("(")
+            # A sentence may open with a MyST role — test the link text, since
+            # the rule requires {ref}`Previous lecture …`, not `previous`.
+            head = ROLE_PREFIX_RE.sub("", head)
+            # A plain lowercase English word opening the sentence; identifiers
+            # and code-like tokens (if/else, np.random, x_t) are exempt.
+            if re.match(r"[a-z][a-z-]*(\s|$)", head):
+                caps.append({"line": n, "text": head[:50]})
+        for sub, fix in BANNED_RENDERINGS:
+            if sub in line:
+                banned.append({"line": n, "rendering": sub, "rule": fix})
+        if has_ml and FUTURE_HORTATIVE_RE.search(body):
+            hortative.append({"line": n, "text": body[-70:]})
+    return {
+        "terminal_punctuation": punct,
+        "lowercase_initial": caps,
+        "banned_renderings": banned,
+        "future_hortative_watch": hortative,
+    }
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--output", required=True, type=Path, help="translated ml document")
@@ -214,6 +330,9 @@ def main() -> int:
                     f"[{round(lo, 3)}, {round(hi, 3)}] — suggests {direction}"
                 )
 
+    # -- Round-2 lints (LINT, not FAIL — prototype until Phase 3 graduation) --
+    result["lint"] = round2_lints(out_text)
+
     # -- Token list for the manual transliteration scan -----------------------
     result["malayalam_tokens_top"] = malayalam_tokens(out_prose, args.top_tokens)
 
@@ -225,6 +344,15 @@ def main() -> int:
             if key in result:
                 print(f"{key}: {json.dumps(result[key], ensure_ascii=False)}")
         print(f"casing variants: {len(result['casing'])}")
+        lint = result["lint"]
+        print(
+            "round-2 lints: "
+            + ", ".join(f"{k}={len(v)}" for k, v in lint.items())
+        )
+        for key, items in lint.items():
+            for it in items:
+                detail = it.get("kind") or it.get("rule") or ""
+                print(f"  LINT {key} L{it['line']}: {detail} — {it.get('text') or it.get('rendering')}")
         print("top Malayalam tokens (scan for transliterated English):")
         for tok, n in result["malayalam_tokens_top"]:
             print(f"  {n:4d}  {tok}")

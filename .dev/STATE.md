@@ -7,6 +7,13 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## In flight
 
+- **v0.27.0 release cut 2026-09-01** — headline: the second inline native-review round
+  encoded (ml glossary v0.4.0 + rules 18 → 24 + the first deterministic ml lints, #297;
+  regeneration-checked in the same PR, decision record
+  `D-2026-09-01-ml-exercise-statements-stay-english`), plus prompt caching on every
+  translator call (#293), `tool-review-injection/` (#285), the `runReview` extraction
+  (#278, #169 slice 1) and the harness editors block (#275). W1 (#259) did not make it
+  and now targets v0.28.0. §4a gate status is recorded on the release PR.
 - **v0.26.0 release cut 2026-08-17** — headline: the first inline native-review round
   encoded (ml glossary v0.3.0 + 18-rule set, #272; regeneration-verified, #273), plus
   verdict provenance (#247), config-preserving writers (#243), newline-terminated
@@ -16,6 +23,12 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   moved — no #109-class lag this time). The ml calibration programme is now
   one-lecture-per-round: stale seeds ml#2–#5 closed, round 2 open (ml#7, `functions`,
   engine `8625221`).
+- **Prompt caching shipped 2026-08-28** (#292 → PR #293, v0.27.0-bound; outside #257):
+  translator prompts now send `[stable(cache_control), volatile]` blocks; forecast
+  ~45-50% off sync-run cost, live-verified. Telemetry semantics changed: `input-tokens`
+  is now the *uncached* remainder — total prompt = input + cache-creation + cache-read
+  (two new outputs); a zero cache-read on a multi-call run means the prefix broke.
+  Remaining half of FUTURE.md idea 7 (`count_tokens` sizing) still open.
 - **The standing plan is tracker #257** (2026-08-10 backlog review; supersedes #94/#198):
   all 67 open issues triaged and verified against v0.25.0, phases W0–W6 filed as
   sub-issues #258–#264. The dominant failure shape it names: **the failure path produces
@@ -33,7 +46,7 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   and the test source repo carries only the zh-cn sync workflow until the next
   unscoped harness run.
 - **W1 (#259) is the next P0** — declared-vs-delivered assertion + TOC structured merge,
-  now targeting **v0.27.0** (v0.26.0 shipped 2026-08-17 as the ml round-1 release).
+  now targeting **v0.28.0** (v0.27.0 cut 2026-09-01 as the ml round-2 + prompt-caching release, without W1; v0.26.0 shipped 2026-08-17 as the ml round-1 release).
   Fully unblocked; the one gate is #169 first or alongside. Scope grew 2026-08-19:
   a stale-resync detection box (#276 guard — code cells modulo localized
   comments/docstrings) and the both-directions rule on the assertion (`files[]`

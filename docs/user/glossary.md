@@ -13,7 +13,7 @@ The glossary system ensures consistent translation of technical terminology acro
 | Chinese (Simplified) | `glossary/zh-cn.json` | 357 | October 2025 |
 | Farsi | `glossary/fa.json` | 357 | December 2025 |
 | French | `glossary/fr.json` | 367 | August 2026 |
-| Malayalam | `glossary/ml.json` | 61 | August 2026 (v0.3.0) |
+| Malayalam | `glossary/ml.json` | 77 | September 2026 (v0.4.0) |
 
 These glossaries ship in the action repository (resolved from the checked-out repo at runtime — they are not baked into the bundle) and load automatically when the `target-language` matches. No configuration needed.
 

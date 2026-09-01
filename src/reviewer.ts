@@ -28,6 +28,8 @@ import {
   DEFAULT_THINKING,
   isRetryableAnthropicError,
   ApiUsage,
+  emptyApiUsage,
+  addUsage,
 } from './models.js';
 import {
   ReviewVerdictV2,
@@ -400,7 +402,7 @@ export class TranslationReviewer {
   /** Section parsing for the deterministic diff checks (#148). */
   private parser: MystParser;
   // Counted at the chokepoint so retried/discarded attempts are included (#164/F53).
-  private usage: ApiUsage = { inputTokens: 0, outputTokens: 0, apiCalls: 0 };
+  private usage: ApiUsage = emptyApiUsage();
 
   constructor(
     anthropicApiKey: string,
@@ -445,9 +447,7 @@ export class TranslationReviewer {
           messages: [{ role: 'user', content: prompt }],
         });
         const response = await stream.finalMessage();
-        this.usage.inputTokens += response.usage.input_tokens;
-        this.usage.outputTokens += response.usage.output_tokens;
-        this.usage.apiCalls += 1;
+        addUsage(this.usage, response.usage);
 
         // A max_tokens stop means the verdict JSON was cut off; retrying at
         // the same cap cannot succeed (generic Error is not retried below).

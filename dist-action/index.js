@@ -26430,18 +26430,31 @@ var LANGUAGE_CONFIGS = {
     // reports/2026-08-17-ml-python-by-example-review-disposition.md.
     // The math-heavy Hint/Solution ruling is recorded in
     // .dev/decisions/D-2026-08-17-ml-math-heavy-sections-stay-english.md.
+    // Extended again 2026-09 from the second inline round: 118 suggestion
+    // blocks on lecture-python-programming.ml#7 (functions), dispositions in
+    // reports/2026-09-01-ml-functions-review-disposition.md (same repo); the
+    // exercise-statement scope ruling is
+    // .dev/decisions/D-2026-09-01-ml-exercise-statements-stay-english.md.
+    // Items held for the editor's answers on ml#12: "For example" as a
+    // discourse rule; glossary pins for already / name / example(s) / work.
     additionalRules: [
       "Keep ALL technical and domain terms in their original English/Latin form \u2014 do NOT translate or transliterate them into Malayalam script. This covers economics (inflation, GDP, recession, interest rate, demand, supply), finance (equity, bond, yield, portfolio, asset class), statistics (regression, correlation, standard deviation, normal distribution), mathematics, and programming (function, loop, library, variable, dataset, numpy, pandas), plus acronyms (GDP, RBI) and named institutions (Federal Reserve)",
       "Translate into Malayalam only the grammatical connective tissue \u2014 pronouns, demonstratives, conjunctions, postpositions, question words, everyday time/place words with a natural in-use equivalent (e.g. country \u2192 \u0D30\u0D3E\u0D1C\u0D4D\u0D2F\u0D02, year \u2192 \u0D35\u0D7C\u0D37\u0D02, before \u2192 \u0D2E\u0D41\u0D2E\u0D4D\u0D2A\u0D4D), and common native verbs of perceiving and saying (e.g. \u0D15\u0D3E\u0D23\u0D3E\u0D02, \u0D2A\u0D31\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41). Ordinary English content words \u2014 everyday adjectives, adverbs and nouns such as simple, best, important, hopefully, example, idea, popular \u2014 usually stay in Latin script in this register; do NOT force a Malayalam rendering merely because a dictionary equivalent exists",
-      'Attach Malayalam case-suffixes, postpositions, and sandhi directly to the English term, hyphenated where natural, using the forms a native writer prefers: -\u0D2F\u0D3F\u0D32\u0D46 after roots ending in a vowel sound (e.g. directory-\u0D2F\u0D3F\u0D32\u0D46, numpy-\u0D2F\u0D3F\u0D32\u0D46, economy-\u0D2F\u0D3F\u0D32\u0D46; likewise bond-\u0D28\u0D4D\u0D31\u0D46, asset classes-\u0D7D); the genitive allomorph -\u0D2F\u0D41\u0D1F\u0D46, never -\u0D28\u0D4D\u0D31\u0D46, after roots ending in a vowel sound (NumPy-\u0D2F\u0D41\u0D1F\u0D46, $\\pi$-\u0D2F\u0D41\u0D1F\u0D46); the fuller ablative \u0D28\u0D3F\u0D28\u0D4D\u0D28\u0D41\u0D02 rather than clipped \u0D28\u0D3F\u0D28\u0D4D\u0D28\u0D4D; the dative variant -\u0D07\u0D28\u0D41\u0D02 where euphony prefers it (\u0D13\u0D30\u0D4B element-\u0D07\u0D28\u0D41\u0D02, \u0D0E\u0D32\u0D4D\u0D32\u0D3E lines-\u0D07\u0D28\u0D41\u0D02); accusative -\u0D28\u0D46 on the object of a light-verb construction (100 standard normals-\u0D28\u0D46 generate \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D); keep the additive -\u0D09\u0D02 wherever the source says "plus", "also" or "too" (e.g. a green border-\u0D09\u0D02 a blinking cursor-\u0D09\u0D02); prefer -\u0D41\u0D2E\u0D3E\u0D2F\u0D3F over plain -\u0D2E\u0D3E\u0D2F\u0D3F',
+      'Attach Malayalam case-suffixes, postpositions, and sandhi directly to the English term, hyphenated where natural, using the forms a native writer prefers: -\u0D2F\u0D3F\u0D32\u0D46 after roots ending in a vowel sound (e.g. directory-\u0D2F\u0D3F\u0D32\u0D46, numpy-\u0D2F\u0D3F\u0D32\u0D46, economy-\u0D2F\u0D3F\u0D32\u0D46; likewise bond-\u0D28\u0D4D\u0D31\u0D46, asset classes-\u0D7D); the genitive allomorph -\u0D2F\u0D41\u0D1F\u0D46, never -\u0D28\u0D4D\u0D31\u0D46, after roots ending in a vowel sound (NumPy-\u0D2F\u0D41\u0D1F\u0D46, $\\pi$-\u0D2F\u0D41\u0D1F\u0D46); the fuller ablative \u0D28\u0D3F\u0D28\u0D4D\u0D28\u0D41\u0D02 rather than clipped \u0D28\u0D3F\u0D28\u0D4D\u0D28\u0D4D; the dative variant -\u0D07\u0D28\u0D41\u0D02 where euphony prefers it (\u0D13\u0D30\u0D4B element-\u0D07\u0D28\u0D41\u0D02, \u0D0E\u0D32\u0D4D\u0D32\u0D3E lines-\u0D07\u0D28\u0D41\u0D02); accusative -\u0D28\u0D46 on the object of a light-verb construction (100 standard normals-\u0D28\u0D46 generate \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D); keep the additive -\u0D09\u0D02 wherever the source says "plus", "also" or "too" (e.g. a green border-\u0D09\u0D02 a blinking cursor-\u0D09\u0D02); prefer -\u0D41\u0D2E\u0D3E\u0D2F\u0D3F over plain -\u0D2E\u0D3E\u0D2F\u0D3F. Apply the accusative -\u0D28\u0D46 on EVERY object of a transitive light verb, plurals included (functions-\u0D28\u0D46 define \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, code-\u0D28\u0D46 simplify \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, conditionals-\u0D28\u0D46 \u0D12\u0D34\u0D3F\u0D35\u0D3E\u0D15\u0D4D\u0D15\u0D3E\u0D02, function-\u0D28\u0D46 call \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15 \u2014 "a call to `plot`" is plot-\u0D28\u0D46 call \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D2E\u0D4D\u0D2A\u0D4B\u0D7E, never -\u0D32\u0D47\u0D15\u0D4D\u0D15\u0D41\u0D33\u0D4D\u0D33 call); do NOT attach the additive -\u0D09\u0D02 to the items of a bullet list (a list is not "X and Y"); coordinated code names take \u0D0E\u0D28\u0D4D\u0D28\u0D3F\u0D35 (`a`, `b` \u0D0E\u0D28\u0D4D\u0D28\u0D3F\u0D35 numbers \u0D06\u0D23\u0D4D), not -\u0D09\u0D02 \u2026 -\u0D09\u0D02',
       "For verbs naming software, interface, or instructional actions, keep the English verb in Latin script and attach a Malayalam light verb (e.g. click \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, press \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, select \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, enable \u0D06\u0D15\u0D41\u0D02, close \u0D06\u0D15\u0D41\u0D02, check \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D02; likewise process \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D, return \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41, execute \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41; cover \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D02 for what a lecture covers, break down \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D for decomposing a program, refer \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41 for what a name refers to, and keep the adverb repeatedly in English in loop descriptions). NEVER replace these with a native Malayalam verb (e.g. not \u0D05\u0D2E\u0D7C\u0D24\u0D4D\u0D24\u0D41\u0D15 for press, not \u0D05\u0D1F\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D15 for hit, not \u0D05\u0D1F\u0D2F\u0D4D\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41 for close, not \u0D2A\u0D4D\u0D30\u0D35\u0D7C\u0D24\u0D4D\u0D24\u0D28\u0D15\u0D4D\u0D37\u0D2E\u0D2E\u0D3E\u0D15\u0D41\u0D02 for enable, not \u0D15\u0D48\u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D02 \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15 for cover \u2014 it reads managerial, not instructional); when the source uses a synonym for pressing a key (hit, strike, tap), normalise it to press \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15",
       'The light-verb pattern is for technical and instructional actions only \u2014 an everyday verb with a natural Malayalam equivalent takes the Malayalam verb, not an English light-verb construction: a line that "ends with a colon" \u0D05\u0D35\u0D38\u0D3E\u0D28\u0D3F\u0D15\u0D4D\u0D15\u0D23\u0D02 (not end \u0D06\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41), a result "placed into the string" \u0D1A\u0D47\u0D7C\u0D15\u0D4D\u0D15\u0D2A\u0D4D\u0D2A\u0D46\u0D1F\u0D41\u0D02 (not place \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D2A\u0D4D\u0D2A\u0D46\u0D1F\u0D41\u0D02), lines that "end up on the same figure" \u0D12\u0D30\u0D47 figure-\u0D7D \u0D35\u0D30\u0D41\u0D02; and "is required/needed" is \u0D06\u0D35\u0D36\u0D4D\u0D2F\u0D2E\u0D3E\u0D2F\u0D3F\u0D35\u0D30\u0D41\u0D28\u0D4D\u0D28\u0D41, never \u0D06\u0D35\u0D36\u0D4D\u0D2F\u0D2A\u0D4D\u0D2A\u0D46\u0D1F\u0D41\u0D28\u0D4D\u0D28\u0D41 (which means "demands")',
-      'A short sentence whose content is mostly code, commands, URLs, file paths, mathematical notation or parameter settings should stay entirely in English rather than being fragmented to translate one or two connective words (e.g. "For example, try `np.random.randn(3)`.", "Here\'s one solution:", "Use $T=200$, $\\alpha = 0.9$ and $\\{\\epsilon_t\\}$ as before.", "The sequence of shocks is assumed to be IID and standard normal."); parenthetical language comparisons also stay English ("(as in C, Java or Go)"); in longer sentences translate the prose and leave the embedded code, URLs and math untouched',
-      'Render English discourse formulas by function, never word-for-word: sentence-initial "In fact, \u2026" and "On the other hand, \u2026" stay in English at the head of the rendered sentence (not \u0D35\u0D3E\u0D38\u0D4D\u0D24\u0D35\u0D24\u0D4D\u0D24\u0D3F\u0D7D, not \u0D2E\u0D31\u0D41\u0D35\u0D36\u0D24\u0D4D\u0D24\u0D4D); "in other words" \u2192 \u0D05\u0D24\u0D3E\u0D2F\u0D24\u0D4D (not \u0D2E\u0D31\u0D4D\u0D31\u0D4A\u0D30\u0D41 \u0D35\u0D3F\u0D27\u0D24\u0D4D\u0D24\u0D3F\u0D7D \u0D2A\u0D31\u0D1E\u0D4D\u0D1E\u0D3E\u0D7D); sentence-initial "Now, \u2026" \u2192 \u0D07\u0D28\u0D3F (not \u0D07\u0D2A\u0D4D\u0D2A\u0D4B\u0D7E); "turn to (the exercises)" \u2192 (exercises-\u0D32\u0D47\u0D15\u0D4D\u0D15\u0D4D) \u0D15\u0D1F\u0D15\u0D4D\u0D15\u0D41\u0D15; "almost always" \u2192 \u0D2E\u0D3F\u0D15\u0D4D\u0D15 \u0D38\u0D2E\u0D2F\u0D24\u0D4D\u0D24\u0D41\u0D02',
+      `A short sentence whose content is mostly code, commands, URLs, file paths, mathematical notation or parameter settings should stay entirely in English rather than being fragmented to translate one or two connective words (e.g. "For example, try \`np.random.randn(3)\`.", "Here's one solution:", "Use $T=200$, $\\alpha = 0.9$ and $\\{\\epsilon_t\\}$ as before.", "The sequence of shocks is assumed to be IID and standard normal."); parenthetical language comparisons also stay English ("(as in C, Java or Go)"); a bullet that is essentially two code expressions compared ("\`plot(x, 'b-')\` differs from \`plot('b-', x)\`") stays English; and the short pointer sentences that introduce a solution or a code cell ("Here's a function for the first random device.", "Here's another function for the second random device.", "Here's the standard solution") stay wholly English \u2014 in longer sentences translate the prose and leave the embedded code, URLs and math untouched`,
+      'Render English discourse formulas by function, never word-for-word: sentence-initial "In fact, \u2026", "On the other hand, \u2026", "In particular, \u2026", "Obviously, \u2026" and "Basically, \u2026" stay in English at the head of the rendered sentence (not \u0D35\u0D3E\u0D38\u0D4D\u0D24\u0D35\u0D24\u0D4D\u0D24\u0D3F\u0D7D, not \u0D2E\u0D31\u0D41\u0D35\u0D36\u0D24\u0D4D\u0D24\u0D4D, not \u0D2A\u0D4D\u0D30\u0D24\u0D4D\u0D2F\u0D47\u0D15\u0D3F\u0D1A\u0D4D\u0D1A\u0D41\u0D02, not \u0D35\u0D4D\u0D2F\u0D15\u0D4D\u0D24\u0D2E\u0D3E\u0D2F\u0D41\u0D02, not \u0D05\u0D1F\u0D3F\u0D38\u0D4D\u0D25\u0D3E\u0D28\u0D2A\u0D30\u0D2E\u0D3E\u0D2F\u0D3F); "in other words" \u2192 \u0D05\u0D24\u0D3E\u0D2F\u0D24\u0D4D (not \u0D2E\u0D31\u0D4D\u0D31\u0D4A\u0D30\u0D41 \u0D35\u0D3F\u0D27\u0D24\u0D4D\u0D24\u0D3F\u0D7D \u0D2A\u0D31\u0D1E\u0D4D\u0D1E\u0D3E\u0D7D); sentence-initial "Now, \u2026" \u2192 \u0D07\u0D28\u0D3F (not \u0D07\u0D2A\u0D4D\u0D2A\u0D4B\u0D7E); "turn to (the exercises)" \u2192 (exercises-\u0D32\u0D47\u0D15\u0D4D\u0D15\u0D4D) \u0D15\u0D1F\u0D15\u0D4D\u0D15\u0D41\u0D15; "almost always" \u2192 \u0D2E\u0D3F\u0D15\u0D4D\u0D15 \u0D38\u0D2E\u0D2F\u0D24\u0D4D\u0D24\u0D41\u0D02',
       `When the English points at content that immediately follows ("Here is/are X \u2026", "figures like this one", "a version that illustrates \u2026"), render the pointer with \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D3E\u0D23\u0D3E\u0D02 / \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D4A\u0D1F\u0D41\u0D24\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 ("can be seen below" / "given below"), never with a literal \u0D07\u0D35\u0D3F\u0D1F\u0D46 ("here") or \u0D07\u0D24\u0D41\u0D2A\u0D4B\u0D32\u0D41\u0D33\u0D4D\u0D33 ("like this") \u2014 e.g. "Here's a version that illustrates for loops" \u2192 "\u2026 \u0D12\u0D30\u0D41 version \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D3E\u0D23\u0D3E\u0D02:"`,
       'Render English "the N with X" as an identifying modifier using the relative participle \u0D09\u0D33\u0D4D\u0D33 \u2014 X \u0D09\u0D33\u0D4D\u0D33 N, e.g. "the cell with the flashing cursor" \u2192 flashing cursor \u0D09\u0D33\u0D4D\u0D33 cell \u2014 never with an accompaniment form (-\u0D09\u0D02, -\u0D28\u0D4A\u0D2A\u0D4D\u0D2A\u0D02), which misreads identification ("which N") as accompaniment ("N together with X")',
       'With the comparative suffix -\u0D28\u0D47\u0D15\u0D4D\u0D15\u0D3E\u0D7E/-\u0D28\u0D46\u0D15\u0D4D\u0D15\u0D3E\u0D7E the comparison is already fully expressed \u2014 never add less/more/\u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41 alongside it; for "less X than Y" prefer Y-\u0D28\u0D4D\u0D31\u0D46 \u0D05\u0D24\u0D4D\u0D30 X \u0D05\u0D32\u0D4D\u0D32 ("not as X as Y")',
       `Write short sentences in a classroom teacher's register: split English compound sentences at comma splices and em-dashes into two Malayalam sentences rather than mirroring the English punctuation; order clauses the way a teacher speaks \u2014 topic or purpose first, then the action; when introducing a definition, describe the concept before naming it; and use the fuller adjectival ordinals \u0D06\u0D26\u0D4D\u0D2F\u0D24\u0D4D\u0D24\u0D46 / \u0D05\u0D35\u0D38\u0D3E\u0D28\u0D24\u0D4D\u0D24\u0D46 for "first"/"last", never clipped \u0D06\u0D26\u0D4D\u0D2F / \u0D05\u0D35\u0D38\u0D3E\u0D28`,
+      `Speak as the teacher in the room, in the hortative: English "we will \u2026", "we'll \u2026", "let's \u2026", "we now \u2026" render as \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u2026 -\u0D06\u0D02 (\u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D15\u0D3E\u0D23\u0D3E\u0D02, \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02, \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D0E\u0D34\u0D41\u0D24\u0D3E\u0D02, \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D02), never as the plain future \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u2026 -\u0D41\u0D02 (not \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D2A\u0D20\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D02, not \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D28\u0D7D\u0D15\u0D41\u0D02, not \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D0E\u0D34\u0D41\u0D24\u0D41\u0D02); lecture verbs like "discuss", "see", "show", "say more about" become \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02 / \u0D15\u0D3E\u0D23\u0D3E\u0D02 ("we will say more about this later" \u2192 \u0D07\u0D24\u0D3F\u0D28\u0D46\u0D15\u0D4D\u0D15\u0D41\u0D31\u0D3F\u0D1A\u0D4D\u0D1A\u0D41\u0D33\u0D4D\u0D33 \u0D15\u0D42\u0D1F\u0D41\u0D24\u0D7D \u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D19\u0D4D\u0D19\u0D7E \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D2A\u0D3F\u0D28\u0D4D\u0D28\u0D40\u0D1F\u0D4D \u0D15\u0D3E\u0D23\u0D3E\u0D02); "consider the following \u2026" / "consider this code again" \u2192 \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D4A\u0D1F\u0D41\u0D24\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u2026 \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02 / \u0D08 code \u0D12\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D7D\u0D15\u0D4D\u0D15\u0D42\u0D1F\u0D3F \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02; a lecture-overview list ("In this lecture we will 1. \u2026 2. \u2026") is introduced as \u0D08 lecture-\u0D7D \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D7B \u0D2A\u0D4B\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D19\u0D4D\u0D19\u0D7E: with the items in the present tense (\u0D2A\u0D20\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41, \u0D2E\u0D28\u0D38\u0D4D\u0D38\u0D3F\u0D32\u0D3E\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41); "Note that \u2026" fronts \u0D36\u0D4D\u0D30\u0D26\u0D4D\u0D27\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D15, and "Recall that \u2026" fronts \u0D13\u0D7C\u0D15\u0D4D\u0D15\u0D41\u0D15:`,
+      `Terminal punctuation is required on every Malayalam prose paragraph regardless of the English source's punctuation: a paragraph that introduces the code cell, list or displayed equation that follows ends with a colon ("\u2026 \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D3E\u0D23\u0D3E\u0D02:", "\u2026 syntax illustrate \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41:", "\u2026 \u0D15\u0D3E\u0D30\u0D23\u0D02 \u0D05\u0D35:"), every other paragraph ends with a full stop, and a comma follows a fronted \u0D36\u0D4D\u0D30\u0D26\u0D4D\u0D27\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D15, / \u0D07\u0D28\u0D3F, / For example, \u2014 never leave a Malayalam paragraph ending on a bare verb or noun because the English line had no punctuation`,
+      "When a retained-English word opens a Malayalam sentence or list item \u2014 including inside {ref}/{doc} link text \u2014 capitalise it exactly as English would at a sentence start: Functions-\u0D28\u0D46 systematic \u0D06\u0D2F\u0D3F \u0D2A\u0D20\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41; Built-in functions \u0D2E\u0D3E\u0D24\u0D4D\u0D30\u0D02 \u2026; Return statement \u0D07\u0D32\u0D4D\u0D32\u0D3E\u0D24\u0D4D\u0D24 functions \u2026; Order \u0D05\u0D28\u0D41\u0D38\u0D30\u0D3F\u0D1A\u0D4D\u0D1A\u0D4D \u2026; User-defined functions-\u0D32\u0D41\u0D02 \u2026; Indent \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 code-\u0D28\u0D46 \u2026; {ref}`Previous lecture <\u2026>`-\u0D7D \u2026; never begin a sentence with a lowercase Latin word",
+      'Fixed renderings the editor corrected on every occurrence \u2014 apply them without exception: "a given N" is \u0D24\u0D28\u0D4D\u0D28\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 N (\u0D24\u0D28\u0D4D\u0D28\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D35\u0D7C\u0D37\u0D02, \u0D24\u0D28\u0D4D\u0D28\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D12\u0D30\u0D41 file-\u0D7D), NEVER \u0D12\u0D30\u0D41 \u0D28\u0D7D\u0D15\u0D3F\u0D2F N; "consider X" as an invitation to look at X is X \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02 or consider \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, NEVER \u0D15\u0D23\u0D15\u0D4D\u0D15\u0D3F\u0D32\u0D46\u0D1F\u0D41\u0D15\u0D4D\u0D15\u0D41\u0D15 \u2014 which is reserved for the "take into account / only consider n positive" sense (\u0D07\u0D35\u0D3F\u0D1F\u0D46 $n$-\u0D28\u0D46 \u2026 \u0D2E\u0D3E\u0D24\u0D4D\u0D30\u0D2E\u0D47 \u0D15\u0D23\u0D15\u0D4D\u0D15\u0D3F\u0D32\u0D46\u0D1F\u0D41\u0D15\u0D4D\u0D15\u0D42); "in one line" is \u0D12\u0D31\u0D4D\u0D31 line-\u0D7D; the spelling is \u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41\u0D15\u0D42\u0D1F\u0D3F, not \u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41\u0D15\u0D42\u0D1F\u0D46; "useful" stays English (\u0D35\u0D33\u0D30\u0D46 useful \u0D06\u0D2F, \u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41\u0D15\u0D42\u0D1F\u0D3F useful \u0D06\u0D15\u0D4D\u0D15\u0D3E\u0D02), never \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D2A\u0D4D\u0D30\u0D26\u0D2E\u0D3E\u0D2F; "a bad idea" is \u0D05\u0D24\u0D4D\u0D30 \u0D28\u0D32\u0D4D\u0D32\u0D24\u0D32\u0D4D\u0D32; "straightforward" is \u0D0E\u0D33\u0D41\u0D2A\u0D4D\u0D2A\u0D02, "contrived" is \u0D15\u0D43\u0D24\u0D4D\u0D30\u0D3F\u0D2E\u0D02, "limited" (of a function) is -\u0D28\u0D4D \u0D1A\u0D3F\u0D32 \u0D2A\u0D30\u0D3F\u0D2E\u0D3F\u0D24\u0D3F\u0D15\u0D33\u0D41\u0D23\u0D4D\u0D1F\u0D4D, "facilitate" is \u0D38\u0D39\u0D3E\u0D2F\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41, and a return statement that is "hit" is \u0D0E\u0D24\u0D4D\u0D24\u0D3F\u0D1A\u0D4D\u0D1A\u0D47\u0D30\u0D41\u0D28\u0D4D\u0D28',
+      'When an English sentence is interrupted by code cells ("For example, these definitions [cell] and [cell] are entirely equivalent"), state the whole claim in one Malayalam sentence BEFORE the first cell (For example, \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D4A\u0D1F\u0D41\u0D24\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D30\u0D23\u0D4D\u0D1F\u0D4D definitions-\u0D09\u0D02 \u0D12\u0D30\u0D47 \u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D2E\u0D3E\u0D23\u0D4D \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D24\u0D4D:) and emit nothing between or after the cells \u2014 Malayalam is verb-final, so a trailing fragment like \u0D0E\u0D28\u0D4D\u0D28\u0D3F\u0D35 \u2026 equivalent \u0D06\u0D23\u0D4D after the second cell is unnatural and the connective \u0D12\u0D2A\u0D4D\u0D2A\u0D02 between the cells is dropped',
+      'Exercise statements whose content is probabilistic or mathematical reasoning (a random device to simulate, a distribution to draw from, coin flips, a derivation) stay in English \u2014 the same reader argument as the Hint/Solution rule, extended by the editor to exercise statements and accepted by the maintainer 2026-09-01 (decision record D-2026-09-01-ml-exercise-statements-stay-english); a mixed sentence keeps its mathematical clause in English and translates only its programming instruction ("In particular, `factorial` \u0D0E\u0D28\u0D4D\u0D28\u0D4D \u0D2A\u0D47\u0D30\u0D41\u0D33\u0D4D\u0D33 \u0D12\u0D30\u0D41 function \u0D0E\u0D34\u0D41\u0D24\u0D41\u0D15, such that `factorial(n)` returns $n!$ for any positive integer $n$."); exercises that are pure programming instruction translate normally \u2014 "Rewrite the `factorial()` function from Exercise 1 using recursion." is [Exercise 1](factorial_exercise)-\u0D32\u0D46 `factorial()` function-\u0D28\u0D46, recursion \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D1A\u0D4D\u0D1A\u0D4D \u0D35\u0D40\u0D23\u0D4D\u0D1F\u0D41\u0D02 \u0D0E\u0D34\u0D41\u0D24\u0D41\u0D15. and MUST NOT be left in English merely because it sits in an exercise block (a function name is not mathematical content); an English-retained line is kept byte-for-byte identical to the English source, so the Malayalam punctuation rule does not add a colon to it',
       "In exercise Hint and Solution sections whose prose is predominantly mathematical reasoning (probability statements, convergence arguments, derivations) rather than Python instruction, keep the entire section in English \u2014 a reader who can follow the mathematics learnt it in English, so a Malayalam rendering serves neither reader (native-editor ruling, 2026-08-17); Hint/Solution prose that is programming guidance translates normally",
       "Never translate comments inside code blocks or code cells \u2014 every code comment stays exactly as written in the English source",
       'Keep section headings in their original English form \u2014 do not translate them (e.g. "## Overview" stays "## Overview")',
@@ -31379,6 +31392,22 @@ var VALID_MODEL_PATTERNS = [
   /^claude-3-haiku-\d{8}$/
   // claude-3-haiku-20240307
 ];
+function emptyApiUsage() {
+  return {
+    inputTokens: 0,
+    outputTokens: 0,
+    cacheCreationInputTokens: 0,
+    cacheReadInputTokens: 0,
+    apiCalls: 0
+  };
+}
+function addUsage(usage, responseUsage) {
+  usage.inputTokens += responseUsage.input_tokens;
+  usage.outputTokens += responseUsage.output_tokens;
+  usage.cacheCreationInputTokens += responseUsage.cache_creation_input_tokens ?? 0;
+  usage.cacheReadInputTokens += responseUsage.cache_read_input_tokens ?? 0;
+  usage.apiCalls += 1;
+}
 function isRetryableAnthropicError(error4) {
   return error4 instanceof RateLimitError || error4 instanceof APIConnectionError || error4 instanceof APIError && (error4.status !== void 0 && error4.status >= 500 || error4.status === void 0 && error4.message?.includes("overloaded"));
 }
@@ -31962,7 +31991,7 @@ var TranslationService = class {
   debug;
   // Counted at the chokepoint so retried/discarded attempts are included —
   // the per-result tokensUsed fields miss them (#164/F53).
-  usage = { inputTokens: 0, outputTokens: 0, apiCalls: 0 };
+  usage = emptyApiUsage();
   constructor(apiKey, model = DEFAULT_CLAUDE_MODEL, debug = false) {
     this.client = new Anthropic({ apiKey, maxRetries: 0 });
     this.model = model;
@@ -32006,9 +32035,8 @@ var TranslationService = class {
           thinking: DEFAULT_THINKING
         });
         const message = await stream.finalMessage();
-        this.usage.inputTokens += message.usage.input_tokens;
-        this.usage.outputTokens += message.usage.output_tokens;
-        this.usage.apiCalls += 1;
+        addUsage(this.usage, message.usage);
+        this.log(`${operationName}: tokens in=${message.usage.input_tokens} out=${message.usage.output_tokens} cacheRead=${message.usage.cache_read_input_tokens ?? 0} cacheWrite=${message.usage.cache_creation_input_tokens ?? 0}`);
         if (message.stop_reason === "max_tokens") {
           throw new Error(`${operationName}: response truncated at max_tokens=${createParams.max_tokens}; refusing to use incomplete output`);
         }
@@ -32027,6 +32055,31 @@ var TranslationService = class {
       }
     }
     throw new Error("Unexpected: retry loop completed without result");
+  }
+  /**
+   * One user message split at the stable / per-call boundary, with a
+   * cache_control breakpoint on the stable block (#292).
+   *
+   * The stable block (operation rules + language rules + glossary) must be
+   * byte-identical across calls to the SAME prompt builder — each builder's
+   * rules differ, so each writes its own cache entry rather than sharing one
+   * across all translator operations (a typical run is dominated by a single
+   * builder, so this costs little). Anything per-call (customInstructions,
+   * document content) belongs in the volatile block. Repeat calls then read
+   * the stable block at ~0.1× the input rate (5-minute TTL, refreshed by
+   * every read). Below the model's minimum cacheable prefix the marker is
+   * silently ignored, which is harmless.
+   */
+  cachedPromptMessages(stablePrefix, volatileSuffix) {
+    return [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: stablePrefix, cache_control: { type: "ephemeral" } },
+          { type: "text", text: volatileSuffix }
+        ]
+      }
+    ];
   }
   /**
    * Translate a section (update, new, or resync)
@@ -32062,7 +32115,7 @@ var TranslationService = class {
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
     const languageConfig = getLanguageConfig(targetLanguage);
     const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
+    const stablePrefix = `You are updating a translation of a technical document section from ${sourceLanguage} to ${targetLanguage}.
 
 TASK: The ${sourceLanguage} section has been modified. Update the existing ${targetLanguage} translation to reflect these changes.
 
@@ -32081,8 +32134,8 @@ CRITICAL RULES:
    - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
 ${additionalRules}
 ${additionalRules ? "" : "9. "}Return ONLY the updated ${targetLanguage} section, no explanations
-${request2.customInstructions || ""}
-${glossarySection}
+${glossarySection}`;
+    const volatileSuffix = `${request2.customInstructions || ""}
 
 [OLD ${sourceLanguage} VERSION]
 ${oldEnglish}
@@ -32104,7 +32157,7 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
     const response = await this.callWithRetry({
       model: this.model,
       max_tokens: MAX_TOKENS.section,
-      messages: [{ role: "user", content: prompt }]
+      messages: this.cachedPromptMessages(stablePrefix, volatileSuffix)
     }, "translateSectionUpdate");
     const content = response.content[0];
     if (!content || content.type !== "text") {
@@ -32139,7 +32192,7 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
     const languageConfig = getLanguageConfig(targetLanguage);
     const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${8 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are resyncing a ${targetLanguage} translation to match the current ${sourceLanguage} source.
+    const stablePrefix = `You are resyncing a ${targetLanguage} translation to match the current ${sourceLanguage} source.
 
 TASK: The ${sourceLanguage} source may have changed since the translation was made. Update the ${targetLanguage} translation to accurately reflect the current source content.
 
@@ -32157,8 +32210,8 @@ CRITICAL RULES:
    - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
 ${additionalRules}
 ${additionalRules ? "" : "8. "}Return ONLY the updated ${targetLanguage} section, no explanations
-${request2.customInstructions || ""}
-${glossarySection}
+${glossarySection}`;
+    const volatileSuffix = `${request2.customInstructions || ""}
 
 [CURRENT ${sourceLanguage} SOURCE]
 ${newEnglish}
@@ -32175,7 +32228,7 @@ Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing t
     const response = await this.callWithRetry({
       model: this.model,
       max_tokens: MAX_TOKENS.section,
-      messages: [{ role: "user", content: prompt }]
+      messages: this.cachedPromptMessages(stablePrefix, volatileSuffix)
     }, "translateSectionResync");
     const content = response.content[0];
     if (!content || content.type !== "text") {
@@ -32206,7 +32259,7 @@ Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing t
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
     const languageConfig = getLanguageConfig(targetLanguage);
     const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
+    const stablePrefix = `You are translating a new section of technical documentation from ${sourceLanguage} to ${targetLanguage}.
 
 RULES:
 1. Translate all prose content accurately
@@ -32223,8 +32276,8 @@ RULES:
    - CRITICAL: Do NOT mix fence markers - use $$...$$ for math OR \`\`\`{math}...\`\`\` for directive math, but NEVER $$...\`\`\` or \`\`\`...$$
 ${additionalRules}
 ${additionalRules ? "" : "9. "}Return ONLY the translated section, no explanations
-${request2.customInstructions || ""}
-${glossarySection}
+${glossarySection}`;
+    const volatileSuffix = `${request2.customInstructions || ""}
 
 [${sourceLanguage} SECTION TO TRANSLATE]
 ${englishSection}
@@ -32236,7 +32289,7 @@ Provide ONLY the ${targetLanguage} translation. Do not include any markers, expl
     const response = await this.callWithRetry({
       model: this.model,
       max_tokens: MAX_TOKENS.section,
-      messages: [{ role: "user", content: prompt }]
+      messages: this.cachedPromptMessages(stablePrefix, volatileSuffix)
     }, "translateNewSection");
     const content = response.content[0];
     if (!content || content.type !== "text") {
@@ -32260,7 +32313,7 @@ Provide ONLY the ${targetLanguage} translation. Do not include any markers, expl
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
     const languageConfig = getLanguageConfig(targetLanguage);
     const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${10 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
+    const stablePrefix = `You are translating a complete technical lecture from ${sourceLanguage} to ${targetLanguage}.
 
 RULES:
 1. Translate all prose content
@@ -32280,12 +32333,13 @@ RULES:
    - Every \`\`\`{solution-start} MUST have matching \`\`\`{solution-end}
    - Every \`\`\`{code-cell} MUST have closing \`\`\`
 ${additionalRules}
-${request2.customInstructions || ""}
 ${glossarySection}
 
 IMPORTANT: You MUST translate the ENTIRE document. Do not stop mid-sentence or mid-code.
 If you are approaching token limits and cannot complete the translation, print:
 "${INCOMPLETE_DOCUMENT_MARKER}"
+`;
+    const volatileSuffix = `${request2.customInstructions || ""}
 
 CONTENT:
 ${content}
@@ -32301,7 +32355,7 @@ Provide the complete translated document maintaining exact MyST structure.`;
     const response = await this.callWithRetry({
       model: this.model,
       max_tokens: maxTokens,
-      messages: [{ role: "user", content: prompt }]
+      messages: this.cachedPromptMessages(stablePrefix, volatileSuffix)
     }, "translateFullDocument");
     const result = response.content[0];
     if (!result || result.type !== "text") {
@@ -32342,7 +32396,7 @@ Provide the complete translated document maintaining exact MyST structure.`;
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
     const languageConfig = getLanguageConfig(targetLanguage);
     const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
-    const prompt = `You are a professional translator specialising in quantitative economics.
+    const stablePrefix = `You are a professional translator specialising in quantitative economics.
 
 You are given:
 1. The **current ${sourceLanguage} source** document (authoritative)
@@ -32378,12 +32432,13 @@ Your task: produce an **updated ${targetLanguage} translation** that accurately 
 7. **Preserve the frontmatter (YAML between --- markers) from the TARGET translation** \u2014 do not replace it with the source frontmatter. Only update the heading-map if section headings changed.
 8. **Use the glossary below for consistent terminology** \u2014 when a term from the glossary appears, use the specified translation.
 ${additionalRules}
-${request2.customInstructions || ""}
 ${glossarySection}
 
 ## Output format
 
 Return ONLY the complete updated ${targetLanguage} document. No explanations, no commentary, no code fences wrapping the document. Start directly with the document's first line: the frontmatter \`---\` marker if the ${targetLanguage} translation has frontmatter, otherwise its first content line. NEVER add a \`---\` marker to a document that does not have frontmatter.
+`;
+    const volatileSuffix = `${request2.customInstructions || ""}
 
 ## Current ${sourceLanguage} Source
 
@@ -32404,7 +32459,7 @@ ${targetContent}`;
       const response = await this.callWithRetry({
         model: this.model,
         max_tokens: maxTokens,
-        messages: [{ role: "user", content: prompt }]
+        messages: this.cachedPromptMessages(stablePrefix, volatileSuffix)
       }, "translateDocumentResync");
       const result = response.content[0];
       if (!result || result.type !== "text") {
@@ -37045,58 +37100,6 @@ function classifyChangedFiles(files, docsFolder) {
     removedTocFiles
   };
 }
-function collectTocFiles(entries) {
-  const files = [];
-  for (const entry of entries ?? []) {
-    if (entry.file)
-      files.push(String(entry.file));
-    if (entry.chapters)
-      files.push(...collectTocFiles(entry.chapters));
-    if (entry.sections)
-      files.push(...collectTocFiles(entry.sections));
-  }
-  return files;
-}
-function partKey(chapters) {
-  return collectTocFiles(chapters).slice().sort().join("\0");
-}
-function mergeTargetCaptions(sourceYaml, targetYaml, logger) {
-  let source;
-  let target;
-  try {
-    source = load(sourceYaml);
-    target = load(targetYaml);
-  } catch {
-    logger?.warning("Could not parse _toc.yml for caption merge \u2014 using source as-is");
-    return sourceYaml;
-  }
-  if (!source || typeof source !== "object" || !target || typeof target !== "object" || !Array.isArray(source.parts) || !Array.isArray(target.parts)) {
-    return sourceYaml;
-  }
-  const targetCaptions = /* @__PURE__ */ new Map();
-  for (const part of target.parts) {
-    if (part.caption && Array.isArray(part.chapters)) {
-      const key = partKey(part.chapters);
-      if (key)
-        targetCaptions.set(key, String(part.caption));
-    }
-  }
-  let preserved = 0;
-  for (const part of source.parts) {
-    if (!Array.isArray(part.chapters))
-      continue;
-    const key = partKey(part.chapters);
-    const localCaption = targetCaptions.get(key);
-    if (localCaption) {
-      part.caption = localCaption;
-      preserved++;
-    }
-  }
-  if (preserved > 0) {
-    logger?.info(`Preserved ${preserved} localised TOC part caption(s) from target`);
-  }
-  return dump(source, { lineWidth: -1 });
-}
 var SyncOrchestrator = class {
   translator;
   processor;
@@ -37302,21 +37305,17 @@ var SyncOrchestrator = class {
     }
   }
   /**
-   * Process a TOC file, preserving any localised part captions from the target.
+   * Process a TOC file (copied directly without translation).
    */
   processTocFile(file, result) {
     this.logger.info(`Processing TOC file ${file.filename}...`);
     if (!file.newContent) {
       throw new Error(`No content provided for ${file.filename}`);
     }
-    let content = file.newContent;
-    if (file.targetContent) {
-      content = mergeTargetCaptions(file.newContent, file.targetContent, this.logger);
-    }
     result.processedFiles.push(file.filename);
     result.translatedFiles.push({
       path: file.filename,
-      content,
+      content: file.newContent,
       sha: file.existingFileSha
     });
     this.logger.info(`Successfully processed ${file.filename}`);
@@ -38198,7 +38197,7 @@ var TranslationReviewer = class {
   /** Section parsing for the deterministic diff checks (#148). */
   parser;
   // Counted at the chokepoint so retried/discarded attempts are included (#164/F53).
-  usage = { inputTokens: 0, outputTokens: 0, apiCalls: 0 };
+  usage = emptyApiUsage();
   constructor(anthropicApiKey, githubToken, model = DEFAULT_REVIEW_MODEL, maxSuggestions = 5) {
     this.anthropic = new Anthropic({ apiKey: anthropicApiKey, maxRetries: 0 });
     this.octokit = github.getOctokit(githubToken);
@@ -38228,9 +38227,7 @@ var TranslationReviewer = class {
           messages: [{ role: "user", content: prompt }]
         });
         const response = await stream.finalMessage();
-        this.usage.inputTokens += response.usage.input_tokens;
-        this.usage.outputTokens += response.usage.output_tokens;
-        this.usage.apiCalls += 1;
+        addUsage(this.usage, response.usage);
         if (response.stop_reason === "max_tokens") {
           throw new Error(`${operationName}: response truncated at max_tokens=${maxTokens}; verdict JSON is incomplete`);
         }
@@ -39306,8 +39303,10 @@ async function runReview(builtInGlossaryDir) {
   const usage = reviewer.getUsage();
   core8.setOutput("input-tokens", String(usage.inputTokens));
   core8.setOutput("output-tokens", String(usage.outputTokens));
+  core8.setOutput("cache-creation-input-tokens", String(usage.cacheCreationInputTokens));
+  core8.setOutput("cache-read-input-tokens", String(usage.cacheReadInputTokens));
   core8.setOutput("api-calls", String(usage.apiCalls));
-  core8.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens`);
+  core8.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens, cache: ${usage.cacheReadInputTokens} read + ${usage.cacheCreationInputTokens} written`);
   core8.info(`\u2705 Review complete: ${result.verdict} \u2192 ${result.recommendation} (Translation: ${result.translationQuality.score}/10, Diff: ${result.diffQuality.score}/10)`);
 }
 function detectTargetLanguage(repoName) {
@@ -39778,8 +39777,10 @@ async function runSync() {
   const usage = orchestrator.getUsage();
   core9.setOutput("input-tokens", String(usage.inputTokens));
   core9.setOutput("output-tokens", String(usage.outputTokens));
+  core9.setOutput("cache-creation-input-tokens", String(usage.cacheCreationInputTokens));
+  core9.setOutput("cache-read-input-tokens", String(usage.cacheReadInputTokens));
   core9.setOutput("api-calls", String(usage.apiCalls));
-  core9.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens`);
+  core9.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens, cache: ${usage.cacheReadInputTokens} read + ${usage.cacheCreationInputTokens} written`);
   let prUrl;
   if (result.translatedFiles.length > 0 || result.filesToDelete.length > 0) {
     try {
@@ -39927,11 +39928,9 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
     try {
       const { content: newContent } = await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, sha);
       let existingFileSha;
-      let targetContent;
       try {
         const result = await fetchFileContent(octokit, targetOwner, targetRepo, file.filename);
         existingFileSha = result.sha;
-        targetContent = result.content;
       } catch {
         core9.info(`${file.filename} does not exist in target repo - will create it`);
       }
@@ -39939,7 +39938,6 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
         filename: file.filename,
         type: "toc",
         newContent,
-        targetContent,
         existingFileSha,
         isNewFile: !existingFileSha
       });
