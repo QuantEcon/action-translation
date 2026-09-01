@@ -186,15 +186,69 @@ describe('Language Configuration', () => {
       // words (we, two, each, ...) are deliberately absent because they inflect
       // with Malayalam grammar and must not be pinned term-level
       expect(translated.map((t) => t.en).sort()).toEqual([
+        'contrived',
         'country',
+        'facilitate',
         'increase',
+        'limited',
         'over time',
         'relationship',
+        'straightforward',
         'year',
       ]);
       for (const t of translated) {
         expect(t.context).toContain('everyday');
       }
+    });
+
+    // Round 2 (lecture-python-programming.ml#7, 118 suggestion blocks): the
+    // ordinary words the editor moved back to English are pinned ml == en so
+    // the model stops reaching for the dictionary equivalent (rule 2 alone did
+    // not hold them), and the #273 line/lines variance regression is pinned.
+    it('pins the round-2 keep-English words and line/lines', () => {
+      const byEn = new Map(glossary.terms.map((t) => [t.en, t]));
+      // 'already', 'name', 'example(s)' and 'work' are deliberately absent —
+      // held for the editor's answers on ml#12.
+      for (const en of ['useful', 'line', 'lines', 'automatically', 'improve']) {
+        const term = byEn.get(en);
+        expect(term).toBeDefined();
+        expect(term!.ml).toBe(en);
+      }
+      expect(byEn.get('useful')!.context).toContain('ഉപയോഗപ്രദമായ');
+    });
+  });
+
+  describe('Malayalam round-2 rules (lecture-python-programming.ml#7)', () => {
+    const rules = getLanguageConfig('ml').additionalRules.join('\n');
+
+    it('carries the deterministic classes: terminal punctuation and sentence-initial capitalisation', () => {
+      expect(rules).toContain(
+        'Terminal punctuation is required on every Malayalam prose paragraph'
+      );
+      expect(rules).toContain('never begin a sentence with a lowercase Latin word');
+    });
+
+    it('carries the hortative teacher voice and the fixed renderings', () => {
+      expect(rules).toContain('നമുക്ക് … -ആം');
+      expect(rules).toContain('never as the plain future നമ്മൾ … -ും');
+      expect(rules).toContain('തന്നിരിക്കുന്ന N');
+      expect(rules).toContain('NEVER ഒരു നൽകിയ N');
+      expect(rules).toContain('NEVER കണക്കിലെടുക്കുക');
+      expect(rules).toContain('കുറച്ചുകൂടി, not കുറച്ചുകൂടെ');
+    });
+
+    it('extends the scope ruling to exercise statements (D-2026-09-01) and reinforces pointer sentences', () => {
+      expect(rules).toContain('D-2026-09-01-ml-exercise-statements-stay-english');
+      expect(rules).toContain('a mixed sentence keeps its mathematical clause in English');
+      expect(rules).toContain(
+        "Here\\'s a function for the first random device.".replace("\\'", "'")
+      );
+    });
+
+    it('holds the items still waiting on the editor (ml#12): "For example" is not yet a discourse rule', () => {
+      // Q1 on ml#12 — encode once answered; the other three connectives are in.
+      expect(rules).toContain('"In particular, …"');
+      expect(rules).not.toContain('"For example, …" stay');
     });
   });
 });

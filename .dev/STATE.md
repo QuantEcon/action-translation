@@ -16,6 +16,12 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   moved — no #109-class lag this time). The ml calibration programme is now
   one-lecture-per-round: stale seeds ml#2–#5 closed, round 2 open (ml#7, `functions`,
   engine `8625221`).
+- **Prompt caching shipped 2026-08-28** (#292 → PR #293, v0.27.0-bound; outside #257):
+  translator prompts now send `[stable(cache_control), volatile]` blocks; forecast
+  ~45-50% off sync-run cost, live-verified. Telemetry semantics changed: `input-tokens`
+  is now the *uncached* remainder — total prompt = input + cache-creation + cache-read
+  (two new outputs); a zero cache-read on a multi-call run means the prefix broke.
+  Remaining half of FUTURE.md idea 7 (`count_tokens` sizing) still open.
 - **The standing plan is tracker #257** (2026-08-10 backlog review; supersedes #94/#198):
   all 67 open issues triaged and verified against v0.25.0, phases W0–W6 filed as
   sub-issues #258–#264. The dominant failure shape it names: **the failure path produces

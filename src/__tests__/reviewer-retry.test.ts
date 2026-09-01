@@ -126,6 +126,12 @@ describe('reviewer callWithRetry', () => {
     await promise;
 
     // Both attempts were paid for; both must be counted (#164/F53).
-    expect(reviewer.getUsage()).toEqual({ inputTokens: 200, outputTokens: 100, apiCalls: 2 });
+    expect(reviewer.getUsage()).toEqual({
+      inputTokens: 200,
+      outputTokens: 100,
+      cacheCreationInputTokens: 0,
+      cacheReadInputTokens: 0,
+      apiCalls: 2,
+    });
   });
 });
