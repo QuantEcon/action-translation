@@ -15,6 +15,7 @@ import { TranslationService } from './translator.js';
 import { FileProcessor } from './file-processor.js';
 import { MystParser } from './parser.js';
 import { checkStructuralParity, formatParityViolations } from './structural-parity.js';
+import { applyVerbatimDirectives } from './verbatim-directives.js';
 import {
   BibliographyMode,
   BibliographySources,
@@ -466,6 +467,30 @@ export class SyncOrchestrator {
   // ---------------------------------------------------------------------------
 
   /**
+   * Verbatim-directive policy (`verbatim-directives.ts`): for editions that
+   * keep the exercise family byte-identical to the source (`ml`), restore
+   * those blocks from `file.newContent` after translation, before the parity
+   * guard checks the bytes that will be written. A block-sequence mismatch is
+   * left for the parity guard to report.
+   */
+  private restoreVerbatimDirectives(file: FileToSync, translatedContent: string): string {
+    if (file.newContent === undefined) return translatedContent;
+    const verbatim = applyVerbatimDirectives(
+      file.newContent,
+      translatedContent,
+      this.config.targetLanguage
+    );
+    if (verbatim.mismatch) {
+      this.logger.warning(`${file.filename}: ${verbatim.mismatch}; verbatim restore skipped`);
+    } else if (verbatim.replaced > 0) {
+      this.logger.info(
+        `${file.filename}: restored ${verbatim.replaced} exercise-family block(s) verbatim from source`
+      );
+    }
+    return verbatim.content;
+  }
+
+  /**
    * Process a markdown file (added or modified).
    * New files get full translation; existing files get section-based updates.
    */
@@ -526,6 +551,7 @@ export class SyncOrchestrator {
     // translation verbatim (#119, #65). Failing the file loudly here is the
     // point — every defect in this class previously shipped as a success and
     // surfaced weeks later on a downstream strict build.
+    translatedContent = this.restoreVerbatimDirectives(file, translatedContent);
     const parity = checkStructuralParity(file.newContent, translatedContent);
     if (!parity.ok) {
       throw new Error(formatParityViolations(file.filename, parity));
@@ -607,6 +633,7 @@ export class SyncOrchestrator {
 
     // Structural parity — same (and only) guard as processMarkdownFile
     // (#119, #65; the dead validateMyST gate was deleted in #165).
+    translatedContent = this.restoreVerbatimDirectives(file, translatedContent);
     const parity = checkStructuralParity(file.newContent, translatedContent);
     if (!parity.ok) {
       throw new Error(formatParityViolations(file.filename, parity));

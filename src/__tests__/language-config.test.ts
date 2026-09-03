@@ -237,18 +237,30 @@ describe('Language Configuration', () => {
       expect(rules).toContain('കുറച്ചുകൂടി, not കുറച്ചുകൂടെ');
     });
 
-    it('extends the scope ruling to exercise statements (D-2026-09-01) and reinforces pointer sentences', () => {
-      expect(rules).toContain('D-2026-09-01-ml-exercise-statements-stay-english');
-      expect(rules).toContain('a mixed sentence keeps its mathematical clause in English');
+    it('reinforces pointer sentences with the round-2 worked examples', () => {
       expect(rules).toContain(
         "Here\\'s a function for the first random device.".replace("\\'", "'")
       );
     });
 
-    it('holds the items still waiting on the editor (ml#12): "For example" is not yet a discourse rule', () => {
-      // Q1 on ml#12 — encode once answered; the other three connectives are in.
-      expect(rules).toContain('"In particular, …"');
-      expect(rules).not.toContain('"For example, …" stay');
+    // The editor's ml#12 answers (2026-09-01), encoded 2026-09-03.
+    it('keeps every exercise-family block byte-identical to the source (D-2026-09-03), replacing the 09-01 scope rule', () => {
+      expect(rules).toContain('D-2026-09-03-ml-all-exercise-content-stays-english');
+      expect(rules).toContain('{exercise-start} … {exercise-end}, {hint}, {solution}');
+      expect(rules).toContain('including pure programming instructions');
+      expect(rules).not.toContain('D-2026-09-01-ml-exercise-statements-stay-english');
+      expect(rules).not.toContain('MUST NOT be left in English');
+      expect(rules).not.toContain('a mixed sentence keeps its mathematical clause in English');
+      // The 08-17 math-heavy Hint/Solution rule is subsumed while the ruling stands.
+      expect(rules).not.toContain('native-editor ruling, 2026-08-17');
+      expect(rules).toContain('subsumes the earlier math-heavy Hint/Solution ruling');
+    });
+
+    it('answers ml#12: "For example" joins the discourse rule, the refer calque is named, headings keep possessives', () => {
+      expect(rules).toContain('"For example, …", "In fact, …"');
+      expect(rules).toContain('not ഉദാഹരണത്തിന്');
+      expect(rules).toContain('never സൂചിപ്പിക്കുന്നു');
+      expect(rules).toContain('never "Matplotlib-യുടെ Split Personality"');
     });
   });
 });

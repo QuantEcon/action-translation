@@ -24,6 +24,7 @@ import { Glossary } from '../../types.js';
 import { updateHeadingMap, injectHeadingMap } from '../../heading-map.js';
 import { applyTypography } from '../../typography.js';
 import { checkStructuralParity, formatParityViolations } from '../../structural-parity.js';
+import { applyVerbatimDirectives } from '../../verbatim-directives.js';
 import { RuleId, buildLocalizationPrompt, getFontRequirements } from '../../localization-rules.js';
 import { ensureTrailingNewline } from './forward.js';
 import { readFileState, writeConfig, writeFileState } from '../translate-state.js';
@@ -286,9 +287,18 @@ export async function translateLecture(
   // seeded file was written with `\ No newline at end of file` (forward's #116,
   // same defect on this writer). Applied before the parity guard so the guard
   // checks the exact bytes that get written, same as forward's finalize path.
-  const finalContent = ensureTrailingNewline(
-    injectHeadingMap(translatedContent, headingMap, translatedTitle)
+  // Verbatim-directive policy (ml): exercise-family blocks are restored from
+  // the source after translation and before the parity guard, so the guard
+  // checks the bytes that get written.
+  const verbatim = applyVerbatimDirectives(
+    sourceContent,
+    ensureTrailingNewline(injectHeadingMap(translatedContent, headingMap, translatedTitle)),
+    options.targetLanguage
   );
+  if (verbatim.mismatch) {
+    console.warn(`  ${lectureFile}: ${verbatim.mismatch}; verbatim restore skipped`);
+  }
+  const finalContent = verbatim.content;
 
   // Structural parity: directive shapes and target anchors must survive
   // translation verbatim, same as the sync and forward write paths. init

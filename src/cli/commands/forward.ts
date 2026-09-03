@@ -39,6 +39,7 @@ import { getFileGitMetadata } from '../git-metadata.js';
 import { MystParser } from '../../parser.js';
 import { applyTypography } from '../../typography.js';
 import { checkStructuralParity, formatParityViolations } from '../../structural-parity.js';
+import { applyVerbatimDirectives } from '../../verbatim-directives.js';
 import {
   findTargetLocalReads,
   buildPreserveInstruction,
@@ -402,6 +403,14 @@ export async function resyncSingleFile(
       // it checks exactly the bytes that would be written; failing the file
       // loudly is the point, because every defect in this class previously
       // shipped as a success and surfaced weeks later downstream.
+      // Verbatim-directive policy (ml): restore exercise-family blocks from the
+      // source before the parity guard, same ordering as init and sync.
+      const verbatim = applyVerbatimDirectives(sourceContent, outputContent, options.language);
+      if (verbatim.mismatch) {
+        logger.warn(`  ${file}: ${verbatim.mismatch}; verbatim restore skipped`);
+      }
+      outputContent = verbatim.content;
+
       const parity = checkStructuralParity(sourceContent, outputContent);
       if (!parity.ok) {
         logger.error(`  ${formatParityViolations(file, parity)}`);
