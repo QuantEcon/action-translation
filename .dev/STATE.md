@@ -7,6 +7,13 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## In flight
 
+- **v0.28.0 release cut 2026-09-03** (#303 merged as `07e7c64`; release PR #304) — headline: the
+  Malayalam editor's ml#12 answers encoded and the verbatim exercise-family policy
+  (`verbatim-directives.ts` on all three write paths + the `verbatimDirectives` review
+  diff-check; decision record `D-2026-09-03-ml-all-exercise-content-stays-english`
+  supersedes the 09-01 record), glossary v0.5.0, rules 24 → 23, harness scenario 28.
+  Validated pre-merge with the local bundle on a scenario-28 harness PR (positive and
+  negative). **W1 (#259) retargets to v0.29.0.** §4a gate status is recorded on #304.
 - **v0.27.0 release cut 2026-09-01** — headline: the second inline native-review round
   encoded (ml glossary v0.4.0 + rules 18 → 24 + the first deterministic ml lints, #297;
   regeneration-checked in the same PR, decision record
