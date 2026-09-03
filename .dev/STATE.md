@@ -7,13 +7,15 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## In flight
 
-- **v0.28.0 release cut 2026-09-03** (#303 merged as `07e7c64`; release PR #304) — headline: the
+- **v0.28.0 released 2026-09-03** (#303 `07e7c64`; release #304 `9284fbc`; §4a gate **completed**:
+  84/84 sync runs, 28/28 delivery + 28/28 stamped verdicts per lane; `@v0` = `v0.28` = `9284fbc`,
+  smoke-verified on all three lanes) — headline: the
   Malayalam editor's ml#12 answers encoded and the verbatim exercise-family policy
   (`verbatim-directives.ts` on all three write paths + the `verbatimDirectives` review
   diff-check; decision record `D-2026-09-03-ml-all-exercise-content-stays-english`
   supersedes the 09-01 record), glossary v0.5.0, rules 24 → 23, harness scenario 28.
   Validated pre-merge with the local bundle on a scenario-28 harness PR (positive and
-  negative). **W1 (#259) retargets to v0.29.0.** §4a gate status is recorded on #304.
+  negative). **W1 (#259) retargets to v0.29.0.** Round 4 (`numpy`) can be generated at `@v0`.
 - **2026-09-01 PR sweep** — all six open PRs reviewed, merge order set. #294/#297 merged
   and released (v0.27.0). **#289** (#156) and **#291** (#254 interim) reviewed in full and
   **upgraded in place on kp992's branches** (`maintainerCanModify`): both had a `yaml.dump`
