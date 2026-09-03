@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-09-03
+
 ### Added
 
 - **Verbatim directive policy, enforced in code** (`src/verbatim-directives.ts`). For editions that keep a directive family byte-identical to the English source — the first is `ml`, whose editor of record ruled on lecture-python-programming.ml#12 that every `{exercise}`, `{exercise-start}…{exercise-end}`, `{hint}`, `{solution}` and `{solution-start}…{solution-end}` block stays in English until he rules on each exercise individually — the blocks are restored from the source after translation on all three write paths (sync, `translate init`, `translate forward`), immediately before the structural-parity guard so parity checks the bytes that are written. Block extents come from a nesting-aware fence walk (backtick, tilde and colon fences; literal bodies such as code cells are opaque), blocks pair by position, and a differing block sequence is left untouched and logged rather than guessed. A rule with no judgement boundary does not belong to the model. Decision record `D-2026-09-03-ml-all-exercise-content-stays-english` supersedes `D-2026-09-01-ml-exercise-statements-stay-english`.
@@ -15,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **ml round-2 second draw archived** (#299): a second regeneration of `functions` at the released v0.27.0 engine with a closeness measure against the editor's reviewed text (exact-line match 11% seed → 21%/19% arms; whole-prose ratio 0.576 → 0.650/0.638), under `experiments/ml-benchmark/arms/`. Experiment data only; no runtime change.
 - **`ml` rules 24 → 23, glossary v0.4.0 → v0.5.0** from the editor's ml#12 answers (2026-09-01): the two exercise-scope rules (09-01 statements, 08-17 math-heavy Hint/Solution) are replaced by one statement of the verbatim policy; sentence-initial *For example,* joins the English-retained discourse connectives (not ഉദാഹരണത്തിന്); the light-verb rule names the `refer` calque (never സൂചിപ്പിക്കുന്നു, seen on both v0.27.0 regeneration draws); the heading rule now says byte-identical including possessives (the `Matplotlib's Split Personality` → `Matplotlib-യുടെ` miss on ml#13). Glossary pins: *already*, *example* / *examples*, *name* (the noun; the act of naming stays പേര്), *work* (light-verb form). The ex5 "over-read" logged on #296 for the v0.27.0 arm was correct behaviour under the new ruling and is withdrawn.
 
 ## [0.27.0] - 2026-09-01
