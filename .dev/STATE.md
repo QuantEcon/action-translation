@@ -14,6 +14,20 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   supersedes the 09-01 record), glossary v0.5.0, rules 24 → 23, harness scenario 28.
   Validated pre-merge with the local bundle on a scenario-28 harness PR (positive and
   negative). **W1 (#259) retargets to v0.29.0.** §4a gate status is recorded on #304.
+- **2026-09-01 PR sweep** — all six open PRs reviewed, merge order set. #294/#297 merged
+  and released (v0.27.0). **#289** (#156) and **#291** (#254 interim) reviewed in full and
+  **upgraded in place on kp992's branches** (`maintainerCanModify`): both had a `yaml.dump`
+  round-trip that turned a one-line `_toc.yml` change into a whole-file rewrite (401 /
+  201 changed lines on the real lecture-python TOC) — both now edit the TOC text in place
+  and verify by parse; #289 gains fetch-failure coverage + an accurate PR-body notice;
+  #291 gains overlap-based part matching (identity matching lost the caption of exactly
+  the part a lecture-adding sync touches), the rebase-replay site, 404-only target
+  fetches, and moved to `src/toc-captions.ts` so it composes with #289. Both CI-green,
+  mergeable, awaiting kp992. **Merge order #289 → #291.** #291 no longer closes #254
+  (W1's structured merge is the end state). **#225 closed** unmerged: #118 cause unfixed,
+  D2 removes the path, D1 gates #178. Two #297 residuals filed as their own issue
+  (ml lint regex misses `functions-നെ`; rule 11 dangling colon). #69 untouched.
+  Tracker #257 re-stamped with a contract-form `## Where we stand` section.
 - **v0.27.0 release cut 2026-09-01** — headline: the second inline native-review round
   encoded (ml glossary v0.4.0 + rules 18 → 24 + the first deterministic ml lints, #297;
   regeneration-checked in the same PR, decision record
@@ -146,8 +160,12 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## Next
 
-**Resume here (2026-08-20):**
+**Resume here (2026-09-02):**
 
+0. **Merge #289, then #291** once kp992 has looked (or after a week — both are
+   maintainer-upgraded and CI-green); whichever lands second is a two-hunk
+   CHANGELOG/bundle rebase. Then **triage the twelve post-review arrivals** listed on
+   #257 into W1–W6 (#282, #287, #290 look W1-shaped).
 1. **#169 slice 2: `src/github-content.ts`** — `tryFetchFileContent` plus **one**
    `buildFilesToSync` over a narrow `ContentClient` interface, replacing the two
    independently-maintained builders (`index.ts:381` and `:1038` as of `228a317`) that
