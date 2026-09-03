@@ -467,10 +467,6 @@ export class SyncOrchestrator {
   // ---------------------------------------------------------------------------
 
   /**
-   * Process a markdown file (added or modified).
-   * New files get full translation; existing files get section-based updates.
-   */
-  /**
    * Verbatim-directive policy (`verbatim-directives.ts`): for editions that
    * keep the exercise family byte-identical to the source (`ml`), restore
    * those blocks from `file.newContent` after translation, before the parity
@@ -494,6 +490,10 @@ export class SyncOrchestrator {
     return verbatim.content;
   }
 
+  /**
+   * Process a markdown file (added or modified).
+   * New files get full translation; existing files get section-based updates.
+   */
   private async processMarkdownFile(
     file: FileToSync,
     glossary: Glossary | undefined,

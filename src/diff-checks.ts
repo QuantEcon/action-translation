@@ -205,12 +205,13 @@ export async function checkVerbatimDirectives(
   }
   const details: string[] = [];
   for (const pair of pairs) {
+    if (details.length >= MAX_DETAILS) break;
     for (const violation of findVerbatimViolations(pair.source, pair.target)) {
       if (details.length >= MAX_DETAILS) break;
       details.push(`${pair.filename}: ${violation}`);
     }
   }
-  return { passed: details.length === 0, details };
+  return { passed: details.length === 0, details: details.slice(0, MAX_DETAILS) };
 }
 
 export async function runDeterministicDiffChecks(

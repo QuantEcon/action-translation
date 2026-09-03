@@ -21,7 +21,12 @@ import { parseTranslationSyncMetadata, TranslationSyncMetadata } from './pr-crea
 import { REVIEW_TRIGGER_LABEL } from './contracts.js';
 import { getLanguageConfig } from './language-config.js';
 import { MystParser } from './parser.js';
-import { runDeterministicDiffChecks, ReviewedFilePair, DiffCheckSource } from './diff-checks.js';
+import {
+  runDeterministicDiffChecks,
+  ReviewedFilePair,
+  DiffCheckSource,
+  DeterministicCheckResult,
+} from './diff-checks.js';
 import {
   DEFAULT_CLAUDE_MODEL,
   MAX_TOKENS,
@@ -1128,11 +1133,12 @@ export class TranslationReviewer {
     // Deterministic failures are recorded for visibility at minor/structure,
     // which does NOT gate — their boolean already gates, and double-gating
     // would double-count one failure in the shadow data.
-    const deterministicFindings: ReviewFinding[] = [
-      deterministic.structurePreserved,
-      deterministic.headingMapCorrect,
-    ]
-      .flatMap((result) => result.details)
+    // `verbatimDirectives` is excluded here because it gates on its own as a
+    // blocker below; every other deterministic result — including any added
+    // later — is surfaced without this list needing to change.
+    const deterministicFindings: ReviewFinding[] = Object.entries(deterministic)
+      .filter(([name, result]) => name !== 'verbatimDirectives' && result !== undefined)
+      .flatMap(([, result]) => (result as DeterministicCheckResult).details)
       .map((detail) => ({
         severity: 'minor' as const,
         category: 'structure' as const,

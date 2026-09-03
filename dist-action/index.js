@@ -37331,10 +37331,6 @@ var SyncOrchestrator = class {
   // Private: File type handlers
   // ---------------------------------------------------------------------------
   /**
-   * Process a markdown file (added or modified).
-   * New files get full translation; existing files get section-based updates.
-   */
-  /**
    * Verbatim-directive policy (`verbatim-directives.ts`): for editions that
    * keep the exercise family byte-identical to the source (`ml`), restore
    * those blocks from `file.newContent` after translation, before the parity
@@ -37352,6 +37348,10 @@ var SyncOrchestrator = class {
     }
     return verbatim.content;
   }
+  /**
+   * Process a markdown file (added or modified).
+   * New files get full translation; existing files get section-based updates.
+   */
   async processMarkdownFile(file, glossary, result, fileRebaseCache) {
     this.logger.info(`Processing ${file.filename}...`);
     if (!file.newContent) {
@@ -37896,13 +37896,15 @@ async function checkVerbatimDirectives(pairs2, targetLanguage) {
   }
   const details = [];
   for (const pair of pairs2) {
+    if (details.length >= MAX_DETAILS)
+      break;
     for (const violation of findVerbatimViolations(pair.source, pair.target)) {
       if (details.length >= MAX_DETAILS)
         break;
       details.push(`${pair.filename}: ${violation}`);
     }
   }
-  return { passed: details.length === 0, details };
+  return { passed: details.length === 0, details: details.slice(0, MAX_DETAILS) };
 }
 async function runDeterministicDiffChecks(parser, pairs2, targetLanguage) {
   const guard = async (name, fn) => {
@@ -38750,10 +38752,7 @@ var TranslationReviewer = class {
       description: truncateField(`${name}: the reviewer reported this check as failed. This is a model judgement, not a deterministic check \u2014 verify against the source diff before treating it as a defect (#148).`),
       suggestion: null
     }));
-    const deterministicFindings = [
-      deterministic.structurePreserved,
-      deterministic.headingMapCorrect
-    ].flatMap((result2) => result2.details).map((detail) => ({
+    const deterministicFindings = Object.entries(deterministic).filter(([name, result2]) => name !== "verbatimDirectives" && result2 !== void 0).flatMap(([, result2]) => result2.details).map((detail) => ({
       severity: "minor",
       category: "structure",
       file: soleFile,
