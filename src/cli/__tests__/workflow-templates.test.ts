@@ -289,6 +289,8 @@ interface SyncJob {
   where: string;
   condition: string;
   permissions: unknown;
+  /** `on.pull_request.branches` of the workflow the job belongs to. */
+  branches: unknown;
 }
 
 function walk(target: string): string[] {
@@ -326,13 +328,17 @@ function syncJobsIn(where: string, source: string): SyncJob[] {
   // A parse error here is the failure, not something to skip: the #192 fix
   // rewrote a folded `if:` in fourteen places and a mis-folded one would
   // silently stop the workflow firing on merges at all.
-  const doc = yaml.load(render(source)) as { jobs?: Record<string, Record<string, unknown>> };
+  const doc = yaml.load(render(source)) as {
+    on?: { pull_request?: { branches?: unknown } };
+    jobs?: Record<string, Record<string, unknown>>;
+  };
   return Object.entries(doc?.jobs ?? {})
     .filter(([, job]) => typeof job?.if === 'string' && job.if.includes('issue_comment'))
     .map(([name, job]) => ({
       where: `${where} :: ${name}`,
       condition: job.if as string,
       permissions: job.permissions,
+      branches: doc.on?.pull_request?.branches,
     }));
 }
 
@@ -379,6 +385,19 @@ describe('the \\translate-resync trigger gate', () => {
     );
     expect(offenders).toEqual([]);
   });
+
+  it.each(ALL_SYNC_JOBS.map((j) => [j.where, j] as const))(
+    '%s fires only for PRs against main',
+    (_where, job) => {
+      // `types: [closed]` matches a PR closed against ANY base, and the job's
+      // `merged == true` guard does not look at the base either. A theme
+      // migration merged into a long-lived `jb2` branch fired every deployed
+      // sync workflow and opened translation PRs in three target repos
+      // (QuantEcon/lecture-python-programming#629). The action now checks the
+      // base too, but the filter is what keeps the run from starting at all.
+      expect(job.branches).toEqual(['main']);
+    }
+  );
 
   it('matches the association set the action enforces internally', () => {
     // A workflow that admitted CONTRIBUTOR would start a billed run that

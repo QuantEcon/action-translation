@@ -7,7 +7,7 @@ A GitHub Action and CLI tool for managing translations of MyST Markdown document
 ## What it does
 
 **GitHub Action** — Runs in your CI pipeline with three modes:
-- **Sync mode**: When a PR is merged in the English source repo, automatically translates changed sections and opens a PR in the target language repo.
+- **Sync mode**: When a PR is merged into the default branch of the English source repo, automatically translates changed sections and opens a PR in the target language repo.
 - **Review mode**: When a translation PR is opened, posts an AI quality review with scores and suggestions.
 - **Rebase mode**: When a translation PR merges in the target repo, automatically rebases its open siblings, reusing cached translations for unchanged sections.
 
@@ -31,6 +31,7 @@ name: Sync Translations
 on:
   pull_request:
     types: [closed]
+    branches: [main]
     paths: ['lectures/**/*.md']
   issue_comment:
     types: [created]
@@ -63,6 +64,8 @@ jobs:
 ```
 
 The `issue_comment` trigger enables the `\translate-resync` command — comment it on any merged PR to re-trigger sync (useful for recovering from failures). To retrigger only one language, add the code: `\translate-resync fa` or `\translate-resync zh-cn`. The run costs Anthropic credits and uses the target-repo PAT, so the `if:` admits only repo owners, org members and collaborators; comments from anyone else are ignored at the workflow level and never start a job.
+
+`branches: [main]` limits the merge trigger to PRs whose base is `main`. Without it, `types: [closed]` fires for a PR merged into *any* branch, and a merge into a long-lived work branch would open translation PRs for content the published edition does not carry. The action also checks the base branch against the repository's default branch, so a `\translate-resync` on such a PR is a no-op.
 
 ### CLI
 
