@@ -72,7 +72,7 @@ jobs:
           github-token: ${{ secrets.TRANSLATION_PAT }}
 ```
 
-This workflow triggers whenever a PR that touches Markdown files in `lectures/` is merged into `main` — `branches: [main]` is what keeps a merge into a work-in-progress branch from being translated as if it were published. It detects which sections changed and creates a translation PR in the target repository. The `issue_comment` trigger enables re-syncing by commenting `\translate-resync` on a merged PR. To retrigger only one language, add the language code (e.g., `\translate-resync zh-cn`).
+This workflow triggers whenever a PR that touches Markdown files in `lectures/` is merged into `main` — `branches: [main]` is what keeps a merge into a work-in-progress branch from being translated as if it were published (the action itself checks against the repository's default branch, so edit the filter if yours is not `main`). It detects which sections changed and creates a translation PR in the target repository. The `issue_comment` trigger enables re-syncing by commenting `\translate-resync` on a merged PR. To retrigger only one language, add the language code (e.g., `\translate-resync zh-cn`).
 
 The `author_association` check on that clause is a trust gate: an `issue_comment` workflow runs with full access to your secrets, so without it any GitHub account could spend Anthropic credits by commenting on a merged PR. Keep all four conditions — dropping any one of them re-opens that.
 

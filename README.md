@@ -7,7 +7,7 @@ A GitHub Action and CLI tool for managing translations of MyST Markdown document
 ## What it does
 
 **GitHub Action** — Runs in your CI pipeline with three modes:
-- **Sync mode**: When a PR is merged into `main` in the English source repo, automatically translates changed sections and opens a PR in the target language repo.
+- **Sync mode**: When a PR is merged into the default branch of the English source repo, automatically translates changed sections and opens a PR in the target language repo.
 - **Review mode**: When a translation PR is opened, posts an AI quality review with scores and suggestions.
 - **Rebase mode**: When a translation PR merges in the target repo, automatically rebases its open siblings, reusing cached translations for unchanged sections.
 

@@ -316,18 +316,18 @@ export function validatePREvent(context: any, testMode: boolean): PREventResult 
   const merged = payload.pull_request?.merged === true;
   const prNumber = payload.pull_request?.number;
 
-  if (!merged) {
-    core.info('PR was closed but not merged. Skipping sync.');
-  }
-
   if (!prNumber) {
     throw new Error('Could not determine PR number from event payload');
+  }
+
+  if (!merged) {
+    core.info('PR was closed but not merged. Skipping sync.');
+    return { merged: false, prNumber, isTestMode: false, isResync: false };
   }
 
   // A merge into any other branch is not a publication event — see
   // mergedIntoDefaultBranch for the incident that put this here.
   if (
-    merged &&
     !mergedIntoDefaultBranch(
       payload.pull_request?.base?.ref,
       payload.repository?.default_branch,

@@ -31886,13 +31886,14 @@ function validatePREvent(context3, testMode) {
   }
   const merged = payload.pull_request?.merged === true;
   const prNumber = payload.pull_request?.number;
-  if (!merged) {
-    core.info("PR was closed but not merged. Skipping sync.");
-  }
   if (!prNumber) {
     throw new Error("Could not determine PR number from event payload");
   }
-  if (merged && !mergedIntoDefaultBranch(payload.pull_request?.base?.ref, payload.repository?.default_branch, prNumber)) {
+  if (!merged) {
+    core.info("PR was closed but not merged. Skipping sync.");
+    return { merged: false, prNumber, isTestMode: false, isResync: false };
+  }
+  if (!mergedIntoDefaultBranch(payload.pull_request?.base?.ref, payload.repository?.default_branch, prNumber)) {
     return { merged: false, prNumber, isTestMode: false, isResync: false };
   }
   core.info(`\u{1F680} Running in PRODUCTION mode for merged PR #${prNumber}`);
