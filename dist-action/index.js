@@ -31850,6 +31850,21 @@ function getReviewInputs() {
   };
 }
 var RESYNC_COMMAND = "\\translate-resync";
+function mergedIntoDefaultBranch(baseRef, defaultBranch, prNumber) {
+  if (!defaultBranch) {
+    core.warning(`Could not determine the repository default branch; assuming PR #${prNumber} landed on it.`);
+    return true;
+  }
+  if (!baseRef) {
+    core.warning(`Could not determine the base branch of PR #${prNumber}; assuming it landed on '${defaultBranch}'.`);
+    return true;
+  }
+  if (baseRef !== defaultBranch) {
+    core.info(`PR #${prNumber} was merged into '${baseRef}', not the default branch '${defaultBranch}'. Skipping sync \u2014 only merges into the default branch are translated.`);
+    return false;
+  }
+  return true;
+}
 function validatePREvent(context3, testMode) {
   const { eventName, payload } = context3;
   if (eventName === "issue_comment") {
@@ -31876,6 +31891,9 @@ function validatePREvent(context3, testMode) {
   }
   if (!prNumber) {
     throw new Error("Could not determine PR number from event payload");
+  }
+  if (merged && !mergedIntoDefaultBranch(payload.pull_request?.base?.ref, payload.repository?.default_branch, prNumber)) {
+    return { merged: false, prNumber, isTestMode: false, isResync: false };
   }
   core.info(`\u{1F680} Running in PRODUCTION mode for merged PR #${prNumber}`);
   return { merged, prNumber, isTestMode: false, isResync: false };
@@ -39885,6 +39903,9 @@ async function runSync() {
     });
     if (!pr.merged) {
       core9.info(`PR #${prNumber} is not merged. Resync only works on merged PRs.`);
+      return;
+    }
+    if (!mergedIntoDefaultBranch(pr.base?.ref, pr.base?.repo?.default_branch, prNumber)) {
       return;
     }
     if (pr.merge_commit_sha) {
