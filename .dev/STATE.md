@@ -7,7 +7,7 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## In flight
 
-- **v0.28.1 release cut 2026-09-14** (#308 `aae38d1`) — patch: sync mode fires only for PRs
+- **v0.28.1 release cut 2026-09-14** (fix #308 `aae38d1`; release PR #309 `3de9024`) — patch: sync mode fires only for PRs
   merged into the default branch. Trigger: QuantEcon/lecture-python-programming#629 (theme
   v3.0.0) merged into the long-lived `jb2` branch on 2026-09-12 and all three deployed sync
   workflows fired — `types: [closed]` has no base-branch filter and neither the job `if:`
@@ -17,7 +17,7 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   compared against `repository.default_branch`. Tidy-up outside the repo, same day: the
   three downstream PRs closed unmerged; `branches: [main]` PR'd into the deployed workflows
   (lecture-python-programming#630, lecture-python-intro#846, lecture-python.myst#1056 —
-  open, awaiting merge). Release PR #309 `3de9024`; §4a gate **completed 2026-09-14**:
+  open, awaiting merge). §4a gate **completed 2026-09-14**:
   84/84 sync runs, 28/28 delivery + 28/28 verdicts per lane at `engineVersion: 0.28.1`;
   `@v0` = `v0.28` = `3de9024`, alias smoke (scenario 01) reports `engineRef: v0` on all
   three lanes; GitHub release published. W1 (#259) still targets v0.29.0.
