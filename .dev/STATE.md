@@ -1,4 +1,4 @@
-verified: 2026-09-03
+verified: 2026-09-14
 
 # STATE
 
@@ -7,6 +7,17 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## In flight
 
+- **v0.28.1 release cut 2026-09-14** (#308 `aae38d1`) — patch: sync mode fires only for PRs
+  merged into the default branch. Trigger: QuantEcon/lecture-python-programming#629 (theme
+  v3.0.0) merged into the long-lived `jb2` branch on 2026-09-12 and all three deployed sync
+  workflows fired — `types: [closed]` has no base-branch filter and neither the job `if:`
+  nor the action looked at the base — opening fr#79, fa#166, zh-cn#105 for unpublished
+  content. Two-layer fix: `branches: [main]` in every published sync template (sweep test
+  now requires it) + `mergedIntoDefaultBranch` in `validatePREvent` and the resync path,
+  compared against `repository.default_branch`. Tidy-up outside the repo, same day: the
+  three downstream PRs closed unmerged; `branches: [main]` PR'd into the deployed workflows
+  (lecture-python-programming ×3, lecture-python-intro, lecture-python.myst). §4a gate
+  status is recorded on the release PR. W1 (#259) still targets v0.29.0.
 - **v0.28.0 released 2026-09-03** (#303 `07e7c64`; release #304 `9284fbc`; §4a gate **completed**:
   84/84 sync runs, 28/28 delivery + 28/28 stamped verdicts per lane; `@v0` = `v0.28` = `9284fbc`,
   smoke-verified on all three lanes) — headline: the
