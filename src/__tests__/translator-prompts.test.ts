@@ -139,3 +139,117 @@ describe('every prompt builder numbers its rules contiguously', () => {
     expectContiguous(lastPrompt(), `document-resync/${lang}`);
   });
 });
+
+/**
+ * Style exemplars (ml round 3): editor-approved sentence pairs carried in the
+ * glossary file render after the terms, inside the prompt-cached stable block,
+ * on every builder — and a glossary without them renders exactly as before.
+ */
+describe('glossary style_examples render as STYLE EXAMPLES in the stable block', () => {
+  let service: TranslationService;
+
+  const terms = [{ en: 'useful', ml: 'useful', 'zh-cn': '有用' }];
+  const withExamples = {
+    version: 'test',
+    terms,
+    style_examples: [
+      { en: 'Here is the first pair.', ml: 'ML-ONE', source: 'test' },
+      { en: 'A pair for another language only.', fr: 'FR-ONLY' },
+      { en: 'Here is the second pair.', ml: 'ML-TWO' },
+    ],
+  };
+
+  beforeEach(() => {
+    mockStream.mockClear();
+    mockFinalMessage.mockResolvedValue({
+      content: [{ type: 'text', text: 'translated' }],
+      usage: { input_tokens: 1, output_tokens: 1 },
+    });
+    service = new TranslationService('test-key', 'test-model', false);
+  });
+
+  function lastBlocks(): { text: string; cache_control?: unknown }[] {
+    const calls = mockStream.mock.calls;
+    return calls[calls.length - 1][0].messages[0].content;
+  }
+
+  it('renders the target language pairs, in order, after the glossary terms', async () => {
+    await service.translateSection({
+      mode: 'new',
+      sourceLanguage: 'en',
+      targetLanguage: 'ml',
+      englishSection: SECTION,
+      glossary: withExamples,
+    });
+    const [stable] = lastBlocks();
+    expect(stable.cache_control).toBeDefined();
+    const glossaryAt = stable.text.indexOf('GLOSSARY:');
+    const examplesAt = stable.text.indexOf('STYLE EXAMPLES:');
+    expect(glossaryAt).toBeGreaterThanOrEqual(0);
+    expect(examplesAt).toBeGreaterThan(glossaryAt);
+    expect(stable.text).toContain('  EN: Here is the first pair.\n  ML: ML-ONE');
+    expect(stable.text.indexOf('ML-ONE')).toBeLessThan(stable.text.indexOf('ML-TWO'));
+    // a pair with no text for this language is skipped, never rendered as "undefined"
+    expect(stable.text).not.toContain('FR-ONLY');
+    expect(stable.text).not.toContain('undefined');
+    // numbered rules stay contiguous — the examples carry no `N. ` lines
+    expectContiguous(stable.text, 'new/ml with examples');
+  });
+
+  it('reaches every builder through the glossary', async () => {
+    await service.translateSection({
+      mode: 'update',
+      sourceLanguage: 'en',
+      targetLanguage: 'ml',
+      oldEnglish: SECTION,
+      newEnglish: SECTION,
+      currentTranslation: SECTION,
+      glossary: withExamples,
+    });
+    expect(lastBlocks()[0].text).toContain('STYLE EXAMPLES:');
+    await service.translateFullDocument({
+      content: SECTION,
+      sourceLanguage: 'en',
+      targetLanguage: 'ml',
+      glossary: withExamples,
+    });
+    expect(
+      lastBlocks()
+        .map((b) => b.text)
+        .join('')
+    ).toContain('STYLE EXAMPLES:');
+    await service.translateDocumentResync({
+      sourceLanguage: 'en',
+      targetLanguage: 'ml',
+      sourceContent: SECTION,
+      targetContent: SECTION,
+      glossary: withExamples,
+    });
+    expect(
+      lastBlocks()
+        .map((b) => b.text)
+        .join('')
+    ).toContain('STYLE EXAMPLES:');
+  });
+
+  it('omits the block when the language has no pairs or the glossary has none', async () => {
+    await service.translateSection({
+      mode: 'new',
+      sourceLanguage: 'en',
+      targetLanguage: 'zh-cn',
+      englishSection: SECTION,
+      glossary: withExamples,
+    });
+    expect(lastBlocks()[0].text).toContain('GLOSSARY:');
+    expect(lastBlocks()[0].text).not.toContain('STYLE EXAMPLES:');
+
+    await service.translateSection({
+      mode: 'new',
+      sourceLanguage: 'en',
+      targetLanguage: 'ml',
+      englishSection: SECTION,
+      glossary: { version: 'test', terms },
+    });
+    expect(lastBlocks()[0].text).not.toContain('STYLE EXAMPLES:');
+  });
+});

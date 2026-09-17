@@ -61,6 +61,26 @@ Each term has:
 - `{lang-code}` — The target language translation (e.g., `zh-cn`, `fa`)
 - `context` — Optional category for disambiguation (e.g., `economics`, `statistics`, `programming`)
 
+### Style examples (optional)
+
+A glossary may also carry `style_examples` — sentence pairs exactly as a native-speaker editor approved them. They are rendered after the terms under a `STYLE EXAMPLES:` heading and tell the translator to match their register, sentence rhythm, punctuation and clause order (never their content). Use them for style that is easier to show than to state as a rule; the Malayalam glossary ships the first set, drawn from the lectures its editor has reviewed.
+
+```json
+{
+  "version": "1.0",
+  "terms": [],
+  "style_examples": [
+    {
+      "en": "We can now use the `plt.style.use()` method to set the style sheet.",
+      "ml": "ഇനി, `plt.style.use()` method ഉപയോഗിച്ച് നമുക്ക് style sheet set ചെയ്യാം.",
+      "source": "lecture-python-programming.ml matplotlib"
+    }
+  ]
+}
+```
+
+Each example has `en`, the target text under its language code, and an optional `source` (provenance; not sent to the model). A pair with no text for the language being translated is skipped. Keep the set small and fixed — it sits in the prompt-cached block of every call, so it costs little after the first request but is paid on every cold one.
+
 ## Using a custom glossary
 
 To use your own glossary instead of the built-in one, specify the `glossary-path` input:

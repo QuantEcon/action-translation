@@ -127,6 +127,10 @@ Each glossary file follows this JSON structure:
 - `{language-code}` (string): Translation in target language
 - `context` (string, optional): Usage context to help AI understand when to use this translation
 
+### Optional: `style_examples`
+
+A top-level `style_examples` array carries sentence pairs exactly as a native-speaker editor approved them — `{ "en": …, "{language-code}": …, "source": … }`. They render after the terms as `STYLE EXAMPLES:` and teach style that resists rule statement (comma rhythm, verb aspect, clause order). `ml.json` ships the first set (v0.6.0), drawn only from lectures its editor has reviewed; add a pair only from editor-approved text, never from unreviewed machine output, and never one that contradicts a rule or an open question with the editor. See `docs/user/glossary.md`.
+
 ### Context Examples
 
 - `"economics"` - General economics term

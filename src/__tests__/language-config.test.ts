@@ -188,9 +188,11 @@ describe('Language Configuration', () => {
       expect(translated.map((t) => t.en).sort()).toEqual([
         'contrived',
         'country',
+        'explicit',
         'facilitate',
         'increase',
         'limited',
+        'multiple',
         'over time',
         'relationship',
         'straightforward',
@@ -215,6 +217,80 @@ describe('Language Configuration', () => {
         expect(term!.ml).toBe(en);
       }
       expect(byEn.get('useful')!.context).toContain('ഉപയോഗപ്രദമായ');
+    });
+  });
+
+  // Round 3 (lecture-python-programming.ml#13, 44 suggestion blocks): few new
+  // terms, and the first `style_examples` — the residue was style, which is
+  // shown to the translator rather than described to it.
+  describe('Malayalam round-3 glossary (v0.6.0): terms and style examples', () => {
+    const glossaryPath = path.join(__dirname, '..', '..', 'glossary', 'ml.json');
+    const glossary: {
+      terms: { en: string; ml: string }[];
+      style_examples: { en: string; ml: string; source?: string }[];
+    } = JSON.parse(fs.readFileSync(glossaryPath, 'utf-8'));
+    const byEn = new Map(glossary.terms.map((t) => [t.en, t]));
+
+    it('moves multiple / explicit to Malayalam and keeps remove / label as light verbs', () => {
+      expect(byEn.get('multiple')!.ml).toBe('ഒന്നിലധികം');
+      expect(byEn.get('explicit')!.ml).toBe('വ്യക്തമായ');
+      expect(byEn.get('remove')!.ml).toBe('remove');
+      expect(byEn.get('label')!.ml).toBe('label');
+    });
+
+    it('holds the words that are open questions on ml#22', () => {
+      // `provide` was pinned English in v0.4.0 and stays as it was until he answers
+      expect(byEn.get('provide')!.ml).toBe('provide');
+      for (const en of ['prefer', 'draw', 'available']) {
+        expect(byEn.has(en)).toBe(false);
+      }
+    });
+
+    it('ships editor-approved style examples: Malayalam, punctuated, provenance-tagged', () => {
+      expect(glossary.style_examples.length).toBeGreaterThanOrEqual(20);
+      for (const example of glossary.style_examples) {
+        expect(example.en.length).toBeGreaterThan(0);
+        expect(example.ml).toMatch(/[\u0d00-\u0d7f]/);
+        expect(example.ml.trimEnd()).toMatch(/[.:)!?]$/);
+        expect(example.source).toMatch(/^lecture-python-programming\.ml /);
+        // single-line: a pair is one paragraph of one reviewed lecture
+        expect(example.ml).not.toContain('\n');
+      }
+    });
+
+    it('no style example contradicts a banned rendering or an open question', () => {
+      const banned = ['ഉപയോഗപ്രദ', 'ഇതിനകം', 'ഒരു നൽകിയ', 'കുറച്ചുകൂടെ', 'ലളിതമായ', 'നീക്കം ചെയ്യ'];
+      for (const example of glossary.style_examples) {
+        for (const b of banned) expect(example.ml).not.toContain(b);
+        expect(example.ml).not.toContain('draw ചെയ്യ');
+      }
+    });
+  });
+
+  describe('Malayalam round-3 rules (lecture-python-programming.ml#13)', () => {
+    const rules = getLanguageConfig('ml').additionalRules;
+    const joined = rules.join('\n');
+
+    it('adds four rules (23 → 27): commas, verb form, idiom, further-reading scope', () => {
+      expect(rules).toHaveLength(27);
+      expect(joined).toContain('Mark clause boundaries with commas');
+      expect(joined).toContain('Choose the verb form by what the English means');
+      expect(joined).toContain(
+        'Render English idiom, metaphor and coined jargon by its plain meaning'
+      );
+      expect(joined).toContain('D-2026-09-18-ml-further-reading-lists-stay-english');
+    });
+
+    it('extends the existing rules rather than restating them', () => {
+      expect(joined).toContain('കരുതാം');
+      expect(joined).toContain('ഒന്നിലധികം');
+      expect(joined).toContain('dictionary പോലെയുള്ള');
+      expect(joined).toContain('remove ചെയ്യാൻ');
+      expect(joined).toContain('മറ്റൊരു');
+    });
+
+    it('no rule ends on a dangling colon (#301)', () => {
+      for (const rule of rules) expect(rule.trimEnd().endsWith(':')).toBe(false);
     });
   });
 
