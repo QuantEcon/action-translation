@@ -1,4 +1,4 @@
-verified: 2026-09-14
+verified: 2026-09-18
 
 # STATE
 
@@ -7,6 +7,24 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## In flight
 
+- **ml round 3 encoded on `ml-round3-v06` (2026-09-18, PR open — not yet released)** — the
+  third inline native review (44 suggestion blocks on lecture-python-programming.ml#13,
+  `matplotlib`) found every round-2 class clean and a residue of *style* (clause-boundary
+  commas, verb aspect, clause order). Payload: `ml` rules 23 → 27, glossary v0.6.0, and a new
+  mechanism — `style_examples` in the glossary file, rendered as `STYLE EXAMPLES:` in the
+  cached stable block on every write path. New admission test: a pattern becomes a rule only
+  if it recurs. Decision record `D-2026-09-18-ml-further-reading-lists-stay-english`. First
+  regeneration test with a **held-out lecture** and three draws per arm
+  (`experiments/ml-benchmark/arms/2026-09-18-round3-rules-exemplars-sonnet5/`): in-sample
+  similarity to the editor's text 0.845 → 0.93, held-out unchanged (0.814 → 0.809) apart
+  from comma density (0.56 → 0.72 vs his 0.82). A blind pairwise Opus 5 judge (2,570
+  judgements, no position bias) then found the rules preferred 55 : 45 held out and rules +
+  the shipped pairs 57 : 43 (p = 0.054), while contrastive / 56-pair / no-rules example
+  variants all judged 50 : 50 — the ml example set was removed from the PR (mechanism
+  ships, no data) and the exemplar line is closed pending round-4 editor data.
+  ml#13 merged `a24e925`. Editor's open questions: lecture-python-programming.ml#22 (none blocks a release).
+  Targets **v0.29.0**; round 4 (`numpy`) is generated after it ships. Log:
+  `.dev/log/2026-09-18-ml-round3.md`.
 - **v0.28.1 release cut 2026-09-14** (fix #308 `aae38d1`; release PR #309 `3de9024`) — patch: sync mode fires only for PRs
   merged into the default branch. Trigger: QuantEcon/lecture-python-programming#629 (theme
   v3.0.0) merged into the long-lived `jb2` branch on 2026-09-12 and all three deployed sync

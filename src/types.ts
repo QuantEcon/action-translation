@@ -85,9 +85,23 @@ export interface GlossaryTerm {
   [key: string]: string | undefined; // Support for multiple target languages (zh-cn, ja, etc.)
 }
 
+/**
+ * An editor-approved source → target sentence pair, shown to the translator as
+ * a style exemplar. Style classes that resist rule statement (comma rhythm,
+ * verb aspect, clause order) are taught by example rather than by another rule.
+ */
+export interface StyleExample {
+  en: string;
+  /** Where the pair comes from (e.g. `lecture-python-programming.ml functions`). */
+  source?: string;
+  [key: string]: string | undefined; // target text keyed by language code, like GlossaryTerm
+}
+
 export interface Glossary {
   version: string;
   terms: GlossaryTerm[];
+  /** Optional editor-approved sentence pairs, rendered after the terms. */
+  style_examples?: StyleExample[];
   style_guide?: {
     preserve_code_blocks?: boolean;
     preserve_math?: boolean;

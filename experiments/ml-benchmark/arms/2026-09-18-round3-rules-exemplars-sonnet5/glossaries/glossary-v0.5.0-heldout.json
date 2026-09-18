@@ -1,0 +1,533 @@
+{
+  "version": "0.5.0",
+  "description": "Translation glossary for QuantEcon lectures (English to Malayalam). v0.5.0 pins the four words the editor answered on lecture-python-programming.ml#12 (2026-09-01): already, example / examples, name (the noun for a bound identifier; the act of naming stays പേര്), and work (light-verb form, work ചെയ്യുന്നുണ്ടോ) — the items held back from v0.4.0. Validated by the native-speaker packet reply 2026-08-03 (experiments/ml-benchmark/DISPOSITIONS.md): C1 confirmed keep-English for the 34 most frequent unpinned terms — deliberately NOT pinned, the policy holds unpinned (203/203 terms measured) — and C2/A8 pinned the software-interface verbs (click, option, set, type, press) that machine output had transliterated; terminology extractors never propose interface verbs, so nothing else protects them. v0.4.0 adds the ordinary words the second inline round moved back to English (useful, provide, exist, automatically, create, improve, full, stage, answer, successive, plus the line/lines pin the #273 regeneration flagged — 118 suggestion blocks on lecture-python-programming.ml#7, dispositions in QuantEcon/project-translation reports/2026-09-01-ml-functions-review-disposition.md) and four everyday words he moved the other way (straightforward, contrived, limited, facilitate). v0.3.0 added the instructional verbs the reviewer's first inline PR review round moved back to English (cover, break down, refer, repeatedly — 100 flags on lecture-python-programming.ml#1, dispositions in QuantEcon/project-translation reports/2026-08-17-ml-python-by-example-review-disposition.md). Policy: keep-English-dominant — technical/domain terms keep their English form (ml == en), and ordinary English content words (everyday adjectives, adverbs, nouns) also usually stay in Latin script per packet A1; Malayalam is generated mainly as grammatical connective tissue around the English words. The few translated 'everyday' entries below (country, year, ...) are deliberate exceptions with a natural in-use equivalent, not an open class to extend. Where ml == en, the term is intentionally kept in English. Malayalam values for the everyday words are taken from native-speaker reviewer Adisankar Manoj Thanuja's worked examples. Grammatical function words (we, two, each, more, before, ...) are deliberately NOT pinned here: they inflect with Malayalam grammar and are handled by the prose rules in language-config, not term-level consistency.",
+  "terms": [
+    {
+      "en": "already",
+      "ml": "already",
+      "context": "adverb kept English — editor's answer on lecture-python-programming.ml#12 Q3 (2026-09-01): not ഇതിനകം; already exist ചെയ്യുന്നു"
+    },
+    {
+      "en": "analysis",
+      "ml": "analysis",
+      "context": "technical"
+    },
+    {
+      "en": "answer",
+      "ml": "answer",
+      "context": "noun kept English — round-2 review (lecture-python-programming.ml#7, functions, 2026-09-01) line 438: not ഉത്തരം"
+    },
+    {
+      "en": "asset",
+      "ml": "asset",
+      "context": "finance"
+    },
+    {
+      "en": "asset class",
+      "ml": "asset class",
+      "context": "finance"
+    },
+    {
+      "en": "automatically",
+      "ml": "automatically",
+      "context": "adverb kept English — round-2 review (lecture-python-programming.ml#7, functions, 2026-09-01) line 180: not സ്വയമേവ"
+    },
+    {
+      "en": "bond",
+      "ml": "bond",
+      "context": "finance"
+    },
+    {
+      "en": "break down",
+      "ml": "break down",
+      "context": "instructional verb (decomposing a program) — pinned per round-1 review flag 9 (ml#1): ഭാഗങ്ങളാക്കി is over-literal; render as break down ചെയ്ത്"
+    },
+    {
+      "en": "central bank",
+      "ml": "central bank",
+      "context": "monetary economics"
+    },
+    {
+      "en": "click",
+      "ml": "click",
+      "context": "software-interface; pinned per packet C2 — machine output transliterated it (A14)"
+    },
+    {
+      "en": "contrived",
+      "ml": "കൃത്രിമം",
+      "context": "everyday; round-2 review (lecture-python-programming.ml#7, functions, 2026-09-01) lines 466, 468: കുറച്ച് കൃത്രിമമാണ്; 'less contrived' → കൂടുതൽ സ്വാഭാവികമായ"
+    },
+    {
+      "en": "correlation",
+      "ml": "correlation",
+      "context": "statistics"
+    },
+    {
+      "en": "country",
+      "ml": "രാജ്യം",
+      "context": "everyday"
+    },
+    {
+      "en": "cover",
+      "ml": "cover",
+      "context": "instructional verb (what a lecture covers) — pinned per round-1 review flag 3 (ml#1): കൈകാര്യം ചെയ്യും reads managerial; render as cover ചെയ്യും"
+    },
+    {
+      "en": "create",
+      "ml": "create",
+      "context": "verb kept English — round-2 review (lecture-python-programming.ml#7, functions, 2026-09-01) line 276: create ചെയ്ത, not സൃഷ്ടിച്ച"
+    },
+    {
+      "en": "data points",
+      "ml": "data points",
+      "context": "statistics"
+    },
+    {
+      "en": "dataset",
+      "ml": "dataset",
+      "context": "programming"
+    },
+    {
+      "en": "debt",
+      "ml": "debt",
+      "context": "finance"
+    },
+    {
+      "en": "demand",
+      "ml": "demand",
+      "context": "economics"
+    },
+    {
+      "en": "diversification",
+      "ml": "diversification",
+      "context": "finance"
+    },
+    {
+      "en": "economy",
+      "ml": "economy",
+      "context": "economics"
+    },
+    {
+      "en": "element",
+      "ml": "element",
+      "context": "programming"
+    },
+    {
+      "en": "equity",
+      "ml": "equity",
+      "context": "finance"
+    },
+    {
+      "en": "example",
+      "ml": "example",
+      "context": "noun kept English — editor's answer on lecture-python-programming.ml#12 Q2 (2026-09-01): not ഉദാഹരണം; sentence-initial 'For example,' also stays English (discourse rule)"
+    },
+    {
+      "en": "examples",
+      "ml": "examples",
+      "context": "noun kept English — see 'example'"
+    },
+    {
+      "en": "exist",
+      "ml": "exist",
+      "context": "verb kept English — round-2 review (lecture-python-programming.ml#7, functions, 2026-09-01) lines 70, 139: already exist ചെയ്യുന്നു, not നിലവിലുണ്ട്"
+    },
+    {
+      "en": "facilitate",
+      "ml": "സഹായിക്കുക",
+      "context": "everyday; round-2 review (lecture-python-programming.ml#7, functions, 2026-09-01) line 284: code reuse ചെയ്യാൻ സഹായിക്കുന്നു"
+    },
+    {
+      "en": "Federal Reserve",
+      "ml": "Federal Reserve",
+      "context": "institution"
+    },
+    {
+      "en": "fixed income",
+      "ml": "fixed income",
+      "context": "finance"
+    },
+    {
+      "en": "for loop",
+      "ml": "for loop",
+      "context": "programming"
+    },
+    {
+      "en": "full",
+      "ml": "full",
+      "context": "adjective kept English ('full list') — round-2 review (lecture-python-programming.ml#7, functions, 2026-09-01) line 96: not പൂർണ്ണമായ"
+    },
+    {
+      "en": "function",
+      "ml": "function",
+      "context": "programming"
+    },
+    {
+      "en": "GDP",
+      "ml": "GDP",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "goods",
+      "ml": "goods",
+      "context": "economics"
+    },
+    {
+      "en": "improve",
+      "ml": "improve",
+      "context": "verb kept English — round-2 review (lecture-python-programming.ml#7, functions, 2026-09-01) line 281: improve ചെയ്യുന്നതിൽ, not മെച്ചപ്പെടുത്താൻ"
+    },
+    {
+      "en": "increase",
+      "ml": "ഉയർത്തുക",
+      "context": "everyday"
+    },
+    {
+      "en": "inflation",
+      "ml": "inflation",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "input",
+      "ml": "input",
+      "context": "programming"
+    },
+    {
+      "en": "interest rate",
+      "ml": "interest rate",
+      "context": "monetary economics"
+    },
+    {
+      "en": "library",
+      "ml": "library",
+      "context": "programming"
+    },
+    {
+      "en": "limited",
+      "ml": "പരിമിതി",
+      "context": "everyday; round-2 review (lecture-python-programming.ml#7, functions, 2026-09-01) line 342: 'is somewhat limited' → -ന് ചില പരിമിതികളുണ്ട്"
+    },
+    {
+      "en": "line",
+      "ml": "line",
+      "context": "programming ('a line of code') kept English — v0.3.1 candidate from the #273 regeneration (14× വരി variance), corroborated in round-2 review (lecture-python-programming.ml#7, functions, 2026-09-01) lines 245, 400"
+    },
+    {
+      "en": "lines",
+      "ml": "lines",
+      "context": "programming kept English — see 'line'; lines-ഇനും / lines execute ചെയ്യുന്ന"
+    },
+    {
+      "en": "list",
+      "ml": "list",
+      "context": "programming"
+    },
+    {
+      "en": "matrix",
+      "ml": "matrix",
+      "context": "mathematics"
+    },
+    {
+      "en": "mean",
+      "ml": "mean",
+      "context": "statistics"
+    },
+    {
+      "en": "name",
+      "ml": "name",
+      "context": "noun for a bound identifier kept English (function-ന്റെ name, name-ൽ) — editor's answer on lecture-python-programming.ml#12 Q5 (2026-09-01); the ACT of naming stays Malayalam (പേരിട്ടു, പേരും), so do not pin the verb"
+    },
+    {
+      "en": "normal distribution",
+      "ml": "normal distribution",
+      "context": "statistics"
+    },
+    {
+      "en": "numpy",
+      "ml": "numpy",
+      "context": "programming"
+    },
+    {
+      "en": "option",
+      "ml": "option",
+      "context": "software-interface; pinned per packet C2 — machine output transliterated 3 of 7 occurrences (A14)"
+    },
+    {
+      "en": "output",
+      "ml": "output",
+      "context": "programming"
+    },
+    {
+      "en": "over time",
+      "ml": "കാലക്രമേണ",
+      "context": "everyday"
+    },
+    {
+      "en": "pandas",
+      "ml": "pandas",
+      "context": "programming"
+    },
+    {
+      "en": "portfolio",
+      "ml": "portfolio",
+      "context": "finance"
+    },
+    {
+      "en": "press",
+      "ml": "press",
+      "context": "software-interface; keyboard instructions — source synonyms hit/strike/tap normalise to press ചെയ്യുക (packet A8)"
+    },
+    {
+      "en": "price",
+      "ml": "price",
+      "context": "finance"
+    },
+    {
+      "en": "provide",
+      "ml": "provide",
+      "context": "verb kept English — round-2 review (lecture-python-programming.ml#7, functions, 2026-09-01) line 47: provide ചെയ്യുന്ന"
+    },
+    {
+      "en": "purchasing power",
+      "ml": "purchasing power",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "Python",
+      "ml": "Python",
+      "context": "programming"
+    },
+    {
+      "en": "rate hike",
+      "ml": "rate hike",
+      "context": "monetary economics"
+    },
+    {
+      "en": "RBI",
+      "ml": "RBI",
+      "context": "institution"
+    },
+    {
+      "en": "recession",
+      "ml": "recession",
+      "context": "macroeconomics"
+    },
+    {
+      "en": "refer",
+      "ml": "refer",
+      "context": "documentation verb (what a name refers to) — pinned per round-1 review flag 19 (ml#1): render as refer ചെയ്യുന്നു rather than സൂചിപ്പിക്കുന്നു"
+    },
+    {
+      "en": "regression analysis",
+      "ml": "regression analysis",
+      "context": "statistics"
+    },
+    {
+      "en": "relationship",
+      "ml": "ബന്ധം",
+      "context": "everyday; optional — may keep English or add (relationship) in parentheses on first use"
+    },
+    {
+      "en": "repeatedly",
+      "ml": "repeatedly",
+      "context": "adverb in loop descriptions — pinned per round-1 review flag 34 (ml#1): keep English rather than ആവർത്തിച്ച്"
+    },
+    {
+      "en": "returns",
+      "ml": "returns",
+      "context": "finance"
+    },
+    {
+      "en": "risk",
+      "ml": "risk",
+      "context": "finance"
+    },
+    {
+      "en": "services",
+      "ml": "services",
+      "context": "economics"
+    },
+    {
+      "en": "set",
+      "ml": "set",
+      "context": "software-interface and mathematics; pinned per packet C2 — machine output transliterated it (A14)"
+    },
+    {
+      "en": "stage",
+      "ml": "stage",
+      "context": "noun kept English ('at some stage') — round-2 review (lecture-python-programming.ml#7, functions, 2026-09-01) line 426: stage-ൽ, not ഘട്ടത്തിൽ"
+    },
+    {
+      "en": "standard deviation",
+      "ml": "standard deviation",
+      "context": "statistics"
+    },
+    {
+      "en": "stock market",
+      "ml": "stock market",
+      "context": "finance"
+    },
+    {
+      "en": "straightforward",
+      "ml": "എളുപ്പം",
+      "context": "everyday; round-2 review (lecture-python-programming.ml#7, functions, 2026-09-01) line 238: എത്ര എളുപ്പമാണെന്ന്"
+    },
+    {
+      "en": "successive",
+      "ml": "successive",
+      "context": "adjective kept English ('each successive call') — round-2 review (lecture-python-programming.ml#7, functions, 2026-09-01) line 460: not തുടർച്ചയായ"
+    },
+    {
+      "en": "supply",
+      "ml": "supply",
+      "context": "economics"
+    },
+    {
+      "en": "type",
+      "ml": "type",
+      "context": "software-interface and programming; pinned per packet C2 — machine output transliterated it (A14)"
+    },
+    {
+      "en": "useful",
+      "ml": "useful",
+      "context": "everyday adjective kept English — round-2 review (lecture-python-programming.ml#7, functions, 2026-09-01) lines 47, 114, 262, 344: never ഉപയോഗപ്രദമായ; render as വളരെ useful ആയ / useful ആക്കാം"
+    },
+    {
+      "en": "variable",
+      "ml": "variable",
+      "context": "programming"
+    },
+    {
+      "en": "work",
+      "ml": "work",
+      "context": "verb kept English in the light-verb form (work ചെയ്യുന്നുണ്ടോ, work ചെയ്യുന്നു) — editor's answer on lecture-python-programming.ml#12 Q4 (2026-09-01): not പ്രവർത്തിക്കുന്നു"
+    },
+    {
+      "en": "year",
+      "ml": "വർഷം",
+      "context": "everyday"
+    },
+    {
+      "en": "yield",
+      "ml": "yield",
+      "context": "finance"
+    }
+  ],
+  "style_examples": [
+    {
+      "en": "* The indented code is a code block called the *function body*.",
+      "ml": "* Indent ചെയ്തിരിക്കുന്ന code-നെ, *function body* എന്ന് വിളിക്കുന്നു.",
+      "source": "lecture-python-programming.ml functions"
+    },
+    {
+      "en": "What happens here is that each successive call uses its own *frame* in the *stack*",
+      "ml": "ഇവിടെ സംഭവിക്കുന്നത് എന്തെന്നാൽ, ഓരോ successive function call-ഉം, stack-ൽ അതിന്റേതായ frame ഉപയോഗിക്കുന്നു.",
+      "source": "lecture-python-programming.ml functions"
+    },
+    {
+      "en": "Here's a longer function, that computes the absolute value of a given number.",
+      "ml": "കുറച്ചുകൂടി നീളമുള്ള ഒരു function നമുക്ക് താഴെ കാണാം. ഈ function ഉപയോഗിച്ച്, തന്നിരിക്കുന്ന ഒരു number-ന്റെ absolute value compute ചെയ്യാൻ സാധിക്കുന്നു.",
+      "source": "lecture-python-programming.ml functions"
+    },
+    {
+      "en": "The keyword argument values we supplied in the definition of `f` become the default values",
+      "ml": "`f`-ന്റെ definition-ൽ നമ്മൾ നൽകിയിരിക്കുന്ന keyword argument values, default values ആയി മാറുന്നു.",
+      "source": "lecture-python-programming.ml functions"
+    },
+    {
+      "en": "* a last-in, first-out (LIFO) data structure",
+      "ml": "* ഇത് ഒരു last-in, first-out (LIFO) data structure ആണ്.",
+      "source": "lecture-python-programming.ml functions"
+    },
+    {
+      "en": "We'll meet less contrived applications of recursion later on.",
+      "ml": "പിന്നീട്, recursion-ന്റെ കൂടുതൽ സ്വാഭാവികമായ applications നമുക്ക് കാണാം.",
+      "source": "lecture-python-programming.ml functions"
+    },
+    {
+      "en": "This is an advanced topic that you should feel free to skip.",
+      "ml": "ഇത് ഒരു advanced topic ആണ്. അതിനാൽ നിങ്ങൾക്ക് വേണമെങ്കിൽ ഇത് skip ചെയ്യാം.",
+      "source": "lecture-python-programming.ml functions"
+    },
+    {
+      "en": "* Any number of functions can be defined in a given file.",
+      "ml": "* തന്നിരിക്കുന്ന ഒരു file-ൽ എത്ര functions വേണമെങ്കിലും define ചെയ്യാം.",
+      "source": "lecture-python-programming.ml functions"
+    },
+    {
+      "en": "Here the function created by `lambda` is said to be *anonymous* because it was never given a name.",
+      "ml": "ഇവിടെ `lambda` ഉപയോഗിച്ച് create ചെയ്ത function-ന് ഒരു പേരും നൽകാത്തതിനാൽ, ആ function-നെ *anonymous* എന്ന് വിളിക്കുന്നു.",
+      "source": "lecture-python-programming.ml functions"
+    },
+    {
+      "en": "First we review these functions and then discuss how we can build our own.",
+      "ml": "ആദ്യമേ നമുക്ക് already exist ചെയ്യുന്ന functions-നെ review ചെയ്യാം. എന്നിട്ട് നമുക്ക് സ്വന്തമായി functions എങ്ങനെ build ചെയ്യാമെന്ന് നോക്കാം.",
+      "source": "lecture-python-programming.ml functions"
+    },
+    {
+      "en": "* Notice that equality is tested with the `==` syntax, not `=`.",
+      "ml": "* ശ്രദ്ധിക്കുക, equality test ചെയ്യുന്നത് `==` syntax ഉപയോഗിച്ചാണ്, `=` അല്ല.",
+      "source": "lecture-python-programming.ml functions"
+    },
+    {
+      "en": "Non-keyword arguments are called *positional arguments*, since their meaning is determined by order",
+      "ml": "Order അനുസരിച്ച് അർത്ഥം നിശ്ചയിക്കപ്പെടുന്നതിനാൽ, non-keyword arguments-നെ *positional arguments* എന്ന് വിളിക്കുന്നു.",
+      "source": "lecture-python-programming.ml functions"
+    },
+    {
+      "en": "(Such a function already exists as a built-in, but let's write our own for the exercise.)",
+      "ml": "(Absolute value compute ചെയ്യുന്ന ഒരു built-in function already exist ചെയ്യുന്നുണ്ട്. പക്ഷേ exercise-ന് വേണ്ടി നമുക്ക് സ്വന്തമായി ഒരു function എഴുതി നോക്കാം.)",
+      "source": "lecture-python-programming.ml functions"
+    },
+    {
+      "en": "This is accomplished in the next program",
+      "ml": "മുകളിൽ പറഞ്ഞ കാര്യങ്ങൾ, താഴെയുള്ള program-ൽ കാണിച്ചിരിക്കുന്നു:",
+      "source": "lecture-python-programming.ml functions"
+    },
+    {
+      "en": "* For example, the statement `a = 10` assigns the name `a` to the value `10`.",
+      "ml": "* For example, `a = 10` എന്ന statement, `a` എന്ന name-നെ `10` എന്ന value-യിലേക്ക് assign ചെയ്യുന്നു.",
+      "source": "lecture-python-programming.ml functions"
+    },
+    {
+      "en": "(Writing functions with multiple return statements is typically discouraged, as it can make logic hard to follow.)",
+      "ml": "(Multiple return statements ഉള്ള functions എഴുതുന്നത് സാധാരണയായി discourage ചെയ്യപ്പെടുന്നു. അങ്ങനെ ചെയ്താൽ, function-ന്റെ logic follow ചെയ്യാൻ ബുദ്ധിമുട്ടാക്കും.)",
+      "source": "lecture-python-programming.ml functions"
+    },
+    {
+      "en": "* The Python standard is 4 spaces, and that's what you should use.",
+      "ml": "* Python-ന്റെ standard 4 spaces ആണ്. അതിനാൽ നിങ്ങളും 4 spaces ഉപയോഗിക്കണം.",
+      "source": "lecture-python-programming.ml python_by_example"
+    },
+    {
+      "en": "* the code block for the `while` loop is again delimited only by indentation.",
+      "ml": "* `while` loop-ന്റെ code block, indentation മാത്രം ഉപയോഗിച്ചാണ് delimit ചെയ്തിരിക്കുന്നത്.",
+      "source": "lecture-python-programming.ml python_by_example"
+    },
+    {
+      "en": "After `import numpy as np` we have access to these attributes via the syntax `np.attribute`.",
+      "ml": "`import numpy as np` ചെയ്ത് കഴിഞ്ഞാൽ, `np.attribute` എന്ന syntax ഉപയോഗിച്ച് ഈ attributes നമുക്ക് access ചെയ്യാം.",
+      "source": "lecture-python-programming.ml python_by_example"
+    },
+    {
+      "en": "Here's an example, that prints -1 for each negative number in an array and 1 for each nonnegative number",
+      "ml": "താഴെക്കൊടുത്തിരിക്കുന്ന example-ൽ, ഒരു array-യിലെ ഓരോ negative number-നും -1-ഉം, ഓരോ nonnegative number-നും 1-ഉം print ചെയ്യുന്നു.",
+      "source": "lecture-python-programming.ml python_by_example"
+    },
+    {
+      "en": "Now let's consider the `for` loop from {ref}`the program above <firstloopprog>`, which was",
+      "ml": "ഇനി നമുക്ക് {ref}`മുകളിലുള്ള program <firstloopprog>`-ലെ `for` loop നോക്കാം. അവിടെ നമ്മൾ ഉപയോഗിച്ച `for` loop താഴെ കാണാം:",
+      "source": "lecture-python-programming.ml python_by_example"
+    },
+    {
+      "en": "* Python objects such as lists, strings, etc. all have methods that are used to manipulate data contained in the object.",
+      "ml": "* Lists, strings തുടങ്ങിയ Python objects-ന് എല്ലാം, അവയിൽ അടങ്ങിയിരിക്കുന്ന data manipulate ചെയ്യാൻ ഉപയോഗിക്കുന്ന methods ഉണ്ട്.",
+      "source": "lecture-python-programming.ml python_by_example"
+    },
+    {
+      "en": "Let's break this program down and see how it works.",
+      "ml": "നമുക്ക് ഈ program-നെ break down ചെയ്ത്, അത് എങ്ങനെ work ചെയ്യുന്നു എന്ന് നോക്കാം.",
+      "source": "lecture-python-programming.ml python_by_example"
+    }
+  ]
+}
