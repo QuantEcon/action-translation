@@ -9,7 +9,8 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 - **v0.29.0 released 2026-09-18** (release PR #312 `a6fda54`; payload #311 `847ca9f`; §4a gate
   **completed**: 84/84 sync runs, 28/28 delivery + 28/28 `engineVersion: 0.29.0` verdicts per
-  lane; `v0.29` = `v0` = `a6fda54`; GitHub release published; `@v0` smoke read-off on #312) — headline: the third Malayalam native review encoded (`ml` rules 23 → 27,
+  lane; `v0.29` = `v0` = `a6fda54`; GitHub release published; `@v0` smoke read-off on #312)
+  — headline: the third Malayalam native review encoded (`ml` rules 23 → 27,
   glossary v0.6.0), the `style_examples` glossary mechanism (no set shipped: evaluated
   held-out and set aside), the Further Reading decision record, and the first regeneration
   test with a held-out lecture and a blind pairwise judge. **W1 (#259) did not make it and
