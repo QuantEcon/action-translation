@@ -252,4 +252,31 @@ describe('glossary style_examples render as STYLE EXAMPLES in the stable block',
     });
     expect(lastBlocks()[0].text).not.toContain('STYLE EXAMPLES:');
   });
+
+  it('renders a glossary without examples byte-identically to the pre-feature template', async () => {
+    // The stable block is prompt-cached, so "no examples" must not change a
+    // single byte: no separator line, no trailing whitespace. Three shapes —
+    // key absent, empty array, pairs for another language only — must agree.
+    const shapes = [
+      { version: 'test', terms },
+      { version: 'test', terms, style_examples: [] },
+      { version: 'test', terms, style_examples: [{ en: 'x', fr: 'y' }] },
+    ];
+    const rendered: string[] = [];
+    for (const glossary of shapes) {
+      await service.translateSection({
+        mode: 'new',
+        sourceLanguage: 'en',
+        targetLanguage: 'ml',
+        englishSection: SECTION,
+        glossary,
+      });
+      rendered.push(lastBlocks()[0].text);
+    }
+    expect(rendered[1]).toBe(rendered[0]);
+    expect(rendered[2]).toBe(rendered[0]);
+    // the glossary block itself is exactly the pre-feature shape
+    expect(rendered[0]).toContain('GLOSSARY:\n  - "useful" → "useful"\n');
+    expect(rendered[0].endsWith('GLOSSARY:\n  - "useful" → "useful"\n')).toBe(true);
+  });
 });
