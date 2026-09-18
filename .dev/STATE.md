@@ -14,7 +14,7 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   test with a held-out lecture and a blind pairwise judge. **W1 (#259) did not make it and
   retargets to v0.30.0.** §4a gate on the tag to follow the merge; tally recorded on the
   release PR. Round 4 (`numpy`) is generated at `@v0` once the alias moves.
-- **ml round 3 encoded on `ml-round3-v06` (2026-09-18, PR open — not yet released)** — the
+- **ml round 3 encoded on #311 (2026-09-18, merged as `847ca9f`; released by v0.29.0)** — the
   third inline native review (44 suggestion blocks on lecture-python-programming.ml#13,
   `matplotlib`) found every round-2 class clean and a residue of *style* (clause-boundary
   commas, verb aspect, clause order). Payload: `ml` rules 23 → 27, glossary v0.6.0, and a new
