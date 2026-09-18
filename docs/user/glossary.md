@@ -63,7 +63,7 @@ Each term has:
 
 ### Style examples (optional)
 
-A glossary may also carry `style_examples` — sentence pairs exactly as a native-speaker editor approved them. They are rendered after the terms under a `STYLE EXAMPLES:` heading and tell the translator to match their register, sentence rhythm, punctuation and clause order (never their content). Use them for style that is easier to show than to state as a rule; the Malayalam glossary ships the first set, drawn from the lectures its editor has reviewed.
+A glossary may also carry `style_examples` — sentence pairs exactly as a native-speaker editor approved them. They are rendered after the terms under a `STYLE EXAMPLES:` heading and tell the translator to match their register, sentence rhythm, punctuation and clause order (never their content). Use them for style that is easier to show than to state as a rule, and only with a measured case: the built-in glossaries ship no set — the Malayalam set was evaluated against the prompt rules on a held-out lecture and set aside as indistinguishable from them.
 
 ```json
 {

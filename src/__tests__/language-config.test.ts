@@ -221,13 +221,13 @@ describe('Language Configuration', () => {
   });
 
   // Round 3 (lecture-python-programming.ml#13, 44 suggestion blocks): few new
-  // terms, and the first `style_examples` — the residue was style, which is
-  // shown to the translator rather than described to it.
-  describe('Malayalam round-3 glossary (v0.6.0): terms and style examples', () => {
+  // terms. The residue was style; style examples were built, tested on a
+  // held-out lecture with a blind pairwise judge, and set aside — see below.
+  describe('Malayalam round-3 glossary (v0.6.0): terms, no style examples', () => {
     const glossaryPath = path.join(__dirname, '..', '..', 'glossary', 'ml.json');
     const glossary: {
       terms: { en: string; ml: string }[];
-      style_examples: { en: string; ml: string; source?: string }[];
+      style_examples?: { en: string; ml: string; source?: string }[];
     } = JSON.parse(fs.readFileSync(glossaryPath, 'utf-8'));
     const byEn = new Map(glossary.terms.map((t) => [t.en, t]));
 
@@ -246,24 +246,14 @@ describe('Language Configuration', () => {
       }
     });
 
-    it('ships editor-approved style examples: Malayalam, punctuated, provenance-tagged', () => {
-      expect(glossary.style_examples.length).toBeGreaterThanOrEqual(20);
-      for (const example of glossary.style_examples) {
-        expect(example.en.length).toBeGreaterThan(0);
-        expect(example.ml).toMatch(/[\u0d00-\u0d7f]/);
-        expect(example.ml.trimEnd()).toMatch(/[.:)!?]$/);
-        expect(example.source).toMatch(/^lecture-python-programming\.ml /);
-        // single-line: a pair is one paragraph of one reviewed lecture
-        expect(example.ml).not.toContain('\n');
-      }
-    });
-
-    it('no style example contradicts a banned rendering or an open question', () => {
-      const banned = ['ഉപയോഗപ്രദ', 'ഇതിനകം', 'ഒരു നൽകിയ', 'കുറച്ചുകൂടെ', 'ലളിതമായ', 'നീക്കം ചെയ്യ'];
-      for (const example of glossary.style_examples) {
-        for (const b of banned) expect(example.ml).not.toContain(b);
-        expect(example.ml).not.toContain('draw ചെയ്യ');
-      }
+    it('ships no style examples — evaluated and set aside (arm 2026-09-18)', () => {
+      // The mechanism is live (translator-prompts.test.ts); the ml set is not.
+      // On a held-out lecture a blind pairwise judge found small, large,
+      // contrastive and rules-replacing example sets all indistinguishable
+      // from the rules alone, so no set is carried. Reinstate only with a
+      // measured case — and re-add the banned-rendering / open-question guard
+      // that protected the set when it existed.
+      expect(glossary.style_examples).toBeUndefined();
     });
   });
 

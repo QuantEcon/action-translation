@@ -91,9 +91,12 @@ export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
     // lecture-python-programming.ml#13 (matplotlib), dispositions in
     // reports/2026-09-18-ml-matplotlib-review-disposition.md. Every round-2
     // class came through clean; the residue is style (clause-boundary commas,
-    // verb aspect, clause order), so this round adds few rules and instead
-    // ships editor-approved sentence pairs as `style_examples` in
-    // glossary/ml.json (v0.6.0). Admission test from this round on: a pattern
+    // verb aspect, clause order). Editor-approved sentence pairs were tried
+    // as `style_examples` (mechanism in translator.ts) and set aside: on a
+    // held-out lecture a blind pairwise judge found every form — small, large,
+    // contrastive, or instead of rules — indistinguishable from the rules
+    // alone (experiments/ml-benchmark/arms/2026-09-18-round3-rules-exemplars-
+    // sonnet5/). Admission test from this round on: a pattern
     // becomes a rule only if it recurs (twice in a round, or across rounds) —
     // draw-to-draw variance makes a singleton as likely noise as habit. The
     // Further Reading scope ruling is

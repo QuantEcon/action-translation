@@ -20,7 +20,8 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   from comma density (0.56 → 0.72 vs his 0.82). A blind pairwise Opus 5 judge (2,570
   judgements, no position bias) then found the rules preferred 55 : 45 held out and rules +
   the shipped pairs 57 : 43 (p = 0.054), while contrastive / 56-pair / no-rules example
-  variants all judged 50 : 50 — the exemplar line is closed pending round-4 editor data.
+  variants all judged 50 : 50 — the ml example set was removed from the PR (mechanism
+  ships, no data) and the exemplar line is closed pending round-4 editor data.
   ml#13 merged `a24e925`. Editor's open questions: lecture-python-programming.ml#22 (none blocks a release).
   Targets **v0.29.0**; round 4 (`numpy`) is generated after it ships. Log:
   `.dev/log/2026-09-18-ml-round3.md`.
