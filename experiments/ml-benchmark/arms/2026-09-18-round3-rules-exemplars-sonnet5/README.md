@@ -20,6 +20,9 @@ tell learning from memorising.
 | `B` / `fB` | `ml-round3-v06` (27 rules) | v0.6.0 terms | none |
 | `Bex` | `ml-round3-v06` | v0.6.0 terms | the same 23 held-out pairs |
 | `fBex` | `ml-round3-v06` | v0.6.0 terms | 16 pairs, none from `functions` (`python_by_example` 7, `matplotlib` 9) |
+| `fBcon` | `ml-round3-v06` + a local build rendering `draft` as a `NOT:` line (not shipped) | v0.6.0 terms | 20 contrastive triples (EN / engine draft / editor's correction), none from `functions` |
+| `fBbig` | `ml-round3-v06` | v0.6.0 terms | 56 pairs, none from `functions` |
+| `fAbig` | main `e806bdc` (23 rules), exemplar-capable build | v0.5.0 | the same 56 pairs |
 
 - **In-sample lecture — `matplotlib`** (source `lecture-python-programming@4980d62`), scored
   against the editor's reviewed text (ml#13 head `2411a3b`: his 44 suggestions verbatim plus
@@ -73,43 +76,84 @@ the rule naming it — a lint catch, not a prompt fix.
 | `fA` baseline | 0.814 | 0.775 | 5.0 | 24.7 | 29.7 | 0.56 |
 | `fB` rules | 0.809 | 0.774 | 8.0 | 27.0 | 30.0 | 0.72 |
 | `fBex` rules + exemplars | 0.805 | 0.783 | 8.3 | 29.0 | 30.3 | 0.70 |
+| `fBcon` rules + contrastive triples | 0.811 | 0.785 | 8.0 | 27.3 | 28.3 | 0.69 |
+| `fBbig` rules + 56 pairs | 0.800 | 0.774 | 7.0 | 25.0 | 31.3 | 0.67 |
+| `fAbig` baseline + 56 pairs | 0.803 | 0.767 | 7.0 | 24.3 | 31.0 | 0.71 |
+
+## Blind pairwise judge
+
+Character similarity cannot separate "reads like the editor" from "shares his words", so a
+second instrument was built: `judge.mjs` shows `claude-opus-5` (a different, stronger model
+than the `claude-sonnet-5` generator, so it is not grading its own habits) the English
+paragraph, the editor's reviewed Malayalam as the reference, and two arms' renderings of the
+same paragraph from the same-numbered draw in **random order**, and asks which is closer to
+the reference in *style only* — register, comma placement, verb forms, clause order, which
+words stay English — with TIE allowed. Identical candidates are scored TIE without a call.
+Position is recorded so bias can be read off; across 2,570 judgements the first-shown
+candidate won 0.48–0.54 of decisions, i.e. no bias. Decisions exclude identical pairs and
+ties; the p-value is a two-sided sign test. `summarise_judge.py` reproduces the tables from
+the archived `judgements-*.json`.
+
+**`matplotlib` (in-sample for the rules)**
+
+| Pairing | decisions | preference | p |
+|---|---|---|---|
+| `A` baseline vs `B` rules | 158 | rules **76 : 24** | < 0.001 |
+| `A` baseline vs `Aex` examples only | 143 | examples 58 : 42 | 0.065 |
+| `B` rules vs `Bex` rules + examples | 145 | 49 : 51 | 0.87 |
+
+**`functions` (held out)**
+
+| Pairing | decisions | preference | p |
+|---|---|---|---|
+| `fA` baseline vs `fB` rules | 206 | rules 55 : 45 | 0.19 |
+| `fB` rules vs `fBex` rules + 16 pairs | 201 | + pairs 53 : 47 | 0.40 |
+| `fA` baseline vs `fBex` rules + 16 pairs | 211 | rules + pairs 57 : 43 | 0.054 |
+| `fB` rules vs `fBcon` rules + 20 contrastive triples | 189 | 51 : 49 | 0.88 |
+| `fB` rules vs `fBbig` rules + 56 pairs | 205 | 50 : 50 | 1.00 |
+| `fA` baseline vs `fAbig` baseline + 56 pairs | 211 | 50 : 50 | 1.00 |
+| `fBex` rules + 16 pairs vs `fBcon` rules + contrastive | 187 | 16 pairs 53 : 47 | 0.38 |
+
+Cost: 1,957 Opus 5 calls across the three judgement files.
 
 ## Reading
 
-1. **The in-sample jump is mostly memorisation, and the held-out lecture says so.** On
-   `matplotlib` the rules move median similarity 0.845 → 0.93 and halve the paragraphs below
-   0.70. On `functions` the same payload moves similarity not at all (0.814 → 0.809 →
-   0.805; the arms overlap draw for draw). What does transfer is the class the rules
-   describe generically: **comma density 0.56 → 0.72 against his 0.82**, with small gains in
-   exact and near-exact paragraphs (5 → 8; 24.7 → 29). The round-3 rules are doing what they
-   say on unseen text; they are not making unseen text read like him overall, and no
-   payload this size could — 30 of 100 held-out paragraphs sit below 0.70 in every arm, and
-   that distance is lexical and structural draw variance, not a missing rule.
-2. **The exemplars have no measurable effect on closeness** — `Aex` ≈ `A`, `Bex` ≈ `B`,
-   `fBex` ≈ `fB`, all inside draw-to-draw spread. Without the rules they do pull the style
-   signatures part-way (commas 0.44 → 0.55, aspect forms 3.3 → 4.7, `കരുതാം` appearing in two
-   of three draws with no rule asking for it), so the mechanism transmits *something*; with
-   the rules present it adds nothing this metric can see. 23–32 sentence pairs is a small
-   set; the honest position is *harmless, cheap (cached), unproven*.
-3. **The seed he edited is not a fair baseline.** It scores 0.951 because his text is
+1. **The judge works, and it agrees with the similarity metric on the big picture.** It sees
+   the in-sample rule effect decisively (76 : 24) where the rules quote the editor's own
+   sentences, and on the held-out lecture it sees what similarity could not: a small,
+   consistent edge for the rules (55 : 45) and a slightly larger one for rules + the shipped
+   16-pair set (57 : 43, p = 0.054). The effect is real and small — a preference in roughly
+   5–7 of every 100 paragraphs. Similarity is flat on the same draws (0.80–0.81 median for
+   every arm), so it was the wrong instrument for style, not wrong about the size.
+2. **Every exemplar variant is dead even on unseen text.** Contrastive triples (the delta the
+   editor wanted, isolated): 51 : 49. A 3.5× larger set: 50 : 50. The large set *without*
+   the new rules: 50 : 50 against baseline, although it reproduced the rules' comma density
+   (0.71 vs 0.72) — the signature moved, the judged style did not. Examples on their own do
+   shift style in-sample (58 : 42) but carry nothing the rules do not once the rules are
+   present (49 : 51). The line of inquiry is closed for now: the shipped 16–32-pair set is
+   the only form with any positive signal, and that signal is not significant.
+3. **The ceiling is visible.** The remaining distance to the editor's text — 30 of 100
+   held-out paragraphs below 0.70 similarity in *every* arm, and 25–30% of paragraphs
+   byte-identical across arms — is sampling variance in the generator, not a missing
+   instruction. More rules would compete for adherence (this round's misses were all of
+   existing rules) without moving that floor; that is the case for lint-and-repair on the
+   rules already present rather than a longer prompt.
+4. **The seed he edited is not a fair baseline.** It scores 0.951 because his text is
    anchored to it — 22 paragraphs are exact because he left them alone. Fresh baseline draws
    score 0.845, the same as the v0.27.0 seed he never saw. Closeness to an editor's text
-   must be measured from independent draws. This also answers the question the 2026-09-03
-   arm left open: the v0.28.0 draw is closer than the v0.27.0 draw (0.951 vs 0.844), but
-   almost all of that gap is anchoring, not the ml#12 pins.
-4. **Character similarity is near its ceiling as an instrument.** It cannot separate "reads
-   like the editor" from "happens to share his word choices". Round 4's useful numbers are
-   the editor-side ones, held in one channel: touch rate, accepted-line count, and the
-   magnitude distribution of his edits (round 2 → round 3: 96% → 67%, 5 → 22 lines,
-   median 0.77 → 0.85).
+   must be measured from independent draws.
+5. **Round 4's useful numbers are the editor-side ones**, held in one channel: touch rate,
+   accepted-line count, and the magnitude distribution of his edits (round 2 → round 3:
+   96% → 67%, 5 → 22 lines, median 0.77 → 0.85). The judge is the instrument for engine-side
+   A/B questions from here on; similarity is retired for style questions.
 
 ## Incidents
 
-- One of 22 runs (`fBex` draw 2, first attempt) was **rejected by the structural-parity
+- One of 31 runs (`fBex` draw 2, first attempt) was **rejected by the structural-parity
   guard** — the model dropped the `{raw}` directive, so every later directive shifted — and
   was re-run. The guard did its job; one event cannot be attributed to the exemplars, but the
   count is recorded here so a pattern would be visible (0/12 runs without exemplars on these two
-  lectures, 1/10 with).
+  lectures, 1/19 with).
 - One `Bex` draw rendered *origin* as `ഉത്ഭവസ്ഥാനത്തിലൂടെ (origin)` — a technical term
   translated with the English in brackets; it occurs in no other `matplotlib` draw. Separately,
   `preference ചെയ്യുന്നു` for *prefer* is a baseline habit (all three `A` draws, twice each) that
@@ -119,5 +163,7 @@ the rule naming it — a lint catch, not a prompt fix.
 ## Reproduce
 
 From this directory: `python3 score.py matplotlib` and `python3 score.py functions` (writes
-`scores-<lecture>.json`). Draws are in `draws/`, the glossaries each arm ran with in
+`scores-<lecture>.json`); `python3 summarise_judge.py judgements-<file>.json` for the judge tables;
+to re-judge, `python3 make_pairs.py <lecture> <arm> <arm> … > items.json` then
+`node judge.mjs items.json "x:y,…" out.json` (real Opus 5 spend; needs the repo's `node_modules`). Draws are in `draws/`, the glossaries each arm ran with in
 `glossaries/`, the reviewed texts and their English sources in `corpus/`.

@@ -79,7 +79,7 @@ if __name__ == '__main__':
             ('reviewed (target)', ['corpus/functions.ml.md']),
             ('round-2 arm, v0.4 rules (engine ml-round2-v04)', [f'{arms}/2026-09-01-round2-rules-sonnet5/functions.md']),
             ('round-2 arm second draw, v0.27.0', [f'{arms}/2026-09-01-round2-rules-sonnet5/functions-v0.27.0.md']),
-        ] + [(arm, sorted(glob.glob(f'draws/functions-{arm}-draw*.md'))) for arm in ('fA', 'fB', 'fBex')]
+        ] + [(arm, sorted(glob.glob(f'draws/functions-{arm}-draw*.md'))) for arm in ('fA', 'fB', 'fBex', 'fBcon', 'fBbig', 'fAbig')]
     else:
       groups = [
         ('reviewed (target)', ['corpus/matplotlib.ml.md']),
