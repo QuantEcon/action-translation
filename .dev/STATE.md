@@ -7,6 +7,13 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## In flight
 
+- **v0.29.0 release cut 2026-09-18** (release PR open on `release-v0.29.0`; #311 `847ca9f` is
+  the payload) — headline: the third Malayalam native review encoded (`ml` rules 23 → 27,
+  glossary v0.6.0), the `style_examples` glossary mechanism (no set shipped: evaluated
+  held-out and set aside), the Further Reading decision record, and the first regeneration
+  test with a held-out lecture and a blind pairwise judge. **W1 (#259) did not make it and
+  retargets to v0.30.0.** §4a gate on the tag to follow the merge; tally recorded on the
+  release PR. Round 4 (`numpy`) is generated at `@v0` once the alias moves.
 - **ml round 3 encoded on `ml-round3-v06` (2026-09-18, PR open — not yet released)** — the
   third inline native review (44 suggestion blocks on lecture-python-programming.ml#13,
   `matplotlib`) found every round-2 class clean and a residue of *style* (clause-boundary
@@ -38,7 +45,7 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   open, awaiting merge). §4a gate **completed 2026-09-14**:
   84/84 sync runs, 28/28 delivery + 28/28 verdicts per lane at `engineVersion: 0.28.1`;
   `@v0` = `v0.28` = `3de9024`, alias smoke (scenario 01) reports `engineRef: v0` on all
-  three lanes; GitHub release published. W1 (#259) still targets v0.29.0.
+  three lanes; GitHub release published. W1 (#259) targeted v0.29.0 then, now v0.30.0.
 - **v0.28.0 released 2026-09-03** (#303 `07e7c64`; release #304 `9284fbc`; §4a gate **completed**:
   84/84 sync runs, 28/28 delivery + 28/28 stamped verdicts per lane; `@v0` = `v0.28` = `9284fbc`,
   smoke-verified on all three lanes) — headline: the

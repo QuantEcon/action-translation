@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-09-18
+
 ### Added
 
 - **Style examples in the glossary** (`Glossary.style_examples`, `translator.ts` → `formatStyleExamples`): a glossary file may now carry editor-approved sentence pairs, rendered after the terms under `STYLE EXAMPLES:` with an instruction to match their register, rhythm, punctuation and clause order — never their content, and to follow a numbered rule where the two seem to differ. Because they ride inside the glossary they reach every write path (sync, `init`, `forward`, resync) with no new input or loader, and they sit in the prompt-cached stable block, so the set is fixed per glossary version rather than retrieved per call. A pair with no text for the target language is skipped; a glossary without the key renders byte-identically to before. Motivation: the third Malayalam review round (lecture-python-programming.ml#13) left a residue that is style — clause-boundary commas, verb aspect, clause order — which prompt rules state badly. **No built-in set ships with this release**: the Malayalam set was built and evaluated (below) and found indistinguishable from the rules alone, so the mechanism lands without data, ready for a measured case.
