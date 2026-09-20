@@ -1,0 +1,5384 @@
+[
+ {
+  "key": "matplotlib|1|0|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 0,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B preserves the reference's inline link placement and clause flow, whereas A displaces the markdown link to the sentence end after the verb, breaking the reference's clause order and terminal punctuation."
+ },
+ {
+  "key": "matplotlib|1|5|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 5,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's keep-English handling of the ordinary word \"simple\" (vs A's Malayalam ലളിതമായ) while both share the same single-sentence, relative-clause rhythm, making the lexical-script choice decisive."
+ },
+ {
+  "key": "matplotlib|1|2|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 2,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "The reference renders the ordinary word \"usual\" in Malayalam (സാധാരണ ഉപയോഗിക്കുന്ന) while keeping only formats/output in Latin script, matching B's സാധാരണ, whereas A leaves \"usual\" in English against the keep-English policy's scope."
+ },
+ {
+  "key": "matplotlib|1|3|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 3,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "The reference renders \"aspects\" in Malayalam (ഓരോ ചെറിയ കാര്യവും) while keeping only presentation/control in English, matching B's വശങ്ങളിലും, whereas A leaves \"aspects-ന്റെയും\" in Latin script against the reference's word-selection pattern."
+ },
+ {
+  "key": "matplotlib|1|1|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 1,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's sentence split into a full stop plus a separate colon-ended clause and renders \"outstanding\" as മികച്ച with the എന്നത് topic marker, whereas B keeps \"outstanding\" in English and chains the clauses with a comma."
+ },
+ {
+  "key": "matplotlib|1|6|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 6,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's word choice മറ്റൊന്ന് and identical phrasing (differing only by the reference's comma), while B substitutes മറ്റേത്."
+ },
+ {
+  "key": "matplotlib|1|8|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 8,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's clipped opener \"പക്ഷേ ആദ്യം,\" and short two-part rhythm, whereas B's \"ആദ്യമായി\" plus the added \"എന്താണെന്ന്\" clause lengthens the sentence away from the reference cadence."
+ },
+ {
+  "key": "matplotlib|1|7|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 7,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's lexical choices exactly (\"പറയുന്ന\" and the exclusive pronoun \"ഞങ്ങൾ\"), whereas A swaps in \"വിവരിക്കുന്ന\" and shifts to \"നമ്മൾ\"; both differ only slightly from the reference's cleft \"ഉപയോഗിക്കാനാണ്…ചെയ്യുന്നത്\"."
+ },
+ {
+  "key": "matplotlib|1|10|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 10,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's convention of hyphen-attaching Malayalam suffixes to English roots (simple-ഉം convenient-ഉം), whereas B separates them with spaces."
+ },
+ {
+  "key": "matplotlib|1|13|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 13,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's colloquial pronoun form നമ്മളെ (vs B's more formal നമ്മെ), while both otherwise share identical punctuation, clause order, and verb aspect."
+ },
+ {
+  "key": "matplotlib|1|15|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 15,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|4|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 4,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's cleft construction with the same lexical frame \"Matplotlib-ന്റെ ഒരു പ്രത്യേകത … എന്നതാണ്\", whereas B recasts it as a \"വ്യത്യസ്തമായത് എന്തെന്നാൽ\" explanatory clause foreign to the reference's rhythm."
+ },
+ {
+  "key": "matplotlib|1|9|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 9,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B's infinitive-plus-auxiliary construction കാണാൻ സാധിക്കുന്ന mirrors the reference's കാണാൻ സാധ്യതയുള്ള, whereas A collapses it into the single participle കാണാവുന്ന."
+ },
+ {
+  "key": "matplotlib|1|18|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 18,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|16|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 16,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's unspaced `---` dash punctuation, while B inserts spaces around the em-dash; otherwise the two are identical."
+ },
+ {
+  "key": "matplotlib|1|17|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 17,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's hortative -ആം mood (കരുതാം) and the 'plotting ചെയ്യാനുള്ള' relative-participle phrasing, whereas A uses a bare imperative (ചിന്തിക്കുക) and a suffixed English root (plotting-ന്)."
+ },
+ {
+  "key": "matplotlib|1|11|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 11,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's clause order and the emphatic \"അറിയാതെ തന്നെ\" placement before the object clause, whereas B relocates the programmer clause into the middle, breaking the reference's rhythm."
+ },
+ {
+  "key": "matplotlib|1|14|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 14,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": false,
+  "reason": "Both candidates share identical clause order, the same hyphenated English-root suffixation (figure-ന്, corresponding ആയ), and the same terminal 'താഴെ കാണാം:' ending; they differ only in the lexical choice മുമ്പത്തെ vs മുമ്പുള്ള, which is not a stylistic distinction."
+ },
+ {
+  "key": "matplotlib|1|23|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 23,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|24|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 24,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|12|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 12,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's English-root suffixation and phrasing more closely ('ഒരു programming style ആണ്', verb-form 'preferred ചെയ്യുന്നത്' vs reference 'prefer ചെയ്യുന്നത്'), while B drops 'ഒരു' and nominalizes to 'preference ചെയ്യുന്നത്'."
+ },
+ {
+  "key": "matplotlib|1|20|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 20,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference exactly, while B needlessly keeps \"clear\" in English and uses the periphrastic ആയി മാറും instead of വ്യക്തമാകും."
+ },
+ {
+  "key": "matplotlib|1|25|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 25,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "Both match the reference's clause structure and terminal colon (only missing the medial comma), but B reproduces the reference's 'അതുപോലെതന്നെ' emphatic nuance with 'തന്നെയാണ്', giving closer rhythm than A's bare 'എളുപ്പം ആണ്'."
+ },
+ {
+  "key": "matplotlib|1|26|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 26,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's sentence split into two full stops and its \"ധാരാളം ... അവയെ ... -ആം\" phrasing without an added pronoun, whereas B keeps a comma-spliced single sentence and inserts നിങ്ങൾക്ക്."
+ },
+ {
+  "key": "matplotlib|1|19|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 19,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's opening clause order and phrasing (\"കുറച്ചുകൂടി typing ആവശ്യ…-എങ്കിലും,\") almost exactly, whereas B fronts \"Typing\" and recasts the concessive clause, though both share the same English-retention pattern otherwise."
+ },
+ {
+  "key": "matplotlib|1|30|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 30,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|31|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 31,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|22|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 22,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's clause order and dash-then-present-tense continuation (\"---ഇത് … കാണിക്കുന്നു\"), whereas A breaks the sentence with a parenthetical dash pair mid-clause and reorders the elements."
+ },
+ {
+  "key": "matplotlib|1|21|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 21,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "Both diverge once on the English/Malayalam split (A keeps 'color', B translates 'red'), but B additionally inserts the pronoun നമ്മൾ that the reference drops, making A's clause shape marginally closer."
+ },
+ {
+  "key": "matplotlib|1|28|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 28,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's fused copula form എളുപ്പമാണ്, whereas A splits it into എളുപ്പം ആണ്; otherwise the two are identical."
+ },
+ {
+  "key": "matplotlib|1|32|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 32,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "Both attach a Malayalam case suffix to the English term, but B's terse single-clause rhythm matches the reference, while A inserts the extra periphrastic hedge \"-ന്റെ കാര്യത്തിലും\" that lengthens the clause beyond the reference's compact phrasing."
+ },
+ {
+  "key": "matplotlib|1|29|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 29,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's compact single-suffixed \"mean-ന്റെ/നെ … label\" phrasing, whereas B inserts the extra Malayalam connective \"-ഉം സഹിതം\", breaking the reference's rhythm."
+ },
+ {
+  "key": "matplotlib|1|37|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 37,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|33|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 33,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's clause order with sentence-initial ഒരുപക്ഷേ and no internal comma, whereas A inverts the clauses and inserts a comma before the modal."
+ },
+ {
+  "key": "matplotlib|1|27|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 27,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": true,
+  "reason": "Each diverges from the reference on one stylistic axis of equal weight — A matches the plain present ...ക്കുന്നു finite form but anglicizes the ordinary verb as 'mention ചെയ്യുന്നു', while B keeps the Malayalam പരാമർശി- and the reference's clause order but shifts to the hortative നമുക്ക്…ആം the reference avoided."
+ },
+ {
+  "key": "matplotlib|1|35|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 35,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B reproduces the reference's clause architecture exactly — the comma after `function` and the \"object-oriented API ഉപയോഗിച്ച് എങ്ങനെ build ചെയ്യാം\" ordering — whereas A drops the comma and inverts the clause into \"build ചെയ്യാൻ ... ഉപയോഗിക്കാം\"; B's lone lexical slip (changes vs മാറ്റങ്ങൾ) weighs less than that rhythmic match."
+ },
+ {
+  "key": "matplotlib|1|38|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 38,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's comma placement after the purpose clause (and otherwise identical wording), whereas B drops that comma, deviating from the reference's punctuation rhythm."
+ },
+ {
+  "key": "matplotlib|1|42|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 42,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|34|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 34,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's phrasing and punctuation almost exactly — \"നമ്മുടെ axes origin-ലൂടെ പോകണമെന്നും, ... ഉണ്ടാകണമെന്നും ... കരുതുക\" with the comma at the clause boundary — whereas A drops the possessive, uses \"origin-ൽ കൂടി\" and unjoined \"പോകണം എന്നും\" without the comma."
+ },
+ {
+  "key": "matplotlib|1|39|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 39,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": false,
+  "reason": "A matches the reference's English-root suffix (`ax`-ന്) but swaps the connective to ഒപ്പം, while B keeps കൂടാതെ but alters the suffix to -ൽ, leaving them equally distant stylistically."
+ },
+ {
+  "key": "matplotlib|1|40|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 40,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference exactly in word order and verb form (തിരികെ pass ചെയ്യുന്നു), while A adds a compound verb construction (pass ചെയ്ത് തിരികെ നൽകുന്നു) not in the reference."
+ },
+ {
+  "key": "matplotlib|1|36|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 36,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's lexical-stylistic choices (ശ്രദ്ധയോടെ, നടക്കുന്നത്, സാധിക്ക-) and its converb-plus-നോക്കുക rhythm almost exactly, whereas B swaps in സൂക്ഷ്മമായി/സംഭവിക്കുന്ന/കഴിയുമോ."
+ },
+ {
+  "key": "matplotlib|1|43|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 43,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's comma at the clause boundary and keeps \"available\" in English, whereas A drops the comma and translates it as ലഭ്യമായ."
+ },
+ {
+  "key": "matplotlib|1|48|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 48,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|41|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 41,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's handling of the English adjective taking the Malayalam copular suffix (\"useful ആയ feature\"), whereas A leaves \"useful feature\" as a bare English cluster; both differ equally in clause order."
+ },
+ {
+  "key": "matplotlib|1|50|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 50,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|45|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 45,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's \"style ഉപയോഗിച്ച്\" instrumental phrasing exactly, whereas A uses the case-suffixed \"style-ൽ\", a small but decisive lexical-grammatical divergence in otherwise identical rhythm and punctuation."
+ },
+ {
+  "key": "matplotlib|1|46|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 46,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference exactly, including the compact എങ്ങനെയിരിക്കുമെന്ന് form and bare ചില styles, whereas A adds a case-suffixed styles-ൽ ചിലത് and the wordier കാണപ്പെടും എന്ന്."
+ },
+ {
+  "key": "matplotlib|1|49|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 49,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "Candidate B matches the reference exactly, including the fused verbal form എങ്ങനെയിരിക്കുമെന്ന്, whereas A uses the periphrastic കാണപ്പെടും എന്ന്."
+ },
+ {
+  "key": "matplotlib|1|47|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 47,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's opening adverb ആദ്യം (vs A's ആദ്യമായി) while the rest — the -ആം hortative and the English-rooted verb — is identical, making B the closer stylistic match."
+ },
+ {
+  "key": "matplotlib|1|52|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 52,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A opens with the bare conditional താല്പര്യമുണ്ടെങ്കിൽ, exactly as the reference does, while B fronts നിങ്ങൾക്ക് before the conditional, altering the clause opening rhythm."
+ },
+ {
+  "key": "matplotlib|1|44|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 44,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "Reference places നമുക്ക് immediately after the English `method` phrase and directly before the hortative verb, a rhythm B mirrors, whereas A shifts നമുക്ക് ahead of the English term."
+ },
+ {
+  "key": "matplotlib|1|57|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 57,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|55|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 55,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "Both miss the reference's hortative ചെയ്യാം, but B retains the reference's possessive നിങ്ങളുടെ opening, matching its phrasing rhythm more closely."
+ },
+ {
+  "key": "matplotlib|1|59|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 59,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|53|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 53,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's perfect aspect (-ചെയ്യപ്പെട്ടിരിക്കുന്നു ≈ സൂക്ഷിച്ചിരിക്കുന്നു) whereas B flattens it to a simple present (-ചെയ്യപ്പെടുന്നു), an explicitly weighted stylistic feature that outweighs B's retention of നിങ്ങളുടെ."
+ },
+ {
+  "key": "matplotlib|1|51|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 51,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": false,
+  "reason": "Each matches the reference on one stylistic point and misses another — A reproduces the exact constituent order (ഈ function നിങ്ങൾക്ക്) but shortens the suffix to List-ലെ, while B keeps the reference's List-ലുള്ള suffixation but reorders the pronoun — and both alike replace പരീക്ഷിക്കാൻ with 'experiment ചെയ്യാൻ'."
+ },
+ {
+  "key": "matplotlib|1|54|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 54,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "The reference keeps the second-person addressee (നിങ്ങൾക്ക്) in the teacher's voice, which A preserves (നിങ്ങളുടെ) while B drops it entirely; the other differences (word order of the English term, ഒരുപാട്/ധാരാളം) are lexical rather than stylistic."
+ },
+ {
+  "key": "matplotlib|1|56|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 56,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's \"നിങ്ങളുടെ സ്വന്തം\" possessive phrasing exactly (both differ only in the reference's converb ചെയ്ത് vs imperative ചെയ്യുക), while A recasts it as the adverbial സ്വന്തമായി ഒരു."
+ },
+ {
+  "key": "matplotlib|1|58|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 58,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's comma at the clause boundary after ഉപയോഗിച്ച് and renders 'overlay' as a Malayalam participle (ചെയ്ത vs. ചെയ്തിരിക്കുന്ന), whereas B drops the comma and leaves 'overlaid' as an English adjective."
+ },
+ {
+  "key": "matplotlib|2|62|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 62,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference word-for-word including the placement of നമ്മൾ before already, whereas A shifts നമ്മൾ after figures, altering the clause rhythm."
+ },
+ {
+  "key": "matplotlib|1|60|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 60,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's genitive-locative `-ലെ` and the quantifier എല്ലാ, matching two of the reference's stylistic choices, whereas A only matches the accusative -നെയും while switching to `-ൽ` and ഏത്."
+ },
+ {
+  "key": "matplotlib|2|63|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 63,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's sentence split with a full stop before \"ഇതിൽ ഉള്ളത്:\", the \"എന്നത്\" topic marker, and the Malayalam rendering of \"outstanding\" as മികച്ച, whereas A keeps a comma-joined clause, drops എന്നത്, and leaves \"outstanding\" in English."
+ },
+ {
+  "key": "matplotlib|2|64|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 64,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's use of the Malayalam word സാധാരണ for \"usual\" while B leaves the ordinary word \"usual\" in English, contrary to the reference's keep-English-for-technical-terms-only pattern."
+ },
+ {
+  "key": "matplotlib|2|65|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 65,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "The reference renders 'aspects' in Malayalam (ചെറിയ കാര്യവും) rather than keeping it in English, so B's use of വശങ്ങളിലും matches the reference's word-choice policy, while A keeps 'aspects-ന്റെയും' in Latin script."
+ },
+ {
+  "key": "matplotlib|2|68|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 68,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's opening word മറ്റൊന്ന് plus the comma at the clause boundary, differing only by the extra ഒരു, whereas B changes the pronoun to മറ്റേത് and drops the comma."
+ },
+ {
+  "key": "matplotlib|1|61|A:Aex",
+  "pair": "A:Aex",
+  "draw": 1,
+  "idx": 61,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's possessive \"നിങ്ങളുടെ\" and the varied \"ഒരിക്കൽ കൂടി\" phrasing, whereas B drops the possessive and flatly repeats വീണ്ടും twice."
+ },
+ {
+  "key": "matplotlib|2|67|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 67,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's punctuation (comma after ഒന്ന്) and its habit of rendering ordinary words like \"ready home\" into Malayalam idiom, whereas B leaves \"ready home\" in English and drops the clause-boundary comma."
+ },
+ {
+  "key": "matplotlib|2|69|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 69,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B keeps \"recommend\" in English with the ചെയ്യുന്നു auxiliary and uses the instrumental -ആൽ (കാരണങ്ങളാൽ) just like the reference, whereas A nativizes it as നിർദ്ദേശിക്കുന്നു and uses കൊണ്ട്."
+ },
+ {
+  "key": "matplotlib|2|70|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 70,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly, including the \"ഇവ തമ്മിലുള്ള\" phrasing and hortative നമുക്ക് നോക്കാം, while A alters that phrase to \"ഈ\"."
+ },
+ {
+  "key": "matplotlib|2|75|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 75,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|71|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 71,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's modal phrasing \"കാണാൻ സാധ്യതയുള്ള\" exactly, whereas B shifts to the ability aspect \"കാണാൻ സാധിക്കുന്ന\"; all else is identical."
+ },
+ {
+  "key": "matplotlib|2|66|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 66,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A reproduces the reference's single-clause, comma-free cleft ending in എന്നതാണ്/എന്നതിലാണ് with the identical dative plotting-നായി, whereas B breaks the sentence with an എന്തെന്നാൽ + comma construction that the reference avoids."
+ },
+ {
+  "key": "matplotlib|2|72|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 72,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's hyphenated English-root suffixing (simple-ഉം convenient-ഉം) and its Malayalam rendering of 'limited' as പരിമിതികൾ, plus clause splitting, whereas A leaves limited/un-Pythonic in English with unhyphenated suffixes in a single flat clause."
+ },
+ {
+  "key": "matplotlib|2|76|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 76,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's exact modifier \"മുൻപത്തെ figure\" while A substitutes a paraphrase (\"മുമ്പ് കൊടുത്ത\"), the candidates being otherwise identical in rhythm, suffixing and terminal colon."
+ },
+ {
+  "key": "matplotlib|2|80|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 80,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|77|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 77,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's sentence split with a full stop before \"അതിൽ:\", whereas B joins the clauses with a comma."
+ },
+ {
+  "key": "matplotlib|2|73|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 73,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's demonstrative phrase (\"ഈ function calls-ൽ\" ≈ \"ഇവിടുത്തെ function call-കളിൽ\"), the emphatic തന്നെ, and the plain quantifier + bare English plural rhythm, while A drops തന്നെ and adds the -ഉം clitic on objects.\"}"
+ },
+ {
+  "key": "matplotlib|2|78|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 78,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's punctuation exactly with the unspaced em-dash '---' attached to ആണ്, whereas A inserts spaces around the dash; both otherwise omit the reference's കരുതാം."
+ },
+ {
+  "key": "matplotlib|2|74|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 74,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "Both are otherwise identical; the reference attaches ചെയ്യുന്നത് to the bare English verb root (prefer), and A's 'preferring ചെയ്യുന്നത്' keeps a verbal root form, whereas B's nominal 'preference ചെയ്യുന്നത്' departs further from that suffixation pattern."
+ },
+ {
+  "key": "matplotlib|2|82|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 82,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A matches the reference exactly, including the temporal clause form പോകുമ്പോൾ, whereas B substitutes the progressive-correlative പോകുന്തോറും."
+ },
+ {
+  "key": "matplotlib|2|83|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 83,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's exact verb form \"red ആക്കി മാറ്റുകയും\" (vs A's \"ആയി\"), with identical -ചെയ്തിരിക്കുന്നു aspect and terminal colon."
+ },
+ {
+  "key": "matplotlib|2|85|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 85,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's \"-ന് പകരം … ഉപയോഗിച്ച്\" conditional/instrumental construction and clause order almost verbatim, while A recasts it as \"മാറ്റുന്നതിലൂടെ\"; B's keeping \"location\" in English is a lexical, not stylistic, divergence."
+ },
+ {
+  "key": "matplotlib|2|86|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 86,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's choice to render ordinary words like \"trivial\" in Malayalam (വളരെ എളുപ്പമാണ്), whereas A leaves \"trivial\" in English against the reference's keep-only-technical-terms style."
+ },
+ {
+  "key": "matplotlib|2|84|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 84,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's unspaced em-dash and present-tense -ന്നു ending, while A adds spaces around the dash and shifts to the plain future കാണിക്കും with an extra നമ്മൾ/-ഉം."
+ },
+ {
+  "key": "matplotlib|2|81|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 81,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": false,
+  "reason": "Both match the reference's concessive -എങ്കിലും clause with comma and the same English keeps (typing/objects/control), each deviating in exactly one spot — A leaves both 'explicit' and 'better' in English while B Malayalamizes 'better' but retains 'explicit' and reorders the opening — so neither is stylistically closer overall."
+ },
+ {
+  "key": "matplotlib|2|79|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 79,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B reproduces the reference's hortative modal ending കരുതാം, whereas A drops into the bare imperative കരുതുക, and mood/verb form is the decisive style marker here despite B's minor spacing and hyphenation deviations."
+ },
+ {
+  "key": "matplotlib|2|87|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 87,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's exact construction \"...ചെയ്യുന്നതും ... ചേർക്കുന്നതും മറ്റും ... എളുപ്പം ... ആണ്:\" including the മറ്റും connective and the split എളുപ്പം + copula, whereas B replaces മറ്റും with the heavier തുടങ്ങിയ കാര്യങ്ങളും and compresses to എളുപ്പമാണ്."
+ },
+ {
+  "key": "matplotlib|2|89|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 89,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's partitive phrasing and, decisively, its plain present-tense verb പരാമർശിക്കുന്നു, whereas A shifts to the hortative പറയാം with a different lexical register."
+ },
+ {
+  "key": "matplotlib|2|90|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 90,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B reproduces the reference's intensifier-plus-copula rhythm \"വളരെ എളുപ്പമാണ്\", while A flattens it to bare \"എളുപ്പമാണ്\"."
+ },
+ {
+  "key": "matplotlib|2|88|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 88,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's two-sentence split and the \"functions-ഉം features-ഉം\" suffixed-English pattern with ധാരാളം/വളരെയധികം in Malayalam, whereas A keeps a whole untranslated English phrase in one comma-joined sentence."
+ },
+ {
+  "key": "matplotlib|2|93|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 93,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "Candidate A matches the reference exactly, including the indefinite \"ഒരു\" before \"example\", which B omits."
+ },
+ {
+  "key": "matplotlib|2|95|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 95,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's clause order with the sentence-initial hedge adverb and single subject, whereas B shifts the hedge to mid-sentence and repeats നിങ്ങൾ, disrupting the reference rhythm."
+ },
+ {
+  "key": "matplotlib|2|94|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 94,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A matches the reference verbatim in word choice and rhythm, while B adds an English-rooted suffixed phrase (\"plots-ന്റെ കാര്യത്തിൽ\") and keeps \"job\" in English, departing from the reference's simpler construction."
+ },
+ {
+  "key": "matplotlib|2|99|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 99,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|100|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 100,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|91|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 91,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's comma at the clause boundary and the hyphenated case-suffix on the English root (mean-നൊപ്പം ≈ mean-നെ), while A drops the comma and uses the unhyphenated 'mean ഉള്ള'."
+ },
+ {
+  "key": "matplotlib|2|102|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 102,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|92|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 92,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's subject-less clause structure (ചിലപ്പോൾ ഒരു figure-ൽ … വരും), while B inserts the dative നമുക്ക് absent from the reference."
+ },
+ {
+  "key": "matplotlib|2|97|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 97,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference almost word-for-word in clause order, comma placement, and keeps \"മാറ്റങ്ങൾ\" in Malayalam, whereas B reorders the clauses and leaves \"changes\" in English."
+ },
+ {
+  "key": "matplotlib|2|101|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 101,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's \"വേണ്ട ... , കൂടാതെ\" phrasing and connective exactly, whereas B substitutes ആവശ്യമുള്ള and ഒപ്പം, diverging in word choice and clause connector rhythm."
+ },
+ {
+  "key": "matplotlib|2|96|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 96,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's paired obligative -ണമെന്നും … -ണമെന്നും … കരുതുക construction with നമ്മുടെ axes and comma placement, while B recasts into nominalized -ഉന്നതും/ഉള്ളതും clauses with an odd English graft (\"preference ചെയ്യുന്നു\")."
+ },
+ {
+  "key": "matplotlib|2|104|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 104,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference exactly in word order (നമുക്ക് preceding style sheets), while B shifts the hortative pronoun after the English term, altering the clause rhythm."
+ },
+ {
+  "key": "matplotlib|2|108|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 108,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|105|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 105,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's conditional -ചെയ്താൽ with the comma at the clause boundary and keeps 'available' in English, whereas B uses the bare converb ചെയ്ത് without a comma and translates 'available' as ലഭ്യമായ."
+ },
+ {
+  "key": "matplotlib|2|103|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 103,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's adjectival construction \"വളരെ useful ആയ … feature ആണ്\" (English root taking ആയ), while B drops വളരെ and the ആയ suffix, leaving a bare English adjective-noun pair."
+ },
+ {
+  "key": "matplotlib|2|107|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 107,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's comma at the clause boundary and keeps 'draw ചെയ്യുന്ന' as an English root with Malayalam light verb, whereas B drops the comma and nativizes 'വരയ്ക്കുന്ന'."
+ },
+ {
+  "key": "matplotlib|2|112|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 112,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|109|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 109,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference verbatim, using the Malayalam verb വരയ്ക്കാം without the added നമുക്ക് and the English-root 'draw ചെയ്യാം' compound that A introduces."
+ },
+ {
+  "key": "matplotlib|2|98|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 98,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": true,
+  "reason": "Both candidates share the reference's participial clause-chain, comma placement, terminal colon and നോക്കുക ending, and both keep 'follow' in English; the remaining differences (സൂക്ഷ്മമായി/ശ്രദ്ധയോടെ, സാധിക്കുമോ/കഴിയുമോ) are lexical swaps that offset each other rather than stylistic divergences."
+ },
+ {
+  "key": "matplotlib|2|110|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 110,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A preserves the reference's clause order with നമുക്ക് immediately preceding `grayscale`, while B shifts the hortative pronoun after the English term, breaking the rhythm."
+ },
+ {
+  "key": "matplotlib|2|106|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 106,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's clause order by opening with ഇനി and keeping the bare `method` noun, whereas B fronts the English 'Style sheet' clause and inserts the explanatory എന്ന."
+ },
+ {
+  "key": "matplotlib|2|111|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 111,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's ഇരിക്കു- verb stem (എങ്ങനെയിരിക്കുന്നു vs എങ്ങനെയിരിക്കുമെന്ന്), differing only in tense, while A substitutes a different verb (കാണപ്പെടുന്നു)."
+ },
+ {
+  "key": "matplotlib|2|113|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 113,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "Both keep \"experiment ചെയ്യാൻ\" in English unlike the reference, but A matches the reference's exact locative form \"List-ലുള്ള\" whereas B shortens it to \"List-ലെ\"."
+ },
+ {
+  "key": "matplotlib|2|115|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 115,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's comma after the subject phrase, the Malayalam rendering of \"dictionary പോലുള്ള\" and the native verb സൂക്ഷിച്ചിരിക്കുന്നു, whereas A drops the comma, keeps \"dictionary-like\" in English and uses the English-rooted passive \"store ചെയ്യപ്പെട്ടിരിക്കുന്നു\"."
+ },
+ {
+  "key": "matplotlib|2|117|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 117,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's hortative -ചെയ്യാം with terminal colon, while B uses the bare infinitive ചെയ്യാൻ, losing the invitational mood."
+ },
+ {
+  "key": "matplotlib|2|118|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 118,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's non-finite conjunctive verb form \"create ചെയ്ത്\" whereas A uses the bare imperative \"ചെയ്യുക\"."
+ },
+ {
+  "key": "matplotlib|2|114|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 114,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": true,
+  "reason": "The two candidates are identical in register, punctuation, clause order and the -ആം hortative verb form, differing only in the orthographic spelling of താൽപ്പര്യം, which is not a stylistic feature."
+ },
+ {
+  "key": "matplotlib|2|120|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 120,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's comma after ഉപയോഗിച്ച് at the clause boundary, while A omits it; both otherwise use the same hortative മാറ്റാം and bare participle ചെയ്ത."
+ },
+ {
+  "key": "matplotlib|2|116|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 116,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's periphrastic potential form \"set ചെയ്യാൻ കഴിയുന്ന\" with \"set ചെയ്യാൻ സാധിക്കുന്ന\", whereas B compresses it into the single participle \"ചെയ്യാവുന്ന\"."
+ },
+ {
+  "key": "matplotlib|2|123|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 123,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's comma at the purpose-clause boundary and the accusative \"style-നെ\" with \"ഒരിക്കൽ കൂടി\", whereas B drops the comma and the -നെ suffix on the English root."
+ },
+ {
+  "key": "matplotlib|2|122|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 122,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's active construction with accusative -നെയും plus the English-root verb 'affect ചെയ്യും', while B restructures into 'setting-ന്റെ effect കാണിക്കും' with a nominative subject, diverging in verb form and suffixation."
+ },
+ {
+  "key": "matplotlib|3|127|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 127,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|124|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 124,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "Candidate B matches the reference exactly in clause order (നമ്മൾ before already) and word choice (ധാരാളം), while A reorders the subject and substitutes ഒരുപാട്."
+ },
+ {
+  "key": "matplotlib|2|121|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 121,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "Both are textually identical to the reference; A additionally preserves the trailing space/spacing of the reference, but the difference is non-stylistic — A matches exactly."
+ },
+ {
+  "key": "matplotlib|2|119|A:Aex",
+  "pair": "A:Aex",
+  "draw": 2,
+  "idx": 119,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's non-finite converb ending \"update ചെയ്ത്\" (vs B's imperative ചെയ്യുക) and keeps the English root with suffix (\"store ചെയ്ത\") rather than substituting a native verb like സൂക്ഷിച്ചിരിക്കുന്ന."
+ },
+ {
+  "key": "matplotlib|3|131|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 131,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|132|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 132,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|133|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 133,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|125|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 125,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's clause order and sentence split — prenominal relative 'design ചെയ്ത(ിരിക്കുന്ന) ... ആണ്.' followed by a separate colon-final lead-in — whereas B keeps a comma-spliced trailing appositive with no full stop."
+ },
+ {
+  "key": "matplotlib|3|130|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 130,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference exactly, including the comma after മറ്റൊന്ന് and the wording കൂടുതൽ, whereas B drops the comma and uses മറ്റേത്/കുറച്ചുകൂടി."
+ },
+ {
+  "key": "matplotlib|3|126|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 126,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's എല്ലാ … formats-ലും (inclusive locative with 'all') while B flattens it to an adjectival formats-ലെ, dropping the reference's quantifier-plus-locative rhythm."
+ },
+ {
+  "key": "matplotlib|3|129|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 129,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's two-sentence split with the second sentence ending in a cleft \"...വേണ്ടിയാണ് ഇത് എഴുതിയ(ിരിക്കുന്ന)ത്\", whereas B compresses everything into a single pre-modifying clause and leaves the ordinary word \"refugees\" in English."
+ },
+ {
+  "key": "matplotlib|3|128|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 128,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's cleft construction ending in \"എന്നതാണ് … പ്രത്യേകത\", while B restructures into a \"എന്നത് … വ്യത്യസ്തമാക്കുന്നു\" predicate."
+ },
+ {
+  "key": "matplotlib|3|134|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 134,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's keep-English handling of \"simple-ഉം convenient-ഉം\", whereas A translates it as ലളിതവും, breaking the English-root-plus-suffix pattern; sentence rhythm is otherwise identical."
+ },
+ {
+  "key": "matplotlib|3|136|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 136,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": true,
+  "reason": "The two candidates are stylistically identical — same cleft ആണ്…ചെയ്യുന്നത് construction, same parenthetical single sentence, same English-root suffixing — differing only in the lexical choice കൂടുതൽ vs കുറച്ചുകൂടി."
+ },
+ {
+  "key": "matplotlib|3|135|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 135,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's comma placement after the function-call phrase and keeps the identical clause order with \"programmer-നെ അറിയിക്കാതെ തന്നെ\" plus the -ുകൾ/suffixed English roots, while B drops the commas, reorders the clauses, and uses an unsuffixed \"programmer അറിയാതെ\"."
+ },
+ {
+  "key": "matplotlib|3|142|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 142,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|137|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 137,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's suffixation on the English root (API-യിലേക്ക്) and the എത്തിക്കുന്നു verb stem, whereas A uses API-ലേക്ക് and the different നയിക്കുന്നു; the നമ്മളെ/നമ്മെ difference is minor by comparison."
+ },
+ {
+  "key": "matplotlib|3|144|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 144,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|138|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 138,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's clause order (Object-oriented API ഉപയോഗിച്ച് first, then മുൻപത്തെ figure … code താഴെ കാണാം:), while A inverts the order and swaps മുൻപത്തെ for മുകളിലെ; B's extra comma is a minor deviation."
+ },
+ {
+  "key": "matplotlib|3|141|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 141,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A keeps the reference's hortative/potential -ആം mood (\"കാണാം\" matching \"കരുതാം\"), whereas B switches to the bare imperative \"കരുതുക\", a decisive mood mismatch that outweighs B's closer dash spacing."
+ },
+ {
+  "key": "matplotlib|3|139|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 139,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "Reference splits into two sentences with a terminal full stop before the colon-introducing phrase, which A reproduces while B keeps a single comma-joined clause."
+ },
+ {
+  "key": "matplotlib|3|148|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 148,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|140|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 140,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's exact phrasing and tight em-dash punctuation without spaces or the added \"എന്നത്\"/\"ഇതൊരു...പോലെയാണ്\" restructuring found in A, differing only by the omitted hortative കരുതാം."
+ },
+ {
+  "key": "matplotlib|3|145|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 145,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's coordinated -ഉകയും … -ഉകയും ചെയ്തിരിക്കുന്നു construction with the comma at the clause boundary, while A collapses it into a single participial clause and adds നമ്മൾ."
+ },
+ {
+  "key": "matplotlib|3|143|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 143,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's word order (\"കുറച്ചുകൂടി typing\") and retains the dative നമുക്ക് in the main clause, whereas A fronts \"Typing\" and drops the benefactive pronoun; B's one extra English word (better) is a lexical, not stylistic, divergence."
+ },
+ {
+  "key": "matplotlib|3|152|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 152,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|147|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 147,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's \"-ന് പകരം … സ്ഥാനം മാറ്റാം\" construction, with the same -ആം modal ending and Malayalam 'സ്ഥാനം', whereas A adds a comma clause, keeps 'location' in English, and ends with the periphrastic മാറ്റാൻ സാധിക്കും."
+ },
+ {
+  "key": "matplotlib|3|149|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 149,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B reproduces the reference's emphatic അതുപോലെതന്നെ (A weakens it to അതുപോലെ), with both otherwise identical and both missing the reference's clause comma."
+ },
+ {
+  "key": "matplotlib|3|155|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 155,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|151|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 151,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's clause order and word choice (അതിൽ ചിലത് മാത്രം ഇവിടെ) with only the verb differing, while B reorders the sentence and injects a gratuitous English noun 'matters' absent from the reference's style."
+ },
+ {
+  "key": "matplotlib|3|146|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 146,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's suffixed English root (Line-നെ), omits an explicit subject pronoun, and repeats \"line\" in the second clause, whereas A drops the case suffix and inserts നമ്മൾ and -യും; B's only deviation is spacing around the dash."
+ },
+ {
+  "key": "matplotlib|3|150|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 150,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's two-sentence split and the -ഉം…-ഉം coordination of the English nouns with a Malayalam verb, while A keeps one comma-spliced sentence and leaves 'discover' in English."
+ },
+ {
+  "key": "matplotlib|3|154|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 154,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "The reference drops the explicit \"we\" pronoun and ends with the impersonal ...വരും construction, which A matches exactly, while B inserts നമുക്ക് not present in the reference."
+ },
+ {
+  "key": "matplotlib|3|157|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 157,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's modal -യേക്കാം ending and 'പതിവായി' wording, whereas B shifts to a flat 'സാധിക്കും' future and substitutes 'സ്ഥിരമായി', despite B keeping the English phrase intact."
+ },
+ {
+  "key": "matplotlib|3|161|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 161,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|153|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 153,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's hyphenated suffix on the English root (mean-ഉം vs mean-നെ) and the same light-verb form 'label ചെയ്യുന്ന', whereas B swaps in a Malayalam postposition (സഹിതം) and a different verb (ചേർക്കുന്ന), matching only the comma."
+ },
+ {
+  "key": "matplotlib|3|159|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 159,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's clause order and comma placement (custom `subplots` function, object-oriented API ഉപയോഗിച്ച് എങ്ങനെ build ചെയ്യാം) almost exactly, whereas B restructures the clause and drops the comma."
+ },
+ {
+  "key": "matplotlib|3|162|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 162,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's comma placement after the purpose clause (and overall identical wording), while B omits the clause-boundary commas."
+ },
+ {
+  "key": "matplotlib|3|158|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 158,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A reproduces the reference's comma at the clause boundary before the second എന്നും clause, matching its punctuation rhythm, whereas B runs the coordinated clauses together unpunctuated; the പോകണം/കടന്നുപോകണം difference is lexical, not stylistic."
+ },
+ {
+  "key": "matplotlib|3|166|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 166,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|164|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 164,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "Candidate A matches the reference exactly, including the adverb തിരികെ that B omits."
+ },
+ {
+  "key": "matplotlib|3|156|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 156,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A reproduces the reference's Malayalam rendering of \"does a nice job\" exactly and only swaps the final deictic, whereas B deviates twice from the keep-English pattern by retaining \"job\" in Latin script and attaching a Malayalam case suffix to \"plots\"."
+ },
+ {
+  "key": "matplotlib|3|165|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 165,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's inclusion of the intensifier വളരെ before \"useful ആയ\", while A omits it; word-order difference (മറ്റൊരു placement) is minor compared to that lexical-rhythm match."
+ },
+ {
+  "key": "matplotlib|3|167|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 167,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's conditional -ആൽ form with the comma at the clause boundary, while A uses a bare converb 'ചെയ്ത്' and omits the comma."
+ },
+ {
+  "key": "matplotlib|3|163|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 163,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's exact verb choice (വരുത്തുന്നു), case suffix on `ax`-ന്, and connective കൂടാതെ, while B swaps in ചെയ്യുന്നു, -ൽ, and ഒപ്പം."
+ },
+ {
+  "key": "matplotlib|3|172|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 172,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|160|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 160,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A preserves the reference's explicit dative pronoun നിങ്ങൾക്ക് and its clause rhythm, whereas B drops it, and the remaining difference (പറ്റുമോ vs സാധിക്കുമോ) is mere lexical choice rather than a stylistic shift."
+ },
+ {
+  "key": "matplotlib|3|174|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 174,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|169|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 169,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's comma at the clause boundary, the \"input ആയി എടുത്ത്\" phrasing, and keeps \"draw ചെയ്യുന്ന\" in English, whereas B drops the comma and Malayalamizes the verb as \"വരയ്ക്കുന്ന\"."
+ },
+ {
+  "key": "matplotlib|3|173|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 173,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's exact verb form എങ്ങനെയിരിക്കും(െന്ന്), differing only in spacing, whereas B substitutes the passive കാണപ്പെടുന്നു, altering the verb aspect/mood."
+ },
+ {
+  "key": "matplotlib|3|168|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 168,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "Reference marks a clause boundary with a comma early in the sentence, and B alone reproduces that comma placement after the initial purpose clause, while A runs it through unpunctuated; the two are otherwise identical in word choice and the hortative -ആം rhythm."
+ },
+ {
+  "key": "matplotlib|3|170|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 170,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's future-modal എങ്ങനെയിരിക്കും construction (differing only in sandhi/spacing), while B substitutes a passive present കാണപ്പെടുന്നത് that changes the verb form and rhythm."
+ },
+ {
+  "key": "matplotlib|3|179|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 179,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|175|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 175,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's hyphenated English-root suffixation (List-ലുള്ള) and retains the explicit നിങ്ങൾക്ക് with the -ആം permissive, while B drops both."
+ },
+ {
+  "key": "matplotlib|3|177|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 177,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's clause order and Malayalam rendering of \"dictionary പോലുള്ള ... എന്ന variable-ൽ\" (A keeps \"dictionary-like\" in English and reorders), even though A's -ചെയ്യപ്പെട്ടിരിക്കുന്നു aspect is closer; the word-choice/order parallel is decisive."
+ },
+ {
+  "key": "matplotlib|3|176|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 176,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's infinitive + capability construction (\"ചെയ്യാൻ ... സാധിക്കും\" ≈ \"ചെയ്യാനും കഴിയും\"), whereas A collapses it into the bare -ആം form (\"ചെയ്യാം\")."
+ },
+ {
+  "key": "matplotlib|3|183|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 183,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|178|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 178,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's lexical choice \"ഒരുപാട്\" and keeps the same English-root-plus-suffix pattern, whereas B swaps in \"ധാരാളം\" and the colloquial \"പറ്റുന്ന\" for the reference's \"കഴിയുന്ന\"-type relative verb."
+ },
+ {
+  "key": "matplotlib|3|180|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 180,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": false,
+  "reason": "Both diverge identically from the reference's conjunctive participle \"create ചെയ്ത്\" by using the bare imperative \"create ചെയ്യുക\", and the only difference between them (the added \"ഒരു\") is lexical, not stylistic."
+ },
+ {
+  "key": "matplotlib|3|171|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 171,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference word-for-word except for rendering the verb as 'draw ചെയ്യാം', while A inserts an extra 'നമുക്ക്' not present in the reference; both keep the -ആം hortative and colon, but B's clause shape is identical in length and word inventory — actually the deciding stylistic point is that the reference translates the verb into Malayalam (വരയ്ക്കാം) like A does... yet A's added pronoun alters rhythm, whereas B preserves the exact clause structure, so B is marginally closer."
+ },
+ {
+  "key": "matplotlib|3|181|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 181,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's clause order and its Malayalam rendering of \"dictionary-like\" as \"പോലുള്ള ... എന്ന variable-ൽ\", whereas A leaves \"dictionary-like\" in English and reorders the phrase."
+ },
+ {
+  "key": "matplotlib|1|2|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 2,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|3|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 3,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|182|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 182,
+  "winner": "Aex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's comma after ഉപയോഗിച്ച് and uses the Malayalam verbalization 'overlay ചെയ്ത' (vs A's English adjective 'overlaid ആയ' and missing comma), differing only in the aspect suffix -ചെയ്ത vs -ചെയ്തിരിക്കുന്ന."
+ },
+ {
+  "key": "matplotlib|3|185|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 185,
+  "winner": "Aex",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A matches the reference's comma at the purpose-clause boundary and its \"ഒരിക്കൽ കൂടി … apply ചെയ്യുക:\" phrasing, while B drops the comma."
+ },
+ {
+  "key": "matplotlib|1|0|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 0,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "Candidate A matches the reference verbatim, including \"ധാരാളം figures\" without the -ഉം suffix that B adds to the English root."
+ },
+ {
+  "key": "matplotlib|1|1|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 1,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's sentence split with a full stop plus a separate colon-ending lead-in (\"ഇതിൽ ഉള്ളത്:\" vs \"അതിൽ ഉള്ളവ:\"), while B keeps a comma-joined single sentence with a different connective."
+ },
+ {
+  "key": "matplotlib|1|5|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 5,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's sentence split into two clauses with the same comma placement and final -എഴുതിയിരിക്കുന്നത് form, whereas A crams everything into one relative-clause sentence."
+ },
+ {
+  "key": "matplotlib|1|6|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 6,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference verbatim, including the comparative \"കൂടുതൽ\", while A substitutes \"കുറച്ചുകൂടി\", a slight register/rhythm shift."
+ },
+ {
+  "key": "matplotlib|1|7|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 7,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B keeps \"recommend\" in English with Malayalam ചെയ്യുന്നു (matching the reference's keep-English policy for that verb), whereas A translates it as ശുപാർശ; the minor കാരണങ്ങൾ കൊണ്ട് vs കാരണങ്ങളാൽ difference is lexical, not stylistic."
+ },
+ {
+  "key": "matplotlib|1|8|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 8,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference verbatim, while B inserts \"രണ്ടും,\" a slight deviation in wording rhythm from the approved line."
+ },
+ {
+  "key": "matplotlib|3|184|A:Aex",
+  "pair": "A:Aex",
+  "draw": 3,
+  "idx": 184,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's active accusative frame (\"plot-നെയും ഈ setting [verb]-ും\") whereas A recasts it into a nominal \"setting-ന്റെ effect-ന് വിധേയമാകും\" periphrasis alien to the reference's rhythm."
+ },
+ {
+  "key": "matplotlib|1|4|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 4,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's exact suffixed form \"plotting-നായി\" and the cleft ending \"എന്നത്...ആണ്\" with minimal added connective, whereas B inserts the explanatory \"എന്തെന്നാൽ\" and the pronoun \"ഇത്\" with a plain dative \"plotting-ന്\", shifting the rhythm."
+ },
+ {
+  "key": "matplotlib|1|13|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 13,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A reproduces the reference's comma placement after \"alternative ആയ,\" whereas B shifts the comma to after നമ്മെ, breaking the reference's clause rhythm."
+ },
+ {
+  "key": "matplotlib|1|10|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 10,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "The reference breaks the sentence into two full stops rather than stringing clauses with commas, and A likewise splits into two sentences while B keeps a single comma-chained sentence."
+ },
+ {
+  "key": "matplotlib|1|9|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 9,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's modal participle സാധ്യതയുള്ള exactly, while A shifts to the ability form സാധിക്കുന്ന; other differences (capitalization, 'easy' left in English) are equal in both."
+ },
+ {
+  "key": "matplotlib|1|12|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 12,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A keeps the verb as an English root with Malayalam auxiliary (\"preference ചെയ്യുന്നു\"), matching the reference's \"prefer ചെയ്യുന്നത്\" keep-English pattern, plus the clause-boundary comma, whereas B nativizes it as ഇഷ്ടപ്പെടുന്നു."
+ },
+ {
+  "key": "matplotlib|1|14|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 14,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's clause order (Object-oriented API ഉപയോഗിച്ച് first, then മുൻപത്തെ figure … code താഴെ കാണാം:) and its English-root-with-suffix wording, whereas A inverts the clauses and Malayalam-izes the opening phrase."
+ },
+ {
+  "key": "matplotlib|1|15|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 15,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B reproduces the reference's two-part structure ending in the connective \"അതിൽ:\" (only differing by comma vs. full stop), whereas A drops that clause entirely."
+ },
+ {
+  "key": "matplotlib|1|20|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 20,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|11|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 11,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's punctuation (comma between the two -ചെയ്യപ്പെടുകയും clauses) and its emphatic particle \"അറിയിക്കാതെ തന്നെ,\" whereas B drops both, its only advantage being adverbial placement."
+ },
+ {
+  "key": "matplotlib|1|16|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 16,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's exact wording and clause structure (`fig` ഒരു ... ആണ്---), whereas B inserts the extra connective എന്നത്, adding a stylistic hedge absent from the reference; the dash-spacing difference is minor by comparison."
+ },
+ {
+  "key": "matplotlib|1|17|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 17,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference verbatim including the copula-only construction and unspaced dash, while A inserts എന്നത് and pads the dash with spaces."
+ },
+ {
+  "key": "matplotlib|1|18|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 18,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "Candidate A matches the reference exactly, while B inserts the topicalizer \"എന്നത്\" and an extra comma not present in the reference's unbroken clause rhythm."
+ },
+ {
+  "key": "matplotlib|1|21|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 21,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly, while A adds the overt subject നമ്മൾ, a small register/rhythm deviation from the reference's subjectless construction."
+ },
+ {
+  "key": "matplotlib|1|24|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 24,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference exactly, rendering ordinary words \"properly\" and \"trivial\" in Malayalam, whereas A needlessly keeps them in English against the reference's lexical-choice pattern."
+ },
+ {
+  "key": "matplotlib|1|23|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 23,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference exactly, including the dative form -ന് and absence of a comma after the conditional clause, whereas B adds a comma and uses -നു."
+ },
+ {
+  "key": "matplotlib|1|28|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 28,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|19|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 19,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's clause structure and keep-English boundary almost exactly (\"കുറച്ചുകൂടി typing ആവശ്യമായി വരുമെങ്കിലും\" ≈ \"ആവശ്യമുണ്ടെങ്കിലും\", with the qualifier in Malayalam), whereas B restructures the first clause and leaves the ordinary word \"better\" in English."
+ },
+ {
+  "key": "matplotlib|1|25|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 25,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's adverbial \"അതുപോലെ(തന്നെ)\" before എളുപ്പമാണ്, matching its rhythm, while A drops it entirely."
+ },
+ {
+  "key": "matplotlib|1|31|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 31,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|26|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 26,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's two-sentence split with a full stop after ഉണ്ട്, the Matplotlib-ൽ locative, and the comma before the കാലക്രമേണ … -ആം clause, whereas A keeps one long comma-spliced sentence with the explicit നിങ്ങൾക്ക്."
+ },
+ {
+  "key": "matplotlib|1|29|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 29,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's clause order, participial -ചെയ്ത് chaining and closing 'താഴെ കാണാം:' almost verbatim, differing only by the added 'ആയി', whereas B restructures into a fronted 'താഴെ കൊടുത്തിരിക്കുന്ന example-ൽ' with -ചെയ്യുകയും…ചെയ്യുന്നു finite rhythm."
+ },
+ {
+  "key": "matplotlib|1|22|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 22,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's capitalized \"Line-\" and the intensifier \"കൂടുതൽ\" in the second clause, whereas B's only edge is the literal triple hyphen (and even that is spaced, unlike the reference's unspaced ---)."
+ },
+ {
+  "key": "matplotlib|1|30|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 30,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A reproduces the reference's exact predicate ആവശ്യമായി വരും (with the same English-root suffixation figure-ൽ), differing only by an added നമുക്ക്, whereas B swaps in the different verb വേണ്ടിവരും."
+ },
+ {
+  "key": "matplotlib|1|36|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 36,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|37|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 37,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|32|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 32,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B preserves the reference's clause order (Matplotlib first), the triple-hyphen dash, and the exact verb phrase നന്നായി ചെയ്യുന്നു, whereas A reorders the clause, swaps in an em dash, and paraphrases as നല്ല ജോലി ചെയ്യുന്നു."
+ },
+ {
+  "key": "matplotlib|1|33|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 33,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's retention of the full English phrase \"set of customizations\" and its compact single-clause -യേക്കാം ending, whereas B translates \"set\" as ഒരു കൂട്ടം and adds a redundant pronoun plus കഴിഞ്ഞേക്കാം periphrasis."
+ },
+ {
+  "key": "matplotlib|1|40|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 40,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|41|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 41,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|35|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 35,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's clause order and possessive construction ([Matthew Doty]-യുടെ ... example താഴെ കാണാം) with no extra comma, while B reorders to a \"-യിൽ നിന്നും\" source phrase and inserts an extra mid-sentence comma."
+ },
+ {
+  "key": "matplotlib|1|27|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 27,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A reproduces the reference's exact clause order and subjectless phrasing (\"അതിൽ ചിലത് മാത്രം ഇവിടെ …\"), deviating only in verb mood, whereas B inserts an explicit \"ഞങ്ങൾ\" subject and reorders the adverbials."
+ },
+ {
+  "key": "matplotlib|1|44|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 44,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|39|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 39,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's verb choice വരുത്തുന്നു exactly (B swaps to ചെയ്യുന്നു), with both otherwise identical in suffixing, comma placement, and കൂടാതെ."
+ },
+ {
+  "key": "matplotlib|1|42|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 42,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B preserves the reference's hortative നമുക്ക് … ഉപയോഗിക്കാം construction, which A drops."
+ },
+ {
+  "key": "matplotlib|1|43|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 43,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "Both match the reference's conditional -ചെയ്താൽ, comma placement, നമുക്ക് കാണാം and terminal colon, but B keeps 'available' in English as the reference does, while A translates it as ലഭ്യമായ."
+ },
+ {
+  "key": "matplotlib|1|34|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 34,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's fused clitic morphology and word choices exactly (origin-ലൂടെ, ഉണ്ടായിരിക്കണമെന്നും, ...എന്ന് കരുതുക), whereas B splits the quotative എന്നും off and uses the periphrastic origin-ൽ കൂടി / ഉണ്ടാകണം, despite matching the dative subject."
+ },
+ {
+  "key": "matplotlib|1|38|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 38,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's hallmark English-root-plus-Malayalam-suffix adverbial ('internal ആയി'), whereas B substitutes the fully English 'internally'; B's single comma is a lesser match than the reference's double-comma parenthesis."
+ },
+ {
+  "key": "matplotlib|1|50|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 50,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|46|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 46,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B uses the same future-copula form എങ്ങനെയിരിക്കും as the reference (merely unmerged with എന്ന്), while A substitutes the passive present കാണപ്പെടുന്നു, altering mood and rhythm."
+ },
+ {
+  "key": "matplotlib|1|45|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 45,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's keep-English handling ('plots draw ചെയ്യുന്ന') while B transliterates 'ആർഗ്യുമെന്റ്' and Malayalam-izes the verb as 'വരയ്ക്കുന്ന', deviating from the reference's English-root-plus-ചെയ്യുക pattern."
+ },
+ {
+  "key": "matplotlib|1|47|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 47,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly, including the Malayalam verb വരയ്ക്കാം, whereas A substitutes the English-rooted 'draw ചെയ്യാം' against the reference's lexical choice."
+ },
+ {
+  "key": "matplotlib|1|51|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 51,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A retains the reference's explicit നിങ്ങൾക്ക് agent with the -ആം permissive form (only word order differs), while B drops the pronoun entirely, altering the reference's clause make-up."
+ },
+ {
+  "key": "matplotlib|1|48|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 48,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A keeps the reference's hortative നമുക്ക് … ഉപയോഗിക്കാം construction and terminal colon, while B drops നമുക്ക്, losing the classroom-voice rhythm (the lowercase 'plots' and -ൽ നിന്ന് vs -ലെ are minor)."
+ },
+ {
+  "key": "matplotlib|1|49|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 49,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's future-modal verb form എങ്ങനെയിരിക്കും(-എന്ന്) almost exactly, whereas A substitutes the present-progressive കാണപ്പെടുന്നു, breaking the reference's mood and rhythm."
+ },
+ {
+  "key": "matplotlib|1|52|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 52,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's clause order by opening directly with the conditional താൽപ്പര്യമുണ്ടെങ്കിൽ, before introducing the subject, whereas B fronts നിങ്ങൾക്ക് ahead of the conditional."
+ },
+ {
+  "key": "matplotlib|1|58|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 58,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|59|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 59,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|53|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 53,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's perfect-aspect verb (-ചെയ്യപ്പെട്ടിരിക്കുന്നു ≈ സൂക്ഷിച്ചിരിക്കുന്നു) whereas B flattens it to a plain present, an aspect shift that outweighs A's dropped നിങ്ങളുടെ."
+ },
+ {
+  "key": "matplotlib|1|56|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 56,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's non-finite conjunctive participle \"create ചെയ്ത്\" (and the possessive \"നിങ്ങളുടേതായ\" echoing \"നിങ്ങളുടെ സ്വന്തം\"), whereas A shifts to the bare imperative \"ചെയ്യുക\"."
+ },
+ {
+  "key": "matplotlib|1|54|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 54,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's periphrastic verb form 'set ചെയ്യാൻ കഴിയുന്ന', whereas B compresses it to the '-ആവുന്ന' form; the missing pronoun in A is a lesser stylistic deviation than the changed verb construction."
+ },
+ {
+  "key": "matplotlib|1|55|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 55,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "Candidate A matches the reference's hortative -ചെയ്യാം mood, possessive നിങ്ങളുടെ ... -ന്റെ framing and ഇങ്ങനെ placement exactly, whereas B uses a bare infinitive purpose clause and drops the second-person possessive."
+ },
+ {
+  "key": "matplotlib|2|64|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 64,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|65|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 65,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|60|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 60,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's active clause order and verb ending (\"ഈ setting ബാധിക്കും/affect ചെയ്യും\") with no added comma, while B restructures into a passive-like predicate with an extra comma and 'effect ഉള്ളതായിരിക്കും'."
+ },
+ {
+  "key": "matplotlib|1|57|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 57,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's non-finite participle ending \"update ചെയ്ത്\" whereas A shifts to the imperative \"ചെയ്യുക\"; the missing final period is a lesser deviation than the mood change."
+ },
+ {
+  "key": "matplotlib|2|63|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 63,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's sentence split (full stop then a short colon-ended clause) while B keeps one comma-joined sentence, a clause-boundary/punctuation divergence."
+ },
+ {
+  "key": "matplotlib|2|62|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 62,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference verbatim, including the word choice ധാരാളം, whereas B substitutes നിരവധി."
+ },
+ {
+  "key": "matplotlib|1|61|B:Bex",
+  "pair": "B:Bex",
+  "draw": 1,
+  "idx": 61,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference verbatim apart from a spacing variant in ഒരിക്കൽ കൂടി, while B inserts the explicit എന്ന appositive marker not present in the reference."
+ },
+ {
+  "key": "matplotlib|2|67|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 67,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's two-sentence split with the same comma placement and the -ഇരിക്കുന്നത് ending, while A crams everything into a single relative-clause sentence."
+ },
+ {
+  "key": "matplotlib|2|66|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 66,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's English-root suffixation \"plotting-നായി\" exactly, whereas A uses the differing dative form \"plotting-ന്\"; all else is identical."
+ },
+ {
+  "key": "matplotlib|2|68|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 68,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference exactly, including the pronoun form മറ്റൊന്ന്, whereas B swaps in മറ്റേത്."
+ },
+ {
+  "key": "matplotlib|2|70|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 70,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A matches the reference verbatim, including the \"ഇവ തമ്മിലുള്ള വ്യത്യാസം\" phrasing and rhythm, whereas B adds an extra embedded clause (എന്താണെന്ന്) that alters the cadence."
+ },
+ {
+  "key": "matplotlib|2|72|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 72,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's sentence-splitting into two sentences with a full stop (and the hedge കുറച്ച്), whereas A runs everything into one comma-chained sentence."
+ },
+ {
+  "key": "matplotlib|2|75|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 75,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B reproduces the reference's verb choice and aspect (എത്തിക്കുന്നു) exactly, while A substitutes നയിക്കുന്നു; everything else is identical."
+ },
+ {
+  "key": "matplotlib|2|71|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 71,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's modal participle സാധ്യതയുള്ള exactly, whereas B substitutes സാധിക്കുന്ന, a different aspect/mood choice; capitalization is a trivial non-stylistic difference."
+ },
+ {
+  "key": "matplotlib|2|69|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 69,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": true,
+  "reason": "Both candidates match the reference's comma placement and English 'recommend ചെയ്യുന്നു' equally, differing only in the lexical choice വിശദീകരിക്കുന്ന vs വിവരിക്കുന്ന, which is not a stylistic distinction; neither uses the reference's cleft ഉപയോഗിക്കാനാണ് construction."
+ },
+ {
+  "key": "matplotlib|2|79|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 79,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "Both add എന്നത്, but A preserves the reference's triple-hyphen dash punctuation whereas B substitutes an em dash, making A punctuationally closer."
+ },
+ {
+  "key": "matplotlib|2|77|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 77,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's sentence split with a full stop before അതിൽ:, whereas A keeps a comma, differing in terminal punctuation and clause segmentation."
+ },
+ {
+  "key": "matplotlib|2|78|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 78,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "Punctuation: A preserves the reference's triple-hyphen dash (`---`) whereas B substitutes a typographic em dash, making A the closer stylistic match."
+ },
+ {
+  "key": "matplotlib|2|74|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 74,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's cleft focus construction (…ആണ് …-ഉന്നത്) and finite ending, while B flattens it into a plain present with the ill-formed 'preferred ചെയ്യുന്നു', despite its English retention of the verb root."
+ },
+ {
+  "key": "matplotlib|2|83|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 83,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|80|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 80,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's comma-free, uninterrupted flow, whereas A inserts an 'എന്നത്,' appositive comma at a non-clause boundary that the reference does not use."
+ },
+ {
+  "key": "matplotlib|2|76|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 76,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "The reference's keep-English habit of attaching Malayalam suffixes to English roots (create ചെയ്യുന്ന) is mirrored by B's 'corresponding ആയ', whereas A translates the term into Malayalam (സമാനമായ)."
+ },
+ {
+  "key": "matplotlib|2|81|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 81,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's comma placement (only at the concessive clause boundary) whereas B inserts an extra comma before നമുക്ക്, breaking the reference's rhythm; both otherwise share the -എങ്കിലും … നൽകുന്നു structure and English-term retention."
+ },
+ {
+  "key": "matplotlib|2|82|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 82,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference exactly in clause order (temporal clause first) and verb form (വ്യക്തമാകും), while A inverts the clauses, inserts a comma, and switches to a കാണാം construction."
+ },
+ {
+  "key": "matplotlib|2|85|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 85,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference exactly in punctuation (no comma after the conditional clause), differing only in the trivial -നു/-ന് dative spelling, whereas B inserts a comma at the clause boundary that the reference omits."
+ },
+ {
+  "key": "matplotlib|2|73|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 73,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A preserves the reference's keep-English verb \"pass ചെയ്യപ്പെടുകയും\", the edition's hallmark English-root-plus-Malayalam-suffix pattern, whereas B substitutes the native കൈമാറ്റം ചെയ്യപ്പെടുകയും despite otherwise echoing the reference's adverbial phrase."
+ },
+ {
+  "key": "matplotlib|2|87|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 87,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's rhythm exactly, including the adverbial intensifier before എളുപ്പം and the separated 'എളുപ്പം ആണ്' form, whereas B drops the adverb and fuses it into എളുപ്പമാണ്."
+ },
+ {
+  "key": "matplotlib|2|91|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 91,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|89|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 89,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's declarative present-tense പരാമർശിക്കുന്നു and the ചിലത് മാത്രം phrasing exactly, while B shifts to the hortative പറയാം with കുറച്ച്, a different mood and register."
+ },
+ {
+  "key": "matplotlib|2|93|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 93,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|86|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 86,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference exactly, while B leaves \"properly\" in English where the reference renders it as ശരിയായി, diverging on the keep-English word choice."
+ },
+ {
+  "key": "matplotlib|2|84|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 84,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A reproduces the reference's English-root suffixation and verb choice exactly (\"Line-നെ അല്പം transparent ആക്കാൻ\"), whereas B drops the -നെ case suffix and switches to the periphrastic \"ആയി കാണിക്കാൻ\"; the dash-spacing difference is minor by comparison."
+ },
+ {
+  "key": "matplotlib|2|92|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 92,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's impersonal construction with no explicit നമുക്ക് subject and the same clause rhythm ending in ...വരും, whereas A inserts the pronoun നമുക്ക്."
+ },
+ {
+  "key": "matplotlib|2|90|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 90,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A reproduces the reference's comma at the clause boundary after \"axes-ൽ\", which is the listed punctuation criterion, whereas B drops it and differs only by the non-stylistic intensifier വളരെ."
+ },
+ {
+  "key": "matplotlib|2|98|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 98,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|94|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 94,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's lean structure and identical closing clause \"ഒരു example താഴെ കാണാം:\", whereas A inserts the extra English root \"work ചെയ്യുന്നു\" plus the periphrastic \"-ന്റെ കാര്യത്തിലും\" and \"അതിന്റെ\", breaking the reference's rhythm."
+ },
+ {
+  "key": "matplotlib|2|96|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 96,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's desiderative -ണമെന്നും … -ണമെന്നും clause pairing, the 'origin-ലൂടെ' suffixation, and a fully Malayalam preference verb, whereas A shifts to -ാനും infinitives and the English-rooted 'preferred ചെയ്യുന്നു'."
+ },
+ {
+  "key": "matplotlib|2|97|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 97,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's possessive attribution (-യുടെ/-യുടെതായി) and comma placement, while A shifts to an ablative \"-യിൽ നിന്നും\" phrase with an extra clause-splitting comma."
+ },
+ {
+  "key": "matplotlib|2|102|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 102,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|95|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 95,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "Both match the reference's -ഏക്കാം modal rhythm, but A keeps the whole technical phrase in Latin script (customizations + set, merely linked by -ന്റെ) as the reference does, whereas B Malayalam-izes 'set' as കൂട്ടം, breaking the keep-English pattern."
+ },
+ {
+  "key": "matplotlib|2|88|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 88,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's sentence-splitting — two independent sentences with a full stop after the 'functions-ഉം features-ഉം ഉണ്ട്' clause — whereas B fuses them into one comma-joined sentence, a structural difference that outweighs B's incidental lexical echoes (ധാരാളം, മനസ്സിലാക്കാം)."
+ },
+ {
+  "key": "matplotlib|2|99|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 99,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's bare English noun-phrase plus terminal colon, while B adds an unwarranted Malayalam verbal form (ചെയ്യുന്നത്) that breaks the reference's nominal rhythm."
+ },
+ {
+  "key": "matplotlib|2|106|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 106,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|100|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 100,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A reproduces the reference's comma placement after \"internal ആയി\" (matching its clause-boundary punctuation rhythm), while B omits those internal commas."
+ },
+ {
+  "key": "matplotlib|2|101|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 101,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's exact clause order (`ax` first), verb choice വരുത്തുന്നു, and connective കൂടാതെ, whereas A reorders the phrase and substitutes ചെയ്യുന്നു/ഒപ്പം."
+ },
+ {
+  "key": "matplotlib|2|109|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 109,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|110|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 110,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|103|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 103,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly, including the cleft word order with ആണ് preceding the link, whereas A reorders the copula to sentence-final position."
+ },
+ {
+  "key": "matplotlib|2|112|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 112,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|104|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 104,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference exactly, while B inserts a hyphen joining the English root to the Malayalam suffix (\"styles-ഉള്ള\"), departing from the reference's unhyphenated spacing convention."
+ },
+ {
+  "key": "matplotlib|2|105|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 105,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A keeps \"available\" in English as the reference does, while B renders it as Malayalam \"ലഭ്യമായ\", diverging from the reference's keep-English lexical choice; all other rhythm, punctuation, and -ആൽ…-ആം forms are identical."
+ },
+ {
+  "key": "matplotlib|2|113|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 113,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference exactly, including rendering 'experiment' as the Malayalam പരീക്ഷിക്കാൻ, whereas A keeps 'experiment ചെയ്യാൻ' in English against the reference's lexical choice."
+ },
+ {
+  "key": "matplotlib|2|111|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 111,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference exactly, including the future/potential verb form എങ്ങനെയിരിക്കുമെന്ന് and terminal colon, whereas A shifts to the present എങ്ങനെയുണ്ടെന്ന്."
+ },
+ {
+  "key": "matplotlib|2|107|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 107,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's \"[English noun] ആയി എടുത്ത്\" pattern (argument ആയി എടുത്ത് vs input ആയി എടുത്ത്), whereas B replaces it with the fully Malayalam സ്വീകരിച്ച്, drifting from the keep-English-root-plus-suffix style."
+ },
+ {
+  "key": "matplotlib|2|108|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 108,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference exactly, including the bare ചില styles phrasing and the future-modal എങ്ങനെയിരിക്കുമെന്ന്, whereas A adds a suffixed styles-ൽ ചിലത് construction and shifts to present എങ്ങനെയുണ്ടെന്ന്."
+ },
+ {
+  "key": "matplotlib|2|115|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 115,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "Candidate A matches the reference exactly, including the perfect aspect സൂക്ഷിച്ചിരിക്കുന്നു and the -നുള്ള suffix, whereas B shifts to an English-rooted passive 'store ചെയ്യപ്പെടുന്നു'."
+ },
+ {
+  "key": "matplotlib|2|117|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 117,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly in the genitive suffix (-ന്റെ) and the compact deictic ഇങ്ങനെ, whereas A substitutes -നുള്ള and the wordier ഇനിപ്പറയുന്ന വിധത്തിൽ, breaking the reference's terse rhythm."
+ },
+ {
+  "key": "matplotlib|2|121|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 121,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|118|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 118,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "Candidate A matches the reference verbatim, including the possessive phrasing \"നിങ്ങളുടെ സ്വന്തം\", whereas B shifts to \"സ്വന്തമായി ഒരു\"."
+ },
+ {
+  "key": "matplotlib|2|114|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 114,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "Reference ends with the infinitive + ability verb (ചെയ്യാനും കഴിയും), which A mirrors (ചെയ്യാൻ ... സാധിക്കും), while B collapses it into the bare modal ചെയ്യാം."
+ },
+ {
+  "key": "matplotlib|2|116|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 116,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's compact single relative clause (\"set ചെയ്യാ… parameters ഉണ്ട്\") without the extra postpositional phrase \"വേണ്ടി\" that lengthens B's rhythm."
+ },
+ {
+  "key": "matplotlib|2|119|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 119,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's rhythm and terminal full stop while keeping the same suffixed-English pattern, whereas B omits the final period and adds an English 'store ചെയ്തിരിക്കുന്ന' verb where the reference keeps it simple."
+ },
+ {
+  "key": "matplotlib|3|126|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 126,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|127|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 127,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|120|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 120,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference verbatim, while A inserts the extra possessive നമ്മുടെ, slightly altering the phrase rhythm."
+ },
+ {
+  "key": "matplotlib|2|122|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 122,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's active voice with the setting as subject and the accusative plot-നെയും plus comma-free flow, whereas A shifts to a passive construction (setting-നാൽ affect ചെയ്യപ്പെടും) and inserts a comma absent in the reference."
+ },
+ {
+  "key": "matplotlib|3|124|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 124,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's clause order and subject placement exactly (നമ്മൾ already ... figures generate ചെയ്തിട്ടുണ്ട്), differing only in a lexical choice, whereas B shifts the subject pronoun after the object, altering the rhythm."
+ },
+ {
+  "key": "matplotlib|3|129|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 129,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A keeps \"simple\" in English with the ആയ suffix exactly as the reference does, while B translates it to ലളിതമായ, deviating from the keep-English lexical choice."
+ },
+ {
+  "key": "matplotlib|2|123|B:Bex",
+  "pair": "B:Bex",
+  "draw": 2,
+  "idx": 123,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "Both match the reference's clause order, comma, and colon, but A reproduces the reference's bare `default` style sheet apposition without B's added എന്ന connective, though B matches ഒരിക്കൽ കൂടി — A's tighter English-noun handling edges closer."
+ },
+ {
+  "key": "matplotlib|3|125|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 125,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly, including the final \"ഇതിൽ ഉള്ളത്:\" nominalized lead-in, whereas A truncates it to a bare \"ഇതിൽ:\"."
+ },
+ {
+  "key": "matplotlib|3|130|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 130,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference exactly, including the pronoun form മറ്റൊന്ന്, whereas B substitutes മറ്റേത്."
+ },
+ {
+  "key": "matplotlib|3|131|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 131,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B keeps \"recommend\" in English with the Malayalam ചെയ്യുന്നു suffix exactly as the reference does, while A translates it to നിർദ്ദേശിക്കുന്നു, violating the keep-English lexical policy."
+ },
+ {
+  "key": "matplotlib|3|132|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 132,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly, including the ഇവ തമ്മിലുള്ള phrasing and hortative നമുക്ക് നോക്കാം, whereas A adds an extra clause (എന്താണെന്ന്) that alters the rhythm."
+ },
+ {
+  "key": "matplotlib|3|128|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 128,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's cleft construction ending in എന്നതാണ്/എന്നതിലാണ് and the same \"plotting-നായി\" dative form, whereas B dissolves the cleft into a എന്തെന്നാൽ clause ending in a plain finite verb."
+ },
+ {
+  "key": "matplotlib|3|137|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 137,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's colloquial pronoun form നമ്മളെ (vs B's more formal നമ്മെ), with all other stylistic features identical."
+ },
+ {
+  "key": "matplotlib|3|134|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 134,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "The reference breaks the paragraph into two sentences with a terminal full stop, which A mirrors, while B runs everything into one comma-chained sentence."
+ },
+ {
+  "key": "matplotlib|3|140|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 140,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|141|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 141,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|142|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 142,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|133|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 133,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's phrasing \"കാണാൻ സാധ്യതയുള്ള ... എളുപ്പ\" and ends with the terminal colon, while A substitutes \"കാണാവുന്ന തരത്തിലുള്ള ... ലളിതമായ\" and drops the colon."
+ },
+ {
+  "key": "matplotlib|3|138|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 138,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's clause order (Object-oriented API ഉപയോഗിച്ച് first, then figure...code താഴെ കാണാം) without the intrusive comma split found in A, despite B's missing terminal colon."
+ },
+ {
+  "key": "matplotlib|3|136|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 136,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's keep-English habits—English root + ചെയ്യുന്നു for 'prefer' and keeping 'line' in Latin script—whereas A nativizes both as ഇഷ്ടപ്പെടുന്നു and വരി."
+ },
+ {
+  "key": "matplotlib|3|146|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 146,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|135|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 135,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's comma after the locative phrase, keeps 'pass' in Latin script, and attaches a Malayalam suffix to the English root (objects-ഉം, cf. object-ുകൾ), whereas A drops the comma and transliterates പാസ്."
+ },
+ {
+  "key": "matplotlib|3|139|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 139,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly, including the demonstrative അതിൽ, while A substitutes ഇതിൽ."
+ },
+ {
+  "key": "matplotlib|3|144|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 144,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly, including the temporal clause form പോകുമ്പോൾ, whereas A substitutes the correlative പോകുന്തോറും."
+ },
+ {
+  "key": "matplotlib|3|145|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 145,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly including the terminal colon, while A omits that punctuation."
+ },
+ {
+  "key": "matplotlib|3|147|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 147,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference exactly, while A inserts an extra comma after the conditional clause -ഉപയോഗിച്ചാൽ, a punctuation deviation from the reference."
+ },
+ {
+  "key": "matplotlib|3|152|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 152,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|148|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 148,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference exactly including the terminal colon, which B omits."
+ },
+ {
+  "key": "matplotlib|3|143|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 143,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's handling of English roots—bare \"objects\" with no case suffix and a qualitative adjective (മെച്ചപ്പെട്ട ≈ മികച്ച) before control—whereas A hyphen-suffixes \"objects-നെ\" and flattens to \"കൂടുതൽ control\"."
+ },
+ {
+  "key": "matplotlib|3|150|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 150,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's clause phrasing and rhythm ('ആവശ്യം വരുന്ന മുറയ്ക്ക് … കാലക്രമേണ … ഇവയെക്കുറിച്ച് … -ആം'), while A substitutes ആവശ്യമുള്ളപ്പോൾ and the blunter കണ്ടെത്താം."
+ },
+ {
+  "key": "matplotlib|3|153|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 153,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's terminal colon (and clause order), whereas A drops the colon and shifts the adverb; B's \"Random ആയി\" vs \"Randomly\" is a minor lexical difference against the decisive punctuation match."
+ },
+ {
+  "key": "matplotlib|3|155|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 155,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference exactly including the terminal colon, which B omits."
+ },
+ {
+  "key": "matplotlib|3|149|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 149,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's terminal colon and copular എളുപ്പമാണ്/എളുപ്പം ആണ് ending, whereas A drops both and ends in the bare emphatic 'എളുപ്പം തന്നെ'; B's untranslated 'also' is a lesser lexical deviation than A's missing clause-final copula and punctuation."
+ },
+ {
+  "key": "matplotlib|3|159|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 159,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|156|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 156,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly including the terminal colon, which A omits."
+ },
+ {
+  "key": "matplotlib|3|161|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 161,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|151|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 151,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "Reference is a plain declarative (-ുന്നു) with the terse \"അതിൽ ചിലത് മാത്രം\" frame, which A mirrors, whereas B inserts the hortative നമുക്ക്…-ആം construction plus the extra qualifier ചുരുക്കം, shifting register."
+ },
+ {
+  "key": "matplotlib|3|154|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 154,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "Both match the reference's future-necessity verb and English-term retention, but A mirrors the reference's plain \"ഒരു figure-ൽ\" whereas B's emphatic \"ഒരൊറ്റ\" adds a lexical flourish absent from the reference."
+ },
+ {
+  "key": "matplotlib|3|164|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 164,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|165|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 165,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|158|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 158,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's punctuation and keep-English pattern exactly (comma after \"നമ്മുടെ axes,\" and bare \"origin-ലൂടെ\"), whereas B drops the comma and glosses origin into Malayalam as ഉത്ഭവസ്ഥാനത്തിലൂടെ (origin)."
+ },
+ {
+  "key": "matplotlib|3|160|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 160,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A matches the reference exactly, including the terminal colon, while B omits the colon — the sole punctuation-style difference."
+ },
+ {
+  "key": "matplotlib|3|168|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 168,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|163|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 163,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's exact lexical-stylistic choices — the verb വരുത്തുന്നു and the connective കൂടാതെ after the comma — whereas A substitutes ചെയ്യുന്നു/ഒപ്പം."
+ },
+ {
+  "key": "matplotlib|3|167|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 167,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's keep-English handling of \"available\" and the terminal colon, while A translates it to ലഭ്യമായ and omits the colon."
+ },
+ {
+  "key": "matplotlib|3|166|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 166,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A is verbatim identical to the reference, while B inserts an extra copular \"ആയ\" suffixing the English adjective, a small stylistic deviation."
+ },
+ {
+  "key": "matplotlib|3|157|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 157,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's clause order with sentence-initial ഒരുപക്ഷേ and keeps 'set' in Latin script as the reference does, whereas A reorders the sentence and translates 'set' as കൂട്ടം."
+ },
+ {
+  "key": "matplotlib|3|162|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 162,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's \"internal ആയി\" Malayalam-suffixed form and comma-separated clause rhythm, whereas B keeps the bare English adverb \"internally\" and drops the internal comma."
+ },
+ {
+  "key": "matplotlib|3|170|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 170,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference exactly, including the future/modal form എങ്ങനെയിരിക്കുമെന്ന്, whereas A uses the present എങ്ങനെയുണ്ടെന്ന്."
+ },
+ {
+  "key": "matplotlib|3|171|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 171,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly in lexical choice (Malayalam വരയ്ക്കാം rather than English \"draw ചെയ്യാം\") and in the terminal colon, whereas A keeps 'draw' in English and omits the colon."
+ },
+ {
+  "key": "matplotlib|3|172|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 172,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly, including the locative suffix -ലെ and the terminal colon, whereas A uses -ൽ നിന്നും and omits the colon."
+ },
+ {
+  "key": "matplotlib|3|174|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 174,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference exactly including the terminal colon, while B omits the colon punctuation."
+ },
+ {
+  "key": "matplotlib|3|175|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 175,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference exactly, rendering \"experiment\" as the Malayalam പരീക്ഷിക്കാൻ, whereas A keeps \"experiment ചെയ്യാൻ\" in English and adds -ഉം, diverging from the reference's English-retention choices."
+ },
+ {
+  "key": "matplotlib|3|173|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 173,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": false,
+  "reason": "Each matches the reference on one stylistic axis and misses the other — A reproduces the exact future-modal verb form എങ്ങനെയിരിക്കുമെന്ന് but drops the terminal colon, while B keeps the colon but shifts to the present എങ്ങനെയുണ്ടെന്ന് — so they are equally close."
+ },
+ {
+  "key": "matplotlib|3|169|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 169,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the edition's keep-English policy by retaining the verb root as \"draw ചെയ്യുന്ന\" like the reference, whereas B nativizes it to \"വരയ്ക്കുന്ന\" — a stylistic deviation that outweighs its terminal colon advantage."
+ },
+ {
+  "key": "matplotlib|3|181|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 181,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|178|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 178,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A retains the dative agent നിങ്ങൾക്ക് before the ability-form verb, mirroring the reference's \"നിങ്ങൾക്ക് set ചെയ്യാൻ കഴിയുന്ന\" clause structure, whereas B drops the agent into an impersonal \"വേണ്ടി\" phrasing."
+ },
+ {
+  "key": "matplotlib|3|183|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 183,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|179|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 179,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly, including the hortative -ആം form (set ചെയ്യാം) and the connective ഇങ്ങനെ plus genitive -ന്റെ, whereas A uses an infinitive purpose form (ചെയ്യാൻ) and dative -ന്."
+ },
+ {
+  "key": "matplotlib|3|177|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 177,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "Both substitute the English root \"store ചെയ്യപ്പെടുന്നു\" for the reference's സൂക്ഷിച്ചിരിക്കുന്നു, but B reproduces the reference's terminal colon, while A ends with a bare stop-less clause — the decisive punctuation match outweighs A's slightly closer -നുള്ള suffix."
+ },
+ {
+  "key": "matplotlib|3|176|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 176,
+  "winner": "B",
+  "position": "B",
+  "swap": true,
+  "reason": "B's adnominal possessive \"നിങ്ങളുടെ സ്വന്തം style sheets\" mirrors the reference's \"നിങ്ങളുടേതായ style sheets\" modifier structure, whereas A shifts to a dative subject plus adverbial (\"നിങ്ങൾക്ക് സ്വന്തമായി\"); otherwise the two are identical in rhythm and English-retention."
+ },
+ {
+  "key": "matplotlib|3|182|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 182,
+  "winner": "Bex",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly including the terminal colon, while A omits the colon and adds നമ്മുടെ."
+ },
+ {
+  "key": "matplotlib|3|185|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 185,
+  "winner": "Bex",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference almost verbatim including the terminal colon and the phrase \"ഒരിക്കൽ കൂടി\", whereas B drops the colon and substitutes \"വീണ്ടും\"."
+ },
+ {
+  "key": "matplotlib|3|180|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 180,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's possessive phrasing \"നിങ്ങളുടെ സ്വന്തം\" (B substitutes \"സ്വന്തമായി ഒരു\"), while both equally diverge in using the imperative ചെയ്യുക instead of the participial ചെയ്ത്."
+ },
+ {
+  "key": "matplotlib|1|0|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 0,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference exactly in clause order and inline link placement, while B displaces the markdown link to the end, disrupting the sentence rhythm and terminal punctuation."
+ },
+ {
+  "key": "matplotlib|3|184|B:Bex",
+  "pair": "B:Bex",
+  "draw": 3,
+  "idx": 184,
+  "winner": "B",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's accusative-marked object with the emphatic suffix (plot-നെയും vs reference plots-നെയും), whereas B drops the -നെ case marking (plot-ഉം), diverging from the reference's grammatical pattern for English-root suffixation."
+ },
+ {
+  "key": "matplotlib|1|3|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 3,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A matches the reference exactly, including the verbal construction 'control ചെയ്യാൻ കഴിയുന്നു', whereas B keeps a nominal English phrase 'fine-grained control' with no Malayalam verb."
+ },
+ {
+  "key": "matplotlib|1|2|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 2,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A matches the reference exactly in verb form (ലഭിക്കുന്നു), dash punctuation, and suffixed English root (formats-ലും), while B is a verbless parenthetical fragment."
+ },
+ {
+  "key": "matplotlib|1|1|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 1,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's എന്നത് topic marker, the perfect participle ചെയ്തിരിക്കുന്ന, and the Malayalam മികച്ച, whereas A uses the bare participle ചെയ്ത and leaves 'outstanding' in English."
+ },
+ {
+  "key": "matplotlib|1|4|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 4,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's clause order and cleft construction with Malayalam \"നൽകുന്നു\" and the -നായി suffix on plotting, while B adds an extra explanatory clause and switches to the English root \"provide ചെയ്യുന്നു.\""
+ },
+ {
+  "key": "matplotlib|1|6|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 6,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's comma after മറ്റൊന്ന് and identical phrasing structure, while B drops the comma and alters the pronoun form to മറ്റേത്."
+ },
+ {
+  "key": "matplotlib|1|7|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 7,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's keep-English policy by retaining \"recommend\" in Latin script, whereas B renders it as ശുപാർശ."
+ },
+ {
+  "key": "matplotlib|1|8|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 8,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B reproduces the reference's relative-participle construction \"ഇവ തമ്മിലുള്ള വ്യത്യാസം\" (merely adding രണ്ടും), whereas A flattens it to a demonstrative \"ഈ വ്യത്യാസം\"; punctuation and the hortative നമുക്ക് നോക്കാം are identical in both."
+ },
+ {
+  "key": "matplotlib|1|10|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 10,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's paraphrase of \"un-Pythonic\" as \"Python-ന്റെ സാധാരണ ശൈലിയോട് പൊരുത്തപ്പെടാത്ത...\" with parallel -ഉം coordination, whereas A leaves it as the bare English term."
+ },
+ {
+  "key": "matplotlib|1|5|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 5,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's \"simple ആയ\" construction and the perfect-aspect relative clause \"…ഉപയോഗിക്കാനാകുന്ന തരത്തിലാണ് എഴുതിയിരിക്കുന്ന(ത്)\" with the same Malayalam rendering of 'MATLAB refugees', whereas B uses the bare past participle എഴുതിയ and leaves 'refugees' in English."
+ },
+ {
+  "key": "matplotlib|1|9|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 9,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A reproduces the reference's modal periphrasis \"കാണാൻ സാധ്യതയുള്ള\" verbatim, whereas B compresses it to the participle \"കാണാവുന്ന\"; the capitalization difference is trivial by comparison."
+ },
+ {
+  "key": "matplotlib|1|12|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 12,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's cleft construction \"...style ആണ് ... ചെയ്യുന്നത്\" and its habit of keeping English roots (style, explicit, prefer-type verb + ചെയ്യുന്നത്), whereas A translates them (ശൈലി, ഇഷ്ടപ്പെടുന്നു) and uses a plain predicate."
+ },
+ {
+  "key": "matplotlib|1|15|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 15,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B reproduces the reference's comma after `എന്ന call` (its distinctive clause-boundary punctuation), while A omits it; both equally miss the sentence split."
+ },
+ {
+  "key": "matplotlib|1|18|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 18,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|16|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 16,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's modal -ആം verb form (കരുതാം) that A drops for a bare phrase, and that mood ending outweighs B's minor spacing around the em-dash."
+ },
+ {
+  "key": "matplotlib|1|20|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 20,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|13|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 13,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's comma placement (after \"alternative ആയ,\") and identical clause structure, while B shifts the comma to after \"നമ്മെ,\" breaking the reference's punctuation rhythm."
+ },
+ {
+  "key": "matplotlib|1|14|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 14,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's keep-English habit of attaching Malayalam grammar to an English root (\"corresponding ആയ\" like \"create ചെയ്യുന്ന\") and echoes its \"മുൻപത്തെ\" adjectival form, whereas A substitutes the Malayalam \"അനുയോജ്യമായ\" and the relative clause \"മുൻപ് കണ്ട\"."
+ },
+ {
+  "key": "matplotlib|1|11|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 11,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B preserves the English root in \"pass ചെയ്യപ്പെടുക\" exactly as the reference does, whereas A substitutes the Malayalam കൈമാറ്റം ചെയ്യപ്പെടുക, breaking the edition's keep-English-verb-plus-ചെയ്യുക pattern that dominates this sentence's style."
+ },
+ {
+  "key": "matplotlib|1|17|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 17,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's hortative \"…ആയി കരുതാം\" and the \"plotting ചെയ്യാനുള്ള\" phrasing, while B switches to a bare imperative (ചിന്തിക്കുക) and a hyphenated English-root suffix (plotting-ന്)."
+ },
+ {
+  "key": "matplotlib|1|19|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 19,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's clause structure and word choices almost exactly (ഉപയോഗിക്കുന്നത് ... മികച്ച/കുറച്ചുകൂടി control നൽകുന്നു), whereas B shifts to a nominalized objects-ന്റെ ... ഉപയോഗം phrasing and keeps extra English words (explicit, better) that the reference renders in Malayalam."
+ },
+ {
+  "key": "matplotlib|1|21|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 21,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's keep-English \"red ആക്കി\", the comma at the clause boundary, and the \"അതോടൊപ്പം\" connective, whereas A translates red as ചുവപ്പ് and drops the comma/connective."
+ },
+ {
+  "key": "matplotlib|1|23|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 23,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference exactly, while B keeps \"location\" in English where the reference renders it as സ്ഥാനം."
+ },
+ {
+  "key": "matplotlib|1|24|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 24,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference exactly, while B keeps \"properly\" and \"trivial\" in English where the reference renders them in Malayalam (ശരിയായി, വളരെ എളുപ്പമാണ്)."
+ },
+ {
+  "key": "matplotlib|1|25|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 25,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's comma after the first nominalized clause and the \"അതുപോലെ\" adverbial phrasing, while B drops the comma and restructures the predicate."
+ },
+ {
+  "key": "matplotlib|1|22|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 22,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's perfect aspect ഉപയോഗിച്ചിട്ടുണ്ട് without an explicit നമ്മൾ and keeps the English root with the -നെ suffix (line-നെ), whereas A uses bare past ഉപയോഗിച്ചു, adds നമ്മൾ, and leaves 'Line' unsuffixed."
+ },
+ {
+  "key": "matplotlib|1|31|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 31,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|28|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 28,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's choice to render the ordinary word \"multiple\" in Malayalam as ഒന്നിലധികം, while B leaves it in English, diverging from the keep-only-technical-terms pattern."
+ },
+ {
+  "key": "matplotlib|1|29|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 29,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference almost verbatim in clause order, the 'mean-നെ label ചെയ്യുന്ന' verb form and terminal colon, whereas B reorders the adverb and swaps in 'mean-ഉം സഹിതം ... ചേർക്കുന്ന'."
+ },
+ {
+  "key": "matplotlib|1|26|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 26,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's choices of ധാരാളം, അവയെക്കുറിച്ച് and the Malayalam rendering മനസ്സിലാക്കാം (rather than leaving 'discover' in English as A does), mirroring the reference's hortative closing rhythm."
+ },
+ {
+  "key": "matplotlib|1|30|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 30,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference almost verbatim, keeping only 'figure' and 'subplots' in English with the same 'ഒന്നിലധികം ... ആവശ്യമായി വരും' construction, whereas B additionally leaves 'multiple' in English and swaps the verb phrase."
+ },
+ {
+  "key": "matplotlib|1|35|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 35,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's clause order, the comma after `subplots` function, and the ഉപയോഗിച്ച് … build ചെയ്യാം construction, whereas A reorders the clause and drops the comma."
+ },
+ {
+  "key": "matplotlib|1|37|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 37,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|32|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 32,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's bare adverbial \"നന്നായി ചെയ്യുന്നു\" with the unsuffixed English term, whereas A attaches a case suffix to the English root (plots-ൽ) and swaps in the literal \"നല്ല ജോലി\", a bigger stylistic departure than B's stray comma."
+ },
+ {
+  "key": "matplotlib|1|36|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 36,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference verbatim in word choice (ശ്രദ്ധയോടെ, നടക്കുന്നതെന്ന്, മനസ്സിലാക്കാൻ സാധിക്കുന്നുണ്ടോ) whereas A keeps 'follow' in English and uses different lexical/aspectual choices."
+ },
+ {
+  "key": "matplotlib|1|40|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 40,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|27|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 27,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's plain impersonal present indicative (-ുന്നു) and the adverb ഇവിടെ, whereas B shifts to the hortative നമുക്ക്…-ആം mood the reference avoids here."
+ },
+ {
+  "key": "matplotlib|1|33|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 33,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's Malayalam പതിവായി and the tentative modal -ഏക്കാം (കഴിഞ്ഞേക്കാം ≈ ഉണ്ടായേക്കാം), while A shifts to an English-rooted 'regular ആയി' and a plain -ആം permissive form."
+ },
+ {
+  "key": "matplotlib|1|39|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 39,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "Both match the reference's rhythm and verb form, but A ends with the same connective \"കൂടാതെ\" as the reference whereas B substitutes \"ഒപ്പം\", making A stylistically closer."
+ },
+ {
+  "key": "matplotlib|1|34|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 34,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's comma after axes, the identical \"ഉണ്ടായിരിക്കണമെന്നും\" form, and keeps 'prefer' in Malayalam, whereas B drops the comma and imports an English root (\"preference ചെയ്യുന്നു\") not in the reference's keep-English set."
+ },
+ {
+  "key": "matplotlib|1|38|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 38,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "Both match the reference's clause order and English-root suffixing, but A inserts an extra \"ആയ\" after standard whereas B reproduces the reference's bare \"standard `plt.subplots` function-നെ\" phrasing exactly (comma placement aside)."
+ },
+ {
+  "key": "matplotlib|1|41|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 41,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference verbatim, including the \"വളരെ useful ആയ\" adjectival construction and the copula-before-predicate clause order, whereas A reorders with sentence-final ആണ് and drops ആയ."
+ },
+ {
+  "key": "matplotlib|1|42|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 42,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference verbatim, while A inserts the extra Malayalam adjectivizer 'ആയ' onto the English root 'uniform', a small deviation in how English words take suffixes."
+ },
+ {
+  "key": "matplotlib|1|44|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 44,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly, including the comma after ഇനി and the ഉപയോഗിച്ച് … ചെയ്യാം clause order, whereas A reorders the clauses and shifts the -ആം to ഉപയോഗിക്കാം."
+ },
+ {
+  "key": "matplotlib|1|46|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 46,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "Candidate B matches the reference exactly, including the fused quotative form എങ്ങനെയിരിക്കുമെന്ന്, whereas A splits it into എങ്ങനെയിരിക്കും എന്ന്."
+ },
+ {
+  "key": "matplotlib|1|50|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 50,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|43|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 43,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's conditional -ആൽ form with the comma at the clause boundary and the verb കാണാം, while A uses a bare converb (ചെയ്ത്) with no comma and കണ്ടെത്താം."
+ },
+ {
+  "key": "matplotlib|1|45|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 45,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's Malayalam instrumental phrase \"ആ/അതേ style ഉപയോഗിച്ച്\", whereas B collapses it into a suffixed English root (\"style-ൽ\"), a small but decisive divergence in how ordinary words are kept Malayalam vs. English."
+ },
+ {
+  "key": "matplotlib|1|47|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 47,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "Reference omits the explicit നമുക്ക് pronoun, matching B's bare hortative -ആം, whereas A inserts നമുക്ക്; both otherwise share the same English-root handling and terminal colon."
+ },
+ {
+  "key": "matplotlib|1|54|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 54,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|49|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 49,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference exactly, including the fused clitic form എങ്ങനെയിരിക്കുമെന്ന്, whereas A splits it into എങ്ങനെയിരിക്കും എന്ന്."
+ },
+ {
+  "key": "matplotlib|1|48|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 48,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's keep-English choice of \"remove ചെയ്യാൻ\" (A translates it as \"നീക്കം ചെയ്യാൻ\"), while both share the hortative -ആം and terminal colon, so the English-retention feature is decisive."
+ },
+ {
+  "key": "matplotlib|1|52|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 52,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": true,
+  "reason": "The two candidates are identical in register, punctuation, verb form (create ചെയ്യാം) and English-retention; they differ only in the orthographic spelling of താൽപ്പര്യം/താല്പര്യം, which is not a stylistic distinction."
+ },
+ {
+  "key": "matplotlib|1|51|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 51,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's lexical choices exactly (List-ലുള്ള, പരീക്ഷിക്കാൻ rather than keeping 'experiment' in English), differing only in trivial word order, while B anglicizes an ordinary verb and shortens the locative suffix."
+ },
+ {
+  "key": "matplotlib|1|59|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 59,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|56|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 56,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's non-finite converb form 'create ചെയ്ത്,' while B switches to the bare imperative 'create ചെയ്യുക,' a verb-mood divergence that outweighs A's minor 'നിങ്ങളുടേതായ ഒരു' wording difference."
+ },
+ {
+  "key": "matplotlib|1|55|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 55,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's hortative -ചെയ്യാം with ഇങ്ങനെ and the genitive -ന്റെ, whereas A uses the purposive infinitive ചെയ്യാൻ and dative -ന്, breaking the classroom 'let us' mood."
+ },
+ {
+  "key": "matplotlib|2|62|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 62,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|53|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 53,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's word order and modifier placement (\"dictionary പോലെയുള്ള `plt.rcParams` എന്ന variable-ൽ\") and the -നുള്ള suffix exactly, whereas B reorders the appositive and switches to -ന്റെ/പോലുള്ള; both use the same store ചെയ്യപ്പെടുന്നു verb."
+ },
+ {
+  "key": "matplotlib|1|58|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 58,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A matches the reference exactly, including the comma at the clause boundary and the -ചെയ്തിരിക്കുന്ന participle, whereas B drops the comma and uses the bare English 'overlaid' with a possessive."
+ },
+ {
+  "key": "matplotlib|1|57|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 57,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's clause order (dictionary പോലെയുള്ള before the variable) and ends in the same conjunctive participle 'ചെയ്ത്', whereas A reorders the modifier and switches to the imperative 'ചെയ്യുക'."
+ },
+ {
+  "key": "matplotlib|2|64|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 64,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly in wording, dash punctuation, and the finite verb ലഭിക്കുന്നു, whereas A is a clipped verbless fragment keeping 'usual' in English with parenthetical placement."
+ },
+ {
+  "key": "matplotlib|1|61|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 61,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference almost verbatim, including the -നെ case suffix on the English root, the \"വീണ്ടും … ആക്കി മാറ്റാൻ\" phrasing and the comma at the purpose-clause boundary, all of which A omits."
+ },
+ {
+  "key": "matplotlib|2|65|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 65,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "Candidate B matches the reference exactly, including the verbal construction 'control ചെയ്യാൻ കഴിയുന്നു' and the Malayalam rendering of 'fine-grained aspects', whereas A keeps a nominal English-heavy phrase."
+ },
+ {
+  "key": "matplotlib|2|69|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 69,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|1|60|A:B",
+  "pair": "A:B",
+  "draw": 1,
+  "idx": 60,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A keeps the English verb root with Malayalam auxiliary (\"affect ചെയ്യും\") exactly as the reference does, whereas B nativizes it to ബാധിക്കും, a bigger stylistic break than A's minor -ൽ/-ലെ case difference."
+ },
+ {
+  "key": "matplotlib|2|63|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 63,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's \"എന്നത്,\" appositive comma, the perfect participle ചെയ്തിരിക്കുന്ന and the Malayalam-rendered മികച്ച, whereas A uses the bare participle ചെയ്ത and leaves 'outstanding' in English."
+ },
+ {
+  "key": "matplotlib|2|68|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 68,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A keeps the reference's comma after the subject pronoun at the clause boundary, while B drops it; all else is identical."
+ },
+ {
+  "key": "matplotlib|2|67|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 67,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's comma after ഒന്ന്, the 'simple ആയ' pattern, and the -തിരിക്കുന്ന perfect form with Malayalam paraphrase of 'MATLAB refugees', whereas A uses a single unbroken relative clause with bare past participle എഴുതിയ and keeps 'refugees/ready home' in English."
+ },
+ {
+  "key": "matplotlib|2|66|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 66,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's single uninterrupted clause ending in a cleft copula with no internal comma, while B inserts an എന്തെന്നാൽ, comma-break that the reference avoids."
+ },
+ {
+  "key": "matplotlib|2|71|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 71,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "The two are otherwise identical, and A matches the reference's capitalized sentence-initial English root \"Introductory\" whereas B lowercases it."
+ },
+ {
+  "key": "matplotlib|2|70|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 70,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's simple noun-phrase + നമുക്ക് നോക്കാം rhythm exactly, while A inserts an extra embedded clause (എന്താണെന്ന്) that lengthens the sentence beyond the reference's cadence."
+ },
+ {
+  "key": "matplotlib|2|72|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 72,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's hyphenated English suffixes (simple-ഉം) and, crucially, renders 'limited'/'un-Pythonic' as the same Malayalam paraphrases (പരിമിതികൾ, Python-ന്റെ സാധാരണ ശൈലിയോട് പൊരുത്തപ്പെടാത്ത) in a split, comma-segmented structure, whereas A keeps those words in English in one tight clause."
+ },
+ {
+  "key": "matplotlib|2|76|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 76,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's clause order (Object-oriented API ഉപയോഗിച്ച് → മുൻപത്തെ figure → code താഴെ കാണാം:) with no internal comma, whereas B reorders the clauses and inserts a comma."
+ },
+ {
+  "key": "matplotlib|2|74|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 74,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's keep-English lexical choices and English-root verb formation (\"programming style\", \"prefer/preference ചെയ്യുന്നത്\"), whereas A nativizes them as ശൈലി and ഇഷ്ടപ്പെടുന്നത്."
+ },
+ {
+  "key": "matplotlib|2|77|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 77,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B reproduces the reference's comma after `എന്ന call` at the clause boundary (A omits it), while both share the same single-sentence break before അതിൽ:."
+ },
+ {
+  "key": "matplotlib|2|75|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 75,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A preserves the reference's colloquial classroom pronoun നമ്മളെ (B shifts to the more literary നമ്മെ), while its verb swap is a lexical rather than stylistic difference."
+ },
+ {
+  "key": "matplotlib|2|73|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 73,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's clause order and the exact negative participle \"programmer-നെ അറിയിക്കാതെ\" preceding the create/pass conjunctive chain, while B reorders clauses and pads with extra Malayalam phrasing (അറിവില്ലാതെതന്നെ, പലയിടത്തേക്കും)."
+ },
+ {
+  "key": "matplotlib|2|80|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 80,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference exactly, including the bare apposition of `plot()` with function, whereas A inserts the explicitizing \"എന്ന\" connective absent from the reference."
+ },
+ {
+  "key": "matplotlib|2|78|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 78,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B reproduces the reference's modal -ആം verb ending (\"പോലെ കരുതാം\") while A truncates to a bare phrase; B's only deviations (em dash, എന്നത്) are minor next to that mood match."
+ },
+ {
+  "key": "matplotlib|2|82|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 82,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A matches the reference verbatim, including the temporal clause form പോകുമ്പോൾ, whereas B substitutes the correlative പോകുന്തോറും, a slight rhythm/verb-form departure."
+ },
+ {
+  "key": "matplotlib|2|83|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 83,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A matches the reference exactly, including the clause-boundary comma and the \"അതോടൊപ്പം\" connective, which B omits."
+ },
+ {
+  "key": "matplotlib|2|79|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 79,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A preserves the reference's hortative/permissive കരുതാം mood (B switches to the bare imperative കരുതുക), which outweighs B's closer em-dash typography."
+ },
+ {
+  "key": "matplotlib|2|81|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 81,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's clause structure and lexical choices almost exactly (…ആവശ്യമ… എങ്കിലും, objects കൂടുതൽ വ്യക്തമായി ഉപയോഗിക്കുന്നത് … control നൽകുന്നു), whereas B shifts to a nominalized 'ഉപയോഗം' phrase with suffixed 'objects-ന്റെ' and keeps extra ordinary words (explicit, better) in English."
+ },
+ {
+  "key": "matplotlib|2|89|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 89,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|85|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 85,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's conditional -ഉപയോഗിച്ചാൽ and the Malayalam word സ്ഥാനം, whereas A uses the bare participle ഉപയോഗിച്ച് and keeps 'location' in English."
+ },
+ {
+  "key": "matplotlib|2|90|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 90,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's comma after \"axes-ൽ\" and renders \"multiple\" in Malayalam as ഒന്നിലധികം, whereas B drops the comma and keeps \"multiple\" in English."
+ },
+ {
+  "key": "matplotlib|2|88|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 88,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's word choices and suffixing (ധാരാളം functions-ഉം features-ഉം, മനസ്സിലാക്കാം) with the same hortative -ആം ending, while B leaves an entire English phrase untranslated, departing from the reference's selective keep-English style."
+ },
+ {
+  "key": "matplotlib|2|93|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 93,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|86|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 86,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's choice to render \"trivial\" as Malayalam വളരെ എളുപ്പമാണ്, whereas B leaves \"trivial\" in English, deviating further from the reference's keep-English boundary."
+ },
+ {
+  "key": "matplotlib|2|84|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 84,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B reproduces the reference's exact triple-hyphen dash ('---') with no surrounding spaces, whereas A substitutes a spaced em dash, and the remaining differences (pronoun വs repeated 'line') are lexical rather than stylistic."
+ },
+ {
+  "key": "matplotlib|2|87|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 87,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's comma at the clause boundary after the first ചെയ്യുന്നതും and its plain എളുപ്പമാണ്/എളുപ്പം ആണ് predicate, whereas A drops the comma and adds an emphatic തന്നെയാണ്."
+ },
+ {
+  "key": "matplotlib|2|91|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 91,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B reproduces the reference's comma at the clause boundary, the \"mean-നെ label ചെയ്യുന്ന\" construction and hyphenated English-root suffixation, while A drops the comma and rewords with \"mean ഉള്ള ഒരു label ചേർക്കുന്ന\"."
+ },
+ {
+  "key": "matplotlib|2|92|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 92,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "The reference translates \"multiple\" into Malayalam as ഒന്നിലധികം while keeping only figure/subplots in English — B matches that keep-English boundary exactly, whereas A leaves \"multiple\" in Latin script."
+ },
+ {
+  "key": "matplotlib|2|99|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 99,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|100|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 100,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|95|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 95,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A preserves the reference's intact English phrase \"set of customizations\" plus the simple -യേക്കാം potential ending, whereas B splits the English term with a Malayalam genitive suffix (customizations-ന്റെ set) and adds a heavier കണ്ടെത്താൻ കഴിഞ്ഞേക്കാം periphrasis."
+ },
+ {
+  "key": "matplotlib|2|102|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 102,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|96|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 96,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's \"നമ്മുടെ axes … -ണമെന്നും … ഉണ്ടാകണമെന്നും\" desiderative complement pairing, whereas A recasts them as nominalized -ന്നതും/ഉള്ളതും with an English-rooted 'preference ചെയ്യുന്നു'."
+ },
+ {
+  "key": "matplotlib|2|98|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 98,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly, including the Malayalamized 'മനസ്സിലാക്കാൻ സാധിക്കുന്നുണ്ടോ' and the fused 'നടക്കുന്നതെന്ന്', whereas A keeps 'follow ചെയ്യാൻ' in English and splits the complementizer."
+ },
+ {
+  "key": "matplotlib|2|97|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 97,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's clause order, comma placement after `function`, and Malayalam rendering of \"changes\" (മാറ്റങ്ങൾ), whereas B reorders clauses, drops the comma, and keeps \"changes\" in English."
+ },
+ {
+  "key": "matplotlib|2|103|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 103,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's cleft rhythm with \"ആണ്\" immediately before the link, whereas B shifts the copula to sentence-final position, breaking the reference's clause order."
+ },
+ {
+  "key": "matplotlib|2|94|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 94,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's plain \"നന്നായി … ചെയ്യുന്നു\" predicate with no extra English word, whereas A inserts the English noun \"job\" and the hyphenated suffix \"plots-ന്റെ കാര്യത്തിൽ\", departing from the reference's leaner keep-English pattern (B's single comma is a minor deviation by comparison)."
+ },
+ {
+  "key": "matplotlib|2|101|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 101,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B mirrors the reference's clause order with `ax`-ന് fronted before the modifier and customizations (ax-ന് ആവശ്യമുള്ള customizations ചെയ്യുന്നു), while A reorders the phrase placing customizations first."
+ },
+ {
+  "key": "matplotlib|2|109|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 109,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|105|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 105,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's conditional ചെയ്താൽ with the comma at the clause boundary and the verb കാണാം, while A uses a bare converb ചെയ്ത് without the comma and കണ്ടെത്താം."
+ },
+ {
+  "key": "matplotlib|2|104|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 104,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference exactly, while B inserts a hyphen attaching the Malayalam suffix to the English root, a stylistic deviation from the reference's spaced form."
+ },
+ {
+  "key": "matplotlib|2|112|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 112,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|106|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 106,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A matches the reference exactly in clause order, comma placement, and the ഉപയോഗിച്ച് … ചെയ്യാം construction, whereas B reorders the clauses and shifts the hortative onto ഉപയോഗിക്കാം."
+ },
+ {
+  "key": "matplotlib|2|114|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 114,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|108|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 108,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly, including the fused future form എങ്ങനെയിരിക്കുമെന്ന്, whereas A uses the flatter present periphrasis എങ്ങനെ കാണപ്പെടുന്നു എന്ന്."
+ },
+ {
+  "key": "matplotlib|2|113|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 113,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference exactly, including rendering 'experiment' as the Malayalam പരീക്ഷിക്കാൻ, whereas B keeps 'experiment' in English with a ചെയ്യാൻ light verb."
+ },
+ {
+  "key": "matplotlib|2|111|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 111,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly, including the future-modal contracted form എങ്ങനെയിരിക്കുമെന്ന്, whereas A uses the present എങ്ങനെയിരിക്കുന്നു എന്ന് with an uncontracted complementizer."
+ },
+ {
+  "key": "matplotlib|2|107|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 107,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's comma at the clause boundary after the participial phrase (എടുത്ത്/സ്വീകരിച്ച്,) and the same ഉപയോഗിച്ച് construction, whereas B drops the comma and compresses to style-ൽ."
+ },
+ {
+  "key": "matplotlib|2|110|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 110,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A preserves the reference's keep-English treatment of the ordinary verb (\"remove ചെയ്യാൻ\"), whereas B nativizes it as \"നീക്കം ചെയ്യാൻ\"; A's minor case-suffix difference (-ൽ നിന്നും vs -ലെ) is less stylistically decisive than the English-root retention."
+ },
+ {
+  "key": "matplotlib|2|115|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 115,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly—same comma after parameters, the Malayalam rendering \"dictionary പോലെയുള്ള\" and native verb സൂക്ഷിച്ചിരിക്കുന്നു—whereas A keeps \"dictionary-like\" in English, drops the clause comma, and uses the English-rooted \"store ചെയ്യപ്പെട്ടിരിക്കുന്നു\"."
+ },
+ {
+  "key": "matplotlib|2|121|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 121,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|2|118|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 118,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A matches the reference verbatim, including the possessive phrasing \"നിങ്ങളുടെ സ്വന്തം\", whereas B shifts to \"സ്വന്തമായി ഒരു\"."
+ },
+ {
+  "key": "matplotlib|2|116|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 116,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": true,
+  "reason": "The two candidates are structurally identical, differing only in the case marker (-ന് vs -നായി), which is not a stylistic difference in register, punctuation, verb form, or English-retention pattern."
+ },
+ {
+  "key": "matplotlib|2|119|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 119,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's clause order (\"dictionary പോലെയുള്ള ... എന്ന variable-ൽ\"), Malayalam relativizer rather than English \"dictionary-like\", and the terminal full stop, whereas B reorders, keeps the English compound adjective, and omits the period."
+ },
+ {
+  "key": "matplotlib|2|120|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 120,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's comma after ഉപയോഗിച്ച് and the perfect participle ചെയ്തിരിക്കുന്ന, whereas A drops the comma and uses the bare past participle ചെയ്ത."
+ },
+ {
+  "key": "matplotlib|2|123|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 123,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's exact clause order, the case-suffixed \"style-നെ\", the \"വീണ്ടും default ആക്കി മാറ്റാൻ\" phrasing and the comma at the purpose-clause boundary, all of which A lacks."
+ },
+ {
+  "key": "matplotlib|3|124|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 124,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference exactly, including the placement of നമ്മൾ before already, whereas A shifts the subject pronoun after figures, altering clause rhythm."
+ },
+ {
+  "key": "matplotlib|2|117|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 117,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's manner adverbial slot before the verb (ഇനിപ്പറയുന്ന വിധത്തിൽ ≈ ഇങ്ങനെ) with the same hortative set ചെയ്യാം + colon rhythm, whereas B drops that element and flattens the cadence."
+ },
+ {
+  "key": "matplotlib|2|122|A:B",
+  "pair": "A:B",
+  "draw": 2,
+  "idx": 122,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A preserves the reference's keep-English verb construction \"affect ചെയ്യും\" whereas B nativizes it to \"ബാധിക്കും\", a lexical-script divergence that outweighs B's closer match on the minor \"മാറ്റിയതിനുശേഷം\" participle form."
+ },
+ {
+  "key": "matplotlib|3|125|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 125,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's clause order, the 'എന്നത്,' opener, the perfect participle 'ചെയ്തിരിക്കുന്ന', the Malayalam 'മികച്ച' for 'outstanding', and the sentence split with full stop, whereas A keeps English 'outstanding', uses the bare past participle and strings everything into one comma-chained sentence."
+ },
+ {
+  "key": "matplotlib|3|131|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 131,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|132|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 132,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|126|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 126,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly in clause order, the Malayalam rendering of \"usual\" as സാധാരണ ഉപയോഗിക്കുന്ന, the finite ലഭിക്കുന്നു predicate and the dash-introduced list, whereas A compresses to a noun phrase and keeps \"usual\" in English."
+ },
+ {
+  "key": "matplotlib|3|127|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 127,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A matches the reference exactly, including the verbal construction 'control ചെയ്യാൻ കഴിയുന്നു', whereas B keeps a nominal phrase with untranslated 'fine-grained'."
+ },
+ {
+  "key": "matplotlib|3|128|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 128,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's cleft construction with \"plotting-നായി രണ്ട് വ്യത്യസ്ത interfaces ... എന്നതാണ്/എന്നതിലാണ്\" and its clause-boundary comma, whereas B restructures into a possessive \"ഉണ്ട്\" clause with a causative predicate."
+ },
+ {
+  "key": "matplotlib|3|130|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 130,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's comma after the topic pronoun and uses the same intensifier കൂടുതൽ, while A drops the comma and substitutes കുറച്ചുകൂടി."
+ },
+ {
+  "key": "matplotlib|3|133|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 133,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's \"കാണാൻ സാധ്യതയുള്ള\" construction and terminal colon, whereas B compresses to \"കാണാവുന്ന\", translates 'easy' into Malayalam, and omits the colon."
+ },
+ {
+  "key": "matplotlib|3|129|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 129,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's second clause almost exactly, including the perfect form എഴുതിയിരിക്കുന്നത് and the phrasing \"MATLAB ഉപയോഗിച്ചിരുന്നവർക്ക് … തരത്തിലാണ്\", whereas A uses the bare past എഴുതിയത് and different phrasing."
+ },
+ {
+  "key": "matplotlib|3|134|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 134,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A keeps \"simple\" in English with the -ഉം suffix and renders \"un-Pythonic\" with the reference's exact paraphrase (Python-ന്റെ സാധാരണ ശൈലിയോട് പൊരുത്തപ്പെടാത്ത), whereas B translates \"simple\" as ലളിതവും and leaves un-Pythonic untranslated, diverging from the reference's keep-English/paraphrase pattern."
+ },
+ {
+  "key": "matplotlib|3|137|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 137,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's suffix attachment on the English root (API-യിലേക്ക്) exactly, while B uses API-ലേക്ക്; otherwise the two are identical."
+ },
+ {
+  "key": "matplotlib|3|136|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 136,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's cleft construction (…ആണ് … ചെയ്യുന്നത്) and keeps the English terms style/line with Malayalam auxiliary verbs, whereas B nativizes ശൈലി/വരി/ഇഷ്ടപ്പെടുന്നു in a flat declarative."
+ },
+ {
+  "key": "matplotlib|3|139|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 139,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B reproduces the reference's punctuation rhythm exactly — comma after എന്ന call, then a full stop before the colon-introduced clause — whereas A drops that comma and uses a comma splice instead of the sentence break."
+ },
+ {
+  "key": "matplotlib|3|135|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 135,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's clause-boundary comma and the suffixed dative construction \"programmer-നെ അറിയിക്കാതെ തന്നെ\", whereas B drops the comma and uses the unsuffixed \"programmer അറിയാതെ\"; A's lone lapse (transliterating പാസ്) outweighs less than those matches."
+ },
+ {
+  "key": "matplotlib|3|142|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 142,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference verbatim, including the omission of the appositive എന്ന that A inserts before function."
+ },
+ {
+  "key": "matplotlib|3|138|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 138,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's clause order — leading with the English term \"Object-oriented API ഉപയോഗിച്ച്\" before the figure/code phrase and no internal comma — whereas A reorders the clauses and inserts a comma the reference lacks; B's missing terminal colon is the lesser deviation."
+ },
+ {
+  "key": "matplotlib|3|141|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 141,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A preserves the reference's hortative/permissive -ആം mood (കരുതാം), whereas B switches to the bare imperative കരുതുക; A's only deviation is dash spacing, a lesser punctuation quibble."
+ },
+ {
+  "key": "matplotlib|3|144|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 144,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference exactly, including the temporal clause form പോകുമ്പോൾ, whereas A substitutes the correlative പോകുന്തോറും."
+ },
+ {
+  "key": "matplotlib|3|140|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 140,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B reproduces the reference's modal/hortative verb ending കരുതാം (rather than A's verbless trailing phrase), which is the instructions' flagged stylistic feature, outweighing its minor dash-spacing and എന്നത് deviations."
+ },
+ {
+  "key": "matplotlib|3|143|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 143,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's choice to render \"explicit\" and \"better\" in Malayalam (കൂടുതൽ വ്യക്തമായി ഉപയോഗിക്കുന്നത്, മെച്ചപ്പെട്ട) with the same nominalized clause structure, whereas A keeps \"explicit\" and \"better control\" in English and adds a genitive -ന്റെ construction."
+ },
+ {
+  "key": "matplotlib|3|145|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 145,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B reproduces the reference's coordinated -ഉകയും … ചെയ്തിരിക്കുന്നു construction with the mid-sentence comma verbatim, while A collapses it into a single bare participle clause with an added നമ്മൾ; B's only lapse is the missing terminal colon."
+ },
+ {
+  "key": "matplotlib|3|147|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 147,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference exactly, including the conditional -ഉപയോഗിച്ചാൽ form, whereas B uses the bare participle ഉപയോഗിച്ച്."
+ },
+ {
+  "key": "matplotlib|3|149|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 149,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's comma at the clause boundary between the two nominalized clauses (A omits it), and this punctuation parallel outweighs B's missing terminal colon."
+ },
+ {
+  "key": "matplotlib|3|146|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 146,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's case-marked \"Line-നെ\", suffix-free `alpha` and pronoun-less ഉപയോഗിച്ചിട്ടുണ്ട് clause, whereas A inserts നമ്മൾ and `alpha`-യും and drops the case marking — a deviation more stylistically salient than B's em-dash spacing."
+ },
+ {
+  "key": "matplotlib|3|148|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 148,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B reproduces the reference's terminal colon (a named punctuation feature) while A omits terminal punctuation altogether; B's only deviation is the trivial non-sandhi spelling എളുപ്പം ആണ്."
+ },
+ {
+  "key": "matplotlib|3|150|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 150,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's two-sentence split and the exact idiom \"ആവശ്യം വരുന്ന മുറയ്ക്ക് കാലക്രമേണ … -ആം,\" whereas B keeps a single comma-spliced sentence and leaves \"discover\" in English."
+ },
+ {
+  "key": "matplotlib|3|151|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 151,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's \"ഇവയിൽ ചിലത് മാത്രം ഇവിടെ\" phrasing and clause order in plain Malayalam, while A inserts a gratuitous English noun (\"matters\") and drops the partitive construction."
+ },
+ {
+  "key": "matplotlib|3|152|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 152,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's choice to render \"multiple\" as Malayalam ഒന്നിലധികം and to fuse the predicate as എളുപ്പമാണ്, whereas A keeps \"multiple\" in English and splits എളുപ്പം ആണ്."
+ },
+ {
+  "key": "matplotlib|3|154|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 154,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's impersonal construction and its Malayalam rendering of \"multiple\" as ഒന്നിലധികം, whereas B inserts നമുക്ക് and keeps \"multiple\" in English, deviating from the reference's keep-English selection."
+ },
+ {
+  "key": "matplotlib|3|155|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 155,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference exactly including the terminal colon, while B omits it."
+ },
+ {
+  "key": "matplotlib|3|156|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 156,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's clause wording and verb form (\"താഴെ കാണാം\") exactly, differing only by the terminal colon, whereas B swaps in the deictic \"ഇതാ\" and loses the reference's hortative -ആം verb."
+ },
+ {
+  "key": "matplotlib|3|161|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 161,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|153|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 153,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A reproduces the reference's clause-boundary comma and the exact suffix form \"mean-നെ\", whereas B drops the comma and swaps in the looser \"mean-ഉം കൂടെ\" phrasing; the missing terminal colon in A is the lesser deviation."
+ },
+ {
+  "key": "matplotlib|3|159|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 159,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's clause order, the comma after `subplots` function, the \"ഉപയോഗിച്ച് എങ്ങനെ build ചെയ്യാം\" construction, and keeps \"മാറ്റങ്ങൾ\" in Malayalam, whereas A rearranges the clauses and leaves \"changes\" in English."
+ },
+ {
+  "key": "matplotlib|3|164|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 164,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|157|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 157,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A mirrors the reference's clause order (sentence-initial ഒരുപക്ഷേ) and keeps 'set' in English with a Malayalam suffix, while B shifts the adverb to mid-sentence and translates 'set' as ഒരു കൂട്ടം."
+ },
+ {
+  "key": "matplotlib|3|166|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 166,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|160|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 160,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference almost verbatim, including the fused ‑നടക്കുന്നതെന്ന് form and Malayalam 'മനസ്സിലാക്കാൻ സാധിക്കുന്നുണ്ടോ', whereas B keeps 'follow' in English and uses a colloquial 'പറ്റുമോ' with split clause form (its colon being the only nod to the reference)."
+ },
+ {
+  "key": "matplotlib|3|158|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 158,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's comma placement at clause boundaries and the fused -ണമെന്നും ... -ണമെന്നും quotative forms with ഇഷ്ട- in Malayalam, while B drops the commas, splits എന്നും, and injects an English root ('preference ചെയ്യുന്നു')."
+ },
+ {
+  "key": "matplotlib|3|165|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 165,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A matches the reference exactly in word order and modifier placement (\"വളരെ useful ആയ മറ്റൊരു feature\"), while B reorders the modifiers."
+ },
+ {
+  "key": "matplotlib|3|163|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 163,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's verb choice വരുത്തുന്നു and the connective കൂടാതെ, while B swaps in ചെയ്യുന്നു and ഒപ്പം, altering the cadence."
+ },
+ {
+  "key": "matplotlib|3|167|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 167,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's conditional -ചെയ്താൽ plus comma at the clause boundary and the identical നമുക്ക് കാണാം ending, whereas B drops the comma and uses a bare participle chain with കണ്ടെത്താം."
+ },
+ {
+  "key": "matplotlib|3|162|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 162,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's hybrid form \"internal ആയി\" (English root + Malayalam adverbial suffix), while B keeps the fully English adverb \"internally\"; the missing commas are equally absent in both."
+ },
+ {
+  "key": "matplotlib|3|168|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 168,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "Candidate B matches the reference exactly — same initial \"ഇനി,\" with comma, the instrumental ഉപയോഗിച്ച് participle, and the hortative \"set ചെയ്യാം\" at the end — whereas A reorders the clauses and shifts the -ആം form onto ഉപയോഗിക്കാം."
+ },
+ {
+  "key": "matplotlib|3|171|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 171,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference exactly in keeping the native verb വരയ്ക്കാം and the terminal colon, whereas A anglicizes the verb as \"draw ചെയ്യാം\" and drops the colon."
+ },
+ {
+  "key": "matplotlib|3|170|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 170,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly, including the fused clitic form എങ്ങനെയിരിക്കുമെന്ന്, whereas A splits it into എങ്ങനെയിരിക്കും എന്ന്."
+ },
+ {
+  "key": "matplotlib|3|173|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 173,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A keeps the reference's terminal colon (B drops it), while its only divergence is the trivial unfused എങ്ങനെയിരിക്കും എന്ന് spelling."
+ },
+ {
+  "key": "matplotlib|3|174|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 174,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference exactly including the terminal colon, which A omits."
+ },
+ {
+  "key": "matplotlib|3|169|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 169,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A mirrors the reference's clause-boundary comma and keeps the verb in English as \"draw ചെയ്യുന്ന\", whereas B drops the comma and nativizes it to \"വരയ്ക്കുന്ന\", a bigger deviation from the keep-English style than A's missing terminal colon."
+ },
+ {
+  "key": "matplotlib|3|179|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 179,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|172|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 172,
+  "winner": "A",
+  "position": "B",
+  "swap": true,
+  "reason": "B matches the reference's terminal colon and the locative \"Plots-ലെ\" construction, while A drops the colon and changes the case to \"-ൽ നിന്നും\"; A's only advantage is keeping \"remove\" in English."
+ },
+ {
+  "key": "matplotlib|3|175|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 175,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference exactly, including the hyphenated \"List-ലുള്ള\", the Malayalam verb പരീക്ഷിക്കാൻ, and the explicit നിങ്ങൾക്ക്, whereas A drops the pronoun, omits the hyphen, and keeps \"experiment ചെയ്യാൻ\" in English."
+ },
+ {
+  "key": "matplotlib|3|176|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 176,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's rendering of \"interested\" as Malayalam താൽപ്പര്യമുണ്ടെങ്കിൽ and keeps only style sheets/create in English, whereas B needlessly leaves \"Interest\" in Latin script, violating the reference's keep-English scope."
+ },
+ {
+  "key": "matplotlib|3|183|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 183,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "matplotlib|3|177|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 177,
+  "winner": "A",
+  "position": "A",
+  "swap": false,
+  "reason": "A matches the reference's terminal colon (B drops it), which outweighs B's minor lexical match of \"പോലെയുള്ള\"."
+ },
+ {
+  "key": "matplotlib|3|180|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 180,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's \"നിങ്ങളുടെ സ്വന്തം\" possessive phrasing (both differ equally from the reference's non-finite ചെയ്ത്), whereas B replaces it with the adverbial സ്വന്തമായി."
+ },
+ {
+  "key": "matplotlib|3|182|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 182,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's comma after ഉപയോഗിച്ച് and the -ചെയ്തിരിക്കുന്ന perfect participle (vs A's clipped 'overlaid ആയ' with no comma), outweighing its missing terminal colon."
+ },
+ {
+  "key": "matplotlib|3|184|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 184,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's \"മാറ്റിയതിനുശേഷം\" nominalized form and keeps the English root verb with the light-verb suffix (\"affect ചെയ്യും\"), whereas B shortens to \"മാറ്റിയ ശേഷം\" and translates the verb as \"ബാധിക്കും,\" breaking the keep-English pattern."
+ },
+ {
+  "key": "matplotlib|3|185|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 185,
+  "winner": "B",
+  "position": "B",
+  "swap": false,
+  "reason": "B mirrors the reference's exact clause phrasing and comma at the purpose-clause boundary (\"style-നെ വീണ്ടും default ആക്കി മാറ്റാൻ,\"), whereas A drops the comma and restructures with \"default-ലേക്ക് തിരികെ\"; B's missing terminal colon is a lesser deviation than A's clause-level divergence."
+ },
+ {
+  "key": "matplotlib|3|181|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 181,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference's forms more closely — \"പോലെയുള്ള\" (vs B's contracted \"പോലുള്ള\") and the present-perfect relative participle \"ചെയ്തിരിക്കുന്ന\" mirroring the reference's stative \"ഉള്ള\", whereas B uses the bare past participle."
+ },
+ {
+  "key": "matplotlib|3|178|A:B",
+  "pair": "A:B",
+  "draw": 3,
+  "idx": 178,
+  "winner": "B",
+  "position": "A",
+  "swap": true,
+  "reason": "A preserves the reference's dative agent നിങ്ങൾക്ക് and a neutral-formal ability form (ചെയ്യാവുന്ന ≈ ചെയ്യാൻ കഴിയുന്ന), while B drops the pronoun and uses the colloquial പറ്റുന്ന, lowering the register."
+ }
+]

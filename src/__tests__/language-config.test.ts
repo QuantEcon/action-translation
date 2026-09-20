@@ -188,9 +188,11 @@ describe('Language Configuration', () => {
       expect(translated.map((t) => t.en).sort()).toEqual([
         'contrived',
         'country',
+        'explicit',
         'facilitate',
         'increase',
         'limited',
+        'multiple',
         'over time',
         'relationship',
         'straightforward',
@@ -218,6 +220,70 @@ describe('Language Configuration', () => {
     });
   });
 
+  // Round 3 (lecture-python-programming.ml#13, 44 suggestion blocks): few new
+  // terms. The residue was style; style examples were built, tested on a
+  // held-out lecture with a blind pairwise judge, and set aside — see below.
+  describe('Malayalam round-3 glossary (v0.6.0): terms, no style examples', () => {
+    const glossaryPath = path.join(__dirname, '..', '..', 'glossary', 'ml.json');
+    const glossary: {
+      terms: { en: string; ml: string }[];
+      style_examples?: { en: string; ml: string; source?: string }[];
+    } = JSON.parse(fs.readFileSync(glossaryPath, 'utf-8'));
+    const byEn = new Map(glossary.terms.map((t) => [t.en, t]));
+
+    it('moves multiple / explicit to Malayalam and keeps remove / label as light verbs', () => {
+      expect(byEn.get('multiple')!.ml).toBe('ഒന്നിലധികം');
+      expect(byEn.get('explicit')!.ml).toBe('വ്യക്തമായ');
+      expect(byEn.get('remove')!.ml).toBe('remove');
+      expect(byEn.get('label')!.ml).toBe('label');
+    });
+
+    it('holds the words that are open questions on ml#22', () => {
+      // `provide` was pinned English in v0.4.0 and stays as it was until he answers
+      expect(byEn.get('provide')!.ml).toBe('provide');
+      for (const en of ['prefer', 'draw', 'available']) {
+        expect(byEn.has(en)).toBe(false);
+      }
+    });
+
+    it('ships no style examples — evaluated and set aside (arm 2026-09-18)', () => {
+      // The mechanism is live (translator-prompts.test.ts); the ml set is not.
+      // On a held-out lecture a blind pairwise judge found small, large,
+      // contrastive and rules-replacing example sets all indistinguishable
+      // from the rules alone, so no set is carried. Reinstate only with a
+      // measured case — and re-add the banned-rendering / open-question guard
+      // that protected the set when it existed.
+      expect(glossary.style_examples).toBeUndefined();
+    });
+  });
+
+  describe('Malayalam round-3 rules (lecture-python-programming.ml#13)', () => {
+    const rules = getLanguageConfig('ml').additionalRules;
+    const joined = rules.join('\n');
+
+    it('adds four rules (23 → 27): commas, verb form, idiom, further-reading scope', () => {
+      expect(rules).toHaveLength(27);
+      expect(joined).toContain('Mark clause boundaries with commas');
+      expect(joined).toContain('Choose the verb form by what the English means');
+      expect(joined).toContain(
+        'Render English idiom, metaphor and coined jargon by its plain meaning'
+      );
+      expect(joined).toContain('D-2026-09-18-ml-further-reading-lists-stay-english');
+    });
+
+    it('extends the existing rules rather than restating them', () => {
+      expect(joined).toContain('കരുതാം');
+      expect(joined).toContain('ഒന്നിലധികം');
+      expect(joined).toContain('dictionary പോലെയുള്ള');
+      expect(joined).toContain('remove ചെയ്യാൻ');
+      expect(joined).toContain('മറ്റൊരു');
+    });
+
+    it('no rule ends on a dangling colon (#301)', () => {
+      for (const rule of rules) expect(rule.trimEnd().endsWith(':')).toBe(false);
+    });
+  });
+
   describe('Malayalam round-2 rules (lecture-python-programming.ml#7)', () => {
     const rules = getLanguageConfig('ml').additionalRules.join('\n');
 
@@ -237,18 +303,30 @@ describe('Language Configuration', () => {
       expect(rules).toContain('കുറച്ചുകൂടി, not കുറച്ചുകൂടെ');
     });
 
-    it('extends the scope ruling to exercise statements (D-2026-09-01) and reinforces pointer sentences', () => {
-      expect(rules).toContain('D-2026-09-01-ml-exercise-statements-stay-english');
-      expect(rules).toContain('a mixed sentence keeps its mathematical clause in English');
+    it('reinforces pointer sentences with the round-2 worked examples', () => {
       expect(rules).toContain(
         "Here\\'s a function for the first random device.".replace("\\'", "'")
       );
     });
 
-    it('holds the items still waiting on the editor (ml#12): "For example" is not yet a discourse rule', () => {
-      // Q1 on ml#12 — encode once answered; the other three connectives are in.
-      expect(rules).toContain('"In particular, …"');
-      expect(rules).not.toContain('"For example, …" stay');
+    // The editor's ml#12 answers (2026-09-01), encoded 2026-09-03.
+    it('keeps every exercise-family block byte-identical to the source (D-2026-09-03), replacing the 09-01 scope rule', () => {
+      expect(rules).toContain('D-2026-09-03-ml-all-exercise-content-stays-english');
+      expect(rules).toContain('{exercise-start} … {exercise-end}, {hint}, {solution}');
+      expect(rules).toContain('including pure programming instructions');
+      expect(rules).not.toContain('D-2026-09-01-ml-exercise-statements-stay-english');
+      expect(rules).not.toContain('MUST NOT be left in English');
+      expect(rules).not.toContain('a mixed sentence keeps its mathematical clause in English');
+      // The 08-17 math-heavy Hint/Solution rule is subsumed while the ruling stands.
+      expect(rules).not.toContain('native-editor ruling, 2026-08-17');
+      expect(rules).toContain('subsumes the earlier math-heavy Hint/Solution ruling');
+    });
+
+    it('answers ml#12: "For example" joins the discourse rule, the refer calque is named, headings keep possessives', () => {
+      expect(rules).toContain('"For example, …", "In fact, …"');
+      expect(rules).toContain('not ഉദാഹരണത്തിന്');
+      expect(rules).toContain('never സൂചിപ്പിക്കുന്നു');
+      expect(rules).toContain('never "Matplotlib-യുടെ Split Personality"');
     });
   });
 });

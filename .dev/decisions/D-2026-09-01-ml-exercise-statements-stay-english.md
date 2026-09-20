@@ -1,3 +1,8 @@
+> **Superseded 2026-09-03** by `D-2026-09-03-ml-all-exercise-content-stays-english`: the editor's
+> answer on lecture-python-programming.ml#12 keeps every exercise-family block byte-identical to
+> the source until he rules on each exercise individually. Kept unedited below as the record of
+> the intermediate ruling.
+
 # Malayalam: exercise statements with mathematical content stay in English
 
 **Context**: The 2026-08-17 ruling (`D-2026-08-17-ml-math-heavy-sections-stay-english`) keeps

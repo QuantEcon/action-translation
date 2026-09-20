@@ -124,3 +124,41 @@ ones: seed 23/17/15/6 → 24/19/16/6, arm 16/5/1/3 → 18/5/1/3, and the reviewe
 text 1/0/2/1 → **1/1/2/1** — the new reviewed hit is his own inconsistency
 (`{ref}`Previous lecture` at 229 but `{doc}`previous lecture` at 290), watch-only
 and a candidate for ml#12.
+
+## Second draw at the released engine (v0.27.0, 2026-09-01)
+
+`functions-v0.27.0.md` — the same recipe run again after release (engine `125801c`,
+17,202 tokens, 3.4 min), i.e. arm 1 plus the ex5 negative example. Two draws is
+still direction, not a rate (#227), but it bounds the variance and tests the fix.
+
+**Closeness to the editor's reviewed text** (prose lines only; exact-line match,
+mean best-aligned line similarity, whole-prose `SequenceMatcher` ratio):
+
+| rendering | exact-line match | mean best-line similarity | whole-prose ratio |
+|---|---|---|---|
+| seed (5ffae4e) | 14/129 (11%) | 0.763 | 0.576 |
+| arm 1 (1251b7b) | 27/131 (21%) | 0.792 | 0.650 |
+| arm 2 (v0.27.0) | 25/131 (19%) | 0.787 | 0.638 |
+
+The engine closed roughly a third of the seed → reviewed distance on the
+whole-prose measure, doubling the share of lines it renders exactly as the
+editor did; the two draws agree to within two lines. The remaining distance is
+dominated by the two mechanical classes and by sentence-splitting preference.
+
+**Signatures, arm 2** (seed / reviewed / arm 2): lints 24/19/16/6 → 1/1/2/1 →
+**17/3/1/1**; colon-terminated paragraphs 4 → 18 → **7**; നമുക്ക് 9 → 21 → **16**;
+നോക്കാം 0 → 8 → **3**; sentence-final നമ്മൾ…-ും 6 → 1 → **1**; capitalised
+sentence-initial English 0 → 5 → **3**; every fixed pair, both pointer sentences,
+all four exercise-scope retentions and the three connectives at the reviewed
+form, as in arm 1.
+
+- **The ex5 fix works**: the recursion exercise statement is Malayalam again
+  (`recursion ഉപയോഗിച്ച്`), so the negative example closed the over-application.
+- **`set` did not recur** — headings 17/17, pinned-term retention clean, no FAIL.
+- **`refer` → `സൂചിപ്പിക്കുന്നു` recurred (2/2 draws, same sentence, line 155)** —
+  the round-1 glossary pin is not holding for "what a name refers to" in this
+  sentence; candidate for a rule example rather than a bare pin.
+- **List-item `-ഉം` regressed in this draw** (`sqrt()` function-ഉം ×2; arm 1 had 0)
+  — the rule fires inconsistently on the two-item overview list.
+- Terminal punctuation stays the weak class (17 bare endings; arm 1 had 18):
+  unchanged case for the deterministic post-processing step.

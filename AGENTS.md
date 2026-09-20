@@ -226,7 +226,7 @@ Docs live in `docs/` — see `docs/index.md` for the full structure.
 
 Before creating a release, verify the following:
 
-1. **CHANGELOG is up to date** — all merged PRs and features are listed under `[Unreleased]`; promote `[Unreleased]` → `[X.Y.Z] - YYYY-MM-DD`
+1. **CHANGELOG is up to date** — all merged PRs and features are listed under `[Unreleased]`; promote `[Unreleased]` → `[X.Y.Z] - YYYY-MM-DD` and leave a fresh empty `## [Unreleased]` header above it, so the next PR's entry has somewhere to go that is not the released section (adopted v0.28.0, #304)
 2. **Version bumped** — update `package.json`, this file (`AGENTS.md`), and `.dev/PLAN.md`
 3. **Tests pass** — run `npm test` and confirm all tests pass
 4. **Build succeeds** — run `npm run build` to compile TypeScript and update `dist-action/`

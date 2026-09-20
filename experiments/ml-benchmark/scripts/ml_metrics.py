@@ -153,6 +153,12 @@ BANNED_RENDERINGS: list[tuple[str, str]] = [
     ("മറുവശത്ത്", "'On the other hand,' stays English"),
     ("ആവർത്തിച്ച്", "'repeatedly' stays English"),
     ("സൂചിപ്പിക്കുന്നു", "'refer' → refer ചെയ്യുന്നു"),
+    # round 3 (lecture-python-programming.ml#13)
+    ("ലളിതമായ", "'simple' stays English (simple ആയ)"),
+    ("നീക്കം ചെയ്യ", "'remove' → remove ചെയ്യാൻ"),
+    ("explicit ആയ", "'explicit' → വ്യക്തമായ / വ്യക്തമായി"),
+    ("dictionary-like", "'X-like' → X പോലെയുള്ള, before the name"),
+    ("പിന്തുടര", "'follow (what is going on)' → മനസ്സിലാക്കുക — check the sense"),
 ]
 # The future-hortative signature: a sentence with subject നമ്മൾ ending on a
 # -ും verb ("we will …") where the teacher's voice wants നമുക്ക് … -ആം. Noisy

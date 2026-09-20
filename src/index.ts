@@ -1,6 +1,12 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { getMode, getInputs, getRebaseInputs, validatePREvent } from './inputs.js';
+import {
+  getMode,
+  getInputs,
+  getRebaseInputs,
+  validatePREvent,
+  mergedIntoDefaultBranch,
+} from './inputs.js';
 import {
   SyncOrchestrator,
   classifyChangedFiles,
@@ -661,6 +667,11 @@ async function runSync(): Promise<void> {
     });
     if (!pr.merged) {
       core.info(`PR #${prNumber} is not merged. Resync only works on merged PRs.`);
+      return;
+    }
+    // The workflow's `branches:` filter does not apply to issue_comment events,
+    // so this is the only base-branch check on the resync path.
+    if (!mergedIntoDefaultBranch(pr.base?.ref, pr.base?.repo?.default_branch, prNumber)) {
       return;
     }
     if (pr.merge_commit_sha) {

@@ -1,4 +1,4 @@
-verified: 2026-08-19
+verified: 2026-09-18
 
 # STATE
 
@@ -7,6 +7,69 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## In flight
 
+- **v0.29.0 released 2026-09-18** (release PR #312 `a6fda54`; payload #311 `847ca9f`; §4a gate
+  **completed**: 84/84 sync runs, 28/28 delivery + 28/28 `engineVersion: 0.29.0` verdicts per
+  lane; `v0.29` = `v0` = `a6fda54`; GitHub release published; `@v0` smoke read-off on #312)
+  — headline: the third Malayalam native review encoded (`ml` rules 23 → 27,
+  glossary v0.6.0), the `style_examples` glossary mechanism (no set shipped: evaluated
+  held-out and set aside), the Further Reading decision record, and the first regeneration
+  test with a held-out lecture and a blind pairwise judge. **W1 (#259) did not make it and
+  retargets to v0.30.0.** Tally on #312. Round 4 (`numpy`) is generated at `@v0` now.
+- **ml round 3 encoded on #311 (2026-09-18, merged as `847ca9f`; released by v0.29.0)** — the
+  third inline native review (44 suggestion blocks on lecture-python-programming.ml#13,
+  `matplotlib`) found every round-2 class clean and a residue of *style* (clause-boundary
+  commas, verb aspect, clause order). Payload: `ml` rules 23 → 27, glossary v0.6.0, and a new
+  mechanism — `style_examples` in the glossary file, rendered as `STYLE EXAMPLES:` in the
+  cached stable block on every write path. New admission test: a pattern becomes a rule only
+  if it recurs. Decision record `D-2026-09-18-ml-further-reading-lists-stay-english`. First
+  regeneration test with a **held-out lecture** and three draws per arm
+  (`experiments/ml-benchmark/arms/2026-09-18-round3-rules-exemplars-sonnet5/`): in-sample
+  similarity to the editor's text 0.845 → 0.93, held-out unchanged (0.814 → 0.809) apart
+  from comma density (0.56 → 0.72 vs his 0.82). A blind pairwise Opus 5 judge (2,570
+  judgements, no position bias) then found the rules preferred 55 : 45 held out and rules +
+  the shipped pairs 57 : 43 (p = 0.054), while contrastive / 56-pair / no-rules example
+  variants all judged 50 : 50 — the ml example set was removed from the PR (mechanism
+  ships, no data) and the exemplar line is closed pending round-4 editor data.
+  ml#13 merged `a24e925`. Editor's open questions: lecture-python-programming.ml#22 (none blocks a release).
+  Targets **v0.29.0**; round 4 (`numpy`) is generated after it ships. Log:
+  `.dev/log/2026-09-18-ml-round3.md`.
+- **v0.28.1 release cut 2026-09-14** (fix #308 `aae38d1`; release PR #309 `3de9024`) — patch: sync mode fires only for PRs
+  merged into the default branch. Trigger: QuantEcon/lecture-python-programming#629 (theme
+  v3.0.0) merged into the long-lived `jb2` branch on 2026-09-12 and all three deployed sync
+  workflows fired — `types: [closed]` has no base-branch filter and neither the job `if:`
+  nor the action looked at the base — opening fr#79, fa#166, zh-cn#105 for unpublished
+  content. Two-layer fix: `branches: [main]` in every published sync template (sweep test
+  now requires it) + `mergedIntoDefaultBranch` in `validatePREvent` and the resync path,
+  compared against `repository.default_branch`. Tidy-up outside the repo, same day: the
+  three downstream PRs closed unmerged; `branches: [main]` PR'd into the deployed workflows
+  (lecture-python-programming#630, lecture-python-intro#846, lecture-python.myst#1056 —
+  open, awaiting merge). §4a gate **completed 2026-09-14**:
+  84/84 sync runs, 28/28 delivery + 28/28 verdicts per lane at `engineVersion: 0.28.1`;
+  `@v0` = `v0.28` = `3de9024`, alias smoke (scenario 01) reports `engineRef: v0` on all
+  three lanes; GitHub release published. W1 (#259) targeted v0.29.0 then, now v0.30.0.
+- **v0.28.0 released 2026-09-03** (#303 `07e7c64`; release #304 `9284fbc`; §4a gate **completed**:
+  84/84 sync runs, 28/28 delivery + 28/28 stamped verdicts per lane; `@v0` = `v0.28` = `9284fbc`,
+  smoke-verified on all three lanes) — headline: the
+  Malayalam editor's ml#12 answers encoded and the verbatim exercise-family policy
+  (`verbatim-directives.ts` on all three write paths + the `verbatimDirectives` review
+  diff-check; decision record `D-2026-09-03-ml-all-exercise-content-stays-english`
+  supersedes the 09-01 record), glossary v0.5.0, rules 24 → 23, harness scenario 28.
+  Validated pre-merge with the local bundle on a scenario-28 harness PR (positive and
+  negative). **W1 (#259) retargets to v0.29.0.** Round 4 (`numpy`) can be generated at `@v0`.
+- **2026-09-01 PR sweep** — all six open PRs reviewed, merge order set. #294/#297 merged
+  and released (v0.27.0). **#289** (#156) and **#291** (#254 interim) reviewed in full and
+  **upgraded in place on kp992's branches** (`maintainerCanModify`): both had a `yaml.dump`
+  round-trip that turned a one-line `_toc.yml` change into a whole-file rewrite (401 /
+  201 changed lines on the real lecture-python TOC) — both now edit the TOC text in place
+  and verify by parse; #289 gains fetch-failure coverage + an accurate PR-body notice;
+  #291 gains overlap-based part matching (identity matching lost the caption of exactly
+  the part a lecture-adding sync touches), the rebase-replay site, 404-only target
+  fetches, and moved to `src/toc-captions.ts` so it composes with #289. Both CI-green,
+  mergeable, awaiting kp992. **Merge order #289 → #291.** #291 no longer closes #254
+  (W1's structured merge is the end state). **#225 closed** unmerged: #118 cause unfixed,
+  D2 removes the path, D1 gates #178. Two #297 residuals filed as their own issue
+  (ml lint regex misses `functions-നെ`; rule 11 dangling colon). #69 untouched.
+  Tracker #257 re-stamped with a contract-form `## Where we stand` section.
 - **v0.27.0 release cut 2026-09-01** — headline: the second inline native-review round
   encoded (ml glossary v0.4.0 + rules 18 → 24 + the first deterministic ml lints, #297;
   regeneration-checked in the same PR, decision record
@@ -139,8 +202,12 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## Next
 
-**Resume here (2026-08-20):**
+**Resume here (2026-09-02):**
 
+0. **Merge #289, then #291** once kp992 has looked (or after a week — both are
+   maintainer-upgraded and CI-green); whichever lands second is a two-hunk
+   CHANGELOG/bundle rebase. Then **triage the twelve post-review arrivals** listed on
+   #257 into W1–W6 (#282, #287, #290 look W1-shaped).
 1. **#169 slice 2: `src/github-content.ts`** — `tryFetchFileContent` plus **one**
    `buildFilesToSync` over a narrow `ContentClient` interface, replacing the two
    independently-maintained builders (`index.ts:381` and `:1038` as of `228a317`) that

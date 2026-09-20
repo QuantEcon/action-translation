@@ -77,7 +77,7 @@ cd /path/to/action-translation/tool-test-action-on-github
 
 The script will:
 1. Reset test repositories to clean state
-2. Run 27 automated test scenarios
+2. Run 28 automated test scenarios
 3. Create PRs in source repository with `test-translation` label
 4. Label triggers action → creates translation PRs in **every** target repository
 5. Report results
@@ -101,7 +101,7 @@ Evaluation uses **Claude Opus 4.5** to assess:
 
 Reports are saved to `reports/evaluation-<date>.md`.
 
-## Test Scenarios (27 total)
+## Test Scenarios (28 total)
 
 The tool tests translation scenarios across four phases:
 
@@ -151,6 +151,7 @@ The tool tests translation scenarios across four phases:
 | # | Scenario | Description |
 |---|----------|-------------|
 | 27 | Citation backfill | `{cite}` role introduced; the cited key lives in the source's `references.bib` but not the target's, so the sync PR must carry the backfilled entry (#117; verifies action-translation#256 defect 3). The target repos' `_config.yml` + `references.bib` fixtures are what arm the guard — see `base-config.yml`. |
+| 28 | Exercise family added | An `## Exercises` section with `{exercise-start}`/`{hint}`/`{solution-start}` blocks is appended to `lecture.md` — the first exercise-family directives in the suite. On `.ml` the sync output must carry every block byte-identical to the source (verbatim-directive policy, `D-2026-09-03-ml-all-exercise-content-stays-english`, enforced by `verbatim-directives.ts` and the `verbatimDirectives` diff-check); on `.zh-cn` and `.fa` the blocks translate as ordinary prose. |
 
 ## Directory Structure
 

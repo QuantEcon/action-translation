@@ -36,6 +36,10 @@ This can happen if:
 - The changed files were not `.md` files
 - The translation of the changed sections is identical to what was already in the target
 
+### Does sync run for PRs merged into branches other than `main`?
+
+No. The workflow's `branches: [main]` filter stops the run before it starts, and the action itself skips a merged PR whose base branch is not the repository's default branch — the `\translate-resync` comment path included. A long-lived work branch (a theme migration, a rewrite in progress) is not a publication, so merging into it must not open translation PRs. If your sync workflow predates the filter, add `branches: [main]` under `pull_request:`; the action's check covers the gap until you do.
+
 ### The action created a PR but some sections weren't translated
 
 Check that:
@@ -130,7 +134,7 @@ This is expected for well-maintained translations. The backward analysis is desi
 
 | Aspect | Sync Action | Forward CLI |
 |--------|------------|-------------|
-| **Trigger** | PR merge event | Manual command |
+| **Trigger** | PR merged into the default branch | Manual command |
 | **Change signal** | Git diff from PR | Whole-document comparison |
 | **Translation mode** | UPDATE (section-level) | RESYNC (whole-file) |
 | **Scope** | Files changed in that PR | Any drifted files |

@@ -46,7 +46,7 @@ const HIGH_PUNCTUATION = /[;:!?]/;
  * MyST directives whose body is prose to be typeset, not code. Anything not
  * listed here is treated as code and left untouched.
  */
-const PROSE_DIRECTIVES = new Set([
+export const PROSE_DIRECTIVES = new Set([
   'admonition',
   'attention',
   'caution',

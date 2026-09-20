@@ -717,6 +717,7 @@ declare -a scenarios=(
     "25-pre-title-content-lecture:Pre-title content (anchor + raw block):lecture"
     "26-heading-case-change-lecture:Heading case change (title-case → sentence-case):lecture"
     "27-add-citation-minimal:Citation introduced ({cite} role + .bib backfill, #117/#256.3):minimal"
+    "28-add-exercise-lecture:Exercise family added ({exercise-start}/{hint}/{solution-start}; ml keeps them verbatim, D-2026-09-03):lecture"
 )
 
 # --scenarios narrows to specific test cases by file-prefix (e.g. 01, or
@@ -731,7 +732,7 @@ if [ -n "$ONLY_SCENARIOS" ]; then
             case "${sc%%:*}" in "$_w"*) _keep+=("$sc"); _hit=true ;; esac
         done
         if [ "$_hit" = false ]; then
-            echo "Unknown scenario '$_w'. Valid prefixes are 01..27." >&2
+            echo "Unknown scenario '$_w'. Valid prefixes are 01..28." >&2
             exit 1
         fi
     done
@@ -898,6 +899,8 @@ if [ "$DRY_RUN" = true ]; then
     echo "     - 24: Empty sections (heading only)"
     echo "     - 25: Pre-title content (anchor + raw block)"
     echo "     - 26: Heading case change (title-case -> sentence-case)"
+    echo "     - 27: Citation introduced ({cite} role + .bib backfill)"
+    echo "     - 28: Exercise family added (ml keeps exercise/hint/solution blocks verbatim)"
     echo "4. Add 'test-translation' label to each PR"
     echo ""
     echo -e "${YELLOW}To actually run these changes, execute without --dry-run:${NC}"

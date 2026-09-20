@@ -127,6 +127,10 @@ Each glossary file follows this JSON structure:
 - `{language-code}` (string): Translation in target language
 - `context` (string, optional): Usage context to help AI understand when to use this translation
 
+### Optional: `style_examples`
+
+A top-level `style_examples` array carries sentence pairs exactly as a native-speaker editor approved them — `{ "en": …, "{language-code}": …, "source": … }`. They render after the terms as `STYLE EXAMPLES:` and teach style that resists rule statement (comma rhythm, verb aspect, clause order). No built-in glossary ships a set yet: the Malayalam set was built from reviewed lectures and set aside when a held-out test found it indistinguishable from the prompt rules alone (`experiments/ml-benchmark/arms/2026-09-18-round3-rules-exemplars-sonnet5/`). Add a pair only from editor-approved text, never from unreviewed machine output, and never one that contradicts a rule or an open question with the editor. See `docs/user/glossary.md`.
+
 ### Context Examples
 
 - `"economics"` - General economics term
