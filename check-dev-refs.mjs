@@ -1,7 +1,7 @@
 /**
- * Check that `path:line` references in .dev/ notes still resolve.
+ * Check that `path:line` references in .qe/ notes still resolve.
  *
- * Scans .dev/**\/*.md (excluding gitignored .dev/scratch/) for references of
+ * Scans .qe/**\/*.md for references of
  * the form `path/to/file.ext:12` or `file.ext:12-18`. A reference fails if the
  * file does not exist, or if the referenced line (range end) is past its end.
  * Bare basenames (`heading-map.ts:45`) resolve against git-tracked files.
@@ -10,8 +10,8 @@
  * it points at code that exists. It catches drift and typos, which is what a
  * decision record actually shipped once (#179, then #158).
  *
- * Runs in CI on source changes: what invalidates a .dev reference is source
- * moving underneath it, so .dev-only PRs (which skip CI) never need it.
+ * Runs in CI on source changes: what invalidates a .qe reference is source
+ * moving underneath it, so .qe-only PRs (which skip CI) never need it.
  */
 
 import { execSync } from 'child_process';
@@ -30,7 +30,7 @@ function findMarkdownFiles(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      if (full !== path.join('.dev', 'scratch')) results.push(...findMarkdownFiles(full));
+      results.push(...findMarkdownFiles(full));
     } else if (entry.name.endsWith('.md')) {
       results.push(full);
     }
@@ -45,7 +45,7 @@ function lineCount(file) {
 const failures = [];
 let checked = 0;
 
-for (const mdFile of findMarkdownFiles('.dev')) {
+for (const mdFile of findMarkdownFiles('.qe')) {
   const lines = fs.readFileSync(mdFile, 'utf8').split('\n');
   lines.forEach((line, i) => {
     for (const match of line.matchAll(REF_PATTERN)) {
@@ -71,8 +71,8 @@ for (const mdFile of findMarkdownFiles('.dev')) {
 }
 
 if (failures.length > 0) {
-  console.error(`✗ ${failures.length} stale reference(s) in .dev/ — update the note or the code:`);
+  console.error(`✗ ${failures.length} stale reference(s) in .qe/ — update the note or the code:`);
   for (const failure of failures) console.error(`  ${failure}`);
   process.exit(1);
 }
-console.log(`✓ ${checked} .dev/ file references resolve`);
+console.log(`✓ ${checked} .qe/ file references resolve`);

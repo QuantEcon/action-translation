@@ -147,7 +147,7 @@ interface verbs that were actually transliterated), and **soft-watch** words tha
 legitimately go both ways by function (`use`, `open`, `right`), which flag for a
 human eye rather than fail the build.
 
-Candidate for `.dev/decisions/` promotion once Phase 2 validates the rules
+Candidate for `.qe/dev/decisions/` promotion once Phase 2 validates the rules
 empirically. #promote
 
 ## Rule text (implemented in the companion PR)

@@ -32,7 +32,7 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   ships, no data) and the exemplar line is closed pending round-4 editor data.
   ml#13 merged `a24e925`. Editor's open questions: lecture-python-programming.ml#22 (none blocks a release).
   Targets **v0.29.0**; round 4 (`numpy`) is generated after it ships. Log:
-  `.dev/log/2026-09-18-ml-round3.md`.
+  `.qe/dev/log/2026-09-18-ml-round3.md`.
 - **v0.28.1 release cut 2026-09-14** (fix #308 `aae38d1`; release PR #309 `3de9024`) — patch: sync mode fires only for PRs
   merged into the default branch. Trigger: QuantEcon/lecture-python-programming#629 (theme
   v3.0.0) merged into the long-lived `jb2` branch on 2026-09-12 and all three deployed sync
@@ -232,7 +232,7 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 - `main` green; **1,533 tests across 65 suites** (zero skips, type-checked) as of
   `228a317`; lint at `--max-warnings 0` including root `*.mjs`, CI checks formatting
-  and `.dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale
+  and `.qe/dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale
   `dist/` — run `npm run build` first; that guard is deliberate, not a break.
 - Highest-priority known bug class: the success-shaped failure (#90 defects 3–5 plus
   #276's two resync mechanisms; freshest instance 2026-08-18, stale regeneration
