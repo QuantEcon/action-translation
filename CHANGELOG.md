@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.2] - 2026-09-21
+
 ### Fixed
 
 - **`ml`: the exercise-verbatim rule no longer primes the model to invent exercise directives** (caught by v0.29.1's §4a gate, which is why v0.29.1 was tagged but never released: no floating tag moved, no GitHub release). Harness scenario 17 (`new-document-toc`) failed twice on the `.ml` lane — the fixture writes its exercises as a plain `## Exercises` heading and a numbered list, the model wrapped them in `{exercise-start}` … `{exercise-end}`, and the structural-parity guard correctly refused the file (directives 3 → 5), leaving the sync PR with a `_toc.yml` entry for a lecture it did not deliver. Measured on that fixture, twelve draws per arm: **5/12 refused at v0.29.0** — the defect is latent since the rule arrived in v0.28.0, and four gates passed it on single lucky draws — **11/12 at v0.29.1** (the #315 rules aggravate it; crossing rules and glossary puts it in the rules), and **0/24** once the rule says it concerns only directives the source already contains. Behaviour is otherwise unchanged: a plain exercises section keeps its English text, as the editor's ruling requires, and its source structure.
