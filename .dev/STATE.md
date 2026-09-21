@@ -7,7 +7,13 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## In flight
 
-- **ml round-3 answers encoded, unreleased (2026-09-21, branch `ml-round3-answers-ml22`)** — the
+- **v0.29.1 release cut 2026-09-21** (payload #315 `cd41558`) — patch: the Malayalam editor's
+  round-3 answers (detail in the next entry). Nothing in it is a feature; the one behavioural
+  correction is the `-ഉം` comma rule, where v0.29.0 had shipped the wrong guess. §4a gate
+  status is recorded on the release PR. After the floating tags move, round 4 (`numpy`,
+  lecture-python-programming.ml#23) is regenerated at `@v0` — the editor has been asked to hold
+  off until then. W1 (#259) still targets v0.30.0.
+- **ml round-3 answers encoded (2026-09-21, #315 merged as `cd41558`; released by v0.29.1)** — the
   editor answered lecture-python-programming.ml#22 on 2026-09-19. `ml` rules 27 → 28, glossary
   v0.7.0. Two answers overturned a guess: the comma between `-ഉം` items is **always** there
   (v0.29.0 shipped "phrases only"), and *draw* is not a light verb (left unencoded — both forms

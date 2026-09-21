@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.1] - 2026-09-21
+
 ### Changed
 
 - **`ml` rules 27 → 28, glossary v0.6.0 → v0.7.0** from the editor's answers to the round-3 questions (lecture-python-programming.ml#22, 2026-09-19). Two answers overturned a guess that v0.29.0 had shipped or was about to: the comma between `-ഉം` items is there **always**, single words included (the clause-boundary rule said phrases only, and the suffix rule's own example contradicted it — both corrected), and *draw* is **not** forced into the light-verb pattern (he calls `വരയ്ക്കാം` natural; it stays unencoded either way). Confirmed and encoded: the plural of a retained English noun is the English plural plus the Malayalam suffix (`objects`, `function calls-ൽ` — never `object-ുകൾ`), as its own short rule; *prefer* stays English; *provide* moves to `നൽകുക`, superseding the v0.4.0 pin, with both forms acceptable in reviewed text. He accepts "would a Kerala student say this word in everyday conversation?" as the test for which ordinary words stay English; the rewrite of that rule is held for a held-out judge run. Decision record `D-2026-09-21-ml-further-reading-boundary-is-the-reference-section` settles the Further Reading boundary (the outside-pointing reference section, not any link-led bullet), which unblocks moving that rule into code.
