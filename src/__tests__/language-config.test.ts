@@ -270,7 +270,7 @@ describe('Language Configuration', () => {
     const rules = getLanguageConfig('ml').additionalRules;
     const joined = rules.join('\n');
 
-    it('adds four rules (23 → 27): commas, verb form, idiom, further-reading scope', () => {
+    it('round 3 added four rules (23 → 27; 28 since the ml#22 answers): commas, verb form, idiom, further-reading scope', () => {
       // 28 since the ml#22 answers added the plural rule (block below)
       expect(rules).toHaveLength(28);
       expect(joined).toContain('Mark clause boundaries with commas');
