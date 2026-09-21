@@ -31,4 +31,6 @@
 
 **Edition side**: lecture-python-programming.ml#24 brings the six places on the reviewed pages into line with his answers (three plurals, three commas), for his review; `logic-ുകളെ` left as his call.
 
-**Next**: review + merge → patch release v0.29.1 (nothing here is a feature) → regenerate round 4 at `@v0` → then the rule-2 arm.
+**Merged and release cut, same day.** #315 merged as `cd41558` (Copilot: two wording nits, addressed in `a4ecc46`); release PR for v0.29.1 opened on `release-v0.29.1`. §4a gate status is recorded on the release PR.
+
+**Next (as written before the merge)**: review + merge → patch release v0.29.1 (nothing here is a feature) → regenerate round 4 at `@v0` → then the rule-2 arm.

@@ -1,4 +1,4 @@
-verified: 2026-09-18
+verified: 2026-09-21
 
 # STATE
 
@@ -7,7 +7,13 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## In flight
 
-- **ml round-3 answers encoded, unreleased (2026-09-21, branch `ml-round3-answers-ml22`)** — the
+- **v0.29.1 release cut 2026-09-21** (payload #315 `cd41558`) — patch: the Malayalam editor's
+  round-3 answers (detail in the next entry). Nothing in it is a feature; the one behavioural
+  correction is the `-ഉം` comma rule, where v0.29.0 had shipped the wrong guess. §4a gate
+  status is recorded on the release PR. After the floating tags move, round 4 (`numpy`,
+  lecture-python-programming.ml#23) is regenerated at `@v0` — the editor has been asked to hold
+  off until then. W1 (#259) still targets v0.30.0.
+- **ml round-3 answers encoded (2026-09-21, #315 merged as `cd41558`; released by v0.29.1)** — the
   editor answered lecture-python-programming.ml#22 on 2026-09-19. `ml` rules 27 → 28, glossary
   v0.7.0. Two answers overturned a guess: the comma between `-ഉം` items is **always** there
   (v0.29.0 shipped "phrases only"), and *draw* is not a light verb (left unencoded — both forms
@@ -54,7 +60,7 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   compared against `repository.default_branch`. Tidy-up outside the repo, same day: the
   three downstream PRs closed unmerged; `branches: [main]` PR'd into the deployed workflows
   (lecture-python-programming#630, lecture-python-intro#846, lecture-python.myst#1056 —
-  open, awaiting merge). §4a gate **completed 2026-09-14**:
+  all three **merged 2026-09-14**; verified 2026-09-21). §4a gate **completed 2026-09-14**:
   84/84 sync runs, 28/28 delivery + 28/28 verdicts per lane at `engineVersion: 0.28.1`;
   `@v0` = `v0.28` = `3de9024`, alias smoke (scenario 01) reports `engineRef: v0` on all
   three lanes; GitHub release published. W1 (#259) targeted v0.29.0 then, now v0.30.0.
@@ -76,7 +82,8 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   #291 gains overlap-based part matching (identity matching lost the caption of exactly
   the part a lecture-adding sync touches), the rebase-replay site, 404-only target
   fetches, and moved to `src/toc-captions.ts` so it composes with #289. Both CI-green,
-  mergeable, awaiting kp992. **Merge order #289 → #291.** #291 no longer closes #254
+  mergeable, awaiting kp992 (who merged `main` into #289 on 2026-09-20; #291 untouched since
+  09-01 — both still open 2026-09-21). **Merge order #289 → #291.** #291 no longer closes #254
   (W1's structured merge is the end state). **#225 closed** unmerged: #118 cause unfixed,
   D2 removes the path, D1 gates #178. Two #297 residuals filed as their own issue
   (ml lint regex misses `functions-നെ`; rule 11 dangling colon). #69 untouched.
@@ -148,6 +155,10 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 - **Malayalam** — first-class harness language (26/26); its two seed reference
   translations await native review (#207); benchmark Phase 1 (#194) unrun.
 - **Glossary PR #69** (ja) — open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
+- **Draft #314** (opened 2026-09-21) — `.dev/` → `.qe/dev/` per the QEP-7 draft (QuantEcon/qeps#40).
+  It renames every file under `.dev/`, so whichever of it and an in-flight PR that touches
+  `.dev/` merges second needs a rebase; raw `log/` and `decisions/` entries keep their
+  historical `.dev/` mentions.
 
 ## Recently landed
 
