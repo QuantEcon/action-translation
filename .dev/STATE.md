@@ -7,6 +7,16 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## In flight
 
+- **ml round-3 answers encoded, unreleased (2026-09-21, branch `ml-round3-answers-ml22`)** — the
+  editor answered lecture-python-programming.ml#22 on 2026-09-19. `ml` rules 27 → 28, glossary
+  v0.7.0. Two answers overturned a guess: the comma between `-ഉം` items is **always** there
+  (v0.29.0 shipped "phrases only"), and *draw* is not a light verb (left unencoded — both forms
+  are his). Confirmed: English plural + suffix for retained nouns (own rule + lint), *prefer*
+  English, *provide* → `നൽകുക` (both acceptable). Further Reading boundary settled as the
+  reference section (`D-2026-09-21-…`), which unblocks the code move under #260. **Open: the
+  rule-2 rewrite** around his everyday-speech test — held for a held-out judge run, not shipped
+  on his say-so alone. Round 4 (lecture-python-programming.ml#23) is deliberately not
+  regenerated; see the log entry `2026-09-21-ml-round3-answers`.
 - **v0.29.0 released 2026-09-18** (release PR #312 `a6fda54`; payload #311 `847ca9f`; §4a gate
   **completed**: 84/84 sync runs, 28/28 delivery + 28/28 `engineVersion: 0.29.0` verdicts per
   lane; `v0.29` = `v0` = `a6fda54`; GitHub release published; `@v0` smoke read-off on #312)
