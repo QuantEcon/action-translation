@@ -7,11 +7,18 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## In flight
 
-- **v0.29.2 release cut 2026-09-21** (payload #317 `62504c1`, on top of #315 `cd41558`) — patch:
-  the scope sentence on the `ml` exercise rule that v0.29.1's failed gate called for, carrying
-  with it the editor's round-3 answers that v0.29.1 never delivered. §4a gate status is
-  recorded on the release PR; scenario 17 on the `.ml` lane is the one to read first. After the
-  floating tags move, round 4 (`numpy`, lecture-python-programming.ml#23) is regenerated at `@v0`.
+- **v0.29.2 released 2026-09-21** (release PR #318 `5f74d74`; payload #317 `62504c1`, on top of
+  #315 `cd41558`; §4a gate **completed**: 84/84 sync runs, 28/28 delivery + 28/28
+  `engineVersion: 0.29.2` verdicts per lane, scenario 17 on `.ml` delivered; `v0.29` = `v0` =
+  `5f74d74`; GitHub release published; `@v0` smoke `engineRef: v0` on all three lanes — tally
+  on #318) — patch: the scope sentence on the `ml` exercise rule that v0.29.1's failed gate
+  called for, carrying the editor's round-3 answers that v0.29.1 never delivered. **Round 4
+  (`numpy`, lecture-python-programming.ml#23) regenerated at `@v0` the same day**: three draws,
+  draw 1 sent (bare endings 1 / 37 / 2), one `ml_repair.py` comma applied and disclosed — the
+  first repaired seed; arm `experiments/ml-benchmark/arms/2026-09-21-round4-numpy-v0.29.2/`.
+  Harness note: the reset left one PR from the previous gate open on `.ml` (closed by hand).
+  W1 (#259) still targets v0.30.0. **Next engine-side: the rule-2 arm** (rewrite around the
+  editor's everyday-speech test, judged held-out before it ships).
 - **v0.29.1 is tagged but NOT released (2026-09-21)** — its §4a gate came back 83/84: scenario 17
   on the `.ml` lane failed twice (the model wrapped a plain `## Exercises` list in
   `{exercise-start}`; structural parity refused the file). `v0` = `v0.29` = `a6fda54` (v0.29.0)
