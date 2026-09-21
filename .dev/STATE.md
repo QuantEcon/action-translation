@@ -14,13 +14,16 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   v0.28.0** (5/12 at v0.29.0) and aggravated by the #315 rules (11/12); one scope sentence on the
   exercise rule takes it to 0/24, and the action path delivers 2/2. The fix ships as
   **v0.29.2**. Log: `.dev/log/2026-09-21-v0291-gate-scenario17.md`.
-- **v0.29.1 release cut 2026-09-21** (payload #315 `cd41558`) — patch: the Malayalam editor's
-  round-3 answers (detail in the next entry). Nothing in it is a feature; the one behavioural
-  correction is the `-ഉം` comma rule, where v0.29.0 had shipped the wrong guess. §4a gate
-  status is recorded on the release PR. After the floating tags move, round 4 (`numpy`,
-  lecture-python-programming.ml#23) is regenerated at `@v0` — the editor has been asked to hold
-  off until then. W1 (#259) still targets v0.30.0.
-- **ml round-3 answers encoded (2026-09-21, #315 merged as `cd41558`; released by v0.29.1)** — the
+- **v0.29.1 release PR merged and tagged 2026-09-21 — gate failed, NOT released (entry above)**
+  (release PR #316 `7fe78a5`; payload #315 `cd41558`) — patch: the Malayalam editor's round-3
+  answers (detail in the next entry). Nothing in it is a feature; the one behavioural
+  correction is the `-ഉം` comma rule, where v0.29.0 had shipped the wrong guess. §4a tally
+  (83/84) is on #316; CHANGELOG marks the version `[YANKED]`. Its contents ship in v0.29.2;
+  **once v0.29.2's floating tags move**, round 4 (`numpy`, lecture-python-programming.ml#23) is
+  regenerated at `@v0` — the editor has been asked to hold off until then. W1 (#259) still
+  targets v0.30.0.
+- **ml round-3 answers encoded (2026-09-21, #315 merged as `cd41558`; tagged in v0.29.1, ships in
+  v0.29.2)** — the
   editor answered lecture-python-programming.ml#22 on 2026-09-19. `ml` rules 27 → 28, glossary
   v0.7.0. Two answers overturned a guess: the comma between `-ഉം` items is **always** there
   (v0.29.0 shipped "phrases only"), and *draw* is not a light verb (left unencoded — both forms
