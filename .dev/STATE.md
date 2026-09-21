@@ -15,8 +15,9 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   English, *provide* → `നൽകുക` (both acceptable). Further Reading boundary settled as the
   reference section (`D-2026-09-21-…`), which unblocks the code move under #260. **Open: the
   rule-2 rewrite** around his everyday-speech test — held for a held-out judge run, not shipped
-  on his say-so alone. Round 4 (lecture-python-programming.ml#23) is deliberately not
-  regenerated; see the log entry `2026-09-21-ml-round3-answers`.
+  on his say-so alone. Round 4 (lecture-python-programming.ml#23) **will be regenerated at
+  `@v0` once this is released** (Matt, 2026-09-21; the editor has been asked to hold off) — see
+  the log entry `2026-09-21-ml-round3-answers`.
 - **v0.29.0 released 2026-09-18** (release PR #312 `a6fda54`; payload #311 `847ca9f`; §4a gate
   **completed**: 84/84 sync runs, 28/28 delivery + 28/28 `engineVersion: 0.29.0` verdicts per
   lane; `v0.29` = `v0` = `a6fda54`; GitHub release published; `@v0` smoke read-off on #312)

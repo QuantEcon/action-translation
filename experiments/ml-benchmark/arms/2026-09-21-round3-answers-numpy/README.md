@@ -35,5 +35,8 @@ What it shows:
 4. **Bare endings remain draw-dependent** (0 / 36 / 2 here; 46 / 35 / 3 at v0.29.0) — nothing in
    this change touches them; best-of-N by lint remains the way to choose a seed.
 
-No draw from this arm was sent to the editor: round 4 (lecture-python-programming.ml#23) stays
-the v0.29.0 draw 3 he was asked to review.
+No draw from this arm goes to the editor — every round is generated at a published `@v0`, and
+these are from an unreleased branch. But the arm is why round 4 will be regenerated: branch
+draw 1 is cleaner than the draft he was sent (v0.29.0 draw 3) on every lint, so
+lecture-python-programming.ml#23 is refreshed at `@v0` once this change is released (decided
+2026-09-21; he had not started and was asked to hold off).
