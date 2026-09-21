@@ -7,6 +7,13 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## In flight
 
+- **v0.29.1 is tagged but NOT released (2026-09-21)** — its §4a gate came back 83/84: scenario 17
+  on the `.ml` lane failed twice (the model wrapped a plain `## Exercises` list in
+  `{exercise-start}`; structural parity refused the file). `v0` = `v0.29` = `a6fda54` (v0.29.0)
+  still; no GitHub release. Measured at twelve draws per arm the defect is **latent since
+  v0.28.0** (5/12 at v0.29.0) and aggravated by the #315 rules (11/12); one scope sentence on the
+  exercise rule takes it to 0/24, and the action path delivers 2/2. The fix ships as
+  **v0.29.2**. Log: `.dev/log/2026-09-21-v0291-gate-scenario17.md`.
 - **v0.29.1 release cut 2026-09-21** (payload #315 `cd41558`) — patch: the Malayalam editor's
   round-3 answers (detail in the next entry). Nothing in it is a feature; the one behavioural
   correction is the `-ഉം` comma rule, where v0.29.0 had shipped the wrong guess. §4a gate

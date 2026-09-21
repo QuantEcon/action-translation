@@ -319,6 +319,27 @@ describe('Language Configuration', () => {
     });
   });
 
+  // v0.29.1's §4a gate (2026-09-21): scenario 17 on the .ml lane failed twice
+  // — the model wrapped the fixture's plain "## Exercises" list in
+  // {exercise-start}, and structural parity refused the file. Measured on that
+  // fixture: 5/12 refusals at v0.29.0, 11/12 at v0.29.1, 0/24 with this scope
+  // sentence. The verbatim rule must speak only of directives the source has.
+  describe('Malayalam exercise rule is scoped to existing directives', () => {
+    const rules = getLanguageConfig('ml').additionalRules;
+    const exerciseRule = rules.find((r) => r.startsWith('Every exercise-related directive'));
+
+    it('forbids adding a directive the source does not have', () => {
+      expect(exerciseRule).toBeDefined();
+      expect(exerciseRule).toContain('directives the source ALREADY contains');
+      expect(exerciseRule).toContain('never add an {exercise}, {exercise-start}, {solution}');
+      expect(exerciseRule).toContain('with no directive wrapped around it');
+    });
+
+    it('stays one rule — the scope is part of the verbatim rule, not a 29th', () => {
+      expect(rules).toHaveLength(28);
+    });
+  });
+
   describe('Malayalam round-2 rules (lecture-python-programming.ml#7)', () => {
     const rules = getLanguageConfig('ml').additionalRules.join('\n');
 
