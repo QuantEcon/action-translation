@@ -1,4 +1,4 @@
-verified: 2026-09-21
+verified: 2026-09-23
 
 # STATE
 
@@ -7,165 +7,52 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## In flight
 
-- **v0.29.3 release cut 2026-09-23** (payload #328 `a4fe00a`, on top of #322 `079b3c7` and #323
-  `ede10e6`) — patch: `fr` glossary v1.2 (Namespace → Espace de nommage, Heads → Face, the
-  standard-normal context) from the French editor's second review round, which reaches French
-  syncs only once `@v0` moves; plus the harness reset fix and the release rate check (step 4b),
-  both of which first run on this gate. §4a gate and the 4b rate-check summary are recorded on the
-  release PR.
-- **v0.29.2 released 2026-09-21** (release PR #318 `5f74d74`; payload #317 `62504c1`, on top of
-  #315 `cd41558`; §4a gate **completed**: 84/84 sync runs, 28/28 delivery + 28/28
-  `engineVersion: 0.29.2` verdicts per lane, scenario 17 on `.ml` delivered; `v0.29` = `v0` =
-  `5f74d74`; GitHub release published; `@v0` smoke `engineRef: v0` on all three lanes — tally
-  on #318) — patch: the scope sentence on the `ml` exercise rule that v0.29.1's failed gate
-  called for, carrying the editor's round-3 answers that v0.29.1 never delivered. **Round 4
-  (`numpy`, lecture-python-programming.ml#23) regenerated at `@v0` the same day**: three draws,
-  draw 1 sent (bare endings 1 / 37 / 2), one `ml_repair.py` comma applied and disclosed — the
-  first repaired seed; arm `experiments/ml-benchmark/arms/2026-09-21-round4-numpy-v0.29.2/`.
-  Harness note: the reset left one PR from the previous gate open on `.ml` (closed by hand).
-  W1 (#259) still targets v0.30.0. **2026-09-23 close-out**: the reset survivor's cause was
-  `gh pr list` with no `--limit` — fixed with a post-reset check on **#322** (closes #321); the
-  gate's one-draw blindness (a ~40% defect passed three gates) is **#320**, decided as a local
-  N-draw rate check — `tool-test-action-on-github/rate-check.sh`, release step 4b, on **#323**
-  (v0.29.2 reads 0/12, v0.29.0 4/12). **Next engine-side: the rule-2 arm** (rewrite around the
-  editor's everyday-speech test, judged held-out before it ships).
-- **v0.29.1 is tagged but NOT released (2026-09-21)** — its §4a gate came back 83/84: scenario 17
-  on the `.ml` lane failed twice (the model wrapped a plain `## Exercises` list in
-  `{exercise-start}`; structural parity refused the file). `v0` = `v0.29` = `a6fda54` (v0.29.0)
-  still; no GitHub release. Measured at twelve draws per arm the defect is **latent since
-  v0.28.0** (5/12 at v0.29.0) and aggravated by the #315 rules (11/12); one scope sentence on the
-  exercise rule takes it to 0/24, and the action path delivers 2/2. The fix ships as
-  **v0.29.2**. Log: `.dev/log/2026-09-21-v0291-gate-scenario17.md`.
-- **v0.29.1 release PR merged and tagged 2026-09-21 — gate failed, NOT released (entry above)**
-  (release PR #316 `7fe78a5`; payload #315 `cd41558`) — patch: the Malayalam editor's round-3
-  answers (detail in the next entry). Nothing in it is a feature; the one behavioural
-  correction is the `-ഉം` comma rule, where v0.29.0 had shipped the wrong guess. §4a tally
-  (83/84) is on #316; CHANGELOG marks the version `[YANKED]`. Its contents ship in v0.29.2;
-  **once v0.29.2's floating tags move**, round 4 (`numpy`, lecture-python-programming.ml#23) is
-  regenerated at `@v0` — the editor has been asked to hold off until then. W1 (#259) still
-  targets v0.30.0.
-- **ml round-3 answers encoded (2026-09-21, #315 merged as `cd41558`; tagged in v0.29.1, ships in
-  v0.29.2)** — the
-  editor answered lecture-python-programming.ml#22 on 2026-09-19. `ml` rules 27 → 28, glossary
-  v0.7.0. Two answers overturned a guess: the comma between `-ഉം` items is **always** there
-  (v0.29.0 shipped "phrases only"), and *draw* is not a light verb (left unencoded — both forms
-  are his). Confirmed: English plural + suffix for retained nouns (own rule + lint), *prefer*
-  English, *provide* → `നൽകുക` (both acceptable). Further Reading boundary settled as the
-  reference section (`D-2026-09-21-…`), which unblocks the code move under #260. **Open: the
-  rule-2 rewrite** around his everyday-speech test — held for a held-out judge run, not shipped
-  on his say-so alone. Round 4 (lecture-python-programming.ml#23) **will be regenerated at
-  `@v0` once this is released** (Matt, 2026-09-21; the editor has been asked to hold off) — see
-  the log entry `2026-09-21-ml-round3-answers`.
-- **v0.29.0 released 2026-09-18** (release PR #312 `a6fda54`; payload #311 `847ca9f`; §4a gate
-  **completed**: 84/84 sync runs, 28/28 delivery + 28/28 `engineVersion: 0.29.0` verdicts per
-  lane; `v0.29` = `v0` = `a6fda54`; GitHub release published; `@v0` smoke read-off on #312)
-  — headline: the third Malayalam native review encoded (`ml` rules 23 → 27,
-  glossary v0.6.0), the `style_examples` glossary mechanism (no set shipped: evaluated
-  held-out and set aside), the Further Reading decision record, and the first regeneration
-  test with a held-out lecture and a blind pairwise judge. **W1 (#259) did not make it and
-  retargets to v0.30.0.** Tally on #312. Round 4 (`numpy`) is generated at `@v0` now.
-- **ml round 3 encoded on #311 (2026-09-18, merged as `847ca9f`; released by v0.29.0)** — the
-  third inline native review (44 suggestion blocks on lecture-python-programming.ml#13,
-  `matplotlib`) found every round-2 class clean and a residue of *style* (clause-boundary
-  commas, verb aspect, clause order). Payload: `ml` rules 23 → 27, glossary v0.6.0, and a new
-  mechanism — `style_examples` in the glossary file, rendered as `STYLE EXAMPLES:` in the
-  cached stable block on every write path. New admission test: a pattern becomes a rule only
-  if it recurs. Decision record `D-2026-09-18-ml-further-reading-lists-stay-english`. First
-  regeneration test with a **held-out lecture** and three draws per arm
-  (`experiments/ml-benchmark/arms/2026-09-18-round3-rules-exemplars-sonnet5/`): in-sample
-  similarity to the editor's text 0.845 → 0.93, held-out unchanged (0.814 → 0.809) apart
-  from comma density (0.56 → 0.72 vs his 0.82). A blind pairwise Opus 5 judge (2,570
-  judgements, no position bias) then found the rules preferred 55 : 45 held out and rules +
-  the shipped pairs 57 : 43 (p = 0.054), while contrastive / 56-pair / no-rules example
-  variants all judged 50 : 50 — the ml example set was removed from the PR (mechanism
-  ships, no data) and the exemplar line is closed pending round-4 editor data.
-  ml#13 merged `a24e925`. Editor's open questions: lecture-python-programming.ml#22 (none blocks a release).
-  Targets **v0.29.0**; round 4 (`numpy`) is generated after it ships. Log:
-  `.dev/log/2026-09-18-ml-round3.md`.
-- **v0.28.1 release cut 2026-09-14** (fix #308 `aae38d1`; release PR #309 `3de9024`) — patch: sync mode fires only for PRs
-  merged into the default branch. Trigger: QuantEcon/lecture-python-programming#629 (theme
-  v3.0.0) merged into the long-lived `jb2` branch on 2026-09-12 and all three deployed sync
-  workflows fired — `types: [closed]` has no base-branch filter and neither the job `if:`
-  nor the action looked at the base — opening fr#79, fa#166, zh-cn#105 for unpublished
-  content. Two-layer fix: `branches: [main]` in every published sync template (sweep test
-  now requires it) + `mergedIntoDefaultBranch` in `validatePREvent` and the resync path,
-  compared against `repository.default_branch`. Tidy-up outside the repo, same day: the
-  three downstream PRs closed unmerged; `branches: [main]` PR'd into the deployed workflows
-  (lecture-python-programming#630, lecture-python-intro#846, lecture-python.myst#1056 —
-  all three **merged 2026-09-14**; verified 2026-09-21). §4a gate **completed 2026-09-14**:
-  84/84 sync runs, 28/28 delivery + 28/28 verdicts per lane at `engineVersion: 0.28.1`;
-  `@v0` = `v0.28` = `3de9024`, alias smoke (scenario 01) reports `engineRef: v0` on all
-  three lanes; GitHub release published. W1 (#259) targeted v0.29.0 then, now v0.30.0.
-- **v0.28.0 released 2026-09-03** (#303 `07e7c64`; release #304 `9284fbc`; §4a gate **completed**:
-  84/84 sync runs, 28/28 delivery + 28/28 stamped verdicts per lane; `@v0` = `v0.28` = `9284fbc`,
-  smoke-verified on all three lanes) — headline: the
-  Malayalam editor's ml#12 answers encoded and the verbatim exercise-family policy
-  (`verbatim-directives.ts` on all three write paths + the `verbatimDirectives` review
-  diff-check; decision record `D-2026-09-03-ml-all-exercise-content-stays-english`
-  supersedes the 09-01 record), glossary v0.5.0, rules 24 → 23, harness scenario 28.
-  Validated pre-merge with the local bundle on a scenario-28 harness PR (positive and
-  negative). **W1 (#259) retargets to v0.29.0.** Round 4 (`numpy`) can be generated at `@v0`.
-- **2026-09-01 PR sweep** — all six open PRs reviewed, merge order set. #294/#297 merged
-  and released (v0.27.0). **#289** (#156) and **#291** (#254 interim) reviewed in full and
-  **upgraded in place on kp992's branches** (`maintainerCanModify`): both had a `yaml.dump`
-  round-trip that turned a one-line `_toc.yml` change into a whole-file rewrite (401 /
-  201 changed lines on the real lecture-python TOC) — both now edit the TOC text in place
-  and verify by parse; #289 gains fetch-failure coverage + an accurate PR-body notice;
-  #291 gains overlap-based part matching (identity matching lost the caption of exactly
-  the part a lecture-adding sync touches), the rebase-replay site, 404-only target
-  fetches, and moved to `src/toc-captions.ts` so it composes with #289. Both CI-green,
-  mergeable, awaiting kp992 (who merged `main` into #289 on 2026-09-20; #291 untouched since
-  09-01 — both still open 2026-09-21). **Merge order #289 → #291.** #291 no longer closes #254
-  (W1's structured merge is the end state). **#225 closed** unmerged: #118 cause unfixed,
-  D2 removes the path, D1 gates #178. Two #297 residuals filed as their own issue
-  (ml lint regex misses `functions-നെ`; rule 11 dangling colon). #69 untouched.
-  Tracker #257 re-stamped with a contract-form `## Where we stand` section.
-- **v0.27.0 release cut 2026-09-01** — headline: the second inline native-review round
-  encoded (ml glossary v0.4.0 + rules 18 → 24 + the first deterministic ml lints, #297;
-  regeneration-checked in the same PR, decision record
-  `D-2026-09-01-ml-exercise-statements-stay-english`), plus prompt caching on every
-  translator call (#293), `tool-review-injection/` (#285), the `runReview` extraction
-  (#278, #169 slice 1) and the harness editors block (#275). W1 (#259) did not make it
-  and now targets v0.28.0. §4a gate status is recorded on the release PR.
-- **v0.26.0 release cut 2026-08-17** — headline: the first inline native-review round
-  encoded (ml glossary v0.3.0 + 18-rule set, #272; regeneration-verified, #273), plus
-  verdict provenance (#247), config-preserving writers (#243), newline-terminated
-  writers (#266/#267), harness scenario 27, and the resync-gate `startsWith` alignment.
-  §4a gate **completed 2026-08-17** (verified 2026-08-19: harness scenario PRs
-  02:36 → GitHub release Latest 02:50; `@v0` = `v0.26` = `e4e5710`, so the alias
-  moved — no #109-class lag this time). The ml calibration programme is now
-  one-lecture-per-round: stale seeds ml#2–#5 closed, round 2 open (ml#7, `functions`,
-  engine `8625221`).
-- **Prompt caching shipped 2026-08-28** (#292 → PR #293, v0.27.0-bound; outside #257):
-  translator prompts now send `[stable(cache_control), volatile]` blocks; forecast
-  ~45-50% off sync-run cost, live-verified. Telemetry semantics changed: `input-tokens`
-  is now the *uncached* remainder — total prompt = input + cache-creation + cache-read
-  (two new outputs); a zero cache-read on a multi-call run means the prefix broke.
-  Remaining half of FUTURE.md idea 7 (`count_tokens` sizing) still open.
+- **fr typography fixes #324 and #325** (filed 2026-09-23 from the French editor's second
+  round) — implementation branches in progress: **#324** (`fix/fr-elision-apostrophe`) sets the
+  `fr` elision apostrophe before inline markup as U+2019; **#325**
+  (`fix/typography-raw-html-blocks`) stops U+00A0 being inserted inside raw `<style>` blocks.
+  The fr edition already carries both defects, so each fix comes with a one-off edition repair.
+  Also held for measurement from the same round: the *Ramasse-miettes* and *Renvoyer* pins.
+- **#326 and #203 — the whole-document paths** (filed / re-diagnosed 2026-09-23): those paths
+  take the head region from the model, so a front-matter drop passes parity and is written
+  (#326); #203 is re-diagnosed as a whole-document code-fence wrap, to be fixed by one unwrap
+  helper shared with #118's forward path. Queued after #324 and #325.
+- **#327 — narrowing `fr.additionalRules[2]`, measured 2026-09-23**: at 12 draws per arm per
+  lecture the narrowed rule keeps 152/152 instructions imperative (current rule: 0/99),
+  « On pose » 12/12, overshoot 0 in 36/36 draws — but the "Your first task" criterion fails:
+  only 4/12 avoid « Votre (première) tâche » (« Votre première tâche consiste à… » in 6/12).
+  One phrase to add, then re-measure `python_by_example` and run the blind pairwise judge; the
+  result goes on #327.
+- **ml calibration: round 4 is with the editor** — the round-3 answers
+  (lecture-python-programming.ml#22, closed 2026-09-21) shipped in v0.29.2 (#315 `cd41558`:
+  rules 27 → 28, glossary v0.7.0; Further Reading boundary `D-2026-09-21-…`, which unblocks the
+  code move under #260). Round 4 (`numpy`, lecture-python-programming.ml#23) was regenerated
+  with the v0.29.2 engine on 2026-09-21: three draws, draw 1 sent (bare endings 1 / 37 / 2),
+  one `ml_repair.py` comma applied and disclosed — the first repaired seed; arm
+  `experiments/ml-benchmark/arms/2026-09-21-round4-numpy-v0.29.2/`. Unreviewed as of
+  2026-09-23, as are lecture-python-programming.ml#24 (the #22 answers applied to the reviewed
+  pages) and ml#14 (exercise blocks restored). **Open: the rule-2 arm** — rewrite around the
+  editor's everyday-speech test, judged held-out before it ships, not on his say-so alone
+  (no issue; STATE and the logs are its tracker). Logs `2026-09-21-ml-round3-answers`,
+  `2026-09-23-close-out`.
 - **The standing plan is tracker #257** (2026-08-10 backlog review; supersedes #94/#198):
   all 67 open issues triaged and verified against v0.25.0, phases W0–W6 filed as
   sub-issues #258–#264. The dominant failure shape it names: **the failure path produces
   a success-shaped artifact** (#90-class). Doctrine: decisions and external clocks first;
-  detection before repair; foundations before dependents.
-- **W0 (#258) CLOSED 2026-08-11** — all twelve boxes, PRs #266–#269. The tail, decided
-  by the owner one-by-one: **D1** deferred to W2 kickoff (box moved to #260 as a gate);
-  **D3** recorded (`decisions/D-2026-08-11-bot-identity-machine-user.md` — machine user,
-  not App; #221 closed, #61 stays as the migration task); **#256.3** verified on the
-  harness rather than the calendar (scenario 27 @ `v0`=v0.25.0 — the backfilled entry
-  delivered in test-translation-sync.zh-cn#710; evidence in #256); **#7** refreshed
-  rather than marked `wontfix` (deck renamed + rewritten against v0.25.0, regenerated).
-  Two carry-forwards: the sync metadata `files[]` **under-declares** (bib + state
-  delivered, undeclared — benign inverse of #256 defect 1, belongs in W1's assertion),
-  and the test source repo carries only the zh-cn sync workflow until the next
-  unscoped harness run.
+  detection before repair; foundations before dependents. Its `## Where we stand` section is
+  stamped 2026-09-01 and has drifted (latest release v0.27.0, W1 → v0.28.0) — re-stamp it.
 - **W1 (#259) is the next P0** — declared-vs-delivered assertion + TOC structured merge,
-  now targeting **v0.28.0** (v0.27.0 cut 2026-09-01 as the ml round-2 + prompt-caching release, without W1; v0.26.0 shipped 2026-08-17 as the ml round-1 release).
-  Fully unblocked; the one gate is #169 first or alongside. Scope grew 2026-08-19:
-  a stale-resync detection box (#276 guard — code cells modulo localized
-  comments/docstrings) and the both-directions rule on the assertion (`files[]`
-  under-declares: bib + state delivered undeclared).
-- **#169 is underway — the W1 gate, one slice per PR.** Slice 1 landed 2026-08-19
-  (#278, `228a317`); slice 2 (`src/github-content.ts`) is next, then the `metadata.mode`
+  now targeting **v0.30.0** (retargeted on #259 as v0.28.0 and v0.29.0 shipped Malayalam rounds
+  instead; the issue title still says v0.27.0). 0 of 7 boxes done. Fully unblocked; the one
+  gate is #169 first or alongside. Scope grew 2026-08-19: a stale-resync detection box and the
+  both-directions rule on the assertion (`files[]` under-declares: bib + state delivered
+  undeclared). Two 2026-08-20 proposals on #259 are not yet in the box text: re-specify the
+  stale-resync box as source snapshot vs source `main` (the #276 ruling), and bring all
+  localisation detection (`_toc.yml` part captions + figure captions, one
+  `checkLocalisationParity`) into W1.
+- **#169 is the W1 gate, one slice per PR — only slice 1 so far.** Slice 1 landed 2026-08-19
+  (#278, `228a317`) and nothing has moved since (no #169 PR; `src/github-content.ts` does not
+  exist at `16e50f6`). Slice 2 (`src/github-content.ts`) is next, then the `metadata.mode`
   dispatch (F19) and the tri-state metadata parser (F139/F140). **The pattern each
   remaining slice follows**, established by slice 1: pass runtime-derived values in as
   arguments rather than importing them — `import.meta.url` lives alone in
@@ -176,78 +63,82 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   `../glossary` still lands on the repo-root glossary). **And grep for comments that
   explain whatever moved** — slice 1 left two files asserting that `index.ts` holds
   `import.meta.url` after it no longer did; nothing but a grep catches that.
-- **#276 (sixth instance of the class, resync path)** — `\translate-resync`
-  regenerates from the source PR's merge-time snapshot; fired in the field
-  2026-08-18. Fully measured 2026-08-19 (ledger in #276): zh-cn clean; fr numpy
-  missed #595 (regeneration silently dropped the file — second mechanism); fa two
-  stale state files + a pandas_panel divergence the hand-restore introduced.
-  **Fallout repaired and byte-verified 2026-08-19** (fa#158, fr#38 merged; recorded-vs-
-  actual mismatch set now zero). The bug itself stays open — W1 carries the detection
-  guard. **Resync moratorium until the guard lands.**
-- **Malayalam** — first-class harness language (26/26); its two seed reference
-  translations await native review (#207); benchmark Phase 1 (#194) unrun.
-- **Glossary PR #69** (ja) — open, awaiting native review + a `LANGUAGE_CONFIGS` entry.
-- **Draft #314** (opened 2026-09-21) — `.dev/` → `.qe/dev/` per the QEP-7 draft (QuantEcon/qeps#40).
-  It renames every file under `.dev/`, so whichever of it and an in-flight PR that touches
-  `.dev/` merges second needs a rebase; raw `log/` and `decisions/` entries keep their
-  historical `.dev/` mentions.
+- **#276 (sixth instance of the class, resync path)** — `\translate-resync` regenerates from
+  the source PR's merge-time snapshot; fired in the field 2026-08-18. Fully measured 2026-08-19
+  (ledger in #276); fallout repaired and byte-verified the same day (fa#158, fr#38 merged;
+  recorded-vs-actual mismatch set zero). **The blanket moratorium was lifted 2026-08-20**
+  (ruling on #276) and replaced by a precondition: `\translate-resync` only when no file of the
+  PR has advanced on source `main` since it merged, i.e. for every path
+  `git rev-list --count <mergeSha>..origin/main -- <path>` is zero. It is no longer the
+  documented recovery — use `translate forward`, or `init -f` for an absent lecture, and never
+  regenerate a natively-reviewed one — but the failure-issue template in `createFailureIssue`
+  still prescribes it unconditionally (#281). The fix is re-specified as source snapshot vs
+  source `main` (English against English), and `mode: rebase` reads the same frozen snapshot.
+  The bug stays open; W1's stale-resync box carries the guard.
+- **Contributor PRs #289 (#156) and #291 (#254 interim)** — reviewed in full and upgraded in
+  place on kp992's branches in the 2026-09-01 sweep (byte-preserving `_toc.yml` edits instead
+  of a `yaml.dump` round-trip; detail on #257 and the PR threads). Both still open 2026-09-23
+  and now **conflicting with `main`**, on CHANGELOG `[Unreleased]` and
+  `dist-action/index.js.map` only (`src/` merges clean; `git merge-tree`, 2026-09-23): #289 is
+  9 behind (kp992 merged `main` in on 2026-09-20; CI green at `8b98a32`), #291 is 20 behind
+  (untouched since 09-01). **Merge order #289 → #291.** #291 is meant to leave #254 open (W1's
+  structured merge is the end state), but its body's negated closing phrase is parsed as a
+  closing reference (`closingIssuesReferences` = #254). The two #297 residuals are #301 (open).
+- **Glossary PR #69** (ja) — rebuilt on `main` 2026-09-01 with the thread's rulings applied
+  (`ja.json` v1.1, the `ja` entry in `LANGUAGE_CONFIGS`, decision record
+  `D-2026-09-01-ja-terminology-policy` on the branch; the Wikipedia cross-check idea is #300).
+  Two reviewers have since agreed three more edits (オーソリティ中心性, 資本の限界生産力,
+  連邦準備制度経済データ) and asked why `SCF` was left out (last reply 2026-09-21) — awaiting
+  the maintainer's reply; the branch is 21 behind `main` and conflicting.
+- **#314** (opened 2026-09-21 as a draft; marked ready for review 2026-09-23 — Copilot's
+  overview recommends approval, two wording nits) — `.dev/` → `.qe/dev/` per the QEP-7 draft
+  (QuantEcon/qeps#40, still open). It renames every file under `.dev/` and already conflicts
+  with `main` (9 behind), so whichever of it and an in-flight PR that touches `.dev/` merges
+  second needs a rebase — this STATE refresh included; raw `log/` and `decisions/` entries keep
+  their historical `.dev/` mentions.
 
 ## Recently landed
 
-- **2026-08-19 — #169 slice 1** (#278, `228a317`): `runReview` extracted to
-  `src/action/review.ts` with 17 tests — the first ever to reach entry-point logic —
-  plus `src/runtime-paths.ts` and a shared `core-logger.ts`. `index.ts` loses 124 lines
-  and both its `path`/`url` imports; suite 1,516 → 1,533. The issue's figures were
-  re-verified against `main` before starting and corrected in place: the file is
-  **1,579 lines** (1,314 at audit time), churn 24 commits/6 months, all line references
-  moved. Two audit claims amended rather than repeated — "zero exports" is really *no
-  usable exports* (`fetchBibliographies` has no importer anywhere), and F17's
-  `dist-action/glossary/` half was already fixed by #197, leaving only its coverage
-  half live. Two guards earned their keep: the module-map test (#168) caught the new
-  modules' absence from `docs/developer/architecture.md`, and Copilot's review caught
-  an overclaiming comment, which led to two more that the extraction itself had
-  falsified (`05ce0ce`).
-- **2026-08-19 — #276 triaged, measured, and repaired**: labels
-  + tracker/W1 bodies updated in place (sixth instance; W1 → v0.27.0; guard box with
-  the localized-docstring caveat; label migration marked done-verified). Full
-  recorded-vs-actual measurement of all 21 state files across fa/fr/zh-cn plus
-  content probes — three first-pass claims reversed: zh-cn needs nothing, the fa
-  pandas_panel "restore" (fa#155) itself diverged from source, and fr numpy's gap is
-  a silent per-file drop by the regeneration, not stale state. Repair PRs:
-  lecture-python-programming.fa#158 (two state files + pandas_panel URL form),
-  lecture-python-programming.fr#38 (hand-port of the two #595 numpy edits — never
-  `forward` a natively-reviewed lecture); **both merged and byte-verified 03:33Z**.
-  Settle-week interaction checked: the workspace-lectures republish→delete sequence is
-  unblocked (pandas/polars byte-clean on all three targets), and that plan's six-repo
-  merge-order table was re-measured and updated (QuantEcon/workspace-lectures#48 — all
-  four programming-family republishes ran green overnight).
-- **2026-08-11 — W0 S-fixes**: #230 `claude-opus-5` pricing entry
-  ($5/$25/MTok; Opus 5 spend had reported as $0.000) + warn-once on unpriced models +
-  `VALID_MODEL_PATTERNS` gains opus-5/fable-5; #234.4 resync gate aligned to the
-  parser's `startsWith` across the scaffolder, all docs, and the harness template;
-  #53 legacy `heading-map:` deprecation warning (removal is W6); #91 heading-maps.md
-  now documents the real key format (heading text verbatim + `::` paths — the docs
-  taught lowercase-hyphenated IDs no writer ever produced).
-- **2026-08-11 — #116 closed both ways**: `forward` (#266) and `init` (#267) terminate
-  written files with a newline; all three writers now do (sync always did). Helper
-  lives in `commands/forward.ts` until #172's `finalizeTranslatedDocument` consolidates
-  finalization. Competing external PR #232 closed with credit; its LF/CRLF
-  byte-for-byte tests adopted.
-- **2026-08-10 — the backlog review shipped** (#265, `77f09da`): report + two decision
-  records on main, tracker + 7 phase issues filed, QEP-0002 labels applied.
-- **Post-v0.25.0 fixes on main**: #244 falsifiable `engineVersion` + `engineRef`
-  (`842528b`); #243 `writeConfig` read-modify-write, unknown keys survive (`597b2be`).
-- **v0.25.0** (2026-08-04) — everything since Wave 1: #192 trust-gated workflow
-  templates, #117 demand-driven bibliography backfill (red-by-design when a key
-  resolves nowhere), #210 deletion partitioning (deletion-only PRs stop failing
-  review; non-404 target-fetch failures fail the run), #202 one-version E2E harness,
-  #237 ml packet rulings, #241 fr editor rules + glossary v1.1. Released, deployed,
-  gated per AGENTS.md §4a; shadow gate field-validated (`wouldAutoMerge: true`
-  recorded, no action). Watch item still open: the first organic **fr** review since
-  the tag move exercises the new register rules for the first time.
-- **Older releases** (detail in git history and `log/`): v0.24.0 = tech-debt Wave 1
-  (#158–#168, 51 findings); v0.23.0 = glossary resolution fixed both halves +
-  diff-check provenance split; v0.22.0 = verdict v2 + `auto-merge-mode: shadow`;
+- **2026-09-23 — v0.29.3 released** (release PR #329 `16e50f6`; payload #328 `a4fe00a`, on top
+  of #322 `079b3c7` and #323 `ede10e6`): `fr` glossary v1.2 from the French editor's second
+  round (Namespace → Espace de nommage, Heads → Face, the standard-normal context; the edition
+  was aligned first in lecture-python-programming.fr#81), the harness post-reset check (#322,
+  for #321) and the release rate check, step 4b (#323, for #320). §4a 84/84: 28/28 delivery +
+  28/28 `engineVersion: 0.29.3` verdicts per lane, scenario 17 delivered on all three lanes;
+  the first 4b rate check (`game-theory.md`) refused 0/12 on zh-cn, fa and ml.
+  `v0` = `v0.29` = `16e50f6`; `@v0` smoke `engineRef: v0` on all three lanes. Tally on #329.
+- **2026-09-21 — v0.29.2 released** (release PR #318 `5f74d74`; payload #317 `62504c1`, on #315
+  `cd41558`): the scope sentence on the `ml` exercise rule that v0.29.1's failed gate called for
+  (scenario 17 refused 5/12 at v0.29.0, 11/12 at v0.29.1, 0/24 with the sentence), carrying the
+  editor's round-3 answers. §4a 84/84, `@v0` smoke clean — tally on #318. v0.29.1 (#316
+  `7fe78a5`) stays tagged, never released: gate 83/84, CHANGELOG `[YANKED]`, log
+  `2026-09-21-v0291-gate-scenario17`.
+- **2026-09-18 — v0.29.0 released** (release PR #312 `a6fda54`; payload #311 `847ca9f`): ml
+  native-review round 3 encoded (rules 23 → 27, glossary v0.6.0; lecture-python-programming.ml#13
+  merged `a24e925`), the `style_examples` glossary mechanism shipped without data (every example
+  set judged 50 : 50 held out by the blind pairwise judge), decision record
+  `D-2026-09-18-ml-further-reading-lists-stay-english`. §4a 84/84, tally on #312. Log
+  `2026-09-18-ml-round3`.
+- **2026-09-14 — v0.28.1 released** (fix #308 `aae38d1`; release PR #309 `3de9024`): sync fires
+  only for PRs merged into the default branch — `branches: [main]` in every published template
+  (the sweep test enforces it) plus a `mergedIntoDefaultBranch` backstop — after
+  lecture-python-programming#629 merged into `jb2` fired all three deployed syncs. The three
+  stray PRs (lecture-python-programming.fr#79, .fa#166, .zh-cn#105) closed unmerged; the filter
+  merged into the deployed workflows (lecture-python-programming#630, lecture-python-intro#846,
+  lecture-python.myst#1056). §4a 84/84, tally on #309. Log `2026-09-14-jb2-sync-fallout`.
+- **2026-09-03 — v0.28.0 released** (#303 `07e7c64`; release #304 `9284fbc`): the Malayalam
+  editor's ml#12 answers encoded and the verbatim exercise-family policy enforced in code
+  (`verbatim-directives.ts` on all three write paths + the `verbatimDirectives` review
+  diff-check; `D-2026-09-03-ml-all-exercise-content-stays-english` supersedes the 09-01
+  record), glossary v0.5.0, rules 24 → 23, harness scenario 28. §4a 84/84, 28/28 per lane;
+  tally on #304.
+- **Older releases** (detail in CHANGELOG, git history and `log/`): v0.27.0 = ml round 2
+  (#297) + prompt caching on every translator call (#293) + `tool-review-injection/` (#285),
+  gate record on #298; v0.26.0 = ml round 1 (#272, regeneration-verified #273) + verdict
+  provenance (#247) + harness scenario 27; v0.25.0 = trust-gated resync + templates (#192),
+  bibliography backfill (#117), deletion partitioning (#210), one-version E2E harness (#202);
+  v0.24.0 = tech-debt Wave 1 (#158–#168, 51 findings); v0.23.0 = glossary resolution fixed
+  both halves + diff-check provenance split; v0.22.0 = verdict v2 + `auto-merge-mode: shadow`;
   v0.21.0 and earlier per CHANGELOG.
 
 ## Blocked
@@ -256,43 +147,63 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## Next
 
-**Resume here (2026-09-02):**
+**Resume here (2026-09-23, after v0.29.3):**
 
-0. **Merge #289, then #291** once kp992 has looked (or after a week — both are
-   maintainer-upgraded and CI-green); whichever lands second is a two-hunk
-   CHANGELOG/bundle rebase. Then **triage the twelve post-review arrivals** listed on
-   #257 into W1–W6 (#282, #287, #290 look W1-shaped).
-1. **#169 slice 2: `src/github-content.ts`** — `tryFetchFileContent` plus **one**
-   `buildFilesToSync` over a narrow `ContentClient` interface, replacing the two
-   independently-maintained builders (`index.ts:381` and `:1038` as of `228a317`) that
-   have already diverged on the renamed-file case. This is the slice that makes F44's
-   divergence and F36's error coercion disappear by construction rather than by patch —
-   and unlike slice 1 it **can change behaviour on the rename path**: `:381` fetches the
-   target's content from `previousPath` and so preserves an existing translation across
-   a rename, while `:1038` has no rename branch at all. Unifying them picks a winner, so
-   decide that explicitly, say so in the PR, and pin it with a test — this is the
-   finding where an existing translation can be discarded.
-2. Then the rest of #169 — `metadata.mode` dispatch (F19), tri-state metadata parser
+0. **The fr engine queue, in this order**: finish, review and PR #324, then #325 (branches in
+   progress, each with its fr edition repair), then #326 together with #203's fence unwrap.
+   In parallel, **#327**: add the "Your first task" phrase, re-measure `python_by_example`, run
+   the blind pairwise judge, and post the result on #327 before the narrowed rule ships.
+1. **Merge #289, then #291** — each needs a `main` merge and a bundle rebuild first (see In
+   flight). **Reword #291's body before merging**: its negated closing phrase would close
+   #254. Then **triage the post-review arrivals** into W1–W6: #257 (stamped 2026-09-01) still
+   lists #280 #282 #283 #284 #286 #287 #288 #290 #295 #296 #300 as untriaged, and #301, #307
+   (`high-priority`) and #324–#327 have arrived since (#282, #287, #290 look W1-shaped; #307
+   goes with slice 2).
+2. **#169 slice 2: `src/github-content.ts`** (not started — no such file at `16e50f6`) —
+   `tryFetchFileContent` plus **one** `buildFilesToSync` over a narrow `ContentClient`
+   interface, replacing the two independently-maintained builders (`rebaseSinglePR` at
+   `index.ts:279` and `fetchAllFileContents` at `:935`, as of `16e50f6`). This is the slice
+   that makes F44's divergence and F36's error coercion disappear by construction rather than
+   by patch — and unlike slice 1 it **can change behaviour on the rename path**. Both builders
+   read the target from the old path; they differ in where the source's old content comes
+   from (sync: `previousFilename` at `sha^`; rebase: the new path at `sha^`, which does not
+   exist before a rename, so a rebased rename diffs against empty) and on a failed source
+   fetch (sync records an error; rebase `continue`s silently, past the throw-before-reset).
+   Unifying them picks a winner, so decide explicitly, say so in the PR, and pin it with a
+   test. Fold in **#307**: the old path is never containment-checked against `docs-folder`,
+   so a rename into the folder can delete a target file outside it.
+3. Then the rest of #169 — `metadata.mode` dispatch (F19), tri-state metadata parser
    (F139/F140) — then W1 (#259) proper.
 
 - **D1** at W2 (#260) kickoff — start the editions-side conversation early.
-- **Watch**: first organic fr review (register rules); first organic sync batch after
-  v0.25.0 (#117 backfill turns missing-bib-key runs red by design). Hold the resync
-  moratorium until #276's guard ships.
-- **W4 prompt work** waits for the shadow-freeze lift (~2026-09-01); any model change
+- **Watch**: no blanket resync moratorium (lifted 2026-08-20) — until W1's stale-resync guard
+  ships, `\translate-resync` is safe only under #276's precondition (no file of the PR advanced
+  on source `main` since it merged). #281's failure-issue template still prescribes it
+  unconditionally, so check the precondition before following a failure issue's advice. The
+  v0.25.0 watches have fired: the first organic sync batch and fr review both ran at 0.25.0
+  (lecture-python-programming.fr#29, 2026-08-05), and the register rule they exercised is now
+  measured in #327.
+- **W4 (#262) prompt work** waits for the shadow window to close — on evidence, not the
+  ~2026-09-01 marker (ruled 2026-08-10): QuantEcon/project-translation#23 is still open
+  (week-7 check-in 2026-09-20), and its exit criterion, QuantEcon/project-translation#28
+  (reported 2026-08-20), names the severity-category sharpening to make. Any model change
   gates on #82's frozen eval set first.
 
 ## Health & context
 
-- `main` green; **1,533 tests across 65 suites** (zero skips, type-checked) as of
-  `228a317`; lint at `--max-warnings 0` including root `*.mjs`, CI checks formatting
-  and `.dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale
-  `dist/` — run `npm run build` first; that guard is deliberate, not a break.
-- Highest-priority known bug class: the success-shaped failure (#90 defects 3–5 plus
-  #276's two resync mechanisms; freshest instance 2026-08-18, stale regeneration
-  merged on fa). W1 is its detection layer.
-- Prod dep advisories: **0**. ESM-only `@actions/*` 3.x/9.x majors tracked as
-  #177 F35.
+- `main` green; **1,590 tests across 67 suites** (zero skips, type-checked) as of
+  `16e50f6`; lint at `--max-warnings 0` including root `*.mjs`, CI checks formatting and
+  `.dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale `dist/`
+  — run `npm run build` first; that guard is deliberate, not a break.
+- Highest-priority known bug class: the success-shaped failure (#90 defects 3–5, #276's two
+  resync mechanisms, and the arrivals #280, #282, #287; freshest field instance 2026-08-19 —
+  lecture-python-intro#839 merged and no sync run was created, #282). Latent members found
+  since, not yet seen in the field: #307 (a rename can delete outside `docs-folder`) and
+  #326 (a front-matter drop passes parity and is written). W1 is its detection layer.
+- Prod dep advisories: **2** (`npm audit --omit=dev`, 2026-09-23) — `js-yaml` 4.3.0 (direct,
+  high; fixed in 4.3.2) and `undici` 6.27.0 (transitive via `@actions/github` /
+  `@actions/http-client`, moderate; fixed in 6.28.0), both with an in-range fix available.
+  ESM-only `@actions/*` 3.x/9.x majors tracked as #177 F35.
 
 ## Map
 
