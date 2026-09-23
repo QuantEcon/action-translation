@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`tool-test-action-on-github/rate-check.sh`** — release checklist step 4b (#320): the release gate takes one draw per scenario, so a model-side defect that fails less than always can pass it (scenario 17's new document was refused on ~40% of draws from v0.28.0 to v0.29.0 and passed three gates). The script runs the CLI at a tag or checkout N times (default 12) per full-document fixture and language, prints refusals per cell with their reasons, and fails above `--max-refusals` (default 1). Local only; `--ref` builds any version in a temporary worktree with its own glossary.
+
 ### Fixed
 
 - **Harness reset no longer misses open PRs beyond the first page** (#321): the three `gh pr list` calls in `test-action-on-github.sh` had no `--limit`, so a repo with more than 30 open PRs kept its oldest through the reset — on 2026-09-21 the `.ml` lane had 31 after diagnosis work between two gates, and the survivor read as a missing verdict in the v0.29.2 tally. Now `--limit 200`, and a post-reset check that stops the run if any repo still has an open PR (a failed listing counts too: it no longer reads as "nothing to close").
