@@ -17,7 +17,11 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   draw 1 sent (bare endings 1 / 37 / 2), one `ml_repair.py` comma applied and disclosed — the
   first repaired seed; arm `experiments/ml-benchmark/arms/2026-09-21-round4-numpy-v0.29.2/`.
   Harness note: the reset left one PR from the previous gate open on `.ml` (closed by hand).
-  W1 (#259) still targets v0.30.0. **Next engine-side: the rule-2 arm** (rewrite around the
+  W1 (#259) still targets v0.30.0. **2026-09-23 close-out**: the reset survivor's cause was
+  `gh pr list` with no `--limit` — fixed with a post-reset check on **#322** (closes #321); the
+  gate's one-draw blindness (a ~40% defect passed three gates) is **#320**, decided as a local
+  N-draw rate check — `tool-test-action-on-github/rate-check.sh`, release step 4b, on **#323**
+  (v0.29.2 reads 0/12, v0.29.0 4/12). **Next engine-side: the rule-2 arm** (rewrite around the
   editor's everyday-speech test, judged held-out before it ships).
 - **v0.29.1 is tagged but NOT released (2026-09-21)** — its §4a gate came back 83/84: scenario 17
   on the `.ml` lane failed twice (the model wrapped a plain `## Exercises` list in
