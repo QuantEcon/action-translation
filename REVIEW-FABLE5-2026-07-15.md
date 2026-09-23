@@ -1,7 +1,7 @@
 # Deep Technical Review — 2026-07-15
 
 **Reviewer**: Claude (Fable 5) &nbsp;·&nbsp; **Baseline**: `main` @ `5fb9c40` (v0.16.0, released 2026-07-15)
-**Predecessor**: the 2026-07-05 deep review, whose findings live in [.dev/PLAN.md](.dev/PLAN.md) / [.dev/ARCHITECTURE.md](.dev/ARCHITECTURE.md). This review does **not** repeat that catalog — it (a) verifies what changed since, (b) reports **new** findings, with emphasis on code that landed after 2026-07-05 (v0.16.0: model upgrade, `typography.ts`, glossary tooling), and (c) audits docs, tests, dependencies, and release/ops state.
+**Predecessor**: the 2026-07-05 deep review, whose findings live in [.qe/dev/PLAN.md](.qe/dev/PLAN.md) / [.qe/dev/ARCHITECTURE.md](.qe/dev/ARCHITECTURE.md). This review does **not** repeat that catalog — it (a) verifies what changed since, (b) reports **new** findings, with emphasis on code that landed after 2026-07-05 (v0.16.0: model upgrade, `typography.ts`, glossary tooling), and (c) audits docs, tests, dependencies, and release/ops state.
 
 **Method**: five parallel line-by-line review agents (action core, LLM pipeline, CLI, tests/CI/build/deps, docs/hygiene) over all 78 source files + docs + GitHub state, with independent spot-verification of every headline claim (reproduced locally or checked against production repos). Severity tags follow PLAN.md: **[H]** wrong output / broken workflow, **[M]** wrong under realistic conditions, **[L]** quality/robustness.
 
@@ -9,7 +9,7 @@
 
 ## 1. Executive summary
 
-**Overall: a genuinely well-run repository whose safety nets are weaker than they look.** The engineering culture is strong — current CHANGELOG, decision records, a measured (not vibes-based) model upgrade, fresh committed `dist-action/`, green 4.4s CI, honest `.dev/` notes. But this review found that several of the quality gates the project relies on are partially illusory, that one v0.16.0 feature shipped a corruption bug into the production French repo, and that the 2026-07-05 review's high-severity correctness backlog is essentially untouched while feature work continued.
+**Overall: a genuinely well-run repository whose safety nets are weaker than they look.** The engineering culture is strong — current CHANGELOG, decision records, a measured (not vibes-based) model upgrade, fresh committed `dist-action/`, green 4.4s CI, honest `.qe/dev/` notes. But this review found that several of the quality gates the project relies on are partially illusory, that one v0.16.0 feature shipped a corruption bug into the production French repo, and that the 2026-07-05 review's high-severity correctness backlog is essentially untouched while feature work continued.
 
 **Top findings** (every [H] independently re-verified — reproduction notes in the Appendix):
 
@@ -29,11 +29,11 @@
 
 ## 2. What changed since the 2026-07-05 review
 
-Seven commits, +7,864/−2,365 across 89 files: `.dev/` convention (#72), model default → `claude-sonnet-5` with centralized model/token config (#75), thinking-eval concluded + glossary-review tooling (#76), experiment-page publishing (#77), deterministic French typography (#79), v0.16.0 release (#80).
+Seven commits, +7,864/−2,365 across 89 files: `.qe/dev/` convention (#72), model default → `claude-sonnet-5` with centralized model/token config (#75), thinking-eval concluded + glossary-review tooling (#76), experiment-page publishing (#77), deterministic French typography (#79), v0.16.0 release (#80).
 
 **Assessment of the new work itself:**
 
-- **`src/models.ts` — good.** Single source of truth for model/token config; verified against the current Claude API: `claude-sonnet-5`, `claude-opus-4-8`, `claude-opus-4-7` are all real IDs; the 64000 whole-document `max_tokens` is within Sonnet 5's 128K output cap; the ~30% tokenizer-growth sizing rationale matches reality. Nits: the pattern list still blesses retired model IDs (`claude-3-5-sonnet-*`, `claude-3-opus-*` — now 404) and warns on valid ones (`claude-fable-5`, bare `claude-opus-4-5`); the comment at `src/models.ts:57-63` still calls thinking-off "a deliberate hold … being measured" though `.dev/decisions/D-2026-07-14-thinking-off-sonnet5.md` settled it; `DEFAULT_THINKING: {type:'disabled'}` would 400 on `claude-fable-5` if a user ever passes it (explicit `disabled` is rejected there — omit the param instead).
+- **`src/models.ts` — good.** Single source of truth for model/token config; verified against the current Claude API: `claude-sonnet-5`, `claude-opus-4-8`, `claude-opus-4-7` are all real IDs; the 64000 whole-document `max_tokens` is within Sonnet 5's 128K output cap; the ~30% tokenizer-growth sizing rationale matches reality. Nits: the pattern list still blesses retired model IDs (`claude-3-5-sonnet-*`, `claude-3-opus-*` — now 404) and warns on valid ones (`claude-fable-5`, bare `claude-opus-4-5`); the comment at `src/models.ts:57-63` still calls thinking-off "a deliberate hold … being measured" though `.qe/dev/decisions/D-2026-07-14-thinking-off-sonnet5.md` settled it; `DEFAULT_THINKING: {type:'disabled'}` would 400 on `claude-fable-5` if a user ever passes it (explicit `disabled` is rejected there — omit the param instead).
 - **The thinking-off and Opus-for-bulk-seed decisions are well-evidenced** (measured, recorded as decision files) — this is how model choices should be made. The same rigor has **not** been applied to the headline change: the Sonnet 4.6 → Sonnet 5 default swap shipped with no translation-quality regression measurement (now tracked as issue #82). §8.4 proposes a concrete cheap eval.
 - **`src/typography.ts` — right idea, one bad mask gap (finding §3.1), wrong integration point.** The transform runs only on the CLI `init` path (`src/cli/commands/init.ts:299`) — the action's sync path, `forward` resync, and rebase never call it (known, tracked as #81), so every post-seed French sync PR regresses to ASCII spacing while the prompt rule (`src/language-config.ts:53`) — the one measured to be ignored — remains the only mechanism. The prompt and the post-processor now *disagree by design*, which is only tenable until sync is wired.
 - **`scripts/glossary/` — useful tooling; its "verbatim production prompt" has already drifted** (omits `customInstructions`/localization rules that production `init` injects by default; copies production's rule-numbering collision; cost model silently prices unknown models at $0 and overstates Sonnet 5 spend ~33% by ignoring intro pricing).
@@ -74,7 +74,7 @@ The repair tool can't catch it: `scripts/typography/apply.mjs:58` `normalize()` 
 
 ### 3.5 [M] Publish safety + broken `npx` documentation
 
-`package.json` has no `private: true` and no `files` allowlist; `npm pack --dry-run` = 428 files / 7.7 MB including `.dev/` internal notes and — because npm-packlist ignores local git excludes — the untracked `.claude/settings.local.json`. Meanwhile the bin name `translate` collides with an unrelated npm package, so the documented `npx translate …` (README:62-66, faq, architecture docs) fetches the wrong package for anyone outside this repo. Either add `private: true` and change docs to a local invocation, or claim a scoped name (`@quantecon/translate`) with a `files` allowlist. Related ops gaps: `main` has no branch protection; repo topics are empty.
+`package.json` has no `private: true` and no `files` allowlist; `npm pack --dry-run` = 428 files / 7.7 MB including `.qe/dev/` internal notes and — because npm-packlist ignores local git excludes — the untracked `.claude/settings.local.json`. Meanwhile the bin name `translate` collides with an unrelated npm package, so the documented `npx translate …` (README:62-66, faq, architecture docs) fetches the wrong package for anyone outside this repo. Either add `private: true` and change docs to a local invocation, or claim a scoped name (`@quantecon/translate`) with a `files` allowlist. Related ops gaps: `main` has no branch protection; repo topics are empty.
 
 ---
 
@@ -98,7 +98,7 @@ Spot-verified against code at `5fb9c40`. Summary: **Phase 1–8 are essentially 
 | 7 Docs | **Open** | all items re-confirmed except rebase example (§7) |
 | 8 Issue gardening | **Open** | 0 of 11 done; #1 #2 #3 #4 #6 #7 #48 #53 #61 #65 #66 all still open |
 
-**`.dev/` currency** (the convention's first real test): STATE.md went stale within a day of its `verified: 2026-07-14` line — it still says "Released v0.15.0", lists merged #72 as in-flight, and (most substantively) says fr has "no production repo yet" while `lecture-python-programming.fr` exists with a live sync workflow pinned to v0.16.0. New issues #81/#82 and PR #78 aren't reflected; no `.dev/log/` entries exist for the three 2026-07-15 sessions despite the AGENTS.md convention. The notes are good; the *update discipline on release days* is the gap.
+**`.qe/dev/` currency** (the convention's first real test): STATE.md went stale within a day of its `verified: 2026-07-14` line — it still says "Released v0.15.0", lists merged #72 as in-flight, and (most substantively) says fr has "no production repo yet" while `lecture-python-programming.fr` exists with a live sync workflow pinned to v0.16.0. New issues #81/#82 and PR #78 aren't reflected; no `.qe/dev/log/` entries exist for the three 2026-07-15 sessions despite the AGENTS.md convention. The notes are good; the *update discipline on release days* is the gap.
 
 ---
 
@@ -119,7 +119,7 @@ Spot-verified against code at `5fb9c40`. Summary: **Phase 1–8 are essentially 
 
 ### 6.1 Action core (parser / diff / file-processor / heading-map / index / sync-orchestrator / pr-creator)
 
-**Tracked items — every one re-verified STILL PRESENT at current line numbers** (only three commits touched `src/` since 2026-07-05 and none touched these sites): fence-blind `parseSections` (`src/parser.ts:69`; the preamble scan at `:40` is equally fence-blind), #65 anchor ownership (`parser.ts:112-117`), the non-ASCII anchor-adjacency regex (`file-processor.ts:564` — verified: `(经济_intro)=` doesn't match), no-op `validateMyST` (`parser.ts:223-233`; the gates at `sync-orchestrator.ts:340,410` remain unfireable), merge discarding fresh translations (`file-processor.ts:352-399`), old target heading unconditionally re-attached (`file-processor.ts:319-326`), `updateHeadingMap` neither preserving nor deleting as documented (`heading-map.ts:82-166`; its `titleHeading` param is never passed by the action caller), positional-fallback misfire on add+delete (`file-processor.ts:193,254,739-749`), duplicate-slug corruption in all three places, `${sha}^` old-content fetch (`index.ts:776,314`), `$1`/`$&` heading-replacement corruption (`file-processor.ts:387`), `context.sha` on the primary sync path (`index.ts:544`), rebase success-comments on no-op early returns (`index.ts:375,447` vs `:201-208`), >1 MB `fetchFileContent` (nuance: downstream now fails *loudly but misleadingly* — "No content provided" — rather than committing empty output), dead `toc-file` input (and `endsWith('_toc.yml')` also matches `foo_toc.yml`), rebase force-push 409/races with no retry, PR-body metadata never refreshed after a rebase, and the **Phase 1.5 rebase trust boundary — unchanged and still the priority security item** (verification confirmed sibling selection and PR-body metadata handling still lack the provenance/identity checks PLAN 1.5 calls for; exploitation specifics withheld here per the `.dev/` public-content rule — see §7.6's R2 sharpening for the structural fix).
+**Tracked items — every one re-verified STILL PRESENT at current line numbers** (only three commits touched `src/` since 2026-07-05 and none touched these sites): fence-blind `parseSections` (`src/parser.ts:69`; the preamble scan at `:40` is equally fence-blind), #65 anchor ownership (`parser.ts:112-117`), the non-ASCII anchor-adjacency regex (`file-processor.ts:564` — verified: `(经济_intro)=` doesn't match), no-op `validateMyST` (`parser.ts:223-233`; the gates at `sync-orchestrator.ts:340,410` remain unfireable), merge discarding fresh translations (`file-processor.ts:352-399`), old target heading unconditionally re-attached (`file-processor.ts:319-326`), `updateHeadingMap` neither preserving nor deleting as documented (`heading-map.ts:82-166`; its `titleHeading` param is never passed by the action caller), positional-fallback misfire on add+delete (`file-processor.ts:193,254,739-749`), duplicate-slug corruption in all three places, `${sha}^` old-content fetch (`index.ts:776,314`), `$1`/`$&` heading-replacement corruption (`file-processor.ts:387`), `context.sha` on the primary sync path (`index.ts:544`), rebase success-comments on no-op early returns (`index.ts:375,447` vs `:201-208`), >1 MB `fetchFileContent` (nuance: downstream now fails *loudly but misleadingly* — "No content provided" — rather than committing empty output), dead `toc-file` input (and `endsWith('_toc.yml')` also matches `foo_toc.yml`), rebase force-push 409/races with no retry, PR-body metadata never refreshed after a rebase, and the **Phase 1.5 rebase trust boundary — unchanged and still the priority security item** (verification confirmed sibling selection and PR-body metadata handling still lack the provenance/identity checks PLAN 1.5 calls for; exploitation specifics withheld here per the `.qe/dev/` public-content rule — see §7.6's R2 sharpening for the structural fix).
 
 **New findings** (none previously tracked):
 
@@ -176,7 +176,7 @@ Covered in §3.3 and §5. Remaining specifics: `cli-smoke.test.ts` makes fresh-c
 
 - ~55 remote branches; only 3 back open PRs. ~47 are squash-merged/dead and prunable; 6 local branches likewise.
 - Committed generated artifacts: `presentations/*.pdf`, built `.html`, `diagrams/workflow.png` (PLAN 7 org decision pending; content still carries the old project name = open issue #7).
-- Open PRs: #78 (fr programming terms, needs native review), #71 (ml, draft), #69 (ja, 5 weeks quiet, still lacks its `LANGUAGE_CONFIGS` entry). Issues #74/#81/#82 are new since the last review and not yet in `.dev/`.
+- Open PRs: #78 (fr programming terms, needs native review), #71 (ml, draft), #69 (ja, 5 weeks quiet, still lacks its `LANGUAGE_CONFIGS` entry). Issues #74/#81/#82 are new since the last review and not yet in `.qe/dev/`.
 - `main` unprotected; no repo topics; description hardcodes "Claude Sonnet" (will date).
 
 ---
@@ -199,7 +199,7 @@ The static prefix (rules + 357-term glossary ≈ 15K tokens) is resent at full p
 
 ### 7.4 R10 — A deterministic model-swap eval (closes issue #82)
 
-The v0.16.0 default-model change shipped unmeasured — and the repo already concluded deterministic checks beat an LLM judge. Concretely: fixed corpus (~5 lectures × zh-cn + fr), translate with candidate model via the existing `scripts/glossary/lib.mjs` harness, score with **deterministic** checks only: balanced fences / `$$` parity / heading counts / `(anchor)=` preservation (these are literally the Phase 2 `validateMyST` checks — build once, use twice), glossary-term adherence %, code-cell byte-fidelity, length-ratio bounds, fr typography compliance. JSON scorecard into `.dev/experiments/model-eval/`; gate `DEFAULT_CLAUDE_MODEL` bumps on no-regression. ~$1.50/run.
+The v0.16.0 default-model change shipped unmeasured — and the repo already concluded deterministic checks beat an LLM judge. Concretely: fixed corpus (~5 lectures × zh-cn + fr), translate with candidate model via the existing `scripts/glossary/lib.mjs` harness, score with **deterministic** checks only: balanced fences / `$$` parity / heading counts / `(anchor)=` preservation (these are literally the Phase 2 `validateMyST` checks — build once, use twice), glossary-term adherence %, code-cell byte-fidelity, length-ratio bounds, fr typography compliance. JSON scorecard into `.qe/dev/experiments/model-eval/`; gate `DEFAULT_CLAUDE_MODEL` bumps on no-regression. ~$1.50/run.
 
 ### 7.5 R11 — Make the release process mechanical
 
@@ -227,7 +227,7 @@ Phase 2 (fence-aware parser + **round-trip invariant test**) remains the highest
 2. **zh-cn/fa on v0.15.0 vs fr on v0.16.0** — deliberate staged rollout of the Sonnet 5 default, or drift? If staged, is there a planned promotion date (intro pricing ends 2026-08-31)?
 3. **npm intent for the CLI**: is `translate` ever meant to be published? (`private: true` vs claiming `@quantecon/translate`.) The docs' `npx translate` currently cannot work for outside users either way.
 4. **Node 24**: PLAN 5.8 bundles it with the `@actions/*` major bumps (both force a dist rebuild) — want that in the same patch as 7.1 or its own release?
-5. **This file**: AGENTS.md says no standalone summary files — the 2026-07-05 review was distilled into `.dev/` and deleted. Same fate intended for this report once its items are ticked into PLAN.md?
+5. **This file**: AGENTS.md says no standalone summary files — the 2026-07-05 review was distilled into `.qe/dev/` and deleted. Same fate intended for this report once its items are ticked into PLAN.md?
 
 ---
 

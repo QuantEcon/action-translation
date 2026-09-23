@@ -73,7 +73,7 @@ Everything here is a contained fix with an obvious correct behaviour. Ship as on
 ### 1.5 Rebase-mode input validation (security — pulled forward from Phase 4)
 - [ ] **[H]** Harden rebase mode's handling of PR-embedded metadata: cross-check it against the
       workflow's own configuration and require the expected automation identity before acting.
-      Specifics deliberately omitted here per the `.dev/` public-content rule. Land this before
+      Specifics deliberately omitted here per the `.qe/dev/` public-content rule. Land this before
       issue #66 documents the metadata as a public contract.
 
 ### 1.6 Release chores
@@ -358,8 +358,8 @@ but not sync; `overloaded` retry in the translator but not the reviewer or any C
 - [ ] Document `.translate/` state files appearing in translation PRs (action side) in
       `docs/user/action-reference.md`
 - [ ] Organization decisions (each small, do deliberately):
-  - [ ] `experiments/` → `.dev/experiments/` (single historical experiment write-up)
-  - [ ] `docs/projects/` (internal RA planning, excluded from the site toc) → `.dev/projects/`
+  - [ ] `experiments/` → `.qe/dev/experiments/` (single historical experiment write-up)
+  - [ ] `docs/projects/` (internal RA planning, excluded from the site toc) → `.qe/dev/projects/`
         or add to the toc deliberately
   - [ ] `presentations/`: stop committing generated artifacts (`.pdf`, built `.html`) or archive
         the directory; content is stale (issue #7 — old project name)
@@ -382,7 +382,7 @@ new-language adopter can go from zero to a working target repo following only pu
 - [x] Close or retitle **#2** to the narrow "cross-model (GPT) reviewer" remainder
       (FUTURE.md idea 9) — closed; FUTURE.md idea 9 holds the remainder
 - [x] Gardening pass 2026-07-26 also closed **#70** (ml shipped v0.24.0; `help wanted` moved to
-      #207), **#73** (`.dev/` pilot complete), **#95** (fixed by #197), **#147** (verdict v2
+      #207), **#73** (`.qe/dev/` pilot complete), **#95** (fixed by #197), **#147** (verdict v2
       validated; calibration → #103/#154), **#138** (duplicate → #192, items copied across).
       **#66** closes on #176's completion — recorded as a checklist item there
 - [ ] Finish **#53** — legacy `heading-map:` fallback removal (`src/heading-map.ts:41`); the

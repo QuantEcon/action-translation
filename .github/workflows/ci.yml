@@ -3,12 +3,12 @@ name: CI
 on:
   push:
     branches: [main]
-    paths-ignore: ['.dev/**']
+    paths-ignore: ['.qe/**']
   pull_request:
     branches: [main]
     # Note: if `test` ever becomes a *required* status check, drop this ignore —
-    # a skipped required check never reports and would deadlock .dev-only PRs.
-    paths-ignore: ['.dev/**']
+    # a skipped required check never reports and would deadlock .qe-only PRs.
+    paths-ignore: ['.qe/**']
   workflow_dispatch:
 
 permissions:
@@ -34,9 +34,10 @@ jobs:
       - name: Format check
         run: npm run format:check
 
-      # Source changes are what invalidate .dev/ path:line references, so this
-      # runs on the normal CI trigger; .dev-only PRs still skip CI entirely.
-      - name: Check .dev references
+      # Source changes are what usually invalidate .qe/ path:line references, so
+      # this runs on the normal CI trigger. .qe-only PRs skip CI but can still add
+      # a broken reference: run `npm run check-dev-refs` before merging one.
+      - name: Check .qe references
         run: npm run check-dev-refs
 
       - name: Build

@@ -80,4 +80,4 @@ ranking):
 
 - Harness + prompts: `scripts/` (see [PLAN.md](./PLAN.md)); metrics in
   `outputs/metrics.jsonl` (git-ignored).
-- Decision record: `.dev/decisions/D-2026-07-14-thinking-off-sonnet5.md`.
+- Decision record: `.qe/dev/decisions/D-2026-07-14-thinking-off-sonnet5.md`.

@@ -90,15 +90,15 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   Two reviewers have since agreed three more edits (オーソリティ中心性, 資本の限界生産力,
   連邦準備制度経済データ) and asked why `SCF` was left out (last reply 2026-09-21) — awaiting
   the maintainer's reply; the branch is 21 behind `main` and conflicting.
-- **#314** (opened 2026-09-21 as a draft; marked ready for review 2026-09-23 — Copilot's
-  overview recommends approval, two wording nits) — `.dev/` → `.qe/dev/` per the QEP-7 draft
-  (QuantEcon/qeps#40, still open). It renames every file under `.dev/` and already conflicts
-  with `main` (9 behind), so whichever of it and an in-flight PR that touches `.dev/` merges
-  second needs a rebase — this STATE refresh included; raw `log/` and `decisions/` entries keep
-  their historical `.dev/` mentions.
 
 ## Recently landed
 
+- **`.dev/` → `.qe/dev/` (#314)** — the notes convention moves inside `.qe/`, the repository's
+  QuantEcon folder, per the QEP-7 draft (QuantEcon/qeps#40): `.qe/README.md` states the folder's
+  contract, `.qe/project.yml` points the `qe` workplan skills at tracker #257, and nothing under
+  `.qe/` is git-ignored — working files live outside the tree (decision records
+  `D-2026-09-21-notes-move-to-qe-dev`, `D-2026-09-21-no-scratch-in-tree`). Raw `log/` and
+  `decisions/` entries keep their historical `.dev/` mentions.
 - **2026-09-23 — v0.29.3 released** (release PR #329 `16e50f6`; payload #328 `a4fe00a`, on top
   of #322 `079b3c7` and #323 `ede10e6`): `fr` glossary v1.2 from the French editor's second
   round (Namespace → Espace de nommage, Heads → Face, the standard-normal context; the edition
@@ -193,7 +193,7 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 - `main` green; **1,590 tests across 67 suites** (zero skips, type-checked) as of
   `16e50f6`; lint at `--max-warnings 0` including root `*.mjs`, CI checks formatting and
-  `.dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale `dist/`
+  `.qe/dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale `dist/`
   — run `npm run build` first; that guard is deliberate, not a break.
 - Highest-priority known bug class: the success-shaped failure (#90 defects 3–5, #276's two
   resync mechanisms, and the arrivals #280, #282, #287; freshest field instance 2026-08-19 —

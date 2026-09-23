@@ -75,18 +75,18 @@ export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
     // per-flag dispositions in QuantEcon/project-translation
     // reports/2026-08-17-ml-python-by-example-review-disposition.md.
     // The math-heavy Hint/Solution ruling is recorded in
-    // .dev/decisions/D-2026-08-17-ml-math-heavy-sections-stay-english.md.
+    // .qe/dev/decisions/D-2026-08-17-ml-math-heavy-sections-stay-english.md.
     // Extended again 2026-09 from the second inline round: 118 suggestion
     // blocks on lecture-python-programming.ml#7 (functions), dispositions in
     // reports/2026-09-01-ml-functions-review-disposition.md (same repo); the
     // exercise-statement scope ruling is
-    // .dev/decisions/D-2026-09-01-ml-exercise-statements-stay-english.md.
+    // .qe/dev/decisions/D-2026-09-01-ml-exercise-statements-stay-english.md.
     // The editor's ml#12 answers (2026-09-01) landed 2026-09-03: "For
     // example" joins the discourse rule; glossary v0.5.0 pins already / name /
     // example(s) / work; and his exercise ruling REPLACED the 09-01 scope rule
     // — every exercise-family block is now byte-identical to the source,
     // enforced in code by verbatim-directives.ts (decision record
-    // .dev/decisions/D-2026-09-03-ml-all-exercise-content-stays-english.md).
+    // .qe/dev/decisions/D-2026-09-03-ml-all-exercise-content-stays-english.md).
     // Third inline round, 2026-09-18: 44 suggestion blocks on
     // lecture-python-programming.ml#13 (matplotlib), dispositions in
     // reports/2026-09-18-ml-matplotlib-review-disposition.md. Every round-2
@@ -100,7 +100,7 @@ export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
     // becomes a rule only if it recurs (twice in a round, or across rounds) —
     // draw-to-draw variance makes a singleton as likely noise as habit. The
     // Further Reading scope ruling is
-    // .dev/decisions/D-2026-09-18-ml-further-reading-lists-stay-english.md.
+    // .qe/dev/decisions/D-2026-09-18-ml-further-reading-lists-stay-english.md.
     //
     // The editor's answers on lecture-python-programming.ml#22 (2026-09-19),
     // encoded 2026-09-21 (rules 27 → 28, glossary v0.7.0): the comma between

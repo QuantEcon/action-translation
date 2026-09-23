@@ -1,0 +1,6 @@
+# .qe/project.yml — declared facts about this repository's project, read by the qe skills.
+# The tracker is the current-state register; the registry (QuantEcon/status-projects,
+# projects.yml) holds the declared facts the dashboard shows.
+tracker: QuantEcon/action-translation#257
+registry: engine-v027
+programme: translation

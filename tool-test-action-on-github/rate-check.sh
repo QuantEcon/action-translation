@@ -26,7 +26,9 @@
 #   --model          Claude model (default claude-sonnet-5, the production default)
 #   --summarize DIR  re-read a finished run directory (no new draws) and print its table
 #
-# Per-draw logs, meta.txt and summary.txt land in .dev/scratch/rate-check/<UTC timestamp>-<pid>/.
+# Per-draw logs, meta.txt and summary.txt land outside the repository, in
+# ${TMPDIR:-/tmp}/action-translation-rate-check/<UTC timestamp>-<pid>/ (nothing under .qe/ is
+# git-ignored and the tree holds no scratch location — D-2026-09-21-no-scratch-in-tree).
 # Exit 0 = every cell within --max-refusals; 1 = a cell over it; 2 = usage or setup error.
 
 set -euo pipefail
@@ -156,7 +158,7 @@ for fx in "${FIXTURE_LIST[@]}"; do cp "$DATA_DIR/$fx" "$SRC_DIR/"; done
 } > "$SRC_DIR/_toc.yml"
 
 STAMP="$(date -u +%Y-%m-%dT%H-%M-%SZ)-$$"   # PID keeps two runs in one second apart
-RUN_DIR="$REPO_ROOT/.dev/scratch/rate-check/$STAMP"
+RUN_DIR="${TMPDIR:-/tmp}/action-translation-rate-check/$STAMP"   # outside the tree (no in-tree scratch)
 mkdir -p "$RUN_DIR"
 {
     echo "ENGINE_TAG='${ENGINE_TAG}'"; echo "ENGINE_SHA='${ENGINE_SHA}'"; echo "MODEL='${MODEL}'"
