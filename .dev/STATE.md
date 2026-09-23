@@ -7,6 +7,7 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## In flight
 
+- **v0.29.3 release cut 2026-09-23** (payload #328 `a4fe00a`, on top of #322 `079b3c7` and #323 `ede10e6`) — patch: `fr` glossary v1.2 (Namespace → Espace de nommage, Heads → Face, the standard-normal context) from the French editor's second review round, which reaches French syncs only once `@v0` moves; plus the harness reset fix and the release rate check (step 4b), both of which first run on this gate. §4a gate and the 4b rate-check summary are recorded on the release PR.
 - **v0.29.2 released 2026-09-21** (release PR #318 `5f74d74`; payload #317 `62504c1`, on top of
   #315 `cd41558`; §4a gate **completed**: 84/84 sync runs, 28/28 delivery + 28/28
   `engineVersion: 0.29.2` verdicts per lane, scenario 17 on `.ml` delivered; `v0.29` = `v0` =
