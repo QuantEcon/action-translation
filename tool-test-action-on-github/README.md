@@ -76,7 +76,7 @@ cd /path/to/action-translation/tool-test-action-on-github
 ```
 
 The script will:
-1. Reset test repositories to clean state
+1. Reset test repositories to clean state — every open PR on the source repo and each target repo is closed, and the script stops if any is still open afterwards (a survivor would be counted as one of this run's PRs)
 2. Run 28 automated test scenarios
 3. Create PRs in source repository with `test-translation` label
 4. Label triggers action → creates translation PRs in **every** target repository
@@ -239,6 +239,7 @@ Evaluation reports are saved to `reports/`:
 **Script fails to reset repositories:**
 - Check GitHub CLI authentication: `gh auth status`
 - Verify repository access permissions
+- "Reset left open PRs behind": the post-reset check found a PR still open on the repo it names. Close it by hand (or work out why `gh` could not) and run the script again; do not create fixture PRs on top of it
 
 **PRs not created:**
 - Check source repository workflow configuration

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Harness reset no longer misses open PRs beyond the first page** (#321): the three `gh pr list` calls in `test-action-on-github.sh` had no `--limit`, so a repo with more than 30 open PRs kept its oldest through the reset — on 2026-09-21 the `.ml` lane had 31 after diagnosis work between two gates, and the survivor read as a missing verdict in the v0.29.2 tally. Now `--limit 200`, and a post-reset check that stops the run if any repo still has an open PR (a failed listing counts too: it no longer reads as "nothing to close").
+
 ## [0.29.2] - 2026-09-21
 
 ### Fixed
