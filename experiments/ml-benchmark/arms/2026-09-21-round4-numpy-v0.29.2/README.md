@@ -25,3 +25,11 @@ watch flags). Whether he touches the repaired line is the first field evidence f
 
 Terminal punctuation remains the draw-dependent class (1 / 37 / 2 here; 37 / 34 / 3 at
 v0.29.0): best-of-N by lint is still what keeps it away from the editor.
+
+One more observation, raised in review of the PR that archived this arm: draw 2, line 177,
+carries a garbage token — `2x2 array undegerbestellen ഉണ്ടാക്കാൻ` — a Latin-script string that
+is neither English, code nor a glossary term, emitted by the model and absent from the other
+two draws and from the draft sent. It is left exactly as generated: the draws are the record.
+It is also a lint gap — nothing in `ml_metrics.py` flags a Latin token that is not English,
+code or a pinned term (#301) — and draw 2 was already the one not chosen, on bare endings.
+
