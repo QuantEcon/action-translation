@@ -34,8 +34,9 @@ jobs:
       - name: Format check
         run: npm run format:check
 
-      # Source changes are what invalidate .qe/ path:line references, so this
-      # runs on the normal CI trigger; .qe-only PRs still skip CI entirely.
+      # Source changes are what usually invalidate .qe/ path:line references, so
+      # this runs on the normal CI trigger. .qe-only PRs skip CI but can still add
+      # a broken reference: run `npm run check-dev-refs` before merging one.
       - name: Check .qe references
         run: npm run check-dev-refs
 

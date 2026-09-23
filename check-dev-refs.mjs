@@ -10,8 +10,10 @@
  * it points at code that exists. It catches drift and typos, which is what a
  * decision record actually shipped once (#179, then #158).
  *
- * Runs in CI on source changes: what invalidates a .qe reference is source
- * moving underneath it, so .qe-only PRs (which skip CI) never need it.
+ * Runs in CI on source changes, which is what usually invalidates a .qe
+ * reference (source moving underneath it). .qe-only PRs skip CI but can still
+ * add a broken or mistyped reference, so run `npm run check-dev-refs` before
+ * merging one.
  */
 
 import { execSync } from 'child_process';
