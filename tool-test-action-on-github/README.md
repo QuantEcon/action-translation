@@ -87,8 +87,8 @@ Both source and target PRs remain **open** for evaluation.
 ### Phase 1b: Rate-check the full-document fixtures
 
 ```bash
-./tool-test-action-on-github/rate-check.sh --ref v0.29.2          # at a tag (release checklist 4b)
-./tool-test-action-on-github/rate-check.sh --languages ml --draws 12   # this checkout's build
+./rate-check.sh --ref v0.29.2               # at a tag (release checklist 4b)
+./rate-check.sh --languages ml --draws 12   # this checkout's build
 ```
 
 Phase 1 takes **one draw per scenario**. That is the right test of whether the tagged bytes deliver through the action path, but a model-side defect that fails less than always slips through it: scenario 17's new document (`game-theory.md`) was refused by the structural-parity guard on about 40% of draws from v0.28.0 to v0.29.0 and passed three release gates before the rate rose enough to be caught (QuantEcon/action-translation#320). `rate-check.sh` measures the rate directly: it runs the CLI N times (default 12) per fixture and language, counts the draws that produced no output file, prints a table with the refusal reasons, and exits non-zero if any cell shows more than `--max-refusals` (default 1). It costs no GitHub runs — N × fixtures × languages CLI translations against a cached prompt — and `--ref` builds any tag or branch in a temporary worktree with that version's own glossary, so an old release can be measured too. Fixtures default to the files the scenarios introduce as whole new documents (only `game-theory.md` today); add to `--fixtures` when a scenario adds another. Logs, `meta.txt` and `summary.txt` land in `.dev/scratch/rate-check/<timestamp>-<pid>/`; `--summarize <that dir>` re-prints a finished run's table and verdict without new draws. Validated on 2026-09-23: v0.29.2 reads 0/12 on `game-theory.md` for `ml`, v0.29.0 (via `--ref`) reads 4/12 and fails — the defect that passed three gates.

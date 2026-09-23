@@ -11,7 +11,7 @@
 #
 # Usage: ./tool-test-action-on-github/rate-check.sh [--ref <tag|branch>] [--draws N]
 #            [--languages ml,fa,zh-cn] [--fixtures game-theory.md] [--parallel J]
-#            [--max-refusals K] [--model M]
+#            [--max-refusals K] [--model M] [--summarize DIR]
 #
 #   --ref            engine to test. Default: this checkout's dist/ and glossary (build first).
 #                    With a ref, a temporary worktree at that ref is compiled with `npx tsc`
@@ -57,7 +57,8 @@ done
 # `{ … } | tee` here would put FAIL in a subshell and the exit code would always be 0 (it was,
 # on the first validation run).
 summarize_run() {
-    local summary="$RUN_DIR/summary.txt" lang fx i out refused reasons rate verdict
+    local lang fx i out refused reasons rate verdict
+    SUMMARY="$RUN_DIR/summary.txt"   # global: the closing line reports it
     FAIL=0
     {
         echo "engine ${ENGINE_TAG:-(untagged)} $ENGINE_SHA · model $MODEL · $DRAWS draws per cell · threshold $MAX_REFUSALS"
@@ -83,8 +84,8 @@ summarize_run() {
                 fi
             done
         done
-    } > "$summary"
-    cat "$summary"
+    } > "$SUMMARY"
+    cat "$SUMMARY"
 }
 
 # --summarize: re-read a finished run (its meta.txt carries what the table needs) and exit
