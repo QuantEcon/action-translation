@@ -1,5 +1,5 @@
 {
-  "version": "1.1",
+  "version": "1.2",
   "description": "Translation glossary for QuantEcon lectures (English to French)",
   "terms": [
     {
@@ -663,6 +663,11 @@
       "context": "game theory"
     },
     {
+      "en": "Heads (coin toss)",
+      "fr": "Face",
+      "context": "probability — coin-toss outcome ('a head occurs' = face)"
+    },
+    {
       "en": "Heavy-tailed distribution",
       "fr": "Loi à queue lourde",
       "context": "probability"
@@ -1023,6 +1028,11 @@
       "context": "economics"
     },
     {
+      "en": "Namespace",
+      "fr": "Espace de nommage",
+      "context": "Python — as in the official French Python docs; not 'espace de noms'"
+    },
+    {
       "en": "NBER",
       "fr": "NBER",
       "context": "institution"
@@ -1375,7 +1385,7 @@
     {
       "en": "Standard normal",
       "fr": "Loi normale centrée réduite",
-      "context": "statistics"
+      "context": "the distribution N(0,1); for draws or random variables use « variable normale centrée réduite »"
     },
     {
       "en": "State space",

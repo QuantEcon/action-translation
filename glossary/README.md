@@ -72,7 +72,7 @@ When the action runs with `target-language: 'zh-cn'`:
 
 ### French (`fr.json`)
 
-**Status**: ✅ Complete (364 terms)
+**Status**: ✅ Complete (369 terms, v1.2)
 
 **Contents**:
 - ~160 economic terms (PIB, équilibre, politique budgétaire, etc.)
