@@ -244,6 +244,19 @@ Before creating a release, verify the following:
 
    The harness defaults to `main`, so the release itself is only gated if you ask for it by
    name. This step verifies the **tagged bytes**, not a branch that may have moved since.
+4b. **Rate-check the full-document fixtures at the tag** — alongside 4a, before moving the floating tags:
+
+   ```bash
+   ./tool-test-action-on-github/rate-check.sh --ref vX.Y.Z
+   ```
+
+   The gate takes one draw per scenario, so it cannot see a model-side defect that fails
+   less than always: scenario 17's new document was refused on ~40% of draws from v0.28.0 to
+   v0.29.0 and passed three gates (#320). This runs the CLI at the tag twelve times per
+   full-document fixture and language and fails if any cell shows more than one refusal.
+   Local only, ~36 translations against a cached prompt; the summary goes on the release PR
+   beside the gate tally.
+
 5. **Commit, tag, push** — commit all changes, create git tag `vX.Y.Z`, push with `--tags`; **then move both floating tags** to the release commit:
 
    ```bash

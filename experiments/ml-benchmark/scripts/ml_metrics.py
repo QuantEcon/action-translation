@@ -164,6 +164,16 @@ BANNED_RENDERINGS: list[tuple[str, str]] = [
 # -ും verb ("we will …") where the teacher's voice wants നമുക്ക് … -ആം. Noisy
 # by design (-ും is also the additive suffix) — a watch list, not a gate.
 FUTURE_HORTATIVE_RE = re.compile(r"നമ്മൾ[^.:!?\n]*\S+ും[.:]?\s*$")
+# The editor's answers on lecture-python-programming.ml#22 (2026-09-19).
+# A Malayalam plural (-കൾ / -ുകൾ, oblique -കള…) built on a Latin-script
+# singular — object-ുകൾ, function call-കളിൽ — where he wants the English
+# plural plus the suffix (objects, function calls-ൽ). Deterministic.
+ML_PLURAL_ON_LATIN_RE = re.compile(r"[A-Za-z`]-?ു?ക[ൾള]")
+# Two adjacent hyphen-suffixed -ഉം items with no comma between them
+# (Columns-ഉം rows-ഉം, Step 1-ഉം 2-ഉം): he wants the comma always, single
+# words included. Only the hyphenated form is matched — a bare -ും is also the
+# future verb ending (ചെയ്യാനും കഴിയും), which would make this a noise source.
+UM_PAIR_NO_COMMA_RE = re.compile(r"\S+-ഉം\s+\S+-ഉം")
 
 
 def prose_lines(text: str) -> list[tuple[int, str, str | None]]:
@@ -208,6 +218,8 @@ def round2_lints(text: str) -> dict:
     caps: list[dict] = []
     banned: list[dict] = []
     hortative: list[dict] = []
+    plural: list[dict] = []
+    um_pair: list[dict] = []
     for n, line, nxt in prose_lines(text):
         has_ml = bool(MALAYALAM_RE.search(line))
         body = line.rstrip()
@@ -237,11 +249,18 @@ def round2_lints(text: str) -> dict:
                 banned.append({"line": n, "rendering": sub, "rule": fix})
         if has_ml and FUTURE_HORTATIVE_RE.search(body):
             hortative.append({"line": n, "text": body[-70:]})
+        if has_ml:
+            for m in ML_PLURAL_ON_LATIN_RE.finditer(body):
+                plural.append({"line": n, "text": body[max(0, m.start() - 20) : m.end() + 6]})
+            for m in UM_PAIR_NO_COMMA_RE.finditer(body):
+                um_pair.append({"line": n, "text": m.group(0)})
     return {
         "terminal_punctuation": punct,
         "lowercase_initial": caps,
         "banned_renderings": banned,
         "future_hortative_watch": hortative,
+        "malayalam_plural_on_english_noun": plural,
+        "um_pair_without_comma": um_pair,
     }
 
 

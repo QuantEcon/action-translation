@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.3] - 2026-09-23
+
+### Added
+
+- **`tool-test-action-on-github/rate-check.sh`** — release checklist step 4b (#320): the release gate takes one draw per scenario, so a model-side defect that fails less than always can pass it (scenario 17's new document was refused on ~40% of draws from v0.28.0 to v0.29.0 and passed three gates). The script runs the CLI at a tag or checkout N times (default 12) per full-document fixture and language, prints refusals per cell with their reasons, and fails above `--max-refusals` (default 1). Local only; `--ref` builds any version in a temporary worktree with its own glossary.
+
+### Changed
+
+- **`fr` glossary v1.1 → v1.2 (367 → 369 terms)** from the French editor's second review round (QuantEcon/lecture-python-programming.fr#77 and #80, merged 2026-09-23). *Namespace → Espace de nommage*: the official French Python documentation uses « espace de nommage » throughout, and fresh `init` draws at v0.29.2 wrote « espace de noms » 206 times out of 206; UPDATE mode already preserves the editor's term, but a NEW section brought « noms » back 3/3 without the pin and 0/3 with it. *Heads (coin toss) → Face*: the coin side was wrong (« pile ») in 6 of 12 fresh draws of the exercise without the pin and 0 of 12 with it; *Tails → Pile* is deliberately not pinned (no source occurrence, and it would sit beside four « queue » entries). *Standard normal* keeps « Loi normale centrée réduite » for the distribution, and its context now steers draws and random variables to « variable normale centrée réduite »: fresh translation called the draws « lois » in 8 of 32 renderings with the old context and 0 of 28 with the new one (Fisher p = 0.005), the distribution sense unchanged 16/16. Held for measurement: *Garbage collection → Ramasse-miettes* and *Return (a value) → Renvoyer*; held for an editor ruling: *Built-in function*.
+
+### Fixed
+
+- **Harness reset no longer misses open PRs beyond the first page** (#321): the three `gh pr list` calls in `test-action-on-github.sh` had no `--limit`, so a repo with more than 30 open PRs kept its oldest through the reset — on 2026-09-21 the `.ml` lane had 31 after diagnosis work between two gates, and the survivor read as a missing verdict in the v0.29.2 tally. Now `--limit 200`, and a post-reset check that stops the run if any repo still has an open PR (a failed listing counts too: it no longer reads as "nothing to close").
+
+## [0.29.2] - 2026-09-21
+
+### Fixed
+
+- **`ml`: the exercise-verbatim rule no longer primes the model to invent exercise directives** (caught by v0.29.1's §4a gate, which is why v0.29.1 was tagged but never released: no floating tag moved, no GitHub release). Harness scenario 17 (`new-document-toc`) failed twice on the `.ml` lane — the fixture writes its exercises as a plain `## Exercises` heading and a numbered list, the model wrapped them in `{exercise-start}` … `{exercise-end}`, and the structural-parity guard correctly refused the file (directives 3 → 5), leaving the sync PR with a `_toc.yml` entry for a lecture it did not deliver. Measured on that fixture, twelve draws per arm: **5/12 refused at v0.29.0** — the defect is latent since the rule arrived in v0.28.0, and four gates passed it on single lucky draws — **11/12 at v0.29.1** (the #315 rules aggravate it; crossing rules and glossary puts it in the rules), and **0/24** once the rule says it concerns only directives the source already contains. Behaviour is otherwise unchanged: a plain exercises section keeps its English text, as the editor's ruling requires, and its source structure.
+
+## [0.29.1] - 2026-09-21 [YANKED]
+
+> **Tagged, never released.** The §4a gate on the `v0.29.1` tag came back 83/84 — harness scenario 17 failed on the `.ml` lane (see the `Fixed` entry above) — so no floating tag was moved and no GitHub release was published: `@v0` and `@v0.29` never pointed here. The tag exists and the entries below describe it accurately, but do not pin it; its contents ship in the release above.
+
+### Changed
+
+- **`ml` rules 27 → 28, glossary v0.6.0 → v0.7.0** from the editor's answers to the round-3 questions (lecture-python-programming.ml#22, 2026-09-19). Two answers overturned a guess that v0.29.0 had shipped or was about to: the comma between `-ഉം` items is there **always**, single words included (the clause-boundary rule said phrases only, and the suffix rule's own example contradicted it — both corrected), and *draw* is **not** forced into the light-verb pattern (he calls `വരയ്ക്കാം` natural; it stays unencoded either way). Confirmed and encoded: the plural of a retained English noun is the English plural plus the Malayalam suffix (`objects`, `function calls-ൽ` — never `object-ുകൾ`), as its own short rule; *prefer* stays English; *provide* moves to `നൽകുക`, superseding the v0.4.0 pin, with both forms acceptable in reviewed text. He accepts "would a Kerala student say this word in everyday conversation?" as the test for which ordinary words stay English; the rewrite of that rule is held for a held-out judge run. Decision record `D-2026-09-21-ml-further-reading-boundary-is-the-reference-section` settles the Further Reading boundary (the outside-pointing reference section, not any link-led bullet), which unblocks moving that rule into code.
+- **`ml_metrics.py` gains two lints, `ml_repair.py` a third repair**: a Malayalam plural built on a Latin-script singular, and two adjacent hyphen-suffixed `-ഉം` items with no comma — calibrated against the three reviewed lectures and the round-4 draft with no false positives. The comma is also repaired mechanically, because the measurement says it must be: on three held-out draws of `numpy` (`experiments/ml-benchmark/arms/2026-09-21-round3-answers-numpy/`) the corrected prompt rule lifts comma-carrying pairs only from 0 of 4 to 2 of 6, while the glossary change is deterministic (`provide ചെയ്യ…` 16 → 0).
+
 ## [0.29.0] - 2026-09-18
 
 ### Added

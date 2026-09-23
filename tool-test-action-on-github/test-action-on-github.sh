@@ -617,9 +617,15 @@ if [ "$DRY_RUN" = false ]; then
     cd "$WORK_DIR/$SOURCE_REPO"
 fi
 
-# Close PRs on source repo
+# Close PRs on source repo.
+# Every `gh pr list` here carries --limit 200: the default is 30, and a lane that
+# has had diagnosis work between two gates (a re-run, a local-bundle validation)
+# can hold more open PRs than that. On 2026-09-21 the .ml lane had 31, the oldest
+# was never listed, and it survived the reset to be read as a missing verdict
+# (#321). The check after the close loops makes any survivor, whatever its
+# cause, stop the run before a fixture PR is created.
 if [ "$DRY_RUN" = true ]; then
-    OPEN_PRS=$(gh pr list --repo "$OWNER/$SOURCE_REPO" --state open --json number --jq '.[].number' 2>/dev/null || echo "")
+    OPEN_PRS=$(gh pr list --repo "$OWNER/$SOURCE_REPO" --state open --limit 200 --json number --jq '.[].number' 2>/dev/null || echo "")
     if [ -z "$OPEN_PRS" ]; then
         echo -e "${CYAN}[DRY RUN] No open PRs to close on source repo${NC}"
     else
@@ -630,7 +636,7 @@ if [ "$DRY_RUN" = true ]; then
     fi
 else
     # Get list of open PRs
-    OPEN_PRS=$(gh pr list --repo "$OWNER/$SOURCE_REPO" --state open --json number --jq '.[].number')
+    OPEN_PRS=$(gh pr list --repo "$OWNER/$SOURCE_REPO" --state open --limit 200 --json number --jq '.[].number')
 
     if [ -z "$OPEN_PRS" ]; then
         echo "No open PRs to close on source repo"
@@ -652,7 +658,7 @@ for L in "${LANGUAGES[@]}"; do
     name="$(lang_name "$L")"
     repo="$OWNER/$SOURCE_REPO.$code"
 
-    TARGET_PRS=$(gh pr list --repo "$repo" --state open --json number --jq '.[].number' 2>/dev/null || echo "")
+    TARGET_PRS=$(gh pr list --repo "$repo" --state open --limit 200 --json number --jq '.[].number' 2>/dev/null || echo "")
     if [ -z "$TARGET_PRS" ]; then
         echo "No open PRs to close on $name target repo"
         continue
@@ -666,6 +672,37 @@ for L in "${LANGUAGES[@]}"; do
         fi
     done
 done
+
+# Verify the reset actually emptied every repo. A survivor here — a PR beyond the
+# list page, a listing that failed and read as empty, a close that did not take —
+# would be counted as one of this run's PRs and read as a missing verdict, so it
+# is a hard stop, not a warning.
+if [ "$DRY_RUN" != true ]; then
+    REPOS_TO_CHECK=("$OWNER/$SOURCE_REPO")
+    for L in "${LANGUAGES[@]}"; do
+        REPOS_TO_CHECK+=("$OWNER/$SOURCE_REPO.$(lang_code "$L")")
+    done
+    RESET_LEFTOVERS=""
+    for repo in "${REPOS_TO_CHECK[@]}"; do
+        # A listing that fails is a failure too — but say which repo and why, rather than
+        # letting `set -e` stop the run silently on the assignment.
+        if ! REMAINING=$(gh pr list --repo "$repo" --state open --limit 200 --json number --jq '.[].number' 2>&1); then
+            echo -e "${RED}✗ Could not list open PRs on ${repo}: ${REMAINING}${NC}"
+            echo -e "${RED}  The reset cannot be verified — fix the listing and run the script again.${NC}"
+            exit 1
+        fi
+        if [ -n "$REMAINING" ]; then
+            RESET_LEFTOVERS="${RESET_LEFTOVERS}  ${repo}: #$(echo "$REMAINING" | tr '\n' ' ' | sed 's/ $//; s/ / #/g')\n"
+        fi
+    done
+    if [ -n "$RESET_LEFTOVERS" ]; then
+        echo -e "${RED}✗ Reset left open PRs behind — stopping before any fixture PR is created:${NC}"
+        echo -e "$RESET_LEFTOVERS"
+        echo -e "${RED}  Close them (or find out why gh could not) and run the script again.${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}✓${NC} All ${#REPOS_TO_CHECK[@]} repos have no open PRs"
+fi
 
 echo ""
 
