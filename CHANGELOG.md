@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.3] - 2026-09-23
+
 ### Added
 
 - **`tool-test-action-on-github/rate-check.sh`** — release checklist step 4b (#320): the release gate takes one draw per scenario, so a model-side defect that fails less than always can pass it (scenario 17's new document was refused on ~40% of draws from v0.28.0 to v0.29.0 and passed three gates). The script runs the CLI at a tag or checkout N times (default 12) per full-document fixture and language, prints refusals per cell with their reasons, and fails above `--max-refusals` (default 1). Local only; `--ref` builds any version in a temporary worktree with its own glossary.
