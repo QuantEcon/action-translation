@@ -684,8 +684,13 @@ if [ "$DRY_RUN" != true ]; then
     done
     RESET_LEFTOVERS=""
     for repo in "${REPOS_TO_CHECK[@]}"; do
-        # No `|| echo ""` here: if the listing itself fails, that is a failure too.
-        REMAINING=$(gh pr list --repo "$repo" --state open --limit 200 --json number --jq '.[].number')
+        # A listing that fails is a failure too — but say which repo and why, rather than
+        # letting `set -e` stop the run silently on the assignment.
+        if ! REMAINING=$(gh pr list --repo "$repo" --state open --limit 200 --json number --jq '.[].number' 2>&1); then
+            echo -e "${RED}✗ Could not list open PRs on ${repo}: ${REMAINING}${NC}"
+            echo -e "${RED}  The reset cannot be verified — fix the listing and run the script again.${NC}"
+            exit 1
+        fi
         if [ -n "$REMAINING" ]; then
             RESET_LEFTOVERS="${RESET_LEFTOVERS}  ${repo}: #$(echo "$REMAINING" | tr '\n' ' ' | sed 's/ $//; s/ / #/g')\n"
         fi
