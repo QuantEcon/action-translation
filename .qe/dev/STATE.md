@@ -23,18 +23,25 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   only 4/12 avoid « Votre (première) tâche » (« Votre première tâche consiste à… » in 6/12).
   One phrase to add, then re-measure `python_by_example` and run the blind pairwise judge; the
   result goes on #327.
-- **ml calibration: round 4 is with the editor** — the round-3 answers
-  (lecture-python-programming.ml#22, closed 2026-09-21) shipped in v0.29.2 (#315 `cd41558`:
-  rules 27 → 28, glossary v0.7.0; Further Reading boundary `D-2026-09-21-…`, which unblocks the
-  code move under #260). Round 4 (`numpy`, lecture-python-programming.ml#23) was regenerated
-  with the v0.29.2 engine on 2026-09-21: three draws, draw 1 sent (bare endings 1 / 37 / 2),
-  one `ml_repair.py` comma applied and disclosed — the first repaired seed; arm
-  `experiments/ml-benchmark/arms/2026-09-21-round4-numpy-v0.29.2/`. Unreviewed as of
-  2026-09-23, as are lecture-python-programming.ml#24 (the #22 answers applied to the reviewed
-  pages) and ml#14 (exercise blocks restored). **Open: the rule-2 arm** — rewrite around the
-  editor's everyday-speech test, judged held-out before it ships, not on his say-so alone
-  (no issue; STATE and the logs are its tracker). Logs `2026-09-21-ml-round3-answers`,
-  `2026-09-23-close-out`.
+- **ml calibration: round 4 is reviewed, applied and merged; its first engine change is
+  in the calibration tooling (2026-09-28).** The editor made 73 suggestions on `numpy`
+  (lecture-python-programming.ml#23): touch rate 67% → 51%, lines accepted 22 → 70, and every
+  class encoded before round 4 held. Applied verbatim with his co-author trailer plus four
+  normalisations, squash-merged as `7e373de`; ml#24 merged; his questions are on ml#25; ml#14
+  (exercise blocks restored) still open. Dispositions: QuantEcon/project-translation
+  `reports/2026-09-28-ml-numpy-review-disposition.md`. The largest residue is comma-joined
+  finite clauses (17.2 per 100 lines across nine draws, 2.8 in his text), which rule 12 has
+  never reached; **#331** (`d9b243c`) adds the lint and a fourth `ml_repair` repair and
+  rebuilds `ml_metrics`' prose scanner. Nothing in `src/` has changed for ml since v0.29.2.
+  **Open, in order**: (1) a second `ml_repair` PR — the bracketed-paragraph stop, a generalised
+  `-ഉം` comma, then the lexical repairs (*see* → `നോക്കുക`, adverbial *element-wise*, *have
+  already seen* → `കണ്ടുകഴിഞ്ഞു`, standalone `മുൻ`), each with his lines as fixtures;
+  (2) prompt trims for the next release that re-draws anyway (rule 12's em-dash clause, rule
+  18(a)'s "always after `എന്നത്`", a rule-19 carve-out, the glossary *work* ban); (3) **the
+  rule-2 arm**, after his ml#25 Q4 answer (permission or requirement), judged held-out;
+  (4) round 5 (`pandas`). **Not yet run: a regeneration test of #331** — so far it is
+  validated offline (existing draws, his edits and reviewed pages), not on fresh draws or
+  held-out lectures with the blind pairwise judge. Log `2026-09-28-ml-round4`.
 - **The standing plan is tracker #257** (2026-08-10 backlog review; supersedes #94/#198):
   all 67 open issues triaged and verified against v0.25.0, phases W0–W6 filed as
   sub-issues #258–#264. The dominant failure shape it names: **the failure path produces
@@ -93,6 +100,13 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## Recently landed
 
+- **ml splice lint + repair, prose scanner rebuilt (#331, `d9b243c`, 2026-09-28)** —
+  `comma_splice_resumptive` / `comma_splice_watch` / `comma_splice_rate` in `ml_metrics.py`
+  and a fourth deterministic repair in `ml_repair.py` (finite verb + comma + resumptive pronoun
+  → full stop). The scanner now reads `(` paragraphs and prose-directive bodies, follows
+  CommonMark fences, and checks punctuation at paragraph ends and capitalisation at starts; the
+  future-hortative watch is retired. 16 stdlib tests (`test_ml_lints.py`) from the editor's
+  own lines. Experiment tooling only; promotion into the engine is #260.
 - **`.dev/` → `.qe/dev/` (#314)** — the notes convention moves inside `.qe/`, the repository's
   QuantEcon folder, per the QEP-7 draft (QuantEcon/qeps#40): `.qe/README.md` states the folder's
   contract, `.qe/project.yml` points the `qe` workplan skills at tracker #257, and nothing under
@@ -148,6 +162,9 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 ## Next
 
 **Resume here (2026-09-23, after v0.29.3):**
+
+*ml, 2026-09-28*: see the ml bullet under In flight — next is the second `ml_repair` PR, and
+the regeneration test of #331 has not been run.
 
 0. **The fr engine queue, in this order**: finish, review and PR #324, then #325 (branches in
    progress, each with its fr edition repair), then #326 together with #203's fence unwrap.
