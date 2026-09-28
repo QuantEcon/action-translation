@@ -10,9 +10,10 @@ even though the prompt states the rule (the #260 post-processing prototype):
   4. a finite clause joined to the next by a comma and a resumptive pronoun or
      connective is split into two sentences (… methods ഉണ്ട്, ഇവയെല്ലാം … →
      … methods ഉണ്ട്. ഇവയെല്ലാം …, rule 12). The editor removed that comma at
-     every such site he edited in rounds 1, 2 and 4 (lecture-python-programming
-     .ml#23), with a full stop at 19 of 25 — the rest an em-dash, a semicolon or
-     a converb, which are his choices and not generated.
+     every such site he edited in rounds 1, 2 and 4
+     (lecture-python-programming.ml#23), with a full stop at 19 of 25 — the
+     rest an em-dash, a semicolon or a converb, which are his choices and not
+     generated.
 
 Only the "bare ending before a cell or list" class is repaired; the lint's other
 class ("paragraph without terminal punctuation") is left alone. Line
@@ -55,7 +56,8 @@ def repair(text: str, bare_lines: list[int], um_lines: list[int] | None = None,
         # A closing bracket is terminated only after a stop, as in the lint: the
         # deep-copy line "(… വിളിക്കുന്നു)" before a cell gets his "):" (ml#23
         # 920). A paragraph that is wholly bracketed is left to the lint — he put
-        # that stop inside the bracket (ml#23 197), and not before a cell.
+        # that stop inside the bracket (ml#23 197), and not before a cell — as is
+        # a comma before a cell, which appending would turn into ",:".
         if (re.search('[ഀ-ൿ]', line) and not re.search(r'(?:[.:!?,]|[.!?:…]\))\s*$', line)
                 and not line.lstrip().startswith('(')):
             lines[n - 1] = line.rstrip() + ':'

@@ -188,6 +188,13 @@ class TerminalPunctuation(unittest.TestCase):
         self.assertEqual(stats["colons_added"], 1)
         self.assertEqual(fixed.split("\n")[0], 'ഇപ്പോൾ `b` എന്നത് ഒരു independent copy ആണ് (ഇതിനെ *deep copy* എന്ന് വിളിക്കുന്നു):')
 
+    def test_comma_is_an_ending_only_before_a_list(self):
+        self.assertEqual(self.kinds("ഈ ഭാഗങ്ങൾ ഇവയാണ്,\n\n* ആദ്യത്തെ item\n"), [])
+        text = "ഈ code നോക്കുക," + CELL
+        self.assertEqual(self.kinds(text), [1])
+        # left to the lint: the repair never writes ",:"
+        self.assertEqual(repair(text, [1])[1]["colons_added"], 0)
+
     def test_hard_wrap_is_not_a_bare_ending(self):
         self.assertEqual(self.kinds("ഇത് ഒരു paragraph-ന്റെ\nതുടർച്ച ആണ്.\n"), [])
 

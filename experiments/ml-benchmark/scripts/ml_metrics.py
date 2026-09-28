@@ -387,7 +387,10 @@ def round2_lints(text: str) -> dict:
             # "(… memory)" is not (he added the stop at ml#23 197 and at
             # functions 286 in round 2; he accepted "...)").
             introduces = nxt is not None and (CELL_OR_MATH_RE.match(nxt) or LIST_ITEM_RE.match(nxt))
-            if introduces and not re.search(r"(?:[.:,]|[.!?:…]\))$", body):
+            # a comma is his ending only before a list it opens, never a cell
+            opens_list = nxt is not None and LIST_ITEM_RE.match(nxt)
+            ending = r"(?:[.:,]|[.!?:…]\))$" if opens_list else r"(?:[.:]|[.!?:…]\))$"
+            if introduces and not re.search(ending, body):
                 punct.append({"line": n, "kind": "bare ending before a cell or list (colon or full stop expected)", "text": body[-60:]})
             elif not introduces and not re.search(r"(?:[.:?!]|[.:?!…]\))$", body):
                 punct.append({"line": n, "kind": "paragraph without terminal punctuation", "text": body[-60:]})
