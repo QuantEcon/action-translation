@@ -6,7 +6,7 @@ E = sys.argv[1]
 ratio = lambda a, b: difflib.SequenceMatcher(None, a, b, autojunk=False).ratio()
 sites = []
 for lecture in ('numpy', 'functions', 'matplotlib'):
-    for i, it in enumerate(json.load(open(f'{E}/items-{lecture}.json'))):
+    for i, it in enumerate(json.load(open(f'{E}/items-{lecture}.json', encoding='utf-8'))):
         o, n = it['candidates']['old'], it['candidates']['new']
         if o == n:
             continue
@@ -20,7 +20,7 @@ for lecture in ('numpy', 'functions', 'matplotlib'):
         sites.append({'id': f'{lecture}-d{it["draw"]}-{i}', 'lecture': lecture, 'draw': it['draw'], 'en': it['en'], 'ref': it['ref'],
                       'raw': it['candidates']['raw'], 'old': o, 'new': n, 'kinds': kinds,
                       'sim_old': round(ratio(o, it['ref']), 4), 'sim_new': round(ratio(n, it['ref']), 4)})
-json.dump(sites, open(f'{E}/sites.json', 'w'), ensure_ascii=False, indent=1)
+json.dump(sites, open(f'{E}/sites.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 from collections import Counter
 print(len(sites), 'paragraphs differ old vs new;', Counter(k for s in sites for k in s['kinds']).most_common(8))
 for lecture in ('numpy', 'functions', 'matplotlib'):

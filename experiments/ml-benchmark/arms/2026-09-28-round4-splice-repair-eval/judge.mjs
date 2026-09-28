@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 
 const [itemsPath, pairSpec, outPath = 'judgements.json'] = process.argv.slice(2);
-const MODEL = process.env.JUDGE_MODEL || 'claude-opus-5';
+const MODEL = process.env.JUDGE_MODEL || 'claude-opus-5-5'; // the model this arm was judged with
 const FREE = process.env.JUDGE_MODE === 'free';
 const CONCURRENCY = 6;
 

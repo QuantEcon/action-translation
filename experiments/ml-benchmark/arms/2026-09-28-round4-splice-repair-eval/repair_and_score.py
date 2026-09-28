@@ -28,10 +28,10 @@ for raw in sorted(glob.glob(f'{E}/draws/*-raw-draw*.md')):
         rec[f'repair_{arm}'] = run_repair(scripts, raw, dst)
     for arm in ('raw', 'old', 'new'):
         rec[f'score_{arm}'] = score(f'{E}/draws/{l}-{arm}-draw{n}.md')
-    a = open(f'{E}/draws/{l}-old-draw{n}.md').read().split('\n'); b = open(f'{E}/draws/{l}-new-draw{n}.md').read().split('\n')
+    a = open(f'{E}/draws/{l}-old-draw{n}.md', encoding='utf-8').read().split('\n'); b = open(f'{E}/draws/{l}-new-draw{n}.md', encoding='utf-8').read().split('\n')
     rec['lines_old_vs_new'] = sum(x != y for x, y in zip(a, b)) + abs(len(a) - len(b))
     out[f'{l}-{n}'] = rec
 for ref in ('numpy', 'functions', 'matplotlib'):
     out[f'{ref}-editor'] = {'lecture': ref, 'score_ref': score(f'{E}/corpus/{ref}.ml.md')}
-json.dump(out, open(f'{E}/scores.json', 'w'), ensure_ascii=False, indent=1)
+json.dump(out, open(f'{E}/scores.json', 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print(len(out), 'records')

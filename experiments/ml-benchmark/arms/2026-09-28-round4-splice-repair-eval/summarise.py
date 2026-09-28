@@ -7,7 +7,7 @@ def sign_p(k, n):
 E = sys.argv[1]
 tot = {}
 for f in sorted(glob.glob(f'{E}/judgements-*.json')):
-    J = json.load(open(f)); mode, lec = f.split('judgements-')[1][:-5].split('-', 1)
+    J = json.load(open(f, encoding='utf-8')); mode, lec = f.split('judgements-')[1][:-5].split('-', 1)
     for pair in sorted({j['pair'] for j in J}):
         x, y = pair.split(':')
         P = [j for j in J if j['pair'] == pair]
