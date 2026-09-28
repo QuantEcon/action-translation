@@ -1,0 +1,1154 @@
+{
+ "functions-1": {
+  "lecture": "functions",
+  "draw": 1,
+  "repair_old": {
+   "colons_added": 3,
+   "for_example_restored": 0,
+   "um_commas_added": 1
+  },
+  "repair_new": {
+   "colons_added": 3,
+   "for_example_restored": 0,
+   "um_commas_added": 1,
+   "splices_split": 6
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 102,
+    "sites": 21,
+    "resumptive": 6,
+    "per_100_lines": 20.6
+   },
+   "terminal_punctuation": 4,
+   "lowercase_initial": 5,
+   "banned_renderings": 3,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 1,
+   "comma_splice_watch": 21,
+   "comma_splice_resumptive": 6
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 102,
+    "sites": 21,
+    "resumptive": 6,
+    "per_100_lines": 20.6
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 5,
+   "banned_renderings": 3,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 21,
+   "comma_splice_resumptive": 6
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 102,
+    "sites": 15,
+    "resumptive": 0,
+    "per_100_lines": 14.7
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 5,
+   "banned_renderings": 3,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 15,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 6
+ },
+ "functions-2": {
+  "lecture": "functions",
+  "draw": 2,
+  "repair_old": {
+   "colons_added": 1,
+   "for_example_restored": 0,
+   "um_commas_added": 1
+  },
+  "repair_new": {
+   "colons_added": 1,
+   "for_example_restored": 0,
+   "um_commas_added": 1,
+   "splices_split": 3
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 102,
+    "sites": 17,
+    "resumptive": 3,
+    "per_100_lines": 16.7
+   },
+   "terminal_punctuation": 2,
+   "lowercase_initial": 12,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 1,
+   "comma_splice_watch": 17,
+   "comma_splice_resumptive": 3
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 102,
+    "sites": 17,
+    "resumptive": 3,
+    "per_100_lines": 16.7
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 12,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 17,
+   "comma_splice_resumptive": 3
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 102,
+    "sites": 14,
+    "resumptive": 0,
+    "per_100_lines": 13.7
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 12,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 14,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 3
+ },
+ "functions-3": {
+  "lecture": "functions",
+  "draw": 3,
+  "repair_old": {
+   "colons_added": 14,
+   "for_example_restored": 0,
+   "um_commas_added": 1
+  },
+  "repair_new": {
+   "colons_added": 14,
+   "for_example_restored": 0,
+   "um_commas_added": 1,
+   "splices_split": 6
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 103,
+    "sites": 20,
+    "resumptive": 6,
+    "per_100_lines": 19.4
+   },
+   "terminal_punctuation": 17,
+   "lowercase_initial": 1,
+   "banned_renderings": 3,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 1,
+   "comma_splice_watch": 20,
+   "comma_splice_resumptive": 6
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 103,
+    "sites": 20,
+    "resumptive": 6,
+    "per_100_lines": 19.4
+   },
+   "terminal_punctuation": 3,
+   "lowercase_initial": 1,
+   "banned_renderings": 3,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 20,
+   "comma_splice_resumptive": 6
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 103,
+    "sites": 14,
+    "resumptive": 0,
+    "per_100_lines": 13.6
+   },
+   "terminal_punctuation": 3,
+   "lowercase_initial": 1,
+   "banned_renderings": 3,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 14,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 6
+ },
+ "functions-4": {
+  "lecture": "functions",
+  "draw": 4,
+  "repair_old": {
+   "colons_added": 4,
+   "for_example_restored": 0,
+   "um_commas_added": 1
+  },
+  "repair_new": {
+   "colons_added": 4,
+   "for_example_restored": 0,
+   "um_commas_added": 1,
+   "splices_split": 3
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 102,
+    "sites": 18,
+    "resumptive": 3,
+    "per_100_lines": 17.6
+   },
+   "terminal_punctuation": 5,
+   "lowercase_initial": 4,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 1,
+   "comma_splice_watch": 18,
+   "comma_splice_resumptive": 3
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 102,
+    "sites": 18,
+    "resumptive": 3,
+    "per_100_lines": 17.6
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 4,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 18,
+   "comma_splice_resumptive": 3
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 102,
+    "sites": 15,
+    "resumptive": 0,
+    "per_100_lines": 14.7
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 4,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 15,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 3
+ },
+ "functions-5": {
+  "lecture": "functions",
+  "draw": 5,
+  "repair_old": {
+   "colons_added": 16,
+   "for_example_restored": 0,
+   "um_commas_added": 1
+  },
+  "repair_new": {
+   "colons_added": 16,
+   "for_example_restored": 0,
+   "um_commas_added": 1,
+   "splices_split": 3
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 102,
+    "sites": 19,
+    "resumptive": 3,
+    "per_100_lines": 18.6
+   },
+   "terminal_punctuation": 19,
+   "lowercase_initial": 5,
+   "banned_renderings": 3,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 1,
+   "comma_splice_watch": 19,
+   "comma_splice_resumptive": 3
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 102,
+    "sites": 19,
+    "resumptive": 3,
+    "per_100_lines": 18.6
+   },
+   "terminal_punctuation": 3,
+   "lowercase_initial": 5,
+   "banned_renderings": 3,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 19,
+   "comma_splice_resumptive": 3
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 102,
+    "sites": 16,
+    "resumptive": 0,
+    "per_100_lines": 15.7
+   },
+   "terminal_punctuation": 3,
+   "lowercase_initial": 5,
+   "banned_renderings": 3,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 16,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 3
+ },
+ "functions-6": {
+  "lecture": "functions",
+  "draw": 6,
+  "repair_old": {
+   "colons_added": 15,
+   "for_example_restored": 0,
+   "um_commas_added": 1
+  },
+  "repair_new": {
+   "colons_added": 15,
+   "for_example_restored": 0,
+   "um_commas_added": 1,
+   "splices_split": 4
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 102,
+    "sites": 17,
+    "resumptive": 4,
+    "per_100_lines": 16.7
+   },
+   "terminal_punctuation": 18,
+   "lowercase_initial": 5,
+   "banned_renderings": 3,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 1,
+   "comma_splice_watch": 17,
+   "comma_splice_resumptive": 4
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 102,
+    "sites": 17,
+    "resumptive": 4,
+    "per_100_lines": 16.7
+   },
+   "terminal_punctuation": 3,
+   "lowercase_initial": 5,
+   "banned_renderings": 3,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 17,
+   "comma_splice_resumptive": 4
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 102,
+    "sites": 13,
+    "resumptive": 0,
+    "per_100_lines": 12.7
+   },
+   "terminal_punctuation": 3,
+   "lowercase_initial": 5,
+   "banned_renderings": 3,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 13,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 4
+ },
+ "matplotlib-1": {
+  "lecture": "matplotlib",
+  "draw": 1,
+  "repair_old": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 2
+  },
+  "repair_new": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 2,
+   "splices_split": 0
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 62,
+    "sites": 7,
+    "resumptive": 0,
+    "per_100_lines": 11.3
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 1,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 2,
+   "comma_splice_watch": 7,
+   "comma_splice_resumptive": 0
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 62,
+    "sites": 7,
+    "resumptive": 0,
+    "per_100_lines": 11.3
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 1,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 7,
+   "comma_splice_resumptive": 0
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 62,
+    "sites": 7,
+    "resumptive": 0,
+    "per_100_lines": 11.3
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 1,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 7,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 0
+ },
+ "matplotlib-2": {
+  "lecture": "matplotlib",
+  "draw": 2,
+  "repair_old": {
+   "colons_added": 18,
+   "for_example_restored": 0,
+   "um_commas_added": 2
+  },
+  "repair_new": {
+   "colons_added": 18,
+   "for_example_restored": 0,
+   "um_commas_added": 2,
+   "splices_split": 0
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 61,
+    "sites": 7,
+    "resumptive": 0,
+    "per_100_lines": 11.5
+   },
+   "terminal_punctuation": 18,
+   "lowercase_initial": 1,
+   "banned_renderings": 0,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 2,
+   "comma_splice_watch": 7,
+   "comma_splice_resumptive": 0
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 61,
+    "sites": 7,
+    "resumptive": 0,
+    "per_100_lines": 11.5
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 1,
+   "banned_renderings": 0,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 7,
+   "comma_splice_resumptive": 0
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 61,
+    "sites": 7,
+    "resumptive": 0,
+    "per_100_lines": 11.5
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 1,
+   "banned_renderings": 0,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 7,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 0
+ },
+ "matplotlib-3": {
+  "lecture": "matplotlib",
+  "draw": 3,
+  "repair_old": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 2
+  },
+  "repair_new": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 2,
+   "splices_split": 0
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 64,
+    "sites": 5,
+    "resumptive": 0,
+    "per_100_lines": 7.8
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 2,
+   "banned_renderings": 0,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 2,
+   "comma_splice_watch": 5,
+   "comma_splice_resumptive": 0
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 64,
+    "sites": 5,
+    "resumptive": 0,
+    "per_100_lines": 7.8
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 2,
+   "banned_renderings": 0,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 5,
+   "comma_splice_resumptive": 0
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 64,
+    "sites": 5,
+    "resumptive": 0,
+    "per_100_lines": 7.8
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 2,
+   "banned_renderings": 0,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 5,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 0
+ },
+ "matplotlib-4": {
+  "lecture": "matplotlib",
+  "draw": 4,
+  "repair_old": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 2
+  },
+  "repair_new": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 2,
+   "splices_split": 0
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 62,
+    "sites": 5,
+    "resumptive": 0,
+    "per_100_lines": 8.1
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 2,
+   "banned_renderings": 1,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 2,
+   "comma_splice_watch": 5,
+   "comma_splice_resumptive": 0
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 62,
+    "sites": 5,
+    "resumptive": 0,
+    "per_100_lines": 8.1
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 2,
+   "banned_renderings": 1,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 5,
+   "comma_splice_resumptive": 0
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 62,
+    "sites": 5,
+    "resumptive": 0,
+    "per_100_lines": 8.1
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 2,
+   "banned_renderings": 1,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 5,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 0
+ },
+ "matplotlib-5": {
+  "lecture": "matplotlib",
+  "draw": 5,
+  "repair_old": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 0
+  },
+  "repair_new": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 0,
+   "splices_split": 0
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 62,
+    "sites": 5,
+    "resumptive": 0,
+    "per_100_lines": 8.1
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 1,
+   "banned_renderings": 0,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 5,
+   "comma_splice_resumptive": 0
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 62,
+    "sites": 5,
+    "resumptive": 0,
+    "per_100_lines": 8.1
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 1,
+   "banned_renderings": 0,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 5,
+   "comma_splice_resumptive": 0
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 62,
+    "sites": 5,
+    "resumptive": 0,
+    "per_100_lines": 8.1
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 1,
+   "banned_renderings": 0,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 5,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 0
+ },
+ "matplotlib-6": {
+  "lecture": "matplotlib",
+  "draw": 6,
+  "repair_old": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 2
+  },
+  "repair_new": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 2,
+   "splices_split": 0
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 63,
+    "sites": 6,
+    "resumptive": 0,
+    "per_100_lines": 9.5
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 2,
+   "banned_renderings": 1,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 2,
+   "comma_splice_watch": 6,
+   "comma_splice_resumptive": 0
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 63,
+    "sites": 6,
+    "resumptive": 0,
+    "per_100_lines": 9.5
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 2,
+   "banned_renderings": 1,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 6,
+   "comma_splice_resumptive": 0
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 63,
+    "sites": 6,
+    "resumptive": 0,
+    "per_100_lines": 9.5
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 2,
+   "banned_renderings": 1,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 6,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 0
+ },
+ "numpy-1": {
+  "lecture": "numpy",
+  "draw": 1,
+  "repair_old": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 1
+  },
+  "repair_new": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 1,
+   "splices_split": 10
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 157,
+    "sites": 27,
+    "resumptive": 10,
+    "per_100_lines": 17.2
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 0,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 1,
+   "comma_splice_watch": 27,
+   "comma_splice_resumptive": 10
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 157,
+    "sites": 27,
+    "resumptive": 10,
+    "per_100_lines": 17.2
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 0,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 27,
+   "comma_splice_resumptive": 10
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 157,
+    "sites": 17,
+    "resumptive": 0,
+    "per_100_lines": 10.8
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 0,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 17,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 10
+ },
+ "numpy-2": {
+  "lecture": "numpy",
+  "draw": 2,
+  "repair_old": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 2
+  },
+  "repair_new": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 2,
+   "splices_split": 14
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 144,
+    "sites": 29,
+    "resumptive": 14,
+    "per_100_lines": 20.1
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 0,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 2,
+   "comma_splice_watch": 29,
+   "comma_splice_resumptive": 14
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 144,
+    "sites": 29,
+    "resumptive": 14,
+    "per_100_lines": 20.1
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 0,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 29,
+   "comma_splice_resumptive": 14
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 144,
+    "sites": 15,
+    "resumptive": 0,
+    "per_100_lines": 10.4
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 0,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 15,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 14
+ },
+ "numpy-3": {
+  "lecture": "numpy",
+  "draw": 3,
+  "repair_old": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 2
+  },
+  "repair_new": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 2,
+   "splices_split": 8
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 153,
+    "sites": 20,
+    "resumptive": 8,
+    "per_100_lines": 13.1
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 0,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 2,
+   "comma_splice_watch": 20,
+   "comma_splice_resumptive": 8
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 153,
+    "sites": 20,
+    "resumptive": 8,
+    "per_100_lines": 13.1
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 0,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 20,
+   "comma_splice_resumptive": 8
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 153,
+    "sites": 12,
+    "resumptive": 0,
+    "per_100_lines": 7.8
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 0,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 12,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 8
+ },
+ "numpy-4": {
+  "lecture": "numpy",
+  "draw": 4,
+  "repair_old": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 2
+  },
+  "repair_new": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 2,
+   "splices_split": 9
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 144,
+    "sites": 31,
+    "resumptive": 9,
+    "per_100_lines": 21.5
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 0,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 2,
+   "comma_splice_watch": 31,
+   "comma_splice_resumptive": 9
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 144,
+    "sites": 31,
+    "resumptive": 9,
+    "per_100_lines": 21.5
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 0,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 31,
+   "comma_splice_resumptive": 9
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 144,
+    "sites": 22,
+    "resumptive": 0,
+    "per_100_lines": 15.3
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 0,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 22,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 9
+ },
+ "numpy-5": {
+  "lecture": "numpy",
+  "draw": 5,
+  "repair_old": {
+   "colons_added": 1,
+   "for_example_restored": 0,
+   "um_commas_added": 2
+  },
+  "repair_new": {
+   "colons_added": 1,
+   "for_example_restored": 0,
+   "um_commas_added": 2,
+   "splices_split": 8
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 144,
+    "sites": 22,
+    "resumptive": 8,
+    "per_100_lines": 15.3
+   },
+   "terminal_punctuation": 2,
+   "lowercase_initial": 0,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 2,
+   "comma_splice_watch": 22,
+   "comma_splice_resumptive": 8
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 144,
+    "sites": 22,
+    "resumptive": 8,
+    "per_100_lines": 15.3
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 0,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 22,
+   "comma_splice_resumptive": 8
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 144,
+    "sites": 14,
+    "resumptive": 0,
+    "per_100_lines": 9.7
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 0,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 14,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 8
+ },
+ "numpy-6": {
+  "lecture": "numpy",
+  "draw": 6,
+  "repair_old": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 2
+  },
+  "repair_new": {
+   "colons_added": 0,
+   "for_example_restored": 0,
+   "um_commas_added": 2,
+   "splices_split": 9
+  },
+  "score_raw": {
+   "splice": {
+    "malayalam_prose_lines": 145,
+    "sites": 24,
+    "resumptive": 9,
+    "per_100_lines": 16.6
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 0,
+   "banned_renderings": 3,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 2,
+   "comma_splice_watch": 24,
+   "comma_splice_resumptive": 9
+  },
+  "score_old": {
+   "splice": {
+    "malayalam_prose_lines": 145,
+    "sites": 24,
+    "resumptive": 9,
+    "per_100_lines": 16.6
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 0,
+   "banned_renderings": 3,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 24,
+   "comma_splice_resumptive": 9
+  },
+  "score_new": {
+   "splice": {
+    "malayalam_prose_lines": 145,
+    "sites": 15,
+    "resumptive": 0,
+    "per_100_lines": 10.3
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 0,
+   "banned_renderings": 3,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 15,
+   "comma_splice_resumptive": 0
+  },
+  "lines_old_vs_new": 9
+ },
+ "numpy-editor": {
+  "lecture": "numpy",
+  "score_ref": {
+   "splice": {
+    "malayalam_prose_lines": 142,
+    "sites": 4,
+    "resumptive": 0,
+    "per_100_lines": 2.8
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 0,
+   "banned_renderings": 1,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 4,
+   "comma_splice_resumptive": 0
+  }
+ },
+ "functions-editor": {
+  "lecture": "functions",
+  "score_ref": {
+   "splice": {
+    "malayalam_prose_lines": 109,
+    "sites": 3,
+    "resumptive": 0,
+    "per_100_lines": 2.8
+   },
+   "terminal_punctuation": 1,
+   "lowercase_initial": 1,
+   "banned_renderings": 2,
+   "malayalam_plural_on_english_noun": 1,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 3,
+   "comma_splice_resumptive": 0
+  }
+ },
+ "matplotlib-editor": {
+  "lecture": "matplotlib",
+  "score_ref": {
+   "splice": {
+    "malayalam_prose_lines": 62,
+    "sites": 1,
+    "resumptive": 0,
+    "per_100_lines": 1.6
+   },
+   "terminal_punctuation": 0,
+   "lowercase_initial": 0,
+   "banned_renderings": 0,
+   "malayalam_plural_on_english_noun": 0,
+   "um_pair_without_comma": 0,
+   "comma_splice_watch": 1,
+   "comma_splice_resumptive": 0
+  }
+ }
+}

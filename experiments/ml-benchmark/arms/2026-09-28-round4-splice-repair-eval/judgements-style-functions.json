@@ -1,0 +1,9800 @@
+[
+ {
+  "key": "functions|1|0|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 0,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|1|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 1,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|2|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 2,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|3|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 3,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|4|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 4,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|5|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 5,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|6|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 6,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|7|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 7,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|8|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 8,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|10|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 10,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|11|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 11,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|12|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 12,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|13|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 13,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|14|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 14,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|15|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 15,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|17|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 17,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|18|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 18,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|19|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 19,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|20|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 20,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|22|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 22,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|23|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 23,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|24|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 24,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|25|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 25,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|26|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 26,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|27|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 27,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|28|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 28,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|29|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 29,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|30|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 30,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|32|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 32,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|33|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 33,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|34|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 34,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|35|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 35,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|36|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 36,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|37|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 37,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|38|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 38,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|39|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 39,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|40|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 40,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|41|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 41,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|42|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 42,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|43|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 43,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|44|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 44,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|45|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 45,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|46|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 46,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|47|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 47,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|48|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 48,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|49|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 49,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|50|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 50,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|51|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 51,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|52|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 52,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|53|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 53,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|54|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 54,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|55|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 55,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|56|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 56,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|57|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 57,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|58|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 58,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|59|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 59,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|60|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 60,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|61|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 61,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|62|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 62,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|63|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 63,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|64|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 64,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|65|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 65,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|66|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 66,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|67|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 67,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|68|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 68,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|69|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 69,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|70|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 70,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|71|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 71,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|72|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 72,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|73|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 73,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|74|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 74,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|75|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 75,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|76|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 76,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|77|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 77,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|78|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 78,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|79|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 79,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|81|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 81,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|82|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 82,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|83|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 83,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|84|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 84,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|85|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 85,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|86|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 86,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|87|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 87,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|88|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 88,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|89|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 89,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|90|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 90,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|91|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 91,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|92|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 92,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|93|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 93,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|94|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 94,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|95|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 95,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|96|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 96,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|97|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 97,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|98|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 98,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|99|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 99,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|100|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 100,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|101|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 101,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|102|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 102,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|103|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 103,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|104|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 104,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|105|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 105,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|106|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 106,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|107|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 107,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|108|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 108,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|21|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 21,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's two-sentence split with a full stop after the first clause, whereas A joins the two clauses with a comma into a single sentence; the two candidates are otherwise identical."
+ },
+ {
+  "key": "functions|2|110|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 110,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|111|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 111,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|112|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 112,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|113|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 113,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|114|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 114,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|115|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 115,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|31|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 31,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the REFERENCE's sentence splitting, ending the first clause with a full stop before the second sentence begins, whereas A joins the two clauses with a comma."
+ },
+ {
+  "key": "functions|2|117|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 117,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|118|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 118,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|119|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 119,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|120|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 120,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|121|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 121,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|122|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 122,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|123|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 123,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|124|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 124,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|125|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 125,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|126|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 126,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|127|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 127,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|128|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 128,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|129|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 129,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|130|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 130,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|131|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 131,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|132|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 132,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|133|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 133,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|134|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 134,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|135|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 135,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|136|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 136,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|137|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 137,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|138|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 138,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|139|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 139,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|140|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 140,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|141|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 141,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|142|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 142,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|143|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 143,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|144|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 144,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|145|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 145,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|146|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 146,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|147|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 147,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|148|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 148,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|149|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 149,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|150|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 150,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|151|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 151,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|152|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 152,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|153|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 153,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|154|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 154,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|155|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 155,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|156|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 156,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|157|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 157,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|158|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 158,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|159|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 159,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|160|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 160,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|161|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 161,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|162|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 162,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|163|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 163,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|164|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 164,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|165|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 165,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|166|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 166,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|167|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 167,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|168|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 168,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|169|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 169,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|170|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 170,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|171|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 171,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|172|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 172,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|173|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 173,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|174|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 174,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|175|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 175,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|176|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 176,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|177|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 177,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|178|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 178,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|179|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 179,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|180|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 180,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|181|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 181,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|182|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 182,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|183|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 183,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|184|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 184,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|185|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 185,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|186|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 186,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|187|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 187,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|188|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 188,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|189|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 189,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|190|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 190,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|191|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 191,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|192|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 192,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|193|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 193,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|194|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 194,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|195|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 195,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|196|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 196,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|197|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 197,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|198|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 198,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|199|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 199,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|200|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 200,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|201|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 201,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|202|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 202,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|203|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 203,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|204|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 204,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|205|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 205,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|206|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 206,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|207|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 207,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|208|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 208,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|9|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 9,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "B splits the paragraph into two sentences with a full stop, as the REFERENCE does, whereas A joins the clauses with a comma; the two candidates are otherwise identical in wording and verb forms."
+ },
+ {
+  "key": "functions|3|210|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 210,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|211|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 211,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|212|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 212,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|213|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 213,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|214|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 214,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|215|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 215,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|109|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 109,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "The decisive feature is sentence splitting: A matches the reference by ending the first clause with a full stop and starting a new sentence, while B joins the two clauses with a comma; the two candidates are otherwise identical."
+ },
+ {
+  "key": "functions|3|217|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 217,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|218|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 218,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|219|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 219,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|220|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 220,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|221|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 221,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|222|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 222,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|223|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 223,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|224|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 224,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|225|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 225,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|226|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 226,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|227|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 227,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|228|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 228,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|229|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 229,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|230|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 230,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|80|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 80,
+  "winner": "old",
+  "position": "B",
+  "swap": true,
+  "reason": "The reference keeps both clauses in a single sentence joined by a semicolon; B likewise keeps one sentence with a comma, whereas A splits it into two sentences with a full stop, and the candidates are otherwise identical."
+ },
+ {
+  "key": "functions|3|232|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 232,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|233|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 233,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|234|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 234,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|235|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 235,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|236|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 236,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|237|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 237,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|238|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 238,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|239|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 239,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|240|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 240,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|241|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 241,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|242|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 242,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|243|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 243,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|244|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 244,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|245|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 245,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|246|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 246,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|247|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 247,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|248|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 248,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|249|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 249,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|250|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 250,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|251|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 251,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|252|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 252,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|16|old:new",
+  "pair": "old:new",
+  "draw": 1,
+  "idx": 16,
+  "winner": "old",
+  "position": "A",
+  "swap": false,
+  "reason": "The decisive feature is sentence splitting: the reference is a single sentence ending in a colon, and A keeps one sentence by joining its clauses with a comma, whereas B breaks it into two sentences with a full stop."
+ },
+ {
+  "key": "functions|3|254|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 254,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|255|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 255,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|256|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 256,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|257|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 257,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|258|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 258,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|259|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 259,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|260|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 260,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|261|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 261,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|262|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 262,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|263|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 263,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|264|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 264,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|265|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 265,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|266|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 266,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|267|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 267,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|268|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 268,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|269|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 269,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|270|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 270,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|271|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 271,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|272|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 272,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|273|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 273,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|274|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 274,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|275|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 275,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|276|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 276,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|277|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 277,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|278|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 278,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|279|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 279,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|209|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 209,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Like the REFERENCE, A splits the paragraph into two sentences with a full stop, whereas B joins the clauses with a comma; the two candidates are otherwise identical."
+ },
+ {
+  "key": "functions|3|281|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 281,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|282|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 282,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|283|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 283,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|116|old:new",
+  "pair": "old:new",
+  "draw": 2,
+  "idx": 116,
+  "winner": "old",
+  "position": "A",
+  "swap": false,
+  "reason": "Candidate A keeps everything in one sentence joined by a comma, matching the REFERENCE's single-sentence structure, whereas B splits it into two sentences with a full stop; otherwise both share the same postposed clause order and word choices."
+ },
+ {
+  "key": "functions|3|285|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 285,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|286|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 286,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|287|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 287,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|288|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 288,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|289|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 289,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|290|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 290,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|291|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 291,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|292|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 292,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|293|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 293,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|294|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 294,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|295|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 295,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|296|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 296,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|297|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 297,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|298|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 298,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|299|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 299,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|300|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 300,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|301|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 301,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|302|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 302,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|303|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 303,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|304|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 304,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|305|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 305,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|306|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 306,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|307|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 307,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|308|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 308,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|216|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 216,
+  "winner": "old",
+  "position": "A",
+  "swap": false,
+  "reason": "The reference is a single sentence ending in a colon; A keeps one sentence by joining its clauses with a comma, while B splits them with a full stop."
+ },
+ {
+  "key": "functions|4|310|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 310,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|311|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 311,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|312|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 312,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|313|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 313,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|314|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 314,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|315|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 315,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|316|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 316,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|317|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 317,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|318|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 318,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|319|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 319,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|320|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 320,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|321|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 321,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|322|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 322,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|323|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 323,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|324|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 324,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|325|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 325,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|326|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 326,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|327|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 327,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|328|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 328,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|329|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 329,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|330|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 330,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|253|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 253,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "Like the REFERENCE, B ends the first clause with a full stop and starts a separate colon-terminated sentence, whereas A joins the two clauses with a comma."
+ },
+ {
+  "key": "functions|4|332|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 332,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|333|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 333,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|334|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 334,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|335|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 335,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|336|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 336,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|337|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 337,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|338|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 338,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|339|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 339,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|340|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 340,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|341|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 341,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|342|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 342,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|343|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 343,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|344|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 344,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|345|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 345,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|346|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 346,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|347|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 347,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|348|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 348,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|349|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 349,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|350|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 350,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|351|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 351,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|352|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 352,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|353|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 353,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|354|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 354,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|355|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 355,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|356|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 356,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|357|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 357,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|358|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 358,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|359|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 359,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|360|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 360,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|361|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 361,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|362|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 362,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|363|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 363,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|364|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 364,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|365|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 365,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|366|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 366,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|367|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 367,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|368|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 368,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|369|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 369,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|370|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 370,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|371|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 371,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|372|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 372,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|373|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 373,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|374|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 374,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|375|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 375,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|376|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 376,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|377|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 377,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|378|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 378,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|379|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 379,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|280|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 280,
+  "winner": "old",
+  "position": "B",
+  "swap": true,
+  "reason": "B keeps the two clauses joined within one sentence (with a comma), as the REFERENCE does with its semicolon; A breaks them into two sentences with a full stop."
+ },
+ {
+  "key": "functions|4|381|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 381,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|382|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 382,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|383|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 383,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|384|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 384,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|385|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 385,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|386|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 386,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|387|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 387,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|388|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 388,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|389|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 389,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|390|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 390,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|391|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 391,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|392|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 392,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|393|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 393,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|394|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 394,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|395|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 395,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|396|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 396,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|397|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 397,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|398|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 398,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|399|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 399,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|400|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 400,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|401|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 401,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|402|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 402,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|403|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 403,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|404|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 404,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|405|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 405,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|406|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 406,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|407|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 407,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|408|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 408,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|284|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 284,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's sentence splitting, ending the first clause with a full stop, while A joins the two clauses with a comma; the rest of the wording is identical in both candidates."
+ },
+ {
+  "key": "functions|5|410|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 410,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|411|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 411,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|412|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 412,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|413|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 413,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|414|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 414,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|415|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 415,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|231|old:new",
+  "pair": "old:new",
+  "draw": 3,
+  "idx": 231,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Like the reference, A splits the text into two sentences with a full stop before the consequence clause, whereas B joins the clauses with a comma."
+ },
+ {
+  "key": "functions|5|417|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 417,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|418|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 418,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|419|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 419,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|420|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 420,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|421|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 421,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|422|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 422,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|423|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 423,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|424|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 424,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|425|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 425,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|426|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 426,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|427|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 427,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|428|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 428,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|429|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 429,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|430|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 430,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|331|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 331,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Like the REFERENCE, A splits the passage into two sentences with a full stop before the consequence clause, whereas B joins them with a comma into a single sentence."
+ },
+ {
+  "key": "functions|5|432|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 432,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|433|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 433,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|434|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 434,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|435|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 435,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|436|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 436,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|437|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 437,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|438|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 438,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|439|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 439,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|440|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 440,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|441|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 441,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|442|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 442,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|443|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 443,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|444|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 444,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|445|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 445,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|446|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 446,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|447|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 447,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|448|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 448,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|449|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 449,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|450|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 450,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|451|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 451,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|452|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 452,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|453|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 453,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|454|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 454,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|455|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 455,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|456|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 456,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|457|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 457,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|458|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 458,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|459|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 459,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|460|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 460,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|461|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 461,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|462|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 462,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|463|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 463,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|464|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 464,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|465|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 465,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|466|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 466,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|467|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 467,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|468|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 468,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|469|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 469,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|470|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 470,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|471|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 471,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|472|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 472,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|473|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 473,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|474|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 474,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|475|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 475,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|476|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 476,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|477|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 477,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|478|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 478,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|479|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 479,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|480|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 480,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|481|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 481,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|482|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 482,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|483|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 483,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|484|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 484,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|485|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 485,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|486|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 486,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|487|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 487,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|488|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 488,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|489|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 489,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|490|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 490,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|491|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 491,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|492|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 492,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|493|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 493,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|494|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 494,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|495|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 495,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|496|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 496,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|497|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 497,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|498|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 498,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|499|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 499,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|500|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 500,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|501|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 501,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|502|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 502,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|503|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 503,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|504|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 504,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|505|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 505,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|506|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 506,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|507|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 507,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|508|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 508,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|309|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 309,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "B splits the paragraph into two sentences with a full stop, as the REFERENCE does, whereas A joins the clauses with a comma; the two candidates are otherwise identical in wording and verb forms."
+ },
+ {
+  "key": "functions|6|510|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 510,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|511|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 511,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|512|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 512,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|513|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 513,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|514|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 514,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|515|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 515,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|380|old:new",
+  "pair": "old:new",
+  "draw": 4,
+  "idx": 380,
+  "winner": "old",
+  "position": "B",
+  "swap": true,
+  "reason": "Like the reference, which joins the two clauses with a semicolon into one sentence, B keeps a single sentence joined by a comma, whereas A splits it into two sentences with a full stop."
+ },
+ {
+  "key": "functions|6|517|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 517,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|518|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 518,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|519|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 519,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|520|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 520,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|521|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 521,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|522|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 522,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|523|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 523,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|524|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 524,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|525|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 525,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|526|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 526,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|527|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 527,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|528|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 528,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|529|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 529,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|530|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 530,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|409|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 409,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's split into two sentences with a full stop, while A joins the clauses with a comma; the two candidates are otherwise identical."
+ },
+ {
+  "key": "functions|6|532|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 532,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|533|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 533,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|534|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 534,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|535|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 535,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|536|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 536,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|537|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 537,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|538|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 538,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|539|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 539,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|540|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 540,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|541|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 541,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|542|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 542,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|543|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 543,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|544|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 544,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|545|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 545,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|546|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 546,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|547|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 547,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|548|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 548,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|549|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 549,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|550|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 550,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|551|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 551,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|552|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 552,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|553|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 553,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|554|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 554,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|555|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 555,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|556|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 556,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|557|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 557,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|558|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 558,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|559|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 559,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|560|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 560,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|561|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 561,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|562|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 562,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|563|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 563,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|564|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 564,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|565|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 565,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|566|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 566,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|567|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 567,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|568|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 568,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|569|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 569,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|570|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 570,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|571|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 571,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|572|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 572,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|573|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 573,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|574|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 574,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|575|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 575,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|576|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 576,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|577|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 577,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|578|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 578,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|579|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 579,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|431|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 431,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A matches the reference's sentence splitting, ending the first clause with a full stop before starting a new sentence that closes with a colon, whereas B joins the two clauses with a comma."
+ },
+ {
+  "key": "functions|6|581|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 581,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|582|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 582,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|583|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 583,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|584|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 584,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|585|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 585,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|586|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 586,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|587|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 587,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|588|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 588,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|589|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 589,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|590|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 590,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|591|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 591,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|592|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 592,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|593|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 593,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|594|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 594,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|595|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 595,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|596|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 596,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|597|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 597,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|598|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 598,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|599|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 599,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|0|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 0,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|509|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 509,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Like the REFERENCE, A splits the English into two sentences with a full stop, whereas B joins them into one with a comma; the two candidates are otherwise identical."
+ },
+ {
+  "key": "functions|1|2|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 2,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|3|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 3,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|4|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 4,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|416|old:new",
+  "pair": "old:new",
+  "draw": 5,
+  "idx": 416,
+  "winner": "old",
+  "position": "B",
+  "swap": true,
+  "reason": "Like the reference, B keeps the whole thing as one sentence (joined with a comma) ending in a colon, whereas A splits it into two sentences with a full stop; the two are otherwise identical in vocabulary and verb forms."
+ },
+ {
+  "key": "functions|1|6|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 6,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|7|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 7,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|8|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 8,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|531|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 531,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "The reference splits the text into two sentences, ending the first with a full stop before continuing with the consequence clause; A does this too, while B joins the clauses with a comma into one sentence."
+ },
+ {
+  "key": "functions|1|10|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 10,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|11|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 11,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|516|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 516,
+  "winner": "old",
+  "position": "A",
+  "swap": false,
+  "reason": "The candidates differ only at the clause boundary: A joins the clauses with a comma and stays one sentence ending in a colon, like the REFERENCE, while B splits them into two sentences with a full stop."
+ },
+ {
+  "key": "functions|1|13|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 13,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|14|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 14,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|15|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 15,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|9|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 9,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A, like the REFERENCE, splits the English sentence into two sentences with a full stop, whereas B joins the clauses with a comma; the two candidates are otherwise identical."
+ },
+ {
+  "key": "functions|1|17|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 17,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|18|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 18,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|19|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 19,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|20|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 20,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|12|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 12,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "Both candidates render 'already' as ഇതിനകം and use the same clause order, but only B keeps the reference's terminal colon, which makes it stylistically closer."
+ },
+ {
+  "key": "functions|1|22|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 22,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|23|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 23,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|24|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 24,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|25|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 25,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|26|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 26,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|27|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 27,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|28|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 28,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|29|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 29,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|30|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 30,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|5|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 5,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "The decisive feature is punctuation: B, like the REFERENCE, puts a comma between 'syntax-ഉം, use-cases-ഉം', while A omits it; the two are otherwise identical, both using a comma instead of the reference's semicolon and 'cover ചെയ്യുന്നു'."
+ },
+ {
+  "key": "functions|1|32|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 32,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|33|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 33,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|34|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 34,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|35|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 35,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|36|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 36,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|37|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 37,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|38|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 38,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|39|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 39,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|40|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 40,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|41|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 41,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|42|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 42,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|43|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 43,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|1|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 1,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Neither candidate reproduces the reference's full-stop sentence split after കണ്ടുകഴിഞ്ഞു, but A, like the reference, closes ഉദാഹരണത്തിന് with lead-in punctuation (a colon, where the reference has a comma), whereas B leaves it bare."
+ },
+ {
+  "key": "functions|1|45|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 45,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|46|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 46,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|47|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 47,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|48|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 48,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|49|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 49,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|50|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 50,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|51|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 51,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|52|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 52,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|53|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 53,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|54|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 54,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|55|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 55,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|56|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 56,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|57|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 57,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|58|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 58,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|59|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 59,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|60|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 60,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|61|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 61,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|62|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 62,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|63|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 63,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|64|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 64,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|65|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 65,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|66|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 66,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|67|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 67,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|68|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 68,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|69|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 69,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|70|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 70,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|71|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 71,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|72|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 72,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|73|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 73,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|74|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 74,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|75|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 75,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|76|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 76,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|77|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 77,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|78|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 78,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|79|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 79,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|31|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 31,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A matches the reference in splitting the text into two sentences with a full stop before the consequence clause, whereas B joins the two clauses with a comma."
+ },
+ {
+  "key": "functions|1|81|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 81,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|82|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 82,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|83|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 83,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|84|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 84,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|85|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 85,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|86|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 86,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|87|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 87,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|88|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 88,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|89|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 89,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|90|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 90,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|91|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 91,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|92|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 92,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|93|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 93,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|94|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 94,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|95|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 95,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|96|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 96,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|97|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 97,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|98|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 98,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|99|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 99,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|100|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 100,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|580|old:new",
+  "pair": "old:new",
+  "draw": 6,
+  "idx": 580,
+  "winner": "old",
+  "position": "A",
+  "swap": false,
+  "reason": "The reference keeps both clauses in a single sentence joined by a semicolon; A likewise keeps one sentence (joined by a comma), whereas B splits it into two sentences with a full stop."
+ },
+ {
+  "key": "functions|2|102|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 102,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|103|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 103,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|104|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 104,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|16|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 16,
+  "winner": "raw",
+  "position": "A",
+  "swap": false,
+  "reason": "Both candidates share the same inverted clause order and vocabulary, but A keeps the paragraph as one comma-joined sentence ending in a colon, like the REFERENCE's single sentence, whereas B splits it with a full stop."
+ },
+ {
+  "key": "functions|2|106|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 106,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|107|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 107,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|108|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 108,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|21|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 21,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's split into two sentences with a full stop, whereas A joins the clauses with a comma; the two candidates share the same vocabulary and verb forms."
+ },
+ {
+  "key": "functions|2|110|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 110,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|111|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 111,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|112|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 112,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|113|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 113,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|114|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 114,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|115|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 115,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|1|44|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 44,
+  "winner": "raw",
+  "position": "A",
+  "swap": false,
+  "reason": "Candidate A matches the reference exactly, while Candidate B adds a terminal colon that the reference does not have."
+ },
+ {
+  "key": "functions|2|117|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 117,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|118|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 118,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|119|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 119,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|120|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 120,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|121|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 121,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|122|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 122,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|123|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 123,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|124|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 124,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|125|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 125,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|126|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 126,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|127|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 127,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|128|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 128,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|129|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 129,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|130|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 130,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|131|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 131,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|132|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 132,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|133|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 133,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|134|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 134,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|135|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 135,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|136|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 136,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|137|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 137,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|138|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 138,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|139|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 139,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|140|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 140,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|141|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 141,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|142|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 142,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|143|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 143,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|144|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 144,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|145|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 145,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|146|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 146,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|147|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 147,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|148|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 148,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|149|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 149,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|150|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 150,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|151|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 151,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|152|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 152,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|153|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 153,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|154|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 154,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|155|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 155,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|156|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 156,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|157|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 157,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|158|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 158,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|159|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 159,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|160|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 160,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|161|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 161,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|162|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 162,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|163|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 163,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|164|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 164,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|165|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 165,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|166|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 166,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|167|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 167,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|168|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 168,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|169|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 169,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|170|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 170,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|171|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 171,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|172|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 172,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|173|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 173,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|174|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 174,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|175|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 175,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|176|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 176,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|177|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 177,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|178|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 178,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|179|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 179,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|180|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 180,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|181|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 181,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|182|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 182,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|183|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 183,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|184|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 184,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|185|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 185,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|186|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 186,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|187|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 187,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|188|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 188,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|189|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 189,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|190|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 190,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|191|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 191,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|192|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 192,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|193|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 193,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|194|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 194,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|195|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 195,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|196|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 196,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|197|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 197,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|198|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 198,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|199|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 199,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|200|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 200,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|109|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 109,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's split into two sentences with a full stop after the first clause, while A joins the clauses with a comma; the two are otherwise identical."
+ },
+ {
+  "key": "functions|3|202|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 202,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|203|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 203,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|204|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 204,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|105|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 105,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A keeps the reference's comma between 'syntax-ഉം,' and 'use-cases-ഉം', which B drops; otherwise the two share the same comma-for-semicolon choice and the same 'cover ചെയ്യുന്നു' wording."
+ },
+ {
+  "key": "functions|3|206|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 206,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|207|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 207,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|208|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 208,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|116|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 116,
+  "winner": "raw",
+  "position": "B",
+  "swap": true,
+  "reason": "The reference is one unbroken sentence ending in a colon, and B keeps a single sentence by joining its clauses with a comma, whereas A splits it into two with a full stop; the two candidates are otherwise identical in wording."
+ },
+ {
+  "key": "functions|3|210|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 210,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|211|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 211,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|2|101|raw:new",
+  "pair": "raw:new",
+  "draw": 2,
+  "idx": 101,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "The candidates differ only in terminal punctuation: A, like the REFERENCE's trailing comma, ends 'ഉദാഹരണത്തിന്' with a lead-in mark (a colon), while B leaves it bare; neither reproduces the REFERENCE's sentence split with a full stop after കണ്ടുകഴിഞ്ഞു."
+ },
+ {
+  "key": "functions|3|213|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 213,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|214|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 214,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|215|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 215,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|205|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 205,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Both candidates use a comma instead of the reference's semicolon and keep 'cover ചെയ്യുന്നു', but A keeps the reference's comma between 'syntax-ഉം, use-cases-ഉം', which B drops."
+ },
+ {
+  "key": "functions|3|217|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 217,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|218|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 218,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|219|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 219,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|220|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 220,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|221|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 221,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|222|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 222,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|223|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 223,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|224|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 224,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|225|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 225,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|226|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 226,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|227|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 227,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|228|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 228,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|229|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 229,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|230|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 230,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|209|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 209,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "B splits the two clauses into separate sentences with a full stop, as the REFERENCE does, whereas A joins them with a comma; the rest of the wording in A and B is identical."
+ },
+ {
+  "key": "functions|3|232|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 232,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|233|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 233,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|234|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 234,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|235|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 235,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|236|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 236,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|212|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 212,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Both candidates render 'already' as ഇതിനകം and share the same structure, so the decisive feature is that A keeps the reference's terminal colon while B drops it."
+ },
+ {
+  "key": "functions|3|238|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 238,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|239|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 239,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|240|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 240,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|201|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 201,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "Both candidates share the comma join and the extra തന്നെ, so the deciding feature is terminal punctuation: B, like the REFERENCE, ends ഉദാഹരണത്തിന് with a mark leading into the list (colon versus the REFERENCE's comma), while A leaves it bare."
+ },
+ {
+  "key": "functions|3|231|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 231,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A splits the text into two sentences with a full stop before the consequence clause, as the REFERENCE does, whereas B joins them with a comma."
+ },
+ {
+  "key": "functions|3|243|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 243,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|216|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 216,
+  "winner": "raw",
+  "position": "B",
+  "swap": true,
+  "reason": "Sentence splitting is decisive: the REFERENCE is one sentence ending in a colon, and B keeps a single sentence joined by a comma, while A breaks it into two with a full stop. Both candidates otherwise share the same postposed clause order and use English 'example'."
+ },
+ {
+  "key": "functions|3|245|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 245,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|246|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 246,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|247|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 247,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|248|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 248,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|249|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 249,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|250|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 250,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|251|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 251,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|252|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 252,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|241|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 241,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": false,
+  "reason": "Both candidates use the bare past participle നൽകിയ instead of the reference's നൽകിയിരിക്കുന്ന and are otherwise identical, and neither ending matches the reference's full stop (A has no terminal mark, B has a colon), so they are equally close."
+ },
+ {
+  "key": "functions|3|254|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 254,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|255|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 255,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|256|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 256,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|257|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 257,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|253|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 253,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Candidate A matches the reference's sentence split (a full stop after the main clause) and its terminal colon, whereas B joins the clauses with a comma and drops the colon; the wording of the two candidates is otherwise identical."
+ },
+ {
+  "key": "functions|3|259|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 259,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|260|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 260,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|261|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 261,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|262|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 262,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|263|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 263,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|264|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 264,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|265|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 265,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|266|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 266,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|267|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 267,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|268|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 268,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|269|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 269,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|270|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 270,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|271|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 271,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|272|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 272,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|273|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 273,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|274|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 274,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|275|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 275,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|276|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 276,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|277|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 277,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|278|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 278,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|279|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 279,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|242|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 242,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "Both candidates are identical in wording and verb form, but only B keeps the reference's terminal colon, so punctuation decides it."
+ },
+ {
+  "key": "functions|3|237|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 237,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": true,
+  "reason": "The two candidates are word-for-word identical, and both differ from the REFERENCE in the same ways: main-clause-first order with കാരണം where the REFERENCE fronts the -തിനാൽ causal clause, and 'Keyword അല്ലാത്ത' where the REFERENCE keeps 'non-keyword'; on the terminal mark neither matches the REFERENCE's full stop, since A ends with a colon and B has none, so neither is closer."
+ },
+ {
+  "key": "functions|3|282|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 282,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|283|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 283,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|244|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 244,
+  "winner": "raw",
+  "position": "A",
+  "swap": false,
+  "reason": "Candidate A matches the reference exactly, while B adds a terminal colon that the reference does not have."
+ },
+ {
+  "key": "functions|3|285|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 285,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|286|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 286,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|258|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 258,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "The decisive feature is punctuation: A keeps the reference's terminal colon introducing the code, while B drops it, and the two are otherwise identical in wording and verb form (-ലെ, കൊടുത്തിരിക്കുന്ന, നോക്കാം)."
+ },
+ {
+  "key": "functions|3|288|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 288,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|280|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 280,
+  "winner": "raw",
+  "position": "B",
+  "swap": true,
+  "reason": "The decisive feature is sentence splitting: the reference keeps both clauses in one sentence joined by a semicolon, and B likewise keeps them joined (with a comma), whereas A breaks them into two separate sentences with a full stop."
+ },
+ {
+  "key": "functions|1|80|raw:new",
+  "pair": "raw:new",
+  "draw": 1,
+  "idx": 80,
+  "winner": "raw",
+  "position": "B",
+  "swap": true,
+  "reason": "The reference keeps both clauses in one sentence joined by a semicolon, and B likewise keeps one sentence (joined by a comma), whereas A splits it into two sentences with a full stop."
+ },
+ {
+  "key": "functions|3|287|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 287,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "The candidates are identical except for the terminal colon, which A keeps to match the REFERENCE's closing colon and B drops."
+ },
+ {
+  "key": "functions|3|292|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 292,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|293|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 293,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|294|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 294,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|295|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 295,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|296|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 296,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|297|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 297,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|298|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 298,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|299|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 299,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|300|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 300,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|281|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 281,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "The two candidates are identical except that B keeps the reference's terminal colon before the code block, while A drops it."
+ },
+ {
+  "key": "functions|4|302|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 302,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|303|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 303,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|304|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 304,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|289|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 289,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "Both candidates are identical in wording, but B keeps the reference's terminal colon while A omits it."
+ },
+ {
+  "key": "functions|4|306|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 306,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|307|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 307,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|308|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 308,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|284|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 284,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "Like the reference, B splits the English sentence into two with a full stop after 'ആണ്', whereas A joins the clauses with a comma; the remaining wording is identical in both candidates."
+ },
+ {
+  "key": "functions|4|310|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 310,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|311|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 311,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|290|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 290,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Both candidates share identical wording and clause order, but only A keeps the REFERENCE's terminal colon, which B drops."
+ },
+ {
+  "key": "functions|4|313|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 313,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|314|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 314,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|315|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 315,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|316|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 316,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|317|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 317,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|318|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 318,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|319|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 319,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|320|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 320,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|321|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 321,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|322|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 322,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|323|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 323,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|324|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 324,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|325|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 325,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|326|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 326,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|327|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 327,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|328|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 328,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|329|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 329,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|330|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 330,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|312|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 312,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "The two candidates are identical in wording, but only B keeps the reference's terminal colon, which marks the sentence as leading into a list."
+ },
+ {
+  "key": "functions|4|332|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 332,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|333|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 333,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|334|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 334,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|335|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 335,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|336|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 336,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|337|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 337,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|338|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 338,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|339|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 339,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|340|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 340,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|341|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 341,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|342|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 342,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|343|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 343,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|309|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 309,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "The decisive feature is sentence splitting: like the REFERENCE, A breaks the paragraph into two sentences at a full stop, whereas B joins the clauses with a comma; otherwise the two candidates are identical."
+ },
+ {
+  "key": "functions|4|345|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 345,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|346|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 346,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|347|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 347,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|348|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 348,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|349|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 349,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|350|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 350,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|351|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 351,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|352|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 352,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|353|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 353,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|354|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 354,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|355|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 355,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|356|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 356,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|357|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 357,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|358|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 358,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|359|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 359,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|360|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 360,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|361|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 361,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|362|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 362,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|363|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 363,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|364|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 364,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|365|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 365,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|366|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 366,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|367|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 367,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|368|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 368,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|369|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 369,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|370|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 370,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|371|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 371,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|372|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 372,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|373|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 373,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|374|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 374,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|375|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 375,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|376|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 376,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|377|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 377,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|378|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 378,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|379|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 379,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|305|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 305,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Both candidates share the comma in place of the reference's semicolon and the English 'cover ചെയ്യുന്നു', but A keeps the reference's comma between 'syntax-ഉം,' and 'use-cases-ഉം', which B drops."
+ },
+ {
+  "key": "functions|4|381|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 381,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|382|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 382,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|383|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 383,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|384|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 384,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|385|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 385,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|386|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 386,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|387|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 387,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|388|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 388,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|389|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 389,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|390|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 390,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|301|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 301,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "Neither candidate matches the reference's split into two sentences, but B, like the reference, closes ഉദാഹരണത്തിന് with lead-in punctuation (a colon, where the reference has a comma), while A leaves it bare."
+ },
+ {
+  "key": "functions|4|392|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 392,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|393|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 393,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|394|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 394,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|395|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 395,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|396|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 396,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|397|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 397,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|398|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 398,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|399|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 399,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|400|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 400,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|3|291|raw:new",
+  "pair": "raw:new",
+  "draw": 3,
+  "idx": 291,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": true,
+  "reason": "Both candidates share the same clause order, the same എന്നതാണ് construction (unlike the reference's എന്തെന്നാൽ,) and the same asterisked terms; neither matches the reference's terminal full stop, since A ends with a colon and B has no final mark, so neither is closer."
+ },
+ {
+  "key": "functions|5|402|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 402,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|403|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 403,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|404|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 404,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|344|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 344,
+  "winner": "raw",
+  "position": "A",
+  "swap": false,
+  "reason": "Candidate A matches the reference exactly, while B adds a terminal colon that the reference does not have, a punctuation difference."
+ },
+ {
+  "key": "functions|5|406|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 406,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|407|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 407,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|408|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 408,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|331|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 331,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "The reference splits the paragraph into two sentences with a full stop before the consequence clause (അതിനാൽ …). B matches that split, while A joins the clauses with a comma."
+ },
+ {
+  "key": "functions|5|410|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 410,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|411|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 411,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|391|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 391,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": false,
+  "reason": "The candidates are identical except for terminal punctuation, and neither matches the REFERENCE's full stop: A has no terminal mark and B ends with a colon."
+ },
+ {
+  "key": "functions|5|413|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 413,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|414|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 414,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|415|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 415,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|405|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 405,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "Both candidates share the same clause joining and the verb 'cover ചെയ്യുന്നു', but B keeps the reference's comma between 'syntax-ഉം, use-cases-ഉം', while A omits it."
+ },
+ {
+  "key": "functions|5|417|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 417,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|418|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 418,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|409|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 409,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Like the REFERENCE, A splits the text into two sentences with a full stop, while B joins the clauses with a comma; the two candidates are otherwise identical."
+ },
+ {
+  "key": "functions|5|420|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 420,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|421|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 421,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|422|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 422,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|423|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 423,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|424|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 424,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|425|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 425,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|426|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 426,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|427|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 427,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|428|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 428,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|429|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 429,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|430|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 430,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|4|380|raw:new",
+  "pair": "raw:new",
+  "draw": 4,
+  "idx": 380,
+  "winner": "raw",
+  "position": "A",
+  "swap": false,
+  "reason": "The candidates differ only at the clause boundary: the reference keeps one sentence joined by a semicolon, and A's comma keeps that single-sentence structure, whereas B splits it into two sentences with a full stop."
+ },
+ {
+  "key": "functions|5|432|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 432,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|433|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 433,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|434|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 434,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|435|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 435,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|436|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 436,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|412|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 412,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "The two candidates are identical in wording, but A keeps the reference's terminal colon while B drops it, so A is closer in punctuation."
+ },
+ {
+  "key": "functions|5|438|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 438,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|439|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 439,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|440|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 440,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|401|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 401,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "The candidates are identical in wording and clause order, but A ends with an introducing mark (a colon) before the list, much as the reference ends with 'ഉദാഹരണത്തിന്,', whereas B has no terminal punctuation at all."
+ },
+ {
+  "key": "functions|5|419|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 419,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "A matches the reference exactly, including the terminal colon that introduces the code block, which B omits."
+ },
+ {
+  "key": "functions|5|443|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 443,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|431|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 431,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "B matches the reference's punctuation, splitting into two sentences with a full stop and ending on a terminal colon, while A joins the clauses with a comma and has no terminal punctuation."
+ },
+ {
+  "key": "functions|5|445|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 445,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|446|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 446,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|447|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 447,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|448|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 448,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|449|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 449,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|450|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 450,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|451|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 451,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|452|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 452,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|416|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 416,
+  "winner": "raw",
+  "position": "A",
+  "swap": false,
+  "reason": "The reference is a single sentence, and A keeps one sentence by joining its clauses with a comma, whereas B splits it into two sentences with a full stop; their vocabulary and clause order are otherwise identical."
+ },
+ {
+  "key": "functions|5|454|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 454,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|455|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 455,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|456|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 456,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|457|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 457,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|453|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 453,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "The two candidates are identical except that B, like the REFERENCE, ends with a terminal colon introducing the list, while A has no terminal punctuation."
+ },
+ {
+  "key": "functions|5|459|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 459,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|460|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 460,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|461|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 461,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|462|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 462,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|463|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 463,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|464|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 464,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|465|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 465,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|466|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 466,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|467|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 467,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|468|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 468,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|469|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 469,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|470|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 470,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|471|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 471,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|472|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 472,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|473|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 473,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|474|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 474,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|475|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 475,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|476|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 476,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|477|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 477,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|478|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 478,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|479|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 479,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|480|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 480,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|441|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 441,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": true,
+  "reason": "Both candidates use the bare past participle നൽകിയ instead of the reference's നൽകിയിരിക്കുന്ന, and neither ends with the reference's full stop (A has a colon, B has no terminal mark), so they are equally distant from the reference."
+ },
+ {
+  "key": "functions|5|482|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 482,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|483|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 483,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|484|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 484,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|485|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 485,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|486|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 486,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|458|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 458,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "The candidates are identical except that B ends with the reference's terminal colon while A has no terminal punctuation, so the colon decides it."
+ },
+ {
+  "key": "functions|5|488|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 488,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|444|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 444,
+  "winner": "raw",
+  "position": "A",
+  "swap": false,
+  "reason": "Candidate A matches the reference exactly, while B adds a terminal colon the reference does not have."
+ },
+ {
+  "key": "functions|5|437|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 437,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": false,
+  "reason": "The two candidates are identical in clause order, the trailing കാരണം clause, verb forms and English retention; they differ only at the end, where A has no terminal mark and B has a colon, and neither matches the REFERENCE's full stop."
+ },
+ {
+  "key": "functions|5|442|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 442,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "Both candidates render 'modify' in Malayalam (മാറ്റാം) rather than keeping it in English, but B matches the reference's terminal colon while A has no punctuation."
+ },
+ {
+  "key": "functions|5|492|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 492,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|493|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 493,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|494|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 494,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|495|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 495,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|496|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 496,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|497|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 497,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|498|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 498,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|499|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 499,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|500|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 500,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|487|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 487,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "The candidates are identical except that B ends with the terminal colon the REFERENCE uses to introduce the following relation, while A has no final punctuation."
+ },
+ {
+  "key": "functions|6|502|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 502,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|503|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 503,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|504|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 504,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|489|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 489,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Both candidates share the same wording, word order, and hortative -ആം, but A keeps the reference's terminal colon while B drops it, so A is closer."
+ },
+ {
+  "key": "functions|6|506|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 506,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|507|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 507,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|508|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 508,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|481|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 481,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "The two candidates are otherwise identical, and the decisive feature is that B keeps the REFERENCE's terminal colon after നോക്കാം, which A omits."
+ },
+ {
+  "key": "functions|6|510|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 510,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|511|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 511,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|509|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 509,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "Like the reference, B splits the sentence into two with a full stop, whereas A joins the clauses with a comma; the two candidates are otherwise identical."
+ },
+ {
+  "key": "functions|6|513|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 513,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|514|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 514,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|515|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 515,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|505|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 505,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Both candidates share the same clause order and use 'cover ചെയ്യുന്നു', but A keeps the comma between 'syntax-ഉം,' and 'use-cases-ഉം' as the reference does, while B drops it."
+ },
+ {
+  "key": "functions|6|517|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 517,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|518|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 518,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|512|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 512,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Both candidates render 'already' as ഇതിനകം rather than keeping it in English, but A keeps the reference's terminal colon while B drops it."
+ },
+ {
+  "key": "functions|6|520|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 520,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|521|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 521,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|522|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 522,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|523|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 523,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|524|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 524,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|525|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 525,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|526|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 526,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|527|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 527,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|528|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 528,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|529|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 529,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|530|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 530,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|5|491|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 491,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": false,
+  "reason": "The candidates are identical except for the terminal mark, and neither matches the reference's full stop: A has no terminal punctuation and B ends with a colon, so neither is closer in style."
+ },
+ {
+  "key": "functions|6|532|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 532,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|533|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 533,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|534|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 534,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|535|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 535,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|536|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 536,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|537|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 537,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|538|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 538,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|539|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 539,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|540|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 540,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|501|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 501,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "Neither candidate splits the sentence with a full stop as the REFERENCE does, but B's terminal colon keeps a trailing mark introducing the list, echoing the REFERENCE's final comma after ഉദാഹരണത്തിന്, while A ends with no punctuation at all."
+ },
+ {
+  "key": "functions|5|490|raw:new",
+  "pair": "raw:new",
+  "draw": 5,
+  "idx": 490,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Both candidates omit the reference's comma after രീതിയിൽ, but A keeps the reference's terminal colon while B drops all ending punctuation, so A is closer."
+ },
+ {
+  "key": "functions|6|543|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 543,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|519|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 519,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "The two candidates are identical except that B keeps the reference's terminal colon introducing the code, while A drops it."
+ },
+ {
+  "key": "functions|6|545|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 545,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|546|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 546,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|547|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 547,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|548|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 548,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|549|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 549,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|550|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 550,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|551|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 551,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|552|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 552,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|531|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 531,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Like the REFERENCE, A splits the text into two sentences with a full stop and ends with a terminal colon, whereas B joins the clauses with a comma and has no terminal punctuation."
+ },
+ {
+  "key": "functions|6|554|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 554,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|555|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 555,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|556|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 556,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|557|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 557,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|516|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 516,
+  "winner": "raw",
+  "position": "A",
+  "swap": false,
+  "reason": "The reference is a single sentence ending in a colon, and A likewise stays one sentence by joining its clauses with a comma, while B splits them into two sentences with a full stop; the two candidates are otherwise identical."
+ },
+ {
+  "key": "functions|6|559|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 559,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|560|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 560,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|561|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 561,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|562|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 562,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|563|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 563,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|564|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 564,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|565|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 565,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|566|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 566,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|567|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 567,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|568|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 568,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|569|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 569,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|570|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 570,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|571|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 571,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|572|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 572,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|573|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 573,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|574|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 574,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|575|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 575,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|576|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 576,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|577|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 577,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|578|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 578,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|579|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 579,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|553|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 553,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "The two candidates are identical except that B ends with a terminal colon, which matches the reference's colon introducing the list that follows, while A has no terminal punctuation."
+ },
+ {
+  "key": "functions|6|544|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 544,
+  "winner": "raw",
+  "position": "A",
+  "swap": false,
+  "reason": "Candidate A matches the reference exactly, while B adds a terminal colon that the reference does not have."
+ },
+ {
+  "key": "functions|6|582|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 582,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|583|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 583,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|584|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 584,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|585|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 585,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|586|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 586,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|558|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 558,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "The candidates are identical except that A keeps the terminal colon, matching the REFERENCE's closing punctuation, while B drops it."
+ },
+ {
+  "key": "functions|6|588|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 588,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|542|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 542,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "The two candidates share identical wording and verb forms, but only B keeps the REFERENCE's terminal colon introducing what follows, while A drops it."
+ },
+ {
+  "key": "functions|6|541|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 541,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": true,
+  "reason": "The candidates share the same bare participle നൽകിയ (instead of the reference's -ഇരിക്കുന്ന form) and the same cleft ആണ് … മാറുന്നത് structure without the reference's comma, and they differ only in the terminal mark: A's colon and B's lack of punctuation are equally far from the reference's full stop."
+ },
+ {
+  "key": "functions|6|580|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 580,
+  "winner": "raw",
+  "position": "B",
+  "swap": true,
+  "reason": "The reference keeps both clauses in one sentence joined by a semicolon, and B likewise keeps them together with a comma, whereas A splits them into two sentences with a full stop."
+ },
+ {
+  "key": "functions|6|592|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 592,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|593|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 593,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|594|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 594,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|595|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 595,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|596|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 596,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|597|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 597,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|598|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 598,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|599|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 599,
+  "winner": "TIE",
+  "identical": true
+ },
+ {
+  "key": "functions|6|581|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 581,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "Both candidates are otherwise identical and differ from the reference in the same ways, but B keeps the reference's terminal colon introducing the code while A drops it."
+ },
+ {
+  "key": "functions|6|589|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 589,
+  "winner": "new",
+  "position": "B",
+  "swap": false,
+  "reason": "The two candidates are identical except for punctuation, and B keeps the reference's terminal colon introducing the code while A drops it."
+ },
+ {
+  "key": "functions|6|590|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 590,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "Both candidates share the same wording and the hortative ഉപയോഗിക്കാം, and neither has the reference's comma, but A keeps the reference's terminal colon while B drops it."
+ },
+ {
+  "key": "functions|6|587|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 587,
+  "winner": "new",
+  "position": "A",
+  "swap": true,
+  "reason": "The candidates are identical except that A keeps the REFERENCE's terminal colon introducing the following expression, while B drops it."
+ },
+ {
+  "key": "functions|6|591|raw:new",
+  "pair": "raw:new",
+  "draw": 6,
+  "idx": 591,
+  "winner": "TIE",
+  "position": "TIE",
+  "swap": false,
+  "reason": "A and B are word-for-word identical and differ only at the end: A has no terminal mark and B ends in a colon, while the REFERENCE ends in a full stop, so neither matches the REFERENCE better."
+ }
+]
