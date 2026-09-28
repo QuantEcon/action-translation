@@ -26473,8 +26473,8 @@ var LANGUAGE_CONFIGS = {
     // ordinary-word pendulum of rounds 2 and 3.
     //
     // Round 4 (lecture-python-programming.ml#23, numpy, 2026-09-28): rule 19
-    // gains one exception — "have already seen/met" takes കണ്ടുകഴിഞ്ഞു (his form
-    // at 4/4 sites; the engine's 0/18). Measured at 24 functions draws it lifts
+    // gains one exception — "have already seen/met" takes കണ്ടുകഴിഞ്ഞു (the
+    // editor's form at 4/4 sites; the engine's 0/18). Measured at 24 functions draws it lifts
     // the completive to 46/46 with no change in terminal punctuation. Three
     // proposed deletions (rule 12's "and em-dashes", rule 18(a)'s "always after
     // എന്നത്", the glossary ban on പ്രവർത്തിക്കുന്നു under `work`) were measured

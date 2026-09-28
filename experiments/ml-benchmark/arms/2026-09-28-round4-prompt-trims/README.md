@@ -4,9 +4,9 @@ The round-4 review (lecture-python-programming.ml#23, `numpy`; dispositions in Q
 
 | # | Change | Why |
 |---|---|---|
-| E | **Rule 19 exception:** "have already seen / met X" takes the completive `-കഴിഞ്ഞു` | His form at 4 of 4 sites across rounds; the engine's at 0 of 18 |
-| D1 | **Delete** rule 12's "and em-dashes" | Never fired (0 of 36 draw lines); he keeps and adds dashes |
-| D2 | **Narrow** rule 18(a)'s "always after `എന്നത്`" to a lecture's opening sentence | He left 13 of 13 bare `എന്നത്` alone and added none |
+| E | **Rule 19 exception:** "have already seen / met X" takes the completive `-കഴിഞ്ഞു` | The editor's form at 4 of 4 sites across rounds; the engine's at 0 of 18 |
+| D1 | **Delete** rule 12's "and em-dashes" | Never fired (0 of 36 draw lines); the editor keeps and adds dashes |
+| D2 | **Narrow** rule 18(a)'s "always after `എന്നത്`" to a lecture's opening sentence | The editor left 13 of 13 bare `എന്നത്` alone and added none |
 | D3 | **Delete** the glossary's ban on `പ്രവർത്തിക്കുന്നു` under `work` (v0.7.0 → v0.7.1) | An extrapolation from an answer about one line (ml#12 Q4) |
 
 The deletions looked zero-risk, but they were measured anyway, at 12 or more drafts per arm, because the rate questions need that many.
@@ -64,5 +64,5 @@ The deletions looked zero-risk, but they were measured anyway, at 12 or more dra
    - None of the three touches the terminal-punctuation rule; adherence to that rule is draw-dependent and sensitive to unrelated prompt text.
    - Which of the three is responsible was not isolated. They are recorded as measured and not shipped, and should not come back without their own arm.
    - Lesson for the programme: **a deletion is not inert; measure it like an addition.**
-3. **One side effect of E, to watch.** It also turns the simple past "*We already saw examples … above*" (`numpy` 864) into the completive, 12/12 against 0/12 bare. The editor left the bare past there in round 4, which is acceptance, not a rejection of the completive. Watch whether he edits it on the next draft that carries it.
+3. **One side effect of E, to watch.** It also turns the simple past "*We already saw examples … above*" (`numpy` 864) into the completive, 12/12 against 0/12 bare. The editor left the bare past there in round 4, which is acceptance, not a rejection of the completive. Watch whether the editor edits it on the next draft that carries it.
 4. **The rule's own example holds.** The `alpha` perfect held 12/12. One B draft restructured the sentence onto a different verb, still in the perfect (`ആക്കിയിട്ടുണ്ട്`).
