@@ -23,25 +23,41 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   only 4/12 avoid « Votre (première) tâche » (« Votre première tâche consiste à… » in 6/12).
   One phrase to add, then re-measure `python_by_example` and run the blind pairwise judge; the
   result goes on #327.
-- **ml calibration: round 4 is reviewed, applied and merged; its first engine change is
-  in the calibration tooling (2026-09-28).** The editor made 73 suggestions on `numpy`
-  (lecture-python-programming.ml#23): touch rate 67% → 51%, lines accepted 22 → 70, and every
-  class encoded before round 4 held. Applied verbatim with his co-author trailer plus four
-  normalisations, squash-merged as `7e373de`; ml#24 merged; his questions are on ml#25; ml#14
-  (exercise blocks restored) still open. Dispositions: QuantEcon/project-translation
-  `reports/2026-09-28-ml-numpy-review-disposition.md`. The largest residue is comma-joined
-  finite clauses (17.2 per 100 lines across nine draws, 2.8 in his text), which rule 12 has
-  never reached; **#331** (`d9b243c`) adds the lint and a fourth `ml_repair` repair and
-  rebuilds `ml_metrics`' prose scanner. Nothing in `src/` has changed for ml since v0.29.2.
-  **Open, in order**: (1) a second `ml_repair` PR — the bracketed-paragraph stop, a generalised
-  `-ഉം` comma, then the lexical repairs (*see* → `നോക്കുക`, adverbial *element-wise*, *have
-  already seen* → `കണ്ടുകഴിഞ്ഞു`, standalone `മുൻ`), each with his lines as fixtures;
-  (2) prompt trims for the next release that re-draws anyway (rule 12's em-dash clause, rule
-  18(a)'s "always after `എന്നത്`", a rule-19 carve-out, the glossary *work* ban); (3) **the
-  rule-2 arm**, after his ml#25 Q4 answer (permission or requirement), judged held-out;
-  (4) round 5 (`pandas`). **Not yet run: a regeneration test of #331** — so far it is
-  validated offline (existing draws, his edits and reviewed pages), not on fresh draws or
-  held-out lectures with the blind pairwise judge. Log `2026-09-28-ml-round4`.
+- **ml calibration: round 4 is closed out; round 5 (`pandas`) is with the editor
+  (2026-09-28).**
+  - **Round 4.** The editor's 73 suggestions on `numpy` (lecture-python-programming.ml#23:
+    touch rate 67% → 51%, lines accepted 22 → 70) are applied and merged as `7e373de`.
+    His questions are on ml#25; ml#14 (exercise blocks restored) is still open.
+    Dispositions: QuantEcon/project-translation `reports/2026-09-28-ml-numpy-review-disposition.md`.
+  - **Engine outcome: code, not prompt.**
+    - **#331** (`d9b243c`) adds the comma-splice lint and a fourth `ml_repair` repair, and
+      rebuilds `ml_metrics`' prose scanner.
+    - Its regeneration test (**#333**, arm `2026-09-28-round4-splice-repair-eval`) ran on 18
+      fresh drafts. The split is preferred 68 : 8 by a reference-free Opus 5.5 judge
+      (20 : 0 on `functions`, a lecture it was not built from) and 60 : 21 against his
+      text; all 81 splits pass a two-reader screen. The splice rate falls 17.3 → 10.7 per
+      100 lines on `numpy`, still above his 2.8, so the repair covers only part of the class.
+  - **Prompt.** Of four trims measured before release (arm `2026-09-28-round4-prompt-trims`,
+    192 drafts), only the rule-19 exception ships: **#335** (`7d58e01`, unreleased).
+    - It takes "have already seen / met" to `കണ്ടുകഴിഞ്ഞു`: `numpy` 0/19 → 23/23,
+      `python_essentials` 4/12 → 10/12.
+    - Watch item: it also turns the simple past at `numpy` 864 into the completive.
+    - The three deletions (rule 12's "and em-dashes", rule 18(a)'s "always after
+      `എന്നത്`", the glossary ban on `പ്രവർത്തിക്കുന്നു`) raised bare endings before code
+      cells from 42% to 75% (p = 0.017) and were rejected. A deletion is not inert.
+  - **Round 5** (`pandas`, lecture-python-programming.ml#26) was generated at `@v0`
+    (v0.29.3): the cleanest of three drafts, with 11 scripted repairs disclosed. The arm is
+    `2026-09-28-round5-pandas-v0.29.3`. No regeneration is needed for #335, which touches
+    no sentence in `pandas`.
+  - **Open, in order:**
+    1. A second `ml_repair` PR: the bracketed-paragraph stop and a generalised `-ഉം` comma,
+       then the lexical repairs (*see* → `നോക്കുക`, adverbial *element-wise*, standalone
+       `മുൻ`), each with his lines as fixtures.
+    2. The release that carries #335 (§4a gate and 4b rate check).
+    3. **The rule-2 arm**, after his ml#25 Q4 answer.
+    4. His round-5 review.
+
+    Logs: `2026-09-28-ml-round4`. Opus 5.5 is scoped separately as **#334**.
 - **The standing plan is tracker #257** (2026-08-10 backlog review; supersedes #94/#198):
   all 67 open issues triaged and verified against v0.25.0, phases W0–W6 filed as
   sub-issues #258–#264. The dominant failure shape it names: **the failure path produces
@@ -100,6 +116,11 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## Recently landed
 
+- **ml rule-19 exception (#335, `7d58e01`, 2026-09-28, unreleased)** — "have already seen /
+  met" takes the completive `കണ്ടുകഴിഞ്ഞു`. It was measured in a four-arm, 192-draft arm with
+  three proposed deletions, which regressed terminal punctuation and were not shipped.
+- **ml arms: #331 regeneration test, round-5 seed (#333, `866f91a`, 2026-09-28)** — the
+  splice repair wins blind pairwise judgements on fresh drafts; `pandas` is sent as ml#26.
 - **ml splice lint + repair, prose scanner rebuilt (#331, `d9b243c`, 2026-09-28)** —
   `comma_splice_resumptive` / `comma_splice_watch` / `comma_splice_rate` in `ml_metrics.py`
   and a fourth deterministic repair in `ml_repair.py` (finite verb + comma + resumptive pronoun
@@ -163,8 +184,8 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 **Resume here (2026-09-23, after v0.29.3):**
 
-*ml, 2026-09-28*: see the ml bullet under In flight — next is the second `ml_repair` PR, and
-the regeneration test of #331 has not been run.
+*ml, 2026-09-28 (end)*: see the ml bullet under In flight — round 5 is with the editor, and
+next is the second `ml_repair` PR; #335 ships at the next release.
 
 0. **The fr engine queue, in this order**: finish, review and PR #324, then #325 (branches in
    progress, each with its fr edition repair), then #326 together with #203's fence unwrap.
