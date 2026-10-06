@@ -105,10 +105,10 @@ context shows *our* framing was wrong, not the tool:
 All three go back in `malayalam-review-followup.md` — three questions, sentences
 included this time.
 
-A note on reviewer calibration: on A2 he ruled **against his own reference** ("my
-use of `-ലെ` was incidental"). He is adjudicating, not defending his draft — which
-is the property #189's "divergences are questions, not errors" stance hoped for,
-and it means the reference is strong ground truth without being infallible.
+A note on the reference: on A2 the ruling went **against the reference
+translation** ("my use of `-ലെ` was incidental"). The reference is therefore
+strong ground truth without being infallible, as #189's "divergences are
+questions, not errors" stance anticipated.
 
 ## The register layer — structure for keep-English beyond the glossary
 
@@ -285,7 +285,6 @@ the `കുറച്ചു` constraint, and the F3 morphology examples fold into
 the PR-review flags**, exactly as the batch sequencing above records. Nothing
 further is owed to the reviewer; the acknowledgement says so explicitly.
 
-Calibration note for the record: F1 is the third time he has ruled against his
-own reference (A2, the B1/B3 reorderings, now the `-ഉം` cursor sentence). The
-reference remains strong ground truth held by an adjudicating, not defending,
-reviewer.
+Note for the record: F1 is the third ruling against the reference translation
+(A2, the B1/B3 reorderings, now the `-ഉം` cursor sentence). The reference
+remains strong ground truth, not an infallible one.
