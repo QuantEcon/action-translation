@@ -8,7 +8,7 @@ QEP (QuantEcon/qeps, QEP-7 — in draft); this repository is the pilot.
 | Path | What | Written by | Lifecycle |
 |---|---|---|---|
 | `README.md` | this contract | people | living |
-| `project.yml` | declared facts the `qe` skills read: the tracker, the registry slug, the programme | people, once | living |
+| `project.yml` | declared facts the `qe` skills read, one entry per project: the tracker, the registry slug, the programme | people, once per project | living |
 | `dev/` | the notes record — see [`dev/README.md`](dev/README.md) | people and agents | raw entries append-only; distilled pages rewritten in place |
 | `NEXT-STEPS.md` | the reading order across trackers and the gates between them — only in a repository with more than one tracker | people | living |
 | `ROADMAP.md`, `DIGEST.md`, `snapshot.json` | views of the tracker drawn by the `qe` workplan skills | the skills | generated — marked as such in their first line; regenerated, never edited |

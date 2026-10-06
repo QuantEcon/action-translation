@@ -72,10 +72,11 @@ Two compliance audits then revised the design.
   order in `.qe/NEXT-STEPS.md`.
 - **No decision record.** No choice about how the engine is built was made; the scope split lives
   in the tracker body and NEXT-STEPS.md.
-- **`.qe/project.yml` is unchanged**, because it is people-written. Two questions remain for the
-  maintainer: whether to register #349 in QuantEcon/status-projects, and how `project.yml` should
-  declare a second tracker, since QEP-7 Appendix A gives it one. #promote the second question to
-  the QEP-7 discussion (QuantEcon/qeps#39).
+- **`.qe/project.yml` declares both projects as a `projects:` list.** This was done on the
+  maintainer's instruction, 2026-10-06. QEP-7's draft Appendix A gives the file one
+  tracker/registry/programme, so the list form, and the other field notes from this session,
+  went to the QEP-7 discussion (QuantEcon/qeps#39) #promote. #349 is registered in
+  QuantEcon/status-projects as `engine-hardening-2026-10` (QuantEcon/status-projects#237).
 
 ## Carry-forward (edition-side, unowned) #promote
 
