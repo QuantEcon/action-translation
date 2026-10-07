@@ -1,3 +1,5 @@
+> **Amended 2026-09-21** by [D-2026-09-21-notes-move-to-qe-dev](D-2026-09-21-notes-move-to-qe-dev.md): the convention stands; its location is `.qe/dev/`.
+
 # Adopt the `.dev/` notes convention (pilot repo)
 
 **Context**: Working notes lived in `dev-notes/` (a 1,850-line completed plan, one design

@@ -133,12 +133,26 @@ def malayalam_tokens(prose: str, top: int) -> list[tuple[str, int]]:
 
 CELL_OR_MATH_RE = re.compile(r"^\s*(```|~~~)\{(code-cell|math)\}")
 LIST_ITEM_RE = re.compile(r"^\s*([*+-]|\d+\.)\s+")
-# Directive bodies live inside fences (already excluded); this only skips
-# directive options (`:class: dropdown`), labels (`(name)=`), cell breaks and
-# comments. A prose line that opens with a MyST role ({ref}`…`, {doc}`…`) is
-# prose and must NOT be skipped — the rules name sentence-initial link text.
-DIRECTIVE_LINE_RE = re.compile(r"^\s*(:|\(|\+\+\+|```|~~~|<!--)")
+# Skips directive options (`:class: dropdown`), labels (`(name)=`), cell breaks
+# and comments. Only a whole-line label is skipped: a prose paragraph that opens
+# with "(" is prose (round 4, ml#23: five such lines, 197 among them, were
+# invisible to every lint). A prose line that opens with a MyST role
+# ({ref}`…`, {doc}`…`) is prose too — the rules name sentence-initial link text.
+DIRECTIVE_LINE_RE = re.compile(r"^\s*(:|\([^)\s]+\)=\s*$|\+\+\+|```|~~~|<!--)")
 ROLE_PREFIX_RE = re.compile(r"^\{[a-z-]+\}`")
+FENCE_LINE_RE = re.compile(r"^(`{3,}|~{3,})\s*(.*)$")
+DIRECTIVE_NAME_RE = re.compile(r"^\{([A-Za-z][A-Za-z0-9-]*)\}")
+# Directives whose body is translated Malayalam prose: scanned like the text
+# around them (ml#23 line 483, a comma splice inside {note}). Exercise-family
+# bodies ({exercise}, {exercise-start}, {hint}, {solution}, …) are English by
+# decision (D-2026-09-03-ml-all-exercise-content-stays-english, restored from
+# source by src/verbatim-directives.ts), as are figures and epigraphs, so they
+# are not scanned — python_by_example's round-1 exercise text, translated before
+# that decision, is therefore no longer linted.
+PROSE_DIRECTIVES = {
+    "note", "tip", "warning", "admonition", "important", "seealso",
+    "attention", "caution", "danger", "error",
+}
 BANNED_RENDERINGS: list[tuple[str, str]] = [
     # (substring, what the rules say instead) — one entry per rule-bound rendering
     ("ഒരു നൽകിയ", "'a given N' → തന്നിരിക്കുന്ന N"),
@@ -160,70 +174,227 @@ BANNED_RENDERINGS: list[tuple[str, str]] = [
     ("dictionary-like", "'X-like' → X പോലെയുള്ള, before the name"),
     ("പിന്തുടര", "'follow (what is going on)' → മനസ്സിലാക്കുക — check the sense"),
 ]
-# The future-hortative signature: a sentence with subject നമ്മൾ ending on a
-# -ും verb ("we will …") where the teacher's voice wants നമുക്ക് … -ആം. Noisy
-# by design (-ും is also the additive suffix) — a watch list, not a gate.
-FUTURE_HORTATIVE_RE = re.compile(r"നമ്മൾ[^.:!?\n]*\S+ും[.:]?\s*$")
+# (The round-2 future-hortative watch was retired in round 4: since rule 13
+# landed it made 2 hits on reviewed seeds and the editor acted on neither — it
+# flagged a later-lecture promise he kept (ml#23 1092) and missed another
+# (1005) — while the engine already writes the hortative at 72 of 81 sites.)
+# The editor's answers on lecture-python-programming.ml#22 (2026-09-19).
+# A Malayalam plural (-കൾ / -ുകൾ, oblique -കള…) built on a Latin-script
+# singular — object-ുകൾ, function call-കളിൽ — where he wants the English
+# plural plus the suffix (objects, function calls-ൽ). Deterministic.
+ML_PLURAL_ON_LATIN_RE = re.compile(r"[A-Za-z`]-?ു?ക[ൾള]")
+# Two adjacent hyphen-suffixed -ഉം items with no comma between them
+# (Columns-ഉം rows-ഉം, Step 1-ഉം 2-ഉം): he wants the comma always, single
+# words included. Only the hyphenated form is matched — a bare -ും is also the
+# future verb ending (ചെയ്യാനും കഴിയും), which would make this a noise source.
+UM_PAIR_NO_COMMA_RE = re.compile(r"\S+-ഉം\s+\S+-ഉം")
+
+# -- Round-4 comma splices (lecture-python-programming.ml#23, 2026-09-28) -----
+# The largest class of the fourth review: two finite clauses joined by a comma
+# where the editor writes a full stop (20 flags; the engine runs at ~17 sites
+# per 100 prose lines across nine numpy draws, his text at ~3). Only 6 of the 23
+# sites mirror an English comma splice — the rest render an English relative
+# clause, "so that", a participle or an appositive as comma + resumptive
+# pronoun — so rule 12's "split at comma splices" does not reach them.
+#
+# FIN is a finite verb ending. A bare -ും is NOT one (it is also the additive /
+# concessive clitic: ആയതും, ആണെങ്കിലും, ശേഷവും), so future forms are listed.
+_SPLICE_FUT = r"(?:ചെയ്യും|പ്പെടും|(?<!-)ക്കും|കഴിയും|കാണും|(?<!-)ആകും|ാകും|നൽകും|വരും|പോകും)"
+_SPLICE_FIN = rf"(?:ുന്നു|ആണ്|ാണ്|ഉണ്ട്|ുണ്ട്|ില്ല|അല്ല|ാം|ുക|ഉള്ളൂ|ുള്ളൂ|{_SPLICE_FUT})"
+_SPLICE_CLOSER = r"\*?(?:\s*\((?:[^()]|\([^()]*\))*\))?"
+SPLICE_SITE_RE = re.compile(rf"(?P<fin>[^\s,]*{_SPLICE_FIN})(?P<closer>{_SPLICE_CLOSER}),\s+(?P<next>\S+)")
+# The repairable subset: the next word is a resumptive pronoun or one of two
+# connectives, and the clause carries on after it on the same line. He removed
+# the comma at 13 of 13 such round-4 seed sites (10 with this exact full stop,
+# 3 folded into a converb) and at the 12 such sites he edited in rounds 1-2
+# (full stop 9, em-dash 2, semicolon 1; a 13th sits in a solution he reverted
+# to English) — a full stop at 19 of 25. The pattern fires on none of his 70
+# untouched round-4 lines or his four reviewed pages.
+# An explicit list, never an open ഇവ\S* / അവ\S* (അവസ്ഥ, അവിടെ, ഇവിടെ).
+SPLICE_RESUMPTIVE_RE = re.compile(
+    r"^(?:ഇത്|ഇതിനെ|അത്|അതിനെ|(?:ഇവ|അവ)(?:യെ|യുടെ|യിൽ|യ്ക്ക്|യെല്ലാം|യോടൊപ്പം)?|അതിനാൽ|അതേസമയം)(?![ഀ-ൿ])"
+)
+# Not clauses, so not splices: a trailing "as shown" tag and a line-final list
+# conjunction (", ഒപ്പം" before the next bullet).
+SPLICE_TAG_TAIL_RE = re.compile(
+    r"^\s*(?:താഴെ\s+\S+\s+(?:പോലെ|രീതിയിൽ)|`[^`]*`\s+(?:എന്ന\s+(?:പോലെ|രീതിയിൽ)|എന്നതുപോലെ|എന്നത്\s+പോലെ))\s*[.:]?\s*$"
+)
+# Finite-looking forms whose comma he keeps: the fronted imperatives rules 13/14
+# require (ശ്രദ്ധിക്കുക, / ഓർക്കുക,) and എല്ലാം ("all", which ends like the modal
+# -ാം — his reviewed python_by_example 275 "objects-ന് എല്ലാം, അവയിൽ …" is kept
+# only by this). The concessive and additive endings are defensive: FIN admits
+# no bare -ും today, and they keep it that way if the future list grows.
+_SPLICE_KEEP_FIN_RE = re.compile(r"(?:ശ്രദ്ധിക്കുക|ഓർക്കുക|ങ്കിലും|ാലും|ായും|ുകയും|പോലും|ല്ലാം)\*?$")
 
 
-def prose_lines(text: str) -> list[tuple[int, str, str | None]]:
-    """(1-based line number, line, next non-blank line) for every prose line
-    outside frontmatter and fences; headings and directive options excluded."""
+def splice_sites(line: str) -> list[dict]:
+    """Comma-joined finite clauses on one line. Each site carries `resumptive`
+    (the repairable subset) and the span of the ", " to replace with ". "."""
+    out: list[dict] = []
+    for m in SPLICE_SITE_RE.finditer(line):
+        fin = m.group("fin")
+        before = line[: m.start("fin")]
+        # The finite token must not open its sentence (തീർച്ചയായും, / ശ്രദ്ധിക്കുക,).
+        head = LIST_ITEM_RE.sub("", re.split(r"[.:?!]\s", before)[-1])
+        if not head.strip():
+            continue
+        if _SPLICE_KEEP_FIN_RE.search(fin):
+            continue
+        bare = fin.strip("*")
+        # "X-ഉം അല്ല, Y-ഉം അല്ല" is the neither-nor coordination whose comma he
+        # adds (ml#23 #7), and "*അല്ല*, ഇത് …" is a contrast he keeps.
+        negator = bare in ("അല്ല", "ഇല്ല")
+        tail = line[m.start("next"):]
+        if SPLICE_TAG_TAIL_RE.match(tail) or re.match(r"ഒപ്പം\s*$", tail):
+            continue
+        if negator and re.search(r"ഉം\s+\*?$", before):
+            continue
+        # A pronoun that ends the line opens a list ("…ആവശ്യമാണ്, അത്" + bullets):
+        # splitting there leaves a verbless "അത്:" sentence, so it is not repaired.
+        carries_on = bool(line[m.end("next"):].strip(" :;"))
+        out.append({
+            "resumptive": bool(SPLICE_RESUMPTIVE_RE.match(m.group("next"))) and not negator and carries_on,
+            "comma_start": m.end("closer"),
+            "next_start": m.start("next"),
+            "text": line[m.start("fin"): m.end("next")],
+        })
+    return out
+
+
+def split_resumptive_splices(line: str) -> tuple[str, int]:
+    """Replace the ", " of every resumptive splice on `line` with ". " (the
+    editor's most common form: 19 of the 25 such sites he edited). Consumed by
+    ml_repair.py, so the lint and the repair share one classifier. Never adds a
+    comma after the connective."""
+    sites = [s for s in splice_sites(line) if s["resumptive"]]
+    for s in reversed(sites):
+        line = line[: s["comma_start"]] + ". " + line[s["next_start"]:]
+    return line, len(sites)
+
+
+def _fence(stripped: str) -> tuple[str, int, str, str | None] | None:
+    """(char, length, info, directive name) if the line is a fence line."""
+    m = FENCE_LINE_RE.match(stripped)
+    if not m:
+        return None
+    info = m.group(2).strip()
+    d = DIRECTIVE_NAME_RE.match(info)
+    # docutils lowercases directive names, so ```{Note} is a note
+    return m.group(1)[0], len(m.group(1)), info, d.group(1).lower() if d else None
+
+
+def _closes(f: tuple[str, int, str, str | None] | None, opener: tuple[str, int, str, str | None]) -> bool:
+    # CommonMark: a closing fence is bare and at least as long as its opener.
+    return f is not None and not f[2] and f[0] == opener[0] and f[1] >= opener[1]
+
+
+def prose_line_info(text: str) -> list[dict]:
+    """Every prose line outside frontmatter and non-prose fences — including the
+    bodies of PROSE_DIRECTIVES — with its paragraph position, so a hard-wrapped
+    paragraph is checked at its start (capitalisation) and end (punctuation)
+    rather than on every wrapped line.
+
+    Fences follow CommonMark, unlike strip_to_prose's toggle: a fence's body is
+    raw content until a bare closing fence at least as long as its opener, so a
+    fence line with an info string (```` ```{hint} ```` inside an unclosed
+    ```` ```{exercise-start} ````) never closes or re-opens anything. The toggle
+    lost parity there in python_by_example and linted a code cell as prose.
+    Inside a prose directive one nested level is tracked, so a code cell inside
+    a longer-fenced {note} is not scanned."""
     lines = text.split("\n")
-    out: list[tuple[int, str, str | None]] = []
     i = 0
     if lines and lines[0].strip() == "---":
         i = 1
         while i < len(lines) and lines[i].strip() != "---":
             i += 1
         i += 1
-    in_fence = False
-    fence_marker = ""
+    outer = inner = None
+    is_prose = [False] * len(lines)
     for idx in range(i, len(lines)):
         line = lines[idx]
         stripped = line.lstrip()
-        m = FENCE_RE.match(stripped)
-        if m:
-            if not in_fence:
-                in_fence, fence_marker = True, m.group(1)
-            elif stripped.startswith(fence_marker):
-                in_fence = False
+        f = _fence(stripped)
+        if outer is None:
+            if f is not None:
+                outer = f
+                continue
+        elif _closes(f, outer):
+            outer = inner = None
             continue
-        if in_fence or not stripped or HEADING_RE.match(stripped) or DIRECTIVE_LINE_RE.match(line):
+        elif inner is not None:
+            if _closes(f, inner):
+                inner = None
             continue
-        nxt = None
-        for j in range(idx + 1, len(lines)):
-            if lines[j].strip():
-                nxt = lines[j]
-                break
-        out.append((idx + 1, line, nxt))
+        elif outer[3] not in PROSE_DIRECTIVES:
+            continue
+        elif f is not None:
+            inner = f
+            continue
+        if not stripped or HEADING_RE.match(stripped) or DIRECTIVE_LINE_RE.match(line):
+            continue
+        is_prose[idx] = True
+    out: list[dict] = []
+    in_item = False
+    for idx, line in enumerate(lines):
+        if not is_prose[idx]:
+            continue
+        nxt = next((lines[j] for j in range(idx + 1, len(lines)) if lines[j].strip()), None)
+        is_item = bool(LIST_ITEM_RE.match(line))
+        prev_prose = idx > 0 and is_prose[idx - 1]
+        next_prose = idx + 1 < len(lines) and is_prose[idx + 1]
+        next_item = next_prose and bool(LIST_ITEM_RE.match(lines[idx + 1]))
+        starts_para = is_item or not prev_prose
+        if starts_para:
+            in_item = is_item
+        out.append({
+            "n": idx + 1, "line": line, "next": nxt,
+            "starts_para": starts_para,
+            "ends_para": not next_prose or next_item,
+            # a list item, or a wrapped continuation of one
+            "in_item": in_item,
+        })
     return out
+
+
+def prose_lines(text: str) -> list[tuple[int, str, str | None]]:
+    """(1-based line number, line, next non-blank line) for every prose line;
+    see prose_line_info."""
+    return [(p["n"], p["line"], p["next"]) for p in prose_line_info(text)]
 
 
 def round2_lints(text: str) -> dict:
     """Terminal punctuation, sentence-initial capitalisation, banned renderings,
-    and the future-hortative watch — only on lines that carry Malayalam, so an
-    English-retained line (kept byte-identical to source) is never flagged."""
+    plurals, -ഉം pairs and comma splices — only on lines that carry Malayalam,
+    so an English-retained line (kept byte-identical to source) is never flagged."""
     punct: list[dict] = []
     caps: list[dict] = []
     banned: list[dict] = []
-    hortative: list[dict] = []
-    for n, line, nxt in prose_lines(text):
+    plural: list[dict] = []
+    um_pair: list[dict] = []
+    splice_watch: list[dict] = []
+    splice_resumptive: list[dict] = []
+    for p in prose_line_info(text):
+        n, line, nxt = p["n"], p["line"], p["next"]
         has_ml = bool(MALAYALAM_RE.search(line))
         body = line.rstrip()
-        is_item = bool(LIST_ITEM_RE.match(body))
-        if has_ml and not is_item:
+        if has_ml and not p["in_item"] and p["ends_para"]:
             # The editor's own convention (ml#7): a colon when the sentence
             # points forward ("… താഴെ കാണാം:"), a full stop when it merely
             # precedes the cell, a comma before a list it opens. Only a BARE
             # ending — the engine's habit of mirroring an unpunctuated English
-            # line — is a defect, so that is all this flags.
+            # line — is a defect, so that is all this flags. A closing bracket
+            # is terminated only when a stop precedes it: "(… memory.)" is, and
+            # "(… memory)" is not (he added the stop at ml#23 197 and at
+            # functions 286 in round 2; he accepted "...)").
             introduces = nxt is not None and (CELL_OR_MATH_RE.match(nxt) or LIST_ITEM_RE.match(nxt))
-            if introduces and not re.search(r"[.:,]$", body):
+            # a comma is his ending only before a list it opens, never a cell
+            opens_list = nxt is not None and LIST_ITEM_RE.match(nxt)
+            ending = r"(?:[.:,]|[.!?:…]\))$" if opens_list else r"(?:[.:]|[.!?:…]\))$"
+            if introduces and not re.search(ending, body):
                 punct.append({"line": n, "kind": "bare ending before a cell or list (colon or full stop expected)", "text": body[-60:]})
-            elif not introduces and not re.search(r"[.:?!)]$", body):
+            elif not introduces and not re.search(r"(?:[.:?!]|[.:?!…]\))$", body):
                 punct.append({"line": n, "kind": "paragraph without terminal punctuation", "text": body[-60:]})
-        if has_ml:
+        if has_ml and p["starts_para"]:
             head = LIST_ITEM_RE.sub("", body).lstrip("(")
             # A sentence may open with a MyST role — test the link text, since
             # the rule requires {ref}`Previous lecture …`, not `previous`.
@@ -235,13 +406,44 @@ def round2_lints(text: str) -> dict:
         for sub, fix in BANNED_RENDERINGS:
             if sub in line:
                 banned.append({"line": n, "rendering": sub, "rule": fix})
-        if has_ml and FUTURE_HORTATIVE_RE.search(body):
-            hortative.append({"line": n, "text": body[-70:]})
+        if has_ml:
+            for m in ML_PLURAL_ON_LATIN_RE.finditer(body):
+                plural.append({"line": n, "text": body[max(0, m.start() - 20) : m.end() + 6]})
+            for m in UM_PAIR_NO_COMMA_RE.finditer(body):
+                um_pair.append({"line": n, "text": m.group(0)})
+            for s in splice_sites(body):
+                splice_watch.append({"line": n, "text": s["text"]})
+                if s["resumptive"]:
+                    splice_resumptive.append({"line": n, "text": s["text"]})
     return {
         "terminal_punctuation": punct,
         "lowercase_initial": caps,
         "banned_renderings": banned,
-        "future_hortative_watch": hortative,
+        "malayalam_plural_on_english_noun": plural,
+        "um_pair_without_comma": um_pair,
+        # Report-only: every comma-joined finite clause. His reviewed pages keep
+        # 1-4 per lecture from round 2 on (parallel clauses, "…ആണ്, പക്ഷേ …:"),
+        # so 0 is not the target; read it with comma_splice_rate. A secondary
+        # best-of-N key at most — never a primary one.
+        "comma_splice_watch": splice_watch,
+        # The subset ml_repair.py splits into two sentences.
+        "comma_splice_resumptive": splice_resumptive,
+    }
+
+
+def comma_splice_rate(text: str) -> dict:
+    """Splice sites per 100 Malayalam prose lines. Reference, 2026-09-28: nine
+    numpy draws 13.1-21.0 (mean 17.2); the editor's reviewed pages numpy 2.8,
+    functions 2.8, matplotlib 1.6 (rounds 2-4) and python_by_example 8.7
+    (round 1, before he was splitting these)."""
+    ml_lines = [p for p in prose_line_info(text) if MALAYALAM_RE.search(p["line"])]
+    sites = [s for p in ml_lines for s in splice_sites(p["line"].rstrip())]
+    n = len(ml_lines)
+    return {
+        "malayalam_prose_lines": n,
+        "sites": len(sites),
+        "resumptive": sum(s["resumptive"] for s in sites),
+        "per_100_lines": round(100 * len(sites) / n, 1) if n else 0.0,
     }
 
 
@@ -338,6 +540,7 @@ def main() -> int:
 
     # -- Round-2 lints (LINT, not FAIL — prototype until Phase 3 graduation) --
     result["lint"] = round2_lints(out_text)
+    result["comma_splice_rate"] = comma_splice_rate(out_text)
 
     # -- Token list for the manual transliteration scan -----------------------
     result["malayalam_tokens_top"] = malayalam_tokens(out_prose, args.top_tokens)
@@ -346,7 +549,7 @@ def main() -> int:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
         print(f"== ml metrics: {args.output} ==")
-        for key in ("headings", "pinned_retention", "script_ratio"):
+        for key in ("headings", "pinned_retention", "script_ratio", "comma_splice_rate"):
             if key in result:
                 print(f"{key}: {json.dumps(result[key], ensure_ascii=False)}")
         print(f"casing variants: {len(result['casing'])}")

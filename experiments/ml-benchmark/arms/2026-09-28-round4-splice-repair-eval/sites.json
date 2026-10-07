@@ -1,0 +1,1217 @@
+[
+ {
+  "id": "numpy-d1-2",
+  "lecture": "numpy",
+  "draw": 1,
+  "en": "The most important structure that NumPy defines is an array data type, formally\ncalled a [numpy.ndarray](https://numpy.org/doc/stable/reference/arrays.ndarray.html).",
+  "ref": "NumPy define ചെയ്യുന്ന ഏറ്റവും പ്രധാനപ്പെട്ട structure, ഒരു array data type ആണ്. ഇതിനെ formally [numpy.ndarray](https://numpy.org/doc/stable/reference/arrays.ndarray.html) എന്ന് വിളിക്കുന്നു.",
+  "raw": "NumPy define ചെയ്യുന്ന ഏറ്റവും പ്രധാനപ്പെട്ട structure ഒരു array data type ആണ്, ഇതിനെ ഔപചാരികമായി\n[numpy.ndarray](https://numpy.org/doc/stable/reference/arrays.ndarray.html) എന്ന് വിളിക്കുന്നു.",
+  "old": "NumPy define ചെയ്യുന്ന ഏറ്റവും പ്രധാനപ്പെട്ട structure ഒരു array data type ആണ്, ഇതിനെ ഔപചാരികമായി\n[numpy.ndarray](https://numpy.org/doc/stable/reference/arrays.ndarray.html) എന്ന് വിളിക്കുന്നു.",
+  "new": "NumPy define ചെയ്യുന്ന ഏറ്റവും പ്രധാനപ്പെട്ട structure ഒരു array data type ആണ്. ഇതിനെ ഔപചാരികമായി\n[numpy.ndarray](https://numpy.org/doc/stable/reference/arrays.ndarray.html) എന്ന് വിളിക്കുന്നു.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.9375,
+  "sim_new": 0.9427
+ },
+ {
+  "id": "numpy-d1-14",
+  "lecture": "numpy",
+  "draw": 1,
+  "en": "Here the shape tuple has only one element, which is the length of the array\n(tuples with one element end with a comma).",
+  "ref": "ഇവിടെ shape tuple-ൽ, array-യുടെ length ആയ ഒരു element മാത്രമാണുള്ളത്. (ഒരു element മാത്രമുള്ള tuples ഒരു comma-യിൽ അവസാനിക്കും).",
+  "raw": "ഇവിടെ shape tuple-ന് ഒരു element മാത്രമേ ഉള്ളൂ, അത് array-യുടെ length ആണ്\n(ഒരു element മാത്രമുള്ള tuples ഒരു comma-യിൽ അവസാനിക്കും).",
+  "old": "ഇവിടെ shape tuple-ന് ഒരു element മാത്രമേ ഉള്ളൂ, അത് array-യുടെ length ആണ്\n(ഒരു element മാത്രമുള്ള tuples ഒരു comma-യിൽ അവസാനിക്കും).",
+  "new": "ഇവിടെ shape tuple-ന് ഒരു element മാത്രമേ ഉള്ളൂ. അത് array-യുടെ length ആണ്\n(ഒരു element മാത്രമുള്ള tuples ഒരു comma-യിൽ അവസാനിക്കും).",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7615,
+  "sim_new": 0.7538
+ },
+ {
+  "id": "numpy-d1-19",
+  "lecture": "numpy",
+  "draw": 1,
+  "en": "Related is `np.empty`, which creates arrays in memory that can later be populated with data",
+  "ref": "ഇതുമായി ബന്ധപ്പെട്ടതാണ് `np.empty`. ഇത് memory-യിൽ ആദ്യം ഒരു array-ക്കുള്ള സ്ഥലം create ചെയ്യുന്നു. അതിലേക്ക് പിന്നീട് data ചേർക്കാവുന്നതാണ്:",
+  "raw": "ഇതുമായി ബന്ധപ്പെട്ടതാണ് `np.empty`, ഇത് memory-ൽ arrays create ചെയ്യുന്നു, ഇവയിൽ പിന്നീട് data populate ചെയ്യാം:",
+  "old": "ഇതുമായി ബന്ധപ്പെട്ടതാണ് `np.empty`, ഇത് memory-ൽ arrays create ചെയ്യുന്നു, ഇവയിൽ പിന്നീട് data populate ചെയ്യാം:",
+  "new": "ഇതുമായി ബന്ധപ്പെട്ടതാണ് `np.empty`, ഇത് memory-ൽ arrays create ചെയ്യുന്നു. ഇവയിൽ പിന്നീട് data populate ചെയ്യാം:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7273,
+  "sim_new": 0.7352
+ },
+ {
+  "id": "numpy-d1-25",
+  "lecture": "numpy",
+  "draw": 1,
+  "en": "See also `np.asarray`, which performs a similar function, but does not make\na distinct copy of data already in a NumPy array.",
+  "ref": "`np.asarray` എന്നതും നോക്കുക. ഇത് similar ആയ ഒരു function ആണ്. പക്ഷേ, NumPy array-യിൽ already ഉള്ള data-യുടെ distinct copy `np.asarray` ഉണ്ടാക്കുന്നില്ല.",
+  "raw": "`np.asarray` എന്നതും കാണുക, ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ഒരു NumPy array-ൽ already ഉള്ള data-യുടെ\nവേറൊരു copy ഉണ്ടാക്കില്ല.",
+  "old": "`np.asarray` എന്നതും കാണുക, ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ഒരു NumPy array-ൽ already ഉള്ള data-യുടെ\nവേറൊരു copy ഉണ്ടാക്കില്ല.",
+  "new": "`np.asarray` എന്നതും കാണുക. ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ഒരു NumPy array-ൽ already ഉള്ള data-യുടെ\nവേറൊരു copy ഉണ്ടാക്കില്ല.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7703,
+  "sim_new": 0.7774
+ },
+ {
+  "id": "numpy-d1-34",
+  "lecture": "numpy",
+  "draw": 1,
+  "en": "Arrays have useful methods, all of which are carefully optimized",
+  "ref": "Arrays-ന് useful ആയ methods ഉണ്ട്. ഇവയെല്ലാം carefully optimize ചെയ്തിരിക്കുന്നു:",
+  "raw": "Arrays-ന് useful ആയ methods ഉണ്ട്, ഇവയെല്ലാം carefully optimize ചെയ്തിരിക്കുന്നു:",
+  "old": "Arrays-ന് useful ആയ methods ഉണ്ട്, ഇവയെല്ലാം carefully optimize ചെയ്തിരിക്കുന്നു:",
+  "new": "Arrays-ന് useful ആയ methods ഉണ്ട്. ഇവയെല്ലാം carefully optimize ചെയ്തിരിക്കുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.9877,
+  "sim_new": 1.0
+ },
+ {
+  "id": "numpy-d1-51",
+  "lecture": "numpy",
+  "draw": 1,
+  "en": "* `for` loops can be avoided, which helps numerical code run fast and",
+  "ref": "* `for` loops ഒഴിവാക്കാം. ഇത് numerical code വേഗത്തിൽ run ചെയ്യാൻ സഹായിക്കുന്നു, ഒപ്പം",
+  "raw": "* `for` loops ഒഴിവാക്കാം, ഇത് numerical code fast ആയി run ചെയ്യാൻ സഹായിക്കുന്നു, കൂടാതെ",
+  "old": "* `for` loops ഒഴിവാക്കാം, ഇത് numerical code fast ആയി run ചെയ്യാൻ സഹായിക്കുന്നു, കൂടാതെ",
+  "new": "* `for` loops ഒഴിവാക്കാം. ഇത് numerical code fast ആയി run ചെയ്യാൻ സഹായിക്കുന്നു, കൂടാതെ",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8439,
+  "sim_new": 0.8555
+ },
+ {
+  "id": "numpy-d1-93",
+  "lecture": "numpy",
+  "draw": 1,
+  "en": "The name `b` is bound to `a` and becomes just another reference to the\narray (the Python assignment model is described in more detail {doc}`later in the course <python_advanced_features>`).",
+  "ref": "`b` എന്ന name, `a`-യുമായി bind ചെയ്യപ്പെട്ടിരിക്കുന്നു. അങ്ങനെ, അതേ array-യിലേക്കുള്ള മറ്റൊരു reference മാത്രമായി `b` മാറുന്നു. (Python-ന്റെ assignment model, {doc}`later in the course <python_advanced_features>`, കൂടുതൽ വിശദമായി വിവരിക്കുന്നുണ്ട്).",
+  "raw": "`b` എന്ന name, `a`-യുമായി bind ചെയ്യപ്പെട്ടിരിക്കുന്നു, അത് ആ array-യിലേക്കുള്ള മറ്റൊരു reference മാത്രമായി മാറുന്നു\n(Python assignment model {doc}`കോഴ്സിൽ പിന്നീട് <python_advanced_features>` കൂടുതൽ വിശദമായി describe ചെയ്യുന്നുണ്ട്).",
+  "old": "`b` എന്ന name, `a`-യുമായി bind ചെയ്യപ്പെട്ടിരിക്കുന്നു, അത് ആ array-യിലേക്കുള്ള മറ്റൊരു reference മാത്രമായി മാറുന്നു\n(Python assignment model {doc}`കോഴ്സിൽ പിന്നീട് <python_advanced_features>` കൂടുതൽ വിശദമായി describe ചെയ്യുന്നുണ്ട്).",
+  "new": "`b` എന്ന name, `a`-യുമായി bind ചെയ്യപ്പെട്ടിരിക്കുന്നു. അത് ആ array-യിലേക്കുള്ള മറ്റൊരു reference മാത്രമായി മാറുന്നു\n(Python assignment model {doc}`കോഴ്സിൽ പിന്നീട് <python_advanced_features>` കൂടുതൽ വിശദമായി describe ചെയ്യുന്നുണ്ട്).",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8364,
+  "sim_new": 0.8364
+ },
+ {
+  "id": "numpy-d1-103",
+  "lecture": "numpy",
+  "draw": 1,
+  "en": "NumPy provides versions of the standard functions `log`, `exp`, `sin`, etc. that act *element-wise* on arrays",
+  "ref": "Arrays-ലെ *ഓരോ element-ലും* act ചെയ്യുന്ന `log`, `exp`, `sin`, തുടങ്ങിയ standard functions-ന്റെ versions NumPy നൽകുന്നു:",
+  "raw": "Standard functions ആയ `log`, `exp`, `sin` എന്നിവയുടെ versions NumPy നൽകുന്നു, ഇവ arrays-ൽ *element-wise* ആയാണ് act ചെയ്യുന്നത്:",
+  "old": "Standard functions ആയ `log`, `exp`, `sin` എന്നിവയുടെ versions NumPy നൽകുന്നു, ഇവ arrays-ൽ *element-wise* ആയാണ് act ചെയ്യുന്നത്:",
+  "new": "Standard functions ആയ `log`, `exp`, `sin` എന്നിവയുടെ versions NumPy നൽകുന്നു. ഇവ arrays-ൽ *element-wise* ആയാണ് act ചെയ്യുന്നത്:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.4453,
+  "sim_new": 0.4453
+ },
+ {
+  "id": "numpy-d1-113",
+  "lecture": "numpy",
+  "draw": 1,
+  "en": "(Later we'll see that JAX has a powerful version of `np.vectorize` that can and usually does generate highly efficient code.)",
+  "ref": "(പിന്നീട് നമ്മൾ കാണും: JAX-ന് `np.vectorize`-ന്റെ ഒരു powerful version ഉണ്ട്. ഇത് സാധാരണയായി highly efficient code generate ചെയ്യും.)",
+  "raw": "(പിന്നീട് നമുക്ക് കാണാം, JAX-ന് `np.vectorize`-ന്റെ ഒരു powerful version ഉണ്ട്, ഇത് മിക്ക സമയത്തും highly efficient ആയ code generate ചെയ്യും.)",
+  "old": "(പിന്നീട് നമുക്ക് കാണാം, JAX-ന് `np.vectorize`-ന്റെ ഒരു powerful version ഉണ്ട്, ഇത് മിക്ക സമയത്തും highly efficient ആയ code generate ചെയ്യും.)",
+  "new": "(പിന്നീട് നമുക്ക് കാണാം, JAX-ന് `np.vectorize`-ന്റെ ഒരു powerful version ഉണ്ട്. ഇത് മിക്ക സമയത്തും highly efficient ആയ code generate ചെയ്യും.)",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8655,
+  "sim_new": 0.8727
+ },
+ {
+  "id": "numpy-d1-122",
+  "lecture": "numpy",
+  "draw": 1,
+  "en": "Much of this functionality is also available in [SciPy](https://scipy.org/), a collection of modules that are built on top of NumPy.",
+  "ref": "ഈ functionality-യുടെ ഭൂരിഭാഗവും [SciPy](https://scipy.org/)-യിലും ലഭ്യമാണ്. NumPy-യുടെ മുകളിൽ build ചെയ്തിരിക്കുന്ന modules-ന്റെ ഒരു collection ആണ് SciPy.",
+  "raw": "ഈ functionality-യുടെ ഭൂരിഭാഗവും [SciPy](https://scipy.org/)-ലും ലഭ്യമാണ്, ഇത് NumPy-യ്ക്ക് മുകളിൽ build ചെയ്ത modules-ന്റെ ഒരു collection ആണ്.",
+  "old": "ഈ functionality-യുടെ ഭൂരിഭാഗവും [SciPy](https://scipy.org/)-ലും ലഭ്യമാണ്, ഇത് NumPy-യ്ക്ക് മുകളിൽ build ചെയ്ത modules-ന്റെ ഒരു collection ആണ്.",
+  "new": "ഈ functionality-യുടെ ഭൂരിഭാഗവും [SciPy](https://scipy.org/)-ലും ലഭ്യമാണ്. ഇത് NumPy-യ്ക്ക് മുകളിൽ build ചെയ്ത modules-ന്റെ ഒരു collection ആണ്.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8919,
+  "sim_new": 0.8986
+ },
+ {
+  "id": "numpy-d2-156",
+  "lecture": "numpy",
+  "draw": 2,
+  "en": "Here the shape tuple has only one element, which is the length of the array\n(tuples with one element end with a comma).",
+  "ref": "ഇവിടെ shape tuple-ൽ, array-യുടെ length ആയ ഒരു element മാത്രമാണുള്ളത്. (ഒരു element മാത്രമുള്ള tuples ഒരു comma-യിൽ അവസാനിക്കും).",
+  "raw": "ഇവിടെ shape tuple-ന് ഒരു element മാത്രമേ ഉള്ളൂ, അത് array-യുടെ length ആണ്\n(ഒരു element മാത്രമുള്ള tuples ഒരു comma-യിൽ അവസാനിക്കും).",
+  "old": "ഇവിടെ shape tuple-ന് ഒരു element മാത്രമേ ഉള്ളൂ, അത് array-യുടെ length ആണ്\n(ഒരു element മാത്രമുള്ള tuples ഒരു comma-യിൽ അവസാനിക്കും).",
+  "new": "ഇവിടെ shape tuple-ന് ഒരു element മാത്രമേ ഉള്ളൂ. അത് array-യുടെ length ആണ്\n(ഒരു element മാത്രമുള്ള tuples ഒരു comma-യിൽ അവസാനിക്കും).",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7615,
+  "sim_new": 0.7538
+ },
+ {
+  "id": "numpy-d2-161",
+  "lecture": "numpy",
+  "draw": 2,
+  "en": "Related is `np.empty`, which creates arrays in memory that can later be populated with data",
+  "ref": "ഇതുമായി ബന്ധപ്പെട്ടതാണ് `np.empty`. ഇത് memory-യിൽ ആദ്യം ഒരു array-ക്കുള്ള സ്ഥലം create ചെയ്യുന്നു. അതിലേക്ക് പിന്നീട് data ചേർക്കാവുന്നതാണ്:",
+  "raw": "ഇതുമായി ബന്ധപ്പെട്ടതാണ് `np.empty`, ഇത് memory-യിൽ arrays create ചെയ്യുന്നു, അവയിൽ പിന്നീട് data populate ചെയ്യാം:",
+  "old": "ഇതുമായി ബന്ധപ്പെട്ടതാണ് `np.empty`, ഇത് memory-യിൽ arrays create ചെയ്യുന്നു, അവയിൽ പിന്നീട് data populate ചെയ്യാം:",
+  "new": "ഇതുമായി ബന്ധപ്പെട്ടതാണ് `np.empty`, ഇത് memory-യിൽ arrays create ചെയ്യുന്നു. അവയിൽ പിന്നീട് data populate ചെയ്യാം:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7451,
+  "sim_new": 0.7529
+ },
+ {
+  "id": "numpy-d2-167",
+  "lecture": "numpy",
+  "draw": 2,
+  "en": "See also `np.asarray`, which performs a similar function, but does not make\na distinct copy of data already in a NumPy array.",
+  "ref": "`np.asarray` എന്നതും നോക്കുക. ഇത് similar ആയ ഒരു function ആണ്. പക്ഷേ, NumPy array-യിൽ already ഉള്ള data-യുടെ distinct copy `np.asarray` ഉണ്ടാക്കുന്നില്ല.",
+  "raw": "`np.asarray`-യും കാണുക, ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ഒരു NumPy array-യിൽ ഇതിനകം ഉള്ള data-യുടെ ഒരു distinct copy ഇത് ഉണ്ടാക്കുന്നില്ല.",
+  "old": "`np.asarray`-യും കാണുക, ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ഒരു NumPy array-യിൽ ഇതിനകം ഉള്ള data-യുടെ ഒരു distinct copy ഇത് ഉണ്ടാക്കുന്നില്ല.",
+  "new": "`np.asarray`-യും കാണുക. ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ഒരു NumPy array-യിൽ ഇതിനകം ഉള്ള data-യുടെ ഒരു distinct copy ഇത് ഉണ്ടാക്കുന്നില്ല.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7619,
+  "sim_new": 0.7687
+ },
+ {
+  "id": "numpy-d2-176",
+  "lecture": "numpy",
+  "draw": 2,
+  "en": "Arrays have useful methods, all of which are carefully optimized",
+  "ref": "Arrays-ന് useful ആയ methods ഉണ്ട്. ഇവയെല്ലാം carefully optimize ചെയ്തിരിക്കുന്നു:",
+  "raw": "Arrays-ന് useful ആയ methods ഉണ്ട്, ഇവയെല്ലാം സൂക്ഷ്മമായി optimize ചെയ്തിരിക്കുന്നു:",
+  "old": "Arrays-ന് useful ആയ methods ഉണ്ട്, ഇവയെല്ലാം സൂക്ഷ്മമായി optimize ചെയ്തിരിക്കുന്നു:",
+  "new": "Arrays-ന് useful ആയ methods ഉണ്ട്. ഇവയെല്ലാം സൂക്ഷ്മമായി optimize ചെയ്തിരിക്കുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8659,
+  "sim_new": 0.878
+ },
+ {
+  "id": "numpy-d2-193",
+  "lecture": "numpy",
+  "draw": 2,
+  "en": "* `for` loops can be avoided, which helps numerical code run fast and",
+  "ref": "* `for` loops ഒഴിവാക്കാം. ഇത് numerical code വേഗത്തിൽ run ചെയ്യാൻ സഹായിക്കുന്നു, ഒപ്പം",
+  "raw": "* `for` loops ഒഴിവാക്കാം, ഇത് numerical code fast ആയി run ചെയ്യാൻ സഹായിക്കുന്നു, ഒപ്പം",
+  "old": "* `for` loops ഒഴിവാക്കാം, ഇത് numerical code fast ആയി run ചെയ്യാൻ സഹായിക്കുന്നു, ഒപ്പം",
+  "new": "* `for` loops ഒഴിവാക്കാം. ഇത് numerical code fast ആയി run ചെയ്യാൻ സഹായിക്കുന്നു, ഒപ്പം",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.907,
+  "sim_new": 0.9186
+ },
+ {
+  "id": "numpy-d2-216",
+  "lecture": "numpy",
+  "draw": 2,
+  "en": "    - For example, if `a -> (3, 3)` and `b -> (3,)`, then broadcasting will add a dimension to the left so that `b -> (1, 3)`;",
+  "ref": "    - For example, `a -> (3, 3)`, `b -> (3,)` ആണെങ്കിൽ, broadcasting, `b`-യുടെ ഇടതുവശത്ത് ഒരു dimension ചേർത്ത് അതിനെ `b -> (1, 3)` ആകും;",
+  "raw": "    - For example, `a -> (3, 3)`-ഉം `b -> (3,)`-ഉം ആണെങ്കിൽ, broadcasting ഇടതുവശത്ത് ഒരു dimension ചേർക്കും, അതിനാൽ `b -> (1, 3)` ആകും;",
+  "old": "    - For example, `a -> (3, 3)`-ഉം `b -> (3,)`-ഉം ആണെങ്കിൽ, broadcasting ഇടതുവശത്ത് ഒരു dimension ചേർക്കും, അതിനാൽ `b -> (1, 3)` ആകും;",
+  "new": "    - For example, `a -> (3, 3)`-ഉം `b -> (3,)`-ഉം ആണെങ്കിൽ, broadcasting ഇടതുവശത്ത് ഒരു dimension ചേർക്കും. അതിനാൽ `b -> (1, 3)` ആകും;",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8971,
+  "sim_new": 0.8971
+ },
+ {
+  "id": "numpy-d2-217",
+  "lecture": "numpy",
+  "draw": 2,
+  "en": "    - If `a -> (2, 2, 2)` and `b -> (2, 2)`, then broadcasting will add a dimension to the left so that `b -> (1, 2, 2)`;",
+  "ref": "    - `a -> (2, 2, 2)`, `b -> (2, 2)` ആണെങ്കിൽ, broadcasting, `b`-യുടെ ഇടതുവശത്ത് ഒരു dimension ചേർത്ത്, അതിനെ `b -> (1, 2, 2)` ആകും;",
+  "raw": "    - `a -> (2, 2, 2)`-ഉം `b -> (2, 2)`-ഉം ആണെങ്കിൽ, broadcasting ഇടതുവശത്ത് ഒരു dimension ചേർക്കും, അതിനാൽ `b -> (1, 2, 2)` ആകും;",
+  "old": "    - `a -> (2, 2, 2)`-ഉം `b -> (2, 2)`-ഉം ആണെങ്കിൽ, broadcasting ഇടതുവശത്ത് ഒരു dimension ചേർക്കും, അതിനാൽ `b -> (1, 2, 2)` ആകും;",
+  "new": "    - `a -> (2, 2, 2)`-ഉം `b -> (2, 2)`-ഉം ആണെങ്കിൽ, broadcasting ഇടതുവശത്ത് ഒരു dimension ചേർക്കും. അതിനാൽ `b -> (1, 2, 2)` ആകും;",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8973,
+  "sim_new": 0.8897
+ },
+ {
+  "id": "numpy-d2-218",
+  "lecture": "numpy",
+  "draw": 2,
+  "en": "    - If `a -> (3, 2, 2)` and `b -> (2,)`, then broadcasting will add two dimensions to the left so that `b -> (1, 1, 2)` (you can also see this process as going through *Step 1* twice).",
+  "ref": "    - `a -> (3, 2, 2)`, `b -> (2,)` ആണെങ്കിൽ, broadcasting, `b`-യുടെ ഇടതുവശത്ത് രണ്ട് dimensions ചേർത്ത്, അതിനെ `b -> (1, 1, 2)` ആകും (ഈ process, *Step 1* രണ്ട് പ്രാവശ്യം നടക്കുന്നതായും കാണാം).",
+  "raw": "    - `a -> (3, 2, 2)`-ഉം `b -> (2,)`-ഉം ആണെങ്കിൽ, broadcasting ഇടതുവശത്ത് രണ്ട് dimensions ചേർക്കും, അതിനാൽ `b -> (1, 1, 2)` ആകും (ഇത് *Step 1* രണ്ട് പ്രാവശ്യം നടത്തിയത് പോലെയും കാണാം).",
+  "old": "    - `a -> (3, 2, 2)`-ഉം `b -> (2,)`-ഉം ആണെങ്കിൽ, broadcasting ഇടതുവശത്ത് രണ്ട് dimensions ചേർക്കും, അതിനാൽ `b -> (1, 1, 2)` ആകും (ഇത് *Step 1* രണ്ട് പ്രാവശ്യം നടത്തിയത് പോലെയും കാണാം).",
+  "new": "    - `a -> (3, 2, 2)`-ഉം `b -> (2,)`-ഉം ആണെങ്കിൽ, broadcasting ഇടതുവശത്ത് രണ്ട് dimensions ചേർക്കും. അതിനാൽ `b -> (1, 1, 2)` ആകും (ഇത് *Step 1* രണ്ട് പ്രാവശ്യം നടത്തിയത് പോലെയും കാണാം).",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8443,
+  "sim_new": 0.8391
+ },
+ {
+  "id": "numpy-d2-220",
+  "lecture": "numpy",
+  "draw": 2,
+  "en": "    - For example, if `a -> (1, 3)` and `b -> (3, 1)`, then broadcasting will expand dimensions with shape 1 in both `a` and `b` so that `a -> (3, 3)` and `b -> (3, 3)`;",
+  "ref": "    - For example, `a -> (1, 3)`, `b -> (3, 1)` ആണെങ്കിൽ, broadcasting `a`-യിലും `b`-യിലും shape 1 ആയിരിക്കുന്ന dimensions expand ചെയ്യും. അതിനാൽ `a -> (3, 3)`, `b -> (3, 3)` ആകും;",
+  "raw": "    - For example, `a -> (1, 3)`-ഉം `b -> (3, 1)`-ഉം ആണെങ്കിൽ, `a`-യിലും `b`-യിലും shape 1 ഉള്ള dimensions broadcasting expand ചെയ്യും, അതിനാൽ `a -> (3, 3)`-ഉം `b -> (3, 3)`-ഉം ആകും;",
+  "old": "    - For example, `a -> (1, 3)`-ഉം `b -> (3, 1)`-ഉം ആണെങ്കിൽ, `a`-യിലും `b`-യിലും shape 1 ഉള്ള dimensions broadcasting expand ചെയ്യും, അതിനാൽ `a -> (3, 3)`-ഉം `b -> (3, 3)`-ഉം ആകും;",
+  "new": "    - For example, `a -> (1, 3)`-ഉം `b -> (3, 1)`-ഉം ആണെങ്കിൽ, `a`-യിലും `b`-യിലും shape 1 ഉള്ള dimensions broadcasting expand ചെയ്യും. അതിനാൽ `a -> (3, 3)`-ഉം `b -> (3, 3)`-ഉം ആകും;",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8453,
+  "sim_new": 0.8508
+ },
+ {
+  "id": "numpy-d2-221",
+  "lecture": "numpy",
+  "draw": 2,
+  "en": "    - If `a -> (2, 2, 2)` and  `b -> (1, 2, 2)`, then broadcasting will expand the first dimension of `b` so that `b -> (2, 2, 2)`;",
+  "ref": "    - `a -> (2, 2, 2)`, `b -> (1, 2, 2)` ആണെങ്കിൽ, broadcasting `b`-യുടെ ആദ്യത്തെ dimension expand ചെയ്യും. അതിനാൽ `b -> (2, 2, 2)` ആകും;",
+  "raw": "    - `a -> (2, 2, 2)`-ഉം `b -> (1, 2, 2)`-ഉം ആണെങ്കിൽ, `b`-യുടെ ആദ്യത്തെ dimension broadcasting expand ചെയ്യും, അതിനാൽ `b -> (2, 2, 2)` ആകും;",
+  "old": "    - `a -> (2, 2, 2)`-ഉം `b -> (1, 2, 2)`-ഉം ആണെങ്കിൽ, `b`-യുടെ ആദ്യത്തെ dimension broadcasting expand ചെയ്യും, അതിനാൽ `b -> (2, 2, 2)` ആകും;",
+  "new": "    - `a -> (2, 2, 2)`-ഉം `b -> (1, 2, 2)`-ഉം ആണെങ്കിൽ, `b`-യുടെ ആദ്യത്തെ dimension broadcasting expand ചെയ്യും. അതിനാൽ `b -> (2, 2, 2)` ആകും;",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8746,
+  "sim_new": 0.8817
+ },
+ {
+  "id": "numpy-d2-222",
+  "lecture": "numpy",
+  "draw": 2,
+  "en": "    - If `a -> (3, 2, 2)` and `b -> (1, 1, 2)`, then broadcasting will expand `b` on all dimensions with shape 1 so that `b -> (3, 2, 2)`.",
+  "ref": "    - `a -> (3, 2, 2)`, `b -> (1, 1, 2)` ആണെങ്കിൽ, broadcasting, `b`-യിലെ shape 1 ആയിരിക്കുന്ന എല്ലാ dimensions-ഉം expand ചെയ്യും. അതിനാൽ `b -> (3, 2, 2)` ആകും.",
+  "raw": "    - `a -> (3, 2, 2)`-ഉം `b -> (1, 1, 2)`-ഉം ആണെങ്കിൽ, shape 1 ഉള്ള എല്ലാ dimensions-ലും `b`-യെ broadcasting expand ചെയ്യും, അതിനാൽ `b -> (3, 2, 2)` ആകും.",
+  "old": "    - `a -> (3, 2, 2)`-ഉം `b -> (1, 1, 2)`-ഉം ആണെങ്കിൽ, shape 1 ഉള്ള എല്ലാ dimensions-ലും `b`-യെ broadcasting expand ചെയ്യും, അതിനാൽ `b -> (3, 2, 2)` ആകും.",
+  "new": "    - `a -> (3, 2, 2)`-ഉം `b -> (1, 1, 2)`-ഉം ആണെങ്കിൽ, shape 1 ഉള്ള എല്ലാ dimensions-ലും `b`-യെ broadcasting expand ചെയ്യും. അതിനാൽ `b -> (3, 2, 2)` ആകും.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.781,
+  "sim_new": 0.7873
+ },
+ {
+  "id": "numpy-d2-235",
+  "lecture": "numpy",
+  "draw": 2,
+  "en": "The name `b` is bound to `a` and becomes just another reference to the\narray (the Python assignment model is described in more detail {doc}`later in the course <python_advanced_features>`).",
+  "ref": "`b` എന്ന name, `a`-യുമായി bind ചെയ്യപ്പെട്ടിരിക്കുന്നു. അങ്ങനെ, അതേ array-യിലേക്കുള്ള മറ്റൊരു reference മാത്രമായി `b` മാറുന്നു. (Python-ന്റെ assignment model, {doc}`later in the course <python_advanced_features>`, കൂടുതൽ വിശദമായി വിവരിക്കുന്നുണ്ട്).",
+  "raw": "`b` എന്ന name, `a`-യുമായി bind ചെയ്യപ്പെട്ടിരിക്കുന്നു, അത് array-യിലേക്കുള്ള മറ്റൊരു reference മാത്രമായി മാറുന്നു (Python assignment model {doc}`കോഴ്സിൽ പിന്നീട് <python_advanced_features>` കൂടുതൽ വിശദമായി വിവരിക്കുന്നുണ്ട്).",
+  "old": "`b` എന്ന name, `a`-യുമായി bind ചെയ്യപ്പെട്ടിരിക്കുന്നു, അത് array-യിലേക്കുള്ള മറ്റൊരു reference മാത്രമായി മാറുന്നു (Python assignment model {doc}`കോഴ്സിൽ പിന്നീട് <python_advanced_features>` കൂടുതൽ വിശദമായി വിവരിക്കുന്നുണ്ട്).",
+  "new": "`b` എന്ന name, `a`-യുമായി bind ചെയ്യപ്പെട്ടിരിക്കുന്നു. അത് array-യിലേക്കുള്ള മറ്റൊരു reference മാത്രമായി മാറുന്നു (Python assignment model {doc}`കോഴ്സിൽ പിന്നീട് <python_advanced_features>` കൂടുതൽ വിശദമായി വിവരിക്കുന്നുണ്ട്).",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8842,
+  "sim_new": 0.8842
+ },
+ {
+  "id": "numpy-d2-245",
+  "lecture": "numpy",
+  "draw": 2,
+  "en": "NumPy provides versions of the standard functions `log`, `exp`, `sin`, etc. that act *element-wise* on arrays",
+  "ref": "Arrays-ലെ *ഓരോ element-ലും* act ചെയ്യുന്ന `log`, `exp`, `sin`, തുടങ്ങിയ standard functions-ന്റെ versions NumPy നൽകുന്നു:",
+  "raw": "`log`, `exp`, `sin`, മുതലായ standard functions-ന്റെ versions NumPy നൽകുന്നു, ഇവ arrays-ൽ *element-wise* ആയാണ് act ചെയ്യുന്നത്:",
+  "old": "`log`, `exp`, `sin`, മുതലായ standard functions-ന്റെ versions NumPy നൽകുന്നു, ഇവ arrays-ൽ *element-wise* ആയാണ് act ചെയ്യുന്നത്:",
+  "new": "`log`, `exp`, `sin`, മുതലായ standard functions-ന്റെ versions NumPy നൽകുന്നു. ഇവ arrays-ൽ *element-wise* ആയാണ് act ചെയ്യുന്നത്:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.5854,
+  "sim_new": 0.5854
+ },
+ {
+  "id": "numpy-d2-255",
+  "lecture": "numpy",
+  "draw": 2,
+  "en": "(Later we'll see that JAX has a powerful version of `np.vectorize` that can and usually does generate highly efficient code.)",
+  "ref": "(പിന്നീട് നമ്മൾ കാണും: JAX-ന് `np.vectorize`-ന്റെ ഒരു powerful version ഉണ്ട്. ഇത് സാധാരണയായി highly efficient code generate ചെയ്യും.)",
+  "raw": "(പിന്നീട് നമുക്ക് കാണാം, JAX-ന്, `np.vectorize`-ന്റെ ഒരു powerful version ഉണ്ട്, ഇത് highly efficient ആയ code generate ചെയ്യാൻ കഴിയും, മിക്ക സമയത്തും ഇത് സംഭവിക്കുകയും ചെയ്യുന്നു.)",
+  "old": "(പിന്നീട് നമുക്ക് കാണാം, JAX-ന്, `np.vectorize`-ന്റെ ഒരു powerful version ഉണ്ട്, ഇത് highly efficient ആയ code generate ചെയ്യാൻ കഴിയും, മിക്ക സമയത്തും ഇത് സംഭവിക്കുകയും ചെയ്യുന്നു.)",
+  "new": "(പിന്നീട് നമുക്ക് കാണാം, JAX-ന്, `np.vectorize`-ന്റെ ഒരു powerful version ഉണ്ട്. ഇത് highly efficient ആയ code generate ചെയ്യാൻ കഴിയും, മിക്ക സമയത്തും ഇത് സംഭവിക്കുകയും ചെയ്യുന്നു.)",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7476,
+  "sim_new": 0.754
+ },
+ {
+  "id": "numpy-d3-277",
+  "lecture": "numpy",
+  "draw": 3,
+  "en": "The most important structure that NumPy defines is an array data type, formally\ncalled a [numpy.ndarray](https://numpy.org/doc/stable/reference/arrays.ndarray.html).",
+  "ref": "NumPy define ചെയ്യുന്ന ഏറ്റവും പ്രധാനപ്പെട്ട structure, ഒരു array data type ആണ്. ഇതിനെ formally [numpy.ndarray](https://numpy.org/doc/stable/reference/arrays.ndarray.html) എന്ന് വിളിക്കുന്നു.",
+  "raw": "NumPy define ചെയ്യുന്ന ഏറ്റവും പ്രധാനപ്പെട്ട structure, ഒരു array data type ആണ്, ഇതിനെ ഔപചാരികമായി\n[numpy.ndarray](https://numpy.org/doc/stable/reference/arrays.ndarray.html) എന്ന് വിളിക്കുന്നു.",
+  "old": "NumPy define ചെയ്യുന്ന ഏറ്റവും പ്രധാനപ്പെട്ട structure, ഒരു array data type ആണ്, ഇതിനെ ഔപചാരികമായി\n[numpy.ndarray](https://numpy.org/doc/stable/reference/arrays.ndarray.html) എന്ന് വിളിക്കുന്നു.",
+  "new": "NumPy define ചെയ്യുന്ന ഏറ്റവും പ്രധാനപ്പെട്ട structure, ഒരു array data type ആണ്. ഇതിനെ ഔപചാരികമായി\n[numpy.ndarray](https://numpy.org/doc/stable/reference/arrays.ndarray.html) എന്ന് വിളിക്കുന്നു.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.9403,
+  "sim_new": 0.9455
+ },
+ {
+  "id": "numpy-d3-300",
+  "lecture": "numpy",
+  "draw": 3,
+  "en": "See also `np.asarray`, which performs a similar function, but does not make\na distinct copy of data already in a NumPy array.",
+  "ref": "`np.asarray` എന്നതും നോക്കുക. ഇത് similar ആയ ഒരു function ആണ്. പക്ഷേ, NumPy array-യിൽ already ഉള്ള data-യുടെ distinct copy `np.asarray` ഉണ്ടാക്കുന്നില്ല.",
+  "raw": "`np.asarray` എന്നതും കാണുക, ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ഒരു NumPy array-യിൽ already ഉള്ള data-യുടെ പ്രത്യേക copy ഉണ്ടാക്കില്ല.",
+  "old": "`np.asarray` എന്നതും കാണുക, ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ഒരു NumPy array-യിൽ already ഉള്ള data-യുടെ പ്രത്യേക copy ഉണ്ടാക്കില്ല.",
+  "new": "`np.asarray` എന്നതും കാണുക. ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ഒരു NumPy array-യിൽ already ഉള്ള data-യുടെ പ്രത്യേക copy ഉണ്ടാക്കില്ല.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7805,
+  "sim_new": 0.7875
+ },
+ {
+  "id": "numpy-d3-309",
+  "lecture": "numpy",
+  "draw": 3,
+  "en": "Arrays have useful methods, all of which are carefully optimized",
+  "ref": "Arrays-ന് useful ആയ methods ഉണ്ട്. ഇവയെല്ലാം carefully optimize ചെയ്തിരിക്കുന്നു:",
+  "raw": "Arrays-ന് useful ആയ methods ഉണ്ട്, ഇവയെല്ലാം സൂക്ഷ്മമായി optimize ചെയ്തിരിക്കുന്നു:",
+  "old": "Arrays-ന് useful ആയ methods ഉണ്ട്, ഇവയെല്ലാം സൂക്ഷ്മമായി optimize ചെയ്തിരിക്കുന്നു:",
+  "new": "Arrays-ന് useful ആയ methods ഉണ്ട്. ഇവയെല്ലാം സൂക്ഷ്മമായി optimize ചെയ്തിരിക്കുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8659,
+  "sim_new": 0.878
+ },
+ {
+  "id": "numpy-d3-326",
+  "lecture": "numpy",
+  "draw": 3,
+  "en": "* `for` loops can be avoided, which helps numerical code run fast and",
+  "ref": "* `for` loops ഒഴിവാക്കാം. ഇത് numerical code വേഗത്തിൽ run ചെയ്യാൻ സഹായിക്കുന്നു, ഒപ്പം",
+  "raw": "* `for` loops ഒഴിവാക്കാം, ഇത് numerical code വേഗത്തിൽ run ചെയ്യാൻ സഹായിക്കുന്നു, ഒപ്പം",
+  "old": "* `for` loops ഒഴിവാക്കാം, ഇത് numerical code വേഗത്തിൽ run ചെയ്യാൻ സഹായിക്കുന്നു, ഒപ്പം",
+  "new": "* `for` loops ഒഴിവാക്കാം. ഇത് numerical code വേഗത്തിൽ run ചെയ്യാൻ സഹായിക്കുന്നു, ഒപ്പം",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.9884,
+  "sim_new": 1.0
+ },
+ {
+  "id": "numpy-d3-327",
+  "lecture": "numpy",
+  "draw": 3,
+  "en": "* broadcasting can allow us to implement operations on arrays without actually creating some dimensions of these arrays in memory, which can be important when arrays are large.",
+  "ref": "* arrays-ന്റെ ഈ dimensions, memory-യിൽ actually create ചെയ്യാതെ തന്നെ arrays-ൽ operations implement ചെയ്യാൻ broadcasting നമ്മെ അനുവദിക്കുന്നു. Arrays വലുതാകുമ്പോൾ ഇത് പ്രധാനമാണ്.",
+  "raw": "* arrays-ന്റെ ചില dimensions memory-ൽ യഥാർത്ഥത്തിൽ create ചെയ്യാതെ തന്നെ, broadcasting ഉപയോഗിച്ച് arrays-ൽ operations implement ചെയ്യാൻ കഴിയും, ഇത് arrays വലുതായിരിക്കുമ്പോൾ പ്രധാനമാണ്.",
+  "old": "* arrays-ന്റെ ചില dimensions memory-ൽ യഥാർത്ഥത്തിൽ create ചെയ്യാതെ തന്നെ, broadcasting ഉപയോഗിച്ച് arrays-ൽ operations implement ചെയ്യാൻ കഴിയും, ഇത് arrays വലുതായിരിക്കുമ്പോൾ പ്രധാനമാണ്.",
+  "new": "* arrays-ന്റെ ചില dimensions memory-ൽ യഥാർത്ഥത്തിൽ create ചെയ്യാതെ തന്നെ, broadcasting ഉപയോഗിച്ച് arrays-ൽ operations implement ചെയ്യാൻ കഴിയും. ഇത് arrays വലുതായിരിക്കുമ്പോൾ പ്രധാനമാണ്.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7107,
+  "sim_new": 0.7163
+ },
+ {
+  "id": "numpy-d3-378",
+  "lecture": "numpy",
+  "draw": 3,
+  "en": "NumPy provides versions of the standard functions `log`, `exp`, `sin`, etc. that act *element-wise* on arrays",
+  "ref": "Arrays-ലെ *ഓരോ element-ലും* act ചെയ്യുന്ന `log`, `exp`, `sin`, തുടങ്ങിയ standard functions-ന്റെ versions NumPy നൽകുന്നു:",
+  "raw": "`log`, `exp`, `sin` തുടങ്ങിയ standard functions-ന്റെ versions NumPy നൽകുന്നു, ഇവ arrays-ൽ *element-wise* ആയാണ് പ്രവർത്തിക്കുന്നത്:",
+  "old": "`log`, `exp`, `sin` തുടങ്ങിയ standard functions-ന്റെ versions NumPy നൽകുന്നു, ഇവ arrays-ൽ *element-wise* ആയാണ് പ്രവർത്തിക്കുന്നത്:",
+  "new": "`log`, `exp`, `sin` തുടങ്ങിയ standard functions-ന്റെ versions NumPy നൽകുന്നു. ഇവ arrays-ൽ *element-wise* ആയാണ് പ്രവർത്തിക്കുന്നത്:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.616,
+  "sim_new": 0.616
+ },
+ {
+  "id": "numpy-d3-382",
+  "lecture": "numpy",
+  "draw": 3,
+  "en": "As we saw above, the usual arithmetic operations (`+`, `*`, etc.) also\nwork element-wise, and combining these with the ufuncs gives a very large set of fast element-wise functions.",
+  "ref": "മുകളിൽ നമ്മൾ കണ്ടത് പോലെ, സാധാരണ arithmetic operations (`+`, `*`, തുടങ്ങിയവ) ഓരോ element-ലും work ചെയ്യുന്നു. ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ, ഓരോ element-ലും work ചെയ്യുന്ന വളരെ വലിയൊരു set of fast functions ലഭിക്കുന്നു.",
+  "raw": "നമ്മൾ മുകളിൽ കണ്ടതുപോലെ, സാധാരണ arithmetic operations-ഉം (`+`, `*`, etc.)\nelement-wise ആയി work ചെയ്യുന്നു, ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ വളരെ വലിയൊരു set of fast element-wise functions ലഭിക്കുന്നു.",
+  "old": "നമ്മൾ മുകളിൽ കണ്ടതുപോലെ, സാധാരണ arithmetic operations-ഉം (`+`, `*`, etc.)\nelement-wise ആയി work ചെയ്യുന്നു, ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ വളരെ വലിയൊരു set of fast element-wise functions ലഭിക്കുന്നു.",
+  "new": "നമ്മൾ മുകളിൽ കണ്ടതുപോലെ, സാധാരണ arithmetic operations-ഉം (`+`, `*`, etc.)\nelement-wise ആയി work ചെയ്യുന്നു. ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ വളരെ വലിയൊരു set of fast element-wise functions ലഭിക്കുന്നു.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7806,
+  "sim_new": 0.7852
+ },
+ {
+  "id": "numpy-d3-388",
+  "lecture": "numpy",
+  "draw": 3,
+  "en": "(Later we'll see that JAX has a powerful version of `np.vectorize` that can and usually does generate highly efficient code.)",
+  "ref": "(പിന്നീട് നമ്മൾ കാണും: JAX-ന് `np.vectorize`-ന്റെ ഒരു powerful version ഉണ്ട്. ഇത് സാധാരണയായി highly efficient code generate ചെയ്യും.)",
+  "raw": "(പിന്നീട് നമുക്ക് കാണാം, JAX-ന്, `np.vectorize`-ന്റെ ശക്തമായ ഒരു version ഉണ്ട്, ഇത് മിക്ക സമയത്തും highly efficient ആയ code generate ചെയ്യാൻ കഴിയും.)",
+  "old": "(പിന്നീട് നമുക്ക് കാണാം, JAX-ന്, `np.vectorize`-ന്റെ ശക്തമായ ഒരു version ഉണ്ട്, ഇത് മിക്ക സമയത്തും highly efficient ആയ code generate ചെയ്യാൻ കഴിയും.)",
+  "new": "(പിന്നീട് നമുക്ക് കാണാം, JAX-ന്, `np.vectorize`-ന്റെ ശക്തമായ ഒരു version ഉണ്ട്. ഇത് മിക്ക സമയത്തും highly efficient ആയ code generate ചെയ്യാൻ കഴിയും.)",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7801,
+  "sim_new": 0.7872
+ },
+ {
+  "id": "numpy-d4-427",
+  "lecture": "numpy",
+  "draw": 4,
+  "en": "Related is `np.empty`, which creates arrays in memory that can later be populated with data",
+  "ref": "ഇതുമായി ബന്ധപ്പെട്ടതാണ് `np.empty`. ഇത് memory-യിൽ ആദ്യം ഒരു array-ക്കുള്ള സ്ഥലം create ചെയ്യുന്നു. അതിലേക്ക് പിന്നീട് data ചേർക്കാവുന്നതാണ്:",
+  "raw": "ഇതുമായി ബന്ധപ്പെട്ടത് `np.empty` ആണ്, ഇത് memory-ൽ arrays create ചെയ്യുന്നു, പിന്നീട് data-കൊണ്ട് നിറയ്ക്കാൻ കഴിയുന്നത്:",
+  "old": "ഇതുമായി ബന്ധപ്പെട്ടത് `np.empty` ആണ്, ഇത് memory-ൽ arrays create ചെയ്യുന്നു, പിന്നീട് data-കൊണ്ട് നിറയ്ക്കാൻ കഴിയുന്നത്:",
+  "new": "ഇതുമായി ബന്ധപ്പെട്ടത് `np.empty` ആണ്. ഇത് memory-ൽ arrays create ചെയ്യുന്നു, പിന്നീട് data-കൊണ്ട് നിറയ്ക്കാൻ കഴിയുന്നത്:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.728,
+  "sim_new": 0.7356
+ },
+ {
+  "id": "numpy-d4-433",
+  "lecture": "numpy",
+  "draw": 4,
+  "en": "See also `np.asarray`, which performs a similar function, but does not make\na distinct copy of data already in a NumPy array.",
+  "ref": "`np.asarray` എന്നതും നോക്കുക. ഇത് similar ആയ ഒരു function ആണ്. പക്ഷേ, NumPy array-യിൽ already ഉള്ള data-യുടെ distinct copy `np.asarray` ഉണ്ടാക്കുന്നില്ല.",
+  "raw": "`np.asarray` എന്നതും കാണുക, ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ഒരു NumPy array-ൽ ഇതിനകം ഉള്ള data-യുടെ ഒരു distinct copy ഉണ്ടാക്കുന്നില്ല.",
+  "old": "`np.asarray` എന്നതും കാണുക, ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ഒരു NumPy array-ൽ ഇതിനകം ഉള്ള data-യുടെ ഒരു distinct copy ഉണ്ടാക്കുന്നില്ല.",
+  "new": "`np.asarray` എന്നതും കാണുക. ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ഒരു NumPy array-ൽ ഇതിനകം ഉള്ള data-യുടെ ഒരു distinct copy ഉണ്ടാക്കുന്നില്ല.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7877,
+  "sim_new": 0.7945
+ },
+ {
+  "id": "numpy-d4-442",
+  "lecture": "numpy",
+  "draw": 4,
+  "en": "Arrays have useful methods, all of which are carefully optimized",
+  "ref": "Arrays-ന് useful ആയ methods ഉണ്ട്. ഇവയെല്ലാം carefully optimize ചെയ്തിരിക്കുന്നു:",
+  "raw": "Arrays-ന് useful ആയ methods ഉണ്ട്, ഇവയെല്ലാം carefully optimize ചെയ്തിരിക്കുന്നു:",
+  "old": "Arrays-ന് useful ആയ methods ഉണ്ട്, ഇവയെല്ലാം carefully optimize ചെയ്തിരിക്കുന്നു:",
+  "new": "Arrays-ന് useful ആയ methods ഉണ്ട്. ഇവയെല്ലാം carefully optimize ചെയ്തിരിക്കുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.9877,
+  "sim_new": 1.0
+ },
+ {
+  "id": "numpy-d4-459",
+  "lecture": "numpy",
+  "draw": 4,
+  "en": "* `for` loops can be avoided, which helps numerical code run fast and",
+  "ref": "* `for` loops ഒഴിവാക്കാം. ഇത് numerical code വേഗത്തിൽ run ചെയ്യാൻ സഹായിക്കുന്നു, ഒപ്പം",
+  "raw": "* `for` loops ഒഴിവാക്കാം, ഇത് numerical code fast ആയി run ചെയ്യാൻ സഹായിക്കുന്നു, കൂടാതെ",
+  "old": "* `for` loops ഒഴിവാക്കാം, ഇത് numerical code fast ആയി run ചെയ്യാൻ സഹായിക്കുന്നു, കൂടാതെ",
+  "new": "* `for` loops ഒഴിവാക്കാം. ഇത് numerical code fast ആയി run ചെയ്യാൻ സഹായിക്കുന്നു, കൂടാതെ",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8439,
+  "sim_new": 0.8555
+ },
+ {
+  "id": "numpy-d4-501",
+  "lecture": "numpy",
+  "draw": 4,
+  "en": "The name `b` is bound to `a` and becomes just another reference to the\narray (the Python assignment model is described in more detail {doc}`later in the course <python_advanced_features>`).",
+  "ref": "`b` എന്ന name, `a`-യുമായി bind ചെയ്യപ്പെട്ടിരിക്കുന്നു. അങ്ങനെ, അതേ array-യിലേക്കുള്ള മറ്റൊരു reference മാത്രമായി `b` മാറുന്നു. (Python-ന്റെ assignment model, {doc}`later in the course <python_advanced_features>`, കൂടുതൽ വിശദമായി വിവരിക്കുന്നുണ്ട്).",
+  "raw": "`b` എന്ന name, `a`-യിലേക്ക് bind ചെയ്യപ്പെടുന്നു, അത് array-യിലേക്കുള്ള മറ്റൊരു reference മാത്രമായി മാറുന്നു (Python assignment model {doc}`later in the course <python_advanced_features>` കൂടുതൽ വിശദമായി describe ചെയ്യുന്നുണ്ട്).",
+  "old": "`b` എന്ന name, `a`-യിലേക്ക് bind ചെയ്യപ്പെടുന്നു, അത് array-യിലേക്കുള്ള മറ്റൊരു reference മാത്രമായി മാറുന്നു (Python assignment model {doc}`later in the course <python_advanced_features>` കൂടുതൽ വിശദമായി describe ചെയ്യുന്നുണ്ട്).",
+  "new": "`b` എന്ന name, `a`-യിലേക്ക് bind ചെയ്യപ്പെടുന്നു. അത് array-യിലേക്കുള്ള മറ്റൊരു reference മാത്രമായി മാറുന്നു (Python assignment model {doc}`later in the course <python_advanced_features>` കൂടുതൽ വിശദമായി describe ചെയ്യുന്നുണ്ട്).",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8745,
+  "sim_new": 0.8745
+ },
+ {
+  "id": "numpy-d4-511",
+  "lecture": "numpy",
+  "draw": 4,
+  "en": "NumPy provides versions of the standard functions `log`, `exp`, `sin`, etc. that act *element-wise* on arrays",
+  "ref": "Arrays-ലെ *ഓരോ element-ലും* act ചെയ്യുന്ന `log`, `exp`, `sin`, തുടങ്ങിയ standard functions-ന്റെ versions NumPy നൽകുന്നു:",
+  "raw": "Standard functions ആയ `log`, `exp`, `sin`, etc.-ന്റെ versions NumPy നൽകുന്നു, ഇവ arrays-ൽ *element-wise* ആയി act ചെയ്യുന്നു:",
+  "old": "Standard functions ആയ `log`, `exp`, `sin`, etc.-ന്റെ versions NumPy നൽകുന്നു, ഇവ arrays-ൽ *element-wise* ആയി act ചെയ്യുന്നു:",
+  "new": "Standard functions ആയ `log`, `exp`, `sin`, etc.-ന്റെ versions NumPy നൽകുന്നു. ഇവ arrays-ൽ *element-wise* ആയി act ചെയ്യുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.4918,
+  "sim_new": 0.4918
+ },
+ {
+  "id": "numpy-d4-515",
+  "lecture": "numpy",
+  "draw": 4,
+  "en": "As we saw above, the usual arithmetic operations (`+`, `*`, etc.) also\nwork element-wise, and combining these with the ufuncs gives a very large set of fast element-wise functions.",
+  "ref": "മുകളിൽ നമ്മൾ കണ്ടത് പോലെ, സാധാരണ arithmetic operations (`+`, `*`, തുടങ്ങിയവ) ഓരോ element-ലും work ചെയ്യുന്നു. ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ, ഓരോ element-ലും work ചെയ്യുന്ന വളരെ വലിയൊരു set of fast functions ലഭിക്കുന്നു.",
+  "raw": "മുകളിൽ നമ്മൾ കണ്ടത് പോലെ, സാധാരണ arithmetic operations (`+`, `*`, etc.)-ഉം element-wise ആയി work ചെയ്യുന്നു, ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ fast element-wise functions-ന്റെ വളരെ വലിയൊരു set നമുക്ക് ലഭിക്കുന്നു:",
+  "old": "മുകളിൽ നമ്മൾ കണ്ടത് പോലെ, സാധാരണ arithmetic operations (`+`, `*`, etc.)-ഉം element-wise ആയി work ചെയ്യുന്നു, ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ fast element-wise functions-ന്റെ വളരെ വലിയൊരു set നമുക്ക് ലഭിക്കുന്നു:",
+  "new": "മുകളിൽ നമ്മൾ കണ്ടത് പോലെ, സാധാരണ arithmetic operations (`+`, `*`, etc.)-ഉം element-wise ആയി work ചെയ്യുന്നു. ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ fast element-wise functions-ന്റെ വളരെ വലിയൊരു set നമുക്ക് ലഭിക്കുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7838,
+  "sim_new": 0.7883
+ },
+ {
+  "id": "numpy-d4-521",
+  "lecture": "numpy",
+  "draw": 4,
+  "en": "(Later we'll see that JAX has a powerful version of `np.vectorize` that can and usually does generate highly efficient code.)",
+  "ref": "(പിന്നീട് നമ്മൾ കാണും: JAX-ന് `np.vectorize`-ന്റെ ഒരു powerful version ഉണ്ട്. ഇത് സാധാരണയായി highly efficient code generate ചെയ്യും.)",
+  "raw": "(പിന്നീട് നമുക്ക് കാണാം, JAX-ന്, `np.vectorize`-ന്റെ ഒരു powerful version ഉണ്ട്, ഇത് വളരെ efficient ആയ code generate ചെയ്യാൻ കഴിയുന്നതും, മിക്ക സമയത്തും ചെയ്യുന്നതും ആണ്.)",
+  "old": "(പിന്നീട് നമുക്ക് കാണാം, JAX-ന്, `np.vectorize`-ന്റെ ഒരു powerful version ഉണ്ട്, ഇത് വളരെ efficient ആയ code generate ചെയ്യാൻ കഴിയുന്നതും, മിക്ക സമയത്തും ചെയ്യുന്നതും ആണ്.)",
+  "new": "(പിന്നീട് നമുക്ക് കാണാം, JAX-ന്, `np.vectorize`-ന്റെ ഒരു powerful version ഉണ്ട്. ഇത് വളരെ efficient ആയ code generate ചെയ്യാൻ കഴിയുന്നതും, മിക്ക സമയത്തും ചെയ്യുന്നതും ആണ്.)",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7368,
+  "sim_new": 0.7434
+ },
+ {
+  "id": "numpy-d4-530",
+  "lecture": "numpy",
+  "draw": 4,
+  "en": "Much of this functionality is also available in [SciPy](https://scipy.org/), a collection of modules that are built on top of NumPy.",
+  "ref": "ഈ functionality-യുടെ ഭൂരിഭാഗവും [SciPy](https://scipy.org/)-യിലും ലഭ്യമാണ്. NumPy-യുടെ മുകളിൽ build ചെയ്തിരിക്കുന്ന modules-ന്റെ ഒരു collection ആണ് SciPy.",
+  "raw": "ഈ functionality-യുടെ വലിയൊരു ഭാഗം [SciPy](https://scipy.org/)-യിലും ലഭ്യമാണ്, ഇത് NumPy-യുടെ മുകളിൽ build ചെയ്തിരിക്കുന്ന modules-ന്റെ ഒരു collection ആണ്.",
+  "old": "ഈ functionality-യുടെ വലിയൊരു ഭാഗം [SciPy](https://scipy.org/)-യിലും ലഭ്യമാണ്, ഇത് NumPy-യുടെ മുകളിൽ build ചെയ്തിരിക്കുന്ന modules-ന്റെ ഒരു collection ആണ്.",
+  "new": "ഈ functionality-യുടെ വലിയൊരു ഭാഗം [SciPy](https://scipy.org/)-യിലും ലഭ്യമാണ്. ഇത് NumPy-യുടെ മുകളിൽ build ചെയ്തിരിക്കുന്ന modules-ന്റെ ഒരു collection ആണ്.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.9221,
+  "sim_new": 0.9286
+ },
+ {
+  "id": "numpy-d5-566",
+  "lecture": "numpy",
+  "draw": 5,
+  "en": "See also `np.asarray`, which performs a similar function, but does not make\na distinct copy of data already in a NumPy array.",
+  "ref": "`np.asarray` എന്നതും നോക്കുക. ഇത് similar ആയ ഒരു function ആണ്. പക്ഷേ, NumPy array-യിൽ already ഉള്ള data-യുടെ distinct copy `np.asarray` ഉണ്ടാക്കുന്നില്ല.",
+  "raw": "`np.asarray`-ഉം കൂടി കാണുക, ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ഇത് ഒരു NumPy array-ൽ already ഉള്ള data-യുടെ ഒരു വ്യത്യസ്ത copy ഉണ്ടാക്കുന്നില്ല.",
+  "old": "`np.asarray`-ഉം കൂടി കാണുക, ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ഇത് ഒരു NumPy array-ൽ already ഉള്ള data-യുടെ ഒരു വ്യത്യസ്ത copy ഉണ്ടാക്കുന്നില്ല.",
+  "new": "`np.asarray`-ഉം കൂടി കാണുക. ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ഇത് ഒരു NumPy array-ൽ already ഉള്ള data-യുടെ ഒരു വ്യത്യസ്ത copy ഉണ്ടാക്കുന്നില്ല.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7248,
+  "sim_new": 0.7315
+ },
+ {
+  "id": "numpy-d5-575",
+  "lecture": "numpy",
+  "draw": 5,
+  "en": "Arrays have useful methods, all of which are carefully optimized",
+  "ref": "Arrays-ന് useful ആയ methods ഉണ്ട്. ഇവയെല്ലാം carefully optimize ചെയ്തിരിക്കുന്നു:",
+  "raw": "Arrays-ന് useful ആയ methods ഉണ്ട്, ഇവയെല്ലാം carefully optimize ചെയ്തതാണ്:",
+  "old": "Arrays-ന് useful ആയ methods ഉണ്ട്, ഇവയെല്ലാം carefully optimize ചെയ്തതാണ്:",
+  "new": "Arrays-ന് useful ആയ methods ഉണ്ട്. ഇവയെല്ലാം carefully optimize ചെയ്തതാണ്:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.9032,
+  "sim_new": 0.9161
+ },
+ {
+  "id": "numpy-d5-592",
+  "lecture": "numpy",
+  "draw": 5,
+  "en": "* `for` loops can be avoided, which helps numerical code run fast and",
+  "ref": "* `for` loops ഒഴിവാക്കാം. ഇത് numerical code വേഗത്തിൽ run ചെയ്യാൻ സഹായിക്കുന്നു, ഒപ്പം",
+  "raw": "* `for` loops ഒഴിവാക്കാൻ കഴിയും, ഇത് numerical code fast ആയി run ചെയ്യാൻ സഹായിക്കുന്നു.",
+  "old": "* `for` loops ഒഴിവാക്കാൻ കഴിയും, ഇത് numerical code fast ആയി run ചെയ്യാൻ സഹായിക്കുന്നു.",
+  "new": "* `for` loops ഒഴിവാക്കാൻ കഴിയും. ഇത് numerical code fast ആയി run ചെയ്യാൻ സഹായിക്കുന്നു.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8208,
+  "sim_new": 0.8324
+ },
+ {
+  "id": "numpy-d5-634",
+  "lecture": "numpy",
+  "draw": 5,
+  "en": "The name `b` is bound to `a` and becomes just another reference to the\narray (the Python assignment model is described in more detail {doc}`later in the course <python_advanced_features>`).",
+  "ref": "`b` എന്ന name, `a`-യുമായി bind ചെയ്യപ്പെട്ടിരിക്കുന്നു. അങ്ങനെ, അതേ array-യിലേക്കുള്ള മറ്റൊരു reference മാത്രമായി `b` മാറുന്നു. (Python-ന്റെ assignment model, {doc}`later in the course <python_advanced_features>`, കൂടുതൽ വിശദമായി വിവരിക്കുന്നുണ്ട്).",
+  "raw": "`b` എന്ന name, `a`-യുമായി bind ചെയ്യപ്പെട്ടിരിക്കുന്നു, അത് ആ array-യിലേക്കുള്ള മറ്റൊരു reference മാത്രമായി മാറുന്നു (Python assignment model {doc}`later in the course <python_advanced_features>`-ൽ കൂടുതൽ വിശദമായി describe ചെയ്തിട്ടുണ്ട്).",
+  "old": "`b` എന്ന name, `a`-യുമായി bind ചെയ്യപ്പെട്ടിരിക്കുന്നു, അത് ആ array-യിലേക്കുള്ള മറ്റൊരു reference മാത്രമായി മാറുന്നു (Python assignment model {doc}`later in the course <python_advanced_features>`-ൽ കൂടുതൽ വിശദമായി describe ചെയ്തിട്ടുണ്ട്).",
+  "new": "`b` എന്ന name, `a`-യുമായി bind ചെയ്യപ്പെട്ടിരിക്കുന്നു. അത് ആ array-യിലേക്കുള്ള മറ്റൊരു reference മാത്രമായി മാറുന്നു (Python assignment model {doc}`later in the course <python_advanced_features>`-ൽ കൂടുതൽ വിശദമായി describe ചെയ്തിട്ടുണ്ട്).",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8934,
+  "sim_new": 0.8934
+ },
+ {
+  "id": "numpy-d5-644",
+  "lecture": "numpy",
+  "draw": 5,
+  "en": "NumPy provides versions of the standard functions `log`, `exp`, `sin`, etc. that act *element-wise* on arrays",
+  "ref": "Arrays-ലെ *ഓരോ element-ലും* act ചെയ്യുന്ന `log`, `exp`, `sin`, തുടങ്ങിയ standard functions-ന്റെ versions NumPy നൽകുന്നു:",
+  "raw": "Standard functions ആയ `log`, `exp`, `sin` എന്നിവയുടെ versions NumPy നൽകുന്നു, ഇവ arrays-ൽ *element-wise* ആയാണ് act ചെയ്യുന്നത്:",
+  "old": "Standard functions ആയ `log`, `exp`, `sin` എന്നിവയുടെ versions NumPy നൽകുന്നു, ഇവ arrays-ൽ *element-wise* ആയാണ് act ചെയ്യുന്നത്:",
+  "new": "Standard functions ആയ `log`, `exp`, `sin` എന്നിവയുടെ versions NumPy നൽകുന്നു. ഇവ arrays-ൽ *element-wise* ആയാണ് act ചെയ്യുന്നത്:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.4453,
+  "sim_new": 0.4453
+ },
+ {
+  "id": "numpy-d5-648",
+  "lecture": "numpy",
+  "draw": 5,
+  "en": "As we saw above, the usual arithmetic operations (`+`, `*`, etc.) also\nwork element-wise, and combining these with the ufuncs gives a very large set of fast element-wise functions.",
+  "ref": "മുകളിൽ നമ്മൾ കണ്ടത് പോലെ, സാധാരണ arithmetic operations (`+`, `*`, തുടങ്ങിയവ) ഓരോ element-ലും work ചെയ്യുന്നു. ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ, ഓരോ element-ലും work ചെയ്യുന്ന വളരെ വലിയൊരു set of fast functions ലഭിക്കുന്നു.",
+  "raw": "നമ്മൾ മുകളിൽ കണ്ടതുപോലെ, സാധാരണ arithmetic operations-ഉം (`+`, `*`, മുതലായവ) element-wise ആയി work ചെയ്യുന്നു, ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ fast element-wise functions-ന്റെ ഒരു വലിയ set ലഭിക്കുന്നു.",
+  "old": "നമ്മൾ മുകളിൽ കണ്ടതുപോലെ, സാധാരണ arithmetic operations-ഉം (`+`, `*`, മുതലായവ) element-wise ആയി work ചെയ്യുന്നു, ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ fast element-wise functions-ന്റെ ഒരു വലിയ set ലഭിക്കുന്നു.",
+  "new": "നമ്മൾ മുകളിൽ കണ്ടതുപോലെ, സാധാരണ arithmetic operations-ഉം (`+`, `*`, മുതലായവ) element-wise ആയി work ചെയ്യുന്നു. ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ fast element-wise functions-ന്റെ ഒരു വലിയ set ലഭിക്കുന്നു.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7419,
+  "sim_new": 0.7465
+ },
+ {
+  "id": "numpy-d5-654",
+  "lecture": "numpy",
+  "draw": 5,
+  "en": "(Later we'll see that JAX has a powerful version of `np.vectorize` that can and usually does generate highly efficient code.)",
+  "ref": "(പിന്നീട് നമ്മൾ കാണും: JAX-ന് `np.vectorize`-ന്റെ ഒരു powerful version ഉണ്ട്. ഇത് സാധാരണയായി highly efficient code generate ചെയ്യും.)",
+  "raw": "(JAX-ന്, `np.vectorize`-ന്റെ ഒരു powerful version ഉണ്ടെന്ന് പിന്നീട് നമുക്ക് കാണാം, ഇത് highly efficient code generate ചെയ്യാൻ കഴിയുന്നതും മിക്ക സമയത്തും അങ്ങനെ ചെയ്യുന്നതും ആണ്.)",
+  "old": "(JAX-ന്, `np.vectorize`-ന്റെ ഒരു powerful version ഉണ്ടെന്ന് പിന്നീട് നമുക്ക് കാണാം, ഇത് highly efficient code generate ചെയ്യാൻ കഴിയുന്നതും മിക്ക സമയത്തും അങ്ങനെ ചെയ്യുന്നതും ആണ്.)",
+  "new": "(JAX-ന്, `np.vectorize`-ന്റെ ഒരു powerful version ഉണ്ടെന്ന് പിന്നീട് നമുക്ക് കാണാം. ഇത് highly efficient code generate ചെയ്യാൻ കഴിയുന്നതും മിക്ക സമയത്തും അങ്ങനെ ചെയ്യുന്നതും ആണ്.)",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.6346,
+  "sim_new": 0.641
+ },
+ {
+  "id": "numpy-d5-663",
+  "lecture": "numpy",
+  "draw": 5,
+  "en": "Much of this functionality is also available in [SciPy](https://scipy.org/), a collection of modules that are built on top of NumPy.",
+  "ref": "ഈ functionality-യുടെ ഭൂരിഭാഗവും [SciPy](https://scipy.org/)-യിലും ലഭ്യമാണ്. NumPy-യുടെ മുകളിൽ build ചെയ്തിരിക്കുന്ന modules-ന്റെ ഒരു collection ആണ് SciPy.",
+  "raw": "ഈ functionality-യിൽ മിക്കതും [SciPy](https://scipy.org/)-ലും ലഭ്യമാണ്, ഇത് NumPy-യുടെ മുകളിൽ build ചെയ്ത modules-ന്റെ ഒരു collection ആണ്.",
+  "old": "ഈ functionality-യിൽ മിക്കതും [SciPy](https://scipy.org/)-ലും ലഭ്യമാണ്, ഇത് NumPy-യുടെ മുകളിൽ build ചെയ്ത modules-ന്റെ ഒരു collection ആണ്.",
+  "new": "ഈ functionality-യിൽ മിക്കതും [SciPy](https://scipy.org/)-ലും ലഭ്യമാണ്. ഇത് NumPy-യുടെ മുകളിൽ build ചെയ്ത modules-ന്റെ ഒരു collection ആണ്.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8522,
+  "sim_new": 0.8591
+ },
+ {
+  "id": "numpy-d6-697",
+  "lecture": "numpy",
+  "draw": 6,
+  "en": "Here the shape tuple has only one element, which is the length of the array\n(tuples with one element end with a comma).",
+  "ref": "ഇവിടെ shape tuple-ൽ, array-യുടെ length ആയ ഒരു element മാത്രമാണുള്ളത്. (ഒരു element മാത്രമുള്ള tuples ഒരു comma-യിൽ അവസാനിക്കും).",
+  "raw": "ഇവിടെ shape tuple-ന് ഒരു element മാത്രമേ ഉള്ളൂ, അത് array-യുടെ length ആണ്\n(ഒരു element ഉള്ള tuples ഒരു comma-യിൽ അവസാനിക്കുന്നു).",
+  "old": "ഇവിടെ shape tuple-ന് ഒരു element മാത്രമേ ഉള്ളൂ, അത് array-യുടെ length ആണ്\n(ഒരു element ഉള്ള tuples ഒരു comma-യിൽ അവസാനിക്കുന്നു).",
+  "new": "ഇവിടെ shape tuple-ന് ഒരു element മാത്രമേ ഉള്ളൂ. അത് array-യുടെ length ആണ്\n(ഒരു element ഉള്ള tuples ഒരു comma-യിൽ അവസാനിക്കുന്നു).",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7082,
+  "sim_new": 0.7004
+ },
+ {
+  "id": "numpy-d6-702",
+  "lecture": "numpy",
+  "draw": 6,
+  "en": "Related is `np.empty`, which creates arrays in memory that can later be populated with data",
+  "ref": "ഇതുമായി ബന്ധപ്പെട്ടതാണ് `np.empty`. ഇത് memory-യിൽ ആദ്യം ഒരു array-ക്കുള്ള സ്ഥലം create ചെയ്യുന്നു. അതിലേക്ക് പിന്നീട് data ചേർക്കാവുന്നതാണ്:",
+  "raw": "ബന്ധപ്പെട്ടതാണ് `np.empty`, ഇത് memory-ൽ arrays create ചെയ്യുന്നു, അവയിൽ പിന്നീട് data നിറയ്ക്കാം:",
+  "old": "ബന്ധപ്പെട്ടതാണ് `np.empty`, ഇത് memory-ൽ arrays create ചെയ്യുന്നു, അവയിൽ പിന്നീട് data നിറയ്ക്കാം:",
+  "new": "ബന്ധപ്പെട്ടതാണ് `np.empty`, ഇത് memory-ൽ arrays create ചെയ്യുന്നു. അവയിൽ പിന്നീട് data നിറയ്ക്കാം:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7197,
+  "sim_new": 0.728
+ },
+ {
+  "id": "numpy-d6-708",
+  "lecture": "numpy",
+  "draw": 6,
+  "en": "See also `np.asarray`, which performs a similar function, but does not make\na distinct copy of data already in a NumPy array.",
+  "ref": "`np.asarray` എന്നതും നോക്കുക. ഇത് similar ആയ ഒരു function ആണ്. പക്ഷേ, NumPy array-യിൽ already ഉള്ള data-യുടെ distinct copy `np.asarray` ഉണ്ടാക്കുന്നില്ല.",
+  "raw": "`np.asarray` എന്നതും കാണുക, ഇത് സമാനമായ ഒരു function നിർവ്വഹിക്കുന്നു, പക്ഷേ ഒരു NumPy array-യിൽ already ഉള്ള data-യുടെ separate ആയ copy ഉണ്ടാക്കുന്നില്ല.",
+  "old": "`np.asarray` എന്നതും കാണുക, ഇത് സമാനമായ ഒരു function നിർവ്വഹിക്കുന്നു, പക്ഷേ ഒരു NumPy array-യിൽ already ഉള്ള data-യുടെ separate ആയ copy ഉണ്ടാക്കുന്നില്ല.",
+  "new": "`np.asarray` എന്നതും കാണുക. ഇത് സമാനമായ ഒരു function നിർവ്വഹിക്കുന്നു, പക്ഷേ ഒരു NumPy array-യിൽ already ഉള്ള data-യുടെ separate ആയ copy ഉണ്ടാക്കുന്നില്ല.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7557,
+  "sim_new": 0.7622
+ },
+ {
+  "id": "numpy-d6-717",
+  "lecture": "numpy",
+  "draw": 6,
+  "en": "Arrays have useful methods, all of which are carefully optimized",
+  "ref": "Arrays-ന് useful ആയ methods ഉണ്ട്. ഇവയെല്ലാം carefully optimize ചെയ്തിരിക്കുന്നു:",
+  "raw": "Arrays-ന് useful ആയ methods ഉണ്ട്, അവയെല്ലാം സൂക്ഷ്മമായി optimize ചെയ്തിരിക്കുന്നു:",
+  "old": "Arrays-ന് useful ആയ methods ഉണ്ട്, അവയെല്ലാം സൂക്ഷ്മമായി optimize ചെയ്തിരിക്കുന്നു:",
+  "new": "Arrays-ന് useful ആയ methods ഉണ്ട്. അവയെല്ലാം സൂക്ഷ്മമായി optimize ചെയ്തിരിക്കുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8537,
+  "sim_new": 0.8659
+ },
+ {
+  "id": "numpy-d6-734",
+  "lecture": "numpy",
+  "draw": 6,
+  "en": "* `for` loops can be avoided, which helps numerical code run fast and",
+  "ref": "* `for` loops ഒഴിവാക്കാം. ഇത് numerical code വേഗത്തിൽ run ചെയ്യാൻ സഹായിക്കുന്നു, ഒപ്പം",
+  "raw": "* `for` loops ഒഴിവാക്കാൻ കഴിയും, ഇത് numerical code fast ആയി run ചെയ്യാൻ സഹായിക്കുന്നു, ഒപ്പം",
+  "old": "* `for` loops ഒഴിവാക്കാൻ കഴിയും, ഇത് numerical code fast ആയി run ചെയ്യാൻ സഹായിക്കുന്നു, ഒപ്പം",
+  "new": "* `for` loops ഒഴിവാക്കാൻ കഴിയും. ഇത് numerical code fast ആയി run ചെയ്യാൻ സഹായിക്കുന്നു, ഒപ്പം",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8715,
+  "sim_new": 0.8827
+ },
+ {
+  "id": "numpy-d6-736",
+  "lecture": "numpy",
+  "draw": 6,
+  "en": "For example, suppose `a` is a $3 \\times 3$ array (`a -> (3, 3)`), while `b` is a flat array with three elements (`b -> (3,)`).",
+  "ref": "For example, `a` എന്നത് ഒരു $3 \\times 3$ array ആണെന്ന് കരുതുക (`a -> (3, 3)`). അതേസമയം `b` എന്നത് മൂന്ന് elements ഉള്ള ഒരു flat array ആണ് (`b -> (3,)`).",
+  "raw": "For example, `a` ഒരു $3 \\times 3$ array ആണെന്ന് കരുതുക (`a -> (3, 3)`), അതേസമയം `b` മൂന്ന് elements ഉള്ള ഒരു flat array ആണ് (`b -> (3,)`).",
+  "old": "For example, `a` ഒരു $3 \\times 3$ array ആണെന്ന് കരുതുക (`a -> (3, 3)`), അതേസമയം `b` മൂന്ന് elements ഉള്ള ഒരു flat array ആണ് (`b -> (3,)`).",
+  "new": "For example, `a` ഒരു $3 \\times 3$ array ആണെന്ന് കരുതുക (`a -> (3, 3)`). അതേസമയം `b` മൂന്ന് elements ഉള്ള ഒരു flat array ആണ് (`b -> (3,)`).",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.9448,
+  "sim_new": 0.9517
+ },
+ {
+  "id": "numpy-d6-776",
+  "lecture": "numpy",
+  "draw": 6,
+  "en": "The name `b` is bound to `a` and becomes just another reference to the\narray (the Python assignment model is described in more detail {doc}`later in the course <python_advanced_features>`).",
+  "ref": "`b` എന്ന name, `a`-യുമായി bind ചെയ്യപ്പെട്ടിരിക്കുന്നു. അങ്ങനെ, അതേ array-യിലേക്കുള്ള മറ്റൊരു reference മാത്രമായി `b` മാറുന്നു. (Python-ന്റെ assignment model, {doc}`later in the course <python_advanced_features>`, കൂടുതൽ വിശദമായി വിവരിക്കുന്നുണ്ട്).",
+  "raw": "`b` എന്ന name, `a`-യുമായി bind ചെയ്യപ്പെട്ടിരിക്കുന്നു, ഇത് ആ array-യിലേക്കുള്ള മറ്റൊരു reference ആയി മാറുന്നു (Python assignment model {doc}`കോഴ്സിന്റെ പിന്നീടുള്ള ഭാഗത്ത് <python_advanced_features>` കൂടുതൽ വിശദമായി describe ചെയ്യപ്പെട്ടിട്ടുണ്ട്).",
+  "old": "`b` എന്ന name, `a`-യുമായി bind ചെയ്യപ്പെട്ടിരിക്കുന്നു, ഇത് ആ array-യിലേക്കുള്ള മറ്റൊരു reference ആയി മാറുന്നു (Python assignment model {doc}`കോഴ്സിന്റെ പിന്നീടുള്ള ഭാഗത്ത് <python_advanced_features>` കൂടുതൽ വിശദമായി describe ചെയ്യപ്പെട്ടിട്ടുണ്ട്).",
+  "new": "`b` എന്ന name, `a`-യുമായി bind ചെയ്യപ്പെട്ടിരിക്കുന്നു. ഇത് ആ array-യിലേക്കുള്ള മറ്റൊരു reference ആയി മാറുന്നു (Python assignment model {doc}`കോഴ്സിന്റെ പിന്നീടുള്ള ഭാഗത്ത് <python_advanced_features>` കൂടുതൽ വിശദമായി describe ചെയ്യപ്പെട്ടിട്ടുണ്ട്).",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7751,
+  "sim_new": 0.7751
+ },
+ {
+  "id": "numpy-d6-786",
+  "lecture": "numpy",
+  "draw": 6,
+  "en": "NumPy provides versions of the standard functions `log`, `exp`, `sin`, etc. that act *element-wise* on arrays",
+  "ref": "Arrays-ലെ *ഓരോ element-ലും* act ചെയ്യുന്ന `log`, `exp`, `sin`, തുടങ്ങിയ standard functions-ന്റെ versions NumPy നൽകുന്നു:",
+  "raw": "`log`, `exp`, `sin`, മുതലായ standard functions-ന്റെ versions NumPy നൽകുന്നു, അവ arrays-ൽ *element-wise* ആയി പ്രവർത്തിക്കുന്നു:",
+  "old": "`log`, `exp`, `sin`, മുതലായ standard functions-ന്റെ versions NumPy നൽകുന്നു, അവ arrays-ൽ *element-wise* ആയി പ്രവർത്തിക്കുന്നു:",
+  "new": "`log`, `exp`, `sin`, മുതലായ standard functions-ന്റെ versions NumPy നൽകുന്നു. അവ arrays-ൽ *element-wise* ആയി പ്രവർത്തിക്കുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.5854,
+  "sim_new": 0.5854
+ },
+ {
+  "id": "numpy-d6-790",
+  "lecture": "numpy",
+  "draw": 6,
+  "en": "As we saw above, the usual arithmetic operations (`+`, `*`, etc.) also\nwork element-wise, and combining these with the ufuncs gives a very large set of fast element-wise functions.",
+  "ref": "മുകളിൽ നമ്മൾ കണ്ടത് പോലെ, സാധാരണ arithmetic operations (`+`, `*`, തുടങ്ങിയവ) ഓരോ element-ലും work ചെയ്യുന്നു. ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ, ഓരോ element-ലും work ചെയ്യുന്ന വളരെ വലിയൊരു set of fast functions ലഭിക്കുന്നു.",
+  "raw": "മുകളിൽ നമ്മൾ കണ്ടത് പോലെ, സാധാരണ arithmetic operations-ഉം (`+`, `*`, മുതലായവ) element-wise ആയി work ചെയ്യുന്നു, ഇവയെ ufuncs-ഉമായി combine ചെയ്യുന്നത്, fast ആയ element-wise functions-ന്റെ വളരെ വലിയ ഒരു set നൽകുന്നു.",
+  "old": "മുകളിൽ നമ്മൾ കണ്ടത് പോലെ, സാധാരണ arithmetic operations-ഉം (`+`, `*`, മുതലായവ) element-wise ആയി work ചെയ്യുന്നു, ഇവയെ ufuncs-ഉമായി combine ചെയ്യുന്നത്, fast ആയ element-wise functions-ന്റെ വളരെ വലിയ ഒരു set നൽകുന്നു.",
+  "new": "മുകളിൽ നമ്മൾ കണ്ടത് പോലെ, സാധാരണ arithmetic operations-ഉം (`+`, `*`, മുതലായവ) element-wise ആയി work ചെയ്യുന്നു. ഇവയെ ufuncs-ഉമായി combine ചെയ്യുന്നത്, fast ആയ element-wise functions-ന്റെ വളരെ വലിയ ഒരു set നൽകുന്നു.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7302,
+  "sim_new": 0.7347
+ },
+ {
+  "id": "functions-d1-9",
+  "lecture": "functions",
+  "draw": 1,
+  "en": "Many functions exist already and we can use them as is.",
+  "ref": "Already exist ചെയ്യുന്ന ധാരാളം functions ഉണ്ട്. അവയെ നമുക്ക് അതേപടി ഉപയോഗിക്കാൻ പറ്റും.",
+  "raw": "പല functions-ഉം already exist ചെയ്യുന്നു, അവ നമുക്ക് അതേപടി ഉപയോഗിക്കാം.",
+  "old": "പല functions-ഉം already exist ചെയ്യുന്നു, അവ നമുക്ക് അതേപടി ഉപയോഗിക്കാം.",
+  "new": "പല functions-ഉം already exist ചെയ്യുന്നു. അവ നമുക്ക് അതേപടി ഉപയോഗിക്കാം.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.6667,
+  "sim_new": 0.6792
+ },
+ {
+  "id": "functions-d1-16",
+  "lecture": "functions",
+  "draw": 1,
+  "en": "Here's another one, which tests whether a given year is a leap year:",
+  "ref": "തന്നിരിക്കുന്ന വർഷം leap year ആണോ അല്ലയോ എന്ന് test ചെയ്യുന്ന മറ്റൊരു ഉദാഹരണം താഴെ കാണാം:",
+  "raw": "മറ്റൊരു example താഴെ കാണാം, ഇത് തന്നിരിക്കുന്ന ഒരു വർഷം leap year ആണോ എന്ന് test ചെയ്യുന്നു:",
+  "old": "മറ്റൊരു example താഴെ കാണാം, ഇത് തന്നിരിക്കുന്ന ഒരു വർഷം leap year ആണോ എന്ന് test ചെയ്യുന്നു:",
+  "new": "മറ്റൊരു example താഴെ കാണാം. ഇത് തന്നിരിക്കുന്ന ഒരു വർഷം leap year ആണോ എന്ന് test ചെയ്യുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.6188,
+  "sim_new": 0.6188
+ },
+ {
+  "id": "functions-d1-21",
+  "lecture": "functions",
+  "draw": 1,
+  "en": "Here's a longer function, that computes the absolute value of a given number.",
+  "ref": "കുറച്ചുകൂടി നീളമുള്ള ഒരു function നമുക്ക് താഴെ കാണാം. ഈ function ഉപയോഗിച്ച്, തന്നിരിക്കുന്ന ഒരു number-ന്റെ absolute value compute ചെയ്യാൻ സാധിക്കുന്നു.",
+  "raw": "താഴെ കാണുന്നത് കുറച്ചുകൂടി നീളമുള്ള ഒരു function ആണ്, ഇത് തന്നിരിക്കുന്ന ഒരു number-ന്റെ absolute value കണക്കാക്കുന്നു.",
+  "old": "താഴെ കാണുന്നത് കുറച്ചുകൂടി നീളമുള്ള ഒരു function ആണ്, ഇത് തന്നിരിക്കുന്ന ഒരു number-ന്റെ absolute value കണക്കാക്കുന്നു.",
+  "new": "താഴെ കാണുന്നത് കുറച്ചുകൂടി നീളമുള്ള ഒരു function ആണ്. ഇത് തന്നിരിക്കുന്ന ഒരു number-ന്റെ absolute value കണക്കാക്കുന്നു.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7011,
+  "sim_new": 0.7085
+ },
+ {
+  "id": "functions-d1-31",
+  "lecture": "functions",
+  "draw": 1,
+  "en": "Execution of the function terminates when the first return is hit, allowing\ncode like the following example",
+  "ref": "ഒരു function പ്രവർത്തിക്കുമ്പോൾ ആദ്യം എത്തിച്ചേരുന്ന return statement execute ചെയ്താൽ, ആ function-ന്റെ execution അവിടെ അവസാനിക്കും. അതിനാൽ താഴെ കാണുന്നതുപോലുള്ള code എഴുതാൻ സാധിക്കുന്നു:",
+  "raw": "ആദ്യത്തെ return-ൽ എത്തിച്ചേരുമ്പോൾ function-ന്റെ execution അവസാനിക്കുന്നു, ഇത് താഴെ കാണുന്നത് പോലുള്ള code സാധ്യമാക്കുന്നു:",
+  "old": "ആദ്യത്തെ return-ൽ എത്തിച്ചേരുമ്പോൾ function-ന്റെ execution അവസാനിക്കുന്നു, ഇത് താഴെ കാണുന്നത് പോലുള്ള code സാധ്യമാക്കുന്നു:",
+  "new": "ആദ്യത്തെ return-ൽ എത്തിച്ചേരുമ്പോൾ function-ന്റെ execution അവസാനിക്കുന്നു. ഇത് താഴെ കാണുന്നത് പോലുള്ള code സാധ്യമാക്കുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.5955,
+  "sim_new": 0.6084
+ },
+ {
+  "id": "functions-d1-80",
+  "lecture": "functions",
+  "draw": 1,
+  "en": "* While these lines are executed, the names `generator_type` and `rng.uniform` are \"synonyms\", and can be used in identical ways.",
+  "ref": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`-എന്നും `rng.uniform`-എന്നും ഉള്ള names \"synonyms\" ആണ്; അതായത് രണ്ടും ഒരേ രീതിയിൽ ഉപയോഗിക്കാം.",
+  "raw": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`, `rng.uniform` എന്നീ names \"synonyms\" ആണ്, അവ ഒരേ വിധത്തിൽ ഉപയോഗിക്കാം.",
+  "old": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`, `rng.uniform` എന്നീ names \"synonyms\" ആണ്, അവ ഒരേ വിധത്തിൽ ഉപയോഗിക്കാം.",
+  "new": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`, `rng.uniform` എന്നീ names \"synonyms\" ആണ്. അവ ഒരേ വിധത്തിൽ ഉപയോഗിക്കാം.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8456,
+  "sim_new": 0.8456
+ },
+ {
+  "id": "functions-d2-109",
+  "lecture": "functions",
+  "draw": 2,
+  "en": "Many functions exist already and we can use them as is.",
+  "ref": "Already exist ചെയ്യുന്ന ധാരാളം functions ഉണ്ട്. അവയെ നമുക്ക് അതേപടി ഉപയോഗിക്കാൻ പറ്റും.",
+  "raw": "ധാരാളം functions ഇതിനോടകം exist ചെയ്യുന്നു, അവയെ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.",
+  "old": "ധാരാളം functions ഇതിനോടകം exist ചെയ്യുന്നു, അവയെ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.",
+  "new": "ധാരാളം functions ഇതിനോടകം exist ചെയ്യുന്നു. അവയെ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.5521,
+  "sim_new": 0.5644
+ },
+ {
+  "id": "functions-d2-116",
+  "lecture": "functions",
+  "draw": 2,
+  "en": "Here's another one, which tests whether a given year is a leap year:",
+  "ref": "തന്നിരിക്കുന്ന വർഷം leap year ആണോ അല്ലയോ എന്ന് test ചെയ്യുന്ന മറ്റൊരു ഉദാഹരണം താഴെ കാണാം:",
+  "raw": "മറ്റൊരു example താഴെ കാണാം, ഇത് തന്നിരിക്കുന്ന ഒരു വർഷം leap year ആണോ എന്ന് പരിശോധിക്കുന്നു:",
+  "old": "മറ്റൊരു example താഴെ കാണാം, ഇത് തന്നിരിക്കുന്ന ഒരു വർഷം leap year ആണോ എന്ന് പരിശോധിക്കുന്നു:",
+  "new": "മറ്റൊരു example താഴെ കാണാം. ഇത് തന്നിരിക്കുന്ന ഒരു വർഷം leap year ആണോ എന്ന് പരിശോധിക്കുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.5193,
+  "sim_new": 0.5193
+ },
+ {
+  "id": "functions-d3-209",
+  "lecture": "functions",
+  "draw": 3,
+  "en": "Many functions exist already and we can use them as is.",
+  "ref": "Already exist ചെയ്യുന്ന ധാരാളം functions ഉണ്ട്. അവയെ നമുക്ക് അതേപടി ഉപയോഗിക്കാൻ പറ്റും.",
+  "raw": "പല functions-ഉം already exist ചെയ്യുന്നു, അവയെ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.",
+  "old": "പല functions-ഉം already exist ചെയ്യുന്നു, അവയെ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.",
+  "new": "പല functions-ഉം already exist ചെയ്യുന്നു. അവയെ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.5963,
+  "sim_new": 0.6087
+ },
+ {
+  "id": "functions-d3-216",
+  "lecture": "functions",
+  "draw": 3,
+  "en": "Here's another one, which tests whether a given year is a leap year:",
+  "ref": "തന്നിരിക്കുന്ന വർഷം leap year ആണോ അല്ലയോ എന്ന് test ചെയ്യുന്ന മറ്റൊരു ഉദാഹരണം താഴെ കാണാം:",
+  "raw": "മറ്റൊരു example താഴെ കാണാം, ഇത് തന്നിരിക്കുന്ന ഒരു വർഷം leap year ആണോ എന്ന് test ചെയ്യുന്നു:",
+  "old": "മറ്റൊരു example താഴെ കാണാം, ഇത് തന്നിരിക്കുന്ന ഒരു വർഷം leap year ആണോ എന്ന് test ചെയ്യുന്നു:",
+  "new": "മറ്റൊരു example താഴെ കാണാം. ഇത് തന്നിരിക്കുന്ന ഒരു വർഷം leap year ആണോ എന്ന് test ചെയ്യുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.6188,
+  "sim_new": 0.6188
+ },
+ {
+  "id": "functions-d3-231",
+  "lecture": "functions",
+  "draw": 3,
+  "en": "Execution of the function terminates when the first return is hit, allowing\ncode like the following example",
+  "ref": "ഒരു function പ്രവർത്തിക്കുമ്പോൾ ആദ്യം എത്തിച്ചേരുന്ന return statement execute ചെയ്താൽ, ആ function-ന്റെ execution അവിടെ അവസാനിക്കും. അതിനാൽ താഴെ കാണുന്നതുപോലുള്ള code എഴുതാൻ സാധിക്കുന്നു:",
+  "raw": "ആദ്യത്തെ return statement-ൽ എത്തിച്ചേരുമ്പോൾ function-ന്റെ execution അവസാനിക്കുന്നു, ഇത് താഴെ കൊടുത്തിരിക്കുന്ന example പോലുള്ള code സാധ്യമാക്കുന്നു:",
+  "old": "ആദ്യത്തെ return statement-ൽ എത്തിച്ചേരുമ്പോൾ function-ന്റെ execution അവസാനിക്കുന്നു, ഇത് താഴെ കൊടുത്തിരിക്കുന്ന example പോലുള്ള code സാധ്യമാക്കുന്നു:",
+  "new": "ആദ്യത്തെ return statement-ൽ എത്തിച്ചേരുമ്പോൾ function-ന്റെ execution അവസാനിക്കുന്നു. ഇത് താഴെ കൊടുത്തിരിക്കുന്ന example പോലുള്ള code സാധ്യമാക്കുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.591,
+  "sim_new": 0.603
+ },
+ {
+  "id": "functions-d3-253",
+  "lecture": "functions",
+  "draw": 3,
+  "en": "User-defined functions are important for improving the clarity of your code by",
+  "ref": "നമ്മുടെ code-ന്റെ clarity improve ചെയ്യുന്നതിൽ user-defined functions-ന് പ്രാധാന്യമുണ്ട്. കാരണം അവ:",
+  "raw": "നിങ്ങളുടെ code-ന്റെ clarity improve ചെയ്യുന്നതിൽ user-defined functions പ്രധാനമാണ്, ഇത് താഴെ പറയുന്ന വിധത്തിൽ സാധ്യമാകുന്നു",
+  "old": "നിങ്ങളുടെ code-ന്റെ clarity improve ചെയ്യുന്നതിൽ user-defined functions പ്രധാനമാണ്, ഇത് താഴെ പറയുന്ന വിധത്തിൽ സാധ്യമാകുന്നു:",
+  "new": "നിങ്ങളുടെ code-ന്റെ clarity improve ചെയ്യുന്നതിൽ user-defined functions പ്രധാനമാണ്. ഇത് താഴെ പറയുന്ന വിധത്തിൽ സാധ്യമാകുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.7085,
+  "sim_new": 0.7354
+ },
+ {
+  "id": "functions-d3-280",
+  "lecture": "functions",
+  "draw": 3,
+  "en": "* While these lines are executed, the names `generator_type` and `rng.uniform` are \"synonyms\", and can be used in identical ways.",
+  "ref": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`-എന്നും `rng.uniform`-എന്നും ഉള്ള names \"synonyms\" ആണ്; അതായത് രണ്ടും ഒരേ രീതിയിൽ ഉപയോഗിക്കാം.",
+  "raw": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`, `rng.uniform` എന്നീ names \"synonyms\" ആണ്, അവ ഒരേ രീതിയിൽ ഉപയോഗിക്കാം.",
+  "old": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`, `rng.uniform` എന്നീ names \"synonyms\" ആണ്, അവ ഒരേ രീതിയിൽ ഉപയോഗിക്കാം.",
+  "new": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`, `rng.uniform` എന്നീ names \"synonyms\" ആണ്. അവ ഒരേ രീതിയിൽ ഉപയോഗിക്കാം.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8782,
+  "sim_new": 0.8782
+ },
+ {
+  "id": "functions-d3-284",
+  "lecture": "functions",
+  "draw": 3,
+  "en": "This is an advanced topic that you should feel free to skip.",
+  "ref": "ഇത് ഒരു advanced topic ആണ്. അതിനാൽ നിങ്ങൾക്ക് വേണമെങ്കിൽ ഇത് skip ചെയ്യാം.",
+  "raw": "ഇത് ഒരു advanced topic ആണ്, ഇത് skip ചെയ്യാൻ നിങ്ങൾക്ക് സ്വാതന്ത്ര്യമുണ്ട്.",
+  "old": "ഇത് ഒരു advanced topic ആണ്, ഇത് skip ചെയ്യാൻ നിങ്ങൾക്ക് സ്വാതന്ത്ര്യമുണ്ട്.",
+  "new": "ഇത് ഒരു advanced topic ആണ്. ഇത് skip ചെയ്യാൻ നിങ്ങൾക്ക് സ്വാതന്ത്ര്യമുണ്ട്.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.5772,
+  "sim_new": 0.5906
+ },
+ {
+  "id": "functions-d4-309",
+  "lecture": "functions",
+  "draw": 4,
+  "en": "Many functions exist already and we can use them as is.",
+  "ref": "Already exist ചെയ്യുന്ന ധാരാളം functions ഉണ്ട്. അവയെ നമുക്ക് അതേപടി ഉപയോഗിക്കാൻ പറ്റും.",
+  "raw": "പല functions-ഉം already exist ചെയ്യുന്നു, അവയെ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.",
+  "old": "പല functions-ഉം already exist ചെയ്യുന്നു, അവയെ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.",
+  "new": "പല functions-ഉം already exist ചെയ്യുന്നു. അവയെ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.5963,
+  "sim_new": 0.6087
+ },
+ {
+  "id": "functions-d4-331",
+  "lecture": "functions",
+  "draw": 4,
+  "en": "Execution of the function terminates when the first return is hit, allowing\ncode like the following example",
+  "ref": "ഒരു function പ്രവർത്തിക്കുമ്പോൾ ആദ്യം എത്തിച്ചേരുന്ന return statement execute ചെയ്താൽ, ആ function-ന്റെ execution അവിടെ അവസാനിക്കും. അതിനാൽ താഴെ കാണുന്നതുപോലുള്ള code എഴുതാൻ സാധിക്കുന്നു:",
+  "raw": "Function-ന്റെ execution, ആദ്യത്തെ return-ൽ എത്തിച്ചേരുമ്പോൾ അവസാനിക്കുന്നു, ഇത് താഴെ കൊടുത്തിരിക്കുന്ന example പോലുള്ള code സാധ്യമാക്കുന്നു:",
+  "old": "Function-ന്റെ execution, ആദ്യത്തെ return-ൽ എത്തിച്ചേരുമ്പോൾ അവസാനിക്കുന്നു, ഇത് താഴെ കൊടുത്തിരിക്കുന്ന example പോലുള്ള code സാധ്യമാക്കുന്നു:",
+  "new": "Function-ന്റെ execution, ആദ്യത്തെ return-ൽ എത്തിച്ചേരുമ്പോൾ അവസാനിക്കുന്നു. ഇത് താഴെ കൊടുത്തിരിക്കുന്ന example പോലുള്ള code സാധ്യമാക്കുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.4417,
+  "sim_new": 0.454
+ },
+ {
+  "id": "functions-d4-380",
+  "lecture": "functions",
+  "draw": 4,
+  "en": "* While these lines are executed, the names `generator_type` and `rng.uniform` are \"synonyms\", and can be used in identical ways.",
+  "ref": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`-എന്നും `rng.uniform`-എന്നും ഉള്ള names \"synonyms\" ആണ്; അതായത് രണ്ടും ഒരേ രീതിയിൽ ഉപയോഗിക്കാം.",
+  "raw": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`, `rng.uniform` എന്നീ names \"synonyms\" ആണ്, അവയെ ഒരേപോലെ ഉപയോഗിക്കാം.",
+  "old": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`, `rng.uniform` എന്നീ names \"synonyms\" ആണ്, അവയെ ഒരേപോലെ ഉപയോഗിക്കാം.",
+  "new": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`, `rng.uniform` എന്നീ names \"synonyms\" ആണ്. അവയെ ഒരേപോലെ ഉപയോഗിക്കാം.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8327,
+  "sim_new": 0.8327
+ },
+ {
+  "id": "functions-d5-409",
+  "lecture": "functions",
+  "draw": 5,
+  "en": "Many functions exist already and we can use them as is.",
+  "ref": "Already exist ചെയ്യുന്ന ധാരാളം functions ഉണ്ട്. അവയെ നമുക്ക് അതേപടി ഉപയോഗിക്കാൻ പറ്റും.",
+  "raw": "പല functions-ഉം already exist ചെയ്യുന്നു, അവ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.",
+  "old": "പല functions-ഉം already exist ചെയ്യുന്നു, അവ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.",
+  "new": "പല functions-ഉം already exist ചെയ്യുന്നു. അവ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.5786,
+  "sim_new": 0.5912
+ },
+ {
+  "id": "functions-d5-416",
+  "lecture": "functions",
+  "draw": 5,
+  "en": "Here's another one, which tests whether a given year is a leap year:",
+  "ref": "തന്നിരിക്കുന്ന വർഷം leap year ആണോ അല്ലയോ എന്ന് test ചെയ്യുന്ന മറ്റൊരു ഉദാഹരണം താഴെ കാണാം:",
+  "raw": "മറ്റൊരു example താഴെ കാണാം, ഇത് തന്നിരിക്കുന്ന ഒരു വർഷം leap year ആണോ എന്ന് പരിശോധിക്കുന്നു:",
+  "old": "മറ്റൊരു example താഴെ കാണാം, ഇത് തന്നിരിക്കുന്ന ഒരു വർഷം leap year ആണോ എന്ന് പരിശോധിക്കുന്നു:",
+  "new": "മറ്റൊരു example താഴെ കാണാം. ഇത് തന്നിരിക്കുന്ന ഒരു വർഷം leap year ആണോ എന്ന് പരിശോധിക്കുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.5193,
+  "sim_new": 0.5193
+ },
+ {
+  "id": "functions-d5-431",
+  "lecture": "functions",
+  "draw": 5,
+  "en": "Execution of the function terminates when the first return is hit, allowing\ncode like the following example",
+  "ref": "ഒരു function പ്രവർത്തിക്കുമ്പോൾ ആദ്യം എത്തിച്ചേരുന്ന return statement execute ചെയ്താൽ, ആ function-ന്റെ execution അവിടെ അവസാനിക്കും. അതിനാൽ താഴെ കാണുന്നതുപോലുള്ള code എഴുതാൻ സാധിക്കുന്നു:",
+  "raw": "ആദ്യത്തെ return-ൽ എത്തിച്ചേരുമ്പോൾ function-ന്റെ execution അവസാനിക്കുന്നു, ഇത് താഴെയുള്ള example പോലുള്ള code സാധ്യമാക്കുന്നു",
+  "old": "ആദ്യത്തെ return-ൽ എത്തിച്ചേരുമ്പോൾ function-ന്റെ execution അവസാനിക്കുന്നു, ഇത് താഴെയുള്ള example പോലുള്ള code സാധ്യമാക്കുന്നു:",
+  "new": "ആദ്യത്തെ return-ൽ എത്തിച്ചേരുമ്പോൾ function-ന്റെ execution അവസാനിക്കുന്നു. ഇത് താഴെയുള്ള example പോലുള്ള code സാധ്യമാക്കുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.5449,
+  "sim_new": 0.5577
+ },
+ {
+  "id": "functions-d6-509",
+  "lecture": "functions",
+  "draw": 6,
+  "en": "Many functions exist already and we can use them as is.",
+  "ref": "Already exist ചെയ്യുന്ന ധാരാളം functions ഉണ്ട്. അവയെ നമുക്ക് അതേപടി ഉപയോഗിക്കാൻ പറ്റും.",
+  "raw": "ധാരാളം functions ഇതിനകം exist ചെയ്യുന്നു, അവ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.",
+  "old": "ധാരാളം functions ഇതിനകം exist ചെയ്യുന്നു, അവ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.",
+  "new": "ധാരാളം functions ഇതിനകം exist ചെയ്യുന്നു. അവ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.5409,
+  "sim_new": 0.5535
+ },
+ {
+  "id": "functions-d6-516",
+  "lecture": "functions",
+  "draw": 6,
+  "en": "Here's another one, which tests whether a given year is a leap year:",
+  "ref": "തന്നിരിക്കുന്ന വർഷം leap year ആണോ അല്ലയോ എന്ന് test ചെയ്യുന്ന മറ്റൊരു ഉദാഹരണം താഴെ കാണാം:",
+  "raw": "വളരെ useful ആയ മറ്റൊരു example താഴെ കാണാം, ഇത് തന്നിരിക്കുന്ന ഒരു വർഷം leap year ആണോ എന്ന് test ചെയ്യുന്നു:",
+  "old": "വളരെ useful ആയ മറ്റൊരു example താഴെ കാണാം, ഇത് തന്നിരിക്കുന്ന ഒരു വർഷം leap year ആണോ എന്ന് test ചെയ്യുന്നു:",
+  "new": "വളരെ useful ആയ മറ്റൊരു example താഴെ കാണാം. ഇത് തന്നിരിക്കുന്ന ഒരു വർഷം leap year ആണോ എന്ന് test ചെയ്യുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.5714,
+  "sim_new": 0.5714
+ },
+ {
+  "id": "functions-d6-531",
+  "lecture": "functions",
+  "draw": 6,
+  "en": "Execution of the function terminates when the first return is hit, allowing\ncode like the following example",
+  "ref": "ഒരു function പ്രവർത്തിക്കുമ്പോൾ ആദ്യം എത്തിച്ചേരുന്ന return statement execute ചെയ്താൽ, ആ function-ന്റെ execution അവിടെ അവസാനിക്കും. അതിനാൽ താഴെ കാണുന്നതുപോലുള്ള code എഴുതാൻ സാധിക്കുന്നു:",
+  "raw": "ആദ്യത്തെ return-ൽ എത്തിച്ചേരുമ്പോൾ function-ന്റെ execution അവസാനിക്കുന്നു, ഇത് താഴെ കൊടുത്തിരിക്കുന്ന example പോലുള്ള code സാധ്യമാക്കുന്നു",
+  "old": "ആദ്യത്തെ return-ൽ എത്തിച്ചേരുമ്പോൾ function-ന്റെ execution അവസാനിക്കുന്നു, ഇത് താഴെ കൊടുത്തിരിക്കുന്ന example പോലുള്ള code സാധ്യമാക്കുന്നു:",
+  "new": "ആദ്യത്തെ return-ൽ എത്തിച്ചേരുമ്പോൾ function-ന്റെ execution അവസാനിക്കുന്നു. ഇത് താഴെ കൊടുത്തിരിക്കുന്ന example പോലുള്ള code സാധ്യമാക്കുന്നു:",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.5477,
+  "sim_new": 0.56
+ },
+ {
+  "id": "functions-d6-580",
+  "lecture": "functions",
+  "draw": 6,
+  "en": "* While these lines are executed, the names `generator_type` and `rng.uniform` are \"synonyms\", and can be used in identical ways.",
+  "ref": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`-എന്നും `rng.uniform`-എന്നും ഉള്ള names \"synonyms\" ആണ്; അതായത് രണ്ടും ഒരേ രീതിയിൽ ഉപയോഗിക്കാം.",
+  "raw": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`, `rng.uniform` എന്നീ names \"synonyms\" ആണ്, ഇവ ഒരേ രീതിയിൽ ഉപയോഗിക്കാം.",
+  "old": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`, `rng.uniform` എന്നീ names \"synonyms\" ആണ്, ഇവ ഒരേ രീതിയിൽ ഉപയോഗിക്കാം.",
+  "new": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`, `rng.uniform` എന്നീ names \"synonyms\" ആണ്. ഇവ ഒരേ രീതിയിൽ ഉപയോഗിക്കാം.",
+  "kinds": [
+   "split"
+  ],
+  "sim_old": 0.8708,
+  "sim_new": 0.8708
+ }
+]

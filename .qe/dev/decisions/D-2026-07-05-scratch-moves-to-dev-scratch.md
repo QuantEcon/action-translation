@@ -1,3 +1,5 @@
+> **Superseded 2026-09-21** by [D-2026-09-21-no-scratch-in-tree](D-2026-09-21-no-scratch-in-tree.md): the tree has no scratch location.
+
 # Scratch moves from `.tmp/` to `.dev/scratch/`
 
 **Context**: The repo's documented scratch location was a gitignored `.tmp/` folder (anchored

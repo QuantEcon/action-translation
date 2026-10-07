@@ -194,6 +194,7 @@ describe('Language Configuration', () => {
         'limited',
         'multiple',
         'over time',
+        'provide',
         'relationship',
         'straightforward',
         'year',
@@ -223,7 +224,7 @@ describe('Language Configuration', () => {
   // Round 3 (lecture-python-programming.ml#13, 44 suggestion blocks): few new
   // terms. The residue was style; style examples were built, tested on a
   // held-out lecture with a blind pairwise judge, and set aside — see below.
-  describe('Malayalam round-3 glossary (v0.6.0): terms, no style examples', () => {
+  describe('Malayalam round-3 glossary (v0.6.0, answers in v0.7.0): terms, no style examples', () => {
     const glossaryPath = path.join(__dirname, '..', '..', 'glossary', 'ml.json');
     const glossary: {
       terms: { en: string; ml: string }[];
@@ -238,10 +239,18 @@ describe('Language Configuration', () => {
       expect(byEn.get('label')!.ml).toBe('label');
     });
 
-    it('holds the words that are open questions on ml#22', () => {
-      // `provide` was pinned English in v0.4.0 and stays as it was until he answers
-      expect(byEn.get('provide')!.ml).toBe('provide');
-      for (const en of ['prefer', 'draw', 'available']) {
+    // v0.7.0: the editor answered the held words on ml#22 (2026-09-19).
+    it('encodes the ml#22 answers: prefer stays English, provide moves to Malayalam', () => {
+      expect(byEn.get('prefer')!.ml).toBe('prefer');
+      // He calls both forms of `provide` acceptable and leans നൽകുന്നു; the
+      // round-2 pin (provide ചെയ്യുന്ന) is superseded, not banned.
+      expect(byEn.get('provide')!.ml).toBe('നൽകുക');
+    });
+
+    it('leaves draw and available unpinned — either form is the editor’s', () => {
+      // `draw`: he calls വരയ്ക്കാം natural and chose draw ചെയ്യുക elsewhere in
+      // the same lecture, so a flip is preference. `available`: a singleton.
+      for (const en of ['draw', 'available']) {
         expect(byEn.has(en)).toBe(false);
       }
     });
@@ -261,8 +270,9 @@ describe('Language Configuration', () => {
     const rules = getLanguageConfig('ml').additionalRules;
     const joined = rules.join('\n');
 
-    it('adds four rules (23 → 27): commas, verb form, idiom, further-reading scope', () => {
-      expect(rules).toHaveLength(27);
+    it('round 3 added four rules (23 → 27; 28 since the ml#22 answers): commas, verb form, idiom, further-reading scope', () => {
+      // 28 since the ml#22 answers added the plural rule (block below)
+      expect(rules).toHaveLength(28);
       expect(joined).toContain('Mark clause boundaries with commas');
       expect(joined).toContain('Choose the verb form by what the English means');
       expect(joined).toContain(
@@ -281,6 +291,52 @@ describe('Language Configuration', () => {
 
     it('no rule ends on a dangling colon (#301)', () => {
       for (const rule of rules) expect(rule.trimEnd().endsWith(':')).toBe(false);
+    });
+  });
+
+  // The editor's answers to the round-3 questions (2026-09-19). Two of them
+  // overturned the guess v0.29.0 had shipped, so these pin the corrected text.
+  describe('Malayalam round-3 answers (lecture-python-programming.ml#22)', () => {
+    const rules = getLanguageConfig('ml').additionalRules;
+    const joined = rules.join('\n');
+
+    it('puts the comma between -ഉം items always, single words included', () => {
+      expect(joined).toContain('simple-ഉം, convenient-ഉം');
+      expect(joined).not.toContain('when each side is a phrase rather than a single word');
+      // the suffix rule's own example must not contradict the comma rule
+      expect(joined).not.toContain('a green border-ഉം a blinking cursor-ഉം');
+    });
+
+    it('states the plural of a retained noun as its own rule (27 → 28)', () => {
+      const plural = rules.find((r) => r.startsWith('The plural of an English noun'));
+      expect(plural).toBeDefined();
+      expect(plural).toContain('function calls-ൽ');
+      expect(plural).toContain('not object-ുകൾ');
+    });
+
+    it('does not force draw into the light-verb pattern', () => {
+      expect(joined).not.toContain('draw ചെയ്യ');
+    });
+  });
+
+  // v0.29.1's §4a gate (2026-09-21): scenario 17 on the .ml lane failed twice
+  // — the model wrapped the fixture's plain "## Exercises" list in
+  // {exercise-start}, and structural parity refused the file. Measured on that
+  // fixture: 5/12 refusals at v0.29.0, 11/12 at v0.29.1, 0/24 with this scope
+  // sentence. The verbatim rule must speak only of directives the source has.
+  describe('Malayalam exercise rule is scoped to existing directives', () => {
+    const rules = getLanguageConfig('ml').additionalRules;
+    const exerciseRule = rules.find((r) => r.startsWith('Every exercise-related directive'));
+
+    it('forbids adding a directive the source does not have', () => {
+      expect(exerciseRule).toBeDefined();
+      expect(exerciseRule).toContain('directives the source ALREADY contains');
+      expect(exerciseRule).toContain('never add an {exercise}, {exercise-start}, {solution}');
+      expect(exerciseRule).toContain('with no directive wrapped around it');
+    });
+
+    it('stays one rule — the scope is part of the verbatim rule, not a 29th', () => {
+      expect(rules).toHaveLength(28);
     });
   });
 

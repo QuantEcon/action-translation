@@ -1,3 +1,8 @@
+> **Boundary settled 2026-09-21** — the question this record leaves open (where the editor draws
+> the line) was answered on lecture-python-programming.ml#22: see
+> `D-2026-09-21-ml-further-reading-boundary-is-the-reference-section`. The decision below stands;
+> kept unedited.
+
 # Malayalam: Further Reading lists stay in English
 
 **Context**: In the third inline review round (lecture-python-programming.ml#13, `matplotlib`,

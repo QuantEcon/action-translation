@@ -32,7 +32,7 @@ proposes dropping the probe model to halve the cost, the method stops working.
    economics terms and had **1 of 24** programming terms — a large gap means this exercise
    is worth running; a small one means it probably isn't.
 3. **Read the language's house style** before assessing anything: the existing glossary's
-   conventions, `src/language-config.ts`, and any `.dev/decisions/*<lang>*`. This changes
+   conventions, `src/language-config.ts`, and any `.qe/dev/decisions/*<lang>*`. This changes
    the answers, it doesn't just flavour them — Malayalam deliberately **keeps technical
    terms in English** (`D-2026-06-01-malayalam-keep-english-policy.md`) while French
    translates them. Proposing `f-string → chaînes f` is a reasonable question for `fr` and
@@ -145,7 +145,7 @@ which mechanism you recommend and why, and what it will cost the reviewer.
 ### 7. After review
 
 Apply the answers, merge, then write the run's REPORT.md embedding the final candidate
-table and counts. Record any policy-level outcome in `.dev/decisions/`.
+table and counts. Record any policy-level outcome in `.qe/dev/decisions/`.
 
 ## Scripts
 
