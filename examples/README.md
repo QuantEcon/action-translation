@@ -18,6 +18,7 @@ name: Sync Translations to Chinese
 on:
   pull_request:
     types: [closed]
+    branches: [main]
     paths:
       - 'lectures/**/*.md'
   issue_comment:
@@ -66,6 +67,16 @@ and its author is an `OWNER`, `MEMBER` or `COLLABORATOR`. `CONTRIBUTOR` — anyo
 merged PR — is deliberately excluded; the action applies the same three-way set internally,
 so admitting it here would only produce a run that no-ops.
 
+### Only merges into `main` sync
+
+`branches: [main]` is part of the trigger, not a nicety. `types: [closed]` fires for a PR
+closed against *any* base branch, and the job's `merged == true` check does not look at the
+base either — so without the filter, a PR merged into a long-lived work branch opens
+translation PRs in every target repo for content the published edition does not carry. The
+action also refuses a merged PR whose base is not the repository's default branch, which is
+the only check on the `\translate-resync` path (an `issue_comment` trigger has no branch
+filter). Change the filter if your default branch has another name.
+
 ## Multi-Language Support
 
 You can sync to multiple target repositories. Each target language needs a
@@ -78,6 +89,7 @@ name: Sync Translations
 on:
   pull_request:
     types: [closed]
+    branches: [main]
     paths:
       - 'lectures/**/*.md'
   issue_comment:

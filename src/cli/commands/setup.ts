@@ -154,6 +154,10 @@ name: Sync Translations
 on:
   pull_request:
     types: [closed]
+    # Only merges into main sync. Without this, a PR merged into any branch
+    # (a long-lived migration branch, say) opens translation PRs for content
+    # the published edition does not carry.
+    branches: [main]
     paths:
       - '${pathsFilter}'
       - '_toc.yml'

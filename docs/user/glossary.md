@@ -12,8 +12,8 @@ The glossary system ensures consistent translation of technical terminology acro
 |----------|------|-------|--------------|
 | Chinese (Simplified) | `glossary/zh-cn.json` | 357 | October 2025 |
 | Farsi | `glossary/fa.json` | 357 | December 2025 |
-| French | `glossary/fr.json` | 367 | August 2026 |
-| Malayalam | `glossary/ml.json` | 77 | September 2026 (v0.4.0) |
+| French | `glossary/fr.json` | 369 | September 2026 |
+| Malayalam | `glossary/ml.json` | 87 | September 2026 (v0.7.0) |
 
 These glossaries ship in the action repository (resolved from the checked-out repo at runtime — they are not baked into the bundle) and load automatically when the `target-language` matches. No configuration needed.
 
@@ -60,6 +60,26 @@ Each term has:
 - `en` — The English term (matched in source content)
 - `{lang-code}` — The target language translation (e.g., `zh-cn`, `fa`)
 - `context` — Optional category for disambiguation (e.g., `economics`, `statistics`, `programming`)
+
+### Style examples (optional)
+
+A glossary may also carry `style_examples` — sentence pairs exactly as a native-speaker editor approved them. They are rendered after the terms under a `STYLE EXAMPLES:` heading and tell the translator to match their register, sentence rhythm, punctuation and clause order (never their content). Use them for style that is easier to show than to state as a rule, and only with a measured case: the built-in glossaries ship no set — the Malayalam set was evaluated against the prompt rules on a held-out lecture and set aside as indistinguishable from them.
+
+```json
+{
+  "version": "1.0",
+  "terms": [],
+  "style_examples": [
+    {
+      "en": "We can now use the `plt.style.use()` method to set the style sheet.",
+      "ml": "ഇനി, `plt.style.use()` method ഉപയോഗിച്ച് നമുക്ക് style sheet set ചെയ്യാം.",
+      "source": "lecture-python-programming.ml matplotlib"
+    }
+  ]
+}
+```
+
+Each example has `en`, the target text under its language code, and an optional `source` (provenance; not sent to the model). A pair with no text for the language being translated is skipped. Keep the set small and fixed — it sits in the prompt-cached block of every call, so it costs little after the first request but is paid on every cold one.
 
 ## Using a custom glossary
 

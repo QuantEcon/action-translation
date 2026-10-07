@@ -36,6 +36,7 @@
 
 import { MystParser } from './parser.js';
 import { checkStructuralParity } from './structural-parity.js';
+import { findVerbatimViolations, hasVerbatimDirectivePolicy } from './verbatim-directives.js';
 import { buildHeadingMap, extractHeadingMap, normalizeHeadingForMatch } from './heading-map.js';
 import { Section } from './types.js';
 
@@ -61,6 +62,13 @@ export interface DeterministicCheckResult {
 export interface DeterministicDiffChecks {
   structurePreserved: DeterministicCheckResult;
   headingMapCorrect: DeterministicCheckResult;
+  /**
+   * Present only for target languages carrying a verbatim-directive policy
+   * (`ml`): every exercise-family block byte-identical to the source. Not one
+   * of the four published `diffChecks` booleans — it gates through a blocker
+   * finding instead, so the verdict schema is unchanged.
+   */
+  verbatimDirectives?: DeterministicCheckResult;
 }
 
 /** Cap on reported detail lines, so one broken file cannot flood the comment. */
@@ -181,9 +189,35 @@ export async function checkHeadingMapCorrect(
  * whose whole design is fail-closed, and a guard that silently disappears when
  * it errors is the defect class this module exists to remove.
  */
+/**
+ * Verbatim-directive policy (`verbatim-directives.ts`): for a language that
+ * carries it, every `{exercise}` / `{exercise-start}…{exercise-end}` /
+ * `{hint}` / `{solution}` / `{solution-start}…{solution-end}` block in the
+ * target must be byte-identical to its counterpart in the source. Passes
+ * trivially for every other language and when the language is unknown.
+ */
+export async function checkVerbatimDirectives(
+  pairs: ReviewedFilePair[],
+  targetLanguage: string | undefined
+): Promise<DeterministicCheckResult> {
+  if (!targetLanguage || !hasVerbatimDirectivePolicy(targetLanguage)) {
+    return { passed: true, details: [] };
+  }
+  const details: string[] = [];
+  for (const pair of pairs) {
+    if (details.length >= MAX_DETAILS) break;
+    for (const violation of findVerbatimViolations(pair.source, pair.target)) {
+      if (details.length >= MAX_DETAILS) break;
+      details.push(`${pair.filename}: ${violation}`);
+    }
+  }
+  return { passed: details.length === 0, details: details.slice(0, MAX_DETAILS) };
+}
+
 export async function runDeterministicDiffChecks(
   parser: MystParser,
-  pairs: ReviewedFilePair[]
+  pairs: ReviewedFilePair[],
+  targetLanguage?: string
 ): Promise<DeterministicDiffChecks> {
   const guard = async (
     name: string,
@@ -202,7 +236,7 @@ export async function runDeterministicDiffChecks(
     }
   };
 
-  return {
+  const checks: DeterministicDiffChecks = {
     structurePreserved: await guard('structurePreserved', () =>
       checkStructurePreserved(parser, pairs)
     ),
@@ -210,4 +244,10 @@ export async function runDeterministicDiffChecks(
       checkHeadingMapCorrect(parser, pairs)
     ),
   };
+  if (targetLanguage && hasVerbatimDirectivePolicy(targetLanguage)) {
+    checks.verbatimDirectives = await guard('verbatimDirectives', () =>
+      checkVerbatimDirectives(pairs, targetLanguage)
+    );
+  }
+  return checks;
 }

@@ -26429,35 +26429,84 @@ var LANGUAGE_CONFIGS = {
     // per-flag dispositions in QuantEcon/project-translation
     // reports/2026-08-17-ml-python-by-example-review-disposition.md.
     // The math-heavy Hint/Solution ruling is recorded in
-    // .dev/decisions/D-2026-08-17-ml-math-heavy-sections-stay-english.md.
+    // .qe/dev/decisions/D-2026-08-17-ml-math-heavy-sections-stay-english.md.
     // Extended again 2026-09 from the second inline round: 118 suggestion
     // blocks on lecture-python-programming.ml#7 (functions), dispositions in
     // reports/2026-09-01-ml-functions-review-disposition.md (same repo); the
     // exercise-statement scope ruling is
-    // .dev/decisions/D-2026-09-01-ml-exercise-statements-stay-english.md.
-    // Items held for the editor's answers on ml#12: "For example" as a
-    // discourse rule; glossary pins for already / name / example(s) / work.
+    // .qe/dev/decisions/D-2026-09-01-ml-exercise-statements-stay-english.md.
+    // The editor's ml#12 answers (2026-09-01) landed 2026-09-03: "For
+    // example" joins the discourse rule; glossary v0.5.0 pins already / name /
+    // example(s) / work; and his exercise ruling REPLACED the 09-01 scope rule
+    // — every exercise-family block is now byte-identical to the source,
+    // enforced in code by verbatim-directives.ts (decision record
+    // .qe/dev/decisions/D-2026-09-03-ml-all-exercise-content-stays-english.md).
+    // Third inline round, 2026-09-18: 44 suggestion blocks on
+    // lecture-python-programming.ml#13 (matplotlib), dispositions in
+    // reports/2026-09-18-ml-matplotlib-review-disposition.md. Every round-2
+    // class came through clean; the residue is style (clause-boundary commas,
+    // verb aspect, clause order). Editor-approved sentence pairs were tried
+    // as `style_examples` (mechanism in translator.ts) and set aside: on a
+    // held-out lecture a blind pairwise judge found every form — small, large,
+    // contrastive, or instead of rules — indistinguishable from the rules
+    // alone (experiments/ml-benchmark/arms/2026-09-18-round3-rules-exemplars-
+    // sonnet5/). Admission test from this round on: a pattern
+    // becomes a rule only if it recurs (twice in a round, or across rounds) —
+    // draw-to-draw variance makes a singleton as likely noise as habit. The
+    // Further Reading scope ruling is
+    // .qe/dev/decisions/D-2026-09-18-ml-further-reading-lists-stay-english.md.
+    //
+    // The editor's answers on lecture-python-programming.ml#22 (2026-09-19),
+    // encoded 2026-09-21 (rules 27 → 28, glossary v0.7.0): the comma between
+    // -ഉം items is ALWAYS there, single words included — v0.29.0 shipped the
+    // opposite guess; the plural of a retained noun is the English plural plus
+    // the suffix (its own rule, and a lint in ml_metrics.py); prefer stays
+    // English; provide → നൽകുക, though he calls both forms acceptable. `draw`
+    // is deliberately NOT encoded either way: he calls വരയ്ക്കാം natural and
+    // changed വരയ്ക്കുന്ന to draw ചെയ്യുക in the same lecture, so a flip on it
+    // is preference, not a defect — do not add it to the light-verb list. The
+    // Further Reading boundary is the section
+    // (D-2026-09-21-ml-further-reading-boundary-is-the-reference-section).
+    // Still open: rule 2 itself. He accepts "would a Kerala student say this
+    // word in everyday conversation?" as the test, but the rewrite waits on a
+    // held-out run of the blind pairwise judge — it is the rule behind the
+    // ordinary-word pendulum of rounds 2 and 3.
+    //
+    // Round 4 (lecture-python-programming.ml#23, numpy, 2026-09-28): rule 19
+    // gains one exception — "have already seen/met" takes കണ്ടുകഴിഞ്ഞു (the
+    // editor's form at 4/4 sites; the engine's 0/18). Measured at 24 functions draws it lifts
+    // the completive to 46/46 with no change in terminal punctuation. Three
+    // proposed deletions (rule 12's "and em-dashes", rule 18(a)'s "always after
+    // എന്നത്", the glossary ban on പ്രവർത്തിക്കുന്നു under `work`) were measured
+    // too and NOT shipped: together they raised the share of drafts that leave
+    // every paragraph before a code cell bare from 42% to 75% (p = 0.017) —
+    // a deletion is not inert. Arm: experiments/ml-benchmark/arms/
+    // 2026-09-28-round4-prompt-trims/.
     additionalRules: [
       "Keep ALL technical and domain terms in their original English/Latin form \u2014 do NOT translate or transliterate them into Malayalam script. This covers economics (inflation, GDP, recession, interest rate, demand, supply), finance (equity, bond, yield, portfolio, asset class), statistics (regression, correlation, standard deviation, normal distribution), mathematics, and programming (function, loop, library, variable, dataset, numpy, pandas), plus acronyms (GDP, RBI) and named institutions (Federal Reserve)",
       "Translate into Malayalam only the grammatical connective tissue \u2014 pronouns, demonstratives, conjunctions, postpositions, question words, everyday time/place words with a natural in-use equivalent (e.g. country \u2192 \u0D30\u0D3E\u0D1C\u0D4D\u0D2F\u0D02, year \u2192 \u0D35\u0D7C\u0D37\u0D02, before \u2192 \u0D2E\u0D41\u0D2E\u0D4D\u0D2A\u0D4D), and common native verbs of perceiving and saying (e.g. \u0D15\u0D3E\u0D23\u0D3E\u0D02, \u0D2A\u0D31\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41). Ordinary English content words \u2014 everyday adjectives, adverbs and nouns such as simple, best, important, hopefully, example, idea, popular \u2014 usually stay in Latin script in this register; do NOT force a Malayalam rendering merely because a dictionary equivalent exists",
-      'Attach Malayalam case-suffixes, postpositions, and sandhi directly to the English term, hyphenated where natural, using the forms a native writer prefers: -\u0D2F\u0D3F\u0D32\u0D46 after roots ending in a vowel sound (e.g. directory-\u0D2F\u0D3F\u0D32\u0D46, numpy-\u0D2F\u0D3F\u0D32\u0D46, economy-\u0D2F\u0D3F\u0D32\u0D46; likewise bond-\u0D28\u0D4D\u0D31\u0D46, asset classes-\u0D7D); the genitive allomorph -\u0D2F\u0D41\u0D1F\u0D46, never -\u0D28\u0D4D\u0D31\u0D46, after roots ending in a vowel sound (NumPy-\u0D2F\u0D41\u0D1F\u0D46, $\\pi$-\u0D2F\u0D41\u0D1F\u0D46); the fuller ablative \u0D28\u0D3F\u0D28\u0D4D\u0D28\u0D41\u0D02 rather than clipped \u0D28\u0D3F\u0D28\u0D4D\u0D28\u0D4D; the dative variant -\u0D07\u0D28\u0D41\u0D02 where euphony prefers it (\u0D13\u0D30\u0D4B element-\u0D07\u0D28\u0D41\u0D02, \u0D0E\u0D32\u0D4D\u0D32\u0D3E lines-\u0D07\u0D28\u0D41\u0D02); accusative -\u0D28\u0D46 on the object of a light-verb construction (100 standard normals-\u0D28\u0D46 generate \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D); keep the additive -\u0D09\u0D02 wherever the source says "plus", "also" or "too" (e.g. a green border-\u0D09\u0D02 a blinking cursor-\u0D09\u0D02); prefer -\u0D41\u0D2E\u0D3E\u0D2F\u0D3F over plain -\u0D2E\u0D3E\u0D2F\u0D3F. Apply the accusative -\u0D28\u0D46 on EVERY object of a transitive light verb, plurals included (functions-\u0D28\u0D46 define \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, code-\u0D28\u0D46 simplify \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, conditionals-\u0D28\u0D46 \u0D12\u0D34\u0D3F\u0D35\u0D3E\u0D15\u0D4D\u0D15\u0D3E\u0D02, function-\u0D28\u0D46 call \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15 \u2014 "a call to `plot`" is plot-\u0D28\u0D46 call \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D2E\u0D4D\u0D2A\u0D4B\u0D7E, never -\u0D32\u0D47\u0D15\u0D4D\u0D15\u0D41\u0D33\u0D4D\u0D33 call); do NOT attach the additive -\u0D09\u0D02 to the items of a bullet list (a list is not "X and Y"); coordinated code names take \u0D0E\u0D28\u0D4D\u0D28\u0D3F\u0D35 (`a`, `b` \u0D0E\u0D28\u0D4D\u0D28\u0D3F\u0D35 numbers \u0D06\u0D23\u0D4D), not -\u0D09\u0D02 \u2026 -\u0D09\u0D02',
-      "For verbs naming software, interface, or instructional actions, keep the English verb in Latin script and attach a Malayalam light verb (e.g. click \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, press \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, select \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, enable \u0D06\u0D15\u0D41\u0D02, close \u0D06\u0D15\u0D41\u0D02, check \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D02; likewise process \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D, return \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41, execute \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41; cover \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D02 for what a lecture covers, break down \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D for decomposing a program, refer \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41 for what a name refers to, and keep the adverb repeatedly in English in loop descriptions). NEVER replace these with a native Malayalam verb (e.g. not \u0D05\u0D2E\u0D7C\u0D24\u0D4D\u0D24\u0D41\u0D15 for press, not \u0D05\u0D1F\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D15 for hit, not \u0D05\u0D1F\u0D2F\u0D4D\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41 for close, not \u0D2A\u0D4D\u0D30\u0D35\u0D7C\u0D24\u0D4D\u0D24\u0D28\u0D15\u0D4D\u0D37\u0D2E\u0D2E\u0D3E\u0D15\u0D41\u0D02 for enable, not \u0D15\u0D48\u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D02 \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15 for cover \u2014 it reads managerial, not instructional); when the source uses a synonym for pressing a key (hit, strike, tap), normalise it to press \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15",
+      'Attach Malayalam case-suffixes, postpositions, and sandhi directly to the English term, hyphenated where natural, using the forms a native writer prefers: -\u0D2F\u0D3F\u0D32\u0D46 after roots ending in a vowel sound (e.g. directory-\u0D2F\u0D3F\u0D32\u0D46, numpy-\u0D2F\u0D3F\u0D32\u0D46, economy-\u0D2F\u0D3F\u0D32\u0D46; likewise bond-\u0D28\u0D4D\u0D31\u0D46, asset classes-\u0D7D); the genitive allomorph -\u0D2F\u0D41\u0D1F\u0D46, never -\u0D28\u0D4D\u0D31\u0D46, after roots ending in a vowel sound (NumPy-\u0D2F\u0D41\u0D1F\u0D46, $\\pi$-\u0D2F\u0D41\u0D1F\u0D46); the fuller ablative \u0D28\u0D3F\u0D28\u0D4D\u0D28\u0D41\u0D02 rather than clipped \u0D28\u0D3F\u0D28\u0D4D\u0D28\u0D4D; the dative variant -\u0D07\u0D28\u0D41\u0D02 where euphony prefers it (\u0D13\u0D30\u0D4B element-\u0D07\u0D28\u0D41\u0D02, \u0D0E\u0D32\u0D4D\u0D32\u0D3E lines-\u0D07\u0D28\u0D41\u0D02); accusative -\u0D28\u0D46 on the object of a light-verb construction (100 standard normals-\u0D28\u0D46 generate \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D); keep the additive -\u0D09\u0D02 wherever the source says "plus", "also" or "too" (e.g. a green border-\u0D09\u0D02, a blinking cursor-\u0D09\u0D02 \u2014 with the comma the clause-boundary rule asks for); prefer -\u0D41\u0D2E\u0D3E\u0D2F\u0D3F over plain -\u0D2E\u0D3E\u0D2F\u0D3F. Apply the accusative -\u0D28\u0D46 on EVERY object of a transitive light verb, plurals included (functions-\u0D28\u0D46 define \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, code-\u0D28\u0D46 simplify \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, conditionals-\u0D28\u0D46 \u0D12\u0D34\u0D3F\u0D35\u0D3E\u0D15\u0D4D\u0D15\u0D3E\u0D02, function-\u0D28\u0D46 call \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15 \u2014 "a call to `plot`" is plot-\u0D28\u0D46 call \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D2E\u0D4D\u0D2A\u0D4B\u0D7E, never -\u0D32\u0D47\u0D15\u0D4D\u0D15\u0D41\u0D33\u0D4D\u0D33 call); do NOT attach the additive -\u0D09\u0D02 to the items of a bullet list (a list is not "X and Y"); coordinated code names take \u0D0E\u0D28\u0D4D\u0D28\u0D3F\u0D35 (`a`, `b` \u0D0E\u0D28\u0D4D\u0D28\u0D3F\u0D35 numbers \u0D06\u0D23\u0D4D), not -\u0D09\u0D02 \u2026 -\u0D09\u0D02',
+      "The plural of an English noun kept in Latin script is its English plural, with the Malayalam suffix attached to that (objects create \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D2A\u0D4D\u0D2A\u0D46\u0D1F\u0D41\u0D28\u0D4D\u0D28\u0D41, function calls-\u0D7D, plots-\u0D28\u0D46, styles-\u0D28\u0D4D\u0D31\u0D46, parameters-\u0D09\u0D02) \u2014 never a Malayalam plural -\u0D15\u0D7E / -\u0D41\u0D15\u0D7E built on the English singular (not object-\u0D41\u0D15\u0D7E, not function call-\u0D15\u0D33\u0D3F\u0D7D, not plot-\u0D15\u0D7E); confirmed by the editor on lecture-python-programming.ml#22, and a vowel sign straight after a hyphen also renders as a dotted circle in some fonts",
+      'For verbs naming software, interface, or instructional actions, keep the English verb in Latin script and attach a Malayalam light verb (e.g. click \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, press \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, select \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, enable \u0D06\u0D15\u0D41\u0D02, close \u0D06\u0D15\u0D41\u0D02, check \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D02; likewise process \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D, return \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41, execute \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41; cover \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D02 for what a lecture covers, break down \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D for decomposing a program, refer \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41 for what a name refers to (never \u0D38\u0D42\u0D1A\u0D3F\u0D2A\u0D4D\u0D2A\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41 \u2014 calqued on both v0.27.0 regeneration draws), and keep the adverb repeatedly in English in loop descriptions; likewise remove \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D7B for removing colors from a plot, never \u0D28\u0D40\u0D15\u0D4D\u0D15\u0D02 \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D7B, and "adds a label with their mean" is \u0D05\u0D35\u0D2F\u0D41\u0D1F\u0D46 mean-\u0D28\u0D46 label \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28, never label \u0D1A\u0D47\u0D7C\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28). NEVER replace these with a native Malayalam verb (e.g. not \u0D05\u0D2E\u0D7C\u0D24\u0D4D\u0D24\u0D41\u0D15 for press, not \u0D05\u0D1F\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D15 for hit, not \u0D05\u0D1F\u0D2F\u0D4D\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41 for close, not \u0D2A\u0D4D\u0D30\u0D35\u0D7C\u0D24\u0D4D\u0D24\u0D28\u0D15\u0D4D\u0D37\u0D2E\u0D2E\u0D3E\u0D15\u0D41\u0D02 for enable, not \u0D15\u0D48\u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D02 \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15 for cover \u2014 it reads managerial, not instructional); when the source uses a synonym for pressing a key (hit, strike, tap), normalise it to press \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15',
       'The light-verb pattern is for technical and instructional actions only \u2014 an everyday verb with a natural Malayalam equivalent takes the Malayalam verb, not an English light-verb construction: a line that "ends with a colon" \u0D05\u0D35\u0D38\u0D3E\u0D28\u0D3F\u0D15\u0D4D\u0D15\u0D23\u0D02 (not end \u0D06\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41), a result "placed into the string" \u0D1A\u0D47\u0D7C\u0D15\u0D4D\u0D15\u0D2A\u0D4D\u0D2A\u0D46\u0D1F\u0D41\u0D02 (not place \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D2A\u0D4D\u0D2A\u0D46\u0D1F\u0D41\u0D02), lines that "end up on the same figure" \u0D12\u0D30\u0D47 figure-\u0D7D \u0D35\u0D30\u0D41\u0D02; and "is required/needed" is \u0D06\u0D35\u0D36\u0D4D\u0D2F\u0D2E\u0D3E\u0D2F\u0D3F\u0D35\u0D30\u0D41\u0D28\u0D4D\u0D28\u0D41, never \u0D06\u0D35\u0D36\u0D4D\u0D2F\u0D2A\u0D4D\u0D2A\u0D46\u0D1F\u0D41\u0D28\u0D4D\u0D28\u0D41 (which means "demands")',
       `A short sentence whose content is mostly code, commands, URLs, file paths, mathematical notation or parameter settings should stay entirely in English rather than being fragmented to translate one or two connective words (e.g. "For example, try \`np.random.randn(3)\`.", "Here's one solution:", "Use $T=200$, $\\alpha = 0.9$ and $\\{\\epsilon_t\\}$ as before.", "The sequence of shocks is assumed to be IID and standard normal."); parenthetical language comparisons also stay English ("(as in C, Java or Go)"); a bullet that is essentially two code expressions compared ("\`plot(x, 'b-')\` differs from \`plot('b-', x)\`") stays English; and the short pointer sentences that introduce a solution or a code cell ("Here's a function for the first random device.", "Here's another function for the second random device.", "Here's the standard solution") stay wholly English \u2014 in longer sentences translate the prose and leave the embedded code, URLs and math untouched`,
-      'Render English discourse formulas by function, never word-for-word: sentence-initial "In fact, \u2026", "On the other hand, \u2026", "In particular, \u2026", "Obviously, \u2026" and "Basically, \u2026" stay in English at the head of the rendered sentence (not \u0D35\u0D3E\u0D38\u0D4D\u0D24\u0D35\u0D24\u0D4D\u0D24\u0D3F\u0D7D, not \u0D2E\u0D31\u0D41\u0D35\u0D36\u0D24\u0D4D\u0D24\u0D4D, not \u0D2A\u0D4D\u0D30\u0D24\u0D4D\u0D2F\u0D47\u0D15\u0D3F\u0D1A\u0D4D\u0D1A\u0D41\u0D02, not \u0D35\u0D4D\u0D2F\u0D15\u0D4D\u0D24\u0D2E\u0D3E\u0D2F\u0D41\u0D02, not \u0D05\u0D1F\u0D3F\u0D38\u0D4D\u0D25\u0D3E\u0D28\u0D2A\u0D30\u0D2E\u0D3E\u0D2F\u0D3F); "in other words" \u2192 \u0D05\u0D24\u0D3E\u0D2F\u0D24\u0D4D (not \u0D2E\u0D31\u0D4D\u0D31\u0D4A\u0D30\u0D41 \u0D35\u0D3F\u0D27\u0D24\u0D4D\u0D24\u0D3F\u0D7D \u0D2A\u0D31\u0D1E\u0D4D\u0D1E\u0D3E\u0D7D); sentence-initial "Now, \u2026" \u2192 \u0D07\u0D28\u0D3F (not \u0D07\u0D2A\u0D4D\u0D2A\u0D4B\u0D7E); "turn to (the exercises)" \u2192 (exercises-\u0D32\u0D47\u0D15\u0D4D\u0D15\u0D4D) \u0D15\u0D1F\u0D15\u0D4D\u0D15\u0D41\u0D15; "almost always" \u2192 \u0D2E\u0D3F\u0D15\u0D4D\u0D15 \u0D38\u0D2E\u0D2F\u0D24\u0D4D\u0D24\u0D41\u0D02',
+      'Render English discourse formulas by function, never word-for-word: sentence-initial "For example, \u2026", "In fact, \u2026", "On the other hand, \u2026", "In particular, \u2026", "Obviously, \u2026" and "Basically, \u2026" stay in English at the head of the rendered sentence (not \u0D09\u0D26\u0D3E\u0D39\u0D30\u0D23\u0D24\u0D4D\u0D24\u0D3F\u0D28\u0D4D, not \u0D35\u0D3E\u0D38\u0D4D\u0D24\u0D35\u0D24\u0D4D\u0D24\u0D3F\u0D7D, not \u0D2E\u0D31\u0D41\u0D35\u0D36\u0D24\u0D4D\u0D24\u0D4D, not \u0D2A\u0D4D\u0D30\u0D24\u0D4D\u0D2F\u0D47\u0D15\u0D3F\u0D1A\u0D4D\u0D1A\u0D41\u0D02, not \u0D35\u0D4D\u0D2F\u0D15\u0D4D\u0D24\u0D2E\u0D3E\u0D2F\u0D41\u0D02, not \u0D05\u0D1F\u0D3F\u0D38\u0D4D\u0D25\u0D3E\u0D28\u0D2A\u0D30\u0D2E\u0D3E\u0D2F\u0D3F); "in other words" \u2192 \u0D05\u0D24\u0D3E\u0D2F\u0D24\u0D4D (not \u0D2E\u0D31\u0D4D\u0D31\u0D4A\u0D30\u0D41 \u0D35\u0D3F\u0D27\u0D24\u0D4D\u0D24\u0D3F\u0D7D \u0D2A\u0D31\u0D1E\u0D4D\u0D1E\u0D3E\u0D7D); sentence-initial "Now, \u2026" \u2192 \u0D07\u0D28\u0D3F (not \u0D07\u0D2A\u0D4D\u0D2A\u0D4B\u0D7E); "turn to (the exercises)" \u2192 (exercises-\u0D32\u0D47\u0D15\u0D4D\u0D15\u0D4D) \u0D15\u0D1F\u0D15\u0D4D\u0D15\u0D41\u0D15; "almost always" \u2192 \u0D2E\u0D3F\u0D15\u0D4D\u0D15 \u0D38\u0D2E\u0D2F\u0D24\u0D4D\u0D24\u0D41\u0D02',
       `When the English points at content that immediately follows ("Here is/are X \u2026", "figures like this one", "a version that illustrates \u2026"), render the pointer with \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D3E\u0D23\u0D3E\u0D02 / \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D4A\u0D1F\u0D41\u0D24\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 ("can be seen below" / "given below"), never with a literal \u0D07\u0D35\u0D3F\u0D1F\u0D46 ("here") or \u0D07\u0D24\u0D41\u0D2A\u0D4B\u0D32\u0D41\u0D33\u0D4D\u0D33 ("like this") \u2014 e.g. "Here's a version that illustrates for loops" \u2192 "\u2026 \u0D12\u0D30\u0D41 version \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D3E\u0D23\u0D3E\u0D02:"`,
       'Render English "the N with X" as an identifying modifier using the relative participle \u0D09\u0D33\u0D4D\u0D33 \u2014 X \u0D09\u0D33\u0D4D\u0D33 N, e.g. "the cell with the flashing cursor" \u2192 flashing cursor \u0D09\u0D33\u0D4D\u0D33 cell \u2014 never with an accompaniment form (-\u0D09\u0D02, -\u0D28\u0D4A\u0D2A\u0D4D\u0D2A\u0D02), which misreads identification ("which N") as accompaniment ("N together with X")',
       'With the comparative suffix -\u0D28\u0D47\u0D15\u0D4D\u0D15\u0D3E\u0D7E/-\u0D28\u0D46\u0D15\u0D4D\u0D15\u0D3E\u0D7E the comparison is already fully expressed \u2014 never add less/more/\u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41 alongside it; for "less X than Y" prefer Y-\u0D28\u0D4D\u0D31\u0D46 \u0D05\u0D24\u0D4D\u0D30 X \u0D05\u0D32\u0D4D\u0D32 ("not as X as Y")',
-      `Write short sentences in a classroom teacher's register: split English compound sentences at comma splices and em-dashes into two Malayalam sentences rather than mirroring the English punctuation; order clauses the way a teacher speaks \u2014 topic or purpose first, then the action; when introducing a definition, describe the concept before naming it; and use the fuller adjectival ordinals \u0D06\u0D26\u0D4D\u0D2F\u0D24\u0D4D\u0D24\u0D46 / \u0D05\u0D35\u0D38\u0D3E\u0D28\u0D24\u0D4D\u0D24\u0D46 for "first"/"last", never clipped \u0D06\u0D26\u0D4D\u0D2F / \u0D05\u0D35\u0D38\u0D3E\u0D28`,
-      `Speak as the teacher in the room, in the hortative: English "we will \u2026", "we'll \u2026", "let's \u2026", "we now \u2026" render as \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u2026 -\u0D06\u0D02 (\u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D15\u0D3E\u0D23\u0D3E\u0D02, \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02, \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D0E\u0D34\u0D41\u0D24\u0D3E\u0D02, \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D02), never as the plain future \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u2026 -\u0D41\u0D02 (not \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D2A\u0D20\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D02, not \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D28\u0D7D\u0D15\u0D41\u0D02, not \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D0E\u0D34\u0D41\u0D24\u0D41\u0D02); lecture verbs like "discuss", "see", "show", "say more about" become \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02 / \u0D15\u0D3E\u0D23\u0D3E\u0D02 ("we will say more about this later" \u2192 \u0D07\u0D24\u0D3F\u0D28\u0D46\u0D15\u0D4D\u0D15\u0D41\u0D31\u0D3F\u0D1A\u0D4D\u0D1A\u0D41\u0D33\u0D4D\u0D33 \u0D15\u0D42\u0D1F\u0D41\u0D24\u0D7D \u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D19\u0D4D\u0D19\u0D7E \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D2A\u0D3F\u0D28\u0D4D\u0D28\u0D40\u0D1F\u0D4D \u0D15\u0D3E\u0D23\u0D3E\u0D02); "consider the following \u2026" / "consider this code again" \u2192 \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D4A\u0D1F\u0D41\u0D24\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u2026 \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02 / \u0D08 code \u0D12\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D7D\u0D15\u0D4D\u0D15\u0D42\u0D1F\u0D3F \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02; a lecture-overview list ("In this lecture we will 1. \u2026 2. \u2026") is introduced as \u0D08 lecture-\u0D7D \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D7B \u0D2A\u0D4B\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D19\u0D4D\u0D19\u0D7E: with the items in the present tense (\u0D2A\u0D20\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41, \u0D2E\u0D28\u0D38\u0D4D\u0D38\u0D3F\u0D32\u0D3E\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41); "Note that \u2026" fronts \u0D36\u0D4D\u0D30\u0D26\u0D4D\u0D27\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D15, and "Recall that \u2026" fronts \u0D13\u0D7C\u0D15\u0D4D\u0D15\u0D41\u0D15:`,
+      'Write short sentences in a classroom teacher\'s register: split English compound sentences at comma splices and em-dashes into two Malayalam sentences rather than mirroring the English punctuation; order clauses the way a teacher speaks \u2014 topic or purpose first, then the action; when introducing a definition, describe the concept before naming it; and use the fuller adjectival ordinals \u0D06\u0D26\u0D4D\u0D2F\u0D24\u0D4D\u0D24\u0D46 / \u0D05\u0D35\u0D38\u0D3E\u0D28\u0D24\u0D4D\u0D24\u0D46 for "first"/"last", never clipped \u0D06\u0D26\u0D4D\u0D2F / \u0D05\u0D35\u0D38\u0D3E\u0D28; when a bullet that is a bare noun-phrase fragment in English is translated, make it a full Malayalam sentence ("* output in all the usual formats (PDF, PNG, etc.)" \u2192 * \u0D38\u0D3E\u0D27\u0D3E\u0D30\u0D23 \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D0E\u0D32\u0D4D\u0D32\u0D3E formats-\u0D32\u0D41\u0D02 output \u0D32\u0D2D\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41 \u2014 PDF, PNG, etc.; "* a last-in, first-out (LIFO) data structure" \u2192 * \u0D07\u0D24\u0D4D \u0D12\u0D30\u0D41 last-in, first-out (LIFO) data structure \u0D06\u0D23\u0D4D.); for "use X to do Y" put the instrument first (\u0D07\u0D28\u0D3F, `plt.style.use()` method \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D1A\u0D4D\u0D1A\u0D4D \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D style sheet set \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D02.); and \u0D2E\u0D31\u0D4D\u0D31\u0D4A\u0D30\u0D41 ("another") sits directly before its noun, after any adjective phrase (\u0D35\u0D33\u0D30\u0D46 useful \u0D06\u0D2F \u0D2E\u0D31\u0D4D\u0D31\u0D4A\u0D30\u0D41 feature, not \u0D2E\u0D31\u0D4D\u0D31\u0D4A\u0D30\u0D41 \u0D35\u0D33\u0D30\u0D46 useful \u0D06\u0D2F feature)',
+      `Speak as the teacher in the room, in the hortative: English "we will \u2026", "we'll \u2026", "let's \u2026", "we now \u2026" render as \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u2026 -\u0D06\u0D02 (\u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D15\u0D3E\u0D23\u0D3E\u0D02, \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02, \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D0E\u0D34\u0D41\u0D24\u0D3E\u0D02, \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D02), never as the plain future \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u2026 -\u0D41\u0D02 (not \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D2A\u0D20\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D02, not \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D28\u0D7D\u0D15\u0D41\u0D02, not \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D0E\u0D34\u0D41\u0D24\u0D41\u0D02); lecture verbs like "discuss", "see", "show", "say more about" become \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02 / \u0D15\u0D3E\u0D23\u0D3E\u0D02 ("we will say more about this later" \u2192 \u0D07\u0D24\u0D3F\u0D28\u0D46\u0D15\u0D4D\u0D15\u0D41\u0D31\u0D3F\u0D1A\u0D4D\u0D1A\u0D41\u0D33\u0D4D\u0D33 \u0D15\u0D42\u0D1F\u0D41\u0D24\u0D7D \u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D19\u0D4D\u0D19\u0D7E \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D2A\u0D3F\u0D28\u0D4D\u0D28\u0D40\u0D1F\u0D4D \u0D15\u0D3E\u0D23\u0D3E\u0D02); "consider the following \u2026" / "consider this code again" \u2192 \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D4A\u0D1F\u0D41\u0D24\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u2026 \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02 / \u0D08 code \u0D12\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D7D\u0D15\u0D4D\u0D15\u0D42\u0D1F\u0D3F \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02; a lecture-overview list ("In this lecture we will 1. \u2026 2. \u2026") is introduced as \u0D08 lecture-\u0D7D \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D7B \u0D2A\u0D4B\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D19\u0D4D\u0D19\u0D7E: with the items in the present tense (\u0D2A\u0D20\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41, \u0D2E\u0D28\u0D38\u0D4D\u0D38\u0D3F\u0D32\u0D3E\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41); "Note that \u2026" fronts \u0D36\u0D4D\u0D30\u0D26\u0D4D\u0D27\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D15, and "Recall that \u2026" fronts \u0D13\u0D7C\u0D15\u0D4D\u0D15\u0D41\u0D15: (with its colon); a reader-directed "think of it as \u2026" or a bare simile ("---like a blank canvas") takes the same -\u0D06\u0D02 form and keeps its verb (\u0D12\u0D30\u0D41 blank canvas \u0D2A\u0D4B\u0D32\u0D46 \u0D15\u0D30\u0D41\u0D24\u0D3E\u0D02; plotting \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D28\u0D41\u0D33\u0D4D\u0D33 \u0D12\u0D30\u0D41 frame \u0D06\u0D2F\u0D3F \u0D15\u0D30\u0D41\u0D24\u0D3E\u0D02), not the bare imperative \u0D15\u0D30\u0D41\u0D24\u0D41\u0D15 and not a verbless \u0D2A\u0D4B\u0D32\u0D46`,
       `Terminal punctuation is required on every Malayalam prose paragraph regardless of the English source's punctuation: a paragraph that introduces the code cell, list or displayed equation that follows ends with a colon ("\u2026 \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D3E\u0D23\u0D3E\u0D02:", "\u2026 syntax illustrate \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41:", "\u2026 \u0D15\u0D3E\u0D30\u0D23\u0D02 \u0D05\u0D35:"), every other paragraph ends with a full stop, and a comma follows a fronted \u0D36\u0D4D\u0D30\u0D26\u0D4D\u0D27\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D15, / \u0D07\u0D28\u0D3F, / For example, \u2014 never leave a Malayalam paragraph ending on a bare verb or noun because the English line had no punctuation`,
       "When a retained-English word opens a Malayalam sentence or list item \u2014 including inside {ref}/{doc} link text \u2014 capitalise it exactly as English would at a sentence start: Functions-\u0D28\u0D46 systematic \u0D06\u0D2F\u0D3F \u0D2A\u0D20\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41; Built-in functions \u0D2E\u0D3E\u0D24\u0D4D\u0D30\u0D02 \u2026; Return statement \u0D07\u0D32\u0D4D\u0D32\u0D3E\u0D24\u0D4D\u0D24 functions \u2026; Order \u0D05\u0D28\u0D41\u0D38\u0D30\u0D3F\u0D1A\u0D4D\u0D1A\u0D4D \u2026; User-defined functions-\u0D32\u0D41\u0D02 \u2026; Indent \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 code-\u0D28\u0D46 \u2026; {ref}`Previous lecture <\u2026>`-\u0D7D \u2026; never begin a sentence with a lowercase Latin word",
-      'Fixed renderings the editor corrected on every occurrence \u2014 apply them without exception: "a given N" is \u0D24\u0D28\u0D4D\u0D28\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 N (\u0D24\u0D28\u0D4D\u0D28\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D35\u0D7C\u0D37\u0D02, \u0D24\u0D28\u0D4D\u0D28\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D12\u0D30\u0D41 file-\u0D7D), NEVER \u0D12\u0D30\u0D41 \u0D28\u0D7D\u0D15\u0D3F\u0D2F N; "consider X" as an invitation to look at X is X \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02 or consider \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, NEVER \u0D15\u0D23\u0D15\u0D4D\u0D15\u0D3F\u0D32\u0D46\u0D1F\u0D41\u0D15\u0D4D\u0D15\u0D41\u0D15 \u2014 which is reserved for the "take into account / only consider n positive" sense (\u0D07\u0D35\u0D3F\u0D1F\u0D46 $n$-\u0D28\u0D46 \u2026 \u0D2E\u0D3E\u0D24\u0D4D\u0D30\u0D2E\u0D47 \u0D15\u0D23\u0D15\u0D4D\u0D15\u0D3F\u0D32\u0D46\u0D1F\u0D41\u0D15\u0D4D\u0D15\u0D42); "in one line" is \u0D12\u0D31\u0D4D\u0D31 line-\u0D7D; the spelling is \u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41\u0D15\u0D42\u0D1F\u0D3F, not \u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41\u0D15\u0D42\u0D1F\u0D46; "useful" stays English (\u0D35\u0D33\u0D30\u0D46 useful \u0D06\u0D2F, \u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41\u0D15\u0D42\u0D1F\u0D3F useful \u0D06\u0D15\u0D4D\u0D15\u0D3E\u0D02), never \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D2A\u0D4D\u0D30\u0D26\u0D2E\u0D3E\u0D2F; "a bad idea" is \u0D05\u0D24\u0D4D\u0D30 \u0D28\u0D32\u0D4D\u0D32\u0D24\u0D32\u0D4D\u0D32; "straightforward" is \u0D0E\u0D33\u0D41\u0D2A\u0D4D\u0D2A\u0D02, "contrived" is \u0D15\u0D43\u0D24\u0D4D\u0D30\u0D3F\u0D2E\u0D02, "limited" (of a function) is -\u0D28\u0D4D \u0D1A\u0D3F\u0D32 \u0D2A\u0D30\u0D3F\u0D2E\u0D3F\u0D24\u0D3F\u0D15\u0D33\u0D41\u0D23\u0D4D\u0D1F\u0D4D, "facilitate" is \u0D38\u0D39\u0D3E\u0D2F\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41, and a return statement that is "hit" is \u0D0E\u0D24\u0D4D\u0D24\u0D3F\u0D1A\u0D4D\u0D1A\u0D47\u0D30\u0D41\u0D28\u0D4D\u0D28',
+      'Fixed renderings the editor corrected on every occurrence \u2014 apply them without exception: "a given N" is \u0D24\u0D28\u0D4D\u0D28\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 N (\u0D24\u0D28\u0D4D\u0D28\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D35\u0D7C\u0D37\u0D02, \u0D24\u0D28\u0D4D\u0D28\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D12\u0D30\u0D41 file-\u0D7D), NEVER \u0D12\u0D30\u0D41 \u0D28\u0D7D\u0D15\u0D3F\u0D2F N; "consider X" as an invitation to look at X is X \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02 or consider \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, NEVER \u0D15\u0D23\u0D15\u0D4D\u0D15\u0D3F\u0D32\u0D46\u0D1F\u0D41\u0D15\u0D4D\u0D15\u0D41\u0D15 \u2014 which is reserved for the "take into account / only consider n positive" sense (\u0D07\u0D35\u0D3F\u0D1F\u0D46 $n$-\u0D28\u0D46 \u2026 \u0D2E\u0D3E\u0D24\u0D4D\u0D30\u0D2E\u0D47 \u0D15\u0D23\u0D15\u0D4D\u0D15\u0D3F\u0D32\u0D46\u0D1F\u0D41\u0D15\u0D4D\u0D15\u0D42); "in one line" is \u0D12\u0D31\u0D4D\u0D31 line-\u0D7D; the spelling is \u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41\u0D15\u0D42\u0D1F\u0D3F, not \u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41\u0D15\u0D42\u0D1F\u0D46; "useful" stays English (\u0D35\u0D33\u0D30\u0D46 useful \u0D06\u0D2F, \u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41\u0D15\u0D42\u0D1F\u0D3F useful \u0D06\u0D15\u0D4D\u0D15\u0D3E\u0D02), never \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D2A\u0D4D\u0D30\u0D26\u0D2E\u0D3E\u0D2F; "a bad idea" is \u0D05\u0D24\u0D4D\u0D30 \u0D28\u0D32\u0D4D\u0D32\u0D24\u0D32\u0D4D\u0D32; "straightforward" is \u0D0E\u0D33\u0D41\u0D2A\u0D4D\u0D2A\u0D02, "contrived" is \u0D15\u0D43\u0D24\u0D4D\u0D30\u0D3F\u0D2E\u0D02, "limited" (of a function) is -\u0D28\u0D4D \u0D1A\u0D3F\u0D32 \u0D2A\u0D30\u0D3F\u0D2E\u0D3F\u0D24\u0D3F\u0D15\u0D33\u0D41\u0D23\u0D4D\u0D1F\u0D4D, "facilitate" is \u0D38\u0D39\u0D3E\u0D2F\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41, and a return statement that is "hit" is \u0D0E\u0D24\u0D4D\u0D24\u0D3F\u0D1A\u0D4D\u0D1A\u0D47\u0D30\u0D41\u0D28\u0D4D\u0D28; "multiple N" is \u0D12\u0D28\u0D4D\u0D28\u0D3F\u0D32\u0D27\u0D3F\u0D15\u0D02 N (\u0D12\u0D28\u0D4D\u0D28\u0D3F\u0D32\u0D27\u0D3F\u0D15\u0D02 plots, \u0D12\u0D28\u0D4D\u0D28\u0D3F\u0D32\u0D27\u0D3F\u0D15\u0D02 subplots), not multiple N; "explicit" is \u0D35\u0D4D\u0D2F\u0D15\u0D4D\u0D24\u0D2E\u0D3E\u0D2F / \u0D35\u0D4D\u0D2F\u0D15\u0D4D\u0D24\u0D2E\u0D3E\u0D2F\u0D3F (objects \u0D15\u0D42\u0D1F\u0D41\u0D24\u0D7D \u0D35\u0D4D\u0D2F\u0D15\u0D4D\u0D24\u0D2E\u0D3E\u0D2F\u0D3F \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D24\u0D4D), not explicit \u0D06\u0D2F; an English "X-like" compound is X \u0D2A\u0D4B\u0D32\u0D46\u0D2F\u0D41\u0D33\u0D4D\u0D33 placed before the name it describes (dictionary \u0D2A\u0D4B\u0D32\u0D46\u0D2F\u0D41\u0D33\u0D4D\u0D33 `plt.rcParams` \u0D0E\u0D28\u0D4D\u0D28 variable, not `plt.rcParams` \u0D0E\u0D28\u0D4D\u0D28 dictionary-like variable); and "simple" stays English (simple \u0D06\u0D2F), never \u0D32\u0D33\u0D3F\u0D24\u0D2E\u0D3E\u0D2F',
       'When an English sentence is interrupted by code cells ("For example, these definitions [cell] and [cell] are entirely equivalent"), state the whole claim in one Malayalam sentence BEFORE the first cell (For example, \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D4A\u0D1F\u0D41\u0D24\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D30\u0D23\u0D4D\u0D1F\u0D4D definitions-\u0D09\u0D02 \u0D12\u0D30\u0D47 \u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D2E\u0D3E\u0D23\u0D4D \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D24\u0D4D:) and emit nothing between or after the cells \u2014 Malayalam is verb-final, so a trailing fragment like \u0D0E\u0D28\u0D4D\u0D28\u0D3F\u0D35 \u2026 equivalent \u0D06\u0D23\u0D4D after the second cell is unnatural and the connective \u0D12\u0D2A\u0D4D\u0D2A\u0D02 between the cells is dropped',
-      'Exercise statements whose content is probabilistic or mathematical reasoning (a random device to simulate, a distribution to draw from, coin flips, a derivation) stay in English \u2014 the same reader argument as the Hint/Solution rule, extended by the editor to exercise statements and accepted by the maintainer 2026-09-01 (decision record D-2026-09-01-ml-exercise-statements-stay-english); a mixed sentence keeps its mathematical clause in English and translates only its programming instruction ("In particular, `factorial` \u0D0E\u0D28\u0D4D\u0D28\u0D4D \u0D2A\u0D47\u0D30\u0D41\u0D33\u0D4D\u0D33 \u0D12\u0D30\u0D41 function \u0D0E\u0D34\u0D41\u0D24\u0D41\u0D15, such that `factorial(n)` returns $n!$ for any positive integer $n$."); exercises that are pure programming instruction translate normally \u2014 "Rewrite the `factorial()` function from Exercise 1 using recursion." is [Exercise 1](factorial_exercise)-\u0D32\u0D46 `factorial()` function-\u0D28\u0D46, recursion \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D1A\u0D4D\u0D1A\u0D4D \u0D35\u0D40\u0D23\u0D4D\u0D1F\u0D41\u0D02 \u0D0E\u0D34\u0D41\u0D24\u0D41\u0D15. and MUST NOT be left in English merely because it sits in an exercise block (a function name is not mathematical content); an English-retained line is kept byte-for-byte identical to the English source, so the Malayalam punctuation rule does not add a colon to it',
-      "In exercise Hint and Solution sections whose prose is predominantly mathematical reasoning (probability statements, convergence arguments, derivations) rather than Python instruction, keep the entire section in English \u2014 a reader who can follow the mathematics learnt it in English, so a Malayalam rendering serves neither reader (native-editor ruling, 2026-08-17); Hint/Solution prose that is programming guidance translates normally",
+      "Mark clause boundaries with commas as the editor does \u2014 without them a Malayalam sentence reads as one breathless run: (a) after a long topic or subject phrase, and always after the topic marker \u0D0E\u0D28\u0D4D\u0D28\u0D24\u0D4D (Matplotlib \u0D0E\u0D28\u0D4D\u0D28\u0D24\u0D4D, scientific computing-\u0D28\u0D3E\u0D2F\u0D3F design \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D12\u0D30\u0D41 \u0D2E\u0D3F\u0D15\u0D1A\u0D4D\u0D1A graphics library \u0D06\u0D23\u0D4D; \u0D07\u0D35\u0D3F\u0D1F\u0D46 `fig, ax = plt.subplots()` \u0D0E\u0D28\u0D4D\u0D28 call, \u0D12\u0D30\u0D41 pair return \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41); (b) after a fronted adverbial, purpose, instrumental or conditional clause (\u0D30\u0D23\u0D4D\u0D1F\u0D3E\u0D2E\u0D24\u0D4D\u0D24\u0D46 method \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D1A\u0D4D\u0D1A\u0D4D, \u2026; \u0D28\u0D3F\u0D19\u0D4D\u0D19\u0D33\u0D41\u0D1F\u0D46 style-\u0D28\u0D46 \u0D35\u0D40\u0D23\u0D4D\u0D1F\u0D41\u0D02 default \u0D06\u0D15\u0D4D\u0D15\u0D3F \u0D2E\u0D3E\u0D31\u0D4D\u0D31\u0D3E\u0D7B, \u2026; \u0D12\u0D30\u0D47 axes-\u0D7D, \u2026; `plt.style.available` \u0D0E\u0D28\u0D4D\u0D28 attribute print \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D3E\u0D7D, \u2026); (c) between coordinated items joined by -\u0D09\u0D02 \u2026 -\u0D09\u0D02 or -\u0D09\u0D15\u0D2F\u0D41\u0D02 \u2026 -\u0D09\u0D15\u0D2F\u0D41\u0D02 \u2014 always, whether each side is a phrase or a single word; the editor's answer on lecture-python-programming.ml#22 is that the comma is there for reading clarity in both cases (Ticks control \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D24\u0D41\u0D02, titles \u0D1A\u0D47\u0D7C\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D24\u0D41\u0D02 \u0D2E\u0D31\u0D4D\u0D31\u0D41\u0D02 \u2026; functions-\u0D09\u0D02, features-\u0D09\u0D02; simple-\u0D09\u0D02, convenient-\u0D09\u0D02; line-\u0D28\u0D4D\u0D31\u0D46 \u0D28\u0D3F\u0D31\u0D02 red \u0D06\u0D15\u0D4D\u0D15\u0D3F \u0D2E\u0D3E\u0D31\u0D4D\u0D31\u0D41\u0D15\u0D2F\u0D41\u0D02, \u0D05\u0D24\u0D4B\u0D1F\u0D4A\u0D2A\u0D4D\u0D2A\u0D02 \u0D12\u0D30\u0D41 legend \u0D1A\u0D47\u0D7C\u0D15\u0D4D\u0D15\u0D41\u0D15\u0D2F\u0D41\u0D02 \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41)",
+      'Choose the verb form by what the English means, not by its surface tense: a state that results from a completed action takes the perfect-stative participle -\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28, not the bare past participle (design \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 library, overlay \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 density lines, Indent \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 code \u2014 not design \u0D1A\u0D46\u0D2F\u0D4D\u0D24, overlay \u0D1A\u0D46\u0D2F\u0D4D\u0D24); something the lecture has just done takes the perfect -\u0D07\u0D1F\u0D4D\u0D1F\u0D41\u0D23\u0D4D\u0D1F\u0D4D ("we\'ve also used `alpha`" \u2192 `alpha` \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D1A\u0D4D\u0D1A\u0D3F\u0D1F\u0D4D\u0D1F\u0D41\u0D23\u0D4D\u0D1F\u0D4D, not \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D1A\u0D4D\u0D1A\u0D41), but "have already seen / met X" takes the completive -\u0D15\u0D34\u0D3F\u0D1E\u0D4D\u0D1E\u0D41 (X \u0D28\u0D2E\u0D4D\u0D2E\u0D7E already \u0D15\u0D23\u0D4D\u0D1F\u0D41\u0D15\u0D34\u0D3F\u0D1E\u0D4D\u0D1E\u0D41, not \u0D15\u0D23\u0D4D\u0D1F\u0D3F\u0D1F\u0D4D\u0D1F\u0D41\u0D23\u0D4D\u0D1F\u0D4D); English "by doing X" / "using X you can \u2026" / "we can find \u2026 by printing" states a condition and takes -\u0D06\u0D7D (`ax.legend(loc=\'upper center\')` \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D1A\u0D4D\u0D1A\u0D3E\u0D7D legend-\u0D28\u0D4D\u0D31\u0D46 \u0D38\u0D4D\u0D25\u0D3E\u0D28\u0D02 \u0D2E\u0D3E\u0D31\u0D4D\u0D31\u0D3E\u0D02; \u2026 print \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D3E\u0D7D, \u2026 \u0D12\u0D30\u0D41 list \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D15\u0D3E\u0D23\u0D3E\u0D02), not the conjunctive participle \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D1A\u0D4D\u0D1A\u0D4D / \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D; and a hedge such as "perhaps" (\u0D12\u0D30\u0D41\u0D2A\u0D15\u0D4D\u0D37\u0D47) agrees with the possibility ending -\u0D0F\u0D15\u0D4D\u0D15\u0D3E\u0D02 (\u0D09\u0D23\u0D4D\u0D1F\u0D3E\u0D2F\u0D47\u0D15\u0D4D\u0D15\u0D3E\u0D02), not the plain future \u0D09\u0D23\u0D4D\u0D1F\u0D3E\u0D15\u0D41\u0D02',
+      `Render English idiom, metaphor and coined jargon by its plain meaning in classroom Malayalam, never word-for-word: "written to help MATLAB refugees find a ready home" \u2192 MATLAB \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D1A\u0D4D\u0D1A\u0D3F\u0D30\u0D41\u0D28\u0D4D\u0D28\u0D35\u0D7C\u0D15\u0D4D\u0D15\u0D4D \u0D0E\u0D33\u0D41\u0D2A\u0D4D\u0D2A\u0D24\u0D4D\u0D24\u0D3F\u0D7D \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D15\u0D4D\u0D15\u0D3E\u0D28\u0D3E\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D24\u0D30\u0D24\u0D4D\u0D24\u0D3F\u0D32\u0D3E\u0D23\u0D4D \u0D07\u0D24\u0D4D \u0D0E\u0D34\u0D41\u0D24\u0D3F\u0D2F\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D24\u0D4D (no refugees, no home); "see if you can follow what's going on" \u2192 \u0D0E\u0D28\u0D4D\u0D24\u0D3E\u0D23\u0D4D \u0D28\u0D1F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D24\u0D46\u0D28\u0D4D\u0D28\u0D4D \u0D28\u0D3F\u0D19\u0D4D\u0D19\u0D7E\u0D15\u0D4D\u0D15\u0D4D \u0D2E\u0D28\u0D38\u0D4D\u0D38\u0D3F\u0D32\u0D3E\u0D15\u0D4D\u0D15\u0D3E\u0D7B \u0D38\u0D3E\u0D27\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41\u0D23\u0D4D\u0D1F\u0D4B \u0D0E\u0D28\u0D4D\u0D28\u0D4D \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D41\u0D15 (to understand \u2014 never \u0D2A\u0D3F\u0D28\u0D4D\u0D24\u0D41\u0D1F\u0D30\u0D41\u0D15, which is to chase); "fine-grained control over all aspects of presentation" \u2192 presentation-\u0D28\u0D4D\u0D31\u0D46 \u0D13\u0D30\u0D4B \u0D1A\u0D46\u0D31\u0D3F\u0D2F \u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D35\u0D41\u0D02 \u0D35\u0D30\u0D46 control \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D7B \u0D15\u0D34\u0D3F\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41; "un-Pythonic" \u2192 Python-\u0D28\u0D4D\u0D31\u0D46 \u0D38\u0D3E\u0D27\u0D3E\u0D30\u0D23 \u0D36\u0D48\u0D32\u0D3F\u0D2F\u0D4B\u0D1F\u0D4D \u0D2A\u0D4A\u0D30\u0D41\u0D24\u0D4D\u0D24\u0D2A\u0D4D\u0D2A\u0D46\u0D1F\u0D3E\u0D24\u0D4D\u0D24`,
+      'A list of pointers to outside resources \u2014 the bullets of a "Further Reading" or "References" style section, each a link plus a short description \u2014 stays wholly in English, copied byte-for-byte from the source including its line wrapping ("* The [Matplotlib gallery](\u2026) provides many examples." and "* [Seaborn](\u2026) facilitates common statistics plots in Matplotlib." stay exactly so); the editor returned every such bullet to English on lecture-python-programming.ml#13 (decision record D-2026-09-18-ml-further-reading-lists-stay-english), so never treat an all-English further-reading list as under-translation',
+      'Every exercise-related directive \u2014 {exercise}, {exercise-start} \u2026 {exercise-end}, {hint}, {solution}, {solution-start} \u2026 {solution-end} \u2014 stays wholly in English, copied byte-for-byte from the source: the fence line, its title argument and options, and every prose line inside, including pure programming instructions ("Rewrite the `factorial()` function using recursion." stays exactly so). This is the editor of record\'s standing ruling until he has decided each exercise individually (2026-09-01, decision record D-2026-09-03-ml-all-exercise-content-stays-english; it subsumes the earlier math-heavy Hint/Solution ruling of 2026-08-17). The engine restores these blocks from the source mechanically after translation, so do not spend effort rephrasing anything inside them, and never treat an all-English exercise block as under-translation. This rule is about directives the source ALREADY contains \u2014 never add an {exercise}, {exercise-start}, {solution} or any other directive, fence or label that the source does not have: where the source writes its exercises as a plain "## Exercises" heading followed by a numbered list, keep that heading and list as they are \u2014 the text in English like all exercise content, the structure exactly as the source has it, with no directive wrapped around it',
       "Never translate comments inside code blocks or code cells \u2014 every code comment stays exactly as written in the English source",
-      'Keep section headings in their original English form \u2014 do not translate them (e.g. "## Overview" stays "## Overview")',
+      `Keep section headings in their original English form, byte-identical including possessives and punctuation \u2014 do not translate them and never attach a Malayalam case-suffix to a possessive inside a heading (e.g. "## Overview" stays "## Overview"; "### Matplotlib's Split Personality" stays exactly so, never "Matplotlib-\u0D2F\u0D41\u0D1F\u0D46 Split Personality")`,
       "Keep proper names (economists, researchers, institutions) in English/Latin script \u2014 do not transliterate them",
       "Handle every term consistently across the whole document \u2014 a term kept in English must remain English on every occurrence, and a word translated to Malayalam must reuse the same Malayalam root each time (normal grammatical inflection is fine)",
       "Use a natural classroom/educational register, not a formal government-gazette style; where a Malayalam word genuinely aids comprehension for a borderline non-technical concept, it may be given with the English in parentheses on first use (e.g. \u0D2C\u0D28\u0D4D\u0D27\u0D02 (relationship)) \u2014 use sparingly",
@@ -31847,6 +31896,21 @@ function getReviewInputs() {
   };
 }
 var RESYNC_COMMAND = "\\translate-resync";
+function mergedIntoDefaultBranch(baseRef, defaultBranch, prNumber) {
+  if (!defaultBranch) {
+    core.warning(`Could not determine the repository default branch; assuming PR #${prNumber} landed on it.`);
+    return true;
+  }
+  if (!baseRef) {
+    core.warning(`Could not determine the base branch of PR #${prNumber}; assuming it landed on '${defaultBranch}'.`);
+    return true;
+  }
+  if (baseRef !== defaultBranch) {
+    core.info(`PR #${prNumber} was merged into '${baseRef}', not the default branch '${defaultBranch}'. Skipping sync \u2014 only merges into the default branch are translated.`);
+    return false;
+  }
+  return true;
+}
 function validatePREvent(context3, testMode) {
   const { eventName, payload } = context3;
   if (eventName === "issue_comment") {
@@ -31868,11 +31932,15 @@ function validatePREvent(context3, testMode) {
   }
   const merged = payload.pull_request?.merged === true;
   const prNumber = payload.pull_request?.number;
-  if (!merged) {
-    core.info("PR was closed but not merged. Skipping sync.");
-  }
   if (!prNumber) {
     throw new Error("Could not determine PR number from event payload");
+  }
+  if (!merged) {
+    core.info("PR was closed but not merged. Skipping sync.");
+    return { merged: false, prNumber, isTestMode: false, isResync: false };
+  }
+  if (!mergedIntoDefaultBranch(payload.pull_request?.base?.ref, payload.repository?.default_branch, prNumber)) {
+    return { merged: false, prNumber, isTestMode: false, isResync: false };
   }
   core.info(`\u{1F680} Running in PRODUCTION mode for merged PR #${prNumber}`);
   return { merged, prNumber, isTestMode: false, isResync: false };
@@ -32508,6 +32576,27 @@ ${targetContent}`;
     }).join("\n");
     return `GLOSSARY:
 ${terms}
+${this.formatStyleExamples(glossary, targetLanguage)}`;
+  }
+  /**
+   * Format the glossary's editor-approved sentence pairs as style exemplars.
+   *
+   * Rendered inside the glossary section, so it sits in the prompt-cached
+   * stable block of every builder and reaches every write path with no extra
+   * plumbing. The set is fixed per glossary version (no per-call retrieval) —
+   * the stable block must be byte-identical across calls to stay cacheable.
+   */
+  formatStyleExamples(glossary, targetLanguage) {
+    const examples = (glossary.style_examples ?? []).filter((example) => typeof example[targetLanguage] === "string" && example[targetLanguage] !== "");
+    if (examples.length === 0) {
+      return "";
+    }
+    const pairs2 = examples.map((example) => `  EN: ${example.en}
+  ${targetLanguage.toUpperCase()}: ${example[targetLanguage]}`).join("\n\n");
+    return `
+STYLE EXAMPLES:
+Sentences from earlier lectures, exactly as the native-speaker editor approved them. Match their register, sentence rhythm, comma placement, verb forms and clause order in your own translation. They illustrate style only \u2014 never copy their content, and where an example and a numbered rule seem to differ, follow the rule.
+${pairs2}
 `;
   }
 };
@@ -36961,6 +37050,122 @@ function formatParityViolations(filename, result) {
 ${bullets}`;
 }
 
+// dist/verbatim-directives.js
+var FENCE_OPEN2 = /^(\s{0,3})(`{3,}|~{3,}|:{3,})\s*(?:\{([\w:+.-]+)\}.*)?$/;
+var SIMPLE_DIRECTIVES = /* @__PURE__ */ new Set(["exercise", "hint", "solution"]);
+var START_DIRECTIVES = /* @__PURE__ */ new Map([
+  ["exercise-start", "exercise-end"],
+  ["solution-start", "solution-end"]
+]);
+var VERBATIM_POLICY = /* @__PURE__ */ new Map([["ml", true]]);
+function hasVerbatimDirectivePolicy(language) {
+  return VERBATIM_POLICY.has(language.toLowerCase());
+}
+function extractVerbatimBlocks(content) {
+  const lines = content.split("\n");
+  const blocks = [];
+  const stack = [];
+  let region = null;
+  let inFrontmatter = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (i === 0 && line.trim() === "---") {
+      inFrontmatter = true;
+      continue;
+    }
+    if (inFrontmatter) {
+      if (line.trim() === "---")
+        inFrontmatter = false;
+      continue;
+    }
+    const open = FENCE_OPEN2.exec(line);
+    if (!open)
+      continue;
+    const [, , marker, rawDirective] = open;
+    const top = stack[stack.length - 1];
+    if (top && !rawDirective && marker[0] === top.marker[0] && marker.length >= top.marker.length) {
+      const popped = stack.pop();
+      if (region && stack.length === region.depth) {
+        const closes = region.endName ? popped.directive === region.endName : true;
+        if (closes) {
+          blocks.push({ kind: region.kind, start: region.start, end: i });
+          region = null;
+        }
+      }
+      continue;
+    }
+    if (top && top.literal)
+      continue;
+    const directive = rawDirective ? rawDirective.toLowerCase() : null;
+    const literal = !directive || !PROSE_DIRECTIVES.has(directive);
+    if (!region && directive) {
+      if (SIMPLE_DIRECTIVES.has(directive)) {
+        region = { kind: directive, start: i, depth: stack.length, endName: null };
+      } else if (START_DIRECTIVES.has(directive)) {
+        region = {
+          kind: directive,
+          start: i,
+          depth: stack.length,
+          endName: START_DIRECTIVES.get(directive)
+        };
+      }
+    }
+    stack.push({ marker, directive, literal });
+  }
+  return blocks;
+}
+function shape(blocks) {
+  return blocks.map((b) => b.kind).join(",");
+}
+function applyVerbatimDirectives(source, output, language) {
+  if (!hasVerbatimDirectivePolicy(language))
+    return { content: output, replaced: 0, mismatch: null };
+  const sourceBlocks = extractVerbatimBlocks(source);
+  const outputBlocks = extractVerbatimBlocks(output);
+  if (shape(sourceBlocks) !== shape(outputBlocks)) {
+    return {
+      content: output,
+      replaced: 0,
+      mismatch: `verbatim-directive block sequence differs: source [${shape(sourceBlocks) || "none"}] vs output [${shape(outputBlocks) || "none"}]`
+    };
+  }
+  if (sourceBlocks.length === 0)
+    return { content: output, replaced: 0, mismatch: null };
+  const sourceLines = source.split("\n");
+  const outputLines = output.split("\n");
+  let replaced = 0;
+  for (let k = sourceBlocks.length - 1; k >= 0; k--) {
+    const s = sourceBlocks[k];
+    const o = outputBlocks[k];
+    const fromSource = sourceLines.slice(s.start, s.end + 1);
+    const current = outputLines.slice(o.start, o.end + 1);
+    if (fromSource.join("\n") !== current.join("\n")) {
+      outputLines.splice(o.start, o.end - o.start + 1, ...fromSource);
+      replaced++;
+    }
+  }
+  return { content: outputLines.join("\n"), replaced, mismatch: null };
+}
+function findVerbatimViolations(source, target) {
+  const sourceBlocks = extractVerbatimBlocks(source);
+  const targetBlocks = extractVerbatimBlocks(target);
+  if (shape(sourceBlocks) !== shape(targetBlocks)) {
+    return [
+      `exercise-family block sequence differs: source [${shape(sourceBlocks) || "none"}] vs target [${shape(targetBlocks) || "none"}]`
+    ];
+  }
+  const sourceLines = source.split("\n");
+  const targetLines = target.split("\n");
+  const violations = [];
+  sourceBlocks.forEach((s, k) => {
+    const t = targetBlocks[k];
+    if (sourceLines.slice(s.start, s.end + 1).join("\n") !== targetLines.slice(t.start, t.end + 1).join("\n")) {
+      violations.push(`{${s.kind}} block at target line ${t.start + 1} is not byte-identical to the source block at line ${s.start + 1}`);
+    }
+  });
+  return violations;
+}
+
 // dist/sync-orchestrator.js
 var import_fs = require("fs");
 var path3 = __toESM(require("path"), 1);
@@ -37348,6 +37553,24 @@ var SyncOrchestrator = class {
   // Private: File type handlers
   // ---------------------------------------------------------------------------
   /**
+   * Verbatim-directive policy (`verbatim-directives.ts`): for editions that
+   * keep the exercise family byte-identical to the source (`ml`), restore
+   * those blocks from `file.newContent` after translation, before the parity
+   * guard checks the bytes that will be written. A block-sequence mismatch is
+   * left for the parity guard to report.
+   */
+  restoreVerbatimDirectives(file, translatedContent) {
+    if (file.newContent === void 0)
+      return translatedContent;
+    const verbatim = applyVerbatimDirectives(file.newContent, translatedContent, this.config.targetLanguage);
+    if (verbatim.mismatch) {
+      this.logger.warning(`${file.filename}: ${verbatim.mismatch}; verbatim restore skipped`);
+    } else if (verbatim.replaced > 0) {
+      this.logger.info(`${file.filename}: restored ${verbatim.replaced} exercise-family block(s) verbatim from source`);
+    }
+    return verbatim.content;
+  }
+  /**
    * Process a markdown file (added or modified).
    * New files get full translation; existing files get section-based updates.
    */
@@ -37372,6 +37595,7 @@ var SyncOrchestrator = class {
         this.logger.warning(`${file.filename}: removed ${dropped.length} target-only section(s) with no source counterpart \u2014 correct if upstream deleted them; destructive if human-added (see PR body)`);
       }
     }
+    translatedContent = this.restoreVerbatimDirectives(file, translatedContent);
     const parity = checkStructuralParity(file.newContent, translatedContent);
     if (!parity.ok) {
       throw new Error(formatParityViolations(file.filename, parity));
@@ -37410,6 +37634,7 @@ var SyncOrchestrator = class {
     } else {
       translatedContent = await this.processor.processFull(file.newContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary);
     }
+    translatedContent = this.restoreVerbatimDirectives(file, translatedContent);
     const parity = checkStructuralParity(file.newContent, translatedContent);
     if (!parity.ok) {
       throw new Error(formatParityViolations(file.filename, parity));
@@ -37893,7 +38118,23 @@ async function checkHeadingMapCorrect(parser, pairs2) {
   }
   return { passed: details.length === 0, details: details.slice(0, MAX_DETAILS) };
 }
-async function runDeterministicDiffChecks(parser, pairs2) {
+async function checkVerbatimDirectives(pairs2, targetLanguage) {
+  if (!targetLanguage || !hasVerbatimDirectivePolicy(targetLanguage)) {
+    return { passed: true, details: [] };
+  }
+  const details = [];
+  for (const pair of pairs2) {
+    if (details.length >= MAX_DETAILS)
+      break;
+    for (const violation of findVerbatimViolations(pair.source, pair.target)) {
+      if (details.length >= MAX_DETAILS)
+        break;
+      details.push(`${pair.filename}: ${violation}`);
+    }
+  }
+  return { passed: details.length === 0, details: details.slice(0, MAX_DETAILS) };
+}
+async function runDeterministicDiffChecks(parser, pairs2, targetLanguage) {
   const guard = async (name, fn) => {
     try {
       return await fn();
@@ -37907,10 +38148,14 @@ async function runDeterministicDiffChecks(parser, pairs2) {
       };
     }
   };
-  return {
+  const checks = {
     structurePreserved: await guard("structurePreserved", () => checkStructurePreserved(parser, pairs2)),
     headingMapCorrect: await guard("headingMapCorrect", () => checkHeadingMapCorrect(parser, pairs2))
   };
+  if (targetLanguage && hasVerbatimDirectivePolicy(targetLanguage)) {
+    checks.verbatimDirectives = await guard("verbatimDirectives", () => checkVerbatimDirectives(pairs2, targetLanguage));
+  }
+  return checks;
 }
 
 // dist/review-verdict.js
@@ -38677,7 +38922,7 @@ var TranslationReviewer = class {
       source: v.source,
       target: v.target
     }));
-    const deterministic = await runDeterministicDiffChecks(this.parser, reviewedPairs);
+    const deterministic = await runDeterministicDiffChecks(this.parser, reviewedPairs, targetLanguage);
     const diffChecks = {
       scopeCorrect: diffQuality.scopeCorrect,
       positionCorrect: diffQuality.positionCorrect,
@@ -38691,7 +38936,7 @@ var TranslationReviewer = class {
       headingMapCorrect: "deterministic"
     };
     for (const [name, result2] of Object.entries(deterministic)) {
-      if (!result2.passed) {
+      if (result2 && !result2.passed) {
         core6.warning(`Deterministic diff check failed \u2014 ${name}: ${result2.details.join("; ")}`);
       }
     }
@@ -38735,7 +38980,7 @@ var TranslationReviewer = class {
       description: truncateField(`${name}: the reviewer reported this check as failed. This is a model judgement, not a deterministic check \u2014 verify against the source diff before treating it as a defect (#148).`),
       suggestion: null
     }));
-    const deterministicFindings = Object.values(deterministic).flatMap((result2) => result2.details).map((detail) => ({
+    const deterministicFindings = Object.entries(deterministic).filter(([name, result2]) => name !== "verbatimDirectives" && result2 !== void 0).flatMap(([, result2]) => result2.details).map((detail) => ({
       severity: "minor",
       category: "structure",
       file: soleFile,
@@ -38743,11 +38988,20 @@ var TranslationReviewer = class {
       description: truncateField(detail),
       suggestion: null
     }));
+    const verbatimFindings = (deterministic.verbatimDirectives?.details ?? []).map((detail) => ({
+      severity: "blocker",
+      category: "diff-check",
+      file: soleFile,
+      location: null,
+      description: truncateField(`${detail} \u2014 this edition keeps every exercise, hint and solution block byte-identical to the English source.`),
+      suggestion: null
+    }));
     const allFindings = sortAndCapFindings([
       ...translationQuality.findings,
       ...syntaxFindings,
       ...diffFindings,
       ...unexpectedDeletionFindings,
+      ...verbatimFindings,
       ...modelCheckFindings,
       ...deterministicFindings
     ]);
@@ -39866,6 +40120,9 @@ async function runSync() {
     });
     if (!pr.merged) {
       core9.info(`PR #${prNumber} is not merged. Resync only works on merged PRs.`);
+      return;
+    }
+    if (!mergedIntoDefaultBranch(pr.base?.ref, pr.base?.repo?.default_branch, prNumber)) {
       return;
     }
     if (pr.merge_commit_sha) {

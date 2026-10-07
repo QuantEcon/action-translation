@@ -32,6 +32,9 @@ name: Translation Sync (__LANG_NAME__)
 on:
   pull_request:
     types: [closed, labeled]
+    # Mirrors the production template: only PRs against main sync. Fixture
+    # PRs are opened with `--base main`, so the label path is unaffected.
+    branches: [main]
   issue_comment:
     types: [created]
 
