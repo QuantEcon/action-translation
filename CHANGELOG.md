@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **`js-yaml` 4.3.0 → 4.3.2 and `undici` 6.27.0 → 6.29.0** (#359), which clears the two high-severity advisories that `npm audit --omit=dev` reported against production dependencies. Both fixes are within the existing ranges, so `package.json` is unchanged and no `@actions/*` major version moves; `undici` arrives through `@actions/github` and `@actions/http-client`. Both packages are bundled into `dist-action/index.js`, so the fix reaches `@v0` workflows with this release. The dev-only `js-yaml` 3.x copy under Jest's coverage tooling moves 3.15.0 → 3.15.2 with it.
+
 ## [0.29.4] - 2026-10-09
 
 ### Added
