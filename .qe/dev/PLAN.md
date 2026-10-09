@@ -270,8 +270,8 @@ repos byte-identical.
       and term lookup use the raw code (`src/language-config.ts:126`,
       `src/sync-orchestrator.ts:112`, `src/translator.ts:666`) — normalize once at input parsing.
       *2026-10-06: #348's zero-term glossary warning makes this mechanism loud.*
-- [ ] **[L]** Rebase force-push races: stale blob SHA after `git.updateRef` (`src/index.ts:464-473`)
-      → unretried 409; two near-simultaneous merges rebase the same branch concurrently. Add
+- [ ] **[L]** Rebase force-push races: stale blob SHA after `git.updateRef`
+      (`rebaseSinglePR`'s branch reset, `src/index.ts:575-582` at `de17858`) → unretried 409; two near-simultaneous merges rebase the same branch concurrently. Add
       retry-on-409 and document the `concurrency` group as required in the workflow template.
       *2026-10-06: carried by #280 (one atomic ref move, plus `queue: max` in the rebase
       template); tick when #280 closes.*

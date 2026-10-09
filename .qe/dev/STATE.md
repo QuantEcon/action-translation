@@ -74,7 +74,7 @@ Roadmap detail lives in the project trackers (reading order in
 - **Tracker #257 is parked** (2026-10-04, @mmcky: relevant, not urgent). It resumes when a
   release is assigned to W1, and its next planning session re-cuts it to W1 alone; the notes for
   that re-cut are in the 2026-10-06 comment on #259. The text below is as of 2026-09-23.
-- **The standing plan is tracker #257** (2026-08-10 backlog review; supersedes #94/#198):
+- **Tracker #257's plan, now parked** (2026-08-10 backlog review; supersedes #94/#198):
   all 67 open issues triaged and verified against v0.25.0, phases W0–W6 filed as
   sub-issues #258–#264. The dominant failure shape it names: **the failure path produces
   a success-shaped artifact** (#90-class). Doctrine: decisions and external clocks first;
@@ -109,10 +109,11 @@ Roadmap detail lives in the project trackers (reading order in
   (ruling on #276) and replaced by a precondition: `\translate-resync` only when no file of the
   PR has advanced on source `main` since it merged, i.e. for every path
   `git rev-list --count <mergeSha>..origin/main -- <path>` is zero. It is no longer the
-  documented recovery — use `translate forward`, or `init -f` for an absent lecture, and never
-  regenerate a natively-reviewed one — but the failure-issue template in `createFailureIssue`
-  still prescribes it unconditionally (#281). The fix is re-specified as source snapshot vs
-  source `main` (English against English), and `mode: rebase` reads the same frozen snapshot.
+  documented recovery — use `translate forward` (after #348 merges), or `init -f` for an
+  absent lecture, and never regenerate a natively-reviewed one — but the failure-issue template
+  in `createFailureIssue` still prescribes it unconditionally (#281). The fix is re-specified as
+  source snapshot vs source `main` (English against English), and `mode: rebase` reads the same
+  frozen snapshot.
   The bug stays open; W1's stale-resync box carries the guard.
 - **Glossary PR #69** (ja) — rebuilt on `main` 2026-09-01 with the thread's rulings applied
   (`ja.json` v1.1, the `ja` entry in `LANGUAGE_CONFIGS`, decision record
@@ -155,10 +156,10 @@ Roadmap detail lives in the project trackers (reading order in
   own lines. Experiment tooling only; promotion into the engine is #260.
 - **`.dev/` → `.qe/dev/` (#314)** — the notes convention moves inside `.qe/`, the repository's
   QuantEcon folder, per the QEP-7 draft (QuantEcon/qeps#40): `.qe/README.md` states the folder's
-  contract, `.qe/project.yml` points the `qe` workplan skills at tracker #257, and nothing under
-  `.qe/` is git-ignored — working files live outside the tree (decision records
-  `D-2026-09-21-notes-move-to-qe-dev`, `D-2026-09-21-no-scratch-in-tree`). Raw `log/` and
-  `decisions/` entries keep their historical `.dev/` mentions.
+  contract, `.qe/project.yml` points the `qe` workplan skills at tracker #257 (at both trackers
+  since #350), and nothing under `.qe/` is git-ignored — working files live outside the tree
+  (decision records `D-2026-09-21-notes-move-to-qe-dev`, `D-2026-09-21-no-scratch-in-tree`).
+  Raw `log/` and `decisions/` entries keep their historical `.dev/` mentions.
 - **2026-09-23 — v0.29.3 released** (release PR #329 `16e50f6`; payload #328 `a4fe00a`, on top
   of #322 `079b3c7` and #323 `ede10e6`): `fr` glossary v1.2 from the French editor's second
   round (Namespace → Espace de nommage, Heads → Face, the standard-normal context; the edition
@@ -224,10 +225,11 @@ in the fr edition's pandas lecture.
    progress, each with its fr edition repair), then #326 together with #203's fence unwrap.
    In parallel, **#327**: add the "Your first task" phrase, re-measure `python_by_example`, run
    the blind pairwise judge, and post the result on #327 before the narrowed rule ships.
-1. **Triage the post-review arrivals** into W1–W6: #257 (stamped 2026-09-01) still lists #280
-   #282 #283 #284 #286 #287 #288 #290 #295 #296 #300 as untriaged, and #301, #307
-   (`high-priority`) and #324–#327 have arrived since (#282, #287, #290 look W1-shaped; #307
-   goes with slice 2).
+1. **Triage the post-review arrivals** into W1–W6 at #257's re-cut: #257 (stamped 2026-09-01)
+   still lists #282 #283 #284 #286 #287 #288 #290 #295 #296 #300 as untriaged, and #301, #307
+   (`high-priority`), #324–#327, #351 and #356 have arrived since (#282, #287, #290 look
+   W1-shaped; #307 goes with slice 2, and #351 beside it). **#280 is #349's work item: do not
+   place it** — an issue has one parent, so a W-phase would detach it.
 2. **#169 slice 2: `src/github-content.ts`** (not started — no such file at `16e50f6`) —
    `tryFetchFileContent` plus **one** `buildFilesToSync` over a narrow `ContentClient`
    interface, replacing the two independently-maintained builders (`rebaseSinglePR` at
