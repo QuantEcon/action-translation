@@ -41,7 +41,12 @@ as merged; step 2.1, settled by QuantEcon/status-projects#237's merge on 2026-10
 - **2.1** QuantEcon/status-projects#237 merged 2026-10-07, stage `active` since 2026-10-06.
 - **2.2** #350 merged as `e9d51a0`, with the default squash message (the commit list, including
   "Proposed for maintainer approval"); `main`'s history is not rewritten for it.
-- **2.3** STEP_23_OUTCOME
+- **2.3** #349's *Where we stand* was re-stamped 2026-10-09: *Next* is still #348, with no branch,
+  and *Needs a person* is only this PR. Out of scope now names QuantEcon/project-translation#70
+  and #351, and says #289 has merged. The
+  [revision-log comment](https://github.com/QuantEcon/action-translation/issues/349#issuecomment-6075120824)
+  covers the registration, the merges, #351's ruling and a note for #280. The stamp must be
+  re-verified by 2026-11-05.
 - **2.4** #352 was reopened 2026-10-09 with a status comment; the PR carrying this log closes it.
 
 **Part 3**:
