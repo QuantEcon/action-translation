@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.4] - 2026-10-09
+
 ### Added
 
 - **ml round-4 prompt-trim arm** archived under `experiments/ml-benchmark/arms/2026-09-28-round4-prompt-trims/`: 192 drafts across four arms (current rules; all four trims; the rule-19 exception alone; the three deletions alone) on `numpy`, `functions`, `python_essentials` and `matplotlib`, with per-draft records and the scripts that rebuild the tables. Experiment data only.
