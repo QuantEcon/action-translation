@@ -122,7 +122,14 @@ the gate. See ARCHITECTURE.md R1 for the longer-term parser direction (mystmd AS
 - [ ] **[M]** Duplicate heading slugs (two `## Exercises`) corrupt matching in three places:
       change attachment (`src/file-processor.ts:184`), deletion detection
       (`src/diff-detector.ts:123, 140-148`), and the rebase cache keys
-      (`src/file-processor.ts:90-91`) — disambiguate IDs (e.g. suffix by occurrence index)
+      (`src/file-processor.ts:90-91`) — disambiguate IDs (e.g. suffix by occurrence index).
+      *2026-10-06 (codebase review, at `415cf87`): the target matcher's exact-heading and ID
+      loops also return the first hit and never skip sections already used
+      (`src/file-processor.ts:819-825`, `:855-858`). Two `## Exercises`, or two English headings
+      that translate to the same target heading, overwrite each other, and the dropped-section
+      reporter checks ids only (`:520-522`), so nothing is reported. The normalized branch
+      already rejects ambiguous hits; apply the same rule. No instance in the deployed estate
+      today, so deferred.*
 - [ ] **[M]** `${sha}^` old-content fetch is wrong for **rebase-merged** multi-commit PRs
       (`src/index.ts:776`, `src/index.ts:314`) — earlier commits' changes are silently treated
       as unchanged. Fetch the PR's base SHA instead, or detect and reject rebase-merge events
@@ -130,7 +137,9 @@ the gate. See ARCHITECTURE.md R1 for the longer-term parser direction (mystmd AS
       reuse the fence-aware parser instead of a private regex
 - [ ] **[L]** Heading replacement uses `sourceSub.heading.replace(/^(#+\s+).*/,` with an
       interpolated string (`src/file-processor.ts:387`) — headings containing `$1`/`$&` corrupt;
-      use a function replacer
+      use a function replacer. *2026-10-06: now `src/file-processor.ts:430-433`, with a second
+      site at `:441`; fixing only the first makes it worse. Both sites, the fix and the tests are
+      on #90.*
 - [ ] **[L]** Prompt rule-numbering collisions when custom instructions are appended
       (`src/translator.ts:395, 408-412, 459, 472-480`) — number rules programmatically.
       *2026-07-24 (#163): those line refs are stale, and the live defect was the hand-counted
@@ -176,12 +185,27 @@ See ARCHITECTURE.md R4 for the design rationale.
 - [ ] **[M]** `forward --test` mutates real repos — writes `[TEST RESYNC]` content over the
       target (`forward.ts:142-146, 223`) and in `--github` mode pushes and opens real PRs.
       Test mode must be side-effect-free
+- [ ] **[M]** `forward --github` re-run guard: a re-run deletes and force-pushes
+      `resync/<stem>` (`src/cli/forward-pr-creator.ts:231-234`, `:290`) with no check for an
+      open PR, so reviewer commits are discarded after a paid re-translation. List open
+      `resync/*` PRs once per run, skip those files (counted as skipped, with a merge-or-close
+      hint), fail closed if the listing fails, and keep `--force` for leftover branches. In the
+      same PR, add a clean-tree / detached-HEAD preflight to `gitPrepareAndPush` (`:212`).
+      Trigger: #177's 40+ file drift-wave row. *(2026-10-06 codebase review.)*
 - [ ] **[M]** `--json` + `--resume` loses completed reports from the aggregate (sidecar path
       mismatch, `backward.ts:339-342` vs `521-532, 727-733`)
 - [ ] **[M]** `setup` emits broken templates: hardcoded action version `'0.9.0'`
       (`src/cli/commands/setup.ts:304, 351` — use `getToolVersion()`), TOC path in the workflow
       `paths` filter is repo-root `_toc.yml` instead of `<docsFolder>/_toc.yml` (`setup.ts:139`),
-      and no `permissions:` block in either generated workflow
+      and no `permissions:` block in either generated workflow.
+      *2026-10-06: the root `_toc.yml` filter is still emitted (`src/cli/commands/setup.ts:162-163`)
+      and four docs pages carry it (`docs/user/quickstart.md:38`,
+      `docs/user/action-reference.md:125`, `docs/user/tutorials/fresh-setup.md:271`,
+      `docs/user/tutorials/add-language.md:235`; `docs/user/tutorials/connect-existing.md:361` is
+      correct), so a TOC-only source PR never starts a sync. `setup` also ignores the status of
+      its `git add`/`commit` (`setup.ts:388-391`) and returns no `error` on push failure
+      (`:401-407`), which `src/cli/index.ts:617` prints as `❌ undefined`. Trigger: before
+      `translate setup` scaffolds the next source workflow.*
 - [ ] **[M]** Triage keyword fallback classifies "not in sync" as IN_SYNC
       (`src/cli/document-comparator.ts:151-154`) — guard the negation like
       `src/cli/forward-triage.ts:139` does
@@ -189,7 +213,9 @@ See ARCHITECTURE.md R4 for the design rationale.
       (`src/cli/git-metadata.ts:174-177`) — wrong by up to a day across timezones, and this
       ordering exists to prevent LLM directional errors. Sort on epoch
 - [ ] **[M]** `init -f cobweb.md` can select `extended_cobweb.md` (`src/cli/commands/init.ts:433-445`) —
-      exact match must win before substring match
+      exact match must win before substring match. *2026-10-06: widen to one lecture-argument
+      resolver shared by `-f` and `--resume-from`: a typo in `--resume-from` restarts the whole
+      edition (`src/cli/commands/init.ts:524-533`) where `-f` would throw. Routed to #263.*
 - [ ] **[L]** Non-recursive discovery (`src/cli/commands/status.ts:103-112`) makes nested
       lectures invisible to status/backward/forward/headingmap/doctor, though state and init
       support nesting — recurse
@@ -199,7 +225,12 @@ See ARCHITECTURE.md R4 for the design rationale.
 - [ ] **[L]** Glossary loading is cwd-dependent (`forward.ts:399-418`, `init.ts:72-92`) — resolve
       relative to the tool install/repo and add `--glossary` to `forward`; dedupe the two loaders
 - [ ] **[L]** `status --write-state` overwrites existing `source-language` config with the CLI
-      default (`status.ts:350-355`) — status should use `resolveSourceLanguage` like backward/forward
+      default (`status.ts:350-355`) — status should use `resolveSourceLanguage` like backward/forward.
+      *2026-10-06: two more defects on the same path, routed to #175's config-precedence item.
+      The safety check compares day strings (`src/cli/commands/status.ts:341-343`) while
+      OUTDATED compares full dates (`:239-240`), so a same-day source edit is recorded as synced.
+      The commander defaults (`src/cli/index.ts:144`, `:234`, `:327`) overwrite an existing
+      `target-language` and `docs-folder` when the flags are omitted.*
 - [ ] **[L]** `-f ../../x.md` path traversal writes state outside the repo
       (`translate-state.ts:136-138`) — apply init's guards (`init.ts:269-272`) everywhere
 - [ ] **[L]** Validate `--write-state`/`--check-sync` incompatibility before the repo scan
@@ -237,10 +268,24 @@ repos byte-identical.
       documents at ~half the real threshold — recompute against actual model limits
 - [ ] **[L]** Language-code case drift: `validateLanguageCode` lowercases but glossary filename
       and term lookup use the raw code (`src/language-config.ts:126`,
-      `src/sync-orchestrator.ts:112`, `src/translator.ts:666`) — normalize once at input parsing
+      `src/sync-orchestrator.ts:112`, `src/translator.ts:666`) — normalize once at input parsing.
+      *2026-10-06: #348's zero-term glossary warning makes this mechanism loud.*
 - [ ] **[L]** Rebase force-push races: stale blob SHA after `git.updateRef` (`src/index.ts:464-473`)
       → unretried 409; two near-simultaneous merges rebase the same branch concurrently. Add
-      retry-on-409 and document the `concurrency` group as required in the workflow template
+      retry-on-409 and document the `concurrency` group as required in the workflow template.
+      *2026-10-06: carried by #280 (one atomic ref move, plus `queue: max` in the rebase
+      template); tick when #280 closes.*
+- [ ] **[L]** The source sync-workflow template (`translate setup`) declares no `concurrency`
+      group and sync is not idempotent, so a second resync comment, or a resync right after a
+      merge, opens a duplicate translation PR. Add a per-language + PR group. Deferred; hosts:
+      #92 (idempotency) and #281 (wording). Stays open when #280 ticks the rebase line above.
+      *(2026-10-06 codebase review.)*
+- [ ] **[M]** Review mode does not gate a failed source fetch for one file: `getSourceDiff`'s
+      per-file catch-alls (`src/reviewer.ts:591`, `:608`) and its outer catch (`:615`) return
+      partial maps, the deterministic checks pass the missing file by default, and the gates at
+      `:963` and `:1185` fire only on empty maps. Narrowing the catches to 404 alone is not
+      enough, because the outer catch swallows a rethrown 5xx. `getSourceAtCommit` (`:653`) has
+      the same shape. Fix shape and acceptance are on #261 (2026-10-06 comment).
 
 **Done when**: review mode scores a 3-file PR with different per-file section counts correctly;
 oversized files error instead of reading as empty.
@@ -269,7 +314,14 @@ oversized files error instead of reading as empty.
       (statements ≥ 66% to start, ratcheting), `npm audit --omit=dev` gate
 - [ ] **node20 → node24** in one change: `action.yml:92` (`using`), `ci.yml:21`,
       `build-action.mjs:23` (esbuild target), `@types/node`, `engines` — Node 20 passed EOL
-      April 2026
+      April 2026. *2026-10-06: the action, CI and esbuild are on 24; the last Node 20 site is
+      `.github/workflows/deploy-docs.yml:39`. Bundle it with #177's next-CI-edit rows.*
+- [ ] **#172 acceptance, when it is scheduled**: before the choke point moves the parity guard,
+      add one test per write site whose mocked processor breaks parity, and assert the file
+      lands in `result.errors` (`src/sync-orchestrator.ts:556-558`, `:637-640`; today's mock
+      always passes parity, so neither throw is exercised). Add real tests for the subsection
+      fallbacks (`src/file-processor.ts:463-467`, `:479-482`), and re-point or delete the
+      copy-based `src/__tests__/integration.test.ts:146-240`. *(2026-10-06 codebase review.)*
 - [ ] Carried from the previous plan (still unchecked there): backward+review workflow test on
       `lecture-python-intro` ↔ `lecture-intro.zh-cn`; review → Issue creation end-to-end
       (non-dry-run); Stage-1 triage recall validation (≥95%)
@@ -294,6 +346,11 @@ but not sync; `overloaded` retry in the translator but not the reviewer or any C
       fixed (`maxRetries: 0` on all six clients — the budget is RETRY_CONFIG's 3, not 9).
       What remains here is unifying the loop/backoff/JSON-extraction machinery itself.*
       (worst case today: 9 attempts)
+      *2026-10-06: `maxRetries: 0` also dropped the SDK's `retry-after` / `x-should-retry`
+      handling and its jitter. The loops now make 3 attempts with 1 s and 2 s sleeps, so a
+      parallel run fails together under a 429 that asked for ~30 s. Fix the stale "1s, 2s, 4s"
+      text in the same PR (`src/translator.ts:48`, `:228`; `src/reviewer.ts:61`;
+      `docs/user/faq.md:168`; `docs/developer/architecture.md:323`). Routed to #173.*
 - [ ] **Move `.translate/` state out of `src/cli/`** into core — the action imports backwards
       from the CLI today (`src/index.ts:8`, `src/sync-orchestrator.ts:20-21`) (ARCHITECTURE.md R3)
 - [ ] **One section parser**: `reviewer.ts` ships its own `extractPreamble`/`extractSections`/

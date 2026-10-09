@@ -1,6 +1,15 @@
-# .qe/project.yml — declared facts about this repository's project, read by the qe skills.
-# The tracker is the current-state register; the registry (QuantEcon/status-projects,
-# projects.yml) holds the declared facts the dashboard shows.
-tracker: QuantEcon/action-translation#257
-registry: engine-v027
-programme: translation
+# .qe/project.yml — declared facts about this repository's projects, read by the qe skills.
+# Each tracker is the current-state register for its project; the registry
+# (QuantEcon/status-projects, projects.yml) holds the declared facts the dashboard shows.
+#
+# This repository hosts two projects. QEP-7's draft (Appendix A) declares a single
+# tracker/registry/programme, so the pilot uses a list. That is field feedback to the QEP
+# (QuantEcon/qeps#39). List order carries no meaning: the reading order across the trackers
+# is NEXT-STEPS.md.
+projects:
+  - tracker: QuantEcon/action-translation#349
+    registry: engine-hardening-2026-10
+    programme: translation
+  - tracker: QuantEcon/action-translation#257
+    registry: engine-v027
+    programme: translation

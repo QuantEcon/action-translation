@@ -3,10 +3,20 @@ verified: 2026-09-23
 # STATE
 
 Where things stand, ~1 page. Read this first; trust it less as the `verified:` date ages.
-Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predates it).
+Roadmap detail lives in the project trackers (reading order in
+[`../NEXT-STEPS.md`](../NEXT-STEPS.md)), not here (PLAN.md predates them).
 
 ## In flight
 
+- **Hardening project #349** (created 2026-10-06 from the 2026-10-05 codebase review). It has two
+  work items:
+  - **#348**: `translate forward` sends no glossary terms and no language rules, because it passes
+    display labels where language codes are expected. This must land before the next `translate
+    forward` run.
+  - **#280** (adopted): rebase moves a PR branch in one step and queues its runs.
+
+  The review's evidence for other open issues went as comments on #90, #154, #169, #170, #259,
+  #261, #281 and #325; the per-finding disposition is in `log/2026-10-06-review-followup.md`.
 - **fr typography fixes #324 and #325** (filed 2026-09-23 from the French editor's second
   round) — implementation branches in progress: **#324** (`fix/fr-elision-apostrophe`) sets the
   `fr` elision apostrophe before inline markup as U+2019; **#325**
@@ -61,6 +71,9 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
     3. His round-5 review.
 
     Logs: `2026-09-28-ml-round4`. Opus 5.5 is scoped separately as **#334**.
+- **Tracker #257 is parked** (2026-10-04, @mmcky: relevant, not urgent). It resumes when a
+  release is assigned to W1, and its next planning session re-cuts it to W1 alone; the notes for
+  that re-cut are in the 2026-10-06 comment on #259. The text below is as of 2026-09-23.
 - **The standing plan is tracker #257** (2026-08-10 backlog review; supersedes #94/#198):
   all 67 open issues triaged and verified against v0.25.0, phases W0–W6 filed as
   sub-issues #258–#264. The dominant failure shape it names: **the failure path produces
@@ -202,6 +215,11 @@ next is the second `ml_repair` PR; #335 shipped in v0.29.4.
 *Release, 2026-10-09*: v0.29.4 is out (see Recently landed); the next release is v0.30.0 per
 #346. This page's `verified:` stamp predates it, so a full re-verify is owed.
 
+*Review, 2026-10-06*: **no `translate forward` run before #348 merges**. Every forward resync
+since PR #31 (2026-03-19) has gone out without the edition's glossary and language rules. #325
+has a proposed widening (2026-10-06 comment): table delimiter rows, which already break a table
+in the fr edition's pandas lecture.
+
 0. **The fr engine queue, in this order**: finish, review and PR #324, then #325 (branches in
    progress, each with its fr edition repair), then #326 together with #203's fence unwrap.
    In parallel, **#327**: add the "Your first task" phrase, re-measure `python_by_example`, run
@@ -251,9 +269,11 @@ next is the second `ml_repair` PR; #335 shipped in v0.29.4.
   lecture-python-intro#839 merged and no sync run was created, #282). Latent members found
   since, not yet seen in the field: #307 (a rename can delete outside `docs-folder`) and
   #326 (a front-matter drop passes parity and is written). W1 is its detection layer.
-- Prod dep advisories: **2** (`npm audit --omit=dev`, 2026-09-23) — `js-yaml` 4.3.0 (direct,
-  high; fixed in 4.3.2) and `undici` 6.27.0 (transitive via `@actions/github` /
-  `@actions/http-client`, moderate; fixed in 6.28.0), both with an in-range fix available.
+- Prod dep advisories: **2, both high** (`npm audit --omit=dev`, 2026-10-06): `js-yaml` 4.3.0
+  (direct; fixed in 4.3.2) and `undici` 6.27.0 (transitive via `@actions/github` /
+  `@actions/http-client`; now flagged for `<=6.28.0`, so the fix is 6.28.1 or later). Both fixes
+  are in range: run `npm update js-yaml undici` and rebuild as part of the next release's build.
+  Dependabot stays with #177.
   ESM-only `@actions/*` 3.x/9.x majors tracked as #177 F35.
 
 ## Map

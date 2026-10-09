@@ -12,8 +12,9 @@ convention; its home is the Project Management Protocols QEP — QuantEcon/qeps 
 - Read [`.qe/dev/STATE.md`](.qe/dev/STATE.md) before starting; it carries a `verified: <date>`
   first line — trust it less as that ages. It points to [`PLAN.md`](.qe/dev/PLAN.md),
   [`FUTURE.md`](.qe/dev/FUTURE.md), and [`ARCHITECTURE.md`](.qe/dev/ARCHITECTURE.md). The
-  work-plan tracker (#257) is the current-state register; keep STATE.md to orientation and
-  the resume checklist rather than restating it.
+  project trackers are the current-state register (reading order in
+  [`.qe/NEXT-STEPS.md`](.qe/NEXT-STEPS.md)); keep STATE.md to orientation and the resume
+  checklist rather than restating them.
 - Finish each session by appending a short log entry to [`.qe/dev/log/`](.qe/dev/log/)
   (`YYYY-MM-DD-<id>.md`) and updating STATE.md if reality changed. What happened goes in
   the log and in the tracker's revision-log comment, never in the tracker's status section.
