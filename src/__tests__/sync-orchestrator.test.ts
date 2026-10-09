@@ -1361,4 +1361,48 @@ parts:
     const tocEntry = result.translatedFiles.find((f) => f.path === 'lectures/_toc.yml');
     expect(tocEntry!.content).toBe(toc.replace('  - file: failed-lecture\n', ''));
   });
+
+  it('keeps the target part captions while removing the failed entry (#254 + #156)', async () => {
+    // The source adds a lecture to the first part and the lecture fails: the
+    // caption merge (#254) runs first, the entry filter second, and together
+    // they must hand back the target TOC unchanged.
+    const sourceToc = `format: jb-book
+root: intro
+parts:
+- caption: Basics
+  chapters:
+  - file: intro
+  - file: failed-lecture
+- caption: Advanced
+  chapters:
+  - file: advanced
+`;
+    const targetToc = `format: jb-book
+root: intro
+parts:
+- caption: 基础
+  chapters:
+  - file: intro
+- caption: 进阶
+  chapters:
+  - file: advanced
+`;
+    const files: FileToSync[] = [
+      { filename: 'lectures/failed-lecture.md', type: 'markdown', isNewFile: true },
+      {
+        filename: 'lectures/_toc.yml',
+        type: 'toc',
+        newContent: sourceToc,
+        targetContent: targetToc,
+        isNewFile: false,
+      },
+    ];
+
+    const result = await orchestrator.processFiles(files);
+
+    expect(result.failedNewFiles).toEqual(['lectures/failed-lecture.md']);
+    expect(result.filteredTocPaths).toEqual(['lectures/_toc.yml']);
+    const tocEntry = result.translatedFiles.find((f) => f.path === 'lectures/_toc.yml');
+    expect(tocEntry!.content).toBe(targetToc);
+  });
 });
