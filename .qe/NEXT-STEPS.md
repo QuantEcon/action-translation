@@ -1,6 +1,6 @@
 # Next steps — reading order across trackers
 
-*Curated by people. Proposed 2026-10-06 for the maintainer's approval. This file holds the one
+*Curated by people. Approved by @mmcky on 2026-10-09. This file holds the one
 thing no single tracker can: the reading order across this repository's projects and the gates
 between them. Each tracker is the plan for its own work and wins on any disagreement with this
 file.*

@@ -17,7 +17,8 @@ QuantEcon/action-translation#73.
 ```
 .qe/dev/
 ├── STATE.md         # orientation and the resume checklist (~1 page);
-│                    #   first line "verified: YYYY-MM-DD"; the tracker (#257) holds the state
+│                    #   first line "verified: YYYY-MM-DD"; the project trackers hold the
+│                    #   state (reading order: ../NEXT-STEPS.md)
 ├── PLAN.md          # current roadmap (not its history)
 ├── ARCHITECTURE.md  # optional living doc: design deliberation, open questions
 ├── FUTURE.md        # optional living doc: uncommitted feature ideas
