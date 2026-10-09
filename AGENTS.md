@@ -257,6 +257,32 @@ Before creating a release, verify the following:
    Local only, ~36 translations against a cached prompt; the summary goes on the release PR
    beside the gate tally.
 
+   **If a cell fails**, find out whether this release caused it before holding the tags.
+   Draw a same-day control for the failing cell, 24 draws at the previous release and 24
+   more at this tag:
+
+   ```bash
+   ./tool-test-action-on-github/rate-check.sh --ref vPREV  --languages <lang> --draws 24
+   ./tool-test-action-on-github/rate-check.sh --ref vX.Y.Z --languages <lang> --draws 24
+   ```
+
+   Then check whether anything that reaches that language's request changed between the
+   two tags: `src/translator.ts`, `glossary/<lang>.json`, the language's `LANGUAGE_CONFIGS`
+   entry, and the modules the CLI `init` path imports.
+
+   - **This tag's rate is clearly higher** than the previous release's (Fisher's exact
+     test, p < 0.05): treat it as a failed gate. The floating tags stay where they are, the
+     tally goes on the release PR, and the repair ships as the next patch.
+   - **The two cannot be told apart**, and above all when the request did not change: the
+     rate predates this release, and holding the tags protects no one from it. Release,
+     put both tables on the release PR, and post the measurement on the defect's issue.
+
+   Keep the threshold as it is. At #320's ~40% it misses about 2% of the time; at a latent
+   ~4% it fails about 8% of releases by chance, and this control is the answer to that.
+   First applied at v0.29.4: zh-cn `game-theory.md` read 2/12, and with the controls 0/36 at
+   v0.29.3 against 3/36 at v0.29.4, with identical request bytes (#203, #354;
+   `D-2026-10-09-rate-check-failure-control`).
+
 5. **Commit, tag, push** — commit all changes, create git tag `vX.Y.Z`, push with `--tags`; **then move both floating tags** to the release commit:
 
    ```bash

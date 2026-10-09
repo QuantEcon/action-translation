@@ -90,6 +90,12 @@ summarize_run() {
     cat "$SUMMARY"
 }
 
+# The failure verdict, printed by a live run and by --summarize alike.
+print_failure() {
+    echo "✗ A cell is over the threshold. One draw per scenario would have passed this at ~$((100 - 100 * MAX_REFUSALS / DRAWS))% or better; the gate cannot see it — do not release on the gate alone."
+    echo "  Next: a same-day control decides whether this release caused it (AGENTS.md, release checklist step 4b)."
+}
+
 # --summarize: re-read a finished run (its meta.txt carries what the table needs) and exit
 # with the same verdict the run would have given. No API key, no draws.
 if [ -n "$SUMMARIZE" ]; then
@@ -100,7 +106,11 @@ if [ -n "$SUMMARIZE" ]; then
     IFS=',' read -ra LANG_LIST <<< "$LANGS"
     IFS=',' read -ra FIXTURE_LIST <<< "$FIXTURES"
     summarize_run
-    [ "$FAIL" -eq 1 ] && exit 1
+    if [ "$FAIL" -eq 1 ]; then
+        echo ""
+        print_failure
+        exit 1
+    fi
     exit 0
 fi
 
@@ -201,7 +211,7 @@ summarize_run   # sets FAIL; prints and writes summary.txt
 
 echo ""
 if [ "$FAIL" -eq 1 ]; then
-    echo "✗ A cell is over the threshold. One draw per scenario would have passed this at ~$((100 - 100 * MAX_REFUSALS / DRAWS))% or better; the gate cannot see it — do not release on the gate alone."
+    print_failure
     exit 1
 fi
 echo "✓ Every cell within threshold. Summary: $SUMMARY"
