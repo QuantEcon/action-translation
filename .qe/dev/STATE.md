@@ -124,6 +124,13 @@ Roadmap detail lives in the project trackers (reading order in
 
 ## Recently landed
 
+- **Dependency security update (#360, `823a8fa`, 2026-10-09, unreleased)** — `js-yaml` 4.3.2
+  and `undici` 6.29.0, in range, which clears both high-severity production advisories
+  (#359). It ships with the next release.
+- **Release step 4b failure procedure (#357, `0178ec7`, 2026-10-09)** — when a rate-check cell
+  fails, draw a same-day control at the previous tag before holding the floating tags; decision
+  `D-2026-10-09-rate-check-failure-control`. The CLI's refused draws report `Tokens: 0`; that
+  is #356.
 - **2026-10-09 — v0.29.4 released** (release PR #354 `fcee846`; payload #291 `a872b53`, #289
   `e084e19`, #335 `7d58e01`): translated `_toc.yml` part captions survive a sync (#254), a
   failed new lecture's TOC entry is removed from the sync PR (#156), and the `ml` rule-19
@@ -214,7 +221,8 @@ Roadmap detail lives in the project trackers (reading order in
 next is the second `ml_repair` PR; #335 shipped in v0.29.4.
 
 *Release, 2026-10-09*: v0.29.4 is out (see Recently landed); the next release is v0.30.0 per
-#346. This page's `verified:` stamp predates it, so a full re-verify is owed.
+#346, and it also carries #360's dependency security update. If 4b fails again, follow AGENTS.md
+step 4b (#357). This page's `verified:` stamp predates it, so a full re-verify is owed.
 
 *Review, 2026-10-06*: **no `translate forward` run before #348 merges**. Every forward resync
 since PR #31 (2026-03-19) has gone out without the edition's glossary and language rules. #325
@@ -271,11 +279,10 @@ in the fr edition's pandas lecture.
   lecture-python-intro#839 merged and no sync run was created, #282). Latent members found
   since, not yet seen in the field: #307 (a rename can delete outside `docs-folder`) and
   #326 (a front-matter drop passes parity and is written). W1 is its detection layer.
-- Prod dep advisories: **2, both high** (`npm audit --omit=dev`, 2026-10-06): `js-yaml` 4.3.0
-  (direct; fixed in 4.3.2) and `undici` 6.27.0 (transitive via `@actions/github` /
-  `@actions/http-client`; now flagged for `<=6.28.0`, so the fix is 6.28.1 or later). Both fixes
-  are in range: run `npm update js-yaml undici` and rebuild as part of the next release's build.
-  Dependabot stays with #177.
+- Prod dep advisories: **0 on `main`** (`npm audit --omit=dev`, 2026-10-09). The two high ones
+  found 2026-10-06, `js-yaml` 4.3.0 and `undici` 6.27.0, were cleared in range by #360
+  (`823a8fa`: 4.3.2 and 6.29.0). That fix is unreleased: `@v0` (v0.29.4) still bundles the old
+  versions until the next release. Dependabot stays with #177.
   ESM-only `@actions/*` 3.x/9.x majors tracked as #177 F35.
 
 ## Map
