@@ -205,6 +205,61 @@ describe('buildPrBody', () => {
       buildPrBody([], [], baseConfig, undefined, undefined, undefined, undefined, new Map())
     ).not.toContain('Target-Only Sections Removed');
   });
+
+  it('names the removed TOC entries when failed new files were filtered from a TOC (#156)', () => {
+    const body = buildPrBody(
+      [],
+      [],
+      baseConfig,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        files: ['lectures/failed-lecture.md', 'lectures/another-failed.md'],
+        filteredTocPaths: ['lectures/_toc.yml'],
+      }
+    );
+
+    expect(body).toContain('### ⚠️ Files Failed to Translate');
+    expect(body).toContain('`lectures/failed-lecture.md`');
+    expect(body).toContain('`lectures/another-failed.md`');
+    expect(body).toContain('removed from `lectures/_toc.yml`');
+    expect(body).not.toContain('No `_toc.yml` was part of this sync');
+    expect(body).toContain('failure issue');
+  });
+
+  it('says nothing was removed when the run had no TOC in its changeset (#156)', () => {
+    const body = buildPrBody(
+      [],
+      [],
+      baseConfig,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        files: ['lectures/failed-lecture.md'],
+        filteredTocPaths: [],
+      }
+    );
+
+    expect(body).toContain('### ⚠️ Files Failed to Translate');
+    expect(body).toContain('No `_toc.yml` was part of this sync');
+    expect(body).not.toContain('have been removed from');
+  });
+
+  it('omits the failed files notice when failedNewFiles is absent or empty', () => {
+    expect(buildPrBody([], [], baseConfig)).not.toContain('Files Failed to Translate');
+    expect(
+      buildPrBody([], [], baseConfig, undefined, undefined, undefined, undefined, undefined, {
+        files: [],
+        filteredTocPaths: [],
+      })
+    ).not.toContain('Files Failed to Translate');
+  });
 });
 
 // =============================================================================
