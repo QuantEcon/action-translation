@@ -7,6 +7,13 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## In flight
 
+- **v0.29.4 release cut 2026-10-09** (payload #291 `a872b53`, #289 `e084e19`, #335 `7d58e01`) —
+  patch: sync and the rebase replay carry the target's translated `_toc.yml` part captions
+  forward (#254), a new lecture the run failed to deliver is removed from the sync PR's
+  `_toc.yml` (#156), and `ml` rule 19 takes the completive. The harness TOC fixtures are flat,
+  so the §4a gate checks those two paths for regressions only; the caption carry-forward is
+  covered by unit tests. §4a gate and the 4b rate-check summary go on the release PR. #346's
+  French and Malayalam items stay with v0.30.0.
 - **fr typography fixes #324 and #325** (filed 2026-09-23 from the French editor's second
   round) — implementation branches in progress: **#324** (`fix/fr-elision-apostrophe`) sets the
   `fr` elision apostrophe before inline markup as U+2019; **#325**
@@ -38,7 +45,7 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
       text; all 81 splits pass a two-reader screen. The splice rate falls 17.3 → 10.7 per
       100 lines on `numpy`, still above his 2.8, so the repair covers only part of the class.
   - **Prompt.** Of four trims measured before release (arm `2026-09-28-round4-prompt-trims`,
-    192 drafts), only the rule-19 exception ships: **#335** (`7d58e01`, unreleased).
+    192 drafts), only the rule-19 exception ships: **#335** (`7d58e01`, in v0.29.4).
     - It takes "have already seen / met" to `കണ്ടുകഴിഞ്ഞു`: `numpy` 0/19 → 23/23,
       `python_essentials` 4/12 → 10/12.
     - Watch item: it also turns the simple past at `numpy` 864 into the completive.
@@ -53,7 +60,8 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
     1. A second `ml_repair` PR: the bracketed-paragraph stop and a generalised `-ഉം` comma,
        then the lexical repairs (*see* → `നോക്കുക`, adverbial *element-wise*, standalone
        `മുൻ`), each with his lines as fixtures.
-    2. The release that carries #335 (§4a gate and 4b rate check).
+    2. The release that carries #335: v0.29.4, cut 2026-10-09 (§4a gate and 4b rate check
+       pending).
     3. **The rule-2 arm**, after his ml#25 Q4 answer.
     4. His round-5 review.
 
@@ -98,15 +106,6 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
   still prescribes it unconditionally (#281). The fix is re-specified as source snapshot vs
   source `main` (English against English), and `mode: rebase` reads the same frozen snapshot.
   The bug stays open; W1's stale-resync box carries the guard.
-- **Contributor PRs #289 (#156) and #291 (#254 interim)** — reviewed in full and upgraded in
-  place on kp992's branches in the 2026-09-01 sweep (byte-preserving `_toc.yml` edits instead
-  of a `yaml.dump` round-trip; detail on #257 and the PR threads). Both still open 2026-09-23
-  and now **conflicting with `main`**, on CHANGELOG `[Unreleased]` and
-  `dist-action/index.js.map` only (`src/` merges clean; `git merge-tree`, 2026-09-23): #289 is
-  9 behind (kp992 merged `main` in on 2026-09-20; CI green at `8b98a32`), #291 is 20 behind
-  (untouched since 09-01). **Merge order #289 → #291.** #291 is meant to leave #254 open (W1's
-  structured merge is the end state), but its body's negated closing phrase is parsed as a
-  closing reference (`closingIssuesReferences` = #254). The two #297 residuals are #301 (open).
 - **Glossary PR #69** (ja) — rebuilt on `main` 2026-09-01 with the thread's rulings applied
   (`ja.json` v1.1, the `ja` entry in `LANGUAGE_CONFIGS`, decision record
   `D-2026-09-01-ja-terminology-policy` on the branch; the Wikipedia cross-check idea is #300).
@@ -116,7 +115,16 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 
 ## Recently landed
 
-- **ml rule-19 exception (#335, `7d58e01`, 2026-09-28, unreleased)** — "have already seen /
+- **#289 and #291 merged 2026-10-09** (kp992's contributor PRs, upgraded in place in the
+  2026-09-01 sweep; ship in v0.29.4). **#291** (`a872b53`, the #254 interim) carries the
+  target's part captions forward in `src/toc-captions.ts`, matching parts by shared lectures and
+  substituting only the caption lines. Its body's negated closing phrase closed #254 on merge,
+  as predicted; the structured TOC merge that is #254's end state stays in W1 (#259). **#289**
+  (`e084e19`; #156 closed on merge) splices a failed new lecture's entry out of the sync PR's
+  `_toc.yml` and lists it in the PR body. It merged second, so its branch took `main` first, with
+  a test of the two together: caption merge, then entry filter, hands back the target TOC byte
+  for byte.
+- **ml rule-19 exception (#335, `7d58e01`, 2026-09-28, ships in v0.29.4)** — "have already seen /
   met" takes the completive `കണ്ടുകഴിഞ്ഞു`. It was measured in a four-arm, 192-draft arm with
   three proposed deletions, which regressed terminal punctuation and were not shipped.
 - **ml arms: #331 regeneration test, round-5 seed (#333, `866f91a`, 2026-09-28)** — the
@@ -185,18 +193,17 @@ Roadmap detail lives in the work-plan tracker **#257**, not here (PLAN.md predat
 **Resume here (2026-09-23, after v0.29.3):**
 
 *ml, 2026-09-28 (end)*: see the ml bullet under In flight — round 5 is with the editor, and
-next is the second `ml_repair` PR; #335 ships at the next release.
+next is the second `ml_repair` PR; #335 ships in v0.29.4.
 
 0. **The fr engine queue, in this order**: finish, review and PR #324, then #325 (branches in
    progress, each with its fr edition repair), then #326 together with #203's fence unwrap.
    In parallel, **#327**: add the "Your first task" phrase, re-measure `python_by_example`, run
    the blind pairwise judge, and post the result on #327 before the narrowed rule ships.
-1. **Merge #289, then #291** — each needs a `main` merge and a bundle rebuild first (see In
-   flight). **Reword #291's body before merging**: its negated closing phrase would close
-   #254. Then **triage the post-review arrivals** into W1–W6: #257 (stamped 2026-09-01) still
-   lists #280 #282 #283 #284 #286 #287 #288 #290 #295 #296 #300 as untriaged, and #301, #307
-   (`high-priority`) and #324–#327 have arrived since (#282, #287, #290 look W1-shaped; #307
-   goes with slice 2).
+1. **Finish v0.29.4** (2026-10-09; see In flight): §4a gate and 4b rate check at the tag,
+   move `v0.29` and `v0`, `@v0` smoke, GitHub release. Then **triage the post-review arrivals**
+   into W1–W6: #257 (stamped 2026-09-01) still lists #280 #282 #283 #284 #286 #287 #288 #290
+   #295 #296 #300 as untriaged, and #301, #307 (`high-priority`) and #324–#327 have arrived
+   since (#282, #287, #290 look W1-shaped; #307 goes with slice 2).
 2. **#169 slice 2: `src/github-content.ts`** (not started — no such file at `16e50f6`) —
    `tryFetchFileContent` plus **one** `buildFilesToSync` over a narrow `ContentClient`
    interface, replacing the two independently-maintained builders (`rebaseSinglePR` at
