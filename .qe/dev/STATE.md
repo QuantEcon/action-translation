@@ -199,11 +199,11 @@ next is the second `ml_repair` PR; #335 ships in v0.29.4.
    progress, each with its fr edition repair), then #326 together with #203's fence unwrap.
    In parallel, **#327**: add the "Your first task" phrase, re-measure `python_by_example`, run
    the blind pairwise judge, and post the result on #327 before the narrowed rule ships.
-1. **Finish v0.29.4** (see In flight): §4a gate and 4b rate check at the tag, move `v0.29`
-   and `v0`, `@v0` smoke, GitHub release. Then **triage the post-review arrivals** into W1–W6: #257 (stamped 2026-09-01) still
-   lists #280 #282 #283 #284 #286 #287 #288 #290 #295 #296 #300 as untriaged, and #301, #307
-   (`high-priority`) and #324–#327 have arrived since (#282, #287, #290 look W1-shaped; #307
-   goes with slice 2).
+1. **Finish v0.29.4** (2026-10-09; see In flight): §4a gate and 4b rate check at the tag,
+   move `v0.29` and `v0`, `@v0` smoke, GitHub release. Then **triage the post-review arrivals**
+   into W1–W6: #257 (stamped 2026-09-01) still lists #280 #282 #283 #284 #286 #287 #288 #290
+   #295 #296 #300 as untriaged, and #301, #307 (`high-priority`) and #324–#327 have arrived
+   since (#282, #287, #290 look W1-shaped; #307 goes with slice 2).
 2. **#169 slice 2: `src/github-content.ts`** (not started — no such file at `16e50f6`) —
    `tryFetchFileContent` plus **one** `buildFilesToSync` over a narrow `ContentClient`
    interface, replacing the two independently-maintained builders (`rebaseSinglePR` at
