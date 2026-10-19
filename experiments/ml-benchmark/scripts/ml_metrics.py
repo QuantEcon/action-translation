@@ -173,7 +173,34 @@ BANNED_RENDERINGS: list[tuple[str, str]] = [
     ("explicit ആയ", "'explicit' → വ്യക്തമായ / വ്യക്തമായി"),
     ("dictionary-like", "'X-like' → X പോലെയുള്ള, before the name"),
     ("പിന്തുടര", "'follow (what is going on)' → മനസ്സിലാക്കുക — check the sense"),
+    # round 5 (lecture-python-programming.ml#26, pandas, 2026-10-19): everyday
+    # words the editor returned to English at every site; none of these
+    # Malayalam forms appears on his five reviewed pages.
+    ("കാര്യക്ഷമ", "'efficient' stays English (efficient-ആയും, efficient-ഉം ആയ)"),
+    ("സൗകര്യപ്രദ", "'convenient(ly)' stays English (convenient methods)"),
+    ("തൃപ്തിപ്പെടുത്ത", "'satisfy' → satisfy ചെയ്യുക"),
+    ("താരതമ്യം", "'compare' → compare ചെയ്യുക"),
+    ("വിജയിച്ച", "'succeeded' → success ആയി"),
+    ("അടിസ്ഥാനപരമായി", "'In essence,' / 'Basically,' stays English"),
+    ("Practice-ൽ", "'In practice,' stays English"),
 ]
+# Report-only watches from the same round: forms he changed at most sites but
+# kept at least once on a reviewed page, so a ban would contradict his text.
+OVER_TRANSLATION_WATCH: list[tuple[str, str]] = [
+    ("സൂക്ഷിക്ക", "'store' → store ചെയ്യുക at ml#26 91, but he keeps സൂക്ഷിക്കുന്ന for a frame storing variables (functions 458) — check the sense"),
+    ("അടിസ്ഥാന ", "'basic' → English at ml#26 64, but അടിസ്ഥാന kept twice in numpy — check the sense"),
+    ("ചെയ്യൽ", "a verbal-noun bullet: he returned the five such pandas bullets to English (ml#57 Q1)"),
+    ("വിവിധ", "'various' → പല at 2 of 3 pandas sites"),
+    ("ഇപ്പോൾ", "'now' meaning next / at this point → ഇനി (ml#25 Q3; ml#26 545, 561, 571); ഇപ്പോൾ only for 'at the moment' / 'for now'"),
+]
+# Library names whose canonical spelling is lowercase: the editor keeps them so
+# at a paragraph start (pandas, ml#26 87), and a code-like opener (axis = 0) is
+# a token, not a word.
+LOWERCASE_OK = {
+    "pandas", "numpy", "matplotlib", "python", "scipy", "sympy", "numba", "jax",
+    "polars", "statsmodels", "wbgapi", "yfinance",
+}
+CODE_OPENER_RE = re.compile(r"^\w+ = ")
 # (The round-2 future-hortative watch was retired in round 4: since rule 13
 # landed it made 2 hits on reviewed seeds and the editor acted on neither — it
 # flagged a later-lecture promise he kept (ml#23 1092) and missed another
@@ -187,7 +214,25 @@ ML_PLURAL_ON_LATIN_RE = re.compile(r"[A-Za-z`]-?ു?ക[ൾള]")
 # (Columns-ഉം rows-ഉം, Step 1-ഉം 2-ഉം): he wants the comma always, single
 # words included. Only the hyphenated form is matched — a bare -ും is also the
 # future verb ending (ചെയ്യാനും കഴിയും), which would make this a noise source.
-UM_PAIR_NO_COMMA_RE = re.compile(r"\S+-ഉം\s+\S+-ഉം")
+# Round 5 (ml#26 64, 284, 435): the second item may run to a few words
+# (type-ഉം core array operations-ഉം; `POP`-ഉം total GDP (`tcgdp`)-ഉം) — he
+# commaed all three. Non-greedy, so a chain gets a comma at every join; the
+# words bridged must be Latin (an English phrase), so two pairs on either side
+# of a Malayalam verb (labels-ഉം ചേർത്ത് rows-ഉം, his pandas 210) are not
+# one pair; no item may contain a comma. Case-marked pairs (-ന്റെയും) are not
+# matched: whether they always take the comma is ml#57 Q2.
+UM_PAIR_NO_COMMA_RE = re.compile(r"(\S+-ഉം)(\s+(?:[^\s,ഀ-ൿ]+\s+){0,3}?[^\s,ഀ-ൿ]*-ഉം)")
+
+
+def add_um_commas(line: str) -> tuple[str, int]:
+    """Insert the comma between -ഉം items wherever UM_PAIR_NO_COMMA_RE finds a
+    bare join; loops so a chain of three gets two commas. Shared with ml_repair."""
+    total = 0
+    while True:
+        line, k = UM_PAIR_NO_COMMA_RE.subn(r"\1,\2", line)
+        total += k
+        if not k:
+            return line, total
 
 # -- Round-4 comma splices (lecture-python-programming.ml#23, 2026-09-28) -----
 # The largest class of the fourth review: two finite clauses joined by a comma
@@ -225,13 +270,43 @@ SPLICE_TAG_TAIL_RE = re.compile(
 # only by this). The concessive and additive endings are defensive: FIN admits
 # no bare -ും today, and they keep it that way if the future list grows.
 _SPLICE_KEEP_FIN_RE = re.compile(r"(?:ശ്രദ്ധിക്കുക|ഓർക്കുക|ങ്കിലും|ാലും|ായും|ുകയും|പോലും|ല്ലാം)\*?$")
+# -- Round-5 widening (lecture-python-programming.ml#26, 2026-10-19) -----------
+# He split 7 of the 8 finite-verb comma sites the lint saw in the pandas seed
+# (89, 272, 444, 460, 467, 538, 571) and kept only a line-final coordination
+# (66), so the repairable subset widens from "comma + resumptive pronoun" to
+# "comma + a continuing clause", guarded by the shapes he keeps on his five
+# reviewed pages:
+#   - a coordinator or connective after the comma (", കൂടാതെ", ", പക്ഷേ",
+#     ", അല്ലെങ്കിൽ", ", അങ്ങനെ" and ", അതുകൊണ്ട്" are his own);
+#   - the same finite form repeated across the segments — parallel predicates
+#     (X ആകാം, Y ആകാം, അല്ലെങ്കിൽ Z ആകാം at ml#26 307; numpy 65 and 700;
+#     python_by_example 258 and 414), which also leaves pandas 272 to the lint;
+#   - an "X, not Y" contrast (`==` syntax ഉപയോഗിച്ചാണ്, `=` അല്ല — functions 366);
+#   - a locative adverb opening a where-clause, or a fronted imperative
+#     (ശ്രദ്ധിക്കുക, / ഓർക്കുക,) that rules 13/14 give its own comma.
+# The one nominal ending he split is the cleft -ിരിക്കുന്നത് before അതിനാൽ /
+# കാരണം (ml#26 110); it has its own pattern since it is not a finite form.
+_SPLICE_KEEP_NEXT_RE = re.compile(
+    r"^\*?(?:കൂടാതെ|ഒപ്പം|അല്ലെങ്കിൽ|പക്ഷേ|എന്നാൽ|അങ്ങനെ|അതുവഴി|അതുകൊണ്ട്|അതായത്|അതേ|അവിടെ|ഇവിടെ|ശ്രദ്ധിക്കുക|ഓർക്കുക)(?![ഀ-ൿ])"
+)
+_SPLICE_CONTRAST_TAIL_RE = re.compile(r"^\S+\s+\*?(?:അല്ല|ഇല്ല)\*?[.:;]?\s*$")
+SPLICE_NOMINAL_RE = re.compile(r"(?P<fin>\S*ിരിക്കുന്നത്)(?P<closer>),\s+(?P<next>(?:അതിനാൽ|കാരണം)(?![ഀ-ൿ])\S*)")
+
+
+def _same_finite_form_recurs(line: str, bare: str) -> bool:
+    toks = [t.strip("*.:;,()") for t in line.split()]
+    return sum(1 for t in toks if t == bare) > 1
 
 
 def splice_sites(line: str) -> list[dict]:
     """Comma-joined finite clauses on one line. Each site carries `resumptive`
     (the repairable subset) and the span of the ", " to replace with ". "."""
     out: list[dict] = []
-    for m in SPLICE_SITE_RE.finditer(line):
+    matches = sorted(
+        list(SPLICE_SITE_RE.finditer(line)) + list(SPLICE_NOMINAL_RE.finditer(line)),
+        key=lambda m: m.start("fin"),
+    )
+    for m in matches:
         fin = m.group("fin")
         before = line[: m.start("fin")]
         # The finite token must not open its sentence (തീർച്ചയായും, / ശ്രദ്ധിക്കുക,).
@@ -252,13 +327,39 @@ def splice_sites(line: str) -> list[dict]:
         # A pronoun that ends the line opens a list ("…ആവശ്യമാണ്, അത്" + bullets):
         # splitting there leaves a verbless "അത്:" sentence, so it is not repaired.
         carries_on = bool(line[m.end("next"):].strip(" :;"))
+        resumptive = bool(SPLICE_RESUMPTIVE_RE.match(m.group("next"))) and not negator and carries_on
+        repairable = (
+            carries_on and not negator
+            and not _SPLICE_KEEP_NEXT_RE.match(m.group("next"))
+            and not _SPLICE_CONTRAST_TAIL_RE.match(tail)
+            and not _same_finite_form_recurs(line, bare)
+        )
         out.append({
-            "resumptive": bool(SPLICE_RESUMPTIVE_RE.match(m.group("next"))) and not negator and carries_on,
+            "resumptive": resumptive,
+            # the round-5 subset ml_repair.py splits; a superset of resumptive
+            # except where a round-5 guard (repeated finite form) applies
+            "repairable": repairable,
             "comma_start": m.end("closer"),
             "next_start": m.start("next"),
             "text": line[m.start("fin"): m.end("next")],
         })
     return out
+
+
+def split_splices(line: str) -> tuple[str, int]:
+    """Replace the ", " of every repairable splice on `line` with ". " and
+    capitalise a plain lowercase English word that now opens a sentence (his
+    "Total GDP" at ml#26 467), leaving code, identifiers and canonical-lowercase
+    library names alone. Consumed by ml_repair.py. Never adds a connective: at
+    ml#26 538 he inserted എന്നാൽ himself, and that is his to do."""
+    sites = [s for s in splice_sites(line) if s["repairable"]]
+    for s in reversed(sites):
+        tail = line[s["next_start"]:]
+        m = re.match(r"([a-z][a-z]+)(?![A-Za-z0-9_.`])", tail)
+        if m and m.group(1) not in LOWERCASE_OK:
+            tail = tail[0].upper() + tail[1:]
+        line = line[: s["comma_start"]] + ". " + tail
+    return line, len(sites)
 
 
 def split_resumptive_splices(line: str) -> tuple[str, int]:
@@ -373,6 +474,8 @@ def round2_lints(text: str) -> dict:
     um_pair: list[dict] = []
     splice_watch: list[dict] = []
     splice_resumptive: list[dict] = []
+    splice_repairable: list[dict] = []
+    watch: list[dict] = []
     for p in prose_line_info(text):
         n, line, nxt = p["n"], p["line"], p["next"]
         has_ml = bool(MALAYALAM_RE.search(line))
@@ -401,11 +504,15 @@ def round2_lints(text: str) -> dict:
             head = ROLE_PREFIX_RE.sub("", head)
             # A plain lowercase English word opening the sentence; identifiers
             # and code-like tokens (if/else, np.random, x_t) are exempt.
-            if re.match(r"[a-z][a-z-]*(\s|$)", head):
+            m = re.match(r"([a-z][a-z-]*)(\s|$)", head)
+            if m and m.group(1) not in LOWERCASE_OK and not CODE_OPENER_RE.match(head):
                 caps.append({"line": n, "text": head[:50]})
         for sub, fix in BANNED_RENDERINGS:
             if sub in line:
                 banned.append({"line": n, "rendering": sub, "rule": fix})
+        for sub, fix in OVER_TRANSLATION_WATCH:
+            if sub in line:
+                watch.append({"line": n, "rendering": sub, "rule": fix})
         if has_ml:
             for m in ML_PLURAL_ON_LATIN_RE.finditer(body):
                 plural.append({"line": n, "text": body[max(0, m.start() - 20) : m.end() + 6]})
@@ -415,19 +522,26 @@ def round2_lints(text: str) -> dict:
                 splice_watch.append({"line": n, "text": s["text"]})
                 if s["resumptive"]:
                     splice_resumptive.append({"line": n, "text": s["text"]})
+                if s["repairable"]:
+                    splice_repairable.append({"line": n, "text": s["text"]})
     return {
         "terminal_punctuation": punct,
         "lowercase_initial": caps,
         "banned_renderings": banned,
         "malayalam_plural_on_english_noun": plural,
         "um_pair_without_comma": um_pair,
+        # Report-only (round 5): over-translations he changed at most sites but
+        # kept at least once, and ഇപ്പോൾ where the sense may be "next".
+        "over_translation_watch": watch,
         # Report-only: every comma-joined finite clause. His reviewed pages keep
         # 1-4 per lecture from round 2 on (parallel clauses, "…ആണ്, പക്ഷേ …:"),
         # so 0 is not the target; read it with comma_splice_rate. A secondary
         # best-of-N key at most — never a primary one.
         "comma_splice_watch": splice_watch,
-        # The subset ml_repair.py splits into two sentences.
+        # The round-4 subset (comma + resumptive pronoun), kept for the series.
         "comma_splice_resumptive": splice_resumptive,
+        # The round-5 subset ml_repair.py splits into two sentences.
+        "comma_splice_repairable": splice_repairable,
     }
 
 
@@ -443,6 +557,7 @@ def comma_splice_rate(text: str) -> dict:
         "malayalam_prose_lines": n,
         "sites": len(sites),
         "resumptive": sum(s["resumptive"] for s in sites),
+        "repairable": sum(s["repairable"] for s in sites),
         "per_100_lines": round(100 * len(sites) / n, 1) if n else 0.0,
     }
 

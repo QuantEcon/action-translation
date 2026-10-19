@@ -35,3 +35,19 @@ Both colons end a sentence that runs on into the list below it (`…, pandas:` b
 **Two false alarms in the pinned-retention check, the same in all drafts.**
 - `returns 6 → 2`: the English verb becomes the light verb `return ചെയ്യുന്നു`, which the count does not fold to the plural.
 - `work 5 → 1`: *working with data* is rendered `പ്രവർത്തിക്കാൻ`. The glossary ban on that form is dropped in the round-4 trims.
+
+## Review outcome (2026-10-19)
+
+The editor reviewed the sent draft between 2026-10-09 and 2026-10-16: 85 suggestion blocks on 85 of 125 Malayalam prose lines, all applied verbatim (`006c855`) with three normalisations (`5da1c5c`), squash-merged as `5378fd3`. Dispositions: QuantEcon/project-translation `reports/2026-10-19-ml-pandas-review-disposition.md`; his questions are lecture-python-programming.ml#57.
+
+| Measure (one method, `prose_lines`) | r3 `matplotlib` | r4 `numpy` | r5 `pandas` |
+|---|---|---|---|
+| Touch rate | 66.7% | 51.0% | 68.0% |
+| Median similarity | 0.824 | 0.895 | 0.859 |
+| Heavy rewrites (< 0.70) | 27.3% | 5.5% | 16.5% |
+| Touch rate, lines < 120 chars | 64% | 40% | 65% |
+
+- **Every encoded class held**: 0 terminal-punctuation flags, 1 capitalisation flag (56, disclosed; draw 3 had the capital), *For example* 5/5, *provide* 6/6, and all 11 repairs kept — including both colons at a list lead-in (64, 540), the case the round-4 analysis was unsure of. He left 236 (a comma before a cell) and 604 (a bare `{note}` ending), as he left 878 in round 4.
+- **The residue is unencoded classes**: over-translation of everyday words (24 flags to English, 3 the other way), sentence splitting past the pronoun subset (7 of the 8 finite-verb comma sites the lint saw, 8 restructures besides), word order (30), explicit referents (18). No hard mistranslation; three mild.
+- **Draw 3** was closer to his text than the seed at 16 of the 85 flagged lines (draw 2 at 4) and matched his line at 3. The selection keys used here are all repaired before sending, so they could not separate drafts.
+- **What this round changed in the scripts** (the PR that adds this section): the splice repair widens to any finite-verb comma followed by a continuing clause, the discourse formulas are restored source-gated, the `-ഉം` comma covers multi-word items, and the round's over-translations become banned renderings and glossary v0.8.0 pins. Re-run on `pandas-v0.29.3-draw1.md` with the English source: 12 `-ഉം` commas, 8 splits, 3 formulas and 2 colons (the sent draft had 8, 1, 0 and 2); splice rate 6.4 → 1.6 per 100 lines; the retention gate fails on `efficient` and `convenient`, which it could not see before. No change on the merged `numpy`, `matplotlib` or `pandas`.
