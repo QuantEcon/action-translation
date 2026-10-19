@@ -12,7 +12,7 @@ import { APIConnectionError, APIError, RateLimitError } from '@anthropic-ai/sdk'
  * (YAML cannot import this constant) and must be kept in sync manually.
  *
  * Anthropic does not publish a floating "sonnet-latest" alias; bare IDs like
- * `claude-sonnet-5` pin to a generation, which is intentional — new generations
+ * `claude-sonnet-5-5` pin to a generation, which is intentional — new generations
  * can ship breaking API changes, so upgrades are a deliberate, tested bump here.
  *
  * Request settings that differ by model — thinking, effort, output caps — come
@@ -20,7 +20,7 @@ import { APIConnectionError, APIError, RateLimitError } from '@anthropic-ai/sdk'
  * Sonnet 5.5, Opus 5.5 and Fable reject the disabled thinking that older models
  * are sent, so no single value is valid for every supported model.
  */
-export const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-5';
+export const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-5-5';
 
 /**
  * Output token budgets (`max_tokens`) per operation class.
@@ -167,13 +167,13 @@ export const MODEL_REQUEST_POLICIES: Readonly<Record<string, ModelRequestPolicy>
  * entry in the same change. models.test.ts pins this list to force that call.
  */
 export const VALID_MODEL_PATTERNS: RegExp[] = [
-  /^claude-sonnet-5-5$/, // claude-sonnet-5-5 (current-generation Sonnet)
+  /^claude-sonnet-5-5$/, // claude-sonnet-5-5 (current-generation Sonnet; DEFAULT_CLAUDE_MODEL)
   /^claude-opus-5-5$/, // claude-opus-5-5 (current-generation Opus)
   /^claude-fable-5-1$/, // claude-fable-5-1 (current Fable, highest-capability tier)
   /^claude-haiku-5-5$/, // claude-haiku-5-5 (current-generation Haiku; accepts thinking disabled at effort <= high, so no table entry)
   /^claude-fable-5$/, // claude-fable-5 (previous-generation Fable)
   /^claude-opus-5$/, // claude-opus-5 (previous-generation Opus) — absent until #230: priced at $0.000 by the glossary scripts while passing validation nowhere
-  /^claude-sonnet-5$/, // claude-sonnet-5 (previous-generation Sonnet; still DEFAULT_CLAUDE_MODEL)
+  /^claude-sonnet-5$/, // claude-sonnet-5 (previous-generation Sonnet; the default until the 5.5 evaluation)
   /^claude-opus-4-8$/, // claude-opus-4-8 (previous-generation Opus)
   /^claude-opus-4-7$/, // claude-opus-4-7 (previous-generation Opus)
   /^claude-haiku-4-5$/, // claude-haiku-4-5 (previous-generation Haiku, bare alias)

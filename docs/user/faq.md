@@ -16,7 +16,7 @@ The GitHub Action supports the configured languages only — the target language
 
 ### How much does it cost to run?
 
-Costs depend on document size and the Claude model used. With `claude-sonnet-5` ($2 / $10 per M input/output tokens; rough estimates, see the [CLI cost table](cli-reference.md#cost-estimates)):
+Costs depend on document size and the Claude model used. With `claude-sonnet-5-5` ($2 / $10 per M input/output tokens; rough estimates, see the [CLI cost table](cli-reference.md#cost-estimates)):
 - **Sync mode** (per PR): ~$0.06–0.25 depending on how many sections changed
 - **Backward analysis** (51 files): ~$1.10 total
 - **Forward resync** (per file): ~$0.16–0.22

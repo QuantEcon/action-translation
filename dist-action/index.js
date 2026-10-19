@@ -47456,7 +47456,7 @@ function validateLanguageCode(languageCode) {
 
 // dist/models.js
 init_sdk();
-var DEFAULT_CLAUDE_MODEL = "claude-sonnet-5";
+var DEFAULT_CLAUDE_MODEL = "claude-sonnet-5-5";
 var MAX_TOKENS = {
   /** Section-level translation (update / resync / new). Streamed. */
   section: 16384,
@@ -47502,7 +47502,7 @@ var MODEL_REQUEST_POLICIES = {
 };
 var VALID_MODEL_PATTERNS = [
   /^claude-sonnet-5-5$/,
-  // claude-sonnet-5-5 (current-generation Sonnet)
+  // claude-sonnet-5-5 (current-generation Sonnet; DEFAULT_CLAUDE_MODEL)
   /^claude-opus-5-5$/,
   // claude-opus-5-5 (current-generation Opus)
   /^claude-fable-5-1$/,
@@ -47514,7 +47514,7 @@ var VALID_MODEL_PATTERNS = [
   /^claude-opus-5$/,
   // claude-opus-5 (previous-generation Opus) — absent until #230: priced at $0.000 by the glossary scripts while passing validation nowhere
   /^claude-sonnet-5$/,
-  // claude-sonnet-5 (previous-generation Sonnet; still DEFAULT_CLAUDE_MODEL)
+  // claude-sonnet-5 (previous-generation Sonnet; the default until the 5.5 evaluation)
   /^claude-opus-4-8$/,
   // claude-opus-4-8 (previous-generation Opus)
   /^claude-opus-4-7$/,

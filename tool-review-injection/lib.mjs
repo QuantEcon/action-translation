@@ -154,7 +154,7 @@ This PR contains automated translations from [${owner}/${name}](https://github.c
 ### Details
 - **Source Language**: en
 - **Target Language**: zh-cn
-- **Model**: claude-sonnet-5
+- **Model**: claude-sonnet-5-5
 
 ---
 *Injected-defect certification fixture — QuantEcon/project-translation#28. Not a real translation.*

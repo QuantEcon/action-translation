@@ -131,7 +131,7 @@ describe('getInputs (sync mode)', () => {
     it('should use default claude model', () => {
       setMockInputs(validInputs);
       const result = getInputs();
-      expect(result.claudeModel).toBe('claude-sonnet-5');
+      expect(result.claudeModel).toBe('claude-sonnet-5-5');
     });
 
     it('should use default source language', () => {

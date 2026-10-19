@@ -56,7 +56,7 @@ inputs:
     description: 'Claude model to use for translation'
     required: false
     # Keep in sync with DEFAULT_CLAUDE_MODEL in src/models.ts
-    default: 'claude-sonnet-5'
+    default: 'claude-sonnet-5-5'
   bibliography:
     description: >-
       How to handle citations a run introduces that the target bibliography lacks:

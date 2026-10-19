@@ -57,7 +57,7 @@ Runs in the **target** (translated) repository, triggered when a translation PR 
 | `docs-folder` | `lectures/` | Documentation folder containing Markdown files |
 | `source-language` | `en` | Source language code |
 | `glossary-path` | *(empty)* | Path to custom glossary JSON file. **Overrides** the built-in glossary for the target language; if empty, the built-in one is used. Honoured by all three modes — sync, rebase and review. A path that cannot be read or parsed **fails the run** rather than falling back to different terminology |
-| `claude-model` | `claude-sonnet-5` | Claude model for translation |
+| `claude-model` | `claude-sonnet-5-5` | Claude model for translation |
 | `bibliography` | `backfill` | How to handle citations a run introduces that the target bibliography lacks (#117). `backfill` copies the entry from the source bibliography; `lint` reports and fails the run without copying; `off` disables the check. Entries are only ever **appended** — a key that already resolves in the target is never a candidate, so an edition that has localised an entry cannot have it clobbered. An unrecognised value **fails the run** |
 | `pr-labels` | `action-translation,automated` | Comma-separated labels for created PRs |
 | `pr-reviewers` | *(empty)* | GitHub usernames to request as reviewers |
@@ -72,7 +72,7 @@ Runs in the **target** (translated) repository, triggered when a translation PR 
 | `source-language` | `en` | Source language code |
 | `docs-folder` | `lectures/` | Documentation folder |
 | `max-suggestions` | `5` | Maximum findings in review comment |
-| `claude-model` | `claude-sonnet-5` | Claude model for review |
+| `claude-model` | `claude-sonnet-5-5` | Claude model for review |
 | `auto-merge-mode` | `off` | `off` or `shadow`. Shadow records the would-auto-merge decision in the verdict block and outputs without acting on it. `active` is not implemented and fails loudly ([#103](https://github.com/QuantEcon/action-translation/issues/103)) |
 
 There is no `target-language` input in review mode: the language is detected from the repository-name suffix (`lecture-python-intro.zh-cn` → `zh-cn`), which selects the glossary for terminology review. A repo whose name carries no language suffix logs a warning and reviews without a glossary.
@@ -308,12 +308,12 @@ For new files, the entire document is translated in a single call (NEW mode).
 
 ## Claude model selection
 
-The default model is `claude-sonnet-5`. The same `claude-model` input sets the model for sync and for review. Options:
+The default model is `claude-sonnet-5-5`. The same `claude-model` input sets the model for sync and for review; to keep the previous default, set `claude-model: claude-sonnet-5`. Options:
 
 | Model | Price per M tokens (input / output) | Best for |
 |-------|------|----------|
-| `claude-sonnet-5` | $2 / $10 | Daily sync operations (the default) |
-| `claude-sonnet-5-5` | $2 / $10 | The current Sonnet, under evaluation as the next default |
+| `claude-sonnet-5-5` | $2 / $10 | Daily sync operations (the default) |
+| `claude-sonnet-5` | $2 / $10 | The previous default (v0.29.x and earlier) |
 | `claude-opus-5-5` | $4 / $20 | High-stakes translations and one-time bulk seeds (always thinks; thinking is billed as output) |
 | `claude-haiku-4-5` | $1 / $5 | Budget-conscious bulk operations |
 

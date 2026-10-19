@@ -14,7 +14,7 @@ backward analysis → interactive review → GitHub Issues → fix source → ve
 ```
 
 **Time:** ~10 minutes for analysis of a 50-file project, plus review time
-**Cost:** ~$1.10 for 51 files using `claude-sonnet-5`
+**Cost:** ~$1.10 for 51 files using `claude-sonnet-5-5`
 
 ## When to use this
 

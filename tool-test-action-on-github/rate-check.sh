@@ -36,7 +36,8 @@
 #                    Checked once against the engine before any draw.
 #   --parallel       concurrent CLI runs (default 6)
 #   --max-refusals   most failures a cell may show and still pass (default 1)
-#   --model          Claude model (default claude-sonnet-5, the production default)
+#   --model          Claude model. Default: the engine under test's own DEFAULT_CLAUDE_MODEL,
+#                    so the gate measures what that release ships at every ref.
 #   --run-dir        write the run to DIR instead of a new directory under
 #                    ${TMPDIR:-/tmp}/action-translation-rate-check/. Refused inside the
 #                    repository, and refused when DIR already holds a run, unless --resume.
@@ -89,7 +90,7 @@ SUMMARIZER="$SCRIPT_DIR/rate-check-summary.mjs"
 IDENTITY="$SCRIPT_DIR/lib/run-identity.mjs"
 
 REF=""; REF_DEPS=""; ENGINE_DIR_ARG=""; DRAWS=12; LANGS=""; FIXTURES="game-theory.md"
-SOURCE_DIR_ARG=""; LOCALIZE="none"; PARALLEL=6; MAX_REFUSALS=1; MODEL="claude-sonnet-5"
+SOURCE_DIR_ARG=""; LOCALIZE="none"; PARALLEL=6; MAX_REFUSALS=1; MODEL=""   # "" = the engine's default
 SUMMARIZE=""; RUN_DIR_ARG=""; RESUME=0; REDRAW_INFRA=0
 
 usage_error() { echo "$1 (try --help)" >&2; exit 2; }
@@ -302,6 +303,12 @@ elif [ -n "$REF" ]; then
 fi
 CLI="$ENGINE_DIR/dist/cli/index.js"
 [ -f "$CLI" ] || { echo "no $CLI — run 'npm run build' first (or pass --ref)" >&2; exit 2; }
+# No --model: the engine's own production default, read from its compiled models.ts, so a
+# release and the same-day control at the previous tag each draw the model they ship.
+if [ -z "$MODEL" ]; then
+    MODEL="$(node --input-type=module -e 'import { pathToFileURL } from "node:url"; const m = await import(pathToFileURL(process.argv[1]).href); if (typeof m.DEFAULT_CLAUDE_MODEL !== "string" || !m.DEFAULT_CLAUDE_MODEL) process.exit(3); process.stdout.write(m.DEFAULT_CLAUDE_MODEL);' "$ENGINE_DIR/dist/models.js")" \
+        || { echo "cannot read DEFAULT_CLAUDE_MODEL from $ENGINE_DIR/dist/models.js — pass --model" >&2; exit 2; }
+fi
 ENGINE_SHA=$(git -C "$ENGINE_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)
 ENGINE_SHA_FULL=$(git -C "$ENGINE_DIR" rev-parse HEAD 2>/dev/null || echo unknown)
 ENGINE_TAG=$(git -C "$ENGINE_DIR" tag --points-at HEAD 2>/dev/null | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)
