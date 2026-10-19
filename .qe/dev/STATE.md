@@ -48,8 +48,8 @@ Roadmap detail lives in the project trackers (reading order in
   only 4/12 avoid « Votre (première) tâche » (« Votre première tâche consiste à… » in 6/12).
   One phrase to add, then re-measure `python_by_example` and run the blind pairwise judge; the
   result goes on #327.
-- **ml calibration: round 4 is closed out; round 5 (`pandas`) is with the editor
-  (2026-09-28).**
+- **ml calibration: round 5 (`pandas`) is applied and merged (2026-10-19); the round-5
+  repairs PR is open; round 6 waits on it and on the editor's ml#57 answers.**
   - **Round 4.** The editor's 73 suggestions on `numpy` (lecture-python-programming.ml#23:
     touch rate 67% → 51%, lines accepted 22 → 70) are applied and merged as `7e373de`.
     His questions are on ml#25; ml#14 (exercise blocks restored) is still open.
@@ -74,14 +74,34 @@ Roadmap detail lives in the project trackers (reading order in
     (v0.29.3): the cleanest of three drafts, with 11 scripted repairs disclosed. The arm is
     `2026-09-28-round5-pandas-v0.29.3`. No regeneration is needed for #335, which touches
     no sentence in `pandas`.
+  - **Round 5** (2026-10-19). His 85 suggestions on `pandas` are applied and merged as
+    `5378fd3`; questions on ml#57. The convergence series reversed under one method (touch
+    rate 67% → 51% → 68%, median similarity 0.82 → 0.90 → 0.86), yet every encoded class
+    held and all 11 disclosed repairs were kept: the regression is over-translation of
+    everyday words (24 flags to English, 3 the other way), splitting past the pronoun subset
+    (7 of 8 lint sites) and word order. Dispositions: QuantEcon/project-translation
+    `reports/2026-10-19-ml-pandas-review-disposition.md`.
+  - **Engine outcome, again code:** the round-5 repairs PR (branch `ml/round5-pandas-repairs`)
+    widens the splice repair to any finite-verb comma followed by a continuing clause (guards
+    from his five pages), restores the discourse formulas source-gated (*In fact* failed 3/3
+    draws despite rule 8), commas multi-word `-ഉം` pairs, adds the round's over-translations
+    to the lint, and ships glossary v0.8.0 (pins *efficient*, *convenient*, *satisfy*,
+    *compare*, *success*; *work* unpinned). Fixed point on the merged `numpy`, `matplotlib`
+    and `pandas`; 31 fixture tests.
   - **Open, in order:**
-    1. A second `ml_repair` PR: the bracketed-paragraph stop and a generalised `-ഉം` comma,
-       then the lexical repairs (*see* → `നോക്കുക`, adverbial *element-wise*, standalone
-       `മുൻ`), each with his lines as fixtures.
-    2. **The rule-2 arm**, after his ml#25 Q4 answer.
-    3. His round-5 review.
+    1. Merge the round-5 repairs PR.
+    2. ml#57's answers: Q1 (gerund bullets to English — a scope rule and a verbatim check if
+       "a rule") and Q2 (case-marked `-ഉം` commas into `add_um_commas`, plus a `numpy` 902
+       follow-up PR if "always").
+    3. Prompt edits held for a re-drawing release, measured at ≥ 12 draws per arm: *now* by
+       sense mid-sentence (ml#25 Q3; 3 round-5 flags), rule 8's list (*In essence*, *In
+       practice*), and the rule-2 arm. The round-4 lexical repairs (*see* → `നോക്കുക`,
+       adverbial *element-wise*, standalone `മുൻ`) and the bracketed-paragraph stop are still
+       open and had no site in `pandas`.
+    4. Round 6 at the next release, drafted with these repairs and glossary v0.8.0, the
+       over-translation lint as a best-of-N key.
 
-    Logs: `2026-09-28-ml-round4`. Opus 5.5 is scoped separately as **#334**.
+    Logs: `2026-09-28-ml-round4`, `2026-10-19-ml-round5`. Opus 5.5 is scoped separately as **#334**.
 - **Tracker #257 is parked** (2026-10-04, @mmcky: relevant, not urgent). It resumes when a
   release is assigned to W1, and its next planning session re-cuts it to W1 alone; the notes for
   that re-cut are in the 2026-10-06 comment on #259. The text below is as of 2026-09-23.
@@ -135,6 +155,11 @@ Roadmap detail lives in the project trackers (reading order in
 
 ## Recently landed
 
+- **ml round-5 repairs and glossary v0.8.0 (#372, `6624fe9`, 2026-10-19)** — the widened splice
+  repair, the source-gated discourse-formula restore, multi-word `-ഉം` commas, the over-translation
+  lint, and glossary pins for *efficient*, *convenient*, *satisfy*, *compare*, *success* (`work`
+  unpinned). Experiment tooling plus the glossary; no `src/` change. Ships in v0.29.5 (release PR
+  open). Log `2026-10-19-ml-round5`.
 - **Dependency security update (#360, `823a8fa`, 2026-10-09, unreleased)** — `js-yaml` 4.3.2
   and `undici` 6.29.0, in range, which clears both high-severity production advisories
   (#359). It ships with the next release.
@@ -235,8 +260,9 @@ still describes the first version (`_toc.yml` left alone); the ToC is now mirror
 *ml, 2026-09-28 (end)*: see the ml bullet under In flight — round 5 is with the editor, and
 next is the second `ml_repair` PR; #335 shipped in v0.29.4.
 
-*Release, 2026-10-09*: v0.29.4 is out (see Recently landed); the next release is v0.30.0 per
-#346, and it also carries #360's dependency security update. If 4b fails again, follow AGENTS.md
+*Release, 2026-10-19*: v0.29.5 (patch) is in its release PR: #372 (glossary v0.8.0 and the round-5
+`ml_repair` tooling) and #360's dependency security update. #346's v0.30.0 (the French and Malayalam
+sync items) stays the next minor; nothing of it is merged yet. If 4b fails again, follow AGENTS.md
 step 4b (#357). This page's `verified:` stamp predates it, so a full re-verify is owed.
 
 *Review, 2026-10-06*: **no `translate forward` run before #348 merges**. Every forward resync
@@ -286,7 +312,8 @@ in the fr edition's pandas lecture.
 ## Health & context
 
 - `main` green; **1,635 tests across 68 suites** (zero skips, type-checked) as of
-  `41ed05f` (counted 2026-10-19; #376 brings it to 1,789 across 70); lint at `--max-warnings 0` including root `*.mjs`, CI checks formatting and
+  `e7356cc` (counted 2026-10-19; #376 brings it to 1,789 across 70); lint at
+  `--max-warnings 0` including root `*.mjs`, CI checks formatting and
   `.qe/dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale `dist/`
   — run `npm run build` first; that guard is deliberate, not a break.
 - Highest-priority known bug class: the success-shaped failure (#90 defects 3–5, #276's two
