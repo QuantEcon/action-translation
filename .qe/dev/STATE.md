@@ -17,6 +17,13 @@ Roadmap detail lives in the project trackers (reading order in
 
   The review's evidence for other open issues went as comments on #90, #154, #169, #170, #259,
   #261, #281 and #325; the per-finding disposition is in `log/2026-10-06-review-followup.md`.
+- **Claude 5.5 upgrade (#342, #334) — PR #394 open (2026-10-19).** The engine runs
+  `claude-sonnet-5-5` (`between_tools`, effort `high`) and `claude-opus-5-5` (adaptive, effort
+  `medium`) through a per-model request policy in `models.ts`, and a refusal now fails the file
+  (R12). The default stays `claude-sonnet-5`. The evaluation project that decides the flip
+  follows as a stacked PR, pre-registered. Its billed runs need an API key, so they are
+  @mmcky's. #342's live check is still open. Decisions `D-2026-10-19-per-model-request-policy` and
+  `D-2026-10-19-opus-5-5-for-bulk-seed`; log `2026-10-19-claude-5-5-engine`.
 - **fr typography fixes #324 and #325** (filed 2026-09-23 from the French editor's second
   round) — implementation branches in progress: **#324** (`fix/fr-elision-apostrophe`) sets the
   `fr` elision apostrophe before inline markup as U+2019; **#325**
