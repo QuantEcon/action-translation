@@ -196,7 +196,9 @@ describe('Language Configuration', () => {
         'over time',
         'provide',
         'relationship',
+        'store',
         'straightforward',
+        'work',
         'year',
       ]);
       for (const t of translated) {
@@ -210,8 +212,8 @@ describe('Language Configuration', () => {
     // not hold them), and the #273 line/lines variance regression is pinned.
     it('pins the round-2 keep-English words and line/lines', () => {
       const byEn = new Map(glossary.terms.map((t) => [t.en, t]));
-      // 'already', 'name', 'example(s)' and 'work' are deliberately absent —
-      // held for the editor's answers on ml#12.
+      // 'already', 'name' and 'example(s)' were held for the editor's answers on
+      // ml#12; 'work' moved to an unpinned light-verb entry in v0.8.0 (round 5).
       for (const en of ['useful', 'line', 'lines', 'automatically', 'improve']) {
         const term = byEn.get(en);
         expect(term).toBeDefined();
