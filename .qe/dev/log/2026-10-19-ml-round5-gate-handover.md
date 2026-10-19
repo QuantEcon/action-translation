@@ -83,3 +83,30 @@ rate questions (a class that moves by one or two sites) go to 12 draws, as in st
 The record goes to QuantEcon/project-translation as a dated report beside
 `reports/2026-10-19-ml-pandas-review-disposition.md`, with the status page and NEXT-STEPS updated,
 and to the arm README here.
+
+## Results (2026-10-19, run from @mmcky's machine)
+
+The handover was executed by a local session on @mmcky's machine, which has an API key: the draws,
+the repairs and the comparison. Full record: the arm,
+`experiments/ml-benchmark/arms/2026-10-19-round5-gate-pandas-v0.29.5/README.md`.
+
+- **Draws.** Three at v0.29.5 and, as a same-day control, three at v0.29.3, each from its own
+  worktree with its own `npm ci`. v0.29.5 draw 2 was refused twice (#203's fence wrap, `{raw}` and
+  `(pd)=` lost) before succeeding; the controls all succeeded first time.
+- **The comparison as written could not pass.** The reference is the seed with the editor's edits
+  applied, so the seed matches it wherever he left a line alone: the two round-5 drafts that were
+  never sent score 92% touch rate against the seed's 68%, at the same engine. Against five fresh
+  v0.29.3 drafts the v0.29.5 drafts are flat on every convergence measure (touch 91–95% against
+  90–94%, median similarity 0.830 against 0.828).
+- **The per-class counts move where round 5 encoded.** Banned over-translations 9.4 → 2.0 per
+  draft (every v0.29.5 draft below every v0.29.3 one, p ≈ 0.018); *convenient* and *efficient*
+  retained in all three (lost in all five before, p ≈ 0.018); `-ഉം` pairs and splices repaired as
+  at v0.29.3. No encoded class regressed.
+- **Verdict (Matt): passed**, and decision 19 amended: convergence is measured against fresh draws
+  at the previous release, not the seed, and reported beside the per-class counts, which decide.
+- **Method.** `convergence.py` rebuilds the round-5 report's uncommitted script and reproduces its
+  seed figures (68.0%, 0.859, 38.8%, 16.5%) except edit mass (273, not 249; its scale). The
+  seed-era repair (`d9b243c`) reproduces the sent seed byte for byte. Both scripts are in the arm.
+- **Next.** Round 6 is drafted at v0.29.5 once the editor's answers on
+  QuantEcon/lecture-python-programming.ml#57 are encoded (open, no answers yet). Watch: #203
+  refusals on ml, 6/41 at v0.29.5 against 1/42 before across today's two fixtures (p ≈ 0.057).
