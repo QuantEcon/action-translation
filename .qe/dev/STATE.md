@@ -11,12 +11,16 @@ Roadmap detail lives in the project trackers (reading order in
 - **#344 `sync-scope: existing` — PR #376 open for review (2026-10-19)**, for the release #346
   tracks. A partial edition syncs only the lectures that have a state file on its default
   branch; the check lives in `src/sync-scope.ts` so D2 (#259) can reuse it, and the input is a
-  thin switch around it (record `D-2026-10-19-sync-scope-existing-reads-state-files`). The
-  harness scope smoke is not run yet: the `gh` token used had no `workflow` scope, so it is
-  Matt's (command in #376). Asked on #344 on 2026-10-19:
-  - ml's `main` has no state files beside its five translated lectures, so a backfill must
-    precede ml's sync workflow;
-  - `doctor` only warns about a lecture without a state file (retirement condition 3).
+  thin switch around it (record `D-2026-10-19-sync-scope-existing-reads-state-files`). Folded
+  in on 2026-10-19: #380 (`status --write-state` refuses English changes not yet carried, until
+  `--carried`) and #387's scoped half (a scoped run that passes without a PR closes the stale
+  failure issue; `all` unchanged, so #387 stays open). The harness scope smoke is not run yet:
+  the `gh` token used had no `workflow` scope, so it is Matt's, handed over in #377. Ruled on
+  2026-10-19, in the records: a state file counts by existence (the CLI's reader gets fixed
+  instead, #381, #379); retirement condition 3 is a required CI state check, built on #370
+  with #385; lecture-at-a-time tooling goes into the CLI first
+  (`D-2026-10-19-lecture-at-a-time-tooling-is-cli-first`). ml's `main` still has no state file
+  beside its five translated lectures, so their backfill must precede ml's sync workflow.
 
   Log `2026-10-19-sync-scope-existing`.
 - **Hardening project #349** (created 2026-10-06 from the 2026-10-05 codebase review). It has two
@@ -254,8 +258,11 @@ Roadmap detail lives in the project trackers (reading order in
 **Resume here (2026-09-23, after v0.29.3):**
 
 *#344, 2026-10-19*: #376 awaits review and the harness scope smoke (`--action-ref
-feat/sync-scope-existing --sync-scope existing --scenarios 17,19,20`). #346's table row for #344
-still describes the first version (`_toc.yml` left alone); the ToC is now mirrored.
+feat/sync-scope-existing --sync-scope existing --scenarios 01,17,18,19,20`; the run book is
+#377's handover log). #346's table row for #344 still describes the first version (`_toc.yml`
+left alone); the ToC is now mirrored. The fourteen issues filed from #376's reviews (#378–#391)
+are untriaged; #378, #379, #381 and #384, with the older #134 and #175, are the CLI bug fixes
+of the CLI-first record's phase 1.
 
 *ml, 2026-09-28 (end)*: see the ml bullet under In flight — round 5 is with the editor, and
 next is the second `ml_repair` PR; #335 shipped in v0.29.4.
@@ -317,7 +324,7 @@ in the fr edition's pandas lecture.
 ## Health & context
 
 - `main` green; **1,635 tests across 68 suites** (zero skips, type-checked) as of
-  `e7356cc` (counted 2026-10-19; #376 brings it to 1,789 across 70); lint at
+  `e7356cc` (counted 2026-10-19; #376 brings it to 1,838 across 70); lint at
   `--max-warnings 0` including root `*.mjs`, CI checks formatting and
   `.qe/dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale `dist/`
   — run `npm run build` first; that guard is deliberate, not a break.

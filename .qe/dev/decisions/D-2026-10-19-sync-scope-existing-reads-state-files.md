@@ -18,6 +18,10 @@ input, byte for byte) or `existing`. Under `existing`:
 - A `.md` on `main` is not enough, since it does not prove the lecture has been migrated: the
   ml edition's English `intro.md` and `_admonition/gpu.md` stay out of scope. Scope reads
   existence, never contents: a state file that `readFileState()` cannot validate still counts.
+  Ruled 2026-10-19 (@mmcky): this stays. The CLI's reader is to be fixed instead, in its own
+  issues and not in #376: it is to load state with `CORE_SCHEMA` and name the key it rejects
+  (#381), `init --skip-existing` is to decide on existence (#379), and extra keys stay accepted,
+  as #290 needs.
 - Only a 404 means out of scope; any other status fails the run, as the ToC fetch already
   does (#254). Taking a read error as absence, as the `all` path's content fetch still does
   (F36 on #169), would make an outage a silent skip of a reviewed lecture. Implementation
@@ -45,8 +49,13 @@ input, byte for byte) or `existing`. Under `existing`:
   no comment about them, because most English PRs touch some lecture that a partial edition
   does not have yet.
 - When nothing is left to sync (no changed lecture in scope, no `_toc.yml` change, no removal
-  and no scope error), there is no PR and no failure issue, the run passes, and the job
-  summary is its only output.
+  and no scope error), there is no PR and no new failure issue, and the run passes. Besides the
+  job summary, its only other output is on a failure issue an earlier run opened for the same
+  PR and language, if there is one: the run closes it, with a comment that links the run.
+  Folded in from #387 on 2026-10-19 (@mmcky): every scoped run that passes without a PR closes
+  that issue, as a run that opens its PR already does. `all` keeps its behaviour byte for byte,
+  so there a run that passes without a PR still leaves the issue open; #387 stays open for that
+  half.
 
 **Temporary input**: When an edition completes, there is no switch from `existing` to `all`.
 `sync-scope` retires once three things land:
@@ -58,14 +67,28 @@ input, byte for byte) or `existing`. Under `existing`:
 3. a check that fails a lecture on `main` without a state file (`translate doctor` already
    checks this).
 
-State-aware sync then becomes every edition's only behaviour. Every lecture of the five
-complete editions has a state file (checked 2026-10-19), so a complete edition loses nothing.
+State-aware sync then becomes every edition's only behaviour. Every top-level lecture of the
+five complete editions (lecture-python-programming.fr, .zh-cn and .fa, lecture-python.zh-cn and
+lecture-intro.zh-cn) has a state file (checked 2026-10-19); the ruling on (3) below lists the
+other `.md` files that lack one.
 On (3): as of 2026-10-19, `doctor` checks only the top-level lectures of the docs folder and
 reports one without a state file as a warning, not a failure; its state-file check fails only
 when none of those lectures has a state file, or when one of their state files exists but
 cannot be read. The scope check is built as the path every edition will take, in a module
 D2's path can import (the entry point cannot be imported, #169). The input is a thin switch
 around it, so retiring the input is a deletion.
+
+Ruled 2026-10-19 (@mmcky), on (3): the condition is met when every syncing edition runs, as a
+required CI check on every PR and on pushes to `main`, a state check that fails on (a) any
+`.md` under the docs folder, subfolders included, that has no state file and is not a declared
+exception; (b) a declared exception that has a state file; (c) a state file with no lecture;
+(d) an unreadable state file. It is built by extending #370 (`doctor --require-state`) with
+recursion (#385) and with exceptions declared in `.translate/config.yml`, each listed by name.
+For every edition to pass that check, retiring the input also needs backfills: the ml
+edition's five lectures, each with the English commit its draft was made from, and the translated `lectures/_admonition/gpu.md` in lecture-python-programming.fr,
+lecture-python-programming.zh-cn and lecture-python.zh-cn. It also needs declared exceptions:
+ml's `intro.md` and `_admonition/gpu.md`, lecture-python-programming.fa's English
+`_admonition/gpu.md`, and lecture-intro.zh-cn's `README.md`. #promote
 
 **Relation to D2**: #344 is D2's partial-edition variant and ships first, in the release #346
 tracks. It differs from D2 in three ways: a lecture is in scope only once it has been
@@ -76,7 +99,10 @@ check is the one D2 will reuse.
 **Known gap**: An English change that lands between a lecture's draft (`translate init`) and
 its PR's merge is not synced, because the lecture is out of scope until the merge. `init`
 records the English commit the draft was made from, so `translate status -f <file>` on the
-round's branch reports OUTDATED before the merge, and the round carries the change.
+round's branch reports OUTDATED before the merge, and the round carries the change. It records
+the carried change with `translate status -f <file> --write-state --carried` (#380, folded in
+2026-10-19): without `--carried`, `--write-state` refuses a lecture whose English has changed
+since the commit its state file records, where before it compared only commit dates.
 Implementation finding, not ruled: a rename opens the same gap. Until the rename's sync PR
 merges, the edition's state file keeps the old name, so a change to the lecture at its new
 path is not synced; once that PR merges, `translate status -f <new name>` reports it OUTDATED.
@@ -101,4 +127,6 @@ path is not synced; once that PR merges, `translate status -f <new name>` report
   as a new file (F36 on #169), on every edition.
 
 **Refs**: #344 (the input), #346 (its release), #259 (D2 and the ToC rule), #142 (`init` ToC
-insertion), #169 (F36; the entry point), #222, #254, QuantEcon/lecture-python-programming.ml.
+insertion), #169 (F36; the entry point), #222, #254, #387 (closing a stale failure issue), #380
+(`--carried`), #370 and #385 (the state check), #379, #381 and #290 (the CLI's state reader),
+D-2026-10-19-lecture-at-a-time-tooling-is-cli-first, QuantEcon/lecture-python-programming.ml.

@@ -347,7 +347,7 @@ npx translate status \
   -f cobweb.md
 ```
 
-`ALIGNED` means the English has not changed since the draft, and merging the PR puts the lecture in sync. `OUTDATED` means it has. Carry the change into the PR, and commit it in the edition's clone. Then record the new English commit in the lecture's state file, with the same command and `--write-state`:
+`ALIGNED` means the English has not changed since the draft, and merging the PR puts the lecture in sync. `OUTDATED` means it has. The English commit the draft was made from is the `source-sha` in `.translate/state/cobweb.md.yml`; in the source clone, `git log -p <source-sha>..HEAD -- lectures/cobweb.md` shows every change since. Carry the changes into the PR, and commit them in the edition's clone. Then record the new English commit in the lecture's state file, with the same command, `--write-state` and `--carried`:
 
 ```bash
 cd /path/to/action-translation
@@ -356,10 +356,11 @@ npx translate status \
   -t ~/repos/lecture-python-intro.zh-cn \
   -l zh-cn \
   -f cobweb.md \
-  --write-state
+  --write-state \
+  --carried
 ```
 
-The carried change must be committed first: `--write-state` refuses a lecture whose English commit is dated after the lecture's last commit on the branch. It rewrites the state file with the new English commit and keeps the model `init` recorded. It also rewrites `.translate/config.yml` from its flags, so pass the edition's own `-l`, and `-d` if the docs folder is not `lectures`. Of this run's changes, the PR takes only the state file: restore the config, then commit and push the state file:
+`--carried` confirms that the PR carries every English change since the commit the state file records. Without it, `--write-state` refuses, and lists the English commits since that one (or says that commit is not in your source clone), so you can check each against the PR. Commit the carried change before this run, because `--write-state` also refuses a lecture whose English commit is dated after the lecture's last commit on the branch. The run rewrites the state file with the new English commit and keeps the model `init` recorded. It also rewrites `.translate/config.yml` from its flags, so pass the edition's own `-l`, and `-d` if the docs folder is not `lectures`. Of this run's changes, the PR takes only the state file: restore the config, then commit and push the state file:
 
 ```bash
 cd ~/repos/lecture-python-intro.zh-cn

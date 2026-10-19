@@ -15,9 +15,12 @@
  *   source         { "<path>@<ref>": content }
  *   target         { "<path>": content | { status } | [answers, in turn] }
  *   editionStatus  optional status for the read of the target repository
+ *   issues         optional: the source repository's open issues, as
+ *                  `issues.listForRepo` lists them ([{ number, title }])
  *
  * A path the scenario does not list answers 404. In an array of answers, the
- * last one answers every later read.
+ * last one answers every later read. An update to an issue the source
+ * repository does not hold answers 404 too.
  *
  * How requests are caught. The bundle's Octokit sends every request through
  * its own copy of undici, which uses undici's global dispatcher: with no proxy
@@ -79,6 +82,8 @@ const log = {
   pulls: [],
   issues: [],
   comments: [],
+  /** Updates to source issues, in order: the issue's number, then each field sent. */
+  issueUpdates: [],
   /** Requests to the model host. */
   modelRequests: 0,
   /** Requests nothing here fakes, to GitHub or to any other host. Each one fails. */
@@ -139,8 +144,11 @@ function readContents(repo, path, ref) {
 }
 
 const CONTENTS = /^\/repos\/([^/]+\/[^/]+)\/contents\/(.+)$/;
+const ISSUE = /^\/repos\/([^/]+\/[^/]+)\/issues\/(\d+)$/;
 const ISSUE_LABELS = /^\/repos\/[^/]+\/[^/]+\/issues\/\d+\/labels$/;
 const ISSUE_COMMENTS = /^\/repos\/([^/]+\/[^/]+)\/issues\/(\d+)\/comments$/;
+/** The source repository's open issues. */
+const OPEN_ISSUES = scenario.issues ?? [];
 
 function answerGitHub(request) {
   const url = new URL(request.path, GITHUB_API_URL);
@@ -152,6 +160,7 @@ function answerGitHub(request) {
   fs.appendFileSync(REQUEST_TRAIL_PATH, `${line}\n`);
   const body = request.body ? JSON.parse(String(request.body)) : {};
   const contents = path.match(CONTENTS);
+  const issue = path.match(ISSUE);
   const comments = path.match(ISSUE_COMMENTS);
 
   if (method === 'GET' && contents) return readContents(contents[1], contents[2], ref);
@@ -189,7 +198,13 @@ function answerGitHub(request) {
     log.pulls.push({ title: body.title, head: body.head, base: body.base, body: body.body });
     return json(201, { number: 99, html_url: `https://github.com/${TARGET}/pull/99` });
   }
-  if (method === 'GET' && path === `/repos/${SOURCE}/issues`) return json(200, []);
+  if (method === 'GET' && path === `/repos/${SOURCE}/issues`) return json(200, OPEN_ISSUES);
+  if (method === 'PATCH' && issue && issue[1] === SOURCE) {
+    const number = Number(issue[2]);
+    log.issueUpdates.push({ number, ...body });
+    const held = OPEN_ISSUES.find((open) => open.number === number);
+    return held ? json(200, { ...held, ...body }) : notFound();
+  }
   if (method === 'POST' && path === `/repos/${SOURCE}/issues`) {
     log.issues.push({ title: body.title, body: body.body });
     return json(201, { number: 5, html_url: `https://github.com/${SOURCE}/issues/5` });

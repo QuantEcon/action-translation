@@ -10,6 +10,8 @@ import {
   formatDate,
   daysBetween,
   getFileGitMetadata,
+  fileChangedSince,
+  commitsSince,
   parseTimelineEntry,
   getRepoCommits,
   getFileTimeline,
@@ -17,6 +19,54 @@ import {
 } from '../git-metadata.js';
 import { FileTimeline } from '../types.js';
 import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
+import { execFileSync } from 'child_process';
+
+/**
+ * Run git in a fixture repository, cut off from the machine's git config and
+ * GIT_* environment so that signing, hooks or a GIT_DIR cannot reach it.
+ * `date` ("YYYY-MM-DD") sets the author and committer dates, at noon UTC.
+ */
+function git(repo: string, args: string[], date?: string): string {
+  const env: NodeJS.ProcessEnv = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (!key.startsWith('GIT_')) env[key] = value;
+  }
+  Object.assign(env, {
+    GIT_CONFIG_GLOBAL: os.devNull,
+    GIT_CONFIG_NOSYSTEM: '1',
+    GIT_AUTHOR_NAME: 'Test',
+    GIT_AUTHOR_EMAIL: 'test@example.com',
+    GIT_COMMITTER_NAME: 'Test',
+    GIT_COMMITTER_EMAIL: 'test@example.com',
+  });
+  if (date) {
+    env.GIT_AUTHOR_DATE = `${date} 12:00:00 +0000`;
+    env.GIT_COMMITTER_DATE = `${date} 12:00:00 +0000`;
+  }
+  return execFileSync('git', args, {
+    cwd: repo,
+    env,
+    encoding: 'utf-8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+}
+
+/** Write one file and commit it on `date`; returns the commit's sha. */
+function commit(
+  repo: string,
+  file: string,
+  content: string,
+  date: string,
+  message: string
+): string {
+  fs.mkdirSync(path.dirname(path.join(repo, file)), { recursive: true });
+  fs.writeFileSync(path.join(repo, file), content, 'utf-8');
+  git(repo, ['add', '--all']);
+  git(repo, ['commit', '-q', '--no-verify', '--no-gpg-sign', '-m', message], date);
+  return git(repo, ['rev-parse', 'HEAD']).trim();
+}
 
 describe('git-metadata', () => {
   describe('parseGitLogOutput', () => {
@@ -94,6 +144,86 @@ describe('git-metadata', () => {
     it('should return null for invalid repo path', async () => {
       const result = await getFileGitMetadata('/nonexistent/path', 'file.md');
       expect(result).toBeNull();
+    });
+  });
+
+  describe('fileChangedSince / commitsSince (#380)', () => {
+    const LECTURE = 'lectures/lecture.md';
+    let repo: string;
+    let added: string; // creates the lecture
+    let fixed: string; // changes it
+    let readmeBetween: string; // touches only README.md, before the next lecture change
+    let revised: string; // changes it again
+    let readmeAfter: string; // touches only README.md, after the last lecture change
+
+    beforeAll(() => {
+      repo = fs.mkdtempSync(path.join(os.tmpdir(), 'git-metadata-test-'));
+      git(repo, ['init', '-q']);
+      added = commit(repo, LECTURE, 'v1\n', '2026-10-01', 'Add lecture');
+      fixed = commit(repo, LECTURE, 'v2\n', '2026-10-03', 'FIX: units | labels');
+      readmeBetween = commit(repo, 'README.md', 'a\n', '2026-10-04', 'Edit README');
+      revised = commit(repo, LECTURE, 'v3\n', '2026-10-05', 'Revise section two');
+      readmeAfter = commit(repo, 'README.md', 'b\n', '2026-10-06', 'Edit README again');
+    });
+
+    afterAll(() => {
+      fs.rmSync(repo, { recursive: true, force: true });
+    });
+
+    it('fileChangedSince: true when the content changed after the commit', async () => {
+      expect(await fileChangedSince(repo, added, LECTURE)).toBe(true);
+      // A commit that did not touch the file still counts what came after it
+      expect(await fileChangedSince(repo, readmeBetween, LECTURE)).toBe(true);
+    });
+
+    it('fileChangedSince: false when the content is the same at the commit and HEAD', async () => {
+      expect(await fileChangedSince(repo, revised, LECTURE)).toBe(false);
+      // Content decides, not commit identity: this commit never touched the file
+      expect(await fileChangedSince(repo, readmeAfter, LECTURE)).toBe(false);
+      // An abbreviated sha resolves like the full one
+      expect(await fileChangedSince(repo, revised.slice(0, 7), LECTURE)).toBe(false);
+    });
+
+    it('fileChangedSince: undefined when git cannot tell', async () => {
+      // Well-formed, but not in this clone
+      expect(
+        await fileChangedSince(repo, '0123456789abcdef0123456789abcdef01234567', LECTURE)
+      ).toBeUndefined();
+      // Not a repository
+      expect(await fileChangedSince('/nonexistent/path', added, LECTURE)).toBeUndefined();
+      // Not a commit name, so git never sees it
+      expect(await fileChangedSince(repo, 'unknown', LECTURE)).toBeUndefined();
+    });
+
+    it('never passes a recorded value that reads as an option to git', async () => {
+      const leak = path.join(repo, 'leak.txt');
+      const before = fs.readdirSync(repo).sort();
+      expect(await fileChangedSince(repo, `--output=${leak}`, LECTURE)).toBeUndefined();
+      expect(await commitsSince(repo, `--output=${leak}`, LECTURE)).toEqual([]);
+      // git log would write to `leak.txt..HEAD`, not `leak.txt`: compare the
+      // whole listing so a leak under any name fails.
+      expect(fs.readdirSync(repo).sort()).toEqual(before);
+    });
+
+    it('commitsSince: the commits that change the file after the given one, newest first', async () => {
+      const lines = await commitsSince(repo, added, LECTURE);
+      expect(lines).toHaveLength(2);
+      expect(lines[0]).toMatch(
+        new RegExp(`^${revised.slice(0, 4)}[0-9a-f]* 2026-10-05 Revise section two$`)
+      );
+      expect(lines[1]).toMatch(
+        new RegExp(`^${fixed.slice(0, 4)}[0-9a-f]* 2026-10-03 FIX: units \\| labels$`)
+      );
+
+      expect(await commitsSince(repo, readmeBetween, LECTURE)).toHaveLength(1);
+    });
+
+    it('commitsSince: empty when nothing changed the file, or git fails', async () => {
+      expect(await commitsSince(repo, revised, LECTURE)).toEqual([]);
+      expect(await commitsSince(repo, readmeAfter, LECTURE)).toEqual([]);
+      expect(await commitsSince(repo, '0123456789abcdef0123456789abcdef01234567', LECTURE)).toEqual(
+        []
+      );
     });
   });
 

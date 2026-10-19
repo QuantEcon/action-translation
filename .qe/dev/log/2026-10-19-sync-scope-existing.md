@@ -46,3 +46,36 @@ scope smoke. The `gh` token has no `workflow` scope, so it is Matt's; the comman
 
 **Next**: Matt reviews #376 and runs the scope smoke; answers on #344 (ml backfill, doctor);
 then #346.
+
+## Addendum, later 2026-10-19: rulings and the fold
+
+**Handover.** The scope smoke went to Matt as #377 (log `2026-10-19-sync-scope-harness-handover`
+on that branch), run as five scenarios (01, 17, 18, 19, 20) on all three lanes. Fourteen issues
+came out of the reviews, #378–#391, among them `init`'s swallowed state write (#378), the
+`source-sha` a merge commit leaves (#391), and #380 and #387, folded in below.
+
+**Ruled by Matt.** Q1: lecture-at-a-time tooling is CLI-first, a thin skill later, no pipeline
+command (new record `D-2026-10-19-lecture-at-a-time-tooling-is-cli-first`). Q2: retirement
+condition 3 is a required CI state check on every PR and push to `main`, failing on an
+unexcepted `.md` without state (subfolders included), an excepted file with state, orphan state
+and unreadable state; it is built on #370 with #385, and the backfills and exceptions it needs
+are listed in the sync-scope record. Q3: scope stays existence-only, and the CLI's reader is
+fixed instead (#381, #379). The sync-scope record now carries all three.
+
+**Folded into #376.**
+- #380: `status --write-state` checks `git diff <recorded source-sha> HEAD` per lecture and
+  refuses a lecture whose English changed since (or whose recorded commit the clone lacks),
+  listing the commits, until `--carried` confirms the translation carries them. `--force` skips it with the other checks. Before, it
+  compared only commit dates. (`fileChangedSince`/`commitsSince` in `src/cli/git-metadata.ts`.)
+- #387, the scoped half: a scoped run that passes without a PR closes the failure issue an
+  earlier run opened for the same PR and language, with a comment that links the run; not in
+  test mode, and `all` is byte for byte as before, so #387 stays open for that half.
+- Verified by a review workflow (builders, then two skeptics per finding); its findings went in
+  before commit, among them a stale-clone hint in the refusal and two bundle scenarios with
+  decoy issues. Counts: 70 suites, 1,838 tests.
+- Checked live for the records: the five complete editions are lecture-python-programming.fr,
+  .zh-cn and .fa, lecture-python.zh-cn and lecture-intro.zh-cn; every top-level lecture has a
+  state file, and the `.md` files without one are the ones the record lists. #promote
+
+**Next**: Matt's review of #376 and the smoke; then the CLI bug fixes of phase 1, and ml's
+backfill (phase 0) before ml's sync workflow.

@@ -14,7 +14,12 @@
  * - the lectures left out reach the PR body and the job summary, but not the
  *   metadata's `files` or the comment on the source PR;
  * - with nothing in scope, the run passes with no PR, no failure issue and no
- *   comment, and the job summary is its only output;
+ *   comment on the source PR: it writes the job summary, and closes the
+ *   failure issues earlier runs opened for the PR;
+ * - a scoped run that passes without a PR closes those issues and cites
+ *   itself, while a run that opens its PR cites the PR, in the text it has
+ *   always used; a test-mode run, a failed run and an `all` run without a PR
+ *   leave them open (the scoped half of #387);
  * - a state file that cannot be read fails the run, and its error heads the
  *   failure issue's list, while the lectures that could be read still sync;
  * - an edition that cannot be read fails the run with nothing synced, the ToC
@@ -70,6 +75,33 @@ const GITHUB_API = 'https://api.github.invalid';
 const MODEL_HOST = 'https://anthropic.invalid';
 /** The URL the fake answers for the translation PR. */
 const PR_URL = `https://github.com/${EDITION}/pull/99`;
+/**
+ * The server and run ID the run is given. Nothing requests the server: it only
+ * names the run's page, which a scoped run that closes a failure issue without
+ * a PR links to (#387).
+ */
+const SERVER = 'https://github.invalid';
+const RUN_ID = '4242';
+const RUN_URL = `${SERVER}/${SOURCE_REPO}/actions/runs/${RUN_ID}`;
+
+/**
+ * Open issues in the source repository: the failure issue an earlier run of
+ * this PR opened for this edition's language, and three a run for `ml` leaves
+ * alone: one for another language, a pull request with the same title (the
+ * issues listing includes pull requests), and one for PR #70, whose title
+ * starts with this PR's.
+ */
+const FAILURE_ISSUE = 42;
+const OPEN_ISSUES = [
+  { number: FAILURE_ISSUE, title: `Translation sync failed for PR #${PR_NUMBER} (ml)` },
+  { number: 43, title: `Translation sync failed for PR #${PR_NUMBER} (zh-cn)` },
+  {
+    number: 44,
+    title: `Translation sync failed for PR #${PR_NUMBER} (ml)`,
+    pull_request: { url: `${GITHUB_API}/repos/${SOURCE_REPO}/pulls/44` },
+  },
+  { number: 45, title: `Translation sync failed for PR #${PR_NUMBER}0 (ml)` },
+];
 
 /** A source lecture with one section. */
 function lecture(title: string, body = 'Body one.'): string {
@@ -139,6 +171,10 @@ interface Scenario {
   source: Record<string, string>;
   /** A path absent here answers 404. An array answers successive reads in turn. */
   target: Record<string, EditionAnswer | EditionAnswer[]>;
+  /** The source repository's open issues; none when absent. */
+  issues?: Array<{ number: number; title: string; pull_request?: { url: string } }>;
+  /** Leave GITHUB_RUN_ID unset, as outside Actions. */
+  noRunId?: boolean;
 }
 
 // =============================================================================
@@ -152,6 +188,8 @@ interface RunLog {
   pulls: Array<{ title: string; head: string; base: string; body: string }>;
   issues: Array<{ title: string; body: string }>;
   comments: Array<{ on: string; body: string }>;
+  /** Each update of a source issue: its number, then the fields sent. */
+  issueUpdates: Array<{ number: number; state?: string; state_reason?: string }>;
   modelRequests: number;
   unmocked: string[];
   mockKept: boolean;
@@ -293,6 +331,7 @@ function runBundle(name: string, scenario: Scenario): BundleRun {
     BUNDLE_PATH: BUNDLE,
     ANTHROPIC_BASE_URL: MODEL_HOST,
     GITHUB_API_URL: GITHUB_API,
+    GITHUB_SERVER_URL: SERVER,
     GITHUB_EVENT_NAME: 'pull_request',
     GITHUB_EVENT_PATH: eventPath,
     GITHUB_REPOSITORY: SOURCE_REPO,
@@ -311,6 +350,7 @@ function runBundle(name: string, scenario: Scenario): BundleRun {
   // No bibliography reads unless the scenario asks for the default mode: they
   // are not scoped, and would only add requests.
   if (!scenario.defaultBibliography) env.INPUT_BIBLIOGRAPHY = 'off';
+  if (!scenario.noRunId) env.GITHUB_RUN_ID = RUN_ID;
   for (const variable of ['PATH', 'HOME']) {
     const value = process.env[variable];
     if (value !== undefined) env[variable] = value;
@@ -493,6 +533,32 @@ const OPEN_FAILURE_ISSUE = [
   `POST /repos/${SOURCE_REPO}/issues`,
   `POST /repos/${SOURCE_REPO}/issues/5/labels`,
 ];
+
+/** The listing of the source repository's open issues, where closing failure issues starts. */
+const LIST_ISSUES = `GET /repos/${SOURCE_REPO}/issues`;
+
+/** The requests that close the failure issue: the listing, a comment on it, then its update. */
+const CLOSE_FAILURE_ISSUE = [
+  LIST_ISSUES,
+  `POST /repos/${SOURCE_REPO}/issues/${FAILURE_ISSUE}/comments`,
+  `PATCH /repos/${SOURCE_REPO}/issues/${FAILURE_ISSUE}`,
+];
+
+/** The update that closes the failure issue. */
+const CLOSED = { number: FAILURE_ISSUE, state: 'closed', state_reason: 'completed' };
+
+/** The comment that closes it after a run that opened its PR: the text it had before #387. */
+const CLOSED_BY_PR = `✅ A later sync for PR #${PR_NUMBER} (ml) succeeded: ${PR_URL}\n\nClosing this failure report.`;
+
+/** The comment that closes it after a scoped run with nothing to deliver, which cites the run. */
+const CLOSED_BY_RUN =
+  `✅ A later sync for PR #${PR_NUMBER} (ml) passed with nothing to deliver to this edition ` +
+  `(sync-scope: existing): ${RUN_URL}\n\nClosing this failure report.`;
+
+/** The same, from a run with no run ID: the sentence ends without a link. */
+const CLOSED_BY_RUN_WITHOUT_LINK =
+  `✅ A later sync for PR #${PR_NUMBER} (ml) passed with nothing to deliver to this edition ` +
+  `(sync-scope: existing).\n\nClosing this failure report.`;
 
 /** The lines of a text, so that an assertion can match one whole. */
 function linesOf(text: string): string[] {
@@ -840,23 +906,28 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
     });
   });
 
+  /** A source PR that changes only a lecture the edition has not taken. */
+  const NOTHING_IN_SCOPE: Scenario = {
+    scope: 'existing',
+    prFiles: [{ filename: 'lectures/b.md', status: 'modified' }],
+    source: changedInSource('lectures/b.md', 'Bravo'),
+    target: { 'lectures/b.md': lecture('Bravo') },
+  };
+
   describe("'existing': nothing the source PR changed is in scope", () => {
     let run: BundleRun;
     beforeAll(() => {
-      run = runBundle('existing-nothing', {
-        scope: 'existing',
-        prFiles: [{ filename: 'lectures/b.md', status: 'modified' }],
-        source: changedInSource('lectures/b.md', 'Bravo'),
-        target: { 'lectures/b.md': lecture('Bravo') },
-      });
+      run = runBundle('existing-nothing', NOTHING_IN_SCOPE);
     }, 90_000);
 
-    it('reads the PR files, the edition and one state file, and nothing else', () => {
+    it('reads the PR files, the edition and one state file, then lists the open issues', () => {
       check(run, (log) => {
         expect(log.requests).toEqual([
           PR_FILES,
           EDITION_READ,
           readEdition('.translate/state/b.md.yml'),
+          // For failure issues an earlier run left open (#387). There are none.
+          LIST_ISSUES,
         ]);
       });
     });
@@ -875,7 +946,7 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
       });
     });
 
-    it('says so in the job summary, its only output', () => {
+    it('says so in the job summary', () => {
       check(run, () => {
         expect(run.summary.match(/^## /gm)).toHaveLength(1);
         expect(linesOf(run.summary)).toContain(
@@ -954,6 +1025,13 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
         expect(log.issues).toHaveLength(1);
         expect(issueErrors(log.issues[0])).toEqual([STATE_UNREADABLE_ERROR]);
         expect(log.comments).toEqual([]);
+      });
+    });
+
+    it('does not look for failure issues to close, though it opened a PR', () => {
+      check(run, (log) => {
+        expect(log.requests).not.toContain(LIST_ISSUES);
+        expect(log.issueUpdates).toEqual([]);
       });
     });
 
@@ -1252,6 +1330,332 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
         expect(linesOf(run.summary)).toContain(FAILED_WITH_NO_PR);
         expect(run.summary).not.toContain('Nothing this source PR changed is in scope.');
         expect(itemsUnder(run.summary, '### ❌ Scope unknown (1)')).toEqual([EDITION_ERROR]);
+      });
+    });
+
+    it('makes no model call, and sends every request to the fake', () => {
+      check(run, expectCleanRun);
+    });
+  });
+
+  // The scoped half of #387. A failure issue an earlier run opened stays open
+  // until a later run of the same PR recovers it. A run that opens its PR has
+  // always closed it. A scoped run that passes without a PR now closes it too,
+  // which on a partial edition is an ordinary outcome. An `all` run without a
+  // PR still leaves it open.
+
+  describe("'existing': nothing in scope, with a failure issue open (#387)", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('existing-nothing-open-issue', { ...NOTHING_IN_SCOPE, issues: OPEN_ISSUES });
+    }, 90_000);
+
+    it('closes the failure issue after the scope check, and makes no other request', () => {
+      check(run, (log) => {
+        expect(log.requests).toEqual([
+          PR_FILES,
+          EDITION_READ,
+          readEdition('.translate/state/b.md.yml'),
+          ...CLOSE_FAILURE_ISSUE,
+        ]);
+      });
+    });
+
+    it('says the run passed with nothing to deliver, links the run, and closes only that issue', () => {
+      check(run, (log) => {
+        expect(log.comments).toEqual([
+          { on: `${SOURCE_REPO}#${FAILURE_ISSUE}`, body: CLOSED_BY_RUN },
+        ]);
+        expect(log.issueUpdates).toEqual([CLOSED]);
+      });
+    });
+
+    it('opens no PR and no failure issue, and passes', () => {
+      check(run, (log) => {
+        expect(log.pulls).toEqual([]);
+        expect(log.issues).toEqual([]);
+        expect(log.writes).toEqual([]);
+        expect(log.deletes).toEqual([]);
+        expect(run.status).toBe(0);
+        expect(run.outputs).toEqual({});
+      });
+    });
+
+    it('makes no model call, and sends every request to the fake', () => {
+      check(run, expectCleanRun);
+    });
+  });
+
+  describe("'existing': nothing in scope, with a failure issue open, in a run with no run ID", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('existing-nothing-open-issue-no-run-id', {
+        ...NOTHING_IN_SCOPE,
+        issues: OPEN_ISSUES,
+        noRunId: true,
+      });
+    }, 90_000);
+
+    it('closes the failure issue with a comment that ends without a link', () => {
+      check(run, (log) => {
+        expect(log.comments).toEqual([
+          { on: `${SOURCE_REPO}#${FAILURE_ISSUE}`, body: CLOSED_BY_RUN_WITHOUT_LINK },
+        ]);
+        expect(log.issueUpdates).toEqual([CLOSED]);
+        expect(run.status).toBe(0);
+      });
+    });
+
+    it('makes no model call, and sends every request to the fake', () => {
+      check(run, expectCleanRun);
+    });
+  });
+
+  describe("'existing': nothing in scope, with a failure issue open, in test mode", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('existing-nothing-open-issue-test-mode', {
+        ...NOTHING_IN_SCOPE,
+        issues: OPEN_ISSUES,
+        testMode: true,
+      });
+    }, 90_000);
+
+    it('makes no issue request at all, and passes', () => {
+      check(run, (log) => {
+        expect(log.requests).toEqual([
+          PR_FILES,
+          EDITION_READ,
+          readEdition('.translate/state/b.md.yml'),
+        ]);
+        expect(log.comments).toEqual([]);
+        expect(log.issueUpdates).toEqual([]);
+        expect(run.status).toBe(0);
+      });
+    });
+
+    it('makes no model call, and sends every request to the fake', () => {
+      check(run, expectCleanRun);
+    });
+  });
+
+  describe("'existing': a run that opens its PR, with a failure issue open", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('existing-pr-open-issue', {
+        scope: 'existing',
+        prFiles: [
+          { filename: 'lectures/a-new.md', status: 'renamed', previous_filename: 'lectures/a.md' },
+        ],
+        source: {
+          [atMerge('lectures/a-new.md')]: lecture('Alpha'),
+          [atParent('lectures/a.md')]: lecture('Alpha'),
+        },
+        target: {
+          '.translate/state/a.md.yml': STATE,
+          'lectures/a.md': translated('Alpha'),
+        },
+        issues: OPEN_ISSUES,
+      });
+    }, 90_000);
+
+    it('comments on the source PR, then closes the failure issue', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(0);
+        expect(log.pulls).toHaveLength(1);
+        expect(log.requests.slice(-4)).toEqual([
+          `POST /repos/${SOURCE_REPO}/issues/${PR_NUMBER}/comments`,
+          ...CLOSE_FAILURE_ISSUE,
+        ]);
+        expect(log.issueUpdates).toEqual([CLOSED]);
+      });
+    });
+
+    it('cites the translation PR in the closing comment, in the text it had before #387', () => {
+      check(run, (log) => {
+        expect(log.comments.map((comment) => comment.on)).toEqual([
+          `${SOURCE_REPO}#${PR_NUMBER}`,
+          `${SOURCE_REPO}#${FAILURE_ISSUE}`,
+        ]);
+        expect(log.comments[1].body).toBe(CLOSED_BY_PR);
+      });
+    });
+
+    it('makes no model call, and sends every request to the fake', () => {
+      check(run, expectCleanRun);
+    });
+  });
+
+  /**
+   * A source PR whose only change removes a lecture the edition no longer
+   * has, with a failure issue open. Removals are not scoped, so a scoped run
+   * gets past the scope check, then finds nothing to delete and opens no PR.
+   */
+  const REMOVES_A_MISSING_LECTURE: Omit<Scenario, 'scope'> = {
+    prFiles: [{ filename: 'lectures/gone.md', status: 'removed' }],
+    source: {},
+    target: {},
+    issues: OPEN_ISSUES,
+  };
+
+  describe("'existing': a run past the scope check with nothing to deliver, with a failure issue open", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('existing-removal-open-issue', {
+        scope: 'existing',
+        ...REMOVES_A_MISSING_LECTURE,
+      });
+    }, 90_000);
+
+    it('looks for the lecture to delete, then closes the failure issue', () => {
+      check(run, (log) => {
+        expect(log.requests).toEqual([
+          PR_FILES,
+          readEdition('lectures/gone.md'),
+          ...CLOSE_FAILURE_ISSUE,
+        ]);
+      });
+    });
+
+    it('says the run passed with nothing to deliver, and links the run', () => {
+      check(run, (log) => {
+        expect(log.comments).toEqual([
+          { on: `${SOURCE_REPO}#${FAILURE_ISSUE}`, body: CLOSED_BY_RUN },
+        ]);
+        expect(log.issueUpdates).toEqual([CLOSED]);
+      });
+    });
+
+    it('opens no PR and no failure issue, and passes', () => {
+      check(run, (log) => {
+        expect(log.pulls).toEqual([]);
+        expect(log.issues).toEqual([]);
+        expect(log.writes).toEqual([]);
+        expect(log.deletes).toEqual([]);
+        expect(run.status).toBe(0);
+        expect(run.outputs['pr-url']).toBeUndefined();
+      });
+    });
+
+    it('makes no model call, and sends every request to the fake', () => {
+      check(run, expectCleanRun);
+    });
+  });
+
+  describe("'all': the same run, with a failure issue open", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('all-removal-open-issue', { scope: 'all', ...REMOVES_A_MISSING_LECTURE });
+    }, 90_000);
+
+    // The requests main's bundle makes for this run: #387's scoped half leaves
+    // `all` as it was.
+    it('makes the requests it made before, none of them for an issue', () => {
+      check(run, (log) => {
+        expect(log.requests).toEqual([PR_FILES, readEdition('lectures/gone.md')]);
+      });
+    });
+
+    it('leaves the failure issue open, opens no PR, and passes', () => {
+      check(run, (log) => {
+        expect(log.comments).toEqual([]);
+        expect(log.issueUpdates).toEqual([]);
+        expect(log.pulls).toEqual([]);
+        expect(log.issues).toEqual([]);
+        expect(run.status).toBe(0);
+      });
+    });
+
+    it('makes no model call, and sends every request to the fake', () => {
+      check(run, expectCleanRun);
+    });
+  });
+
+  describe("'existing': the same run past the scope check, in test mode", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('existing-removal-open-issue-test-mode', {
+        scope: 'existing',
+        ...REMOVES_A_MISSING_LECTURE,
+        testMode: true,
+      });
+    }, 90_000);
+
+    it('makes no issue request at all, and passes', () => {
+      check(run, (log) => {
+        expect(log.requests).not.toContain(LIST_ISSUES);
+        expect(log.comments).toEqual([]);
+        expect(log.issueUpdates).toEqual([]);
+        expect(run.status).toBe(0);
+      });
+    });
+
+    it('makes no model call, and sends every request to the fake', () => {
+      check(run, expectCleanRun);
+    });
+  });
+
+  describe("'existing': a run past the scope check that fails with no PR, with a failure issue open", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('existing-unread-lecture-open-issue', {
+        scope: 'existing',
+        prFiles: [
+          { filename: 'lectures/a-new.md', status: 'renamed', previous_filename: 'lectures/a.md' },
+        ],
+        source: {
+          [atMerge('lectures/a-new.md')]: lecture('Alpha'),
+          [atParent('lectures/a.md')]: lecture('Alpha'),
+        },
+        target: {
+          '.translate/state/a.md.yml': STATE,
+          'lectures/a.md': [translated('Alpha'), { status: 502 }],
+        },
+        issues: OPEN_ISSUES,
+      });
+    }, 90_000);
+
+    it('opens a new failure issue, and neither lists nor closes the open one', () => {
+      check(run, (log) => {
+        expect(log.requests.slice(-OPEN_FAILURE_ISSUE.length)).toEqual(OPEN_FAILURE_ISSUE);
+        expect(log.requests).not.toContain(LIST_ISSUES);
+        expect(log.pulls).toEqual([]);
+        expect(log.issues).toHaveLength(1);
+        expect(log.comments).toEqual([]);
+        expect(log.issueUpdates).toEqual([]);
+        expect(run.status).toBe(1);
+      });
+    });
+
+    it('makes no model call, and sends every request to the fake', () => {
+      check(run, expectCleanRun);
+    });
+  });
+
+  describe("'existing': a scope error, with a failure issue open", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      // Only the lecture whose state file answers 500, so nothing is in scope.
+      run = runBundle('existing-scope-error-open-issue', {
+        ...STATE_UNREADABLE,
+        prFiles: [{ filename: 'lectures/e.md', status: 'modified' }],
+        issues: OPEN_ISSUES,
+      });
+    }, 90_000);
+
+    it('opens a new failure issue, and neither lists nor closes the open one', () => {
+      check(run, (log) => {
+        expect(log.requests).toEqual([
+          PR_FILES,
+          EDITION_READ,
+          readEdition('.translate/state/e.md.yml'),
+          ...OPEN_FAILURE_ISSUE,
+        ]);
+        expect(run.status).toBe(1);
+        expect(log.issues).toHaveLength(1);
+        expect(issueErrors(log.issues[0])).toEqual([STATE_UNREADABLE_ERROR]);
+        expect(log.comments).toEqual([]);
+        expect(log.issueUpdates).toEqual([]);
       });
     });
 

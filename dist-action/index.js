@@ -40876,6 +40876,9 @@ async function runSync() {
     if (scope.errors.length === 0) {
       core9.info("sync-scope: existing \u2014 nothing this PR changed is in scope. No translation PR.");
       await writeScopeSummary(void 0, 0);
+      if (!isTestMode) {
+        await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, nothingToDeliverResolution(prNumber, inputs.targetLanguage));
+      }
       return;
     }
     core9.setFailed(`Translation completed with ${scope.errors.length} errors`);
@@ -40970,7 +40973,9 @@ async function runSync() {
       await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, result.errors);
     } else if (prUrl) {
       await postSuccessComment(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, prUrl, result.processedFiles);
-      await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, prUrl);
+      await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, `\u2705 A later sync for PR #${prNumber} (${inputs.targetLanguage}) succeeded: ${prUrl}`);
+    } else if (scope) {
+      await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, nothingToDeliverResolution(prNumber, inputs.targetLanguage));
     }
   }
 }
@@ -41211,7 +41216,7 @@ async function postSuccessComment(octokit, prNumber, targetLanguage, targetRepo,
     core9.warning(`Could not post success comment on PR #${prNumber}: ${error4}`);
   }
 }
-async function closeFailureIssues(octokit, prNumber, targetLanguage, prUrl) {
+async function closeFailureIssues(octokit, prNumber, targetLanguage, resolution) {
   try {
     const title = `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
     const openIssues = await octokit.paginate(octokit.rest.issues.listForRepo, {
@@ -41226,7 +41231,7 @@ async function closeFailureIssues(octokit, prNumber, targetLanguage, prUrl) {
         owner: github3.context.repo.owner,
         repo: github3.context.repo.repo,
         issue_number: issue.number,
-        body: `\u2705 A later sync for PR #${prNumber} (${targetLanguage}) succeeded: ${prUrl}
+        body: `${resolution}
 
 Closing this failure report.`
       });
@@ -41242,6 +41247,14 @@ Closing this failure report.`
   } catch (error4) {
     core9.warning(`Could not close failure issues for PR #${prNumber}: ${error4}`);
   }
+}
+function nothingToDeliverResolution(prNumber, targetLanguage) {
+  const resolution = `\u2705 A later sync for PR #${prNumber} (${targetLanguage}) passed with nothing to deliver to this edition (sync-scope: existing)`;
+  const { serverUrl, runId } = github3.context;
+  if (!Number.isFinite(runId) || runId <= 0)
+    return `${resolution}.`;
+  const { owner, repo } = github3.context.repo;
+  return `${resolution}: ${serverUrl}/${owner}/${repo}/actions/runs/${runId}`;
 }
 async function createFailureIssue(octokit, prNumber, targetLanguage, targetRepo, errors) {
   try {

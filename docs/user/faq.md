@@ -77,7 +77,7 @@ When the sync workflow encounters an error (API failure, parsing error, etc.), i
 - Recovery instructions including the `\translate-resync` command
 - The label `translation-sync-failure`
 
-To recover, fix the underlying issue and comment `\translate-resync` on the original merged PR. To retry only a specific language, use `\translate-resync zh-cn` or `\translate-resync fa`.
+To recover, fix the underlying issue and comment `\translate-resync` on the original merged PR. To retry only a specific language, use `\translate-resync zh-cn` or `\translate-resync fa`. A later sync of the same PR and language closes the issue when it opens its translation PR without errors, or, under `sync-scope: existing`, when it passes with nothing to deliver.
 
 ### Does the action post any status updates?
 
@@ -85,7 +85,7 @@ Yes. On successful sync, the action posts a **confirmation comment** on the sour
 - A link to the translation PR in the target repo
 - A list of translated files
 
-This gives visibility to the PR author and reviewers that the translation was created. Under `sync-scope: existing`, a run left with nothing to sync posts no comment; its job summary lists what it skipped.
+This gives visibility to the PR author and reviewers that the translation was created. Under `sync-scope: existing`, a run left with nothing to sync posts no comment on the source PR; its job summary lists what it skipped, and it closes any failure issue an earlier run opened for the same PR and language, with a comment that links the run.
 
 :::{note}
 Because success comments are posted via the GitHub API on the source PR, they trigger the `issue_comment` event again. This causes the sync workflows to start, but the `if:` condition correctly skips them (the comment body doesn't start with `\translate-resync`). These skipped runs use no compute and complete in ~1 second. This is a known GitHub Actions limitation — `issue_comment` cannot filter by comment body at the trigger level.
@@ -105,7 +105,7 @@ A lecture listed under **State File Without a Lecture** needs fixing: the editio
 
 ### Why did a changed lecture get no sync PR?
 
-Under `sync-scope: existing`, this happens when the lecture is out of scope and the run has nothing else to sync (no `_toc.yml` change, no removal). Such a run passes without a PR, a failure issue or a comment on the source PR; its job summary, on the workflow run's page, lists each skipped lecture and why.
+Under `sync-scope: existing`, this happens when the lecture is out of scope and the run has nothing else to sync (no `_toc.yml` change, no removal). Such a run passes without a PR, a new failure issue or a comment on the source PR; its job summary, on the workflow run's page, lists each skipped lecture and why. If an earlier run opened a failure issue for the same PR and language, this run closes it.
 
 If the edition does have the lecture, check that:
 

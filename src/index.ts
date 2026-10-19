@@ -766,13 +766,24 @@ async function runSync(): Promise<void> {
       : Promise.resolve();
 
   // Nothing left to sync. Without a scope error the run passes: no PR, no
-  // failure issue, no comment on the source PR, and the job summary is the
-  // only output. With one, some changed lecture's scope is unknown, so the run
-  // fails here, before it reads the edition again.
+  // failure issue and no comment on the source PR. Besides the job summary, it
+  // closes the failure issues earlier runs opened for this PR (the scoped half
+  // of #387): on a partial edition, passing with nothing in scope is an
+  // ordinary recovery, such as a rerun after a transient read error left a
+  // lecture's scope unknown. With a scope error, some changed lecture's scope
+  // is unknown, so the run fails here, before it reads the edition again.
   if (scope && nothingToSync(scope.classified)) {
     if (scope.errors.length === 0) {
       core.info('sync-scope: existing — nothing this PR changed is in scope. No translation PR.');
       await writeScopeSummary(undefined, 0);
+      if (!isTestMode) {
+        await closeFailureIssues(
+          octokit,
+          prNumber,
+          inputs.targetLanguage,
+          nothingToDeliverResolution(prNumber, inputs.targetLanguage)
+        );
+      }
       return;
     }
     core.setFailed(`Translation completed with ${scope.errors.length} errors`);
@@ -985,7 +996,23 @@ async function runSync(): Promise<void> {
         result.processedFiles
       );
       // ...and close any failure issues earlier runs opened for this PR.
-      await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, prUrl);
+      await closeFailureIssues(
+        octokit,
+        prNumber,
+        inputs.targetLanguage,
+        `✅ A later sync for PR #${prNumber} (${inputs.targetLanguage}) succeeded: ${prUrl}`
+      );
+    } else if (scope) {
+      // The scoped half of #387: a scoped run that passes with nothing to
+      // deliver, such as one whose only change removes a lecture the edition
+      // no longer has, closes the PR's failure issues too. Under `all` such a
+      // run leaves them open, as it always has; #387 stays open for that half.
+      await closeFailureIssues(
+        octokit,
+        prNumber,
+        inputs.targetLanguage,
+        nothingToDeliverResolution(prNumber, inputs.targetLanguage)
+      );
     }
   }
 }
@@ -1404,13 +1431,18 @@ async function postSuccessComment(
  * is where the pile gets cleaned up. Issues are matched by their exact
  * deterministic title, not by label — the label is applied best-effort and may
  * be missing.
+ *
+ * `resolution` opens the closing comment and says how the PR recovered: with
+ * the translation PR a later run opened, or, under `sync-scope: existing`,
+ * with a later run that passed with nothing to deliver
+ * (`nothingToDeliverResolution`, the scoped half of #387).
  */
 async function closeFailureIssues(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   octokit: any,
   prNumber: number,
   targetLanguage: string,
-  prUrl: string
+  resolution: string
 ): Promise<void> {
   try {
     const title = `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
@@ -1430,7 +1462,7 @@ async function closeFailureIssues(
         owner: github.context.repo.owner,
         repo: github.context.repo.repo,
         issue_number: issue.number,
-        body: `✅ A later sync for PR #${prNumber} (${targetLanguage}) succeeded: ${prUrl}\n\nClosing this failure report.`,
+        body: `${resolution}\n\nClosing this failure report.`,
       });
       await octokit.rest.issues.update({
         owner: github.context.repo.owner,
@@ -1444,6 +1476,22 @@ async function closeFailureIssues(
   } catch (error) {
     core.warning(`Could not close failure issues for PR #${prNumber}: ${error}`);
   }
+}
+
+/**
+ * How a scoped run that passed with nothing to deliver resolves the PR's
+ * failure issues (the scoped half of #387). With no translation PR to cite, it
+ * cites this run. Outside Actions GITHUB_RUN_ID is unset, `runId` is NaN, and
+ * the sentence ends without a link.
+ */
+function nothingToDeliverResolution(prNumber: number, targetLanguage: string): string {
+  const resolution =
+    `✅ A later sync for PR #${prNumber} (${targetLanguage}) passed with nothing to deliver ` +
+    `to this edition (sync-scope: existing)`;
+  const { serverUrl, runId } = github.context;
+  if (!Number.isFinite(runId) || runId <= 0) return `${resolution}.`;
+  const { owner, repo } = github.context.repo;
+  return `${resolution}: ${serverUrl}/${owner}/${repo}/actions/runs/${runId}`;
 }
 
 /**

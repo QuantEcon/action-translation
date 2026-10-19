@@ -46,7 +46,8 @@ npx translate status -s <source-path> -t <target-path> [options]
 | `--exclude <pattern>` | *(none)* | Exclude files matching pattern (repeatable) |
 | `--json` | `false` | Output as JSON |
 | `--write-state` | `false` | Bootstrap `.translate/` metadata from current state |
-| `--force` | `false` | Skip sync-date safety check for `--write-state` |
+| `--carried` | `false` | With `--write-state`: confirm the translation carries the English changes since each lecture's recorded sync point |
+| `--force` | `false` | Skip every `--write-state` safety check (see [Bootstrapping existing projects](#bootstrapping-existing-projects)) |
 | `--check-sync` | `false` | LLM-based content sync check (requires `ANTHROPIC_API_KEY`) |
 | `--test` | `false` | Use mock triage responses for `--check-sync` (no LLM calls) |
 
@@ -566,7 +567,7 @@ tool-version: <tool version>   # Version that performed this sync
 
 | Command | Reads | Writes |
 |---------|-------|--------|
-| `status` | Uses `source-sha` for exact staleness | `--write-state` bootstraps config + state |
+| `status` | Uses `source-sha` for exact staleness, and with `--write-state` to find English changes since it | `--write-state` bootstraps config + state |
 | `backward` | Skips files where `source-sha` is unchanged | — |
 | `forward` | — | Updates state after successful resync |
 | `init` | `--skip-existing` skips lectures with a readable state file | Writes config, and state for each lecture it translates |
@@ -598,6 +599,14 @@ This:
 2. For each translated file, records the current source commit as `source-sha`
 3. Uses the target file's last commit date as `synced-at`
 4. Keeps the model a file's existing state names; otherwise marks `model: unknown` (not recoverable from history)
+
+It refuses in three cases:
+
+- **An English commit dated after the translation's last commit.** The translation may predate the English it would be recorded against: bring it up to date first, for example with `forward`. For a file without a state file this is the only check, and any later commit to the translation passes it, whether or not the translation carries the English: confirm the translation matches the current English before writing its state (`--check-sync`; Step 2 of [Tutorial: Connect an Existing Target](tutorials/connect-existing.md#step-2-check-sync-before-bootstrapping)).
+- **English changes since the commit a state file records.** When a file already has a state file and the English file has changed since the commit it records, recording the current commit would mark those changes as carried into the translation. The refusal lists each such file with the English commits since its recorded commit. It also refuses a file whose recorded commit is not in the local source clone, since git cannot tell what changed: pull or unshallow the clone. Once the translation carries every change and is committed, rerun with `--carried` to confirm it. A recorded commit whose version of the file is the current one, such as the merge commit a sync records, passes.
+- **A state file that exists but cannot be read.** It is left as it is: repair or delete it.
+
+The first two checks refuse the whole run before anything is written. The third lets the run write the config and the other files' state, then fails, naming each unreadable file. `--force` skips all three; `--carried` skips only the second.
 
 On a partial edition, write state only for the lectures it has translated. Without `-f` or `--exclude`, `--write-state` writes one for every `.md` file at the top level of the docs folder that both repositories have, English copies included, and under `sync-scope: existing` each state file puts its lecture in scope. Run it once per translated lecture with `-f`, or leave the English copies out with `--exclude`; a translated lecture in a subfolder needs `-f` either way, for example `-f advanced/topic.md`. Pass the edition's own `-l` and `-d` every time, since each run rewrites `.translate/config.yml` from the flags:
 
