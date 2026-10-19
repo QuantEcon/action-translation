@@ -144,6 +144,11 @@ Roadmap detail lives in the project trackers (reading order in
 
 ## Recently landed
 
+- **ml round-5 repairs and glossary v0.8.0 (#372, `6624fe9`, 2026-10-19)** — the widened splice
+  repair, the source-gated discourse-formula restore, multi-word `-ഉം` commas, the over-translation
+  lint, and glossary pins for *efficient*, *convenient*, *satisfy*, *compare*, *success* (`work`
+  unpinned). Experiment tooling plus the glossary; no `src/` change. Ships in v0.29.5 (release PR
+  open). Log `2026-10-19-ml-round5`.
 - **Dependency security update (#360, `823a8fa`, 2026-10-09, unreleased)** — `js-yaml` 4.3.2
   and `undici` 6.29.0, in range, which clears both high-severity production advisories
   (#359). It ships with the next release.
@@ -240,8 +245,9 @@ Roadmap detail lives in the project trackers (reading order in
 *ml, 2026-09-28 (end)*: see the ml bullet under In flight — round 5 is with the editor, and
 next is the second `ml_repair` PR; #335 shipped in v0.29.4.
 
-*Release, 2026-10-09*: v0.29.4 is out (see Recently landed); the next release is v0.30.0 per
-#346, and it also carries #360's dependency security update. If 4b fails again, follow AGENTS.md
+*Release, 2026-10-19*: v0.29.5 (patch) is in its release PR: #372 (glossary v0.8.0 and the round-5
+`ml_repair` tooling) and #360's dependency security update. #346's v0.30.0 (the French and Malayalam
+sync items) stays the next minor; nothing of it is merged yet. If 4b fails again, follow AGENTS.md
 step 4b (#357). This page's `verified:` stamp predates it, so a full re-verify is owed.
 
 *Review, 2026-10-06*: **no `translate forward` run before #348 merges**. Every forward resync
