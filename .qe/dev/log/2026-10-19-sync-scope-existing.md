@@ -71,8 +71,9 @@ fixed instead (#381, #379). The sync-scope record now carries all three.
   earlier run opened for the same PR and language, with a comment that links the run; not in
   test mode, and `all` is byte for byte as before, so #387 stays open for that half.
 - Verified by a review workflow (builders, then two skeptics per finding); its findings went in
-  before commit, among them a stale-clone hint in the refusal and two bundle scenarios with
-  decoy issues. Counts: 70 suites, 1,838 tests.
+  before commit, among them a stale-clone hint in the refusal, two bundle scenarios with
+  decoy issues, and a test that the date guard refuses first when both guards would. Counts:
+  70 suites, 1,839 tests.
 - Checked live for the records: the five complete editions are lecture-python-programming.fr,
   .zh-cn and .fa, lecture-python.zh-cn and lecture-intro.zh-cn; every top-level lecture has a
   state file, and the `.md` files without one are the ones the record lists. #promote

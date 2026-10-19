@@ -230,7 +230,10 @@ See ARCHITECTURE.md R4 for the design rationale.
       The safety check compares day strings (`src/cli/commands/status.ts:341-343`) while
       OUTDATED compares full dates (`:239-240`), so a same-day source edit is recorded as synced.
       The commander defaults (`src/cli/index.ts:144`, `:234`, `:327`) overwrite an existing
-      `target-language` and `docs-folder` when the flags are omitted.*
+      `target-language` and `docs-folder` when the flags are omitted.* *2026-10-19: #376
+      (#380) closes the same-day hole for a lecture with a readable state file: `--write-state`
+      now asks git whether the English changed since the recorded `source-sha`, whatever the
+      dates. A lecture without one is still checked by day-granular date alone.*
 - [ ] **[L]** `-f ../../x.md` path traversal writes state outside the repo
       (`translate-state.ts:136-138`) — apply init's guards (`init.ts:269-272`) everywhere
 - [ ] **[L]** Validate `--write-state`/`--check-sync` incompatibility before the repo scan

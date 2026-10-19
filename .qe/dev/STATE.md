@@ -324,7 +324,7 @@ in the fr edition's pandas lecture.
 ## Health & context
 
 - `main` green; **1,635 tests across 68 suites** (zero skips, type-checked) as of
-  `e7356cc` (counted 2026-10-19; #376 brings it to 1,838 across 70); lint at
+  `e7356cc` (counted 2026-10-19; #376 brings it to 1,839 across 70); lint at
   `--max-warnings 0` including root `*.mjs`, CI checks formatting and
   `.qe/dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale `dist/`
   — run `npm run build` first; that guard is deliberate, not a break.

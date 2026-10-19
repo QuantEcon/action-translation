@@ -1153,6 +1153,28 @@ describe('--write-state carried-change guard (#380)', () => {
     expect(readFileState(target, 'lecture.md')?.['source-sha']).toBe(drafted);
   });
 
+  it('runs the date guard first when both would refuse', async () => {
+    // The tutorials rely on this order: until the carried change is committed,
+    // the date guard's refusal is the one shown, without the commit listing.
+    const drafted = commit(
+      source,
+      { 'lectures/lecture.md': SOURCE_2_SECTIONS },
+      '2026-10-01',
+      'Add lecture'
+    );
+    commit(target, { 'lectures/lecture.md': TARGET_2_SECTIONS_WITH_MAP }, '2026-10-02', 'Draft');
+    recordSyncPoint(drafted);
+    commit(source, { 'lectures/lecture.md': SOURCE_FIXED }, '2026-10-05', 'FIX');
+
+    const message = await refusal();
+
+    expect(message).toMatch(
+      /^--write-state blocked: 1 file\(s\) have SOURCE commits newer than TARGET\./
+    );
+    expect(message).not.toContain('English changes since the sync point');
+    expect(readFileState(target, 'lecture.md')?.['source-sha']).toBe(drafted);
+  });
+
   it('--carried does not skip the corrupt-file refusal', async () => {
     commit(source, { 'lectures/lecture.md': SOURCE_2_SECTIONS }, '2026-10-01', 'Add lecture');
     commit(target, { 'lectures/lecture.md': TARGET_2_SECTIONS_WITH_MAP }, '2026-10-02', 'Draft');
