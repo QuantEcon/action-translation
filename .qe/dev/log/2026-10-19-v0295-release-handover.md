@@ -5,7 +5,7 @@ local scripts the session could not run: the harness needs the `gh` token's `wor
 the rate check needs `ANTHROPIC_API_KEY`. @mmcky runs them locally and logs the results back; the
 session then moves the floating tags, smokes `@v0`, publishes the release and posts the tallies.
 
-**State, read live on 2026-10-19 at 06:30 UTC**:
+**State, read live on 2026-10-19 before 06:04 UTC**:
 
 - `main` is at `e7356cc` (`chore: release v0.29.5`, #373). `package.json` says 0.29.5.
 - Tag `v0.29.5` → `e7356cc`, lightweight like every earlier release tag. `v0.29` and `v0` are still
@@ -18,7 +18,9 @@ session then moves the floating tags, smokes `@v0`, publishes the release and po
 
 ## How to run this (@mmcky, locally)
 
-From a checkout of `main` at `e7356cc` with `npm ci` done:
+From a checkout of `main` at `e7356cc` with `npm ci` done after checking it out. The rate check
+symlinks this checkout's `node_modules` into its worktrees, so a stale install measures the old
+dependencies:
 
 1. **Token scope, once.** The harness refuses to run without it (it rewrites the nine workflow
    files in the four harness repos):
@@ -31,6 +33,7 @@ From a checkout of `main` at `e7356cc` with `npm ci` done:
    across three lanes); 5+ minutes to create the PRs, then the workflows run on GitHub:
 
    ```bash
+   SCRATCH=$(mktemp -d)
    ./tool-test-action-on-github/test-action-on-github.sh --action-ref v0.29.5 2>&1 | tee "$SCRATCH/gate-v0.29.5.log"
    ```
 
@@ -77,3 +80,38 @@ From a checkout of `main` at `e7356cc` with `npm ci` done:
 > **Security** — `js-yaml` 4.3.2 and `undici` 6.29.0, within the existing ranges, clearing the two high-severity production advisories; both are bundled, so the fix reaches `@v0` workflows with this release (#360).
 >
 > **Added, experiment tooling only** — `ml_repair.py` widens the comma-splice repair to any finite-verb comma followed by a continuing clause, restores sentence-initial discourse formulas gated on the English source, and commas multi-word `-ഉം` pairs; `ml_metrics.py` gains an over-translation lint; 31 fixture tests (#372). Full details in `CHANGELOG.md` under `[0.29.5]`.
+
+## Results (2026-10-19, run from @mmcky's machine)
+
+The handover was executed by a local session on @mmcky's machine, which has the `workflow` scope
+and an API key; @mmcky approved the release on the results below.
+
+**§4a passed.** Census 9/9 at `@v0.29.5`; 28 source PRs (test-translation-sync#1006–1033); 84/84
+sync runs succeeded, two skipped per lane as expected. Each lane holds 28 translation PRs, and all
+84 carry a verdict block at `engineVersion: 0.29.5`, `engineRef: v0.29.5`. Scenario 17 delivered
+`game-theory.md` on all three lanes (zh-cn#1038, fa#423, ml#332). Verdicts: 83 PASS, 1 WARN. The
+WARN is zh-cn scenario 22 (zh-cn#1043): the headings of two whole `##` sections stay in English
+while their body is translated. It is not new: the v0.29.4 gate's zh-cn#1013 read the same 23/33,
+unremarked, because the read-back counts verdict coverage, not verdict values. Filed as #375.
+
+**§4b over threshold on fa and ml, pre-existing.** `game-theory.md` refused 0/12 on zh-cn, 2/12 on
+fa and 2/12 on ml, every refusal with #203's signature (directives 3 → 2, `{code-cell}` and `{math}`
+transposed). The fa request is byte-identical to v0.29.4's: no `src/` change except one test, and
+no change to `glossary/fa.json` or the language configs. The ml request differs only by
+`glossary/ml.json` (#372). Same-day controls, 24 draws per arm, run side by side: fa 0/24 at
+v0.29.4 against 1/24 at v0.29.5, ml 1/24 against 2/24. Pooled with v0.29.4's 0/12 of 2026-10-09
+and today's 4b: fa 0/36 against 3/36 (Fisher two-sided p ≈ 0.24), ml 1/36 against 4/36
+(p ≈ 0.36). The two cannot be told apart, so step 4b releases. The cell that trips moves between
+languages from release to release (zh-cn at v0.29.4, fa and ml now), as a latent rate of a few
+percent does at 12 draws. #363 (v0.30.0) is the repair.
+
+**Traps, for the next run.** Step 2's `tee` needed `SCRATCH` set first (fixed above). The clone
+used here still held v0.29.4's install (`js-yaml` 4.3.0, `undici` 6.27.0) because `npm ci` was not
+re-run after fast-forwarding, so 4b measured v0.29.5's `src/` and glossary without #360's bumps.
+Those reach the action through `dist-action/`, which §4a ran, and do not reach the model request.
+As at v0.29.4, a refused draw reports `Tokens: 0` and `Time: 0.0`; it is still the parity guard,
+not an API failure. Read the `## Failures` section of the draw's `TRANSLATION-REPORT.md`.
+
+**Tags and release**: pending. The session's tag push was refused by its permission classifier,
+so @mmcky runs checklist 5 (move `v0.29` and `v0`, smoke `@v0` on scenario 01) and 6 (the release,
+with the notes above) by hand; the tally then goes on #373 and the measurement on #203.
