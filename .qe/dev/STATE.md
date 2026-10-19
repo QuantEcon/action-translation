@@ -260,10 +260,15 @@ still describes the first version (`_toc.yml` left alone); the ToC is now mirror
 *ml, 2026-09-28 (end)*: see the ml bullet under In flight — round 5 is with the editor, and
 next is the second `ml_repair` PR; #335 shipped in v0.29.4.
 
-*Release, 2026-10-19*: v0.29.5 (patch) is in its release PR: #372 (glossary v0.8.0 and the round-5
-`ml_repair` tooling) and #360's dependency security update. #346's v0.30.0 (the French and Malayalam
-sync items) stays the next minor; nothing of it is merged yet. If 4b fails again, follow AGENTS.md
-step 4b (#357). This page's `verified:` stamp predates it, so a full re-verify is owed.
+*Release, 2026-10-19*: **v0.29.5 is released** (#373, `e7356cc`); `v0.29` and `v0` point at it
+and the `@v0` smoke passed on all three lanes. §4a passed at the tag (28/28 verdicts per lane at
+`engineVersion: 0.29.5`); §4b's fa and ml cells were over threshold but indistinguishable from
+v0.29.4 under the step-4b control (#203's latent rate). Log
+`2026-10-19-v0295-release-handover`. Payload: #372 (glossary v0.8.0 and the round-5 `ml_repair`
+tooling) and #360's dependency security update. New from the gate: #375, zh-cn sync leaving a whole
+section's headings in English (scenario 22, pre-existing). #346's v0.30.0 (the French and Malayalam
+sync items) stays the next minor; nothing of it is merged yet. This page's `verified:` stamp
+predates it, so a full re-verify is owed.
 
 *Review, 2026-10-06*: **no `translate forward` run before #348 merges**. Every forward resync
 since PR #31 (2026-03-19) has gone out without the edition's glossary and language rules. #325
