@@ -1,0 +1,15 @@
+{"draft": "round5/pandas-v0.29.3-draw1(sent)", "repair": {"colons_added": 2, "for_example_restored": 0, "um_commas_added": 12, "splices_split": 8, "formulas_restored": 3}, "repair_version": "#372 repair (main)"}
+{"draft": "round5/pandas-v0.29.3-draw2", "repair": {"colons_added": 2, "for_example_restored": 0, "um_commas_added": 6, "splices_split": 3, "formulas_restored": 2}, "repair_version": "#372 repair (main)"}
+{"draft": "round5/pandas-v0.29.3-draw3", "repair": {"colons_added": 1, "for_example_restored": 0, "um_commas_added": 11, "splices_split": 9, "formulas_restored": 3}, "repair_version": "#372 repair (main)"}
+{"draft": "control-v0.29.3/pandas-v0.29.3-draw1", "repair": {"colons_added": 2, "for_example_restored": 0, "um_commas_added": 15, "splices_split": 3, "formulas_restored": 3}, "repair_version": "#372 repair (main)"}
+{"draft": "control-v0.29.3/pandas-v0.29.3-draw2", "repair": {"colons_added": 1, "for_example_restored": 0, "um_commas_added": 8, "splices_split": 7, "formulas_restored": 3}, "repair_version": "#372 repair (main)"}
+{"draft": "control-v0.29.3/pandas-v0.29.3-draw3", "repair": {"colons_added": 2, "for_example_restored": 0, "um_commas_added": 12, "splices_split": 3, "formulas_restored": 1}, "repair_version": "#372 repair (main)"}
+{"draft": "pandas-v0.29.5-draw1", "repair": {"colons_added": 2, "for_example_restored": 0, "um_commas_added": 8, "splices_split": 3, "formulas_restored": 3}, "repair_version": "#372 repair (main)"}
+{"draft": "pandas-v0.29.5-draw2", "repair": {"colons_added": 2, "for_example_restored": 0, "um_commas_added": 10, "splices_split": 4, "formulas_restored": 2}, "repair_version": "#372 repair (main)"}
+{"draft": "pandas-v0.29.5-draw3", "repair": {"colons_added": 1, "for_example_restored": 0, "um_commas_added": 9, "splices_split": 6, "formulas_restored": 1}, "repair_version": "#372 repair (main)"}
+{"draft": "round5/pandas-v0.29.3-draw1(sent)", "repair": {"colons_added": 2, "for_example_restored": 0, "um_commas_added": 8, "splices_split": 1}, "repair_version": "seed-era repair d9b243c"}
+{"draft": "round5/pandas-v0.29.3-draw2", "repair": {"colons_added": 2, "for_example_restored": 0, "um_commas_added": 5, "splices_split": 0}, "repair_version": "seed-era repair d9b243c"}
+{"draft": "round5/pandas-v0.29.3-draw3", "repair": {"colons_added": 1, "for_example_restored": 0, "um_commas_added": 8, "splices_split": 3}, "repair_version": "seed-era repair d9b243c"}
+{"draft": "control-v0.29.3/pandas-v0.29.3-draw1", "repair": {"colons_added": 2, "for_example_restored": 0, "um_commas_added": 11, "splices_split": 1}, "repair_version": "seed-era repair d9b243c"}
+{"draft": "control-v0.29.3/pandas-v0.29.3-draw2", "repair": {"colons_added": 1, "for_example_restored": 0, "um_commas_added": 6, "splices_split": 3}, "repair_version": "seed-era repair d9b243c"}
+{"draft": "control-v0.29.3/pandas-v0.29.3-draw3", "repair": {"colons_added": 2, "for_example_restored": 0, "um_commas_added": 6, "splices_split": 0}, "repair_version": "seed-era repair d9b243c"}
