@@ -48,6 +48,16 @@ export const TARGET_REPO_LABELS: readonly string[] = [
 export const AUTO_MERGE_MODES = ['off', 'shadow'] as const;
 export type AutoMergeMode = (typeof AUTO_MERGE_MODES)[number];
 
+/**
+ * Valid `sync-scope` values; first entry is the default. `existing` syncs a
+ * changed lecture only when the edition has its state file (#344, see
+ * `sync-scope.ts`). The input is temporary: it retires when state-aware sync
+ * becomes every edition's behaviour
+ * (D-2026-10-19-sync-scope-existing-reads-state-files).
+ */
+export const SYNC_SCOPES = ['all', 'existing'] as const;
+export type SyncScope = (typeof SYNC_SCOPES)[number];
+
 // The model default's owner stays src/models.ts; re-exported here so contract
 // consumers (and the action.yml parity test) have a single import site.
 export { DEFAULT_CLAUDE_MODEL } from './models.js';

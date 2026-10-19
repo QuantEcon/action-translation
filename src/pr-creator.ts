@@ -15,6 +15,7 @@
 import { TranslatedFile } from './types.js';
 import { Logger } from './sync-orchestrator.js';
 import { SYNC_BRANCH_PREFIX } from './branch-naming.js';
+import { ScopeSkip, formatScopeNotice } from './sync-scope.js';
 
 // =============================================================================
 // INTERFACES
@@ -115,6 +116,7 @@ export interface PrCreationResult {
  * @param config - PR configuration
  * @param logger - Logger instance
  * @param sourcePrInfo - Optional source PR metadata
+ * @param scopeSkipped - Lectures `sync-scope: existing` left out of the run (#344)
  * @returns PR creation result with URL and branch name
  */
 export async function createTranslationPR(
@@ -128,7 +130,8 @@ export async function createTranslationPR(
   skippedSections?: Map<string, string[]>,
   fileMetadata?: Array<{ path: string; type: string; previousPath?: string }>,
   droppedTargetSections?: Map<string, string[]>,
-  failedNewFiles?: FailedNewFilesNotice
+  failedNewFiles?: FailedNewFilesNotice,
+  scopeSkipped?: ScopeSkip[]
 ): Promise<PrCreationResult> {
   const { targetOwner, targetRepo } = config;
 
@@ -197,7 +200,8 @@ export async function createTranslationPR(
     baseSha,
     fileMetadata,
     droppedTargetSections,
-    failedNewFiles
+    failedNewFiles,
+    scopeSkipped
   );
 
   // Build PR title
@@ -280,7 +284,8 @@ export function buildPrBody(
   targetBaseSha?: string,
   fileMetadata?: Array<{ path: string; type: string; previousPath?: string }>,
   droppedTargetSections?: Map<string, string[]>,
-  failedNewFiles?: FailedNewFilesNotice
+  failedNewFiles?: FailedNewFilesNotice,
+  scopeSkipped?: ScopeSkip[]
 ): string {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);
@@ -353,6 +358,10 @@ export function buildPrBody(
     failedFilesNotice = `\n\n### ⚠️ Files Failed to Translate\n\nThe following new file(s) could not be translated and are **absent from this PR**. ${tocSentence} The error details and recovery steps are in the failure issue this run opens on the source repository.\n\n${lines.join('\n')}`;
   }
 
+  // Lectures `sync-scope: existing` left out (#344). Absent under `all`, so
+  // that body is unchanged; never part of the metadata's `files` below.
+  const scopeNotice = formatScopeNotice(scopeSkipped ?? []);
+
   // Build machine-readable metadata for rebase mode
   // Use fileMetadata (with type info) if available, otherwise fall back to path-only
   const metadataFiles: TranslationSyncMetadata['files'] = fileMetadata
@@ -391,7 +400,7 @@ This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoNam
 ### Source PR
 **[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ''}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
 
-${filesChangedSection}${failedFilesNotice}${skippedNotice}${droppedNotice}
+${filesChangedSection}${failedFilesNotice}${skippedNotice}${droppedNotice}${scopeNotice}
 
 ### Details
 - **Source Language**: ${config.sourceLanguage}

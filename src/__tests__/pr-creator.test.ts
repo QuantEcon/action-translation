@@ -17,6 +17,12 @@ import {
   parseTranslationSyncMetadata,
   PrCreatorConfig,
 } from '../pr-creator.js';
+import {
+  formatScopeNotice,
+  LECTURE_MISSING_HEADING,
+  NOT_SYNCED_HEADING,
+  ScopeSkip,
+} from '../sync-scope.js';
 import { TranslatedFile } from '../types.js';
 
 // =============================================================================
@@ -259,6 +265,169 @@ describe('buildPrBody', () => {
         filteredTocPaths: [],
       })
     ).not.toContain('Files Failed to Translate');
+  });
+});
+
+// =============================================================================
+// SYNC-SCOPE NOTICE TESTS (#344)
+// =============================================================================
+
+describe('buildPrBody sync-scope notice (#344)', () => {
+  const files: TranslatedFile[] = [
+    { path: 'lectures/functions.md', content: 'c1', sha: 'sha-functions' },
+  ];
+  const deleted = [{ path: 'lectures/old_lecture.md', sha: 'sha-old' }];
+  const fileMetadata = [
+    { path: 'lectures/functions.md', type: 'markdown' },
+    { path: 'lectures/old_lecture.md', type: 'removed' },
+  ];
+  const sourcePrInfo = { title: 'Update the functions lecture', labels: [] };
+  const pendingSections = new Map([['lectures/functions.md', ['Exercises']]]);
+  const droppedSections = new Map([['lectures/functions.md', ['Local Notes']]]);
+  const failedNewFiles = {
+    files: ['lectures/new_lecture.md'],
+    filteredTocPaths: ['lectures/_toc.yml'],
+  };
+
+  const scopeSkipped: ScopeSkip[] = [
+    {
+      path: 'lectures/intro.md',
+      statePath: '.translate/state/intro.md.yml',
+      reason: 'not-in-edition',
+    },
+    {
+      path: 'lectures/names.md',
+      previousPath: 'lectures/naming.md',
+      statePath: '.translate/state/naming.md.yml',
+      reason: 'not-in-edition',
+    },
+    {
+      path: 'lectures/getting_started.md',
+      statePath: '.translate/state/getting_started.md.yml',
+      reason: 'lecture-missing',
+    },
+  ];
+
+  /** A body carrying every earlier notice, with `skipped` as the scope argument. */
+  function bodyWithNotices(skipped: ScopeSkip[] | undefined): string {
+    return buildPrBody(
+      files,
+      deleted,
+      baseConfig,
+      sourcePrInfo,
+      pendingSections,
+      'target-sha',
+      fileMetadata,
+      droppedSections,
+      failedNewFiles,
+      skipped
+    );
+  }
+
+  it('leaves the body byte-identical when the run left nothing out (sync-scope: all)', () => {
+    // Under 'all', runSync passes `scope?.skipped`, which is undefined, and
+    // that is the same call as one without the argument. The snapshot pins
+    // the body that call builds. It matched main's buildPrBody when it was
+    // taken, so a change to it changes the PR body of every edition.
+    const body = buildPrBody(
+      files,
+      deleted,
+      baseConfig,
+      sourcePrInfo,
+      pendingSections,
+      'target-sha',
+      fileMetadata,
+      droppedSections,
+      failedNewFiles
+    );
+
+    expect(body).toMatchSnapshot();
+    // A scoped run that left nothing out passes an empty list.
+    expect(bodyWithNotices([])).toBe(body);
+    expect(body).not.toContain(NOT_SYNCED_HEADING);
+    expect(body).not.toContain(LECTURE_MISSING_HEADING);
+  });
+
+  it('leaves a body with no other notice byte-identical when the run left nothing out', () => {
+    const body = buildPrBody(files, [], baseConfig);
+
+    expect(body).toMatchSnapshot();
+    expect(
+      buildPrBody(
+        files,
+        [],
+        baseConfig,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        []
+      )
+    ).toBe(body);
+  });
+
+  it('lists the lectures left out after the other notices and before the details', () => {
+    const body = bodyWithNotices(scopeSkipped);
+
+    expect(body).toContain(NOT_SYNCED_HEADING);
+    expect(body.split('\n')).toEqual(
+      expect.arrayContaining([
+        '- `lectures/intro.md`',
+        '- `lectures/names.md` (renamed from `lectures/naming.md`)',
+      ])
+    );
+    // The whole notice sits between the other notices and the details.
+    expect(body).toContain(`${formatScopeNotice(scopeSkipped)}\n\n### Details`);
+    for (const notice of [
+      '### ⚠️ Files Failed to Translate',
+      '### ⚠️ Sections Pending Earlier Translation PR',
+      '### ⚠️ Target-Only Sections Removed',
+    ]) {
+      expect(body.indexOf(notice)).toBeGreaterThan(-1);
+      expect(body.indexOf(notice)).toBeLessThan(body.indexOf(NOT_SYNCED_HEADING));
+    }
+  });
+
+  it('lists a lecture whose state file has no lecture beside it, with the state file', () => {
+    const body = bodyWithNotices(scopeSkipped);
+
+    expect(body).toContain(LECTURE_MISSING_HEADING);
+    expect(body.split('\n')).toContain(
+      '- `lectures/getting_started.md`: `.translate/state/getting_started.md.yml`'
+    );
+  });
+
+  it('keeps the lectures left out of the metadata files', () => {
+    // The metadata's `files` names what the PR delivers (#259's
+    // declared-vs-delivered check). A lecture left out is listed, never declared.
+    const withTypes = parseTranslationSyncMetadata(bodyWithNotices(scopeSkipped));
+    const pathOnly = parseTranslationSyncMetadata(
+      buildPrBody(
+        files,
+        deleted,
+        baseConfig,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        scopeSkipped
+      )
+    );
+
+    expect(withTypes).toBeDefined();
+    expect(withTypes!.files).toEqual([
+      { path: 'lectures/functions.md', type: 'markdown' },
+      { path: 'lectures/old_lecture.md', type: 'removed' },
+    ]);
+    expect(pathOnly).toBeDefined();
+    expect(pathOnly!.files).toEqual([
+      { path: 'lectures/functions.md' },
+      { path: 'lectures/old_lecture.md' },
+    ]);
   });
 });
 

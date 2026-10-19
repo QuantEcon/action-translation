@@ -27,6 +27,13 @@ import { isTranslationBranch } from './branch-naming.js';
 import { FAILURE_ISSUE_LABEL } from './contracts.js';
 import { refreshStaleBranch } from './rebase-siblings.js';
 import { stateFileRelativePath } from './cli/translate-state.js';
+import {
+  applySyncScope,
+  buildScopeSummary,
+  nothingToSync,
+  refuseUnreadLectures,
+  writeJobSummary,
+} from './sync-scope.js';
 import { runReview } from './action/review.js';
 import { coreLogger } from './action/core-logger.js';
 import { getBuiltInGlossaryDir } from './runtime-paths.js';
@@ -728,6 +735,60 @@ async function runSync(): Promise<void> {
   core.info(`Found ${classified.removedMarkdownFiles.length} removed markdown files`);
   core.info(`Found ${classified.removedTocFiles.length} removed TOC files`);
 
+  // sync-scope (#344): under `existing`, a changed or renamed lecture syncs
+  // only when the edition has its state file, checked before any content is
+  // fetched. Removals and `_toc.yml` are not scoped. `all` returns undefined
+  // and makes no request, so every `scope` branch below is skipped.
+  const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
+  const scope = await applySyncScope(
+    inputs.syncScope,
+    octokit,
+    classified,
+    { owner: targetOwner, repo: targetRepo },
+    inputs.docsFolder,
+    coreLogger
+  );
+  const writeScopeSummary = (prUrl: string | undefined, errorCount: number) =>
+    scope
+      ? writeJobSummary(
+          core.summary,
+          buildScopeSummary({
+            targetLanguage: inputs.targetLanguage,
+            targetRepo: inputs.targetRepo,
+            sourceRepo: `${github.context.repo.owner}/${github.context.repo.repo}`,
+            prNumber,
+            scoped: scope,
+            prUrl,
+            errorCount,
+          }),
+          coreLogger
+        )
+      : Promise.resolve();
+
+  // Nothing left to sync. Without a scope error the run passes: no PR, no
+  // failure issue, no comment on the source PR, and the job summary is the
+  // only output. With one, some changed lecture's scope is unknown, so the run
+  // fails here, before it reads the edition again.
+  if (scope && nothingToSync(scope.classified)) {
+    if (scope.errors.length === 0) {
+      core.info('sync-scope: existing — nothing this PR changed is in scope. No translation PR.');
+      await writeScopeSummary(undefined, 0);
+      return;
+    }
+    core.setFailed(`Translation completed with ${scope.errors.length} errors`);
+    await writeScopeSummary(undefined, scope.errors.length);
+    if (!isTestMode) {
+      await createFailureIssue(
+        octokit,
+        prNumber,
+        inputs.targetLanguage,
+        inputs.targetRepo,
+        scope.errors
+      );
+    }
+    return;
+  }
+
   // Load glossary
   const builtInGlossaryDir = getBuiltInGlossaryDir();
   const glossary = await loadGlossary(
@@ -738,19 +799,30 @@ async function runSync(): Promise<void> {
   );
 
   // Fetch content and build FileToSync array
-  const [targetOwner, targetRepo] = inputs.targetRepo.split('/');
   const {
-    files: filesToSync,
+    files: fetchedFiles,
     errors: fetchErrors,
     fetchFailedNewFiles,
   } = await fetchAllFileContents(
     octokit,
-    classified,
+    scope ? scope.classified : classified,
     inputs,
     targetOwner,
     targetRepo,
     effectiveSha
   );
+
+  // Under scope, a lecture whose scope could not be read, and an in-scope
+  // lecture the fetch could not read, each fail the run: neither is
+  // translated, and an in-scope lecture is never translated from scratch
+  // (see sync-scope.ts).
+  let filesToSync = fetchedFiles;
+  if (scope) {
+    const held = refuseUnreadLectures(fetchedFiles);
+    for (const error of held.errors) core.error(error);
+    filesToSync = held.files;
+    fetchErrors.unshift(...scope.errors, ...held.errors);
+  }
 
   // Fetch existing state file SHAs from target repo for state generation
   const existingStateShas = await fetchExistingStateShas(
@@ -872,7 +944,8 @@ async function runSync(): Promise<void> {
         result.droppedTargetSections,
         result.failedNewFiles
           ? { files: result.failedNewFiles, filteredTocPaths: result.filteredTocPaths ?? [] }
-          : undefined
+          : undefined,
+        scope?.skipped
       );
 
       prUrl = prResult.prUrl;
@@ -887,6 +960,8 @@ async function runSync(): Promise<void> {
       );
     }
   }
+
+  await writeScopeSummary(prUrl, result.errors.length);
 
   // Post-sync notifications (skip in test mode)
   if (!isTestMode) {

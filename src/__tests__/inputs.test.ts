@@ -192,6 +192,36 @@ describe('getInputs (sync mode)', () => {
       expect(result.testMode).toBe(true);
     });
   });
+
+  describe('sync-scope validation (#344)', () => {
+    // getInput reads an unset input as '', and so does the mock. A workflow
+    // that leaves the input out gets action.yml's default instead, which
+    // contracts.test.ts pins to the same value.
+    it("should default to 'all' when empty", () => {
+      setMockInputs({ ...validInputs, 'sync-scope': '' });
+      const result = getInputs();
+      expect(result.syncScope).toBe('all');
+    });
+
+    ['all', 'existing'].forEach((scope) => {
+      it(`should accept sync-scope: ${scope}`, () => {
+        setMockInputs({ ...validInputs, 'sync-scope': scope });
+        const result = getInputs();
+        expect(result.syncScope).toBe(scope);
+      });
+    });
+
+    // An unknown value throws: falling back to 'all' would translate in full
+    // every lecture a partial edition has not reviewed yet.
+    ['Existing', 'none', 'true', 'existing-only'].forEach((scope) => {
+      it(`should reject sync-scope: ${scope}`, () => {
+        setMockInputs({ ...validInputs, 'sync-scope': scope });
+        expect(() => getInputs()).toThrow(
+          `Invalid sync-scope: '${scope}'. Expected 'all' or 'existing'.`
+        );
+      });
+    });
+  });
 });
 
 // =============================================================================
