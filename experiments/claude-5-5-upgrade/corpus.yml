@@ -1,0 +1,469 @@
+# Pinned corpus for the Claude 5.5 upgrade evaluation (README.md). Resolved 2026-10-20, before any draw.
+#
+# Commits: `gh api repos/QuantEcon/<repo>/commits/main --jq .sha`. Files: downloaded at the pinned commit from
+# raw.githubusercontent.com; every one matched the blob SHA-1 of `gh api repos/QuantEcon/<repo>/git/trees/<sha>?recursive=1`
+# and its size, and spot checks through `gh api repos/QuantEcon/<repo>/contents/<path>?ref=<sha>` gave the same sha256.
+# fetch-corpus.mjs re-verifies every sha256 below and aborts on a mismatch.
+#
+# production: the editions whose repository holds lectures/<file> at the pinned edition commit (`editions:` below).
+# A lecture with an empty list is in no production edition. For the ml edition, file presence decides: its _toc.yml
+# lists all 27 lectures but the repository holds 6.
+schema: claude-5-5-upgrade/corpus/1
+pinned: '2026-10-20'
+
+repos:
+  lecture-python-programming: { sha: b0c58ab96a9c537fcf766e4f2d9fd32f4a0fc2f7, committed: '2026-10-13' }
+  lecture-python.myst: { sha: 9ad04de55b7612aac6ca5305d42a99accbc51532, committed: '2026-10-16' }
+  lecture-python-intro: { sha: 530ede2b348321d3924f7c900691b7daf165757c, committed: '2026-10-09' }
+  lecture-jax: { sha: 4b939ec49a7f1901245f68749c1b1e18e3454d34, committed: '2026-10-12' }
+
+editions:
+  - { repo: lecture-python-programming.fa, source: lecture-python-programming, language: fa, sha: 5c87733f1b43fa8cd41180bfbf0b248497e0cb32, committed: '2026-10-18', lectures: 27 }
+  - { repo: lecture-python-programming.fr, source: lecture-python-programming, language: fr, sha: f9d4f3a201b478a67d557778caa57df44ad029ac, committed: '2026-10-18', lectures: 27 }
+  - { repo: lecture-python-programming.ml, source: lecture-python-programming, language: ml, sha: 5378fd35e79aabdbd677605deed08eec11ef0ca6, committed: '2026-10-19', lectures: 6 }
+  - { repo: lecture-python-programming.zh-cn, source: lecture-python-programming, language: zh-cn, sha: f7afc9e30ebe46ab01af294a5305f3dc93d107ed, committed: '2026-10-18', lectures: 27 }
+  - { repo: lecture-python.zh-cn, source: lecture-python.myst, language: zh-cn, sha: 9772961fd91a1267f3f9990840f0482b59329a99, committed: '2026-10-18', lectures: 145 }
+  - { repo: lecture-intro.zh-cn, source: lecture-python-intro, language: zh-cn, sha: 47dfa51ba43ac5d5192cffda94a81bc189627c2d, committed: '2026-10-13', lectures: 53 }
+  # lecture-python-programming.ja exists but holds no lectures/_toc.yml at
+  # 981adf0b07bd15f17e8e81376eabf9b4f92b1702: not in production.
+
+documents:
+  # class fixture — Stage 1. In-repo harness fixtures; rate-check reads them from test-action-on-github-data/.
+  - id: game-theory
+    local: tool-test-action-on-github/test-action-on-github-data/game-theory.md
+    sha256: 1b37ce351c8f9a3f3f5ffa90b0161b27435d3260329f7bc7eb0c2d92231bc4e4
+    bytes: 6614
+    class: fixture
+    languages: [zh-cn, fa, ml, fr]
+    localize: none
+    production: []
+    notes: "Harness scenario 17 (new document); release step 4b's fixture. Sonnet 5's measured parity-refusal rate here is about 4% per language (#203)."
+  - id: 25-pre-title-content-lecture
+    local: tool-test-action-on-github/test-action-on-github-data/25-pre-title-content-lecture.md
+    sha256: fdea438a7ca2aaafe4346087b33faa1d70a8826889606bf7e1709f9740765289
+    bytes: 5825
+    class: fixture
+    languages: [zh-cn, fa, ml, fr]
+    localize: none
+    production: []
+    notes: "Harness scenario 25 as a whole document: a (label)= anchor, a {raw} jupyter head block and {index} in the H1, the head shape of #363."
+  - id: 28-add-exercise-lecture
+    local: tool-test-action-on-github/test-action-on-github-data/28-add-exercise-lecture.md
+    sha256: f1c406b460be13abc519860f62f2e8e4fd7d89c38c09a69a15bea82254fffe87
+    bytes: 6154
+    class: fixture
+    languages: [zh-cn, fa, ml, fr]
+    localize: none
+    production: []
+    notes: "Harness scenario 28 as a whole document: the exercise family (verbatim-directive policy for ml)."
+  # class head-raw — Stage 2. QuantEcon head block ({raw} jupyter + (label)= anchor); the #118/#203/#363 defect class.
+  # localize: default = the engine's own default rules: rate-check passes no --localize (init has no 'default'
+  # value) and records the list the engine resolved in meta.txt.
+  - id: python_essentials
+    repo: lecture-python-programming
+    sha: b0c58ab96a9c537fcf766e4f2d9fd32f4a0fc2f7
+    path: lectures/python_essentials.md
+    sha256: 44f39dd095e40d6d147a077382ca978db371dd3bd8f2afc5d86fc9a08b16effa
+    bytes: 24236
+    class: head-raw
+    languages: [fr]
+    localize: default
+    production: [fa, fr, zh-cn]
+    notes: "Sonnet 5 at v0.29.4 failed parity 14 of 14 French drafts (#363)."
+  - id: python_oop
+    repo: lecture-python-programming
+    sha: b0c58ab96a9c537fcf766e4f2d9fd32f4a0fc2f7
+    path: lectures/python_oop.md
+    sha256: 72f9f2c25cebb30ab99949a7361b1f55affb1e519e161f47a9ed4cd159309be8
+    bytes: 25777
+    class: head-raw
+    languages: [fr]
+    localize: default
+    production: [fa, fr, zh-cn]
+    notes: "Sonnet 5 at v0.29.4 failed parity 6 of 9 French drafts (#363)."
+  - id: prospects_bounded_rationality
+    repo: lecture-python.myst
+    sha: 9ad04de55b7612aac6ca5305d42a99accbc51532
+    path: lectures/prospects_bounded_rationality.md
+    sha256: 5e356894bf49377a579207e0ffec5d848f573f5757f5facf97f3f3cf4942eae5
+    bytes: 26966
+    class: head-raw
+    languages: [zh-cn]
+    localize: default
+    production: [zh-cn]
+    notes: "#227's 2026-07-27 reproducer: 5/15 structural passes at default localize, 14/15 at none."
+  # class safety-bio — Stage 2 probe.
+  - id: sir_model
+    repo: lecture-python.myst
+    sha: 9ad04de55b7612aac6ca5305d42a99accbc51532
+    path: lectures/sir_model.md
+    sha256: f5cfa4f839f72c02a3ca15764156bae68e7f949c6cda34a004419cba1a5bb5c5
+    bytes: 11613
+    class: safety-bio
+    languages: [zh-cn]
+    localize: none
+    production: [zh-cn]
+    notes: "COVID-19 epidemic model. In the zh-cn edition, so a refusal here is a production refusal (R3)."
+  # class safety-frontier — Stage 2 probes. autodiff and jax_intro are in production; jax_nn and keras are not.
+  - id: autodiff
+    repo: lecture-python-programming
+    sha: b0c58ab96a9c537fcf766e4f2d9fd32f4a0fc2f7
+    path: lectures/autodiff.md
+    sha256: 4a1a441630c1b34a46ff514b60f2ad64e9f0cdb008b4349b25b98d0f4807e621
+    bytes: 11115
+    class: safety-frontier
+    languages: [zh-cn]
+    localize: none
+    production: [fa, fr, zh-cn]
+    notes: "Automatic differentiation with JAX; in the fa, fr and zh-cn editions."
+  - id: jax_intro
+    repo: lecture-python-programming
+    sha: b0c58ab96a9c537fcf766e4f2d9fd32f4a0fc2f7
+    path: lectures/jax_intro.md
+    sha256: a21bb131b93d2649586c06cd3e88aae3efa5bb1aa9e1afccddd0179ffb3d8f7e
+    bytes: 23766
+    class: safety-frontier
+    languages: [zh-cn]
+    localize: none
+    production: [fa, fr, zh-cn]
+    notes: "JAX introduction; in the fa, fr and zh-cn editions."
+  - id: jax_nn
+    repo: lecture-jax
+    sha: 4b939ec49a7f1901245f68749c1b1e18e3454d34
+    path: lectures/jax_nn.md
+    sha256: 15b3e85e3ccfa22c8853a0abae1e3607e49c505ecf21d08676807ae1e1ccaa9d
+    bytes: 29522
+    class: safety-frontier
+    languages: [zh-cn]
+    localize: none
+    production: []
+    notes: "Neural networks in JAX; stronger frontier_llm probe; lecture-jax has no edition."
+  - id: keras
+    repo: lecture-jax
+    sha: 4b939ec49a7f1901245f68749c1b1e18e3454d34
+    path: lectures/keras.md
+    sha256: 52ffb2186327f02895f99b468cd02f03836444551f63895170ea36030abc8bcf
+    bytes: 8276
+    class: safety-frontier
+    languages: [zh-cn]
+    localize: none
+    production: []
+    notes: "Neural networks with Keras; stronger frontier_llm probe; lecture-jax has no edition."
+  # class long-tail — Stage 2. The largest production lecture (121,374 bytes): about 69K output tokens at the fr-measured
+  # 0.57 tokens per byte, so it may exceed the 64,000-token full-document cap that s5 and s55 share.
+  - id: two_computation
+    repo: lecture-python.myst
+    sha: 9ad04de55b7612aac6ca5305d42a99accbc51532
+    path: lectures/two_computation.md
+    sha256: 525e4113d38ae1875f29e2937ba3917799a543fe518d5efe48117a02d898f6dd
+    bytes: 121374
+    class: long-tail
+    languages: [zh-cn, fa]
+    localize: none
+    production: [zh-cn]
+    notes: "The admission check estimates 41.4K tokens (zh-cn) and 56.6K (fa), so both are admitted."
+  # class reference-ml — Stage 4. The round-4 corpus (experiments/ml-benchmark, never edited): each <lecture>.en.md is
+  # byte-identical to lecture-python-programming@b0c58ab lectures/<lecture>.md (same sha256 as the sweep entry), and
+  # <lecture>.ml.md is the editor-reviewed page. fetch-corpus.mjs copies the source as <lecture>.md.
+  - id: functions
+    local: experiments/ml-benchmark/arms/2026-09-28-round4-splice-repair-eval/corpus/functions.en.md
+    sha256: 1fa4eab23aa4a96ab18be7e4b9e3327a9c6fdd57dbcb031b2bac4b8674b555ec
+    bytes: 16307
+    reference: experiments/ml-benchmark/arms/2026-09-28-round4-splice-repair-eval/corpus/functions.ml.md
+    reference_sha256: 845807b7d9bf2c3f96039ec878873691603e25e4bc18447a1a6052a522db50a4
+    reference_bytes: 29404
+    class: reference-ml
+    languages: [ml]
+    localize: none
+    production: [fa, fr, ml, zh-cn]
+    notes: "Editor-reviewed in round 2 (lecture-python-programming.ml). The reference is a post-edit of a claude-sonnet-5 seed, so it is anchored on s5."
+  - id: matplotlib
+    local: experiments/ml-benchmark/arms/2026-09-28-round4-splice-repair-eval/corpus/matplotlib.en.md
+    sha256: 3090de43fe488ebbd2ab902639a5bc2bd1dddc22a653c32fa68ed93a2edcf51f
+    bytes: 12471
+    reference: experiments/ml-benchmark/arms/2026-09-28-round4-splice-repair-eval/corpus/matplotlib.ml.md
+    reference_sha256: 419719f868e058caa39cd108fdd4f0a037144641ff8abbae2f576f5af518bba8
+    reference_bytes: 19508
+    class: reference-ml
+    languages: [ml]
+    localize: none
+    production: [fa, fr, ml, zh-cn]
+    notes: "Editor-reviewed in round 3, including ml#24. The reference is a post-edit of a claude-sonnet-5 seed, so it is anchored on s5."
+  - id: numpy
+    local: experiments/ml-benchmark/arms/2026-09-28-round4-splice-repair-eval/corpus/numpy.en.md
+    sha256: 225e568121fd0c28b11cc955e9b2b8560832b189c432f0372ae703ae6dfe946c
+    bytes: 39618
+    reference: experiments/ml-benchmark/arms/2026-09-28-round4-splice-repair-eval/corpus/numpy.ml.md
+    reference_sha256: f2d86417d1efe2832b953be5e7e029fb69c7843a258a3a70435af55169cae74c
+    reference_bytes: 53929
+    class: reference-ml
+    languages: [ml]
+    localize: none
+    production: [fa, fr, ml, zh-cn]
+    notes: "Editor-reviewed in round 4 (lecture-python-programming.ml#23, merged 7e373de). The reference is a post-edit of a claude-sonnet-5 seed, so it is anchored on s5."
+
+# Stage 3: every lecture of every production source repository, in _toc.yml order at the pinned commit.
+# Each repository gets its own output directory (fetch-corpus.mjs --sweep): names repeat across repositories
+# (intro.md) and across classes (numpy.md is also a reference-ml source).
+sweep:
+  - repo: lecture-python-programming
+    sha: b0c58ab96a9c537fcf766e4f2d9fd32f4a0fc2f7
+    dir: lectures
+    class: sweep-lecture-python-programming
+    languages: [zh-cn, fa]
+    localize: none
+    lectures: 27
+    bytes: 458114
+    files:
+      - { file: intro.md, bytes: 446, sha256: 24d373de91848294e6dd984e292ee27e2b07e81d9e87aca54171439862382352, production: [fa, fr, ml, zh-cn] }
+      - { file: about_py.md, bytes: 16352, sha256: 15f0a77815b08a5d66673fc2a4f427e584fdbdd29d9c7ce7a7b052d521fb9266, production: [fa, fr, zh-cn] }
+      - { file: getting_started.md, bytes: 18086, sha256: 6e13c028a70102562f62778fe86f1f87d1403f1bbad0fce7730adc0bc11accc1, production: [fa, fr, zh-cn] }
+      - { file: python_by_example.md, bytes: 18251, sha256: 78f564a5677268ddd2b06a818d8bc79ba93a4d602d586422892593e5a1cf292e, production: [fa, fr, ml, zh-cn] }
+      - { file: functions.md, bytes: 16307, sha256: 1fa4eab23aa4a96ab18be7e4b9e3327a9c6fdd57dbcb031b2bac4b8674b555ec, production: [fa, fr, ml, zh-cn] }
+      - { file: python_essentials.md, bytes: 24236, sha256: 44f39dd095e40d6d147a077382ca978db371dd3bd8f2afc5d86fc9a08b16effa, production: [fa, fr, zh-cn] }
+      - { file: oop_intro.md, bytes: 9989, sha256: c29eed886275a2c39b89ce17da8b8e65931a46609a124419b78191f6be058900, production: [fa, fr, zh-cn] }
+      - { file: names.md, bytes: 14221, sha256: a03ab7b66fd1deede7ba9155cc14f04c0800b6d269e028bd56f257ee493a9ea8, production: [fa, fr, zh-cn] }
+      - { file: python_oop.md, bytes: 25777, sha256: 72f9f2c25cebb30ab99949a7361b1f55affb1e519e161f47a9ed4cd159309be8, production: [fa, fr, zh-cn] }
+      - { file: need_for_speed.md, bytes: 15181, sha256: a91b233ce9487a28c1faed87a7e7caafd5cce0d45185c8be4c24da307aaf0e61, production: [fa, fr, zh-cn] }
+      - { file: numpy.md, bytes: 39618, sha256: 225e568121fd0c28b11cc955e9b2b8560832b189c432f0372ae703ae6dfe946c, production: [fa, fr, ml, zh-cn] }
+      - { file: matplotlib.md, bytes: 12471, sha256: 3090de43fe488ebbd2ab902639a5bc2bd1dddc22a653c32fa68ed93a2edcf51f, production: [fa, fr, ml, zh-cn] }
+      - { file: scipy.md, bytes: 17524, sha256: e21de87b430301e66a53074447b186b244b775d0f79a5036407812bb181fee0c, production: [fa, fr, zh-cn] }
+      - { file: numba.md, bytes: 28473, sha256: 50829cab55b5aa94effdeeb2172ab38b7eb43509d104f70a2be7c8174a3a1fe6, production: [fa, fr, zh-cn] }
+      - { file: jax_intro.md, bytes: 23766, sha256: a21bb131b93d2649586c06cd3e88aae3efa5bb1aa9e1afccddd0179ffb3d8f7e, production: [fa, fr, zh-cn] }
+      - { file: numpy_vs_numba_vs_jax.md, bytes: 15139, sha256: 138c9d4a9570d16238f82e97edcc49f66ed782c596171e09901fd23a146a1163, production: [fa, fr, zh-cn] }
+      - { file: autodiff.md, bytes: 11115, sha256: 4a1a441630c1b34a46ff514b60f2ad64e9f0cdb008b4349b25b98d0f4807e621, production: [fa, fr, zh-cn] }
+      - { file: pandas.md, bytes: 24269, sha256: 1a5aafd3078491f4b30e0238e92ac5820c1baab29c4c8b71644e4b582bff9458, production: [fa, fr, ml, zh-cn] }
+      - { file: pandas_panel.md, bytes: 17897, sha256: 61281bfcc1924692ed866f6c078b73bf569c7baec3f91bc2dcd8c7bbe205eb01, production: [fa, fr, zh-cn] }
+      - { file: polars.md, bytes: 21395, sha256: 7a12fcfa8ddf6257a1d63a33cafeb16600de41ca6753d0df617eaf1bee27c148, production: [fa, fr, zh-cn] }
+      - { file: writing_good_code.md, bytes: 12883, sha256: c8d996c3fa8c0469913e93e4c5cb03cd89f191c6ef0bf0c09e8bda8c04d2415c, production: [fa, fr, zh-cn] }
+      - { file: workspace.md, bytes: 12616, sha256: fac5c325dc4d35633a3394232d705d17e16500d95c53a02ed17b511c4f3b125c, production: [fa, fr, zh-cn] }
+      - { file: python_advanced_features.md, bytes: 30496, sha256: 5a6a3b188622fdfd974b5a4fe5dd922d6c090c1bcf3d9b40de9a58b8e11b8704, production: [fa, fr, zh-cn] }
+      - { file: debugging.md, bytes: 12231, sha256: 8a72a4477d36c56b3ad1f67193b338f75e6495b4a24b02720ff4822b8b61eb82, production: [fa, fr, zh-cn] }
+      - { file: sympy.md, bytes: 16226, sha256: 9bd30370c3f7b2a7b20c5dc5ab8a075badb82fab6544c2ae30cd4c62587bf610, production: [fa, fr, zh-cn] }
+      - { file: troubleshooting.md, bytes: 2337, sha256: d129564db3f141f615e130b1b88fd6fcebb9655365e6bce297f564d940536252, production: [fa, fr, zh-cn] }
+      - { file: status.md, bytes: 812, sha256: 54f69667e129fbb079dcd5d78448582ed4473dbc957b4b8032fcb23e6d49d930, production: [fa, fr, zh-cn] }
+  - repo: lecture-python.myst
+    sha: 9ad04de55b7612aac6ca5305d42a99accbc51532
+    dir: lectures
+    class: sweep-lecture-python.myst
+    languages: [zh-cn]
+    localize: none
+    lectures: 150
+    bytes: 5017014
+    files:
+      - { file: intro.md, bytes: 306, sha256: 532379964a8a9b2e44975a844adebeb961485ffc17106d4a07fd64cefdf8b3f8, production: [zh-cn] }
+      - { file: sir_model.md, bytes: 11613, sha256: f5cfa4f839f72c02a3ca15764156bae68e7f949c6cda34a004419cba1a5bb5c5, production: [zh-cn] }
+      - { file: linear_algebra.md, bytes: 39623, sha256: 8dab3932cc751397fd6dae43107026503a35173ff04210978d89f61f63666b74, production: [zh-cn] }
+      - { file: qr_decomp.md, bytes: 11976, sha256: c52641d516a4df92873eac2287a7608d09dbc05f3b56a5f79cb6495b71923f8f, production: [zh-cn] }
+      - { file: eig_circulant.md, bytes: 15290, sha256: 6d8a86dc9be93af8432fd310f9c0c6ea4484f7d81a103fe56c4784088d30bde9, production: [zh-cn] }
+      - { file: svd_intro.md, bytes: 46264, sha256: e08871528ec9cf39d801aca814597181ce703285940e9108a8e2d148a0fab0fd, production: [zh-cn] }
+      - { file: var_dmd.md, bytes: 36587, sha256: faffa52890e4fc1addb50ca535a60c0083af3bf9d24f61151f6f9c1af396cb1a, production: [zh-cn] }
+      - { file: newton_method.md, bytes: 27577, sha256: 2e7c2f3f33d8511747bd14d791eaa7e933dda0fdcf3ec41163762bfe245123a8, production: [zh-cn] }
+      - { file: prob_matrix.md, bytes: 50477, sha256: 5f919e78f2941daa4761fcf5bad7135af7f7b3edafbd4279dde1987fb70ef568, production: [zh-cn] }
+      - { file: stats_examples.md, bytes: 13221, sha256: 8ed0559816d7af14247b2328e73f0c5072065cd7ce8e718cc0c6c0d459752412, production: [zh-cn] }
+      - { file: lln_clt.md, bytes: 28180, sha256: 26198954db8296f65dbc6a07a8009a983055c5904efdad02e69eca72bde24ddb, production: [zh-cn] }
+      - { file: prob_meaning.md, bytes: 25216, sha256: 110b592fde19539bf4ef5cab8ef8a7f04e5149580513d8a6fe2528d70940a610, production: [zh-cn] }
+      - { file: multi_hyper.md, bytes: 13694, sha256: b64409944a145fb67948288660bd11325862383e0b3d68682d54c3f505a0bd1a, production: [zh-cn] }
+      - { file: multivariate_normal.md, bytes: 70062, sha256: 7f979883b805468d879f2debc56d91fc35374eb75f34b40c52b30be724c803b1, production: [zh-cn] }
+      - { file: hoist_failure.md, bytes: 42533, sha256: 9f20603d80a0514f8be391dddbec89f30b1d8c65f35e3a73a2436bb9a7fe68cb, production: [zh-cn] }
+      - { file: back_prop.md, bytes: 16721, sha256: a266384a37a2014171989bbd00e5384fda256aea7bfe11f301b33bed830046bc, production: [zh-cn] }
+      - { file: rand_resp.md, bytes: 11116, sha256: b3a137c9f031d993f030ab17f79ec5cc75529df616070add440d320af1e1a538, production: [zh-cn] }
+      - { file: util_rand_resp.md, bytes: 26367, sha256: f49df0ff149ba1f61e4ce15607c5272483a3bff8a8385ca4e3b555f1792f1c54, production: [zh-cn] }
+      - { file: bayes_nonconj.md, bytes: 23029, sha256: 5590ed437c5310853e5c35e1f0427d07a37989a0aba3f659f1f2fc5beefaa600, production: [zh-cn] }
+      - { file: ar1_bayes.md, bytes: 19040, sha256: 0a42b3188befdd0dad8825ac45bcb8676dcd6734f2612491e04e5198a2272e94, production: [zh-cn] }
+      - { file: ar1_turningpts.md, bytes: 28620, sha256: 69f69e03909154b1be571d6368a1adf74398ceb4278745687c4f129bbe6da502, production: [zh-cn] }
+      - { file: divergence_measures.md, bytes: 18351, sha256: bbad7b43593d40dea9abd7a145a472b351e67ebfd3d620f607048d37561251c0, production: [zh-cn] }
+      - { file: likelihood_ratio_process.md, bytes: 60692, sha256: 08b936c8b7922c2d35131a60f36687db5b7ebb509a8b7ad85ba753b478d4bbf1, production: [zh-cn] }
+      - { file: likelihood_ratio_process_2.md, bytes: 57831, sha256: da1692c894eee6c0fb52802024971836a10c312c790809b3fb3e0c75740e1ce0, production: [zh-cn] }
+      - { file: likelihood_var.md, bytes: 22875, sha256: 6e6aa2b569a7caa7fcb26a9734faf3de5160e5d7731ac742919f8bb342a7d9c1, production: [zh-cn] }
+      - { file: imp_sample.md, bytes: 23001, sha256: 62f14fab60458836b72eadf25c93608d1cea55cbe8f21c284d40f90d41243c16, production: [zh-cn] }
+      - { file: wald_friedman.md, bytes: 52310, sha256: 97c73686e214a228890cc6d317a6c2f7367a0c27bcea15ff860dd959183d0f0f, production: [zh-cn] }
+      - { file: wald_friedman_2.md, bytes: 24490, sha256: c7ed36431101a31a8cd5c1754b6e9b1e2c28116fe15759d77fe98b671a0bf940, production: [zh-cn] }
+      - { file: exchangeable.md, bytes: 26632, sha256: 7fd09b96df47509a70fb4e65fe7b0fd2add2efe64958db84e05a6d16bb516c9c, production: [zh-cn] }
+      - { file: likelihood_bayes.md, bytes: 32441, sha256: ad6b24db5082706e24bafe704d84804c5c7602e427f623cdf8cc36d58da2643f, production: [zh-cn] }
+      - { file: blackwell_kihlstrom.md, bytes: 52681, sha256: 5e3cff32f90f1518257d3978b7d12b3f660a1276edbed48e1674f6b505215f90, production: [zh-cn] }
+      - { file: information_market_equilibrium.md, bytes: 47459, sha256: 6032176f53b45f763a5f01ca7e06235205c70924d61c1d8fdd729adedda1118e, production: [zh-cn] }
+      - { file: mix_model.md, bytes: 29693, sha256: 856eb65381be75aee2dcd801da117f6abd0ff7f5b346b46466ab5d413989d565, production: [zh-cn] }
+      - { file: navy_captain.md, bytes: 33435, sha256: 7c2b04c6659feeb6ebc46e90a0a4c2d751509e99365875a7491568b60dc6b58d, production: [zh-cn] }
+      - { file: merging_of_opinions.md, bytes: 44917, sha256: ac043b49f8cce6d040276c406a7582760fb45702c013fa74dd08b71ff9c91276, production: [zh-cn] }
+      - { file: survival_recursive_preferences.md, bytes: 46120, sha256: 7e00655cab0393b1ce5062d939d7a2fa18198705a2be8f572670081a394cba6f, production: [zh-cn] }
+      - { file: pricing_information.md, bytes: 40541, sha256: cad6b32634cee33f9dcdedba467808662e616cd85abd57fbc60b44081c007a8b, production: [zh-cn] }
+      - { file: market_diffusion.md, bytes: 35628, sha256: 6b81d96f74b2bfe89102151dd7fe4025b2a3707ad0df36129c6247bc8dc35c38, production: [zh-cn] }
+      - { file: gallant_tauchen.md, bytes: 56925, sha256: c499e5cad1c58f0c933735b878161ca1e90e9650505a4cea58c2010264b94614, production: [] }
+      - { file: opt_transport.md, bytes: 23111, sha256: 3493517fdd779384d600caebfd01c11cc7a15e6c591b4e9d9b77fd19443ccf85, production: [zh-cn] }
+      - { file: von_neumann_model.md, bytes: 34248, sha256: 3d5cf69257a6d6423c05ed95edf3565628cb83d76bd418b482ba0d28be465f3b, production: [zh-cn] }
+      - { file: finite_markov.md, bytes: 40186, sha256: 7224f5ca5f41ef16071a4544a65f02e3a2aaf8a80b32a9327384d8fa767ead4b, production: [zh-cn] }
+      - { file: inventory_dynamics.md, bytes: 13880, sha256: b0e243ea61a12c208ffec80f3106de6001fe176ef6f04c9e9d8a40e93782124f, production: [zh-cn] }
+      - { file: linear_models.md, bytes: 37889, sha256: ae2e5175b70733a105c01aadcc939fe7514023163d4b7c9eece890ca11263470, production: [zh-cn] }
+      - { file: samuelson.md, bytes: 41192, sha256: a4f65fc75be1341382e77ad32fd2565c2897f86cb63f94d7ad9680c8f0991248, production: [zh-cn] }
+      - { file: chow_business_cycles.md, bytes: 58134, sha256: 4422037804728bd32aa18329db5700ef6c3149f8ac9915527c97f3197085c8ae, production: [zh-cn] }
+      - { file: kesten_processes.md, bytes: 21340, sha256: 236108afaacc71f4d25bc059867ee02eb3fb2dcb40d2ca9eb329c440a910eeeb, production: [zh-cn] }
+      - { file: wealth_dynamics.md, bytes: 19772, sha256: c59bc277330c1a1677e85b900127cb090b95a7bdbca8f862419aa318a5b2a7ce, production: [zh-cn] }
+      - { file: kalman.md, bytes: 24619, sha256: 070cfaf14250806e0425b2f929ba9bd9962eeb675d6f38ef3fcad4d21cf15a2b, production: [zh-cn] }
+      - { file: kalman_2.md, bytes: 23736, sha256: 39e64e88cbe52e82c65818e53cbf0b415c90841ae2675420ce3feb847114c815, production: [zh-cn] }
+      - { file: kalman_filter_var.md, bytes: 34366, sha256: fe17ad1984c84b447f4e42a7785b93d5802a819f6ff8d15c95066bef397475f4, production: [zh-cn] }
+      - { file: var_subsets.md, bytes: 39179, sha256: ec26943d42aac530a3760ebddbd2179d68d6f85b61975fa482739ef70f1ae0fa, production: [zh-cn] }
+      - { file: organization_capital.md, bytes: 27226, sha256: 8437eba3bf830a170838a528d1a39e38475b1f2cffe09cf1d6fc94ae858095a2, production: [zh-cn] }
+      - { file: measurement_models.md, bytes: 57941, sha256: ae4e54b68394c54742103501807d617627c290ef74ba5367898b4596ed45dbed, production: [zh-cn] }
+      - { file: mccall_model.md, bytes: 34173, sha256: a2752f6e58d15a399e2e611531e2b075d4e889947f904a41520c15e26f2a0160, production: [zh-cn] }
+      - { file: mccall_model_with_separation.md, bytes: 19967, sha256: a7e57bf7d78a21e31acfb138b2536e244a9bfebd5bc512fea0f87ca45ac1094a, production: [zh-cn] }
+      - { file: mccall_model_with_sep_markov.md, bytes: 28521, sha256: ccb7530f8b60fb371f835ac1073e82a9500686367983e90e6d7b045359e413b8, production: [zh-cn] }
+      - { file: mccall_fitted_vfi.md, bytes: 26969, sha256: f233d0a11b20263e0caf532021e565bbd8cecdefd303368e34bc0593d733d68d, production: [zh-cn] }
+      - { file: mccall_risk.md, bytes: 21930, sha256: dbb6fb47ae29af90f710545ff63d0edcf722572e2908aee4ea5e3125ddf2343f, production: [zh-cn] }
+      - { file: mccall_persist_trans.md, bytes: 13229, sha256: 99da12637572735806c45842fa1190a0eedbdea78211a1abc542effe61000efb, production: [zh-cn] }
+      - { file: career.md, bytes: 17077, sha256: ada259685f814573d4cb0f1550c411e37f1f3c0d2e8ba9fa2362718adc7e8535, production: [zh-cn] }
+      - { file: jv.md, bytes: 17823, sha256: 1a5c73c392d5fc108913ef756797cc2975908c87617aa404707ca417b42a0ec2, production: [zh-cn] }
+      - { file: odu.md, bytes: 33264, sha256: 95015586259d5a002aafcec3ef00c288bff8968cdf6f1b46af840326fd21d0bf, production: [zh-cn] }
+      - { file: inventory_q.md, bytes: 24892, sha256: a6d622fbd14671daf3101a25b1d202ecd9e23ad572a77daeba4e9edbbddce022, production: [zh-cn] }
+      - { file: rs_inventory_q.md, bytes: 23884, sha256: adc8397196a13e59c35cab1d8c7af786a40cec5aaddec162e63f5ed5784890f4, production: [zh-cn] }
+      - { file: mccall_q.md, bytes: 27204, sha256: 96dc46004295622ebb07bc784943109c00d9768cdc58f564a24b359f870429e5, production: [zh-cn] }
+      - { file: os.md, bytes: 18282, sha256: 4b48ab4e73770d12c29a9dc32c05d84a114e803263c50a1b462e566e69a4757d, production: [zh-cn] }
+      - { file: os_numerical.md, bytes: 17042, sha256: 7037f0003d74dda30773a4425ebd724871aa052c3f4ffa8294256c49f53b6283, production: [zh-cn] }
+      - { file: os_stochastic.md, bytes: 22123, sha256: 3ed430247f0bd1154b258555fb9f0981031886d69d9708ed41b80669b31faa3f, production: [zh-cn] }
+      - { file: os_time_iter.md, bytes: 15709, sha256: 44ebdf94f5d4260da014296bc45c0f85789955ff392a2dc6feddc8c0c8df4161, production: [zh-cn] }
+      - { file: os_egm.md, bytes: 10198, sha256: 98e8079178e9c5499b9b455c73e43fecdf60ef97c1c8ae47385a0cbede8e84d3, production: [zh-cn] }
+      - { file: os_egm_jax.md, bytes: 11336, sha256: 44a03a37cfbed936a2088330c4275680da0370ad14a4380c89a75b744eb3c4ff, production: [zh-cn] }
+      - { file: ifp_discrete.md, bytes: 15776, sha256: f682b80bc0b0d2d57e6b803ed078c5b8f118e780b4e897fa5aac30b8448c9da6, production: [zh-cn] }
+      - { file: ifp_opi.md, bytes: 12847, sha256: 6d065237901c8cc4b37e13396d66467c5f76a576a17e20b3a4e281d133e18925, production: [zh-cn] }
+      - { file: ifp_egm.md, bytes: 26571, sha256: 743c023b0801d0f4b1cabd6f63368035c7fce11a1f038a30c7db550d5e1f36b0, production: [zh-cn] }
+      - { file: ifp_egm_transient_shocks.md, bytes: 30810, sha256: 901acde648b4b471391d1fd73a4f0ae080b29974eed04cde59c6ac7313cf64da, production: [zh-cn] }
+      - { file: ifp_advanced.md, bytes: 25377, sha256: 46107f290587bf6ce7d2a6a8c60db424c83fb45f0978295d04b1a8cd75993da1, production: [zh-cn] }
+      - { file: lqcontrol.md, bytes: 45507, sha256: 4fcebb9b55ef08af05cb053dbad47e0b9e05b6fc7f8a559ead663fc61ef3c465, production: [zh-cn] }
+      - { file: lagrangian_lqdp.md, bytes: 24572, sha256: a0435e3185b1fa81ff2f0e1030f84344c49ed705a2f1f47f9f6d97a72d42fe80, production: [zh-cn] }
+      - { file: cross_product_trick.md, bytes: 5780, sha256: ff84e07d006be53be60cbdda4902e655c8503db44be80b9fc728f1147054663d, production: [zh-cn] }
+      - { file: perm_income.md, bytes: 29796, sha256: f3d103c352803d552997d9e2376db8bc9fc116ac362efc544c3be609f690642d, production: [zh-cn] }
+      - { file: perm_income_cons.md, bytes: 26662, sha256: d2024dfba39a5dec505bb7fe07fd48111cda47c004a330a187cf881162bbb8aa, production: [zh-cn] }
+      - { file: robust_permanent_income.md, bytes: 39734, sha256: ca410c91ae9d62a2b83f0a0a45a889a36512b838f2d565032cc3f2bc4d3d04c0, production: [zh-cn] }
+      - { file: theil_1.md, bytes: 15804, sha256: 4fe36978c54006b5960bf8461e491fc88f8964c84ccea3c05029978d6fe4a97e, production: [zh-cn] }
+      - { file: theil_2.md, bytes: 27216, sha256: 19808174382bd0c9dc12fb3faf79088eb5da3a3e8e2aa26304c9f3a2eb89677a, production: [zh-cn] }
+      - { file: lq_permanent_income.md, bytes: 24513, sha256: b861e7da7c65530c02dce8e46129521e81d4237e6cb6fa69ca30103ec74b10d0, production: [zh-cn] }
+      - { file: lq_bewley_complete_markets.md, bytes: 20242, sha256: 4c5e0746ae400a68a247d478249d7578cff06bf34ab96a561553deb3c8effc8b, production: [zh-cn] }
+      - { file: lq_robust_smoothing.md, bytes: 52136, sha256: 10d45920c053cf89ad531b2098e9f28f185709d89d9571f4b64660d09f0c05e0, production: [zh-cn] }
+      - { file: lq_robust_bewley.md, bytes: 33814, sha256: e8687d17ad6525cd47a32edc2ba95137efece7433d5439dd5c1349fe24c15aea, production: [zh-cn] }
+      - { file: lq_inventories.md, bytes: 23246, sha256: 63cd01cf845cc3b5b4c28e863f587cf16d8a7f7b45e18950c9e8c90e5779bded, production: [zh-cn] }
+      - { file: bounded_rationality.md, bytes: 36650, sha256: 415f6601d806d0811dbf9269d07f17fab88594f4e1e5794025d8254e58c88f6d, production: [zh-cn] }
+      - { file: olg_adaptive_money.md, bytes: 53661, sha256: 86e546960e5ae9c2f2c3d860ab9ea4b533c685bb35592fa50b042b11237efc24, production: [zh-cn] }
+      - { file: learning_approximation.md, bytes: 31311, sha256: 4a8d39dc7c920bc3179aaf7b54667b1513e7b8a440f9a90f776ed5ceda17038a, production: [zh-cn] }
+      - { file: exchange_rate_learning.md, bytes: 30002, sha256: 588d6f566589d8777f4e4cdc534df9c11f8fec0ea45148c805d0f1adda8566b7, production: [zh-cn] }
+      - { file: genetic_classifier.md, bytes: 38303, sha256: e77467a4d79f2c565050c2a3b0c1b257dedaa65a20ced245788de5b3267f2469, production: [zh-cn] }
+      - { file: marimon_mcgrattan_sargent.md, bytes: 70954, sha256: 34578bd71d5339c47031c8e8903049abef2d8b2e146005b9088acd70d7c5a30f, production: [zh-cn] }
+      - { file: prospects_bounded_rationality.md, bytes: 26966, sha256: 5e356894bf49377a579207e0ffec5d848f573f5757f5facf97f3f3cf4942eae5, production: [zh-cn] }
+      - { file: phillips_two_stories.md, bytes: 35542, sha256: 25d0ff26cb119f4850399f55675c7259ca7b9433ea0ed0f8bc46259afd279893, production: [zh-cn] }
+      - { file: phillips_credibility.md, bytes: 19205, sha256: e4cdb52412b85baa754723a90d9b2f81f59e7016f2820a1b76ebf0df93a3e2a3, production: [zh-cn] }
+      - { file: phillips_credible_policies.md, bytes: 40543, sha256: 44f096374954e5d71ffcd726591ebc9a22fb7754cf76a2f7b9894fc0aaafb8fe, production: [zh-cn] }
+      - { file: phillips_adaptive.md, bytes: 18864, sha256: 7de70a1ce9ca72c112e928fc54a752c281eb2c125ec50a06550eb5e22b7670f7, production: [zh-cn] }
+      - { file: phillips_misspecified.md, bytes: 16263, sha256: f8546e4071784d3b79db05dc2e12d528490188ab2e03c1837174b9f8a7a189f4, production: [zh-cn] }
+      - { file: phillips_self_confirming.md, bytes: 22288, sha256: 27e9c77774b0c8699ac65498a3f0b85ebb7e11ee551693f268d44750b0e5c284, production: [zh-cn] }
+      - { file: phillips_learning.md, bytes: 39483, sha256: 2e867636ed75ff6c6b64934a3103b77afdc8a3ae54ac2fe94c9c1493868016ca, production: [zh-cn] }
+      - { file: phillips_escaping_nash.md, bytes: 26036, sha256: 6a164fa8894527d81d4f2258f8ec3963fbe982fb5b983017191587969387fe02, production: [zh-cn] }
+      - { file: phillips_priors.md, bytes: 30659, sha256: b62aecd1e5e345e9336bc0b8b2e8cb19e68feed36746c4dd5f70702d8e04e940, production: [zh-cn] }
+      - { file: phillips_lost_conquest.md, bytes: 23077, sha256: 8f36fb10af2c1c1af5dab028f603cf9b362ea40ae4aee363fc4273a2a3175def, production: [zh-cn] }
+      - { file: phillips_drifts_volatilities.md, bytes: 111830, sha256: fe0f8eb5238437d02a201dd2894a20941ce227f8e378e11046835e69bcc3ade5, production: [zh-cn] }
+      - { file: cass_koopmans_1.md, bytes: 33129, sha256: 7ea98f092ce7f37f77593376dc58422805947d069747818762cd7b1f269416fc, production: [zh-cn] }
+      - { file: cass_koopmans_2.md, bytes: 28668, sha256: 11f3d2a351127761553c5d75cb75ae1791af0637d62bf27f4079831f0290cf63, production: [zh-cn] }
+      - { file: cass_fiscal.md, bytes: 60654, sha256: 2c01f97c79d55386da1d51ba15524e6272e9d35e11dcae1f11528654e74890f2, production: [zh-cn] }
+      - { file: cass_fiscal_2.md, bytes: 21168, sha256: 7f06812dcb3607d890c05694d2b1bf798ef5e16a18e29189e44e56fa59edb025, production: [zh-cn] }
+      - { file: lake_model.md, bytes: 22076, sha256: 59993883552f3b140628de3e13320857b3a5bba72a963da318a4fa7eb4637318, production: [zh-cn] }
+      - { file: endogenous_lake.md, bytes: 19010, sha256: da093563bb7328269bad2cd2dd4fce9ceb9b4d7e2f01d7df457343bc3e388e69, production: [zh-cn] }
+      - { file: rational_expectations.md, bytes: 31337, sha256: 4fa9edfda1a8632c71fa0575fb1f89e74a77d4fcf1c8b07f3b4ec0a20ce432ce, production: [zh-cn] }
+      - { file: lucas_prescott_investment.md, bytes: 42879, sha256: 09dfdb1b837856943103ecf1f367e8b15bc082c65fda46d1631158d8a10cac9f, production: [] }
+      - { file: optimal_growth_uncertainty.md, bytes: 34934, sha256: baabaac5ff365ba0fd76ed513e29ba6892a8d6504d0b372c5457ecb4865b6b93, production: [] }
+      - { file: re_with_feedback.md, bytes: 30189, sha256: d7374e15d756c3d4913adb4e84ac792db049b227c64a04629c96ffd380bb1ffb, production: [zh-cn] }
+      - { file: markov_perf.md, bytes: 23277, sha256: 83ccf7a2dc299fa6a367351dfa5c1ae49af4c5173c8855f96a3abc314ea75e4d, production: [zh-cn] }
+      - { file: uncertainty_traps.md, bytes: 15732, sha256: ed188efd4b874830cb9dcdf955c26d4107c54a8f8411849cc69f895f08421427, production: [zh-cn] }
+      - { file: aiyagari.md, bytes: 25266, sha256: f72e8f998fc8f1b9f24446430c3094e45a2c8a3890d11c0c2052ebf136ed8b73, production: [zh-cn] }
+      - { file: aiyagari_egm.md, bytes: 22246, sha256: 4562f9d8ff6f4548a83f2e78bc7d6fb03b90186bd36bd79ab0e66f6a50c98545, production: [zh-cn] }
+      - { file: ak2.md, bytes: 53114, sha256: 2c5c9adfe95311528abc2732ae20a34d78a7045e5aa234c3abdbf84008606bc7, production: [zh-cn] }
+      - { file: ak_aiyagari.md, bytes: 51658, sha256: 3eb6833c72736cb83d8eb008c499bd5f2fb72aa5f574c24325f488ecf1eb7a8b, production: [zh-cn] }
+      - { file: two_computation.md, bytes: 121374, sha256: 525e4113d38ae1875f29e2937ba3917799a543fe518d5efe48117a02d898f6dd, production: [zh-cn] }
+      - { file: social_security_depletion.md, bytes: 78764, sha256: 1814d2080be17e7ea7616064da67ad8ac5fd177e76b0761ea15c2906a8b5ae9c, production: [] }
+      - { file: lq_mean_field_games.md, bytes: 69245, sha256: 5802974e88a675f4240861df9fe4f8891443bc6bd0434aa0a9a24c0eddde51e8, production: [] }
+      - { file: markov_asset.md, bytes: 30077, sha256: 0e01f3843a19e34159bd45b637e6a810642c81eb06000ef60dd2a2c5eb0433aa, production: [zh-cn] }
+      - { file: hansen_singleton_1983.md, bytes: 64548, sha256: 7b756840e103cfb6668e72ed0b0c733012e2e41d6bee3044ca12f8633eac30ec, production: [zh-cn] }
+      - { file: hansen_singleton_1982.md, bytes: 42455, sha256: 141fbb7b161ef8d4d711c5e055609726dae27c3b64ae83ba34ee6143acefe353, production: [zh-cn] }
+      - { file: ge_arrow.md, bytes: 79789, sha256: 90dc0153da3f2d3b2b397b41aa7e252a63d2181a01901bdc307cce9bcef890af, production: [zh-cn] }
+      - { file: harrison_kreps.md, bytes: 22589, sha256: 59bff69d859fb6cc13dc35451f97e077a68a2b34272cf6ae8844884f17c24c71, production: [zh-cn] }
+      - { file: morris_learn.md, bytes: 24074, sha256: e071d1d8f3928d25ccf588c05612ff7064f8e165c073d2ac5991ebe9cae82272, production: [zh-cn] }
+      - { file: rational_learning_re.md, bytes: 38769, sha256: 3457c47e0fc634f1504d501c320ad9900406700aac88321cfc119f43b40e1865, production: [zh-cn] }
+      - { file: ls_learning.md, bytes: 54118, sha256: 7f0f69a8077e4a240800083e0e756688c33822d8457b0508a73d3e462e55ea9b, production: [zh-cn] }
+      - { file: affine_risk_prices.md, bytes: 66976, sha256: d2a134d5a421f51b3f8e45c31a7ea20ba0d14aa46a61984f64025067dac7d1b3, production: [zh-cn] }
+      - { file: ross_recovery.md, bytes: 45489, sha256: 9158acad8fcb958ddfe60df843eea3d93c4333fd5fcf1ad3f914f105e9011efb, production: [zh-cn] }
+      - { file: long_run_risk_operator.md, bytes: 103955, sha256: f9ffbfbc2c5e4473c69b37e63b2e380b0bfee5c11805da092f6a69a4f3bef685, production: [zh-cn] }
+      - { file: misspecified_recovery.md, bytes: 79876, sha256: df6c17cf5ed67ef9db887672c45d96fce3cdff47a0d580dfebb0efe1e11f0923, production: [zh-cn] }
+      - { file: pandas_panel.md, bytes: 17897, sha256: 61281bfcc1924692ed866f6c078b73bf569c7baec3f91bc2dcd8c7bbe205eb01, production: [zh-cn] }
+      - { file: ols.md, bytes: 21932, sha256: ebbd8f2f7e8c54ffcc2c01699e7dd5692ca8d36d2e197497687d094a2a8106e3, production: [zh-cn] }
+      - { file: mle.md, bytes: 30144, sha256: f6b85d0e59f32a2d1401e721072d6db352f5274ef56882e9341d11448d3cc88e, production: [zh-cn] }
+      - { file: unemployment_linear.md, bytes: 20635, sha256: 8055c20f4943f7f9796c22ec8d98499188971231e0bed4eebe178e2a6f1ac723, production: [zh-cn] }
+      - { file: unemployment_shocks.md, bytes: 18187, sha256: 786d0f1df7d90f4f10b474c7bdd92e4a8b3804225f5d12fde5cbe1b37e2081c6, production: [zh-cn] }
+      - { file: sargent_surico.md, bytes: 82518, sha256: b88272acf9bdb02602f293c7f265876e39ad43e5e156eb667a33719e33655ec6, production: [zh-cn] }
+      - { file: two_auctions.md, bytes: 32087, sha256: ce70fd50b5399d2d321885a6e604aa803286500bac747e7160e02a4a4bedf827, production: [zh-cn] }
+      - { file: house_auction.md, bytes: 56694, sha256: 9ad108e4e061c7e23f4056cec150eca503ca3d07973683a839740bf17502623e, production: [zh-cn] }
+      - { file: troubleshooting.md, bytes: 2428, sha256: 93555745ad4c9d44ffa0b04ca454ac7e92b8706016ef549acc0ca617f46fc940, production: [zh-cn] }
+      - { file: zreferences.md, bytes: 229, sha256: 30ced77eb4b08e82970f1bae2b6ec22116dddd264670f7753237704757d9044b, production: [zh-cn] }
+      - { file: status.md, bytes: 812, sha256: 54f69667e129fbb079dcd5d78448582ed4473dbc957b4b8032fcb23e6d49d930, production: [zh-cn] }
+  - repo: lecture-python-intro
+    sha: 530ede2b348321d3924f7c900691b7daf165757c
+    dir: lectures
+    class: sweep-lecture-python-intro
+    languages: [zh-cn]
+    localize: none
+    lectures: 57
+    bytes: 1338921
+    files:
+      - { file: intro.md, bytes: 324, sha256: c4a59ed38bef65381f3ce8e0482d8ffa5de6cb145ba62e43ccd246d9810e2767, production: [zh-cn] }
+      - { file: about.md, bytes: 2722, sha256: aa1c926117250030167cfd3844d9e8c288191ca5aff5526c6c77a4159bef7dab, production: [zh-cn] }
+      - { file: long_run_growth.md, bytes: 21690, sha256: 3557ede481af3b7f1a60fe2d1decda5036412cc0ad492bd7065ddf6d648d8771, production: [zh-cn] }
+      - { file: business_cycle.md, bytes: 22041, sha256: 22af2dec63bc2683ee19748c64ea87931599c660ad942dfa8eea41fb82e055f0, production: [zh-cn] }
+      - { file: inflation_history.md, bytes: 32760, sha256: b865d22a9563b62db4387c391e5f19ede96cd8fe0385b070518b7bfc4ffa3b0c, production: [zh-cn] }
+      - { file: inequality.md, bytes: 32070, sha256: 9c0f5201a2168b6a652f44de56737bf9e4881b6a2025c77277d105289dc8a53b, production: [zh-cn] }
+      - { file: prob_dist.md, bytes: 25982, sha256: 7cf2adfb0838626d8fbf0fc7750697ea3e47c892501e0102481173be02e5aec5, production: [zh-cn] }
+      - { file: observed_distributions.md, bytes: 26387, sha256: 05915db6ac2d89d656d21234a526a801bc08f787a34be183e5dff9385088fef4, production: [zh-cn] }
+      - { file: fitting_distributions.md, bytes: 25407, sha256: 44d67ef69eb4687e6e0f6012b806a06c365260c9cd0f95380aaeaf6dc453ebae, production: [zh-cn] }
+      - { file: bivariate_dist.md, bytes: 29106, sha256: 031fe469537cd7194e95749ab255dc95983f743f36ac93767ec5ec0ad8f91392, production: [] }
+      - { file: lln_clt_intro.md, bytes: 18634, sha256: ba5a586118184dc7d3e76486c74b3d58bc5c75620d86d5a0b7a65e1cd2b585da, production: [zh-cn] }
+      - { file: heavy_tails.md, bytes: 39398, sha256: f7c6a053801180858a91c8abe5b15418ff87671f964a082222d167ae35ba9409, production: [zh-cn] }
+      - { file: simple_linear_regression.md, bytes: 15583, sha256: 1d477c465767cf5e19d226cd34e35c5b27e743b976e32f82d7b57d8bb07fc59c, production: [zh-cn] }
+      - { file: mle_intro.md, bytes: 31928, sha256: cce2cb65bb7df8945ecbc845eaa75b5eb1552367801e11da5be7641ee91703eb, production: [zh-cn] }
+      - { file: wealth_tax.md, bytes: 20942, sha256: 32e116ec7f38c0a201cc4071b200d3d27c5dd58b2ac0fdf889355fd0706b09d4, production: [zh-cn] }
+      - { file: bayes_intro.md, bytes: 27283, sha256: ad348e4c261418a52f9765a39addd6b79205361d2aa7e95cba57bec13d53db4e, production: [] }
+      - { file: intro_supply_demand.md, bytes: 26662, sha256: f1f45d83f9d704d99f08f5b38a2d17c24663d15eccef6aea122f564e1c69478d, production: [zh-cn] }
+      - { file: linear_equations.md, bytes: 31215, sha256: 2e253e7da94837bd2dc454163a477c3f7f544f09fe0480998d84739919f8bcdf, production: [zh-cn] }
+      - { file: geom_series.md, bytes: 31785, sha256: d3eb655028c3d46ae326bc3b0385698474b14d650b96f46ac23f67cb2e3ae1e6, production: [zh-cn] }
+      - { file: pv.md, bytes: 17177, sha256: 1851682e34ebd45ed2ee14f3df09e09e90472024c18e6b288303c1012873952b, production: [zh-cn] }
+      - { file: equalizing_difference.md, bytes: 22274, sha256: 6d0e8141390b2053cbd78f70208c5d005b5333385a9ab31252eac0372cb4f49f, production: [zh-cn] }
+      - { file: cons_smooth.md, bytes: 32671, sha256: c32c99eb8802885dde216785cab4a68d36e2cd9e579da7067c3ec79184877b31, production: [zh-cn] }
+      - { file: tax_smooth.md, bytes: 27206, sha256: 9caef1a47f5cd089739c846ceb2d149cc9b024639c1fb277305469775b6a9e06, production: [] }
+      - { file: complex_and_trig.md, bytes: 18464, sha256: 1dda1dcc68d68fb78e3a18d714001af3e42757b1c4fc652555d7fb3c40d60190, production: [zh-cn] }
+      - { file: eigen_I.md, bytes: 33749, sha256: e86ac34140714725fb9da2780f7ea6c419466a80cba6449b32c2d8d8de21cdde, production: [zh-cn] }
+      - { file: greek_square.md, bytes: 23336, sha256: 5dbb7cfae5e6c6a878dacc2fc328a9bdf42d9b969b0e91ce59320db0bfbfbd36, production: [zh-cn] }
+      - { file: scalar_dynam.md, bytes: 15428, sha256: 2b2fbdf7f23670172e34762908f66b62b1bc726ff17f344e7f3de1d1009cf60a, production: [zh-cn] }
+      - { file: solow.md, bytes: 16465, sha256: 1a4352b74eb922991139f965e971a2c671efc634f6c42b4208a273449791e2ce, production: [zh-cn] }
+      - { file: cobweb.md, bytes: 16353, sha256: 8eb34f606a9508641028ad395d0da6e9b83e7edd3a8d253df88fe77da4b2f85d, production: [zh-cn] }
+      - { file: olg.md, bytes: 21191, sha256: bda023d2d97d5107a594dc4e1c23315560eefe32e1f2838ff95b921fa8557a0c, production: [zh-cn] }
+      - { file: msy_fishery.md, bytes: 31201, sha256: d9f4a58c1cb4b499732d49ffec611394c43d177d73db7337835730a82ff24ebe, production: [] }
+      - { file: schelling.md, bytes: 14280, sha256: 7e66ab73e6253cf9b1d30c528b0b6a96d220be5f4bedcd4e48870f41df918f84, production: [zh-cn] }
+      - { file: cagan_ree.md, bytes: 32074, sha256: aae4845b62e598564e9c646f1d9c8d0939617cd412ea59908babac3b43c23d3b, production: [zh-cn] }
+      - { file: cagan_adaptive.md, bytes: 24314, sha256: 8431ebf22d543adaa466e4b63109b01fad92af9b9ca9064abbcded44bca52aa5, production: [zh-cn] }
+      - { file: money_inflation.md, bytes: 39163, sha256: 090cb1840d4e829a03bf887269720875b937d000faf4d62e35c22680e99a3a8e, production: [zh-cn] }
+      - { file: unpleasant.md, bytes: 23849, sha256: cd95f9948bb26911dc5f2f7f6872154648e70b349a0ba326e946c3d3f2e11a20, production: [zh-cn] }
+      - { file: money_inflation_nonlinear.md, bytes: 24220, sha256: 9ac2afb466b497698bc268e78a9d2dc95f8ef654163d5fd3c4195bd038ad8e85, production: [zh-cn] }
+      - { file: laffer_adaptive.md, bytes: 20092, sha256: 0dd9da7da4ec84dbe5f90c9abb3204bc984445c9a714544ae5c236129156f0a8, production: [zh-cn] }
+      - { file: french_rev.md, bytes: 45840, sha256: 9100a3305c1ae173643f91e16447b883be0af04da93443779e220c8e79c8c7e5, production: [zh-cn] }
+      - { file: ar1_processes.md, bytes: 16110, sha256: 7bb34978d8dc069315fd2e1a16d9a058856d06af9971949258b05fa6cf7fce25, production: [zh-cn] }
+      - { file: markov_chains_I.md, bytes: 35310, sha256: 6a186df430960e36ee1a9ecd50a520b8173d149daf4de54ec770c503a7ff945e, production: [zh-cn] }
+      - { file: markov_chains_II.md, bytes: 17662, sha256: 6ecb1edaabd1935e75b62ebbb5f41fed05ae18410ec6073ffd32d7c1e091d475, production: [zh-cn] }
+      - { file: time_series_with_matrices.md, bytes: 16960, sha256: 4b4989b5af92b3bba3138fb6c2680048bffb601fd353373a80bc7574a46c7e2f, production: [zh-cn] }
+      - { file: monte_carlo.md, bytes: 19485, sha256: 2206dfe073f042b85d3bd2dc7c10f3e7a5dd1c1528d982094a5463e701cd1531, production: [zh-cn] }
+      - { file: commod_price.md, bytes: 10773, sha256: 1dd1ea00be1dfcac4737c7da9c8b6561ede7223f40874ecc17b76d3f96d8f039, production: [zh-cn] }
+      - { file: lp_intro.md, bytes: 24482, sha256: d3196d5f45d589d561e3fc09019a93ad8ce3b436591a015af639011c151e4963, production: [zh-cn] }
+      - { file: short_path.md, bytes: 14604, sha256: 1f128140aa71e0d62a9a9556ebe5db39bde1583b2bed5e6a1879f4018cc31671, production: [zh-cn] }
+      - { file: eigen_II.md, bytes: 17298, sha256: fefb9b19a94d10d0dd59f08107d24ae101dfb6c4b0cca69acf77017740bf175a, production: [zh-cn] }
+      - { file: input_output.md, bytes: 16580, sha256: 9301953d639a4f94cfeace71e2d0af529a9526eb1a6c4757d45511857cdef8c1, production: [zh-cn] }
+      - { file: lake_model_intro.md, bytes: 18136, sha256: a8263cb6914c60eaf736f1a8afaa382275fc14ad2b1d72839965b9b11a756b56, production: [zh-cn] }
+      - { file: networks.md, bytes: 37865, sha256: ab39506f1a33f0755a8ddc5b5dc06cbc73f4bd5bee5051d09c1feaba21482df8, production: [zh-cn] }
+      - { file: mobility.md, bytes: 47701, sha256: de9a31259eaf2a13339e39876b9aaaacf3a445e477ba9c572ce9b0aaafce2d3b, production: [zh-cn] }
+      - { file: supply_demand_multiple_goods.md, bytes: 49188, sha256: 7bdc255a81c0bdac00fdb5632b42952495239032c4248490cbf9bcb65ccea095, production: [zh-cn] }
+      - { file: supply_demand_heterogeneity.md, bytes: 32351, sha256: f3e6707a2431eac18b018ac30876d65a8190efa2fb224a5ab44820d4635f20ba, production: [zh-cn] }
+      - { file: troubleshooting.md, bytes: 2367, sha256: 64c3f5243f824caabc1f63f11cb5b7c4454f9ea17745eda9dd7fc23e2d2b5553, production: [zh-cn] }
+      - { file: zreferences.md, bytes: 229, sha256: 30ced77eb4b08e82970f1bae2b6ec22116dddd264670f7753237704757d9044b, production: [zh-cn] }
+      - { file: status.md, bytes: 554, sha256: 609f9150068a1b2783bbaba0ae67581273d2ce083a3102a8ce36b7d53e531a4f, production: [zh-cn] }

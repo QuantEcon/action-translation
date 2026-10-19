@@ -262,6 +262,13 @@ Before creating a release, verify the following:
    Local only, ~36 translations against a cached prompt; the summary goes on the release PR
    beside the gate tally.
 
+   On an engine with `init --report-json` (after v0.29.5), a failure is any non-infra
+   failure: a refusal, a truncation, a parity break or a crash. Draws lost to rate limits,
+   overloads or dropped connections are left out. A cell where those exceed 10% of its
+   attempts reads **UNRELIABLE**, and a cell cut short reads **INCOMPLETE**. Neither is a
+   verdict on the release: re-run that cell, or continue the run with
+   `--run-dir <dir> --resume`.
+
    **If a cell fails**, find out whether this release caused it before holding the tags.
    Draw a same-day control for the failing cell, 24 draws at the previous release and 24
    more at this tag:
@@ -270,6 +277,15 @@ Before creating a release, verify the following:
    ./tool-test-action-on-github/rate-check.sh --ref vPREV  --languages <lang> --draws 24
    ./tool-test-action-on-github/rate-check.sh --ref vX.Y.Z --languages <lang> --draws 24
    ```
+
+   Compare the two runs on one rule. A tag without `init --report-json` (v0.29.5 and older)
+   is scored by the legacy rule, which counts every draw that wrote no output, infra
+   included. Set its count against the newer tag's `legacy.refused` out of `legacy.draws` in
+   `summary.json`, not against the newer tag's classified failures. `legacy` judges each draw
+   on its first attempt, so a run topped up with `--redraw-infra` still compares with the
+   old tag's control, which cannot redraw. If the two tags lock different dependencies
+   (`git diff vPREV vX.Y.Z -- package-lock.json`), add `--ref-deps own` to the control at
+   vPREV, so that it runs the SDK it shipped with.
 
    Then check whether anything that reaches that language's request changed between the
    two tags: `src/translator.ts`, `glossary/<lang>.json`, the language's `LANGUAGE_CONFIGS`

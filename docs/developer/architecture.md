@@ -114,6 +114,7 @@ src/
 ├── localization-rules.ts # Code-cell localization rules for init (native-reviewer authored)
 ├── typography.ts        # Language typography applied in code, not via the prompt (nesting-aware fence walker)
 ├── models.ts            # Model IDs, per-model request policy (thinking, effort, max_tokens), response checks (stop_reason, text extraction), shared retry predicate
+├── model-pricing.ts     # The one list-price table (cache prices included); costUSD is null for an unpriced model, never $0
 ├── contracts.ts         # Cross-boundary constants: labels, auto-merge modes (owner module, #162)
 ├── branch-naming.ts     # Translation branch prefixes — the one owner (#115)
 ├── structural-parity.ts # Deterministic directive/anchor parity guard on every write path
@@ -138,6 +139,7 @@ src/cli/
 ├── section-matcher.ts     # Cross-language section matching
 ├── git-metadata.ts        # File-level git metadata + commit timeline
 ├── report-generator.ts    # Markdown/JSON report formatting
+├── run-report.ts          # init --report-json: failure classes (classifyFailure), report schema, atomic write
 ├── review-formatter.ts    # Chalk card renderer for review command
 ├── review-session.ts      # Pure state machine (accept/skip/reject)
 ├── issue-generator.ts     # GitHub Issue title/body/label generator

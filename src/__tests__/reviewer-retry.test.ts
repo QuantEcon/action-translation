@@ -130,6 +130,7 @@ describe('reviewer callWithRetry', () => {
     expect(reviewer.getUsage()).toEqual({
       inputTokens: 200,
       outputTokens: 100,
+      thinkingTokens: 0,
       cacheCreationInputTokens: 0,
       cacheReadInputTokens: 0,
       apiCalls: 2,
