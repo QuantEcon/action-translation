@@ -164,6 +164,8 @@ chapters:
       expect(stdout).toContain('--glossary');
       expect(stdout).toContain('--parallel');
       expect(stdout).toContain('--skip-existing');
+      // rate-check.sh detects a reporting engine by grepping this help for it.
+      expect(stdout).toContain('--report-json');
     });
   });
 

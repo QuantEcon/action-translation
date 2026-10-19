@@ -439,6 +439,7 @@ program
     `Localization rules for code cells (use "none" to disable)`,
     DEFAULT_RULES.join(',')
   )
+  .option('--report-json <path>', 'Write a machine-readable run report (JSON) to <path>')
   .option('--dry-run', 'Preview lectures without translating', false)
   .action(async (opts) => {
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -480,6 +481,7 @@ program
       localize: localizeRules,
       dryRun: opts.dryRun,
       apiKey: apiKey || '',
+      reportJson: opts.reportJson,
     };
 
     try {

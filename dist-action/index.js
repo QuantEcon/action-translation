@@ -47621,6 +47621,7 @@ function emptyApiUsage() {
   return {
     inputTokens: 0,
     outputTokens: 0,
+    thinkingTokens: 0,
     cacheCreationInputTokens: 0,
     cacheReadInputTokens: 0,
     apiCalls: 0
@@ -47629,6 +47630,7 @@ function emptyApiUsage() {
 function addUsage(usage, responseUsage) {
   usage.inputTokens += responseUsage.input_tokens;
   usage.outputTokens += responseUsage.output_tokens;
+  usage.thinkingTokens += responseUsage.output_tokens_details?.thinking_tokens ?? 0;
   usage.cacheCreationInputTokens += responseUsage.cache_creation_input_tokens ?? 0;
   usage.cacheReadInputTokens += responseUsage.cache_read_input_tokens ?? 0;
   usage.apiCalls += 1;
@@ -48238,6 +48240,12 @@ var TranslationService = class {
   // Counted at the chokepoint so retried/discarded attempts are included —
   // the per-result tokensUsed fields miss them (#164/F53).
   usage = emptyApiUsage();
+  // The model named on every final message. With server-side fallbacks off it
+  // is the requested model; a run report records it so that a measurement can
+  // show which model served it.
+  servedModels = /* @__PURE__ */ new Set();
+  // Attempts retried after a transient error (429, 5xx, overload, connection).
+  retries = 0;
   constructor(apiKey, model = DEFAULT_CLAUDE_MODEL, debug = false) {
     this.client = new Anthropic({ apiKey, maxRetries: 0 });
     this.model = model;
@@ -48251,6 +48259,14 @@ var TranslationService = class {
   /** Total API usage this instance has accumulated, retries included. */
   getUsage() {
     return { ...this.usage };
+  }
+  /** Every model that served a final message on this instance, sorted. */
+  getServedModels() {
+    return [...this.servedModels].sort();
+  }
+  /** How many attempts this instance retried after a transient error. */
+  getRetryCount() {
+    return this.retries;
   }
   /**
    * Sleep for a given number of milliseconds
@@ -48289,6 +48305,9 @@ var TranslationService = class {
         });
         const message = await stream2.finalMessage();
         addUsage(this.usage, message.usage);
+        if (message.model) {
+          this.servedModels.add(message.model);
+        }
         this.log(`${operationName}: tokens in=${message.usage.input_tokens} out=${message.usage.output_tokens} cacheRead=${message.usage.cache_read_input_tokens ?? 0} cacheWrite=${message.usage.cache_creation_input_tokens ?? 0}`);
         assertCompleteResponse(message, operationName, createParams.max_tokens);
         return message;
@@ -48301,6 +48320,7 @@ var TranslationService = class {
           throw error4;
         }
         const delay = baseDelayMs * Math.pow(2, attempt - 1);
+        this.retries++;
         this.log(`${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error4 instanceof Error ? error4.message : error4}. Retrying in ${delay}ms...`);
         await this.sleep(delay);
       }

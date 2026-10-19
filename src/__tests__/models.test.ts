@@ -19,7 +19,9 @@ import {
   TruncatedResponseError,
   UnexpectedStopReasonError,
   VALID_MODEL_PATTERNS,
+  addUsage,
   assertCompleteResponse,
+  emptyApiUsage,
   extractResponseText,
   isRecognizedModel,
   isRetryableAnthropicError,
@@ -413,5 +415,51 @@ describe('assertCompleteResponse', () => {
     expect(isRetryableAnthropicError(new ModelRefusalError('op', 'cyber', null, 0))).toBe(false);
     expect(isRetryableAnthropicError(new UnexpectedStopReasonError('op', null))).toBe(false);
     expect(isRetryableAnthropicError(new TruncatedResponseError(1, 'op'))).toBe(false);
+  });
+});
+
+describe('addUsage', () => {
+  it('starts from an all-zero accumulator', () => {
+    expect(emptyApiUsage()).toStrictEqual({
+      inputTokens: 0,
+      outputTokens: 0,
+      thinkingTokens: 0,
+      cacheCreationInputTokens: 0,
+      cacheReadInputTokens: 0,
+      apiCalls: 0,
+    });
+  });
+
+  it('counts thinking tokens apart, without adding them to output (they are part of it)', () => {
+    const usage = emptyApiUsage();
+    addUsage(usage, {
+      input_tokens: 900,
+      output_tokens: 700,
+      output_tokens_details: { thinking_tokens: 450 },
+      cache_creation_input_tokens: 5000,
+      cache_read_input_tokens: null,
+    });
+    addUsage(usage, {
+      input_tokens: 100,
+      output_tokens: 300,
+      output_tokens_details: { thinking_tokens: 50 },
+      cache_read_input_tokens: 5000,
+    });
+    expect(usage).toStrictEqual({
+      inputTokens: 1000,
+      outputTokens: 1000,
+      thinkingTokens: 500,
+      cacheCreationInputTokens: 5000,
+      cacheReadInputTokens: 5000,
+      apiCalls: 2,
+    });
+  });
+
+  it('counts no thinking when the breakdown is null or absent', () => {
+    const usage = emptyApiUsage();
+    addUsage(usage, { input_tokens: 10, output_tokens: 20, output_tokens_details: null });
+    addUsage(usage, { input_tokens: 10, output_tokens: 20 });
+    expect(usage.thinkingTokens).toBe(0);
+    expect(usage.outputTokens).toBe(40);
   });
 });

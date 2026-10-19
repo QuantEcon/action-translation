@@ -216,6 +216,7 @@ describe('translator prompt caching', () => {
     expect(service.getUsage()).toEqual({
       inputTokens: 190,
       outputTokens: 95,
+      thinkingTokens: 0,
       cacheCreationInputTokens: 9000,
       cacheReadInputTokens: 9000,
       apiCalls: 3,

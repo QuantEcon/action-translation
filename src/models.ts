@@ -378,6 +378,11 @@ export interface ApiUsage {
    * inputTokens + cacheCreationInputTokens + cacheReadInputTokens (#292). */
   inputTokens: number;
   outputTokens: number;
+  /** Output tokens spent thinking (`output_tokens_details.thinking_tokens`).
+   * Already inside outputTokens, which stays the billed total; counted apart
+   * so a model's thinking overhead can be measured. 0 when the API sends no
+   * breakdown. */
+  thinkingTokens: number;
   /** Tokens written to the prompt cache (billed at 1.25× the input rate). */
   cacheCreationInputTokens: number;
   /** Tokens served from the prompt cache (billed at ~0.1× the input rate).
@@ -391,6 +396,7 @@ export function emptyApiUsage(): ApiUsage {
   return {
     inputTokens: 0,
     outputTokens: 0,
+    thinkingTokens: 0,
     cacheCreationInputTokens: 0,
     cacheReadInputTokens: 0,
     apiCalls: 0,
@@ -399,19 +405,22 @@ export function emptyApiUsage(): ApiUsage {
 
 /**
  * Accumulate one response's usage block into an ApiUsage counter.
- * The cache fields are optional on the wire — absent means no caching.
+ * The cache fields and the output breakdown are optional on the wire — absent
+ * means no caching, and no thinking reported.
  */
 export function addUsage(
   usage: ApiUsage,
   responseUsage: {
     input_tokens: number;
     output_tokens: number;
+    output_tokens_details?: { thinking_tokens: number } | null;
     cache_creation_input_tokens?: number | null;
     cache_read_input_tokens?: number | null;
   }
 ): void {
   usage.inputTokens += responseUsage.input_tokens;
   usage.outputTokens += responseUsage.output_tokens;
+  usage.thinkingTokens += responseUsage.output_tokens_details?.thinking_tokens ?? 0;
   usage.cacheCreationInputTokens += responseUsage.cache_creation_input_tokens ?? 0;
   usage.cacheReadInputTokens += responseUsage.cache_read_input_tokens ?? 0;
   usage.apiCalls += 1;
