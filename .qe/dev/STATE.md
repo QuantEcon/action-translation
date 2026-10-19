@@ -20,9 +20,13 @@ Roadmap detail lives in the project trackers (reading order in
   instead, #381, #379); retirement condition 3 is a required CI state check, built on #370
   with #385; lecture-at-a-time tooling goes into the CLI first
   (`D-2026-10-19-lecture-at-a-time-tooling-is-cli-first`). ml's `main` still has no state file
-  beside its five translated lectures, so their backfill must precede ml's sync workflow.
+  beside its five translated lectures, so their backfill must precede ml's sync workflow
+  (lecture-python-programming.ml#55 carries `python_by_example` forward, then ml#56 writes the
+  state files). On 2026-10-20 a trace of what sync does with a lecture the source removes filed
+  #396–#401 and added one line to #376's action reference: under `existing`, a rename whose old
+  path has no state file is skipped, so the old file stays where it was.
 
-  Log `2026-10-19-sync-scope-existing`.
+  Logs `2026-10-19-sync-scope-existing`, `2026-10-20-lecture-removal-gaps`.
 - **Hardening project #349** (created 2026-10-06 from the 2026-10-05 codebase review). It has two
   work items:
   - **#348**: `translate forward` sends no glossary terms and no language rules, because it passes
@@ -261,8 +265,8 @@ Roadmap detail lives in the project trackers (reading order in
 feat/sync-scope-existing --sync-scope existing --scenarios 01,17,18,19,20`; the run book is
 #377's handover log). #346's table row for #344 still describes the first version (`_toc.yml`
 left alone); the ToC is now mirrored. The fourteen issues filed from #376's reviews (#378–#391)
-are untriaged; #378, #379, #381 and #384, with the older #134 and #175, are the CLI bug fixes
-of the CLI-first record's phase 1.
+and the six from the 2026-10-20 removal trace (#396–#401) are untriaged; #378, #379, #381 and
+#384, with the older #134 and #175, are the CLI bug fixes of the CLI-first record's phase 1.
 
 *ml, 2026-09-28 (end)*: see the ml bullet under In flight — round 5 is with the editor, and
 next is the second `ml_repair` PR; #335 shipped in v0.29.4.
