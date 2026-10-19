@@ -270,6 +270,8 @@ npx translate forward \
   -t ~/repos/lecture-intro.zh-cn
 ```
 
+On a partial edition, name each translated lecture with `-f`, or leave the English copies out with `--exclude`. A bulk run resyncs each copy the source has moved on from and writes a state file for it, and under `sync-scope: existing` that state file puts the copy in sync's scope (see [Partial editions](action-reference.md#partial-editions)).
+
 **GitHub PR mode:**
 
 ```bash
@@ -406,6 +408,19 @@ npx translate init \
   --target-language zh-cn
 ```
 
+**One lecture, for an edition whose lectures are reviewed before they are published:**
+
+```bash
+npx translate init \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  --target-language zh-cn \
+  -f cobweb.md \
+  --dry-run
+```
+
+`-f` names a lecture listed in the source `_toc.yml`, and takes the first entry in ToC order that equals or contains the name. Preview with `--dry-run` first: it prints the `Translating single file:` line with the lecture it matched, and stops before translating or writing anything. Then run the same command without `--dry-run`. `-f` narrows the translation, not the rest of the run: every run except a dry run rewrites `.translate/config.yml` and `TRANSLATION-REPORT.md`, and copies every non-Markdown file in the source docs folder into the target, `_toc.yml` and `_config.yml` included. Each lecture then joins the edition in its own PR, with its state file (see [Tutorial: Fresh Setup](tutorials/fresh-setup.md#one-reviewed-lecture-at-a-time)).
+
 **Resume from a specific lecture (after a failure or interruption):**
 
 ```bash
@@ -487,6 +502,8 @@ For existing paired projects, bootstrap `.translate/` metadata:
 npx translate status -s ~/source -t ~/target -l zh-cn --write-state
 ```
 
+On a partial edition, run `forward` (step 4 above) and `--write-state` per translated lecture instead, or with the English copies excluded, so that no copy is rewritten or gets a state file (see [Bootstrapping existing projects](#bootstrapping-existing-projects)).
+
 ## Cost estimates
 
 Approximate costs using `claude-sonnet-5` at standard pricing ($3 / $15 per M input/output tokens). The introductory rate ($2 / $10 per M through 2026-08-31) runs ~13% lower. Figures reflect Sonnet 5's tokenizer, which produces ~30% more tokens than Sonnet 4.6 for the same text:
@@ -509,7 +526,7 @@ Approximate costs using `claude-sonnet-5` at standard pricing ($3 / $15 per M in
 
 ## `.translate/` metadata folder
 
-The `.translate/` folder in the target repo stores persistent sync metadata. It enables exact staleness detection, skip optimisation for backward analysis, and translation provenance.
+The `.translate/` folder in the target repo stores persistent sync metadata. It enables exact staleness detection, skip optimisation for backward analysis, and translation provenance. The sync Action reads it too: under `sync-scope: existing`, a lecture's state file is what puts it in scope (see [Partial editions](action-reference.md#partial-editions)).
 
 ### Structure
 
@@ -552,14 +569,17 @@ tool-version: <tool version>   # Version that performed this sync
 | `status` | Uses `source-sha` for exact staleness | `--write-state` bootstraps config + state |
 | `backward` | Skips files where `source-sha` is unchanged | — |
 | `forward` | — | Updates state after successful resync |
-| `init` | — | Creates config + state for each lecture |
+| `init` | `--skip-existing` skips lectures with a readable state file | Writes config, and state for each lecture it translates |
 | `setup` | — | Creates config as part of scaffolding |
 | `doctor` | Reads config, checks state files | — |
 | `headingmap` | — | Injects heading-maps into target files |
+| Sync Action | Under `sync-scope: existing`, syncs a changed lecture only if its state file exists | Writes state for each lecture it syncs; deletes it with a removed lecture |
+
+`init` does not fail when it cannot write a lecture's state file. Check that `.translate/state/<file>.yml` exists before committing the lecture: without it, the lecture is out of scope under `sync-scope: existing`.
 
 ### Graceful absence
 
-If `.translate/` doesn't exist, all commands work exactly as before (git-heuristic fallback). Existing projects are unaffected.
+If `.translate/` doesn't exist, `status`, `backward` and `forward` fall back to git heuristics, and a sync under the default `sync-scope: all` works as before; `doctor` reports the folder missing. Under `sync-scope: existing`, absence is not graceful: a lecture without a state file is out of scope, so an edition with no state files syncs no lecture. Only removals and `_toc.yml` changes reach it.
 
 ### Bootstrapping existing projects
 
@@ -577,7 +597,19 @@ This:
 1. Creates `.translate/config.yml` from the provided flags
 2. For each translated file, records the current source commit as `source-sha`
 3. Uses the target file's last commit date as `synced-at`
-4. Marks `model: unknown` (not recoverable from history)
+4. Keeps the model a file's existing state names; otherwise marks `model: unknown` (not recoverable from history)
+
+On a partial edition, write state only for the lectures it has translated. Without `-f` or `--exclude`, `--write-state` writes one for every `.md` file at the top level of the docs folder that both repositories have, English copies included, and under `sync-scope: existing` each state file puts its lecture in scope. Run it once per translated lecture with `-f`, or leave the English copies out with `--exclude`; a translated lecture in a subfolder needs `-f` either way, for example `-f advanced/topic.md`. Pass the edition's own `-l` and `-d` every time, since each run rewrites `.translate/config.yml` from the flags:
+
+```bash
+npx translate status \
+  -s /path/to/source \
+  -t /path/to/target \
+  -l ml \
+  -d lectures \
+  -f functions.md \
+  --write-state
+```
 
 ---
 

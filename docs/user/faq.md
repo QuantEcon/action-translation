@@ -85,11 +85,35 @@ Yes. On successful sync, the action posts a **confirmation comment** on the sour
 - A link to the translation PR in the target repo
 - A list of translated files
 
-This gives visibility to the PR author and reviewers that the translation was created.
+This gives visibility to the PR author and reviewers that the translation was created. Under `sync-scope: existing`, a run left with nothing to sync posts no comment; its job summary lists what it skipped.
 
 :::{note}
 Because success comments are posted via the GitHub API on the source PR, they trigger the `issue_comment` event again. This causes the sync workflows to start, but the `if:` condition correctly skips them (the comment body doesn't start with `\translate-resync`). These skipped runs use no compute and complete in ~1 second. This is a known GitHub Actions limitation — `issue_comment` cannot filter by comment body at the trigger level.
 :::
+
+### Can an edition sync only the lectures it has reviewed?
+
+Yes. Set `sync-scope: existing`, a temporary input, on the edition's sync job. A changed lecture then syncs only when the edition has its state file, `.translate/state/<file>.yml`, on its default branch. `translate init` writes one with each lecture, so a lecture joins sync when the PR that adds it, state file included, merges. Other changed lectures are skipped before any model call and never translated from scratch. See [Partial editions](action-reference.md#partial-editions), which also says when the input retires, and [Tutorial: Fresh Setup](tutorials/fresh-setup.md#one-reviewed-lecture-at-a-time) for adding lectures one at a time.
+
+### What does "Lectures Not Synced" in a sync PR mean?
+
+The edition syncs with `sync-scope: existing`, and the source PR also changed lectures the edition does not have yet: there is no state file for them under `.translate/state/`. They were skipped, not translated, and are left out of the PR's metadata.
+
+Nothing needs doing for a lecture nobody has drafted for the edition yet: it joins sync when the PR that adds it merges. A lecture that has been drafted but whose PR has not merged is another matter: its PR must carry this change before it merges, because sync will not. Run `translate status -f <file>` on that PR's branch to check (see the known gap under [Partial editions](action-reference.md#partial-editions)).
+
+A lecture listed under **State File Without a Lecture** needs fixing: the edition has its state file but not the lecture. Restore the lecture, or remove its state file.
+
+### Why did a changed lecture get no sync PR?
+
+Under `sync-scope: existing`, this happens when the lecture is out of scope and the run has nothing else to sync (no `_toc.yml` change, no removal). Such a run passes without a PR, a failure issue or a comment on the source PR; its job summary, on the workflow run's page, lists each skipped lecture and why.
+
+If the edition does have the lecture, check that:
+
+- Its state file is on the edition's default branch. `translate init` does not fail when it cannot write one.
+- Its PR merged before the change did. A lecture is out of scope until then, so a change that merges after the lecture is drafted and before its PR merges must be carried in that PR (see the known gap under [Partial editions](action-reference.md#partial-editions)).
+- It was not renamed in a sync PR that is still open. Until that PR merges, the edition's state file is under the old name, so a change to the lecture at its new path is not synced. Once it merges, `translate status -f <new name>` reports the lecture `OUTDATED`.
+
+An error in the scope check is not a skip: the run fails and opens a failure issue, and its job summary lists the error under **Scope unknown**. (An in-scope lecture whose content then cannot be read fails the run too; that error is in the failure issue and the log.) If the run cannot read the edition at all, as with a `target-repo` that names no repository the token can see, it syncs nothing, not even a `_toc.yml` change or a removal. If it cannot tell whether a lecture is in scope, the lectures it could check still sync; should a later read fail as well, the run stops at that read, and both errors are only in its log.
 
 ### How do I add a new language?
 
@@ -143,7 +167,7 @@ This is expected for well-maintained translations. The backward analysis is desi
 | **Trigger** | PR merged into the default branch | Manual command |
 | **Change signal** | Git diff from PR | Whole-document comparison |
 | **Translation mode** | UPDATE (section-level) | RESYNC (whole-file) |
-| **Scope** | Files changed in that PR | Any drifted files |
+| **Scope** | Files changed in that PR (under `sync-scope: existing`, only lectures with a state file in the edition) | Any drifted files |
 | **Output** | PR in target repo | Local file update (or PR with `--github`) |
 | **Use case** | Ongoing maintenance | Drift recovery, onboarding |
 

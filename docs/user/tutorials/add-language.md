@@ -179,6 +179,8 @@ This creates `QuantEcon/lecture-python-intro.ja` on GitHub with the scaffolding 
 
 ### Translate the content
 
+This translates every lecture at once. If each lecture will be reviewed before it is published, follow [One reviewed lecture at a time](#one-reviewed-lecture-at-a-time) below instead.
+
 ```bash
 npx translate init \
   -s ~/repos/lecture-python-intro \
@@ -212,6 +214,42 @@ git add .
 git commit -m "Initial Japanese translation via translate init"
 git push origin main
 ```
+
+### One reviewed lecture at a time
+
+If each lecture is reviewed before it is published, skip the two subsections above (the `--glossary` note still applies). Translate one lecture at a time, and add each to the edition in its own PR, together with its state file. [Tutorial: Fresh Setup](fresh-setup.md#one-reviewed-lecture-at-a-time) walks through one lecture in full; in short:
+
+Once, before the first lecture's PR, make the edition's build prune its table of contents (see [Prune the table of contents at build time](fresh-setup.md#prune-the-table-of-contents-at-build-time)). Sync keeps the committed `_toc.yml` a mirror of the source's, so it lists lectures the edition does not have yet.
+
+Then, for each lecture, update the source clone, start a branch from an up-to-date `main` in `lecture-python-intro.ja`, and preview the draft. `-f` takes the first `_toc.yml` entry that equals or contains the name; `--dry-run` prints that entry on the `Translating single file:` line, then stops before translating or writing anything:
+
+```bash
+npx translate init \
+  -s ~/repos/lecture-python-intro \
+  -t ./lecture-python-intro.ja \
+  --target-language ja \
+  -f cobweb.md \
+  --dry-run
+```
+
+Run the same command without `--dry-run` to translate the lecture. Merging its PR after review puts the lecture in sync. Before opening the PR:
+
+- **Check `git status`.** `-f` narrows the translation, not the rest of the run: every `init` run except a dry run rewrites `.translate/config.yml` and `TRANSLATION-REPORT.md`, and copies every non-Markdown file in the source docs folder into the target, `_toc.yml` and `_config.yml` included. The first lecture's PR keeps the copied build files (`_config.yml`, `_toc.yml`, images and other static files), since the new edition has none. A later PR keeps only the lecture, its state file and any new file the lecture uses: restore the edition's copies of everything else, and delete the new files the PR does not need, `TRANSLATION-REPORT.md` among them.
+- **Confirm the state file exists**, here `.translate/state/cobweb.md.yml`. `init` does not fail when it cannot write it, and without it the lecture never syncs.
+
+Before merging, check whether the English changed after the draft. Update the source clone, put the edition's clone on the PR's branch and pull it, since reviewers' suggestions land there as commits, and run:
+
+```bash
+npx translate status \
+  -s ~/repos/lecture-python-intro \
+  -t ./lecture-python-intro.ja \
+  -l ja \
+  -f cobweb.md
+```
+
+`OUTDATED` means it did. Sync does not update a lecture until its PR merges, so the PR must carry the change: commit and push it, then run the same command with `--write-state` added to record the new English commit in the lecture's state file. Keep `-l ja`, because that run rewrites `.translate/config.yml` from its flags, and `-l` defaults to `zh-cn`. Restore `.translate/config.yml` if the run changed it, commit and push the state file too, and run the check again: it should now read `ALIGNED`. The check reads your local clones, so it reads `ALIGNED` even when a commit has not reached the PR: push before you trust it.
+
+Set `sync-scope: existing` on the Japanese sync job in Step 4.
 
 ---
 
@@ -289,6 +327,18 @@ jobs:
 
 The jobs run in **parallel** — each language is translated independently.
 
+Scope is set per job. If the Japanese edition takes lectures one at a time, add `sync-scope: existing` (a temporary input; see [Partial editions](../action-reference.md#partial-editions)) to the `sync-to-japanese` job only, and the Chinese job keeps the default, `all`:
+
+```yaml
+- uses: QuantEcon/action-translation@v0
+  with:
+    mode: sync
+    target-repo: 'QuantEcon/lecture-python-intro.ja'
+    target-language: 'ja'
+    sync-scope: existing
+    # ... other inputs as above
+```
+
 ### Target repo — Review workflow
 
 Create `.github/workflows/review-translations.yml` in the **new target** repository:
@@ -356,7 +406,7 @@ npx translate status \
   -l ja
 ```
 
-All files should show `✅ ALIGNED`.
+All files should show `✅ ALIGNED`. On an edition built one lecture at a time, the lectures it has not taken yet show `SOURCE_ONLY`.
 
 ### Health check
 
@@ -374,6 +424,8 @@ Any ❌ items should be addressed before moving to production.
 1. Make a small edit in the source repo
 2. Open and merge a PR
 3. Check both target repos — you should see translation PRs in both `.zh-cn` and `.ja` repos
+
+If the Japanese edition is built one lecture at a time, edit a lecture it already has.
 
 ---
 
@@ -416,9 +468,9 @@ Each target repository maintains its own `.translate/state/` independently.
 - [ ] Font configuration added if needed (optional)
 - [ ] Source rebuilt: `npm run build`
 - [ ] Target repo scaffolded: `translate setup`
-- [ ] Content translated: `translate init`
-- [ ] Translated content pushed to target repo
-- [ ] Source workflow updated with new language job
+- [ ] Content translated: `translate init` for every lecture, or `translate init -f` for one reviewed lecture per PR
+- [ ] Translated content pushed to target repo, or the first lecture's PR merged with its state file
+- [ ] Source workflow updated with new language job (with `sync-scope: existing` for an edition built one lecture at a time)
 - [ ] Target workflow created for review
 - [ ] Secrets configured in both repos
 - [ ] Pipeline tested with a small change

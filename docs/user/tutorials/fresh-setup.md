@@ -39,6 +39,8 @@ Step 4: Configure workflows and secrets    (manual GitHub setup)
 Step 5: Test the pipeline                  (merge a test PR)
 ```
 
+Steps 2 and 3 translate and publish every lecture at once, for an edition translated in one go. If each lecture is reviewed before it is published, follow [One reviewed lecture at a time](#one-reviewed-lecture-at-a-time) in place of Steps 2 and 3.
+
 ---
 
 ## Step 0: Install action-translation
@@ -251,6 +253,126 @@ All checks should pass (✅) before proceeding to workflow configuration.
 
 ---
 
+## One reviewed lecture at a time
+
+Follow this route in place of Steps 2 and 3 when each lecture is reviewed before it is published. The edition grows by one pull request per lecture. Each PR carries the lecture and its state file, `.translate/state/<file>.yml`, and merging it puts the lecture in sync: the source repo's sync workflow runs with `sync-scope: existing` (Step 4a), which updates only the lectures whose state file is on the edition's default branch. Lectures the edition has not taken yet are skipped and listed in the sync PR or the job summary, never translated from scratch. See [Partial editions](../action-reference.md#partial-editions).
+
+The commands below run `translate` from the action-translation folder, and expect the edition's clone at `~/repos/lecture-python-intro.zh-cn`, beside the source clone, as Step 3's checks do.
+
+### Prune the table of contents at build time
+
+Do this once, before the first lecture's PR. Sync keeps the committed `_toc.yml` a mirror of the source's, with the edition's translated part captions, so it lists lectures the edition does not have yet. The first lecture's PR brings such a copy too, since `init` copies the source's. Make the edition's build prune it to the lectures the edition has, rather than committing a pruned copy that the next sync of `_toc.yml` would overwrite. `QuantEcon/lecture-python-programming.ml` does this with `scripts/prune_toc.py`.
+
+Then repeat the next four steps for each lecture.
+
+### Draft the lecture
+
+Update the source clone, and start a branch from an up-to-date `main` in the edition's clone:
+
+```bash
+cd ~/repos/lecture-python-intro
+git pull
+
+cd ~/repos/lecture-python-intro.zh-cn
+git switch main
+git pull
+git switch -c translate-cobweb
+```
+
+`-f` names a lecture listed in the source `_toc.yml`, and takes the first entry in ToC order that equals or contains the name: `-f solow.md` would match `ak_solow.md` if that came first. Preview the match with `--dry-run`, which prints the `Translating single file:` line and stops before translating or writing anything:
+
+```bash
+cd /path/to/action-translation
+npx translate init \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  --target-language zh-cn \
+  -f cobweb.md \
+  --dry-run
+```
+
+If the line shows the lecture you meant, run the same command without `--dry-run` to translate it.
+
+### Keep only what the PR needs
+
+`-f` narrows the translation, not the rest of the run: every `init` run except a dry run rewrites `.translate/config.yml` and `TRANSLATION-REPORT.md`, and copies every non-Markdown file in the source docs folder into the target, `_toc.yml` and `_config.yml` included. See what changed:
+
+```bash
+cd ~/repos/lecture-python-intro.zh-cn
+git status
+```
+
+The first lecture's PR keeps the copied build files (`_config.yml`, `_toc.yml`, images and other static files): the edition has none yet, and cannot build without them. A later PR needs only the lecture, its state file and any new file the lecture uses, such as an image: restore the edition's copies of everything else, and delete the new files the PR does not need, `TRANSLATION-REPORT.md` among them. For example:
+
+```bash
+git restore lectures/_toc.yml lectures/_config.yml
+```
+
+### Confirm the state file
+
+`init` does not fail when it cannot write the state file, and without it the lecture never syncs:
+
+```bash
+ls .translate/state/cobweb.md.yml
+```
+
+`translate doctor` also flags lectures at the top level of the docs folder that have no state file.
+
+### Open the PR, and check for English changes before merging
+
+Commit the lecture, its state file and anything else you kept, then open a PR for review:
+
+```bash
+git add lectures/cobweb.md .translate/state/cobweb.md.yml   # plus any files you kept
+git commit -m "Translate cobweb.md"
+git push -u origin translate-cobweb
+gh pr create --title "Translate cobweb.md" --body "First translation of cobweb.md, for review."
+```
+
+An English change to this lecture that merges after the draft and before this PR merges is not synced to it: the lecture is out of scope until its PR merges. `init` recorded the English commit the draft was made from, so before merging, update the source clone, put the edition's clone on the PR's branch and pull it (reviewers' suggestions land on that branch as commits), and check:
+
+```bash
+cd ~/repos/lecture-python-intro
+git pull
+
+cd ~/repos/lecture-python-intro.zh-cn
+git switch translate-cobweb
+git pull
+
+cd /path/to/action-translation
+npx translate status \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  -l zh-cn \
+  -f cobweb.md
+```
+
+`ALIGNED` means the English has not changed since the draft, and merging the PR puts the lecture in sync. `OUTDATED` means it has. Carry the change into the PR, and commit it in the edition's clone. Then record the new English commit in the lecture's state file, with the same command and `--write-state`:
+
+```bash
+cd /path/to/action-translation
+npx translate status \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  -l zh-cn \
+  -f cobweb.md \
+  --write-state
+```
+
+The carried change must be committed first: `--write-state` refuses a lecture whose English commit is dated after the lecture's last commit on the branch. It rewrites the state file with the new English commit and keeps the model `init` recorded. It also rewrites `.translate/config.yml` from its flags, so pass the edition's own `-l`, and `-d` if the docs folder is not `lectures`. Of this run's changes, the PR takes only the state file: restore the config, then commit and push the state file:
+
+```bash
+cd ~/repos/lecture-python-intro.zh-cn
+git restore .translate/config.yml
+git add .translate/state/cobweb.md.yml
+git commit -m "Record the English commit carried into cobweb.md"
+git push
+```
+
+Then run the check once more: the lecture should now read `ALIGNED`, and merging the PR puts it in sync.
+
+---
+
 ## Step 4: Configure workflows and secrets
 
 You need two workflows: one in the **source** repo (to trigger translations) and one in the **target** repo (to review them).
@@ -303,6 +425,16 @@ jobs:
           docs-folder: 'lectures'
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           github-token: ${{ secrets.TRANSLATION_PAT }}
+```
+
+If the edition is built [one reviewed lecture at a time](#one-reviewed-lecture-at-a-time), add `sync-scope: existing` (a temporary input; see [Partial editions](../action-reference.md#partial-editions)) to the action's inputs, so that a sync updates only the lectures the edition has taken:
+
+```yaml
+- uses: QuantEcon/action-translation@v0
+  with:
+    mode: sync
+    # ... the inputs above
+    sync-scope: existing
 ```
 
 ### 4b: Source repo — Secrets
@@ -385,6 +517,8 @@ Make a small change in the source repo and merge a PR to verify the full pipelin
 3. **Check the target repo** — a translation PR should appear within a few minutes
 4. **Review the PR** — if the review workflow is configured, it posts a quality assessment
 5. **Merge the translation PR** — the target repo is now in sync
+
+On an edition built one lecture at a time, edit a lecture the edition already has. A change to any other lecture is skipped, and on its own opens no translation PR.
 
 ---
 
