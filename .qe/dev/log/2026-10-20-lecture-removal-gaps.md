@@ -51,3 +51,9 @@ title, so here it finds only the parked #257. It does not read `.qe/project.yml`
 both trackers, the active #349 included.
 
 **Next**: Matt's review of #376 and the scope smoke (#377). Triage of #378–#391 and #396–#401.
+
+**Promoted, later 2026-10-20**: the field note went upstream as QuantEcon/skills#85 (`qe` 0.10.1),
+which closes QuantEcon/skills#80. With no issue named, discovery now reads `.qe/project.yml` in both
+shapes, plus `Project`-typed issues and the title search, and asks when they name more than one.
+`NEXT-STEPS.md` gives the recommendation. Run by hand here, it names #349 and #257 and recommends
+#349.
