@@ -26,7 +26,12 @@
 #   * the `test-translation` label trigger + `test-mode`, so a sync can be fired
 #     from an OPEN fixture PR without merging anything to main;
 #   * `target-repo` derived from ${{ github.repository }} so a fork of the
-#     harness points at its own targets.
+#     harness points at its own targets;
+#   * the `test-sync-scope-existing` label, which the mode step turns into
+#     `sync-scope: existing` for that PR (`--sync-scope existing`, #344). Every
+#     other run passes `all`, the action's default. A ref older than the release
+#     that adds the input (v0.30.0, #346) logs "Unexpected input(s)
+#     'sync-scope'" and otherwise runs unchanged.
 name: Translation Sync (__LANG_NAME__)
 
 on:
@@ -76,6 +81,15 @@ jobs:
             echo "test-mode=false" >> $GITHUB_OUTPUT
             echo "🚀 PRODUCTION mode — merged PR or \translate-resync"
           fi
+          # The harness adds the scope label before test-translation, so the
+          # event that fires this run already carries it (#344).
+          if [[ "${{ contains(github.event.pull_request.labels.*.name, 'test-sync-scope-existing') }}" == "true" ]]; then
+            echo "sync-scope=existing" >> $GITHUB_OUTPUT
+            echo "sync-scope: existing — the PR carries the test-sync-scope-existing label"
+          else
+            echo "sync-scope=all" >> $GITHUB_OUTPUT
+            echo "sync-scope: all — the action's default"
+          fi
 
       - uses: QuantEcon/action-translation@__ACTION_REF__
         with:
@@ -87,3 +101,4 @@ jobs:
           anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
           github-token: ${{ secrets.QUANTECON_SERVICES_PAT }}
           test-mode: ${{ steps.mode.outputs.test-mode }}
+          sync-scope: ${{ steps.mode.outputs.sync-scope }}

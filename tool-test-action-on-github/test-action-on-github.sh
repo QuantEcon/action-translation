@@ -6,6 +6,7 @@
 # comprehensive end-to-end testing of the translation action.
 #
 # Usage: ./tool-test-action-on-github/test-action-on-github.sh [--dry-run] [--action-ref <tag|branch>]
+#            [--languages <code,...>] [--scenarios <prefix,...>] [--sync-scope <all|existing>]
 #
 # Options:
 #   --dry-run       Show what would be done without making any changes
@@ -20,6 +21,14 @@
 #                   workflow, which is the post-release smoke that exercises tag
 #                   resolution (QuantEcon/action-translation#109) without
 #                   embedding two versions in one run (#202).
+#   --sync-scope    `all` (the default) or `existing`. `existing` replays the
+#                   scenarios on a partial edition (#344): every target reset
+#                   lays down .translate/state/lecture.md.yml and none for
+#                   lecture-minimal.md, and every PR this run creates carries the
+#                   `test-sync-scope-existing` label, which the sync workflow
+#                   turns into `sync-scope: existing`. The ref must declare the
+#                   input. A smoke test, not the release gate; the expected
+#                   results are in README.md, "Scope runs".
 #
 # Prerequisites:
 # - GitHub CLI (gh) must be installed and authenticated, with the `workflow`
@@ -34,7 +43,8 @@
 #    in each target — every one pinned to the same ref
 # 3. Closes all open PRs on the source and every target repo
 # 4. Creates fresh test PRs covering the scenario matrix (see `scenarios` below)
-# 5. Adds 'test-translation' label to each PR
+# 5. Adds 'test-translation' label to each PR (under --sync-scope existing, after
+#    the 'test-sync-scope-existing' label it is created with)
 # 6. Prints summary of created PRs
 #
 
@@ -45,6 +55,7 @@ DRY_RUN=false
 ACTION_REF=""
 ONLY_LANGUAGES=""
 ONLY_SCENARIOS=""
+SYNC_SCOPE="all"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --dry-run)
@@ -75,10 +86,22 @@ while [[ $# -gt 0 ]]; do
             fi
             shift 2
             ;;
+        --sync-scope)
+            SYNC_SCOPE="$2"
+            case "$SYNC_SCOPE" in
+                all|existing) ;;
+                *)
+                    echo "--sync-scope must be 'all' or 'existing' (got '$SYNC_SCOPE')" >&2
+                    exit 1
+                    ;;
+            esac
+            shift 2
+            ;;
         *)
             echo "Unknown option: $1" >&2
             echo "Usage: $0 [--dry-run] [--action-ref <tag|branch>]" >&2
             echo "                 [--languages <code,...>] [--scenarios <prefix,...>]" >&2
+            echo "                 [--sync-scope <all|existing>]" >&2
             exit 1
             ;;
     esac
@@ -93,6 +116,10 @@ EXAMPLES_DIR="$(cd "$SCRIPT_DIR/../examples" && pwd)"
 WORK_DIR="$(pwd)"   # repos are cloned here; every step cd's from it absolutely
 TEST_FILE_MINIMAL="lecture-minimal.md"
 TEST_FILE_LECTURE="lecture.md"
+# The label that runs a PR under `sync-scope: existing` (#344). The sync
+# workflow template and the evaluator (evaluate/src/scope-expectations.ts) spell
+# it the same way; workflow-templates.test.ts holds the three together.
+SCOPE_LABEL="test-sync-scope-existing"
 
 # Every language the harness drives, as `code|Display name`. Everything else is
 # derived, so adding a language is one line here plus its three base fixtures:
@@ -381,6 +408,11 @@ echo -e "  ref  ${GREEN}${ACTION_REF}${NC} (${ACTION_REF_SHA:0:7}, from ${ACTION
 if [ -n "$(git ls-remote "$ACTION_REPO_URL" "refs/heads/$ACTION_REF" 2>/dev/null)" ]; then
     echo -e "       ${YELLOW}branch ref — runs whatever dist-action/ that branch has committed${NC}"
 fi
+if [ "$SYNC_SCOPE" = existing ]; then
+    echo -e "  sync-scope  ${YELLOW}existing${NC} (from --sync-scope)"
+else
+    echo -e "  sync-scope  ${GREEN}all${NC} (the default)"
+fi
 echo ""
 echo -e "  Workflows this run writes and pins:"
 for L in "${LANGUAGES[@]}"; do
@@ -399,8 +431,17 @@ if [ "$SCOPED_LANGUAGES" = true ]; then
     echo -e "  ${YELLOW}  them. This is a smoke test, not a release gate.${NC}"
     echo ""
 fi
+if [ "$SYNC_SCOPE" = existing ]; then
+    echo -e "  ${YELLOW}⚠ SYNC-SCOPE RUN — sync-scope: existing (#344)${NC}"
+    echo -e "  ${YELLOW}  Every PR this run creates carries the $SCOPE_LABEL label,${NC}"
+    echo -e "  ${YELLOW}  which the sync workflows turn into sync-scope: existing. Every target${NC}"
+    echo -e "  ${YELLOW}  reset lays down .translate/state/$TEST_FILE_LECTURE.yml and none for${NC}"
+    echo -e "  ${YELLOW}  $TEST_FILE_MINIMAL. This is a SMOKE TEST, not the release gate: the${NC}"
+    echo -e "  ${YELLOW}  gate's lanes stay on the default, sync-scope: all.${NC}"
+    echo ""
+fi
 TOTAL_WORKFLOWS=$(( ${#LANGUAGES[@]} * 3 ))
-if [ "$SCOPED_LANGUAGES" = true ] || [ -n "$ONLY_SCENARIOS" ]; then
+if [ "$SCOPED_LANGUAGES" = true ] || [ -n "$ONLY_SCENARIOS" ] || [ "$SYNC_SCOPE" = existing ]; then
     echo -e "  ${YELLOW}${TOTAL_WORKFLOWS}/${TOTAL_WORKFLOWS} scoped workflows on one ref — this is a SMOKE TEST, not a gate.${NC}"
 else
     echo -e "  ${GREEN}${TOTAL_WORKFLOWS}/${TOTAL_WORKFLOWS} workflows on one ref${NC} — a full run tests exactly one version."
@@ -472,6 +513,18 @@ if [ "$DRY_RUN" = false ] && ! gh auth status 2>&1 | grep -q "'workflow'"; then
     exit 1
 fi
 
+# A scope run needs a ref whose action.yml declares the input. An older one
+# (before v0.30.0, #346) logs "Unexpected input(s) 'sync-scope'" and syncs every
+# lecture, so the run would report a scope it never exercised.
+if [ "$SYNC_SCOPE" = existing ] && ! gh api -H "Accept: application/vnd.github.raw+json" \
+        "repos/$OWNER/action-translation/contents/action.yml?ref=$ACTION_REF_SHA" 2>/dev/null \
+        | grep -q '^  sync-scope:'; then
+    echo -e "${RED}Error: --sync-scope existing, but action.yml at $ACTION_REF (${ACTION_REF_SHA:0:7}) declares${NC}"
+    echo -e "${RED}no sync-scope input, or could not be read.${NC}"
+    echo "Its workflows would ignore the input and sync every lecture. Use a ref that has it."
+    exit 1
+fi
+
 echo -e "${GREEN}✓${NC} Prerequisites check passed"
 echo ""
 
@@ -528,6 +581,22 @@ fi
 #
 echo -e "${BLUE}Step 2: Preparing target repositories...${NC}"
 
+# Under --sync-scope existing every target gets one state file, for lecture.md,
+# written as `init` writes it: block style, with synced-at quoted as js-yaml
+# dumps it (unquoted, it loads as a date and readFileState rejects the file).
+# source-sha is the source commit that last touched lecture.md, which is what
+# `init` records, read from the clone Step 1 just reset. Scope reads only
+# whether the file exists; a valid one keeps `translate status` truthful too.
+if [ "$SYNC_SCOPE" = existing ] && [ "$DRY_RUN" = false ]; then
+    STATE_SOURCE_SHA="$(git -C "$WORK_DIR/$SOURCE_REPO" log -1 --format=%H -- "$TEST_FILE_LECTURE")"
+    STATE_SYNCED_AT="$(date -u +%Y-%m-%d)"
+    STATE_SECTION_COUNT="$(grep -c '^## ' "$DATA_DIR/base-lecture.md" || true)"
+    if [ -z "$STATE_SOURCE_SHA" ] || [ "${STATE_SECTION_COUNT:-0}" -lt 1 ]; then
+        echo -e "${RED}✗ cannot derive the $TEST_FILE_LECTURE state file (source-sha '$STATE_SOURCE_SHA', section-count '$STATE_SECTION_COUNT')${NC}" >&2
+        exit 1
+    fi
+fi
+
 for L in "${LANGUAGES[@]}"; do
     code="$(lang_code "$L")"
     name="$(lang_name "$L")"
@@ -537,6 +606,9 @@ for L in "${LANGUAGES[@]}"; do
         echo -e "${CYAN}[DRY RUN] Would reset $OWNER/$repo ($name):${NC}"
         echo -e "${CYAN}  - base-minimal-$code.md, base-lecture-$code.md, base-toc-$code.yml, _config.yml, references.bib${NC}"
         echo -e "${CYAN}  - .github/workflows/{review,rebase}-translations.yml @ $ACTION_REF${NC}"
+        if [ "$SYNC_SCOPE" = existing ]; then
+            echo -e "${CYAN}  - .translate/state/$TEST_FILE_LECTURE.yml (sync-scope: existing; none for $TEST_FILE_MINIMAL)${NC}"
+        fi
         continue
     fi
 
@@ -585,12 +657,31 @@ editors:
   secondary: []
 EOF
 
+        # sync-scope: existing (#344). lecture-minimal.md gets no state file on
+        # purpose: it plays the English copy on a partial edition's main (the
+        # Malayalam edition's intro.md), present as a .md and absent as state,
+        # so it must stay out of scope. model is the action's default
+        # (src/models.ts); tool-version is left absent, as in config.yml above.
+        if [ "$SYNC_SCOPE" = existing ]; then
+            mkdir -p .translate/state
+            cat > ".translate/state/$TEST_FILE_LECTURE.yml" <<EOF
+source-sha: $STATE_SOURCE_SHA
+synced-at: "$STATE_SYNCED_AT"
+model: claude-sonnet-5
+mode: NEW
+section-count: $STATE_SECTION_COUNT
+EOF
+        fi
+
         render_target_workflows
         assert_no_placeholders
 
         commit_and_push "Reset: base state for testing ($name) [$ACTION_REF]"
     )
     echo -e "${GREEN}✓${NC} $name target reset; review + rebase rendered @ $ACTION_REF"
+    if [ "$SYNC_SCOPE" = existing ]; then
+        echo -e "  .translate/state/$TEST_FILE_LECTURE.yml laid down (sync-scope: existing)"
+    fi
 done
 
 echo ""
@@ -719,6 +810,12 @@ if [ "$DRY_RUN" = false ]; then
             --description "Trigger translation action in TEST mode" \
             --color "0E8A16" || echo "Label may already exist"
     fi
+    if [ "$SYNC_SCOPE" = existing ] && ! gh label list --repo "$OWNER/$SOURCE_REPO" | grep -q "$SCOPE_LABEL"; then
+        echo "Creating $SCOPE_LABEL label..."
+        gh label create "$SCOPE_LABEL" --repo "$OWNER/$SOURCE_REPO" \
+            --description "Harness: run the sync with sync-scope: existing (#344)" \
+            --color "5319E7" || echo "Label may already exist"
+    fi
 fi
 
 echo ""
@@ -760,6 +857,9 @@ declare -a scenarios=(
 # --scenarios narrows to specific test cases by file-prefix (e.g. 01, or
 # 01-intro-change-minimal). Matching is prefix-based so the short number works.
 if [ -n "$ONLY_SCENARIOS" ]; then
+    _total=${#scenarios[@]}
+    _first="${scenarios[0]%%-*}"
+    _last="${scenarios[$(( _total - 1 ))]%%-*}"
     _keep=()
     IFS=',' read -ra _want <<< "$ONLY_SCENARIOS"
     for _w in "${_want[@]}"; do
@@ -769,12 +869,12 @@ if [ -n "$ONLY_SCENARIOS" ]; then
             case "${sc%%:*}" in "$_w"*) _keep+=("$sc"); _hit=true ;; esac
         done
         if [ "$_hit" = false ]; then
-            echo "Unknown scenario '$_w'. Valid prefixes are 01..28." >&2
+            echo "Unknown scenario '$_w'. Valid prefixes are ${_first}..${_last}." >&2
             exit 1
         fi
     done
     scenarios=("${_keep[@]}")
-    echo -e "${YELLOW}Scoped run: ${#scenarios[@]} of 27 scenarios (${ONLY_SCENARIOS})${NC}"
+    echo -e "${YELLOW}Scoped run: ${#scenarios[@]} of ${_total} scenarios (${ONLY_SCENARIOS})${NC}"
     echo ""
 fi
 
@@ -807,7 +907,11 @@ for scenario in "${scenarios[@]}"; do
         echo -e "${CYAN}[DRY RUN] Would create PR: ${pr_title}${NC}"
         echo -e "${CYAN}  Branch: ${branch_name}${NC}"
         echo -e "${CYAN}  Type: ${target_file}${NC}"
-        echo -e "${CYAN}  Label: test-translation${NC}"
+        if [ "$SYNC_SCOPE" = existing ]; then
+            echo -e "${CYAN}  Labels: ${SCOPE_LABEL}, then test-translation${NC}"
+        else
+            echo -e "${CYAN}  Label: test-translation${NC}"
+        fi
         echo ""
     else
         echo -e "${YELLOW}Creating PR: ${pr_title}${NC}"
@@ -855,6 +959,19 @@ for scenario in "${scenarios[@]}"; do
         assert_test_remote
         git push -f origin "$branch_name"
         
+        # Under --sync-scope existing the scope label goes on at creation,
+        # BEFORE test-translation below: the labeled event that fires the sync
+        # carries the PR's labels as they stand then, and the workflow reads
+        # the scope from it.
+        scope_args=()
+        scope_note=""
+        if [ "$SYNC_SCOPE" = existing ]; then
+            scope_args=(--label "$SCOPE_LABEL")
+            scope_note="
+
+**Sync scope**: this PR runs under \`sync-scope: existing\` (the \`${SCOPE_LABEL}\` label, #344)."
+        fi
+
         # Create draft PR with label
         PR_URL=$(gh pr create \
             --title "${pr_title}" \
@@ -868,10 +985,11 @@ This is an automated test PR to validate the translation action.
 
 **Changes**: See file diff for details.
 
-**Testing**: The \`test-translation\` label will trigger the action." \
+**Testing**: The \`test-translation\` label will trigger the action.${scope_note}" \
             --draft \
             --base main \
-            --head "$branch_name")
+            --head "$branch_name" \
+            "${scope_args[@]}")
         
         # Extract PR number from URL
         PR_NUMBER=$(echo "$PR_URL" | grep -o '[0-9]*$')
@@ -929,7 +1047,7 @@ if [ "$DRY_RUN" = true ]; then
     echo "     - 18: Document DELETED (lecture.md + TOC)"
     echo "     - 19: Multiple files changed (minimal + lecture)"
     echo "     - 20: Document RENAMED (lecture → linear-algebra + TOC)"
-    echo "   Edge Cases (21-26):"
+    echo "   Edge Cases (21-26), Shared Assets and Directives (27-28):"
     echo "     - 21: Preamble only changed (frontmatter)"
     echo "     - 22: Deep nesting (##### and ######)"
     echo "     - 23: Special characters in headings"
@@ -938,7 +1056,12 @@ if [ "$DRY_RUN" = true ]; then
     echo "     - 26: Heading case change (title-case -> sentence-case)"
     echo "     - 27: Citation introduced ({cite} role + .bib backfill)"
     echo "     - 28: Exercise family added (ml keeps exercise/hint/solution blocks verbatim)"
-    echo "4. Add 'test-translation' label to each PR"
+    if [ "$SYNC_SCOPE" = existing ]; then
+        echo "4. Create each PR with the '$SCOPE_LABEL' label, then add 'test-translation'"
+        echo "   (sync-scope: existing; every target also gets .translate/state/$TEST_FILE_LECTURE.yml)"
+    else
+        echo "4. Add 'test-translation' label to each PR"
+    fi
     echo ""
     echo -e "${YELLOW}To actually run these changes, execute without --dry-run:${NC}"
     echo "  ./tool-test-action-on-github/test-action-on-github.sh"
@@ -963,7 +1086,12 @@ else
     true
     echo ""
     echo "Next steps:"
-    echo "1. Each PR has the 'test-translation' label"
+    if [ "$SYNC_SCOPE" = existing ]; then
+        echo "1. Each PR has the '$SCOPE_LABEL' and 'test-translation' labels (sync-scope: existing)"
+        echo "   Expected results: tool-test-action-on-github/README.md, \"Scope runs\""
+    else
+        echo "1. Each PR has the 'test-translation' label"
+    fi
     echo "2. Every workflow is pinned to $ACTION_REF (${ACTION_REF_SHA:0:7})"
     echo "3. Check each target repo for translation PRs:"
     for L in "${LANGUAGES[@]}"; do
