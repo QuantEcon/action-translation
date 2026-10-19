@@ -10,7 +10,8 @@ API as it is built.
 **State, read live on 2026-10-20**:
 
 - **`main` is at `f011f93`.** The default is still `claude-sonnet-5`; nothing live has changed.
-- **#394** (`feat/claude-5-5-models`; CI green; mergeable, clean) is ready to merge. It brings:
+- **#394** (`feat/claude-5-5-models`; CI green; mergeable, clean) is ready to merge once two stale
+  `.qe` lines are fixed (work item 1). It brings:
   - the per-model request policy: Sonnet 5.5 runs `between_tools` at effort `high`; Opus 5.5 and
     Fable run adaptive at `medium`, with larger output caps because they always think;
   - refusal handling: a refusal fails the file instead of being written;
@@ -114,40 +115,70 @@ Run it after the Sonnet pair.
 
 ## The work left, in order
 
-1. **Merge #394.** It changes no default.
+1. **Fix two stale lines in #394, then merge it.** It changes no default. Its STATE bullet and the
+   **Next** line of its log (`log/2026-10-19-claude-5-5-engine.md`) still promise a
+   pre-registered stacked PR with `experiments/claude-5-5-upgrade/`. Point both at
+   test-action-translation and the decision.
 2. **Trim #395, then merge it.**
    - Delete `experiments/claude-5-5-upgrade/` and `src/__tests__/claude-5-5-eval.test.ts`.
    - Rewrite its CHANGELOG entry, its STATE.md bullet and its log
      (`log/2026-10-20-claude-5-5-eval.md`) so they describe what stays and point at
      test-action-translation and the decision.
+   - Optionally, move rate-check's default-from-engine hunk from `feat/default-sonnet-5-5` into
+     #395. #395 then carries the legacy-engine fixture fix and a test for the default, and the
+     flip PR is the flip alone.
    - Retarget it to `main` once #394 is in, run `npm run build` and `npm test`, then grep for
      `claude-5-5-upgrade`. Only logs should still name it.
 3. **Build `model-eval`** in test-action-translation, following `DESIGN.md`:
    - write `lib/score.py`, `lib/rules.mjs` and `bin/model-eval.mjs`, with the offline tests it
      lists;
+   - reuse what fits from the deleted experiment, which stays in #395's history:
+     - `run-stages.mjs` for the cost estimate and the signal handling;
+     - `lib.mjs` for the engine fingerprint;
+     - `ml-lints.mjs` for its call of `ml_metrics.py`;
+     - `fake-api.mjs` for the end-to-end test;
    - check the prose stripper on real ml drafts before trusting any number from it;
    - run `model-eval --yes` with the drafts' root. It resumes every cell and draws nothing new;
    - write the report (`reports/<date>-claude-sonnet-5-5-vs-claude-sonnet-5/`) and run
      `--record`.
-4. **Add the `/model-upgrade` skill and checklist** in this repository:
-   `.claude/skills/model-upgrade/SKILL.md`, `docs/developer/model-upgrades.md`, and an AGENTS.md
-   checklist entry, all pointing at test-action-translation. Its steps are the ones in that
-   repository's README:
-   - engine readiness;
-   - evaluate;
-   - decide per language;
-   - flip.
 
-   This session could not write to `.claude/skills/`.
+   The work answers #82 (no test set for model upgrades) and #204 (model-bump regression
+   testing). Post the first report on both.
+4. **Add the `/model-upgrade` skill and checklist** in this repository. This session could not
+   write to `.claude/skills/`.
+   - **The files:**
+     - `.claude/skills/model-upgrade/SKILL.md`, kept short;
+     - `docs/developer/model-upgrades.md` for the detail, added to `docs/myst.yml`;
+     - a short "Model upgrades" section in AGENTS.md.
+   - **The procedure:**
+     1. **Engine readiness**, its own PR, with the default unchanged. Check the model's API
+        differences with the claude-api skill. Then add:
+        - its `VALID_MODEL_PATTERNS` pattern;
+        - a `MODEL_REQUEST_POLICIES` entry if it rejects disabled thinking;
+        - its price in `model-pricing.ts`;
+        - the policy, pricing and `model-requests-sdk.test.ts` tests.
+     2. **Plan.** Run `model-eval --plan`, show @mmcky the cost, and get a go-ahead.
+     3. **Run** `model-eval --baseline <default> --candidate <new> --yes`. Optionally add
+        `--also <opus>`, and `--sweep` for a new generation.
+     4. **Decide per language** from REPORT.md.
+     5. **The flip PR.** It changes:
+        - `DEFAULT_CLAUDE_MODEL` and `action.yml` together (`contracts.test.ts` checks this);
+        - the docs, and the CHANGELOG with how to keep the old model;
+        - a decision record citing the report;
+        - the `--record` history rows;
+        - the edition pins.
+     6. **The release**: steps 4a and 4b as always. Item 5 covers 4b at a model change.
+     7. **Afterwards**, each edition's next native-review round runs on the new model, and that
+        language's convergence series splits there.
 5. **The flip**, once the report is in:
-   - Open `feat/default-sonnet-5-5` as a PR and fix its 5 failing tests.
+   - Open `feat/default-sonnet-5-5` as a PR and fix its failing tests.
    - Add the CHANGELOG entry and a decision record citing the report.
    - Before `v0` moves, pin `claude-model: claude-sonnet-5` in the workflows of each edition whose
      language did not PASS.
-   - At that release, step 4b compares models, not just request bytes. The same-day control at
-     the previous tag draws `claude-sonnet-5`, because rate-check now takes each engine's own
-     default. A clearly higher rate at the new tag therefore belongs to the new model, and it
-     fails the gate.
+   - At that release, step 4b compares what each release ships. rate-check takes each engine's
+     own default, so the same-day control at the previous tag draws `claude-sonnet-5`, and a
+     clearly higher rate at the new tag fails the gate as usual. To tell the model's effect from
+     the code's, also draw the failing cell at the new tag with `--model claude-sonnet-5`.
 6. **Add CI to test-action-translation**: `npm test` and `score.py --self-test` on PRs, with no
    API key. The workflow file needs the `workflow` scope to push, so it is @mmcky's to push.
 7. **Optional:** the Opus 5.5 arm above, and a refusal sweep over `lecture-python-programming` in

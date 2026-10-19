@@ -45,4 +45,5 @@ The procedure is a project skill plus a checklist in this repository (`/model-up
   language that did not pass before `v0` moves.
 - **The billed runs belong to a maintainer with an API key.** CI runs only the offline tests.
 
-**Refs**: #342, #334, #227, #394, #395; log `2026-10-20-claude-5-5-eval-handover`.
+**Refs**: #82 (no test set for model upgrades), #204 (model-bump regression testing), #342, #334,
+#227, #394, #395; log `2026-10-20-claude-5-5-eval-handover`.
