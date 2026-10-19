@@ -8,6 +8,17 @@ Roadmap detail lives in the project trackers (reading order in
 
 ## In flight
 
+- **#344 `sync-scope: existing` — PR #376 open for review (2026-10-19)**, for the release #346
+  tracks. A partial edition syncs only the lectures that have a state file on its default
+  branch; the check lives in `src/sync-scope.ts` so D2 (#259) can reuse it, and the input is a
+  thin switch around it (record `D-2026-10-19-sync-scope-existing-reads-state-files`). The
+  harness scope smoke is not run yet: the `gh` token used had no `workflow` scope, so it is
+  Matt's (command in #376). Asked on #344 on 2026-10-19:
+  - ml's `main` has no state files beside its five translated lectures, so a backfill must
+    precede ml's sync workflow;
+  - `doctor` only warns about a lecture without a state file (retirement condition 3).
+
+  Log `2026-10-19-sync-scope-existing`.
 - **Hardening project #349** (created 2026-10-06 from the 2026-10-05 codebase review). It has two
   work items:
   - **#348**: `translate forward` sends no glossary terms and no language rules, because it passes
@@ -217,6 +228,10 @@ Roadmap detail lives in the project trackers (reading order in
 
 **Resume here (2026-09-23, after v0.29.3):**
 
+*#344, 2026-10-19*: #376 awaits review and the harness scope smoke (`--action-ref
+feat/sync-scope-existing --sync-scope existing --scenarios 17,19,20`). #346's table row for #344
+still describes the first version (`_toc.yml` left alone); the ToC is now mirrored.
+
 *ml, 2026-09-28 (end)*: see the ml bullet under In flight — round 5 is with the editor, and
 next is the second `ml_repair` PR; #335 shipped in v0.29.4.
 
@@ -270,8 +285,8 @@ in the fr edition's pandas lecture.
 
 ## Health & context
 
-- `main` green; **1,590 tests across 67 suites** (zero skips, type-checked) as of
-  `16e50f6`; lint at `--max-warnings 0` including root `*.mjs`, CI checks formatting and
+- `main` green; **1,635 tests across 68 suites** (zero skips, type-checked) as of
+  `41ed05f` (counted 2026-10-19; #376 brings it to 1,789 across 70); lint at `--max-warnings 0` including root `*.mjs`, CI checks formatting and
   `.qe/dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale `dist/`
   — run `npm run build` first; that guard is deliberate, not a break.
 - Highest-priority known bug class: the success-shaped failure (#90 defects 3–5, #276's two
