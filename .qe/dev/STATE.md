@@ -245,8 +245,10 @@ Roadmap detail lives in the project trackers (reading order in
 *ml, 2026-09-28 (end)*: see the ml bullet under In flight — round 5 is with the editor, and
 next is the second `ml_repair` PR; #335 shipped in v0.29.4.
 
-*Release, 2026-10-19*: v0.29.5 (patch) is in its release PR: #372 (glossary v0.8.0 and the round-5
-`ml_repair` tooling) and #360's dependency security update. #346's v0.30.0 (the French and Malayalam
+*Release, 2026-10-19*: v0.29.5 is merged (#373, `e7356cc`) and tagged; the §4a gate and §4b rate
+check are handed to @mmcky's local machine (log `2026-10-19-v0295-release-handover`), since they need
+the `gh` `workflow` scope and an API key. `v0` stays at v0.29.4 until they pass. Payload: #372
+(glossary v0.8.0 and the round-5 `ml_repair` tooling) and #360's dependency security update. #346's v0.30.0 (the French and Malayalam
 sync items) stays the next minor; nothing of it is merged yet. If 4b fails again, follow AGENTS.md
 step 4b (#357). This page's `verified:` stamp predates it, so a full re-verify is owed.
 
