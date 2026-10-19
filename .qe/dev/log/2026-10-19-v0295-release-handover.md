@@ -112,6 +112,14 @@ Those reach the action through `dist-action/`, which §4a ran, and do not reach 
 As at v0.29.4, a refused draw reports `Tokens: 0` and `Time: 0.0`; it is still the parity guard,
 not an API failure. Read the `## Failures` section of the draw's `TRANSLATION-REPORT.md`.
 
-**Tags and release**: pending. The session's tag push was refused by its permission classifier,
-so @mmcky runs checklist 5 (move `v0.29` and `v0`, smoke `@v0` on scenario 01) and 6 (the release,
-with the notes above) by hand; the tally then goes on #373 and the measurement on #203.
+**Tags and release.** `v0.29` and `v0` moved `fcee846` → `e7356cc`. `@v0` smoke (scenario 01,
+test-translation-sync#1034): 3/3 sync runs succeeded, and the verdicts read `engineVersion: 0.29.5`,
+`engineRef: v0`, PASS on all three lanes (zh-cn#1049, fa#433, ml#338). GitHub release published,
+title = the tag, with the notes above. Tally on #373; measurement on #203. The permission
+classifier refused both the tag force-push and `gh release create` until @mmcky granted each by
+name; approving the release plan was not enough, so a session doing this should ask for the two
+grants explicitly.
+
+**Next**: the Malayalam decision-19 gate on `pandas` at v0.29.5 (QuantEcon/project-translation,
+`plans/ml-programming-edition.md`), before round 6 is drafted; then v0.30.0 per #346. STATE's
+`verified:` stamp is still 2026-09-23, so a page re-verify is still owed.
