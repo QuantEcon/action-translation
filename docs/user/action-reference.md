@@ -308,15 +308,18 @@ For new files, the entire document is translated in a single call (NEW mode).
 
 ## Claude model selection
 
-The default model is `claude-sonnet-5`, which provides excellent translation quality at reasonable cost. Options:
+The default model is `claude-sonnet-5`. The same `claude-model` input sets the model for sync and for review. Options:
 
-| Model | Cost | Best for |
+| Model | Price per M tokens (input / output) | Best for |
 |-------|------|----------|
-| `claude-sonnet-5` | ~$0.06/file | Daily sync operations (recommended) |
-| `claude-opus-4-8` | ~$0.10/file | High-stakes translations needing maximum quality |
-| `claude-haiku-4-5` | ~$0.02/file | Budget-conscious bulk operations |
+| `claude-sonnet-5` | $2 / $10 | Daily sync operations (the default) |
+| `claude-sonnet-5-5` | $2 / $10 | The current Sonnet, under evaluation as the next default |
+| `claude-opus-5-5` | $4 / $20 | High-stakes translations and one-time bulk seeds (always thinks; thinking is billed as output) |
+| `claude-haiku-4-5` | $1 / $5 | Budget-conscious bulk operations |
 
-Costs are approximate and based on Sonnet 5 standard pricing ($3 / $15 per M input/output tokens); the introductory rate ($2 / $10 per M through 2026-08-31) runs ~13% lower. Sonnet 5's tokenizer produces ~30% more tokens than Sonnet 4.6 for the same text, which is already reflected above.
+With a Sonnet model a typical lecture costs roughly $0.10–0.25 to translate. The glossary dominates the input, and calls after the first read it from the prompt cache at $0.20 per M tokens; the French lecture measured in the [thinking-sonnet5 report](https://github.com/QuantEcon/action-translation/blob/main/experiments/thinking-sonnet5/REPORT.md) (one uncached whole-file call, 9,715 output tokens, $0.21 at the earlier $3 / $15) comes to about $0.14 at $2 / $10.
+
+Each model is sent request settings it accepts. Sonnet 5 and older models run with extended thinking disabled; Sonnet 5.5 runs with its lowest setting (`between_tools`, no extended thinking) at effort `high`; Opus 5.5, which always thinks, runs with adaptive thinking at effort `medium` and output limits raised to leave room for the thinking. If the model declines a request (`stop_reason: refusal`), the file fails with the refusal category instead of using partial output.
 
 ## File naming conventions
 

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Claude Sonnet 5.5 and Claude Opus 5.5 can be selected** with the `claude-model` input or `--model` (#342, #334). Both reject the `thinking: {type: 'disabled'}` that every call sent, so each model now gets a request policy (`requestPolicyFor` in `src/models.ts`). Sonnet 5 and the older models keep exactly today's request: thinking disabled, no effort, the same `max_tokens`. `claude-sonnet-5-5` gets its lowest setting, `between_tools` (no extended thinking), at effort `high`. `claude-opus-5-5`, `claude-fable-5` and `claude-fable-5-1` always think, so they get adaptive thinking at effort `medium` and `max_tokens` with room for the thinking (`maxTokensFor`); the full-document admission check keeps its 64,000-token budget. An unrecognised model ID gets the API's defaults instead of a setting it may reject. `claude-haiku-5-5` is now recognised and keeps its v0.29.5 request, thinking disabled, which it accepts at its default effort `medium`; left unrecognised, it would have fallen to the API's defaults and thought within `max_tokens` caps sized for output alone. **The default model is unchanged** (`claude-sonnet-5`); it moves only after the evaluation reports. Server-side refusal fallbacks stay off: every provenance field records the requested model, and a fallback would credit another model's output to it (decision `D-2026-10-19-per-model-request-policy`).
+
+### Changed
+
+- **`@anthropic-ai/sdk` 0.78.0 → 0.131.0.** It types Sonnet 5.5's `between_tools` and keeps `stop_details` (the refusal category) on streamed responses, which 0.78.0 silently dropped. 0.131.0 is the newest release at least two weeks old and predates the OpenTelemetry dependency added in 0.134.0. The action bundle grows from 1.68 MB to 2.34 MB.
+- **Glossary tooling moves to Opus 5.5** (#334 Part A). `scripts/glossary` seeds and extracts terms with `claude-opus-5-5` (was `claude-opus-4-8`; decision `D-2026-10-19-opus-5-5-for-bulk-seed`), and the probe follows the production default. Every call now uses the engine's request policy from `dist/`, so the probe runs as production does (it was running adaptive thinking that production never sends). `PRICING` gains the 5.5 models and cache prices, and corrects Sonnet 5 to $2 / $10. A refused or truncated sample is now reported as failed instead of being written, and a failed extraction is listed instead of counted as covered. A failed call's cost still counts in the printed spend, a request error counts as a failure too, and either script exits 1 if anything failed. Tooling only.
+- **Docs: model table and prices.** Sonnet 5.5 and Opus 5.5 are listed (Opus 5.5 replaces Opus 4.8 as the high-quality option) at current list prices, with a measured lecture re-priced at those prices in place of the stale per-file figures. The cost sentences in the CLI reference and FAQ no longer cite the introductory rate that ended on 2026-08-31.
+
+### Fixed
+
+- **A model refusal is no longer used as a translation or verdict** (R12 of the 2026-10-06 review, #342). Only `stop_reason: end_turn` now counts as a complete response. A refusal fails the file with its classifier category (`ModelRefusalError`, not retried), `max_tokens` fails as before, and any other stop reason fails too. Before, a refusal that came with partial text was committed as a successful translation. Text is now read from the response's text blocks rather than `content[0]`, which is a thinking block on models that always think, and an empty reply fails instead of becoming an empty section.
+- **`claude-fable-5` no longer fails every call.** It passed model validation but was sent `disabled` thinking, which it rejects.
+
 ## [0.29.5] - 2026-10-19
 
 ### Added

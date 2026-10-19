@@ -24,7 +24,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import Anthropic from '@anthropic-ai/sdk';
 import {
-  ROOT, ROLES, EXTRACT_MODEL, MAX_TOKENS_EXTRACT, arg, resolveSourceDir, docsFolder,
+  ROOT, ROLES, EXTRACT_MODEL, arg, resolveSourceDir, docsFolder,
   requireApiKey, loadGlossary, glossaryPath, callClaude, costUSD, parseJsonResponse, languageLabel, langName, rel,
 } from './lib.mjs';
 
@@ -75,6 +75,8 @@ console.log(`Lectures (${lectures.length}): ${lectures.join(', ')}\n`);
 
 const client = new Anthropic();
 const byTerm = new Map();
+const extracted = []; // lectures whose terms are in the output
+const failed = []; // { lecture, stopReason, category[, error] } — no terms are taken from these
 let spend = 0;
 
 for (const base of lectures) {
@@ -83,11 +85,21 @@ for (const base of lectures) {
   const en = fs.readFileSync(enPath, 'utf-8');
   const translated = fs.readFileSync(path.join(langDir, base, `${role}.md`), 'utf-8');
 
+  let r, cost = 0;
   try {
-    const r = await callClaude(client, { model, maxTokens: MAX_TOKENS_EXTRACT, prompt: buildPrompt(en, translated) });
-    const { terms } = parseJsonResponse(r.text);
-    const cost = costUSD(model, r.usage);
+    r = await callClaude(client, { model, operation: 'analysis', prompt: buildPrompt(en, translated) });
+    cost = costUSD(model, r.usage); // billed whether or not the lecture is usable
     spend += cost;
+    if (r.stopReason !== 'end_turn') {
+      // A refusal or a max_tokens stop can still carry partial JSON, and the terms parsed
+      // from it would pass for the lecture's full set.
+      const category = r.stopDetails?.category ?? null;
+      console.error(`  ✗ ${base}: stop_reason=${r.stopReason}${category ? ` category=${category}` : ''}  ($${cost.toFixed(3)})`);
+      failed.push({ lecture: base, stopReason: r.stopReason, category });
+      continue;
+    }
+    const { terms } = parseJsonResponse(r.text);
+    if (!Array.isArray(terms)) throw new Error('response JSON has no "terms" array');
     console.log(`  ${base}: ${terms.length} terms proposed  ($${cost.toFixed(3)})`);
 
     for (const t of terms) {
@@ -101,8 +113,11 @@ for (const base of lectures) {
       if (t.note) rec.notes.push(`${base}: ${t.note}`);
       byTerm.set(k, rec);
     }
+    extracted.push(base);
   } catch (err) {
-    console.error(`  ${base}: ERROR ${err.message}`);
+    // An API error (r unset) or a response that is not the expected JSON (r.stopReason 'end_turn').
+    console.error(`  ✗ ${base}: ERROR ${err.message}${r ? `  ($${cost.toFixed(3)})` : ''}`);
+    failed.push({ lecture: base, stopReason: r?.stopReason ?? null, category: null, error: err.message });
   }
 }
 
@@ -127,6 +142,11 @@ console.log(`Extract spend: $${spend.toFixed(2)}`);
 
 fs.mkdirSync(outDir, { recursive: true });
 fs.writeFileSync(path.join(outDir, `glossary-suggestions-${role}.json`),
-  JSON.stringify({ lang, role, model, lectures, drifting, stable }, null, 2));
+  JSON.stringify({ lang, role, model, lectures: extracted, failed, drifting, stable }, null, 2));
 console.log(`wrote ${rel(path.join(outDir, `glossary-suggestions-${role}.json`))}`);
+if (failed.length) {
+  console.error(`\n✗ ${failed.length} lecture(s) failed and are missing from that file: ${failed.map((f) => f.lecture).join(', ')}`);
+  console.error(`compare-models cannot see variation in a lecture that was never extracted; rerun this role before comparing.`);
+  process.exit(1);
+}
 console.log(`\nNext: run the other role, then\n  node scripts/glossary/compare-models.mjs --lang ${lang} --data ${rel(outDir)}`);

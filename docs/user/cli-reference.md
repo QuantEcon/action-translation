@@ -489,7 +489,7 @@ npx translate status -s ~/source -t ~/target -l zh-cn --write-state
 
 ## Cost estimates
 
-Approximate costs using `claude-sonnet-5` at standard pricing ($3 / $15 per M input/output tokens). The introductory rate ($2 / $10 per M through 2026-08-31) runs ~13% lower. Figures reflect Sonnet 5's tokenizer, which produces ~30% more tokens than Sonnet 4.6 for the same text:
+Approximate costs using `claude-sonnet-5` ($2 / $10 per M input/output tokens; cache reads $0.20 per M). The figures below are rough estimates made before prompt caching and at an earlier $3 / $15 price; the uncached whole-file French translation measured in the [thinking-sonnet5 report](https://github.com/QuantEcon/action-translation/blob/main/experiments/thinking-sonnet5/REPORT.md) (9,715 output tokens, $0.21 at that price) comes to about $0.14 at $2 / $10:
 
 | Operation | Cost | Notes |
 |-----------|------|-------|

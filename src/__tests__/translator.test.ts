@@ -7,7 +7,8 @@
  * - Glossary formatting
  * - Error handling
  *
- * Note: API calls are NOT tested here (would require mocking Anthropic SDK)
+ * Note: no API calls are made here — the size-admission tests stub the
+ * service's single call chokepoint (callWithRetry).
  * The actual translation quality is validated via tool-test-action-on-github
  */
 
@@ -19,6 +20,8 @@ jest.mock('@actions/core', () => ({
   debug: jest.fn(),
   getInput: jest.fn(),
 }));
+
+import { TranslationService } from '../translator.js';
 
 // We need to test internal functions, so we'll use a workaround
 // by testing through the module's behavior
@@ -199,28 +202,67 @@ describe('Translator Module', () => {
   // =============================================================================
 
   describe('Document Size Validation', () => {
-    it('should have defined API max tokens limit', () => {
-      // The API_MAX_TOKENS constant should be 32768
-      const API_MAX_TOKENS = 32768;
-      expect(API_MAX_TOKENS).toBe(32768);
+    // checkDocumentSize admits a whole document when its estimated output,
+    // ceil(ceil(chars / 4) × 1.5) + 2000 for fr, is within MAX_TOKENS.fullDocument
+    // = 64000. A model that always thinks is sent a larger max_tokens, but the
+    // admission budget must stay 64000 for every model.
+    const AT_BUDGET = 165_332; // estimate 64000: admitted
+    const OVER_BUDGET = 165_333; // estimate 64001: rejected
+
+    function serviceWithStubbedCall(model: string) {
+      const service = new TranslationService('test-key', model);
+      const callWithRetry = jest.fn(async (_params: { max_tokens: number }) => ({
+        content: [{ type: 'text', text: 'traduction' }],
+        usage: { input_tokens: 1, output_tokens: 1 },
+        stop_reason: 'end_turn',
+      }));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (service as any).callWithRetry = callWithRetry;
+      return { service, callWithRetry };
+    }
+
+    it.each(['claude-sonnet-5', 'claude-sonnet-5-5', 'claude-opus-5-5', 'test-model'])(
+      'rejects a document over the 64000-token budget before any API call (%s)',
+      async (model) => {
+        const { service, callWithRetry } = serviceWithStubbedCall(model);
+
+        await expect(
+          service.translateFullDocument({
+            content: 'x'.repeat(OVER_BUDGET),
+            sourceLanguage: 'en',
+            targetLanguage: 'fr',
+          })
+        ).rejects.toThrow('estimated 64001 tokens exceeds the output budget of 64000 tokens');
+        expect(callWithRetry).not.toHaveBeenCalled();
+      }
+    );
+
+    it('admits a document at exactly the budget, sent with the larger always-thinking cap', async () => {
+      const { service, callWithRetry } = serviceWithStubbedCall('claude-opus-5-5');
+
+      const result = await service.translateFullDocument({
+        content: 'x'.repeat(AT_BUDGET),
+        sourceLanguage: 'en',
+        targetLanguage: 'fr',
+      });
+
+      expect(result.success).toBe(true);
+      expect(callWithRetry).toHaveBeenCalledTimes(1);
+      expect(callWithRetry.mock.calls[0][0].max_tokens).toBe(128000);
     });
 
-    it('should detect when document exceeds limits', () => {
-      // A very large document should fail pre-flight check
-      // 200,000 chars → (200000/4) * 1.5 + 2000 = 77,000 tokens > 32768
-      const veryLargeSourceLength = 200000;
-      const estimatedTokens = Math.ceil(veryLargeSourceLength / 4) * 1.5 + 2000;
+    it('document resync admits on source + target length, against the same budget', async () => {
+      const { service, callWithRetry } = serviceWithStubbedCall('claude-opus-5-5');
 
-      expect(estimatedTokens).toBeGreaterThan(32768);
-    });
-
-    it('should allow reasonable document sizes', () => {
-      // A typical lecture (20,000 chars) should pass
-      // 20,000 chars → (20000/4) * 1.5 + 2000 = 9,500 tokens < 32768
-      const typicalSourceLength = 20000;
-      const estimatedTokens = Math.ceil(typicalSourceLength / 4) * 1.5 + 2000;
-
-      expect(estimatedTokens).toBeLessThan(32768);
+      await expect(
+        service.translateDocumentResync({
+          sourceContent: 'x'.repeat(OVER_BUDGET - 1000),
+          targetContent: 'y'.repeat(1000),
+          sourceLanguage: 'en',
+          targetLanguage: 'fr',
+        })
+      ).rejects.toThrow('exceeds the output budget of 64000 tokens');
+      expect(callWithRetry).not.toHaveBeenCalled();
     });
   });
 

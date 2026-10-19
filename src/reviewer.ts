@@ -29,8 +29,10 @@ import {
 } from './diff-checks.js';
 import {
   DEFAULT_CLAUDE_MODEL,
-  MAX_TOKENS,
-  DEFAULT_THINKING,
+  maxTokensFor,
+  modelRequestParams,
+  assertCompleteResponse,
+  extractResponseText,
   isRetryableAnthropicError,
   ApiUsage,
   emptyApiUsage,
@@ -448,28 +450,26 @@ export class TranslationReviewer {
         const stream = this.anthropic.messages.stream({
           model: this.model,
           max_tokens: maxTokens,
-          thinking: DEFAULT_THINKING,
+          ...modelRequestParams(this.model, 'review'),
           messages: [{ role: 'user', content: prompt }],
         });
         const response = await stream.finalMessage();
         addUsage(this.usage, response.usage);
 
-        // A max_tokens stop means the verdict JSON was cut off; retrying at
-        // the same cap cannot succeed (generic Error is not retried below).
-        if (response.stop_reason === 'max_tokens') {
-          throw new Error(
-            `${operationName}: response truncated at max_tokens=${maxTokens}; verdict JSON is incomplete`
-          );
+        // Only an end_turn is a verdict. A max_tokens stop means the JSON was
+        // cut off, and a refusal or any other stop reason is no verdict at all.
+        // None of them is retried below: a rerun at the same cap cannot fit,
+        // and a refusal is not transient.
+        assertCompleteResponse(response, operationName, maxTokens);
+
+        // Every text block (a thinking block can come first). No text is an
+        // error, deliberately not a parse failure, so it is not retried.
+        const text = extractResponseText(response);
+        if (!text.trim()) {
+          throw new Error(`${operationName}: response contained no text`);
         }
 
-        const content = response.content[0];
-        if (!content || content.type !== 'text') {
-          throw new Error(
-            `Unexpected response from Claude: ${content ? content.type : `empty content (stop_reason: ${response.stop_reason})`}`
-          );
-        }
-
-        return parseJsonResponse(content.text);
+        return parseJsonResponse(text);
       } catch (error) {
         // Don't retry on non-transient API errors
         if (error instanceof AuthenticationError || error instanceof BadRequestError) {
@@ -1580,8 +1580,9 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
 
 **CRITICAL**: Findings MUST relate ONLY to the sections that were changed in this PR. Do not report findings for unchanged parts of the document.`;
 
+    const maxTokens = maxTokensFor(this.model, 'review');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let result: any = await this.callWithRetry(prompt, MAX_TOKENS.review, 'evaluateTranslation');
+    let result: any = await this.callWithRetry(prompt, maxTokens, 'evaluateTranslation');
 
     // Validate the four criterion scores before they reach the weighted sum
     // (#102) — retry once on an incomplete response, then fail loudly rather
@@ -1591,7 +1592,7 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
       core.warning(
         `evaluateTranslation: response missing numeric criteria [${check.missing.join(', ')}] — retrying`
       );
-      result = await this.callWithRetry(prompt, MAX_TOKENS.review, 'evaluateTranslation');
+      result = await this.callWithRetry(prompt, maxTokens, 'evaluateTranslation');
       check = validateCriterionScores(result);
       if (!check.valid) {
         throw new Error(
@@ -1725,8 +1726,9 @@ Respond with ONLY valid JSON:
   "structureDetails": "Brief explanation of structure check"
 }`;
 
+    const maxTokens = maxTokensFor(this.model, 'review');
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result: any = await this.callWithRetry(prompt, MAX_TOKENS.review, 'evaluateDiff');
+    const result: any = await this.callWithRetry(prompt, maxTokens, 'evaluateDiff');
     // Strict identity: these come straight off model JSON, and a quoted
     // "false" is truthy. Anything that is not literally `true` is a failed
     // check — including a missing key.

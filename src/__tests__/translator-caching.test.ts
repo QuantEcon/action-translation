@@ -60,6 +60,7 @@ describe('translator prompt caching', () => {
     mockFinalMessage.mockResolvedValue({
       content: [{ type: 'text', text: 'translated' }],
       usage: { input_tokens: 10, output_tokens: 5 },
+      stop_reason: 'end_turn',
     });
     service = new TranslationService('test-key', 'test-model', false);
   });
@@ -182,6 +183,7 @@ describe('translator prompt caching', () => {
         cache_creation_input_tokens: 9000,
         cache_read_input_tokens: 0,
       },
+      stop_reason: 'end_turn',
     });
     mockFinalMessage.mockResolvedValueOnce({
       content: [{ type: 'text', text: 'translated' }],
@@ -191,11 +193,13 @@ describe('translator prompt caching', () => {
         cache_creation_input_tokens: 0,
         cache_read_input_tokens: 9000,
       },
+      stop_reason: 'end_turn',
     });
     // Third call: usage block without cache fields (older mock shape)
     mockFinalMessage.mockResolvedValueOnce({
       content: [{ type: 'text', text: 'translated' }],
       usage: { input_tokens: 10, output_tokens: 5 },
+      stop_reason: 'end_turn',
     });
 
     const request = {
@@ -217,4 +221,56 @@ describe('translator prompt caching', () => {
       apiCalls: 3,
     });
   });
+
+  // Besides the cacheable prompt, every builder sends the model's request
+  // policy (models.ts) for its operation class: sections, then full documents.
+  const POLICY_CASES: Array<{
+    model: string;
+    fields: { thinking?: { type: string }; output_config?: { effort: string } };
+    caps: [number, number];
+  }> = [
+    // Today's request, byte for byte: thinking disabled, no output_config key
+    { model: 'claude-sonnet-5', fields: { thinking: { type: 'disabled' } }, caps: [16384, 64000] },
+    {
+      model: 'claude-sonnet-5-5',
+      fields: { thinking: { type: 'between_tools' }, output_config: { effort: 'high' } },
+      caps: [16384, 64000],
+    },
+    {
+      model: 'claude-opus-5-5',
+      fields: { thinking: { type: 'adaptive' }, output_config: { effort: 'medium' } },
+      caps: [32768, 128000],
+    },
+    // Unrecognized: the API's defaults, neither field sent
+    { model: 'test-model', fields: {}, caps: [16384, 64000] },
+  ];
+
+  it.each(POLICY_CASES)(
+    'every builder sends the request policy of $model',
+    async ({ model, fields, caps }) => {
+      service = new TranslationService('test-key', model, false);
+      await callEachBuilder();
+
+      const sent = mockStream.mock.calls.map(([params]) => params);
+      const [sectionCap, documentCap] = caps;
+      expect(sent.map((params) => params.max_tokens)).toEqual([
+        sectionCap,
+        sectionCap,
+        sectionCap,
+        documentCap,
+        documentCap,
+      ]);
+      for (const params of sent) {
+        expect(Object.keys(params)).toEqual([
+          'model',
+          'max_tokens',
+          'messages',
+          ...Object.keys(fields),
+        ]);
+        expect(params.model).toBe(model);
+        expect(params.thinking).toStrictEqual(fields.thinking);
+        expect(params.output_config).toStrictEqual(fields.output_config);
+      }
+    }
+  );
 });

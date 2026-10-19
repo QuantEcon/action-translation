@@ -47467,20 +47467,60 @@ var MAX_TOKENS = {
   /** Analytical CLI judgments (backward eval, forward triage, doc compare). Non-streamed. */
   analysis: 8192
 };
-var DEFAULT_THINKING = { type: "disabled" };
+var ALWAYS_THINKING_MAX_TOKENS = {
+  section: 32768,
+  fullDocument: 128e3,
+  review: 32768,
+  analysis: 16384
+};
+var THINKING_DISABLED = {
+  label: "thinking-disabled",
+  thinking: { type: "disabled" },
+  alwaysThinks: false
+};
+var BETWEEN_TOOLS_HIGH = {
+  label: "between-tools/high",
+  thinking: { type: "between_tools" },
+  effort: { section: "high", fullDocument: "high", review: "high", analysis: "high" },
+  alwaysThinks: false
+};
+var ADAPTIVE_MEDIUM = {
+  label: "adaptive/medium",
+  thinking: { type: "adaptive" },
+  effort: { section: "medium", fullDocument: "medium", review: "medium", analysis: "medium" },
+  alwaysThinks: true
+};
+var API_DEFAULTS = {
+  label: "api-defaults",
+  alwaysThinks: false
+};
+var MODEL_REQUEST_POLICIES = {
+  "claude-sonnet-5-5": BETWEEN_TOOLS_HIGH,
+  "claude-opus-5-5": ADAPTIVE_MEDIUM,
+  "claude-fable-5": ADAPTIVE_MEDIUM,
+  "claude-fable-5-1": ADAPTIVE_MEDIUM
+};
 var VALID_MODEL_PATTERNS = [
+  /^claude-sonnet-5-5$/,
+  // claude-sonnet-5-5 (current-generation Sonnet)
+  /^claude-opus-5-5$/,
+  // claude-opus-5-5 (current-generation Opus)
+  /^claude-fable-5-1$/,
+  // claude-fable-5-1 (current Fable, highest-capability tier)
+  /^claude-haiku-5-5$/,
+  // claude-haiku-5-5 (current-generation Haiku; accepts thinking disabled at effort <= high, so no table entry)
   /^claude-fable-5$/,
-  // claude-fable-5 (highest-capability tier)
+  // claude-fable-5 (previous-generation Fable)
   /^claude-opus-5$/,
-  // claude-opus-5 (current-generation Opus) — absent until #230: priced at $0.000 by the glossary scripts while passing validation nowhere
+  // claude-opus-5 (previous-generation Opus) — absent until #230: priced at $0.000 by the glossary scripts while passing validation nowhere
   /^claude-sonnet-5$/,
-  // claude-sonnet-5 (current-generation Sonnet)
+  // claude-sonnet-5 (previous-generation Sonnet; still DEFAULT_CLAUDE_MODEL)
   /^claude-opus-4-8$/,
   // claude-opus-4-8 (previous-generation Opus)
   /^claude-opus-4-7$/,
   // claude-opus-4-7 (previous-generation Opus)
   /^claude-haiku-4-5$/,
-  // claude-haiku-4-5 (current-generation Haiku, bare alias)
+  // claude-haiku-4-5 (previous-generation Haiku, bare alias)
   /^claude-sonnet-4-6$/,
   // claude-sonnet-4-6 (previous-generation Sonnet)
   /^claude-opus-4-6$/,
@@ -47502,6 +47542,81 @@ var VALID_MODEL_PATTERNS = [
   /^claude-3-haiku-\d{8}$/
   // claude-3-haiku-20240307
 ];
+function isRecognizedModel(model) {
+  return VALID_MODEL_PATTERNS.some((pattern) => pattern.test(model));
+}
+function requestPolicyFor(model) {
+  if (Object.hasOwn(MODEL_REQUEST_POLICIES, model)) {
+    return MODEL_REQUEST_POLICIES[model];
+  }
+  return isRecognizedModel(model) ? THINKING_DISABLED : API_DEFAULTS;
+}
+function modelRequestParams(model, operation) {
+  assertOperationClass(operation);
+  const policy = requestPolicyFor(model);
+  const params = {};
+  if (policy.thinking) {
+    params.thinking = { ...policy.thinking };
+  }
+  if (policy.effort) {
+    params.output_config = { effort: policy.effort[operation] };
+  }
+  return params;
+}
+function maxTokensFor(model, operation) {
+  assertOperationClass(operation);
+  return requestPolicyFor(model).alwaysThinks ? ALWAYS_THINKING_MAX_TOKENS[operation] : MAX_TOKENS[operation];
+}
+function assertOperationClass(operation) {
+  if (!Object.hasOwn(MAX_TOKENS, operation)) {
+    throw new Error(`Unknown operation class '${operation}' (expected ${Object.keys(MAX_TOKENS).join(" | ")})`);
+  }
+}
+var TruncatedResponseError = class extends Error {
+  constructor(maxTokens, operation) {
+    super(`${operation ? `${operation}: ` : ""}Response truncated at max_tokens=${maxTokens}; refusing to interpret incomplete output`);
+    this.name = "TruncatedResponseError";
+  }
+};
+var ModelRefusalError = class extends Error {
+  operation;
+  category;
+  explanation;
+  partialChars;
+  constructor(operation, category, explanation, partialChars) {
+    super(`${operation}: model refusal (stop_reason=refusal, category=${category ?? "none"}) \u2014 the model declined the request; its output was discarded${partialChars ? ` (${partialChars} chars of partial output)` : ""}${explanation ? `: ${explanation.slice(0, 200)}` : ""}`);
+    this.name = "ModelRefusalError";
+    this.operation = operation;
+    this.category = category;
+    this.explanation = explanation;
+    this.partialChars = partialChars;
+  }
+};
+var UnexpectedStopReasonError = class extends Error {
+  operation;
+  stopReason;
+  constructor(operation, stopReason) {
+    super(`${operation}: unexpected stop_reason=${stopReason ?? "null"}; refusing to interpret the response`);
+    this.name = "UnexpectedStopReasonError";
+    this.operation = operation;
+    this.stopReason = stopReason;
+  }
+};
+function extractResponseText(message) {
+  return message.content.filter((block) => block.type === "text").map((block) => block.text).join("");
+}
+function assertCompleteResponse(message, operation, maxTokens) {
+  switch (message.stop_reason) {
+    case "end_turn":
+      return;
+    case "max_tokens":
+      throw new TruncatedResponseError(maxTokens, operation);
+    case "refusal":
+      throw new ModelRefusalError(operation, message.stop_details?.category ?? null, message.stop_details?.explanation ?? null, extractResponseText(message).length);
+    default:
+      throw new UnexpectedStopReasonError(operation, message.stop_reason ?? null);
+  }
+}
 function emptyApiUsage() {
   return {
     inputTokens: 0,
@@ -48083,12 +48198,12 @@ function estimateOutputTokens(sourceLength, targetLanguage) {
 }
 function checkDocumentSize(sourceLength, targetLanguage) {
   const estimated = estimateOutputTokens(sourceLength, targetLanguage);
-  const API_MAX_TOKENS = MAX_TOKENS.fullDocument;
-  if (estimated > API_MAX_TOKENS) {
-    return `Document too large: estimated ${estimated} tokens exceeds API maximum of ${API_MAX_TOKENS} tokens. This document needs section-by-section translation rather than bulk translation.`;
+  const OUTPUT_BUDGET_TOKENS = MAX_TOKENS.fullDocument;
+  if (estimated > OUTPUT_BUDGET_TOKENS) {
+    return `Document too large: estimated ${estimated} tokens exceeds the output budget of ${OUTPUT_BUDGET_TOKENS} tokens. This document needs section-by-section translation rather than bulk translation.`;
   }
   if (process.env.TRANSLATE_DEBUG) {
-    console.log(`Pre-flight check: source=${sourceLength} chars, estimated output=${estimated} tokens, using max_tokens=${API_MAX_TOKENS}`);
+    console.log(`Pre-flight check: source=${sourceLength} chars, estimated output=${estimated} tokens, output budget=${OUTPUT_BUDGET_TOKENS}`);
   }
   return null;
 }
@@ -48146,6 +48261,11 @@ var TranslationService = class {
   /**
    * Call Claude API with retry logic and exponential backoff.
    *
+   * The request carries the model's thinking / effort fields for the operation
+   * class (`modelRequestParams`), and only a response that ended naturally is
+   * returned: a max_tokens stop, a refusal or any other stop reason throws a
+   * typed error once the attempt's usage has been counted.
+   *
    * Retries on transient errors:
    * - RateLimitError (429)
    * - APIConnectionError (network issues)
@@ -48155,22 +48275,22 @@ var TranslationService = class {
    * Does NOT retry on:
    * - AuthenticationError (invalid API key)
    * - BadRequestError (prompt issues)
+   * - TruncatedResponseError, ModelRefusalError, UnexpectedStopReasonError
+   *   (a rerun at the same cap cannot fit; a refusal is not transient)
    * - Other non-transient errors
    */
-  async callWithRetry(createParams, operationName) {
+  async callWithRetry(createParams, operationName, operationClass) {
     const { maxRetries, baseDelayMs } = RETRY_CONFIG;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const stream2 = this.client.messages.stream({
           ...createParams,
-          thinking: DEFAULT_THINKING
+          ...modelRequestParams(createParams.model, operationClass)
         });
         const message = await stream2.finalMessage();
         addUsage(this.usage, message.usage);
         this.log(`${operationName}: tokens in=${message.usage.input_tokens} out=${message.usage.output_tokens} cacheRead=${message.usage.cache_read_input_tokens ?? 0} cacheWrite=${message.usage.cache_creation_input_tokens ?? 0}`);
-        if (message.stop_reason === "max_tokens") {
-          throw new Error(`${operationName}: response truncated at max_tokens=${createParams.max_tokens}; refusing to use incomplete output`);
-        }
+        assertCompleteResponse(message, operationName, createParams.max_tokens);
         return message;
       } catch (error4) {
         if (error4 instanceof AuthenticationError || error4 instanceof BadRequestError) {
@@ -48287,20 +48407,20 @@ Provide ONLY the updated ${targetLanguage} translation. Do not include any marke
     this.log(`Current ${targetLanguage} length: ${currentTranslation.length}`);
     const response = await this.callWithRetry({
       model: this.model,
-      max_tokens: MAX_TOKENS.section,
+      max_tokens: maxTokensFor(this.model, "section"),
       messages: this.cachedPromptMessages(stablePrefix, volatileSuffix)
-    }, "translateSectionUpdate");
-    const content = response.content[0];
-    if (!content || content.type !== "text") {
+    }, "translateSectionUpdate", "section");
+    const text = extractResponseText(response).trim();
+    if (!text) {
       return {
         success: false,
-        error: "Unexpected response format from Claude"
+        error: "translateSectionUpdate: response contained no text"
       };
     }
-    this.log(`Translated section length: ${content.text.length}`);
+    this.log(`Translated section length: ${text.length}`);
     return {
       success: true,
-      translatedSection: content.text.trim(),
+      translatedSection: text,
       tokensUsed: response.usage.input_tokens + response.usage.output_tokens
     };
   }
@@ -48358,20 +48478,20 @@ Provide ONLY the resynced ${targetLanguage} translation. Preserve the existing t
     this.log(`Existing ${targetLanguage} length: ${currentTranslation.length}`);
     const response = await this.callWithRetry({
       model: this.model,
-      max_tokens: MAX_TOKENS.section,
+      max_tokens: maxTokensFor(this.model, "section"),
       messages: this.cachedPromptMessages(stablePrefix, volatileSuffix)
-    }, "translateSectionResync");
-    const content = response.content[0];
-    if (!content || content.type !== "text") {
+    }, "translateSectionResync", "section");
+    const text = extractResponseText(response).trim();
+    if (!text) {
       return {
         success: false,
-        error: "Unexpected response format from Claude"
+        error: "translateSectionResync: response contained no text"
       };
     }
-    this.log(`Resynced section length: ${content.text.length}`);
+    this.log(`Resynced section length: ${text.length}`);
     return {
       success: true,
-      translatedSection: content.text.trim(),
+      translatedSection: text,
       tokensUsed: response.usage.input_tokens + response.usage.output_tokens
     };
   }
@@ -48419,20 +48539,20 @@ Provide ONLY the ${targetLanguage} translation. Do not include any markers, expl
     this.log(`${sourceLanguage} section length: ${englishSection.length}`);
     const response = await this.callWithRetry({
       model: this.model,
-      max_tokens: MAX_TOKENS.section,
+      max_tokens: maxTokensFor(this.model, "section"),
       messages: this.cachedPromptMessages(stablePrefix, volatileSuffix)
-    }, "translateNewSection");
-    const content = response.content[0];
-    if (!content || content.type !== "text") {
+    }, "translateNewSection", "section");
+    const text = extractResponseText(response).trim();
+    if (!text) {
       return {
         success: false,
-        error: "Unexpected response format from Claude"
+        error: "translateNewSection: response contained no text"
       };
     }
-    this.log(`Translated section length: ${content.text.length}`);
+    this.log(`Translated section length: ${text.length}`);
     return {
       success: true,
-      translatedSection: content.text.trim(),
+      translatedSection: text,
       tokensUsed: response.usage.input_tokens + response.usage.output_tokens
     };
   }
@@ -48480,22 +48600,21 @@ Provide the complete translated document maintaining exact MyST structure.`;
     if (sizeError) {
       throw new Error(sizeError);
     }
-    const maxTokens = MAX_TOKENS.fullDocument;
+    const maxTokens = maxTokensFor(this.model, "fullDocument");
     this.log(`Translating full document`);
     this.log(`Content length: ${content.length} chars`);
     const response = await this.callWithRetry({
       model: this.model,
       max_tokens: maxTokens,
       messages: this.cachedPromptMessages(stablePrefix, volatileSuffix)
-    }, "translateFullDocument");
-    const result = response.content[0];
-    if (!result || result.type !== "text") {
+    }, "translateFullDocument", "fullDocument");
+    const translatedText = extractResponseText(response).trim();
+    if (!translatedText) {
       return {
         success: false,
-        error: "Unexpected response format from Claude"
+        error: "translateFullDocument: response contained no text"
       };
     }
-    const translatedText = result.text.trim();
     if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
       return {
         success: false,
@@ -48582,7 +48701,7 @@ ${targetContent}`;
     if (sizeError) {
       throw new Error(sizeError);
     }
-    const maxTokens = MAX_TOKENS.fullDocument;
+    const maxTokens = maxTokensFor(this.model, "fullDocument");
     this.log(`Resyncing full document`);
     this.log(`Source length: ${sourceContent.length} chars`);
     this.log(`Target length: ${targetContent.length} chars`);
@@ -48591,15 +48710,14 @@ ${targetContent}`;
         model: this.model,
         max_tokens: maxTokens,
         messages: this.cachedPromptMessages(stablePrefix, volatileSuffix)
-      }, "translateDocumentResync");
-      const result = response.content[0];
-      if (!result || result.type !== "text") {
+      }, "translateDocumentResync", "fullDocument");
+      const translatedText = extractResponseText(response).trim();
+      if (!translatedText) {
         return {
           success: false,
-          error: "Unexpected response format from Claude"
+          error: "translateDocumentResync: response contained no text"
         };
       }
-      const translatedText = result.text.trim();
       if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
         return {
           success: false,
@@ -54869,19 +54987,17 @@ var TranslationReviewer = class {
         const stream2 = this.anthropic.messages.stream({
           model: this.model,
           max_tokens: maxTokens,
-          thinking: DEFAULT_THINKING,
+          ...modelRequestParams(this.model, "review"),
           messages: [{ role: "user", content: prompt }]
         });
         const response = await stream2.finalMessage();
         addUsage(this.usage, response.usage);
-        if (response.stop_reason === "max_tokens") {
-          throw new Error(`${operationName}: response truncated at max_tokens=${maxTokens}; verdict JSON is incomplete`);
+        assertCompleteResponse(response, operationName, maxTokens);
+        const text = extractResponseText(response);
+        if (!text.trim()) {
+          throw new Error(`${operationName}: response contained no text`);
         }
-        const content = response.content[0];
-        if (!content || content.type !== "text") {
-          throw new Error(`Unexpected response from Claude: ${content ? content.type : `empty content (stop_reason: ${response.stop_reason})`}`);
-        }
-        return parseJsonResponse(content.text);
+        return parseJsonResponse(text);
       } catch (error4) {
         if (error4 instanceof AuthenticationError || error4 instanceof BadRequestError) {
           throw error4;
@@ -55596,11 +55712,12 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
 - Do NOT invent findings just to fill the array - quality over quantity
 
 **CRITICAL**: Findings MUST relate ONLY to the sections that were changed in this PR. Do not report findings for unchanged parts of the document.`;
-    let result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateTranslation");
+    const maxTokens = maxTokensFor(this.model, "review");
+    let result = await this.callWithRetry(prompt, maxTokens, "evaluateTranslation");
     let check = validateCriterionScores(result);
     if (!check.valid) {
       core6.warning(`evaluateTranslation: response missing numeric criteria [${check.missing.join(", ")}] \u2014 retrying`);
-      result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateTranslation");
+      result = await this.callWithRetry(prompt, maxTokens, "evaluateTranslation");
       check = validateCriterionScores(result);
       if (!check.valid) {
         throw new Error(`evaluateTranslation: response still missing numeric criterion scores [${check.missing.join(", ")}] after retry \u2014 refusing to compute a verdict from an incomplete review`);
@@ -55709,7 +55826,8 @@ Respond with ONLY valid JSON:
   "positionDetails": "Brief explanation of position check",
   "structureDetails": "Brief explanation of structure check"
 }`;
-    const result = await this.callWithRetry(prompt, MAX_TOKENS.review, "evaluateDiff");
+    const maxTokens = maxTokensFor(this.model, "review");
+    const result = await this.callWithRetry(prompt, maxTokens, "evaluateDiff");
     const isTrue = (v) => v === true;
     const scopeCorrect = isTrue(result.scopeCorrect);
     const positionCorrect = isTrue(result.positionCorrect);
