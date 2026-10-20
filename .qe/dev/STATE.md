@@ -37,8 +37,9 @@ Roadmap detail lives in the project trackers (reading order in
   only 4/12 avoid « Votre (première) tâche » (« Votre première tâche consiste à… » in 6/12).
   One phrase to add, then re-measure `python_by_example` and run the blind pairwise judge; the
   result goes on #327.
-- **ml calibration: round 5 (`pandas`) is applied and merged (2026-10-19); the round-5
-  repairs PR is open; round 6 waits on it and on the editor's ml#57 answers.**
+- **ml calibration: round 5 (`pandas`) is merged and its repairs shipped in v0.29.5
+  (2026-10-19); round 6 (`intro`, lecture-python-programming.ml#58) is with the editor; his
+  ml#57 answers (2026-10-20) are encoded in code on `ml/ml57-answers`.**
   - **Round 4.** The editor's 73 suggestions on `numpy` (lecture-python-programming.ml#23:
     touch rate 67% → 51%, lines accepted 22 → 70) are applied and merged as `7e373de`.
     His questions are on ml#25; ml#14 (exercise blocks restored) is still open.
@@ -77,20 +78,25 @@ Roadmap detail lives in the project trackers (reading order in
     to the lint, and ships glossary v0.8.0 (pins *efficient*, *convenient*, *satisfy*,
     *compare*, *success*; *work* unpinned). Fixed point on the merged `numpy`, `matplotlib`
     and `pandas`; 31 fixture tests.
+  - **ml#57's answers (2026-10-20), encoded in code.** Q1: short label bullets stay English as
+    a general rule — `is_label_list` and a sixth `ml_repair` repair, source-gated (decision
+    record `D-2026-10-21-ml-short-label-bullets-stay-english`). Q2: always a comma on
+    case-marked `-ഉം` pairs — the `-ഉം` repair widened. Fixed point on the reviewed pages
+    except `numpy` 840/902 (edition fix lecture-python-programming.ml#59) and `functions`
+    279–280 (round 2 predates the ruling; left as approved); 40 fixture tests.
   - **Open, in order:**
-    1. Merge the round-5 repairs PR.
-    2. ml#57's answers: Q1 (gerund bullets to English — a scope rule and a verbatim check if
-       "a rule") and Q2 (case-marked `-ഉം` commas into `add_um_commas`, plus a `numpy` 902
-       follow-up PR if "always").
-    3. Prompt edits held for a re-drawing release, measured at ≥ 12 draws per arm: *now* by
-       sense mid-sentence (ml#25 Q3; 3 round-5 flags), rule 8's list (*In essence*, *In
-       practice*), and the rule-2 arm. The round-4 lexical repairs (*see* → `നോക്കുക`,
-       adverbial *element-wise*, standalone `മുൻ`) and the bracketed-paragraph stop are still
-       open and had no site in `pandas`.
-    4. Round 6 at the next release, drafted with these repairs and glossary v0.8.0, the
-       over-translation lint as a best-of-N key.
+    1. Merge the ml#57 PR.
+    2. Prompt edits held for a re-drawing release, measured at ≥ 12 draws per arm: rule 12's
+       bullet clause narrowed to bullets outside a label list, with the label lists and the
+       short `{note}` lead-in (*For the `.apply()` method:*) kept English (ml#57 Q1; also tells
+       the review judge); *now* by sense mid-sentence (ml#25 Q3; 3 round-5 flags); rule 8's
+       list (*In essence*, *In practice*); and the rule-2 arm. The round-4 lexical repairs
+       (*see* → `നോക്കുക`, adverbial *element-wise*, standalone `മുൻ`) and the
+       bracketed-paragraph stop are still open and had no site in `pandas`.
+    3. Round 7 at the release that carries them, after the round-6 review.
 
-    Logs: `2026-09-28-ml-round4`, `2026-10-19-ml-round5`. Opus 5.5 is scoped separately as **#334**.
+    Logs: `2026-09-28-ml-round4`, `2026-10-19-ml-round5`, `2026-10-21-ml57-answers`. Opus 5.5
+    is scoped separately as **#334**.
 - **Tracker #257 is parked** (2026-10-04, @mmcky: relevant, not urgent). It resumes when a
   release is assigned to W1, and its next planning session re-cuts it to W1 alone; the notes for
   that re-cut are in the 2026-10-06 comment on #259. The text below is as of 2026-09-23.
