@@ -39,7 +39,8 @@ Roadmap detail lives in the project trackers (reading order in
   result goes on #327.
 - **ml calibration: round 5 (`pandas`) is merged and its repairs shipped in v0.29.5
   (2026-10-19); round 6 (`intro`, lecture-python-programming.ml#58) is with the editor; his
-  ml#57 answers (2026-10-20) are encoded in code on `ml/ml57-answers`.**
+  ml#57 answers (2026-10-20) are encoded in code (#403, merged 2026-10-20 as `888cdb7`); the
+  held rule edits are #404.**
   - **Round 4.** The editor's 73 suggestions on `numpy` (lecture-python-programming.ml#23:
     touch rate 67% → 51%, lines accepted 22 → 70) are applied and merged as `7e373de`.
     His questions are on ml#25; ml#14 (exercise blocks restored) is still open.
@@ -85,8 +86,9 @@ Roadmap detail lives in the project trackers (reading order in
     except `numpy` 840/902 (edition fix lecture-python-programming.ml#59) and `functions`
     279–280 (round 2 predates the ruling; left as approved); 40 fixture tests.
   - **Open, in order:**
-    1. Merge the ml#57 PR.
-    2. Prompt edits held for a re-drawing release, measured at ≥ 12 draws per arm: rule 12's
+    1. ~~Merge the ml#57 PR~~ (#403, merged 2026-10-20).
+    2. Prompt edits held for a re-drawing release, measured at ≥ 12 draws per arm (#404, with
+       its handover `log/2026-10-21-ml-held-rule-edits-handover.md`): rule 12's
        bullet clause narrowed to bullets outside a label list, with the label lists and the
        short `{note}` lead-in (*For the `.apply()` method:*) kept English (ml#57 Q1; also tells
        the review judge); *now* by sense mid-sentence (ml#25 Q3; 3 round-5 flags); rule 8's
