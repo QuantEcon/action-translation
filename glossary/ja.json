@@ -1,6 +1,6 @@
 {
-  "version": "1.1",
-  "description": "Translation glossary for QuantEcon lectures (English to Japanese). Terminology policy from the native-speaker review of the 1.0 draft on PR #69 (2026-07-29 → 2026-08-18): use the Japanese term where a well-known, standard Japanese counterpart exists (予算制約, 行列, 均衡, 世代重複モデル); otherwise keep the English term in Latin script — if in doubt, keep English (Japanese readers of economics are comfortable with English technical words inside Japanese sentences). Where only the generic head noun has a Japanese equivalent, the proper-name part stays English (lake モデル, cost-to-go 関数). All personal names stay in Latin script — no katakana transliteration and no guessed kanji, for Japanese and Chinese researchers too (ja == en on every name entry). Compound names are joined with ・ (ソロー・スワン, コブ・ダグラス), never ＝. Abbreviations expand to the full Japanese term with the English abbreviation in full-width parentheses (国内総生産（GDP）). Named surveys and databases keep their English name (FRED, Survey of Consumer Finances). Reviewed by Chihiro2000GitHub (native speaker, whole-glossary pass), sayaikegawa and xuanguang-li; policy rulings by jstac. Decision record: .dev/decisions/D-2026-09-01-ja-terminology-policy.md.",
+  "version": "1.2",
+  "description": "Translation glossary for QuantEcon lectures (English to Japanese). Terminology policy from the glossary review on PR #69 (2026-07-29 → 2026-09-21) and the rulings on #337 (2026-10-02 and 2026-10-22): use the Japanese term where a well-known, standard Japanese counterpart exists (予算制約, 行列, 均衡, 世代重複モデル); otherwise keep the English term in Latin script — if in doubt, keep English (Japanese readers of economics are comfortable with English technical words inside Japanese sentences). Where only the generic head noun has a Japanese equivalent, the proper-name part stays English (lake モデル, cost-to-go 関数). All personal names stay in Latin script — no katakana transliteration and no guessed kanji, for Japanese and Chinese researchers too (ja == en on every name entry). Compound names are joined with ・ (ソロー・スワン, コブ・ダグラス), never ＝. Abbreviations expand to the full Japanese term with the English abbreviation in full-width parentheses (国内総生産（GDP）). Named surveys and databases keep their English name unless this glossary gives a Japanese one (Survey of Consumer Finances（SCF）, but 連邦準備制度経済データ（FRED）); FRED and NBER on their own stay bare. A half-width space separates Japanese from a Latin word (AR(1) 過程). A katakana gloss is kept where the katakana word is familiar to economics or statistics readers (通貨発行益（シニョリッジ）) and dropped otherwise (年金). Reviewed on #69 by Chihiro2000GitHub (native speaker, whole-glossary pass), sayaikegawa and xuanguang-li, with policy rulings by jstac; v1.2 applies the rulings on #337. Decision records: .qe/dev/decisions/D-2026-09-01-ja-terminology-policy.md and .qe/dev/decisions/D-2026-10-22-ja-house-style.md.",
   "terms": [
     {
       "en": "Accessible state",
@@ -49,7 +49,7 @@
     },
     {
       "en": "AR(1) processes",
-      "ja": "AR(1)過程",
+      "ja": "AR(1) 過程",
       "context": "time series"
     },
     {
@@ -69,7 +69,7 @@
     },
     {
       "en": "Authority centrality",
-      "ja": "Authority centrality",
+      "ja": "オーソリティ中心性",
       "context": "network science"
     },
     {
@@ -554,7 +554,7 @@
     },
     {
       "en": "Federal Reserve Economic Data",
-      "ja": "連邦準備経済データ（FRED）",
+      "ja": "連邦準備制度経済データ（FRED）",
       "context": "data source"
     },
     {
@@ -869,7 +869,7 @@
     },
     {
       "en": "Marginal product of capital",
-      "ja": "資本の限界生産物",
+      "ja": "資本の限界生産力",
       "context": "economics"
     },
     {
@@ -1434,7 +1434,7 @@
     },
     {
       "en": "Survey of Consumer Finances",
-      "ja": "Survey of Consumer Finances",
+      "ja": "Survey of Consumer Finances（SCF）",
       "context": "data source"
     },
     {

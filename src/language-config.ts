@@ -172,19 +172,23 @@ export const LANGUAGE_CONFIGS: Record<string, LanguageConfig> = {
   ja: {
     code: 'ja',
     name: 'Japanese',
-    // Terminology policy from the native-speaker review of the glossary draft on
-    // PR #69 (2026-07-29 → 2026-08-18): whole-glossary pass by Chihiro2000GitHub
-    // (native speaker), confirmations by sayaikegawa and xuanguang-li, policy
-    // rulings by jstac. Recorded in
-    // .dev/decisions/D-2026-09-01-ja-terminology-policy.md.
+    // Terminology policy from the glossary review on PR #69 (2026-07-29 →
+    // 2026-09-21): whole-glossary pass by Chihiro2000GitHub (native speaker),
+    // confirmations by sayaikegawa and xuanguang-li, policy rulings by jstac.
+    // House style (rules 8 and 9, and the amended rules 1, 2 and 7) ruled on
+    // #337 (2026-10-02 and 2026-10-22). Recorded in
+    // .qe/dev/decisions/D-2026-09-01-ja-terminology-policy.md and
+    // .qe/dev/decisions/D-2026-10-22-ja-house-style.md.
     additionalRules: [
-      'Use proper full-width Japanese punctuation marks (、。「」) not ASCII punctuation (,.) in prose text',
-      'Always insert a space between Japanese characters and inline MyST directives ({doc}, {ref}, {any}, {term}, etc.) or Markdown links ([text](url))',
+      'Use full-width Japanese punctuation (、。「」) in prose, never ASCII punctuation (,.) and never ，． (まず、配列を作る。)',
+      'Always insert a half-width space between Japanese characters and Latin words, inline code, inline MyST directives ({doc}, {ref}, {any}, {term}, etc.) or Markdown links ([text](url)): NumPy の配列, `x` の値, AR(1) 過程',
       'Use the Japanese term only where a well-known, standard Japanese counterpart exists (e.g. 予算制約 for budget constraint, 行列 for matrix, 均衡 for equilibrium, 世代重複モデル for the OLG model); otherwise keep the English term in Latin script — if in doubt, keep English. Japanese readers of economics are comfortable with English technical words inside Japanese sentences (value function, Bellman equation)',
       'Where only the generic head noun has a Japanese equivalent, keep the proper-name part in English and translate the head noun (lake モデル, cost-to-go 関数) — never invent a katakana rendering for a term that has no established Japanese form',
       'Keep ALL personal names in Latin script exactly as in the source (Robert Solow, not ロバート・ソロー) — do not transliterate names to katakana, and never guess kanji for Japanese or Chinese researchers',
       'Join the parts of a compound name with ・ (ソロー・スワン成長モデル, コブ・ダグラス型生産関数, ハミルトン・ヤコビ・ベルマン方程式), never with ＝',
-      'On first use, render an abbreviation as the full Japanese term with the English abbreviation in full-width parentheses (国内総生産（GDP）, 最小二乗法（OLS）), then the abbreviation alone; named datasets and surveys keep their English name (FRED, Survey of Consumer Finances)',
+      'On first use, render an abbreviation as the full Japanese term with the English abbreviation in full-width parentheses (国内総生産（GDP）, 最小二乗法（OLS）), then the abbreviation alone; named datasets and surveys keep their English name unless the glossary gives a Japanese one (Survey of Consumer Finances（SCF）, but 連邦準備制度経済データ（FRED）)',
+      'Write prose in the plain である style throughout (この関数はリストを返す。), never です・ます. Exercise instructions end in 〜なさい (リストの要素の和を返す関数を書きなさい。)',
+      'In prose, use full-width parentheses around Latin text, abbreviations and asides (国内総生産（GDP）, 名前空間（namespace）, （…）); parentheses in code, math and Markdown or MyST syntax stay as they are',
     ],
   },
   // Future language configurations can be added here:

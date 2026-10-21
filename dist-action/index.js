@@ -26839,19 +26839,23 @@ var LANGUAGE_CONFIGS = {
   ja: {
     code: "ja",
     name: "Japanese",
-    // Terminology policy from the native-speaker review of the glossary draft on
-    // PR #69 (2026-07-29 → 2026-08-18): whole-glossary pass by Chihiro2000GitHub
-    // (native speaker), confirmations by sayaikegawa and xuanguang-li, policy
-    // rulings by jstac. Recorded in
-    // .dev/decisions/D-2026-09-01-ja-terminology-policy.md.
+    // Terminology policy from the glossary review on PR #69 (2026-07-29 →
+    // 2026-09-21): whole-glossary pass by Chihiro2000GitHub (native speaker),
+    // confirmations by sayaikegawa and xuanguang-li, policy rulings by jstac.
+    // House style (rules 8 and 9, and the amended rules 1, 2 and 7) ruled on
+    // #337 (2026-10-02 and 2026-10-22). Recorded in
+    // .qe/dev/decisions/D-2026-09-01-ja-terminology-policy.md and
+    // .qe/dev/decisions/D-2026-10-22-ja-house-style.md.
     additionalRules: [
-      "Use proper full-width Japanese punctuation marks (\u3001\u3002\u300C\u300D) not ASCII punctuation (,.) in prose text",
-      "Always insert a space between Japanese characters and inline MyST directives ({doc}, {ref}, {any}, {term}, etc.) or Markdown links ([text](url))",
+      "Use full-width Japanese punctuation (\u3001\u3002\u300C\u300D) in prose, never ASCII punctuation (,.) and never \uFF0C\uFF0E (\u307E\u305A\u3001\u914D\u5217\u3092\u4F5C\u308B\u3002)",
+      "Always insert a half-width space between Japanese characters and Latin words, inline code, inline MyST directives ({doc}, {ref}, {any}, {term}, etc.) or Markdown links ([text](url)): NumPy \u306E\u914D\u5217, `x` \u306E\u5024, AR(1) \u904E\u7A0B",
       "Use the Japanese term only where a well-known, standard Japanese counterpart exists (e.g. \u4E88\u7B97\u5236\u7D04 for budget constraint, \u884C\u5217 for matrix, \u5747\u8861 for equilibrium, \u4E16\u4EE3\u91CD\u8907\u30E2\u30C7\u30EB for the OLG model); otherwise keep the English term in Latin script \u2014 if in doubt, keep English. Japanese readers of economics are comfortable with English technical words inside Japanese sentences (value function, Bellman equation)",
       "Where only the generic head noun has a Japanese equivalent, keep the proper-name part in English and translate the head noun (lake \u30E2\u30C7\u30EB, cost-to-go \u95A2\u6570) \u2014 never invent a katakana rendering for a term that has no established Japanese form",
       "Keep ALL personal names in Latin script exactly as in the source (Robert Solow, not \u30ED\u30D0\u30FC\u30C8\u30FB\u30BD\u30ED\u30FC) \u2014 do not transliterate names to katakana, and never guess kanji for Japanese or Chinese researchers",
       "Join the parts of a compound name with \u30FB (\u30BD\u30ED\u30FC\u30FB\u30B9\u30EF\u30F3\u6210\u9577\u30E2\u30C7\u30EB, \u30B3\u30D6\u30FB\u30C0\u30B0\u30E9\u30B9\u578B\u751F\u7523\u95A2\u6570, \u30CF\u30DF\u30EB\u30C8\u30F3\u30FB\u30E4\u30B3\u30D3\u30FB\u30D9\u30EB\u30DE\u30F3\u65B9\u7A0B\u5F0F), never with \uFF1D",
-      "On first use, render an abbreviation as the full Japanese term with the English abbreviation in full-width parentheses (\u56FD\u5185\u7DCF\u751F\u7523\uFF08GDP\uFF09, \u6700\u5C0F\u4E8C\u4E57\u6CD5\uFF08OLS\uFF09), then the abbreviation alone; named datasets and surveys keep their English name (FRED, Survey of Consumer Finances)"
+      "On first use, render an abbreviation as the full Japanese term with the English abbreviation in full-width parentheses (\u56FD\u5185\u7DCF\u751F\u7523\uFF08GDP\uFF09, \u6700\u5C0F\u4E8C\u4E57\u6CD5\uFF08OLS\uFF09), then the abbreviation alone; named datasets and surveys keep their English name unless the glossary gives a Japanese one (Survey of Consumer Finances\uFF08SCF\uFF09, but \u9023\u90A6\u6E96\u5099\u5236\u5EA6\u7D4C\u6E08\u30C7\u30FC\u30BF\uFF08FRED\uFF09)",
+      "Write prose in the plain \u3067\u3042\u308B style throughout (\u3053\u306E\u95A2\u6570\u306F\u30EA\u30B9\u30C8\u3092\u8FD4\u3059\u3002), never \u3067\u3059\u30FB\u307E\u3059. Exercise instructions end in \u301C\u306A\u3055\u3044 (\u30EA\u30B9\u30C8\u306E\u8981\u7D20\u306E\u548C\u3092\u8FD4\u3059\u95A2\u6570\u3092\u66F8\u304D\u306A\u3055\u3044\u3002)",
+      "In prose, use full-width parentheses around Latin text, abbreviations and asides (\u56FD\u5185\u7DCF\u751F\u7523\uFF08GDP\uFF09, \u540D\u524D\u7A7A\u9593\uFF08namespace\uFF09, \uFF08\u2026\uFF09); parentheses in code, math and Markdown or MyST syntax stay as they are"
     ]
   }
   // Future language configurations can be added here:

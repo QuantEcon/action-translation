@@ -14,7 +14,7 @@ glossary/
 └── fr.json            # French glossary
 ```
 
-Planned languages (`ja`, `es`, `zh-tw`) are listed under
+Planned languages (`es`, `zh-tw`) are listed under
 [File Naming Convention](#file-naming-convention) below.
 
 ## File Naming Convention
@@ -89,22 +89,26 @@ recommended before promoting to ✅ Complete.
 
 ### Japanese (`ja.json`)
 
-**Status**: ✅ Complete (357 terms, v1.1)
+**Status**: ✅ Complete (357 terms, v1.2)
 
 **Contents**: Mirrors the English term set of the `zh-cn` / `fa` glossaries
 (economics, macro/micro, finance, linear algebra, probability/statistics, time
 series, network science, economist and mathematician names).
 
-**Notes**: Machine-drafted as v1.0, then reviewed term-by-term by native speakers
-on PR #69 (July–August 2026: Chihiro2000GitHub, sayaikegawa, xuanguang-li; policy
-rulings by jstac). v1.1 applies that review under one rule — *Japanese where a
+**Notes**: Machine-drafted as v1.0, then reviewed term by term on PR #69
+(July–September 2026: Chihiro2000GitHub, sayaikegawa, xuanguang-li; policy rulings
+by jstac). v1.1 applies that review under one rule — *Japanese where a
 well-known, standard Japanese counterpart exists, English otherwise; if in doubt,
 English*: all personal names stay in Latin script (no katakana, no guessed kanji);
 terms with no established Japanese form stay in English (`Forcing variable`,
-`Survey of Consumer Finances`) or keep the proper-name part English (`lake モデル`,
+`Survey of Consumer Finances（SCF）`) or keep the proper-name part English (`lake モデル`,
 `cost-to-go 関数`); compound names use ・ (コブ・ダグラス), never ＝; abbreviations
 expand with the English acronym in full-width parentheses (国内総生産（GDP）).
-Decision record `.dev/decisions/D-2026-09-01-ja-terminology-policy.md`.
+v1.2 (October 2026) applies the rulings on #337: オーソリティ中心性, 資本の限界生産力,
+連邦準備制度経済データ（FRED）, `Survey of Consumer Finances（SCF）`, and a half-width
+space between Japanese and a Latin word (AR(1) 過程). Decision records
+`.qe/dev/decisions/D-2026-09-01-ja-terminology-policy.md` and
+`.qe/dev/decisions/D-2026-10-22-ja-house-style.md`.
 
 **Maintained by**: QuantEcon team
 

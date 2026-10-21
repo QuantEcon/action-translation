@@ -5,7 +5,7 @@ subtitle: Extend action-translation to support an additional target language
 
 # Tutorial: Adding a New Language
 
-This tutorial walks through adding support for a new target language — for example, adding Japanese (`ja`) to a project that already has Chinese (`zh-cn`). By the end, you'll have:
+This tutorial walks through adding support for a new target language — for example, adding Japanese (`ja`) to a project that already has Chinese (`zh-cn`). Japanese is now configured (#69), so its real entry in `src/language-config.ts` and its glossary, `glossary/ja.json`, show where this walkthrough ends up. By the end, you'll have:
 
 - A language configuration with language-specific translation rules
 - A glossary for consistent technical terminology
@@ -94,7 +94,7 @@ The existing glossaries have 357 terms organized across:
 You don't need all 357 terms from day one. Start with the most important terms and expand over time.
 
 :::{tip}
-For economist names, use the standard transliteration in the target language's academic community. These vary significantly across languages.
+Settle how personal names are written with the language's reviewers before you draft the names section, because practice varies by language. The Japanese edition keeps every name in Latin script exactly as in the English (Robert Solow, not ロバート・ソロー), while the Chinese glossary uses established Chinese renderings.
 :::
 
 ---
@@ -123,11 +123,11 @@ ja: {
   code: 'ja',
   name: 'Japanese',
   additionalRules: [
-    'Use Japanese punctuation: 、(読点) for commas, 。(句点) for periods.',
-    'Use full-width parentheses（）and brackets【】for Japanese text.',
-    'Keep mathematical notation and code in half-width ASCII characters.',
-    'Use です/ます (polite) form for explanatory text, である form for formal definitions.',
-    'Translate technical terms using standard Japanese academic conventions.',
+    'Use full-width Japanese punctuation (、。「」) in prose, never ASCII punctuation (,.) and never ，．',
+    'Always insert a half-width space between Japanese characters and Latin words or inline code: NumPy の配列, `x` の値',
+    'Use the Japanese term only where a well-known, standard Japanese counterpart exists; otherwise keep the English term in Latin script — if in doubt, keep English',
+    'Write prose in the plain である style throughout, never です・ます. Exercise instructions end in 〜なさい',
+    // …and five more: see the real entry in src/language-config.ts
   ],
 },
 ```

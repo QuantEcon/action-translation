@@ -13,14 +13,14 @@ The glossary system ensures consistent translation of technical terminology acro
 | Chinese (Simplified) | `glossary/zh-cn.json` | 357 | October 2025 |
 | Farsi | `glossary/fa.json` | 357 | December 2025 |
 | French | `glossary/fr.json` | 369 | September 2026 |
-| Malayalam | `glossary/ml.json` | 87 | September 2026 (v0.7.0) |
-| Japanese | `glossary/ja.json` | 357 | September 2026 (v1.1) |
+| Malayalam | `glossary/ml.json` | 93 | October 2026 (v0.8.0) |
+| Japanese | `glossary/ja.json` | 357 | October 2026 (v1.2) |
 
 These glossaries ship in the action repository (resolved from the checked-out repo at runtime — they are not baked into the bundle) and load automatically when the `target-language` matches. No configuration needed.
 
 > The French glossary began as a machine-drafted economics glossary; native-speaker review is incorporated incrementally — programming-domain terms were reviewed in #78 and extended from the first native-editor lecture reviews (lecture-python-programming.fr #24/#25, August 2026).
 
-> The Japanese glossary was machine-drafted (v1.0) and then reviewed term-by-term by native speakers on PR #69 (July–August 2026). v1.1 applies that review: personal names stay in Latin script, terms with no established Japanese form stay in English (if in doubt, English), and compound names use ・. See [Language Configuration](language-config.md#japanese--ja) for the prompt rules that carry the same policy.
+> The Japanese glossary was machine-drafted (v1.0) and then reviewed term by term on PR #69 (July–September 2026). v1.1 applies that review, and v1.2 the rulings on #337 (October 2026): personal names stay in Latin script, terms with no established Japanese form stay in English (if in doubt, English), and compound names use ・. See [Language Configuration](language-config.md#japanese--ja) for the prompt rules that carry the same policy.
 
 ## How it works
 

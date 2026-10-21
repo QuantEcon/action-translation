@@ -68,14 +68,19 @@ describe('Language Configuration', () => {
       const config = getLanguageConfig('ja');
       expect(config.code).toBe('ja');
       expect(config.name).toBe('Japanese');
-      expect(config.additionalRules).toHaveLength(7);
+      expect(config.additionalRules).toHaveLength(9);
       expect(config.additionalRules[0]).toContain('full-width Japanese punctuation');
-      // The terminology policy from the PR #69 native-speaker review
-      expect(config.additionalRules.join('\n')).toContain('if in doubt, keep English');
-      expect(config.additionalRules.join('\n')).toContain(
-        'Keep ALL personal names in Latin script'
-      );
-      expect(config.additionalRules.join('\n')).toContain('never with ＝');
+      const rules = config.additionalRules.join('\n');
+      // The terminology policy from the PR #69 glossary review
+      expect(rules).toContain('if in doubt, keep English');
+      expect(rules).toContain('Keep ALL personal names in Latin script');
+      expect(rules).toContain('never with ＝');
+      // The house style ruled on #337 (2026-10-02 and 2026-10-22)
+      expect(rules).toContain('never ，．');
+      expect(rules).toContain('half-width space between Japanese characters and Latin words');
+      expect(rules).toContain('unless the glossary gives a Japanese one');
+      expect(config.additionalRules[7]).toContain('plain である style');
+      expect(config.additionalRules[8]).toContain('full-width parentheses around Latin text');
     });
 
     it('should return empty rules for unconfigured languages', () => {
@@ -218,6 +223,24 @@ describe('Language Configuration', () => {
     it('joins compound names with ・, never ＝', () => {
       for (const t of glossary.terms) {
         expect(t.ja).not.toContain('＝');
+      }
+    });
+
+    // #337 rulings (2026-10-02): T1–T4.
+    it('carries the #337 glossary rulings', () => {
+      const ja = (en: string) => glossary.terms.find((t) => t.en === en)?.ja;
+      expect(ja('Authority centrality')).toBe('オーソリティ中心性');
+      expect(ja('Marginal product of capital')).toBe('資本の限界生産力');
+      expect(ja('Federal Reserve Economic Data')).toBe('連邦準備制度経済データ（FRED）');
+      expect(ja('Survey of Consumer Finances')).toBe('Survey of Consumer Finances（SCF）');
+    });
+
+    // #337 H4: a half-width space between Japanese and a Latin word (AR(1) 過程).
+    it('separates Japanese from a Latin word with a space', () => {
+      const abutting =
+        /[A-Za-z0-9)][\u3040-\u30ff\u3400-\u9fff]|[\u3040-\u30ff\u3400-\u9fff][A-Za-z0-9(]/;
+      for (const t of glossary.terms) {
+        expect(t.ja).not.toMatch(abutting);
       }
     });
   });

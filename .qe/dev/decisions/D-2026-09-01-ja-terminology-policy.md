@@ -1,7 +1,9 @@
+> **Partly superseded 2026-10-22** by [D-2026-10-22-ja-house-style](D-2026-10-22-ja-house-style.md): its dataset clause now reads "…unless the glossary gives a Japanese one", and the edition's house style is added.
+
 # Japanese: standard term where one exists, English otherwise, if in doubt English
 
 **Context**: The Japanese glossary (PR #69) was machine-drafted in June 2026 and put to
-native-speaker review. Four reviewers converged between 2026-07-29 and 2026-08-18 — a
+review on the PR. Four reviewers converged between 2026-07-29 and 2026-08-18 — a
 whole-glossary pass by Chihiro2000GitHub (native speaker), confirmations by sayaikegawa
 and xuanguang-li, policy rulings by jstac. Their reasoning: Japanese undergraduates read
 Japanese sentences with English technical words comfortably (value function, Bellman

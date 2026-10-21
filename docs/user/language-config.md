@@ -14,7 +14,7 @@ Each target language can have specific translation rules that are automatically 
 | `fa` | Farsi (Persian) | ✅ Configured |
 | `fr` | French | ✅ Configured (draft glossary) |
 | `ml` | Malayalam | ✅ Configured (keep-English policy; glossary in review) |
-| `ja` | Japanese | ✅ Configured (glossary native-speaker reviewed, August 2026) |
+| `ja` | Japanese | ✅ Configured (glossary reviewed on #69, July–September 2026; house style ruled on #337, October 2026) |
 | `es` | Spanish | Planned |
 
 ## Current rules
@@ -42,15 +42,17 @@ The register and anti-calque rules encode the first native-editor review of mach
 
 ### Japanese — `ja`
 
-- Use proper full-width Japanese punctuation marks (、。「」) not ASCII punctuation (,.) in prose text
-- Insert a space between Japanese characters and inline MyST directives or Markdown links
+- Use full-width Japanese punctuation (、。「」) in prose, never ASCII punctuation (,.) and never ，．
+- Insert a half-width space between Japanese characters and Latin words, inline code, inline MyST directives or Markdown links (NumPy の配列, `x` の値, AR(1) 過程)
 - Use the Japanese term only where a well-known, standard Japanese counterpart exists (予算制約, 行列, 均衡, 世代重複モデル); otherwise keep the English term in Latin script — if in doubt, keep English
 - Where only the generic head noun has a Japanese equivalent, keep the proper-name part in English and translate the head noun (lake モデル, cost-to-go 関数); never invent a katakana rendering
 - Keep all personal names in Latin script (Robert Solow, not ロバート・ソロー) — no katakana transliteration, no guessed kanji
 - Join compound names with ・ (ソロー・スワン, コブ・ダグラス), never ＝
-- Render an abbreviation on first use as the full Japanese term with the English abbreviation in full-width parentheses (国内総生産（GDP）); named datasets and surveys keep their English name (FRED, Survey of Consumer Finances)
+- Render an abbreviation on first use as the full Japanese term with the English abbreviation in full-width parentheses (国内総生産（GDP）); named datasets and surveys keep their English name unless the glossary gives a Japanese one (Survey of Consumer Finances（SCF）, but 連邦準備制度経済データ（FRED）)
+- Write prose in the plain である style throughout (この関数はリストを返す。), never です・ます; exercise instructions end in 〜なさい
+- In prose, use full-width parentheses around Latin text, abbreviations and asides (名前空間（namespace）); parentheses in code, math and Markdown or MyST syntax stay as they are
 
-The terminology rules encode the native-speaker review of the glossary draft on PR #69 (July–August 2026): a whole-glossary pass by Chihiro2000GitHub with confirmations by sayaikegawa and xuanguang-li, and the policy rulings by jstac — Japanese where a standard term exists, English otherwise, if in doubt English. Decision record `D-2026-09-01-ja-terminology-policy`.
+The terminology rules encode the review of the glossary draft on PR #69 (July–September 2026): a whole-glossary pass by Chihiro2000GitHub with confirmations by sayaikegawa and xuanguang-li, and the policy rulings by jstac — Japanese where a standard term exists, English otherwise, if in doubt English. The house style — the register and parentheses rules, and the amended punctuation, spacing and dataset rules — follows the rulings on #337 (October 2026). Comments in code cells are translated into Japanese, and figure labels stay in English until Japanese font support lands (#260). Decision records `D-2026-09-01-ja-terminology-policy` and `D-2026-10-22-ja-house-style`.
 
 ## How rules are applied
 

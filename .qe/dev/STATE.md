@@ -150,12 +150,11 @@ Roadmap detail lives in the project trackers (reading order in
   source snapshot vs source `main` (English against English), and `mode: rebase` reads the same
   frozen snapshot.
   The bug stays open; W1's stale-resync box carries the guard.
-- **Glossary PR #69** (ja) — rebuilt on `main` 2026-09-01 with the thread's rulings applied
-  (`ja.json` v1.1, the `ja` entry in `LANGUAGE_CONFIGS`, decision record
-  `D-2026-09-01-ja-terminology-policy` on the branch; the Wikipedia cross-check idea is #300).
-  Two reviewers have since agreed three more edits (オーソリティ中心性, 資本の限界生産力,
-  連邦準備制度経済データ) and asked why `SCF` was left out (last reply 2026-09-21) — awaiting
-  the maintainer's reply; the branch is 21 behind `main` and conflicting.
+- **Glossary PR #69** (ja) — up to date with `main` on 2026-10-22 and carrying the #337
+  rulings (decided 2026-10-22): `ja.json` v1.2, nine `ja` rules, decision records
+  `D-2026-09-01-ja-terminology-policy` and `D-2026-10-22-ja-house-style`. Awaiting merge
+  (#338); the programming terms (#339) and the release (#340) follow, and merged is not
+  released. The Wikipedia cross-check idea is #300.
 
 ## Recently landed
 
