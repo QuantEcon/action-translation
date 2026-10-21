@@ -342,6 +342,43 @@ describe('Language Configuration', () => {
     });
   });
 
+  // Round 5 (lecture-python-programming.ml#26, pandas): his ml#25 answer 3 on
+  // "now", measured 2026-10-21 (arm 2026-10-21-held-rule-edits). The ml#57 Q1
+  // rule-12 edit measured with it raised parity refusals on functions and was
+  // withdrawn, so rule 12 must stay as it was. Rule 8 is edited in place, so
+  // the count stays 28.
+  describe('Malayalam round-5 rule 8 (ml#25 answer 3); rule 12 unchanged', () => {
+    const rules = getLanguageConfig('ml').additionalRules;
+    const register = rules.find((r) => r.startsWith('Write short sentences in a classroom'));
+    const formulas = rules.find((r) => r.startsWith('Render English discourse formulas'));
+
+    it('rule 12 keeps its bullet clause (the label-bullet edit was withdrawn)', () => {
+      expect(register).toBeDefined();
+      expect(register).toContain(
+        'when a bullet that is a bare noun-phrase fragment in English is translated, make it a full Malayalam sentence'
+      );
+      expect(register).not.toContain('copied byte-for-byte');
+    });
+
+    it('rule 8 takes "now" by the two senses the editor confirmed', () => {
+      expect(formulas).toBeDefined();
+      expect(formulas).toContain('"now" meaning "next, let\'s move on" → ഇനി');
+      expect(formulas).toContain('in the middle of one ("we can now plot …"');
+      expect(formulas).toContain('ഇപ്പോൾ only where "now" means "at this moment"');
+      // "at this point" also reads as "at this moment" (pandas 487, kept ഇപ്പോൾ)
+      expect(formulas).not.toContain('at this point');
+    });
+
+    it('rule 8 keeps "In essence" and "In practice" English', () => {
+      expect(formulas).toContain('"In essence, …", "In practice, …"');
+      expect(formulas).toContain('not Practice-ൽ or പ്രായോഗികമായി');
+    });
+
+    it('edits rule 8 in place — still 28', () => {
+      expect(rules).toHaveLength(28);
+    });
+  });
+
   describe('Malayalam round-2 rules (lecture-python-programming.ml#7)', () => {
     const rules = getLanguageConfig('ml').additionalRules.join('\n');
 
