@@ -101,7 +101,7 @@ by jstac). v1.1 applies that review under one rule — *Japanese where a
 well-known, standard Japanese counterpart exists, English otherwise; if in doubt,
 English*: all personal names stay in Latin script (no katakana, no guessed kanji);
 terms with no established Japanese form stay in English (`Forcing variable`,
-`Survey of Consumer Finances（SCF）`) or keep the proper-name part English (`lake モデル`,
+`Survey of Consumer Finances`) or keep the proper-name part English (`lake モデル`,
 `cost-to-go 関数`); compound names use ・ (コブ・ダグラス), never ＝; abbreviations
 expand with the English acronym in full-width parentheses (国内総生産（GDP）).
 v1.2 (October 2026) applies the rulings on #337: オーソリティ中心性, 資本の限界生産力,
@@ -112,7 +112,7 @@ space between Japanese and a Latin word (AR(1) 過程). Decision records
 
 **Maintained by**: QuantEcon team
 
-**Last updated**: September 2026
+**Last updated**: October 2026
 
 ### Spanish (`es.json`)
 
@@ -305,4 +305,4 @@ These glossaries are part of the Translation Sync Action and inherit its license
 ---
 
 **Maintained by**: QuantEcon Team  
-**Last updated**: June 9, 2026
+**Last updated**: October 22, 2026
