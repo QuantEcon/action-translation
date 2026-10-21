@@ -48,8 +48,11 @@ Roadmap detail lives in the project trackers (reading order in
   only 4/12 avoid « Votre (première) tâche » (« Votre première tâche consiste à… » in 6/12).
   One phrase to add, then re-measure `python_by_example` and run the blind pairwise judge; the
   result goes on #327.
-- **ml calibration: round 5 (`pandas`) is applied and merged (2026-10-19); the round-5
-  repairs PR is open; round 6 waits on it and on the editor's ml#57 answers.**
+- **ml calibration: round 5 (`pandas`) is merged and its repairs shipped in v0.29.5
+  (2026-10-19); round 6 (`intro`, lecture-python-programming.ml#58) is with the editor; his
+  ml#57 answers (2026-10-20) are encoded in code (#403, merged 2026-10-20 as `888cdb7`); of
+  the held rule edits, rule 8 passed its arm and merged as #404 (`88c132c`, shipped in v0.29.6),
+  and rule 12 was withdrawn.**
   - **Round 4.** The editor's 73 suggestions on `numpy` (lecture-python-programming.ml#23:
     touch rate 67% → 51%, lines accepted 22 → 70) are applied and merged as `7e373de`.
     His questions are on ml#25; ml#14 (exercise blocks restored) is still open.
@@ -88,20 +91,32 @@ Roadmap detail lives in the project trackers (reading order in
     to the lint, and ships glossary v0.8.0 (pins *efficient*, *convenient*, *satisfy*,
     *compare*, *success*; *work* unpinned). Fixed point on the merged `numpy`, `matplotlib`
     and `pandas`; 31 fixture tests.
+  - **ml#57's answers (2026-10-20), encoded in code.** Q1: short label bullets stay English as
+    a general rule — `is_label_list` and a sixth `ml_repair` repair, source-gated (decision
+    record `D-2026-10-21-ml-short-label-bullets-stay-english`). Q2: always a comma on
+    case-marked `-ഉം` pairs — the `-ഉം` repair widened. Fixed point on the reviewed pages
+    except `numpy` 840/902 (edition fix lecture-python-programming.ml#59) and `functions`
+    279–280 (round 2 predates the ruling; left as approved); 40 fixture tests.
   - **Open, in order:**
-    1. Merge the round-5 repairs PR.
-    2. ml#57's answers: Q1 (gerund bullets to English — a scope rule and a verbatim check if
-       "a rule") and Q2 (case-marked `-ഉം` commas into `add_um_commas`, plus a `numpy` 902
-       follow-up PR if "always").
-    3. Prompt edits held for a re-drawing release, measured at ≥ 12 draws per arm: *now* by
-       sense mid-sentence (ml#25 Q3; 3 round-5 flags), rule 8's list (*In essence*, *In
-       practice*), and the rule-2 arm. The round-4 lexical repairs (*see* → `നോക്കുക`,
-       adverbial *element-wise*, standalone `മുൻ`) and the bracketed-paragraph stop are still
-       open and had no site in `pandas`.
-    4. Round 6 at the next release, drafted with these repairs and glossary v0.8.0, the
-       over-translation lint as a best-of-N key.
+    1. ~~Merge the ml#57 PR~~ (#403, merged 2026-10-20).
+    2. Prompt edits held for a re-drawing release, measured 2026-10-21 (arm
+       `2026-10-21-held-rule-edits`; verdict in `log/2026-10-21-ml-held-rule-edits-handover.md`):
+       - **Rule 8 passed** and merged as #404 (`88c132c`): *now* by sense mid-sentence (ml#25 Q3;
+         3 round-5 flags) and its list (*In essence*, *In practice*).
+       - **Rule 12's label-bullet edit (ml#57 Q1) failed** and is withdrawn. On its own it
+         raised parity refusals on `functions` (1/49 → 7/31) and the bare-endings mode. It
+         waits on the editor's answer about lists that complete their lead-in's sentence (a
+         question drafted for the round-6 questions issue), and is then re-worded and
+         re-measured with `functions` at ≥ 24 draws per arm.
+       - The rule-2 arm is still to run. The round-4 lexical repairs (*see* → `നോക്കുക`,
+         adverbial *element-wise*, standalone `മുൻ`) and the bracketed-paragraph stop are
+         still open and had no site in `pandas`.
+    3. Round 7 at v0.29.6, the release that carries rule 8, after the round-6 review. Round 6
+       (`intro`, ml#58, seeded at v0.29.5) is not re-seeded (Matt, 2026-10-21): `intro.md` has
+       no rule-8 site.
 
-    Logs: `2026-09-28-ml-round4`, `2026-10-19-ml-round5`. Opus 5.5 is scoped separately as **#334**.
+    Logs: `2026-09-28-ml-round4`, `2026-10-19-ml-round5`, `2026-10-21-ml57-answers`. Opus 5.5
+    is scoped separately as **#334**.
 - **Tracker #257 is parked** (2026-10-04, @mmcky: relevant, not urgent). It resumes when a
   release is assigned to W1, and its next planning session re-cuts it to W1 alone; the notes for
   that re-cut are in the 2026-10-06 comment on #259. The text below is as of 2026-09-23.
@@ -155,14 +170,20 @@ Roadmap detail lives in the project trackers (reading order in
 
 ## Recently landed
 
+- **ml rule 8 takes *now* by sense (#404, `88c132c`, 2026-10-21)** — *now* meaning "next, let's
+  move on" → `ഇനി` mid-sentence too, `ഇപ്പോൾ` only for "at this moment"; *In essence* and
+  *In practice* kept English. Measured before merge (arm `2026-10-21-held-rule-edits`, 193 drafts):
+  targets moved, terminal punctuation and refusals held at 48 v 48 on `functions`. The rule-12
+  label-bullet edit measured with it was withdrawn. Shipped in v0.29.6. Log
+  `2026-10-21-ml-held-rule-edits-handover`.
 - **ml round-5 repairs and glossary v0.8.0 (#372, `6624fe9`, 2026-10-19)** — the widened splice
   repair, the source-gated discourse-formula restore, multi-word `-ഉം` commas, the over-translation
   lint, and glossary pins for *efficient*, *convenient*, *satisfy*, *compare*, *success* (`work`
-  unpinned). Experiment tooling plus the glossary; no `src/` change. Ships in v0.29.5 (release PR
-  open). Log `2026-10-19-ml-round5`.
-- **Dependency security update (#360, `823a8fa`, 2026-10-09, unreleased)** — `js-yaml` 4.3.2
-  and `undici` 6.29.0, in range, which clears both high-severity production advisories
-  (#359). It ships with the next release.
+  unpinned). Experiment tooling plus the glossary; no `src/` change. Shipped in v0.29.5. Log
+  `2026-10-19-ml-round5`.
+- **Dependency security update (#360, `823a8fa`, 2026-10-09)** — `js-yaml` 4.3.2 and `undici`
+  6.29.0, in range, which clears both high-severity production advisories (#359). Shipped in
+  v0.29.5.
 - **Release step 4b failure procedure (#357, `0178ec7`, 2026-10-09)** — when a rate-check cell
   fails, draw a same-day control at the previous tag before holding the floating tags; decision
   `D-2026-10-09-rate-check-failure-control`. The CLI's refused draws report `Tokens: 0`; that
@@ -256,15 +277,14 @@ Roadmap detail lives in the project trackers (reading order in
 *ml, 2026-09-28 (end)*: see the ml bullet under In flight — round 5 is with the editor, and
 next is the second `ml_repair` PR; #335 shipped in v0.29.4.
 
-*Release, 2026-10-19*: **v0.29.5 is released** (#373, `e7356cc`); `v0.29` and `v0` point at it
+*Release, 2026-10-21*: **v0.29.6 is released** (#405, `4151c08`); `v0.29` and `v0` point at it
 and the `@v0` smoke passed on all three lanes. §4a passed at the tag (28/28 verdicts per lane at
-`engineVersion: 0.29.5`); §4b's fa and ml cells were over threshold but indistinguishable from
-v0.29.4 under the step-4b control (#203's latent rate). Log
-`2026-10-19-v0295-release-handover`. Payload: #372 (glossary v0.8.0 and the round-5 `ml_repair`
-tooling) and #360's dependency security update. New from the gate: #375, zh-cn sync leaving a whole
-section's headings in English (scenario 22, pre-existing). #346's v0.30.0 (the French and Malayalam
-sync items) stays the next minor; nothing of it is merged yet. This page's `verified:` stamp
-predates it, so a full re-verify is owed.
+`engineVersion: 0.29.6`; the one WARN is #375, zh-cn scenario 22, pre-existing); §4b read zh-cn
+1/12, fa 0/12, ml 0/12, all within threshold. Payload: #404, `ml` rule 8 (*now* by sense;
+*In essence* / *In practice* kept English); #403's `ml_repair` tooling rode along. Log
+`2026-10-21-v0296-release`. #346's v0.30.0 (the French and Malayalam sync items) stays the next
+minor; nothing of it is merged yet. This page's `verified:` stamp predates it, so a full re-verify
+is owed.
 
 *Review, 2026-10-06*: **no `translate forward` run before #348 merges**. Every forward resync
 since PR #31 (2026-03-19) has gone out without the edition's glossary and language rules. #325
