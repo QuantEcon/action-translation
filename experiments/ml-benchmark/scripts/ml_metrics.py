@@ -219,19 +219,35 @@ ML_PLURAL_ON_LATIN_RE = re.compile(r"[A-Za-z`]-?ു?ക[ൾള]")
 # commaed all three. Non-greedy, so a chain gets a comma at every join; the
 # words bridged must be Latin (an English phrase), so two pairs on either side
 # of a Malayalam verb (labels-ഉം ചേർത്ത് rows-ഉം, his pandas 210) are not
-# one pair; no item may contain a comma. Case-marked pairs (-ന്റെയും) are not
-# matched: whether they always take the comma is ml#57 Q2.
+# one pair; no item may contain a comma.
 UM_PAIR_NO_COMMA_RE = re.compile(r"(\S+-ഉം)(\s+(?:[^\s,ഀ-ൿ]+\s+){0,3}?[^\s,ഀ-ൿ]*-ഉം)")
+# The editor's answer on lecture-python-programming.ml#57 (Q2, 2026-10-20):
+# "always a comma" between two items that carry a case ending as well as -ഉം
+# (`DataFrame`-ന്റെയും, `Series` objects-ന്റെയും and US-ന്റെയും, Australia-യുടെയും,
+# his pandas 474 and 615; numpy 840 and 902 were bare). An item ends in a
+# hyphen-attached suffix closing in -ും with the word ending there, so
+# rows-ലും columns-ലുമായി (his own pandas 161, no comma) is not a pair, and an
+# unhyphenated -ും (represent ചെയ്യാനും analyze ചെയ്യാനും, the future ചെയ്യും)
+# never matches. The bridged words must be Latin, as above, so a single item
+# meaning "all" or "any" (എല്ലാ plots-നെയും ഈ setting, matplotlib 427) is not a
+# pair. The quotative -എന്നും (`generator_type`-എന്നും `rng.uniform`-എന്നും,
+# functions 396) is not a case ending; he has not ruled on it, so it is left.
+_UM_CASE_ITEM = r"-(?!എന്നും)[ഀ-ൿ]*ും(?![ഀ-ൿ])"
+UM_CASE_PAIR_NO_COMMA_RE = re.compile(
+    rf"(\S+?{_UM_CASE_ITEM})(\s+(?:[^\s,ഀ-ൿ]+\s+){{0,3}}?[^\s,ഀ-ൿ]*{_UM_CASE_ITEM})"
+)
 
 
 def add_um_commas(line: str) -> tuple[str, int]:
-    """Insert the comma between -ഉം items wherever UM_PAIR_NO_COMMA_RE finds a
-    bare join; loops so a chain of three gets two commas. Shared with ml_repair."""
+    """Insert the comma between -ഉം items wherever UM_PAIR_NO_COMMA_RE or
+    UM_CASE_PAIR_NO_COMMA_RE finds a bare join; loops so a chain of three gets
+    two commas. Shared with ml_repair."""
     total = 0
     while True:
         line, k = UM_PAIR_NO_COMMA_RE.subn(r"\1,\2", line)
-        total += k
-        if not k:
+        line, c = UM_CASE_PAIR_NO_COMMA_RE.subn(r"\1,\2", line)
+        total += k + c
+        if not k + c:
             return line, total
 
 # -- Round-4 comma splices (lecture-python-programming.ml#23, 2026-09-28) -----
@@ -516,7 +532,7 @@ def round2_lints(text: str) -> dict:
         if has_ml:
             for m in ML_PLURAL_ON_LATIN_RE.finditer(body):
                 plural.append({"line": n, "text": body[max(0, m.start() - 20) : m.end() + 6]})
-            for m in UM_PAIR_NO_COMMA_RE.finditer(body):
+            for m in [*UM_PAIR_NO_COMMA_RE.finditer(body), *UM_CASE_PAIR_NO_COMMA_RE.finditer(body)]:
                 um_pair.append({"line": n, "text": m.group(0)})
             for s in splice_sites(body):
                 splice_watch.append({"line": n, "text": s["text"]})
@@ -560,6 +576,139 @@ def comma_splice_rate(text: str) -> dict:
         "repairable": sum(s["repairable"] for s in sites),
         "per_100_lines": round(100 * len(sites) / n, 1) if n else 0.0,
     }
+
+
+# -- ml#57 Q1: short label bullets stay English (2026-10-20) -------------------
+# The editor returned the five bullets under pandas' "facilitate operations such
+# as" (reading in data, adjusting indices, …) to the English byte for byte, and
+# ruled on ml#57: "the points were barely 2-3 words … make it general rule —
+# reading small sentences in english is better than bad translation". No word
+# count alone reproduces his pages (line numbers are the reviewed pages'): on
+# them a 6-8 word item stays English in a list of labels (pandas 70-72,
+# python_by_example 97-98) while a 7-9 word item is a Malayalam sentence in a
+# list that mixes lengths (matplotlib 50, 52). The test is therefore a list's:
+# a list of labels is one with at least one item of LABEL_SHORT words or fewer
+# and none over LABEL_MAX, no item continuing the sentence (ending in "and" /
+# "or" or a comma: numpy 71, functions 51, matplotlib 382), no item a sentence
+# (ending in a full stop other than "etc.") or carrying a clause after an
+# em-dash ("Heavy memory footprint --- produces many intermediate arrays",
+# jax_intro), and a lead-in that does not end in a relative, a modal, "let" or
+# "to", whose items are then verb phrases ("The main part of the program that",
+# functions 309; "consumers, who can" → "hold and spend cash", python_oop;
+# "We let" → "0 represent "low"", numba). Bullets only — he wrote of "the
+# points" — since a numbered
+# list is a sequence of steps (getting_started's "1. Open up a terminal",
+# translated in the archived draft). Single-line items only, with no nested
+# list. On the five reviewed pages this matches only lists that are already
+# English, plus functions 279-280 ("separating different strands of logic",
+# "facilitating code reuse"), which the round-2 review predates.
+LABEL_SHORT, LABEL_MAX = 3, 8
+_BULLET_RE = re.compile(r"^\s*[*+-]\s+")
+_LABEL_CONTINUES_RE = re.compile(r"(?:\b(?:and|or)|[,;])\s*$", re.IGNORECASE)
+_LABEL_SENTENCE_RE = re.compile(r"(?<!etc)\.\s*$|\s(?:---|—)\s*\S")
+_LABEL_RELATIVE_LEAD_RE = re.compile(
+    r"\b(?:that|which|who|can|could|will|would|may|might|should|must|shall|let|to)\s*:?\s*$", re.IGNORECASE
+)
+
+
+def _label_words(item: str) -> list[str]:
+    """Words of a list item's text: a code span or a footnote mark is one word,
+    a link counts as its text."""
+    t = LIST_ITEM_RE.sub("", item)
+    t = re.sub(r"`[^`]*`", "C", t)
+    t = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", t)
+    return t.split()
+
+
+def list_blocks(text: str) -> list[dict]:
+    """Every run of single-indent list items in prose, keyed by its section (the
+    heading above it, fence-aware) and its order there, with the lead-in line
+    before it. Headings are byte-identical English on both sides, so the n-th
+    block of a section pairs with the n-th block of the same section."""
+    lines = text.split("\n")
+    info = {p["n"]: p for p in prose_line_info(text)}
+    section_of: dict[int, str] = {}
+    sec, fence = "", None
+    for idx, line in enumerate(lines, 1):
+        s = line.lstrip()
+        m = FENCE_LINE_RE.match(s)
+        if fence is None and m:
+            fence = (m.group(1)[0], len(m.group(1)))
+        elif fence is not None and m and m.group(1)[0] == fence[0] and len(m.group(1)) >= fence[1] and not m.group(2).strip():
+            fence = None
+        elif fence is None and HEADING_RE.match(line):
+            sec = line.strip()
+        section_of[idx] = sec
+    blocks: list[dict] = []
+    seen: dict[str, int] = {}
+    n = 1
+    while n <= len(lines):
+        p = info.get(n)
+        if not (p and LIST_ITEM_RE.match(p["line"])):
+            n += 1
+            continue
+        indent = len(p["line"]) - len(p["line"].lstrip())
+        items, simple, j = [n], True, n + 1
+        while j <= len(lines):
+            q = info.get(j)
+            if not lines[j - 1].strip():
+                j += 1
+                continue
+            if q is None:
+                break
+            q_indent = len(q["line"]) - len(q["line"].lstrip())
+            if LIST_ITEM_RE.match(q["line"]) and q_indent == indent:
+                items.append(j)
+            elif q_indent > indent or not q["starts_para"]:
+                simple = False  # a wrapped line or a nested list under an item
+                if LIST_ITEM_RE.match(q["line"]):
+                    break
+            else:
+                break
+            j += 1
+        lead = next((lines[k - 1] for k in range(items[0] - 1, 0, -1) if lines[k - 1].strip()), "")
+        sec = section_of[items[0]]
+        blocks.append({"section": sec, "order": seen.get(sec, 0), "items": items, "indent": indent,
+                       "simple": simple, "lead": lead})
+        seen[sec] = seen.get(sec, 0) + 1
+        n = j if j > n else n + 1
+    return blocks
+
+
+def is_label_list(block: dict, lines: list[str]) -> bool:
+    """The ml#57 Q1 test on an English block (see the note above)."""
+    if not block["simple"] or _LABEL_RELATIVE_LEAD_RE.search(block["lead"]):
+        return False
+    texts = [lines[n - 1] for n in block["items"]]
+    if not all(_BULLET_RE.match(t) for t in texts):
+        return False
+    counts = [len(_label_words(t)) for t in texts]
+    if not counts or min(counts) > LABEL_SHORT or max(counts) > LABEL_MAX:
+        return False
+    return not any(_LABEL_CONTINUES_RE.search(t) or _LABEL_SENTENCE_RE.search(t) for t in texts)
+
+
+def label_list_sites(text: str, source: str) -> list[dict]:
+    """Items of an English label list that the translation does not carry byte
+    for byte: (ml line, English line). A section whose number of lists differs
+    between the two documents, or a block whose item count or indent does, is
+    skipped, never guessed at."""
+    en_lines, ml_lines = source.split("\n"), text.split("\n")
+    en_blocks, ml_list = list_blocks(source), list_blocks(text)
+    ml_blocks = {(b["section"], b["order"]): b for b in ml_list}
+    per_section = lambda bs: {s: sum(b["section"] == s for b in bs) for s in {b["section"] for b in bs}}  # noqa: E731
+    en_count, ml_count = per_section(en_blocks), per_section(ml_list)
+    out: list[dict] = []
+    for b in en_blocks:
+        if en_count[b["section"]] != ml_count.get(b["section"]) or not is_label_list(b, en_lines):
+            continue
+        mb = ml_blocks.get((b["section"], b["order"]))
+        if mb is None or len(mb["items"]) != len(b["items"]) or mb["indent"] != b["indent"] or not mb["simple"]:
+            continue
+        for en_n, ml_n in zip(b["items"], mb["items"]):
+            if ml_lines[ml_n - 1] != en_lines[en_n - 1]:
+                out.append({"line": ml_n, "text": ml_lines[ml_n - 1], "english": en_lines[en_n - 1]})
+    return out
 
 
 def main() -> int:
@@ -655,6 +804,10 @@ def main() -> int:
 
     # -- Round-2 lints (LINT, not FAIL — prototype until Phase 3 graduation) --
     result["lint"] = round2_lints(out_text)
+    if args.source:
+        # ml#57 Q1: items of an English label list that came out translated;
+        # ml_repair.py restores them from the source.
+        result["lint"]["label_list_translated"] = label_list_sites(out_text, src_text)
     result["comma_splice_rate"] = comma_splice_rate(out_text)
 
     # -- Token list for the manual transliteration scan -----------------------

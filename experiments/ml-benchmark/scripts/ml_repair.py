@@ -24,7 +24,15 @@ even though the prompt states the rule (the #260 post-processing prototype):
      "As a rule," and the one-line "And so on." from round 4). He has restored
      six such formulas to English across rounds and moved none the other way;
      "In addition," is deliberately absent — he kept ഇത് കൂടാതെ, (ml#26 342).
-     Needs --source; without it nothing is restored.
+     Needs --source; without it nothing is restored;
+  6. a list of short labels the model translated is restored to the English
+     byte for byte, gated on the source (ml_metrics.is_label_list). The editor
+     returned the five such pandas bullets to English (ml#26 68-72) and ruled on
+     lecture-python-programming.ml#57 (Q1, 2026-10-20) that short bullets stay
+     English as a general rule. Needs --source.
+
+Repair 3 also covers case-marked pairs since his ml#57 answer (Q2, "always a
+comma"): speed-ന്റെയും memory-യുടെയും → speed-ന്റെയും, memory-യുടെയും.
 
 Only the "bare ending before a cell or list" class is repaired; the lint's other
 class ("paragraph without terminal punctuation") is left alone. Line
@@ -47,7 +55,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from ml_metrics import LIST_ITEM_RE, add_um_commas, prose_line_info, split_splices  # noqa: E402
+from ml_metrics import LIST_ITEM_RE, add_um_commas, label_list_sites, prose_line_info, split_splices  # noqa: E402
 FOR_EXAMPLE = re.compile(r'(^|\n)(\s*(?:[*-]|\d+\.)?\s*)ഉദാഹരണത്തിന്,')
 # (English opener, the Malayalam openers the model writes for it). Each entry
 # is editor-attested: he restored the English at every site across rounds.
@@ -135,6 +143,16 @@ def restore_formulas(text: str, source: str) -> tuple[str, int]:
     return '\n'.join(lines), n
 
 
+def restore_label_lists(text: str, source: str) -> tuple[str, int]:
+    """Restore each item of an English label list the model translated, from
+    the source line byte for byte (ml#57 Q1)."""
+    lines = text.split('\n')
+    sites = label_list_sites(text, source)
+    for s in sites:
+        lines[s['line'] - 1] = s['english']
+    return '\n'.join(lines), len(sites)
+
+
 def lint(output: Path, source: Path | None):
     cmd = [sys.executable, str(HERE / 'ml_metrics.py'), '--output', str(output), '--json']
     if source:
@@ -145,6 +163,11 @@ def lint(output: Path, source: Path | None):
 
 def repair(text: str, bare_lines: list[int], um_lines: list[int] | None = None,
            splice_lines: list[int] | None = None, source: str | None = None) -> tuple[str, dict]:
+    # First, so no other repair is counted on a line the restore replaces; it
+    # replaces lines one for one, so the lint's line numbers still hold.
+    labels = 0
+    if source is not None:
+        text, labels = restore_label_lists(text, source)
     lines = text.split('\n')
     colons = 0
     for n in bare_lines:
@@ -172,7 +195,7 @@ def repair(text: str, bare_lines: list[int], um_lines: list[int] | None = None,
     if source is not None:
         out, formulas = restore_formulas(out, source)
     return out, {'colons_added': colons, 'for_example_restored': examples, 'um_commas_added': commas,
-                 'splices_split': splits, 'formulas_restored': formulas}
+                 'splices_split': splits, 'formulas_restored': formulas, 'label_bullets_restored': labels}
 
 
 if __name__ == '__main__':

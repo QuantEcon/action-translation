@@ -1,0 +1,6 @@
+start 2026-10-21T00:26:02Z
+control 888cdb7d4a0815d959e559fb605648eb7326f3cb
+candidate b5c1f10c071b79e296d1d11902ef9805a4254f33
+english b0c58ab
+model claude-sonnet-5
+end 2026-10-21T01:23:53Z

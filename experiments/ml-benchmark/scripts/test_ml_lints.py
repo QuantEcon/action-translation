@@ -1,4 +1,5 @@
-"""Fixture tests for the round-4 and round-5 ml lints and repairs.
+"""Fixture tests for the round-4 and round-5 ml lints and repairs, and for his
+ml#57 answers.
 
 Positive fixtures are the editor's own lines from the round-4 and round-5
 reviews (lecture-python-programming.ml#23 and #26); negatives are forms he kept
@@ -13,8 +14,11 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from ml_metrics import add_um_commas, prose_line_info, round2_lints, split_resumptive_splices, split_splices  # noqa: E402
-from ml_repair import repair, restore_formulas  # noqa: E402
+from ml_metrics import (  # noqa: E402
+    add_um_commas, is_label_list, label_list_sites, list_blocks, prose_line_info, round2_lints,
+    split_resumptive_splices, split_splices,
+)
+from ml_repair import repair, restore_formulas, restore_label_lists  # noqa: E402
 
 # (seed line, the editor's suggestion): the repair must reproduce his line exactly.
 HIS_SPLITS = [
@@ -236,14 +240,170 @@ class UmPairCommas(unittest.TestCase):
         self.assertEqual(add_um_commas('Columns-ഉം rows-ഉം'), ('Columns-ഉം, rows-ഉം', 1))
         self.assertEqual(add_um_commas('Step 1-ഉം 2-ഉം 3-ഉം'), ('Step 1-ഉം, 2-ഉം, 3-ഉം', 2))
 
-    def test_leaves_case_marked_and_commaed_pairs(self):
-        for line in ('`DataFrame`-ന്റെയും `Series` objects-ന്റെയും', 'US-ന്റെയും Australia-യുടെയും', 'Matlab-ഉം, STATA-ഉം ആയി',
+    def test_leaves_commaed_pairs(self):
+        for line in ('Matlab-ഉം, STATA-ഉം ആയി',
                      # two pairs either side of a Malayalam verb are not one pair (his pandas 210)
                      'Integers-ഉം, labels-ഉം ചേർത്ത് rows-ഉം, columns-ഉം select ചെയ്യാൻ'):
             self.assertEqual(add_um_commas(line), (line, 0))
 
     def test_lint_sees_the_multi_word_pair(self):
         self.assertEqual(len(round2_lints('`POP`-ഉം total GDP (`tcgdp`)-ഉം മാത്രമേ.\n')["um_pair_without_comma"]), 1)
+
+
+class CaseMarkedUmCommas(unittest.TestCase):
+    """lecture-python-programming.ml#57 Q2: "always a comma" on case-marked pairs."""
+
+    def test_his_pairs(self):
+        for seed, his in [
+            # pandas 474 and 615, the two pairs he commaed in round 5
+            ('`DataFrame`-ന്റെയും `Series` objects-ന്റെയും', '`DataFrame`-ന്റെയും, `Series` objects-ന്റെയും'),
+            ('US-ന്റെയും Australia-യുടെയും', 'US-ന്റെയും, Australia-യുടെയും'),
+            # numpy 902 and 840, bare on the round-4 page (fixed by ml#59)
+            ('Copies ഉണ്ടാക്കുന്നത് speed-ന്റെയും memory-യുടെയും കാര്യത്തിൽ expensive ആണ്.',
+             'Copies ഉണ്ടാക്കുന്നത് speed-ന്റെയും, memory-യുടെയും കാര്യത്തിൽ expensive ആണ്.'),
+            ('broadcasting `a`-യിലും `b`-യിലും shape 1 ആയിരിക്കുന്ന dimensions expand ചെയ്യും.',
+             'broadcasting `a`-യിലും, `b`-യിലും shape 1 ആയിരിക്കുന്ന dimensions expand ചെയ്യും.'),
+            # python_by_example 69 exactly as he approved it: the bridge may hold math
+            ('(ഇവിടെ $t$ horizontal axis-ലും $\\epsilon_t$ vertical axis-ലും ആണ്.)',
+             '(ഇവിടെ $t$ horizontal axis-ലും, $\\epsilon_t$ vertical axis-ലും ആണ്.)'),
+        ]:
+            self.assertEqual(add_um_commas(seed), (his, 1))
+        self.assertEqual(add_um_commas('A-ന്റെയും B-ന്റെയും C-ന്റെയും'), ('A-ന്റെയും, B-ന്റെയും, C-ന്റെയും', 2))
+
+    def test_leaves_what_is_not_a_bare_pair(self):
+        for line in (
+            # the second item carries on (-ലുമായി): his own pandas 161, no comma
+            'അതിനാൽ, rows-ലും columns-ലുമായി organize ചെയ്തിരിക്കുന്ന data-യെ represent ചെയ്യാനും analyze ചെയ്യാനും ഇത് ഒരു powerful tool ആണ്.',
+            # single items meaning "all" or "any": matplotlib 427, python_by_example 184, functions 236
+            '`.rcParams`-ലെ parameters മാറ്റിയതിനുശേഷം generate ചെയ്യുന്ന എല്ലാ plots-നെയും ഈ setting affect ചെയ്യും.',
+            'ഈ രണ്ട് lines-ന്റെയും ഇടയിൽ മറ്റ് പല lines-ഉം വന്നേക്കാം.',
+            '* Functions ഉൾപ്പെടെ, ഏത് തരം object-നെയും ഒരു function-ന് return ചെയ്യാൻ കഴിയും.',
+            # the quotative, which he has not ruled on (functions 396)
+            '* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`-എന്നും `rng.uniform`-എന്നും ഉള്ള names "synonyms" ആണ്;',
+            # already commaed by him (pandas 161)
+            'Individual rows-ഇനും, individual columns-ഇനും പലപ്പോഴും descriptive indexes ഉണ്ടായിരിക്കും.',
+        ):
+            self.assertEqual(add_um_commas(line), (line, 0))
+
+    def test_lint_and_repair_see_it(self):
+        text = 'ഇത് US-ന്റെയും Australia-യുടെയും data ആണ്.\n'
+        self.assertEqual(len(round2_lints(text)["um_pair_without_comma"]), 1)
+        self.assertEqual(repair(text, [], [1])[1]["um_commas_added"], 1)
+
+
+EN_LISTS = """---
+title: t
+---
+
+## Overview
+
+Just as NumPy provides the basic array data type plus core array operations, pandas
+
+1. defines fundamental structures for working with data and
+1. endows them with methods that facilitate operations such as
+    * reading in data
+    * adjusting indices
+    * working with dates and time series
+    * sorting, grouping, re-ordering and general data munging [^mung]
+    * dealing with missing values, etc., etc.
+
+Matplotlib is an outstanding graphics library, designed for scientific computing, with
+
+* high-quality 2D and 3D plots
+* output in all the usual formats (PDF, PNG, etc.)
+* LaTeX integration
+* fine-grained control over all aspects of presentation
+* animation, etc.
+
+## Steps
+
+As a practice run, please execute the following
+
+1. Open up a terminal
+1. Type `conda update conda`
+
+Imagine now you want to write a program with consumers, who can
+
+* hold and spend cash
+* consume goods
+"""
+
+# The round-5 seed's renderings of the pandas list (ml#26 68-72); the
+# matplotlib list as on his round-3 page, but with a translated last item.
+ML_LISTS = """---
+title: t
+---
+
+## Overview
+
+NumPy അടിസ്ഥാന array data type-ഉം, core array operations-ഉം നൽകുന്നത് പോലെ, pandas:
+
+1. data-യുമായി work ചെയ്യാനുള്ള fundamental structures define ചെയ്യുന്നു, കൂടാതെ
+1. താഴെ പറയുന്നതുപോലുള്ള operations എളുപ്പമാക്കുന്ന methods അവയ്ക്ക് നൽകുന്നു:
+    * data read ചെയ്യൽ
+    * indices adjust ചെയ്യൽ
+    * dates-ഉം time series-ഉം ആയി പ്രവർത്തിക്കൽ
+    * sorting, grouping, re-ordering, പൊതുവായ data munging [^mung]
+    * missing values കൈകാര്യം ചെയ്യൽ, etc., etc.
+
+Matplotlib എന്നത്, scientific computing-നായി design ചെയ്തിരിക്കുന്ന ഒരു മികച്ച graphics library ആണ്. ഇതിൽ ഉള്ളത്:
+
+* high-quality 2D and 3D plots
+* സാധാരണ ഉപയോഗിക്കുന്ന എല്ലാ formats-ലും output ലഭിക്കുന്നു — PDF, PNG, etc.
+* LaTeX integration
+* presentation-ന്റെ ഓരോ ചെറിയ കാര്യവും വരെ control ചെയ്യാൻ കഴിയുന്നു
+* animation, തുടങ്ങിയവ.
+
+## Steps
+
+ഒരു practice run ആയി, താഴെ പറയുന്നവ execute ചെയ്യുക:
+
+1. ഒരു terminal തുറക്കുക
+1. `conda update conda` എന്ന് type ചെയ്യുക
+
+Consumers ഉള്ള ഒരു program എഴുതണമെന്ന് കരുതുക, അവർക്ക്:
+
+* cash hold ചെയ്യാനും spend ചെയ്യാനും കഴിയും
+* goods consume ചെയ്യാൻ കഴിയും
+"""
+
+
+class LabelListRestore(unittest.TestCase):
+    """lecture-python-programming.ml#57 Q1: short label bullets stay English."""
+
+    def test_restores_the_pandas_list_only(self):
+        fixed, n = restore_label_lists(ML_LISTS, EN_LISTS)
+        self.assertEqual(n, 5)
+        en, ml, out = EN_LISTS.split("\n"), ML_LISTS.split("\n"), fixed.split("\n")
+        self.assertEqual(out[10:15], en[10:15])
+        # everything else is untouched: the numbered parent items, the mixed
+        # matplotlib list (a 9-word item), the numbered steps, the list whose
+        # lead-in ends in a modal
+        self.assertEqual(out[:10] + out[15:], ml[:10] + ml[15:])
+
+    def test_repair_runs_it_with_the_source_only(self):
+        self.assertEqual(repair(ML_LISTS, [], [], [], EN_LISTS)[1]["label_bullets_restored"], 5)
+        self.assertEqual(repair(ML_LISTS, [], [], [])[1]["label_bullets_restored"], 0)
+
+    def test_the_lint_names_each_item(self):
+        sites = label_list_sites(ML_LISTS, EN_LISTS)
+        self.assertEqual([s["line"] for s in sites], [11, 12, 13, 14, 15])
+        self.assertEqual(sites[0]["english"], "    * reading in data")
+
+    def test_a_list_he_kept_english_is_left(self):
+        self.assertEqual(label_list_sites(EN_LISTS, EN_LISTS), [])
+
+    def test_a_section_whose_lists_do_not_pair_is_skipped(self):
+        # the draft split the matplotlib list in two: the section has one list
+        # more than the source, so nothing in it is paired
+        ml = ML_LISTS.replace("* LaTeX integration\n", "* LaTeX integration\n\nകൂടാതെ:\n\n")
+        self.assertEqual(restore_label_lists(ml, EN_LISTS)[1], 0)
+
+    def test_label_test_on_the_english(self):
+        en_lines = EN_LISTS.split("\n")
+        verdicts = [is_label_list(b, en_lines) for b in list_blocks(EN_LISTS)]
+        # parent items, pandas list, matplotlib list, steps, consumers
+        self.assertEqual(verdicts, [False, True, False, False, False])
 
 
 ML_DOC = """---

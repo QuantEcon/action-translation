@@ -1,0 +1,52 @@
+== drafts and refusals
+- pandas: control 0 (refused 0), candidate 0 (refused 0)
+- numpy: control 0 (refused 0), candidate 0 (refused 0)
+- functions: control 48 (refused 0), candidate 48 (refused 0)
+
+== Q1 targets (p: candidate better, one-sided)
+- all label items English: pandas 0/0 → 0/0 (p=1.000); functions 0/48 → 0/48 (p=1.000)
+  pandas control: translated items {}
+  pandas candidate: translated items {}
+  functions control: translated items {'* separating different strands of logic': 48, '* facilitating code reuse': 48}
+  functions candidate: translated items {'* separating different strands of logic': 48, '* facilitating code reuse': 48}
+- lead-in kept English: pandas 0/0 → 0/0 (p=1.000)
+
+== over-application (p: candidate worse)
+- drafts with ≥1 Malayalam-reviewed bullet left English: pandas 0/0 → 0/0 (p=1.000); numpy 0/0 → 0/0 (p=1.000); functions 0/48 → 0/48 (p=1.000); pooled 0/48 → 0/48 (p=1.000)
+
+== R5: *now* by sense (site-draws)
+- next → ഇനി, functions: control {'ഇനി': 96} | candidate {'ഇനി': 96}
+  pooled next: ഇനി 96/96 → 96/96 (p candidate better=1.000; site-draws are not independent within a draft)
+  pooled moment: ഇപ്പോൾ 0/0 → 0/0 (p candidate better=1.000; site-draws are not independent within a draft)
+  per site (want ഇനി at next, ഇപ്പോൾ at moment):
+    pandas [next] 'you can now proceed': control {} | candidate {}
+    pandas [next] 'We could now write': control {} | candidate {}
+    pandas [next] 'that we can now manipulate': control {} | candidate {}
+    pandas [moment] 'Plotting as before now yields': control {} | candidate {}
+    pandas [moment] "For now let's work through": control {} | candidate {}
+    numpy [moment] 'Now `b` is an independent copy': control {} | candidate {}
+    numpy [moment] "Now, let's look at the output of the htop": control {} | candidate {}
+    functions [next] "Now that we've defined this function": control {'ഇനി': 48} | candidate {'ഇനി': 48}
+    functions [next] 'Now, when we call the function': control {'ഇനി': 48} | candidate {'ഇനി': 48}
+  per-draft next → ഇനി, functions: mean 2.00 → 2.00 (permutation p candidate better=1.000)
+
+== formulas kept English (site-draws)
+- pandas control: 0/0
+- pandas candidate: 0/0
+- numpy control: 0/0
+- numpy candidate: 0/0
+
+== regression panel (p: candidate worse, one-sided)
+- bare-endings mode (≥10): pandas 0/0 → 0/0 (p=1.000); numpy 0/0 → 0/0 (p=1.000); functions 28/48 → 32/48 (p=0.264); pooled 28/48 → 32/48 (p=0.264)
+- headings not identical: pandas 0/0 → 0/0 (p=1.000); numpy 0/0 → 0/0 (p=1.000); functions 0/48 → 0/48 (p=1.000); pooled 0/48 → 0/48 (p=1.000)
+- code cells not identical: pandas 0/0 → 0/0 (p=1.000); numpy 0/0 → 0/0 (p=1.000); functions 4/48 → 2/48 (p=0.898); pooled 4/48 → 2/48 (p=0.898)
+- exercise-block violations: pandas 0/0 → 0/0 (p=1.000); numpy 0/0 → 0/0 (p=1.000); functions 0/48 → 0/48 (p=1.000); pooled 0/48 → 0/48 (p=1.000)
+- pinned-term gate lost: pandas 0/0 → 0/0 (p=1.000); numpy 0/0 → 0/0 (p=1.000); functions 46/48 → 45/48 (p=0.819); pooled 46/48 → 45/48 (p=0.819)
+- bare_endings (mean per draft): functions 9.8 → 11.1 (p=0.203)
+- para_no_punct (mean per draft): functions 2.1 → 2.3 (p=0.202)
+- lowercase (mean per draft): functions 4.4 → 4.2 (p=0.650)
+- banned (mean per draft): functions 2.4 → 2.3 (p=0.747)
+- plural (mean per draft): functions 0.0 → 0.0 (p=0.497)
+- um_pair_no_comma (mean per draft): functions 1.3 → 1.1 (p=0.988)
+- over_translation_watch (mean per draft): functions 1.0 → 1.0 (p=1.000)
+- splice_per100 (mean per draft): functions 17.6 → 17.1 (p=0.910)

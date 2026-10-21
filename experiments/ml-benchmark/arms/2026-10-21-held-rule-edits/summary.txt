@@ -1,0 +1,61 @@
+== drafts and refusals
+- pandas: control 12 (refused 2), candidate 12 (refused 0)
+- numpy: control 12 (refused 0), candidate 12 (refused 1)
+- functions: control 24 (refused 0), candidate 24 (refused 7)
+
+== Q1 targets (p: candidate better, one-sided)
+- all label items English: pandas 0/12 → 12/12 (p=0.000); functions 0/24 → 0/24 (p=1.000)
+  pandas control: translated items {'* reading in data': 12, '* adjusting indices': 12, '* working with dates and time series': 12, '* sorting, grouping, re-ordering and general data munging [^mung]': 12, '* dealing with missing values, etc., etc.': 12}
+  pandas candidate: translated items {}
+  functions control: translated items {'* separating different strands of logic': 24, '* facilitating code reuse': 24}
+  functions candidate: translated items {'* separating different strands of logic': 24, '* facilitating code reuse': 24}
+- lead-in kept English: pandas 1/12 → 12/12 (p=0.000)
+
+== over-application (p: candidate worse)
+- drafts with ≥1 Malayalam-reviewed bullet left English: pandas 1/12 → 12/12 (p=0.000); numpy 0/12 → 0/12 (p=1.000); functions 0/24 → 2/24 (p=0.245); pooled 1/48 → 14/48 (p=0.000)
+  pandas control: {'- axis = 0 -- apply function to each column (variables)': 1, '- axis = 1 -- apply function to each row (observations)': 1, '- axis = 0 is the default parameter': 1}
+  pandas candidate: {'- axis = 0 -- apply function to each column (variables)': 12, '- axis = 1 -- apply function to each row (observations)': 12, '- axis = 0 is the default parameter': 12}
+  functions candidate: {'* the `sqrt()` function from NumPy and': 1, '* the built-in `print()` function': 2}
+
+== R5: *now* by sense (site-draws)
+- next → ഇനി, pandas: control {'ഇനി': 19, 'neither': 3, 'ഇപ്പോൾ': 14} | candidate {'ഇനി': 26, 'ഇപ്പോൾ': 9, 'neither': 1}
+- next → ഇനി, functions: control {'ഇനി': 48} | candidate {'ഇനി': 48}
+  pooled next: ഇനി 67/84 → 74/84 (p candidate better=0.103; site-draws are not independent within a draft)
+- moment → ഇപ്പോൾ, pandas: control {'ഇപ്പോൾ': 20, 'ഇനി': 4} | candidate {'ഇപ്പോൾ': 20, 'neither': 1, 'ഇനി': 3}
+- moment → ഇപ്പോൾ, numpy: control {'ഇപ്പോൾ': 6, 'ഇനി': 18} | candidate {'ഇപ്പോൾ': 11, 'ഇനി': 13}
+  pooled moment: ഇപ്പോൾ 26/48 → 31/48 (p candidate better=0.203; site-draws are not independent within a draft)
+  per site (want ഇനി at next, ഇപ്പോൾ at moment):
+    pandas [next] 'you can now proceed': control {'ഇനി': 11, 'ഇപ്പോൾ': 1} | candidate {'ഇനി': 12}
+    pandas [next] 'We could now write': control {'neither': 3, 'ഇപ്പോൾ': 9} | candidate {'ഇനി': 2, 'ഇപ്പോൾ': 9, 'neither': 1}
+    pandas [next] 'that we can now manipulate': control {'ഇപ്പോൾ': 4, 'ഇനി': 8} | candidate {'ഇനി': 12}
+    pandas [moment] 'Plotting as before now yields': control {'ഇപ്പോൾ': 10, 'ഇനി': 2} | candidate {'ഇപ്പോൾ': 11, 'ഇനി': 1}
+    pandas [moment] "For now let's work through": control {'ഇപ്പോൾ': 10, 'ഇനി': 2} | candidate {'neither': 1, 'ഇപ്പോൾ': 9, 'ഇനി': 2}
+    numpy [moment] 'Now `b` is an independent copy': control {'ഇപ്പോൾ': 6, 'ഇനി': 6} | candidate {'ഇപ്പോൾ': 11, 'ഇനി': 1}
+    numpy [moment] "Now, let's look at the output of the htop": control {'ഇനി': 12} | candidate {'ഇനി': 12}
+    functions [next] "Now that we've defined this function": control {'ഇനി': 24} | candidate {'ഇനി': 24}
+    functions [next] 'Now, when we call the function': control {'ഇനി': 24} | candidate {'ഇനി': 24}
+  per-draft next → ഇനി, pandas: mean 1.58 → 2.17 (permutation p candidate better=0.016)
+  per-draft next → ഇനി, functions: mean 2.00 → 2.00 (permutation p candidate better=1.000)
+  per-draft moment → ഇപ്പോൾ, pandas: mean 1.67 → 1.67 (permutation p candidate better=0.625)
+  per-draft moment → ഇപ്പോൾ, numpy: mean 0.50 → 0.92 (permutation p candidate better=0.036)
+
+== formulas kept English (site-draws)
+- pandas control: 0/24
+- pandas candidate: 14/24
+- numpy control: 0/0
+- numpy candidate: 0/0
+
+== regression panel (p: candidate worse, one-sided)
+- bare-endings mode (≥10): pandas 0/12 → 0/12 (p=1.000); numpy 2/12 → 2/12 (p=0.705); functions 11/24 → 20/24 (p=0.007); pooled 13/48 → 22/48 (p=0.045)
+- headings not identical: pandas 0/12 → 0/12 (p=1.000); numpy 0/12 → 0/12 (p=1.000); functions 0/24 → 0/24 (p=1.000); pooled 0/48 → 0/48 (p=1.000)
+- code cells not identical: pandas 0/12 → 0/12 (p=1.000); numpy 1/12 → 1/12 (p=0.761); functions 3/24 → 0/24 (p=1.000); pooled 4/48 → 1/48 (p=0.972)
+- exercise-block violations: pandas 0/12 → 0/12 (p=1.000); numpy 0/12 → 0/12 (p=1.000); functions 0/24 → 0/24 (p=1.000); pooled 0/48 → 0/48 (p=1.000)
+- pinned-term gate lost: pandas 12/12 → 12/12 (p=1.000); numpy 12/12 → 12/12 (p=1.000); functions 22/24 → 22/24 (p=0.696); pooled 46/48 → 46/48 (p=0.692)
+- bare_endings (mean per draft): pandas 2.2 → 2.4 (p=0.421); numpy 5.6 → 6.0 (p=0.345); functions 7.7 → 13.5 (p=0.003)
+- para_no_punct (mean per draft): pandas 0.1 → 0.3 (p=0.160); numpy 1.0 → 1.0 (p=1.000); functions 1.9 → 2.7 (p=0.004)
+- lowercase (mean per draft): pandas 14.9 → 9.6 (p=1.000); numpy 0.1 → 1.5 (p=0.236); functions 4.5 → 4.8 (p=0.385)
+- banned (mean per draft): pandas 4.2 → 2.2 (p=1.000); numpy 2.1 → 1.8 (p=0.879); functions 2.5 → 2.7 (p=0.179)
+- plural (mean per draft): pandas 0.0 → 0.0 (p=1.000); numpy 0.0 → 0.0 (p=1.000); functions 0.0 → 0.0 (p=1.000)
+- um_pair_no_comma (mean per draft): pandas 11.2 → 11.4 (p=0.445); numpy 5.2 → 4.3 (p=0.960); functions 1.2 → 1.1 (p=0.917)
+- over_translation_watch (mean per draft): pandas 7.0 → 6.5 (p=0.818); numpy 0.8 → 1.0 (p=0.255); functions 1.0 → 1.0 (p=1.000)
+- splice_per100 (mean per draft): pandas 7.9 → 8.1 (p=0.399); numpy 17.7 → 18.5 (p=0.093); functions 17.6 → 17.1 (p=0.805)
