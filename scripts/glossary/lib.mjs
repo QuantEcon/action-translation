@@ -15,6 +15,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { getLanguageConfig, languageLabel } from '../../dist/language-config.js';
+import { DEFAULT_CLAUDE_MODEL, extractResponseText, maxTokensFor, modelRequestParams } from '../../dist/models.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, '../..');
@@ -35,8 +36,8 @@ export function rel(p) {
 // The two-model comparison is NOT a bake-off. It is the entire candidate-finding
 // signal, and cutting it to save cost silently breaks the method:
 //
-//   seed  — the model that will actually do the bulk translation (Opus 4.8, per
-//           .qe/dev/decisions/D-2026-07-14-opus-for-bulk-seed.md).
+//   seed  — the model that will actually do the bulk translation (Opus 5.5, per
+//           .qe/dev/decisions/D-2026-10-19-opus-5-5-for-bulk-seed.md).
 //   probe — a DIFFERENT-family model, run only to disagree with the seed.
 //
 // Why a probe is needed: on the fr programming run, the seed model showed ZERO
@@ -44,25 +45,28 @@ export function rel(p) {
 // candidates. All 11 candidates came from seed↔probe disagreement. A term both
 // models render identically everywhere needs no glossary entry — they already
 // agree, and every pinned term costs input tokens in every prompt forever.
-export const SEED_MODEL = 'claude-opus-4-8';
-export const PROBE_MODEL = 'claude-sonnet-5';
-export const EXTRACT_MODEL = 'claude-opus-4-8'; // term extraction from an EN↔target pair
+export const SEED_MODEL = 'claude-opus-5-5';
+// The probe follows the production sync default, so the disagreement it finds is the one production
+// will meet. Keep it a different family from the seed: translate-sample.mjs refuses only seed = probe.
+export const PROBE_MODEL = DEFAULT_CLAUDE_MODEL;
+export const EXTRACT_MODEL = 'claude-opus-5-5'; // term extraction from an EN↔target pair
 export const ROLES = ['seed', 'probe'];
 
-export const MAX_TOKENS_FULL = 64000; // matches production MAX_TOKENS.fullDocument
-export const MAX_TOKENS_EXTRACT = 8192;
-
-// Standard per-M-token pricing (USD).
+// Per-M-token list prices (USD), checked against Anthropic's model table on 2026-10-19.
 export const PRICING = {
+  'claude-fable-5-1': { in: 10, out: 50 },
   'claude-fable-5': { in: 10, out: 50 },
+  'claude-opus-5-5': { in: 4, out: 20, cacheRead: 0.2, cacheWrite5m: 5 },
   'claude-opus-5': { in: 5, out: 25 },
-  'claude-sonnet-5': { in: 3, out: 15 },
+  'claude-sonnet-5-5': { in: 2, out: 10, cacheRead: 0.2, cacheWrite5m: 2.5 },
+  'claude-sonnet-5': { in: 2, out: 10, cacheRead: 0.2, cacheWrite5m: 2.5 }, // was { in: 3, out: 15 }: the introductory $2/$10 is now the list price
   'claude-sonnet-4-6': { in: 3, out: 15 },
   'claude-opus-4-8': { in: 5, out: 25 },
   'claude-opus-4-7': { in: 5, out: 25 },
   'claude-haiku-4-5': { in: 1, out: 5 },
 };
 const warnedUnpricedModels = new Set();
+const warnedUnpricedCache = new Set();
 export function costUSD(model, usage) {
   const p = PRICING[model];
   if (!p) {
@@ -79,7 +83,25 @@ export function costUSD(model, usage) {
     }
     return 0;
   }
-  return ((usage?.input_tokens ?? 0) / 1e6) * p.in + ((usage?.output_tokens ?? 0) / 1e6) * p.out;
+  // Cache writes are priced at the 5-minute TTL rate (these scripts send no cache_control).
+  // Cache tokens on a model with no cache price are the same hidden spend as a missing
+  // model (#230), so they are priced at $0 loudly, once per model.
+  const cacheRead = usage?.cache_read_input_tokens ?? 0;
+  const cacheWrite = usage?.cache_creation_input_tokens ?? 0;
+  const unpricedCache = (cacheRead && p.cacheRead == null) || (cacheWrite && p.cacheWrite5m == null);
+  if (unpricedCache && !warnedUnpricedCache.has(model)) {
+    warnedUnpricedCache.add(model);
+    console.warn(
+      `⚠️  No cache pricing for model '${model}' — its cache tokens are reported at $0.000. ` +
+        `Add cacheRead / cacheWrite5m to its PRICING entry in scripts/glossary/lib.mjs.`
+    );
+  }
+  return (
+    ((usage?.input_tokens ?? 0) / 1e6) * p.in +
+    ((usage?.output_tokens ?? 0) / 1e6) * p.out +
+    (cacheRead / 1e6) * (p.cacheRead ?? 0) +
+    (cacheWrite / 1e6) * (p.cacheWrite5m ?? 0)
+  );
 }
 
 // --- CLI arg helpers ---------------------------------------------------------
@@ -174,14 +196,27 @@ Provide the complete translated document maintaining exact MyST structure.`;
 
 // --- SDK call ----------------------------------------------------------------
 
-/** One streamed call; extracts text blocks only (a thinking block lands first if thinking is on). */
-export async function callClaude(client, { model, maxTokens, prompt, thinking }) {
-  const params = { model, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] };
+/**
+ * One streamed call, sent with the engine's request policy for this model and operation
+ * (dist/models.js: thinking, effort and max_tokens), so each role runs the way production
+ * would run it; an unknown `operation` throws there. `maxTokens` / `thinking` override the
+ * policy; no caller passes either. Text comes from the text blocks only (a model that always
+ * thinks puts a thinking block first). Only stopReason 'end_turn' with some text is a usable
+ * result: a refusal or a max_tokens stop can still carry partial text, an 'end_turn' can carry
+ * thinking and no text, and the call is billed either way.
+ */
+export async function callClaude(client, { model, prompt, operation, maxTokens, thinking }) {
+  const params = {
+    model, max_tokens: maxTokens ?? maxTokensFor(model, operation), ...modelRequestParams(model, operation),
+    messages: [{ role: 'user', content: prompt }],
+  };
   if (thinking) params.thinking = thinking;
   const start = Date.now();
   const msg = await client.messages.stream(params).finalMessage();
-  const text = msg.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
-  return { text, usage: msg.usage, elapsed: +((Date.now() - start) / 1000).toFixed(1), stopReason: msg.stop_reason };
+  return {
+    text: extractResponseText(msg), usage: msg.usage, elapsed: +((Date.now() - start) / 1000).toFixed(1),
+    stopReason: msg.stop_reason, stopDetails: msg.stop_details ?? null, model: msg.model,
+  };
 }
 
 export const parseJsonResponse = (t) => {

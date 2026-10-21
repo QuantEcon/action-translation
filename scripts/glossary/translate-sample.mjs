@@ -7,7 +7,7 @@
  *
  *   fresh    — translate the sample with BOTH the seed and probe models.
  *              Use for a language with no seeded repo yet. Cost: 2 translations
- *              per lecture (~$0.80/lecture for fr; glossary-dominated).
+ *              per lecture (~$0.80/lecture for fr with an Opus 4.8 seed; glossary-dominated).
  *
  *   existing — the target repo is already seeded, so its COMMITTED translation
  *              is the seed rendering (free); only the probe model runs.
@@ -36,7 +36,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import Anthropic from '@anthropic-ai/sdk';
 import {
-  ROOT, SEED_MODEL, PROBE_MODEL, MAX_TOKENS_FULL, arg, hasFlag, list, resolveSourceDir,
+  ROOT, SEED_MODEL, PROBE_MODEL, arg, hasFlag, list, resolveSourceDir,
   docsFolder, requireApiKey, loadGlossary, glossaryPath, buildTranslatePrompt, callClaude,
   costUSD, langName, rel,
 } from './lib.mjs';
@@ -75,6 +75,7 @@ console.log(`  glossary: ${glossary?.terms?.length ?? 0} terms · lectures: ${le
 
 const client = dryRun ? null : new Anthropic();
 let spend = 0;
+const failed = []; // `<base>/<role>` of every sample that was not written
 
 for (const lecture of lectures) {
   const base = lecture.replace(/\.md$/, '');
@@ -103,21 +104,43 @@ for (const lecture of lectures) {
     if (fs.existsSync(dest) && !force) { console.log(`  ${base}  ${role}: exists, skipping (--force to redo)`); continue; }
     if (dryRun) { console.log(`  ${base}  ${role}: would translate with ${model}`); continue; }
     try {
-      const r = await callClaude(client, {
-        model, maxTokens: MAX_TOKENS_FULL,
-        prompt: buildTranslatePrompt(en, lang, glossary),
-      });
-      if (r.stopReason === 'max_tokens') console.warn(`    ! ${base}/${role} hit max_tokens — translation may be truncated`);
-      fs.writeFileSync(dest, r.text);
-      const c = costUSD(model, r.usage);
+      const r = await callClaude(client, { model, operation: 'fullDocument', prompt: buildTranslatePrompt(en, lang, glossary) });
+      const c = costUSD(model, r.usage); // billed whether or not the sample is usable
       spend += c;
+      if (r.stopReason !== 'end_turn') {
+        // A refusal or a max_tokens stop can still carry partial text. Writing it would pass
+        // it off as a translation, and every rerun would then skip the sample as done.
+        const category = r.stopDetails?.category;
+        console.error(`  ✗ ${base}/${role}: stop_reason=${r.stopReason}${category ? ` category=${category}` : ''}  ${model}  ${r.elapsed}s  $${c.toFixed(3)}`);
+        // dest exists here only under --force: it is the earlier sample this run was asked to
+        // redo. Remove it, so the sample is "not written" and a plain rerun retries it.
+        fs.rmSync(dest, { force: true });
+        failed.push(`${base}/${role}`);
+        continue;
+      }
+      if (!r.text.trim()) {
+        // A model that always thinks (the Opus 5.5 seed) can end its turn with thinking blocks and no text.
+        // An empty file would pass for a translation, and every rerun would skip it as done.
+        console.error(`  ✗ ${base}/${role}: response contained no text  ${model}  ${r.elapsed}s  $${c.toFixed(3)}`);
+        fs.rmSync(dest, { force: true });
+        failed.push(`${base}/${role}`);
+        continue;
+      }
+      fs.writeFileSync(dest, r.text);
       console.log(`  ${base}  ${role}: ${model}  ${r.elapsed}s  $${c.toFixed(3)}`);
     } catch (err) {
-      console.error(`  ${base}  ${role}: ERROR ${err.message}`);
+      console.error(`  ✗ ${base}/${role}: ERROR ${err.message}`);
+      fs.rmSync(dest, { force: true });
+      failed.push(`${base}/${role}`);
     }
   }
 }
 
 console.log(`\nTranslation spend: $${spend.toFixed(2)}`);
 console.log(`Outputs: ${rel(path.join(outDir, lang))}/<lecture>/{seed,probe}.md`);
+if (failed.length) {
+  console.error(`\n✗ ${failed.length} sample(s) failed and were not written: ${failed.join(', ')}`);
+  console.error(`Rerun to retry them (existing outputs are skipped unless --force).`);
+  process.exit(1);
+}
 console.log(`\nNext: node scripts/glossary/suggest-glossary.mjs --lang ${lang} --outputs ${rel(outDir)} --role seed   (then --role probe)`);
