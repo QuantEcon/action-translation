@@ -342,25 +342,22 @@ describe('Language Configuration', () => {
     });
   });
 
-  // Round 5 (lecture-python-programming.ml#26, pandas): the editor's ml#57 Q1
-  // ruling on short label bullets and his ml#25 answer 3 on "now", held for
-  // a 12-draw arm (.qe/dev/log/2026-10-21-ml-held-rule-edits-handover.md).
-  // Both edit existing rules, so the count stays 28.
-  describe('Malayalam round-5 held rule edits (ml#57 Q1, ml#25 answer 3)', () => {
+  // Round 5 (lecture-python-programming.ml#26, pandas): his ml#25 answer 3 on
+  // "now", measured 2026-10-21 (arm 2026-10-21-held-rule-edits). The ml#57 Q1
+  // rule-12 edit measured with it raised parity refusals on functions and was
+  // withdrawn, so rule 12 must stay as it was. Rule 8 is edited in place, so
+  // the count stays 28.
+  describe('Malayalam round-5 rule 8 (ml#25 answer 3); rule 12 unchanged', () => {
     const rules = getLanguageConfig('ml').additionalRules;
     const register = rules.find((r) => r.startsWith('Write short sentences in a classroom'));
     const formulas = rules.find((r) => r.startsWith('Render English discourse formulas'));
 
-    it('rule 12 keeps short label bullets English and tells the judge so', () => {
+    it('rule 12 keeps its bullet clause (the label-bullet edit was withdrawn)', () => {
       expect(register).toBeDefined();
-      expect(register).toContain('"* reading in data"');
-      expect(register).toContain('D-2026-10-21-ml-short-label-bullets-stay-english');
-      expect(register).toContain('never treat such English bullets as under-translation');
-      expect(register).toContain("a bullet that completes the lead-in's sentence");
-      // the unconditional clause it replaces
-      expect(register).not.toContain(
+      expect(register).toContain(
         'when a bullet that is a bare noun-phrase fragment in English is translated, make it a full Malayalam sentence'
       );
+      expect(register).not.toContain('copied byte-for-byte');
     });
 
     it('rule 8 takes "now" by the two senses the editor confirmed', () => {
@@ -377,7 +374,7 @@ describe('Language Configuration', () => {
       expect(formulas).toContain('not Practice-ൽ or പ്രായോഗികമായി');
     });
 
-    it('edits rules in place — still 28', () => {
+    it('edits rule 8 in place — still 28', () => {
       expect(rules).toHaveLength(28);
     });
   });

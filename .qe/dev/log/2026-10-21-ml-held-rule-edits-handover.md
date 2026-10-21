@@ -121,9 +121,38 @@ arms). The eight loops run in parallel. Then commit the arm as
 `records.jsonl` and the script that rebuilds it, as round 4 did), their log tails, and a
 `README.md` with the two shas, the model, the English sha and any refusals.
 
+## Verdict (2026-10-21): partly passed — rule 8 ships, rule 12 is withdrawn
+
+Drawn in this session (the key was available after all). The arm is
+`experiments/ml-benchmark/arms/2026-10-21-held-rule-edits/`, with its README:
+
+- 96 drafts in the main arm;
+- a rule-12 / rule-8 ablation on `functions`;
+- a second `functions` round for rule 8. It was pre-registered when rule 8's first
+  bare-endings result landed on the 25-point flag line (11/24 → 17/24, p = 0.071).
+
+**Rule 12 fails.**
+- It reaches its target only on `pandas`, whose bullets its examples quote (label list 0/12 → 12/12).
+- On its own it raises parity refusals on `functions` from 1/49 to 7/31 attempts (p = 0.005) and
+  the bare-endings mode from 28/48 to 20/24 (p = 0.03).
+- It leaves the `pandas` `axis` bullets under the lead-in in English in 12/12 drafts, though the
+  editor translated them.
+- Withdrawn from this PR. The ruling stays in code (`ml_repair.py` repair 6).
+- The held-out site, `functions` 270–271, completes its lead-in's sentence ("…by"), so it tested
+  nothing. Whether such lists stay English is a question for the editor, drafted for the round-6
+  questions issue.
+
+**Rule 8 passes.**
+- "next" → `ഇനി` on `pandas`: 1.58 → 2.17 per draft (p = 0.016).
+- "at this moment" → `ഇപ്പോൾ` on held-out `numpy`: 0.50 → 0.92 (p = 0.036).
+- Formulas kept: 0/24 → 14/24.
+- At 48 v 48 on `functions` the bare-endings mode does not worsen (28/48 → 32/48, p = 0.26), and
+  neither do refusals (1/49 → 1/49). Round 1's gap was mostly the control drawing low: the same
+  engine gave 11/24 in round 1 and 17/24 in round 2.
+
 ## What happens after
 
-- **Passed**: this PR merges (#403 is already merged). A release follows the release procedure: the
+- **Passed** (rule 8 alone, as this PR now carries): this PR merges (#403 is already merged). A release follows the release procedure: the
   gate on the tag, step 4b, the `@v0` smoke. It then serves round 7, after the editor's round-6
   review of `intro` (lecture-python-programming.ml#58).
 - **Partly passed**: the edits that passed ship, the CHANGELOG's held entry is cut to them, and the

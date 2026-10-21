@@ -13,7 +13,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **`ml` rules 12 and 8, held for measurement** (do not release before the arm in `.qe/dev/log/2026-10-21-ml-held-rule-edits-handover.md` passes). Rule 12: a short label bullet (*reading in data*, *LaTeX integration*), and a short label-like lead-in (*For the `.apply()` method:*), stays in English byte for byte, and the review judge is told not to call it under-translation (lecture-python-programming.ml#57 Q1, decision record `D-2026-10-21-ml-short-label-bullets-stay-english`). "Make a bare noun-phrase bullet a full Malayalam sentence" is limited to longer, descriptive bullets, and a bullet that completes the lead-in's sentence is translated with it. Rule 8: *now* meaning "next, let's move on" takes `ഇനി` in the middle of a sentence as well as at its start, with `ഇപ്പോൾ` only where it means "at this moment" — "at the moment", "for now", "currently" or "while …" (the editor's ml#25 answer 3; three round-5 flags); *In essence,* and *In practice,* join the sentence-initial formulas that stay English (already restored in code since v0.29.5).
+- **`ml` rule 8 takes *now* by sense, and keeps *In essence,* and *In practice,* in English.** *Now* meaning "next, let's move on" takes `ഇനി` in the middle of a sentence as well as at its start, with `ഇപ്പോൾ` only where it means "at this moment" — "at the moment", "for now", "currently" or "while …" (the editor's ml#25 answer 3; three round-5 flags). *In essence,* and *In practice,* join the sentence-initial formulas that stay English (already restored in code since v0.29.5).
+  - **Measured 2026-10-21** on raw drafts against a same-day control (arm `experiments/ml-benchmark/arms/2026-10-21-held-rule-edits/`):
+    - "next" → `ഇനി` on `pandas` rises 1.58 → 2.17 per draft (p = 0.016);
+    - "at this moment" → `ഇപ്പോൾ` on held-out `numpy` rises 0.50 → 0.92 (p = 0.036);
+    - the formulas are kept in 14/24 site-draws, against 0/24;
+    - on `functions` at 48 drafts per arm, the bare-endings mode (28/48 → 32/48, p = 0.26) and parity refusals (1/49 → 1/49) do not worsen.
+  - **Withdrawn:** the rule-12 edit measured with it (lecture-python-programming.ml#57 Q1: short label bullets and a short label-like lead-in stay English).
+    - It reached its target only on `pandas`, whose bullets its examples quote.
+    - On its own it raised parity refusals on `functions` (the `{raw}` head directive dropped) from 1/49 to 7/31 attempts (p = 0.005) and the bare-endings mode from 28/48 to 20/24 (p = 0.03).
+    - It also left the `pandas` `axis` bullets under the lead-in in English in 12/12 drafts; the editor translated them.
+    - The ruling stays in code (`ml_repair.py` repair 6). The prompt edit waits on the editor's answer about lists that complete their lead-in's sentence.
 
 ## [0.29.5] - 2026-10-19
 

@@ -39,8 +39,8 @@ Roadmap detail lives in the project trackers (reading order in
   result goes on #327.
 - **ml calibration: round 5 (`pandas`) is merged and its repairs shipped in v0.29.5
   (2026-10-19); round 6 (`intro`, lecture-python-programming.ml#58) is with the editor; his
-  ml#57 answers (2026-10-20) are encoded in code (#403, merged 2026-10-20 as `888cdb7`); the
-  held rule edits are #404.**
+  ml#57 answers (2026-10-20) are encoded in code (#403, merged 2026-10-20 as `888cdb7`); of
+  the held rule edits, rule 8 passed its arm and is #404, and rule 12 was withdrawn.**
   - **Round 4.** The editor's 73 suggestions on `numpy` (lecture-python-programming.ml#23:
     touch rate 67% → 51%, lines accepted 22 → 70) are applied and merged as `7e373de`.
     His questions are on ml#25; ml#14 (exercise blocks restored) is still open.
@@ -87,15 +87,19 @@ Roadmap detail lives in the project trackers (reading order in
     279–280 (round 2 predates the ruling; left as approved); 40 fixture tests.
   - **Open, in order:**
     1. ~~Merge the ml#57 PR~~ (#403, merged 2026-10-20).
-    2. Prompt edits held for a re-drawing release, measured at ≥ 12 draws per arm (#404, with
-       its handover `log/2026-10-21-ml-held-rule-edits-handover.md`): rule 12's
-       bullet clause narrowed to bullets outside a label list, with the label lists and the
-       short `{note}` lead-in (*For the `.apply()` method:*) kept English (ml#57 Q1; also tells
-       the review judge); *now* by sense mid-sentence (ml#25 Q3; 3 round-5 flags); rule 8's
-       list (*In essence*, *In practice*); and the rule-2 arm. The round-4 lexical repairs
-       (*see* → `നോക്കുക`, adverbial *element-wise*, standalone `മുൻ`) and the
-       bracketed-paragraph stop are still open and had no site in `pandas`.
-    3. Round 7 at the release that carries them, after the round-6 review.
+    2. Prompt edits held for a re-drawing release, measured 2026-10-21 (arm
+       `2026-10-21-held-rule-edits`; verdict in `log/2026-10-21-ml-held-rule-edits-handover.md`):
+       - **Rule 8 passed** and is #404, ready for review: *now* by sense mid-sentence (ml#25 Q3;
+         3 round-5 flags) and its list (*In essence*, *In practice*).
+       - **Rule 12's label-bullet edit (ml#57 Q1) failed** and is withdrawn. On its own it
+         raised parity refusals on `functions` (1/49 → 7/31) and the bare-endings mode. It
+         waits on the editor's answer about lists that complete their lead-in's sentence (a
+         question drafted for the round-6 questions issue), and is then re-worded and
+         re-measured with `functions` at ≥ 24 draws per arm.
+       - The rule-2 arm is still to run. The round-4 lexical repairs (*see* → `നോക്കുക`,
+         adverbial *element-wise*, standalone `മുൻ`) and the bracketed-paragraph stop are
+         still open and had no site in `pandas`.
+    3. Round 7 at the release that carries rule 8, after the round-6 review.
 
     Logs: `2026-09-28-ml-round4`, `2026-10-19-ml-round5`, `2026-10-21-ml57-answers`. Opus 5.5
     is scoped separately as **#334**.
