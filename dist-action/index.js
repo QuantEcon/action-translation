@@ -2140,10 +2140,66 @@ var require_request = __commonJS({
           return false;
         }
       }
-      onUpgrade(statusCode, headers, socket) {
+      /**
+       * @param {number|null} statusCode
+       * @param {Buffer[]|null} headers
+       * @param {import('node:stream').Duplex} socket
+       * @param {string} [statusText]
+       */
+      onUpgrade(statusCode, headers, socket, statusText = "") {
+        this.onFinally();
         assert(!this.aborted);
         assert(!this.completed);
-        return this[kHandler].onUpgrade(statusCode, headers, socket);
+        if (statusCode !== null) {
+          this.#publishUpgradeHeaders(statusCode, headers, statusText);
+        }
+        const result = this[kHandler].onUpgrade(statusCode, headers, socket);
+        if (!this.aborted) {
+          this.completed = true;
+          if (statusCode !== null) {
+            this.#publishUpgradeTrailers();
+          }
+        }
+        return result;
+      }
+      /**
+       * @param {number} statusCode
+       * @param {import('node:http2').IncomingHttpHeaders} headers
+       * @param {(headers: import('node:http2').IncomingHttpHeaders) => Buffer[]} parseHeaders
+       * @param {string} [statusText]
+       */
+      onUpgradeResponse(statusCode, headers, parseHeaders, statusText = "") {
+        assert(!this.aborted);
+        assert(this.completed);
+        if (channels.headers.hasSubscribers) {
+          this.#publishUpgradeHeaders(statusCode, parseHeaders(headers), statusText);
+        }
+        this.#publishUpgradeTrailers();
+      }
+      /**
+       * @param {Error} error
+       */
+      onUpgradeError(error4) {
+        assert(!this.aborted);
+        assert(this.completed);
+        if (channels.error.hasSubscribers) {
+          channels.error.publish({ request: this, error: error4 });
+        }
+      }
+      /**
+       * @param {number} statusCode
+       * @param {Buffer[]} headers
+       * @param {string} statusText
+       */
+      #publishUpgradeHeaders(statusCode, headers, statusText) {
+        if (channels.headers.hasSubscribers) {
+          channels.headers.publish({ request: this, response: { statusCode, headers, statusText } });
+        }
+      }
+      #publishUpgradeTrailers() {
+        if (channels.trailers.hasSubscribers) {
+          channels.trailers.publish({ request: this, trailers: [] });
+        }
       }
       onComplete(trailers) {
         this.onFinally();
@@ -2210,7 +2266,11 @@ var require_request = __commonJS({
           } else if (typeof val[i] === "object") {
             throw new InvalidArgumentError(`invalid ${key} header`);
           } else {
-            arr.push(`${val[i]}`);
+            const str2 = `${val[i]}`;
+            if (!isValidHeaderValue(str2)) {
+              throw new InvalidArgumentError(`invalid ${key} header`);
+            }
+            arr.push(str2);
           }
         }
         val = arr;
@@ -2222,6 +2282,9 @@ var require_request = __commonJS({
         val = "";
       } else {
         val = `${val}`;
+        if (!isValidHeaderValue(val)) {
+          throw new InvalidArgumentError(`invalid ${key} header`);
+        }
       }
       if (headerName === "host") {
         if (request2.host !== null) {
@@ -5952,6 +6015,7 @@ var require_client_h1 = __commonJS({
       RequestContentLengthMismatchError,
       ResponseContentLengthMismatchError,
       RequestAbortedError,
+      InvalidArgumentError,
       HeadersTimeoutError,
       HeadersOverflowError,
       SocketError,
@@ -6278,7 +6342,7 @@ var require_client_h1 = __commonJS({
         }
       }
       onUpgrade(head) {
-        const { upgrade, client, socket, headers, statusCode } = this;
+        const { upgrade, client, socket, headers, statusCode, statusText } = this;
         assert(upgrade);
         assert(client[kSocket] === socket);
         assert(!socket.destroyed);
@@ -6303,9 +6367,10 @@ var require_client_h1 = __commonJS({
         client[kQueue][client[kRunningIdx]++] = null;
         client.emit("disconnect", client[kUrl], [client], new InformationalError("upgrade"));
         try {
-          request2.onUpgrade(statusCode, headers, socket);
-        } catch (err) {
-          util.destroy(socket, err);
+          request2.onUpgrade(statusCode, headers, socket, statusText);
+        } catch (error4) {
+          util.errorRequest(client, request2, error4);
+          util.destroy(socket, error4);
         }
         client[kResume]();
       }
@@ -6597,21 +6662,20 @@ var require_client_h1 = __commonJS({
     }
     function clearIdleSocketValidation(socket) {
       if (socket[kIdleSocketValidationTimeout]) {
-        clearTimeout(socket[kIdleSocketValidationTimeout]);
+        clearImmediate(socket[kIdleSocketValidationTimeout]);
         socket[kIdleSocketValidationTimeout] = null;
       }
       socket[kIdleSocketValidation] = 0;
     }
     function scheduleIdleSocketValidation(client, socket) {
       socket[kIdleSocketValidation] = 1;
-      socket[kIdleSocketValidationTimeout] = setTimeout(() => {
+      socket[kIdleSocketValidationTimeout] = setImmediate(() => {
         socket[kIdleSocketValidationTimeout] = null;
         socket[kIdleSocketValidation] = 2;
         if (client[kSocket] === socket && !socket.destroyed) {
           client[kResume]();
         }
-      }, 0);
-      socket[kIdleSocketValidationTimeout].unref?.();
+      });
     }
     function resumeH1(client) {
       const socket = client[kSocket];
@@ -6678,8 +6742,16 @@ var require_client_h1 = __commonJS({
         }
         body = bodyStream.stream;
         contentLength = bodyStream.length;
-      } else if (util.isBlobLike(body) && request2.contentType == null && body.type) {
-        headers.push("content-type", body.type);
+      } else if (util.isBlobLike(body) && request2.contentType == null) {
+        const contentType = body.type;
+        if (contentType) {
+          const contentTypeValue = `${contentType}`;
+          if (!util.isValidHeaderValue(contentTypeValue)) {
+            util.errorRequest(client, request2, new InvalidArgumentError("invalid content-type header"));
+            return false;
+          }
+          headers.push("content-type", contentTypeValue);
+        }
       }
       if (body && typeof body.read === "function") {
         body.read(0);
@@ -6701,11 +6773,17 @@ var require_client_h1 = __commonJS({
       }
       const socket = client[kSocket];
       clearIdleSocketValidation(socket);
-      const abort = (err) => {
-        if (request2.aborted || request2.completed) {
+      const abort = (error4) => {
+        if (request2.aborted) {
           return;
         }
-        util.errorRequest(client, request2, err || new RequestAbortedError());
+        if (request2.completed) {
+          if (request2.upgrade || request2.method === "CONNECT") {
+            util.destroy(socket, new InformationalError("aborted"));
+          }
+          return;
+        }
+        util.errorRequest(client, request2, error4 || new RequestAbortedError());
         util.destroy(body);
         util.destroy(socket, new InformationalError("aborted"));
       };
@@ -7061,6 +7139,7 @@ var require_client_h2 = __commonJS({
   "node_modules/undici/lib/dispatcher/client-h2.js"(exports2, module2) {
     "use strict";
     var assert = require("node:assert");
+    var { errorMonitor } = require("node:events");
     var { pipeline } = require("node:stream");
     var util = require_util();
     var {
@@ -7120,6 +7199,10 @@ var require_client_h2 = __commonJS({
         }
       }
       return result;
+    }
+    function parseH2ResponseHeaders(headers) {
+      const { [HTTP2_HEADER_STATUS]: _statusCode, ...realHeaders } = headers;
+      return parseH2Headers(realHeaders);
     }
     async function connectH2(client, socket) {
       client[kSocket] = socket;
@@ -7284,16 +7367,22 @@ var require_client_h2 = __commonJS({
       const { hostname, port } = client[kUrl];
       headers[HTTP2_HEADER_AUTHORITY] = host || `${hostname}${port ? `:${port}` : ""}`;
       headers[HTTP2_HEADER_METHOD] = method;
-      const abort = (err) => {
-        if (request2.aborted || request2.completed) {
+      const abort = (error4) => {
+        if (request2.aborted) {
           return;
         }
-        err = err || new RequestAbortedError();
-        util.errorRequest(client, request2, err);
-        if (stream != null) {
-          util.destroy(stream, err);
+        if (request2.completed) {
+          if (method === "CONNECT" && stream != null) {
+            util.destroy(stream, error4 || new RequestAbortedError());
+          }
+          return;
         }
-        util.destroy(body, err);
+        error4 = error4 || new RequestAbortedError();
+        util.errorRequest(client, request2, error4);
+        if (stream != null) {
+          util.destroy(stream, error4);
+        }
+        util.destroy(body, error4);
         client[kQueue][client[kRunningIdx]++] = null;
         client[kResume]();
       };
@@ -7308,18 +7397,42 @@ var require_client_h2 = __commonJS({
       if (method === "CONNECT") {
         session.ref();
         stream = session.request(headers, { endStream: false, signal });
-        if (stream.id && !stream.pending) {
-          request2.onUpgrade(null, null, stream);
-          ++session[kOpenStreams];
-          client[kQueue][client[kRunningIdx]++] = null;
-        } else {
-          stream.once("ready", () => {
+        let upgradeResponseFinished = false;
+        const onResponse = (headers2) => {
+          upgradeResponseFinished = true;
+          stream.off(errorMonitor, onUpgradeError);
+          request2.onUpgradeResponse(Number(headers2[HTTP2_HEADER_STATUS]), headers2, parseH2ResponseHeaders);
+        };
+        const onUpgradeError = (error4) => {
+          upgradeResponseFinished = true;
+          stream.off("response", onResponse);
+          request2.onUpgradeError(error4);
+        };
+        const onReady = () => {
+          try {
             request2.onUpgrade(null, null, stream);
-            ++session[kOpenStreams];
-            client[kQueue][client[kRunningIdx]++] = null;
-          });
-        }
+          } catch (error4) {
+            stream.off("response", onResponse);
+            abort(error4);
+            return;
+          }
+          if (request2.aborted) {
+            return;
+          }
+          stream.off("error", abort);
+          stream.once(errorMonitor, onUpgradeError);
+          client[kQueue][client[kRunningIdx]++] = null;
+        };
+        stream.once("response", onResponse);
+        stream.once("error", abort);
+        ++session[kOpenStreams];
+        onReady();
         stream.once("close", () => {
+          if (!upgradeResponseFinished && request2.completed) {
+            stream.off("response", onResponse);
+            stream.off(errorMonitor, onUpgradeError);
+            request2.onUpgradeError(new InformationalError(`HTTP/2: "stream error" received - code ${stream.rstCode}`));
+          }
           session[kOpenStreams] -= 1;
           if (session[kOpenStreams] === 0) session.unref();
         });
@@ -9231,6 +9344,24 @@ var require_retry_handler = __commonJS({
       const current = Date.now();
       return new Date(retryAfter).getTime() - current;
     }
+    function validatePartialResponseContentLength(headers, range, statusCode, retryCount) {
+      const contentLength = headers["content-length"];
+      if (contentLength == null) {
+        return null;
+      }
+      if (!Number.isFinite(range.start) || !Number.isFinite(range.end)) {
+        return null;
+      }
+      const length = Number(contentLength);
+      const expectedLength = range.end - range.start + 1;
+      if (!Number.isFinite(length) || length !== expectedLength) {
+        return new RequestRetryError("Content-Length mismatch", statusCode, {
+          headers,
+          data: { count: retryCount }
+        });
+      }
+      return null;
+    }
     var RetryHandler = class _RetryHandler {
       constructor(opts, handlers) {
         const { retryOptions, ...dispatchOpts } = opts;
@@ -9284,6 +9415,7 @@ var require_retry_handler = __commonJS({
         this.end = null;
         this.etag = null;
         this.resume = null;
+        this.headersSent = false;
         this.handler.onConnect((reason) => {
           this.aborted = true;
           if (this.abort) {
@@ -9292,6 +9424,17 @@ var require_retry_handler = __commonJS({
             this.reason = reason;
           }
         });
+      }
+      checkpointResponseEnd(headers, resume) {
+        if (this.end == null && this.opts.method !== "HEAD") {
+          const contentLength = headers["content-length"];
+          this.end = contentLength != null ? Number(contentLength) - 1 : null;
+          assert(
+            this.end == null || Number.isFinite(this.end),
+            "invalid content-length"
+          );
+        }
+        this.resume = this.end != null ? resume : null;
       }
       onRequestSent() {
         if (this.handler.onRequestSent) {
@@ -9354,7 +9497,9 @@ var require_retry_handler = __commonJS({
         const headers = parseHeaders(rawHeaders);
         this.retryCount += 1;
         if (statusCode >= 300) {
-          if (this.retryOpts.statusCodes.includes(statusCode) === false) {
+          if (!this.headersSent && this.retryOpts.statusCodes.includes(statusCode) === false) {
+            this.headersSent = true;
+            this.checkpointResponseEnd(headers, resume);
             return this.handler.onHeaders(
               statusCode,
               rawHeaders,
@@ -9403,9 +9548,21 @@ var require_retry_handler = __commonJS({
             );
             return false;
           }
+          const contentLengthError = validatePartialResponseContentLength(headers, contentRange, statusCode, this.retryCount);
+          if (contentLengthError != null) {
+            this.abort(contentLengthError);
+            return false;
+          }
           const { start, size, end = size - 1 } = contentRange;
-          assert(this.start === start, "content-range mismatch");
-          assert(this.end == null || this.end === end, "content-range mismatch");
+          if (this.start !== start || this.end != null && this.end !== end) {
+            this.abort(
+              new RequestRetryError("Content-Range mismatch", statusCode, {
+                headers,
+                data: { count: this.retryCount }
+              })
+            );
+            return false;
+          }
           this.resume = resume;
           return true;
         }
@@ -9413,12 +9570,18 @@ var require_retry_handler = __commonJS({
           if (statusCode === 206) {
             const range = parseRangeHeader(headers["content-range"]);
             if (range == null) {
+              this.headersSent = true;
               return this.handler.onHeaders(
                 statusCode,
                 rawHeaders,
                 resume,
                 statusMessage
               );
+            }
+            const contentLengthError = validatePartialResponseContentLength(headers, range, statusCode, this.retryCount);
+            if (contentLengthError != null) {
+              this.abort(contentLengthError);
+              return false;
             }
             const { start, size, end = size - 1 } = range;
             assert(
@@ -9439,6 +9602,7 @@ var require_retry_handler = __commonJS({
             "invalid content-length"
           );
           this.resume = resume;
+          this.headersSent = true;
           this.etag = headers.etag != null ? headers.etag : null;
           if (this.etag != null && this.etag.startsWith("W/")) {
             this.etag = null;
@@ -9466,7 +9630,7 @@ var require_retry_handler = __commonJS({
         return this.handler.onComplete(rawTrailers);
       }
       onError(err) {
-        if (this.aborted || isDisturbed(this.opts.body)) {
+        if (this.aborted || isDisturbed(this.opts.body) || this.headersSent && this.resume == null) {
           return this.handler.onError(err);
         }
         if (this.retryCount - this.retryCountCheckpoint > 0) {
@@ -16265,14 +16429,48 @@ var require_util6 = __commonJS({
       for (let i = 0; i < path6.length; ++i) {
         const code = path6.charCodeAt(i);
         if (code < 32 || // exclude CTLs (0-31)
-        code === 127 || // DEL
+        code > 126 || // exclude DEL and non-ascii
         code === 59) {
           throw new Error("Invalid cookie path");
         }
       }
     }
+    function isLetterOrDigit(code) {
+      return code >= 48 && code <= 57 || // 0-9
+      code >= 65 && code <= 90 || // A-Z
+      code >= 97 && code <= 122;
+    }
     function validateCookieDomain(domain) {
-      if (domain.startsWith("-") || domain.endsWith(".") || domain.endsWith("-")) {
+      if (domain === " ") {
+        return;
+      }
+      if (domain.length > 255) {
+        throw new Error("Invalid cookie domain");
+      }
+      let labelLength = 0;
+      for (let i = 0; i < domain.length; ++i) {
+        const code = domain.charCodeAt(i);
+        if (code === 46) {
+          if (labelLength === 0) {
+            throw new Error("Invalid cookie domain");
+          }
+          if (domain.charCodeAt(i - 1) === 45) {
+            throw new Error("Invalid cookie domain");
+          }
+          labelLength = 0;
+          continue;
+        }
+        if (labelLength === 0 && !isLetterOrDigit(code)) {
+          throw new Error("Invalid cookie domain");
+        }
+        if (!isLetterOrDigit(code) && code !== 45) {
+          throw new Error("Invalid cookie domain");
+        }
+        if (++labelLength > 63) {
+          throw new Error("Invalid cookie domain");
+        }
+      }
+      if (labelLength === 0 || domain.charCodeAt(domain.length - 1) === 45) {
         throw new Error("Invalid cookie domain");
       }
     }
@@ -16355,7 +16553,11 @@ var require_util6 = __commonJS({
           throw new Error("Invalid unparsed");
         }
         const [key, ...value] = part.split("=");
-        out.push(`${key.trim()}=${value.join("=")}`);
+        const trimmedKey = key.trim();
+        const joinedValue = value.join("=");
+        validateCookieName(trimmedKey);
+        validateCookieValue(joinedValue);
+        out.push(`${trimmedKey}=${joinedValue}`);
       }
       return out.join("; ");
     }
@@ -17314,7 +17516,7 @@ var require_connection = __commonJS({
           const secProtocol = response.headersList.get("Sec-WebSocket-Protocol");
           if (secProtocol !== null) {
             const requestProtocols = getDecodeSplit("sec-websocket-protocol", request2.headersList);
-            if (!requestProtocols.includes(secProtocol)) {
+            if (requestProtocols === null || !requestProtocols.includes(secProtocol)) {
               failWebsocketConnection(ws, "Protocol was not set in the opening handshake.");
               return;
             }
@@ -17462,6 +17664,7 @@ var require_permessage_deflate = __commonJS({
             if (this.#maxPayloadSize > 0 && this.#inflate[kLength] > this.#maxPayloadSize) {
               callback(new MessageSizeExceededError());
               this.#inflate.removeAllListeners();
+              this.#inflate.destroy();
               this.#inflate = null;
               return;
             }
@@ -18373,6 +18576,40 @@ var require_eventsource_stream = __commonJS({
     var CR = 13;
     var COLON = 58;
     var SPACE = 32;
+    var DATA = Buffer.from("data");
+    var EVENT = Buffer.from("event");
+    var ID = Buffer.from("id");
+    var RETRY = Buffer.from("retry");
+    function isASCIINumberBytes(buffer, start) {
+      if (start >= buffer.length) {
+        return false;
+      }
+      for (let i = start; i < buffer.length; i++) {
+        if (buffer[i] < 48 || buffer[i] > 57) {
+          return false;
+        }
+      }
+      return true;
+    }
+    function isValidLastEventIdBytes(buffer, start) {
+      for (let i = start; i < buffer.length; i++) {
+        if (buffer[i] === 0) {
+          return false;
+        }
+      }
+      return true;
+    }
+    function isFieldName(line, length, field) {
+      if (length !== field.length) {
+        return false;
+      }
+      for (let i = 0; i < length; i++) {
+        if (line[i] !== field[i]) {
+          return false;
+        }
+      }
+      return true;
+    }
     var EventSourceStream = class extends Transform {
       /**
        * @type {eventSourceSettings}
@@ -18392,10 +18629,13 @@ var require_eventsource_stream = __commonJS({
        */
       eventEndCheck = false;
       /**
-       * @type {Buffer}
+       * @type {Buffer[]}
        */
-      buffer = null;
+      chunks = [];
+      chunkIndex = 0;
       pos = 0;
+      lineChunkIndex = 0;
+      linePos = 0;
       event = {
         data: void 0,
         event: void 0,
@@ -18426,63 +18666,30 @@ var require_eventsource_stream = __commonJS({
           callback();
           return;
         }
-        if (this.buffer) {
-          this.buffer = Buffer.concat([this.buffer, chunk]);
-        } else {
-          this.buffer = chunk;
-        }
+        this.chunks.push(chunk);
         if (this.checkBOM) {
-          switch (this.buffer.length) {
-            case 1:
-              if (this.buffer[0] === BOM[0]) {
-                callback();
-                return;
-              }
-              this.checkBOM = false;
-              callback();
-              return;
-            case 2:
-              if (this.buffer[0] === BOM[0] && this.buffer[1] === BOM[1]) {
-                callback();
-                return;
-              }
-              this.checkBOM = false;
-              break;
-            case 3:
-              if (this.buffer[0] === BOM[0] && this.buffer[1] === BOM[1] && this.buffer[2] === BOM[2]) {
-                this.buffer = Buffer.alloc(0);
-                this.checkBOM = false;
-                callback();
-                return;
-              }
-              this.checkBOM = false;
-              break;
-            default:
-              if (this.buffer[0] === BOM[0] && this.buffer[1] === BOM[1] && this.buffer[2] === BOM[2]) {
-                this.buffer = this.buffer.subarray(3);
-              }
-              this.checkBOM = false;
-              break;
+          if (this.handleBOM()) {
+            callback();
+            return;
           }
         }
-        while (this.pos < this.buffer.length) {
+        while (this.hasCurrentByte()) {
+          const byte = this.currentByte();
           if (this.eventEndCheck) {
             if (this.crlfCheck) {
-              if (this.buffer[this.pos] === LF) {
-                this.buffer = this.buffer.subarray(this.pos + 1);
-                this.pos = 0;
+              if (byte === LF) {
                 this.crlfCheck = false;
+                this.consumeCurrentByte();
                 continue;
               }
               this.crlfCheck = false;
             }
-            if (this.buffer[this.pos] === LF || this.buffer[this.pos] === CR) {
-              if (this.buffer[this.pos] === CR) {
+            if (byte === LF || byte === CR) {
+              if (byte === CR) {
                 this.crlfCheck = true;
               }
-              this.buffer = this.buffer.subarray(this.pos + 1);
-              this.pos = 0;
-              if (this.event.data !== void 0 || this.event.event || this.event.id || this.event.retry) {
+              this.consumeCurrentByte();
+              if (this.hasPendingEvent()) {
                 this.processEvent(this.event);
               }
               this.clearEvent();
@@ -18491,17 +18698,16 @@ var require_eventsource_stream = __commonJS({
             this.eventEndCheck = false;
             continue;
           }
-          if (this.buffer[this.pos] === LF || this.buffer[this.pos] === CR) {
-            if (this.buffer[this.pos] === CR) {
+          if (byte === LF || byte === CR) {
+            if (byte === CR) {
               this.crlfCheck = true;
             }
-            this.parseLine(this.buffer.subarray(0, this.pos), this.event);
-            this.buffer = this.buffer.subarray(this.pos + 1);
-            this.pos = 0;
+            this.parseLine(this.readLine(), this.event);
+            this.consumeCurrentByte();
             this.eventEndCheck = true;
             continue;
           }
-          this.pos++;
+          this.advanceCursor();
         }
         callback();
       }
@@ -18517,43 +18723,42 @@ var require_eventsource_stream = __commonJS({
         if (colonPosition === 0) {
           return;
         }
-        let field = "";
-        let value = "";
+        let fieldLength = line.length;
+        let valueStart = line.length;
         if (colonPosition !== -1) {
-          field = line.subarray(0, colonPosition).toString("utf8");
-          let valueStart = colonPosition + 1;
+          fieldLength = colonPosition;
+          valueStart = colonPosition + 1;
           if (line[valueStart] === SPACE) {
             ++valueStart;
           }
-          value = line.subarray(valueStart).toString("utf8");
-        } else {
-          field = line.toString("utf8");
-          value = "";
         }
-        switch (field) {
-          case "data":
-            if (event[field] === void 0) {
-              event[field] = value;
-            } else {
-              event[field] += `
+        if (isFieldName(line, fieldLength, DATA)) {
+          const value = line.toString("utf8", valueStart);
+          if (event.data === void 0) {
+            event.data = value;
+          } else {
+            event.data += `
 ${value}`;
-            }
-            break;
-          case "retry":
-            if (isASCIINumber(value)) {
-              event[field] = value;
-            }
-            break;
-          case "id":
-            if (isValidLastEventId(value)) {
-              event[field] = value;
-            }
-            break;
-          case "event":
-            if (value.length > 0) {
-              event[field] = value;
-            }
-            break;
+          }
+          return;
+        }
+        if (isFieldName(line, fieldLength, RETRY)) {
+          if (isASCIINumberBytes(line, valueStart)) {
+            event.retry = line.toString("utf8", valueStart);
+          }
+          return;
+        }
+        if (isFieldName(line, fieldLength, ID)) {
+          if (isValidLastEventIdBytes(line, valueStart)) {
+            event.id = line.toString("utf8", valueStart);
+          }
+          return;
+        }
+        if (isFieldName(line, fieldLength, EVENT)) {
+          const value = line.toString("utf8", valueStart);
+          if (value.length > 0) {
+            event.event = value;
+          }
         }
       }
       /**
@@ -18578,12 +18783,120 @@ ${value}`;
         }
       }
       clearEvent() {
-        this.event = {
-          data: void 0,
-          event: void 0,
-          id: void 0,
-          retry: void 0
-        };
+        this.event.data = void 0;
+        this.event.event = void 0;
+        this.event.id = void 0;
+        this.event.retry = void 0;
+      }
+      hasPendingEvent() {
+        return this.event.data !== void 0 || this.event.event !== void 0 || this.event.id !== void 0 || this.event.retry !== void 0;
+      }
+      hasCurrentByte() {
+        return this.chunkIndex < this.chunks.length && this.pos < this.chunks[this.chunkIndex].length;
+      }
+      currentByte() {
+        return this.chunks[this.chunkIndex][this.pos];
+      }
+      consumeCurrentByte() {
+        this.advanceCursor();
+        this.syncLineStartToCursor();
+      }
+      advanceCursor() {
+        this.pos++;
+        while (this.chunkIndex < this.chunks.length && this.pos >= this.chunks[this.chunkIndex].length) {
+          this.chunkIndex++;
+          this.pos = 0;
+        }
+      }
+      syncLineStartToCursor() {
+        this.lineChunkIndex = this.chunkIndex;
+        this.linePos = this.pos;
+        this.dropConsumedChunks();
+      }
+      dropConsumedChunks() {
+        while (this.lineChunkIndex > 0) {
+          this.chunks.shift();
+          this.lineChunkIndex--;
+          this.chunkIndex--;
+        }
+        if (this.chunkIndex === this.chunks.length) {
+          this.chunks.length = 0;
+          this.chunkIndex = 0;
+          this.pos = 0;
+          this.lineChunkIndex = 0;
+          this.linePos = 0;
+        }
+      }
+      readLine() {
+        if (this.lineChunkIndex === this.chunkIndex) {
+          return this.chunks[this.chunkIndex].subarray(this.linePos, this.pos);
+        }
+        const chunks = [];
+        let length = 0;
+        for (let i = this.lineChunkIndex; i <= this.chunkIndex; i++) {
+          const chunk = this.chunks[i];
+          const start = i === this.lineChunkIndex ? this.linePos : 0;
+          const end = i === this.chunkIndex ? this.pos : chunk.length;
+          const slice = chunk.subarray(start, end);
+          length += slice.length;
+          chunks.push(slice);
+        }
+        return Buffer.concat(chunks, length);
+      }
+      peekBufferedByte(offset) {
+        let chunkIndex = this.lineChunkIndex;
+        let pos = this.linePos;
+        while (chunkIndex < this.chunks.length) {
+          const chunk = this.chunks[chunkIndex];
+          const remaining = chunk.length - pos;
+          if (offset < remaining) {
+            return chunk[pos + offset];
+          }
+          offset -= remaining;
+          chunkIndex++;
+          pos = 0;
+        }
+      }
+      discardLeadingBytes(count) {
+        while (count > 0 && this.lineChunkIndex < this.chunks.length) {
+          const chunk = this.chunks[this.lineChunkIndex];
+          const remaining = chunk.length - this.linePos;
+          if (count < remaining) {
+            this.linePos += count;
+            count = 0;
+          } else {
+            count -= remaining;
+            this.lineChunkIndex++;
+            this.linePos = 0;
+          }
+        }
+        this.chunkIndex = this.lineChunkIndex;
+        this.pos = this.linePos;
+        this.dropConsumedChunks();
+      }
+      handleBOM() {
+        const first = this.peekBufferedByte(0);
+        const second = this.peekBufferedByte(1);
+        const third = this.peekBufferedByte(2);
+        if (second === void 0) {
+          if (first === BOM[0]) {
+            return true;
+          }
+          this.checkBOM = false;
+          return true;
+        }
+        if (third === void 0) {
+          if (first === BOM[0] && second === BOM[1]) {
+            return true;
+          }
+          this.checkBOM = false;
+          return false;
+        }
+        if (first === BOM[0] && second === BOM[1] && third === BOM[2]) {
+          this.discardLeadingBytes(3);
+        }
+        this.checkBOM = false;
+        return !this.hasCurrentByte();
       }
     };
     module2.exports = {
@@ -26429,35 +26742,94 @@ var LANGUAGE_CONFIGS = {
     // per-flag dispositions in QuantEcon/project-translation
     // reports/2026-08-17-ml-python-by-example-review-disposition.md.
     // The math-heavy Hint/Solution ruling is recorded in
-    // .dev/decisions/D-2026-08-17-ml-math-heavy-sections-stay-english.md.
+    // .qe/dev/decisions/D-2026-08-17-ml-math-heavy-sections-stay-english.md.
     // Extended again 2026-09 from the second inline round: 118 suggestion
     // blocks on lecture-python-programming.ml#7 (functions), dispositions in
     // reports/2026-09-01-ml-functions-review-disposition.md (same repo); the
     // exercise-statement scope ruling is
-    // .dev/decisions/D-2026-09-01-ml-exercise-statements-stay-english.md.
-    // Items held for the editor's answers on ml#12: "For example" as a
-    // discourse rule; glossary pins for already / name / example(s) / work.
+    // .qe/dev/decisions/D-2026-09-01-ml-exercise-statements-stay-english.md.
+    // The editor's ml#12 answers (2026-09-01) landed 2026-09-03: "For
+    // example" joins the discourse rule; glossary v0.5.0 pins already / name /
+    // example(s) / work; and his exercise ruling REPLACED the 09-01 scope rule
+    // — every exercise-family block is now byte-identical to the source,
+    // enforced in code by verbatim-directives.ts (decision record
+    // .qe/dev/decisions/D-2026-09-03-ml-all-exercise-content-stays-english.md).
+    // Third inline round, 2026-09-18: 44 suggestion blocks on
+    // lecture-python-programming.ml#13 (matplotlib), dispositions in
+    // reports/2026-09-18-ml-matplotlib-review-disposition.md. Every round-2
+    // class came through clean; the residue is style (clause-boundary commas,
+    // verb aspect, clause order). Editor-approved sentence pairs were tried
+    // as `style_examples` (mechanism in translator.ts) and set aside: on a
+    // held-out lecture a blind pairwise judge found every form — small, large,
+    // contrastive, or instead of rules — indistinguishable from the rules
+    // alone (experiments/ml-benchmark/arms/2026-09-18-round3-rules-exemplars-
+    // sonnet5/). Admission test from this round on: a pattern
+    // becomes a rule only if it recurs (twice in a round, or across rounds) —
+    // draw-to-draw variance makes a singleton as likely noise as habit. The
+    // Further Reading scope ruling is
+    // .qe/dev/decisions/D-2026-09-18-ml-further-reading-lists-stay-english.md.
+    //
+    // The editor's answers on lecture-python-programming.ml#22 (2026-09-19),
+    // encoded 2026-09-21 (rules 27 → 28, glossary v0.7.0): the comma between
+    // -ഉം items is ALWAYS there, single words included — v0.29.0 shipped the
+    // opposite guess; the plural of a retained noun is the English plural plus
+    // the suffix (its own rule, and a lint in ml_metrics.py); prefer stays
+    // English; provide → നൽകുക, though he calls both forms acceptable. `draw`
+    // is deliberately NOT encoded either way: he calls വരയ്ക്കാം natural and
+    // changed വരയ്ക്കുന്ന to draw ചെയ്യുക in the same lecture, so a flip on it
+    // is preference, not a defect — do not add it to the light-verb list. The
+    // Further Reading boundary is the section
+    // (D-2026-09-21-ml-further-reading-boundary-is-the-reference-section).
+    // Still open: rule 2 itself. He accepts "would a Kerala student say this
+    // word in everyday conversation?" as the test, but the rewrite waits on a
+    // held-out run of the blind pairwise judge — it is the rule behind the
+    // ordinary-word pendulum of rounds 2 and 3.
+    //
+    // Round 4 (lecture-python-programming.ml#23, numpy, 2026-09-28): rule 19
+    // gains one exception — "have already seen/met" takes കണ്ടുകഴിഞ്ഞു (the
+    // editor's form at 4/4 sites; the engine's 0/18). Measured at 24 functions draws it lifts
+    // the completive to 46/46 with no change in terminal punctuation. Three
+    // proposed deletions (rule 12's "and em-dashes", rule 18(a)'s "always after
+    // എന്നത്", the glossary ban on പ്രവർത്തിക്കുന്നു under `work`) were measured
+    // too and NOT shipped: together they raised the share of drafts that leave
+    // every paragraph before a code cell bare from 42% to 75% (p = 0.017) —
+    // a deletion is not inert. Arm: experiments/ml-benchmark/arms/
+    // 2026-09-28-round4-prompt-trims/.
+    //
+    // Round 5 (lecture-python-programming.ml#26, pandas): rule 8 gains "In
+    // essence" and "In practice", and "now" by sense mid-sentence (his ml#25
+    // answer 3: the two senses he confirmed, "next, let's move on" and "at
+    // this moment"). Measured 2026-10-21 (arm 2026-10-21-held-rule-edits):
+    // its targets move and terminal punctuation holds at 48 v 48 on
+    // functions. The ml#57 Q1 rule-12 edit (short label bullets stay English)
+    // was measured with it and withdrawn: on its own it raised parity
+    // refusals on functions 1/49 -> 7/31 and the bare-endings mode; the
+    // ruling stays in code (ml_repair.py repair 6).
     additionalRules: [
       "Keep ALL technical and domain terms in their original English/Latin form \u2014 do NOT translate or transliterate them into Malayalam script. This covers economics (inflation, GDP, recession, interest rate, demand, supply), finance (equity, bond, yield, portfolio, asset class), statistics (regression, correlation, standard deviation, normal distribution), mathematics, and programming (function, loop, library, variable, dataset, numpy, pandas), plus acronyms (GDP, RBI) and named institutions (Federal Reserve)",
       "Translate into Malayalam only the grammatical connective tissue \u2014 pronouns, demonstratives, conjunctions, postpositions, question words, everyday time/place words with a natural in-use equivalent (e.g. country \u2192 \u0D30\u0D3E\u0D1C\u0D4D\u0D2F\u0D02, year \u2192 \u0D35\u0D7C\u0D37\u0D02, before \u2192 \u0D2E\u0D41\u0D2E\u0D4D\u0D2A\u0D4D), and common native verbs of perceiving and saying (e.g. \u0D15\u0D3E\u0D23\u0D3E\u0D02, \u0D2A\u0D31\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41). Ordinary English content words \u2014 everyday adjectives, adverbs and nouns such as simple, best, important, hopefully, example, idea, popular \u2014 usually stay in Latin script in this register; do NOT force a Malayalam rendering merely because a dictionary equivalent exists",
-      'Attach Malayalam case-suffixes, postpositions, and sandhi directly to the English term, hyphenated where natural, using the forms a native writer prefers: -\u0D2F\u0D3F\u0D32\u0D46 after roots ending in a vowel sound (e.g. directory-\u0D2F\u0D3F\u0D32\u0D46, numpy-\u0D2F\u0D3F\u0D32\u0D46, economy-\u0D2F\u0D3F\u0D32\u0D46; likewise bond-\u0D28\u0D4D\u0D31\u0D46, asset classes-\u0D7D); the genitive allomorph -\u0D2F\u0D41\u0D1F\u0D46, never -\u0D28\u0D4D\u0D31\u0D46, after roots ending in a vowel sound (NumPy-\u0D2F\u0D41\u0D1F\u0D46, $\\pi$-\u0D2F\u0D41\u0D1F\u0D46); the fuller ablative \u0D28\u0D3F\u0D28\u0D4D\u0D28\u0D41\u0D02 rather than clipped \u0D28\u0D3F\u0D28\u0D4D\u0D28\u0D4D; the dative variant -\u0D07\u0D28\u0D41\u0D02 where euphony prefers it (\u0D13\u0D30\u0D4B element-\u0D07\u0D28\u0D41\u0D02, \u0D0E\u0D32\u0D4D\u0D32\u0D3E lines-\u0D07\u0D28\u0D41\u0D02); accusative -\u0D28\u0D46 on the object of a light-verb construction (100 standard normals-\u0D28\u0D46 generate \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D); keep the additive -\u0D09\u0D02 wherever the source says "plus", "also" or "too" (e.g. a green border-\u0D09\u0D02 a blinking cursor-\u0D09\u0D02); prefer -\u0D41\u0D2E\u0D3E\u0D2F\u0D3F over plain -\u0D2E\u0D3E\u0D2F\u0D3F. Apply the accusative -\u0D28\u0D46 on EVERY object of a transitive light verb, plurals included (functions-\u0D28\u0D46 define \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, code-\u0D28\u0D46 simplify \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, conditionals-\u0D28\u0D46 \u0D12\u0D34\u0D3F\u0D35\u0D3E\u0D15\u0D4D\u0D15\u0D3E\u0D02, function-\u0D28\u0D46 call \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15 \u2014 "a call to `plot`" is plot-\u0D28\u0D46 call \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D2E\u0D4D\u0D2A\u0D4B\u0D7E, never -\u0D32\u0D47\u0D15\u0D4D\u0D15\u0D41\u0D33\u0D4D\u0D33 call); do NOT attach the additive -\u0D09\u0D02 to the items of a bullet list (a list is not "X and Y"); coordinated code names take \u0D0E\u0D28\u0D4D\u0D28\u0D3F\u0D35 (`a`, `b` \u0D0E\u0D28\u0D4D\u0D28\u0D3F\u0D35 numbers \u0D06\u0D23\u0D4D), not -\u0D09\u0D02 \u2026 -\u0D09\u0D02',
-      "For verbs naming software, interface, or instructional actions, keep the English verb in Latin script and attach a Malayalam light verb (e.g. click \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, press \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, select \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, enable \u0D06\u0D15\u0D41\u0D02, close \u0D06\u0D15\u0D41\u0D02, check \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D02; likewise process \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D, return \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41, execute \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41; cover \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D02 for what a lecture covers, break down \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D for decomposing a program, refer \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41 for what a name refers to, and keep the adverb repeatedly in English in loop descriptions). NEVER replace these with a native Malayalam verb (e.g. not \u0D05\u0D2E\u0D7C\u0D24\u0D4D\u0D24\u0D41\u0D15 for press, not \u0D05\u0D1F\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D15 for hit, not \u0D05\u0D1F\u0D2F\u0D4D\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41 for close, not \u0D2A\u0D4D\u0D30\u0D35\u0D7C\u0D24\u0D4D\u0D24\u0D28\u0D15\u0D4D\u0D37\u0D2E\u0D2E\u0D3E\u0D15\u0D41\u0D02 for enable, not \u0D15\u0D48\u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D02 \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15 for cover \u2014 it reads managerial, not instructional); when the source uses a synonym for pressing a key (hit, strike, tap), normalise it to press \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15",
+      'Attach Malayalam case-suffixes, postpositions, and sandhi directly to the English term, hyphenated where natural, using the forms a native writer prefers: -\u0D2F\u0D3F\u0D32\u0D46 after roots ending in a vowel sound (e.g. directory-\u0D2F\u0D3F\u0D32\u0D46, numpy-\u0D2F\u0D3F\u0D32\u0D46, economy-\u0D2F\u0D3F\u0D32\u0D46; likewise bond-\u0D28\u0D4D\u0D31\u0D46, asset classes-\u0D7D); the genitive allomorph -\u0D2F\u0D41\u0D1F\u0D46, never -\u0D28\u0D4D\u0D31\u0D46, after roots ending in a vowel sound (NumPy-\u0D2F\u0D41\u0D1F\u0D46, $\\pi$-\u0D2F\u0D41\u0D1F\u0D46); the fuller ablative \u0D28\u0D3F\u0D28\u0D4D\u0D28\u0D41\u0D02 rather than clipped \u0D28\u0D3F\u0D28\u0D4D\u0D28\u0D4D; the dative variant -\u0D07\u0D28\u0D41\u0D02 where euphony prefers it (\u0D13\u0D30\u0D4B element-\u0D07\u0D28\u0D41\u0D02, \u0D0E\u0D32\u0D4D\u0D32\u0D3E lines-\u0D07\u0D28\u0D41\u0D02); accusative -\u0D28\u0D46 on the object of a light-verb construction (100 standard normals-\u0D28\u0D46 generate \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D); keep the additive -\u0D09\u0D02 wherever the source says "plus", "also" or "too" (e.g. a green border-\u0D09\u0D02, a blinking cursor-\u0D09\u0D02 \u2014 with the comma the clause-boundary rule asks for); prefer -\u0D41\u0D2E\u0D3E\u0D2F\u0D3F over plain -\u0D2E\u0D3E\u0D2F\u0D3F. Apply the accusative -\u0D28\u0D46 on EVERY object of a transitive light verb, plurals included (functions-\u0D28\u0D46 define \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, code-\u0D28\u0D46 simplify \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, conditionals-\u0D28\u0D46 \u0D12\u0D34\u0D3F\u0D35\u0D3E\u0D15\u0D4D\u0D15\u0D3E\u0D02, function-\u0D28\u0D46 call \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15 \u2014 "a call to `plot`" is plot-\u0D28\u0D46 call \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D2E\u0D4D\u0D2A\u0D4B\u0D7E, never -\u0D32\u0D47\u0D15\u0D4D\u0D15\u0D41\u0D33\u0D4D\u0D33 call); do NOT attach the additive -\u0D09\u0D02 to the items of a bullet list (a list is not "X and Y"); coordinated code names take \u0D0E\u0D28\u0D4D\u0D28\u0D3F\u0D35 (`a`, `b` \u0D0E\u0D28\u0D4D\u0D28\u0D3F\u0D35 numbers \u0D06\u0D23\u0D4D), not -\u0D09\u0D02 \u2026 -\u0D09\u0D02',
+      "The plural of an English noun kept in Latin script is its English plural, with the Malayalam suffix attached to that (objects create \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D2A\u0D4D\u0D2A\u0D46\u0D1F\u0D41\u0D28\u0D4D\u0D28\u0D41, function calls-\u0D7D, plots-\u0D28\u0D46, styles-\u0D28\u0D4D\u0D31\u0D46, parameters-\u0D09\u0D02) \u2014 never a Malayalam plural -\u0D15\u0D7E / -\u0D41\u0D15\u0D7E built on the English singular (not object-\u0D41\u0D15\u0D7E, not function call-\u0D15\u0D33\u0D3F\u0D7D, not plot-\u0D15\u0D7E); confirmed by the editor on lecture-python-programming.ml#22, and a vowel sign straight after a hyphen also renders as a dotted circle in some fonts",
+      'For verbs naming software, interface, or instructional actions, keep the English verb in Latin script and attach a Malayalam light verb (e.g. click \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, press \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, select \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, enable \u0D06\u0D15\u0D41\u0D02, close \u0D06\u0D15\u0D41\u0D02, check \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D02; likewise process \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D, return \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41, execute \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41; cover \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D02 for what a lecture covers, break down \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D for decomposing a program, refer \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41 for what a name refers to (never \u0D38\u0D42\u0D1A\u0D3F\u0D2A\u0D4D\u0D2A\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41 \u2014 calqued on both v0.27.0 regeneration draws), and keep the adverb repeatedly in English in loop descriptions; likewise remove \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D7B for removing colors from a plot, never \u0D28\u0D40\u0D15\u0D4D\u0D15\u0D02 \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D7B, and "adds a label with their mean" is \u0D05\u0D35\u0D2F\u0D41\u0D1F\u0D46 mean-\u0D28\u0D46 label \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28, never label \u0D1A\u0D47\u0D7C\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28). NEVER replace these with a native Malayalam verb (e.g. not \u0D05\u0D2E\u0D7C\u0D24\u0D4D\u0D24\u0D41\u0D15 for press, not \u0D05\u0D1F\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D15 for hit, not \u0D05\u0D1F\u0D2F\u0D4D\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41 for close, not \u0D2A\u0D4D\u0D30\u0D35\u0D7C\u0D24\u0D4D\u0D24\u0D28\u0D15\u0D4D\u0D37\u0D2E\u0D2E\u0D3E\u0D15\u0D41\u0D02 for enable, not \u0D15\u0D48\u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D02 \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15 for cover \u2014 it reads managerial, not instructional); when the source uses a synonym for pressing a key (hit, strike, tap), normalise it to press \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15',
       'The light-verb pattern is for technical and instructional actions only \u2014 an everyday verb with a natural Malayalam equivalent takes the Malayalam verb, not an English light-verb construction: a line that "ends with a colon" \u0D05\u0D35\u0D38\u0D3E\u0D28\u0D3F\u0D15\u0D4D\u0D15\u0D23\u0D02 (not end \u0D06\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41), a result "placed into the string" \u0D1A\u0D47\u0D7C\u0D15\u0D4D\u0D15\u0D2A\u0D4D\u0D2A\u0D46\u0D1F\u0D41\u0D02 (not place \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D2A\u0D4D\u0D2A\u0D46\u0D1F\u0D41\u0D02), lines that "end up on the same figure" \u0D12\u0D30\u0D47 figure-\u0D7D \u0D35\u0D30\u0D41\u0D02; and "is required/needed" is \u0D06\u0D35\u0D36\u0D4D\u0D2F\u0D2E\u0D3E\u0D2F\u0D3F\u0D35\u0D30\u0D41\u0D28\u0D4D\u0D28\u0D41, never \u0D06\u0D35\u0D36\u0D4D\u0D2F\u0D2A\u0D4D\u0D2A\u0D46\u0D1F\u0D41\u0D28\u0D4D\u0D28\u0D41 (which means "demands")',
       `A short sentence whose content is mostly code, commands, URLs, file paths, mathematical notation or parameter settings should stay entirely in English rather than being fragmented to translate one or two connective words (e.g. "For example, try \`np.random.randn(3)\`.", "Here's one solution:", "Use $T=200$, $\\alpha = 0.9$ and $\\{\\epsilon_t\\}$ as before.", "The sequence of shocks is assumed to be IID and standard normal."); parenthetical language comparisons also stay English ("(as in C, Java or Go)"); a bullet that is essentially two code expressions compared ("\`plot(x, 'b-')\` differs from \`plot('b-', x)\`") stays English; and the short pointer sentences that introduce a solution or a code cell ("Here's a function for the first random device.", "Here's another function for the second random device.", "Here's the standard solution") stay wholly English \u2014 in longer sentences translate the prose and leave the embedded code, URLs and math untouched`,
-      'Render English discourse formulas by function, never word-for-word: sentence-initial "In fact, \u2026", "On the other hand, \u2026", "In particular, \u2026", "Obviously, \u2026" and "Basically, \u2026" stay in English at the head of the rendered sentence (not \u0D35\u0D3E\u0D38\u0D4D\u0D24\u0D35\u0D24\u0D4D\u0D24\u0D3F\u0D7D, not \u0D2E\u0D31\u0D41\u0D35\u0D36\u0D24\u0D4D\u0D24\u0D4D, not \u0D2A\u0D4D\u0D30\u0D24\u0D4D\u0D2F\u0D47\u0D15\u0D3F\u0D1A\u0D4D\u0D1A\u0D41\u0D02, not \u0D35\u0D4D\u0D2F\u0D15\u0D4D\u0D24\u0D2E\u0D3E\u0D2F\u0D41\u0D02, not \u0D05\u0D1F\u0D3F\u0D38\u0D4D\u0D25\u0D3E\u0D28\u0D2A\u0D30\u0D2E\u0D3E\u0D2F\u0D3F); "in other words" \u2192 \u0D05\u0D24\u0D3E\u0D2F\u0D24\u0D4D (not \u0D2E\u0D31\u0D4D\u0D31\u0D4A\u0D30\u0D41 \u0D35\u0D3F\u0D27\u0D24\u0D4D\u0D24\u0D3F\u0D7D \u0D2A\u0D31\u0D1E\u0D4D\u0D1E\u0D3E\u0D7D); sentence-initial "Now, \u2026" \u2192 \u0D07\u0D28\u0D3F (not \u0D07\u0D2A\u0D4D\u0D2A\u0D4B\u0D7E); "turn to (the exercises)" \u2192 (exercises-\u0D32\u0D47\u0D15\u0D4D\u0D15\u0D4D) \u0D15\u0D1F\u0D15\u0D4D\u0D15\u0D41\u0D15; "almost always" \u2192 \u0D2E\u0D3F\u0D15\u0D4D\u0D15 \u0D38\u0D2E\u0D2F\u0D24\u0D4D\u0D24\u0D41\u0D02',
+      `Render English discourse formulas by function, never word-for-word: sentence-initial "For example, \u2026", "In fact, \u2026", "In essence, \u2026", "In practice, \u2026", "On the other hand, \u2026", "In particular, \u2026", "Obviously, \u2026" and "Basically, \u2026" stay in English at the head of the rendered sentence (not \u0D09\u0D26\u0D3E\u0D39\u0D30\u0D23\u0D24\u0D4D\u0D24\u0D3F\u0D28\u0D4D, not \u0D35\u0D3E\u0D38\u0D4D\u0D24\u0D35\u0D24\u0D4D\u0D24\u0D3F\u0D7D, not \u0D05\u0D1F\u0D3F\u0D38\u0D4D\u0D25\u0D3E\u0D28\u0D2A\u0D30\u0D2E\u0D3E\u0D2F\u0D3F, not Practice-\u0D7D or \u0D2A\u0D4D\u0D30\u0D3E\u0D2F\u0D4B\u0D17\u0D3F\u0D15\u0D2E\u0D3E\u0D2F\u0D3F, not \u0D2E\u0D31\u0D41\u0D35\u0D36\u0D24\u0D4D\u0D24\u0D4D, not \u0D2A\u0D4D\u0D30\u0D24\u0D4D\u0D2F\u0D47\u0D15\u0D3F\u0D1A\u0D4D\u0D1A\u0D41\u0D02, not \u0D35\u0D4D\u0D2F\u0D15\u0D4D\u0D24\u0D2E\u0D3E\u0D2F\u0D41\u0D02); "in other words" \u2192 \u0D05\u0D24\u0D3E\u0D2F\u0D24\u0D4D (not \u0D2E\u0D31\u0D4D\u0D31\u0D4A\u0D30\u0D41 \u0D35\u0D3F\u0D27\u0D24\u0D4D\u0D24\u0D3F\u0D7D \u0D2A\u0D31\u0D1E\u0D4D\u0D1E\u0D3E\u0D7D); "now" meaning "next, let's move on" \u2192 \u0D07\u0D28\u0D3F, at the start of a sentence ("Now, \u2026") and in the middle of one ("we can now plot \u2026", "you can now proceed \u2026") alike, and \u0D07\u0D2A\u0D4D\u0D2A\u0D4B\u0D7E only where "now" means "at this moment" \u2014 "at the moment", "for now", "currently" or "while \u2026"; "turn to (the exercises)" \u2192 (exercises-\u0D32\u0D47\u0D15\u0D4D\u0D15\u0D4D) \u0D15\u0D1F\u0D15\u0D4D\u0D15\u0D41\u0D15; "almost always" \u2192 \u0D2E\u0D3F\u0D15\u0D4D\u0D15 \u0D38\u0D2E\u0D2F\u0D24\u0D4D\u0D24\u0D41\u0D02`,
       `When the English points at content that immediately follows ("Here is/are X \u2026", "figures like this one", "a version that illustrates \u2026"), render the pointer with \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D3E\u0D23\u0D3E\u0D02 / \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D4A\u0D1F\u0D41\u0D24\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 ("can be seen below" / "given below"), never with a literal \u0D07\u0D35\u0D3F\u0D1F\u0D46 ("here") or \u0D07\u0D24\u0D41\u0D2A\u0D4B\u0D32\u0D41\u0D33\u0D4D\u0D33 ("like this") \u2014 e.g. "Here's a version that illustrates for loops" \u2192 "\u2026 \u0D12\u0D30\u0D41 version \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D3E\u0D23\u0D3E\u0D02:"`,
       'Render English "the N with X" as an identifying modifier using the relative participle \u0D09\u0D33\u0D4D\u0D33 \u2014 X \u0D09\u0D33\u0D4D\u0D33 N, e.g. "the cell with the flashing cursor" \u2192 flashing cursor \u0D09\u0D33\u0D4D\u0D33 cell \u2014 never with an accompaniment form (-\u0D09\u0D02, -\u0D28\u0D4A\u0D2A\u0D4D\u0D2A\u0D02), which misreads identification ("which N") as accompaniment ("N together with X")',
       'With the comparative suffix -\u0D28\u0D47\u0D15\u0D4D\u0D15\u0D3E\u0D7E/-\u0D28\u0D46\u0D15\u0D4D\u0D15\u0D3E\u0D7E the comparison is already fully expressed \u2014 never add less/more/\u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41 alongside it; for "less X than Y" prefer Y-\u0D28\u0D4D\u0D31\u0D46 \u0D05\u0D24\u0D4D\u0D30 X \u0D05\u0D32\u0D4D\u0D32 ("not as X as Y")',
-      `Write short sentences in a classroom teacher's register: split English compound sentences at comma splices and em-dashes into two Malayalam sentences rather than mirroring the English punctuation; order clauses the way a teacher speaks \u2014 topic or purpose first, then the action; when introducing a definition, describe the concept before naming it; and use the fuller adjectival ordinals \u0D06\u0D26\u0D4D\u0D2F\u0D24\u0D4D\u0D24\u0D46 / \u0D05\u0D35\u0D38\u0D3E\u0D28\u0D24\u0D4D\u0D24\u0D46 for "first"/"last", never clipped \u0D06\u0D26\u0D4D\u0D2F / \u0D05\u0D35\u0D38\u0D3E\u0D28`,
-      `Speak as the teacher in the room, in the hortative: English "we will \u2026", "we'll \u2026", "let's \u2026", "we now \u2026" render as \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u2026 -\u0D06\u0D02 (\u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D15\u0D3E\u0D23\u0D3E\u0D02, \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02, \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D0E\u0D34\u0D41\u0D24\u0D3E\u0D02, \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D02), never as the plain future \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u2026 -\u0D41\u0D02 (not \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D2A\u0D20\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D02, not \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D28\u0D7D\u0D15\u0D41\u0D02, not \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D0E\u0D34\u0D41\u0D24\u0D41\u0D02); lecture verbs like "discuss", "see", "show", "say more about" become \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02 / \u0D15\u0D3E\u0D23\u0D3E\u0D02 ("we will say more about this later" \u2192 \u0D07\u0D24\u0D3F\u0D28\u0D46\u0D15\u0D4D\u0D15\u0D41\u0D31\u0D3F\u0D1A\u0D4D\u0D1A\u0D41\u0D33\u0D4D\u0D33 \u0D15\u0D42\u0D1F\u0D41\u0D24\u0D7D \u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D19\u0D4D\u0D19\u0D7E \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D2A\u0D3F\u0D28\u0D4D\u0D28\u0D40\u0D1F\u0D4D \u0D15\u0D3E\u0D23\u0D3E\u0D02); "consider the following \u2026" / "consider this code again" \u2192 \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D4A\u0D1F\u0D41\u0D24\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u2026 \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02 / \u0D08 code \u0D12\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D7D\u0D15\u0D4D\u0D15\u0D42\u0D1F\u0D3F \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02; a lecture-overview list ("In this lecture we will 1. \u2026 2. \u2026") is introduced as \u0D08 lecture-\u0D7D \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D7B \u0D2A\u0D4B\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D19\u0D4D\u0D19\u0D7E: with the items in the present tense (\u0D2A\u0D20\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41, \u0D2E\u0D28\u0D38\u0D4D\u0D38\u0D3F\u0D32\u0D3E\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41); "Note that \u2026" fronts \u0D36\u0D4D\u0D30\u0D26\u0D4D\u0D27\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D15, and "Recall that \u2026" fronts \u0D13\u0D7C\u0D15\u0D4D\u0D15\u0D41\u0D15:`,
+      'Write short sentences in a classroom teacher\'s register: split English compound sentences at comma splices and em-dashes into two Malayalam sentences rather than mirroring the English punctuation; order clauses the way a teacher speaks \u2014 topic or purpose first, then the action; when introducing a definition, describe the concept before naming it; and use the fuller adjectival ordinals \u0D06\u0D26\u0D4D\u0D2F\u0D24\u0D4D\u0D24\u0D46 / \u0D05\u0D35\u0D38\u0D3E\u0D28\u0D24\u0D4D\u0D24\u0D46 for "first"/"last", never clipped \u0D06\u0D26\u0D4D\u0D2F / \u0D05\u0D35\u0D38\u0D3E\u0D28; when a bullet that is a bare noun-phrase fragment in English is translated, make it a full Malayalam sentence ("* output in all the usual formats (PDF, PNG, etc.)" \u2192 * \u0D38\u0D3E\u0D27\u0D3E\u0D30\u0D23 \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D0E\u0D32\u0D4D\u0D32\u0D3E formats-\u0D32\u0D41\u0D02 output \u0D32\u0D2D\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41 \u2014 PDF, PNG, etc.; "* a last-in, first-out (LIFO) data structure" \u2192 * \u0D07\u0D24\u0D4D \u0D12\u0D30\u0D41 last-in, first-out (LIFO) data structure \u0D06\u0D23\u0D4D.); for "use X to do Y" put the instrument first (\u0D07\u0D28\u0D3F, `plt.style.use()` method \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D1A\u0D4D\u0D1A\u0D4D \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D style sheet set \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D02.); and \u0D2E\u0D31\u0D4D\u0D31\u0D4A\u0D30\u0D41 ("another") sits directly before its noun, after any adjective phrase (\u0D35\u0D33\u0D30\u0D46 useful \u0D06\u0D2F \u0D2E\u0D31\u0D4D\u0D31\u0D4A\u0D30\u0D41 feature, not \u0D2E\u0D31\u0D4D\u0D31\u0D4A\u0D30\u0D41 \u0D35\u0D33\u0D30\u0D46 useful \u0D06\u0D2F feature)',
+      `Speak as the teacher in the room, in the hortative: English "we will \u2026", "we'll \u2026", "let's \u2026", "we now \u2026" render as \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u2026 -\u0D06\u0D02 (\u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D15\u0D3E\u0D23\u0D3E\u0D02, \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02, \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D0E\u0D34\u0D41\u0D24\u0D3E\u0D02, \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D02), never as the plain future \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u2026 -\u0D41\u0D02 (not \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D2A\u0D20\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D02, not \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D28\u0D7D\u0D15\u0D41\u0D02, not \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D0E\u0D34\u0D41\u0D24\u0D41\u0D02); lecture verbs like "discuss", "see", "show", "say more about" become \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02 / \u0D15\u0D3E\u0D23\u0D3E\u0D02 ("we will say more about this later" \u2192 \u0D07\u0D24\u0D3F\u0D28\u0D46\u0D15\u0D4D\u0D15\u0D41\u0D31\u0D3F\u0D1A\u0D4D\u0D1A\u0D41\u0D33\u0D4D\u0D33 \u0D15\u0D42\u0D1F\u0D41\u0D24\u0D7D \u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D19\u0D4D\u0D19\u0D7E \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D2A\u0D3F\u0D28\u0D4D\u0D28\u0D40\u0D1F\u0D4D \u0D15\u0D3E\u0D23\u0D3E\u0D02); "consider the following \u2026" / "consider this code again" \u2192 \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D4A\u0D1F\u0D41\u0D24\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u2026 \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02 / \u0D08 code \u0D12\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D7D\u0D15\u0D4D\u0D15\u0D42\u0D1F\u0D3F \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02; a lecture-overview list ("In this lecture we will 1. \u2026 2. \u2026") is introduced as \u0D08 lecture-\u0D7D \u0D28\u0D2E\u0D4D\u0D2E\u0D7E \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D7B \u0D2A\u0D4B\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D19\u0D4D\u0D19\u0D7E: with the items in the present tense (\u0D2A\u0D20\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41, \u0D2E\u0D28\u0D38\u0D4D\u0D38\u0D3F\u0D32\u0D3E\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41); "Note that \u2026" fronts \u0D36\u0D4D\u0D30\u0D26\u0D4D\u0D27\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D15, and "Recall that \u2026" fronts \u0D13\u0D7C\u0D15\u0D4D\u0D15\u0D41\u0D15: (with its colon); a reader-directed "think of it as \u2026" or a bare simile ("---like a blank canvas") takes the same -\u0D06\u0D02 form and keeps its verb (\u0D12\u0D30\u0D41 blank canvas \u0D2A\u0D4B\u0D32\u0D46 \u0D15\u0D30\u0D41\u0D24\u0D3E\u0D02; plotting \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D28\u0D41\u0D33\u0D4D\u0D33 \u0D12\u0D30\u0D41 frame \u0D06\u0D2F\u0D3F \u0D15\u0D30\u0D41\u0D24\u0D3E\u0D02), not the bare imperative \u0D15\u0D30\u0D41\u0D24\u0D41\u0D15 and not a verbless \u0D2A\u0D4B\u0D32\u0D46`,
       `Terminal punctuation is required on every Malayalam prose paragraph regardless of the English source's punctuation: a paragraph that introduces the code cell, list or displayed equation that follows ends with a colon ("\u2026 \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D3E\u0D23\u0D3E\u0D02:", "\u2026 syntax illustrate \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41:", "\u2026 \u0D15\u0D3E\u0D30\u0D23\u0D02 \u0D05\u0D35:"), every other paragraph ends with a full stop, and a comma follows a fronted \u0D36\u0D4D\u0D30\u0D26\u0D4D\u0D27\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D15, / \u0D07\u0D28\u0D3F, / For example, \u2014 never leave a Malayalam paragraph ending on a bare verb or noun because the English line had no punctuation`,
       "When a retained-English word opens a Malayalam sentence or list item \u2014 including inside {ref}/{doc} link text \u2014 capitalise it exactly as English would at a sentence start: Functions-\u0D28\u0D46 systematic \u0D06\u0D2F\u0D3F \u0D2A\u0D20\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41; Built-in functions \u0D2E\u0D3E\u0D24\u0D4D\u0D30\u0D02 \u2026; Return statement \u0D07\u0D32\u0D4D\u0D32\u0D3E\u0D24\u0D4D\u0D24 functions \u2026; Order \u0D05\u0D28\u0D41\u0D38\u0D30\u0D3F\u0D1A\u0D4D\u0D1A\u0D4D \u2026; User-defined functions-\u0D32\u0D41\u0D02 \u2026; Indent \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 code-\u0D28\u0D46 \u2026; {ref}`Previous lecture <\u2026>`-\u0D7D \u2026; never begin a sentence with a lowercase Latin word",
-      'Fixed renderings the editor corrected on every occurrence \u2014 apply them without exception: "a given N" is \u0D24\u0D28\u0D4D\u0D28\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 N (\u0D24\u0D28\u0D4D\u0D28\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D35\u0D7C\u0D37\u0D02, \u0D24\u0D28\u0D4D\u0D28\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D12\u0D30\u0D41 file-\u0D7D), NEVER \u0D12\u0D30\u0D41 \u0D28\u0D7D\u0D15\u0D3F\u0D2F N; "consider X" as an invitation to look at X is X \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02 or consider \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, NEVER \u0D15\u0D23\u0D15\u0D4D\u0D15\u0D3F\u0D32\u0D46\u0D1F\u0D41\u0D15\u0D4D\u0D15\u0D41\u0D15 \u2014 which is reserved for the "take into account / only consider n positive" sense (\u0D07\u0D35\u0D3F\u0D1F\u0D46 $n$-\u0D28\u0D46 \u2026 \u0D2E\u0D3E\u0D24\u0D4D\u0D30\u0D2E\u0D47 \u0D15\u0D23\u0D15\u0D4D\u0D15\u0D3F\u0D32\u0D46\u0D1F\u0D41\u0D15\u0D4D\u0D15\u0D42); "in one line" is \u0D12\u0D31\u0D4D\u0D31 line-\u0D7D; the spelling is \u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41\u0D15\u0D42\u0D1F\u0D3F, not \u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41\u0D15\u0D42\u0D1F\u0D46; "useful" stays English (\u0D35\u0D33\u0D30\u0D46 useful \u0D06\u0D2F, \u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41\u0D15\u0D42\u0D1F\u0D3F useful \u0D06\u0D15\u0D4D\u0D15\u0D3E\u0D02), never \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D2A\u0D4D\u0D30\u0D26\u0D2E\u0D3E\u0D2F; "a bad idea" is \u0D05\u0D24\u0D4D\u0D30 \u0D28\u0D32\u0D4D\u0D32\u0D24\u0D32\u0D4D\u0D32; "straightforward" is \u0D0E\u0D33\u0D41\u0D2A\u0D4D\u0D2A\u0D02, "contrived" is \u0D15\u0D43\u0D24\u0D4D\u0D30\u0D3F\u0D2E\u0D02, "limited" (of a function) is -\u0D28\u0D4D \u0D1A\u0D3F\u0D32 \u0D2A\u0D30\u0D3F\u0D2E\u0D3F\u0D24\u0D3F\u0D15\u0D33\u0D41\u0D23\u0D4D\u0D1F\u0D4D, "facilitate" is \u0D38\u0D39\u0D3E\u0D2F\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41, and a return statement that is "hit" is \u0D0E\u0D24\u0D4D\u0D24\u0D3F\u0D1A\u0D4D\u0D1A\u0D47\u0D30\u0D41\u0D28\u0D4D\u0D28',
+      'Fixed renderings the editor corrected on every occurrence \u2014 apply them without exception: "a given N" is \u0D24\u0D28\u0D4D\u0D28\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 N (\u0D24\u0D28\u0D4D\u0D28\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D35\u0D7C\u0D37\u0D02, \u0D24\u0D28\u0D4D\u0D28\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D12\u0D30\u0D41 file-\u0D7D), NEVER \u0D12\u0D30\u0D41 \u0D28\u0D7D\u0D15\u0D3F\u0D2F N; "consider X" as an invitation to look at X is X \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D3E\u0D02 or consider \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D15, NEVER \u0D15\u0D23\u0D15\u0D4D\u0D15\u0D3F\u0D32\u0D46\u0D1F\u0D41\u0D15\u0D4D\u0D15\u0D41\u0D15 \u2014 which is reserved for the "take into account / only consider n positive" sense (\u0D07\u0D35\u0D3F\u0D1F\u0D46 $n$-\u0D28\u0D46 \u2026 \u0D2E\u0D3E\u0D24\u0D4D\u0D30\u0D2E\u0D47 \u0D15\u0D23\u0D15\u0D4D\u0D15\u0D3F\u0D32\u0D46\u0D1F\u0D41\u0D15\u0D4D\u0D15\u0D42); "in one line" is \u0D12\u0D31\u0D4D\u0D31 line-\u0D7D; the spelling is \u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41\u0D15\u0D42\u0D1F\u0D3F, not \u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41\u0D15\u0D42\u0D1F\u0D46; "useful" stays English (\u0D35\u0D33\u0D30\u0D46 useful \u0D06\u0D2F, \u0D15\u0D41\u0D31\u0D1A\u0D4D\u0D1A\u0D41\u0D15\u0D42\u0D1F\u0D3F useful \u0D06\u0D15\u0D4D\u0D15\u0D3E\u0D02), never \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D2A\u0D4D\u0D30\u0D26\u0D2E\u0D3E\u0D2F; "a bad idea" is \u0D05\u0D24\u0D4D\u0D30 \u0D28\u0D32\u0D4D\u0D32\u0D24\u0D32\u0D4D\u0D32; "straightforward" is \u0D0E\u0D33\u0D41\u0D2A\u0D4D\u0D2A\u0D02, "contrived" is \u0D15\u0D43\u0D24\u0D4D\u0D30\u0D3F\u0D2E\u0D02, "limited" (of a function) is -\u0D28\u0D4D \u0D1A\u0D3F\u0D32 \u0D2A\u0D30\u0D3F\u0D2E\u0D3F\u0D24\u0D3F\u0D15\u0D33\u0D41\u0D23\u0D4D\u0D1F\u0D4D, "facilitate" is \u0D38\u0D39\u0D3E\u0D2F\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41, and a return statement that is "hit" is \u0D0E\u0D24\u0D4D\u0D24\u0D3F\u0D1A\u0D4D\u0D1A\u0D47\u0D30\u0D41\u0D28\u0D4D\u0D28; "multiple N" is \u0D12\u0D28\u0D4D\u0D28\u0D3F\u0D32\u0D27\u0D3F\u0D15\u0D02 N (\u0D12\u0D28\u0D4D\u0D28\u0D3F\u0D32\u0D27\u0D3F\u0D15\u0D02 plots, \u0D12\u0D28\u0D4D\u0D28\u0D3F\u0D32\u0D27\u0D3F\u0D15\u0D02 subplots), not multiple N; "explicit" is \u0D35\u0D4D\u0D2F\u0D15\u0D4D\u0D24\u0D2E\u0D3E\u0D2F / \u0D35\u0D4D\u0D2F\u0D15\u0D4D\u0D24\u0D2E\u0D3E\u0D2F\u0D3F (objects \u0D15\u0D42\u0D1F\u0D41\u0D24\u0D7D \u0D35\u0D4D\u0D2F\u0D15\u0D4D\u0D24\u0D2E\u0D3E\u0D2F\u0D3F \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D24\u0D4D), not explicit \u0D06\u0D2F; an English "X-like" compound is X \u0D2A\u0D4B\u0D32\u0D46\u0D2F\u0D41\u0D33\u0D4D\u0D33 placed before the name it describes (dictionary \u0D2A\u0D4B\u0D32\u0D46\u0D2F\u0D41\u0D33\u0D4D\u0D33 `plt.rcParams` \u0D0E\u0D28\u0D4D\u0D28 variable, not `plt.rcParams` \u0D0E\u0D28\u0D4D\u0D28 dictionary-like variable); and "simple" stays English (simple \u0D06\u0D2F), never \u0D32\u0D33\u0D3F\u0D24\u0D2E\u0D3E\u0D2F',
       'When an English sentence is interrupted by code cells ("For example, these definitions [cell] and [cell] are entirely equivalent"), state the whole claim in one Malayalam sentence BEFORE the first cell (For example, \u0D24\u0D3E\u0D34\u0D46 \u0D15\u0D4A\u0D1F\u0D41\u0D24\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D30\u0D23\u0D4D\u0D1F\u0D4D definitions-\u0D09\u0D02 \u0D12\u0D30\u0D47 \u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D2E\u0D3E\u0D23\u0D4D \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D24\u0D4D:) and emit nothing between or after the cells \u2014 Malayalam is verb-final, so a trailing fragment like \u0D0E\u0D28\u0D4D\u0D28\u0D3F\u0D35 \u2026 equivalent \u0D06\u0D23\u0D4D after the second cell is unnatural and the connective \u0D12\u0D2A\u0D4D\u0D2A\u0D02 between the cells is dropped',
-      'Exercise statements whose content is probabilistic or mathematical reasoning (a random device to simulate, a distribution to draw from, coin flips, a derivation) stay in English \u2014 the same reader argument as the Hint/Solution rule, extended by the editor to exercise statements and accepted by the maintainer 2026-09-01 (decision record D-2026-09-01-ml-exercise-statements-stay-english); a mixed sentence keeps its mathematical clause in English and translates only its programming instruction ("In particular, `factorial` \u0D0E\u0D28\u0D4D\u0D28\u0D4D \u0D2A\u0D47\u0D30\u0D41\u0D33\u0D4D\u0D33 \u0D12\u0D30\u0D41 function \u0D0E\u0D34\u0D41\u0D24\u0D41\u0D15, such that `factorial(n)` returns $n!$ for any positive integer $n$."); exercises that are pure programming instruction translate normally \u2014 "Rewrite the `factorial()` function from Exercise 1 using recursion." is [Exercise 1](factorial_exercise)-\u0D32\u0D46 `factorial()` function-\u0D28\u0D46, recursion \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D1A\u0D4D\u0D1A\u0D4D \u0D35\u0D40\u0D23\u0D4D\u0D1F\u0D41\u0D02 \u0D0E\u0D34\u0D41\u0D24\u0D41\u0D15. and MUST NOT be left in English merely because it sits in an exercise block (a function name is not mathematical content); an English-retained line is kept byte-for-byte identical to the English source, so the Malayalam punctuation rule does not add a colon to it',
-      "In exercise Hint and Solution sections whose prose is predominantly mathematical reasoning (probability statements, convergence arguments, derivations) rather than Python instruction, keep the entire section in English \u2014 a reader who can follow the mathematics learnt it in English, so a Malayalam rendering serves neither reader (native-editor ruling, 2026-08-17); Hint/Solution prose that is programming guidance translates normally",
+      "Mark clause boundaries with commas as the editor does \u2014 without them a Malayalam sentence reads as one breathless run: (a) after a long topic or subject phrase, and always after the topic marker \u0D0E\u0D28\u0D4D\u0D28\u0D24\u0D4D (Matplotlib \u0D0E\u0D28\u0D4D\u0D28\u0D24\u0D4D, scientific computing-\u0D28\u0D3E\u0D2F\u0D3F design \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D12\u0D30\u0D41 \u0D2E\u0D3F\u0D15\u0D1A\u0D4D\u0D1A graphics library \u0D06\u0D23\u0D4D; \u0D07\u0D35\u0D3F\u0D1F\u0D46 `fig, ax = plt.subplots()` \u0D0E\u0D28\u0D4D\u0D28 call, \u0D12\u0D30\u0D41 pair return \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41); (b) after a fronted adverbial, purpose, instrumental or conditional clause (\u0D30\u0D23\u0D4D\u0D1F\u0D3E\u0D2E\u0D24\u0D4D\u0D24\u0D46 method \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D1A\u0D4D\u0D1A\u0D4D, \u2026; \u0D28\u0D3F\u0D19\u0D4D\u0D19\u0D33\u0D41\u0D1F\u0D46 style-\u0D28\u0D46 \u0D35\u0D40\u0D23\u0D4D\u0D1F\u0D41\u0D02 default \u0D06\u0D15\u0D4D\u0D15\u0D3F \u0D2E\u0D3E\u0D31\u0D4D\u0D31\u0D3E\u0D7B, \u2026; \u0D12\u0D30\u0D47 axes-\u0D7D, \u2026; `plt.style.available` \u0D0E\u0D28\u0D4D\u0D28 attribute print \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D3E\u0D7D, \u2026); (c) between coordinated items joined by -\u0D09\u0D02 \u2026 -\u0D09\u0D02 or -\u0D09\u0D15\u0D2F\u0D41\u0D02 \u2026 -\u0D09\u0D15\u0D2F\u0D41\u0D02 \u2014 always, whether each side is a phrase or a single word; the editor's answer on lecture-python-programming.ml#22 is that the comma is there for reading clarity in both cases (Ticks control \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D24\u0D41\u0D02, titles \u0D1A\u0D47\u0D7C\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D24\u0D41\u0D02 \u0D2E\u0D31\u0D4D\u0D31\u0D41\u0D02 \u2026; functions-\u0D09\u0D02, features-\u0D09\u0D02; simple-\u0D09\u0D02, convenient-\u0D09\u0D02; line-\u0D28\u0D4D\u0D31\u0D46 \u0D28\u0D3F\u0D31\u0D02 red \u0D06\u0D15\u0D4D\u0D15\u0D3F \u0D2E\u0D3E\u0D31\u0D4D\u0D31\u0D41\u0D15\u0D2F\u0D41\u0D02, \u0D05\u0D24\u0D4B\u0D1F\u0D4A\u0D2A\u0D4D\u0D2A\u0D02 \u0D12\u0D30\u0D41 legend \u0D1A\u0D47\u0D7C\u0D15\u0D4D\u0D15\u0D41\u0D15\u0D2F\u0D41\u0D02 \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41)",
+      'Choose the verb form by what the English means, not by its surface tense: a state that results from a completed action takes the perfect-stative participle -\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28, not the bare past participle (design \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 library, overlay \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 density lines, Indent \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28 code \u2014 not design \u0D1A\u0D46\u0D2F\u0D4D\u0D24, overlay \u0D1A\u0D46\u0D2F\u0D4D\u0D24); something the lecture has just done takes the perfect -\u0D07\u0D1F\u0D4D\u0D1F\u0D41\u0D23\u0D4D\u0D1F\u0D4D ("we\'ve also used `alpha`" \u2192 `alpha` \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D1A\u0D4D\u0D1A\u0D3F\u0D1F\u0D4D\u0D1F\u0D41\u0D23\u0D4D\u0D1F\u0D4D, not \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D1A\u0D4D\u0D1A\u0D41), but "have already seen / met X" takes the completive -\u0D15\u0D34\u0D3F\u0D1E\u0D4D\u0D1E\u0D41 (X \u0D28\u0D2E\u0D4D\u0D2E\u0D7E already \u0D15\u0D23\u0D4D\u0D1F\u0D41\u0D15\u0D34\u0D3F\u0D1E\u0D4D\u0D1E\u0D41, not \u0D15\u0D23\u0D4D\u0D1F\u0D3F\u0D1F\u0D4D\u0D1F\u0D41\u0D23\u0D4D\u0D1F\u0D4D); English "by doing X" / "using X you can \u2026" / "we can find \u2026 by printing" states a condition and takes -\u0D06\u0D7D (`ax.legend(loc=\'upper center\')` \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D1A\u0D4D\u0D1A\u0D3E\u0D7D legend-\u0D28\u0D4D\u0D31\u0D46 \u0D38\u0D4D\u0D25\u0D3E\u0D28\u0D02 \u0D2E\u0D3E\u0D31\u0D4D\u0D31\u0D3E\u0D02; \u2026 print \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D3E\u0D7D, \u2026 \u0D12\u0D30\u0D41 list \u0D28\u0D2E\u0D41\u0D15\u0D4D\u0D15\u0D4D \u0D15\u0D3E\u0D23\u0D3E\u0D02), not the conjunctive participle \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D1A\u0D4D\u0D1A\u0D4D / \u0D1A\u0D46\u0D2F\u0D4D\u0D24\u0D4D; and a hedge such as "perhaps" (\u0D12\u0D30\u0D41\u0D2A\u0D15\u0D4D\u0D37\u0D47) agrees with the possibility ending -\u0D0F\u0D15\u0D4D\u0D15\u0D3E\u0D02 (\u0D09\u0D23\u0D4D\u0D1F\u0D3E\u0D2F\u0D47\u0D15\u0D4D\u0D15\u0D3E\u0D02), not the plain future \u0D09\u0D23\u0D4D\u0D1F\u0D3E\u0D15\u0D41\u0D02',
+      `Render English idiom, metaphor and coined jargon by its plain meaning in classroom Malayalam, never word-for-word: "written to help MATLAB refugees find a ready home" \u2192 MATLAB \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D1A\u0D4D\u0D1A\u0D3F\u0D30\u0D41\u0D28\u0D4D\u0D28\u0D35\u0D7C\u0D15\u0D4D\u0D15\u0D4D \u0D0E\u0D33\u0D41\u0D2A\u0D4D\u0D2A\u0D24\u0D4D\u0D24\u0D3F\u0D7D \u0D09\u0D2A\u0D2F\u0D4B\u0D17\u0D3F\u0D15\u0D4D\u0D15\u0D3E\u0D28\u0D3E\u0D15\u0D41\u0D28\u0D4D\u0D28 \u0D24\u0D30\u0D24\u0D4D\u0D24\u0D3F\u0D32\u0D3E\u0D23\u0D4D \u0D07\u0D24\u0D4D \u0D0E\u0D34\u0D41\u0D24\u0D3F\u0D2F\u0D3F\u0D30\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D24\u0D4D (no refugees, no home); "see if you can follow what's going on" \u2192 \u0D0E\u0D28\u0D4D\u0D24\u0D3E\u0D23\u0D4D \u0D28\u0D1F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D24\u0D46\u0D28\u0D4D\u0D28\u0D4D \u0D28\u0D3F\u0D19\u0D4D\u0D19\u0D7E\u0D15\u0D4D\u0D15\u0D4D \u0D2E\u0D28\u0D38\u0D4D\u0D38\u0D3F\u0D32\u0D3E\u0D15\u0D4D\u0D15\u0D3E\u0D7B \u0D38\u0D3E\u0D27\u0D3F\u0D15\u0D4D\u0D15\u0D41\u0D28\u0D4D\u0D28\u0D41\u0D23\u0D4D\u0D1F\u0D4B \u0D0E\u0D28\u0D4D\u0D28\u0D4D \u0D28\u0D4B\u0D15\u0D4D\u0D15\u0D41\u0D15 (to understand \u2014 never \u0D2A\u0D3F\u0D28\u0D4D\u0D24\u0D41\u0D1F\u0D30\u0D41\u0D15, which is to chase); "fine-grained control over all aspects of presentation" \u2192 presentation-\u0D28\u0D4D\u0D31\u0D46 \u0D13\u0D30\u0D4B \u0D1A\u0D46\u0D31\u0D3F\u0D2F \u0D15\u0D3E\u0D30\u0D4D\u0D2F\u0D35\u0D41\u0D02 \u0D35\u0D30\u0D46 control \u0D1A\u0D46\u0D2F\u0D4D\u0D2F\u0D3E\u0D7B \u0D15\u0D34\u0D3F\u0D2F\u0D41\u0D28\u0D4D\u0D28\u0D41; "un-Pythonic" \u2192 Python-\u0D28\u0D4D\u0D31\u0D46 \u0D38\u0D3E\u0D27\u0D3E\u0D30\u0D23 \u0D36\u0D48\u0D32\u0D3F\u0D2F\u0D4B\u0D1F\u0D4D \u0D2A\u0D4A\u0D30\u0D41\u0D24\u0D4D\u0D24\u0D2A\u0D4D\u0D2A\u0D46\u0D1F\u0D3E\u0D24\u0D4D\u0D24`,
+      'A list of pointers to outside resources \u2014 the bullets of a "Further Reading" or "References" style section, each a link plus a short description \u2014 stays wholly in English, copied byte-for-byte from the source including its line wrapping ("* The [Matplotlib gallery](\u2026) provides many examples." and "* [Seaborn](\u2026) facilitates common statistics plots in Matplotlib." stay exactly so); the editor returned every such bullet to English on lecture-python-programming.ml#13 (decision record D-2026-09-18-ml-further-reading-lists-stay-english), so never treat an all-English further-reading list as under-translation',
+      'Every exercise-related directive \u2014 {exercise}, {exercise-start} \u2026 {exercise-end}, {hint}, {solution}, {solution-start} \u2026 {solution-end} \u2014 stays wholly in English, copied byte-for-byte from the source: the fence line, its title argument and options, and every prose line inside, including pure programming instructions ("Rewrite the `factorial()` function using recursion." stays exactly so). This is the editor of record\'s standing ruling until he has decided each exercise individually (2026-09-01, decision record D-2026-09-03-ml-all-exercise-content-stays-english; it subsumes the earlier math-heavy Hint/Solution ruling of 2026-08-17). The engine restores these blocks from the source mechanically after translation, so do not spend effort rephrasing anything inside them, and never treat an all-English exercise block as under-translation. This rule is about directives the source ALREADY contains \u2014 never add an {exercise}, {exercise-start}, {solution} or any other directive, fence or label that the source does not have: where the source writes its exercises as a plain "## Exercises" heading followed by a numbered list, keep that heading and list as they are \u2014 the text in English like all exercise content, the structure exactly as the source has it, with no directive wrapped around it',
       "Never translate comments inside code blocks or code cells \u2014 every code comment stays exactly as written in the English source",
-      'Keep section headings in their original English form \u2014 do not translate them (e.g. "## Overview" stays "## Overview")',
+      `Keep section headings in their original English form, byte-identical including possessives and punctuation \u2014 do not translate them and never attach a Malayalam case-suffix to a possessive inside a heading (e.g. "## Overview" stays "## Overview"; "### Matplotlib's Split Personality" stays exactly so, never "Matplotlib-\u0D2F\u0D41\u0D1F\u0D46 Split Personality")`,
       "Keep proper names (economists, researchers, institutions) in English/Latin script \u2014 do not transliterate them",
       "Handle every term consistently across the whole document \u2014 a term kept in English must remain English on every occurrence, and a word translated to Malayalam must reuse the same Malayalam root each time (normal grammatical inflection is fine)",
       "Use a natural classroom/educational register, not a formal government-gazette style; where a Malayalam word genuinely aids comprehension for a borderline non-technical concept, it may be given with the English in parentheses on first use (e.g. \u0D2C\u0D28\u0D4D\u0D27\u0D02 (relationship)) \u2014 use sparingly",
@@ -31858,6 +32230,21 @@ function getReviewInputs() {
   };
 }
 var RESYNC_COMMAND = "\\translate-resync";
+function mergedIntoDefaultBranch(baseRef, defaultBranch, prNumber) {
+  if (!defaultBranch) {
+    core.warning(`Could not determine the repository default branch; assuming PR #${prNumber} landed on it.`);
+    return true;
+  }
+  if (!baseRef) {
+    core.warning(`Could not determine the base branch of PR #${prNumber}; assuming it landed on '${defaultBranch}'.`);
+    return true;
+  }
+  if (baseRef !== defaultBranch) {
+    core.info(`PR #${prNumber} was merged into '${baseRef}', not the default branch '${defaultBranch}'. Skipping sync \u2014 only merges into the default branch are translated.`);
+    return false;
+  }
+  return true;
+}
 function validatePREvent(context3, testMode) {
   const { eventName, payload } = context3;
   if (eventName === "issue_comment") {
@@ -31879,11 +32266,15 @@ function validatePREvent(context3, testMode) {
   }
   const merged = payload.pull_request?.merged === true;
   const prNumber = payload.pull_request?.number;
-  if (!merged) {
-    core.info("PR was closed but not merged. Skipping sync.");
-  }
   if (!prNumber) {
     throw new Error("Could not determine PR number from event payload");
+  }
+  if (!merged) {
+    core.info("PR was closed but not merged. Skipping sync.");
+    return { merged: false, prNumber, isTestMode: false, isResync: false };
+  }
+  if (!mergedIntoDefaultBranch(payload.pull_request?.base?.ref, payload.repository?.default_branch, prNumber)) {
+    return { merged: false, prNumber, isTestMode: false, isResync: false };
   }
   core.info(`\u{1F680} Running in PRODUCTION mode for merged PR #${prNumber}`);
   return { merged, prNumber, isTestMode: false, isResync: false };
@@ -32519,6 +32910,27 @@ ${targetContent}`;
     }).join("\n");
     return `GLOSSARY:
 ${terms}
+${this.formatStyleExamples(glossary, targetLanguage)}`;
+  }
+  /**
+   * Format the glossary's editor-approved sentence pairs as style exemplars.
+   *
+   * Rendered inside the glossary section, so it sits in the prompt-cached
+   * stable block of every builder and reaches every write path with no extra
+   * plumbing. The set is fixed per glossary version (no per-call retrieval) —
+   * the stable block must be byte-identical across calls to stay cacheable.
+   */
+  formatStyleExamples(glossary, targetLanguage) {
+    const examples = (glossary.style_examples ?? []).filter((example) => typeof example[targetLanguage] === "string" && example[targetLanguage] !== "");
+    if (examples.length === 0) {
+      return "";
+    }
+    const pairs2 = examples.map((example) => `  EN: ${example.en}
+  ${targetLanguage.toUpperCase()}: ${example[targetLanguage]}`).join("\n\n");
+    return `
+STYLE EXAMPLES:
+Sentences from earlier lectures, exactly as the native-speaker editor approved them. Match their register, sentence rhythm, comma placement, verb forms and clause order in your own translation. They illustrate style only \u2014 never copy their content, and where an example and a numbered rule seem to differ, follow the rule.
+${pairs2}
 `;
   }
 };
@@ -33898,7 +34310,7 @@ function requireOmap() {
   const _toString = Object.prototype.toString;
   function resolveYamlOmap(data) {
     if (data === null) return true;
-    const objectKeys = [];
+    const objectKeys = {};
     const object = data;
     for (let index = 0, length = object.length; index < length; index += 1) {
       const pair = object[index];
@@ -33912,8 +34324,8 @@ function requireOmap() {
         }
       }
       if (!pairHasKey) return false;
-      if (objectKeys.indexOf(pairKey) === -1) objectKeys.push(pairKey);
-      else return false;
+      if (_hasOwnProperty.call(objectKeys, pairKey)) return false;
+      Object.defineProperty(objectKeys, pairKey, { value: true });
     }
     return true;
   }
@@ -34315,16 +34727,21 @@ function requireLoader() {
       state.result += _result;
     }
   }
+  function chargeMergeWork(state) {
+    state.totalMergeKeys++;
+    if (state.maxTotalMergeKeys !== -1 && state.totalMergeKeys > state.maxTotalMergeKeys) {
+      throwError(state, "merge keys exceeded maxTotalMergeKeys (" + state.maxTotalMergeKeys + ")");
+    }
+  }
   function mergeMappings(state, destination, source, overridableKeys) {
     if (!common2.isObject(source)) {
       throwError(state, "cannot merge mappings; the provided source object is unacceptable");
     }
+    chargeMergeWork(state);
     const sourceKeys = Object.keys(source);
     for (let index = 0, quantity = sourceKeys.length; index < quantity; index += 1) {
       const key = sourceKeys[index];
-      if (state.maxTotalMergeKeys !== -1 && ++state.totalMergeKeys > state.maxTotalMergeKeys) {
-        throwError(state, "merge keys exceeded maxTotalMergeKeys (" + state.maxTotalMergeKeys + ")");
-      }
+      chargeMergeWork(state);
       if (!_hasOwnProperty.call(destination, key)) {
         setProperty(destination, key, source[key]);
         overridableKeys[key] = true;
@@ -34352,6 +34769,9 @@ function requireLoader() {
     }
     if (keyTag === "tag:yaml.org,2002:merge") {
       if (Array.isArray(valueNode)) {
+        if (valueNode.length > 100) {
+          throwError(state, "abnormal merge sequence size");
+        }
         for (let index = 0, quantity = valueNode.length; index < quantity; index += 1) {
           mergeMappings(state, _result, valueNode[index], overridableKeys);
         }
@@ -36972,6 +37392,122 @@ function formatParityViolations(filename, result) {
 ${bullets}`;
 }
 
+// dist/verbatim-directives.js
+var FENCE_OPEN2 = /^(\s{0,3})(`{3,}|~{3,}|:{3,})\s*(?:\{([\w:+.-]+)\}.*)?$/;
+var SIMPLE_DIRECTIVES = /* @__PURE__ */ new Set(["exercise", "hint", "solution"]);
+var START_DIRECTIVES = /* @__PURE__ */ new Map([
+  ["exercise-start", "exercise-end"],
+  ["solution-start", "solution-end"]
+]);
+var VERBATIM_POLICY = /* @__PURE__ */ new Map([["ml", true]]);
+function hasVerbatimDirectivePolicy(language) {
+  return VERBATIM_POLICY.has(language.toLowerCase());
+}
+function extractVerbatimBlocks(content) {
+  const lines = content.split("\n");
+  const blocks = [];
+  const stack = [];
+  let region = null;
+  let inFrontmatter = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (i === 0 && line.trim() === "---") {
+      inFrontmatter = true;
+      continue;
+    }
+    if (inFrontmatter) {
+      if (line.trim() === "---")
+        inFrontmatter = false;
+      continue;
+    }
+    const open = FENCE_OPEN2.exec(line);
+    if (!open)
+      continue;
+    const [, , marker, rawDirective] = open;
+    const top = stack[stack.length - 1];
+    if (top && !rawDirective && marker[0] === top.marker[0] && marker.length >= top.marker.length) {
+      const popped = stack.pop();
+      if (region && stack.length === region.depth) {
+        const closes = region.endName ? popped.directive === region.endName : true;
+        if (closes) {
+          blocks.push({ kind: region.kind, start: region.start, end: i });
+          region = null;
+        }
+      }
+      continue;
+    }
+    if (top && top.literal)
+      continue;
+    const directive = rawDirective ? rawDirective.toLowerCase() : null;
+    const literal = !directive || !PROSE_DIRECTIVES.has(directive);
+    if (!region && directive) {
+      if (SIMPLE_DIRECTIVES.has(directive)) {
+        region = { kind: directive, start: i, depth: stack.length, endName: null };
+      } else if (START_DIRECTIVES.has(directive)) {
+        region = {
+          kind: directive,
+          start: i,
+          depth: stack.length,
+          endName: START_DIRECTIVES.get(directive)
+        };
+      }
+    }
+    stack.push({ marker, directive, literal });
+  }
+  return blocks;
+}
+function shape(blocks) {
+  return blocks.map((b) => b.kind).join(",");
+}
+function applyVerbatimDirectives(source, output, language) {
+  if (!hasVerbatimDirectivePolicy(language))
+    return { content: output, replaced: 0, mismatch: null };
+  const sourceBlocks = extractVerbatimBlocks(source);
+  const outputBlocks = extractVerbatimBlocks(output);
+  if (shape(sourceBlocks) !== shape(outputBlocks)) {
+    return {
+      content: output,
+      replaced: 0,
+      mismatch: `verbatim-directive block sequence differs: source [${shape(sourceBlocks) || "none"}] vs output [${shape(outputBlocks) || "none"}]`
+    };
+  }
+  if (sourceBlocks.length === 0)
+    return { content: output, replaced: 0, mismatch: null };
+  const sourceLines = source.split("\n");
+  const outputLines = output.split("\n");
+  let replaced = 0;
+  for (let k = sourceBlocks.length - 1; k >= 0; k--) {
+    const s = sourceBlocks[k];
+    const o = outputBlocks[k];
+    const fromSource = sourceLines.slice(s.start, s.end + 1);
+    const current = outputLines.slice(o.start, o.end + 1);
+    if (fromSource.join("\n") !== current.join("\n")) {
+      outputLines.splice(o.start, o.end - o.start + 1, ...fromSource);
+      replaced++;
+    }
+  }
+  return { content: outputLines.join("\n"), replaced, mismatch: null };
+}
+function findVerbatimViolations(source, target) {
+  const sourceBlocks = extractVerbatimBlocks(source);
+  const targetBlocks = extractVerbatimBlocks(target);
+  if (shape(sourceBlocks) !== shape(targetBlocks)) {
+    return [
+      `exercise-family block sequence differs: source [${shape(sourceBlocks) || "none"}] vs target [${shape(targetBlocks) || "none"}]`
+    ];
+  }
+  const sourceLines = source.split("\n");
+  const targetLines = target.split("\n");
+  const violations = [];
+  sourceBlocks.forEach((s, k) => {
+    const t = targetBlocks[k];
+    if (sourceLines.slice(s.start, s.end + 1).join("\n") !== targetLines.slice(t.start, t.end + 1).join("\n")) {
+      violations.push(`{${s.kind}} block at target line ${t.start + 1} is not byte-identical to the source block at line ${s.start + 1}`);
+    }
+  });
+  return violations;
+}
+
 // dist/sync-orchestrator.js
 var import_fs = require("fs");
 var path3 = __toESM(require("path"), 1);
@@ -37037,6 +37573,142 @@ function serializeFileState(state) {
 }
 function stateFileRelativePath(filename) {
   return `${TRANSLATE_DIR}/${STATE_DIR}/${filename}.yml`;
+}
+
+// dist/toc-captions.js
+var CAPTION_LINE_RE = /^(\s*(?:-\s+)?caption:\s*)(.*?)(\s*)$/;
+function partFiles(part) {
+  const out = /* @__PURE__ */ new Set();
+  const visit = (entries) => {
+    if (!Array.isArray(entries))
+      return;
+    for (const entry of entries) {
+      if (typeof entry !== "object" || entry === null)
+        continue;
+      const e = entry;
+      if (typeof e.file === "string")
+        out.add(e.file);
+      visit(e.chapters);
+      visit(e.sections);
+    }
+  };
+  visit(part.chapters);
+  return out;
+}
+function partsOf(doc) {
+  if (!doc || typeof doc !== "object")
+    return void 0;
+  const parts = doc.parts;
+  if (!Array.isArray(parts))
+    return void 0;
+  return parts.filter((p) => typeof p === "object" && p !== null);
+}
+function matchPartsByOverlap(source, target) {
+  const candidates = [];
+  source.forEach((s, i) => {
+    target.forEach((t, j) => {
+      let overlap = 0;
+      for (const f of s)
+        if (t.has(f))
+          overlap++;
+      if (overlap > 0)
+        candidates.push({ i, j, overlap });
+    });
+  });
+  candidates.sort((a, b) => b.overlap - a.overlap || Math.abs(a.i - a.j) - Math.abs(b.i - b.j) || a.i - b.i);
+  const matched = /* @__PURE__ */ new Map();
+  const claimed = /* @__PURE__ */ new Set();
+  for (const { i, j } of candidates) {
+    if (matched.has(i) || claimed.has(j))
+      continue;
+    matched.set(i, j);
+    claimed.add(j);
+  }
+  return matched;
+}
+function renderCaption(value) {
+  return dump(value, { lineWidth: -1 }).replace(/\n$/, "");
+}
+function substituteCaptionLines(sourceYaml, captions) {
+  const lines = sourceYaml.split("\n");
+  let k = -1;
+  for (let n = 0; n < lines.length; n++) {
+    if (lines[n].trimStart().startsWith("#"))
+      continue;
+    const m = CAPTION_LINE_RE.exec(lines[n]);
+    if (!m)
+      continue;
+    k++;
+    const wanted = captions.get(k);
+    if (wanted === void 0)
+      continue;
+    lines[n] = `${m[1]}${renderCaption(wanted)}${m[3]}`;
+  }
+  return lines.join("\n");
+}
+function sameDocument(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+function mergeTargetCaptions(sourceYaml, targetYaml, logger) {
+  let source;
+  let target;
+  try {
+    source = load(sourceYaml);
+    target = load(targetYaml);
+  } catch {
+    logger?.warning("Could not parse _toc.yml for caption merge \u2014 using source as-is");
+    return sourceYaml;
+  }
+  const sourceParts = partsOf(source);
+  const targetParts = partsOf(target);
+  if (!sourceParts || !targetParts || sourceParts.length === 0 || targetParts.length === 0) {
+    return sourceYaml;
+  }
+  const matched = matchPartsByOverlap(sourceParts.map(partFiles), targetParts.map(partFiles));
+  const captions = /* @__PURE__ */ new Map();
+  const notLocalised = [];
+  const unmatched = [];
+  sourceParts.forEach((part, i) => {
+    const sourceCaption = typeof part.caption === "string" ? part.caption : void 0;
+    const j = matched.get(i);
+    if (j === void 0) {
+      if (sourceCaption !== void 0)
+        unmatched.push(sourceCaption);
+      return;
+    }
+    const targetCaption = targetParts[j].caption;
+    if (typeof targetCaption !== "string" || targetCaption === "")
+      return;
+    if (targetCaption === sourceCaption) {
+      notLocalised.push(sourceCaption);
+      return;
+    }
+    captions.set(i, targetCaption);
+  });
+  for (const caption of unmatched) {
+    logger?.warning(`_toc.yml part "${caption}" has no counterpart in the target TOC \u2014 caption left as in source`);
+  }
+  if (notLocalised.length > 0) {
+    logger?.info(`_toc.yml: ${notLocalised.length} part caption(s) identical in source and target (not localised): ${notLocalised.map((c) => `"${c}"`).join(", ")}`);
+  }
+  if (captions.size === 0)
+    return sourceYaml;
+  const expected = load(sourceYaml);
+  const expectedParts = partsOf(expected);
+  for (const [i, caption] of captions)
+    expectedParts[i].caption = caption;
+  const substituted = substituteCaptionLines(sourceYaml, captions);
+  let verified = false;
+  try {
+    verified = sameDocument(load(substituted), expected);
+  } catch {
+    verified = false;
+  }
+  logger?.info(`Preserved ${captions.size} localised TOC part caption(s) from target`);
+  if (verified)
+    return substituted;
+  logger?.warning("_toc.yml caption merge could not be applied in place \u2014 re-serialising the document");
+  return dump(expected, { lineWidth: -1, noArrayIndent: true });
 }
 
 // dist/sync-orchestrator.js
@@ -37111,6 +37783,131 @@ function classifyChangedFiles(files, docsFolder) {
     removedTocFiles
   };
 }
+var TOC_FILE_LINE_RE = /^(\s*)-\s+file:\s*(?:"([^"]*)"|'([^']*)'|([^\s#]+))\s*(?:#.*)?$/;
+function collectTocFiles(doc) {
+  const out = [];
+  const visit = (entries) => {
+    if (!Array.isArray(entries))
+      return;
+    for (const entry of entries) {
+      if (typeof entry !== "object" || entry === null)
+        continue;
+      const e = entry;
+      if (typeof e.file === "string")
+        out.push(e.file);
+      visit(e.chapters);
+      visit(e.sections);
+    }
+  };
+  if (!doc || typeof doc !== "object")
+    return out;
+  const root = doc;
+  visit(root.chapters);
+  visit(root.sections);
+  if (Array.isArray(root.parts)) {
+    for (const part of root.parts) {
+      if (typeof part === "object" && part !== null) {
+        visit(part.chapters);
+      }
+    }
+  }
+  return out;
+}
+function spliceTocEntryLines(tocContent, entriesToDrop) {
+  const lines = tocContent.split("\n");
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const m = TOC_FILE_LINE_RE.exec(lines[i]);
+    const stem = m ? m[2] ?? m[3] ?? m[4] : void 0;
+    if (m && stem !== void 0 && entriesToDrop.has(stem)) {
+      const dashIndent = m[1].length;
+      let j = i + 1;
+      while (j < lines.length) {
+        const line = lines[j];
+        if (line.trim() === "") {
+          j++;
+          continue;
+        }
+        const indent = line.length - line.trimStart().length;
+        if (indent <= dashIndent)
+          break;
+        j++;
+      }
+      while (j > i + 1 && lines[j - 1].trim() === "")
+        j--;
+      i = j;
+      continue;
+    }
+    out.push(lines[i]);
+    i++;
+  }
+  return out.join("\n");
+}
+function filterTocDocument(doc, entriesToDrop) {
+  const filterList = (entries) => {
+    if (!Array.isArray(entries))
+      return entries;
+    const kept = entries.filter((entry) => {
+      if (typeof entry !== "object" || entry === null)
+        return true;
+      const file = entry.file;
+      return !(typeof file === "string" && entriesToDrop.has(file));
+    });
+    for (const entry of kept) {
+      if (typeof entry === "object" && entry !== null) {
+        const e = entry;
+        if ("chapters" in e)
+          e.chapters = filterList(e.chapters);
+        if ("sections" in e)
+          e.sections = filterList(e.sections);
+      }
+    }
+    return kept;
+  };
+  if ("chapters" in doc)
+    doc.chapters = filterList(doc.chapters);
+  if ("sections" in doc)
+    doc.sections = filterList(doc.sections);
+  if (Array.isArray(doc.parts)) {
+    for (const part of doc.parts) {
+      if (typeof part === "object" && part !== null) {
+        const p = part;
+        if ("chapters" in p)
+          p.chapters = filterList(p.chapters);
+      }
+    }
+  }
+}
+function removeTocFileEntries(tocContent, entriesToDrop) {
+  if (entriesToDrop.size === 0)
+    return tocContent;
+  let doc;
+  try {
+    doc = load(tocContent);
+  } catch {
+    return tocContent;
+  }
+  if (!doc || typeof doc !== "object")
+    return tocContent;
+  const before = collectTocFiles(doc);
+  if (!before.some((f) => entriesToDrop.has(f)))
+    return tocContent;
+  filterTocDocument(doc, entriesToDrop);
+  const expected = collectTocFiles(doc);
+  const spliced = spliceTocEntryLines(tocContent, entriesToDrop);
+  if (tocFilesAre(spliced, expected))
+    return spliced;
+  return dump(doc, { lineWidth: -1, noArrayIndent: true });
+}
+function tocFilesAre(content, expected) {
+  try {
+    const files = collectTocFiles(load(content));
+    return files.length === expected.length && files.every((f, i) => f === expected[i]);
+  } catch {
+    return false;
+  }
+}
 var SyncOrchestrator = class {
   translator;
   processor;
@@ -37141,7 +37938,7 @@ var SyncOrchestrator = class {
    * @param glossary - Optional glossary for translation
    * @returns Aggregated results across all files
    */
-  async processFiles(files, glossary, rebaseCache, bibliography) {
+  async processFiles(files, glossary, rebaseCache, bibliography, fetchFailedNewFiles = []) {
     const result = {
       translatedFiles: [],
       filesToDelete: [],
@@ -37173,6 +37970,7 @@ var SyncOrchestrator = class {
       }
     }
     this.backfillCitations(files, result, bibliography);
+    this.filterTocForFailedNewFiles(files, result, fetchFailedNewFiles);
     return result;
   }
   /**
@@ -37223,6 +38021,24 @@ var SyncOrchestrator = class {
   // Private: File type handlers
   // ---------------------------------------------------------------------------
   /**
+   * Verbatim-directive policy (`verbatim-directives.ts`): for editions that
+   * keep the exercise family byte-identical to the source (`ml`), restore
+   * those blocks from `file.newContent` after translation, before the parity
+   * guard checks the bytes that will be written. A block-sequence mismatch is
+   * left for the parity guard to report.
+   */
+  restoreVerbatimDirectives(file, translatedContent) {
+    if (file.newContent === void 0)
+      return translatedContent;
+    const verbatim = applyVerbatimDirectives(file.newContent, translatedContent, this.config.targetLanguage);
+    if (verbatim.mismatch) {
+      this.logger.warning(`${file.filename}: ${verbatim.mismatch}; verbatim restore skipped`);
+    } else if (verbatim.replaced > 0) {
+      this.logger.info(`${file.filename}: restored ${verbatim.replaced} exercise-family block(s) verbatim from source`);
+    }
+    return verbatim.content;
+  }
+  /**
    * Process a markdown file (added or modified).
    * New files get full translation; existing files get section-based updates.
    */
@@ -37247,6 +38063,7 @@ var SyncOrchestrator = class {
         this.logger.warning(`${file.filename}: removed ${dropped.length} target-only section(s) with no source counterpart \u2014 correct if upstream deleted them; destructive if human-added (see PR body)`);
       }
     }
+    translatedContent = this.restoreVerbatimDirectives(file, translatedContent);
     const parity = checkStructuralParity(file.newContent, translatedContent);
     if (!parity.ok) {
       throw new Error(formatParityViolations(file.filename, parity));
@@ -37285,6 +38102,7 @@ var SyncOrchestrator = class {
     } else {
       translatedContent = await this.processor.processFull(file.newContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary);
     }
+    translatedContent = this.restoreVerbatimDirectives(file, translatedContent);
     const parity = checkStructuralParity(file.newContent, translatedContent);
     if (!parity.ok) {
       throw new Error(formatParityViolations(file.filename, parity));
@@ -37316,20 +38134,74 @@ var SyncOrchestrator = class {
     }
   }
   /**
-   * Process a TOC file (copied directly without translation).
+   * Process a TOC file: the source is mirrored, with the target's localised
+   * part captions carried forward (#254; see `toc-captions.ts`).  No target
+   * content means a first delivery, which takes the source verbatim.
    */
   processTocFile(file, result) {
     this.logger.info(`Processing TOC file ${file.filename}...`);
     if (!file.newContent) {
       throw new Error(`No content provided for ${file.filename}`);
     }
+    let content = file.newContent;
+    if (file.targetContent) {
+      content = mergeTargetCaptions(file.newContent, file.targetContent, this.logger);
+    }
     result.processedFiles.push(file.filename);
     result.translatedFiles.push({
       path: file.filename,
-      content: file.newContent,
+      content,
       sha: file.existingFileSha
     });
     this.logger.info(`Successfully processed ${file.filename}`);
+  }
+  /**
+   * After all per-file processing, drop TOC entries that reference new files
+   * this run did not deliver (#156).
+   *
+   * A new file that errored is absent from the target repo — its TOC entry
+   * would create a dangling reference that breaks the target build under
+   * `-n -W` and corrupts cross-references in every sibling lecture that cites
+   * it.  Only new files are candidates: if a file already existed in the
+   * target, its entry belongs in the TOC regardless of whether this run's
+   * update succeeded.
+   *
+   * Two ways a new file fails to arrive: translation errored inside this loop
+   * (the file is in `files`, `isNewFile`, and not in `processedFiles`), or its
+   * source content could not be fetched, in which case the caller never built
+   * a `FileToSync` for it and passes it in as `fetchFailedNewFiles` instead.
+   * Both must leave the TOC, or the build breaks either way.
+   */
+  filterTocForFailedNewFiles(files, result, fetchFailedNewFiles) {
+    if (result.errors.length === 0 && fetchFailedNewFiles.length === 0)
+      return;
+    const processedSet = new Set(result.processedFiles);
+    const failedNewFiles = files.filter((f) => (f.type === "markdown" || f.type === "renamed") && f.isNewFile && !processedSet.has(f.filename)).map((f) => f.filename);
+    for (const filename of fetchFailedNewFiles) {
+      if (!failedNewFiles.includes(filename))
+        failedNewFiles.push(filename);
+    }
+    if (failedNewFiles.length === 0)
+      return;
+    result.failedNewFiles = failedNewFiles;
+    result.filteredTocPaths = [];
+    for (const translated of result.translatedFiles) {
+      if (path3.basename(translated.path) !== "_toc.yml")
+        continue;
+      const tocDir = path3.dirname(translated.path);
+      const entriesToDrop = new Set(failedNewFiles.map((filename) => {
+        const rel = tocDir === "." ? filename : path3.relative(tocDir, filename);
+        return rel.replace(/\.md$/, "");
+      }));
+      const before = translated.content;
+      const filtered = removeTocFileEntries(before, entriesToDrop);
+      if (filtered !== before) {
+        translated.content = filtered;
+        result.filteredTocPaths.push(translated.path);
+        const names = failedNewFiles.map((f) => path3.basename(f, ".md")).join(", ");
+        this.logger.warning(`${translated.path}: removed ${names} from TOC \u2014 file(s) were not delivered and are absent from the target`);
+      }
+    }
   }
   /**
    * Process a removed file (track for deletion in target repo).
@@ -37415,7 +38287,7 @@ function isTranslationBranch(ref) {
 
 // dist/pr-creator.js
 var SYNC_METADATA_SCHEMA_VERSION = 1;
-async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections) {
+async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections, failedNewFiles) {
   const { targetOwner, targetRepo } = config;
   const { data: targetRepoData } = await octokit.rest.repos.get({
     owner: targetOwner,
@@ -37461,7 +38333,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     });
     logger.info(`Deleted: ${file.path}`);
   }
-  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections);
+  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections, failedNewFiles);
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
   const { data: pr } = await octokit.rest.pulls.create({
     owner: targetOwner,
@@ -37508,7 +38380,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     prNumber: pr.number
   };
 }
-function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections) {
+function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections, failedNewFiles) {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);
   let filesChangedSection = "";
@@ -37555,6 +38427,18 @@ The following sections exist in the current translation but have **no counterpar
 
 ${lines.join("\n")}`;
   }
+  let failedFilesNotice = "";
+  if (failedNewFiles && failedNewFiles.files.length > 0) {
+    const lines = failedNewFiles.files.map((f) => `- \u274C \`${f}\``);
+    const tocSentence = failedNewFiles.filteredTocPaths.length > 0 ? `Their entries have been removed from ${failedNewFiles.filteredTocPaths.map((p) => `\`${p}\``).join(", ")} so the target build stays green; the entries return with the files once they are delivered.` : `No \`_toc.yml\` was part of this sync, so nothing was removed from it \u2014 if the target's TOC already lists these files, its build will fail until they are delivered.`;
+    failedFilesNotice = `
+
+### \u26A0\uFE0F Files Failed to Translate
+
+The following new file(s) could not be translated and are **absent from this PR**. ${tocSentence} The error details and recovery steps are in the failure issue this run opens on the source repository.
+
+${lines.join("\n")}`;
+  }
   const metadataFiles = fileMetadata ? fileMetadata.map((f) => {
     const entry = {
       path: f.path,
@@ -37589,7 +38473,7 @@ This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoNam
 ### Source PR
 **[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ""}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
 
-${filesChangedSection}${skippedNotice}${droppedNotice}
+${filesChangedSection}${failedFilesNotice}${skippedNotice}${droppedNotice}
 
 ### Details
 - **Source Language**: ${config.sourceLanguage}
@@ -37762,7 +38646,23 @@ async function checkHeadingMapCorrect(parser, pairs2) {
   }
   return { passed: details.length === 0, details: details.slice(0, MAX_DETAILS) };
 }
-async function runDeterministicDiffChecks(parser, pairs2) {
+async function checkVerbatimDirectives(pairs2, targetLanguage) {
+  if (!targetLanguage || !hasVerbatimDirectivePolicy(targetLanguage)) {
+    return { passed: true, details: [] };
+  }
+  const details = [];
+  for (const pair of pairs2) {
+    if (details.length >= MAX_DETAILS)
+      break;
+    for (const violation of findVerbatimViolations(pair.source, pair.target)) {
+      if (details.length >= MAX_DETAILS)
+        break;
+      details.push(`${pair.filename}: ${violation}`);
+    }
+  }
+  return { passed: details.length === 0, details: details.slice(0, MAX_DETAILS) };
+}
+async function runDeterministicDiffChecks(parser, pairs2, targetLanguage) {
   const guard = async (name, fn) => {
     try {
       return await fn();
@@ -37776,10 +38676,14 @@ async function runDeterministicDiffChecks(parser, pairs2) {
       };
     }
   };
-  return {
+  const checks = {
     structurePreserved: await guard("structurePreserved", () => checkStructurePreserved(parser, pairs2)),
     headingMapCorrect: await guard("headingMapCorrect", () => checkHeadingMapCorrect(parser, pairs2))
   };
+  if (targetLanguage && hasVerbatimDirectivePolicy(targetLanguage)) {
+    checks.verbatimDirectives = await guard("verbatimDirectives", () => checkVerbatimDirectives(pairs2, targetLanguage));
+  }
+  return checks;
 }
 
 // dist/review-verdict.js
@@ -38546,7 +39450,7 @@ var TranslationReviewer = class {
       source: v.source,
       target: v.target
     }));
-    const deterministic = await runDeterministicDiffChecks(this.parser, reviewedPairs);
+    const deterministic = await runDeterministicDiffChecks(this.parser, reviewedPairs, targetLanguage);
     const diffChecks = {
       scopeCorrect: diffQuality.scopeCorrect,
       positionCorrect: diffQuality.positionCorrect,
@@ -38560,7 +39464,7 @@ var TranslationReviewer = class {
       headingMapCorrect: "deterministic"
     };
     for (const [name, result2] of Object.entries(deterministic)) {
-      if (!result2.passed) {
+      if (result2 && !result2.passed) {
         core6.warning(`Deterministic diff check failed \u2014 ${name}: ${result2.details.join("; ")}`);
       }
     }
@@ -38604,7 +39508,7 @@ var TranslationReviewer = class {
       description: truncateField(`${name}: the reviewer reported this check as failed. This is a model judgement, not a deterministic check \u2014 verify against the source diff before treating it as a defect (#148).`),
       suggestion: null
     }));
-    const deterministicFindings = Object.values(deterministic).flatMap((result2) => result2.details).map((detail) => ({
+    const deterministicFindings = Object.entries(deterministic).filter(([name, result2]) => name !== "verbatimDirectives" && result2 !== void 0).flatMap(([, result2]) => result2.details).map((detail) => ({
       severity: "minor",
       category: "structure",
       file: soleFile,
@@ -38612,11 +39516,20 @@ var TranslationReviewer = class {
       description: truncateField(detail),
       suggestion: null
     }));
+    const verbatimFindings = (deterministic.verbatimDirectives?.details ?? []).map((detail) => ({
+      severity: "blocker",
+      category: "diff-check",
+      file: soleFile,
+      location: null,
+      description: truncateField(`${detail} \u2014 this edition keeps every exercise, hint and solution block byte-identical to the English source.`),
+      suggestion: null
+    }));
     const allFindings = sortAndCapFindings([
       ...translationQuality.findings,
       ...syntaxFindings,
       ...diffFindings,
       ...unexpectedDeletionFindings,
+      ...verbatimFindings,
       ...modelCheckFindings,
       ...deterministicFindings
     ]);
@@ -39521,15 +40434,22 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
           continue;
         }
         let existingFileSha;
+        let targetContent;
         try {
           const result2 = await fetchFileContent(octokit, owner, repo, file.path);
           existingFileSha = result2.sha;
-        } catch {
+          targetContent = result2.content;
+        } catch (error4) {
+          const status = error4?.status;
+          if (status !== 404) {
+            throw new Error(`Could not read ${file.path} from ${owner}/${repo} (status ${status ?? "unknown"}): ${error4}`);
+          }
         }
         filesToSync.push({
           filename: file.path,
           type: "toc",
           newContent: newContent2,
+          targetContent,
           existingFileSha,
           isNewFile: !existingFileSha
         });
@@ -39730,6 +40650,9 @@ async function runSync() {
       core9.info(`PR #${prNumber} is not merged. Resync only works on merged PRs.`);
       return;
     }
+    if (!mergedIntoDefaultBranch(pr.base?.ref, pr.base?.repo?.default_branch, prNumber)) {
+      return;
+    }
     if (pr.merge_commit_sha) {
       effectiveSha = pr.merge_commit_sha;
       core9.info(`\u{1F504} RESYNC: PR #${prNumber} is merged \u2014 using merge commit ${effectiveSha}`);
@@ -39761,7 +40684,7 @@ async function runSync() {
   const builtInGlossaryDir = getBuiltInGlossaryDir();
   const glossary = await loadGlossary(inputs.targetLanguage, builtInGlossaryDir, inputs.glossaryPath || void 0, coreLogger);
   const [targetOwner, targetRepo] = inputs.targetRepo.split("/");
-  const { files: filesToSync, errors: fetchErrors } = await fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo, effectiveSha);
+  const { files: filesToSync, errors: fetchErrors, fetchFailedNewFiles } = await fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo, effectiveSha);
   const existingStateShas = await fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToSync, inputs.docsFolder);
   const stateConfig = {
     sourceCommitSha: effectiveSha,
@@ -39777,7 +40700,7 @@ async function runSync() {
     bibliographyMode: inputs.bibliographyMode
   }, coreLogger, stateConfig);
   const bibliography = inputs.bibliographyMode === "off" ? void 0 : await fetchBibliographies(octokit, { owner: github3.context.repo.owner, repo: github3.context.repo.repo, ref: effectiveSha }, { owner: targetOwner, repo: targetRepo }, inputs.docsFolder);
-  const result = await orchestrator.processFiles(filesToSync, glossary, void 0, bibliography);
+  const result = await orchestrator.processFiles(filesToSync, glossary, void 0, bibliography, fetchFailedNewFiles);
   result.errors.unshift(...fetchErrors);
   const hasErrors = result.errors.length > 0;
   if (hasErrors) {
@@ -39821,7 +40744,7 @@ async function runSync() {
         }
         return entry;
       });
-      const prResult = await createTranslationPR(octokit, result.translatedFiles, result.filesToDelete, prConfig, coreLogger, sourcePrInfo, result.skippedSections, fileMetadata, result.droppedTargetSections);
+      const prResult = await createTranslationPR(octokit, result.translatedFiles, result.filesToDelete, prConfig, coreLogger, sourcePrInfo, result.skippedSections, fileMetadata, result.droppedTargetSections, result.failedNewFiles ? { files: result.failedNewFiles, filteredTocPaths: result.filteredTocPaths ?? [] } : void 0);
       prUrl = prResult.prUrl;
       core9.setOutput("pr-url", prResult.prUrl);
       core9.setOutput("files-synced", result.processedFiles.length.toString());
@@ -39855,6 +40778,7 @@ async function fetchFileContent(octokit, owner, repo, filepath, ref) {
 async function fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo, commitSha) {
   const filesToSync = [];
   const fetchErrors = [];
+  const fetchFailedNewFiles = [];
   const sourceOwner = github3.context.repo.owner;
   const sourceRepo = github3.context.repo.repo;
   const sha = commitSha || github3.context.sha;
@@ -39892,6 +40816,9 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
     } catch (error4) {
       core9.error(`Error fetching content for ${file.filename}: ${error4}`);
       fetchErrors.push(`Fetch failed (markdown): ${file.filename}: ${error4}`);
+      if (await targetFileIsMissing(octokit, targetOwner, targetRepo, file.filename)) {
+        fetchFailedNewFiles.push(file.filename);
+      }
     }
   }
   for (const file of classified.renamedMarkdownFiles) {
@@ -39939,16 +40866,23 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
     try {
       const { content: newContent } = await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, sha);
       let existingFileSha;
+      let targetContent;
       try {
         const result = await fetchFileContent(octokit, targetOwner, targetRepo, file.filename);
         existingFileSha = result.sha;
-      } catch {
+        targetContent = result.content;
+      } catch (error4) {
+        const status = error4?.status;
+        if (status !== 404) {
+          throw new Error(`Could not read ${file.filename} from ${targetOwner}/${targetRepo} (status ${status ?? "unknown"}): ${error4}`);
+        }
         core9.info(`${file.filename} does not exist in target repo - will create it`);
       }
       filesToSync.push({
         filename: file.filename,
         type: "toc",
         newContent,
+        targetContent,
         existingFileSha,
         isNewFile: !existingFileSha
       });
@@ -39979,7 +40913,15 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
       fetchErrors.push(`Fetch failed (removed): ${file.filename}: ${error4}`);
     }
   }
-  return { files: filesToSync, errors: fetchErrors };
+  return { files: filesToSync, errors: fetchErrors, fetchFailedNewFiles };
+}
+async function targetFileIsMissing(octokit, owner, repo, filePath) {
+  try {
+    await fetchFileContent(octokit, owner, repo, filePath);
+    return false;
+  } catch (error4) {
+    return error4?.status === 404;
+  }
 }
 async function fetchSourcePrInfo(octokit, prNumber) {
   try {

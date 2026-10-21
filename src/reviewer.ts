@@ -21,7 +21,12 @@ import { parseTranslationSyncMetadata, TranslationSyncMetadata } from './pr-crea
 import { REVIEW_TRIGGER_LABEL } from './contracts.js';
 import { getLanguageConfig } from './language-config.js';
 import { MystParser } from './parser.js';
-import { runDeterministicDiffChecks, ReviewedFilePair, DiffCheckSource } from './diff-checks.js';
+import {
+  runDeterministicDiffChecks,
+  ReviewedFilePair,
+  DiffCheckSource,
+  DeterministicCheckResult,
+} from './diff-checks.js';
 import {
   DEFAULT_CLAUDE_MODEL,
   MAX_TOKENS,
@@ -1006,7 +1011,11 @@ export class TranslationReviewer {
         source: v.source as string,
         target: v.target as string,
       }));
-    const deterministic = await runDeterministicDiffChecks(this.parser, reviewedPairs);
+    const deterministic = await runDeterministicDiffChecks(
+      this.parser,
+      reviewedPairs,
+      targetLanguage
+    );
 
     const diffChecks = {
       scopeCorrect: diffQuality.scopeCorrect,
@@ -1021,7 +1030,7 @@ export class TranslationReviewer {
       headingMapCorrect: 'deterministic',
     };
     for (const [name, result] of Object.entries(deterministic)) {
-      if (!result.passed) {
+      if (result && !result.passed) {
         core.warning(`Deterministic diff check failed — ${name}: ${result.details.join('; ')}`);
       }
     }
@@ -1124,8 +1133,12 @@ export class TranslationReviewer {
     // Deterministic failures are recorded for visibility at minor/structure,
     // which does NOT gate — their boolean already gates, and double-gating
     // would double-count one failure in the shadow data.
-    const deterministicFindings: ReviewFinding[] = Object.values(deterministic)
-      .flatMap((result) => result.details)
+    // `verbatimDirectives` is excluded here because it gates on its own as a
+    // blocker below; every other deterministic result — including any added
+    // later — is surfaced without this list needing to change.
+    const deterministicFindings: ReviewFinding[] = Object.entries(deterministic)
+      .filter(([name, result]) => name !== 'verbatimDirectives' && result !== undefined)
+      .flatMap(([, result]) => (result as DeterministicCheckResult).details)
       .map((detail) => ({
         severity: 'minor' as const,
         category: 'structure' as const,
@@ -1135,6 +1148,24 @@ export class TranslationReviewer {
         suggestion: null,
       }));
 
+    // Verbatim-directive policy (ml): an exercise-family block that differs
+    // from the source is a blocker in the gating `diff-check` category. It is
+    // not one of the four published booleans, so the verdict schema is
+    // unchanged; the finding alone routes the PR to the editor
+    // (D-2026-09-03-ml-all-exercise-content-stays-english).
+    const verbatimFindings: ReviewFinding[] = (deterministic.verbatimDirectives?.details ?? []).map(
+      (detail) => ({
+        severity: 'blocker' as const,
+        category: 'diff-check' as const,
+        file: soleFile,
+        location: null,
+        description: truncateField(
+          `${detail} — this edition keeps every exercise, hint and solution block byte-identical to the English source.`
+        ),
+        suggestion: null,
+      })
+    );
+
     // Re-sorted and re-capped: normalizeFindings ordered and bounded the
     // model's own findings, but concatenating the other sources onto the end
     // breaks both, and the contract publishes "worst first, capped".
@@ -1143,6 +1174,7 @@ export class TranslationReviewer {
       ...syntaxFindings,
       ...diffFindings,
       ...unexpectedDeletionFindings,
+      ...verbatimFindings,
       ...modelCheckFindings,
       ...deterministicFindings,
     ]);

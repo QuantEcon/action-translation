@@ -1,0 +1,816 @@
+---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+    format_version: 0.13
+    jupytext_version: 1.16.7
+kernelspec:
+  display_name: Python 3 (ipykernel)
+  language: python
+  name: python3
+translation:
+  title: Pandas
+  headings:
+    Overview: Overview
+    Series: Series
+    DataFrames: DataFrames
+    DataFrames::Select Data by Position: Select Data by Position
+    DataFrames::Select Data by Conditions: Select Data by Conditions
+    DataFrames::Apply Method: Apply Method
+    DataFrames::Make Changes in DataFrames: Make Changes in DataFrames
+    DataFrames::Standardization and Visualization: Standardization and Visualization
+    On-Line Data Sources: On-Line Data Sources
+    On-Line Data Sources::Accessing Data with requests: Accessing Data with requests
+    On-Line Data Sources::Using wbgapi and yfinance to Access Data: Using wbgapi and yfinance to Access Data
+    Exercises: Exercises
+---
+
+(pd)=
+```{raw} jupyter
+<div id="qe-notebook-header" align="right" style="text-align:right;">
+        <a href="https://quantecon.org/" title="quantecon.org">
+                <img style="width:250px;display:inline;" width="250px" src="https://assets.quantecon.org/img/qe-menubar-logo.svg" alt="QuantEcon">
+        </a>
+</div>
+```
+
+# {index}`Pandas <single: Pandas>`
+
+```{index} single: Python; Pandas
+```
+
+Anaconda-യിൽ ഉള്ളവ കൂടാതെ, ഈ lecture-ന് താഴെ പറയുന്ന libraries-ഉം ആവശ്യമായിവരുന്നു:
+
+```{code-cell} ipython3
+:tags: [hide-output]
+
+!pip install --upgrade wbgapi
+!pip install --upgrade yfinance
+```
+
+## Overview
+
+[Pandas](https://pandas.pydata.org/) എന്നത്, Python-നായുള്ള വേഗതയേറിയതും കാര്യക്ഷമവുമായ data analysis tools-ന്റെ ഒരു package ആണ്.
+
+data science, machine learning തുടങ്ങിയ മേഖലകളുടെ വളർച്ചയ്‌ക്കൊപ്പം, ഇതിന്റെ popularity-യും അടുത്ത കാലത്തായി വളരെയധികം ഉയർന്നിട്ടുണ്ട്.
+
+Stack Overflow Trends-ന്റെ സഹായത്തോടെ, Matlab, STATA എന്നിവയുമായി താരതമ്യം ചെയ്യുന്ന ഒരു popularity comparison കാലക്രമേണ താഴെ കാണാം:
+
+```{figure} /_static/lecture_specific/pandas/pandas_vs_rest.png
+:scale: 100
+```
+
+[NumPy](https://numpy.org/) അടിസ്ഥാന array data type-ഉം core array operations-ഉം നൽകുന്നത് പോലെ, pandas
+
+1. data-യുമായി പ്രവർത്തിക്കാനുള്ള അടിസ്ഥാന structures-നെ define ചെയ്യുന്നു, ഒപ്പം
+1. താഴെ പറയുന്നത് പോലുള്ള operations-നെ സഹായിക്കുന്ന methods-ഉം അവയ്ക്ക് നൽകുന്നു
+    * data read ചെയ്യുക
+    * indices adjust ചെയ്യുക
+    * dates, time series എന്നിവയുമായി പ്രവർത്തിക്കുക
+    * sorting, grouping, re-ordering, general data munging [^mung] എന്നിവ
+    * missing values കൈകാര്യം ചെയ്യുക, തുടങ്ങിയവ
+
+കൂടുതൽ sophisticated ആയ statistical functionality, pandas-ന് മുകളിൽ build ചെയ്തിരിക്കുന്ന [statsmodels](https://www.statsmodels.org/), [scikit-learn](https://scikit-learn.org/) പോലുള്ള മറ്റ് packages-നായി വിട്ടിരിക്കുന്നു.
+
+ഈ lecture pandas-നെക്കുറിച്ചുള്ള ഒരു അടിസ്ഥാന introduction നൽകും.
+
+ഈ lecture-ൽ ഉടനീളം, താഴെ പറയുന്ന imports നടന്നിട്ടുണ്ട് എന്ന് നമുക്ക് കരുതാം:
+
+```{code-cell} ipython3
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import requests
+```
+
+pandas define ചെയ്യുന്ന രണ്ട് പ്രധാന data types ആണ് `Series`, `DataFrame` എന്നിവ.
+
+ഒരു single variable-ന്റെ observations-ന്റെ ഒരു collection പോലെ, `Series` എന്നത് data-യുടെ ഒരു "column" ആയി കരുതാം.
+
+related columns of data സൂക്ഷിക്കാനുള്ള ഒരു two-dimensional object ആണ് `DataFrame`.
+
+## Series
+
+```{index} single: Pandas; Series
+```
+
+നമുക്ക് Series-ൽ നിന്ന് തുടങ്ങാം.
+
+നാല് random observations-ന്റെ ഒരു series create ചെയ്തുകൊണ്ട് നമുക്ക് ആരംഭിക്കാം:
+
+```{code-cell} ipython3
+rng = np.random.default_rng()
+s = pd.Series(rng.standard_normal(4), name='daily returns')
+s
+```
+
+ഇവിടെ `0, 1, 2, 3` എന്നീ indices, നാല് listed companies-നെ index ചെയ്യുന്നതായും, values അവയുടെ ഓഹരികളുടെ daily returns ആയും നിങ്ങൾക്ക് സങ്കൽപ്പിക്കാം.
+
+Pandas `Series`, NumPy arrays-ന് മുകളിൽ build ചെയ്തിരിക്കുന്നതിനാൽ, സമാനമായ പല operations-നെയും ഇത് support ചെയ്യുന്നു:
+
+```{code-cell} ipython3
+s * 100
+```
+
+```{code-cell} ipython3
+np.abs(s)
+```
+
+എന്നാൽ NumPy arrays-നേക്കാൾ കൂടുതൽ കാര്യങ്ങൾ `Series` നൽകുന്നു.
+
+(statistically oriented ആയ) ചില additional methods അവയ്ക്ക് ഉണ്ട് എന്ന് മാത്രമല്ല:
+
+```{code-cell} ipython3
+s.describe()
+```
+
+മാത്രമല്ല, അവയുടെ indices കൂടുതൽ flexible ആണ്:
+
+```{code-cell} ipython3
+s.index = ['AMZN', 'AAPL', 'MSFT', 'GOOG']
+s
+```
+
+ഈ രീതിയിൽ നോക്കുമ്പോൾ, `Series` എന്നത് വേഗതയേറിയതും കാര്യക്ഷമവുമായ Python dictionaries പോലെയാണ് (dictionary-യിലെ എല്ലാ items-ഉം ഒരേ type ആയിരിക്കണം എന്ന നിയന്ത്രണത്തോടെ --- ഇവിടെ floats).
+
+വാസ്തവത്തിൽ, Python dictionaries-ന് ഉപയോഗിക്കുന്ന അതേ syntax തന്നെ ഇവിടെയും ഏറെക്കുറെ ഉപയോഗിക്കാം:
+
+```{code-cell} ipython3
+s['AMZN']
+```
+
+```{code-cell} ipython3
+s['AMZN'] = 0
+s
+```
+
+```{code-cell} ipython3
+'AAPL' in s
+```
+
+## DataFrames
+
+```{index} single: Pandas; DataFrames
+```
+
+`Series` എന്നത് data-യുടെ ഒരൊറ്റ column ആണെങ്കിൽ, `DataFrame` എന്നത് ഓരോ variable-ഇനും ഒന്ന് വീതം ഉള്ള പല columns ആണ്.
+
+അടിസ്ഥാനപരമായി, pandas-ലെ `DataFrame` എന്നത് (highly optimized ആയ) ഒരു Excel spreadsheet-ന് സമാനമാണ്.
+
+അതിനാൽ, rows-ഉം columns-ഉം ആയി സ്വാഭാവികമായി organize ചെയ്യപ്പെട്ടിരിക്കുന്ന, individual rows-ഇനും individual columns-ഇനും പലപ്പോഴും descriptive indexes ഉള്ള data represent ചെയ്യാനും analyse ചെയ്യാനും ഇത് ശക്തമായ ഒരു tool ആണ്.
+
+[Penn World Tables](https://www.rug.nl/ggdc/productivity/pwt/pwt-releases/pwt-7.0)-ൽ നിന്ന് എടുത്ത `test_pwt.csv` എന്ന CSV file-ൽ നിന്ന് data read ചെയ്യുന്ന ഒരു example നോക്കാം.
+
+ഈ dataset-ൽ താഴെ പറയുന്ന indicators ഉണ്ട്:
+
+| Variable Name | Description |
+| :-: | :-: |
+| POP | Population (in thousands) |
+| XRAT | Exchange Rate to US Dollar |                     
+| tcgdp | Total PPP Converted GDP (in million international dollar) |
+| cc | Consumption Share of PPP Converted GDP Per Capita (%) |
+| cg | Government Consumption Share of PPP Converted GDP Per Capita (%) |
+
+
+`pandas` function ആയ `read_csv` ഉപയോഗിച്ച് നമുക്ക് ഇത് ഒരു URL-ൽ നിന്ന് read ചെയ്യാം.
+
+```{code-cell} ipython3
+df = pd.read_csv('https://github.com/QuantEcon/data-lectures/raw/main/lectures/test_pwt.csv')
+type(df)
+```
+
+`test_pwt.csv`-യുടെ content താഴെ കാണാം:
+
+```{code-cell} ipython3
+df
+```
+
+### Select Data by Position
+
+practice-ൽ, നമ്മൾ എപ്പോഴും ചെയ്യുന്ന ഒരു കാര്യം, നമുക്ക് താൽപ്പര്യമുള്ള data-യുടെ ഒരു subset കണ്ടെത്തി, select ചെയ്ത്, അതുമായി പ്രവർത്തിക്കുക എന്നതാണ്.
+
+standard Python array slicing notation ഉപയോഗിച്ച് നമുക്ക് പ്രത്യേക rows select ചെയ്യാം:
+
+```{code-cell} ipython3
+df[2:5]
+```
+
+columns select ചെയ്യാൻ, ആവശ്യമുള്ള columns-ന്റെ names strings ആയി അടങ്ങിയ ഒരു list നമുക്ക് pass ചെയ്യാം:
+
+```{code-cell} ipython3
+df[['country', 'tcgdp']]
+```
+
+integers ഉപയോഗിച്ച് rows-ഉം columns-ഉം ഒരുമിച്ച് select ചെയ്യാൻ, `.iloc[rows, columns]` എന്ന format-ൽ `iloc` attribute ഉപയോഗിക്കണം.
+
+```{code-cell} ipython3
+df.iloc[2:5, 0:4]
+```
+
+integers-ഉം labels-ഉം കൂടിച്ചേർത്ത് rows-ഉം columns-ഉം select ചെയ്യാൻ, സമാനമായ രീതിയിൽ `loc` attribute ഉപയോഗിക്കാം:
+
+```{code-cell} ipython3
+df.loc[df.index[2:5], ['country', 'tcgdp']]
+```
+
+### Select Data by Conditions
+
+integers-ഉം names-ഉം ഉപയോഗിച്ച് rows-നെയും columns-നെയും index ചെയ്യുന്നതിന് പകരം, ചില (ഒരുപക്ഷേ complicated ആയ) conditions തൃപ്തിപ്പെടുത്തുന്ന ഒരു sub-dataframe-ഉം നമുക്ക് ലഭിക്കാം.
+
+ഇത് എങ്ങനെ ചെയ്യാം എന്നതിന്റെ പല രീതികൾ ഈ section-ൽ കാണിക്കുന്നു.
+
+`[]` operator ഉപയോഗിക്കുന്നതാണ് ഏറ്റവും എളുപ്പം.
+
+```{code-cell} ipython3
+df[df.POP >= 20000]
+```
+
+ഇവിടെ എന്താണ് നടക്കുന്നത് എന്ന് മനസ്സിലാക്കാൻ, `df.POP >= 20000` boolean values-ന്റെ ഒരു series return ചെയ്യുന്നു എന്ന് ശ്രദ്ധിക്കുക.
+
+```{code-cell} ipython3
+df.POP >= 20000
+```
+
+ഈ case-ൽ, `df[___]` boolean values-ന്റെ ഒരു series എടുത്ത്, `True` values ഉള്ള rows മാത്രം return ചെയ്യുന്നു.
+
+ഇനി ഒരു example കൂടി നോക്കാം,
+
+```{code-cell} ipython3
+df[(df.country.isin(['Argentina', 'India', 'South Africa'])) & (df.POP > 40000)]
+```
+
+എന്നിരുന്നാലും, ഇതേ കാര്യം ചെയ്യാൻ മറ്റൊരു വഴിയുണ്ട്, കൂടുതൽ സ്വാഭാവികമായ syntax-ഉള്ള ഇത്, വലിയ dataframes-ന് അല്പം വേഗതയേറിയതും ആയിരിക്കും.
+
+```{code-cell} ipython3
+# the above is equivalent to 
+df.query("POP >= 20000")
+```
+
+```{code-cell} ipython3
+df.query("country in ['Argentina', 'India', 'South Africa'] and POP > 40000")
+```
+
+വ്യത്യസ്ത columns-നിടയിൽ arithmetic operations-ഉം നമുക്ക് അനുവദിക്കാം.
+
+```{code-cell} ipython3
+df[(df.cc + df.cg >= 80) & (df.POP <= 20000)]
+```
+
+```{code-cell} ipython3
+# the above is equivalent to 
+df.query("cc + cg >= 80 & POP <= 20000")
+```
+
+For example, household consumption - gdp share ആയ `cc` ഏറ്റവും കൂടുതലുള്ള country select ചെയ്യാൻ നമുക്ക് ഈ conditioning ഉപയോഗിക്കാം.
+
+```{code-cell} ipython3
+df.loc[df.cc == max(df.cc)]
+```
+
+select ചെയ്ത ഒരു sub-dataframe-ന്റെ ചില columns മാത്രം നമുക്ക് നോക്കണമെങ്കിൽ, മുകളിൽ പറഞ്ഞ conditions-നൊപ്പം `.loc[__ , __]` command ഉപയോഗിക്കാം.
+
+ആദ്യത്തെ argument condition എടുക്കുന്നു, രണ്ടാമത്തെ argument നമുക്ക് return വേണ്ട columns-ന്റെ ഒരു list എടുക്കുന്നു.
+
+```{code-cell} ipython3
+df.loc[(df.cc + df.cg >= 80) & (df.POP <= 20000), ['country', 'year', 'POP']]
+```
+
+**Application: Subsetting Dataframe**
+
+Real-world datasets [enormous](https://developers.google.com/machine-learning/crash-course/overfitting) ആയിരിക്കാം.
+
+computational efficiency വർദ്ധിപ്പിക്കാനും redundancy കുറയ്ക്കാനും, data-യുടെ ഒരു subset ഉപയോഗിച്ച് പ്രവർത്തിക്കുന്നത് ചിലപ്പോൾ നല്ലതായിരിക്കും.
+
+നമുക്ക് population (`POP`), total GDP (`tcgdp`) എന്നിവയിൽ മാത്രമേ താൽപ്പര്യമുള്ളൂ എന്ന് കരുതാം.
+
+`df` എന്ന data frame-നെ ഈ variables മാത്രമായി ചുരുക്കാനുള്ള ഒരു വഴി, മുകളിൽ വിവരിച്ച selection method ഉപയോഗിച്ച് dataframe-നെ overwrite ചെയ്യുക എന്നതാണ്:
+
+```{code-cell} ipython3
+df_subset = df[['country', 'POP', 'tcgdp']]
+df_subset
+```
+
+തുടർന്നുള്ള analysis-ന് വേണ്ടി ഈ ചെറിയ dataset-നെ നമുക്ക് save ചെയ്യാം.
+
+```{code-block} python3
+:class: no-execute
+
+df_subset.to_csv('pwt_subset.csv', index=False)
+```
+
+### Apply Method
+
+വ്യാപകമായി ഉപയോഗിക്കപ്പെടുന്ന മറ്റൊരു Pandas method ആണ് `df.apply()`.
+
+ഇത് ഓരോ row/column-ഇനും ഒരു function apply ചെയ്ത്, ഒരു series return ചെയ്യുന്നു.
+
+`max` function പോലുള്ള ചില built-in functions, ഒരു `lambda` function, അല്ലെങ്കിൽ ഒരു user-defined function ഈ function ആയിരിക്കാം.
+
+`max` function ഉപയോഗിക്കുന്ന ഒരു example താഴെ കാണാം:
+
+```{code-cell} ipython3
+df[['year', 'POP', 'XRAT', 'tcgdp', 'cc', 'cg']].apply(max)
+```
+
+ഈ line of code, select ചെയ്ത എല്ലാ columns-ഇനും `max` function apply ചെയ്യുന്നു.
+
+`df.apply()` method-നൊപ്പം `lambda` function പലപ്പോഴും ഉപയോഗിക്കാറുണ്ട്.
+
+dataframe-ലെ ഓരോ row-ഇനും അതേ row തന്നെ return ചെയ്യുന്ന ഒരു trivial example നോക്കാം:
+
+```{code-cell} ipython3
+df.apply(lambda row: row, axis=1)
+```
+
+```{note}
+`.apply()` method-ന്:
+- axis = 0 -- ഓരോ column-ഇനും (variables) function apply ചെയ്യുന്നു
+- axis = 1 -- ഓരോ row-ഇനും (observations) function apply ചെയ്യുന്നു
+- axis = 0 ആണ് default parameter
+```
+
+കുറച്ചുകൂടി advanced ആയ selection ചെയ്യാൻ, ഇത് `.loc[]`-ഉമായി ചേർത്ത് ഉപയോഗിക്കാം.
+
+```{code-cell} ipython3
+complexCondition = df.apply(
+    lambda row: row.POP > 40000 if row.country in ['Argentina', 'India', 'South Africa'] else row.POP < 20000, 
+    axis=1), ['country', 'year', 'POP', 'XRAT', 'tcgdp']
+```
+
+if-else statement-ൽ പറഞ്ഞിരിക്കുന്ന condition തൃപ്തിപ്പെടുത്തുന്ന rows-ന്റെ boolean values-ന്റെ ഒരു series ആണ് `df.apply()` ഇവിടെ return ചെയ്യുന്നത്.
+
+ഇതുകൂടാതെ, താൽപ്പര്യമുള്ള variables-ന്റെ ഒരു subset-ഉം ഇത് define ചെയ്യുന്നു.
+
+```{code-cell} ipython3
+complexCondition
+```
+
+ഈ condition dataframe-ന് apply ചെയ്യുമ്പോൾ, ഫലം ഇപ്രകാരമായിരിക്കും:
+
+```{code-cell} ipython3
+df.loc[complexCondition]
+```
+
+### Make Changes in DataFrames
+
+ഭാവിയിലെ analysis-ന് വേണ്ടി ഒരു clean dataset generate ചെയ്യാൻ, dataframes-ൽ മാറ്റങ്ങൾ വരുത്താനുള്ള കഴിവ് പ്രധാനമാണ്.
+
+**1.** നമ്മൾ select ചെയ്ത rows "keep" ചെയ്യാനും ബാക്കിയുള്ള rows-നെ `NaN` ഉപയോഗിച്ച് replace ചെയ്യാനും, `df.where()` സൗകര്യപ്രദമായി ഉപയോഗിക്കാം:
+
+```{code-cell} ipython3
+df.where(df.POP >= 20000)
+```
+
+**2.** modify ചെയ്യേണ്ട column specify ചെയ്യാനും values assign ചെയ്യാനും, നമുക്ക് `.loc[]` നേരിട്ട് ഉപയോഗിക്കാം:
+
+```{code-cell} ipython3
+df.loc[df.cg == max(df.cg), 'cg'] = np.nan
+df
+```
+
+**3.** *rows/columns മൊത്തത്തിൽ* modify ചെയ്യാൻ നമുക്ക് `.apply()` method ഉപയോഗിക്കാം:
+
+```{code-cell} ipython3
+def update_row(row):
+    # modify POP
+    row.POP = np.nan if row.POP<= 10000 else row.POP
+
+    # modify XRAT
+    row.XRAT = row.XRAT / 10
+    return row
+
+df.apply(update_row, axis=1)
+```
+
+**4.** dataframe-ലെ എല്ലാ *individual entries*-യും ഒരുമിച്ച് modify ചെയ്യാൻ നമുക്ക് `.map()` method ഉപയോഗിക്കാം.
+
+```{code-cell} ipython3
+# Round all decimal numbers to 2 decimal places
+df.map(lambda x : round(x,2) if not isinstance(x, str) else x)
+```
+
+**Application: Missing Value Imputation**
+
+data munging-ലെ ഒരു പ്രധാന step ആണ് missing values replace ചെയ്യുന്നത്.
+
+നമുക്ക് random ആയി ചില NaN values insert ചെയ്യാം:
+
+```{code-cell} ipython3
+for idx in list(zip([0, 3, 5, 6], [3, 4, 6, 2])):
+    df.iloc[idx] = np.nan
+
+df
+```
+
+ഇവിടെ `zip()` function, രണ്ട് lists-ൽ നിന്നും values-ന്റെ pairs create ചെയ്യുന്നു (അതായത് [0,3], [3,4] ...)
+
+എല്ലാ missing values-യും 0 കൊണ്ട് replace ചെയ്യാൻ നമുക്ക് വീണ്ടും `.map()` method ഉപയോഗിക്കാം:
+
+```{code-cell} ipython3
+# replace all NaN values by 0
+def replace_nan(x):
+    if not isinstance(x, str):
+        return  0 if pd.isna(x) else x
+    else:
+        return x
+
+df.map(replace_nan)
+```
+
+missing values replace ചെയ്യാൻ സൗകര്യപ്രദമായ methods-ഉം pandas നമുക്ക് നൽകുന്നു.
+
+For example, variable means ഉപയോഗിച്ചുള്ള single imputation pandas-ൽ എളുപ്പത്തിൽ ചെയ്യാം:
+
+```{code-cell} ipython3
+df = df.fillna(df.iloc[:,2:8].mean())
+df
+```
+
+വിവിധ machine learning techniques ഉൾപ്പെടുന്ന data science-ലെ ഒരു വലിയ മേഖലയാണ് Missing value imputation.
+
+missing values impute ചെയ്യാൻ python-ൽ കൂടുതൽ [advanced tools](https://scikit-learn.org/stable/modules/impute.html)-ഉം ഉണ്ട്.
+
+### Standardization and Visualization
+
+നമുക്ക് population (`POP`), total GDP (`tcgdp`) എന്നിവയിൽ മാത്രമേ താൽപ്പര്യമുള്ളൂ എന്ന് കരുതാം.
+
+`df` എന്ന data frame-നെ ഈ variables മാത്രമായി ചുരുക്കാനുള്ള ഒരു വഴി, മുകളിൽ വിവരിച്ച selection method ഉപയോഗിച്ച് dataframe-നെ overwrite ചെയ്യുക എന്നതാണ്:
+
+```{code-cell} ipython3
+df = df[['country', 'POP', 'tcgdp']]
+df
+```
+
+country names-നെ ഒരു index ആയി ഉപയോഗിക്കാൻ കഴിയുന്നതിനാൽ, ഇവിടെ `0, 1,..., 7` എന്ന index redundant ആണ്.
+
+ഇത് ചെയ്യാൻ, dataframe-ലെ `country` variable-നെ നമുക്ക് index ആയി set ചെയ്യാം:
+
+```{code-cell} ipython3
+df = df.set_index('country')
+df
+```
+
+columns-ന് അല്പം മെച്ചപ്പെട്ട names നൽകാം:
+
+```{code-cell} ipython3
+df.columns = 'population', 'total GDP'
+df
+```
+
+`population` variable thousands-ൽ ആണ്; നമുക്ക് അതിനെ single units ആയി മാറ്റാം:
+
+```{code-cell} ipython3
+df['population'] = df['population'] * 1e3
+df
+```
+
+ഇനി, real GDP per capita കാണിക്കുന്ന ഒരു column നമുക്ക് ചേർക്കാം; total GDP millions-ൽ ആയതിനാൽ, ഇവിടെ 1,000,000 കൊണ്ട് multiply ചെയ്യുന്നു:
+
+```{code-cell} ipython3
+df['GDP percap'] = df['total GDP'] * 1e6 / df['population']
+df
+```
+
+Matplotlib വഴി പ്രവർത്തിക്കുന്ന plotting, visualization methods pandas-ന്റെ `DataFrame`, `Series` objects-ന് ഉണ്ട് എന്നതാണ് അവയുടെ നല്ല കാര്യങ്ങളിലൊന്ന്.
+
+For example, GDP per capita-യുടെ ഒരു bar plot നമുക്ക് എളുപ്പത്തിൽ generate ചെയ്യാം:
+
+```{code-cell} ipython3
+ax = df['GDP percap'].plot(kind='bar')
+ax.set_xlabel('country', fontsize=12)
+ax.set_ylabel('GDP per capita', fontsize=12)
+plt.show()
+```
+
+നിലവിൽ data frame countries-ന്റെ alphabetical order-ൽ ആണ്; നമുക്ക് ഇത് GDP per capita അനുസരിച്ച് മാറ്റാം:
+
+```{code-cell} ipython3
+df = df.sort_values(by='GDP percap', ascending=False)
+df
+```
+
+ഇപ്പോൾ മുമ്പത്തെപ്പോലെ plot ചെയ്യുമ്പോൾ ലഭിക്കുന്നത്:
+
+```{code-cell} ipython3
+ax = df['GDP percap'].plot(kind='bar')
+ax.set_xlabel('country', fontsize=12)
+ax.set_ylabel('GDP per capita', fontsize=12)
+plt.show()
+```
+
+## On-Line Data Sources
+
+```{index} single: Data Sources
+```
+
+online databases-നെ programmatically ആയി query ചെയ്യുന്നത് Python എളുപ്പമാക്കുന്നു.
+
+economists-ന് പ്രധാനപ്പെട്ട ഒരു database ആണ് [FRED](https://fred.stlouisfed.org/) --- St. Louis Fed maintain ചെയ്യുന്ന time series data-യുടെ ഒരു വലിയ collection.
+
+For example, [unemployment rate](https://fred.stlouisfed.org/series/UNRATE)-ൽ നമുക്ക് താൽപ്പര്യമുണ്ട് എന്ന് കരുതുക.
+
+(data-യെ ഒരു csv ആയി download ചെയ്യാൻ, മുകളിൽ വലതുവശത്തുള്ള `Download` click ചെയ്ത്, `CSV (data)` എന്ന option select ചെയ്യുക).
+
+പകരം, ഒരു Python program-ന് അകത്ത് നിന്നും CSV file access ചെയ്യാം.
+
+ഇത് പല രീതികളിലും ചെയ്യാം.
+
+താരതമ്യേന low-level ആയ ഒരു method-ൽ നിന്ന് നമുക്ക് തുടങ്ങാം, പിന്നീട് pandas-ലേക്ക് തിരികെ വരാം.
+
+### Accessing Data with {index}`requests <single: requests>`
+
+```{index} single: Python; requests
+```
+
+Internet-ൽ നിന്ന് data request ചെയ്യാനുള്ള standard Python library ആയ [requests](https://requests.readthedocs.io/en/latest/) ഉപയോഗിക്കുന്നതാണ് ഒരു option.
+
+തുടങ്ങാൻ, നിങ്ങളുടെ computer-ൽ താഴെ പറയുന്ന code ഒന്ന് try ചെയ്യുക:
+
+```{code-cell} ipython3
+r = requests.get('https://fred.stlouisfed.org/graph/fredgraph.csv?bgcolor=%23e1e9f0&chart_type=line&drp=0&fo=open%20sans&graph_bgcolor=%23ffffff&height=450&mode=fred&recession_bars=on&txtcolor=%23444444&ts=12&tts=12&width=1318&nt=0&thu=0&trc=0&show_legend=yes&show_axis_titles=yes&show_tooltip=yes&id=UNRATE&scale=left&cosd=1948-01-01&coed=2024-06-01&line_color=%234572a7&link_values=false&line_style=solid&mark_type=none&mw=3&lw=2&ost=-99999&oet=99999&mma=0&fml=a&fq=Monthly&fam=avg&fgst=lin&fgsnd=2020-02-01&line_index=1&transformation=lin&vintage_date=2024-07-29&revision_date=2024-07-29&nd=1948-01-01')
+```
+
+error message ഒന്നും ഇല്ലെങ്കിൽ, call succeed ആയി എന്നാണ് അർത്ഥം.
+
+നിങ്ങൾക്ക് ഒരു error കിട്ടിയാൽ, സാധ്യതയുള്ള രണ്ട് കാരണങ്ങളുണ്ട്:
+
+1. നിങ്ങൾ Internet-ലേക്ക് connect ചെയ്തിട്ടില്ല --- ഇത് അങ്ങനെയല്ല എന്ന് പ്രതീക്ഷിക്കാം.
+1. നിങ്ങളുടെ machine ഒരു proxy server വഴിയാണ് Internet access ചെയ്യുന്നത്, Python-ന് ഇത് അറിയില്ല.
+
+രണ്ടാമത്തെ case-ൽ, നിങ്ങൾക്ക് ഒന്നുകിൽ
+
+* മറ്റൊരു machine-ലേക്ക് മാറാം
+* [the documentation](https://requests.readthedocs.io/en/latest/) വായിച്ച് നിങ്ങളുടെ proxy problem പരിഹരിക്കാം
+
+എല്ലാം ശരിയായി പ്രവർത്തിക്കുന്നു എന്ന് കരുതിയാൽ, `requests.get(url)` എന്ന call return ചെയ്യുന്ന data-യിൽ നിന്ന് `source` object build ചെയ്യാൻ ഇനി നിങ്ങൾക്ക് മുന്നോട്ട് പോകാം:
+
+```{code-cell} ipython3
+url = 'https://fred.stlouisfed.org/graph/fredgraph.csv?bgcolor=%23e1e9f0&chart_type=line&drp=0&fo=open%20sans&graph_bgcolor=%23ffffff&height=450&mode=fred&recession_bars=on&txtcolor=%23444444&ts=12&tts=12&width=1318&nt=0&thu=0&trc=0&show_legend=yes&show_axis_titles=yes&show_tooltip=yes&id=UNRATE&scale=left&cosd=1948-01-01&coed=2024-06-01&line_color=%234572a7&link_values=false&line_style=solid&mark_type=none&mw=3&lw=2&ost=-99999&oet=99999&mma=0&fml=a&fq=Monthly&fam=avg&fgst=lin&fgsnd=2020-02-01&line_index=1&transformation=lin&vintage_date=2024-07-29&revision_date=2024-07-29&nd=1948-01-01'
+source = requests.get(url).content.decode().split("\n")
+source[0]
+```
+
+```{code-cell} ipython3
+source[1]
+```
+
+```{code-cell} ipython3
+source[2]
+```
+
+ഈ text parse ചെയ്ത്, ഒരു array ആയി store ചെയ്യാൻ, നമുക്ക് ഇപ്പോൾ കുറച്ച് additional code എഴുതാം.
+
+എന്നാൽ ഇത് അനാവശ്യമാണ് --- pandas-ന്റെ `read_csv` function ഈ task നമുക്ക് വേണ്ടി handle ചെയ്യും.
+
+pandas നമ്മുടെ dates column recognize ചെയ്യാൻ, `parse_dates=True` ഉപയോഗിക്കുന്നു; ഇത് simple ആയ date filtering സാധ്യമാക്കുന്നു:
+
+```{code-cell} ipython3
+data = pd.read_csv(url, index_col=0, parse_dates=True)
+```
+
+`data` എന്ന pandas DataFrame-ലേക്ക് data read ചെയ്യപ്പെട്ടിരിക്കുന്നു, ഇനി നമുക്ക് ഇത് പതിവ് രീതിയിൽ manipulate ചെയ്യാം:
+
+```{code-cell} ipython3
+type(data)
+```
+
+```{code-cell} ipython3
+data.head()  # A useful method to get a quick look at a data frame
+```
+
+```{code-cell} ipython3
+pd.set_option('display.precision', 1)
+data.describe()  # Your output might differ slightly
+```
+
+2006 മുതൽ 2012 വരെയുള്ള unemployment rate-ഉം താഴെ പറയുന്ന രീതിയിൽ നമുക്ക് plot ചെയ്യാം:
+
+```{code-cell} ipython3
+ax = data['2006':'2012'].plot(title='US Unemployment Rate', legend=False)
+ax.set_xlabel('year', fontsize=12)
+ax.set_ylabel('%', fontsize=12)
+plt.show()
+```
+
+ശ്രദ്ധിക്കുക, pandas മറ്റ് പല file type alternatives-ഉം നൽകുന്നു.
+
+read ചെയ്യാനും, excel, json, parquet എന്നിവയ്ക്കായോ, ഒരു database server-ലേക്ക് നേരിട്ട് plug ചെയ്യാനോ ഉപയോഗിക്കാവുന്ന [a wide variety](https://pandas.pydata.org/pandas-docs/stable/user_guide/io.html) top-level methods pandas-ന് ഉണ്ട്.
+
+### Using {index}`wbgapi <single: wbgapi>` and {index}`yfinance <single: yfinance>` to Access Data
+
+World Bank publish ചെയ്യുന്ന നിരവധി databases-ൽ നിന്ന് data fetch ചെയ്യാൻ [wbgapi](https://pypi.org/project/wbgapi/) python library ഉപയോഗിക്കാം.
+
+```{note}
+[wbgapi](https://pypi.org/project/wbgapi/) package-നെക്കുറിച്ചുള്ള useful ആയ ചില വിവരങ്ങൾ ഈ [world bank blog post](https://blogs.worldbank.org/en/opendata/introducing-wbgapi-new-python-package-accessing-world-bank-data)-ൽ, ഇതുകൂടാതെ ഈ [tutorial](https://github.com/tgherzog/wbgapi/blob/master/examples/wbgapi-quickstart.ipynb)-ലും നിങ്ങൾക്ക് കണ്ടെത്താം
+```
+
+exercises-ൽ Yahoo finance-ൽ നിന്ന് data fetch ചെയ്യാൻ നമ്മൾ [yfinance](https://pypi.org/project/yfinance/)-ഉം ഉപയോഗിക്കും.
+
+ഇപ്പോൾ data download ചെയ്ത് plot ചെയ്യുന്ന ഒരു example നമുക്ക് പരിശോധിക്കാം --- ഇത്തവണ World Bank-ൽ നിന്ന്.
+
+World Bank ഒരു വലിയ range of indicators-ന്റെ data [collect ചെയ്യുകയും organize ചെയ്യുകയും](https://data.worldbank.org/indicator) ചെയ്യുന്നു.
+
+For example, GDP-യുടെ ratio ആയ government debt-നെക്കുറിച്ചുള്ള ചില data [ഇവിടെ](https://data.worldbank.org/indicator/GC.DOD.TOTL.GD.ZS) കാണാം.
+
+അടുത്ത code example, നിങ്ങൾക്ക് വേണ്ടി data fetch ചെയ്ത്, US-ന്റെയും Australia-യുടെയും time series plot ചെയ്യുന്നു:
+
+```{code-cell} ipython3
+import wbgapi as wb
+wb.series.info('GC.DOD.TOTL.GD.ZS')
+```
+
+```{code-cell} ipython3
+govt_debt = wb.data.DataFrame('GC.DOD.TOTL.GD.ZS', economy=['USA','AUS'], time=range(2005,2016))
+govt_debt = govt_debt.T    # move years from columns to rows for plotting
+```
+
+```{code-cell} ipython3
+govt_debt.plot(xlabel='year', ylabel='Government debt (% of GDP)');
+```
+
+## Exercises
+
+```{exercise-start}
+:label: pd_ex1
+```
+
+With these imports:
+
+```{code-cell} ipython3
+import datetime as dt
+import yfinance as yf
+```
+
+Write a program to calculate the percentage price change over 2021 for the following shares:
+
+```{code-cell} ipython3
+ticker_list = {'INTC': 'Intel',
+               'MSFT': 'Microsoft',
+               'IBM': 'IBM',
+               'BHP': 'BHP',
+               'TM': 'Toyota',
+               'AAPL': 'Apple',
+               'AMZN': 'Amazon',
+               'C': 'Citigroup',
+               'QCOM': 'Qualcomm',
+               'KO': 'Coca-Cola',
+               'GOOG': 'Google'}
+```
+
+Here's the first part of the program
+
+```{code-cell} ipython3
+def read_data(ticker_list,
+          start=dt.datetime(2021, 1, 1),
+          end=dt.datetime(2021, 12, 31)):
+    """
+    This function reads in closing price data from Yahoo
+    for each tick in the ticker_list.
+    """
+    ticker = pd.DataFrame()
+
+    for tick in ticker_list:
+        stock = yf.Ticker(tick)
+        prices = stock.history(start=start, end=end)
+
+        # Change the index to date-only
+        prices.index = pd.to_datetime(prices.index.date)
+        
+        closing_prices = prices['Close']
+        ticker[tick] = closing_prices
+
+    return ticker
+
+ticker = read_data(ticker_list)
+```
+
+Complete the program to plot the result as a bar graph like this one:
+
+```{image} /_static/lecture_specific/pandas/pandas_share_prices.png
+:scale: 80
+:align: center
+```
+
+```{exercise-end}
+```
+
+```{solution-start} pd_ex1
+:class: dropdown
+```
+
+There are a few ways to approach this problem using Pandas to calculate
+the percentage change.
+
+First, you can extract the data and perform the calculation such as:
+
+```{code-cell} ipython3
+p1 = ticker.iloc[0]    #Get the first set of prices as a Series
+p2 = ticker.iloc[-1]   #Get the last set of prices as a Series
+price_change = (p2 - p1) / p1 * 100
+price_change
+```
+
+Alternatively you can use an inbuilt method `pct_change` and configure it to
+perform the correct calculation using `periods` argument.
+
+```{code-cell} ipython3
+change = ticker.pct_change(periods=len(ticker)-1, axis='rows')*100
+price_change = change.iloc[-1]
+price_change
+```
+
+Then to plot the chart
+
+```{code-cell} ipython3
+price_change.sort_values(inplace=True)
+price_change.rename(index=ticker_list, inplace=True)
+```
+
+```{code-cell} ipython3
+fig, ax = plt.subplots(figsize=(10,8))
+ax.set_xlabel('stock', fontsize=12)
+ax.set_ylabel('percentage change in price', fontsize=12)
+price_change.plot(kind='bar', ax=ax)
+plt.show()
+```
+
+```{solution-end}
+```
+
+
+```{exercise-start}
+:label: pd_ex2
+```
+
+Using the method `read_data` introduced in {ref}`pd_ex1`, write a program to obtain year-on-year percentage change for the following indices:
+
+```{code-cell} ipython3
+indices_list = {'^GSPC': 'S&P 500',
+               '^IXIC': 'NASDAQ',
+               '^DJI': 'Dow Jones',
+               '^N225': 'Nikkei'}
+```
+
+Complete the program to show summary statistics and plot the result as a time series graph like this one:
+
+```{image} /_static/lecture_specific/pandas/pandas_indices_pctchange.png
+:scale: 80
+:align: center
+```
+
+```{exercise-end}
+```
+
+```{solution-start} pd_ex2
+:class: dropdown
+```
+
+Following the work you did in {ref}`pd_ex1`, you can query the data using `read_data` by updating the start and end dates accordingly.
+
+```{code-cell} ipython3
+indices_data = read_data(
+        indices_list,
+        start=dt.datetime(1971, 1, 1),  #Common Start Date
+        end=dt.datetime(2021, 12, 31)
+)
+```
+
+Then, extract the first and last set of prices per year as DataFrames and calculate the yearly returns such as:
+
+```{code-cell} ipython3
+yearly_returns = pd.DataFrame()
+
+for index, name in indices_list.items():
+    p1 = indices_data.groupby(indices_data.index.year)[index].first()  # Get the first set of returns as a DataFrame
+    p2 = indices_data.groupby(indices_data.index.year)[index].last()   # Get the last set of returns as a DataFrame
+    returns = (p2 - p1) / p1
+    yearly_returns[name] = returns
+
+yearly_returns
+```
+
+Next, you can obtain summary statistics by using the method `describe`.
+
+```{code-cell} ipython3
+yearly_returns.describe()
+```
+
+Then, to plot the chart
+
+```{code-cell} ipython3
+fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+
+for iter_, ax in enumerate(axes.flatten()):            # Flatten 2-D array to 1-D array
+    index_name = yearly_returns.columns[iter_]         # Get index name per iteration
+    ax.plot(yearly_returns[index_name])                # Plot pct change of yearly returns per index
+    ax.set_ylabel("percent change", fontsize = 12)
+    ax.set_title(index_name)
+
+plt.tight_layout()
+```
+
+```{solution-end}
+```
+
+[^mung]: Wikipedia defines munging as cleaning data from one raw form into a structured, purged one.

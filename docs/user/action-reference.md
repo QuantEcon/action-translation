@@ -12,7 +12,7 @@ The action operates in three modes, specified by the `mode` input:
 
 ### Sync mode
 
-Runs in the **source** (English) repository. When a PR is merged that changes Markdown files, the action:
+Runs in the **source** (English) repository. When a PR that changes Markdown files is merged into the default branch, the action:
 
 1. Detects which files and sections changed
 2. Translates only the changed sections using Claude
@@ -119,6 +119,7 @@ name: Sync Translations
 on:
   pull_request:
     types: [closed]
+    branches: [main]
     paths:
       - 'lectures/**/*.md'
       - '_toc.yml'
@@ -162,6 +163,8 @@ The `issue_comment` trigger enables the `\translate-resync` command — comment 
 
 **The four conditions on that clause are load-bearing.** `issue_comment` workflows run in default-branch context with full access to secrets, and GitHub cannot filter the event by comment body at the trigger level — so the `if:` is the only gate. It checks that the comment is on a **pull request** (`github.event.issue.pull_request`; plain issues raise the same event), that it carries the command, and that its author is an `OWNER`, `MEMBER` or `COLLABORATOR`. Without the last one, any GitHub account can spend your Anthropic credits by commenting on a merged PR. `CONTRIBUTOR` — anyone with one merged PR — is deliberately excluded, and the action enforces the same set internally, so widening the workflow alone would only buy a run that no-ops. `permissions: contents: read` completes the picture: the action authenticates to the target repo with `TRANSLATION_PAT`, so the ambient `GITHUB_TOKEN` never needs write.
 
+**`branches: [main]` is the other half of the trigger.** `pull_request: types: [closed]` fires for a PR closed against *any* base branch, and `github.event.pull_request.merged` says nothing about which branch it merged into — so without the filter a PR merged into a long-lived work branch (a theme migration, a lecture rewrite in progress) is forwarded to every target repo as if it had been published. The action checks too: a merged PR whose base is not the repository's default branch is skipped, on the `pull_request` path and on `\translate-resync` (an `issue_comment` trigger cannot carry a branch filter). If your default branch is not `main`, change the filter to match; the action's check follows the repository setting.
+
 ### Multi-language sync
 
 Use separate jobs for each target language. They run in parallel and create independent PRs:
@@ -172,6 +175,7 @@ name: Sync Translations
 on:
   pull_request:
     types: [closed]
+    branches: [main]
     paths:
       - 'lectures/**/*.md'
   issue_comment:
@@ -286,7 +290,7 @@ jobs:
 
 ## How sync mode works
 
-When a PR is merged, sync mode:
+When a PR is merged into the default branch, sync mode:
 
 1. **Identifies changed files** — Compares the PR's diff against the docs folder pattern
 2. **Classifies each file** — New file (full translation) or existing file (section-level update)

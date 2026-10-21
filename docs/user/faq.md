@@ -36,6 +36,10 @@ This can happen if:
 - The changed files were not `.md` files
 - The translation of the changed sections is identical to what was already in the target
 
+### Does sync run for PRs merged into branches other than `main`?
+
+No. The workflow's `branches: [main]` filter stops the run before it starts, and the action itself skips a merged PR whose base branch is not the repository's default branch — the `\translate-resync` comment path included. A long-lived work branch (a theme migration, a rewrite in progress) is not a publication, so merging into it must not open translation PRs. If your sync workflow predates the filter, add `branches: [main]` under `pull_request:`; the action's check covers the gap until you do.
+
 ### The action created a PR but some sections weren't translated
 
 Check that:
@@ -96,6 +100,12 @@ Because success comments are posted via the GitHub API on the source PR, they tr
 
 See [Language Configuration](language-config.md) for details.
 
+### Why did the translated section captions in `_toc.yml` revert to English after a sync?
+
+They should no longer. A sync mirrors the source `_toc.yml` so that lecture additions, removals and reorderings propagate, and in v0.29.3 and earlier it mirrored the part captions too, overwriting whatever the edition had translated — silently, because English captions build fine and review mode never looks at the TOC. The sync now reads the target's current `_toc.yml` and carries each part's translated caption forward, matching parts by the lectures they contain rather than by name or position, so a part that gains or loses a lecture keeps its caption. Only the caption lines change; the rest of the TOC is byte-identical to the source, unless the same run failed to deliver a new lecture, whose entry is also removed (see *A sync PR says some files "failed to translate"* below).
+
+Two cases still land in English, both on purpose. A **new part** — one sharing no lectures with any part in the target — arrives with its source caption, and the run log warns `has no counterpart in the target TOC`; translate it in the sync PR before merging. A part whose caption was **never translated** (byte-identical to the source in the target already) stays that way and is logged as `not localised`; that is the state to fix once in the edition, after which every later sync preserves it.
+
 ### How do I add content to a translated edition that isn't in the source?
 
 Put it in a **target-only file** — a new `.md` file in the target repo's docs folder, added to the target's `_toc.yml`. Sync only ever touches files that exist in the source, so a target-only file is never modified, resynced, or removed by automation. The `status` command lists such files as `TARGET_ONLY` so they stay visible.
@@ -103,6 +113,14 @@ Put it in a **target-only file** — a new `.md` file in the target repo's docs 
 Do **not** add extra sections inside a synced file. The sync mirrors the source document's structure, so a section that has no counterpart in the source is removed on the next sync of that file. The removal is deliberate — it is how upstream deletions propagate — and the sync PR lists every removed target-only section under "Target-Only Sections Removed" so a reviewer can catch the case where the content was human-authored. If that happens, restore the content into a target-only file and merge the sync.
 
 If the addition is an *improvement to existing content* rather than new material, consider contributing it to the source repository instead (`translate backward` helps capture such improvements) — then every language edition benefits and the sync carries it back to yours.
+
+### A sync PR says some files "failed to translate" — is the PR safe to merge?
+
+Yes, as far as the build goes. When a _new_ lecture in the source PR cannot be delivered (most often the structural-parity guard refusing a translation whose directive sequence came back scrambled, sometimes a failed content fetch), the sync PR is opened without it and lists it under **Files Failed to Translate**. The lecture's `_toc.yml` entry is removed from the same PR so the target builds cleanly, and the removal takes out only that entry's lines — nothing else in the TOC changes because of it (the translated part captions are still carried forward as usual). The entry comes back with the file when a later rebase delivers it; the machine-readable metadata block still declares the file for exactly that reason.
+
+Read the notice's second sentence carefully. If it names the TOC the entry was removed from, the PR is self-consistent. If it says _no `_toc.yml` was part of this sync_, nothing was removed because nothing needed to be in this changeset — but the target's existing TOC may already list the file (for example, from a concurrent sync that mirrored the whole source TOC), and the build will fail until the file arrives. The failure issue opened on the source repository carries the error details and the recovery steps.
+
+Only new files are ever removed from the TOC. A lecture that already exists in the target and merely failed to _update_ keeps its entry — the previous translation is still there and still correct to link.
 
 ### The `forward` command changed too many lines
 
@@ -122,7 +140,7 @@ This is expected for well-maintained translations. The backward analysis is desi
 
 | Aspect | Sync Action | Forward CLI |
 |--------|------------|-------------|
-| **Trigger** | PR merge event | Manual command |
+| **Trigger** | PR merged into the default branch | Manual command |
 | **Change signal** | Git diff from PR | Whole-document comparison |
 | **Translation mode** | UPDATE (section-level) | RESYNC (whole-file) |
 | **Scope** | Files changed in that PR | Any drifted files |

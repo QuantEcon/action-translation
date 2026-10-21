@@ -53,7 +53,7 @@ result for the method: the second model is not a bake-off, it is the signal.
 Beyond zero drift, Opus was *correct* where Sonnet drifted: `mutable` → `mutable` vs
 Sonnet's `muable`, which is not the Python sense. Output lengths were near-identical, so
 the cost difference is purely the price ratio: $1.22 → $2.03 for 5 lectures (~$6.3 →
-~$10.4 for all 26). Recorded as `.dev/decisions/D-2026-07-14-opus-for-bulk-seed.md`.
+~$10.4 for all 26). Recorded as `.qe/dev/decisions/D-2026-07-14-opus-for-bulk-seed.md`.
 
 ## The 11 candidates
 

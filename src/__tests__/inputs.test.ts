@@ -18,6 +18,7 @@ import {
   getRebaseInputs,
   validatePREvent,
   validateReviewPREvent,
+  mergedIntoDefaultBranch,
 } from '../inputs.js';
 
 // Mock @actions/core
@@ -320,7 +321,9 @@ describe('validatePREvent (sync mode)', () => {
         pull_request: {
           merged: true,
           number: 123,
+          base: { ref: 'main' },
         },
+        repository: { default_branch: 'main' },
       },
     };
 
@@ -329,6 +332,88 @@ describe('validatePREvent (sync mode)', () => {
     expect(result.prNumber).toBe(123);
     expect(result.isTestMode).toBe(false);
     expect(result.isResync).toBe(false);
+  });
+
+  describe('base branch guard', () => {
+    // lecture-python-programming#629: a theme migration merged into the
+    // long-lived `jb2` branch fired every sync workflow and opened
+    // translation PRs in three target repos for unpublished content.
+    it('should skip a PR merged into a branch other than the default branch', () => {
+      const context = {
+        eventName: 'pull_request',
+        payload: {
+          action: 'closed',
+          pull_request: {
+            merged: true,
+            number: 629,
+            base: { ref: 'jb2' },
+          },
+          repository: { default_branch: 'main' },
+        },
+      };
+
+      const result = validatePREvent(context, false);
+      expect(result.merged).toBe(false);
+      expect(result.prNumber).toBe(629);
+      expect(result.isResync).toBe(false);
+      expect(mockedCore.info).toHaveBeenCalledWith(
+        expect.stringContaining("merged into 'jb2', not the default branch 'main'")
+      );
+    });
+
+    it('should follow the repository setting, not a hard-coded main', () => {
+      const context = {
+        eventName: 'pull_request',
+        payload: {
+          action: 'closed',
+          pull_request: {
+            merged: true,
+            number: 7,
+            base: { ref: 'master' },
+          },
+          repository: { default_branch: 'master' },
+        },
+      };
+
+      expect(validatePREvent(context, false).merged).toBe(true);
+    });
+
+    it('should proceed with a warning when the payload has no default branch', () => {
+      const context = {
+        eventName: 'pull_request',
+        payload: {
+          action: 'closed',
+          pull_request: {
+            merged: true,
+            number: 8,
+            base: { ref: 'jb2' },
+          },
+        },
+      };
+
+      expect(validatePREvent(context, false).merged).toBe(true);
+      expect(mockedCore.warning).toHaveBeenCalledWith(
+        expect.stringContaining('Could not determine the repository default branch')
+      );
+    });
+
+    it('should not consult the base branch for a closed-unmerged PR', () => {
+      const context = {
+        eventName: 'pull_request',
+        payload: {
+          action: 'closed',
+          pull_request: {
+            merged: false,
+            number: 9,
+            base: { ref: 'jb2' },
+          },
+          repository: { default_branch: 'main' },
+        },
+      };
+
+      expect(validatePREvent(context, false).merged).toBe(false);
+      expect(mockedCore.warning).not.toHaveBeenCalled();
+    });
   });
 
   it('should handle closed but not merged PR', () => {
@@ -610,6 +695,31 @@ describe('validatePREvent (sync mode)', () => {
 // =============================================================================
 // PR EVENT VALIDATION TESTS (REVIEW MODE)
 // =============================================================================
+
+describe('mergedIntoDefaultBranch', () => {
+  // Shared by the pull_request path (validatePREvent) and the resync path in
+  // runSync, which reads the base from pulls.get because an issue_comment
+  // payload carries neither the base nor the merge state.
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('accepts a base that matches the default branch', () => {
+    expect(mergedIntoDefaultBranch('main', 'main', 1)).toBe(true);
+    expect(mockedCore.warning).not.toHaveBeenCalled();
+  });
+
+  it('rejects a base that differs from the default branch', () => {
+    expect(mergedIntoDefaultBranch('jb2', 'main', 629)).toBe(false);
+    expect(mockedCore.info).toHaveBeenCalledWith(expect.stringContaining('PR #629'));
+  });
+
+  it('passes with a warning when either side is unknown', () => {
+    expect(mergedIntoDefaultBranch(undefined, 'main', 2)).toBe(true);
+    expect(mergedIntoDefaultBranch('jb2', undefined, 3)).toBe(true);
+    expect(mockedCore.warning).toHaveBeenCalledTimes(2);
+  });
+});
 
 describe('validateReviewPREvent (review mode)', () => {
   beforeEach(() => {

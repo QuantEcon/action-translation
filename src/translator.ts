@@ -814,6 +814,36 @@ ${targetContent}`;
 
     return `GLOSSARY:
 ${terms}
+${this.formatStyleExamples(glossary, targetLanguage)}`;
+  }
+
+  /**
+   * Format the glossary's editor-approved sentence pairs as style exemplars.
+   *
+   * Rendered inside the glossary section, so it sits in the prompt-cached
+   * stable block of every builder and reaches every write path with no extra
+   * plumbing. The set is fixed per glossary version (no per-call retrieval) —
+   * the stable block must be byte-identical across calls to stay cacheable.
+   */
+  private formatStyleExamples(glossary: Glossary, targetLanguage: string): string {
+    const examples = (glossary.style_examples ?? []).filter(
+      (example) => typeof example[targetLanguage] === 'string' && example[targetLanguage] !== ''
+    );
+    if (examples.length === 0) {
+      return '';
+    }
+
+    const pairs = examples
+      .map(
+        (example) =>
+          `  EN: ${example.en}\n  ${targetLanguage.toUpperCase()}: ${example[targetLanguage]}`
+      )
+      .join('\n\n');
+
+    return `
+STYLE EXAMPLES:
+Sentences from earlier lectures, exactly as the native-speaker editor approved them. Match their register, sentence rhythm, comma placement, verb forms and clause order in your own translation. They illustrate style only — never copy their content, and where an example and a numbered rule seem to differ, follow the rule.
+${pairs}
 `;
   }
 }

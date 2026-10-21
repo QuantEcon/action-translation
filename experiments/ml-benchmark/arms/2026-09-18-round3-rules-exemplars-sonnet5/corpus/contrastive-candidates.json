@@ -1,0 +1,1250 @@
+[
+ {
+  "lecture": "python_by_example",
+  "en": "We're now ready to start learning the Python language itself.",
+  "draft": "നമ്മൾ ഇപ്പോൾ Python language തന്നെ പഠിച്ചു തുടങ്ങാൻ തയ്യാറാണ്.",
+  "edited": "ഇനി നമുക്ക് Python language-നെ പറ്റി പഠിക്കാം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "The objective is to introduce you to basic Python syntax and data structures.",
+  "draft": "ഇതിന്റെ ലക്ഷ്യം നിങ്ങൾക്ക് അടിസ്ഥാന Python syntax-ഉം data structures-ഉം പരിചയപ്പെടുത്തുക എന്നതാണ്.",
+  "edited": "Basic Python syntax-ഉം data structures-ഉം നിങ്ങൾക്ക് introduce ചെയ്തു തരിക എന്നതാണ് ഈ lecture-ന്റെ ലക്ഷ്യം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Deeper concepts will be covered in later lectures.",
+  "draft": "കൂടുതൽ ആഴത്തിലുള്ള concepts പിന്നീടുള്ള lectures-ൽ കൈകാര്യം ചെയ്യും.",
+  "edited": "കൂടുതൽ ആഴത്തിലുള്ള concepts പിന്നീടുള്ള lectures-ൽ cover ചെയ്യും."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "You should have read the {doc}`lecture <getting_started>` on getting started with Python before beginning this one.",
+  "draft": "ഇത് തുടങ്ങുന്നതിന് മുമ്പ് Python-ൽ getting started ചെയ്യുന്നതിനെക്കുറിച്ചുള്ള {doc}`lecture <getting_started>` നിങ്ങൾ വായിച്ചിരിക്കണം.",
+  "edited": "ഈ lecture-ലേക്കു കടക്കുന്നതിനു മുമ്പ് നിങ്ങൾ getting started with Python എന്ന {doc}`lecture <getting_started>` വായിച്ചിട്ടുണ്ടാകും എന്ന് കരുതുന്നു."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "In other words, we want to generate figures that look something like this:",
+  "draft": "മറ്റൊരു വിധത്തിൽ പറഞ്ഞാൽ, ഇതുപോലുള്ള figures generate ചെയ്യണം:",
+  "edited": "അതായത്, താഴെ കൊടുത്തിരിക്കുന്നത് പോലെയുള്ള ഒരു figure നമുക്ക് generate ചെയ്യണം:"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "(Here $t$ is on the horizontal axis and $\\epsilon_t$ is on the vertical axis.)",
+  "draft": "(ഇവിടെ $t$ horizontal axis-ലും $\\epsilon_t$ vertical axis-ലും ആണ്.)",
+  "edited": "(ഇവിടെ $t$ horizontal axis-ലും, $\\epsilon_t$ vertical axis-ലും ആണ്.)"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "We'll do this in several different ways, each time learning something more about Python.",
+  "draft": "നമ്മൾ ഇത് പല വ്യത്യസ്ത രീതികളിൽ ചെയ്യും, ഓരോ തവണയും Python-നെക്കുറിച്ച് കൂടുതൽ കാര്യങ്ങൾ പഠിക്കും.",
+  "edited": "ഈ white noise process plotting നമ്മൾ പല വിധത്തിൽ ചെയ്യും — ഓരോ രീതിയിൽ ചെയ്യുമ്പോഴും നമ്മൾ Python-നെക്കുറിച്ച് കൂടുതൽ കാര്യങ്ങൾ പഠിക്കും."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Here are a few lines of code that perform the task we set",
+  "draft": "നമ്മൾ set ചെയ്ത task ചെയ്യുന്ന കുറച്ച് lines of code ഇവിടെ ഉണ്ട്",
+  "edited": "നമ്മൾ set ചെയ്ത task ചെയ്യുന്ന കുറച്ച് lines of code താഴെ കാണാം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Let's break this program down and see how it works.",
+  "draft": "ഈ program-നെ ഭാഗങ്ങളാക്കി, അത് എങ്ങനെ പ്രവർത്തിക്കുന്നു എന്ന് നോക്കാം.",
+  "edited": "നമുക്ക് ഈ program-നെ break down ചെയ്ത്, അത് എങ്ങനെ work ചെയ്യുന്നു എന്ന് നോക്കാം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "The first line imports {doc}`NumPy <numpy>`, a favorite Python package for tasks like",
+  "draft": "ആദ്യ line {doc}`NumPy <numpy>` import ചെയ്യുന്നു, ഇത് ഇത്തരം tasks-ക്ക് ഇഷ്ടപ്പെട്ട ഒരു Python package ആണ്",
+  "edited": "ആദ്യത്തെ line {doc}`NumPy <numpy>` import ചെയ്യുന്നു — NumPy, താഴെ കൊടുത്തിരിക്കുന്ന പോലത്തെ tasks-കൾ ചെയ്യാനുള്ള ഒരു Python package ആണ്:"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "After `import numpy as np` we have access to these attributes via the syntax `np.attribute`.",
+  "draft": "`import numpy as np` എന്ന് ചെയ്ത ശേഷം, `np.attribute` എന്ന syntax വഴി ഈ attributes-ലേക്ക് നമുക്ക് access ലഭിക്കും.",
+  "edited": "`import numpy as np` ചെയ്ത് കഴിഞ്ഞാൽ, `np.attribute` എന്ന syntax ഉപയോഗിച്ച് ഈ attributes നമുക്ക് access ചെയ്യാം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Python programs typically require multiple import statements.",
+  "draft": "Python programs സാധാരണയായി multiple import statements ആവശ്യപ്പെടുന്നു.",
+  "edited": "Python programs-ൽ സാധാരണയായി multiple import statements ആവശ്യമായിവരുന്നു."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "When you want to do something interesting with Python, you almost always need to import additional functionality.",
+  "draft": "Python ഉപയോഗിച്ച് interesting ആയ എന്തെങ്കിലും ചെയ്യണമെങ്കിൽ, മിക്കവാറും എപ്പോഴും additional functionality import ചെയ്യേണ്ടി വരും.",
+  "edited": "Python ഉപയോഗിച്ച് interesting ആയ എന്തെങ്കിലും ചെയ്യണമെങ്കിൽ, മിക്ക സമയത്തും additional functionality import ചെയ്യേണ്ടി വരും."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Packages are used by developers to organize code they wish to share.",
+  "draft": "Developers അവർ share ചെയ്യാൻ ഉദ്ദേശിക്കുന്ന code organize ചെയ്യാൻ packages ഉപയോഗിക്കുന്നു.",
+  "edited": "Share ചെയ്യാൻ ആഗ്രഹിക്കുന്ന code-നെ organize ചെയ്യാനാണ് developers packages ഉപയോഗിക്കുന്നത്."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "In fact, a **package** is just a directory containing",
+  "draft": "വാസ്തവത്തിൽ, ഒരു **package** എന്നത് ഇവ അടങ്ങിയ ഒരു directory മാത്രമാണ്",
+  "edited": "In fact, ഒരു **package** എന്നത് താഴെ കൊടുത്തിരിക്കുന്നവ അടങ്ങിയ ഒരു directory ആണ്:"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "1. files with Python code --- called **modules** in Python speak",
+  "draft": "1. Python code ഉള്ള files --- Python-ന്റെ ഭാഷയിൽ **modules** എന്ന് വിളിക്കുന്നു",
+  "edited": "1. Python code ഉള്ള files — Python-ന്റെ ഭാഷയിൽ ഇവയെ **modules** എന്ന് വിളിക്കുന്നു"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "1. possibly some compiled code that can be accessed by Python (e.g., functions compiled from C or FORTRAN code)",
+  "draft": "1. Python access ചെയ്യാൻ കഴിയുന്ന compiled code ചിലപ്പോൾ (ഉദാ: C അല്ലെങ്കിൽ FORTRAN code-യിൽ നിന്ന് compile ചെയ്ത functions)",
+  "edited": "1. Python-ന് access ചെയ്യാൻ കഴിയുന്ന compiled code (e.g., functions compiled from C or FORTRAN code)"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "1. a file called `__init__.py` that specifies what will be executed when we type `import package_name`",
+  "draft": "1. `import package_name` എന്ന് type ചെയ്യുമ്പോൾ എന്ത് execute ചെയ്യണം എന്ന് specify ചെയ്യുന്ന `__init__.py` എന്ന file",
+  "edited": "1. `__init__.py` എന്ന ഒരു file — നമ്മൾ `import package_name` type ചെയ്യുമ്പോൾ എന്ത് execute ചെയ്യണം എന്ന് ഇത് specify ചെയ്യുന്നു"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "You can check the location of your `__init__.py` for NumPy in python by running the code:",
+  "draft": "NumPy-യുടെ `__init__.py`-യുടെ location Python-ൽ ഈ code run ചെയ്ത് check ചെയ്യാം:",
+  "edited": "NumPy-യുടെ `__init__.py`-യുടെ location check ചെയ്യാൻ, താഴെ കൊടുത്തിരിക്കുന്ന code Python-ൽ run ചെയ്യുക:"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Here `np` refers to the package NumPy, while `random` is a **subpackage** of NumPy.",
+  "draft": "ഇവിടെ `np` എന്നത് NumPy package-നെ സൂചിപ്പിക്കുന്നു, `random` എന്നത് NumPy-യുടെ ഒരു **subpackage** ആണ്.",
+  "edited": "ഇവിടെ `np` എന്നത് NumPy package-നെ refer ചെയ്യുന്നു, അതേ സമയം `random` എന്നത് NumPy-യുടെ ഒരു **subpackage** ആണ്."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Subpackages are just packages that are subdirectories of another package.",
+  "draft": "Subpackages എന്നത് മറ്റൊരു package-ന്റെ subdirectories ആയ packages മാത്രമാണ്.",
+  "edited": "Subpackages എന്നത് മറ്റൊരു package-ന്റെ subdirectory ആയ packages മാത്രമാണ്."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "For instance, you can find folder `random` under the directory of NumPy.",
+  "draft": "ഉദാഹരണത്തിന്, NumPy-യുടെ directory-യുടെ കീഴിൽ `random` എന്ന folder നിങ്ങൾക്ക് കണ്ടെത്താം.",
+  "edited": "ഉദാഹരണത്തിന്, NumPy-യുടെ directory-യിൽ `random` എന്ന folder കാണാം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Here's another way to access NumPy's square root function",
+  "draft": "NumPy-യുടെ square root function access ചെയ്യാൻ മറ്റൊരു വഴി ഇവിടെ",
+  "edited": "NumPy-യുടെ square root function access ചെയ്യാനുള്ള മറ്റൊരു രീതി താഴെ കാണാം:"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "The advantage is less typing if we use `sqrt` often in our code.",
+  "draft": "നമ്മുടെ code-ൽ `sqrt` പലപ്പോഴും ഉപയോഗിക്കുകയാണെങ്കിൽ, ഇത് ഉപയോഗിക്കുന്നത് typing കുറയ്ക്കും എന്നതാണ് advantage.",
+  "edited": "ഇതിന്റെ advantage — നമ്മുടെ code-ൽ `sqrt` പലപ്പോഴും ഉപയോഗിക്കുകയാണെങ്കിൽ, ഇതുവഴി നമുക്ക് typing കുറക്കാൻ സാധിക്കും."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "The disadvantage is that, in a long program, these two lines might be separated by many other lines.",
+  "draft": "ദോഷം, ഒരു long program-ൽ, ഈ രണ്ട് lines പലപ്പോഴും പല മറ്റ് lines-ഉം കൊണ്ട് separate ചെയ്യപ്പെട്ടേക്കാം.",
+  "edited": "ഇതിന്റെ disadvantage — ഒരു long program-ൽ, ഈ രണ്ട് lines-ന്റെയും ഇടയിൽ മറ്റ് പല lines-ഉം വന്നേക്കാം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Then it's harder for readers to know where `sqrt` came from, should they wish to.",
+  "draft": "അപ്പോൾ, `sqrt` എവിടെ നിന്ന് വന്നു എന്ന് readers അറിയാൻ ആഗ്രഹിച്ചാൽ, അത് കണ്ടെത്താൻ കൂടുതൽ ബുദ്ധിമുട്ടാകും.",
+  "edited": "അങ്ങനെ വരുമ്പോൾ, `sqrt` എവിടെ നിന്ന് വന്നു എന്ന് readers-ന് മനസ്സിലാക്കാൻ ബുദ്ധിമുട്ടായേക്കാം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Returning to our program that plots white noise, the remaining three lines after the import statements are",
+  "draft": "White noise plot ചെയ്യുന്ന നമ്മുടെ program-ലേക്ക് തിരികെ വരാം, import statements കഴിഞ്ഞുള്ള ബാക്കി മൂന്ന് lines ഇവയാണ്",
+  "edited": "White noise plot ചെയ്യുന്ന നമ്മുടെ program-ലേക്ക് തിരികെ വരാം. Import statements കഴിഞ്ഞുള്ള ബാക്കി മൂന്ന് lines ഇവയാണ്:"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "We can and will look at various ways to configure and improve this plot below.",
+  "draft": "താഴെ ഈ plot configure ചെയ്യാനും improve ചെയ്യാനുമുള്ള പല വഴികളും നമുക്ക് നോക്കാം.",
+  "edited": "ഈ plot configure ചെയ്യാനും improve ചെയ്യാനുമുള്ള പല വഴികൾ നമുക്ക് താഴെ കാണാം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Let's try writing some alternative versions of {ref}`our first program <ourfirstprog>`, which plotted IID draws from the standard normal distribution.",
+  "draft": "Standard normal distribution-ൽ നിന്നുള്ള IID draws plot ചെയ്ത {ref}`നമ്മുടെ ആദ്യ program <ourfirstprog>`-ന്റെ ചില alternative versions എഴുതി നോക്കാം.",
+  "edited": "Standard normal distribution-ൽ നിന്നും IID draws plot ചെയ്ത {ref}`നമ്മുടെ ആദ്യത്തെ program <ourfirstprog>`, മറ്റു പല രീതികളിൽ എങ്ങനെ എഴുതാം എന്ന് നോക്കാം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "But they do help us illustrate some important Python syntax and semantics in a familiar setting.",
+  "draft": "എന്നാൽ ഇവ ഒരു familiar setting-ൽ ചില പ്രധാന Python syntax-ഉം semantics-ഉം illustrate ചെയ്യാൻ സഹായിക്കുന്നു.",
+  "edited": "എന്നാൽ ഇവ ഒരു familiar setting-ൽ ചില പ്രധാന Python syntax-ഉം, semantics-ഉം illustrate ചെയ്യാൻ സഹായിക്കുന്നു."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Here's a version that illustrates `for` loops and Python lists.",
+  "draft": "`for` loops-ഉം Python lists-ഉം illustrate ചെയ്യുന്ന ഒരു version ഇവിടെ.",
+  "edited": "`for` loops-ഉം, Python lists-ഉം illustrate ചെയ്യുന്ന ഒരു version താഴെ കാണാം:"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "* The first line sets the desired length of the time series.",
+  "draft": "* ആദ്യ line time series-ന്റെ ആവശ്യമുള്ള length set ചെയ്യുന്നു.",
+  "edited": "* ആദ്യത്തെ line, time series-ന് ആവശ്യമായ length set ചെയ്യുന്നു."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "* The next line creates an empty *list* called `ϵ_values` that will store the $\\epsilon_t$ values as we generate them.",
+  "draft": "* അടുത്ത line, ജനറേറ്റ് ചെയ്യുന്ന $\\epsilon_t$ values store ചെയ്യാൻ `ϵ_values` എന്ന empty *list* create ചെയ്യുന്നു.",
+  "edited": "* അടുത്ത line, `ϵ_values` എന്നൊരു empty *list* create ചെയ്യുന്നു — അതിൽ ആയിരിക്കും നമ്മൾ generate ചെയ്യുന്ന $\\epsilon_t$ values store ചെയ്യുക."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "* The next three lines are the `for` loop, which repeatedly draws a new random number $\\epsilon_t$ and appends it to the end of the list `ϵ_values`.",
+  "draft": "* അടുത്ത മൂന്ന് lines `for` loop ആണ്, ഇത് ആവർത്തിച്ച് പുതിയ random number $\\epsilon_t$ draw ചെയ്ത് `ϵ_values` list-ന്റെ അവസാനത്തിൽ append ചെയ്യുന്നു.",
+  "edited": "* അടുത്ത മൂന്ന് lines ആണ് `for` loop — ഇത് repeatedly ഒരു പുതിയ random number $\\epsilon_t$ draw ചെയ്ത് `ϵ_values` list-ന്റെ അവസാനം append ചെയ്യുന്നു."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "* The last two lines generate the plot and display it to the user.",
+  "draft": "* അവസാന രണ്ട് lines plot generate ചെയ്ത് user-ന് display ചെയ്യുന്നു.",
+  "edited": "* അവസാനത്തെ രണ്ട് lines, plot generate ചെയ്ത്, user-ന് display ചെയ്യുന്നു."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Let's study some parts of this program in more detail.",
+  "draft": "ഈ program-ന്റെ ചില ഭാഗങ്ങൾ കൂടുതൽ വിശദമായി പഠിക്കാം.",
+  "edited": "ഈ program-ന്റെ കുറച്ചു ഭാഗങ്ങൾ നമുക്ക് വിശദമായി പഠിക്കാം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Consider the statement `ϵ_values = []`, which creates an empty list.",
+  "draft": "`ϵ_values = []` എന്ന statement നോക്കുക, ഇത് ഒരു empty list create ചെയ്യുന്നു.",
+  "edited": "`ϵ_values = []` എന്ന statement നോക്കുക. ഇത് ഒരു empty list create ചെയ്യുന്നു."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Lists are a native Python data structure used to group a collection of objects.",
+  "draft": "Lists എന്നത് objects-ന്റെ ഒരു collection group ചെയ്യാൻ ഉപയോഗിക്കുന്ന native Python data structure ആണ്.",
+  "edited": "ഒരു കൂട്ടം objects-നെ ഒരുമിച്ച് group ചെയ്യാൻ ഉപയോഗിക്കുന്ന Python-ന്റെ ഒരു native data structure ആണ് Lists."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "When adding a value to a list, we can use the syntax `list_name.append(some_value)`",
+  "draft": "ഒരു list-ലേക്ക് value add ചെയ്യുമ്പോൾ, `list_name.append(some_value)` എന്ന syntax നമുക്ക് ഉപയോഗിക്കാം",
+  "edited": "ഒരു list-ലേക്ക് ഒരു value add ചെയ്യാൻ, `list_name.append(some_value)` എന്ന syntax നമുക്ക് ഉപയോഗിക്കാം"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Here `append()` is what's called a **method**, which is a function \"attached to\" an object---in this case, the list `x`.",
+  "draft": "ഇവിടെ `append()` എന്നത് **method** എന്ന് വിളിക്കപ്പെടുന്ന ഒന്നാണ്, ഇത് ഒരു object-ൽ \"attach\" ചെയ്ത function ആണ്---ഇവിടെ `x` എന്ന list.",
+  "edited": "ഇവിടെ `append()` എന്നത് ഒരു **method** ആണ്. ഒരു object-നോട് \"attach\" ആയിരിക്കുന്ന ഒരു function-നെയാണ് method എന്ന് വിളിക്കുന്നത്. ഇവിടെ ആ object `x` എന്ന list ആണ്."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "We'll learn all about methods {doc}`later on <oop_intro>`, but just to give you some idea,",
+  "draft": "Methods-നെക്കുറിച്ച് {doc}`പിന്നീട് <oop_intro>` നമ്മൾ എല്ലാം പഠിക്കും, പക്ഷേ ഒരു idea നൽകാൻ,",
+  "edited": "Methods-നെ പറ്റി നമ്മൾ {doc}`പിന്നീട് <oop_intro>` വിശദമായി പഠിക്കും, പക്ഷേ ഇപ്പോൾ ഒരു idea കിട്ടാൻ നിങ്ങൾ ഇത്രെയും മനസിലാക്കുക:"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "* Python objects such as lists, strings, etc. all have methods that are used to manipulate data contained in the object.",
+  "draft": "* Lists, strings പോലുള്ള Python objects-ന് എല്ലാം, object-ൽ അടങ്ങിയ data manipulate ചെയ്യാൻ ഉപയോഗിക്കുന്ന methods ഉണ്ട്.",
+  "edited": "* Lists, strings തുടങ്ങിയ Python objects-ന് എല്ലാം, അവയിൽ അടങ്ങിയിരിക്കുന്ന data manipulate ചെയ്യാൻ ഉപയോഗിക്കുന്ന methods ഉണ്ട്."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Lists in Python are zero-based (as in C, Java or Go), so the first element is referenced by `x[0]`",
+  "draft": "Python-ലെ lists zero-based ആണ് (C, Java അല്ലെങ്കിൽ Go-യിലേത് പോലെ), അതുകൊണ്ട് ആദ്യ element `x[0]` എന്ന് reference ചെയ്യുന്നു",
+  "edited": "Python-ലെ lists zero-based ആണ് (as in C, Java or Go). അതിനാൽ list-ൽ, ആദ്യത്തെ element-ന്റെ reference `x[0]` ആയി ഉപയോഗിക്കുന്നു"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Now let's consider the `for` loop from {ref}`the program above <firstloopprog>`, which was",
+  "draft": "ഇപ്പോൾ {ref}`മുകളിലുള്ള program <firstloopprog>`-ലെ `for` loop നോക്കാം, അത് ഇതായിരുന്നു",
+  "edited": "ഇനി നമുക്ക് {ref}`മുകളിലുള്ള program <firstloopprog>`-ലെ `for` loop നോക്കാം. അവിടെ നമ്മൾ ഉപയോഗിച്ച `for` loop താഴെ കാണാം:"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Python executes the two indented lines `ts_length` times before moving on.",
+  "draft": "Python ഈ indented ആയ രണ്ട് lines `ts_length` തവണ execute ചെയ്ത ശേഷമേ മുന്നോട്ട് പോകൂ.",
+  "edited": "Indent ചെയ്തിരിക്കുന്ന ഈ രണ്ട് lines, `ts_length` തവണ execute ചെയ്ത ശേഷമേ Python മുന്നോട്ട് പോകൂ."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "These two lines are called a **code block**, since they comprise the \"block\" of code that we are looping over.",
+  "draft": "ഈ രണ്ട് lines-നെ **code block** എന്ന് വിളിക്കുന്നു, കാരണം ഇത് നമ്മൾ loop ചെയ്യുന്ന code-ന്റെ \"block\" ആണ്.",
+  "edited": "ഈ രണ്ട് lines-നെ നാം **code block** എന്ന് വിളിക്കുന്നു - കാരണം നമ്മൾ `for` loop ഉപയോഗിച്ച് ഈ \"block\" of code-നെയാണ് loop ചെയ്യിക്കുന്നത്."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Unlike most other languages, Python knows the extent of the code block *only from indentation*.",
+  "draft": "മറ്റ് മിക്ക languages-ൽ നിന്ന് വ്യത്യസ്തമായി, Python code block-ന്റെ extent *indentation-ൽ നിന്ന് മാത്രം* അറിയുന്നു.",
+  "edited": "ഒരു code block എവിടെ വരെ extent ചെയ്യുന്നു എന്ന് Python മനസ്സിലാക്കുന്നത് അതിന്റെ *indentation മാത്രം* ഉപയോഗിച്ചാണ്. ഇത്, മറ്റു പല programming languages-ൽ നിന്നും Python-നെ വ്യത്യസ്തമാക്കുന്നു."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "In our program, indentation decreases after line `ϵ_values.append(e)`, telling Python that this line marks the lower limit of the code block.",
+  "draft": "നമ്മുടെ program-ൽ, `ϵ_values.append(e)` എന്ന line-ന് ശേഷം indentation കുറയുന്നു, ഇത് Python-നോട് ഈ line code block-ന്റെ lower limit ആണ് എന്ന് പറയുന്നു.",
+  "edited": "നമ്മുടെ program-ൽ, `ϵ_values.append(e)` എന്ന line-ന് ശേഷം indentation കുറയുന്നു. ഇതിലൂടെ, ആ code block അവിടെ അവസാനിക്കുന്നു എന്ന് Python മനസ്സിലാക്കുന്നു."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "More on indentation below---for now, let's look at another example of a `for` loop",
+  "draft": "Indentation-നെക്കുറിച്ച് കൂടുതൽ താഴെ---ഇപ്പോൾ, `for` loop-ന്റെ മറ്റൊരു example നോക്കാം",
+  "edited": "Indentation-നെ പറ്റി കൂടുതൽ താഴെ കാണാം — ഇപ്പോൾ `for` loop-ന്റെ മറ്റൊരു example നോക്കാം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "* For each element of the `sequence`, it \"binds\" the name `variable_name` to that element and then executes the code block.",
+  "draft": "* `sequence`-ലെ ഓരോ element-നും, ആ element-ന് `variable_name` എന്ന name \"bind\" ചെയ്ത് code block execute ചെയ്യുന്നു.",
+  "edited": "* `sequence`-ലെ ഓരോ element-ഇനും, Python ആ element-നെ `variable_name` എന്ന name \"bind\" ചെയ്യുന്നു. തുടർന്ന് code block execute ചെയ്യുന്നു."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "In discussing the `for` loop, we explained that the code blocks being looped over are delimited by indentation.",
+  "draft": "`for` loop discuss ചെയ്യുമ്പോൾ, loop ചെയ്യപ്പെടുന്ന code blocks indentation-ൽ delimit ചെയ്യപ്പെടുന്നു എന്ന് നമ്മൾ explain ചെയ്തു.",
+  "edited": "`for` loop discuss ചെയ്തപ്പോൾ, loop ചെയ്യപ്പെടുന്ന code block-ന്റെ delimit, അതിന്റെ indentation ഉപയോഗിച്ചാണ് Python മനസ്സിലാക്കുന്നതെന്ന് നമ്മൾ discuss ചെയ്തിരുന്നു."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "In fact, in Python, *all* code blocks (i.e., those occurring inside loops, if clauses, function definitions, etc.) are delimited by indentation.",
+  "draft": "വാസ്തവത്തിൽ, Python-ൽ, *എല്ലാ* code blocks-ഉം (അതായത്, loops, if clauses, function definitions, etc.-ന് അകത്ത് സംഭവിക്കുന്നവ) indentation-ൽ delimit ചെയ്യപ്പെടുന്നു.",
+  "edited": "In fact, Python-ൽ, *എല്ലാ* code blocks-ഉം (അതായത്, loops-ന്റെ code block, if clauses-ന്റെ code block, function definitions-ന്റെ code block, etc.) indentation ഉപയോഗിച്ചാണ് delimit ചെയ്യപ്പെടുന്നത്."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Thus, unlike most other languages, whitespace in Python code affects the output of the program.",
+  "draft": "അതുകൊണ്ട്, മറ്റ് മിക്ക languages-ൽ നിന്ന് വ്യത്യസ്തമായി, Python code-ലെ whitespace program-ന്റെ output-നെ affect ചെയ്യുന്നു.",
+  "edited": "അതിനാൽ, മറ്റു മിക്ക programming languages-ൽ നിന്നും വ്യത്യസ്തമായി, Python code-ലെ whitespace, program-ന്റെ output-നെ affect ചെയ്യുന്നു."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Once you get used to it, this is a good thing: It",
+  "draft": "ഇത് ശീലമായാൽ, ഇത് ഒരു നല്ല കാര്യമാണ്: ഇത്",
+  "edited": "ഒരിക്കൽ ഇത് ശീലമായാൽ, ഇത് ഒരു നല്ല കാര്യമാണ്."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "* forces clean, consistent indentation, improving readability",
+  "draft": "* clean-ഉം consistent-ഉം ആയ indentation force ചെയ്യുന്നു, readability improve ചെയ്യുന്നു",
+  "edited": "* clean-ഉം consistent-ഉം ആയ indentation വഴി readability improve ചെയ്യുന്നു"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "On the other hand, it takes a bit of care to get right, so please remember:",
+  "draft": "മറുവശത്ത്, ഇത് correct ആയി ചെയ്യാൻ ഒരല്പം care ആവശ്യമാണ്, അതുകൊണ്ട് ദയവായി ഓർക്കുക:",
+  "edited": "On the other hand, ഇത് correct ആയി ഉപയോഗിക്കാൻ ഒരല്പം care ആവശ്യമാണ്. അതിനാൽ താഴെപ്പറയുന്ന കാര്യങ്ങൾ ഓർത്തിരിക്കുക:"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "* The line before the start of a code block always ends in a colon",
+  "draft": "* ഒരു code block ആരംഭിക്കുന്നതിന് മുമ്പുള്ള line എപ്പോഴും colon-ൽ end ആകുന്നു",
+  "edited": "* ഒരു code block ആരംഭിക്കുന്നതിന് മുമ്പുള്ള line എപ്പോഴും colon-ൽ അവസാനിക്കണം"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "* All lines in a code block must have the same amount of indentation.",
+  "draft": "* ഒരു code block-ലെ എല്ലാ lines-ഉം ഒരേ amount of indentation ഉള്ളവയായിരിക്കണം.",
+  "edited": "* ഒരു code block-ലെ എല്ലാ lines-ഇനും ഒരേ amount of indentation ഉണ്ടായിരിക്കണം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "* The Python standard is 4 spaces, and that's what you should use.",
+  "draft": "* Python standard 4 spaces ആണ്, അത് നിങ്ങൾ ഉപയോഗിക്കണം.",
+  "edited": "* Python-ന്റെ standard 4 spaces ആണ്. അതിനാൽ നിങ്ങളും 4 spaces ഉപയോഗിക്കണം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "The `for` loop is the most common technique for iteration in Python.",
+  "draft": "Python-ൽ iteration-ന് ഏറ്റവും common ആയ technique `for` loop ആണ്.",
+  "edited": "Python-ൽ iteration ചെയ്യാൻ ഏറ്റവും common ആയി ഉപയോഗിക്കുന്ന technique ആണ് `for` loop."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "But, for the purpose of illustration, let's modify {ref}`the program above <firstloopprog>` to use a `while` loop instead.",
+  "draft": "എന്നാൽ, illustration-ന്റെ purpose-ന് വേണ്ടി, {ref}`മുകളിലുള്ള program <firstloopprog>` `while` loop ഉപയോഗിച്ച് modify ചെയ്യാം.",
+  "edited": "എന്നാൽ, illustration purpose-ന് വേണ്ടി, {ref}`മുൻപത്തെ program-ൽ <firstloopprog>` `for` loop-നു പകരം `while` loop ഉപയോഗിച്ച് എങ്ങനെ ചെയ്യാം എന്ന് നോക്കാം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "A while loop will keep executing the code block delimited by indentation until the condition (```i < ts_length```) is satisfied.",
+  "draft": "Condition (```i < ts_length```) satisfy ആകുന്നത് വരെ, indentation-ൽ delimit ചെയ്ത code block ഒരു while loop execute ചെയ്ത് കൊണ്ടേയിരിക്കും.",
+  "edited": "Indentation ഉപയോഗിച്ച് delimit ചെയ്തിരിക്കുന്ന while loop-ന്റെ code block, (```i < ts_length```) എന്ന condition satisfy ആകുന്നത് വരെ execute ചെയ്ത് കൊണ്ടേയിരിക്കും."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "* the code block for the `while` loop is again delimited only by indentation.",
+  "draft": "* `while` loop-ന്റെ code block ഇവിടെയും indentation-ൽ മാത്രമേ delimit ചെയ്യപ്പെടുന്നുള്ളൂ.",
+  "edited": "* `while` loop-ന്റെ code block, indentation മാത്രം ഉപയോഗിച്ചാണ് delimit ചെയ്തിരിക്കുന്നത്."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "* the statement `i = i + 1` can be replaced by `i += 1`.",
+  "draft": "* `i = i + 1` എന്ന statement `i += 1` എന്ന് replace ചെയ്യാം.",
+  "edited": "* `i = i + 1` എന്ന statement-ന് പകരം `i += 1` എന്നും എഴുതാം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Let's do one more application before we turn to exercises.",
+  "draft": "Exercises-ലേക്ക് പോകുന്നതിന് മുമ്പ് ഒരു application കൂടി ചെയ്യാം.",
+  "edited": "Exercises-ലേക്ക് കടക്കുന്നതിന് മുമ്പ് ഒരു application കൂടി നോക്കാം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "In this application, we plot the balance of a bank account over time.",
+  "draft": "ഈ application-ൽ, നമ്മൾ ഒരു bank account-ന്റെ balance കാലക്രമേണ plot ചെയ്യുന്നു.",
+  "edited": "ഈ application-ൽ, സമയം കടന്നുപോകുന്നതിനനുസരിച്ച് ഒരു bank account-ന്റെ balance എങ്ങനെ മാറുന്നു എന്ന് നാം plot ചെയ്യുന്നു."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "There are no withdraws over the time period, the last date of which is denoted by $T$.",
+  "draft": "$T$ എന്ന് denote ചെയ്യുന്ന last date വരെയുള്ള time period-ൽ withdraws ഒന്നും ഇല്ല.",
+  "edited": "ഈ application-നു വേണ്ടി നമ്മൾ consider ചെയ്യുന്ന time period-ൽ withdraws ഒന്നുമില്ല. കൂടാതെ, നമ്മുടെ time period-ന്റെ last date $T$ എന്ന് denote ചെയ്യുന്നു."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "The balance updates from period $t$ to $t+1$ according to $b_{t+1} = (1 + r) b_t$.",
+  "draft": "Balance, period $t$-ൽ നിന്ന് $t+1$-ലേക്ക് $b_{t+1} = (1 + r) b_t$ എന്ന formula അനുസരിച്ച് update ആകുന്നു.",
+  "edited": "സമയം $t$-ൽ നിന്നും $t+1$ ആകുമ്പോൾ, balance update ചെയ്യേണ്ട formula: $b_{t+1} = (1 + r) b_t$"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "In the code below, we generate and plot the sequence $b_0, b_1, \\ldots, b_T$.",
+  "draft": "താഴെയുള്ള code-ൽ, നമ്മൾ $b_0, b_1, \\ldots, b_T$ sequence generate ചെയ്ത് plot ചെയ്യുന്നു.",
+  "edited": "താഴെയുള്ള code-ൽ, $b_0, b_1, \\ldots, b_T$ എന്ന sequence നാം generate ചെയ്ത് plot ചെയ്യുന്നു."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "`f'$\\\\alpha = {α}$'` in the solution is an application of [f-String](https://docs.python.org/3/tutorial/inputoutput.html#tut-f-strings), which allows you to use `{}` to contain an expression.",
+  "draft": "Solution-ലെ `f'$\\\\alpha = {α}$'` എന്നത് [f-String](https://docs.python.org/3/tutorial/inputoutput.html#tut-f-strings)-ന്റെ ഒരു application ആണ്, ഇത് `{}` ഉപയോഗിച്ച് ഒരു expression contain ചെയ്യാൻ അനുവദിക്കുന്നു.",
+  "edited": "Solution-ലെ `f'$\\\\alpha = {α}$'` എന്നത് [f-String](https://docs.python.org/3/tutorial/inputoutput.html#tut-f-strings)-ന്റെ ഒരു application ആണ്. ഒരു expression-നെ `{}`-ക്കുള്ളിൽ എഴുതാൻ f-string അനുവദിക്കുന്നു."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "The contained expression will be evaluated, and the result will be placed into the string.",
+  "draft": "Contain ചെയ്ത expression evaluate ചെയ്യപ്പെടും, result string-ലേക്ക് place ചെയ്യപ്പെടും.",
+  "edited": "അങ്ങനെ `{}`-ക്കുള്ളിൽ എഴുതിയിരിക്കുന്ന expression Python evaluate ചെയ്യും. ലഭിക്കുന്ന result string-ലേക്ക് ചേർക്കപ്പെടും."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Replace this existing function with an if--else condition.",
+  "draft": "ഈ existing function-ന് പകരം ഒരു if--else condition ഉപയോഗിക്കുക.",
+  "edited": "ആ existing function-ന് പകരം ഒരു if--else condition ഉപയോഗിക്കുക."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Here's a shorter way to write the same thing:",
+  "draft": "ഇത് തന്നെ എഴുതാൻ ഒരു shorter വഴി:",
+  "edited": "short ആയിട്ടുള്ള ഒരു solution താഴെ കാണാം:"
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Here's a harder exercise, that takes some thought and planning.",
+  "draft": "ഇവിടെ കുറച്ച് thought-ഉം planning-ഉം ആവശ്യമുള്ള ഒരു harder exercise ഉണ്ട്.",
+  "edited": "ഇനി കുറച്ച് thought-ഉം planning-ഉം ആവശ്യമുള്ള ഒരു harder exercise ചെയ്യാം."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "The task is to compute an approximation to $\\pi$ using [Monte Carlo](https://en.wikipedia.org/wiki/Monte_Carlo_method).",
+  "draft": "[Monte Carlo](https://en.wikipedia.org/wiki/Monte_Carlo_method) ഉപയോഗിച്ച് $\\pi$-ന്റെ ഒരു approximation compute ചെയ്യുക എന്നതാണ് task.",
+  "edited": "[Monte Carlo](https://en.wikipedia.org/wiki/Monte_Carlo_method) ഉപയോഗിച്ച് $\\pi$-യുടെ ഒരു approximation compute ചെയ്യുക എന്നതാണ് task."
+ },
+ {
+  "lecture": "python_by_example",
+  "en": "Use no imports besides",
+  "draft": "ഇത് കൂടാതെ മറ്റൊന്നും import ചെയ്യരുത്",
+  "edited": "താഴെ കൊടുത്തിരിക്കുന്ന import statement മാത്രം ഉപയോഗിക്കുക:"
+ },
+ {
+  "lecture": "functions",
+  "en": "Functions are an extremely useful construct provided by almost all programming.",
+  "draft": "മിക്കവാറും എല്ലാ programming-ഉം നൽകുന്ന അതിയായി ഉപയോഗപ്രദമായ ഒരു construct ആണ് functions.",
+  "edited": "മിക്കവാറും എല്ലാ programming languages-ഉം provide ചെയ്യുന്ന വളരെ useful ആയ ഒരു programming construct ആണ് functions."
+ },
+ {
+  "lecture": "functions",
+  "en": "We have already met several functions, such as",
+  "draft": "നമ്മൾ ഇതിനകം പല functions-ഉം കണ്ടുകഴിഞ്ഞു, ഉദാഹരണത്തിന്",
+  "edited": "നമ്മൾ ഇതിനകം പല functions-ഉം കണ്ടുകഴിഞ്ഞു. ഉദാഹരണത്തിന്,"
+ },
+ {
+  "lecture": "functions",
+  "en": "* the `sqrt()` function from NumPy and",
+  "draft": "* NumPy-യിലെ `sqrt()` function-ഉം",
+  "edited": "* NumPy-യിലെ `sqrt()` function"
+ },
+ {
+  "lecture": "functions",
+  "en": "* the built-in `print()` function",
+  "draft": "* built-in ആയ `print()` function-ഉം",
+  "edited": "* Python-ൽ, built-in ആയി ലഭിക്കുന്ന `print()` function"
+ },
+ {
+  "lecture": "functions",
+  "en": "In this lecture we'll",
+  "draft": "ഈ lecture-ൽ നമ്മൾ",
+  "edited": "ഈ lecture-ൽ നമ്മൾ ചെയ്യാൻ പോകുന്ന കാര്യങ്ങൾ:"
+ },
+ {
+  "lecture": "functions",
+  "en": "1. treat functions systematically and cover syntax and use-cases, and",
+  "draft": "1. functions-നെ systematic ആയി treat ചെയ്യുകയും syntax-ഉം use-cases-ഉം cover ചെയ്യുകയും ചെയ്യും, ഒപ്പം",
+  "edited": "1. Functions-നെ systematic ആയി പഠിക്കുന്നു; അവയുടെ syntax-ഉം, use-cases-ഉം മനസ്സിലാക്കുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "2. learn to do is build our own user-defined functions.",
+  "draft": "2. നമ്മുടെ സ്വന്തം user-defined functions എങ്ങനെ build ചെയ്യാമെന്ന് പഠിക്കും.",
+  "edited": "2. സ്വന്തമായി user-defined functions എങ്ങനെ build ചെയ്യാമെന്ന് പഠിക്കുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "We will use the following imports.",
+  "draft": "താഴെ കാണുന്ന imports നമ്മൾ ഉപയോഗിക്കും.",
+  "edited": "ഇതിനായി നമ്മൾ താഴെ കാണുന്ന imports ഉപയോഗിക്കും."
+ },
+ {
+  "lecture": "functions",
+  "en": "A function is a named section of a program that implements a specific task.",
+  "draft": "ഒരു പ്രത്യേക task implement ചെയ്യുന്ന, പേരുള്ള ഒരു program-ന്റെ section ആണ് function.",
+  "edited": "ഒരു program-ന് ഉള്ളിൽ, ഒരു specific task implement ചെയ്യുന്ന ഒരു section ആണ് function. ഈ section-നെ നമ്മൾ ഒരു പേരിട്ടു വിളിക്കുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "Many functions exist already and we can use them as is.",
+  "draft": "ഇതിനകം ധാരാളം functions നിലവിലുണ്ട്, അവയെ അതേപടി ഉപയോഗിക്കാം.",
+  "edited": "Already exist ചെയ്യുന്ന ധാരാളം functions ഉണ്ട്. അവയെ നമുക്ക് അതേപടി ഉപയോഗിക്കാൻ പറ്റും."
+ },
+ {
+  "lecture": "functions",
+  "en": "First we review these functions and then discuss how we can build our own.",
+  "draft": "ആദ്യം നമ്മൾ ഈ functions review ചെയ്യാം, എന്നിട്ട് നമ്മുടെ സ്വന്തം functions എങ്ങനെ build ചെയ്യാമെന്ന് discuss ചെയ്യാം.",
+  "edited": "ആദ്യമേ നമുക്ക് already exist ചെയ്യുന്ന functions-നെ review ചെയ്യാം. എന്നിട്ട് നമുക്ക് സ്വന്തമായി functions എങ്ങനെ build ചെയ്യാമെന്ന് നോക്കാം."
+ },
+ {
+  "lecture": "functions",
+  "en": "Python has a number of **built-in** functions that are available without `import`.",
+  "draft": "`import` ഇല്ലാതെ ലഭ്യമായ കുറേ **built-in** functions Python-ൽ ഉണ്ട്.",
+  "edited": "`import` ചെയ്യാതെ തന്നെ ഉപയോഗിക്കാനാകുന്ന നിരവധി **built-in** functions Python-ൽ ഉണ്ട്."
+ },
+ {
+  "lecture": "functions",
+  "en": "We have already met some",
+  "draft": "ഇവയിൽ ചിലത് നമ്മൾ ഇതിനകം കണ്ടുകഴിഞ്ഞു",
+  "edited": "ഇവയിൽ ചിലത് നമ്മൾ already കണ്ടുകഴിഞ്ഞു:"
+ },
+ {
+  "lecture": "functions",
+  "en": "The full list of Python built-ins is [here](https://docs.python.org/3/library/functions.html).",
+  "draft": "Python built-ins-ന്റെ പൂർണ്ണമായ list [ഇവിടെ](https://docs.python.org/3/library/functions.html) കാണാം.",
+  "edited": "Python-ലെ built-in functions-ന്റെ full list [ഇവിടെ](https://docs.python.org/3/library/functions.html) കാണാം."
+ },
+ {
+  "lecture": "functions",
+  "en": "If the built-in functions don't cover what we need, we either need to import functions or create our own.",
+  "draft": "built-in functions നമുക്ക് വേണ്ടത് cover ചെയ്യുന്നില്ലെങ്കിൽ, നമുക്ക് ഒന്നുകിൽ functions import ചെയ്യേണ്ടിവരും, അല്ലെങ്കിൽ സ്വന്തമായി create ചെയ്യേണ്ടിവരും.",
+  "edited": "Built-in functions മാത്രം ഉപയോഗിച്ച് നമുക്ക് ആവശ്യമുള്ളത് ചെയ്യാൻ കഴിയുന്നില്ലെങ്കിൽ, ഒന്നുകിൽ മറ്റുള്ള functions-നെ import ചെയ്യേണ്ടി വരും, അല്ലെങ്കിൽ സ്വന്തമായി functions create ചെയ്യേണ്ടി വരും."
+ },
+ {
+  "lecture": "functions",
+  "en": "Examples of importing and using functions were given in the {doc}`previous lecture <python_by_example>`",
+  "draft": "functions import ചെയ്ത് ഉപയോഗിക്കുന്നതിന്റെ ഉദാഹരണങ്ങൾ {doc}`previous lecture <python_by_example>`-ൽ കൊടുത്തിരുന്നു.",
+  "edited": "Functions-നെ import ചെയ്ത് ഉപയോഗിക്കുന്ന examples നമ്മൾ {doc}`previous lecture <python_by_example>`-ൽ കണ്ടിരുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "Here's another one, which tests whether a given year is a leap year:",
+  "draft": "ഒരു നൽകിയ വർഷം leap year ആണോ എന്ന് test ചെയ്യുന്ന മറ്റൊരു ഉദാഹരണം താഴെ കാണാം:",
+  "edited": "തന്നിരിക്കുന്ന വർഷം leap year ആണോ അല്ലയോ എന്ന് test ചെയ്യുന്ന മറ്റൊരു ഉദാഹരണം താഴെ കാണാം:"
+ },
+ {
+  "lecture": "functions",
+  "en": "In many instances it's useful to be able to define our own functions.",
+  "draft": "പല അവസരങ്ങളിലും നമ്മുടെ സ്വന്തം functions define ചെയ്യാൻ കഴിയുന്നത് ഉപയോഗപ്രദമാണ്.",
+  "edited": "പല അവസരങ്ങളിലും, നമുക്ക് സ്വന്തമായി functions-നെ define ചെയ്യാൻ കഴിയുന്നത് വളരെ useful ആണ്."
+ },
+ {
+  "lecture": "functions",
+  "en": "Let's start by discussing how it's done.",
+  "draft": "അത് എങ്ങനെ ചെയ്യാമെന്ന് discuss ചെയ്തുകൊണ്ട് തുടങ്ങാം.",
+  "edited": "അത് എങ്ങനെ ചെയ്യാമെന്ന് നമുക്ക് നോക്കാം."
+ },
+ {
+  "lecture": "functions",
+  "en": "Here's a very simple Python function, that implements the mathematical function $f(x) = 2 x + 1$",
+  "draft": "$f(x) = 2 x + 1$ എന്ന mathematical function implement ചെയ്യുന്ന വളരെ simple ആയ ഒരു Python function താഴെ കാണാം",
+  "edited": "$f(x) = 2 x + 1$ എന്ന mathematical function implement ചെയ്യുന്ന വളരെ simple ആയ ഒരു Python function താഴെ കാണാം:"
+ },
+ {
+  "lecture": "functions",
+  "en": "Now that we've defined this function, let's *call* it and check whether it does what we expect:",
+  "draft": "ഇപ്പോൾ നമ്മൾ ഈ function define ചെയ്തുകഴിഞ്ഞു, ഇനി അതിനെ *call* ചെയ്ത് അത് നമ്മൾ പ്രതീക്ഷിക്കുന്നത് ചെയ്യുന്നുണ്ടോ എന്ന് check ചെയ്യാം:",
+  "edited": "നമ്മൾ ഈ function-നെ define ചെയ്ത സ്ഥിതിക്ക്, ഇനി അതിനെ call ചെയ്ത്, നമ്മൾ expect ചെയ്യുന്നത് പോലെ ആ function പ്രവർത്തിക്കുന്നുണ്ടോ എന്ന് നോക്കാം."
+ },
+ {
+  "lecture": "functions",
+  "en": "Here's a longer function, that computes the absolute value of a given number.",
+  "draft": "നൽകിയ ഒരു number-ന്റെ absolute value compute ചെയ്യുന്ന, കുറച്ചുകൂടെ നീളമുള്ള ഒരു function താഴെ കാണാം.",
+  "edited": "കുറച്ചുകൂടി നീളമുള്ള ഒരു function നമുക്ക് താഴെ കാണാം. ഈ function ഉപയോഗിച്ച്, തന്നിരിക്കുന്ന ഒരു number-ന്റെ absolute value compute ചെയ്യാൻ സാധിക്കുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "(Such a function already exists as a built-in, but let's write our own for the exercise.)",
+  "draft": "(ഇത്തരമൊരു function built-in ആയി ഇതിനകം നിലവിലുണ്ട്, പക്ഷേ exercise-ന് വേണ്ടി നമുക്ക് സ്വന്തമായി ഒന്ന് എഴുതാം.)",
+  "edited": "(Absolute value compute ചെയ്യുന്ന ഒരു built-in function already exist ചെയ്യുന്നുണ്ട്. പക്ഷേ exercise-ന് വേണ്ടി നമുക്ക് സ്വന്തമായി ഒരു function എഴുതി നോക്കാം.)"
+ },
+ {
+  "lecture": "functions",
+  "en": "Let's review the syntax here.",
+  "draft": "ഇവിടെയുള്ള syntax review ചെയ്യാം.",
+  "edited": "ഇവിടുത്തെ syntax നമുക്ക് review ചെയ്യാം:"
+ },
+ {
+  "lecture": "functions",
+  "en": "* `def` is a Python keyword used to start function definitions.",
+  "draft": "* function definitions തുടങ്ങാൻ ഉപയോഗിക്കുന്ന Python keyword ആണ് `def`.",
+  "edited": "* ഒരു function definition തുടങ്ങാൻ ഉപയോഗിക്കുന്ന Python keyword ആണ് `def`."
+ },
+ {
+  "lecture": "functions",
+  "en": "* `def new_abs_function(x):` indicates that the function is called `new_abs_function` and that it has a single argument `x`.",
+  "draft": "* `def new_abs_function(x):` എന്നത് indicate ചെയ്യുന്നത് function-ന്റെ പേര് `new_abs_function` എന്നാണെന്നും, അതിന് `x` എന്ന ഒരു argument ഉണ്ടെന്നുമാണ്.",
+  "edited": "* `def new_abs_function(x):` എന്നത് indicate ചെയ്യുന്നത്, function-ന്റെ name `new_abs_function` എന്നാണെന്നും, അതിന് `x` എന്ന ഒരൊറ്റ argument ഉണ്ടെന്നുമാണ്."
+ },
+ {
+  "lecture": "functions",
+  "en": "* The indented code is a code block called the *function body*.",
+  "draft": "* indent ചെയ്ത code, *function body* എന്ന് വിളിക്കുന്ന ഒരു code block ആണ്.",
+  "edited": "* Indent ചെയ്തിരിക്കുന്ന code-നെ, *function body* എന്ന് വിളിക്കുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "* The `return` keyword indicates that `abs_value` is the object that should be returned to the calling code.",
+  "draft": "* calling code-ലേക്ക് return ചെയ്യേണ്ട object `abs_value` ആണെന്ന് `return` keyword indicate ചെയ്യുന്നു.",
+  "edited": "* ഈ function-നെ call ചെയ്ത code-ലേക്ക്, `abs_value` ആണ് return ചെയ്യേണ്ടത് എന്ന് `return` keyword indicate ചെയ്യുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "This whole function definition is read by the Python interpreter and stored in memory.",
+  "draft": "ഈ function definition മുഴുവനും Python interpreter വായിച്ച് memory-യിൽ store ചെയ്യുന്നു.",
+  "edited": "ഈ function definition മുഴുവനും Python interpreter വായിച്ച്, അതിനെ memory-യിൽ store ചെയ്യുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "Let's call it to check that it works:",
+  "draft": "ഇത് പ്രവർത്തിക്കുന്നുണ്ടോ എന്ന് check ചെയ്യാൻ അതിനെ call ചെയ്യാം:",
+  "edited": "ഈ function ശരിയായി work ചെയ്യുന്നുണ്ടോ എന്ന് check ചെയ്യാൻ, അതിനെ call ചെയ്ത നോക്കാം."
+ },
+ {
+  "lecture": "functions",
+  "en": "Note that a function can have arbitrarily many `return` statements (including zero).",
+  "draft": "ഒരു function-ന് അനിയന്ത്രിതമായി എത്ര `return` statements വേണമെങ്കിലും (പൂജ്യം ഉൾപ്പെടെ) ഉണ്ടാകാം എന്നത് ശ്രദ്ധിക്കുക.",
+  "edited": "ശ്രദ്ധിക്കുക, ഒരു function-ൽ എത്ര `return` statements വേണമെങ്കിലും ഉണ്ടാകാം; ഒന്നും ഇല്ലാതെയും ഇരിക്കാം."
+ },
+ {
+  "lecture": "functions",
+  "en": "Execution of the function terminates when the first return is hit, allowing code like the following example",
+  "draft": "ആദ്യത്തെ return hit ചെയ്യുമ്പോൾ function-ന്റെ execution അവസാനിക്കുന്നു, ഇത് താഴെ കാണുന്ന ഉദാഹരണം പോലുള്ള code സാധ്യമാക്കുന്നു",
+  "edited": "ഒരു function പ്രവർത്തിക്കുമ്പോൾ ആദ്യം എത്തിച്ചേരുന്ന return statement execute ചെയ്താൽ, ആ function-ന്റെ execution അവിടെ അവസാനിക്കും. അതിനാൽ താഴെ കാണുന്നതുപോലുള്ള code എഴുതാൻ സാധിക്കുന്നു:"
+ },
+ {
+  "lecture": "functions",
+  "en": "(Writing functions with multiple return statements is typically discouraged, as it can make logic hard to follow.)",
+  "draft": "(multiple return statements ഉള്ള functions എഴുതുന്നത് സാധാരണയായി discourage ചെയ്യപ്പെടുന്നു, കാരണം അത് logic follow ചെയ്യാൻ ബുദ്ധിമുട്ടാക്കും.)",
+  "edited": "(Multiple return statements ഉള്ള functions എഴുതുന്നത് സാധാരണയായി discourage ചെയ്യപ്പെടുന്നു. അങ്ങനെ ചെയ്താൽ, function-ന്റെ logic follow ചെയ്യാൻ ബുദ്ധിമുട്ടാക്കും.)"
+ },
+ {
+  "lecture": "functions",
+  "en": "Functions without a return statement automatically return the special Python object `None`.",
+  "draft": "return statement ഇല്ലാത്ത functions സ്വയമേവ പ്രത്യേക Python object ആയ `None` return ചെയ്യുന്നു.",
+  "edited": "Return statement ഇല്ലാത്ത functions, automatically ഒരു പ്രത്യേക Python object ആയ `None` return ചെയ്യുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "In a {ref}`previous lecture <python_by_example>`, you came across the statement",
+  "draft": "ഒരു {ref}`previous lecture <python_by_example>`-ൽ, നിങ്ങൾ ഈ statement കണ്ടിരുന്നു",
+  "edited": "ഒരു {ref}`previous lecture <python_by_example>`-ൽ, നിങ്ങൾ ഈ statement കണ്ടിരുന്നു:"
+ },
+ {
+  "lecture": "functions",
+  "en": "In this call to Matplotlib's `plot` function, notice that the last argument is passed in `name=argument` syntax.",
+  "draft": "Matplotlib-ന്റെ `plot` function-ലേക്കുള്ള ഈ call-ൽ, അവസാനത്തെ argument `name=argument` syntax-ൽ pass ചെയ്യുന്നത് ശ്രദ്ധിക്കുക.",
+  "edited": "Matplotlib-ന്റെ `plot` function-നെ call ചെയ്യുമ്പോൾ, അവസാനത്തെ argument `name=argument` എന്ന syntax-ൽ pass ചെയ്യുന്നത് ശ്രദ്ധിക്കുക."
+ },
+ {
+  "lecture": "functions",
+  "en": "This is called a *keyword argument*, with `label` being the keyword.",
+  "draft": "ഇതിനെ *keyword argument* എന്ന് വിളിക്കുന്നു, `label` ആണ് ഇവിടെ keyword.",
+  "edited": "ഇതിനെ *keyword argument* എന്ന് വിളിക്കുന്നു. `label` ആണ് ഇവിടെ keyword."
+ },
+ {
+  "lecture": "functions",
+  "en": "Non-keyword arguments are called *positional arguments*, since their meaning is determined by order",
+  "draft": "order അനുസരിച്ച് അർത്ഥം നിശ്ചയിക്കപ്പെടുന്നതിനാൽ, non-keyword arguments-നെ *positional arguments* എന്ന് വിളിക്കുന്നു",
+  "edited": "Order അനുസരിച്ച് അർത്ഥം നിശ്ചയിക്കപ്പെടുന്നതിനാൽ, non-keyword arguments-നെ *positional arguments* എന്ന് വിളിക്കുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "Keyword arguments are particularly useful when a function has a lot of arguments, in which case it's hard to remember the right order.",
+  "draft": "ഒരു function-ന് ധാരാളം arguments ഉള്ളപ്പോൾ keyword arguments പ്രത്യേകിച്ചും ഉപയോഗപ്രദമാണ്, കാരണം അപ്പോൾ ശരിയായ order ഓർത്തിരിക്കാൻ ബുദ്ധിമുട്ടാണ്.",
+  "edited": "ഒരു function-ന് ധാരാളം arguments ഉള്ളപ്പോൾ, keyword arguments പ്രത്യേകിച്ചും ഉപയോഗപ്രദമാണ്. കാരണം ശരിയായ order ഓർത്തിരിക്കാൻ ബുദ്ധിമുട്ടായേക്കാം."
+ },
+ {
+  "lecture": "functions",
+  "en": "You can adopt keyword arguments in user-defined functions with no difficulty.",
+  "draft": "user-defined functions-ൽ keyword arguments ഒരു ബുദ്ധിമുട്ടും കൂടാതെ നിങ്ങൾക്ക് adopt ചെയ്യാം.",
+  "edited": "User-defined functions-ലും keyword arguments നിങ്ങൾക്ക് ഒരു ബുദ്ധിമുട്ടും കൂടാതെ adopt ചെയ്യാം."
+ },
+ {
+  "lecture": "functions",
+  "en": "The next example illustrates the syntax",
+  "draft": "അടുത്ത ഉദാഹരണം syntax illustrate ചെയ്യുന്നു",
+  "edited": "അടുത്ത example, ഇതിന്റെ syntax illustrate ചെയ്യുന്നു:"
+ },
+ {
+  "lecture": "functions",
+  "en": "The keyword argument values we supplied in the definition of `f` become the default values",
+  "draft": "`f`-ന്റെ definition-ൽ നമ്മൾ നൽകിയ keyword argument values, default values ആയി മാറുന്നു",
+  "edited": "`f`-ന്റെ definition-ൽ നമ്മൾ നൽകിയിരിക്കുന്ന keyword argument values, default values ആയി മാറുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "They can be modified as follows",
+  "draft": "താഴെ കാണുന്ന രീതിയിൽ അവയെ modify ചെയ്യാം",
+  "edited": "താഴെ കാണുന്ന രീതിയിൽ അവയെ modify ചെയ്യാം:"
+ },
+ {
+  "lecture": "functions",
+  "en": "As we discussed in the {ref}`previous lecture <python_by_example>`, Python functions are very flexible.",
+  "draft": "{ref}`previous lecture <python_by_example>`-ൽ നമ്മൾ discuss ചെയ്തതുപോലെ, Python functions വളരെ flexible ആണ്.",
+  "edited": "{ref}`Previous lecture <python_by_example>`-ൽ നമ്മൾ discuss ചെയ്തതുപോലെ, Python functions വളരെ flexible ആണ്."
+ },
+ {
+  "lecture": "functions",
+  "en": "* Any number of functions can be defined in a given file.",
+  "draft": "* ഒരു നൽകിയ file-ൽ എത്ര functions വേണമെങ്കിലും define ചെയ്യാം.",
+  "edited": "* തന്നിരിക്കുന്ന ഒരു file-ൽ എത്ര functions വേണമെങ്കിലും define ചെയ്യാം."
+ },
+ {
+  "lecture": "functions",
+  "en": "* Functions can be (and often are) defined inside other functions.",
+  "draft": "* Functions മറ്റ് functions-ന് ഉള്ളിൽ define ചെയ്യാൻ കഴിയും (ഇത് പലപ്പോഴും ചെയ്യാറുമുണ്ട്).",
+  "edited": "* Functions-നെ മറ്റൊരു function-ന്റെ ഉള്ളിൽ define ചെയ്യാം; പലപ്പോഴും അങ്ങനെ ചെയ്യാറുമുണ്ട്."
+ },
+ {
+  "lecture": "functions",
+  "en": "* Any object can be passed to a function as an argument, including other functions.",
+  "draft": "* മറ്റ് functions ഉൾപ്പെടെ ഏത് object-നെയും ഒരു function-ലേക്ക് argument ആയി pass ചെയ്യാം.",
+  "edited": "* മറ്റ് functions ഉൾപ്പെടെ, ഏത് object-നെയും ഒരു function-ലേക്ക് argument ആയി pass ചെയ്യാം."
+ },
+ {
+  "lecture": "functions",
+  "en": "* A function can return any kind of object, including functions.",
+  "draft": "* Functions ഉൾപ്പെടെ ഏത് തരം object-ഉം ഒരു function-ന് return ചെയ്യാൻ കഴിയും.",
+  "edited": "* Functions ഉൾപ്പെടെ, ഏത് തരം object-നെയും ഒരു function-ന് return ചെയ്യാൻ കഴിയും."
+ },
+ {
+  "lecture": "functions",
+  "en": "We will give examples of how straightforward it is to pass a function to a function in the following sections.",
+  "draft": "ഒരു function-ലേക്ക് ഒരു function pass ചെയ്യുന്നത് എത്ര straightforward ആണെന്നതിന്റെ ഉദാഹരണങ്ങൾ താഴെയുള്ള sections-ൽ നമ്മൾ നൽകും.",
+  "edited": "ഒരു function-നെ മറ്റൊരു function-ലേക്ക് pass ചെയ്യുന്നത് എത്ര എളുപ്പമാണെന്ന് കാണിക്കുന്ന examples താഴെയുള്ള sections-ൽ നമുക്ക് കാണാം."
+ },
+ {
+  "lecture": "functions",
+  "en": "The `lambda` keyword is used to create simple functions on one line.",
+  "draft": "ഒരു line-ൽ simple functions create ചെയ്യാൻ `lambda` keyword ഉപയോഗിക്കുന്നു.",
+  "edited": "ഒറ്റ line-ൽ തന്നെ simple functions create ചെയ്യാനാണ് `lambda` keyword ഉപയോഗിക്കുന്നത്."
+ },
+ {
+  "lecture": "functions",
+  "en": "For example, the definitions",
+  "draft": "ഉദാഹരണത്തിന്, ഈ definitions",
+  "edited": "For example, താഴെ കൊടുത്തിരിക്കുന്ന രണ്ട് definitions-ഉം ഒരേ കാര്യമാണ് ചെയ്യുന്നത്:"
+ },
+ {
+  "lecture": "functions",
+  "en": "Here the function created by `lambda` is said to be *anonymous* because it was never given a name.",
+  "draft": "ഇവിടെ `lambda` സൃഷ്ടിച്ച function-ന് ഒരു പേരും നൽകാത്തതിനാൽ അതിനെ *anonymous* എന്ന് പറയുന്നു.",
+  "edited": "ഇവിടെ `lambda` ഉപയോഗിച്ച് create ചെയ്ത function-ന് ഒരു പേരും നൽകാത്തതിനാൽ, ആ function-നെ *anonymous* എന്ന് വിളിക്കുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "User-defined functions are important for improving the clarity of your code by",
+  "draft": "നിങ്ങളുടെ code-ന്റെ clarity മെച്ചപ്പെടുത്താൻ user-defined functions പ്രധാനമാണ്, കാരണം അവ",
+  "edited": "നമ്മുടെ code-ന്റെ clarity improve ചെയ്യുന്നതിൽ user-defined functions-ന് പ്രാധാന്യമുണ്ട്. കാരണം അവ:"
+ },
+ {
+  "lecture": "functions",
+  "en": "* separating different strands of logic",
+  "draft": "* വ്യത്യസ്ത logic strands-നെ separate ചെയ്യുന്നു",
+  "edited": "* വ്യത്യസ്ത logic-ുകളെ separate ചെയ്യുന്നു"
+ },
+ {
+  "lecture": "functions",
+  "en": "* facilitating code reuse",
+  "draft": "* code reuse facilitate ചെയ്യുന്നു",
+  "edited": "* Code reuse ചെയ്യാൻ സഹായിക്കുന്നു"
+ },
+ {
+  "lecture": "functions",
+  "en": "(Writing the same thing twice is [almost always a bad idea](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself))",
+  "draft": "(ഒരേ കാര്യം രണ്ട് തവണ എഴുതുന്നത് [മിക്ക സമയത്തും ഒരു മോശം ആശയമാണ്](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself))",
+  "edited": "(ഒരേ code രണ്ടുതവണ എഴുതുന്നത് [അത്ര നല്ലതല്ല](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself).)"
+ },
+ {
+  "lecture": "functions",
+  "en": "We will say more about this {doc}`later <writing_good_code>`.",
+  "draft": "ഇതിനെക്കുറിച്ച് {doc}`later <writing_good_code>` നമ്മൾ കൂടുതൽ പറയും.",
+  "edited": "ഇതിനെക്കുറിച്ചുള്ള കൂടുതൽ കാര്യങ്ങൾ നമുക്ക് {doc}`പിന്നീട് കാണാം <writing_good_code>`."
+ },
+ {
+  "lecture": "functions",
+  "en": "Consider again this code from the {doc}`previous lecture <python_by_example>`",
+  "draft": "{doc}`previous lecture <python_by_example>`-ലെ ഈ code വീണ്ടും കണക്കിലെടുക്കാം",
+  "edited": "{doc}`previous lecture <python_by_example>`-ൽ നമ്മൾ കണ്ട ഈ code ഒരിക്കൽക്കൂടി നോക്കാം:"
+ },
+ {
+  "lecture": "functions",
+  "en": "We will break this program into two parts:",
+  "draft": "ഈ program-നെ നമ്മൾ രണ്ട് ഭാഗങ്ങളായി break down ചെയ്ത്:",
+  "edited": "ഈ program-നെ നമുക്ക് രണ്ട് ഭാഗങ്ങളായി break down ചെയ്യാം:"
+ },
+ {
+  "lecture": "functions",
+  "en": "1. A user-defined function that generates a list of random variables.",
+  "draft": "1. random variables-ന്റെ ഒരു list generate ചെയ്യുന്ന user-defined function.",
+  "edited": "1. User-defined function - Random variables-ന്റെ ഒരു list generate ചെയ്യുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "1. calls this function to get data",
+  "draft": "1. data ലഭിക്കാൻ ഈ function call ചെയ്യുന്നു",
+  "edited": "1. Data ലഭിക്കുന്നതിനായി user-defined function-നെ call ചെയ്യുന്നു"
+ },
+ {
+  "lecture": "functions",
+  "en": "1. plots the data",
+  "draft": "1. data plot ചെയ്യുന്നു",
+  "edited": "1. ലഭിച്ച data-യെ plot ചെയ്യുന്നു"
+ },
+ {
+  "lecture": "functions",
+  "en": "This is accomplished in the next program",
+  "draft": "ഇത് അടുത്ത program-ൽ accomplish ചെയ്യപ്പെടുന്നു",
+  "edited": "മുകളിൽ പറഞ്ഞ കാര്യങ്ങൾ, താഴെയുള്ള program-ൽ കാണിച്ചിരിക്കുന്നു:"
+ },
+ {
+  "lecture": "functions",
+  "en": "When the interpreter gets to the expression `generate_data(100)`, it executes the function body with `n` set equal to 100.",
+  "draft": "interpreter `generate_data(100)` എന്ന expression-ൽ എത്തുമ്പോൾ, `n`, 100-ന് equal ആയി set ചെയ്ത് function body execute ചെയ്യുന്നു.",
+  "edited": "Python interpreter, `generate_data(100)` എന്ന expression-ൽ എത്തുമ്പോൾ, `n`-ന്റെ value 100 ആയി set ചെയ്ത്, function-ന്റെ body execute ചെയ്യുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "The net result is that the name `data` is *bound* to the list `ϵ_values` returned by the function.",
+  "draft": "ഇതിന്റെ net result, `data` എന്ന പേര് function return ചെയ്ത `ϵ_values` എന്ന list-ലേക്ക് *bind* ചെയ്യപ്പെടും എന്നതാണ്.",
+  "edited": "ഇതിന്റെ അവസാനം, function return ചെയ്യുന്ന `ϵ_values` എന്ന list-ലേക്ക് `data` എന്ന name *bind* ചെയ്യപ്പെടുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "Our function `generate_data()` is rather limited.",
+  "draft": "നമ്മുടെ `generate_data()` function കുറച്ചൊക്കെ limited ആണ്.",
+  "edited": "നമ്മുടെ `generate_data()` function-ന് ചില പരിമിതികളുണ്ട്."
+ },
+ {
+  "lecture": "functions",
+  "en": "Let's make it slightly more useful by giving it the ability to return either standard normals or uniform random variables on $(0, 1)$ as required.",
+  "draft": "ആവശ്യമുള്ളപ്പോൾ $(0, 1)$-ൽ standard normals-ഓ uniform random variables-ഓ return ചെയ്യാനുള്ള കഴിവ് നൽകി, ഇതിനെ കുറച്ചുകൂടെ ഉപയോഗപ്രദമാക്കാം.",
+  "edited": "`generate_data()` function-നെ നമുക്ക് കുറച്ചുകൂടി useful ആക്കാം — ആവശ്യാനുസരണം, standard normal random variables അല്ലെങ്കിൽ, $(0, 1)$ interval-ൽ ഉള്ള uniform random variables return ചെയ്യാൻ കഴിയുന്ന രീതിയിൽ."
+ },
+ {
+  "lecture": "functions",
+  "en": "This is achieved in the next piece of code.",
+  "draft": "താഴെയുള്ള code piece-ൽ ഇത് achieve ചെയ്യപ്പെടുന്നു.",
+  "edited": "ഇത് എങ്ങനെ ചെയ്യാമെന്ന് താഴെയുള്ള code-ൽ കാണിച്ചിരിക്കുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "Hopefully, the syntax of the if/else clause is self-explanatory, with indentation again delimiting the extent of the code blocks.",
+  "draft": "if/else clause-ന്റെ syntax self-explanatory ആണെന്ന് പ്രതീക്ഷിക്കുന്നു, code blocks-ന്റെ extent വീണ്ടും indentation delimit ചെയ്യുന്നു.",
+  "edited": "if/else clause-ന്റെ syntax, self-explanatory ആണെന്ന് വിശ്വസിക്കുന്നു. ഇവിടെയും, indentation ഉപയോഗിച്ചാണ് code blocks-ന്റെ extent-നെ delimit ചെയ്തിരിക്കുന്നത്."
+ },
+ {
+  "lecture": "functions",
+  "en": "* We are passing the argument `U` as a string, which is why we write it as `'U'`.",
+  "draft": "* `U` എന്ന argument ഒരു string ആയാണ് നമ്മൾ pass ചെയ്യുന്നത്, അതുകൊണ്ടാണ് നമ്മൾ അതിനെ `'U'` എന്ന് എഴുതുന്നത്.",
+  "edited": "* `U` എന്ന argument-നെ ഒരു string ആയാണ് നമ്മൾ pass ചെയ്യുന്നത്. അതുകൊണ്ടാണ് നമ്മൾ അതിനെ `'U'` എന്ന് എഴുതുന്നത്."
+ },
+ {
+  "lecture": "functions",
+  "en": "* Notice that equality is tested with the `==` syntax, not `=`.",
+  "draft": "* equality test ചെയ്യുന്നത് `==` syntax ഉപയോഗിച്ചാണ്, `=` അല്ല എന്നത് ശ്രദ്ധിക്കുക.",
+  "edited": "* ശ്രദ്ധിക്കുക, equality test ചെയ്യുന്നത് `==` syntax ഉപയോഗിച്ചാണ്, `=` അല്ല."
+ },
+ {
+  "lecture": "functions",
+  "en": "* For example, the statement `a = 10` assigns the name `a` to the value `10`.",
+  "draft": "* ഉദാഹരണത്തിന്, `a = 10` എന്ന statement `a` എന്ന പേരിനെ `10` എന്ന value-യിലേക്ക് assign ചെയ്യുന്നു.",
+  "edited": "* For example, `a = 10` എന്ന statement, `a` എന്ന name-നെ `10` എന്ന value-യിലേക്ക് assign ചെയ്യുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "* The expression `a == 10` evaluates to either `True` or `False`, depending on the value of `a`.",
+  "draft": "* `a == 10` എന്ന expression, `a`-യുടെ value അനുസരിച്ച് `True`-ഓ `False`-ഓ ആയി evaluate ചെയ്യപ്പെടും.",
+  "edited": "* `a == 10` എന്ന expression, `a`-യുടെ value അനുസരിച്ച്, `True`-ഓ `False`-ഓ ആയി evaluate ചെയ്യപ്പെടുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "Now, there are several ways that we can simplify the code above.",
+  "draft": "ഇനി, മുകളിലുള്ള code simplify ചെയ്യാൻ പല വഴികളും ഉണ്ട്.",
+  "edited": "മുകളിലുള്ള code-നെ simplify ചെയ്യാൻ പല വഴികളും ഉണ്ട്."
+ },
+ {
+  "lecture": "functions",
+  "en": "To understand this, consider the following version.",
+  "draft": "ഇത് മനസ്സിലാക്കാൻ, താഴെയുള്ള version കണക്കിലെടുക്കുക.",
+  "edited": "ഇത് മനസ്സിലാക്കാൻ, താഴെയുള്ള version നോക്കാം."
+ },
+ {
+  "lecture": "functions",
+  "en": "* While these lines are executed, the names `generator_type` and `rng.uniform` are \"synonyms\", and can be used in identical ways.",
+  "draft": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`-ഉം `rng.uniform`-ഉം \"synonyms\" ആണ്, അവ ഒരേപോലെ ഉപയോഗിക്കാം.",
+  "edited": "* ഈ lines execute ചെയ്യുന്ന സമയത്ത്, `generator_type`-എന്നും `rng.uniform`-എന്നും ഉള്ള names \"synonyms\" ആണ്; അതായത് രണ്ടും ഒരേ രീതിയിൽ ഉപയോഗിക്കാം."
+ },
+ {
+  "lecture": "functions",
+  "en": "This principle works more generally---for example, consider the following piece of code",
+  "draft": "ഈ principle കൂടുതൽ generally-യിലും പ്രവർത്തിക്കുന്നു --- ഉദാഹരണത്തിന്, താഴെയുള്ള code piece കണക്കിലെടുക്കുക",
+  "edited": "ഈ principle കൂടുതൽ പൊതുവായ രീതിയിലും പ്രവർത്തിക്കും. For example, താഴെ കൊടുത്തിരിക്കുന്ന code നോക്കാം:"
+ },
+ {
+  "lecture": "functions",
+  "en": "Here we created another name for the built-in function `max()`, which could then be used in identical ways.",
+  "draft": "ഇവിടെ built-in function ആയ `max()`-ന് നമ്മൾ മറ്റൊരു പേര് create ചെയ്തു, അത് ഒരേപോലെ ഉപയോഗിക്കാൻ കഴിയും.",
+  "edited": "ഇവിടെ, built-in function ആയ `max()`-ന് നമ്മൾ മറ്റൊരു name create ചെയ്തു. തുടർന്ന്, ആ പുതിയ name-ഉം, `max()`-ഉം ഒരേ രീതിയിൽ ഉപയോഗിക്കാം."
+ },
+ {
+  "lecture": "functions",
+  "en": "This is an advanced topic that you should feel free to skip.",
+  "draft": "ഇത് ഒരു advanced topic ആണ്, ഇത് skip ചെയ്യാൻ നിങ്ങൾക്ക് സ്വാതന്ത്ര്യമുണ്ട്.",
+  "edited": "ഇത് ഒരു advanced topic ആണ്. അതിനാൽ നിങ്ങൾക്ക് വേണമെങ്കിൽ ഇത് skip ചെയ്യാം."
+ },
+ {
+  "lecture": "functions",
+  "en": "At the same time, it's a neat idea that you should learn it at some stage of your programming career.",
+  "draft": "അതേസമയം, ഇത് ഒരു neat ആശയമാണ്, നിങ്ങളുടെ programming career-ന്റെ ഏതെങ്കിലും ഘട്ടത്തിൽ ഇത് പഠിക്കണം.",
+  "edited": "അതേസമയം, നിങ്ങളുടെ programming career-ന്റെ ഏതെങ്കിലും ഒരു stage-ൽ, ഇത് പഠിച്ചിരിക്കുന്നത് നല്ലതാണ്."
+ },
+ {
+  "lecture": "functions",
+  "en": "Basically, a recursive function is a function that calls itself.",
+  "draft": "അടിസ്ഥാനപരമായി, ഒരു recursive function എന്നത് സ്വയം call ചെയ്യുന്ന ഒരു function ആണ്.",
+  "edited": "Basically, സ്വയം call ചെയ്യുന്ന ഒരു function-നെ recursive function എന്ന് വിളിക്കുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "For example, consider the problem of computing $x_t$ for some t when",
+  "draft": "ഉദാഹരണത്തിന്, ഏതെങ്കിലും t-ന് $x_t$ compute ചെയ്യുന്ന problem കണക്കിലെടുക്കുക, ഇവിടെ",
+  "edited": "ഉദാഹരണത്തിന്, താഴെ കൊടുത്തിരിക്കുന്ന relation ഉപയോഗിച്ച്, ഏതെങ്കിലും t-ന്, $x_t$ compute ചെയ്യുന്ന problem consider ചെയ്യുക:"
+ },
+ {
+  "lecture": "functions",
+  "en": "Obviously the answer is $2^t$.",
+  "draft": "വ്യക്തമായും ഉത്തരം $2^t$ ആണ്.",
+  "edited": "Obviously, ഇതിന്റെ answer $2^t$ ആണ്."
+ },
+ {
+  "lecture": "functions",
+  "en": "We can compute this easily enough with a loop",
+  "draft": "ഒരു loop ഉപയോഗിച്ച് നമുക്ക് ഇത് എളുപ്പത്തിൽ compute ചെയ്യാം",
+  "edited": "ഒരു loop ഉപയോഗിച്ച് നമുക്ക് ഇത് എളുപ്പത്തിൽ compute ചെയ്യാം:"
+ },
+ {
+  "lecture": "functions",
+  "en": "We can also use a recursive solution, as follows",
+  "draft": "താഴെ കാണുന്ന രീതിയിൽ ഒരു recursive solution-ഉം നമുക്ക് ഉപയോഗിക്കാം",
+  "edited": "താഴെ കാണുന്ന രീതിയിൽ, ഒരു recursive solution-ഉം നമുക്ക് ഉപയോഗിക്കാം:"
+ },
+ {
+  "lecture": "functions",
+  "en": "What happens here is that each successive call uses its own *frame* in the *stack*",
+  "draft": "ഇവിടെ സംഭവിക്കുന്നത്, ഓരോ തുടർച്ചയായ call-ഉം *stack*-ൽ അതിന്റേതായ *frame* ഉപയോഗിക്കുന്നു എന്നതാണ്",
+  "edited": "ഇവിടെ സംഭവിക്കുന്നത് എന്തെന്നാൽ, ഓരോ successive function call-ഉം, stack-ൽ അതിന്റേതായ frame ഉപയോഗിക്കുന്നു."
+ },
+ {
+  "lecture": "functions",
+  "en": "* a frame is where the local variables of a given function call are held",
+  "draft": "* ഒരു നൽകിയ function call-ന്റെ local variables സൂക്ഷിക്കുന്ന സ്ഥലമാണ് frame",
+  "edited": "* ഒരു function call-ന്റെ local variables സൂക്ഷിക്കുന്ന ഇടമാണ് frame."
+ },
+ {
+  "lecture": "functions",
+  "en": "* stack is memory used to process function calls",
+  "draft": "* function calls process ചെയ്യാൻ ഉപയോഗിക്കുന്ന memory ആണ് stack",
+  "edited": "* Function calls process ചെയ്യാൻ ഉപയോഗിക്കുന്ന memory ആണ് stack."
+ },
+ {
+  "lecture": "functions",
+  "en": "* a last-in, first-out (LIFO) data structure",
+  "draft": "* ഒരു last-in, first-out (LIFO) data structure",
+  "edited": "* ഇത് ഒരു last-in, first-out (LIFO) data structure ആണ്."
+ },
+ {
+  "lecture": "functions",
+  "en": "This example is somewhat contrived, since the first (iterative) solution would usually be preferred to the recursive solution.",
+  "draft": "ഈ ഉദാഹരണം കുറച്ച് contrived ആണ്, കാരണം സാധാരണയായി ആദ്യത്തെ (iterative) solution ആണ് recursive solution-നേക്കാൾ preferred ആയിരിക്കുക.",
+  "edited": "ഈ ഉദാഹരണം കുറച്ച് കൃത്രിമമാണ്. കാരണം സാധാരണയായി ആദ്യത്തെ, അതായത് iterative solution, ആണ് recursive solution-നെക്കാൾ മുൻഗണന നൽകുക."
+ },
+ {
+  "lecture": "functions",
+  "en": "We'll meet less contrived applications of recursion later on.",
+  "draft": "recursion-ന്റെ കുറച്ചുകൂടെ contrived അല്ലാത്ത applications നമ്മൾ പിന്നീട് കാണും.",
+  "edited": "പിന്നീട്, recursion-ന്റെ കൂടുതൽ സ്വാഭാവികമായ applications നമുക്ക് കാണാം."
+ },
+ {
+  "lecture": "functions",
+  "en": "Use `rng = np.random.default_rng()` to generate random numbers.",
+  "draft": "random numbers generate ചെയ്യാൻ `rng = np.random.default_rng()` ഉപയോഗിക്കുക.",
+  "edited": "Random numbers generate ചെയ്യാൻ `rng = np.random.default_rng()` ഉപയോഗിക്കുക."
+ },
+ {
+  "lecture": "functions",
+  "en": "Rewrite the function `factorial()` in from [Exercise 1](factorial_exercise) using recursion.",
+  "draft": "[Exercise 1](factorial_exercise)-ലെ `factorial()` function-നെ recursion ഉപയോഗിച്ച് വീണ്ടും എഴുതുക.",
+  "edited": "[Exercise 1](factorial_exercise)-ലെ `factorial()` function-നെ, recursion ഉപയോഗിച്ച് വീണ്ടും എഴുതുക."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Matplotlib is an outstanding graphics library, designed for scientific computing, with",
+  "draft": "Matplotlib scientific computing-നായി design ചെയ്ത ഒരു മികച്ച graphics library ആണ്. ഇതിൽ ഉള്ളത്:",
+  "edited": "Matplotlib എന്നത്, scientific computing-നായി design ചെയ്തിരിക്കുന്ന ഒരു മികച്ച graphics library ആണ്. ഇതിൽ ഉള്ളത്:"
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "* output in all the usual formats (PDF, PNG, etc.)",
+  "draft": "* സാധാരണ formats-ലെല്ലാം (PDF, PNG, etc.) output",
+  "edited": "* സാധാരണ ഉപയോഗിക്കുന്ന എല്ലാ formats-ലും output ലഭിക്കുന്നു — PDF, PNG, etc."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "* fine-grained control over all aspects of presentation",
+  "draft": "* presentation-ന്റെ എല്ലാ വശങ്ങളിലും fine-grained control",
+  "edited": "* presentation-ന്റെ ഓരോ ചെറിയ കാര്യവും വരെ control ചെയ്യാൻ കഴിയുന്നു"
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Matplotlib is unusual in that it offers two different interfaces to plotting.",
+  "draft": "Matplotlib-ന്റെ ഒരു പ്രത്യേകത, plotting-നായി അത് രണ്ട് വ്യത്യസ്ത interfaces provide ചെയ്യുന്നു എന്നതാണ്.",
+  "edited": "Plotting-നായി രണ്ട് വ്യത്യസ്ത interfaces നൽകുന്നു എന്നതാണ് Matplotlib-ന്റെ ഒരു പ്രത്യേകത."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "One is a simple MATLAB-style API (Application Programming Interface) that was written to help MATLAB refugees find a ready home.",
+  "draft": "ഒന്ന്, MATLAB refugees-ന് എളുപ്പം home ആയി തോന്താൻ എഴുതിയ ലളിതമായ ഒരു MATLAB-style API (Application Programming Interface) ആണ്.",
+  "edited": "അതിൽ ഒന്ന്, simple ആയ MATLAB-style API (Application Programming Interface) ആണ്. MATLAB ഉപയോഗിച്ചിരുന്നവർക്ക് എളുപ്പത്തിൽ ഉപയോഗിക്കാനാകുന്ന തരത്തിലാണ് ഇത് എഴുതിയിരിക്കുന്നത്."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "For reasons described below, we recommend that you use the second API.",
+  "draft": "താഴെ പറയുന്ന കാരണങ്ങളാൽ, രണ്ടാമത്തെ API ഉപയോഗിക്കാൻ ഞങ്ങൾ recommend ചെയ്യുന്നു.",
+  "edited": "താഴെ പറയുന്ന കാരണങ്ങളാൽ, രണ്ടാമത്തെ API ഉപയോഗിക്കാനാണ് ഞങ്ങൾ recommend ചെയ്യുന്നത്."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Here's the kind of easy example you might find in introductory treatments",
+  "draft": "Introductory treatments-ൽ കാണാവുന്ന തരത്തിലുള്ള എളുപ്പമായ ഒരു example താഴെ കാണാം:",
+  "edited": "Introductory പാഠങ്ങളിൽ കാണാൻ സാധ്യതയുള്ള ഒരു എളുപ്പമായ example താഴെ കാണാം:"
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "This is simple and convenient, but also somewhat limited and un-Pythonic.",
+  "draft": "ഇത് simple-ഉം convenient-ഉം ആണ്, പക്ഷേ ചില പരിമിതികളുണ്ട്, കൂടാതെ un-Pythonic ആണ്.",
+  "edited": "ഇത് simple-ഉം convenient-ഉം ആണ്. പക്ഷേ കുറച്ചൊക്കെ പരിമിതികളും, Python-ന്റെ സാധാരണ ശൈലിയോട് പൊരുത്തപ്പെടാത്ത സ്വഭാവവും ഇതിനുണ്ട്."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "For example, in the function calls, a lot of objects get created and passed around without making themselves known to the programmer.",
+  "draft": "For example, ഈ function calls-ൽ, programmer-ന് അറിയാതെ തന്നെ ധാരാളം objects create ചെയ്യപ്പെടുകയും pass ചെയ്യപ്പെടുകയും ചെയ്യുന്നു.",
+  "edited": "For example, ഇവിടുത്തെ function call-കളിൽ, programmer-നെ അറിയിക്കാതെ തന്നെ നിരവധി object-ുകൾ create ചെയ്യപ്പെടുകയും, അവ pass ചെയ്യപ്പെടുകയും ചെയ്യുന്നു."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Here's the code corresponding to the preceding figure using the object-oriented API",
+  "draft": "Object-oriented API ഉപയോഗിച്ച് മുൻപത്തെ figure-ന് സമാനമായ code താഴെ കാണാം:",
+  "edited": "Object-oriented API ഉപയോഗിച്ച് മുൻപത്തെ figure create ചെയ്യുന്ന code താഴെ കാണാം:"
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Here the call `fig, ax = plt.subplots()` returns a pair, where",
+  "draft": "ഇവിടെ `fig, ax = plt.subplots()` എന്ന call ഒരു pair return ചെയ്യുന്നു. അതിൽ:",
+  "edited": "ഇവിടെ `fig, ax = plt.subplots()` എന്ന call, ഒരു pair return ചെയ്യുന്നു. അതിൽ:"
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "* `fig` is a `Figure` instance---like a blank canvas.",
+  "draft": "* `fig` ഒരു `Figure` instance ആണ്---ഒരു blank canvas പോലെ.",
+  "edited": "* `fig` ഒരു `Figure` instance ആണ്---ഒരു blank canvas പോലെ കരുതാം."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "* `ax` is an `AxesSubplot` instance---think of a frame for plotting in.",
+  "draft": "* `ax` ഒരു `AxesSubplot` instance ആണ്---plotting ചെയ്യാനുള്ള ഒരു frame ആയി കരുതുക.",
+  "edited": "* `ax` ഒരു `AxesSubplot` instance ആണ്---plotting ചെയ്യാനുള്ള ഒരു frame ആയി കരുതാം."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "While there's a bit more typing, the more explicit use of objects gives us better control.",
+  "draft": "കുറച്ചുകൂടി typing വേണ്ടിവരുമെങ്കിലും, objects-ന്റെ കൂടുതൽ explicit ആയ ഉപയോഗം നമുക്ക് മെച്ചപ്പെട്ട control നൽകുന്നു.",
+  "edited": "കുറച്ചുകൂടി typing ആവശ്യമുണ്ടെങ്കിലും, objects കൂടുതൽ വ്യക്തമായി ഉപയോഗിക്കുന്നത് നമുക്ക് മികച്ച control നൽകുന്നു."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Here we've changed the line to red and added a legend",
+  "draft": "ഇവിടെ line-ന്റെ നിറം red ആക്കി മാറ്റുകയും ഒരു legend ചേർക്കുകയും ചെയ്തിരിക്കുന്നു:",
+  "edited": "ഇവിടെ line-ന്റെ നിറം red ആക്കി മാറ്റുകയും, അതോടൊപ്പം ഒരു legend ചേർക്കുകയും ചെയ്തിരിക്കുന്നു:"
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "We've also used `alpha` to make the line slightly transparent---which makes it look smoother.",
+  "draft": "Line-നെ അല്പം transparent ആക്കാൻ `alpha` ഉപയോഗിച്ചു---ഇത് കാഴ്ചയിൽ കൂടുതൽ smooth ആയി തോന്നിക്കും.",
+  "edited": "Line-നെ അല്പം transparent ആക്കാൻ `alpha` ഉപയോഗിച്ചിട്ടുണ്ട്---ഇത് line-ന് കൂടുതൽ smooth ആയ രൂപം നൽകുന്നു."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "The location of the legend can be changed by replacing `ax.legend()` with `ax.legend(loc='upper center')`.",
+  "draft": "`ax.legend()`-ന് പകരം `ax.legend(loc='upper center')` ഉപയോഗിച്ച് legend-ന്റെ സ്ഥാനം മാറ്റാം.",
+  "edited": "`ax.legend()`-ന് പകരം `ax.legend(loc='upper center')` ഉപയോഗിച്ചാൽ legend-ന്റെ സ്ഥാനം മാറ്റാം."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Controlling the ticks, adding titles and so on is also straightforward",
+  "draft": "Ticks control ചെയ്യുന്നതും titles ചേർക്കുന്നതും മറ്റും അതുപോലെതന്നെ എളുപ്പം ആണ്:",
+  "edited": "Ticks control ചെയ്യുന്നതും, titles ചേർക്കുന്നതും മറ്റും അതുപോലെതന്നെ എളുപ്പം ആണ്:"
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Matplotlib has a huge array of functions and features, which you can discover over time as you have need for them.",
+  "draft": "Matplotlib-ൽ ധാരാളം functions-ഉം features-ഉം ഉണ്ട്. ആവശ്യം വരുന്ന മുറയ്ക്ക് കാലക്രമേണ അവയെ കണ്ടെത്താം.",
+  "edited": "Matplotlib-ൽ ധാരാളം functions-ഉം, features-ഉം ഉണ്ട്. ആവശ്യം വരുന്ന മുറയ്ക്ക്, കാലക്രമേണ അവയെക്കുറിച്ച് മനസ്സിലാക്കാം."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "It's straightforward to generate multiple plots on the same axes.",
+  "draft": "ഒരേ axes-ൽ multiple plots generate ചെയ്യുന്നത് വളരെ എളുപ്പമാണ്.",
+  "edited": "ഒരേ axes-ൽ, ഒന്നിലധികം plots generate ചെയ്യുന്നത് വളരെ എളുപ്പമാണ്."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Here's an example that randomly generates three normal densities and adds a label with their mean",
+  "draft": "Randomly മൂന്ന് normal densities generate ചെയ്ത്, അവയുടെ mean-നൊപ്പം label ചേർക്കുന്ന ഒരു example താഴെ കാണാം:",
+  "edited": "Randomly മൂന്ന് normal densities generate ചെയ്ത്, അവയുടെ mean-നെ label ചെയ്യുന്ന ഒരു example താഴെ കാണാം:"
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Sometimes we want multiple subplots in one figure.",
+  "draft": "ചിലപ്പോൾ ഒരു figure-ൽ multiple subplots വേണ്ടിവരും.",
+  "edited": "ചിലപ്പോൾ ഒരു figure-ൽ ഒന്നിലധികം subplots ആവശ്യമായി വരും."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Perhaps you will find a set of customizations that you regularly use.",
+  "draft": "ഒരുപക്ഷേ നിങ്ങൾ പതിവായി ഉപയോഗിക്കുന്ന ഒരു set of customizations ഉണ്ടാകും.",
+  "edited": "ഒരുപക്ഷേ നിങ്ങൾ പതിവായി ഉപയോഗിക്കുന്ന ഒരു set of customizations ഉണ്ടായേക്കാം."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Suppose we usually prefer our axes to go through the origin, and to have a grid.",
+  "draft": "നമ്മുടെ axes origin-ലൂടെ കടന്നുപോകണമെന്നും, ഒരു grid ഉണ്ടാകണമെന്നും നമ്മൾ സാധാരണയായി prefer ചെയ്യുന്നു എന്ന് കരുതുക.",
+  "edited": "For example, നമ്മുടെ axes, origin-ലൂടെ പോകണമെന്നും, അവയിൽ grid ഉണ്ടായിരിക്കണമെന്നും നമുക്ക് ഇഷ്ടമാണെന്ന് കരുതുക."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Here's a nice example from [Matthew Doty](https://github.com/xcthulhu) of how the object-oriented API can be used to build a custom `subplots` function that implements these changes.",
+  "draft": "ഈ മാറ്റങ്ങൾ implement ചെയ്യുന്ന ഒരു custom `subplots` function object-oriented API ഉപയോഗിച്ച് എങ്ങനെ build ചെയ്യാം എന്നതിന് [Matthew Doty](https://github.com/xcthulhu)-യുടെ ഒരു നല്ല example താഴെ കാണാം.",
+  "edited": "ഈ മാറ്റങ്ങൾ implement ചെയ്യുന്ന ഒരു custom `subplots` function, object-oriented API ഉപയോഗിച്ച് എങ്ങനെ build ചെയ്യാം എന്നതിന് [Matthew Doty](https://github.com/xcthulhu)-യുടെ ഒരു നല്ല example താഴെ കാണാം."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Read carefully through the code and see if you can follow what's going on",
+  "draft": "Code ശ്രദ്ധയോടെ വായിച്ച്, എന്താണ് നടക്കുന്നത് എന്ന് നിങ്ങൾക്ക് പിന്തുടരാൻ കഴിയുമോ എന്ന് നോക്കുക:",
+  "edited": "Code ശ്രദ്ധയോടെ വായിച്ച്, എന്താണ് നടക്കുന്നതെന്ന് നിങ്ങൾക്ക് മനസ്സിലാക്കാൻ സാധിക്കുന്നുണ്ടോ എന്ന് നോക്കുക:"
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "1. calls the standard `plt.subplots` function internally to generate the `fig, ax` pair,",
+  "draft": "1. `fig, ax` pair generate ചെയ്യാൻ internal ആയി standard `plt.subplots` function-നെ call ചെയ്യുന്നു,",
+  "edited": "1. `fig, ax` pair generate ചെയ്യാൻ, internal ആയി, standard `plt.subplots` function-നെ call ചെയ്യുന്നു,"
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Another useful feature in Matplotlib is [style sheets](https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html).",
+  "draft": "Matplotlib-ലെ മറ്റൊരു വളരെ useful ആയ feature ആണ് [style sheets](https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html).",
+  "edited": "Matplotlib-ലെ വളരെ useful ആയ മറ്റൊരു feature ആണ് [style sheets](https://matplotlib.org/stable/gallery/style_sheets/style_sheets_reference.html)."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "We can find a list of available styles by printing the attribute `plt.style.available`",
+  "draft": "`plt.style.available` എന്ന attribute print ചെയ്ത് ലഭ്യമായ styles-ന്റെ ഒരു list നമുക്ക് കണ്ടെത്താം:",
+  "edited": "`plt.style.available` എന്ന attribute print ചെയ്താൽ, available ആയിട്ടുള്ള styles-ന്റെ ഒരു list നമുക്ക് കാണാം:"
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "We can now use the `plt.style.use()` method to set the style sheet.",
+  "draft": "ഇനി style sheet set ചെയ്യാൻ `plt.style.use()` method നമുക്ക് ഉപയോഗിക്കാം.",
+  "edited": "ഇനി, `plt.style.use()` method ഉപയോഗിച്ച് നമുക്ക് style sheet set ചെയ്യാം."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Let's write a function that takes the name of a style sheet and draws different plots with the style",
+  "draft": "ഒരു style sheet-ന്റെ name എടുത്ത്, ആ style-ൽ വ്യത്യസ്ത plots വരയ്ക്കുന്ന ഒരു function നമുക്ക് എഴുതാം:",
+  "edited": "ഒരു style sheet-ന്റെ name input ആയി എടുത്ത്, അതേ style ഉപയോഗിച്ച് വ്യത്യസ്ത plots draw ചെയ്യുകയും ചെയ്യുന്ന ഒരു function നമുക്ക് എഴുതാം:"
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "We can use `grayscale` to remove colors in plots",
+  "draft": "Plots-ലെ colors നീക്കം ചെയ്യാൻ നമുക്ക് `grayscale` ഉപയോഗിക്കാം:",
+  "edited": "Plots-ലെ colors remove ചെയ്യാൻ നമുക്ക് `grayscale` ഉപയോഗിക്കാം:"
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "If you are interested, you can even create your own style sheets.",
+  "draft": "താൽപ്പര്യമുണ്ടെങ്കിൽ, നിങ്ങൾക്ക് സ്വന്തമായി style sheets തന്നെ create ചെയ്യാം.",
+  "edited": "താൽപ്പര്യമുണ്ടെങ്കിൽ, നിങ്ങളുടേതായ style sheets create ചെയ്യാനും കഴിയും."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Parameters for your style sheets are stored in a dictionary-like variable `plt.rcParams`",
+  "draft": "നിങ്ങളുടെ style sheets-ന്റെ parameters `plt.rcParams` എന്ന dictionary-like variable-ൽ ആണ് സൂക്ഷിച്ചിരിക്കുന്നത്:",
+  "edited": "നിങ്ങളുടെ style sheets-നുള്ള parameters, dictionary പോലെയുള്ള `plt.rcParams` എന്ന variable-ൽ സൂക്ഷിച്ചിരിക്കുന്നു:"
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "There are many parameters you could set for your style sheets.",
+  "draft": "നിങ്ങളുടെ style sheets-ന് വേണ്ടി set ചെയ്യാവുന്ന ധാരാളം parameters ഉണ്ട്.",
+  "edited": "Style sheets-ൽ നിങ്ങൾക്ക് set ചെയ്യാൻ കഴിയുന്ന ഒരുപാട് parameters ഉണ്ട്."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "2. updating values stored in the dictionary-like variable `plt.rcParams`",
+  "draft": "2. `plt.rcParams` എന്ന dictionary-like variable-ൽ സൂക്ഷിച്ചിരിക്കുന്ന values update ചെയ്ത്.",
+  "edited": "2. Dictionary പോലെയുള്ള `plt.rcParams` എന്ന variable-ൽ ഉള്ള values update ചെയ്ത്."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Let's change the style of our overlaid density lines using the second method",
+  "draft": "രണ്ടാമത്തെ method ഉപയോഗിച്ച് overlay ചെയ്ത density lines-ന്റെ style നമുക്ക് മാറ്റാം:",
+  "edited": "രണ്ടാമത്തെ method ഉപയോഗിച്ച്, overlay ചെയ്തിരിക്കുന്ന density lines-ന്റെ style നമുക്ക് മാറ്റാം:"
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Any plot generated after changing parameters in `.rcParams` will be affected by the setting.",
+  "draft": "`.rcParams`-ലെ parameters മാറ്റിയതിന് ശേഷം generate ചെയ്യുന്ന ഏത് plot-നെയും ഈ setting affect ചെയ്യും.",
+  "edited": "`.rcParams`-ലെ parameters മാറ്റിയതിനുശേഷം generate ചെയ്യുന്ന എല്ലാ plots-നെയും ഈ setting affect ചെയ്യും."
+ },
+ {
+  "lecture": "matplotlib",
+  "en": "Apply the `default` style sheet again to change your style back to default",
+  "draft": "നിങ്ങളുടെ style-നെ വീണ്ടും default ആക്കി മാറ്റാൻ `default` style sheet ഒരിക്കൽ കൂടി apply ചെയ്യുക:",
+  "edited": "നിങ്ങളുടെ style-നെ വീണ്ടും default ആക്കി മാറ്റാൻ, `default` style sheet ഒരിക്കൽ കൂടി apply ചെയ്യുക:"
+ }
+]

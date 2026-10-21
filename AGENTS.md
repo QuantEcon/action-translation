@@ -3,23 +3,29 @@
 Guidance for coding agents working in this repository (GitHub Action + `translate` CLI for
 translating QuantEcon MyST lectures via the Anthropic API; TypeScript).
 
-## Project notes (`.dev/`)
+## Project notes (`.qe/dev/`)
 
-Working notes — state, decisions, design ideas — live in [`.dev/`](.dev/README.md)
-(the QuantEcon `.dev/` convention; this is the pilot repo).
+Working notes — state, decisions, design ideas — live in [`.qe/dev/`](.qe/dev/README.md),
+inside [`.qe/`](.qe/README.md), the repository's QuantEcon folder (this repo pilots the
+convention; its home is the Project Management Protocols QEP — QuantEcon/qeps QEP-7, in draft).
 
-- Read [`.dev/STATE.md`](.dev/STATE.md) before starting; it carries a `verified: <date>`
-  first line — trust it less as that ages. It points to [`PLAN.md`](.dev/PLAN.md),
-  [`FUTURE.md`](.dev/FUTURE.md), and [`ARCHITECTURE.md`](.dev/ARCHITECTURE.md).
-- Finish each session by appending a short log entry to [`.dev/log/`](.dev/log/)
-  (`YYYY-MM-DD-<id>.md`) and updating STATE.md if reality changed.
-- Record settled decisions in [`.dev/decisions/`](.dev/decisions/) in the same PR that makes
-  them (`D-YYYY-MM-DD-<slug>.md`; never edited — supersede with a new file + a note at the
-  top of the old one).
-- Tag cross-repo findings inline with `#promote`.
+- Read [`.qe/dev/STATE.md`](.qe/dev/STATE.md) before starting; it carries a `verified: <date>`
+  first line — trust it less as that ages. It points to [`PLAN.md`](.qe/dev/PLAN.md),
+  [`FUTURE.md`](.qe/dev/FUTURE.md), and [`ARCHITECTURE.md`](.qe/dev/ARCHITECTURE.md). The
+  project trackers are the current-state register (reading order in
+  [`.qe/NEXT-STEPS.md`](.qe/NEXT-STEPS.md)); keep STATE.md to orientation and the resume
+  checklist rather than restating them.
+- Finish each session by appending a short log entry to [`.qe/dev/log/`](.qe/dev/log/)
+  (`YYYY-MM-DD-<id>.md`) and updating STATE.md if reality changed. What happened goes in
+  the log and in the tracker's revision-log comment, never in the tracker's status section.
+- Record settled decisions in [`.qe/dev/decisions/`](.qe/dev/decisions/) in the same PR that
+  makes them (`D-YYYY-MM-DD-<slug>.md`; never edited — supersede with a new file + a note at
+  the top of the old one). A record explains the choice as of its date and guides the next
+  one; to change a decision, write the superseding record.
+- Tag cross-repo findings inline with `#promote`; `.qe/dev/` is about this repository only.
 - Keep it curated: distill, supersede, or delete — git holds the history.
-- `.dev/` is public: no credentials, no unpatched-vulnerability specifics (security
-  advisories until fixed).
+- `.qe/` is public: no credentials, no unpatched-vulnerability specifics (security
+  advisories until fixed). Nothing under it is git-ignored; scratch lives outside the tree.
 
 ## Commands
 
@@ -32,8 +38,9 @@ Working notes — state, decisions, design ideas — live in [`.dev/`](.dev/READ
 
 - `dist-action/` is committed and must stay in sync with `src/` — always `npm run build`
   after source changes; CI fails on drift.
-- Use `.dev/scratch/` (gitignored) for scratch files; never create standalone summary/notes
-  markdown files for individual changes.
+- Scratch and working files live outside the tree (the agent's own scratchpad, or
+  `SCRATCH=$(mktemp -d)`); never create standalone summary/notes markdown files for
+  individual changes.
 - Update `CHANGELOG.md` under `[Unreleased]` for user-visible changes.
 
 ---
@@ -116,28 +123,28 @@ npm run build    # Compile TypeScript + bundle dist-action/index.js
   success. After any scripted edit: `grep` for what should be gone, `grep` for what
   should be there, and check the file still parses or renders. Prefer exact-match
   edits over pattern replacement whenever the target is known.
-- Multi-line commit messages: write to `.dev/scratch/` first, then use `-F`:
+- Multi-line commit messages: write to a temporary file outside the repository first
+  (`SCRATCH=$(mktemp -d)`), then use `-F`:
   ```bash
-  git commit -F .dev/scratch/msg.txt
+  git commit -F $SCRATCH/msg.txt
   ```
 
 ### Using the `gh` CLI
 
-Always write output to the local **`.dev/scratch/`** folder (not `/tmp/`) to keep work repo-scoped:
+Write command output and drafted bodies to a temporary directory outside the repository — `SCRATCH=$(mktemp -d)`, or the agent's own scratchpad — since nothing under `.qe/` is git-ignored and the repository holds no scratch location:
 
 ```bash
 # Read PR details
-gh pr view 123 > .dev/scratch/pr.txt && cat .dev/scratch/pr.txt
+gh pr view 123 > $SCRATCH/pr.txt && cat $SCRATCH/pr.txt
 
 # Create PR (write body with file tool first, then:)
-gh pr create --title "..." --body-file .dev/scratch/pr-body.txt --base main > .dev/scratch/pr-result.txt && cat .dev/scratch/pr-result.txt
+gh pr create --title "..." --body-file $SCRATCH/pr-body.txt --base main > $SCRATCH/pr-result.txt && cat $SCRATCH/pr-result.txt
 
 # Create release (write notes with file tool first; title is the tag alone — see the
 # release checklist for why)
-gh release create vX.Y.Z --title "vX.Y.Z" --notes-file .dev/scratch/release-notes.md > .dev/scratch/release-result.txt && cat .dev/scratch/release-result.txt
+gh release create vX.Y.Z --title "vX.Y.Z" --notes-file $SCRATCH/release-notes.md > $SCRATCH/release-result.txt && cat $SCRATCH/release-result.txt
 ```
 
-The `.dev/scratch/` folder is committed (via `.gitkeep`) but its contents are git-ignored.
 
 ### Addressing Copilot PR Review Comments
 
@@ -147,13 +154,13 @@ After pushing a PR, Copilot may leave review comments. To address them:
    ```bash
    gh api repos/QuantEcon/action-translation/pulls/PR_NUM/comments \
      --jq '.[] | {id, path, line, body: (.body | split("\n")[0])}' \
-     > .dev/scratch/pr-comments.txt && cat .dev/scratch/pr-comments.txt
+     > $SCRATCH/pr-comments.txt && cat $SCRATCH/pr-comments.txt
    ```
 2. **Push fixes** to the PR branch addressing the feedback
 3. **Reply to each comment** — write reply to a file, then post:
    ```bash
    gh api repos/QuantEcon/action-translation/pulls/PR_NUM/comments/COMMENT_ID/replies \
-     -f body="$(cat .dev/scratch/reply.txt)" 2>&1 | jq -r '.html_url'
+     -f body="$(cat $SCRATCH/reply.txt)" 2>&1 | jq -r '.html_url'
    ```
 4. **Resolve threads** on the GitHub web interface
 
@@ -226,8 +233,8 @@ Docs live in `docs/` — see `docs/index.md` for the full structure.
 
 Before creating a release, verify the following:
 
-1. **CHANGELOG is up to date** — all merged PRs and features are listed under `[Unreleased]`; promote `[Unreleased]` → `[X.Y.Z] - YYYY-MM-DD`
-2. **Version bumped** — update `package.json`, this file (`AGENTS.md`), and `.dev/PLAN.md`
+1. **CHANGELOG is up to date** — all merged PRs and features are listed under `[Unreleased]`; promote `[Unreleased]` → `[X.Y.Z] - YYYY-MM-DD` and leave a fresh empty `## [Unreleased]` header above it, so the next PR's entry has somewhere to go that is not the released section (adopted v0.28.0, #304)
+2. **Version bumped** — update `package.json`, this file (`AGENTS.md`), and `.qe/dev/PLAN.md`
 3. **Tests pass** — run `npm test` and confirm all tests pass
 4. **Build succeeds** — run `npm run build` to compile TypeScript and update `dist-action/`
 4a. **E2E-gate the tagged release** — after tagging and before moving the floating tags:
@@ -238,6 +245,45 @@ Before creating a release, verify the following:
 
    The harness defaults to `main`, so the release itself is only gated if you ask for it by
    name. This step verifies the **tagged bytes**, not a branch that may have moved since.
+4b. **Rate-check the full-document fixtures at the tag** — alongside 4a, before moving the floating tags:
+
+   ```bash
+   ./tool-test-action-on-github/rate-check.sh --ref vX.Y.Z
+   ```
+
+   The gate takes one draw per scenario, so it cannot see a model-side defect that fails
+   less than always: scenario 17's new document was refused on ~40% of draws from v0.28.0 to
+   v0.29.0 and passed three gates (#320). This runs the CLI at the tag twelve times per
+   full-document fixture and language and fails if any cell shows more than one refusal.
+   Local only, ~36 translations against a cached prompt; the summary goes on the release PR
+   beside the gate tally.
+
+   **If a cell fails**, find out whether this release caused it before holding the tags.
+   Draw a same-day control for the failing cell, 24 draws at the previous release and 24
+   more at this tag:
+
+   ```bash
+   ./tool-test-action-on-github/rate-check.sh --ref vPREV  --languages <lang> --draws 24
+   ./tool-test-action-on-github/rate-check.sh --ref vX.Y.Z --languages <lang> --draws 24
+   ```
+
+   Then check whether anything that reaches that language's request changed between the
+   two tags: `src/translator.ts`, `glossary/<lang>.json`, the language's `LANGUAGE_CONFIGS`
+   entry, and the modules the CLI `init` path imports.
+
+   - **This tag's rate is clearly higher** than the previous release's (Fisher's exact
+     test, p < 0.05): treat it as a failed gate. The floating tags stay where they are, the
+     tally goes on the release PR, and the repair ships as the next patch.
+   - **The two cannot be told apart**, and above all when the request did not change: the
+     rate predates this release, and holding the tags protects no one from it. Release,
+     put both tables on the release PR, and post the measurement on the defect's issue.
+
+   Keep the threshold as it is. At #320's ~40% it misses about 2% of the time; at a latent
+   ~4% it fails about 8% of releases by chance, and this control is the answer to that.
+   First applied at v0.29.4: zh-cn `game-theory.md` read 2/12, and with the controls 0/36 at
+   v0.29.3 against 3/36 at v0.29.4, with identical request bytes (#203, #354;
+   `D-2026-10-09-rate-check-failure-control`).
+
 5. **Commit, tag, push** — commit all changes, create git tag `vX.Y.Z`, push with `--tags`; **then move both floating tags** to the release commit:
 
    ```bash
@@ -255,7 +301,7 @@ Before creating a release, verify the following:
 6. **Create GitHub release** — the title is **the tag and nothing else**:
 
    ```bash
-   gh release create vX.Y.Z --title "vX.Y.Z" --notes-file .dev/scratch/release-notes.md
+   gh release create vX.Y.Z --title "vX.Y.Z" --notes-file $SCRATCH/release-notes.md
    ```
 
    The repo sidebar and the releases list truncate long titles, so a descriptive

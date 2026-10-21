@@ -101,6 +101,7 @@ src/
 │   ├── review.ts        # REVIEW mode runner, extracted from index.ts and directly tested (#169)
 │   └── core-logger.ts   # @actions/core → Logger adapter, shared by the entry point and mode runners
 ├── sync-orchestrator.ts # Sync processing pipeline
+├── toc-captions.ts      # _toc.yml part-caption preservation on sync (#254)
 ├── pr-creator.ts        # PR creation in target repo
 ├── parser.ts            # MyST Markdown parser (stack-based, line-by-line)
 ├── diff-detector.ts     # Change detection via section comparison
@@ -115,6 +116,7 @@ src/
 ├── contracts.ts         # Cross-boundary constants: labels, auto-merge modes (owner module, #162)
 ├── branch-naming.ts     # Translation branch prefixes — the one owner (#115)
 ├── structural-parity.ts # Deterministic directive/anchor parity guard on every write path
+├── verbatim-directives.ts # Per-language verbatim directive families (ml exercise blocks), restored in code on every write path
 ├── bibliography.ts      # Citation-key extraction + bibliography backfill for shared .bib assets (#117)
 ├── review-verdict.ts    # Verdict v2 block: build/parse/sanitize + recommendation logic
 ├── diff-checks.ts       # Deterministic halves of the four review diffChecks (#148)

@@ -1,0 +1,1784 @@
+[
+ {
+  "id": "numpy-d1-2",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d1-2",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Split at ', ഇതിനെ' leaves two finite sentences ('... data type ആണ്.' / 'ഇതിനെ ... എന്ന് വിളിക്കുന്നു.'). The editor's ref splits in exactly the same place with the same pronoun."
+   },
+   {
+    "id": "numpy-d1-2",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor made the same split: '... array data type ആണ്. ഇതിനെ formally ... എന്ന് വിളിക്കുന്നു.' Both clauses are finite, and ഇതിനെ refers back to the array data type. The meaning is unchanged."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d1-14",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d1-14",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "'... ഒരു element മാത്രമേ ഉള്ളൂ.' is finite, and 'അത് array-യുടെ length ആണ്' stands on its own; അത് clearly points back to the element. The editor folded this into a relative clause ('length ആയ ഒരു element') instead of splitting, but the split is grammatical and keeps the meaning. The parenthetical after 'ആണ്' with no full stop was already in old, so the split did not cause it."
+   },
+   {
+    "id": "numpy-d1-14",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "The editor folded the second clause into a relative participle ('array-യുടെ length ആയ ഒരു element മാത്രമാണുള്ളത്') and kept one sentence. The split is still well-formed: 'ഒരു element മാത്രമേ ഉള്ളൂ. അത് array-യുടെ length ആണ്'. അത് points back to the element. The parenthetical now attaches to the second sentence, which suits its content. Probably acceptable."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d1-19",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d1-19",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Split at ', ഇവയിൽ': 'ഇത് memory-ൽ arrays create ചെയ്യുന്നു.' is finite, and 'ഇവയിൽ പിന്നീട് data populate ചെയ്യാം:' reads naturally, with plural ഇവ referring to arrays. The editor also split here (with അതിലേക്ക്). He split the earlier ', ഇത്' after `np.empty` as well, which the repair left alone. That is a missed split, not a defect in this one. The trailing colon that introduces the code is kept."
+   },
+   {
+    "id": "numpy-d1-19",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor also split before the 'into these, data later' clause ('... create ചെയ്യുന്നു. അതിലേക്ക് പിന്നീട് data ചേർക്കാവുന്നതാണ്:'). ഇവയിൽ refers back to the arrays. The colon that introduces the code still closes a complete sentence. The editor also split at the earlier comma ('`np.empty`, ഇത്'), which the repair left alone. That is a missed split, not a wrong one."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d1-25",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d1-25",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The first clause ends in the finite imperative 'കാണുക', and 'ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ...' stands on its own. The editor split at the same place ('നോക്കുക. ഇത് similar ആയ ...'). He also split before പക്ഷേ, but that is outside this site."
+   },
+   {
+    "id": "numpy-d1-25",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor split at the same point ('`np.asarray` എന്നതും നോക്കുക. ഇത് ...'). The first clause is a finite imperative, and ഇത് refers to np.asarray. The editor also put a full stop before പക്ഷേ, but the new version keeps that comma. That is outside this split and not a defect."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d1-34",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d1-34",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The new text is identical to the editor's ref (sim_new 1.0): 'methods ഉണ്ട്. ഇവയെല്ലാം ... optimize ചെയ്തിരിക്കുന്നു:'. The colon introducing the list is kept."
+   },
+   {
+    "id": "numpy-d1-34",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The new text matches the editor's reference word for word: 'Arrays-ന് useful ആയ methods ഉണ്ട്. ഇവയെല്ലാം carefully optimize ചെയ്തിരിക്കുന്നു:'. The colon that introduces the list stays at the end of a complete sentence."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d1-51",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d1-51",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Bullet item: '`for` loops ഒഴിവാക്കാം.' is finite (modal), and 'ഇത് ... സഹായിക്കുന്നു, കൂടാതെ' carries on into the next line as before. The editor made the same split ('ഒഴിവാക്കാം. ഇത് ...'). The trailing കൂടാതെ continuation is unchanged."
+   },
+   {
+    "id": "numpy-d1-51",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor made the same split inside this bullet ('* `for` loops ഒഴിവാക്കാം. ഇത് numerical code ... സഹായിക്കുന്നു, ഒപ്പം'). ഇത് refers to avoiding for-loops. The trailing 'കൂടാതെ' still carries on into the next bullet, as the English 'and' does."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d1-93",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d1-93",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Probably acceptable. 'bind ചെയ്യപ്പെട്ടിരിക്കുന്നു.' is finite, and 'അത് ... reference മാത്രമായി മാറുന്നു' is well-formed. അത് naturally takes the previous subject (`b` എന്ന name), and the meaning rules out reading it as the binding. The editor split in the same place but opened the second sentence with 'അങ്ങനെ,' and an explicit `b` rather than the bare pronoun. He may find അത് slightly weak, but he would not plausibly undo the split. The parenthetical with no full stop before it was already in old."
+   },
+   {
+    "id": "numpy-d1-93",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor split at the same place. He also replaced the opening അത് with 'അങ്ങനെ, ...' and made `b` the explicit subject. That suggests he found the pronoun weak, since it could be read as `a`. The same ambiguity was already in the comma version, so the split does not cause it. Probably acceptable; the pronoun choice is a separate wording issue."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d1-103",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d1-103",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "Probably acceptable. Both sentences are finite: '... versions NumPy നൽകുന്നു.' and 'ഇവ arrays-ൽ *element-wise* ആയാണ് act ചെയ്യുന്നത്:'. The colon still introduces the example code. The editor rewrote the whole sentence as a single restrictive relative clause ('act ചെയ്യുന്ന ... versions'), so the English restrictive 'that act element-wise' becomes a separate descriptive statement here. The meaning is effectively the same. ഇവ could in principle be read as the standard functions rather than NumPy's versions, but old had the same ambiguity."
+   },
+   {
+    "id": "numpy-d1-103",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "In English 'that act element-wise' is a restrictive relative clause. The editor kept one sentence with a preposed relative participle ('... act ചെയ്യുന്ന ... versions NumPy നൽകുന്നു:'). The draft had already turned it into a coordinated ', ഇവ ...' clause, so the split only changes the comma to a full stop. Both sentences are finite, and the colon before the code closes a full sentence. There is a slight existing ambiguity over whether ഇവ means NumPy's versions or the standard log/exp/sin, but the split does not add to it. Probably acceptable."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d1-113",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d1-113",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor's ref splits at exactly this point ('... version ഉണ്ട്. ഇത് സാധാരണയായി ... generate ചെയ്യും.'). Both sentences are finite, and ഇത് refers to the JAX version. The comma after 'കാണാം' (the editor used a colon) is outside this site and unchanged."
+   },
+   {
+    "id": "numpy-d1-113",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor split at the same point ('... powerful version ഉണ്ട്. ഇത് സാധാരണയായി ...'), and ഇത് refers to JAX's version. The earlier comma after 'പിന്നീട് നമുക്ക് കാണാം' is left as is, where the editor used a colon. That is unrelated to this split. Both sentences stay inside the parentheses."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d1-122",
+  "verdict": "acceptable",
+  "defect_class": "none",
+  "reason": "The split is at the same place as the editor's: the full stop goes after 'ലഭ്യമാണ്'. Both sentences are finite and well-formed. The first ends in the copula ('... [SciPy](...)-ലും ലഭ്യമാണ്.'). The second is a complete copular sentence ('ഇത് NumPy-യ്ക്ക് മുകളിൽ build ചെയ്ത modules-ന്റെ ഒരു collection ആണ്.'). There is no fragment or forward reference, and the first clause is not subordinate. The meaning matches the English appositive. ഇത് has a possible second antecedent, 'ഈ functionality', but only SciPy can be 'a collection of modules', and SciPy is also the closest noun. The comma version (raw/old) had the same ambiguity, so the split did not create it. The editor replaced the pronoun with an explicit 'SciPy', but that is a wording change separate from the split, and he kept the sentence break itself. Probably not something he would revert. At most a later round might name SciPy instead of using ഇത്.",
+  "screens": [
+   {
+    "id": "numpy-d1-122",
+    "verdict": "unsure",
+    "defect_class": "pronoun-antecedent-ambiguity",
+    "editor_same_split": "yes",
+    "note": "The split location matches the editor's, and both sentences are grammatical ('... ലഭ്യമാണ്.' / 'ഇത് ... collection ആണ്.'). But once it opens a new sentence, proximal ഇത് tends to pick up the previous sentence's topic 'ഈ functionality' rather than SciPy. The meaning mostly resolves it, since functionality is not a collection of modules. The editor made the same split but dropped the pronoun and named 'SciPy' explicitly. So the split probably stands, but the pronoun-led second sentence is what he changed; a later round may flag it."
+   },
+   {
+    "id": "numpy-d1-122",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor split at the same place. He replaced the pronoun with an explicit subject ('... collection ആണ് SciPy.'), probably because ഇത് could be read as referring to 'ഈ functionality' rather than SciPy. That ambiguity was already in the comma version, so the split does not cause it. Probably acceptable."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d2-156",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d2-156",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "'shape tuple-ന് ഒരു element മാത്രമേ ഉള്ളൂ.' is a complete finite sentence (the മാത്രമേ...ഉള്ളൂ construction is finite), and 'അത് array-യുടെ length ആണ്' stands on its own. അത് points back to the element. The editor used a relative clause instead ('length ആയ ഒരു element മാത്രമാണുള്ളത്'), but the split does not change meaning, and the parenthetical still attaches to the second sentence."
+   },
+   {
+    "id": "numpy-d2-156",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "'...ഒരു element മാത്രമേ ഉള്ളൂ. അത് array-യുടെ length ആണ് (...)'. The first clause ends in a finite verb (മാത്രമേ ഉള്ളൂ). അത് refers back to the single element, as 'which' does in the English, so the meaning is unchanged. The editor folded the relative clause into an adjectival phrase ('length ആയ ഒരു element') and kept one sentence, so his fix is a restructure rather than a split here. Still, the two-sentence version is well-formed and the parenthetical stays with its sentence. Probable acceptable."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d2-161",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d2-161",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The split before 'അവയിൽ' is at the same place as the editor's second split ('...create ചെയ്യുന്നു. അതിലേക്ക് പിന്നീട്...'). 'അവയിൽ പിന്നീട് data populate ചെയ്യാം:' is a complete modal sentence and still correctly introduces the code cell with its colon. The earlier comma splice at '`np.empty`, ഇത്' is left unsplit (the editor split there too), but that is a missed site, not a problem with this split."
+   },
+   {
+    "id": "numpy-d2-161",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The split is at 'അവയിൽ' ('create ചെയ്യുന്നു. അവയിൽ പിന്നീട് data populate ചെയ്യാം:'). The first clause is finite and അവ refers back to the arrays. The editor split at the same point ('...create ചെയ്യുന്നു. അതിലേക്ക് പിന്നീട്...'), and he also split before ഇത്, which the repair leaves joined by a comma. The closing colon that introduces the code cell stays at the end of the second sentence, where the editor also has it. Only one of the editor's two splits was made, but that is not a defect."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d2-167",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d2-167",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The imperative '`np.asarray`-യും കാണുക.' is a complete sentence, and 'ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ...' opens naturally with ഇത് pointing back to np.asarray. The editor split at exactly this place ('...എന്നതും നോക്കുക. ഇത് similar ആയ...')."
+   },
+   {
+    "id": "numpy-d2-167",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "'`np.asarray`-യും കാണുക. ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ...'. The first clause is a complete imperative and ഇത് refers back to np.asarray. The editor split at the same place ('...എന്നതും നോക്കുക. ഇത് similar ആയ...'); he also split before പക്ഷേ, which the repair does not need to do."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d2-176",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d2-176",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The result is the same as the editor's reviewed text ('...methods ഉണ്ട്. ഇവയെല്ലാം ... optimize ചെയ്തിരിക്കുന്നു:'). Both clauses are finite, ഇവയെല്ലാം points back to the methods, and the colon still introduces the code."
+   },
+   {
+    "id": "numpy-d2-176",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "'Arrays-ന് useful ആയ methods ഉണ്ട്. ഇവയെല്ലാം സൂക്ഷ്മമായി optimize ചെയ്തിരിക്കുന്നു:'. This is the same split the editor made, with ഇവയെല്ലാം as the opener. The colon introducing what follows stays on the second sentence, as it does in his version."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d2-193",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d2-193",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "This is a list item that carries on into the next bullet with 'ഒപ്പം'. The editor split at exactly this place ('ഒഴിവാക്കാം. ഇത് ... സഹായിക്കുന്നു, ഒപ്പം'). 'ഒഴിവാക്കാം' is a finite modal, and the ഇത് sentence stands alone. The link to the next list item is kept because the split comes before 'ഒപ്പം', not after it."
+   },
+   {
+    "id": "numpy-d2-193",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "'* `for` loops ഒഴിവാക്കാം. ഇത് numerical code ... സഹായിക്കുന്നു, ഒപ്പം'. This matches the editor's split exactly. ഇത് refers back to avoiding loops. The trailing ', ഒപ്പം' that carries into the next bullet is kept, as the editor kept it."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d2-216",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d2-216",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "'...ആണെങ്കിൽ, broadcasting ഇടതുവശത്ത് ഒരു dimension ചേർക്കും.' is a complete conditional sentence, and 'അതിനാൽ `b -> (1, 3)` ആകും;' picks up the result through അതിനാൽ, so the conditional still reaches it. Here the editor used a participle ('ചേർത്ത് അതിനെ...ആകും'), but in the parallel bullets 220 and 221 he made exactly this split ('expand ചെയ്യും. അതിനാൽ ... ആകും;'), so the split fits his practice. A full stop inside a bullet that ends in ';' matches his own text."
+   },
+   {
+    "id": "numpy-d2-216",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "'...ആണെങ്കിൽ, broadcasting ഇടതുവശത്ത് ഒരു dimension ചേർക്കും. അതിനാൽ `b -> (1, 3)` ആകും;'. The first clause is finite (ചേർക്കും), and അതിനാൽ gives the English 'so that' result reading. For this item the editor rewrote with a participle ('...ചേർത്ത് അതിനെ ... ആകും') and kept a single sentence, so there is no അതിനാൽ in his version. However, in the parallel items 220 and 221 he split at exactly '...ചെയ്യും. അതിനാൽ ... ആകും;', so this split matches his own practice for the construction. The example still reads clearly inside the 'if' framing. Probable acceptable."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d2-217",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d2-217",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "Same construction as 216: 'ചേർക്കും. അതിനാൽ `b -> (1, 2, 2)` ആകും;'. Both parts are finite, and the result clause reads naturally. The editor used the participial form here, but split the same pattern at 'ചെയ്യും. അതിനാൽ' in bullets 220 and 221, so a reviewer would probably accept it."
+   },
+   {
+    "id": "numpy-d2-217",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "This has the same construction as 216 ('...ചേർക്കും. അതിനാൽ `b -> (1, 2, 2)` ആകും;'). The editor used a participle ('ചേർത്ത്, അതിനെ ... ആകും') for this item and did not split, but he split identically at അതിനാൽ in the sibling items 220 and 221. The two sentences are well-formed and the result reading is preserved. Probable acceptable."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d2-218",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d2-218",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "Same construction as 216 and 217. After the split, the parenthetical '(ഇത് *Step 1* ... കാണാം)' stays with the second sentence, and ഇത് there still refers to the process described. The editor used the participial form here, but the split matches what he did in bullets 220 and 221."
+   },
+   {
+    "id": "numpy-d2-218",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "This has the same pattern as 216 and 217: '...രണ്ട് dimensions ചേർക്കും. അതിനാൽ `b -> (1, 1, 2)` ആകും (...)'. The parenthetical stays attached to the result sentence, which is where it belongs in the English. The editor restructured this item with a participle rather than splitting, but he split at അതിനാൽ in the parallel items 220 and 221. Probable acceptable."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d2-220",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d2-220",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor split at exactly this place: '...expand ചെയ്യും. അതിനാൽ `a -> (3, 3)`, `b -> (3, 3)` ആകും;'. The first sentence is a complete conditional plus main clause, and the second opens naturally with അതിനാൽ. The only differences from the editor are in wording elsewhere (-ഉം coordination, word order)."
+   },
+   {
+    "id": "numpy-d2-220",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "'...dimensions broadcasting expand ചെയ്യും. അതിനാൽ `a -> (3, 3)`-ഉം `b -> (3, 3)`-ഉം ആകും;'. This is the same split point and connective as the editor's '...expand ചെയ്യും. അതിനാൽ ... ആകും;'. The unusual word order in the first clause comes from the draft, not from the split."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d2-221",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d2-221",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor split at exactly this place: '...expand ചെയ്യും. അതിനാൽ `b -> (2, 2, 2)` ആകും;'. Both sentences are well formed, the meaning is unchanged, and the bullet still ends with ';'."
+   },
+   {
+    "id": "numpy-d2-221",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "'...ആദ്യത്തെ dimension broadcasting expand ചെയ്യും. അതിനാൽ `b -> (2, 2, 2)` ആകും;'. This is identical to the editor's split ('...expand ചെയ്യും. അതിനാൽ `b -> (2, 2, 2)` ആകും;'). It is well-formed and the meaning is unchanged."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d2-222",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d2-222",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Both sentences are finite and complete. The second, 'അതിനാൽ `b -> (3, 2, 2)` ആകും.', stands on its own with its connective. The ref has the identical full stop before അതിനാൽ, inside the same conditional list item."
+   },
+   {
+    "id": "numpy-d2-222",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Split before അതിനാൽ ('therefore'). The first sentence (the if-clause plus 'will expand') is a complete finite sentence. English 'so that' marks a result, and അതിനാൽ ... ആകും keeps that meaning. The editor split in the same place with the same connective."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d2-235",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d2-235",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor put a full stop at the same point (after ചെയ്യപ്പെട്ടിരിക്കുന്നു). He also swapped the pronoun for 'അങ്ങനെ ... `b` മാറുന്നു'. Both sentences in NEW are well-formed. Probable minor issue, and not caused by the split: as a new sentence, 'അത്' could be read as pointing to `a` rather than `b`. The comma version already had the same ambiguity, and the editor made the subject explicit."
+   },
+   {
+    "id": "numpy-d2-235",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Split after 'is bound' (bind ചെയ്യപ്പെട്ടിരിക്കുന്നു), a complete finite clause. The editor split here too, but opened his second sentence with അങ്ങനെ ('so') and named `b` instead of using അത്. After the split, അത് most likely still points to `b`, the topic of the first sentence, though a reader could take it as `a`. The comma version had the same ambiguity. The parenthetical now attaches to the second sentence only; the editor made it a separate sentence, which is a small point. Probably acceptable."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d2-245",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d2-245",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "The editor did not split. He rewrote the clause as a relative ('act ചെയ്യുന്ന ... versions'). NEW gives two complete finite sentences, and the cleft 'ഇവ ... ആയാണ് act ചെയ്യുന്നത്:' reads naturally on its own. The colon still introduces the code on the element-wise statement. This shape matches site 309, where the editor himself wrote 'ഉണ്ട്. ഇവയെല്ലാം ...:'. The restrictive sense of the English 'that' was already lost in OLD, so the split does not change the meaning (probable)."
+   },
+   {
+    "id": "numpy-d2-245",
+    "verdict": "acceptable",
+    "defect_class": "restrictive-relative-detached (benign)",
+    "editor_same_split": "no-restructured",
+    "note": "The English 'versions ... that act element-wise' is a restrictive relative clause. The editor rewrote it as a relative participle (act ചെയ്യുന്ന ... versions), with no comma and no split. The draft had already turned it into a coordinated clause with ഇവ ('these'), so the split does not change the meaning further: NumPy's versions do act element-wise. Both sentences are well-formed. The closing colon stays on the second sentence, which is the claim the following code illustrates, so the lead-in to the code is intact. The editor would probably restructure this paragraph whichever form he received, but would not restore the comma. Probably acceptable."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d2-255",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d2-255",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The ref splits at the same ഇത്, inside the same parenthesis. Both sentences are finite. A nominative 'ഇത് ... ചെയ്യാൻ കഴിയും' (prescriptively ഇതിന്) is a draft issue, not a split issue. The later comma before 'മിക്ക സമയത്തും ഇത്' is correctly left alone."
+   },
+   {
+    "id": "numpy-d2-255",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Split after '... has a powerful version' (ഉണ്ട്), before ഇത് ('this'). The editor split at exactly this point inside the parenthesis. ഇത് clearly refers to the JAX version. The draft's 'ഇത് ... ചെയ്യാൻ കഴിയും' (subject not in the dative case that കഴിയും usually takes) and the second comma are draft issues, not caused by the split."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d3-277",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d3-277",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Same split as the ref: 'ആണ്. ഇതിനെ ... എന്ന് വിളിക്കുന്നു.' Both sentences are complete, and ഇതിനെ refers back to the array data type. The hard line break inside the second sentence is source wrapping and harmless."
+   },
+   {
+    "id": "numpy-d3-277",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Same as the editor: '... ഒരു array data type ആണ്. ഇതിനെ ... എന്ന് വിളിക്കുന്നു.' ('... is an array data type. It is called ...'). The line break carried over from the English source is harmless."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d3-300",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d3-300",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The ref splits at the same point ('നോക്കുക. ഇത് ...'). The imperative first sentence and the copular second sentence are both well-formed. The editor also split before പക്ഷേ, which is outside this repair's scope."
+   },
+   {
+    "id": "numpy-d3-300",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The first clause ends in an imperative, കാണുക ('see'), which is finite. ഇത് ('this') clearly refers to np.asarray. The editor split here too. He also split before പക്ഷേ ('but'), which the repair does not do and which is out of scope. Meaning unchanged."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d3-309",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d3-309",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Identical to the ref: 'methods ഉണ്ട്. ഇവയെല്ലാം ... optimize ചെയ്തിരിക്കുന്നു:'. Both sentences are complete, and the colon still introduces the code on the second sentence, as the editor has it."
+   },
+   {
+    "id": "numpy-d3-309",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Identical to the editor's split: 'Arrays-ന് useful ആയ methods ഉണ്ട്. ഇവയെല്ലാം ... optimize ചെയ്തിരിക്കുന്നു:' ('Arrays have useful methods. All of these are ... optimized:'). The colon still introduces the code that follows."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d3-326",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d3-326",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Identical to the ref: '`for` loops ഒഴിവാക്കാം. ഇത് ... സഹായിക്കുന്നു, ഒപ്പം'. Both clauses are finite. The trailing ഒപ്പം that links to the next bullet is unaffected."
+   },
+   {
+    "id": "numpy-d3-326",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Inside the bullet, split after 'can be avoided' (ഒഴിവാക്കാം), before ഇത് ('this'). The result matches the editor's text exactly (sim_new 1.0). The ഒപ്പം ('and') that carries over to the next bullet is kept."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d3-327",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d3-327",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The ref splits at the same boundary. He wrote 'അനുവദിക്കുന്നു. Arrays വലുതാകുമ്പോൾ ഇത് പ്രധാനമാണ്.', with the pronoun moved later. NEW's 'കഴിയും. ഇത് arrays വലുതായിരിക്കുമ്പോൾ പ്രധാനമാണ്.' is well-formed. ഇത് clearly refers to the capability in the previous sentence."
+   },
+   {
+    "id": "numpy-d3-327",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "English 'which can be important' refers to the whole preceding clause. ഇത് ('this') after the full stop picks it up correctly, and the editor split at the same place with ഇത്. Losing 'can' ('can be important' becomes 'is important') is a draft issue; the editor's text drops it too."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d3-378",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d3-378",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "This is the same paragraph as d2-245 in a different draw (പ്രവർത്തിക്കുന്നത് instead of act ചെയ്യുന്നത്). The editor used a relative clause instead of splitting. NEW's two sentences are complete, and the ഇവ-sentence ending in a colon matches the shape he wrote at 309. The meaning is unchanged relative to OLD (probable)."
+   },
+   {
+    "id": "numpy-d3-378",
+    "verdict": "acceptable",
+    "defect_class": "restrictive-relative-detached (benign)",
+    "editor_same_split": "no-restructured",
+    "note": "Same paragraph as numpy-d2-245, from a different draw. The editor used a relative participle, with no split. Split reads '... versions NumPy നൽകുന്നു. ഇവ arrays-ൽ element-wise ആയാണ് പ്രവർത്തിക്കുന്നത്:' ('NumPy provides versions ... These act element-wise on arrays:'). Both sentences are well-formed, the meaning is the same as the comma version, and the colon before the code survives. Probably acceptable, though the editor would likely rewrite it as a relative participle."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d3-382",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d3-382",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Split after the finite verb 'work ചെയ്യുന്നു'. Second sentence 'ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ ... ലഭിക്കുന്നു.' is complete, and ഇവയെ refers back cleanly to the operations. The editor's ref splits at exactly this point with the same opener."
+   },
+   {
+    "id": "numpy-d3-382",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The split falls after 'element-wise ആയി work ചെയ്യുന്നു.' and the next sentence opens 'ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ'. The editor split at exactly this point with the same opening pronoun. Both clauses are finite, ഇവയെ refers back to the arithmetic operations, and the meaning is unchanged."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d3-388",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d3-388",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Split after 'version ഉണ്ട്' (finite). The editor's ref makes the same split ('...ഉണ്ട്. ഇത് സാധാരണയായി...'). The nominative 'ഇത് ... ചെയ്യാൻ കഴിയും' (ഇതിന് would be better) is a draft issue that was already there, not caused by the split. The leading 'നമുക്ക് കാണാം,' now covers only the first sentence, but the editor's version does the same."
+   },
+   {
+    "id": "numpy-d3-388",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The split falls after 'version ഉണ്ട്.' and the next sentence opens with ഇത്, as in the editor's ref ('...version ഉണ്ട്. ഇത് സാധാരണയായി...'). Both sentences stay inside the parentheses, as in the ref. The split takes the second sentence outside the scope of 'നമുക്ക് കാണാം', but the editor did the same. The nominative ഇത് with കഴിയും (probably should be ഇതിന്) was already in the draft and is not caused by the split."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d4-427",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d4-427",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Split after the finite copula 'ആണ്'. It matches the editor's 'ബന്ധപ്പെട്ടതാണ് `np.empty`. ഇത് ...'. The second sentence ends in a dangling relative nominal '...നിറയ്ക്കാൻ കഴിയുന്നത്:'. That flaw was already in the draft (it is identical in old), and the split neither creates nor worsens it."
+   },
+   {
+    "id": "numpy-d4-427",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The split after '`np.empty` ആണ്.' followed by 'ഇത് memory-ൽ...' matches the editor's split ('ബന്ധപ്പെട്ടതാണ് `np.empty`. ഇത് memory-യിൽ...'). The colon that introduces the code stays at the end of the second sentence. The awkward tail 'പിന്നീട് data-കൊണ്ട് നിറയ്ക്കാൻ കഴിയുന്നത്:' was already in the draft; the editor rewrote it as a separate sentence. The split does not cause that problem."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d4-433",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d4-433",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "First clause ends in the imperative 'കാണുക', which is finite. Second sentence 'ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ ...' stands alone. The editor split at the same point and also made a further split before പക്ഷേ, which this repair does not attempt."
+   },
+   {
+    "id": "numpy-d4-433",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The first clause ends in the imperative 'കാണുക', which is finite. The second sentence opens 'ഇത് സമാനമായ ഒരു function ആണ്, പക്ഷേ...', and the editor split at the same place ('എന്നതും നോക്കുക. ഇത് similar ആയ...'). The editor also split again at പക്ഷേ, which the new repair does not do and does not need to."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d4-442",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d4-442",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Identical to the editor's ref: 'methods ഉണ്ട്. ഇവയെല്ലാം carefully optimize ചെയ്തിരിക്കുന്നു:'. The colon that introduces the following code stays on the second sentence, so the list introduction is intact."
+   },
+   {
+    "id": "numpy-d4-442",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The new output matches the editor's ref word for word: 'Arrays-ന് useful ആയ methods ഉണ്ട്. ഇവയെല്ലാം carefully optimize ചെയ്തിരിക്കുന്നു:'. The colon introducing the list stays at the end of the second sentence, as in the ref."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d4-459",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d4-459",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Bullet item. The split after 'ഒഴിവാക്കാം' (finite modal) matches the editor's 'ഒഴിവാക്കാം. ഇത് ... സഹായിക്കുന്നു, ഒപ്പം'. The trailing 'കൂടാതെ' carries on into the next bullet just as the editor's 'ഒപ്പം' does."
+   },
+   {
+    "id": "numpy-d4-459",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "In this bullet item the split after 'ഒഴിവാക്കാം.' followed by 'ഇത് numerical code ... സഹായിക്കുന്നു, കൂടാതെ' matches the editor ('ഒഴിവാക്കാം. ഇത് numerical code വേഗത്തിൽ ... സഹായിക്കുന്നു, ഒപ്പം'). The trailing connective that carries on to the next bullet is kept."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d4-501",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d4-501",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Split after 'bind ചെയ്യപ്പെടുന്നു' (finite passive), at the same point as the editor. Both sentences are well-formed. One caveat: the editor opened his second sentence with 'അങ്ങനെ' and named `b` again as the subject instead of using a bare pronoun. A sentence-initial 'അത്' could probably be read as `a`, although topic continuity favours `b`. That ambiguity was already in the comma version, and the full stop may sharpen it slightly. The editor would probably change the opener but not undo the split."
+   },
+   {
+    "id": "numpy-d4-501",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor split at the same place ('bind ചെയ്യപ്പെട്ടിരിക്കുന്നു. അങ്ങനെ, ... `b` മാറുന്നു'). He also replaced the pronoun അത് with an explicit `b` and added അങ്ങനെ. That suggests a sentence-initial അത് reads a little weakly after the break, since `a` is the nearest noun. In meaning, though, 'another reference to the array' can only refer to `b`, so the referent is recoverable. The split is probably acceptable. The editor would likely also make the pronoun explicit, but that is a separate edit."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d4-515",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d4-515",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Same sentence as d3-382. The split after 'work ചെയ്യുന്നു' matches the editor's split and 'ഇവയെ' opener, and the second sentence is complete. The draft's trailing colon (the English has a full stop) was there before the split and is not caused by it."
+   },
+   {
+    "id": "numpy-d4-515",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "This is the same English paragraph as d3-382. The split after 'work ചെയ്യുന്നു.' followed by 'ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ...' matches the editor exactly. The trailing colon was already in the draft and is unaffected."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d4-521",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d4-521",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Split after 'version ഉണ്ട്', as in the editor's ref. The second sentence is a copular clause with nominalised predicates ('ഇത് ... കഴിയുന്നതും, ... ചെയ്യുന്നതും ആണ്'). It is a little heavy but complete, and it stands alone with ഇത് referring to the JAX version."
+   },
+   {
+    "id": "numpy-d4-521",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The split after 'version ഉണ്ട്.' followed by 'ഇത് ... കഴിയുന്നതും, മിക്ക സമയത്തും ചെയ്യുന്നതും ആണ്.' matches the editor's split at the same point with ഇത്. The second sentence is a well-formed copular sentence ending in ആണ്. The English relative 'that can and usually does' is detached here too, but the editor detached it the same way."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d4-511",
+  "verdict": "acceptable",
+  "defect_class": "none",
+  "reason": "The split produces two finite, well-formed sentences. The first is 'Standard functions ആയ `log`, `exp`, `sin`, etc.-ന്റെ versions NumPy നൽകുന്നു.', a complete main clause ending in നൽകുന്നു. The second is 'ഇവ arrays-ൽ *element-wise* ആയി act ചെയ്യുന്നു:', also finite. ഇവ points back to something already said, not forward, and the first clause is a main clause, not a subordinate one. The screeners are right that a restrictive clause becomes a separate statement, but that happened earlier: the raw draft had already made the English restrictive relative into a coordinate ', ഇവ ...' clause, so it is not caused by the split. The split only turns that comma into a full stop. The possible confusion of ഇവ with the listed standard functions is also inherited from the comma version. Probable (non-native reading): the split does not make that confusion worse, because 'versions' is the head object and topic of the previous sentence, so it is still the natural antecedent. The colon now ends a sentence saying the functions act element-wise, and it still introduces the code example naturally, perhaps better, since the example presumably demonstrates element-wise action. There is no fragment, no broken list introduction and no change of meaning. The editor restructured this sentence into a pre-nominal participle ('act ചെയ്യുന്ന ... versions') rather than splitting it. However, he made exactly this comma-to-full-stop change at every comparable ', ഇവ' site he edited, so he is unlikely to revert this split. Keeping the restrictive sense would need a restructure, which is outside what this split repair does.",
+  "screens": [
+   {
+    "id": "numpy-d4-511",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "The editor made no split. He rendered the English restrictive relative clause as a participial modifier ('act ചെയ്യുന്ന ... versions'). The draft had already turned it into a coordinate 'ഇവ' clause, so the split only changes the comma to a full stop, and both sentences are finite and well-formed. The colon before the code example now sits on 'ഇവ ... act ചെയ്യുന്നു:', which still reads naturally as an introduction to the example. Minor risk (probable, not certain): 'ഇവ' could be read as the standard functions rather than the NumPy versions. That risk was already in the comma version."
+   },
+   {
+    "id": "numpy-d4-511",
+    "verdict": "unsure",
+    "defect_class": "detached-restrictive-relative (probable)",
+    "editor_same_split": "no-restructured",
+    "note": "In the English, 'that act element-wise on arrays' is a restrictive relative clause that defines NumPy's versions. The editor kept it attached as a pre-nominal participle ('...act ചെയ്യുന്ന `log`, `exp`, `sin`, തുടങ്ങിയ standard functions-ന്റെ versions NumPy നൽകുന്നു:'), with no split. The draft had already turned the clause into a coordinate one ('..., ഇവ ... act ചെയ്യുന്നു'), and the full stop now makes it a separate assertion. Both sentences are well-formed. However, ഇവ now sits a sentence away from 'versions' and may be read as referring to the listed standard functions (log/exp/sin). The clause may also lose its defining force. This is a probable weakening rather than a clear defect, and the editor's fix would be to restructure rather than simply undo the split."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d5-566",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d5-566",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Adisankar makes exactly this split ('... നോക്കുക. ഇത് similar ആയ ഒരു function ആണ്.'). The first clause is a finite imperative (കാണുക), and ഇത് clearly picks up np.asarray. The later ', പക്ഷേ' comma is untouched and is outside this split."
+   },
+   {
+    "id": "numpy-d5-566",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The first clause is a finite imperative (കാണുക), and the editor split at exactly this point (നോക്കുക. ഇത് ...). He also split again before പക്ഷേ, which the new output leaves joined by a comma. That comma is outside this site. The meaning is unchanged."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d5-575",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d5-575",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "This is the editor's split word for word ('... methods ഉണ്ട്. ഇവയെല്ലാം ...'). ഇവയെല്ലാം clearly means the methods. The colon that introduces the code stays on the second sentence, as in his reference."
+   },
+   {
+    "id": "numpy-d5-575",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "This matches the editor's split word for word: 'methods ഉണ്ട്. ഇവയെല്ലാം ...'. The colon that introduces the code stays at the end of the second sentence, as in his version, so the lead-in to the code is intact."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d5-592",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d5-592",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Same split as the editor ('`for` loops ഒഴിവാക്കാം. ഇത് numerical code ...'). ഇത് means 'avoiding loops', which reads naturally at the start of a sentence. The draft closes the bullet with a full stop instead of carrying over the English 'and' (the editor wrote 'ഒപ്പം'). That comes from the draft, not from this split."
+   },
+   {
+    "id": "numpy-d5-592",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "This is a bullet item. The editor split it at the same place: 'ഒഴിവാക്കാം. ഇത് ... സഹായിക്കുന്നു'. ഇത് refers back to avoiding loops, which is correct. The draft drops the trailing 'and' that carries on into the next bullet, but that was already missing in the draft and is not caused by the split."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d5-634",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d5-634",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor breaks the sentence at the same point but rewrites the second part as 'അങ്ങനെ, ... reference മാത്രമായി `b` മാറുന്നു'. Placed after the full stop, അത് most likely resolves to the previous sentence's subject, `b`, which is correct. The comma version leaned more towards the nearer `a`, so the split is neutral or slightly clearer. Both sentences are complete."
+   },
+   {
+    "id": "numpy-d5-634",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor split at the same point. He also rewrote the second sentence to open with അങ്ങനെ and to name `b` as its subject instead of using the bare അത്. The English is a coordinated predicate with b as the shared subject. After the full stop, അത് most plausibly picks up the topicalised '`b` എന്ന name', though it could also be read as `a`. That ambiguity was already in the comma version. Probable acceptable. If the editor reviews this, he may swap അത് for `b`."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d5-648",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d5-648",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "This matches the editor's reference exactly ('... work ചെയ്യുന്നു. ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ ...'). The first clause ends in a finite verb, and ഇവയെ clearly means the arithmetic operations."
+   },
+   {
+    "id": "numpy-d5-648",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "This is the same split the editor made: 'work ചെയ്യുന്നു. ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ ...'. The first clause is finite, and ഇവയെ correctly refers to the arithmetic operations."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d5-654",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d5-654",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor also splits the parenthetical here and opens the second sentence with ഇത്. He does reshape the first clause ('പിന്നീട് നമ്മൾ കാണും: JAX-ന് ... ഉണ്ട്.') so that the version becomes the subject of the main clause. In the draft, the referent sits inside the ഉണ്ടെന്ന് clause of 'കാണാം', but ഇത് + 'generate code' still points to the version (or JAX, which gives nearly the same meaning). Both sentences are complete. The second sentence's clumsy 'കഴിയുന്നതും ... ചെയ്യുന്നതും ആണ്' was already in the draft."
+   },
+   {
+    "id": "numpy-d5-654",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor also split before 'ഇത് ... generate ചെയ്യും'. He first reshaped the first clause into 'പിന്നീട് നമ്മൾ കാണും: JAX-ന് ... ഉണ്ട്.' In the draft the antecedent sits inside a -എന്ന് complement, so after the split the claim about efficient code is no longer inside the scope of 'we'll see'. The editor's version has the same effect. Both sentences stay inside the parentheses. Probable acceptable."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d6-697",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d6-697",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "The editor folds 'which is the length' into a relative participle ('length ആയ ഒരു element മാത്രമാണുള്ളത്') and makes the parenthetical its own sentence. The draft's split still gives two well-formed sentences: 'മാത്രമേ ... ഉള്ളൂ.' is finite, and അത് resolves to the element, which is the nominative subject. The possessor 'shape tuple-ന്' is dative, so the pronoun does not pick it up. Meaning is unchanged. The hard line break before the parenthetical comes from the source."
+   },
+   {
+    "id": "numpy-d6-697",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "The English 'which is the length' is a non-restrictive relative clause, so turning it into a separate sentence keeps the meaning. The editor did not split here. He folded it into a prenominal clause (length ആയ ഒരു element) and split only before the parenthetical. The draft's 'ഒരു element മാത്രമേ ഉള്ളൂ. അത് array-യുടെ length ആണ്' is natural, and അത് refers to the element because the tuple cannot be 'the length'. The parenthetical now attaches to the second sentence, which is harmless. Probable acceptable."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d4-530",
+  "verdict": "acceptable",
+  "defect_class": "none",
+  "reason": "The split turns '... ലഭ്യമാണ്, ഇത് ... collection ആണ്.' into two sentences. Both are well-formed. The first ends in the finite copular ലഭ്യമാണ്, so it is not subordinate. The second is a complete equative sentence (ഇത് ... ഒരു collection ആണ്), so it is not a fragment. ഇത് points back, not forward. The editor split at exactly the same place in ref. The difference is that he opened the second sentence with 'SciPy' instead of ഇത്. Across a full stop, ഇത് could in principle echo the topic 'ഈ functionality'. But 'a collection of modules built on top of NumPy' fits only SciPy, so the meaning is still clear. The same ambiguity was already in the comma version, so the split did not create it. Changing ഇത് to SciPy is a word choice that goes beyond the split. It is not a reason to revert the full stop. My verdict is 'probable' because our Malayalam reading is non-native: the split is sound, and the editor might still swap ഇത് for SciPy.",
+  "screens": [
+   {
+    "id": "numpy-d4-530",
+    "verdict": "unsure",
+    "defect_class": "pronoun-referent-ambiguity",
+    "editor_same_split": "yes",
+    "note": "Both sentences are complete and well-formed. Adisankar also breaks the sentence at this point, but he opens the second sentence with the noun, not the pronoun ('... collection ആണ് SciPy.'). Once ഇത് starts a new sentence it can point back to 'ഈ functionality' (the topic, echoed by the proximal ഈ/ഇത്) as well as to SciPy. With the comma, the nearest noun (SciPy) is the likelier reading. Meaning is probably still recoverable from 'collection of modules'. Probably acceptable, but the editor both times chose not to let ഇത് carry the reference."
+   },
+   {
+    "id": "numpy-d4-530",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor split at the same place, after ലഭ്യമാണ്. His second sentence names SciPy instead of using ഇത്. In the draft, ഇത് could echo 'ഈ functionality', but 'collection of modules' makes SciPy the only sensible reading. This ambiguity was already in the comma version, so the split does not cause it. Both sentences are finite and well-formed (probable)."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d5-644",
+  "verdict": "acceptable",
+  "defect_class": "none (pre-existing restrictive-relative loss, not caused by split)",
+  "reason": "The split is well-formed and does not change the meaning. The first sentence ('Standard functions ആയ `log`, `exp`, `sin` എന്നിവയുടെ versions NumPy നൽകുന്നു.') is a finite clause with the verb നൽകുന്നു, so it is not a fragment. The second sentence ('ഇവ arrays-ൽ *element-wise* ആയാണ് act ചെയ്യുന്നത്:') is a complete cleft sentence that focuses on 'element-wise'. A resumptive ഇവ at the start of a sentence reads naturally, and the trailing colon still introduces the code block that follows. Both screeners raised two concerns, and neither comes from the split. First, the English restrictive relative ('versions ... that act element-wise') had already become a separate, non-restrictive assertion in the raw draft's comma construction. Second, ഇവ could refer to either 'versions' or the listed functions, but that ambiguity is identical with the comma. Changing the comma to a full stop only makes explicit a sentence boundary the draft already implied. The editor restructured the sentence into a single one with a prenominal relative ('... act ചെയ്യുന്ന ... versions NumPy നൽകുന്നു:'), so he would rewrite this site whichever way it was split. That makes the result different from his wording, but it is not a defect the split introduced. Our reading is non-native, so this is a probable acceptable: the result is no worse than the comma draft and is probably slightly cleaner.",
+  "screens": [
+   {
+    "id": "numpy-d5-644",
+    "verdict": "unsure",
+    "defect_class": "restrictive-relative-split",
+    "editor_same_split": "no-restructured",
+    "note": "Both sentences are grammatically complete. However, the English 'that act element-wise' is a restrictive relative: it describes which versions NumPy provides. The editor kept one sentence, using a relative participle ('... act ചെയ്യുന്ന ... versions NumPy നൽകുന്നു:'). After the split, the defining property becomes a separate claim, and sentence-initial ഇവ could be read as the listed standard functions (log/exp/sin എന്നിവ) rather than the NumPy versions. The draft's comma already lost the restrictive sense, so the split probably makes things only slightly worse. Probably acceptable."
+   },
+   {
+    "id": "numpy-d5-644",
+    "verdict": "unsure",
+    "defect_class": "restrictive-relative-detached",
+    "editor_same_split": "no-restructured",
+    "note": "In the English, 'that act element-wise' is a restrictive relative clause on 'versions'. The editor kept it as a prenominal relative clause in a single sentence ending with a colon, with no split. The split output reads 'NumPy provides versions of log, exp, sin. These act element-wise on arrays:'. That is grammatical, and the colon now introduces the code from the second sentence, which still works. However, the restrictive clause becomes a separate assertion, and ഇവ could be read as the standard functions in general rather than NumPy's versions. The comma version already detached the clause, so this is a probable minor drift at worst."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d5-663",
+  "verdict": "acceptable",
+  "defect_class": "none",
+  "reason": "This is a probable acceptable. Both sentences are complete: the first ends in the finite verb ലഭ്യമാണ് and the second in the copula ആണ്, so there is no fragment and no verbless sentence. The first clause is main, not subordinate, and nothing refers forward. The editor split at exactly this comma (ref: '...-യിലും ലഭ്യമാണ്. NumPy-യുടെ മുകളിൽ ... collection ആണ് SciPy.'). The only difference is that he names SciPy instead of opening with ഇത്. The ഇത് referent is the same as in the comma version, so the split does not change the meaning. The predicate 'collection of modules built on top of NumPy' can only describe SciPy, not the functionality, so the referent resolves on meaning. A sentence-opening ഇത് that points back to an entity just named is normal Malayalam. This is the same English paragraph and the same split as numpy-d4-530, where ഇത് also opens the second sentence. A native speaker might still prefer the editor's version that names SciPy, but that is a style choice, not a defect in the split.",
+  "screens": [
+   {
+    "id": "numpy-d5-663",
+    "verdict": "unsure",
+    "defect_class": "pronoun-referent-ambiguity",
+    "editor_same_split": "yes",
+    "note": "Same English paragraph and same editor reference as numpy-d4-530. He breaks the sentence here too but names SciPy explicitly instead of using ഇത്. Once ഇത് opens a new sentence, it competes between the topic 'ഈ functionality-യിൽ മിക്കതും' and SciPy. Both sentences are grammatically complete. Probably acceptable, but the bare pronoun is weaker than in the comma version."
+   },
+   {
+    "id": "numpy-d5-663",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "This is the same paragraph as d4-530, and the editor split at the same place, naming SciPy explicitly. ഇത് could echo 'ഈ functionality', but 'collection of modules' resolves it to SciPy. The ambiguity was already in the comma version. Probable acceptable."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d6-702",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d6-702",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Split at 'create ചെയ്യുന്നു. അവയിൽ പിന്നീട് data നിറയ്ക്കാം:'. Both clauses are finite. The second sentence stands on its own: അവയിൽ refers back to the arrays, and the colon still introduces the code. The editor split at the same point (അതിലേക്ക് ...). The earlier comma after np.empty ('..., ഇത്') is still there, but that is not this split."
+   },
+   {
+    "id": "numpy-d6-702",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Split at ', അവയിൽ' after the finite 'create ചെയ്യുന്നു'. അവയിൽ points back to arrays and the colon still introduces the code. The editor split at the same place ('...create ചെയ്യുന്നു. അതിലേക്ക് പിന്നീട്...'). He also split at the earlier ', ഇത്' after np.empty, which the repair left alone. That missed split is not a defect in this one."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d6-708",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d6-708",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The imperative 'കാണുക' is a finite ending, so the first sentence is complete. 'ഇത് സമാനമായ ഒരു function നിർവ്വഹിക്കുന്നു, പക്ഷേ ...' is well formed, and ഇത് clearly refers to np.asarray. The editor split at exactly this point. He also split again before പക്ഷേ, but the new repair was not meant to do that."
+   },
+   {
+    "id": "numpy-d6-708",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The first clause is a finite imperative ('എന്നതും കാണുക'). The second sentence opens with ഇത്, which refers back to np.asarray. The editor split at the same place ('എന്നതും നോക്കുക. ഇത് similar ആയ...'). The meaning is unchanged, and the 'പക്ഷേ' contrast stays inside the second sentence as it does in the English."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d6-717",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d6-717",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "'methods ഉണ്ട്. അവയെല്ലാം ... optimize ചെയ്തിരിക്കുന്നു:' gives two complete sentences, and the pronoun refers back to methods. The editor made the same split (he wrote ഇവയെല്ലാം). The colon before the code is kept."
+   },
+   {
+    "id": "numpy-d6-717",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The English relative clause 'all of which' is non-restrictive. The editor made the identical split ('methods ഉണ്ട്. ഇവയെല്ലാം ... optimize ചെയ്തിരിക്കുന്നു:'), using ഇവ where the draft has അവ. The colon still introduces the code."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d6-734",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d6-734",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "This is a bullet whose English continues on the next line. The split 'ഒഴിവാക്കാൻ കഴിയും. ഇത് ... സഹായിക്കുന്നു, ഒപ്പം' matches the editor's own version exactly, including the trailing ', ഒപ്പം'. കഴിയും is finite, and ഇത് refers back to avoiding loops."
+   },
+   {
+    "id": "numpy-d6-734",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The split is inside the bullet, after the finite 'ഒഴിവാക്കാൻ കഴിയും'. ഇത് refers back to avoiding loops, which matches the English 'which helps'. The editor made the same split ('ഒഴിവാക്കാം. ഇത് ... സഹായിക്കുന്നു, ഒപ്പം'). The trailing 'ഒപ്പം' continuation is untouched."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d6-736",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d6-736",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "'... ആണെന്ന് കരുതുക (...). അതേസമയം `b` ... ആണ് (...).' The editor split in the same place, with അതേസമയം opening the second sentence. After the split, 'suppose' no longer formally covers the clause about b, but the editor accepted the same outcome."
+   },
+   {
+    "id": "numpy-d6-736",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The split puts 'അതേസമയം b ... ആണ്' outside the scope of 'കരുതുക' (suppose), so strictly b becomes an assertion rather than part of the supposition. The editor made exactly this split with അതേസമയം, and context keeps the meaning clear, so this matches his practice."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d6-776",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d6-776",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Both sentences are finite: '... bind ചെയ്യപ്പെട്ടിരിക്കുന്നു.' and 'ഇത് ... reference ആയി മാറുന്നു (...).' The editor split at the same point. He also rewrote the second sentence to open with 'അങ്ങനെ, ...' and named `b` explicitly instead of using ഇത്. Probably at the start of a sentence ഇത് is slightly less clearly tied to b (it could be read as 'this binding'). That is a clarity nit, not a grammar defect, and the comma version had the same weakness."
+   },
+   {
+    "id": "numpy-d6-776",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Probable acceptable. The editor split at the same boundary, but he rewrote the second sentence to 'അങ്ങനെ, ... b മാറുന്നു', naming b explicitly instead of using ഇത്. That suggests he found the bare pronoun weak, but the ambiguity was already in the comma version and the split did not cause it. ഇത് most naturally resolves to the subject 'b എന്ന name'. The parenthetical stays with the second sentence."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d6-790",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "numpy-d6-790",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "'... work ചെയ്യുന്നു. ഇവയെ ufuncs-ഉമായി combine ചെയ്യുന്നത്, ... set നൽകുന്നു.' The editor split at the same point, also opening with ഇവയെ (he used ...ചെയ്യുമ്പോൾ). The second sentence has a nominalised subject and a finite verb, so it stands on its own."
+   },
+   {
+    "id": "numpy-d6-790",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The first clause is finite ('work ചെയ്യുന്നു'), and ഇവയെ refers back to the arithmetic operations. The editor split at the same place and opened with the same pronoun ('... work ചെയ്യുന്നു. ഇവയെ ufuncs-ഉമായി combine ചെയ്യുമ്പോൾ...'). The meaning is unchanged."
+   }
+  ]
+ },
+ {
+  "id": "functions-d1-9",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d1-9",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "'... already exist ചെയ്യുന്നു. അവ നമുക്ക് അതേപടി ഉപയോഗിക്കാം.' The editor split in the same place. He used the accusative അവയെ, but the unmarked അവ is also acceptable for an inanimate object, and that choice comes from the draft, not the split."
+   },
+   {
+    "id": "functions-d1-9",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor made the same split ('... functions ഉണ്ട്. അവയെ നമുക്ക് അതേപടി ഉപയോഗിക്കാൻ പറ്റും.'). The draft uses nominative-form അവ as the object where he has അവയെ. That is a wording difference, not caused by the split, and probably acceptable for inanimate objects."
+   }
+  ]
+ },
+ {
+  "id": "functions-d1-16",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d1-16",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "Probable. 'മറ്റൊരു example താഴെ കാണാം. ഇത് ... test ചെയ്യുന്നു:' gives two complete sentences, and ഇത് refers back to the example just named. The colon that introduces the code moves to the second sentence and still leads into the code block. The editor rewrote it as a single relative-clause sentence ending in 'താഴെ കാണാം:', so he may prefer one sentence for 'X, which Y:' lead-ins. The split is grammatical, though, and no worse than the comma splice."
+   },
+   {
+    "id": "functions-d1-16",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "Probable acceptable. The English 'which tests...' is a non-restrictive relative clause. The editor folded it into one sentence with a relative participle ('... test ചെയ്യുന്ന മറ്റൊരു ഉദാഹരണം താഴെ കാണാം:'), so he did not split. After the split, ഇത് refers back to 'മറ്റൊരു example', both sentences are finite, and the colon stays on the sentence directly before the code. So the code introduction still works and the meaning is preserved. The editor would likely rewrite this sentence, but not because of the split."
+   }
+  ]
+ },
+ {
+  "id": "numpy-d6-786",
+  "verdict": "acceptable",
+  "defect_class": "none (probable; minor restrictive-to-appositive shift already present in the draft)",
+  "reason": "Probable. The split gives '... standard functions-ന്റെ versions NumPy നൽകുന്നു.' and 'അവ arrays-ൽ *element-wise* ആയി പ്രവർത്തിക്കുന്നു:'. The first clause ends in the finite verb നൽകുന്നു, so it is not subordinate. The second has its own finite verb. Neither is a fragment or verbless. അവ points back to the versions, the head noun and the most natural antecedent. Even if a reader took it as 'the functions', in context these are NumPy's functions, so the meaning holds. The colon now closes a sentence that states the element-wise property, and it still leads into the code example, so the list/code introduction is not broken. The one cost is that the English restrictive relative ('versions ... that act element-wise') becomes a separate assertion. That shift was already made by the raw draft's comma coordination, and the split does not add it. Since every NumPy version of these functions does act element-wise, the restrictive and non-restrictive readings mean the same thing here. The editor restructured the sentence into a relative participle (act ചെയ്യുന്ന ... versions NumPy നൽകുന്നു:), so he would rewrite it whether or not it is split. His rewrite is a stylistic preference, not a sign the split is wrong. The split reads at least as well as the comma splice and keeps the meaning.",
+  "screens": [
+   {
+    "id": "numpy-d6-786",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "Probable. 'NumPy നൽകുന്നു. അവ arrays-ൽ *element-wise* ആയി പ്രവർത്തിക്കുന്നു:' gives two well-formed sentences. അവ (plural) refers back to the versions, and the colon before the code is now on the second sentence, which works. The editor turned it into a single restrictive relative clause (act ചെയ്യുന്ന ... versions), so he would probably rewrite this sentence either way. Still, the split does not read worse than the comma splice and keeps the meaning."
+   },
+   {
+    "id": "numpy-d6-786",
+    "verdict": "unsure",
+    "defect_class": "restrictive-relative-detached (probable, minor)",
+    "editor_same_split": "no-restructured",
+    "note": "In the English, 'versions ... that act element-wise' is a restrictive relative clause. The editor kept one sentence, turning it into a Malayalam relative participle ('... act ചെയ്യുന്ന ... versions NumPy നൽകുന്നു:'). The split leaves 'NumPy provides versions of log, exp, sin' as a thin standalone claim and makes the defining property a separate assertion. അവ could also be read as the standard functions rather than NumPy's versions. Both sentences are well-formed and the information survives. Most of the harm was already in the draft's comma coordination, so the split adds little. This is the one site in this batch where the pattern plausibly misfires."
+   }
+  ]
+ },
+ {
+  "id": "functions-d1-21",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d1-21",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "First clause ends in the finite copula 'ആണ്'. The second sentence 'ഇത് ... കണക്കാക്കുന്നു' is complete on its own, with 'ഇത്' referring back to the function. The editor also broke into two sentences at this point, though he opened the second with 'ഈ function ഉപയോഗിച്ച്,' and reworded both halves."
+   },
+   {
+    "id": "functions-d1-21",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Both clauses are finite (…function ആണ് / ഇത് … കണക്കാക്കുന്നു), and ഇത് clearly points back to the function. The editor also broke the paragraph into two sentences at this boundary, though he opened the second with 'ഈ function ഉപയോഗിച്ച്' rather than ഇത്. Meaning is unchanged: 'that computes' is a non-restrictive relative, so it can stand as its own sentence."
+   }
+  ]
+ },
+ {
+  "id": "functions-d1-31",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d1-31",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "'...execution അവസാനിക്കുന്നു.' is finite. In 'ഇത് ... code സാധ്യമാക്കുന്നു:', 'ഇത്' refers back to the whole event (execution ending), which is natural in Malayalam, and the sentence still introduces the code. The editor split at the same place, opening with 'അതിനാൽ' where the draft has 'ഇത്'."
+   },
+   {
+    "id": "functions-d1-31",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The editor split at the same point and used അതിനാൽ as the connective. Here ഇത് refers back to the whole event of execution terminating, which reads naturally ('this makes code like the following possible'). The colon that introduces the code stays at the end of the second sentence, so the lead-in to the code block is intact."
+   }
+  ]
+ },
+ {
+  "id": "functions-d1-80",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d1-80",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-other",
+    "note": "Split inside a bullet. '...\"synonyms\" ആണ്.' is finite, and 'അവ ഒരേ വിധത്തിൽ ഉപയോഗിക്കാം.' stands alone (the 'അവ' vs 'അവയെ' case was already like this before the split). The editor put a stronger break here too, but used a semicolon plus 'അതായത്' and kept one sentence. A full stop is a reasonable equivalent. Probably would not be reverted, but he may prefer the bullet stay a single sentence."
+   },
+   {
+    "id": "functions-d1-80",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-other",
+    "note": "The editor did not keep the comma. He used a semicolon plus അതായത്, so he also treated this as two clauses; the full stop is a slightly stronger break of the same kind. Both sentences are complete, and അവ refers back to the two names. One small point: the English 'While these lines are executed' covers both predicates, and after a full stop the second sentence carries that time frame only by context. Inside a single bullet the probable reading is unchanged."
+   }
+  ]
+ },
+ {
+  "id": "functions-d2-109",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d2-109",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "'...exist ചെയ്യുന്നു. അവയെ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.' has two finite clauses. The editor split at exactly this point and opened his second sentence with 'അവയെ' as well."
+   },
+   {
+    "id": "functions-d2-109",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "This matches the editor exactly: he also has two sentences, with the second opening 'അവയെ നമുക്ക് അതേപടി…'. Both clauses are finite, and അവയെ refers back to the functions."
+   }
+  ]
+ },
+ {
+  "id": "functions-d2-116",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d2-116",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "'മറ്റൊരു example താഴെ കാണാം.' is finite (modal '-ആം'). 'ഇത് ... ആണോ എന്ന് പരിശോധിക്കുന്നു:' is a complete sentence and still introduces the code with its colon. The editor rewrote the paragraph as one sentence with a relative clause ('...test ചെയ്യുന്ന മറ്റൊരു ഉദാഹരണം താഴെ കാണാം:'), so this is not his split, but the split itself is well-formed."
+   },
+   {
+    "id": "functions-d2-116",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "The editor did not split here. He folded the English 'which tests…' into a relative-participle phrase (test ചെയ്യുന്ന മറ്റൊരു ഉദാഹരണം). The split version is still sound. The relative clause is non-restrictive, so a separate 'ഇത് … പരിശോധിക്കുന്നു:' keeps the meaning, and ഇത് refers back to the example. The colon introducing the code stays at the end, so the lead-in works. It is probably no worse than the comma version, which the editor would have rewritten anyway."
+   }
+  ]
+ },
+ {
+  "id": "functions-d3-209",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d3-209",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Same shape as d2-109. 'പല functions-ഉം already exist ചെയ്യുന്നു. അവയെ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.' has two finite clauses, and the editor split at the same point with 'അവയെ'."
+   },
+   {
+    "id": "functions-d3-209",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Same case as d2-109: two finite clauses, and അവയെ refers back to the functions. The editor split at this same boundary."
+   }
+  ]
+ },
+ {
+  "id": "functions-d3-216",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d3-216",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "Same as d2-116 ('test ചെയ്യുന്നു' in place of 'പരിശോധിക്കുന്നു'). Both sentences are finite and the second still introduces the code. The editor restructured into a single relative-clause sentence rather than splitting."
+   },
+   {
+    "id": "functions-d3-216",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "Same case as d2-116. The editor restructured into a single relative-participle sentence and did not split. The split is still well-formed and preserves the meaning of the non-restrictive 'which tests…'. The colon lead-in to the code is kept on the second sentence."
+   }
+  ]
+ },
+ {
+  "id": "functions-d3-231",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d3-231",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Same as d1-31. '...അവസാനിക്കുന്നു.' is finite, and 'ഇത് ... example പോലുള്ള code സാധ്യമാക്കുന്നു:' stands alone and introduces the code. The editor split here too, opening with 'അതിനാൽ'."
+   },
+   {
+    "id": "functions-d3-231",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Same case as d1-31. The editor split at this point and opened the second sentence with അതിനാൽ. ഇത് referring back to the termination event reads naturally, and the colon before the code is kept."
+   }
+  ]
+ },
+ {
+  "id": "functions-d3-253",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d3-253",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "This is a list introduction (the English ends in 'by' and a bullet list follows). After the split, the first sentence '...user-defined functions പ്രധാനമാണ്.' is finite. The second, 'ഇത് താഴെ പറയുന്ന വിധത്തിൽ സാധ്യമാകുന്നു:', is a complete sentence that carries the colon, so the list introduction is not broken. The editor also split here ('...പ്രാധാന്യമുണ്ട്. കാരണം അവ:'). What 'ഇത്' refers to is a little vague, but it was the same before the split."
+   },
+   {
+    "id": "functions-d3-253",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "This paragraph introduces a bullet list; the English 'by' continues into the list items. The editor also split here, writing '…പ്രാധാന്യമുണ്ട്. കാരണം അവ:'. After the split, the second sentence 'ഇത് താഴെ പറയുന്ന വിധത്തിൽ സാധ്യമാകുന്നു:' is a complete clause that still ends in the colon, so the list lead-in is not broken. It is somewhat unclear what ഇത് refers to (the importance, or the clarity gain), but the comma version has the same ambiguity. The split is probably fine; the awkwardness is in the draft's wording, not the split."
+   }
+  ]
+ },
+ {
+  "id": "functions-d3-280",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d3-280",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-other",
+    "note": "Same as d1-80 ('രീതിയിൽ' in place of 'വിധത്തിൽ'). Both sentences in the bullet are finite and well-formed. The editor used a semicolon plus 'അതായത്' rather than a full stop. A full stop is probably acceptable to him, though he may prefer a single sentence per bullet."
+   },
+   {
+    "id": "functions-d3-280",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-other",
+    "note": "Same case as d1-80. The editor used a semicolon plus അതായത; he did not keep the comma. Both sentences are complete, and അവ refers back to the names. The 'while these lines are executed' time frame now applies to the second sentence only by context, which is probably a harmless loosening inside one bullet."
+   }
+  ]
+ },
+ {
+  "id": "functions-d3-284",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d3-284",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Both clauses are finite ('... advanced topic ആണ്.' / 'ഇത് skip ചെയ്യാൻ നിങ്ങൾക്ക് സ്വാതന്ത്ര്യമുണ്ട്.'), and the second sentence stands on its own with the anaphoric ഇത്. The editor split at the same boundary and added അതിനാൽ. The split alone drops no connective the comma version had, so the meaning is unchanged. Two sentences in a row start with ഇത്, which is slightly repetitive but grammatical."
+   },
+   {
+    "id": "functions-d3-284",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Both halves are finite (ആണ് / സ്വാതന്ത്ര്യമുണ്ട്). The second ഇത് refers back to the topic, and meaning is unchanged. The editor split at the same boundary but opened the second sentence with അതിനാൽ, which also makes the 'so feel free' link explicit. Starting two sentences in a row with ഇത് is a small style point, not a defect."
+   }
+  ]
+ },
+ {
+  "id": "functions-d4-309",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d4-309",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "'പല functions-ഉം already exist ചെയ്യുന്നു.' is finite and complete. 'അവയെ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.' stands alone, with അവയെ referring back to functions. The editor's ref has the same full stop before 'അവയെ നമുക്ക് ...'."
+   },
+   {
+    "id": "functions-d4-309",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Split at the same boundary as the editor's ('...ഉണ്ട്. അവയെ നമുക്ക്...'). The first clause is finite (exist ചെയ്യുന്നു), and അവയെ clearly refers back to the functions. Clean."
+   }
+  ]
+ },
+ {
+  "id": "functions-d4-331",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d4-331",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "First sentence ends in the finite verb അവസാനിക്കുന്നു. Second: 'ഇത് ... code സാധ്യമാക്കുന്നു:' is complete, and ഇത് refers back to the whole preceding event, not forward. The code intro keeps its colon on the second sentence. The editor split at the same place and opened the second sentence with അതിനാൽ. The stray comma after 'Function-ന്റെ execution,' is in the draft, not the split."
+   },
+   {
+    "id": "functions-d4-331",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "The first clause is finite (അവസാനിക്കുന്നു). The sentence-initial ഇത് refers back to the whole preceding event, which matches the English 'allowing...' result clause. The editor split at the same place, using അതിനാൽ instead of ഇത്. The trailing colon still introduces the code block. The stray comma after 'execution' comes from the draft, not the split."
+   }
+  ]
+ },
+ {
+  "id": "functions-d4-380",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d4-380",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-other",
+    "note": "Bullet item. '... names \"synonyms\" ആണ്.' is a complete copular sentence, and 'അവയെ ഒരേപോലെ ഉപയോഗിക്കാം.' stands alone. At the same boundary the editor used a semicolon plus അതായത് instead of a full stop, keeping it one sentence. Two sentences in a bullet are fine. The split is probably acceptable, but it is weaker than his semicolon: the 'that is' link is lost, though the meaning is not changed."
+   },
+   {
+    "id": "functions-d4-380",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-other",
+    "note": "Probably acceptable. The first clause is finite ('synonyms ആണ്'), and അവയെ refers back to the two names. The editor also broke at this point, but with a semicolon plus അതായത് ('that is'), which keeps the 'while these lines are executed' scope over both clauses. The full stop slightly narrows that temporal scope to the first sentence, but in context the reader carries it over. The editor would probably not revert it, though he might add അതായത്."
+   }
+  ]
+ },
+ {
+  "id": "functions-d5-409",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d5-409",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Same boundary as the editor's ref. 'അവ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.' is complete. The editor wrote അവയെ where the draft has nominative അവ, but that is a draft choice unrelated to the split, and the nominative is acceptable with the dative-subject modal (probable)."
+   },
+   {
+    "id": "functions-d5-409",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Same boundary as the editor's split. The first clause is finite. അവ is used as an unmarked object where the editor has അവയെ; dropping the accusative on an inanimate object is normal, and that comes from the draft, not the split. Meaning unchanged."
+   }
+  ]
+ },
+ {
+  "id": "functions-d5-416",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d5-416",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "'മറ്റൊരു example താഴെ കാണാം.' is finite (modal കാണാം) and complete. 'ഇത് ... leap year ആണോ എന്ന് പരിശോധിക്കുന്നു:' stands alone, with ഇത് pointing back to the example, and keeps the colon that introduces the code. The editor instead rewrote it as one relative-participle sentence ('test ചെയ്യുന്ന മറ്റൊരു ഉദാഹരണം താഴെ കാണാം:'). He would probably rewrite this sentence anyway, but the split itself is grammatical, and a two-sentence code intro ('Here is another. It tests ...:') reads naturally. Probable acceptable."
+   },
+   {
+    "id": "functions-d5-416",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "Probably acceptable. In English this is a non-restrictive relative clause ('which tests...'). The draft had already turned it into a comma splice with ഇത്, and the split makes two complete sentences: 'another example is below. It tests whether...:'. The colon still introduces the code, so no fragment. The editor instead folded it into one sentence with a relative participle (test ചെയ്യുന്ന മറ്റൊരു ഉദാഹരണം), so he would reword the whole line rather than revert the split. The split is an improvement over the comma splice but not his preferred form."
+   }
+  ]
+ },
+ {
+  "id": "functions-d5-431",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d5-431",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "'ആദ്യത്തെ return-ൽ എത്തിച്ചേരുമ്പോൾ function-ന്റെ execution അവസാനിക്കുന്നു.' is finite. 'ഇത് താഴെയുള്ള example പോലുള്ള code സാധ്യമാക്കുന്നു:' is complete, with ഇത് as a backward anaphor for the preceding event. The editor split at the same point (with അതിനാൽ). The colon for the code intro is preserved."
+   },
+   {
+    "id": "functions-d5-431",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Same shape as d4-331. The first clause is finite (അവസാനിക്കുന്നു), and ഇത് refers back to the termination behaviour. It matches the editor's split point (he used അതിനാൽ). The colon still introduces the code."
+   }
+  ]
+ },
+ {
+  "id": "functions-d6-509",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d6-509",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "'ധാരാളം functions ഇതിനകം exist ചെയ്യുന്നു.' is finite and complete. 'അവ അതേപടി നമുക്ക് ഉപയോഗിക്കാം.' stands alone. The editor has the same boundary."
+   },
+   {
+    "id": "functions-d6-509",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Same boundary as the editor's split. The first clause is finite (exist ചെയ്യുന്നു), and അവ refers back to the functions. It uses the unmarked object like d5-409, which comes from the draft. Meaning unchanged."
+   }
+  ]
+ },
+ {
+  "id": "functions-d6-516",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d6-516",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "Same pattern as d5-416. 'വളരെ useful ആയ മറ്റൊരു example താഴെ കാണാം.' is complete, and 'ഇത് ... test ചെയ്യുന്നു:' stands alone and introduces the code with a colon. The editor restructured into a single relative-participle sentence rather than splitting. The split is grammatical and does not change the meaning (probable). The inserted 'വളരെ useful' is a draft addition, not caused by the split."
+   },
+   {
+    "id": "functions-d6-516",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "Probably acceptable, for the same reasons as d5-416: two complete sentences, ഇത് refers back to the example, and the colon still introduces the code. The editor restructured into a single relative-participle sentence instead. The added 'വളരെ useful ആയ' is not in the English, but it is a draft problem, not the split's."
+   }
+  ]
+ },
+ {
+  "id": "functions-d6-531",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d6-531",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Identical structure to d4-331/d5-431. Both sentences are finite, the backward-referring ഇത് opens a complete second sentence ending in സാധ്യമാക്കുന്നു:, and the editor split at the same place (with അതിനാൽ)."
+   },
+   {
+    "id": "functions-d6-531",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "yes",
+    "note": "Same shape as d5-431. The first clause is finite, and the resumptive ഇത് stands for the whole preceding clause. It matches the editor's split point (he used അതിനാൽ). The colon still introduces the code."
+   }
+  ]
+ },
+ {
+  "id": "functions-d6-580",
+  "verdict": "acceptable",
+  "defect_class": "",
+  "reason": "both screeners acceptable",
+  "screens": [
+   {
+    "id": "functions-d6-580",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "Clause 1 ends in the finite copula ആണ് (\"... എന്നീ names \"synonyms\" ആണ്.\"), so it is a complete sentence. Clause 2 (\"ഇവ ഒരേ രീതിയിൽ ഉപയോഗിക്കാം.\") has a finite modal verb, and ഇവ points back to the two names just listed. There is no fragment, no list introduction and no forward-referring pronoun. The editor broke at the same point but used a semicolon plus അതായത് (\"that is\") rather than a full stop: a stronger break than the comma, though not a full stop. One small nuance: after the split, the time clause \"while these lines execute\" no longer grammatically covers the second sentence. Context still makes the meaning clear, and the English has the same loose scope. My reading is non-native, but this is probably fine and not something the editor would revert."
+   },
+   {
+    "id": "functions-d6-580",
+    "verdict": "acceptable",
+    "defect_class": "none",
+    "editor_same_split": "no-restructured",
+    "note": "The split is acceptable. The first clause is finite: the names \"synonyms\" ആണ് (\"are synonyms\"). The second sentence, ഇവ ഒരേ രീതിയിൽ ഉപയോഗിക്കാം (\"these can be used in the same way\"), is complete, and ഇവ points back to the two names, which matches \"and can be used in identical ways\" in the English. Nothing is left as a fragment, and the 'While these lines are executed' clause stays attached to the first sentence, so the meaning is unchanged. The editor broke at the same place but used a semicolon plus അതായത് ('that is') instead of a full stop. That shows he treated this as a clause boundary but wanted the two parts to stay close. A full stop inside a bullet still reads naturally (probable, non-native reading), and he is unlikely to revert it."
+   }
+  ]
+ }
+]

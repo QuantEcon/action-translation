@@ -217,7 +217,7 @@ Romance-language expansion). If one language benefits and the other doesn't, the
 outcome can be a per-language default rather than a single tool-wide value.
 
 Whatever we choose becomes a decision record in
-[`.dev/decisions/`](../../.dev/decisions/) and, if we enable thinking, a code
+[`.qe/dev/decisions/`](../../.qe/dev/decisions/) and, if we enable thinking, a code
 change: flip `DEFAULT_THINKING` (or make it per-path) **and** switch the
 translator/reviewer text extraction from `content[0]` to
 `content.filter(b => b.type === 'text')` (a thinking block lands first when

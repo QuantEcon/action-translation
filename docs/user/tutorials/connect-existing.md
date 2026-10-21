@@ -355,6 +355,7 @@ name: Sync Translations
 on:
   pull_request:
     types: [closed]
+    branches: [main]
     paths:
       - 'lectures/**/*.md'
       - 'lectures/_toc.yml'

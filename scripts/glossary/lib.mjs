@@ -36,7 +36,7 @@ export function rel(p) {
 // signal, and cutting it to save cost silently breaks the method:
 //
 //   seed  — the model that will actually do the bulk translation (Opus 4.8, per
-//           .dev/decisions/D-2026-07-14-opus-for-bulk-seed.md).
+//           .qe/dev/decisions/D-2026-07-14-opus-for-bulk-seed.md).
 //   probe — a DIFFERENT-family model, run only to disagree with the seed.
 //
 // Why a probe is needed: on the fr programming run, the seed model showed ZERO

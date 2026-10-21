@@ -21,10 +21,8 @@ docs/_build/
 # TypeScript build info
 *.tsbuildinfo
 
-# Scratch — .dev/scratch/ dir is committed (via .gitkeep) but contents are ignored
-.dev/scratch/*
-!.dev/scratch/.gitkeep
-# Legacy scratch location (retired 2026-07-05; see .dev/decisions/) — keep ignoring stale local copies
+# No scratch location in the tree (D-2026-09-21-no-scratch-in-tree in .qe/dev/decisions/);
+# legacy locations stay ignored so stale local copies remain invisible
 .tmp/
 **/*.tmp
 .cache/

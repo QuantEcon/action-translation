@@ -229,6 +229,49 @@ export interface PREventResult {
 export const RESYNC_COMMAND = '\\translate-resync';
 
 /**
+ * True when a merged PR landed on the repository's default branch.
+ *
+ * Sync mode translates what reaches the published edition, and only the
+ * default branch is published. A PR merged into a long-lived work branch (a
+ * theme migration on `jb2`, QuantEcon/lecture-python-programming#629) carries
+ * changes the edition does not yet show, and forwarding it opened translation
+ * PRs in every target repo. The workflow template filters `branches: [main]`
+ * at the trigger, but the `issue_comment` path has no such filter and deployed
+ * copies predate it, so the action checks as well.
+ *
+ * Compared against the repository's default branch rather than a hard-coded
+ * `main` so a `master` edition is unaffected. An unknown default branch or
+ * base ref cannot be checked and passes with a warning: blocking production
+ * on a payload shape this code has not seen would be the worse failure.
+ */
+export function mergedIntoDefaultBranch(
+  baseRef: string | undefined,
+  defaultBranch: string | undefined,
+  prNumber: number
+): boolean {
+  if (!defaultBranch) {
+    core.warning(
+      `Could not determine the repository default branch; assuming PR #${prNumber} landed on it.`
+    );
+    return true;
+  }
+  if (!baseRef) {
+    core.warning(
+      `Could not determine the base branch of PR #${prNumber}; assuming it landed on '${defaultBranch}'.`
+    );
+    return true;
+  }
+  if (baseRef !== defaultBranch) {
+    core.info(
+      `PR #${prNumber} was merged into '${baseRef}', not the default branch '${defaultBranch}'. ` +
+        `Skipping sync — only merges into the default branch are translated.`
+    );
+    return false;
+  }
+  return true;
+}
+
+/**
  * Validate that the event is a merged PR, test mode label, or resync comment (SYNC mode)
  *
  * Supported triggers:
@@ -273,12 +316,25 @@ export function validatePREvent(context: any, testMode: boolean): PREventResult 
   const merged = payload.pull_request?.merged === true;
   const prNumber = payload.pull_request?.number;
 
-  if (!merged) {
-    core.info('PR was closed but not merged. Skipping sync.');
-  }
-
   if (!prNumber) {
     throw new Error('Could not determine PR number from event payload');
+  }
+
+  if (!merged) {
+    core.info('PR was closed but not merged. Skipping sync.');
+    return { merged: false, prNumber, isTestMode: false, isResync: false };
+  }
+
+  // A merge into any other branch is not a publication event — see
+  // mergedIntoDefaultBranch for the incident that put this here.
+  if (
+    !mergedIntoDefaultBranch(
+      payload.pull_request?.base?.ref,
+      payload.repository?.default_branch,
+      prNumber
+    )
+  ) {
+    return { merged: false, prNumber, isTestMode: false, isResync: false };
   }
 
   core.info(`🚀 Running in PRODUCTION mode for merged PR #${prNumber}`);

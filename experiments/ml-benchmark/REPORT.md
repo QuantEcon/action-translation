@@ -440,7 +440,7 @@ and roughly double the $3.20 the tooling reports.
 
 **The cost tracker reports `$0.000` for every `claude-opus-5` call.** The model is
 absent from `VALID_MODEL_PATTERNS` in `src/models.ts` (a known staleness item in
-`.dev/FUTURE.md`) and evidently from the pricing table too, so Opus spend is
+`.qe/dev/FUTURE.md`) and evidently from the pricing table too, so Opus spend is
 invisible rather than merely unvalidated. Sonnet 5 measures ~$0.23/lecture; Opus 5
 list price is $5/$25 per MTok against Sonnet's $3/$15, so the true Opus figure is
 roughly $0.4–0.5/lecture. Filed as **#230**.
