@@ -47,9 +47,16 @@ The references that `D-2026-07-24` and older logs make into `models.ts`, the glo
 **Merge with #376** — both PRs add to CHANGELOG `[Unreleased]`, which gave one conflict in
 simulation. Whichever merges second folds them together and re-runs `npm run build`.
 
-**Next**: the evaluation project, a stacked PR with:
+**Next**, as planned on 2026-10-19: the evaluation project, a stacked PR (#395) with:
 - `init --report-json`;
 - a classified `rate-check.sh`;
 - `experiments/claude-5-5-upgrade/`, pre-registered.
 
 Then the default flip, once its decision rules pass.
+
+**Changed 2026-10-20, before this PR merged**: the evaluation moved to a standing golden set in
+QuantEcon/test-action-translation, scored by `model-eval` (decision
+`D-2026-10-20-model-upgrades-measured-against-goldens`). #395 keeps the engine-side pieces
+(`init --report-json`, the price table, the classified `rate-check.sh`) and drops
+`experiments/claude-5-5-upgrade/`. The flip waits on the first `model-eval` report and cites it.
+Handover: `log/2026-10-20-claude-5-5-eval-handover`.
