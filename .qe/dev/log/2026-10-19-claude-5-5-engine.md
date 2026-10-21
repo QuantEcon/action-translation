@@ -35,6 +35,13 @@ evaluation (Part B).
 **Not done** — no live API call was made: the session had no Anthropic key. So #342's live
 check (`translate init -m claude-sonnet-5-5` on one lecture) is still open.
 
+**Done 2026-10-22, before this PR merged**: the live check ran at `c8d1c2d` on @mmcky's
+machine, one zh-cn draft of the scenario 17 fixture `game-theory.md` per model through
+`rate-check.sh --draws 1 --max-refusals 0`. `claude-sonnet-5` (the default, now on SDK 0.131),
+`claude-sonnet-5-5` and `claude-opus-5-5` each delivered: 20 headings, 3 directives and 6 math
+blocks, as in the source; about 1,220 CJK characters; the requested model in the state file;
+and no error, 400 or retry in the logs. Each draft used 5,311–5,334 input and output tokens.
+
 **Drift recorded** — three append-only references already pointed at moved code and now shift
 further; `check-dev-refs` still passes:
 - `D-2026-07-24-tech-debt-audit-boundaries`'s translator reference for `translateSectionResync`;

@@ -25,7 +25,9 @@ Roadmap detail lives in the project trackers (reading order in
   `D-2026-10-20-model-upgrades-measured-against-goldens`), and #395 is to be trimmed to the
   engine-side tooling that report needs (`init --report-json`, the price table, a classified
   `rate-check.sh`). The billed runs need an API key, so they are @mmcky's (handover
-  `log/2026-10-20-claude-5-5-eval-handover`). #342's live check is still open. Decisions
+  `log/2026-10-20-claude-5-5-eval-handover`). #342's live check passed on 2026-10-22, before
+  merge: one zh-cn draft of `game-theory.md` each from `claude-sonnet-5`, `claude-sonnet-5-5`
+  and `claude-opus-5-5`, all delivered with the source's structure. Decisions
   `D-2026-10-19-per-model-request-policy` and `D-2026-10-19-opus-5-5-for-bulk-seed`; log
   `2026-10-19-claude-5-5-engine`.
 - **fr typography fixes #324 and #325** (filed 2026-09-23 from the French editor's second
