@@ -40,7 +40,7 @@ Roadmap detail lives in the project trackers (reading order in
 - **ml calibration: round 5 (`pandas`) is merged and its repairs shipped in v0.29.5
   (2026-10-19); round 6 (`intro`, lecture-python-programming.ml#58) is with the editor; his
   ml#57 answers (2026-10-20) are encoded in code (#403, merged 2026-10-20 as `888cdb7`); of
-  the held rule edits, rule 8 passed its arm and merged as #404 (`88c132c`, ships in v0.29.6),
+  the held rule edits, rule 8 passed its arm and merged as #404 (`88c132c`, shipped in v0.29.6),
   and rule 12 was withdrawn.**
   - **Round 4.** The editor's 73 suggestions on `numpy` (lecture-python-programming.ml#23:
     touch rate 67% → 51%, lines accepted 22 → 70) are applied and merged as `7e373de`.
@@ -163,7 +163,7 @@ Roadmap detail lives in the project trackers (reading order in
   move on" → `ഇനി` mid-sentence too, `ഇപ്പോൾ` only for "at this moment"; *In essence* and
   *In practice* kept English. Measured before merge (arm `2026-10-21-held-rule-edits`, 193 drafts):
   targets moved, terminal punctuation and refusals held at 48 v 48 on `functions`. The rule-12
-  label-bullet edit measured with it was withdrawn. Ships in v0.29.6 (release PR open). Log
+  label-bullet edit measured with it was withdrawn. Shipped in v0.29.6. Log
   `2026-10-21-ml-held-rule-edits-handover`.
 - **ml round-5 repairs and glossary v0.8.0 (#372, `6624fe9`, 2026-10-19)** — the widened splice
   repair, the source-gated discourse-formula restore, multi-word `-ഉം` commas, the over-translation
@@ -266,13 +266,14 @@ Roadmap detail lives in the project trackers (reading order in
 *ml, 2026-09-28 (end)*: see the ml bullet under In flight — round 5 is with the editor, and
 next is the second `ml_repair` PR; #335 shipped in v0.29.4.
 
-*Release, 2026-10-21*: **v0.29.6 (patch) is in its release PR** — #404, `ml` rule 8 (*now* by
-sense; *In essence* / *In practice* kept English). Only the ml request changes: the zh-cn and fa
-requests are byte-identical to v0.29.5's, so their §4b cells should read as they did there. #403's
-`ml_repair` tooling rides along (experiment tooling, not in the bundle). Until the gate passes,
-`v0.29` and `v0` stay at v0.29.5 (#373, `e7356cc`; log `2026-10-19-v0295-release-handover`, which
-also filed #375). #346's v0.30.0 (the French and Malayalam sync items) stays the next minor; nothing
-of it is merged yet. This page's `verified:` stamp predates it, so a full re-verify is owed.
+*Release, 2026-10-21*: **v0.29.6 is released** (#405, `4151c08`); `v0.29` and `v0` point at it
+and the `@v0` smoke passed on all three lanes. §4a passed at the tag (28/28 verdicts per lane at
+`engineVersion: 0.29.6`; the one WARN is #375, zh-cn scenario 22, pre-existing); §4b read zh-cn
+1/12, fa 0/12, ml 0/12, all within threshold. Payload: #404, `ml` rule 8 (*now* by sense;
+*In essence* / *In practice* kept English); #403's `ml_repair` tooling rode along. Log
+`2026-10-21-v0296-release`. #346's v0.30.0 (the French and Malayalam sync items) stays the next
+minor; nothing of it is merged yet. This page's `verified:` stamp predates it, so a full re-verify
+is owed.
 
 *Review, 2026-10-06*: **no `translate forward` run before #348 merges**. Every forward resync
 since PR #31 (2026-03-19) has gone out without the edition's glossary and language rules. #325
