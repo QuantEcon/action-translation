@@ -6,9 +6,9 @@ on that branch). The edits:
 - **rule 12**: short label bullets, and a short label-like lead-in, stay English (lecture-python-programming.ml#57 Q1);
 - **rule 8**: *now* by sense (ml#25 answer 3), plus *In essence,* and *In practice,* kept English.
 
-**Verdict, by the decision rule:**
-- **Rule 12 fails.** It hits its target on the lecture it quotes, but on its own it causes the `functions` regression: parity refusals, the bare-endings mode, and bullets left English that the editor translated.
-- **Rule 8 hits its targets.** It is flagged for Matt's call: on `functions` the bare-endings mode moves 11/24 → 17/24 (p = 0.071), exactly the 25-point flag line.
+**Verdict, by the decision rule: partly passed.**
+- **Rule 12 fails and is withdrawn.** It hits its target on the lecture it quotes, but on its own it causes the `functions` regression: parity refusals, the bare-endings mode, and bullets left English that the editor translated.
+- **Rule 8 passes and ships alone.** Its first `functions` round landed on the 25-point flag line (11/24 → 17/24, p = 0.071). A second round, pre-registered before drawing, settled it at 48 v 48: 28/48 → 32/48 (p = 0.26), refusals 1/49 v 1/49.
 
 ## How the drafts were made
 
@@ -20,18 +20,19 @@ on that branch). The edits:
 - **Command.** `init -s <source> -t <dir> --target-language ml -f <lecture>.md --localize none -m claude-sonnet-5`, from each worktree's root.
 - **Draws:**
   - main arm: 96 drafts (`pandas` 12, `numpy` 12 and `functions` 24 per arm), 2026-10-21 00:26–01:24Z;
-  - ablation: 24 `functions` drafts per arm, 01:02–01:46Z, beside the main arm's last hour.
-  - All the same day as the control.
-- **Refusals.** A draw whose output file was not written was retried (up to three tries; slot 20 of the candidate's `functions` was refused three times and redrawn in the ablation run). All 17 refusals are one class: the `{raw}` head directive dropped, one directive short (#203, #326).
+  - ablation: 24 `functions` drafts per arm, 01:02–01:46Z, beside the main arm's last hour;
+  - rule 8, second round: 24 more `functions` drafts each for control and `r8` (draws 25–48), 01:53–02:27Z. Its decision rule was fixed in `run-r8-round2.sh` before any draw: pool with round 1, and drop rule 8 if the bare-endings mode or refusals are worse at one-sided p < 0.05. Extending a sample after a look inflates α slightly.
+  - All the same day, from the same worktrees.
+- **Refusals.** A draw whose output file was not written was retried (up to three tries; slot 20 of the candidate's `functions` was refused three times and redrawn in the ablation run). All 19 refusals are one class: the `{raw}` head directive dropped, one directive short (#203, #326).
 - **Reference.** QuantEcon/lecture-python-programming.ml `main` at `96c1825`. It labels the *now* sites and the bullets the editor has in Malayalam.
 - **Raw drafts.** No `ml_repair.py`: the prompt is what changed.
 
 Files:
-- `drafts.tar.xz`: every draft and log tail, in `main/` and `ablation/`;
-- `records.jsonl` and `records-ablation.jsonl`: one row per draft;
-- `summary*.txt`: the printed tables (in the ablation summaries, "candidate" is that ablation arm);
-- `progress*.txt` and `meta.txt`: the draw log, with times and refusals;
-- `run-arm.sh`, `run-ablation.sh` and `analyze.py`: the method. The scripts' scratch paths are this session's.
+- `drafts.tar.xz`: every draft and log tail, in `main/`, `ablation/` and `r8-round2/`;
+- `records.jsonl`, `records-ablation.jsonl` and `records-r8-round2.jsonl`: one row per draft;
+- `summary*.txt`: the printed tables (in the ablation and rule-8 summaries, "candidate" is that ablation arm; `summary-r8-pooled.txt` is the pre-registered 48 v 48 test);
+- `progress*.txt` and `meta*.txt`: the draw logs, with times and refusals;
+- `run-arm.sh`, `run-ablation.sh`, `run-r8-round2.sh` and `analyze.py`: the method. The scripts' scratch paths are this session's.
 
 ## Method
 
@@ -95,16 +96,28 @@ Headings, exercise blocks, plurals, `-ഉം` pairs, splices and banned renderin
 | Paragraphs without punctuation, mean | 1.9 | 2.7 (p = 0.003) | 2.4 (p = 0.039) | 2.7 |
 | Continuation bullets (31–32) left English | 0/24 | 5/24 (p = 0.025) | 0/24 | 2/24 |
 
+**Rule 8, second round** (`functions`, draws 25–48, and the pre-registered pool):
+
+| Measure | Round 1 | Round 2 | Pooled, 48 v 48 |
+|---|---|---|---|
+| Bare-endings mode, control → `r8` | 11/24 → 17/24 | 17/24 → 15/24 | 28/48 → 32/48 (p = 0.264) |
+| Bare endings, mean | 7.7 → 11.9 | 11.9 → 10.2 | 9.8 → 11.1 (p = 0.203) |
+| Paragraphs without punctuation, mean | 1.9 → 2.4 | 2.4 → 2.2 | 2.1 → 2.3 (p = 0.202) |
+| Parity refusals (attempts) | 0/24 → 0/24 | 1/25 → 1/25 | 1/49 → 1/49 (p = 0.753) |
+
+The same control engine gave 11/24 in round 1 and 17/24 in round 2 (one-sided p = 0.071), so one 24-draw round of the mode still swings by 25 points. Against the pooled control, rule 12 alone remains worse: refusals 1/49 → 7/31 (p = 0.005) and the mode 28/48 → 20/24 (p = 0.029).
+
 ## Reading
 
 1. **Rule 12 does not ship.**
    - It is perfect on the lecture its examples quote. On its own, though, it reproduces the whole `functions` regression: the refusal rate and the bare-endings mode are identical to the full candidate's.
    - It also leaves bullets English that the editor translated: the `pandas` `axis` bullets under the lead-in (12/12) and, in the ablation, the `functions` bullets that complete their lead-in's sentence (5/24).
    - A refusal fails the file on the sync path (`sync-orchestrator.ts` throws on a parity failure), so the refusal rate is a production cost on whole-document translations: new lectures and `init`.
-2. **Rule 8 is Matt's call.**
+2. **Rule 8 ships.**
    - Its targets move: "next" on `pandas` (p = 0.016) and "at this moment" on held-out `numpy` (p = 0.036), with no refusals.
-   - On terminal punctuation it sits on the flag line: the bare-endings mode moves 11/24 → 17/24 (p = 0.071, +25 points), and the mean reaches p = 0.024.
-   - It is the same direction as the round-4 trims, which touched no punctuation rule either.
+   - Round 1 put it on the terminal-punctuation flag line (11/24 → 17/24, p = 0.071). The pre-registered second round reversed (17/24 → 15/24), and the pool does not worsen (28/48 → 32/48, p = 0.26).
+   - Most of round 1's gap was the control drawing low. A single 24-draw round of the mode is not enough to call a moderate effect either way; 48 is.
+   - Two sites did not move: `pandas` 556 and `numpy` 1108. They are singletons and are not worth a rewording, which is how punctuation regressions get in.
 3. **The held-out label list was a poor choice of site.**
    - `functions` 270–271 complete their lead-in's sentence ("…the clarity of your code **by**"). The rule's own continuation clause arguably covers them, so 0/24 is ambiguous rather than a failure.
    - The editor's `pandas` list ("operations **such as**", kept English), `is_label_list` (which takes `functions` 270–271 as labels; #403 restores them) and the prompt draw the line in three places. That is a question for the editor, not one to settle by rewording.
