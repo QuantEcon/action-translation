@@ -13,8 +13,10 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import {
-  MAX_TOKENS,
-  DEFAULT_THINKING,
+  maxTokensFor,
+  modelRequestParams,
+  assertCompleteResponse,
+  extractResponseText,
   TruncatedResponseError,
   isRetryableAnthropicError,
 } from '../models.js';
@@ -225,25 +227,22 @@ export async function triageForward(
 
   const client = new Anthropic({ apiKey: options.apiKey, maxRetries: 0 });
   const { maxRetries, baseDelayMs } = RETRY_CONFIG;
+  const maxTokens = maxTokensFor(options.model, 'analysis');
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const response = await client.messages.create({
         model: options.model,
-        max_tokens: MAX_TOKENS.analysis,
-        thinking: DEFAULT_THINKING,
+        max_tokens: maxTokens,
+        ...modelRequestParams(options.model, 'analysis'),
         messages: [{ role: 'user', content: prompt }],
       });
-      if (response.stop_reason === 'max_tokens') {
-        // Truncated output must not be interpreted — and the typed error is
-        // retryable, so one truncation no longer discards the paid analysis.
-        throw new TruncatedResponseError(MAX_TOKENS.analysis);
-      }
+      // Only an end_turn is interpreted. Truncated output must not be — and
+      // the typed error is retryable, so one truncation no longer discards the
+      // paid analysis. A refusal or any other stop reason is not retried.
+      assertCompleteResponse(response, 'triageForward', maxTokens);
 
-      const responseText = response.content
-        .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-        .map((block) => block.text)
-        .join('');
+      const responseText = extractResponseText(response);
 
       const { verdict, reason } = parseForwardTriageResponse(responseText);
 

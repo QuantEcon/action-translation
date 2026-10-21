@@ -48,8 +48,8 @@ candidate table rather than link to it.
 
 ### 1. Translate the sample — two roles
 
-`seed` is the model that will do the bulk translation (Opus 4.8, per
-`D-2026-07-14-opus-for-bulk-seed.md`). `probe` is a different-family model run *only* to
+`seed` is the model that will do the bulk translation (Opus 5.5, per
+`D-2026-10-19-opus-5-5-for-bulk-seed.md`). `probe` is a different-family model run *only* to
 disagree with it.
 
     node scripts/glossary/translate-sample.mjs --lang fr \
@@ -61,7 +61,7 @@ disagree with it.
 translation becomes the seed rendering for free and only the probe runs, halving the cost.
 Prefer fresh if the glossary has changed a lot since that repo was seeded.
 
-Cost: roughly $0.80/lecture fresh, $0.40 with `--existing` (fr; glossary-dominated).
+Cost: roughly $0.80/lecture fresh, $0.40 with `--existing` (fr; glossary-dominated; measured with Opus 4.8 as the seed — Opus 5.5 is cheaper per token but always thinks, so check the cost line the scripts print).
 
 ### 2. Extract terms — once per role
 
