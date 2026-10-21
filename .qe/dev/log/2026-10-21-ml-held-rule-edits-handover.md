@@ -1,4 +1,4 @@
-# 2026-10-21 — handover: measure the held ml rule edits (rule 12 label bullets, rule 8 *now* and formulas), for @mmcky's local machine
+# 2026-10-21 — handover: measure the held ml rule edits (rule 12 label bullets, rule 8 *now* and formulas)
 
 **Trigger**: three ml prompt edits have waited for a re-drawing release, which must be measured at
 ≥ 12 draws per arm before it ships (a rule edit is not inert: the round-4 trims,
@@ -13,81 +13,119 @@
    (`ml_repair.py` repair 6, #403); the prompt edit is for raw drafts, sync runs that are not
    repaired, and the judge.
 2. **Rule 8, *now* by sense** (ml#25 answer 3; round-5 flags at ml#26 545, 561, 571): *now* meaning
-   "next" or "at this point" → `ഇനി` mid-sentence too; `ഇപ്പോൾ` only for "at the moment", "for
-   now", "currently", "while …" (his kept `ഇപ്പോൾ` at 492 and 609 are the negatives).
+   "next, let's move on" → `ഇനി` mid-sentence too; `ഇപ്പോൾ` only where it means "at this moment"
+   ("at the moment", "for now", "currently", "while …"). His kept `ഇപ്പോൾ` at ml 492 and 609
+   (English 487 and 605) are the negatives.
 3. **Rule 8's list**: *In essence,* and *In practice,* join the formulas that stay English
    (`ml_repair.py` already restores them, #372).
 
-The draws need `ANTHROPIC_API_KEY`, which the session does not have; @mmcky draws locally and
-commits the files, and the session does the comparison, as for #392.
+## Revised after review (2026-10-21)
+
+The first version of this design would not have seen the regression it guards against, and it
+measured the label-bullet target only in-sample. Four changes, all made before any draw:
+
+- **Rule 8 wording.** The first draft sent "next" *or "at this point"* to `ഇനി`. "At this point"
+  also reads as "at this moment", which is how the editor kept English 487 (*Plotting as before
+  **now** yields*, `ഇപ്പോൾ`). The rule now uses the two senses he confirmed on ml#25, "next, let's
+  move on" and "at this moment".
+- **Power.** At 12 v 12 the bare-endings share has about 42% power (one-sided Fisher, α = 0.05)
+  against the round-4 effect (42% → 75%). Round 4 itself showed it on `numpy` only as 2/12 v 4/12;
+  it was seen on `functions` at 36 v 24 and pooled. `functions` is added at **24 per arm** (68%
+  alone), and the share is also pooled over the three lectures (48 v 48).
+- **Held-out label list.** `numpy` has no label list (`ml_metrics.is_label_list` over all 26
+  lectures at `b0c58ab`), and rule 12 quotes three of the five `pandas` bullets and its lead-in, so
+  `pandas` alone is in-sample. `functions` 270–271 (*separating different strands of logic*,
+  *facilitating code reuse*) is a label list the rule does not quote. The round-2 review approved
+  Malayalam there; the ml#57 ruling postdates it.
+- **Pinned shas.** Control is `888cdb7` (`main` after #403; its `src/` is v0.29.5's, `e7356cc`), not
+  `origin/main`. The candidate sha is captured once at the start and written to the arm README.
 
 ## Design
 
-- **Arms.** *Control*: `main` (its `src/` is v0.29.5's, `e7356cc`). *Candidate*: this branch's
-  head. Same day, side by side, each from its own worktree with its own `npm ci` and
-  `npm run build`, as in the round-5 gate.
-- **Lectures.** `pandas` (the target lecture: five label bullets, one lead-in, five *now* sites, two
-  formulas) and `numpy` (held out for regressions: 109 code cells, the measure that caught the
-  round-4 deletions, four *now* sites). English at `b0c58ab`.
-- **Draws.** 12 per arm per lecture, 48 in all, `claude-sonnet-5`. A draw the structural-parity
-  guard refuses is retried, and the refusal counted (#203).
+- **Arms.** *Control*: `888cdb7`. *Candidate*: this branch's head at the start of the run. Same
+  day, side by side, each from its own worktree with its own `npm ci` and `npm run build:cli`, as
+  in the round-5 gate.
+- **Lectures.** English at `b0c58ab` (`git archive`).
+  - `pandas`, 12 per arm: the target lecture (the label list at 54–58, the lead-in at 320, five
+    *now* sites, two formulas). In-sample for rule 12.
+  - `numpy`, 12 per arm: held out; 109 code cells, four *now* sites.
+  - `functions`, 24 per arm: the bare-endings lecture (15/36 in the mode at v0.29.3); the held-out
+    label list at 270–271; three *now* sites.
+- **Draws.** 96 in all, `claude-sonnet-5`. A draw whose output file is not written (the
+  structural-parity guard, #203) is retried, and the refusal counted.
 - **Measured on the raw drafts** (before `ml_repair`, since the prompt is what changed):
-  - *Q1*: `label_list_translated` (needs `--source`), and the lead-in kept English;
-    *over-application*: prose bullets outside a label list that come out byte-identical to the
-    English (`pandas` 542–543 and `numpy` 64–65 must stay Malayalam);
-  - *R5*: `ഇനി` against `ഇപ്പോൾ` at the aligned *now* sites, split into "next" sites and his
-    `ഇപ്പോൾ` sites;
-  - *formulas*: Malayalam openers before the restore;
-  - *regression panel*: the share of drafts that leave every paragraph before a code cell bare,
-    terminal punctuation, capitals, banned renderings, plurals, `-ഉം` pairs, the splice rate, the
-    pinned-term gate, headings and exercise blocks byte-identical, and parity refusals.
-- **Decision rule**: ship when the Q1 and R5 targets improve (one-sided exact test, p < 0.05,
-  12 v 12) and nothing on the regression panel or the over-application count worsens at the same
-  test. A target that does not move is dropped from the release rather than kept on faith; a
-  regression sends that edit back for rewording and a second arm.
+  - *Q1*: `label_list_translated` (needs `--source`), per lecture, with a per-item table for
+    `pandas` 57–58 (the 7-word items he kept English, where "a few words" is most likely to part
+    from his page). The lead-in at 320 counts as kept when its words match the English, with or
+    without the colon he and rule 14 add.
+  - *Over-application*: bullets outside a label list that the reviewed edition has in Malayalam
+    and a draft leaves byte-identical to the English: `pandas` 537–538, `numpy` 42–43, and
+    `functions` 31–32 (the bullets that complete the lead-in's sentence).
+  - *R5*: `ഇനി` against `ഇപ്പോൾ` at the aligned *now* sites, labelled by the reviewed edition's
+    rendering at each site, split into "next" sites and "at this moment" sites.
+  - *Formulas*: Malayalam openers for *In essence,* / *In practice,* before the restore.
+  - *Regression panel*: the share of drafts in the bare-endings mode (≥ 10 bare before code cells)
+    per lecture and pooled; terminal punctuation, capitals, banned renderings, plurals, `-ഉം`
+    pairs, the splice rate, the pinned-term gate, headings and exercise blocks byte-identical, and
+    parity refusals.
+- **Decision rule**:
+  - Ship an edit when its target improves (one-sided exact test, p < 0.05) and nothing on the
+    regression panel or the over-application count worsens at the same test, on `functions` or
+    pooled.
+  - Because the panel is underpowered per lecture, a panel measure that worsens by 25 points or
+    more without reaching p < 0.05 is flagged for Matt's call, not passed silently.
+  - A target that does not move is dropped from the release rather than kept on faith.
+  - A regression sends the bundle to an ablation (rule 12 against rule 8) before any edit is
+    reworded, since rule 12's edit narrows a clause as well as adding one (the round-4 lesson).
 
-## How to run this (@mmcky, locally)
+## How to run this
 
 From a clone of QuantEcon/action-translation, with `ANTHROPIC_API_KEY` exported and a local clone
-of QuantEcon/lecture-python-programming at `b0c58ab`:
+of QuantEcon/lecture-python-programming:
 
 ```bash
-SRC=/path/to/lecture-python-programming
-ARM=experiments/ml-benchmark/arms/2026-10-21-held-rule-edits
+LPP=/path/to/lecture-python-programming
 SCRATCH=$(mktemp -d)
-for arm in control candidate; do
-  ref=$([ "$arm" = control ] && echo origin/main || echo origin/ml/held-rule-edits)
-  git worktree add "$SCRATCH/$arm" "$ref"
-  (cd "$SCRATCH/$arm" && npm ci && npm run build)
-done
-mkdir -p "$ARM" "$SCRATCH/out"
-for arm in control candidate; do
-  for lect in pandas numpy; do
-    for i in $(seq 1 12); do
-      out="$SCRATCH/out/$arm-$lect-$i"
-      (cd "$SCRATCH/$arm" && node dist/cli/index.js init -s "$SRC" -t "$out" \
-        --target-language ml -f "$lect.md" --localize none -m claude-sonnet-5) > "$out.log" 2>&1
-      cp "$out/lectures/$lect.md" "$ARM/$arm-$lect-draw$i.md"
-      tail -5 "$out.log" > "$ARM/$arm-$lect-draw$i.log-tail"
-    done &
+git -C "$LPP" archive b0c58ab lectures | tar -x -C "$SCRATCH" && mkdir "$SCRATCH/src" && mv "$SCRATCH/lectures" "$SCRATCH/src/"
+CAND=$(git rev-parse origin/ml/held-rule-edits); echo "candidate $CAND"
+git worktree add --detach "$SCRATCH/control" 888cdb7
+git worktree add --detach "$SCRATCH/candidate" "$CAND"
+for arm in control candidate; do (cd "$SCRATCH/$arm" && npm ci && npm run build:cli); done
+mkdir -p "$SCRATCH/arm"
+draw() {  # arm lecture first last
+  for i in $(seq "$3" "$4"); do
+    for try in 1 2 3; do
+      out="$SCRATCH/out/$1-$2-$i-$try"
+      (cd "$SCRATCH/$1" && node dist/cli/index.js init -s "$SCRATCH/src" -t "$out" \
+        --target-language ml -f "$2.md" --localize none -m claude-sonnet-5) > "$out.log" 2>&1
+      if [ -f "$out/lectures/$2.md" ]; then
+        cp "$out/lectures/$2.md" "$SCRATCH/arm/$2-$1-draw$i.md"
+        tail -5 "$out.log" > "$SCRATCH/arm/$2-$1-draw$i.log-tail"; break
+      fi
+      tail -5 "$out.log" > "$SCRATCH/arm/$2-$1-draw$i-refused$try.log-tail"
+    done
   done
+}
+mkdir -p "$SCRATCH/out"
+for arm in control candidate; do
+  draw $arm pandas 1 12 & draw $arm numpy 1 12 &
+  draw $arm functions 1 12 & draw $arm functions 13 24 &
 done
 wait
 ```
 
-Run from each worktree's root so the CLI loads that tree's glossary. The four loops run in
-parallel; a refused draw shows as a failure in its log tail. Re-run that draw number, and keep the
-failed tail beside the success, renamed `…-refused1.log-tail`.
-
-Then commit the arm on a branch (`arms/2026-10-21-held-rule-edits`): the 48 drafts, their log
-tails, and a short `README.md` with the two commit shas, the model, the English sha and any
-refusals. Push it and say so. The session runs the lints and the comparison, writes the results
-into the README, and adds the verdict to this log.
+Run each draw from its worktree's root so the CLI loads that tree's glossary (identical in the two
+arms). The eight loops run in parallel. Then commit the arm as
+`experiments/ml-benchmark/arms/2026-10-21-held-rule-edits/` on a branch
+(`arms/2026-10-21-held-rule-edits`): the drafts (or, if they are too large to commit, a
+`records.jsonl` and the script that rebuilds it, as round 4 did), their log tails, and a
+`README.md` with the two shas, the model, the English sha and any refusals.
 
 ## What happens after
 
-- **Passed**: this PR merges after #403. A release follows the release procedure: the gate on the
-  tag, step 4b, the `@v0` smoke. It then serves round 7, after the editor's round-6 review of
-  `intro` (lecture-python-programming.ml#58).
-- **Partly passed**: the edits that passed ship, and the rest are reworded and measured again.
+- **Passed**: this PR merges (#403 is already merged). A release follows the release procedure: the
+  gate on the tag, step 4b, the `@v0` smoke. It then serves round 7, after the editor's round-6
+  review of `intro` (lecture-python-programming.ml#58).
+- **Partly passed**: the edits that passed ship, the CHANGELOG's held entry is cut to them, and the
+  rest are reworded and measured again.
 - The rule-2 arm (the everyday-speech test) is separate and not in this branch.

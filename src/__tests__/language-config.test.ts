@@ -342,6 +342,46 @@ describe('Language Configuration', () => {
     });
   });
 
+  // Round 5 (lecture-python-programming.ml#26, pandas): the editor's ml#57 Q1
+  // ruling on short label bullets and his ml#25 answer 3 on "now", held for
+  // a 12-draw arm (.qe/dev/log/2026-10-21-ml-held-rule-edits-handover.md).
+  // Both edit existing rules, so the count stays 28.
+  describe('Malayalam round-5 held rule edits (ml#57 Q1, ml#25 answer 3)', () => {
+    const rules = getLanguageConfig('ml').additionalRules;
+    const register = rules.find((r) => r.startsWith('Write short sentences in a classroom'));
+    const formulas = rules.find((r) => r.startsWith('Render English discourse formulas'));
+
+    it('rule 12 keeps short label bullets English and tells the judge so', () => {
+      expect(register).toBeDefined();
+      expect(register).toContain('"* reading in data"');
+      expect(register).toContain('D-2026-10-21-ml-short-label-bullets-stay-english');
+      expect(register).toContain('never treat such English bullets as under-translation');
+      expect(register).toContain("a bullet that completes the lead-in's sentence");
+      // the unconditional clause it replaces
+      expect(register).not.toContain(
+        'when a bullet that is a bare noun-phrase fragment in English is translated, make it a full Malayalam sentence'
+      );
+    });
+
+    it('rule 8 takes "now" by the two senses the editor confirmed', () => {
+      expect(formulas).toBeDefined();
+      expect(formulas).toContain('"now" meaning "next, let\'s move on" → ഇനി');
+      expect(formulas).toContain('in the middle of one ("we can now plot …"');
+      expect(formulas).toContain('ഇപ്പോൾ only where "now" means "at this moment"');
+      // "at this point" also reads as "at this moment" (pandas 487, kept ഇപ്പോൾ)
+      expect(formulas).not.toContain('at this point');
+    });
+
+    it('rule 8 keeps "In essence" and "In practice" English', () => {
+      expect(formulas).toContain('"In essence, …", "In practice, …"');
+      expect(formulas).toContain('not Practice-ൽ or പ്രായോഗികമായി');
+    });
+
+    it('edits rules in place — still 28', () => {
+      expect(rules).toHaveLength(28);
+    });
+  });
+
   describe('Malayalam round-2 rules (lecture-python-programming.ml#7)', () => {
     const rules = getLanguageConfig('ml').additionalRules.join('\n');
 
