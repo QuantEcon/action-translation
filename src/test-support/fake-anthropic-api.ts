@@ -16,9 +16,12 @@
  *   with no `event:` line). `message_start` carries the message with
  *   `stop_details: null` and a `usage` object, which the accumulator writes
  *   into; `message_delta` carries `delta: {stop_reason, stop_sequence,
- *   stop_details, container}` and the final `usage.output_tokens`. Each text
+ *   stop_details, container}`, the final `usage.output_tokens` and its
+ *   `output_tokens_details` (null unless the reply gives thinking). Each text
  *   block arrives as two `text_delta`s, and the bytes in 7-byte chunks, which
- *   split lines and multi-byte characters as a network can.
+ *   split lines and multi-byte characters as a network can. A reply with a
+ *   `midStreamError` ends after its content blocks with an `error` frame
+ *   instead, as the API ends a stream that fails part-way.
  * - Non-streamed: the whole Message as `application/json` (without that
  *   content type the SDK returns the body as a string).
  */
@@ -38,8 +41,20 @@ export interface FakeReply {
   stop_reason: Anthropic.StopReason | null;
   /** The API sets it only with stop_reason 'refusal'; null otherwise (the default). */
   stop_details?: Anthropic.RefusalStopDetails | null;
-  /** Billed tokens. Default: 120 in, 40 out. */
-  usage?: { input_tokens: number; output_tokens: number };
+  /**
+   * Billed tokens. Default: 120 in, 40 out. `thinking_tokens` is sent as
+   * `output_tokens_details` (a part of output_tokens, not added to it);
+   * without it the breakdown is null.
+   */
+  usage?: { input_tokens: number; output_tokens: number; thinking_tokens?: number };
+  /** Streamed requests only: end the stream with this error after the content blocks. */
+  midStreamError?: { type: string; message: string };
+}
+
+/** An SSE `error` frame, which the SDK raises as an APIError with no status. */
+interface FakeErrorEvent {
+  type: 'error';
+  error: { type: string; message: string };
 }
 
 /** One request as the SDK sent it over the wire. */
@@ -99,7 +114,7 @@ export function installFakeAnthropicApi(): FakeAnthropicApi {
 
     const message = completeMessage(serial, String(body.model), reply);
     return body.stream === true
-      ? sseResponse(serial, streamEvents(message, reply.content))
+      ? sseResponse(serial, streamEvents(message, reply.content, reply.midStreamError))
       : jsonResponse(serial, 200, message);
   });
 
@@ -126,7 +141,11 @@ function parseJsonObject(text: string): Record<string, unknown> | null {
     : null;
 }
 
-function usageBlock(inputTokens: number, outputTokens: number): Anthropic.Usage {
+function usageBlock(
+  inputTokens: number,
+  outputTokens: number,
+  thinkingTokens?: number
+): Anthropic.Usage {
   return {
     input_tokens: inputTokens,
     output_tokens: outputTokens,
@@ -134,7 +153,8 @@ function usageBlock(inputTokens: number, outputTokens: number): Anthropic.Usage 
     cache_read_input_tokens: 0,
     cache_creation: null,
     inference_geo: null,
-    output_tokens_details: null,
+    output_tokens_details:
+      thinkingTokens === undefined ? null : { thinking_tokens: thinkingTokens },
     server_tool_use: null,
     service_tier: 'standard',
   };
@@ -159,16 +179,17 @@ function completeMessage(serial: number, model: string, reply: FakeReply): Anthr
     stop_reason: reply.stop_reason,
     stop_sequence: null,
     stop_details: reply.stop_details ?? null,
-    usage: usageBlock(usage.input_tokens, usage.output_tokens),
+    usage: usageBlock(usage.input_tokens, usage.output_tokens, usage.thinking_tokens),
   };
 }
 
 /** The server-sent events that stream `message`, in order. */
 function streamEvents(
   message: Anthropic.Message,
-  blocks: FakeContentBlock[]
-): Anthropic.RawMessageStreamEvent[] {
-  const events: Anthropic.RawMessageStreamEvent[] = [
+  blocks: FakeContentBlock[],
+  midStreamError?: FakeErrorEvent['error']
+): Array<Anthropic.RawMessageStreamEvent | FakeErrorEvent> {
+  const events: Array<Anthropic.RawMessageStreamEvent | FakeErrorEvent> = [
     {
       type: 'message_start',
       message: {
@@ -218,6 +239,11 @@ function streamEvents(
     events.push({ type: 'content_block_stop', index });
   });
 
+  if (midStreamError) {
+    events.push({ type: 'error', error: midStreamError });
+    return events;
+  }
+
   events.push(
     {
       type: 'message_delta',
@@ -232,7 +258,7 @@ function streamEvents(
         input_tokens: null,
         cache_creation_input_tokens: null,
         cache_read_input_tokens: null,
-        output_tokens_details: null,
+        output_tokens_details: message.usage.output_tokens_details,
         server_tool_use: null,
       },
     },
@@ -250,7 +276,10 @@ function inTwo(text: string): string[] {
   );
 }
 
-function sseResponse(serial: number, events: Anthropic.RawMessageStreamEvent[]): Response {
+function sseResponse(
+  serial: number,
+  events: Array<Anthropic.RawMessageStreamEvent | FakeErrorEvent>
+): Response {
   const bytes = new TextEncoder().encode(
     events.map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join('')
   );

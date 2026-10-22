@@ -101,6 +101,7 @@ src/
 │   ├── review.ts        # REVIEW mode runner, extracted from index.ts and directly tested (#169)
 │   └── core-logger.ts   # @actions/core → Logger adapter, shared by the entry point and mode runners
 ├── sync-orchestrator.ts # Sync processing pipeline
+├── sync-scope.ts        # sync-scope: existing — sync a changed lecture only if the target has its state file (#344)
 ├── toc-captions.ts      # _toc.yml part-caption preservation on sync (#254)
 ├── pr-creator.ts        # PR creation in target repo
 ├── parser.ts            # MyST Markdown parser (stack-based, line-by-line)
@@ -113,6 +114,7 @@ src/
 ├── localization-rules.ts # Code-cell localization rules for init (native-reviewer authored)
 ├── typography.ts        # Language typography applied in code, not via the prompt (nesting-aware fence walker)
 ├── models.ts            # Model IDs, per-model request policy (thinking, effort, max_tokens), response checks (stop_reason, text extraction), shared retry predicate
+├── model-pricing.ts     # The one list-price table (cache prices included); costUSD is null for an unpriced model, never $0
 ├── contracts.ts         # Cross-boundary constants: labels, auto-merge modes (owner module, #162)
 ├── branch-naming.ts     # Translation branch prefixes — the one owner (#115)
 ├── structural-parity.ts # Deterministic directive/anchor parity guard on every write path
@@ -137,6 +139,7 @@ src/cli/
 ├── section-matcher.ts     # Cross-language section matching
 ├── git-metadata.ts        # File-level git metadata + commit timeline
 ├── report-generator.ts    # Markdown/JSON report formatting
+├── run-report.ts          # init --report-json: failure classes (classifyFailure), report schema, atomic write
 ├── review-formatter.ts    # Chalk card renderer for review command
 ├── review-session.ts      # Pure state machine (accept/skip/reject)
 ├── issue-generator.ts     # GitHub Issue title/body/label generator
@@ -186,6 +189,15 @@ PR merged in SOURCE repo
 ┌─────────────────────────┐
 │ index.ts                │  Fetch PR diff, identify changed files
 │ (GitHub Action entry)   │
+└───────────┬─────────────┘
+            │
+            ▼
+┌─────────────────────────┐
+│ sync-scope.ts           │  Keep the changed lectures whose state file
+│ (sync-scope: existing)  │  the target has; skip and list the rest
+│                         │  before any content is fetched (#344)
+│                         │  Nothing left to sync: job summary, no PR,
+│                         │  and the Issue only if a scope read failed
 └───────────┬─────────────┘
             │
             ▼

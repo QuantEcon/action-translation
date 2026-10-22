@@ -21,9 +21,14 @@
  */
 
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
+import { spawnSync } from 'child_process';
 import * as yaml from 'js-yaml';
 import { generateSourceWorkflowYaml } from '../commands/setup.js';
+import { MystParser } from '../../parser.js';
+import { NOT_SYNCED_HEADING } from '../../sync-scope.js';
+import { readFileState } from '../translate-state.js';
 
 const ROOT = path.join(__dirname, '..', '..', '..');
 const CANONICAL = fs.readFileSync(path.join(ROOT, 'examples', 'review-translations.yml'), 'utf8');
@@ -251,6 +256,216 @@ describe('the E2E harness workflow rendering', () => {
     expect(count(tgt, /^```/gm)).toBe(count(src, /^```/gm));
     expect(count(tgt, /^\$\$/gm)).toBe(count(src, /^\$\$/gm));
     expect(count(tgt, /^```\{[a-z-]+\}/gm)).toBe(count(src, /^```\{[a-z-]+\}/gm));
+  });
+
+  describe('the --sync-scope existing switch (#344)', () => {
+    // A scope run replays the scenarios on a partial edition: the reset gives
+    // each target a state file for lecture.md and none for lecture-minimal.md,
+    // and every PR carries a label the sync workflow turns into the input.
+    const EVALUATOR_SCOPE = 'tool-test-action-on-github/evaluate/src/scope-expectations.ts';
+    const EVALUATOR_GITHUB = 'tool-test-action-on-github/evaluate/src/github.ts';
+
+    function renderedSteps(): Array<Record<string, unknown>> {
+      const doc = yaml.load(render(template)) as {
+        jobs: Record<string, { steps: Array<Record<string, unknown>> }>;
+      };
+      return Object.values(doc.jobs).flatMap((job) => job.steps);
+    }
+
+    it('passes sync-scope from the mode step, not a literal', () => {
+      const action = renderedSteps().find(
+        (s) => typeof s.uses === 'string' && s.uses.startsWith('QuantEcon/action-translation@')
+      );
+      expect((action?.with as Record<string, unknown>)['sync-scope']).toBe(
+        '${{ steps.mode.outputs.sync-scope }}'
+      );
+    });
+
+    it('sets the scope from the test-sync-scope-existing label in the mode step', () => {
+      // The event payload already carries the label: the harness adds it
+      // before test-translation, whose labeled event fires the run.
+      const run = renderedSteps().find((s) => s.id === 'mode')?.run as string;
+      expect(run).toContain(
+        "contains(github.event.pull_request.labels.*.name, 'test-sync-scope-existing')"
+      );
+      expect(run).toContain('echo "sync-scope=existing" >> $GITHUB_OUTPUT');
+      expect(run).toContain('echo "sync-scope=all" >> $GITHUB_OUTPUT');
+    });
+
+    it('spells the label one way in the script, the template and the evaluator', () => {
+      const label = script.match(/^SCOPE_LABEL="([^"]+)"$/m)?.[1];
+      expect(label).toBe('test-sync-scope-existing');
+      expect(template).toContain(`'${label}'`);
+      const evaluator = fs.readFileSync(path.join(ROOT, EVALUATOR_SCOPE), 'utf8');
+      expect(evaluator).toContain(`export const SCOPE_LABEL = '${label}';`);
+      // The evaluator cannot import src/, so its copy of the heading is held here.
+      expect(evaluator).toContain(`export const NOT_SYNCED_HEADING = '${NOT_SYNCED_HEADING}';`);
+    });
+
+    it('rejects a --sync-scope other than all or existing before doing anything', () => {
+      expect(script).toMatch(/^SYNC_SCOPE="all"$/m);
+      // This runs the real script, which resets four repositories and opens
+      // billed PRs. It must stop at argument parsing, and if a change ever
+      // lets it go further, the run still cannot reach GitHub: --dry-run comes
+      // first, the environment holds no token, PATH and the working directory
+      // are one empty scratch directory, so neither gh nor git can run, and
+      // the timeout ends a hang.
+      const bash = (process.env.PATH ?? '')
+        .split(path.delimiter)
+        .map((dir) => path.join(dir, 'bash'))
+        .find((candidate) => path.isAbsolute(candidate) && fs.existsSync(candidate));
+      expect(bash).toBeDefined();
+      const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-no-gh-'));
+      try {
+        for (const args of [
+          ['--dry-run', '--sync-scope', 'everything'],
+          ['--dry-run', '--sync-scope'],
+        ]) {
+          const run = spawnSync(bash!, [path.join(ROOT, HARNESS_SCRIPT), ...args], {
+            encoding: 'utf8',
+            cwd: scratch,
+            env: { PATH: scratch },
+            timeout: 10_000,
+          });
+          expect(run.error).toBeUndefined();
+          expect(run.status).toBe(1);
+          expect(run.stderr).toContain("--sync-scope must be 'all' or 'existing'");
+        }
+      } finally {
+        fs.rmSync(scratch, { recursive: true, force: true });
+      }
+    });
+
+    it('expects no translation PR for exactly the scenarios that change only lecture-minimal.md', () => {
+      // lecture-minimal.md has no state file under scope, so these scenarios
+      // sync nothing, and the evaluator fails a translation PR for any of them.
+      // A minimal scenario added to the script without joining the evaluator's
+      // list would be judged as a sync instead.
+      const minimalOnly = [...script.matchAll(/^\s*"(\d+)-[^:"]*:[^"]*:minimal"$/gm)].map(
+        (m) => m[1]
+      );
+      expect(minimalOnly.length).toBeGreaterThan(0);
+      const evaluator = fs.readFileSync(path.join(ROOT, EVALUATOR_SCOPE), 'utf8');
+      const listed = /MINIMAL_ONLY_SCENARIOS = \[([^\]]*)\]/.exec(evaluator)?.[1] ?? '';
+      expect([...listed.matchAll(/'(\d+)'/g)].map((m) => m[1])).toEqual(minimalOnly);
+    });
+
+    it('expects a translation PR for exactly the scenarios that change only lecture.md', () => {
+      // lecture.md has its state file under scope, so these scenarios sync it,
+      // and the evaluator fails a source PR among them that has no translation
+      // PR. A lecture scenario added to the script without joining the
+      // evaluator's list would get no expectation.
+      const lectureOnly = [...script.matchAll(/^\s*"(\d+)-[^:"]*:[^"]*:lecture"$/gm)].map(
+        (m) => m[1]
+      );
+      expect(lectureOnly.length).toBeGreaterThan(0);
+      const evaluator = fs.readFileSync(path.join(ROOT, EVALUATOR_SCOPE), 'utf8');
+      const listed = /LECTURE_ONLY_SCENARIOS = \[([^\]]*)\]/.exec(evaluator)?.[1] ?? '';
+      expect([...listed.matchAll(/'(\d+)'/g)].map((m) => m[1])).toEqual(lectureOnly);
+    });
+
+    it('gives every scenario in the script exactly one expectation', () => {
+      // Under the label, the evaluator reports a source PR with no translation
+      // PR through its scenario's expectation. A scenario without one would
+      // drop out of the report.
+      const block = /declare -a scenarios=\(\n([\s\S]*?)\n\)/.exec(script)?.[1] ?? '';
+      const scenarios = [...block.matchAll(/^\s*"(\d+)-/gm)].map((m) => m[1]);
+      expect(scenarios.length).toBeGreaterThan(0);
+      const evaluator = fs.readFileSync(path.join(ROOT, EVALUATOR_SCOPE), 'utf8');
+      const listed = (name: string): string[] => {
+        const list = new RegExp(`${name} = \\[([^\\]]*)\\]`).exec(evaluator)?.[1] ?? '';
+        return [...list.matchAll(/'(\d+)'/g)].map((m) => m[1]);
+      };
+      const expected = [
+        ...listed('MINIMAL_ONLY_SCENARIOS'),
+        ...listed('LECTURE_ONLY_SCENARIOS'),
+        ...[...evaluator.matchAll(/^\s*scenario: '(\d+)',$/gm)].map((m) => m[1]),
+      ];
+      expect([...expected].sort()).toEqual([...scenarios].sort());
+    });
+
+    it('reads the sync run under the check name of the sync job for its target', () => {
+      // A scenario that expects no translation PR is verified by the check run
+      // of the sync job for the target the evaluator reads. A job without
+      // `name:` reports its id as the check run's name.
+      const evaluator = fs.readFileSync(path.join(ROOT, EVALUATOR_SCOPE), 'utf8');
+      const checkName = /export const SYNC_CHECK_NAME = '([^']+)';/.exec(evaluator)?.[1];
+      const github = fs.readFileSync(path.join(ROOT, EVALUATOR_GITHUB), 'utf8');
+      const lang = /const TARGET_REPO = 'test-translation-sync\.([a-z-]+)';/.exec(github)?.[1];
+      expect(HARNESS_LANGUAGES).toContain(lang);
+      const doc = yaml.load(
+        template
+          .replace(/__ACTION_REF__/g, 'main')
+          .replace(/__LANG_NAME__/g, 'Target')
+          .replace(/__LANG__/g, lang!)
+      ) as { jobs: Record<string, Record<string, unknown>> };
+      expect(Object.keys(doc.jobs)).toEqual([checkName]);
+      expect(doc.jobs[checkName!]).not.toHaveProperty('name');
+    });
+
+    it('writes a state file for lecture.md only, and only under existing', async () => {
+      const write =
+        /cat > "\.translate\/state\/\$TEST_FILE_LECTURE\.yml" <<EOF\n([\s\S]*?)\nEOF\n/.exec(
+          script
+        );
+      expect(write).not.toBeNull();
+      // Inside the `existing` branch, so the default reset writes no state file.
+      const before = script.slice(0, write!.index);
+      const guard = before.lastIndexOf('if [ "$SYNC_SCOPE" = existing ]; then');
+      expect(guard).toBeGreaterThan(-1);
+      expect(before.slice(guard)).not.toMatch(/^\s*fi\s*$/m);
+      // The only state file the harness writes. lecture-minimal.md stays
+      // without one: it plays the English copy on a partial edition's main.
+      expect(script.match(/>\s*"?\.translate\/state\//g)).toHaveLength(1);
+      expect(script).not.toMatch(/\bcp\b[^\n]*\.translate\/state\//);
+      expect(script).not.toMatch(/state\/(?:\$TEST_FILE_MINIMAL|lecture-minimal\.md)\.yml/);
+
+      // section-count is derived from the fixture, and agrees with the parser.
+      expect(script).toContain(`grep -c '^## ' "$DATA_DIR/base-lecture.md"`);
+      const fixture = fs.readFileSync(
+        path.join(ROOT, 'tool-test-action-on-github/test-action-on-github-data/base-lecture.md'),
+        'utf8'
+      );
+      const sections = (fixture.match(/^## /gm) ?? []).length;
+      const parsed = await new MystParser().parseSections(fixture, 'lecture.md');
+      expect(sections).toBe(parsed.sections.length);
+
+      // What the reset writes is a state file the tools accept.
+      const content = write![1]
+        .replace('$STATE_SOURCE_SHA', 'a'.repeat(40))
+        .replace('$STATE_SYNCED_AT', '2026-10-19')
+        .replace('$STATE_SECTION_COUNT', String(sections));
+      expect(content).not.toContain('$');
+      const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'harness-scope-state-'));
+      try {
+        fs.mkdirSync(path.join(tmp, '.translate', 'state'), { recursive: true });
+        fs.writeFileSync(path.join(tmp, '.translate', 'state', 'lecture.md.yml'), `${content}\n`);
+        expect(readFileState(tmp, 'lecture.md')).toEqual({
+          'source-sha': 'a'.repeat(40),
+          'synced-at': '2026-10-19',
+          model: 'claude-sonnet-5',
+          mode: 'NEW',
+          'section-count': sections,
+        });
+      } finally {
+        fs.rmSync(tmp, { recursive: true, force: true });
+      }
+    });
+
+    it('creates each PR with the scope label before adding test-translation', () => {
+      // The labeled event that fires the sync carries the labels the PR has
+      // at that moment, so the scope label must be on it first.
+      const step4 = script.slice(script.indexOf('# STEP 4'));
+      expect(step4).toContain('gh label create "$SCOPE_LABEL"');
+      const scopeArgs = step4.indexOf('scope_args=(--label "$SCOPE_LABEL")');
+      const create = step4.indexOf('PR_URL=$(gh pr create');
+      const passed = step4.indexOf('"${scope_args[@]}")', create);
+      const trigger = step4.indexOf('gh pr edit "$PR_NUMBER" --add-label "test-translation"');
+      expect(scopeArgs).toBeGreaterThan(-1);
+      expect(scopeArgs).toBeLessThan(create);
+      expect(passed).toBeGreaterThan(create);
+      expect(passed).toBeLessThan(trigger);
+    });
   });
 });
 

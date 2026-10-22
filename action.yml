@@ -19,7 +19,17 @@ inputs:
   target-language:
     description: 'Target language code (e.g., zh-cn, fa). Required for sync mode.'
     required: false
-  
+  sync-scope:
+    description: >
+      Sync mode. Which changed lectures a sync translates: "all" (default) or "existing".
+      With "existing", a changed or renamed lecture syncs only when the target has its state
+      file, .translate/state/<file>.yml (for example intro.md.yml); the others are skipped
+      before any content is fetched and listed in the PR body and the job summary. For
+      editions built one reviewed lecture at a time (#344). Removals and _toc.yml sync as
+      with "all".
+    required: false
+    default: 'all'
+
   # Review mode inputs
   source-repo:
     description: 'Source repository for English content (owner/repo). Required for review mode.'

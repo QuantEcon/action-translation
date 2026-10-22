@@ -17,6 +17,7 @@ import {
   RESYNC_PR_LABELS,
   REVIEW_TRIGGER_LABEL,
   SYNC_PR_LABELS,
+  SYNC_SCOPES,
   TARGET_REPO_LABELS,
 } from '../contracts.js';
 import { buildGhArgs } from '../cli/forward-pr-creator.js';
@@ -103,6 +104,18 @@ describe('artefacts that cannot import TypeScript agree with the constants', () 
     for (const mode of AUTO_MERGE_MODES) {
       expect(block).toContain(`"${mode}"`);
     }
+  });
+
+  it('the sync-scope input names every scope and defaults to the first', () => {
+    // inputs.ts reads an empty input as SYNC_SCOPES[0]; the action.yml default
+    // must be the same value, or an unset input means two different things.
+    const actionYml = fs.readFileSync(path.join(ROOT, 'action.yml'), 'utf8');
+    const block = actionYml.match(/^ {2}sync-scope:\n(?: {4}.*\n)+/m)?.[0];
+    expect(block).toBeDefined();
+    for (const scope of SYNC_SCOPES) {
+      expect(block).toContain(`"${scope}"`);
+    }
+    expect(block?.match(/^ {4}default: (.*)$/m)?.[1]).toBe(`'${SYNC_SCOPES[0]}'`);
   });
 
   it('the canonical review workflow gates on the trigger label in both clauses', () => {

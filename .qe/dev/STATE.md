@@ -8,6 +8,26 @@ Roadmap detail lives in the project trackers (reading order in
 
 ## In flight
 
+- **#344 `sync-scope: existing` — #376 (2026-10-19)**, for the release #346
+  tracks. A partial edition syncs only the lectures that have a state file on its default
+  branch; the check lives in `src/sync-scope.ts` so D2 (#259) can reuse it, and the input is a
+  thin switch around it (record `D-2026-10-19-sync-scope-existing-reads-state-files`). Folded
+  in on 2026-10-19: #380 (`status --write-state` refuses English changes not yet carried, until
+  `--carried`) and #387's scoped half (a scoped run that passes without a PR closes the stale
+  failure issue; `all` unchanged, so #387 stays open). The harness scope smoke passed on all
+  three lanes on 2026-10-22, at `b747bf8` (results in log `2026-10-19-sync-scope-harness-handover`,
+  #377). Ruled on
+  2026-10-19, in the records: a state file counts by existence (the CLI's reader gets fixed
+  instead, #381, #379); retirement condition 3 is a required CI state check, built on #370
+  with #385; lecture-at-a-time tooling goes into the CLI first
+  (`D-2026-10-19-lecture-at-a-time-tooling-is-cli-first`). ml's `main` still has no state file
+  beside its five translated lectures, so their backfill must precede ml's sync workflow
+  (lecture-python-programming.ml#55 carries `python_by_example` forward, then ml#56 writes the
+  state files). On 2026-10-20 a trace of what sync does with a lecture the source removes filed
+  #396–#401 and added one line to #376's action reference: under `existing`, a rename whose old
+  path has no state file is skipped, so the old file stays where it was.
+
+  Logs `2026-10-19-sync-scope-existing`, `2026-10-20-lecture-removal-gaps`.
 - **Hardening project #349** (created 2026-10-06 from the 2026-10-05 codebase review). It has two
   work items:
   - **#348**: `translate forward` sends no glossary terms and no language rules, because it passes
@@ -17,19 +37,21 @@ Roadmap detail lives in the project trackers (reading order in
 
   The review's evidence for other open issues went as comments on #90, #154, #169, #170, #259,
   #261, #281 and #325; the per-finding disposition is in `log/2026-10-06-review-followup.md`.
-- **Claude 5.5 upgrade (#342, #334) — engine support in #394 (2026-10-19).** The engine runs
-  `claude-sonnet-5-5` (`between_tools`, effort `high`) and `claude-opus-5-5` (adaptive, effort
-  `medium`) through a per-model request policy in `models.ts`, and a refusal now fails the file
-  (R12). The default stays `claude-sonnet-5`. The flip waits on a `model-eval` report against
-  the standing golden set in QuantEcon/test-action-translation (decision
-  `D-2026-10-20-model-upgrades-measured-against-goldens`), and #395 is to be trimmed to the
-  engine-side tooling that report needs (`init --report-json`, the price table, a classified
-  `rate-check.sh`). The billed runs need an API key, so they are @mmcky's (handover
-  `log/2026-10-20-claude-5-5-eval-handover`). #342's live check passed on 2026-10-22, before
-  merge: one zh-cn draft of `game-theory.md` each from `claude-sonnet-5`, `claude-sonnet-5-5`
-  and `claude-opus-5-5`, all delivered with the source's structure. Decisions
-  `D-2026-10-19-per-model-request-policy` and `D-2026-10-19-opus-5-5-for-bulk-seed`; log
-  `2026-10-19-claude-5-5-engine`.
+- **Claude 5.5 upgrade (#342, #334) — engine support in #394 (2026-10-19), measurement tooling
+  in #395.** The engine runs `claude-sonnet-5-5` (`between_tools`, effort `high`) and
+  `claude-opus-5-5` (adaptive, effort `medium`) through a per-model request policy in `models.ts`,
+  and a refusal now fails the file (R12). The default stays `claude-sonnet-5`. #395 adds what
+  the measurement needs: `translate init --report-json`, one price table (`model-pricing.ts`) and
+  a classified `rate-check.sh` that draws the tested engine's own default model; its one-off
+  experiment was dropped before merge. The flip waits on a `model-eval` report against the
+  standing golden set in QuantEcon/test-action-translation (decision
+  `D-2026-10-20-model-upgrades-measured-against-goldens`). The billed runs need an API key, so
+  they are @mmcky's (handover `log/2026-10-20-claude-5-5-eval-handover`). #342's live check
+  passed on 2026-10-22, before merge: one zh-cn draft of `game-theory.md` each from
+  `claude-sonnet-5`, `claude-sonnet-5-5` and `claude-opus-5-5`, all delivered with the source's
+  structure. Decisions `D-2026-10-19-per-model-request-policy` and
+  `D-2026-10-19-opus-5-5-for-bulk-seed`; logs `2026-10-19-claude-5-5-engine` and
+  `2026-10-20-claude-5-5-eval`.
 - **fr typography fixes #324 and #325** (filed 2026-09-23 from the French editor's second
   round) — implementation branches in progress: **#324** (`fix/fr-elision-apostrophe`) sets the
   `fr` elision apostrophe before inline markup as U+2019; **#325**
@@ -275,6 +297,13 @@ Roadmap detail lives in the project trackers (reading order in
 
 **Resume here (2026-09-23, after v0.29.3):**
 
+*#344, 2026-10-19*: #376 awaits review and the harness scope smoke (`--action-ref
+feat/sync-scope-existing --sync-scope existing --scenarios 01,17,18,19,20`; the run book is
+#377's handover log). #346's table row for #344 still describes the first version (`_toc.yml`
+left alone); the ToC is now mirrored. The fourteen issues filed from #376's reviews (#378–#391)
+and the six from the 2026-10-20 removal trace (#396–#401) are untriaged; #378, #379, #381 and
+#384, with the older #134 and #175, are the CLI bug fixes of the CLI-first record's phase 1.
+
 *ml, 2026-09-28 (end)*: see the ml bullet under In flight — round 5 is with the editor, and
 next is the second `ml_repair` PR; #335 shipped in v0.29.4.
 
@@ -333,8 +362,9 @@ in the fr edition's pandas lecture.
 
 ## Health & context
 
-- `main` green; **1,590 tests across 67 suites** (zero skips, type-checked) as of
-  `16e50f6`; lint at `--max-warnings 0` including root `*.mjs`, CI checks formatting and
+- `main` green; **1,635 tests across 68 suites** (zero skips, type-checked) as of
+  `e7356cc` (counted 2026-10-19; #376 brings it to 1,839 across 70); lint at
+  `--max-warnings 0` including root `*.mjs`, CI checks formatting and
   `.qe/dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale `dist/`
   — run `npm run build` first; that guard is deliberate, not a break.
 - Highest-priority known bug class: the success-shaped failure (#90 defects 3–5, #276's two

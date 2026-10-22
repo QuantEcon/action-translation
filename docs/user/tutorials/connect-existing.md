@@ -25,6 +25,8 @@ Use this when you have:
 - The target **already has translated `.md` files** in a docs folder
 - The repos are **not yet connected** via action-translation (no `.translate/` folder, no sync workflow)
 
+It also fits a **partial edition**: one that has translated some lectures, may hold English copies of others, and takes the rest one reviewed PR at a time, as in [One reviewed lecture at a time](fresh-setup.md#one-reviewed-lecture-at-a-time). Notes in Steps 2, 4, 5, 6 and 7, and under [Common issues](#common-issues-when-connecting), cover what differs for it.
+
 If you're starting from scratch with no translations, see [Tutorial: Fresh Setup](fresh-setup.md) instead.
 
 ## Overview
@@ -117,6 +119,10 @@ This uses a lightweight LLM comparison to classify each file:
 
 If all files show `IDENTICAL` or `I18N_ONLY`, skip to Step 4. If any show `CONTENT_CHANGES`, proceed to Step 3. If any show `TARGET_HAS_ADDITIONS`, consider running `translate backward` first to capture improvements before resyncing.
 
+:::{note}
+**On a partial edition**, the check also reports the English copies: a byte-identical copy as `IDENTICAL` (`Files are byte-identical`), and one the source has moved on from as `CONTENT_CHANGES`. Neither is a translation, so leave the copies out of Steps 3 to 5: name each translated lecture with `-f`, or leave the copies out with `--exclude`. Without either, both commands take every `.md` file at the top level of the docs folder: `forward` (Steps 3 and 5) rewrites each copy the source has moved on from and writes a state file for it, and `status --write-state` (Step 4) writes one for every copy. (If any copy is stale, `--write-state` refuses the whole run and suggests `forward` or `--force`; on a partial edition take neither, and rerun with `-f` or `--exclude`.) Under `sync-scope: existing` (Step 6), a state file puts its copy in sync's scope.
+:::
+
 :::{tip}
 If you're confident the translations are current (e.g., they were just completed), you can skip this step. But for repos where the source has been actively developed since the translations were done, this check can save significant debugging later.
 :::
@@ -198,6 +204,19 @@ mode: RESYNC               # Marked as RESYNC (not a fresh translation)
 section-count: 5           # Current source section count
 ```
 
+:::{warning}
+**On a partial edition, write state for the translated lectures only.** Without `-f` or `--exclude`, `--write-state` writes a state file for every `.md` file at the top level of the docs folder that both repositories have, English copies included. Under `sync-scope: existing` (Step 6), a state file is what puts a lecture in sync's scope, so the next English change to a copy with one would be synced into it as a half-translated page. Run the command once per translated lecture with `-f`, or leave the copies out with `--exclude`; a translated lecture in a subfolder needs `-f` in any case. Keep `-l`, and `-d` if the docs folder is not `lectures`, on every run, since each one rewrites `.translate/config.yml` from its flags. See [Bootstrapping existing projects](../cli-reference.md#bootstrapping-existing-projects).
+
+```bash
+npx translate status \
+  -s ~/repos/lecture-python-intro \
+  -t ~/repos/lecture-python-intro.zh-cn \
+  -l zh-cn \
+  -f cobweb.md \
+  --write-state
+```
+:::
+
 **Commit the metadata:**
 
 ```bash
@@ -219,6 +238,10 @@ Heading-maps are essential for reliable section matching. If Step 1 showed `MISS
 
 :::{note}
 Files with zero sections (no `##` headings, like a simple `intro.md` or `status.md`) correctly have no heading-map. The `doctor` command will not warn about these.
+:::
+
+:::{note}
+**On a partial edition**, run every command in this step with `-f` for each translated lecture, or with `--exclude` for the English copies. Without either, `forward` rewrites each copy the source has moved on from and writes a state file for it, which puts the copy in sync's scope under `sync-scope: existing`. `headingmap` adds an English-to-English heading-map to each copy. Without a heading-map, a copy that has sections shows `MISSING_HEADINGMAP`, which is expected (see Step 7).
 :::
 
 ### Option A: Use `headingmap` to generate maps (recommended)
@@ -400,6 +423,20 @@ jobs:
 Make sure the `paths` filter matches your actual file locations. For example, if your TOC is at `lectures/_toc.yml`, use that — not `_toc.yml` at the repo root.
 :::
 
+On a partial edition, add `sync-scope: existing` (a temporary input; see [Partial editions](../action-reference.md#partial-editions)) to the action's inputs. A sync then updates only the lectures that have a state file on the edition's default branch, and never translates a lecture the edition has not taken:
+
+```yaml
+- uses: QuantEcon/action-translation@v0
+  with:
+    mode: sync
+    # ... the inputs above
+    sync-scope: existing
+```
+
+Switch only once every lecture the edition has translated has its state file on the default branch (Step 4). Under `existing`, a lecture without one is not synced, so an edition with no state files would sync no lecture at all.
+
+Sync keeps `_toc.yml` a mirror of the source's under `existing` too, so the first sync of a source PR that changes it replaces the edition's table of contents with one that lists lectures the edition does not have yet. Before this workflow merges, make the edition's build prune it (see [Prune the table of contents at build time](fresh-setup.md#prune-the-table-of-contents-at-build-time)).
+
 ### 6b: Source repo — Secrets
 
 | Secret | Value | Purpose |
@@ -498,13 +535,24 @@ npx translate doctor \
 
 All checks should pass ✅. If some files show `OUTDATED` or `SOURCE_AHEAD`, address them with `forward` before considering the connection complete — otherwise those files will be silently out of date.
 
+On a partial edition, some of this reads differently:
+
+- `status` shows the lectures the edition has not taken as `SOURCE_ONLY`. Under `sync-scope: existing`, sync never translates them: each joins the edition in its own reviewed PR, as in [One reviewed lecture at a time](fresh-setup.md#one-reviewed-lecture-at-a-time).
+- The English copies have no state file and no heading-map, on purpose. `doctor` warns about the missing state files, and about the missing heading-maps of the copies that have sections, which `status` shows with `MISSING_HEADINGMAP`.
+- A copy the source has moved on from shows `OUTDATED`, or `SOURCE_AHEAD` when the source added a section. Leave it: `forward` would rewrite it and give it a state file, which puts it in sync's scope.
+- `doctor` names at most five files without a state file, and checks only the top level of the docs folder. Compare `.translate/state/` with the lectures the edition has translated, subfolders included: each translated lecture needs a state file, and no English copy may have one.
+
 ---
 
 ## Common issues when connecting
 
 ### Many files show MISSING_HEADINGMAP
 
-This is expected for repos translated before action-translation. Use `headingmap` to fix without changing translations:
+This is expected for repos translated before action-translation.
+
+On a partial edition, the English copies that have sections show `MISSING_HEADINGMAP` too, and should keep it. Run either command below with `-f` for each translated lecture, or with `--exclude` for the copies: without either, `forward` rewrites each copy the source has moved on from and gives it a state file, which puts it in sync's scope (see the note in Step 5).
+
+Use `headingmap` to fix without changing translations:
 
 ```bash
 npx translate headingmap \
@@ -530,9 +578,11 @@ This means the source and target have different numbers of `##` sections. Common
 - The target was manually restructured → may need manual alignment
 - Subsections (`###`) inside a section don't affect the count — only `##` headings matter
 
+On a partial edition, an English copy can show `SOURCE_AHEAD` too; leave it (see Step 7).
+
 ### Files exist in only one repo
 
-- `SOURCE_ONLY` — new file that hasn't been translated yet. Use `forward -f <file>` or wait for the sync action to handle it when the file is changed via a PR.
+- `SOURCE_ONLY` — new file that hasn't been translated yet. Translate it with `init -f <file>`, since `forward` only resyncs a file the target already has; [Tutorial: Resync a Drifted Target](resync-drifted.md) lists what else `init -f` changes. Under the default `sync-scope: all`, you can instead wait for the sync action to translate it when a PR changes it. Under `sync-scope: existing`, sync never translates it: add it in its own reviewed PR, as in [One reviewed lecture at a time](fresh-setup.md#one-reviewed-lecture-at-a-time).
 - `TARGET_ONLY` — a file that was deleted from source. Consider deleting it from target too.
 
 ## Next steps

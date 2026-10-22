@@ -26,7 +26,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { MystParser } from '../../parser.js';
 import { extractHeadingMap } from '../../heading-map.js';
-import { getFileGitMetadata } from '../git-metadata.js';
+import { getFileGitMetadata, fileChangedSince, commitsSince } from '../git-metadata.js';
 import {
   readFileState,
   writeFileState,
@@ -91,7 +91,8 @@ export interface StatusOptions {
   file?: string; // Single file to check (relative to docs-folder)
   writeState?: boolean; // Bootstrap .translate/ metadata from current state
   sourceLanguage?: string; // Required when writeState is true
-  force?: boolean; // Skip sync-date safety check for --write-state
+  force?: boolean; // Skip every --write-state safety check (dates, carried changes, unreadable state)
+  carried?: boolean; // With --write-state: confirm English changes since each recorded sync point are carried (#380)
   checkSync?: boolean; // LLM-based content sync check (requires ANTHROPIC_API_KEY)
   apiKey?: string; // Anthropic API key (required for --check-sync)
   model?: string; // Claude model (default: DEFAULT_CLAUDE_MODEL — see src/models.ts)
@@ -286,6 +287,113 @@ export async function checkFileStatus(
 }
 
 // ============================================================================
+// --write-state CARRIED-CHANGE GUARD (#380)
+// ============================================================================
+
+/** A lecture whose English changed after the sync point its state file records. */
+interface UncarriedChange {
+  file: string;
+  recorded: string; // The state file's source-sha
+  sourcePath: string; // The English file, relative to the source clone
+  commits?: string[]; // Commits since the recorded one; undefined when it is not in the clone
+}
+
+/**
+ * Find the lectures whose English changed after the sync point their state
+ * file records.
+ *
+ * The date guard compares last-commit dates only, so any later commit to the
+ * lecture (a reviewer's suggestion on a round's branch) let --write-state
+ * record the current English commit over English changes the translation never
+ * carried, and the lecture then read ALIGNED (#380). A readable state file
+ * names the commit the translation was last synced from, so git can answer
+ * directly: has the English file's content changed since that commit? Content
+ * decides, not commit identity, so a recorded commit that did not touch the
+ * file (the merge commit sync records, #391) passes.
+ *
+ * Checked: each entry that will receive state, whose readable state file
+ * records a source-sha other than 'unknown' that differs from the English
+ * file's last commit. Left to the date guard alone: lectures without a
+ * readable state file (bootstrap; an unreadable one is refused at write time),
+ * records of 'unknown', and English with no git history, for which the write
+ * records 'unknown' and so claims nothing.
+ */
+async function findUncarriedChanges(
+  entries: FileStatusEntry[],
+  source: string,
+  target: string,
+  docsFolder: string
+): Promise<UncarriedChange[]> {
+  const uncarried: UncarriedChange[] = [];
+  for (const entry of entries) {
+    if (
+      entry.status === 'SOURCE_ONLY' ||
+      entry.status === 'TARGET_ONLY' ||
+      entry.status === 'NOT_FOUND'
+    ) {
+      continue;
+    }
+
+    const recorded = readFileState(target, entry.file)?.['source-sha'];
+    if (!recorded || recorded === 'unknown') continue;
+
+    const sourcePath = docsFolder ? path.join(docsFolder, entry.file) : entry.file;
+    const current = await getFileGitMetadata(source, sourcePath);
+    if (!current || current.lastCommit === recorded) continue;
+
+    const changed = await fileChangedSince(source, recorded, sourcePath);
+    if (changed === false) continue;
+
+    uncarried.push({
+      file: entry.file,
+      recorded,
+      sourcePath,
+      commits: changed ? await commitsSince(source, recorded, sourcePath) : undefined,
+    });
+  }
+  return uncarried;
+}
+
+/** One refusal naming every lecture findUncarriedChanges found. */
+function uncarriedChangesError(uncarried: UncarriedChange[]): Error {
+  const lines: string[] = [];
+  for (const u of uncarried) {
+    const recorded = u.recorded.slice(0, 7);
+    if (u.commits === undefined) {
+      lines.push(`  ${u.file}  (recorded ${recorded}, which is not in the local source clone)`);
+      continue;
+    }
+    lines.push(`  ${u.file}  (recorded ${recorded})`);
+    if (u.commits.length > 0) {
+      lines.push(...u.commits.map((commit) => `    ${commit}`));
+    } else {
+      // The content differs, yet git log lists no commit since the recorded
+      // one: the recorded commit is not an ancestor of HEAD, or a merge that
+      // kept the other side's version hides the change from log's history
+      // simplification. The diff still shows what moved.
+      lines.push(
+        `    (no listed commit; see git diff ${recorded} HEAD -- ${u.sourcePath}, ` +
+          `and pull the clone first if the recorded commit is newer than its HEAD)`
+      );
+    }
+  }
+  const missing = uncarried.some((u) => u.commits === undefined);
+  return new Error(
+    `--write-state blocked: ${uncarried.length} file(s) have English changes since the sync point their state file records.\n` +
+      `Recording the current English commit would mark those changes as carried into the translation.\n\n` +
+      lines.join('\n') +
+      '\n\n' +
+      (missing
+        ? `A recorded commit that is not in the local source clone cannot be checked: ` +
+          `pull or unshallow the clone and rerun, or confirm with --carried.\n\n`
+        : '') +
+      `Options:\n` +
+      `  1. Carry each change into the translation and commit it, then rerun with --carried\n` +
+      `  2. Use --force to write state anyway (skips every check)`
+  );
+}
+
+// ============================================================================
 // FULL STATUS RUN
 // ============================================================================
 
@@ -363,6 +471,17 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
             `  1. Run 'translate forward' first to bring TARGET up to date\n` +
             `  2. Use --force to write state anyway (if you're sure translations are current)`
         );
+      }
+
+      // A lecture whose state file records a sync point is also held to it
+      // (#380). Like the date guard, this refuses before anything is written;
+      // --carried, the operator's word that the changes are in the
+      // translation, skips this guard and no other.
+      if (!options.carried) {
+        const uncarried = await findUncarriedChanges(entries, source, target, docsFolder);
+        if (uncarried.length > 0) {
+          throw uncarriedChangesError(uncarried);
+        }
       }
     }
 

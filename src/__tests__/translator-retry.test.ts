@@ -318,6 +318,25 @@ describe('TranslationService - Retry Logic', () => {
   });
 
   describe('retryable errors', () => {
+    it('counts every retried attempt, and none for an attempt that is not retried', async () => {
+      mockFinalMessage
+        .mockRejectedValueOnce(rateLimitError('Rate limit exceeded'))
+        .mockRejectedValueOnce(serverError(529, 'Overloaded'))
+        .mockResolvedValueOnce(createSuccessResponse())
+        .mockRejectedValueOnce(badRequestError('Invalid request'));
+      const request = {
+        mode: 'new' as const,
+        sourceLanguage: 'en',
+        targetLanguage: 'zh-cn',
+        englishSection: '## Test\n\nContent',
+      };
+
+      expect((await service.translateSection(request)).success).toBe(true);
+      expect(service.getRetryCount()).toBe(2);
+      expect((await service.translateSection(request)).success).toBe(false);
+      expect(service.getRetryCount()).toBe(2);
+    });
+
     it('should retry on RateLimitError and succeed', async () => {
       mockFinalMessage
         .mockRejectedValueOnce(rateLimitError('Rate limit exceeded'))

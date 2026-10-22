@@ -7,7 +7,8 @@
  */
 
 import { Octokit } from '@octokit/rest';
-import type { PRPair, FileDiff } from './types.js';
+import { SYNC_CHECK_NAME } from './scope-expectations.js';
+import type { PRPair, FileDiff, SourcePR, SyncCheckRun } from './types.js';
 
 // Test repository configuration
 const SOURCE_OWNER = 'QuantEcon';
@@ -25,16 +26,14 @@ export class GitHubService {
   /**
    * Get all open PRs from source repo with test-translation label
    */
-  async getSourcePRs(): Promise<Array<{
-    number: number;
-    title: string;
-    branch: string;
-    url: string;
-  }>> {
+  async getSourcePRs(): Promise<SourcePR[]> {
+    // per_page 100, not the default 30: a source PR missing from the page
+    // would read as one with no translation PR.
     const { data: prs } = await this.octokit.pulls.list({
       owner: SOURCE_OWNER,
       repo: SOURCE_REPO,
       state: 'open',
+      per_page: 100,
     });
 
     return prs
@@ -44,7 +43,34 @@ export class GitHubService {
         title: pr.title,
         branch: pr.head.ref,
         url: pr.html_url,
+        labels: pr.labels.map(l => l.name),
+        headSha: pr.head.sha,
       }));
+  }
+
+  /**
+   * The check runs of the zh-cn sync job (SYNC_CHECK_NAME) on a source
+   * commit. A harness source PR under the scope label has at least two: the
+   * run its scope label fires, which the job skips, and the run
+   * test-translation fires. `filter: 'all'` lists re-run attempts too, on one
+   * page of up to 100, which covers a harness commit; `syncRunVerdict` picks
+   * the run that decides. A read that fails throws.
+   */
+  async getSyncCheckRuns(headSha: string): Promise<SyncCheckRun[]> {
+    const { data } = await this.octokit.checks.listForRef({
+      owner: SOURCE_OWNER,
+      repo: SOURCE_REPO,
+      ref: headSha,
+      check_name: SYNC_CHECK_NAME,
+      filter: 'all',
+      per_page: 100,
+    });
+    return data.check_runs.map(run => ({
+      id: run.id,
+      status: run.status,
+      conclusion: run.conclusion,
+      url: run.html_url ?? undefined,
+    }));
   }
 
   /**
@@ -61,6 +87,7 @@ export class GitHubService {
       owner: TARGET_OWNER,
       repo: TARGET_REPO,
       state: 'open',
+      per_page: 100,
     });
 
     return prs.map(pr => ({
@@ -74,22 +101,27 @@ export class GitHubService {
 
   /**
    * Match source PRs to their corresponding target PRs
-   * Target PRs reference source PRs in their body via "### Source PR" section
+   * Target PRs reference source PRs in their body via "### Source PR" section.
+   * Source PRs with no target PR are returned as `unmatched`.
    */
-  async matchPRPairs(): Promise<PRPair[]> {
+  async matchPRPairs(): Promise<{ pairs: PRPair[]; unmatched: SourcePR[] }> {
     const sourcePRs = await this.getSourcePRs();
     const targetPRs = await this.getTargetPRs();
     
     const pairs: PRPair[] = [];
+    const unmatched: SourcePR[] = [];
 
     for (const sourcePR of sourcePRs) {
       // Find target PR that references this source PR
       // Target PR body contains: "### Source PR\n**[#123 - ..."
-      const matchingTarget = targetPRs.find(tpr => 
-        tpr.body.includes(`#${sourcePR.number}`)
-      );
+      // Not followed by a digit, so #12 does not match a body that cites #123:
+      // a false match would hide a source PR that has no translation PR.
+      const reference = new RegExp(`#${sourcePR.number}(?!\\d)`);
+      const matchingTarget = targetPRs.find(tpr => reference.test(tpr.body));
 
-      if (matchingTarget) {
+      if (!matchingTarget) {
+        unmatched.push(sourcePR);
+      } else {
         // Extract test scenario from title (e.g., "TEST: New section added (05 - minimal)")
         const scenarioMatch = sourcePR.title.match(/TEST:\s*(.+)/);
         const testScenario = scenarioMatch ? scenarioMatch[1] : sourcePR.title;
@@ -104,11 +136,13 @@ export class GitHubService {
           sourceUrl: sourcePR.url,
           targetUrl: matchingTarget.url,
           testScenario,
+          sourceLabels: sourcePR.labels,
+          targetBody: matchingTarget.body,
         });
       }
     }
 
-    return pairs;
+    return { pairs, unmatched };
   }
 
   /**

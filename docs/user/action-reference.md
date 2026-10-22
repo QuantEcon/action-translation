@@ -22,6 +22,8 @@ Runs in the **source** (English) repository. When a PR that changes Markdown fil
 
 If sync fails, it automatically opens a GitHub Issue with error details and recovery instructions.
 
+An edition that takes lectures one reviewed PR at a time can limit sync to the lectures it already has: see [Partial editions](#partial-editions).
+
 ### Review mode
 
 Runs in the **target** (translated) repository. When a translation PR is opened (typically by sync mode), the action:
@@ -59,6 +61,7 @@ Runs in the **target** (translated) repository, triggered when a translation PR 
 | `glossary-path` | *(empty)* | Path to custom glossary JSON file. **Overrides** the built-in glossary for the target language; if empty, the built-in one is used. Honoured by all three modes — sync, rebase and review. A path that cannot be read or parsed **fails the run** rather than falling back to different terminology |
 | `claude-model` | `claude-sonnet-5` | Claude model for translation |
 | `bibliography` | `backfill` | How to handle citations a run introduces that the target bibliography lacks (#117). `backfill` copies the entry from the source bibliography; `lint` reports and fails the run without copying; `off` disables the check. Entries are only ever **appended** — a key that already resolves in the target is never a candidate, so an edition that has localised an entry cannot have it clobbered. An unrecognised value **fails the run** |
+| `sync-scope` | `all` | Which changed lectures a sync translates. `all` takes every one. `existing` syncs a changed or renamed lecture only when the edition has its state file, `.translate/state/<file>.yml`; the others are skipped and listed. A temporary input for an edition built one reviewed lecture at a time (see [Partial editions](#partial-editions)). An unrecognised value **fails the run** |
 | `pr-labels` | `action-translation,automated` | Comma-separated labels for created PRs |
 | `pr-reviewers` | *(empty)* | GitHub usernames to request as reviewers |
 | `pr-team-reviewers` | *(empty)* | GitHub team slugs to request as reviewers |
@@ -293,18 +296,53 @@ jobs:
 When a PR is merged into the default branch, sync mode:
 
 1. **Identifies changed files** — Compares the PR's diff against the docs folder pattern
-2. **Classifies each file** — New file (full translation) or existing file (section-level update)
-3. **Parses sections** — Splits documents at `##` headings using a stack-based parser
-4. **Detects section changes** — Compares old and new source to find which sections differ
-5. **Translates changed sections** — Sends only modified sections to Claude (UPDATE mode)
-6. **Reconstructs the document** — Merges translated sections back with unchanged content
-7. **Updates heading-map** — Refreshes the section ID mapping in the target frontmatter
-8. **Creates a PR** — Commits all updated files to a branch in the target repo
-9. **Posts a success comment** — Confirms sync completion on the source PR with a link to the translation PR
+2. **Checks scope** — Under `sync-scope: existing` only: keeps a changed or renamed lecture only if the edition has both its state file and the lecture, before any content is fetched. If nothing is left to sync, the run ends here with a job summary and no PR: it passes if every check succeeded, and otherwise fails and opens the failure issue (see [Partial editions](#partial-editions))
+3. **Classifies each file** — New file (full translation) or existing file (section-level update)
+4. **Parses sections** — Splits documents at `##` headings using a stack-based parser
+5. **Detects section changes** — Compares old and new source to find which sections differ
+6. **Translates changed sections** — Sends only modified sections to Claude (UPDATE mode)
+7. **Reconstructs the document** — Merges translated sections back with unchanged content
+8. **Updates heading-map** — Refreshes the section ID mapping in the target frontmatter
+9. **Creates a PR** — Commits all updated files to a branch in the target repo
+10. **Posts a success comment** — Confirms sync completion on the source PR with a link to the translation PR
 
 If any files fail to process, the action opens a GitHub Issue with error details and a link to the source PR. Comment `\translate-resync` on the merged PR to retry all languages, or `\translate-resync fa` to retry a specific language.
 
-For new files, the entire document is translated in a single call (NEW mode).
+For new files, the entire document is translated in a single call (NEW mode). Under `sync-scope: existing` this never happens: a lecture is in scope only if the edition already has it.
+
+## Partial editions
+
+A partial edition takes lectures one reviewed PR at a time, so the source has lectures the edition does not have yet. Under the default `sync-scope: all`, a source PR that changes one of them has it translated from scratch in the sync PR. Set `sync-scope: existing` on the edition's sync job to sync only the lectures the edition already has:
+
+```yaml
+- uses: QuantEcon/action-translation@v0
+  with:
+    mode: sync
+    target-repo: 'QuantEcon/lecture-python-programming.ml'
+    target-language: 'ml'
+    sync-scope: existing
+    # ... other inputs
+```
+
+**What is in scope.** A changed lecture syncs only when the edition's default branch has its state file, `.translate/state/<path>.yml`, with `<path>` relative to `docs-folder`: `lectures/cobweb.md` needs `.translate/state/cobweb.md.yml`, and `lectures/_admonition/gpu.md` needs `.translate/state/_admonition/gpu.md.yml`. A renamed lecture is decided by its previous path. `translate init` writes the state file with the lecture, so a lecture joins sync when the PR that adds it, state file included, merges. A lecture new to the source is out of scope, since the edition has no state file for it. The run checks only that the state file exists, not what it says.
+
+A lecture's `.md` file is not enough. `QuantEcon/lecture-python-programming.ml` carries English copies of `intro.md` and `_admonition/gpu.md`, and syncing them would turn an English change into a half-translated page; with no state files, they stay out of scope. By the same rule, an edition with no state files syncs no lecture under `existing`. Before an edition switches to `existing`, every lecture it has translated needs a state file, and no other lecture should have one (see [Bootstrapping existing projects](cli-reference.md#bootstrapping-existing-projects)).
+
+**How a scoped run behaves.**
+
+- Each changed or renamed lecture is checked before any of its content is fetched, so one out of scope costs a request or two and no model call.
+- Only a 404 counts as absent. Any other read error leaves that lecture's scope unknown, and the lecture is neither synced nor skipped: the run fails and opens the failure issue, and the job summary lists the error under **Scope unknown**. The lectures the run could check still sync, in a PR as usual. If a later read fails as well, as the bibliography check's read of the edition's `_config.yml` can, the run stops at that read instead: no PR, no failure issue and no job summary, and both errors are only in the run's log.
+- Before checking any lecture, the run reads the edition itself. GitHub also answers 404 for a repository the token cannot see, so without this read a `target-repo` that names no repository the token can see (a misspelt name, or a token without access) would pass with every lecture skipped. If the read fails, the run syncs nothing, not even a `_toc.yml` change or a removal, since an edition it cannot read can take no change. It fails at once and opens the failure issue, and the job summary lists the error under **Scope unknown**.
+- Removals are not scoped: a lecture deleted upstream is deleted from the edition, with its state file, as under `all`. When a rename comes with a large rewrite, GitHub can report it as a removal plus an addition instead: the removal then deletes the edition's lecture and its state file, and the addition is out of scope. Add the lecture back at its new path in a reviewed PR.
+- A rename is scoped by its previous path. When the edition has no state file there, as for an English copy, the rename is skipped: the edition keeps the file under its old name, and when the source PR also changes `_toc.yml`, as a rename usually does, the mirrored ToC drops the old name's entry, leaving the file outside the ToC. Move or remove it by hand.
+- `_toc.yml` is not scoped either. It is mirrored from the source with the edition's translated part captions kept, as under `all`, so it lists lectures the edition does not have yet. A partial edition prunes it at build time (the Malayalam edition runs `scripts/prune_toc.py`).
+- Lectures the edition does not have yet are listed under **Lectures Not Synced** in the PR body, when there is one, and in the job summary on the workflow run's page. They are not in the PR's metadata `files`, which names what the PR delivers, and the comment on the source PR does not mention them.
+- When nothing is left to sync (no lecture in scope, no `_toc.yml` change, no removal) and every check succeeded, the run passes without a PR, a new failure issue or a comment on the source PR, and its job summary lists what it skipped. If an earlier run opened a failure issue for the same PR and language, for example after a failed scope read, this run closes it, with a comment that links the run. A scoped run that gets past the scope check and passes without a PR, because it had nothing to deliver, does the same. Runs that end before the scope check (a PR with no docs changes, or a resync aimed at another language) close nothing, and under `all` only a run that opens its translation PR without errors closes the issue.
+- A lecture is never translated from scratch. If its state file exists but its `.md` does not, it is skipped with a warning and listed under **State File Without a Lecture**: restore the lecture, or remove the state file. If the content of a lecture in scope cannot be read, the run fails.
+
+**Known gap.** An English change that merges after a lecture is drafted (`translate init`) and before its PR merges does not reach that lecture: the lecture is out of scope until its PR merges. `translate init` records the English commit the draft was made from, so a check before merging catches such a change: run `translate status -f <file>` with the edition's clone on the PR's branch, and both clones up to date. `OUTDATED` means the PR should carry the change. Once the change is committed, record the new English commit in the lecture's state file: run the same check with `--write-state --carried`, and with the edition's own `-l` and `-d`, because that run rewrites `.translate/config.yml` from its flags. `--carried` confirms that the PR carries every English change since the commit the state file records. Without it, `--write-state` refuses, and lists the English commits since that one, or says that commit is not in the local source clone. Restore `.translate/config.yml` if the run changed it, commit the state file to the PR, and run the check again: it should now read `ALIGNED`. [Tutorial: Fresh Setup](tutorials/fresh-setup.md#one-reviewed-lecture-at-a-time) walks through it. A rename opens the same gap: until the rename's sync PR merges, the edition's state file is under the old name, so a change to the lecture at its new path is not synced. Once that PR merges, `translate status -f <new name>` reports the lecture `OUTDATED`.
+
+**The input is temporary.** `sync-scope` retires once three things land: sync never first-translates a lecture the edition lacks ([#259](https://github.com/QuantEcon/action-translation/issues/259)); one `_toc.yml` rule for every edition, under which the committed ToC lists the lectures that have a state file and those the PR delivers, and `translate init` inserts a new lecture's entry ([#259](https://github.com/QuantEcon/action-translation/issues/259), [#142](https://github.com/QuantEcon/action-translation/issues/142)); and a check that fails any lecture in the edition that has no state file. As ruled on 2026-10-19, that check runs in each syncing edition's CI and fails on a `.md` in the docs folder, subfolders included, that has no state file and is not a declared exception (such as an English copy), on a declared exception that has one, on a state file with no lecture, and on an unreadable state file ([#370](https://github.com/QuantEcon/action-translation/issues/370)); today `translate doctor` only warns about a missing state file, and only for top-level lectures. State-aware sync is then every edition's only behaviour, and an edition with a state file for every lecture loses nothing. An edition that completes before then stays on `existing`: there is no switch back to `all`.
 
 ## Claude model selection
 

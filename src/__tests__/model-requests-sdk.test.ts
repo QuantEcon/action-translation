@@ -330,6 +330,7 @@ describe('translator (streamed): what comes back', () => {
     expect(service.getUsage()).toEqual({
       inputTokens: 500,
       outputTokens: 7,
+      thinkingTokens: 0,
       cacheCreationInputTokens: 0,
       cacheReadInputTokens: 0,
       apiCalls: 1,
@@ -381,6 +382,54 @@ describe('translator (streamed): what comes back', () => {
     expect(result.translatedSection).toBeUndefined();
     expect(result.error).toContain('unexpected stop_reason=model_context_window_exceeded');
     expect(api.requests).toHaveLength(1);
+  });
+
+  it('counts the thinking tokens the stream reports, and the model that served each call, refused ones included', async () => {
+    api.reply(
+      {
+        content: [thinking(), text(TRANSLATED_DOCUMENT)],
+        stop_reason: 'end_turn',
+        usage: { input_tokens: 900, output_tokens: 700, thinking_tokens: 450 },
+      },
+      MID_STREAM_REFUSAL
+    );
+    const service = new TranslationService('test-key', 'claude-opus-5-5');
+
+    await service.translateFullDocument(FULL_DOCUMENT);
+    await rejectionOf(service.translateFullDocument(FULL_DOCUMENT));
+
+    // output_tokens_details reached the accumulator through message_delta;
+    // thinking stays inside outputTokens.
+    expect(service.getUsage()).toEqual({
+      inputTokens: 1400,
+      outputTokens: 707,
+      thinkingTokens: 450,
+      cacheCreationInputTokens: 0,
+      cacheReadInputTokens: 0,
+      apiCalls: 2,
+    });
+    expect(service.getServedModels()).toEqual(['claude-opus-5-5']);
+    expect(service.getRetryCount()).toBe(0);
+  });
+
+  it('retries a mid-stream overload, and counts the retry', async () => {
+    api.reply(
+      {
+        content: [text('部分')],
+        stop_reason: null,
+        midStreamError: { type: 'overloaded_error', message: 'Overloaded' },
+      },
+      endTurn(text(TRANSLATED_DOCUMENT))
+    );
+    const service = new TranslationService('test-key', 'claude-sonnet-5');
+
+    const result = await service.translateFullDocument(FULL_DOCUMENT);
+
+    expect(result).toMatchObject({ success: true, translatedSection: TRANSLATED_DOCUMENT });
+    expect(api.requests).toHaveLength(2);
+    expect(service.getRetryCount()).toBe(1);
+    // The failed stream returned no usage; only the completed call is counted.
+    expect(service.getUsage().apiCalls).toBe(1);
   });
 });
 

@@ -1,0 +1,105 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`buildPrBody sync-scope notice (#344) leaves a body with no other notice byte-identical when the run left nothing out 1`] = `
+"## Automated Translation Sync
+
+This PR contains automated translations from [QuantEcon/lecture-python](https://github.com/QuantEcon/lecture-python).
+
+### Source PR
+**[#42](https://github.com/QuantEcon/lecture-python/pull/42)**
+
+### Files Updated
+- ✏️ \`lectures/functions.md\`
+
+### Details
+- **Source Language**: en
+- **Target Language**: zh-cn
+- **Model**: claude-sonnet-4-20250514
+
+---
+*This PR was created automatically by the [translation action](https://github.com/quantecon/action-translation).*
+
+<!-- translation-sync-metadata
+{
+  "schemaVersion": 1,
+  "sourceRepo": "QuantEcon/lecture-python",
+  "sourcePR": 42,
+  "mode": "sync",
+  "sourceCommitSha": "abc123def456",
+  "targetBaseSha": "",
+  "sourceLanguage": "en",
+  "targetLanguage": "zh-cn",
+  "claudeModel": "claude-sonnet-4-20250514",
+  "files": [
+    {
+      "path": "lectures/functions.md"
+    }
+  ]
+}
+-->"
+`;
+
+exports[`buildPrBody sync-scope notice (#344) leaves the body byte-identical when the run left nothing out (sync-scope: all) 1`] = `
+"## Automated Translation Sync
+
+This PR contains automated translations from [QuantEcon/lecture-python](https://github.com/QuantEcon/lecture-python).
+
+### Source PR
+**[#42 - Update the functions lecture](https://github.com/QuantEcon/lecture-python/pull/42)**
+
+### Files Updated
+- ✏️ \`lectures/functions.md\`
+
+### Files Deleted
+- ❌ \`lectures/old_lecture.md\`
+
+### ⚠️ Files Failed to Translate
+
+The following new file(s) could not be translated and are **absent from this PR**. Their entries have been removed from \`lectures/_toc.yml\` so the target build stays green; the entries return with the files once they are delivered. The error details and recovery steps are in the failure issue this run opens on the source repository.
+
+- ❌ \`lectures/new_lecture.md\`
+
+### ⚠️ Sections Pending Earlier Translation PR
+
+The following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. If that PR is abandoned, run \`/translate-resync\` to recover.
+
+- \`lectures/functions.md\`: \`Exercises\`
+
+### ⚠️ Target-Only Sections Removed
+
+The following sections exist in the current translation but have **no counterpart in the source document**, so this sync removes them (the translation mirrors the source's structure). If the source deleted these sections, this removal is correct — merge as usual. If they are human-authored additions you want to keep, move them into a target-only file before merging (see [adding content to a translated edition](https://github.com/QuantEcon/action-translation/blob/main/docs/user/faq.md#how-do-i-add-content-to-a-translated-edition-that-isnt-in-the-source)).
+
+- \`lectures/functions.md\`: \`Local Notes\`
+
+### Details
+- **Source Language**: en
+- **Target Language**: zh-cn
+- **Model**: claude-sonnet-4-20250514
+
+---
+*This PR was created automatically by the [translation action](https://github.com/quantecon/action-translation).*
+
+<!-- translation-sync-metadata
+{
+  "schemaVersion": 1,
+  "sourceRepo": "QuantEcon/lecture-python",
+  "sourcePR": 42,
+  "mode": "sync",
+  "sourceCommitSha": "abc123def456",
+  "targetBaseSha": "target-sha",
+  "sourceLanguage": "en",
+  "targetLanguage": "zh-cn",
+  "claudeModel": "claude-sonnet-4-20250514",
+  "files": [
+    {
+      "path": "lectures/functions.md",
+      "type": "markdown"
+    },
+    {
+      "path": "lectures/old_lecture.md",
+      "type": "removed"
+    }
+  ]
+}
+-->"
+`;

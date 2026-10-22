@@ -35,6 +35,19 @@ export const DEFAULT_EVALUATOR_MODEL = 'claude-opus-4-8';
  */
 const MAX_DOCUMENT_CHARS = 200_000;
 
+/**
+ * What the diff judge is told about source files a `sync-scope: existing` run
+ * left out on purpose (#344). The caller drops them from the source file list,
+ * since a judge that sees one there can count its absence from the target
+ * against scope. With none left out this is '', and the prompt is unchanged.
+ */
+function scopeNote(leftOut: string[]): string {
+  if (leftOut.length === 0) return '';
+  const files = leftOut.map(f => `\`${f}\``).join(', ');
+  const them = leftOut.length === 1 ? 'it' : 'them';
+  return `\n\nThe source PR also changed ${files}. The sync ran under \`sync-scope: existing\`, which leaves out a changed lecture the target edition does not have yet, so the list above omits ${them} and the target correctly leaves ${them} unchanged.`;
+}
+
 // Load glossary
 interface GlossaryTerm {
   en: string;
@@ -506,6 +519,9 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
 
   /**
    * Evaluate diff quality - are changes in correct locations?
+   *
+   * `leftOutByScope` names the source files a `sync-scope: existing` run left
+   * out (#344), which the caller has already dropped from `sourceFiles`.
    */
   async evaluateDiff(
     sourceBefore: string,
@@ -513,7 +529,8 @@ Note: "syntaxErrors" should be an empty array [] if no markdown syntax errors ar
     targetBefore: string,
     targetAfter: string,
     sourceFiles: FileDiff[],
-    targetFiles: FileDiff[]
+    targetFiles: FileDiff[],
+    leftOutByScope: string[] = []
   ): Promise<DiffQualityResult> {
     // Documents go to the judge WHOLE.
     //
@@ -597,7 +614,7 @@ ${sourceAfter}
 \`\`\`
 
 ### Source Files Changed:
-${sourceFiles.map(f => `- ${f.filename}: ${f.status} (+${f.additions}/-${f.deletions})`).join('\n')}
+${sourceFiles.map(f => `- ${f.filename}: ${f.status} (+${f.additions}/-${f.deletions})`).join('\n')}${scopeNote(leftOutByScope)}
 
 ## Target Document Changes
 

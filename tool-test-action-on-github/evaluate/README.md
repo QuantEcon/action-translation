@@ -75,6 +75,20 @@ For each PR pair:
 - Posted as PR review comment on target PR
 - Includes scores, verdict, summary, strengths, issues, suggestions
 
+### 4. Scope runs
+
+A source PR with the `test-sync-scope-existing` label ran under `sync-scope: existing`, the harness's `--sync-scope existing` ([#344](https://github.com/QuantEcon/action-translation/issues/344)). `src/scope-expectations.ts` holds what the run should produce, for every scenario. For 17–20 and the scenarios that change only `lecture.md` (09–15, 22, 23, 25, 26, 28), that is a translation PR: the files it changes and how, and the lectures its body lists under `### Lectures Not Synced`. For the scenarios that change only `lecture-minimal.md` (01–08, 16, 21, 24, 27), it is no translation PR at all. The checks are deterministic and make no model call.
+
+- **17** and **18** translate no lecture, so the check is the whole evaluation.
+- **19** and **20** are evaluated on the lecture the expectation names (`lecture.md`, `linear-algebra.md`), not on the first changed `.md`, which for 19 is the lecture the run left out. The diff judge gets only the source files the run was meant to sync, and a note that `sync-scope: existing` left the others out, so 19's `lecture-minimal.md` does not count against scope.
+- The scenarios that change only `lecture.md` are held to a PR that changes `lecture.md` and updates `.translate/state/lecture.md.yml`, with no `### Lectures Not Synced` section. They are evaluated on `lecture.md` as usual, and the judge's prompt is the one a run without the label gets.
+- A mismatch makes the verdict FAIL, and the review comment and the report list each problem.
+- A labelled source PR whose scenario expects a translation PR, and has none, is a failure: the report lists it and the run exits non-zero.
+- For the scenarios that change only `lecture-minimal.md`, a translation PR is a failure, decided by the check alone. No translation PR is the expected result only if the source PR's zh-cn sync run passed, because a run that fails opens no PR either. The evaluator reads the check runs of the `sync-translation-zh-cn` job on the source PR's head commit, and ignores the skipped run that the scope label's own labeled event fires. The newest of the rest decides: success is a pass, and any other conclusion, or no run at all, is a failure. A run that has not finished, or check runs the evaluator cannot read (as with a `GITHUB_TOKEN` that cannot read checks), leave the source PR unverified, never passed. The report gives passed, failed and unverified source PRs a row each, and a failed or unverified one makes the run exit non-zero.
+- When the model scored no pair, as when every pair is decided by the check alone, the report's average scores read n/a.
+
+The expected results of every scenario are in [`../README.md`](../README.md#scope-runs), "Scope runs".
+
 ## Review Posting: GitHub UI Behavior
 
 **Important**: This tool uses `pulls.createReview()` which posts **PR reviews**, not regular comments.

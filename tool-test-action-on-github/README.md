@@ -42,7 +42,7 @@ The ref defaults to `main`, which is the code you are working on. Override it fo
 ./test-action-on-github.sh --action-ref v0       # the floating tag (post-release smoke)
 ```
 
-The script fails immediately if the ref does not exist on the remote, rather than letting 26 workflow runs fail at resolution. A raw commit SHA is not accepted — `git ls-remote` cannot verify one, and pinning to a ref the script cannot confirm exists is the failure mode this replaced.
+The script fails immediately if the ref does not exist on the remote, rather than letting every workflow run fail at resolution. A raw commit SHA is not accepted — `git ls-remote` cannot verify one, and pinning to a ref the script cannot confirm exists is the failure mode this replaced.
 
 Because every workflow uses the marketplace form `uses: QuantEcon/action-translation@<ref>` rather than checking out and building locally, **uncommitted code cannot be tested — push the branch first**. The committed `dist-action/` bundle is what executes either way, so nothing is lost, and this form additionally exercises ref resolution on every workflow on every run.
 
@@ -91,7 +91,43 @@ Both source and target PRs remain **open** for evaluation.
 ./rate-check.sh --languages ml --draws 12   # this checkout's build
 ```
 
-Phase 1 takes **one draw per scenario**. That is the right test of whether the tagged bytes deliver through the action path, but a model-side defect that fails less than always slips through it: scenario 17's new document (`game-theory.md`) was refused by the structural-parity guard on about 40% of draws from v0.28.0 to v0.29.0 and passed three release gates before the rate rose enough to be caught (QuantEcon/action-translation#320). `rate-check.sh` measures the rate directly: it runs the CLI N times (default 12) per fixture and language, counts the draws that produced no output file, prints a table with the refusal reasons, and exits non-zero if any cell shows more than `--max-refusals` (default 1). It costs no GitHub runs — N × fixtures × languages CLI translations against a cached prompt — and `--ref` builds any tag or branch in a temporary worktree with that version's own glossary, so an old release can be measured too. Fixtures default to the files the scenarios introduce as whole new documents (only `game-theory.md` today); add to `--fixtures` when a scenario adds another. Logs, `meta.txt` and `summary.txt` land in `${TMPDIR:-/tmp}/action-translation-rate-check/<timestamp>-<pid>/`, outside the repository; `--summarize <that dir>` re-prints a finished run's table and verdict without new draws. A failing cell is not yet a verdict on the release: AGENTS.md (release checklist step 4b) describes the same-day control at the previous tag that tells a regression from a rate that predates it. Validated on 2026-09-23: v0.29.2 reads 0/12 on `game-theory.md` for `ml`, v0.29.0 (via `--ref`) reads 4/12 and fails — the defect that passed three gates.
+Phase 1 takes **one draw per scenario**. That is the right test of whether the tagged bytes deliver through the action path, but a model-side defect that fails less than always slips through it: scenario 17's new document (`game-theory.md`) was refused by the structural-parity guard on about 40% of draws from v0.28.0 to v0.29.0 and passed three release gates before the rate rose enough to be caught (QuantEcon/action-translation#320). `rate-check.sh` measures the rate directly: it runs the CLI N times (default 12) per fixture and language, classifies each draw (see [How a draw is counted](#how-a-draw-is-counted)), prints a table with the failure reasons, and exits non-zero if any cell shows more than `--max-refusals` failures (default 1) or gives no verdict. It costs no GitHub runs — N × fixtures × languages CLI translations against a cached prompt — and `--ref` builds any tag or branch in a temporary worktree with that version's own glossary, so an old release can be measured too. Fixtures default to the files the scenarios introduce as whole new documents (only `game-theory.md` today); add to `--fixtures` when a scenario adds another. Logs, `meta.txt`, `summary.txt` and `summary.json` land in `${TMPDIR:-/tmp}/action-translation-rate-check/<timestamp>-<pid>/`, outside the repository; `--summarize <that dir>` re-prints a finished run's table and verdict without new draws. A failing cell is not yet a verdict on the release: AGENTS.md (release checklist step 4b) describes the same-day control at the previous tag that tells a regression from a rate that predates it. Validated on 2026-09-23: v0.29.2 reads 0/12 on `game-theory.md` for `ml`, v0.29.0 (via `--ref`) reads 4/12 and fails — the defect that passed three gates.
+
+#### How a draw is counted
+
+When the engine's `translate init --help` lists `--report-json` (detected on every run; engines after v0.29.5 have it), each draw writes a JSON report and is classified from it:
+
+| Outcome of the draw | Counted as |
+|---|---|
+| Translated, and the file written | **ok** |
+| A model refusal (with its `stop_details` category), a truncation, a parity break, any other error, or a draw that finished without a readable report | **failed**: what `--max-refusals` bounds |
+| A 429, 5xx, overload or connection error that outlasted the engine's retries, or a stream that a server error or a dropped connection cut off part-way (of those the engine retries only an overload) | **infra**: left out of both the numerator and the denominator (#227) |
+
+Each cell gets a verdict, and the first match wins:
+
+- **FAIL**: more failures than `--max-refusals`. More draws can only add failures, so a FAIL stands even when a later rule also applies.
+- **INCOMPLETE**: a planned draw never finished, as after an interrupted run. Continue the run with `--run-dir <dir> --resume`.
+- **UNRELIABLE**: infra failures exceed 10% of the cell's attempts, so the cell gives no verdict. Re-run the cell, ideally at another time.
+- **ok**: none of the above.
+
+Any verdict but ok exits 1; a usage or setup error exits 2. The table gives each cell's failure rate over its valid draws, with a Wilson 95% interval, and the failure kinds, mean cost, output and thinking tokens, and latency.
+
+An older engine (v0.29.5 and before, measured through `--ref`) writes no report, so it keeps the original rule: a draw without its output file counts as refused, infra failures included. The kinds are still read from each draw's `TRANSLATION-REPORT.md`, for information only. Whatever the engine, every cell in `summary.json` also carries that count (`legacy.refused` of `legacy.draws`), so a release can be compared with a control at an older tag on one rule. It judges each draw on its first attempt, so a run topped up with `--redraw-infra` still compares with a control, which cannot redraw.
+
+For measurements beyond the gate, such as the Claude 5.5 evaluation:
+
+| Flag | What it does |
+|---|---|
+| `--source-dir DIR` | Takes the `--fixtures` from DIR, for example pinned real lectures, instead of `test-action-on-github-data/`. |
+| `--localize none\|default\|RULES` | `none` is the default, as before. `default` passes no `--localize`, so the engine applies its own default rules, and `meta.txt` records which they were. The value is checked against the engine before any draw. |
+| `--run-dir DIR`, `--resume` | Writes the run to DIR, which must be outside the repository. With `--resume`, finished draws are kept and the rest are drawn, provided the engine and inputs still match `meta.txt` (exit 2 otherwise). |
+| `--redraw-infra` | Draws a run's infra draws again. The replaced attempts stay in the cell's infra share, so a redraw tops up the valid draws without hiding how many were lost. |
+| `--ref-deps own` | With `--ref`, runs `npm ci` from the ref's own lockfile. By default the ref borrows this checkout's `node_modules`, so an old ref runs on *this* checkout's SDK. `meta.txt` records the SDK actually loaded either way. |
+| `--engine-dir DIR` | Uses an engine you built yourself. |
+
+With no `--model`, a run draws the tested engine's own `DEFAULT_CLAUDE_MODEL`, read from its `dist/models.js`, so release step 4b compares what each release ships, the same-day control at the previous tag included. An engine whose `dist/models.js` does not export it is refused before any draw and needs `--model` (every tag from v0.20.0 up exports it).
+
+`meta.txt` also records the engine's commit and whether its tree was clean, along with hashes of `dist/`, `dist/structural-parity.js`, the glossaries and the fixtures. `summary.json` (schema `rate-check-summary/1`) carries the same, plus every draw's outcome, tokens, cost and timestamps. The statistics behind the tables are in `lib/stats.mjs`; `node lib/stats.mjs --self-test` checks them against exact values and against R, and CI runs it.
 
 ### Phase 2: Evaluate Translation Quality
 
@@ -112,7 +148,7 @@ Reports are saved to `reports/evaluation-<date>.md`.
 
 ## Test Scenarios (28 total)
 
-The tool tests translation scenarios across four phases:
+The tool tests translation scenarios across five phases:
 
 ### Phase 1: Basic Structure (Tests 01–08, minimal doc)
 | # | Scenario | Description |
@@ -156,11 +192,54 @@ The tool tests translation scenarios across four phases:
 | 25 | Pre-title content | Anchor (`(label)=`) + `{raw}` block before `# title` |
 | 26 | Heading case change | Title-case → sentence-case headings (heading-map lookup) |
 
-### Phase 5: Shared Assets (Test 27)
+### Phase 5: Shared Assets and Directives (Tests 27–28)
 | # | Scenario | Description |
 |---|----------|-------------|
 | 27 | Citation backfill | `{cite}` role introduced; the cited key lives in the source's `references.bib` but not the target's, so the sync PR must carry the backfilled entry (#117; verifies action-translation#256 defect 3). The target repos' `_config.yml` + `references.bib` fixtures are what arm the guard — see `base-config.yml`. |
 | 28 | Exercise family added | An `## Exercises` section with `{exercise-start}`/`{hint}`/`{solution-start}` blocks is appended to `lecture.md` — the first exercise-family directives in the suite. On `.ml` the sync output must carry every block byte-identical to the source (verbatim-directive policy, `D-2026-09-03-ml-all-exercise-content-stays-english`, enforced by `verbatim-directives.ts` and the `verbatimDirectives` diff-check); on `.zh-cn` and `.fa` the blocks translate as ordinary prose. |
+
+## Scope runs
+
+`--sync-scope existing` replays the scenarios on a partial edition, the case the action's `sync-scope` input exists for ([#344](https://github.com/QuantEcon/action-translation/issues/344)). Under `existing`, a changed lecture syncs only when the target has its state file, `.translate/state/<file>.yml` (for example `lecture.md.yml`). The others are skipped before any model call, and listed in the PR body under `### Lectures Not Synced` and in the sync run's job summary. Removals and `_toc.yml` sync as under `all`.
+
+```bash
+./tool-test-action-on-github/test-action-on-github.sh --sync-scope existing --scenarios 17,19,20
+```
+
+The option changes two things:
+
+- **The target reset** lays down one state file in every target, `.translate/state/lecture.md.yml`, and none for `lecture-minimal.md`. `lecture-minimal.md` then plays the English copy on a partial edition's `main` (the Malayalam edition's `intro.md`): present as a `.md`, absent as state, so it must stay out of scope. The state file holds what `init` writes, except `tool-version`: the source commit that last touched `lecture.md`, the date, the default model, `mode: NEW`, and the section count of `base-lecture.md`.
+- **Every PR the run creates** carries the `test-sync-scope-existing` label. It goes on when the PR is created, before `test-translation`, so the event that fires the sync already carries it. The sync workflow's mode step turns it into `sync-scope: existing`; without it the workflow passes `all`. The PR body says which scope it runs under. The action copies a source PR's labels, all but `test-translation`, onto its translation PR, so the translation PRs carry the label too. The targets' review workflows ignore it.
+
+The ref must declare the input: v0.30.0 ([#346](https://github.com/QuantEcon/action-translation/issues/346)) or later, or a branch that carries #344. The script reads `action.yml` at the resolved commit and stops if the input is missing. An older ref would log `Unexpected input(s) 'sync-scope'` and sync every lecture, so the run would test nothing it claims to. A default run on an older ref, such as a control at a previous tag, logs the same warning and otherwise runs unchanged.
+
+### Expected results
+
+| Scenarios | Source change | Translation PR under `sync-scope: existing` |
+|---|---|---|
+| 17 | New `game-theory.md` + `_toc.yml` | Changes only `_toc.yml`, mirrored from the source with `game-theory` in it. The body lists `game-theory.md` under `### Lectures Not Synced`. No `.translate/state/` change. Review gives the "No markdown files to review" PASS. |
+| 19 | `lecture-minimal.md` + `lecture.md` | The mixed PR. Changes `lecture.md` and `.translate/state/lecture.md.yml`, an update since the state file exists. Leaves `lecture-minimal.md` alone and lists it under `### Lectures Not Synced`. |
+| 20 | Rename `lecture.md` → `linear-algebra.md` + `_toc.yml` | In scope: the previous path has its state file. Adds `linear-algebra.md` and `.translate/state/linear-algebra.md.yml`, deletes `lecture.md` and `.translate/state/lecture.md.yml` (GitHub may show either pair as a rename), and updates `_toc.yml`. No `### Lectures Not Synced` section. |
+| 18 | Delete `lecture.md` + `_toc.yml` | Removals follow the `.md`: deletes `lecture.md` and its state file, and updates `_toc.yml`. |
+| 01–08, 16, 21, 24, 27 | `lecture-minimal.md` only | No translation PR. The sync run passes, and its job summary lists `lecture-minimal.md` as not synced. |
+| 09–15, 22, 23, 25, 26, 28 | `lecture.md` only | As under `all`, except that `.translate/state/lecture.md.yml` is updated rather than added. No `### Lectures Not Synced` section. |
+
+The table assumes every scope read succeeds. When a source PR changes or renames a lecture, the action reads the target repository first, because GitHub answers 404 for a repository the token cannot see, as it does for a missing state file. If that read fails, nothing syncs, not even `_toc.yml` or a removal. A state-file or `.md` read that fails with any status but 404 leaves only that lecture neither synced nor skipped, and the other lectures still sync. Either error fails the sync run, and its job summary lists the error under `### ❌ Scope unknown`. When an error leaves nothing to sync, the run fails at once with no PR, before it reads anything more from the target, and outside test mode it opens the failure issue. Test mode opens no failure issue, so the red sync run is the signal. For the scenarios that expect no translation PR, the evaluator reads that run.
+
+The evaluator holds a source PR with the label to the table (`evaluate/src/scope-expectations.ts`). Every scenario has an expectation, so a source PR with no translation PR is never left out of the report:
+
+- **17–20.** It compares the translation PR's files and its `### Lectures Not Synced` list with the table, and a mismatch makes the verdict FAIL. 17 and 18 translate no lecture, so it makes no model call for them. It evaluates `lecture.md` for 19 and `linear-algebra.md` for 20. The diff judge sees only the source files the run was meant to sync, so 19's `lecture-minimal.md` does not count against scope.
+- **09–15, 22, 23, 25, 26, 28.** The same comparison: the translation PR changes `lecture.md`, updates its state file, and has no `### Lectures Not Synced` section. The model evaluates `lecture.md` as under `all`.
+- **01–08, 16, 21, 24, 27.** A translation PR is a failure, found without a model call. No translation PR is the expected result only if the source PR's zh-cn sync run passed, since a run that fails opens no PR either. The evaluator reads the check runs of the `sync-translation-zh-cn` job on the source PR's head commit, ignoring the run that the scope label's own labeled event fires, which the job skips. A failed run, or none, is a failure. A run still in progress, or check runs it cannot read, leave the source PR unverified, never passed, and the evaluator exits non-zero.
+
+A source PR whose scenario expects a translation PR, and has none, is a failure: the report lists it, and the evaluator exits non-zero. The evaluator reads only the zh-cn target and its sync run, so check fa and ml by hand.
+
+### Caveats
+
+- **A smoke test, not the release gate.** The gate's lanes stay on the default, `all`, and the census says so under `existing`.
+- **Real API spend.** With `--scenarios 17,19,20`, as above, each language makes one billed sync translation (19's) and two billed reviews (19's and 20's); 17 makes no model call. A full scope run, without `--scenarios`, makes 13 billed sync translations per language, for 19 and the twelve scenarios that change only `lecture.md`. It makes 14 billed reviews, for those and 20, whose sync moves the lecture without translating it. 17, 18 and the scenarios that change only `lecture-minimal.md` make no model call.
+- **`--languages` still narrows the estate.** The source reset re-renders `.github/` from the narrowed list, so the other languages' sync workflows stay deleted until a run without `--languages`.
+- **The next default run undoes the setup.** Its reset deletes `.translate/` in every target, state file included, and its PRs carry no scope label.
 
 ## Directory Structure
 
@@ -178,6 +257,7 @@ tool-test-action-on-github/
 │   │   ├── evaluate.ts          # CLI entry point
 │   │   ├── evaluator.ts         # Opus 4.5 evaluation
 │   │   ├── github.ts            # PR fetching
+│   │   ├── scope-expectations.ts  # Expected results of a scope run (#344)
 │   │   └── types.ts             # TypeScript types
 │   ├── package.json
 │   └── tsconfig.json

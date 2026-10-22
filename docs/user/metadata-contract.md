@@ -201,7 +201,7 @@ The stable label contract on PRs the tooling creates:
 
 - Sync PRs (action): `action-translation` + `automated`.
 - CLI resync PRs (`translate forward --github`): `action-translation-sync` + `resync` + `action-translation` (since v0.21.0, [#131](https://github.com/QuantEcon/action-translation/issues/131)).
-- Failure issues (sync mode, source repo): `translation-sync-failure` — applied best-effort to the issue a failed sync opens, and used by nothing as a gate; the issue is closed automatically when a later sync for the same PR succeeds ([#160](https://github.com/QuantEcon/action-translation/issues/160)).
+- Failure issues (sync mode, source repo): `translation-sync-failure` — applied best-effort to the issue a failed sync opens, and used by nothing as a gate; the issue is closed automatically when a later sync for the same PR and language opens its translation PR without errors ([#160](https://github.com/QuantEcon/action-translation/issues/160)) or, under `sync-scope: existing`, passes with nothing to deliver. Under `all`, a later run that passes without opening a PR leaves it open ([#387](https://github.com/QuantEcon/action-translation/issues/387)).
 - `action-translation` is the **canonical detection label** — review workflows gate on it, and it is applied by every PR-creating path.
 
 These values are owned in code by `src/contracts.ts` ([#162](https://github.com/QuantEcon/action-translation/issues/162)): every code consumer imports them, `translate setup` bootstraps the labels via `gh label create`, `translate doctor --check-gh` verifies they exist, and a structural test fails when a source file re-spells one or when `action.yml`, the canonical workflow templates, or this section disagrees with the constants.
