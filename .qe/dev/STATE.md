@@ -8,8 +8,8 @@ Roadmap detail lives in the project trackers (reading order in
 
 ## In flight
 
-- **#344 `sync-scope: existing` — #376 (2026-10-19)**, for the release #346
-  tracks. A partial edition syncs only the lectures that have a state file on its default
+- **#344 `sync-scope: existing` — #376 (2026-10-19), released in v0.30.0 (2026-10-22)**; #344
+  is closed. A partial edition syncs only the lectures that have a state file on its default
   branch; the check lives in `src/sync-scope.ts` so D2 (#259) can reuse it, and the input is a
   thin switch around it (record `D-2026-10-19-sync-scope-existing-reads-state-files`). Folded
   in on 2026-10-19: #380 (`status --write-state` refuses English changes not yet carried, until
@@ -38,7 +38,7 @@ Roadmap detail lives in the project trackers (reading order in
   The review's evidence for other open issues went as comments on #90, #154, #169, #170, #259,
   #261, #281 and #325; the per-finding disposition is in `log/2026-10-06-review-followup.md`.
 - **Claude 5.5 upgrade (#342, #334) — engine support in #394 (2026-10-19), measurement tooling
-  in #395.** The engine runs `claude-sonnet-5-5` (`between_tools`, effort `high`) and
+  in #395, both released in v0.30.0 (2026-10-22); #342 is closed.** The engine runs `claude-sonnet-5-5` (`between_tools`, effort `high`) and
   `claude-opus-5-5` (adaptive, effort `medium`) through a per-model request policy in `models.ts`,
   and a refusal now fails the file (R12). The default stays `claude-sonnet-5`. #395 adds what
   the measurement needs: `translate init --report-json`, one price table (`model-pricing.ts`) and
@@ -151,8 +151,8 @@ Roadmap detail lives in the project trackers (reading order in
   detection before repair; foundations before dependents. Its `## Where we stand` section is
   stamped 2026-09-01 and has drifted (latest release v0.27.0, W1 → v0.28.0) — re-stamp it.
 - **W1 (#259) is the next P0** — declared-vs-delivered assertion + TOC structured merge,
-  now targeting **v0.30.0** (retargeted on #259 as v0.28.0 and v0.29.0 shipped Malayalam rounds
-  instead; the issue title still says v0.27.0). 0 of 7 boxes done. Fully unblocked; the one
+  last targeted at **v0.30.0**, which shipped without it (retargeted on #259 as v0.28.0 and
+  v0.29.0 shipped Malayalam rounds instead; the issue title still says v0.27.0). 0 of 7 boxes done. Fully unblocked; the one
   gate is #169 first or alongside. Scope grew 2026-08-19: a stale-resync detection box and the
   both-directions rule on the assertion (`files[]` under-declares: bib + state delivered
   undeclared). Two 2026-08-20 proposals on #259 are not yet in the box text: re-specify the
@@ -185,14 +185,21 @@ Roadmap detail lives in the project trackers (reading order in
   source snapshot vs source `main` (English against English), and `mode: rebase` reads the same
   frozen snapshot.
   The bug stays open; W1's stale-resync box carries the guard.
-- **Glossary PR #69** (ja) — up to date with `main` on 2026-10-22 and carrying the #337
-  rulings (decided 2026-10-22): `ja.json` v1.2, nine `ja` rules, decision records
-  `D-2026-09-01-ja-terminology-policy` and `D-2026-10-22-ja-house-style`. Awaiting merge
-  (#338); the programming terms (#339) and the release (#340) follow, and merged is not
-  released. The Wikipedia cross-check idea is #300.
+- **Japanese (`ja`) — #69 merged 2026-10-22 (`301ea73`) and released in v0.30.0**, carrying
+  the #337 rulings: `ja.json` v1.2, nine `ja` rules, decision records
+  `D-2026-09-01-ja-terminology-policy` and `D-2026-10-22-ja-house-style`; #338 is closed. The
+  programming terms (#339) and the Japanese release (#340) follow, and no Japanese lecture is
+  drafted before #339. A `ja` harness lane would put the Japanese Action path into every gate;
+  it needs a `test-translation-sync.ja` target repo, and is worth adding with #340. The
+  Wikipedia cross-check idea is #300.
 
 ## Recently landed
 
+- **2026-10-22 — v0.30.0 released** (release PR #410 `c9a40bc`; payload #394 `999bffa`, #69
+  `301ea73`, #376 `9b0730f`, #395 `482b4d9`, #408 `126efe8`): Claude Sonnet 5.5 and Opus 5.5
+  selectable, a refusal fails the file, SDK 0.131.0; Japanese; `sync-scope: existing`;
+  `init --report-json` and a classified rate check; #362 and #407. §4a 84/84 at the tag, §4b
+  0/12 on every lane, `@v0` smoke passed. Log `2026-10-22-v0300-release`.
 - **ml rule 8 takes *now* by sense (#404, `88c132c`, 2026-10-21)** — *now* meaning "next, let's
   move on" → `ഇനി` mid-sentence too, `ഇപ്പോൾ` only for "at this moment"; *In essence* and
   *In practice* kept English. Measured before merge (arm `2026-10-21-held-rule-edits`, 193 drafts):
@@ -297,9 +304,8 @@ Roadmap detail lives in the project trackers (reading order in
 
 **Resume here (2026-09-23, after v0.29.3):**
 
-*#344, 2026-10-19*: #376 awaits review and the harness scope smoke (`--action-ref
-feat/sync-scope-existing --sync-scope existing --scenarios 01,17,18,19,20`; the run book is
-#377's handover log). #346's table row for #344 still describes the first version (`_toc.yml`
+*#344, 2026-10-22*: #376 merged and shipped in v0.30.0, after the harness scope smoke passed
+on all three lanes (results in #377's log). #346's table row for #344 still describes the first version (`_toc.yml`
 left alone); the ToC is now mirrored. The fourteen issues filed from #376's reviews (#378–#391)
 and the six from the 2026-10-20 removal trace (#396–#401) are untriaged; #378, #379, #381 and
 #384, with the older #134 and #175, are the CLI bug fixes of the CLI-first record's phase 1.
@@ -307,17 +313,17 @@ and the six from the 2026-10-20 removal trace (#396–#401) are untriaged; #378,
 *ml, 2026-09-28 (end)*: see the ml bullet under In flight — round 5 is with the editor, and
 next is the second `ml_repair` PR; #335 shipped in v0.29.4.
 
-*Release, 2026-10-22*: **v0.30.0 (minor) is in its release PR.** Payload since v0.29.6: #394
-(Claude Sonnet 5.5 and Opus 5.5 selectable through a per-model request policy; a refusal fails the
-file; `@anthropic-ai/sdk` 0.78.0 → 0.131.0, with Sonnet 5's request bytes unchanged), #69
-(Japanese, `ja`: glossary v1.2 and nine rules), #376 (`sync-scope: existing`, with #380's
-`status --write-state` guard), #395 (`init --report-json`, one price table, and a classified
-`rate-check.sh` that draws the tested engine's own default model) and #408 (#362, an intro that
-appears or disappears; #407, text on a body admonition's fence line). The default model stays
-`claude-sonnet-5`. Until the gate passes, `v0.29` and `v0` stay at v0.29.6 (#405, `4151c08`; log
-`2026-10-21-v0296-release`). #346's French items (#347, #327, #324, #325, #363) are not in it,
-since none has merged. Japanese is configured, but no Japanese lecture is drafted before #339's
-programming terms (#340). This page's `verified:` stamp predates it, so a full re-verify is owed.
+*Release, 2026-10-22*: **v0.30.0 is released** (#410, `c9a40bc`); `v0.30` and `v0` point at it,
+`v0.29` stays at v0.29.6, and the `@v0` smoke passed on all three lanes. §4a passed at the tag
+(84/84 sync runs; 28 verdicts per lane at `engineVersion: 0.30.0`; the one WARN is #375, zh-cn
+scenario 22, pre-existing); §4b read zh-cn, fa and ml 0/12 each, on the classified instrument for
+the first time. The default model stays `claude-sonnet-5`: switching it follows the golden-set
+evaluation (#402's handover). Which release carries the switch is open: v0.30.1 was proposed, and a
+minor would keep `@v0.30` on Sonnet 5. #346's French
+items (#347, #327, #324, #325, #363) were not in it, since none had merged. Next: lecture-python.zh-cn's
+two lectures (#362, #407) through `\translate-resync` on lecture-python.myst#1055, with
+`svd_intro` dropped by hand, and Malayalam's state-file backfill and `sync-scope` wiring. Log
+`2026-10-22-v0300-release`. This page's `verified:` stamp predates it, so a full re-verify is owed.
 
 *Review, 2026-10-06*: **no `translate forward` run before #348 merges**. Every forward resync
 since PR #31 (2026-03-19) has gone out without the edition's glossary and language rules. #325
