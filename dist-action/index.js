@@ -52685,19 +52685,7 @@ var FileProcessor = class {
         resultTitle = cachedParsed.title;
         this.log(`Cache hit for title \u2014 skipping Claude call`);
       } else {
-        const result = await this.translator.translateSection({
-          mode: "update",
-          sourceLanguage,
-          targetLanguage,
-          glossary,
-          oldEnglish: oldSource.title,
-          newEnglish: newSource.title,
-          currentTranslation: target.title
-        });
-        if (!result.success) {
-          throw new Error(`Translation failed for title: ${result.error}`);
-        }
-        resultTitle = result.translatedSection || target.title;
+        resultTitle = await this.translateChangedPreamblePart("title", oldSource.title, newSource.title, target.title, sourceLanguage, targetLanguage, glossary);
         this.log(`Translated title to: "${resultTitle}"`);
       }
     } else {
@@ -52710,19 +52698,7 @@ var FileProcessor = class {
         resultIntro = cachedParsed.intro;
         this.log(`Cache hit for intro \u2014 skipping Claude call`);
       } else {
-        const result = await this.translator.translateSection({
-          mode: "update",
-          sourceLanguage,
-          targetLanguage,
-          glossary,
-          oldEnglish: oldSource.intro,
-          newEnglish: newSource.intro,
-          currentTranslation: target.intro
-        });
-        if (!result.success) {
-          throw new Error(`Translation failed for intro: ${result.error}`);
-        }
-        resultIntro = result.translatedSection || target.intro;
+        resultIntro = await this.translateChangedPreamblePart("intro", oldSource.intro, newSource.intro, target.intro, sourceLanguage, targetLanguage, glossary);
         this.log(`Translated intro (${resultIntro.length} chars)`);
       }
     } else {
@@ -52931,6 +52907,33 @@ ${bodyLines.join("\n")}`;
     ]));
     const typesetTitleText = applyTypography(resultTitleText, targetLanguage);
     return injectHeadingMap(typeset, typesetHeadingMap, typesetTitleText);
+  }
+  /**
+   * Helper: Translate a title or intro that changed upstream, routed by
+   * emptiness. Update mode needs all three of old English, new English and the
+   * current translation, so a part that appears (no old English, or no
+   * translation yet) is translated as new, and a part that disappears is
+   * written empty with no Claude call (#362).
+   */
+  async translateChangedPreamblePart(part, oldEnglish, newEnglish, currentTranslation, sourceLanguage, targetLanguage, glossary) {
+    if (newEnglish.trim() === "") {
+      this.log(`${part} removed upstream \u2014 writing it empty`);
+      return newEnglish;
+    }
+    const isNew = oldEnglish.trim() === "" || currentTranslation.trim() === "";
+    const result = await this.translator.translateSection(isNew ? { mode: "new", sourceLanguage, targetLanguage, glossary, englishSection: newEnglish } : {
+      mode: "update",
+      sourceLanguage,
+      targetLanguage,
+      glossary,
+      oldEnglish,
+      newEnglish,
+      currentTranslation
+    });
+    if (!result.success) {
+      throw new Error(`Translation failed for ${part}: ${result.error}`);
+    }
+    return result.translatedSection || currentTranslation;
   }
   /**
    * Helper: Translate a new section
@@ -53147,7 +53150,17 @@ var FLEXIBLE_ARG_DIRECTIVES = /* @__PURE__ */ new Set([
   "exercise-start",
   "contents",
   "index",
-  "code-cell"
+  "code-cell",
+  "attention",
+  "caution",
+  "danger",
+  "error",
+  "hint",
+  "important",
+  "note",
+  "seealso",
+  "tip",
+  "warning"
 ]);
 var FLEXIBLE_ARG_PREFIX = "prf:";
 function isFlexibleArgDirective(name) {
