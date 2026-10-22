@@ -8,14 +8,15 @@ Roadmap detail lives in the project trackers (reading order in
 
 ## In flight
 
-- **#344 `sync-scope: existing` — PR #376 open for review (2026-10-19)**, for the release #346
+- **#344 `sync-scope: existing` — #376 (2026-10-19)**, for the release #346
   tracks. A partial edition syncs only the lectures that have a state file on its default
   branch; the check lives in `src/sync-scope.ts` so D2 (#259) can reuse it, and the input is a
   thin switch around it (record `D-2026-10-19-sync-scope-existing-reads-state-files`). Folded
   in on 2026-10-19: #380 (`status --write-state` refuses English changes not yet carried, until
   `--carried`) and #387's scoped half (a scoped run that passes without a PR closes the stale
-  failure issue; `all` unchanged, so #387 stays open). The harness scope smoke is not run yet:
-  the `gh` token used had no `workflow` scope, so it is Matt's, handed over in #377. Ruled on
+  failure issue; `all` unchanged, so #387 stays open). The harness scope smoke passed on all
+  three lanes on 2026-10-22, at `b747bf8` (results in log `2026-10-19-sync-scope-harness-handover`,
+  #377). Ruled on
   2026-10-19, in the records: a state file counts by existence (the CLI's reader gets fixed
   instead, #381, #379); retirement condition 3 is a required CI state check, built on #370
   with #385; lecture-at-a-time tooling goes into the CLI first
