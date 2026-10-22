@@ -307,14 +307,17 @@ and the six from the 2026-10-20 removal trace (#396–#401) are untriaged; #378,
 *ml, 2026-09-28 (end)*: see the ml bullet under In flight — round 5 is with the editor, and
 next is the second `ml_repair` PR; #335 shipped in v0.29.4.
 
-*Release, 2026-10-21*: **v0.29.6 is released** (#405, `4151c08`); `v0.29` and `v0` point at it
-and the `@v0` smoke passed on all three lanes. §4a passed at the tag (28/28 verdicts per lane at
-`engineVersion: 0.29.6`; the one WARN is #375, zh-cn scenario 22, pre-existing); §4b read zh-cn
-1/12, fa 0/12, ml 0/12, all within threshold. Payload: #404, `ml` rule 8 (*now* by sense;
-*In essence* / *In practice* kept English); #403's `ml_repair` tooling rode along. Log
-`2026-10-21-v0296-release`. #346's v0.30.0 (the French and Malayalam sync items) stays the next
-minor; nothing of it is merged yet. This page's `verified:` stamp predates it, so a full re-verify
-is owed.
+*Release, 2026-10-22*: **v0.30.0 (minor) is in its release PR.** Payload since v0.29.6: #394
+(Claude Sonnet 5.5 and Opus 5.5 selectable through a per-model request policy; a refusal fails the
+file; `@anthropic-ai/sdk` 0.78.0 → 0.131.0, with Sonnet 5's request bytes unchanged), #69
+(Japanese, `ja`: glossary v1.2 and nine rules), #376 (`sync-scope: existing`, with #380's
+`status --write-state` guard), #395 (`init --report-json`, one price table, and a classified
+`rate-check.sh` that draws the tested engine's own default model) and #408 (#362, an intro that
+appears or disappears; #407, text on a body admonition's fence line). The default model stays
+`claude-sonnet-5`. Until the gate passes, `v0.29` and `v0` stay at v0.29.6 (#405, `4151c08`; log
+`2026-10-21-v0296-release`). #346's French items (#347, #327, #324, #325, #363) are not in it,
+since none has merged. Japanese is configured, but no Japanese lecture is drafted before #339's
+programming terms (#340). This page's `verified:` stamp predates it, so a full re-verify is owed.
 
 *Review, 2026-10-06*: **no `translate forward` run before #348 merges**. Every forward resync
 since PR #31 (2026-03-19) has gone out without the edition's glossary and language rules. #325
