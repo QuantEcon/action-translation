@@ -191,6 +191,30 @@ describe('checkStructuralParity — legitimate translation must pass', () => {
     expect(result.violations[0].message).toContain('lost its argument');
   });
 
+  it('#407: body text on a {note} fence line passes when translated', () => {
+    // lecture-python.myst measurement_models: the note's first sentence sits on
+    // the fence line, and MyST renders it as the opening of the body.
+    const src = [
+      '```{note} This is why econometric estimation is often called an "inverse" problem, while',
+      'simulating a model for given parameter values is called a "direct" problem.',
+      '```',
+    ].join('\n');
+    const out = [
+      '```{note} 这就是为什么计量经济学估计常被称为"逆"问题，而对给定参数值模拟模型',
+      '被称为"正"问题。',
+      '```',
+    ].join('\n');
+    expect(checkStructuralParity(src, out).ok).toBe(true);
+  });
+
+  it('#407: a {note} that drops its fence-line text still fails', () => {
+    const src = '```{note} First sentence of the note.\nRest of the note.\n```';
+    const out = '```{note}\n笔记的其余部分。\n```';
+    const result = checkStructuralParity(src, out);
+    expect(result.ok).toBe(false);
+    expect(result.violations[0].message).toContain('lost its argument');
+  });
+
   it('a solution argument is structural — changing it fails', () => {
     // {solution} takes the target exercise's LABEL, not a title.
     const src = '```{solution} ex-cobweb\nbody\n```';

@@ -2062,3 +2062,137 @@ translation:
     expect(mockTranslator.translateSection).not.toHaveBeenCalled();
   });
 });
+
+describe('FileProcessor.processSectionBased — an intro that appears or disappears (#362)', () => {
+  let processor: FileProcessor;
+  let mockTranslator: jest.Mocked<TranslationService>;
+
+  beforeEach(() => {
+    mockTranslator = {
+      translateSection: jest.fn(),
+      translateFullDocument: jest.fn(),
+    } as any;
+    processor = new FileProcessor(mockTranslator, false);
+  });
+
+  const withIntro = `---
+config: test
+---
+
+# Introduction
+
+Intro text.
+
+## Section A
+
+Content of section A.`;
+
+  const withoutIntro = `---
+config: test
+---
+
+# Introduction
+
+## Section A
+
+Content of section A.`;
+
+  const targetWithIntro = `---
+config: test
+translation:
+  title: 介绍
+  headings:
+    Section A: "部分 A"
+---
+
+# 介绍
+
+介绍文本。
+
+## 部分 A
+
+部分 A 的内容。`;
+
+  const targetWithoutIntro = `---
+config: test
+translation:
+  title: 介绍
+  headings:
+    Section A: "部分 A"
+---
+
+# 介绍
+
+## 部分 A
+
+部分 A 的内容。`;
+
+  it('translates an added intro (empty -> non-empty) as new', async () => {
+    mockTranslator.translateSection.mockResolvedValue({
+      success: true,
+      translatedSection: '新增的介绍。',
+    });
+
+    const result = await processor.processSectionBased(
+      withoutIntro,
+      withIntro,
+      targetWithoutIntro,
+      'test.md',
+      'en',
+      'zh-cn'
+    );
+
+    expect(mockTranslator.translateSection).toHaveBeenCalledTimes(1);
+    expect(mockTranslator.translateSection).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'new',
+        englishSection: expect.stringContaining('Intro text.'),
+      })
+    );
+    expect(result).toContain('新增的介绍。');
+    expect(result).toContain('## 部分 A');
+  });
+
+  it('writes a removed intro (non-empty -> empty) empty, with no Claude call', async () => {
+    const result = await processor.processSectionBased(
+      withIntro,
+      withoutIntro,
+      targetWithIntro,
+      'test.md',
+      'en',
+      'zh-cn'
+    );
+
+    expect(mockTranslator.translateSection).not.toHaveBeenCalled();
+    expect(result).not.toContain('介绍文本。');
+    expect(result).toContain('# 介绍');
+    expect(result).toContain('## 部分 A');
+  });
+
+  it('still updates an edited non-empty intro in update mode', async () => {
+    mockTranslator.translateSection.mockResolvedValue({
+      success: true,
+      translatedSection: '修改后的介绍文本。',
+    });
+
+    const result = await processor.processSectionBased(
+      withIntro,
+      withIntro.replace('Intro text.', 'Revised intro text.'),
+      targetWithIntro,
+      'test.md',
+      'en',
+      'zh-cn'
+    );
+
+    expect(mockTranslator.translateSection).toHaveBeenCalledTimes(1);
+    expect(mockTranslator.translateSection).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: 'update',
+        oldEnglish: expect.stringContaining('Intro text.'),
+        newEnglish: expect.stringContaining('Revised intro text.'),
+        currentTranslation: expect.stringContaining('介绍文本。'),
+      })
+    );
+    expect(result).toContain('修改后的介绍文本。');
+  });
+});

@@ -131,21 +131,15 @@ export class FileProcessor {
         resultTitle = cachedParsed.title;
         this.log(`Cache hit for title — skipping Claude call`);
       } else {
-        const result = await this.translator.translateSection({
-          mode: 'update',
+        resultTitle = await this.translateChangedPreamblePart(
+          'title',
+          oldSource.title,
+          newSource.title,
+          target.title,
           sourceLanguage,
           targetLanguage,
-          glossary,
-          oldEnglish: oldSource.title,
-          newEnglish: newSource.title,
-          currentTranslation: target.title,
-        });
-
-        if (!result.success) {
-          throw new Error(`Translation failed for title: ${result.error}`);
-        }
-
-        resultTitle = result.translatedSection || target.title;
+          glossary
+        );
         this.log(`Translated title to: "${resultTitle}"`);
       }
     } else {
@@ -162,21 +156,15 @@ export class FileProcessor {
         resultIntro = cachedParsed.intro;
         this.log(`Cache hit for intro — skipping Claude call`);
       } else {
-        const result = await this.translator.translateSection({
-          mode: 'update',
+        resultIntro = await this.translateChangedPreamblePart(
+          'intro',
+          oldSource.intro,
+          newSource.intro,
+          target.intro,
           sourceLanguage,
           targetLanguage,
-          glossary,
-          oldEnglish: oldSource.intro,
-          newEnglish: newSource.intro,
-          currentTranslation: target.intro,
-        });
-
-        if (!result.success) {
-          throw new Error(`Translation failed for intro: ${result.error}`);
-        }
-
-        resultIntro = result.translatedSection || target.intro;
+          glossary
+        );
         this.log(`Translated intro (${resultIntro.length} chars)`);
       }
     } else {
@@ -567,6 +555,49 @@ export class FileProcessor {
 
     // 7. Inject updated translation metadata (title + headings) into frontmatter
     return injectHeadingMap(typeset, typesetHeadingMap, typesetTitleText);
+  }
+
+  /**
+   * Helper: Translate a title or intro that changed upstream, routed by
+   * emptiness. Update mode needs all three of old English, new English and the
+   * current translation, so a part that appears (no old English, or no
+   * translation yet) is translated as new, and a part that disappears is
+   * written empty with no Claude call (#362).
+   */
+  private async translateChangedPreamblePart(
+    part: 'title' | 'intro',
+    oldEnglish: string,
+    newEnglish: string,
+    currentTranslation: string,
+    sourceLanguage: string,
+    targetLanguage: string,
+    glossary?: Glossary
+  ): Promise<string> {
+    if (newEnglish.trim() === '') {
+      this.log(`${part} removed upstream — writing it empty`);
+      return newEnglish;
+    }
+
+    const isNew = oldEnglish.trim() === '' || currentTranslation.trim() === '';
+    const result = await this.translator.translateSection(
+      isNew
+        ? { mode: 'new', sourceLanguage, targetLanguage, glossary, englishSection: newEnglish }
+        : {
+            mode: 'update',
+            sourceLanguage,
+            targetLanguage,
+            glossary,
+            oldEnglish,
+            newEnglish,
+            currentTranslation,
+          }
+    );
+
+    if (!result.success) {
+      throw new Error(`Translation failed for ${part}: ${result.error}`);
+    }
+
+    return result.translatedSection || currentTranslation;
   }
 
   /**
