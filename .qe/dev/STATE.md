@@ -37,19 +37,21 @@ Roadmap detail lives in the project trackers (reading order in
 
   The review's evidence for other open issues went as comments on #90, #154, #169, #170, #259,
   #261, #281 and #325; the per-finding disposition is in `log/2026-10-06-review-followup.md`.
-- **Claude 5.5 upgrade (#342, #334) — engine support in #394 (2026-10-19).** The engine runs
-  `claude-sonnet-5-5` (`between_tools`, effort `high`) and `claude-opus-5-5` (adaptive, effort
-  `medium`) through a per-model request policy in `models.ts`, and a refusal now fails the file
-  (R12). The default stays `claude-sonnet-5`. The flip waits on a `model-eval` report against
-  the standing golden set in QuantEcon/test-action-translation (decision
-  `D-2026-10-20-model-upgrades-measured-against-goldens`), and #395 is to be trimmed to the
-  engine-side tooling that report needs (`init --report-json`, the price table, a classified
-  `rate-check.sh`). The billed runs need an API key, so they are @mmcky's (handover
-  `log/2026-10-20-claude-5-5-eval-handover`). #342's live check passed on 2026-10-22, before
-  merge: one zh-cn draft of `game-theory.md` each from `claude-sonnet-5`, `claude-sonnet-5-5`
-  and `claude-opus-5-5`, all delivered with the source's structure. Decisions
-  `D-2026-10-19-per-model-request-policy` and `D-2026-10-19-opus-5-5-for-bulk-seed`; log
-  `2026-10-19-claude-5-5-engine`.
+- **Claude 5.5 upgrade (#342, #334) — engine support in #394 (2026-10-19), measurement tooling
+  in #395.** The engine runs `claude-sonnet-5-5` (`between_tools`, effort `high`) and
+  `claude-opus-5-5` (adaptive, effort `medium`) through a per-model request policy in `models.ts`,
+  and a refusal now fails the file (R12). The default stays `claude-sonnet-5`. #395 adds what
+  the measurement needs: `translate init --report-json`, one price table (`model-pricing.ts`) and
+  a classified `rate-check.sh` that draws the tested engine's own default model; its one-off
+  experiment was dropped before merge. The flip waits on a `model-eval` report against the
+  standing golden set in QuantEcon/test-action-translation (decision
+  `D-2026-10-20-model-upgrades-measured-against-goldens`). The billed runs need an API key, so
+  they are @mmcky's (handover `log/2026-10-20-claude-5-5-eval-handover`). #342's live check
+  passed on 2026-10-22, before merge: one zh-cn draft of `game-theory.md` each from
+  `claude-sonnet-5`, `claude-sonnet-5-5` and `claude-opus-5-5`, all delivered with the source's
+  structure. Decisions `D-2026-10-19-per-model-request-policy` and
+  `D-2026-10-19-opus-5-5-for-bulk-seed`; logs `2026-10-19-claude-5-5-engine` and
+  `2026-10-20-claude-5-5-eval`.
 - **fr typography fixes #324 and #325** (filed 2026-09-23 from the French editor's second
   round) — implementation branches in progress: **#324** (`fix/fr-elision-apostrophe`) sets the
   `fr` elision apostrophe before inline markup as U+2019; **#325**
