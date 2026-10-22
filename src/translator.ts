@@ -146,6 +146,12 @@ export class TranslationService {
   // Counted at the chokepoint so retried/discarded attempts are included —
   // the per-result tokensUsed fields miss them (#164/F53).
   private usage: ApiUsage = emptyApiUsage();
+  // The model named on every final message. With server-side fallbacks off it
+  // is the requested model; a run report records it so that a measurement can
+  // show which model served it.
+  private servedModels = new Set<string>();
+  // Attempts retried after a transient error (429, 5xx, overload, connection).
+  private retries = 0;
 
   constructor(apiKey: string, model: string = DEFAULT_CLAUDE_MODEL, debug: boolean = false) {
     // maxRetries: 0 — callWithRetry owns the whole retry budget. The SDK's
@@ -165,6 +171,16 @@ export class TranslationService {
   /** Total API usage this instance has accumulated, retries included. */
   getUsage(): ApiUsage {
     return { ...this.usage };
+  }
+
+  /** Every model that served a final message on this instance, sorted. */
+  getServedModels(): string[] {
+    return [...this.servedModels].sort();
+  }
+
+  /** How many attempts this instance retried after a transient error. */
+  getRetryCount(): number {
+    return this.retries;
   }
 
   /**
@@ -214,6 +230,10 @@ export class TranslationService {
         });
         const message = await stream.finalMessage();
         addUsage(this.usage, message.usage);
+        // Before the stop check: a refused or truncated message was served too.
+        if (message.model) {
+          this.servedModels.add(message.model);
+        }
         this.log(
           `${operationName}: tokens in=${message.usage.input_tokens} out=${message.usage.output_tokens} cacheRead=${message.usage.cache_read_input_tokens ?? 0} cacheWrite=${message.usage.cache_creation_input_tokens ?? 0}`
         );
@@ -239,6 +259,7 @@ export class TranslationService {
         }
 
         const delay = baseDelayMs * Math.pow(2, attempt - 1); // 1s, 2s, 4s
+        this.retries++;
         this.log(
           `${operationName}: retryable error on attempt ${attempt}/${maxRetries}: ${error instanceof Error ? error.message : error}. Retrying in ${delay}ms...`
         );

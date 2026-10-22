@@ -91,7 +91,43 @@ Both source and target PRs remain **open** for evaluation.
 ./rate-check.sh --languages ml --draws 12   # this checkout's build
 ```
 
-Phase 1 takes **one draw per scenario**. That is the right test of whether the tagged bytes deliver through the action path, but a model-side defect that fails less than always slips through it: scenario 17's new document (`game-theory.md`) was refused by the structural-parity guard on about 40% of draws from v0.28.0 to v0.29.0 and passed three release gates before the rate rose enough to be caught (QuantEcon/action-translation#320). `rate-check.sh` measures the rate directly: it runs the CLI N times (default 12) per fixture and language, counts the draws that produced no output file, prints a table with the refusal reasons, and exits non-zero if any cell shows more than `--max-refusals` (default 1). It costs no GitHub runs — N × fixtures × languages CLI translations against a cached prompt — and `--ref` builds any tag or branch in a temporary worktree with that version's own glossary, so an old release can be measured too. Fixtures default to the files the scenarios introduce as whole new documents (only `game-theory.md` today); add to `--fixtures` when a scenario adds another. Logs, `meta.txt` and `summary.txt` land in `${TMPDIR:-/tmp}/action-translation-rate-check/<timestamp>-<pid>/`, outside the repository; `--summarize <that dir>` re-prints a finished run's table and verdict without new draws. A failing cell is not yet a verdict on the release: AGENTS.md (release checklist step 4b) describes the same-day control at the previous tag that tells a regression from a rate that predates it. Validated on 2026-09-23: v0.29.2 reads 0/12 on `game-theory.md` for `ml`, v0.29.0 (via `--ref`) reads 4/12 and fails — the defect that passed three gates.
+Phase 1 takes **one draw per scenario**. That is the right test of whether the tagged bytes deliver through the action path, but a model-side defect that fails less than always slips through it: scenario 17's new document (`game-theory.md`) was refused by the structural-parity guard on about 40% of draws from v0.28.0 to v0.29.0 and passed three release gates before the rate rose enough to be caught (QuantEcon/action-translation#320). `rate-check.sh` measures the rate directly: it runs the CLI N times (default 12) per fixture and language, classifies each draw (see [How a draw is counted](#how-a-draw-is-counted)), prints a table with the failure reasons, and exits non-zero if any cell shows more than `--max-refusals` failures (default 1) or gives no verdict. It costs no GitHub runs — N × fixtures × languages CLI translations against a cached prompt — and `--ref` builds any tag or branch in a temporary worktree with that version's own glossary, so an old release can be measured too. Fixtures default to the files the scenarios introduce as whole new documents (only `game-theory.md` today); add to `--fixtures` when a scenario adds another. Logs, `meta.txt`, `summary.txt` and `summary.json` land in `${TMPDIR:-/tmp}/action-translation-rate-check/<timestamp>-<pid>/`, outside the repository; `--summarize <that dir>` re-prints a finished run's table and verdict without new draws. A failing cell is not yet a verdict on the release: AGENTS.md (release checklist step 4b) describes the same-day control at the previous tag that tells a regression from a rate that predates it. Validated on 2026-09-23: v0.29.2 reads 0/12 on `game-theory.md` for `ml`, v0.29.0 (via `--ref`) reads 4/12 and fails — the defect that passed three gates.
+
+#### How a draw is counted
+
+When the engine's `translate init --help` lists `--report-json` (detected on every run; engines after v0.29.5 have it), each draw writes a JSON report and is classified from it:
+
+| Outcome of the draw | Counted as |
+|---|---|
+| Translated, and the file written | **ok** |
+| A model refusal (with its `stop_details` category), a truncation, a parity break, any other error, or a draw that finished without a readable report | **failed**: what `--max-refusals` bounds |
+| A 429, 5xx, overload or connection error that outlasted the engine's retries, or a stream that a server error or a dropped connection cut off part-way (of those the engine retries only an overload) | **infra**: left out of both the numerator and the denominator (#227) |
+
+Each cell gets a verdict, and the first match wins:
+
+- **FAIL**: more failures than `--max-refusals`. More draws can only add failures, so a FAIL stands even when a later rule also applies.
+- **INCOMPLETE**: a planned draw never finished, as after an interrupted run. Continue the run with `--run-dir <dir> --resume`.
+- **UNRELIABLE**: infra failures exceed 10% of the cell's attempts, so the cell gives no verdict. Re-run the cell, ideally at another time.
+- **ok**: none of the above.
+
+Any verdict but ok exits 1; a usage or setup error exits 2. The table gives each cell's failure rate over its valid draws, with a Wilson 95% interval, and the failure kinds, mean cost, output and thinking tokens, and latency.
+
+An older engine (v0.29.5 and before, measured through `--ref`) writes no report, so it keeps the original rule: a draw without its output file counts as refused, infra failures included. The kinds are still read from each draw's `TRANSLATION-REPORT.md`, for information only. Whatever the engine, every cell in `summary.json` also carries that count (`legacy.refused` of `legacy.draws`), so a release can be compared with a control at an older tag on one rule. It judges each draw on its first attempt, so a run topped up with `--redraw-infra` still compares with a control, which cannot redraw.
+
+For measurements beyond the gate, such as the Claude 5.5 evaluation:
+
+| Flag | What it does |
+|---|---|
+| `--source-dir DIR` | Takes the `--fixtures` from DIR, for example pinned real lectures, instead of `test-action-on-github-data/`. |
+| `--localize none\|default\|RULES` | `none` is the default, as before. `default` passes no `--localize`, so the engine applies its own default rules, and `meta.txt` records which they were. The value is checked against the engine before any draw. |
+| `--run-dir DIR`, `--resume` | Writes the run to DIR, which must be outside the repository. With `--resume`, finished draws are kept and the rest are drawn, provided the engine and inputs still match `meta.txt` (exit 2 otherwise). |
+| `--redraw-infra` | Draws a run's infra draws again. The replaced attempts stay in the cell's infra share, so a redraw tops up the valid draws without hiding how many were lost. |
+| `--ref-deps own` | With `--ref`, runs `npm ci` from the ref's own lockfile. By default the ref borrows this checkout's `node_modules`, so an old ref runs on *this* checkout's SDK. `meta.txt` records the SDK actually loaded either way. |
+| `--engine-dir DIR` | Uses an engine you built yourself. |
+
+With no `--model`, a run draws the tested engine's own `DEFAULT_CLAUDE_MODEL`, read from its `dist/models.js`, so release step 4b compares what each release ships, the same-day control at the previous tag included. An engine whose `dist/models.js` does not export it is refused before any draw and needs `--model` (every tag from v0.20.0 up exports it).
+
+`meta.txt` also records the engine's commit and whether its tree was clean, along with hashes of `dist/`, `dist/structural-parity.js`, the glossaries and the fixtures. `summary.json` (schema `rate-check-summary/1`) carries the same, plus every draw's outcome, tokens, cost and timestamps. The statistics behind the tables are in `lib/stats.mjs`; `node lib/stats.mjs --self-test` checks them against exact values and against R, and CI runs it.
 
 ### Phase 2: Evaluate Translation Quality
 

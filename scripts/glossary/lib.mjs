@@ -16,6 +16,7 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { getLanguageConfig, languageLabel } from '../../dist/language-config.js';
 import { DEFAULT_CLAUDE_MODEL, extractResponseText, maxTokensFor, modelRequestParams } from '../../dist/models.js';
+import { costUSD as listPriceUSD } from '../../dist/model-pricing.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const ROOT = path.resolve(HERE, '../..');
@@ -52,24 +53,18 @@ export const PROBE_MODEL = DEFAULT_CLAUDE_MODEL;
 export const EXTRACT_MODEL = 'claude-opus-5-5'; // term extraction from an EN↔target pair
 export const ROLES = ['seed', 'probe'];
 
-// Per-M-token list prices (USD), checked against Anthropic's model table on 2026-10-19.
-export const PRICING = {
-  'claude-fable-5-1': { in: 10, out: 50 },
-  'claude-fable-5': { in: 10, out: 50 },
-  'claude-opus-5-5': { in: 4, out: 20, cacheRead: 0.2, cacheWrite5m: 5 },
-  'claude-opus-5': { in: 5, out: 25 },
-  'claude-sonnet-5-5': { in: 2, out: 10, cacheRead: 0.2, cacheWrite5m: 2.5 },
-  'claude-sonnet-5': { in: 2, out: 10, cacheRead: 0.2, cacheWrite5m: 2.5 }, // was { in: 3, out: 15 }: the introductory $2/$10 is now the list price
-  'claude-sonnet-4-6': { in: 3, out: 15 },
-  'claude-opus-4-8': { in: 5, out: 25 },
-  'claude-opus-4-7': { in: 5, out: 25 },
-  'claude-haiku-4-5': { in: 1, out: 5 },
-};
+// Prices come from the engine's one table (src/model-pricing.ts, via dist/), shared with
+// `translate init --report-json`. This wrapper takes the SDK's snake_case `usage` and keeps
+// the scripts' number contract: an unpriced model reports $0.000.
 const warnedUnpricedModels = new Set();
-const warnedUnpricedCache = new Set();
 export function costUSD(model, usage) {
-  const p = PRICING[model];
-  if (!p) {
+  const cost = listPriceUSD(model, {
+    inputTokens: usage?.input_tokens ?? 0,
+    outputTokens: usage?.output_tokens ?? 0,
+    cacheReadInputTokens: usage?.cache_read_input_tokens ?? 0,
+    cacheCreationInputTokens: usage?.cache_creation_input_tokens ?? 0,
+  });
+  if (cost === null) {
     // A missing entry fails in the direction that hides spend: claude-opus-5
     // priced every call at $0.000 for weeks and nothing looked wrong (#230).
     // Zero is a legitimate value (cache-only responses), so "unknown" must be
@@ -78,30 +73,12 @@ export function costUSD(model, usage) {
       warnedUnpricedModels.add(model);
       console.warn(
         `⚠️  No pricing entry for model '${model}' — reporting $0.000. ` +
-          `Real spend is hidden until PRICING in scripts/glossary/lib.mjs gains an entry.`
+          `Real spend is hidden until MODEL_PRICING in src/model-pricing.ts gains an entry.`
       );
     }
     return 0;
   }
-  // Cache writes are priced at the 5-minute TTL rate (these scripts send no cache_control).
-  // Cache tokens on a model with no cache price are the same hidden spend as a missing
-  // model (#230), so they are priced at $0 loudly, once per model.
-  const cacheRead = usage?.cache_read_input_tokens ?? 0;
-  const cacheWrite = usage?.cache_creation_input_tokens ?? 0;
-  const unpricedCache = (cacheRead && p.cacheRead == null) || (cacheWrite && p.cacheWrite5m == null);
-  if (unpricedCache && !warnedUnpricedCache.has(model)) {
-    warnedUnpricedCache.add(model);
-    console.warn(
-      `⚠️  No cache pricing for model '${model}' — its cache tokens are reported at $0.000. ` +
-        `Add cacheRead / cacheWrite5m to its PRICING entry in scripts/glossary/lib.mjs.`
-    );
-  }
-  return (
-    ((usage?.input_tokens ?? 0) / 1e6) * p.in +
-    ((usage?.output_tokens ?? 0) / 1e6) * p.out +
-    (cacheRead / 1e6) * (p.cacheRead ?? 0) +
-    (cacheWrite / 1e6) * (p.cacheWrite5m ?? 0)
-  );
+  return cost;
 }
 
 // --- CLI arg helpers ---------------------------------------------------------

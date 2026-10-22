@@ -322,6 +322,7 @@ npx translate init -s <source-path> -t <target-path> --target-language <code> [o
 | `-j, --parallel <n>` | `1` | Number of parallel translations |
 | `--glossary <path>` | *(auto)* | Path to glossary JSON file (default: built-in glossary for the language) |
 | `--localize <rules>` | `code-comments,figure-labels,i18n-font-config` | Localization rules for code cells (use `none` to disable) |
+| `--report-json <path>` | *(none)* | Also write a machine-readable run report (JSON) to `<path>`: each lecture's outcome and failure class (`parity`, `model-refusal` with its category, `truncated`, `infra`, ...), the run's API usage with thinking tokens, its cost at list price and the model that served it. Not written on `--dry-run` |
 | `--dry-run` | `false` | Preview lectures without translating |
 
 ### Localization rules
