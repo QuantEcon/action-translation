@@ -933,6 +933,12 @@ describe('rate-check.sh — an engine without --report-json (the legacy rule)', 
       path.join(engine, 'package.json'),
       JSON.stringify({ name: 'legacy-engine', version: '0.29.5', type: 'module' })
     );
+    // Every engine since v0.28.0 exports its production default; with no --model, rate-check
+    // draws it, as it would from v0.29.5's own dist/models.js.
+    fs.writeFileSync(
+      path.join(engine, 'dist', 'models.js'),
+      "export const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-5';\n"
+    );
     fs.writeFileSync(
       path.join(engine, 'dist', 'localization-rules.js'),
       [
@@ -1071,5 +1077,58 @@ describe('rate-check.sh — an engine without --report-json (the legacy rule)', 
     expect(fs.readFileSync(path.join(runDir, 'meta.txt'), 'utf8')).toContain(
       `SOURCE_DIR='${fs.realpathSync(source)}'`
     );
+  });
+
+  /** A copy of the old engine whose dist/models.js exports `model`, or is missing when null. */
+  function engineWithDefault(name: string, model: string | null): string {
+    const copy = freshDir(name);
+    fs.cpSync(engine, copy, { recursive: true });
+    const models = path.join(copy, 'dist', 'models.js');
+    if (model === null) fs.rmSync(models);
+    else fs.writeFileSync(models, `export const DEFAULT_CLAUDE_MODEL = '${model}';\n`);
+    return copy;
+  }
+
+  it("draws the engine's own DEFAULT_CLAUDE_MODEL when no --model is given", () => {
+    const flipped = engineWithDefault('engine-default-5-5', 'claude-sonnet-5-5');
+    const runDir = path.join(freshDir('engine-default-run'), 'run');
+    const base = [RATE_CHECK, '--engine-dir', flipped, '--languages', 'zh-cn', '--draws', '1'];
+    const result = run('bash', [...base, '--run-dir', runDir]);
+    expect(result.code).toBe(0);
+    expect(fs.readFileSync(path.join(runDir, 'meta.txt'), 'utf8')).toContain(
+      "MODEL='claude-sonnet-5-5'"
+    );
+    // the fake init echoes its arguments: the draw was made with the engine's default
+    expect(fs.readFileSync(path.join(runDir, 'zh-cn', 'game-theory', '1.log'), 'utf8')).toContain(
+      '-m claude-sonnet-5-5'
+    );
+
+    // an explicit --model still wins over the engine's default
+    const pinnedDir = path.join(freshDir('engine-default-pinned'), 'run');
+    const pinned = run('bash', [...base, '--model', 'claude-sonnet-5', '--run-dir', pinnedDir]);
+    expect(pinned.code).toBe(0);
+    expect(fs.readFileSync(path.join(pinnedDir, 'meta.txt'), 'utf8')).toContain(
+      "MODEL='claude-sonnet-5'"
+    );
+  });
+
+  it('refuses to guess a model for an engine that exports none, before any draw', () => {
+    const old = engineWithDefault('engine-no-default', null);
+    const runDir = path.join(freshDir('engine-no-default-run'), 'run');
+    const result = run('bash', [
+      RATE_CHECK,
+      '--engine-dir',
+      old,
+      '--languages',
+      'zh-cn',
+      '--draws',
+      '1',
+      '--run-dir',
+      runDir,
+    ]);
+    expect(result.code).toBe(2);
+    expect(result.stderr).toContain('cannot read DEFAULT_CLAUDE_MODEL');
+    expect(result.stderr).toContain('pass --model');
+    expect(fs.existsSync(path.join(runDir, 'zh-cn'))).toBe(false);
   });
 });
