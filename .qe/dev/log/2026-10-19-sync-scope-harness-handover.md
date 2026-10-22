@@ -136,3 +136,34 @@ git fetch origin && git switch feat/sync-scope-existing && git pull
   (all but `test-translation`) onto its translation PR, so the label is also created in each
   target. The review workflows ignore it.
 - **Set `SCRATCH` before the `tee`.** It is the trap the v0.29.5 handover hit.
+
+## Results, 2026-10-22: every case matches on all three lanes
+
+Run from a session on @mmcky's machine, whose `gh` token had the `workflow` scope, at #376's
+`b747bf8` (`main` merged in, so #394 and #69 are on the branch). The dry run and the real run
+both read: census 9/9 on `@feat/sync-scope-existing`, `sync-scope: existing`. Source PRs
+QuantEcon/test-translation-sync#1064–#1068 for scenarios 01, 17, 18, 19 and 20. The runs settled
+within six minutes of the start. Translation PR numbers below are in
+QuantEcon/test-translation-sync.<lang>.
+
+| Scenario | zh-cn | fa | ml | Matches the expected table |
+|---|---|---|---|---|
+| 01 | no PR | no PR | no PR | yes: each log reads `lecture-minimal.md: not synced`, "0 changed lecture(s) in scope, 1 not synced", "No translation PR"; the run passes |
+| 17 | #1079 | #463 | #368 | yes: `_toc.yml` only, adding `game-theory`; Not Synced `game-theory.md`; "No markdown files to review", then PASS |
+| 18 | #1080 | #464 | #369 | yes: `lecture.md` and its state file removed, `_toc.yml` modified; nothing listed; the deletion-only PASS |
+| 19 | #1081 | #466 | #371 | yes: `lecture.md` and its state file modified; Not Synced `lecture-minimal.md`; PASS |
+| 20 | #1082 | #465 | #370 | yes: `linear-algebra.md` shown as renamed from `lecture.md`, the state file removed and added, `_toc.yml` modified; nothing listed; PASS |
+
+- **Sync runs**: 15 of 15 succeeded, one per scenario and lane, each beside the expected
+  skipped run from the label event. No failure issue was opened (test mode).
+- **Reviews**: verdicts at `engineRef: feat/sync-scope-existing`. Some review runs were
+  cancelled by later events on the same PR; none failed.
+- **SDK 0.131 on the Action path**: with #394 on the branch, this was its first GitHub Action
+  run. Scenario 19's translations and every review went through it without an error.
+- **Not run**: the evaluator (billed Opus calls, zh-cn only; all three lanes were read back by
+  hand instead) and step 4's default control (the v0.30.0 gate covers the default path).
+- **Read-back traps met**: macOS `/bin/bash` is 3.2, so a `declare -A` loop over the lanes
+  queried the wrong PRs; and scenario 17's verdict is logged by the review run, not posted as a
+  comment, so a parser of PR comments finds none.
+
+Reported on #376. Next: @mmcky merges #376 with this PR, and #344 can then be closed.
