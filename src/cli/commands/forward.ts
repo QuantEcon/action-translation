@@ -373,13 +373,21 @@ export async function resyncSingleFile(
 
     const translator = new TranslationService(options.apiKey, options.model, false);
     const result = await translator.translateDocumentResync({
-      sourceLanguage: languageLabel(options.sourceLanguage),
-      targetLanguage: languageLabel(options.language),
+      // Codes, not display labels: the translator keys the glossary and the
+      // language rules by code, and a label matched neither (#348).
+      sourceLanguage: options.sourceLanguage,
+      targetLanguage: options.language,
       glossary,
       customInstructions: buildPreserveInstruction(targetLocalReads),
       sourceContent,
       targetContent,
     });
+    // What went into the request, beside what the loader reported: until #348
+    // the loader said 357 terms while the request carried none.
+    logger.info(
+      `  Request carried ${result.glossaryTermsSent ?? 0} of ${glossary?.terms.length ?? 0} ` +
+        `glossary terms and ${result.languageRulesSent ?? 0} ${options.language} rules`
+    );
 
     if (result.success && result.translatedSection) {
       // Apply deterministic typography before anything derives from the text —

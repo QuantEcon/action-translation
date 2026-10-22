@@ -212,6 +212,10 @@ export interface SectionTranslationResult {
   translatedSection?: string;
   error?: string;
   tokensUsed?: number;
+  /** translateDocumentResync only: glossary terms rendered into the request (#348). */
+  glossaryTermsSent?: number;
+  /** translateDocumentResync only: the target language's rules rendered into the request (#348). */
+  languageRulesSent?: number;
 }
 
 /**

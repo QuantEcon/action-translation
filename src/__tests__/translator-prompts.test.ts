@@ -11,7 +11,9 @@
  * 1..N with no repeats, for every builder × language combination.
  */
 
+import * as core from '@actions/core';
 import { TranslationService } from '../translator.js';
+import { Glossary } from '../types.js';
 
 jest.mock('@actions/core', () => ({
   info: jest.fn(),
@@ -280,5 +282,90 @@ describe('glossary style_examples render as STYLE EXAMPLES in the stable block',
     // the glossary block itself is exactly the pre-feature shape
     expect(rendered[0]).toContain('GLOSSARY:\n  - "useful" → "useful"\n');
     expect(rendered[0].endsWith('GLOSSARY:\n  - "useful" → "useful"\n')).toBe(true);
+  });
+});
+
+/**
+ * A glossary key that matches no term (#348). From PR #31 until this fix,
+ * forward passed display labels, so every resync rendered an empty GLOSSARY
+ * block and the only trace was a debug-only line per skipped term. That case
+ * now warns outside debug mode, once per key per service instance; a key that
+ * matches, or a language with a glossary and no LANGUAGE_CONFIGS entry, is
+ * unchanged.
+ */
+describe('a glossary key that matches no term warns', () => {
+  const warning = core.warning as jest.Mock;
+  const glossary: Glossary = {
+    version: 'test',
+    terms: [
+      { en: 'Marginal distribution', 'zh-cn': '边缘分布' },
+      { en: 'Matrix', 'zh-cn': '矩阵' },
+    ],
+  };
+  let service: TranslationService;
+
+  beforeEach(() => {
+    mockStream.mockClear();
+    warning.mockClear();
+    mockFinalMessage.mockResolvedValue({
+      content: [{ type: 'text', text: 'translated' }],
+      usage: { input_tokens: 1, output_tokens: 1 },
+      stop_reason: 'end_turn',
+    });
+    service = new TranslationService('test-key', 'test-model', false);
+  });
+
+  function resync(targetLanguage: string, withGlossary: Glossary = glossary) {
+    return service.translateDocumentResync({
+      sourceLanguage: 'en',
+      targetLanguage,
+      sourceContent: SECTION,
+      targetContent: SECTION,
+      glossary: withGlossary,
+    });
+  }
+
+  function lastPrompt(): string {
+    const calls = mockStream.mock.calls;
+    return calls[calls.length - 1][0].messages[0].content
+      .map((block: { text: string }) => block.text)
+      .join('');
+  }
+
+  it.each(['Chinese (Simplified) (zh-cn)', 'ZH-CN'])(
+    'names the key %p, once per service instance',
+    async (key) => {
+      const result = await resync(key);
+      await resync(key);
+
+      expect(result.glossaryTermsSent).toBe(0);
+      expect(warning).toHaveBeenCalledTimes(1);
+      expect(warning.mock.calls[0][0]).toContain(`none for "${key}"`);
+
+      // A new instance (a new forward file, a new sync run) warns again.
+      service = new TranslationService('test-key', 'test-model', false);
+      await resync(key);
+      expect(warning).toHaveBeenCalledTimes(2);
+    }
+  );
+
+  it('adds no warning for a key that matches', async () => {
+    const result = await resync('zh-cn');
+
+    expect(result.glossaryTermsSent).toBe(2);
+    expect(lastPrompt()).toContain('"Marginal distribution" → "边缘分布"');
+    expect(warning).not.toHaveBeenCalled();
+  });
+
+  it('works as before for a language with a glossary and no LANGUAGE_CONFIGS entry', async () => {
+    const xx: Glossary = { version: 'test', terms: [{ en: 'Matrix', xx: 'XX-MATRIX' }] };
+
+    const result = await resync('xx', xx);
+
+    expect(result.success).toBe(true);
+    expect(result.glossaryTermsSent).toBe(1);
+    expect(result.languageRulesSent).toBe(0);
+    expect(lastPrompt()).toContain('"Matrix" → "XX-MATRIX"');
+    expect(warning).not.toHaveBeenCalled();
   });
 });

@@ -21876,7 +21876,7 @@ var require_core = __commonJS({
     exports2.isDebug = isDebug;
     exports2.debug = debug;
     exports2.error = error4;
-    exports2.warning = warning7;
+    exports2.warning = warning8;
     exports2.notice = notice2;
     exports2.info = info9;
     exports2.startGroup = startGroup;
@@ -21969,7 +21969,7 @@ Support boolean input list: \`true | True | TRUE | false | False | FALSE\``);
     function error4(message, properties = {}) {
       (0, command_1.issueCommand)("error", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
-    function warning7(message, properties = {}) {
+    function warning8(message, properties = {}) {
       (0, command_1.issueCommand)("warning", (0, utils_1.toCommandProperties)(properties), message instanceof Error ? message.toString() : message);
     }
     function notice2(message, properties = {}) {
@@ -48241,6 +48241,9 @@ function checkDocumentSize(sourceLength, targetLanguage) {
   }
   return null;
 }
+function hasTranslation(term, language) {
+  return typeof term[language] === "string" && term[language] !== "";
+}
 function formatApiError(error4) {
   if (error4 instanceof AuthenticationError) {
     return "Authentication failed: Invalid or expired API key. Check your anthropic-api-key secret.";
@@ -48278,6 +48281,9 @@ var TranslationService = class {
   servedModels = /* @__PURE__ */ new Set();
   // Attempts retried after a transient error (429, 5xx, overload, connection).
   retries = 0;
+  // Language keys already warned about matching no glossary term, so a
+  // section-by-section run warns once rather than once per section (#348).
+  glossaryKeysWarned = /* @__PURE__ */ new Set();
   constructor(apiKey, model = DEFAULT_CLAUDE_MODEL, debug = false) {
     this.client = new Anthropic({ apiKey, maxRetries: 0 });
     this.model = model;
@@ -48698,6 +48704,10 @@ Provide the complete translated document maintaining exact MyST structure.`;
     const glossarySection = glossary ? this.formatGlossary(glossary, targetLanguage) : "";
     const languageConfig = getLanguageConfig(targetLanguage);
     const additionalRules = languageConfig.additionalRules.length > 0 ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join("\n") : "";
+    const sent = {
+      glossaryTermsSent: (glossary?.terms ?? []).filter((term) => hasTranslation(term, targetLanguage)).length,
+      languageRulesSent: languageConfig.additionalRules.length
+    };
     const stablePrefix = `You are a professional translator specialising in quantitative economics.
 
 You are given:
@@ -48767,25 +48777,29 @@ ${targetContent}`;
       if (!translatedText) {
         return {
           success: false,
-          error: "translateDocumentResync: response contained no text"
+          error: "translateDocumentResync: response contained no text",
+          ...sent
         };
       }
       if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
         return {
           success: false,
-          error: `Document exceeded token limits and was truncated. This document may need a simpler resync approach.`
+          error: `Document exceeded token limits and was truncated. This document may need a simpler resync approach.`,
+          ...sent
         };
       }
       this.log(`Resync complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
       return {
         success: true,
         translatedSection: translatedText,
-        tokensUsed: response.usage.input_tokens + response.usage.output_tokens
+        tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
+        ...sent
       };
     } catch (error4) {
       return {
         success: false,
-        error: formatApiError(error4)
+        error: formatApiError(error4),
+        ...sent
       };
     }
   }
@@ -48796,13 +48810,18 @@ ${targetContent}`;
     if (!glossary.terms || glossary.terms.length === 0) {
       return "";
     }
-    const terms = glossary.terms.filter((term) => {
-      if (typeof term[targetLanguage] === "string" && term[targetLanguage] !== "") {
+    const kept = glossary.terms.filter((term) => {
+      if (hasTranslation(term, targetLanguage)) {
         return true;
       }
       this.log(`Glossary term "${term.en}" has no ${targetLanguage} translation \u2014 skipped`);
       return false;
-    }).map((term) => {
+    });
+    if (kept.length === 0 && !this.glossaryKeysWarned.has(targetLanguage)) {
+      this.glossaryKeysWarned.add(targetLanguage);
+      core2.warning(`Glossary has ${glossary.terms.length} terms but none for "${targetLanguage}", so the request carries no glossary terms. Glossary entries are keyed by language code (e.g. "zh-cn").`);
+    }
+    const terms = kept.map((term) => {
       const translation = term[targetLanguage];
       const context3 = term.context ? ` (${term.context})` : "";
       return `  - "${term.en}" \u2192 "${translation}"${context3}`;
@@ -53911,8 +53930,8 @@ var SyncOrchestrator = class {
     if (docs.length === 0)
       return;
     const plan = planCitationBackfill({ docs, bib: bibliography, mode });
-    for (const warning7 of plan.warnings)
-      this.logger.warning(warning7);
+    for (const warning8 of plan.warnings)
+      this.logger.warning(warning8);
     if (plan.mergedBib && plan.bibPath) {
       const total = [...plan.backfilled.values()].reduce((n, keys) => n + keys.length, 0);
       this.logger.info(`Bibliography: appended ${total} entr${total === 1 ? "y" : "ies"} to ${plan.bibPath} for citations this sync introduced`);
@@ -54733,8 +54752,8 @@ async function checkHeadingMapCorrect(parser, pairs2) {
       parser.parseSections(pair.target, pair.filename)
     ]);
     const { map: expected, warnings } = buildHeadingMap(sourceParsed.sections, targetParsed.sections);
-    for (const warning7 of warnings) {
-      details.push(`${pair.filename}: ${warning7}`);
+    for (const warning8 of warnings) {
+      details.push(`${pair.filename}: ${warning8}`);
     }
     if (expected.size === 0)
       continue;
