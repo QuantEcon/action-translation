@@ -322,10 +322,11 @@ scenario 22, pre-existing); §4b read zh-cn, fa and ml 0/12 each, on the classif
 the first time. The default model stays `claude-sonnet-5`: switching it follows the golden-set
 evaluation (#402's handover). Which release carries the switch is open: v0.30.1 was proposed, and a
 minor would keep `@v0.30` on Sonnet 5. #346's French
-items (#347, #327, #324, #325, #363) were not in it, since none had merged. Next: lecture-python.zh-cn's
-two lectures (#362, #407) through `\translate-resync` on lecture-python.myst#1055, with
-`svd_intro` dropped by hand, and Malayalam's state-file backfill and `sync-scope` wiring. Log
-`2026-10-22-v0300-release`. This page's `verified:` stamp predates it, so a full re-verify is owed.
+items (#347, #327, #324, #325, #363) were not in it, since none had merged. lecture-python.zh-cn
+was then fully recovered, its two lectures (#362, #407) by `\translate-resync` on
+lecture-python.myst#1055, and published as `publish-2026oct22` (log
+`2026-10-22-forward-language-codes`). Next: Malayalam's state-file backfill and `sync-scope`
+wiring. Log `2026-10-22-v0300-release`. This page's `verified:` stamp predates it, so a full re-verify is owed.
 
 *Review, 2026-10-06*: every forward resync from PR #31 (2026-03-19) until the #348 fix went
 out without the edition's glossary and language rules; the text forward wrote in that time is
