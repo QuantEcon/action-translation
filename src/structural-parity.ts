@@ -72,6 +72,9 @@ export interface ParityResult {
  *   `prf:*`, `contents` (its argument is the ToC's display title —
  *   `Contents` → `目录` is correct translation, confirmed corpus-wide),
  *   `index` (a Chinese edition's index entries should be Chinese).
+ * - **Body text on the fence line**: the named admonitions (`note`, `warning`,
+ *   `tip`, …) take no title; text written after the name is rendered as the
+ *   opening of the body, so it is prose and is translated (#407).
  * - **Edition-pinned**: `code-cell`'s argument is the kernel/lexer name, and
  *   editions legitimately pin different kernels (`python3` upstream vs
  *   `ipython3` across lecture-python.zh-cn) — target frontmatter is ground
@@ -99,6 +102,16 @@ const FLEXIBLE_ARG_DIRECTIVES = new Set([
   'contents',
   'index',
   'code-cell',
+  'attention',
+  'caution',
+  'danger',
+  'error',
+  'hint',
+  'important',
+  'note',
+  'seealso',
+  'tip',
+  'warning',
 ]);
 
 /** `prf:theorem Title`, `prf:definition Title`, … — the whole family takes titles. */
