@@ -4,8 +4,10 @@
  * `forward` resolved its glossary only against `process.cwd()`. No edition
  * repository carries `glossary/<lang>.json`, so a resync run from the target
  * repo — the natural place to run it — translated with no glossary at all and
- * logged nothing either way. These tests pin the end of the chain: what the
- * translator actually receives, from a working directory that has no glossary.
+ * logged nothing either way. These tests pin what the translator receives,
+ * from a working directory that has no glossary. What it then sends to the
+ * model is pinned in forward-request.test.ts: the translator is mocked here,
+ * and #348 (labels for language keys) sat inside it.
  *
  * Separate file from forward.test.ts because it mocks triage and the translator,
  * which the main suite exercises for real (in test mode).

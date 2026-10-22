@@ -106,7 +106,7 @@ For the CLI, glossaries are loaded automatically based on the language code. The
 | 2 | `<cwd>/glossary/{language}.json`, `<cwd>/glossary-{language}.json` | Lets a project override the estate defaults by carrying its own glossary |
 | 3 | `{action-translation}/glossary/{language}.json` | The built-in glossary, resolved relative to the installed package — **not** to the working directory |
 
-Every run prints the glossary it loaded (`✓ Loaded built-in glossary for zh-cn — 357 terms (…)`) or warns that it found none and lists every path it tried. A malformed glossary is an error rather than a silent skip.
+Every run prints the glossary it loaded (`✓ Loaded built-in glossary for zh-cn — 357 terms (…)`) or warns that it found none and lists every path it tried. A malformed glossary is an error rather than a silent skip. `forward` also prints what each resync request carried (`Request carried 357 of 357 glossary terms and 2 zh-cn rules`). If a glossary has no term at all under the language code a run asks for, such as `ZH-CN` instead of `zh-cn`, the run warns once and names that code.
 
 ## Adding terms to a glossary
 

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`translate forward` sends the edition's glossary and language rules with every resync** (#348). It passed display labels such as `Chinese (Simplified) (zh-cn)` to the translator, which keys the glossary and `LANGUAGE_CONFIGS` by bare code. Every whole-file resync since PR #31 therefore reached the model with an empty `GLOSSARY:` block and none of the edition's rules, while the log said the glossary had loaded. Forward now passes the codes, and logs what the request carried beside what was loaded: `Request carried 357 of 357 glossary terms and 2 zh-cn rules`. The resync prompt now names the languages by code, as the other prompts do, and its pre-flight size check uses the language's own expansion factor (1.3 for zh-cn and ja, 1.8 for fa) instead of the default 1.5.
+- **A glossary that has no term for the requested language now warns** (#348). The per-term skip lines print only in debug mode, so a language key that matched nothing, whether a display label or a case drift such as `ZH-CN`, sent an empty glossary block with no sign of it. The warning names the key and appears once per run (once per file for `forward`).
+
 ## [0.30.0] - 2026-10-22
 
 ### Added

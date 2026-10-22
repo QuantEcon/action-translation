@@ -302,7 +302,12 @@ describe('translator (streamed): what comes back', () => {
 
       const result = await run(new TranslationService('test-key', 'claude-opus-5-5'));
 
-      expect(result).toEqual({ success: false, error: `${operation}: response contained no text` });
+      // toMatchObject: a document resync also reports what its request carried (#348).
+      expect(result).toMatchObject({
+        success: false,
+        error: `${operation}: response contained no text`,
+      });
+      expect(result.translatedSection).toBeUndefined();
       expect(api.requests).toHaveLength(1);
     }
   );

@@ -20,6 +20,7 @@ import {
 } from '@anthropic-ai/sdk';
 import {
   Glossary,
+  GlossaryTerm,
   SectionTranslationRequest,
   SectionTranslationResult,
   FullDocumentTranslationRequest,
@@ -112,6 +113,14 @@ function checkDocumentSize(sourceLength: number, targetLanguage: string): string
 }
 
 /**
+ * Whether a glossary term has a translation for `language`. Only those terms
+ * are rendered into a prompt; the rest would read `"term" → "undefined"`.
+ */
+function hasTranslation(term: GlossaryTerm, language: string): boolean {
+  return typeof term[language] === 'string' && term[language] !== '';
+}
+
+/**
  * Format API error for user-friendly output
  */
 function formatApiError(error: unknown): string {
@@ -152,6 +161,9 @@ export class TranslationService {
   private servedModels = new Set<string>();
   // Attempts retried after a transient error (429, 5xx, overload, connection).
   private retries = 0;
+  // Language keys already warned about matching no glossary term, so a
+  // section-by-section run warns once rather than once per section (#348).
+  private glossaryKeysWarned = new Set<string>();
 
   constructor(apiKey: string, model: string = DEFAULT_CLAUDE_MODEL, debug: boolean = false) {
     // maxRetries: 0 — callWithRetry owns the whole retry budget. The SDK's
@@ -711,6 +723,14 @@ Provide the complete translated document maintaining exact MyST structure.`;
       languageConfig.additionalRules.length > 0
         ? languageConfig.additionalRules.map((rule, i) => `${9 + i}. ${rule}`).join('\n')
         : '';
+    // What the request carries, for the caller to report beside what it
+    // loaded: until #348, a key that matched nothing sent nothing unannounced.
+    const sent = {
+      glossaryTermsSent: (glossary?.terms ?? []).filter((term) =>
+        hasTranslation(term, targetLanguage)
+      ).length,
+      languageRulesSent: languageConfig.additionalRules.length,
+    };
 
     const stablePrefix = `You are a professional translator specialising in quantitative economics.
 
@@ -796,6 +816,7 @@ ${targetContent}`;
         return {
           success: false,
           error: 'translateDocumentResync: response contained no text',
+          ...sent,
         };
       }
 
@@ -806,6 +827,7 @@ ${targetContent}`;
           error:
             `Document exceeded token limits and was truncated. ` +
             `This document may need a simpler resync approach.`,
+          ...sent,
         };
       }
 
@@ -817,11 +839,13 @@ ${targetContent}`;
         success: true,
         translatedSection: translatedText,
         tokensUsed: response.usage.input_tokens + response.usage.output_tokens,
+        ...sent,
       };
     } catch (error) {
       return {
         success: false,
         error: formatApiError(error),
+        ...sent,
       };
     }
   }
@@ -834,16 +858,28 @@ ${targetContent}`;
       return '';
     }
 
-    const terms = glossary.terms
-      .filter((term) => {
-        // A term without a translation for this language would render as
-        // `"term" → "undefined"` in the prompt — skip it and say so.
-        if (typeof term[targetLanguage] === 'string' && term[targetLanguage] !== '') {
-          return true;
-        }
-        this.log(`Glossary term "${term.en}" has no ${targetLanguage} translation — skipped`);
-        return false;
-      })
+    const kept = glossary.terms.filter((term) => {
+      // A term without a translation for this language would render as
+      // `"term" → "undefined"` in the prompt — skip it and say so.
+      if (hasTranslation(term, targetLanguage)) {
+        return true;
+      }
+      this.log(`Glossary term "${term.en}" has no ${targetLanguage} translation — skipped`);
+      return false;
+    });
+
+    // No term at all means the key matched nothing, not a sparse glossary: a
+    // display label or a case drift (`ZH-CN`). The per-term lines above print
+    // only in debug mode, so warn where a normal run shows it (#348).
+    if (kept.length === 0 && !this.glossaryKeysWarned.has(targetLanguage)) {
+      this.glossaryKeysWarned.add(targetLanguage);
+      core.warning(
+        `Glossary has ${glossary.terms.length} terms but none for "${targetLanguage}", so the ` +
+          `request carries no glossary terms. Glossary entries are keyed by language code (e.g. "zh-cn").`
+      );
+    }
+
+    const terms = kept
       .map((term) => {
         const translation = term[targetLanguage];
         const context = term.context ? ` (${term.context})` : '';

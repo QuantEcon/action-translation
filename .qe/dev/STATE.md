@@ -30,9 +30,11 @@ Roadmap detail lives in the project trackers (reading order in
   Logs `2026-10-19-sync-scope-existing`, `2026-10-20-lecture-removal-gaps`.
 - **Hardening project #349** (created 2026-10-06 from the 2026-10-05 codebase review). It has two
   work items:
-  - **#348**: `translate forward` sends no glossary terms and no language rules, because it passes
-    display labels where language codes are expected. This must land before the next `translate
-    forward` run.
+  - **#348 is fixed on `main`, not yet released.** `translate forward` passed display labels
+    where language codes are expected, so its resyncs sent no glossary terms and no language
+    rules. It now passes the codes and logs what each request carried, and a glossary with no
+    term for the requested code warns on every path. Forward runs are open again from a `main`
+    build; the CLI runs from a checkout, so they need no release.
   - **#280** (adopted): rebase moves a PR branch in one step and queues its runs.
 
   The review's evidence for other open issues went as comments on #90, #154, #169, #170, #259,
@@ -179,7 +181,7 @@ Roadmap detail lives in the project trackers (reading order in
   (ruling on #276) and replaced by a precondition: `\translate-resync` only when no file of the
   PR has advanced on source `main` since it merged, i.e. for every path
   `git rev-list --count <mergeSha>..origin/main -- <path>` is zero. It is no longer the
-  documented recovery — use `translate forward` (after #348 merges), or `init -f` for an
+  documented recovery — use `translate forward`, or `init -f` for an
   absent lecture, and never regenerate a natively-reviewed one — but the failure-issue template
   in `createFailureIssue` still prescribes it unconditionally (#281). The fix is re-specified as
   source snapshot vs source `main` (English against English), and `mode: rebase` reads the same
@@ -325,10 +327,10 @@ two lectures (#362, #407) through `\translate-resync` on lecture-python.myst#105
 `svd_intro` dropped by hand, and Malayalam's state-file backfill and `sync-scope` wiring. Log
 `2026-10-22-v0300-release`. This page's `verified:` stamp predates it, so a full re-verify is owed.
 
-*Review, 2026-10-06*: **no `translate forward` run before #348 merges**. Every forward resync
-since PR #31 (2026-03-19) has gone out without the edition's glossary and language rules. #325
-has a proposed widening (2026-10-06 comment): table delimiter rows, which already break a table
-in the fr edition's pandas lecture.
+*Review, 2026-10-06*: every forward resync from PR #31 (2026-03-19) until the #348 fix went
+out without the edition's glossary and language rules; the text forward wrote in that time is
+#154's to measure. #325 has a proposed widening (2026-10-06 comment): table
+delimiter rows, which already break a table in the fr edition's pandas lecture.
 
 0. **The fr engine queue, in this order**: finish, review and PR #324, then #325 (branches in
    progress, each with its fr edition repair), then #326 together with #203's fence unwrap.
