@@ -241,7 +241,16 @@ program
   )
   .option('--json', 'Output as JSON', false)
   .option('--write-state', 'Bootstrap .translate/ metadata from current state', false)
-  .option('--force', 'Skip sync-date safety check for --write-state', false)
+  .option(
+    '--force',
+    'Skip every --write-state safety check (sync dates, carried changes, unreadable state files)',
+    false
+  )
+  .option(
+    '--carried',
+    "With --write-state: confirm the translation carries the English changes since each lecture's recorded sync point",
+    false
+  )
   .option('--check-sync', 'LLM-based content sync check (requires ANTHROPIC_API_KEY)', false)
   .option('--test', 'Use mock triage responses for --check-sync (no LLM calls)', false)
   .action(async (opts) => {
@@ -263,6 +272,7 @@ program
       writeState: opts.writeState,
       sourceLanguage: opts.sourceLanguage,
       force: opts.force,
+      carried: opts.carried,
       checkSync: opts.checkSync,
       apiKey: apiKey || 'test-key',
       model: DEFAULT_CLAUDE_MODEL,

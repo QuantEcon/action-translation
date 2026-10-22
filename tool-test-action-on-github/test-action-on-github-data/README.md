@@ -4,7 +4,7 @@ This directory contains test scenarios for validating the translation action aga
 
 ## Structure
 
-- **workflow-template.yml**: GitHub Actions workflow file for test repositories
+- **sync-workflow-template.yml**: The source repo's sync workflow, rendered once per harness language. Its mode step passes `sync-scope: existing` for a PR with the `test-sync-scope-existing` label (#344), and `all` otherwise
 - **Base documents**: Starting point for all tests (identical between EN, ZH-CN, and FA repos)
   - `base-minimal.md` / `base-minimal-zh-cn.md` / `base-minimal-fa.md` - Simple 2-section document
   - `base-lecture.md` / `base-lecture-zh-cn.md` / `base-lecture-fa.md` - Realistic lecture example
@@ -12,7 +12,7 @@ This directory contains test scenarios for validating the translation action aga
   - `game-theory.md` - New document for testing NEW document mode
   - `linear-algebra.md` - Copy of base-lecture for rename testing
 
-- **Test scenarios**: Modified versions for testing specific changes (26 total)
+- **Test scenarios**: Modified versions for testing specific changes (28 total)
   - **Basic Tests (01-08)**:
     - `01-intro-change-minimal.md` - Intro text modified
     - `02-title-change-minimal.md` - Title modified
@@ -39,13 +39,15 @@ This directory contains test scenarios for validating the translation action aga
     - `19-multi-file-minimal.md` + `19-multi-file-lecture.md` - Multiple files
     - `20-rename-document-toc.yml` - Document renamed + TOC updated
   
-  - **Edge Cases (21-26)**:
+  - **Edge Cases (21-26)**, then **Shared Assets and Directives (27-28)**:
     - `21-preamble-only-minimal.md` - Only frontmatter changed
     - `22-deep-nesting-lecture.md` - ##### and ###### nesting
     - `23-special-chars-lecture.md` - Special characters in headings
     - `24-empty-sections-minimal.md` - Sections with no content
     - `25-pre-title-content-lecture.md` - Anchor + raw block before title
     - `26-heading-case-change-lecture.md` - Heading case change (title → sentence)
+    - `27-add-citation-minimal.md` - `{cite}` role whose key the target's `references.bib` lacks
+    - `28-add-exercise-lecture.md` - Exercise family added (`{exercise-start}`, `{hint}`, `{solution-start}`)
 
 ## File Structure
 
@@ -98,9 +100,14 @@ The test script (`test-action-on-github.sh`) uses these files to:
 25. **Pre-title Content** - `(label)=` anchor + `{raw} jupyter` block before `# title`
 26. **Heading Case Change** - Title-case → sentence-case headings (tests heading-map case-insensitive lookup)
 
+### Phase 5: Shared Assets and Directives (Tests 27-28)
+27. **Citation Backfill** - `{cite}` role introduced; the cited key is in the source's `references.bib` but not the target's, so the sync PR must carry the entry (see `base-config.yml`)
+28. **Exercise Family** - `## Exercises` with `{exercise-start}`/`{hint}`/`{solution-start}` blocks appended to `lecture.md`; `.ml` keeps them byte-identical to the source
+
 ## Notes
 
 - All scenarios use the same base document state
 - Minimal scenarios test in isolation
 - Real-world scenario tests realistic content
 - PRs are created as drafts with `test-translation` label
+- Under `--sync-scope existing` the target reset also writes `.translate/state/lecture.md.yml`, and none for `lecture-minimal.md`; see "Scope runs" in `../README.md`

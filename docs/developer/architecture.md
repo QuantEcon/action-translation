@@ -101,6 +101,7 @@ src/
 │   ├── review.ts        # REVIEW mode runner, extracted from index.ts and directly tested (#169)
 │   └── core-logger.ts   # @actions/core → Logger adapter, shared by the entry point and mode runners
 ├── sync-orchestrator.ts # Sync processing pipeline
+├── sync-scope.ts        # sync-scope: existing — sync a changed lecture only if the target has its state file (#344)
 ├── toc-captions.ts      # _toc.yml part-caption preservation on sync (#254)
 ├── pr-creator.ts        # PR creation in target repo
 ├── parser.ts            # MyST Markdown parser (stack-based, line-by-line)
@@ -186,6 +187,15 @@ PR merged in SOURCE repo
 ┌─────────────────────────┐
 │ index.ts                │  Fetch PR diff, identify changed files
 │ (GitHub Action entry)   │
+└───────────┬─────────────┘
+            │
+            ▼
+┌─────────────────────────┐
+│ sync-scope.ts           │  Keep the changed lectures whose state file
+│ (sync-scope: existing)  │  the target has; skip and list the rest
+│                         │  before any content is fetched (#344)
+│                         │  Nothing left to sync: job summary, no PR,
+│                         │  and the Issue only if a scope read failed
 └───────────┬─────────────┘
             │
             ▼

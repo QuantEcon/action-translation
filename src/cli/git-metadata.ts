@@ -6,6 +6,9 @@
  * to help evaluate whether changes are worth backporting.
  *
  * Uses file-level dates (not section-level) for simplicity and reliability.
+ *
+ * Also answers whether a file changed since a recorded sync point, and with
+ * which commits, for `status --write-state` (#380).
  */
 
 import { execFile } from 'child_process';
@@ -64,6 +67,71 @@ export function parseGitLogOutput(output: string): FileGitMetadata | null {
     lastCommit: sha,
     lastAuthor: author,
   };
+}
+
+// A recorded sync point (a state file's `source-sha`) reaches git as a revision
+// argument. Only a full or abbreviated hex object name is passed on, so a
+// hand-edited value such as `--output=<path>` is never read as an option.
+const OBJECT_NAME = /^[0-9a-f]{4,64}$/i;
+
+/**
+ * Has a file's content changed between a recorded commit and HEAD?
+ *
+ * Runs `git diff --quiet <sha> HEAD -- <path>`, which compares the file's
+ * content at the two commits rather than the commits themselves: a recorded
+ * commit that did not touch the file, such as the merge commit sync records
+ * (#391), reads as unchanged.
+ *
+ * @param repoPath - Path to the git repository root
+ * @param sha - The recorded commit
+ * @param filePath - Relative path to the file within the repo
+ * @returns false when the content is the same (exit 0), true when it differs
+ *   (exit 1), and undefined when git cannot tell: the commit is not in the
+ *   local clone (shallow, not pulled, another repository) or git failed
+ */
+export async function fileChangedSince(
+  repoPath: string,
+  sha: string,
+  filePath: string
+): Promise<boolean | undefined> {
+  if (!OBJECT_NAME.test(sha)) return undefined;
+  try {
+    await execFileAsync('git', ['diff', '--quiet', sha, 'HEAD', '--', filePath], {
+      cwd: repoPath,
+    });
+    return false;
+  } catch (error) {
+    return (error as { code?: unknown }).code === 1 ? true : undefined;
+  }
+}
+
+/**
+ * The commits after a recorded commit, up to HEAD, that change a file:
+ * newest first, one line each, `<short sha> <author date> <subject>`.
+ *
+ * Empty both when there are none and when git fails; fileChangedSince tells
+ * those apart.
+ *
+ * @param repoPath - Path to the git repository root
+ * @param sha - The recorded commit
+ * @param filePath - Relative path to the file within the repo
+ */
+export async function commitsSince(
+  repoPath: string,
+  sha: string,
+  filePath: string
+): Promise<string[]> {
+  if (!OBJECT_NAME.test(sha)) return [];
+  try {
+    const { stdout } = await execFileAsync(
+      'git',
+      ['log', '--format=%h %ad %s', '--date=short', `${sha}..HEAD`, '--', filePath],
+      { cwd: repoPath }
+    );
+    return stdout.split('\n').filter((line) => line.trim() !== '');
+  } catch {
+    return [];
+  }
 }
 
 /**

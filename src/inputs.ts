@@ -8,6 +8,8 @@ import {
   AutoMergeMode,
   REVIEW_TRIGGER_LABEL,
   SYNC_PR_LABELS,
+  SYNC_SCOPES,
+  SyncScope,
 } from './contracts.js';
 
 /**
@@ -60,6 +62,17 @@ export function getInputs(): ActionInputs {
   const bibliographyMode = parseBibliographyMode(
     core.getInput('bibliography', { required: false })
   );
+
+  // Which changed lectures the sync may touch (#344). An unrecognised value
+  // throws rather than defaulting: a typo that fell back to `all` would
+  // translate in full every lecture a partial edition has not reviewed yet.
+  const syncScopeRaw = core.getInput('sync-scope', { required: false }) || SYNC_SCOPES[0];
+  if (!SYNC_SCOPES.includes(syncScopeRaw as SyncScope)) {
+    throw new Error(
+      `Invalid sync-scope: '${syncScopeRaw}'. Expected ${SYNC_SCOPES.map((s) => `'${s}'`).join(' or ')}.`
+    );
+  }
+  const syncScope = syncScopeRaw as SyncScope;
 
   const prLabelsRaw = core.getInput('pr-labels', { required: false }) || SYNC_PR_LABELS.join(',');
   const prLabels = prLabelsRaw
@@ -121,6 +134,7 @@ export function getInputs(): ActionInputs {
     prTeamReviewers,
     testMode,
     bibliographyMode,
+    syncScope,
   };
 }
 

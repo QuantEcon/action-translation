@@ -11,7 +11,7 @@
  * These tests use the compiled dist/cli/index.js — run `npm run build:cli` first.
  */
 
-import { execFile } from 'child_process';
+import { execFile, execFileSync } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -104,6 +104,64 @@ describe('CLI smoke tests', () => {
       const { code } = await run(['status', '-s', '/nonexistent/path', '-t', '/tmp']);
       // Status command reports 0 files found rather than crashing
       expect(code).toBe(0);
+    });
+
+    // The carried-change guard is unit-tested in status.test.ts; this pins the
+    // CLI wiring, so a dropped `carried: opts.carried` cannot make --carried a
+    // silent no-op (#380).
+    it('status --write-state refuses an unverifiable sync point until --carried', async () => {
+      const git = (repo: string, args: string[]): string => {
+        const env: NodeJS.ProcessEnv = {};
+        for (const [key, value] of Object.entries(process.env)) {
+          if (!key.startsWith('GIT_')) env[key] = value;
+        }
+        Object.assign(env, {
+          GIT_CONFIG_GLOBAL: os.devNull,
+          GIT_CONFIG_NOSYSTEM: '1',
+          GIT_AUTHOR_NAME: 'Test',
+          GIT_AUTHOR_EMAIL: 'test@example.com',
+          GIT_COMMITTER_NAME: 'Test',
+          GIT_COMMITTER_EMAIL: 'test@example.com',
+        });
+        return execFileSync('git', args, { cwd: repo, env, encoding: 'utf-8' });
+      };
+      const commitFile = (repo: string, rel: string, content: string): void => {
+        fs.mkdirSync(path.dirname(path.join(repo, rel)), { recursive: true });
+        fs.writeFileSync(path.join(repo, rel), content, 'utf-8');
+        git(repo, ['add', '--all']);
+        git(repo, ['commit', '-q', '--no-verify', '--no-gpg-sign', '-m', 'commit']);
+      };
+
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cli-smoke-carried-'));
+      try {
+        const source = path.join(tmpDir, 'source');
+        const target = path.join(tmpDir, 'target');
+        for (const repo of [source, target]) {
+          fs.mkdirSync(repo);
+          git(repo, ['init', '-q']);
+        }
+        // Source first, so the date guard passes
+        commitFile(source, 'lectures/lecture.md', '# Lecture\n\n## One\n\nText.\n');
+        commitFile(target, 'lectures/lecture.md', '# 讲座\n\n## 一\n\n文字。\n');
+        // A sync point the source clone does not have: the guard cannot check it
+        fs.mkdirSync(path.join(target, '.translate', 'state'), { recursive: true });
+        fs.writeFileSync(
+          path.join(target, '.translate', 'state', 'lecture.md.yml'),
+          "source-sha: 0123456789abcdef0123456789abcdef01234567\nsynced-at: '2026-10-02'\n" +
+            'model: claude-sonnet-5\nmode: NEW\nsection-count: 1\n',
+          'utf-8'
+        );
+
+        const base = ['status', '-s', source, '-t', target, '--write-state'];
+        const refused = await run(base);
+        expect(refused.code).toBe(1);
+        expect(refused.stderr).toContain('--write-state blocked: 1 file(s) have English changes');
+
+        const confirmed = await run([...base, '--carried']);
+        expect(confirmed.code).toBe(0);
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
     });
   });
 

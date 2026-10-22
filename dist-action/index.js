@@ -47979,6 +47979,7 @@ var TARGET_REPO_LABELS = [
   .../* @__PURE__ */ new Set([...SYNC_PR_LABELS, ...RESYNC_PR_LABELS])
 ];
 var AUTO_MERGE_MODES = ["off", "shadow"];
+var SYNC_SCOPES = ["all", "existing"];
 
 // dist/inputs.js
 function validateClaudeModel(model) {
@@ -48008,6 +48009,11 @@ function getInputs() {
   const claudeModel = core.getInput("claude-model", { required: false }) || DEFAULT_CLAUDE_MODEL;
   const githubToken = core.getInput("github-token", { required: true });
   const bibliographyMode = parseBibliographyMode(core.getInput("bibliography", { required: false }));
+  const syncScopeRaw = core.getInput("sync-scope", { required: false }) || SYNC_SCOPES[0];
+  if (!SYNC_SCOPES.includes(syncScopeRaw)) {
+    throw new Error(`Invalid sync-scope: '${syncScopeRaw}'. Expected ${SYNC_SCOPES.map((s) => `'${s}'`).join(" or ")}.`);
+  }
+  const syncScope = syncScopeRaw;
   const prLabelsRaw = core.getInput("pr-labels", { required: false }) || SYNC_PR_LABELS.join(",");
   const prLabels = prLabelsRaw.split(",").map((l) => l.trim()).filter((l) => l.length > 0);
   if (!prLabels.includes(REVIEW_TRIGGER_LABEL)) {
@@ -48038,7 +48044,8 @@ function getInputs() {
     prReviewers,
     prTeamReviewers,
     testMode,
-    bibliographyMode
+    bibliographyMode,
+    syncScope
   };
 }
 function getRebaseInputs() {
@@ -54157,9 +54164,202 @@ function isTranslationBranch(ref) {
   return TRANSLATION_BRANCH_PREFIXES.some((prefix) => ref.startsWith(prefix) && ref.length > prefix.length);
 }
 
+// dist/sync-scope.js
+function docsRelativePath(filename, docsFolder) {
+  if (!docsFolder)
+    return filename;
+  const prefix = docsFolder.endsWith("/") ? docsFolder : `${docsFolder}/`;
+  return filename.startsWith(prefix) ? filename.slice(prefix.length) : filename;
+}
+function stateFileFor(filename, docsFolder) {
+  return stateFileRelativePath(docsRelativePath(filename, docsFolder));
+}
+function statusOf(error4) {
+  return error4?.status;
+}
+function messageOf(error4) {
+  return error4 instanceof Error ? error4.message : String(error4);
+}
+async function targetHasFile(client, target, path8) {
+  try {
+    await client.rest.repos.getContent({ owner: target.owner, repo: target.repo, path: path8 });
+    return true;
+  } catch (error4) {
+    const status = statusOf(error4);
+    if (status === 404)
+      return false;
+    throw new Error(`could not read ${path8} from ${target.owner}/${target.repo} (status ${status ?? "unknown"}): ${messageOf(error4)}`);
+  }
+}
+async function scopeChangedLectures(client, classified, target, docsFolder, logger) {
+  const inScope = [];
+  const skipped = [];
+  const errors = [];
+  const edition = `${target.owner}/${target.repo}`;
+  if (classified.changedMarkdownFiles.length + classified.renamedMarkdownFiles.length > 0) {
+    try {
+      await client.rest.repos.get({ owner: target.owner, repo: target.repo });
+    } catch (error4) {
+      const message = `Fetch failed (scope): could not read the edition ${edition} (status ${statusOf(error4) ?? "unknown"}), so nothing was synced: ${messageOf(error4)}`;
+      logger.error(message);
+      return {
+        classified: {
+          changedMarkdownFiles: [],
+          renamedMarkdownFiles: [],
+          changedTocFiles: [],
+          removedMarkdownFiles: [],
+          removedTocFiles: []
+        },
+        inScope,
+        skipped,
+        errors: [message]
+      };
+    }
+  }
+  const keep = async (path8, previousPath) => {
+    const decidingPath = previousPath ?? path8;
+    const statePath = stateFileFor(decidingPath, docsFolder);
+    const skip = (reason) => previousPath ? { path: path8, previousPath, statePath, reason } : { path: path8, statePath, reason };
+    try {
+      if (!await targetHasFile(client, target, statePath)) {
+        skipped.push(skip("not-in-edition"));
+        logger.info(`${path8}: not synced \u2014 ${edition} has no ${statePath}`);
+        return false;
+      }
+      if (!await targetHasFile(client, target, decidingPath)) {
+        skipped.push(skip("lecture-missing"));
+        logger.warning(`${path8}: not synced \u2014 ${edition} has ${statePath} but not ${decidingPath}, so the lecture is not translated from scratch. Restore the lecture or remove its state file.`);
+        return false;
+      }
+    } catch (error4) {
+      const message = `Fetch failed (scope): ${path8}: ${messageOf(error4)}`;
+      errors.push(message);
+      logger.error(message);
+      return false;
+    }
+    inScope.push(path8);
+    return true;
+  };
+  const changedMarkdownFiles = [];
+  for (const file of classified.changedMarkdownFiles) {
+    if (await keep(file.filename))
+      changedMarkdownFiles.push(file);
+  }
+  const renamedMarkdownFiles = [];
+  for (const file of classified.renamedMarkdownFiles) {
+    if (await keep(file.filename, file.previous_filename || void 0)) {
+      renamedMarkdownFiles.push(file);
+    }
+  }
+  return {
+    classified: { ...classified, changedMarkdownFiles, renamedMarkdownFiles },
+    inScope,
+    skipped,
+    errors
+  };
+}
+async function applySyncScope(scope, client, classified, target, docsFolder, logger) {
+  if (scope !== "existing")
+    return void 0;
+  const scoped = await scopeChangedLectures(client, classified, target, docsFolder, logger);
+  logger.info(`sync-scope: existing \u2014 ${scoped.inScope.length} changed lecture(s) in scope, ${scoped.skipped.length} not synced` + (scoped.errors.length > 0 ? `, ${scoped.errors.length} scope error(s)` : ""));
+  return scoped;
+}
+function nothingToSync(classified) {
+  return classified.changedMarkdownFiles.length === 0 && classified.renamedMarkdownFiles.length === 0 && classified.changedTocFiles.length === 0 && classified.removedMarkdownFiles.length === 0 && classified.removedTocFiles.length === 0;
+}
+function refuseUnreadLectures(files) {
+  const kept = [];
+  const errors = [];
+  for (const file of files) {
+    if ((file.type === "markdown" || file.type === "renamed") && file.isNewFile) {
+      const read = file.previousFilename ?? file.filename;
+      errors.push(`Fetch failed (${file.type}): ${file.filename}: the edition has ${read} (sync-scope: existing), but its content could not be read, so it was not translated from scratch`);
+    } else {
+      kept.push(file);
+    }
+  }
+  return { files: kept, errors };
+}
+var NOT_SYNCED_HEADING = "### Lectures Not Synced";
+var LECTURE_MISSING_HEADING = "### \u26A0\uFE0F State File Without a Lecture";
+function lectureLabel(skip) {
+  return skip.previousPath ? `\`${skip.path}\` (renamed from \`${skip.previousPath}\`)` : `\`${skip.path}\``;
+}
+function formatScopeNotice(skipped) {
+  const notInEdition = skipped.filter((s) => s.reason === "not-in-edition");
+  const lectureMissing = skipped.filter((s) => s.reason === "lecture-missing");
+  let notice2 = "";
+  if (notInEdition.length > 0) {
+    notice2 += `
+
+${NOT_SYNCED_HEADING}
+
+The source PR also changed these lectures. This edition does not have them yet (no state file under \`.translate/state/\`), so \`sync-scope: existing\` leaves them out of this PR.
+
+` + notInEdition.map((s) => `- ${lectureLabel(s)}`).join("\n");
+  }
+  if (lectureMissing.length > 0) {
+    notice2 += `
+
+${LECTURE_MISSING_HEADING}
+
+This edition has a state file for each of these lectures but not the lecture itself, so this PR does not translate them from scratch. Restore each lecture, or remove its state file.
+
+` + lectureMissing.map((s) => `- ${lectureLabel(s)}: \`${s.statePath}\``).join("\n");
+  }
+  return notice2;
+}
+function buildScopeSummary(input) {
+  const { scoped } = input;
+  const sourcePr = `[${input.sourceRepo}#${input.prNumber}](https://github.com/${input.sourceRepo}/pull/${input.prNumber})`;
+  let outcome;
+  if (input.prUrl) {
+    outcome = `**Translation PR:** ${input.prUrl}` + (input.errorCount > 0 ? ` The run also failed with ${input.errorCount} error(s); see the log.` : "");
+  } else if (input.errorCount > 0) {
+    outcome = `**No translation PR.** The run failed with ${input.errorCount} error(s); see the log.`;
+  } else if (nothingToSync(scoped.classified)) {
+    outcome = "**No translation PR.** Nothing this source PR changed is in scope.";
+  } else {
+    outcome = "**No translation PR.** The run produced no changes.";
+  }
+  const notInEdition = scoped.skipped.filter((s) => s.reason === "not-in-edition");
+  const lectureMissing = scoped.skipped.filter((s) => s.reason === "lecture-missing");
+  const lines = [
+    `## Translation sync (${input.targetLanguage}): \`sync-scope: existing\``,
+    "",
+    `Source PR ${sourcePr} \u2192 edition \`${input.targetRepo}\``,
+    "",
+    outcome,
+    "",
+    "A changed lecture syncs only when this edition has its state file under `.translate/state/`. Removals and `_toc.yml` are not scoped.",
+    "",
+    `### In scope (${scoped.inScope.length})`,
+    "",
+    ...scoped.inScope.length > 0 ? scoped.inScope.map((p) => `- \`${p}\``) : ["None."]
+  ];
+  if (notInEdition.length > 0) {
+    lines.push("", `### Not synced: not in this edition yet (${notInEdition.length})`, "", ...notInEdition.map((s) => `- ${lectureLabel(s)}`));
+  }
+  if (lectureMissing.length > 0) {
+    lines.push("", `### \u26A0\uFE0F Not synced: state file without a lecture (${lectureMissing.length})`, "", "Restore each lecture, or remove its state file.", "", ...lectureMissing.map((s) => `- ${lectureLabel(s)}: \`${s.statePath}\``));
+  }
+  if (scoped.errors.length > 0) {
+    lines.push("", `### \u274C Scope unknown (${scoped.errors.length})`, "", "These reads failed, so the lectures they cover were neither synced nor skipped, and the run failed.", "", ...scoped.errors.map((e) => `- ${e}`));
+  }
+  return lines.join("\n") + "\n";
+}
+async function writeJobSummary(summary2, markdown, logger) {
+  try {
+    await summary2.addRaw(markdown, true).write();
+  } catch (error4) {
+    logger.warning(`Could not write the job summary: ${error4 instanceof Error ? error4.message : String(error4)}`);
+  }
+}
+
 // dist/pr-creator.js
 var SYNC_METADATA_SCHEMA_VERSION = 1;
-async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections, failedNewFiles) {
+async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped) {
   const { targetOwner, targetRepo } = config;
   const { data: targetRepoData } = await octokit.rest.repos.get({
     owner: targetOwner,
@@ -54205,7 +54405,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     });
     logger.info(`Deleted: ${file.path}`);
   }
-  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections, failedNewFiles);
+  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped);
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
   const { data: pr } = await octokit.rest.pulls.create({
     owner: targetOwner,
@@ -54252,7 +54452,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     prNumber: pr.number
   };
 }
-function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections, failedNewFiles) {
+function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped) {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);
   let filesChangedSection = "";
@@ -54311,6 +54511,7 @@ The following new file(s) could not be translated and are **absent from this PR*
 
 ${lines.join("\n")}`;
   }
+  const scopeNotice = formatScopeNotice(scopeSkipped ?? []);
   const metadataFiles = fileMetadata ? fileMetadata.map((f) => {
     const entry = {
       path: f.path,
@@ -54345,7 +54546,7 @@ This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoNam
 ### Source PR
 **[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ""}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
 
-${filesChangedSection}${failedFilesNotice}${skippedNotice}${droppedNotice}
+${filesChangedSection}${failedFilesNotice}${skippedNotice}${droppedNotice}${scopeNotice}
 
 ### Details
 - **Source Language**: ${config.sourceLanguage}
@@ -55530,7 +55731,7 @@ var TranslationReviewer = class {
       diff: 10,
       overall: 10
     };
-    const summary = `Deletion-only PR: ${deletedFiles.length} translated document(s) removed to match source PR #${sourcePrNumber}. No translation content was evaluated.`;
+    const summary2 = `Deletion-only PR: ${deletedFiles.length} translated document(s) removed to match source PR #${sourcePrNumber}. No translation content was evaluated.`;
     const fileRows = deletedFiles.map((f) => `| \`${f}\` | removed in #${sourcePrNumber} |`);
     const reviewComment = `## \u{1F5D1}\uFE0F Translation Review \u2014 deletion only
 
@@ -55583,13 +55784,13 @@ Every file removed here is also deleted by source PR #${sourcePrNumber}, so the 
         findingsMalformed: false,
         issues: [],
         strengths: [],
-        summary
+        summary: summary2
       },
       diffQuality: {
         score: 10,
         ...diffChecks,
         issues: [],
-        summary,
+        summary: summary2,
         scopeDetails: `All ${deletedFiles.length} removed file(s) match deletions in source PR #${sourcePrNumber}.`,
         positionDetails: "N/A \u2014 deletion only.",
         structureDetails: "N/A \u2014 deletion only."
@@ -56265,11 +56466,11 @@ You may need to manually resolve conflicts or run \`/translate-resync\` on the s
     }
   }
   const refreshedNote = inputs.rebaseStaleSiblings ? `, ${refreshedCount} refreshed` : "";
-  const summary = `\u267B\uFE0F Rebase complete: ${rebasedCount} rebased${refreshedNote}, ${skippedCount} skipped, ${errorCount} errors.`;
+  const summary2 = `\u267B\uFE0F Rebase complete: ${rebasedCount} rebased${refreshedNote}, ${skippedCount} skipped, ${errorCount} errors.`;
   if (errorCount > 0) {
-    core9.setFailed(summary);
+    core9.setFailed(summary2);
   } else {
-    core9.info(summary);
+    core9.info(summary2);
   }
 }
 async function rebaseSinglePR(octokit, pr, metadata, inputs) {
@@ -56555,10 +56756,44 @@ async function runSync() {
   core9.info(`Found ${classified.changedTocFiles.length} changed TOC files`);
   core9.info(`Found ${classified.removedMarkdownFiles.length} removed markdown files`);
   core9.info(`Found ${classified.removedTocFiles.length} removed TOC files`);
+  const [targetOwner, targetRepo] = inputs.targetRepo.split("/");
+  const scope = await applySyncScope(inputs.syncScope, octokit, classified, { owner: targetOwner, repo: targetRepo }, inputs.docsFolder, coreLogger);
+  const writeScopeSummary = (prUrl2, errorCount) => scope ? writeJobSummary(core9.summary, buildScopeSummary({
+    targetLanguage: inputs.targetLanguage,
+    targetRepo: inputs.targetRepo,
+    sourceRepo: `${github3.context.repo.owner}/${github3.context.repo.repo}`,
+    prNumber,
+    scoped: scope,
+    prUrl: prUrl2,
+    errorCount
+  }), coreLogger) : Promise.resolve();
+  if (scope && nothingToSync(scope.classified)) {
+    if (scope.errors.length === 0) {
+      core9.info("sync-scope: existing \u2014 nothing this PR changed is in scope. No translation PR.");
+      await writeScopeSummary(void 0, 0);
+      if (!isTestMode) {
+        await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, nothingToDeliverResolution(prNumber, inputs.targetLanguage));
+      }
+      return;
+    }
+    core9.setFailed(`Translation completed with ${scope.errors.length} errors`);
+    await writeScopeSummary(void 0, scope.errors.length);
+    if (!isTestMode) {
+      await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, scope.errors);
+    }
+    return;
+  }
   const builtInGlossaryDir = getBuiltInGlossaryDir();
   const glossary = await loadGlossary(inputs.targetLanguage, builtInGlossaryDir, inputs.glossaryPath || void 0, coreLogger);
-  const [targetOwner, targetRepo] = inputs.targetRepo.split("/");
-  const { files: filesToSync, errors: fetchErrors, fetchFailedNewFiles } = await fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo, effectiveSha);
+  const { files: fetchedFiles, errors: fetchErrors, fetchFailedNewFiles } = await fetchAllFileContents(octokit, scope ? scope.classified : classified, inputs, targetOwner, targetRepo, effectiveSha);
+  let filesToSync = fetchedFiles;
+  if (scope) {
+    const held = refuseUnreadLectures(fetchedFiles);
+    for (const error4 of held.errors)
+      core9.error(error4);
+    filesToSync = held.files;
+    fetchErrors.unshift(...scope.errors, ...held.errors);
+  }
   const existingStateShas = await fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToSync, inputs.docsFolder);
   const stateConfig = {
     sourceCommitSha: effectiveSha,
@@ -56618,7 +56853,7 @@ async function runSync() {
         }
         return entry;
       });
-      const prResult = await createTranslationPR(octokit, result.translatedFiles, result.filesToDelete, prConfig, coreLogger, sourcePrInfo, result.skippedSections, fileMetadata, result.droppedTargetSections, result.failedNewFiles ? { files: result.failedNewFiles, filteredTocPaths: result.filteredTocPaths ?? [] } : void 0);
+      const prResult = await createTranslationPR(octokit, result.translatedFiles, result.filesToDelete, prConfig, coreLogger, sourcePrInfo, result.skippedSections, fileMetadata, result.droppedTargetSections, result.failedNewFiles ? { files: result.failedNewFiles, filteredTocPaths: result.filteredTocPaths ?? [] } : void 0, scope?.skipped);
       prUrl = prResult.prUrl;
       core9.setOutput("pr-url", prResult.prUrl);
       core9.setOutput("files-synced", result.processedFiles.length.toString());
@@ -56627,12 +56862,15 @@ async function runSync() {
       result.errors.push(`PR creation failed: ${prError instanceof Error ? prError.message : String(prError)}`);
     }
   }
+  await writeScopeSummary(prUrl, result.errors.length);
   if (!isTestMode) {
     if (result.errors.length > 0) {
       await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, result.errors);
     } else if (prUrl) {
       await postSuccessComment(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, prUrl, result.processedFiles);
-      await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, prUrl);
+      await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, `\u2705 A later sync for PR #${prNumber} (${inputs.targetLanguage}) succeeded: ${prUrl}`);
+    } else if (scope) {
+      await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, nothingToDeliverResolution(prNumber, inputs.targetLanguage));
     }
   }
 }
@@ -56873,7 +57111,7 @@ async function postSuccessComment(octokit, prNumber, targetLanguage, targetRepo,
     core9.warning(`Could not post success comment on PR #${prNumber}: ${error4}`);
   }
 }
-async function closeFailureIssues(octokit, prNumber, targetLanguage, prUrl) {
+async function closeFailureIssues(octokit, prNumber, targetLanguage, resolution) {
   try {
     const title = `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
     const openIssues = await octokit.paginate(octokit.rest.issues.listForRepo, {
@@ -56888,7 +57126,7 @@ async function closeFailureIssues(octokit, prNumber, targetLanguage, prUrl) {
         owner: github3.context.repo.owner,
         repo: github3.context.repo.repo,
         issue_number: issue.number,
-        body: `\u2705 A later sync for PR #${prNumber} (${targetLanguage}) succeeded: ${prUrl}
+        body: `${resolution}
 
 Closing this failure report.`
       });
@@ -56904,6 +57142,14 @@ Closing this failure report.`
   } catch (error4) {
     core9.warning(`Could not close failure issues for PR #${prNumber}: ${error4}`);
   }
+}
+function nothingToDeliverResolution(prNumber, targetLanguage) {
+  const resolution = `\u2705 A later sync for PR #${prNumber} (${targetLanguage}) passed with nothing to deliver to this edition (sync-scope: existing)`;
+  const { serverUrl, runId } = github3.context;
+  if (!Number.isFinite(runId) || runId <= 0)
+    return `${resolution}.`;
+  const { owner, repo } = github3.context.repo;
+  return `${resolution}: ${serverUrl}/${owner}/${repo}/actions/runs/${runId}`;
 }
 async function createFailureIssue(octokit, prNumber, targetLanguage, targetRepo, errors) {
   try {

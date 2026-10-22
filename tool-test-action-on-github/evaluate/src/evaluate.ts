@@ -25,15 +25,77 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { GitHubService } from './github.js';
 import { TranslationEvaluator, identifyChangedSections } from './evaluator.js';
-import type { 
-  EvaluationOptions, 
-  EvaluationResult, 
+import {
+  checkScopeExpectation,
+  formatScopeCheck,
+  scopeExpectationFor,
+  SYNC_CHECK_NAME,
+  syncRunVerdict,
+} from './scope-expectations.js';
+import type {
+  EvaluationOptions,
+  EvaluationResult,
   EvaluationReport,
-  PRPair 
+  NoTargetPRSource,
+  PRPair,
+  ScopeCheckResult,
+  SourcePR,
+  SyncRunVerdict,
+  UnmatchedScopeSource
 } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+function logScopeCheck(check: ScopeCheckResult): void {
+  if (check.ok) {
+    console.log(chalk.gray(`  Scope check (scenario ${check.scenario}): as expected`));
+    return;
+  }
+  console.log(chalk.red(`  Scope check (scenario ${check.scenario}): ${check.problems.length} problem(s)`));
+  for (const problem of check.problems) {
+    console.log(chalk.red(`    - ${problem}`));
+  }
+}
+
+/**
+ * A scope run the check decides alone, with no model call: a PR that
+ * translates no lecture (scenarios 17 and 18), or one whose scenario expects
+ * no translation PR at all. `why` says which, in the review comment.
+ */
+async function scopeOnlyResult(
+  pair: PRPair,
+  scopeCheck: ScopeCheckResult,
+  why: string,
+  github: GitHubService,
+  options: EvaluationOptions
+): Promise<EvaluationResult> {
+  logScopeCheck(scopeCheck);
+  const verdict = scopeCheck.ok ? 'PASS' : 'FAIL';
+  const reviewComment = `## ${scopeCheck.ok ? '✅' : '❌'} Translation Quality Evaluation
+
+**Verdict**: ${verdict} | **Date**: ${new Date().toISOString().split('T')[0]}
+
+${why}
+
+${formatScopeCheck(scopeCheck)}`;
+
+  if (options.postReviews) {
+    console.log(chalk.gray('  Posting review to PR...'));
+    await github.postReview(pair.targetNumber, reviewComment, 'COMMENT');
+  }
+
+  const verdictColor = scopeCheck.ok ? chalk.green : chalk.red;
+  console.log(verdictColor(`  ${verdict}: sync-scope check only (no model evaluation)`));
+
+  return {
+    prPair: pair,
+    timestamp: new Date().toISOString(),
+    scopeCheck,
+    overallVerdict: verdict,
+    reviewComment,
+  };
+}
 
 async function evaluatePRPair(
   pair: PRPair,
@@ -44,15 +106,38 @@ async function evaluatePRPair(
   console.log(chalk.blue(`\nEvaluating: ${pair.testScenario}`));
   console.log(chalk.gray(`  Source PR #${pair.sourceNumber} → Target PR #${pair.targetNumber}`));
 
+  // A scope run (#344) is held to its scenario's expected result. When the PR
+  // translates no lecture, or should not exist at all, that check is the
+  // whole evaluation.
+  const expectation = scopeExpectationFor(pair.sourceLabels, pair.sourceBranch);
+  if (expectation && (expectation.noTargetPR || !expectation.primaryLecture)) {
+    const targetFiles = await github.getTargetPRFiles(pair.targetNumber);
+    return scopeOnlyResult(
+      pair,
+      checkScopeExpectation(expectation, targetFiles, pair.targetBody),
+      expectation.noTargetPR
+        ? 'Under `sync-scope: existing` this scenario should open no translation PR, so there is no model evaluation.'
+        : 'Under `sync-scope: existing` this PR translates no lecture, so there is no model evaluation.',
+      github,
+      options
+    );
+  }
+
   // Get source diff (English before/after)
   const sourceDiff = await github.getSourceDiff(pair.sourceNumber);
   
   // Get target diff (Chinese before/after)
   const targetDiff = await github.getTargetDiff(pair.targetNumber);
 
-  // Get primary file content for evaluation
+  const scopeCheck = expectation
+    ? checkScopeExpectation(expectation, targetDiff.files, pair.targetBody)
+    : undefined;
+  if (scopeCheck) logScopeCheck(scopeCheck);
+
+  // Get primary file content for evaluation. A scope run names it: the first
+  // changed .md can be a lecture the run left out (19's lecture-minimal.md).
   const primaryFile = sourceDiff.files.find(f => f.filename.endsWith('.md'));
-  const sourceFile = primaryFile?.filename || 'lecture-minimal.md';
+  const sourceFile = expectation?.primaryLecture || primaryFile?.filename || 'lecture-minimal.md';
 
   const sourceAfter = sourceDiff.afterContent.get(sourceFile) || '';
   const targetAfter = targetDiff.afterContent.get(sourceFile) || '';
@@ -76,15 +161,20 @@ async function evaluatePRPair(
     changedSections
   );
 
-  // Evaluate diff quality
+  // Evaluate diff quality. The judge compares the target's files with the
+  // source's, so a scope run hands it only the source files the run was meant
+  // to sync: one it left out on purpose (19's lecture-minimal.md) would read as
+  // missing from the target. The scope check above holds the PR to that list.
   console.log(chalk.gray('  Evaluating diff quality...'));
+  const notSynced = new Set(expectation?.notSynced ?? []);
   const diffResult = await evaluator.evaluateDiff(
     sourceBefore,
     sourceAfter,
     targetBefore,
     targetAfter,
-    sourceDiff.files,
-    targetDiff.files
+    sourceDiff.files.filter(f => !notSynced.has(f.filename)),
+    targetDiff.files,
+    sourceDiff.files.filter(f => notSynced.has(f.filename)).map(f => f.filename)
   );
 
   // Determine overall verdict
@@ -97,13 +187,15 @@ async function evaluatePRPair(
   } else {
     verdict = 'FAIL';
   }
+  // A scope run that is not its expected result fails, whatever the scores.
+  if (scopeCheck && !scopeCheck.ok) {
+    verdict = 'FAIL';
+  }
 
   // Generate review comment
-  const reviewComment = evaluator.generateReviewComment(
-    translationResult,
-    diffResult,
-    verdict
-  );
+  const reviewComment =
+    evaluator.generateReviewComment(translationResult, diffResult, verdict) +
+    (scopeCheck ? `\n\n---\n\n${formatScopeCheck(scopeCheck)}` : '');
 
   // Post review if enabled
   // Always use COMMENT to avoid "can't approve own PR" errors
@@ -118,6 +210,7 @@ async function evaluatePRPair(
     timestamp: new Date().toISOString(),
     translationQuality: translationResult,
     diffQuality: diffResult,
+    scopeCheck,
     overallScore: Math.round(overallScore * 10) / 10,
     overallVerdict: verdict,
     reviewComment,
@@ -126,32 +219,125 @@ async function evaluatePRPair(
   // Print summary
   const verdictColor = verdict === 'PASS' ? chalk.green : 
                        verdict === 'WARN' ? chalk.yellow : chalk.red;
-  console.log(verdictColor(`  ${verdict}: Translation ${translationResult.score}/10, Diff ${diffResult.score}/10`));
+  const scopeNote = scopeCheck && !scopeCheck.ok ? ', scope check failed' : '';
+  console.log(verdictColor(`  ${verdict}: Translation ${translationResult.score}/10, Diff ${diffResult.score}/10${scopeNote}`));
 
   return result;
+}
+
+/**
+ * Scope-run source PRs that no translation PR references (#344), sorted by
+ * what their scenario expects. `missing` expected one, and each is a failure.
+ * `expectedNone` expected none, which is the result only if the sync run
+ * passed (`withSyncRuns`). Nothing pairs either, so without this both would
+ * drop out silently.
+ */
+function unmatchedScopeSources(
+  unmatched: SourcePR[],
+  prNumbers?: number[]
+): { missing: UnmatchedScopeSource[]; expectedNone: UnmatchedScopeSource[] } {
+  const missing: UnmatchedScopeSource[] = [];
+  const expectedNone: UnmatchedScopeSource[] = [];
+  for (const source of unmatched) {
+    const expectation = scopeExpectationFor(source.labels, source.branch);
+    if (!expectation) continue;
+    if (prNumbers && prNumbers.length > 0 && !prNumbers.includes(source.number)) continue;
+    const entry = {
+      sourceNumber: source.number,
+      title: source.title,
+      scenario: expectation.scenario,
+      headSha: source.headSha,
+    };
+    (expectation.noTargetPR ? expectedNone : missing).push(entry);
+  }
+  return { missing, expectedNone };
+}
+
+/**
+ * Read the zh-cn sync run of each source PR that expects no translation PR
+ * (#344). A run that fails opens no PR either, so the missing PR alone proves
+ * nothing. A check that cannot be read leaves the source PR unverified, never
+ * passed.
+ */
+async function withSyncRuns(
+  sources: UnmatchedScopeSource[],
+  github: GitHubService
+): Promise<NoTargetPRSource[]> {
+  const verified: NoTargetPRSource[] = [];
+  for (const source of sources) {
+    let syncRun: SyncRunVerdict;
+    try {
+      syncRun = syncRunVerdict(await github.getSyncCheckRuns(source.headSha));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      syncRun = {
+        state: 'unverified',
+        detail: `could not read the ${SYNC_CHECK_NAME} check runs: ${message}`,
+      };
+    }
+    verified.push({ ...source, syncRun });
+  }
+  return verified;
+}
+
+/** Source PRs that expect no translation PR, by their sync run's verdict. */
+function bySyncRun(
+  sources: NoTargetPRSource[]
+): Record<SyncRunVerdict['state'], NoTargetPRSource[]> {
+  return {
+    passed: sources.filter(s => s.syncRun.state === 'passed'),
+    failed: sources.filter(s => s.syncRun.state === 'failed'),
+    unverified: sources.filter(s => s.syncRun.state === 'unverified'),
+  };
+}
+
+/** A sync run's verdict as a console color: red if it failed, yellow if unverified. */
+function syncRunColor(verdict: SyncRunVerdict): (text: string) => string {
+  if (verdict.state === 'failed') return chalk.red;
+  if (verdict.state === 'unverified') return chalk.yellow;
+  return chalk.gray;
+}
+
+/** A source PR that expects no translation PR, as a line of a report callout. */
+function noTargetPRLine(source: NoTargetPRSource): string {
+  const run = source.syncRun.url ? ` ([sync run](${source.syncRun.url}))` : '';
+  return `> - **${source.title}** (source PR #${source.sourceNumber}, scenario ${source.scenario}): ${source.syncRun.detail}${run}`;
+}
+
+/** An average score as the report prints it: "n/a" when the model scored nothing. */
+function formatAverage(average: number | undefined): string {
+  return average === undefined ? 'n/a' : `${average}/10`;
 }
 
 function generateReport(
   results: EvaluationResult[],
   repoInfo: { sourceRepo: string; targetRepo: string },
   model: string,
-  dropped: Array<{ pair: PRPair; error: string }> = []
+  dropped: Array<{ pair: PRPair; error: string }> = [],
+  missing: UnmatchedScopeSource[] = [],
+  expectedNone: NoTargetPRSource[] = []
 ): EvaluationReport {
   const passed = results.filter(r => r.overallVerdict === 'PASS').length;
   const warned = results.filter(r => r.overallVerdict === 'WARN').length;
   const failed = results.filter(r => r.overallVerdict === 'FAIL').length;
 
-  const avgTranslation = results.length > 0 
-    ? results.reduce((sum, r) => sum + r.translationQuality.score, 0) / results.length
-    : 0;
-  const avgDiff = results.length > 0
-    ? results.reduce((sum, r) => sum + r.diffQuality.score, 0) / results.length
-    : 0;
+  // Averages cover the pairs the model scored. A scope check that stands
+  // alone (17, 18, or a PR that should not exist) has no scores, and with
+  // nothing scored there is no average.
+  const scored = results.flatMap(r =>
+    r.translationQuality && r.diffQuality
+      ? [{ translation: r.translationQuality.score, diff: r.diffQuality.score }]
+      : []
+  );
+  const average = (scores: number[]): number | undefined =>
+    scores.length > 0
+      ? Math.round((scores.reduce((sum, s) => sum + s, 0) / scores.length) * 10) / 10
+      : undefined;
 
   // Collect common issues
   const allIssues = results.flatMap(r => [
-    ...r.translationQuality.issues,
-    ...r.diffQuality.issues,
+    ...(r.translationQuality?.issues ?? []),
+    ...(r.diffQuality?.issues ?? []),
   ]);
   const issueCounts = new Map<string, number>();
   for (const issue of allIssues) {
@@ -174,19 +360,38 @@ function generateReport(
       title: d.pair.sourceTitle,
       error: d.error,
     })),
+    missingTargetPRs: missing,
+    expectedNoTargetPRs: expectedNone,
     results,
     summary: {
       passed,
       warned,
       failed,
-      averageTranslationScore: Math.round(avgTranslation * 10) / 10,
-      averageDiffScore: Math.round(avgDiff * 10) / 10,
+      averageTranslationScore: average(scored.map(s => s.translation)),
+      averageDiffScore: average(scored.map(s => s.diff)),
       commonIssues,
     },
   };
 }
 
 function formatReportMarkdown(report: EvaluationReport): string {
+  const missing = report.missingTargetPRs ?? [];
+  const missingRow = missing.length > 0
+    ? `| Missing translation PRs (sync-scope) ❌ | ${missing.length} |\n`
+    : '';
+  // A source PR that expects no translation PR gets a ✅ only when its sync
+  // run passed: a run that fails opens no PR either.
+  const noPR = bySyncRun(report.expectedNoTargetPRs ?? []);
+  const noPRRows =
+    (noPR.passed.length > 0
+      ? `| No translation PR, as expected; sync run passed (sync-scope) ✅ | ${noPR.passed.length} |\n`
+      : '') +
+    (noPR.failed.length > 0
+      ? `| No translation PR, but the sync run failed or never ran (sync-scope) ❌ | ${noPR.failed.length} |\n`
+      : '') +
+    (noPR.unverified.length > 0
+      ? `| No translation PR, sync run not verified (sync-scope) ⚠️ | ${noPR.unverified.length} |\n`
+      : '');
   let md = `# Translation Evaluation Report
 
 **Generated**: ${report.generatedAt}
@@ -204,10 +409,46 @@ function formatReportMarkdown(report: EvaluationReport): string {
 | Passed ✅ | ${report.summary.passed} |
 | Warnings ⚠️ | ${report.summary.warned} |
 | Failed ❌ | ${report.summary.failed} |
-| Avg Translation Score | ${report.summary.averageTranslationScore}/10 |
-| Avg Diff Score | ${report.summary.averageDiffScore}/10 |
+| Avg Translation Score | ${formatAverage(report.summary.averageTranslationScore)} |
+| Avg Diff Score | ${formatAverage(report.summary.averageDiffScore)} |
+${missingRow}${noPRRows}
+`;
+
+  if (missing.length > 0) {
+    md += `> ❌ **${missing.length} source PR(s) under \`sync-scope: existing\` have no translation PR, and their scenarios expect one.**
+> Each is a failure. Check the source PR's sync run; one still running has not opened its PR yet.
+>
+${missing.map(m => `> - **${m.title}** (source PR #${m.sourceNumber}, scenario ${m.scenario})`).join('\n')}
 
 `;
+  }
+
+  if (noPR.failed.length > 0) {
+    md += `> ❌ **${noPR.failed.length} source PR(s) under \`sync-scope: existing\` have no translation PR, as their scenarios expect, but their zh-cn sync run failed or never ran.**
+> Each is a failure: a sync run that fails opens no PR either. Check the run's log and job summary.
+>
+${noPR.failed.map(noTargetPRLine).join('\n')}
+
+`;
+  }
+
+  if (noPR.unverified.length > 0) {
+    md += `> ⚠️ **${noPR.unverified.length} source PR(s) under \`sync-scope: existing\` have no translation PR, as their scenarios expect, but the evaluator could not verify their zh-cn sync run.**
+> They do not count as passed. Check each run by hand, or evaluate again once every run has finished.
+>
+${noPR.unverified.map(noTargetPRLine).join('\n')}
+
+`;
+  }
+
+  if (noPR.passed.length > 0) {
+    md += `> ✅ **${noPR.passed.length} source PR(s) under \`sync-scope: existing\` have no translation PR, as their scenarios expect, and their zh-cn sync run passed:** nothing they change is in scope.
+> Check that each run's job summary lists the lecture as not synced.
+>
+${noPR.passed.map(noTargetPRLine).join('\n')}
+
+`;
+  }
 
   if (report.droppedPairs && report.droppedPairs.length > 0) {
     md += `> ⚠️ **Incomplete run — ${report.droppedPairs.length} pair(s) errored and are excluded from every score above.**
@@ -235,20 +476,26 @@ ${report.summary.commonIssues.map(i => `- ${i}`).join('\n')}
   for (const result of report.results) {
     const emoji = result.overallVerdict === 'PASS' ? '✅' : 
                   result.overallVerdict === 'WARN' ? '⚠️' : '❌';
+    const { translationQuality: tq, diffQuality: dq, scopeCheck } = result;
+    const scores = tq && dq
+      ? `- **Translation Score**: ${tq.score}/10\n- **Diff Score**: ${dq.score}/10\n`
+      : '- **Model evaluation**: none; the sync-scope check is the whole evaluation\n';
+    const scope = scopeCheck
+      ? `- **Sync-scope check** (scenario ${scopeCheck.scenario}): ` +
+        `${scopeCheck.ok ? '✅ as expected' : `❌ ${scopeCheck.problems.length} problem(s)`}\n` +
+        scopeCheck.problems.map(p => `  - ${p}\n`).join('')
+      : '';
+    const summaries = tq && dq
+      ? `**Translation Summary**: ${tq.summary}\n\n**Diff Summary**: ${dq.summary}\n\n`
+      : '';
     
     md += `### ${emoji} ${result.prPair.testScenario}
 
 - **Source PR**: [#${result.prPair.sourceNumber}](${result.prPair.sourceUrl})
 - **Target PR**: [#${result.prPair.targetNumber}](${result.prPair.targetUrl})
-- **Translation Score**: ${result.translationQuality.score}/10
-- **Diff Score**: ${result.diffQuality.score}/10
-- **Verdict**: ${result.overallVerdict}
-
-**Translation Summary**: ${result.translationQuality.summary}
-
-**Diff Summary**: ${result.diffQuality.summary}
-
-`;
+${scores}- **Verdict**: ${result.overallVerdict}
+${scope}
+${summaries}`;
   }
 
   return md;
@@ -300,22 +547,26 @@ async function main() {
     console.log(chalk.gray(`Target: ${repoInfo.targetRepo}`));
     
     console.log(chalk.blue('\nFetching PR pairs...'));
-    let pairs = await github.matchPRPairs();
+    const matched = await github.matchPRPairs();
+    let pairs = matched.pairs;
+    const prNumbers: number[] | undefined = opts.pr?.map((p: string) => parseInt(p, 10));
 
     // Apply --pr filter if provided
-    if (opts.pr && opts.pr.length > 0) {
-      const prNumbers = opts.pr.map((p: string) => parseInt(p, 10));
+    if (prNumbers && prNumbers.length > 0) {
       pairs = pairs.filter(p => 
         prNumbers.includes(p.sourceNumber) || 
         prNumbers.includes(p.targetNumber)
       );
     }
-    
-    if (pairs.length === 0) {
+    const scopeSources = unmatchedScopeSources(matched.unmatched, prNumbers);
+    const { missing } = scopeSources;
+
+    if (pairs.length === 0 && missing.length === 0 && scopeSources.expectedNone.length === 0) {
       console.log(chalk.yellow('No matching PR pairs found'));
       process.exit(0);
     }
-    
+    const expectedNone = await withSyncRuns(scopeSources.expectedNone, github);
+
     console.log(chalk.green(`\nFound ${pairs.length} PR pair(s):\n`));
     
     for (const pair of pairs) {
@@ -326,7 +577,20 @@ async function main() {
       console.log(chalk.gray(`  ${pair.targetUrl}`));
       console.log('');
     }
+
+    for (const m of missing) {
+      console.log(chalk.red(`${m.title}`));
+      console.log(chalk.red(`  Source: PR #${m.sourceNumber}, under sync-scope: existing: no translation PR (scenario ${m.scenario} expects one)`));
+      console.log('');
+    }
     
+    for (const m of expectedNone) {
+      const color = syncRunColor(m.syncRun);
+      console.log(color(`${m.title}`));
+      console.log(color(`  Source: PR #${m.sourceNumber}, under sync-scope: existing: no translation PR, as scenario ${m.scenario} expects; zh-cn sync run: ${m.syncRun.detail}`));
+      console.log('');
+    }
+
     process.exit(0);
   }
 
@@ -364,7 +628,8 @@ async function main() {
 
   // Get PR pairs to evaluate
   console.log(chalk.blue('\nFetching PR pairs...'));
-  let pairs = await github.matchPRPairs();
+  const matched = await github.matchPRPairs();
+  let pairs = matched.pairs;
 
   // Filter by specific PR numbers if provided (accepts source or target PR numbers)
   if (options.prNumbers && options.prNumbers.length > 0) {
@@ -373,13 +638,29 @@ async function main() {
       options.prNumbers!.includes(p.targetNumber)
     );
   }
+  const scopeSources = unmatchedScopeSources(matched.unmatched, options.prNumbers);
+  const { missing } = scopeSources;
 
-  if (pairs.length === 0) {
+  if (pairs.length === 0 && missing.length === 0 && scopeSources.expectedNone.length === 0) {
     console.log(chalk.yellow('No matching PR pairs found'));
     process.exit(0);
   }
+  const expectedNone = await withSyncRuns(scopeSources.expectedNone, github);
+  const noPR = bySyncRun(expectedNone);
 
   console.log(chalk.green(`Found ${pairs.length} PR pair(s) to evaluate`));
+  if (missing.length > 0) {
+    console.error(chalk.red(`${missing.length} source PR(s) under sync-scope: existing have no translation PR (each a failure):`));
+    for (const m of missing) {
+      console.error(chalk.red(`  - ${m.title} (source PR #${m.sourceNumber}, scenario ${m.scenario})`));
+    }
+  }
+  if (expectedNone.length > 0) {
+    console.log(chalk.gray(`${expectedNone.length} source PR(s) under sync-scope: existing have no translation PR, as their scenarios expect. Their zh-cn sync runs:`));
+    for (const m of expectedNone) {
+      console.log(syncRunColor(m.syncRun)(`  - ${m.title} (source PR #${m.sourceNumber}, scenario ${m.scenario}): ${m.syncRun.detail}`));
+    }
+  }
 
   // Evaluate each pair
   const results: EvaluationResult[] = [];
@@ -414,7 +695,7 @@ async function main() {
   }
 
   // Generate report
-  const report = generateReport(results, repoInfo, options.model!, dropped);
+  const report = generateReport(results, repoInfo, options.model!, dropped, missing, expectedNone);
 
   // Print summary
   console.log(chalk.blue('\n' + '═'.repeat(50)));
@@ -424,8 +705,20 @@ async function main() {
   console.log(chalk.green(`Passed: ${report.summary.passed}`));
   console.log(chalk.yellow(`Warnings: ${report.summary.warned}`));
   console.log(chalk.red(`Failed: ${report.summary.failed}`));
-  console.log(`Avg Translation Score: ${report.summary.averageTranslationScore}/10`);
-  console.log(`Avg Diff Score: ${report.summary.averageDiffScore}/10`);
+  if (missing.length > 0) {
+    console.log(chalk.red(`Missing translation PRs (sync-scope): ${missing.length}`));
+  }
+  if (noPR.passed.length > 0) {
+    console.log(chalk.green(`No translation PR, as expected; sync run passed (sync-scope): ${noPR.passed.length}`));
+  }
+  if (noPR.failed.length > 0) {
+    console.log(chalk.red(`No translation PR, but the sync run failed or never ran (sync-scope): ${noPR.failed.length}`));
+  }
+  if (noPR.unverified.length > 0) {
+    console.log(chalk.yellow(`No translation PR, sync run not verified (sync-scope): ${noPR.unverified.length}`));
+  }
+  console.log(`Avg Translation Score: ${formatAverage(report.summary.averageTranslationScore)}`);
+  console.log(`Avg Diff Score: ${formatAverage(report.summary.averageDiffScore)}`);
 
   // Save report
   const dateStr = new Date().toISOString().split('T')[0];
@@ -438,8 +731,17 @@ async function main() {
   console.log(chalk.green(`\nReport saved to: ${outputPath}`));
 
   // Exit non-zero on failures, and equally on an incomplete run: a dropped pair means
-  // the scores above describe a subset, which must not read as a clean pass.
-  if (report.summary.failed > 0 || dropped.length > 0) {
+  // the scores above describe a subset, which must not read as a clean pass. A scope
+  // run's missing translation PR is a failure too, and so is a source PR that expects
+  // none but whose sync run failed or never ran. One whose sync run could not be
+  // verified leaves the run incomplete, like a dropped pair.
+  if (
+    report.summary.failed > 0 ||
+    dropped.length > 0 ||
+    missing.length > 0 ||
+    noPR.failed.length > 0 ||
+    noPR.unverified.length > 0
+  ) {
     process.exit(1);
   }
 }

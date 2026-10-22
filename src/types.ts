@@ -27,6 +27,8 @@ export interface ActionInputs {
   testMode: boolean; // If true, run on PR head instead of merge commit
   /** How to handle citations a sync introduces that the target bibliography lacks (#117) */
   bibliographyMode: import('./bibliography.js').BibliographyMode;
+  /** Which changed lectures the sync may touch: all, or only those with a state file (#344) */
+  syncScope: import('./contracts.js').SyncScope;
 }
 
 export interface ReviewInputs {

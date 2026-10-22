@@ -190,13 +190,14 @@ End-to-end testing against real GitHub repos. Creates test PRs that trigger the 
 ./tool-test-action-on-github/test-action-on-github.sh --dry-run             # Preview only
 ./tool-test-action-on-github/test-action-on-github.sh --action-ref vX.Y.Z   # Release gate
 ./tool-test-action-on-github/test-action-on-github.sh --action-ref v0       # Post-release smoke
+./tool-test-action-on-github/test-action-on-github.sh --sync-scope existing --scenarios 17,19,20   # Scope smoke (#344)
 ```
 
-**What the script does**: resets all repos to clean state (force-push `main`), closes all open PRs, creates 26 draft PRs with `test-translation` label. The label triggers one sync workflow per configured language.
+**What the script does**: resets all repos to clean state (force-push `main`), closes all open PRs, creates 28 draft PRs with `test-translation` label. The label triggers one sync workflow per configured language.
 
 **⚠ Real API spend**: `test-mode` suppresses PR side effects, not model calls — a run makes real, billed Claude calls. A three-language run is ~78 sync runs **plus ~78 review runs**. The ~1.4M input tokens measured on two languages pre-dates review coverage, so it is a floor, not an estimate.
 
-**⚠ Terminal timeout**: The script creates 26 PRs sequentially and can take 5+ minutes. Set a generous timeout (≥ 600000ms) or run without one.
+**⚠ Terminal timeout**: The script creates 28 PRs sequentially and can take 5+ minutes. Set a generous timeout (≥ 600000ms) or run without one.
 
 ### Folder Structure
 
@@ -207,17 +208,18 @@ tool-test-action-on-github/
 ├── test-action-on-github-data/        # Test fixtures + workflow templates
 │   ├── sync-workflow-template.yml     # ONE sync workflow, rendered per language
 │   ├── base-*.md / base-*.yml        # Base state files for source + targets
-│   └── 01-*.md ... 26-*.md           # Test scenario files (26 total)
+│   └── 01-*.md ... 28-*.md           # Test scenario files (28 total)
 ├── evaluate/                          # Phase 2: LLM-based quality evaluation
 └── reports/                           # Saved evaluation reports
 ```
 
-### Test Scenarios (26 total, 4 phases)
+### Test Scenarios (28 total, 5 phases)
 
 - **Phase 1 (01–08)**: Basic structure — intro, title, section content, reorder, add/delete section, subsection, multi-element (minimal doc)
 - **Phase 2 (09–15)**: Complex structure — real-world lecture, sub-subsections, code cells, math, delete subsection/sub-subsection (lecture doc)
 - **Phase 3 (16–20)**: Structural changes — pure reorder, new/deleted/renamed document + TOC, multi-file
 - **Phase 4 (21–26)**: Edge cases — preamble-only, deep nesting, special chars, empty sections, pre-title content, heading case change
+- **Phase 5 (27–28)**: Shared assets and directives — citation backfill, exercise family
 
 ---
 
@@ -326,6 +328,7 @@ Before creating a release, verify the following:
 | Change detection | `diff-detector.ts` → `detectSectionChanges` |
 | Heading-maps | `heading-map.ts` → `updateHeadingMap` |
 | File classification | `sync-orchestrator.ts` → `classifyChangedFiles` + `StateGenerationConfig` |
+| Sync scope (partial editions) | `sync-scope.ts` → `applySyncScope` / `scopeChangedLectures` |
 | PR creation | `pr-creator.ts` → `createTranslationPR` |
 | Forward resync | `commands/forward.ts` → `resyncSingleFile` / `runForwardBulk` |
 | Forward triage | `forward-triage.ts` → `triageForward` |

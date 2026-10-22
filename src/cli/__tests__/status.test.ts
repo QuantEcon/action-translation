@@ -8,6 +8,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { execFileSync } from 'child_process';
 import {
   discoverMarkdownFiles,
   resolveFilePairs,
@@ -17,8 +18,11 @@ import {
   formatStatusTable,
   formatStatusJson,
   FileSyncStatus,
+  StatusOptions,
+  StatusResult,
 } from '../commands/status.js';
 import { readFileState, writeFileState } from '../translate-state.js';
+import { getFileGitMetadata } from '../git-metadata.js';
 
 // ============================================================================
 // HELPERS
@@ -41,6 +45,51 @@ function writeMd(filePath: string, content: string): void {
   const dir = path.dirname(filePath);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(filePath, content, 'utf-8');
+}
+
+/**
+ * Run git in a fixture repository, cut off from the machine's git config and
+ * GIT_* environment so that signing, hooks or a GIT_DIR cannot reach it.
+ * `date` ("YYYY-MM-DD") sets the author and committer dates, at noon UTC.
+ */
+function git(repo: string, args: string[], date?: string): string {
+  const env: NodeJS.ProcessEnv = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (!key.startsWith('GIT_')) env[key] = value;
+  }
+  Object.assign(env, {
+    GIT_CONFIG_GLOBAL: os.devNull,
+    GIT_CONFIG_NOSYSTEM: '1',
+    GIT_AUTHOR_NAME: 'Test',
+    GIT_AUTHOR_EMAIL: 'test@example.com',
+    GIT_COMMITTER_NAME: 'Test',
+    GIT_COMMITTER_EMAIL: 'test@example.com',
+  });
+  if (date) {
+    env.GIT_AUTHOR_DATE = `${date} 12:00:00 +0000`;
+    env.GIT_COMMITTER_DATE = `${date} 12:00:00 +0000`;
+  }
+  return execFileSync('git', args, {
+    cwd: repo,
+    env,
+    encoding: 'utf-8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+}
+
+/** Write files (paths relative to the repo) and commit them on `date`; returns the commit's sha. */
+function commit(
+  repo: string,
+  files: Record<string, string>,
+  date: string,
+  message: string
+): string {
+  for (const [file, content] of Object.entries(files)) {
+    writeMd(path.join(repo, file), content);
+  }
+  git(repo, ['add', '--all']);
+  git(repo, ['commit', '-q', '--no-verify', '--no-gpg-sign', '-m', message], date);
+  return git(repo, ['rev-parse', 'HEAD']).trim();
 }
 
 /** Source file with 2 sections */
@@ -803,6 +852,470 @@ describe('--write-state safeguard', () => {
 
     const state = readFileState(path.join(tmpDir, 'target'), 'intro.md');
     expect(state?.model).toBe('unknown');
+  });
+});
+
+// ============================================================================
+// --write-state CARRIED-CHANGE GUARD (#380)
+// ============================================================================
+
+describe('--write-state carried-change guard (#380)', () => {
+  /** The English after a fix the translation has not carried */
+  const SOURCE_FIXED = SOURCE_2_SECTIONS.replace('Some content.', 'Some corrected content.');
+  /** The translation after a reviewer's suggestion, which carries no English change */
+  const TARGET_REVIEWED = TARGET_2_SECTIONS_WITH_MAP.replace('一些内容。', '一些修订过的内容。');
+  /** A well-formed commit that neither fixture repository has */
+  const ABSENT_SHA = '0123456789abcdef0123456789abcdef01234567';
+
+  let source: string;
+  let target: string;
+
+  beforeEach(() => {
+    source = path.join(tmpDir, 'source');
+    target = path.join(tmpDir, 'target');
+    for (const repo of [source, target]) {
+      fs.mkdirSync(repo, { recursive: true });
+      git(repo, ['init', '-q']);
+    }
+  });
+
+  /** The state file a draft from `sha` leaves behind */
+  function recordSyncPoint(sha: string, file = 'lecture.md'): void {
+    writeFileState(target, file, {
+      'source-sha': sha,
+      'synced-at': '2026-10-02',
+      model: 'claude-sonnet-5',
+      mode: 'NEW',
+      'section-count': 2,
+    });
+  }
+
+  function statusOf(extra: Partial<StatusOptions> = {}): Promise<StatusResult> {
+    return runStatus({
+      source,
+      target,
+      docsFolder: 'lectures',
+      language: 'ja',
+      exclude: [],
+      ...extra,
+    });
+  }
+
+  function writeState(extra: Partial<StatusOptions> = {}): Promise<StatusResult> {
+    return statusOf({ writeState: true, ...extra });
+  }
+
+  /** The refused run's message (fails the test if the run is not refused) */
+  async function refusal(extra: Partial<StatusOptions> = {}): Promise<string> {
+    try {
+      await writeState(extra);
+    } catch (error) {
+      return (error as Error).message;
+    }
+    throw new Error('expected --write-state to be refused');
+  }
+
+  /** A commit line as `git log --format='%h %ad %s' --date=short` prints it */
+  function commitLine(sha: string, rest: string): RegExp {
+    return new RegExp(`\\n    ${sha.slice(0, 4)}[0-9a-f]* ${rest}`);
+  }
+
+  /**
+   * #380's sequence: the lecture is drafted from English commit A and its state
+   * records A; the English is fixed in B; a reviewer's suggestion is then
+   * committed to the lecture, so the date guard alone passes it.
+   */
+  function draftThenUncarriedFix(): { drafted: string; fixed: string } {
+    const lecture = 'lectures/lecture.md';
+    const drafted = commit(source, { [lecture]: SOURCE_2_SECTIONS }, '2026-10-01', 'Add lecture');
+    commit(target, { [lecture]: TARGET_2_SECTIONS_WITH_MAP }, '2026-10-02', 'Draft lecture');
+    recordSyncPoint(drafted);
+    const fixed = commit(
+      source,
+      { [lecture]: SOURCE_FIXED },
+      '2026-10-05',
+      'FIX: lecture cleanup batch'
+    );
+    commit(target, { [lecture]: TARGET_REVIEWED }, '2026-10-06', 'Apply reviewer suggestion');
+    return { drafted, fixed };
+  }
+
+  /** The English fix arrives through a --no-ff merge, whose commit the state records (#391) */
+  function syncedFromMergeCommit(): { fix: string; merge: string } {
+    commit(source, { 'lectures/lecture.md': SOURCE_2_SECTIONS }, '2026-10-01', 'Add lecture');
+    git(source, ['checkout', '-q', '-b', 'fix']);
+    const fix = commit(source, { 'lectures/lecture.md': SOURCE_FIXED }, '2026-10-03', 'FIX: typo');
+    git(source, ['checkout', '-q', '-']);
+    git(
+      source,
+      [
+        'merge',
+        '-q',
+        '--no-ff',
+        '--no-verify',
+        '--no-gpg-sign',
+        '-m',
+        'Merge pull request #1',
+        'fix',
+      ],
+      '2026-10-03'
+    );
+    const merge = git(source, ['rev-parse', 'HEAD']).trim();
+    commit(target, { 'lectures/lecture.md': TARGET_REVIEWED }, '2026-10-04', 'Sync from #1');
+    recordSyncPoint(merge);
+    return { fix, merge };
+  }
+
+  it('refuses English changes after the sync point when the lecture has a later commit', async () => {
+    const { drafted, fixed } = draftThenUncarriedFix();
+
+    // The premise: the lecture reads OUTDATED, and the date guard alone passes it
+    expect((await statusOf()).entries[0].status).toBe('OUTDATED');
+
+    const message = await refusal();
+    expect(message).toContain(
+      '--write-state blocked: 1 file(s) have English changes since the sync point their state file records.\n' +
+        'Recording the current English commit would mark those changes as carried into the translation.\n\n' +
+        `  lecture.md  (recorded ${drafted.slice(0, 7)})\n`
+    );
+    expect(message).toMatch(commitLine(fixed, '2026-10-05 FIX: lecture cleanup batch'));
+    expect(message).toContain(
+      'Options:\n' +
+        '  1. Carry each change into the translation and commit it, then rerun with --carried\n' +
+        '  2. Use --force to write state anyway (skips every check)'
+    );
+    expect(message).not.toContain('not in the local source clone');
+
+    // Refused before anything was written
+    expect(readFileState(target, 'lecture.md')).toMatchObject({
+      'source-sha': drafted,
+      mode: 'NEW',
+    });
+    expect(fs.existsSync(path.join(target, '.translate', 'config.yml'))).toBe(false);
+  });
+
+  it('writes the current English commit with --carried, after which the lecture reads ALIGNED', async () => {
+    const { fixed } = draftThenUncarriedFix();
+
+    await writeState({ carried: true });
+
+    expect(readFileState(target, 'lecture.md')).toMatchObject({
+      'source-sha': fixed,
+      'synced-at': '2026-10-06',
+      model: 'claude-sonnet-5',
+      mode: 'RESYNC',
+      'section-count': 2,
+    });
+    expect((await statusOf()).entries[0].status).toBe('ALIGNED');
+  });
+
+  it('passes a recorded commit that did not change the English file', async () => {
+    const lastTouched = commit(
+      source,
+      { 'lectures/lecture.md': SOURCE_2_SECTIONS },
+      '2026-10-01',
+      'Add lecture'
+    );
+    const unrelated = commit(source, { 'README.md': '# Lectures\n' }, '2026-10-03', 'Edit README');
+    commit(target, { 'lectures/lecture.md': TARGET_2_SECTIONS_WITH_MAP }, '2026-10-04', 'Draft');
+    recordSyncPoint(unrelated);
+
+    await writeState();
+
+    expect(readFileState(target, 'lecture.md')?.['source-sha']).toBe(lastTouched);
+  });
+
+  it('passes the merge commit sync records when the file is unchanged since (#391)', async () => {
+    const { fix, merge } = syncedFromMergeCommit();
+    // The premise: the file's last commit is the PR's own commit, not the merge
+    const lastCommit = (await getFileGitMetadata(source, 'lectures/lecture.md'))?.lastCommit;
+    expect(lastCommit).toBe(fix);
+    expect(lastCommit).not.toBe(merge);
+
+    await writeState();
+
+    expect(readFileState(target, 'lecture.md')?.['source-sha']).toBe(fix);
+  });
+
+  it('lists only the commits after the recorded one', async () => {
+    const { merge } = syncedFromMergeCommit();
+    const revised = commit(
+      source,
+      { 'lectures/lecture.md': SOURCE_FIXED.replace('More content.', 'More content, revised.') },
+      '2026-10-05',
+      'Revise section two'
+    );
+    commit(target, { 'lectures/lecture.md': TARGET_2_SECTIONS_WITH_MAP }, '2026-10-06', 'Review');
+
+    const message = await refusal();
+
+    expect(message).toContain(`  lecture.md  (recorded ${merge.slice(0, 7)})\n`);
+    expect(message).toMatch(commitLine(revised, '2026-10-05 Revise section two'));
+    expect(message).not.toContain('FIX: typo');
+  });
+
+  it('refuses a recorded commit that is not in the local source clone, unless --carried', async () => {
+    const current = commit(
+      source,
+      { 'lectures/lecture.md': SOURCE_2_SECTIONS },
+      '2026-10-01',
+      'Add lecture'
+    );
+    commit(target, { 'lectures/lecture.md': TARGET_2_SECTIONS_WITH_MAP }, '2026-10-02', 'Draft');
+    recordSyncPoint(ABSENT_SHA);
+
+    const message = await refusal();
+    expect(message).toContain(
+      '  lecture.md  (recorded 0123456, which is not in the local source clone)\n\n' +
+        'A recorded commit that is not in the local source clone cannot be checked: ' +
+        'pull or unshallow the clone and rerun, or confirm with --carried.\n\n' +
+        'Options:'
+    );
+    expect(readFileState(target, 'lecture.md')?.['source-sha']).toBe(ABSENT_SHA);
+
+    await writeState({ carried: true });
+    expect(readFileState(target, 'lecture.md')?.['source-sha']).toBe(current);
+  });
+
+  it('finds a recorded commit beyond a shallow clone missing', async () => {
+    const upstream = path.join(tmpDir, 'upstream');
+    fs.mkdirSync(upstream);
+    git(upstream, ['init', '-q']);
+    const drafted = commit(
+      upstream,
+      { 'lectures/lecture.md': SOURCE_2_SECTIONS },
+      '2026-10-01',
+      'Add lecture'
+    );
+    commit(upstream, { 'lectures/lecture.md': SOURCE_FIXED }, '2026-10-05', 'FIX: typo');
+    source = path.join(tmpDir, 'shallow');
+    git(tmpDir, ['clone', '-q', '--depth', '1', `file://${upstream}`, source]);
+    commit(target, { 'lectures/lecture.md': TARGET_2_SECTIONS_WITH_MAP }, '2026-10-06', 'Draft');
+    recordSyncPoint(drafted);
+
+    const message = await refusal();
+
+    expect(message).toContain(
+      `  lecture.md  (recorded ${drafted.slice(0, 7)}, which is not in the local source clone)`
+    );
+  });
+
+  it("leaves a recorded 'unknown' to the date guard", async () => {
+    commit(source, { 'lectures/lecture.md': SOURCE_2_SECTIONS }, '2026-10-01', 'Add lecture');
+    commit(target, { 'lectures/lecture.md': TARGET_2_SECTIONS_WITH_MAP }, '2026-10-02', 'Draft');
+    recordSyncPoint('unknown');
+    const fixed = commit(source, { 'lectures/lecture.md': SOURCE_FIXED }, '2026-10-05', 'FIX');
+    commit(target, { 'lectures/lecture.md': TARGET_REVIEWED }, '2026-10-06', 'Review');
+
+    await writeState();
+    expect(readFileState(target, 'lecture.md')?.['source-sha']).toBe(fixed);
+
+    // ...which still refuses English dated after the lecture's last commit
+    recordSyncPoint('unknown');
+    commit(source, { 'lectures/lecture.md': SOURCE_2_SECTIONS }, '2026-10-08', 'Revert FIX');
+    await expect(writeState()).rejects.toThrow(/SOURCE commits newer than TARGET/);
+  });
+
+  it('leaves a lecture without a state file (bootstrap) to the date guard', async () => {
+    commit(source, { 'lectures/lecture.md': SOURCE_2_SECTIONS }, '2026-10-01', 'Add lecture');
+    commit(target, { 'lectures/lecture.md': TARGET_2_SECTIONS_WITH_MAP }, '2026-10-02', 'Draft');
+    const fixed = commit(source, { 'lectures/lecture.md': SOURCE_FIXED }, '2026-10-05', 'FIX');
+    commit(target, { 'lectures/lecture.md': TARGET_REVIEWED }, '2026-10-06', 'Review');
+
+    await writeState();
+
+    expect(readFileState(target, 'lecture.md')).toMatchObject({
+      'source-sha': fixed,
+      mode: 'RESYNC',
+    });
+  });
+
+  it('is skipped by --force', async () => {
+    const { fixed } = draftThenUncarriedFix();
+
+    await writeState({ force: true });
+
+    expect(readFileState(target, 'lecture.md')?.['source-sha']).toBe(fixed);
+  });
+
+  it('--carried does not skip the date guard', async () => {
+    const drafted = commit(
+      source,
+      { 'lectures/lecture.md': SOURCE_2_SECTIONS },
+      '2026-10-01',
+      'Add lecture'
+    );
+    commit(target, { 'lectures/lecture.md': TARGET_2_SECTIONS_WITH_MAP }, '2026-10-02', 'Draft');
+    recordSyncPoint(drafted);
+    commit(source, { 'lectures/lecture.md': SOURCE_FIXED }, '2026-10-05', 'FIX');
+
+    await expect(writeState({ carried: true })).rejects.toThrow(/SOURCE commits newer than TARGET/);
+    expect(readFileState(target, 'lecture.md')?.['source-sha']).toBe(drafted);
+  });
+
+  it('runs the date guard first when both would refuse', async () => {
+    // The tutorials rely on this order: until the carried change is committed,
+    // the date guard's refusal is the one shown, without the commit listing.
+    const drafted = commit(
+      source,
+      { 'lectures/lecture.md': SOURCE_2_SECTIONS },
+      '2026-10-01',
+      'Add lecture'
+    );
+    commit(target, { 'lectures/lecture.md': TARGET_2_SECTIONS_WITH_MAP }, '2026-10-02', 'Draft');
+    recordSyncPoint(drafted);
+    commit(source, { 'lectures/lecture.md': SOURCE_FIXED }, '2026-10-05', 'FIX');
+
+    const message = await refusal();
+
+    expect(message).toMatch(
+      /^--write-state blocked: 1 file\(s\) have SOURCE commits newer than TARGET\./
+    );
+    expect(message).not.toContain('English changes since the sync point');
+    expect(readFileState(target, 'lecture.md')?.['source-sha']).toBe(drafted);
+  });
+
+  it('--carried does not skip the corrupt-file refusal', async () => {
+    commit(source, { 'lectures/lecture.md': SOURCE_2_SECTIONS }, '2026-10-01', 'Add lecture');
+    commit(target, { 'lectures/lecture.md': TARGET_2_SECTIONS_WITH_MAP }, '2026-10-02', 'Draft');
+    const statePath = path.join(target, '.translate', 'state', 'lecture.md.yml');
+    fs.mkdirSync(path.dirname(statePath), { recursive: true });
+    fs.writeFileSync(statePath, '{{{ not yaml at all', 'utf-8');
+
+    await expect(writeState({ carried: true })).rejects.toThrow(/corrupt/i);
+    expect(fs.readFileSync(statePath, 'utf-8')).toBe('{{{ not yaml at all');
+  });
+
+  it('reports every refused lecture in one error and writes nothing', async () => {
+    const lectures = ['aligned.md', 'lecture.md', 'other.md'];
+    const drafted = commit(
+      source,
+      Object.fromEntries(lectures.map((f) => [`lectures/${f}`, SOURCE_2_SECTIONS])),
+      '2026-10-01',
+      'Add lectures'
+    );
+    commit(
+      target,
+      Object.fromEntries(lectures.map((f) => [`lectures/${f}`, TARGET_2_SECTIONS_WITH_MAP])),
+      '2026-10-02',
+      'Draft lectures'
+    );
+    recordSyncPoint(drafted, 'aligned.md'); // its English has not changed
+    recordSyncPoint(drafted, 'lecture.md');
+    recordSyncPoint(ABSENT_SHA, 'other.md');
+    const fixed = commit(
+      source,
+      { 'lectures/lecture.md': SOURCE_FIXED },
+      '2026-10-05',
+      'FIX: lecture cleanup batch'
+    );
+    commit(target, { 'lectures/lecture.md': TARGET_REVIEWED }, '2026-10-06', 'Review');
+
+    const message = await refusal();
+
+    expect(message).toContain('--write-state blocked: 2 file(s) have English changes');
+    expect(message).toContain(`  lecture.md  (recorded ${drafted.slice(0, 7)})\n`);
+    expect(message).toMatch(commitLine(fixed, '2026-10-05 FIX: lecture cleanup batch'));
+    expect(message).toContain(
+      '  other.md  (recorded 0123456, which is not in the local source clone)'
+    );
+    expect(message.indexOf('lecture.md')).toBeLessThan(message.indexOf('other.md'));
+    expect(message).not.toContain('aligned.md');
+    for (const file of lectures) {
+      expect(readFileState(target, file)?.mode).toBe('NEW');
+    }
+    expect(fs.existsSync(path.join(target, '.translate', 'config.yml'))).toBe(false);
+  });
+
+  it('points at the diff when no commit since the recorded one changes the file', async () => {
+    commit(source, { 'lectures/lecture.md': SOURCE_2_SECTIONS }, '2026-10-01', 'Add lecture');
+    git(source, ['checkout', '-q', '-b', 'draft']);
+    const unmerged = commit(
+      source,
+      { 'lectures/lecture.md': SOURCE_FIXED },
+      '2026-10-02',
+      'Unmerged English edit'
+    );
+    git(source, ['checkout', '-q', '-']);
+    commit(target, { 'lectures/lecture.md': TARGET_2_SECTIONS_WITH_MAP }, '2026-10-03', 'Draft');
+    recordSyncPoint(unmerged);
+
+    const message = await refusal();
+
+    expect(message).toContain(
+      `  lecture.md  (recorded ${unmerged.slice(0, 7)})\n` +
+        `    (no listed commit; see git diff ${unmerged.slice(0, 7)} HEAD -- lectures/lecture.md, ` +
+        `and pull the clone first if the recorded commit is newer than its HEAD)`
+    );
+  });
+
+  it('refuses an uncarried change that adds a section (primary status SOURCE_AHEAD)', async () => {
+    const lecture = 'lectures/lecture.md';
+    const drafted = commit(source, { [lecture]: SOURCE_2_SECTIONS }, '2026-10-01', 'Add lecture');
+    commit(target, { [lecture]: TARGET_2_SECTIONS_WITH_MAP }, '2026-10-02', 'Draft lecture');
+    recordSyncPoint(drafted);
+    const added = commit(
+      source,
+      { [lecture]: `${SOURCE_2_SECTIONS}\n## Section Three\n\nNew content.\n` },
+      '2026-10-05',
+      'Add section three'
+    );
+    commit(target, { [lecture]: TARGET_REVIEWED }, '2026-10-06', 'Apply reviewer suggestion');
+
+    // The premise: OUTDATED is a flag here, not the primary status
+    const entry = (await statusOf()).entries[0];
+    expect(entry.status).toBe('SOURCE_AHEAD');
+    expect(entry.flags).toContain('OUTDATED');
+
+    const message = await refusal();
+    expect(message).toContain(`  lecture.md  (recorded ${drafted.slice(0, 7)})\n`);
+    expect(message).toMatch(commitLine(added, '2026-10-05 Add section three'));
+  });
+
+  it('skips a lecture the English renamed, whose old translation and state file remain', async () => {
+    const drafted = commit(
+      source,
+      { 'lectures/old.md': SOURCE_2_SECTIONS },
+      '2026-10-01',
+      'Add lecture'
+    );
+    commit(target, { 'lectures/old.md': TARGET_2_SECTIONS_WITH_MAP }, '2026-10-02', 'Draft');
+    recordSyncPoint(drafted, 'old.md');
+    git(source, ['mv', 'lectures/old.md', 'lectures/new.md']);
+    git(source, ['commit', '-q', '--no-verify', '--no-gpg-sign', '-m', 'Rename'], '2026-10-05');
+
+    // The premise: git still dates the old name, to the rename, so only the
+    // status skip keeps it out of the guard
+    expect((await getFileGitMetadata(source, 'lectures/old.md'))?.lastCommit).toBe(
+      git(source, ['rev-parse', 'HEAD']).trim()
+    );
+
+    const result = await writeState();
+
+    expect(result.entries.map((e) => e.status)).toEqual(['SOURCE_ONLY', 'TARGET_ONLY']);
+    expect(fs.existsSync(path.join(target, '.translate', 'config.yml'))).toBe(true);
+    expect(readFileState(target, 'old.md')?.['source-sha']).toBe(drafted);
+  });
+
+  it('checks a lecture in a subfolder by its docs-relative path', async () => {
+    const lecture = 'lectures/advanced/topic.md';
+    const drafted = commit(source, { [lecture]: SOURCE_2_SECTIONS }, '2026-10-01', 'Add lecture');
+    commit(target, { [lecture]: TARGET_2_SECTIONS_WITH_MAP }, '2026-10-02', 'Draft lecture');
+    recordSyncPoint(drafted, 'advanced/topic.md');
+    const fixed = commit(
+      source,
+      { [lecture]: SOURCE_FIXED },
+      '2026-10-05',
+      'FIX: lecture cleanup batch'
+    );
+    commit(target, { [lecture]: TARGET_REVIEWED }, '2026-10-06', 'Apply reviewer suggestion');
+
+    const message = await refusal({ file: 'advanced/topic.md' });
+    expect(message).toContain(`  advanced/topic.md  (recorded ${drafted.slice(0, 7)})\n`);
+    expect(message).toMatch(commitLine(fixed, '2026-10-05 FIX: lecture cleanup batch'));
+
+    await writeState({ file: 'advanced/topic.md', carried: true });
+    expect(readFileState(target, 'advanced/topic.md')?.['source-sha']).toBe(fixed);
   });
 });
 

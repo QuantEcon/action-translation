@@ -42,7 +42,7 @@ The ref defaults to `main`, which is the code you are working on. Override it fo
 ./test-action-on-github.sh --action-ref v0       # the floating tag (post-release smoke)
 ```
 
-The script fails immediately if the ref does not exist on the remote, rather than letting 26 workflow runs fail at resolution. A raw commit SHA is not accepted — `git ls-remote` cannot verify one, and pinning to a ref the script cannot confirm exists is the failure mode this replaced.
+The script fails immediately if the ref does not exist on the remote, rather than letting every workflow run fail at resolution. A raw commit SHA is not accepted — `git ls-remote` cannot verify one, and pinning to a ref the script cannot confirm exists is the failure mode this replaced.
 
 Because every workflow uses the marketplace form `uses: QuantEcon/action-translation@<ref>` rather than checking out and building locally, **uncommitted code cannot be tested — push the branch first**. The committed `dist-action/` bundle is what executes either way, so nothing is lost, and this form additionally exercises ref resolution on every workflow on every run.
 
@@ -112,7 +112,7 @@ Reports are saved to `reports/evaluation-<date>.md`.
 
 ## Test Scenarios (28 total)
 
-The tool tests translation scenarios across four phases:
+The tool tests translation scenarios across five phases:
 
 ### Phase 1: Basic Structure (Tests 01–08, minimal doc)
 | # | Scenario | Description |
@@ -156,11 +156,54 @@ The tool tests translation scenarios across four phases:
 | 25 | Pre-title content | Anchor (`(label)=`) + `{raw}` block before `# title` |
 | 26 | Heading case change | Title-case → sentence-case headings (heading-map lookup) |
 
-### Phase 5: Shared Assets (Test 27)
+### Phase 5: Shared Assets and Directives (Tests 27–28)
 | # | Scenario | Description |
 |---|----------|-------------|
 | 27 | Citation backfill | `{cite}` role introduced; the cited key lives in the source's `references.bib` but not the target's, so the sync PR must carry the backfilled entry (#117; verifies action-translation#256 defect 3). The target repos' `_config.yml` + `references.bib` fixtures are what arm the guard — see `base-config.yml`. |
 | 28 | Exercise family added | An `## Exercises` section with `{exercise-start}`/`{hint}`/`{solution-start}` blocks is appended to `lecture.md` — the first exercise-family directives in the suite. On `.ml` the sync output must carry every block byte-identical to the source (verbatim-directive policy, `D-2026-09-03-ml-all-exercise-content-stays-english`, enforced by `verbatim-directives.ts` and the `verbatimDirectives` diff-check); on `.zh-cn` and `.fa` the blocks translate as ordinary prose. |
+
+## Scope runs
+
+`--sync-scope existing` replays the scenarios on a partial edition, the case the action's `sync-scope` input exists for ([#344](https://github.com/QuantEcon/action-translation/issues/344)). Under `existing`, a changed lecture syncs only when the target has its state file, `.translate/state/<file>.yml` (for example `lecture.md.yml`). The others are skipped before any model call, and listed in the PR body under `### Lectures Not Synced` and in the sync run's job summary. Removals and `_toc.yml` sync as under `all`.
+
+```bash
+./tool-test-action-on-github/test-action-on-github.sh --sync-scope existing --scenarios 17,19,20
+```
+
+The option changes two things:
+
+- **The target reset** lays down one state file in every target, `.translate/state/lecture.md.yml`, and none for `lecture-minimal.md`. `lecture-minimal.md` then plays the English copy on a partial edition's `main` (the Malayalam edition's `intro.md`): present as a `.md`, absent as state, so it must stay out of scope. The state file holds what `init` writes, except `tool-version`: the source commit that last touched `lecture.md`, the date, the default model, `mode: NEW`, and the section count of `base-lecture.md`.
+- **Every PR the run creates** carries the `test-sync-scope-existing` label. It goes on when the PR is created, before `test-translation`, so the event that fires the sync already carries it. The sync workflow's mode step turns it into `sync-scope: existing`; without it the workflow passes `all`. The PR body says which scope it runs under. The action copies a source PR's labels, all but `test-translation`, onto its translation PR, so the translation PRs carry the label too. The targets' review workflows ignore it.
+
+The ref must declare the input: v0.30.0 ([#346](https://github.com/QuantEcon/action-translation/issues/346)) or later, or a branch that carries #344. The script reads `action.yml` at the resolved commit and stops if the input is missing. An older ref would log `Unexpected input(s) 'sync-scope'` and sync every lecture, so the run would test nothing it claims to. A default run on an older ref, such as a control at a previous tag, logs the same warning and otherwise runs unchanged.
+
+### Expected results
+
+| Scenarios | Source change | Translation PR under `sync-scope: existing` |
+|---|---|---|
+| 17 | New `game-theory.md` + `_toc.yml` | Changes only `_toc.yml`, mirrored from the source with `game-theory` in it. The body lists `game-theory.md` under `### Lectures Not Synced`. No `.translate/state/` change. Review gives the "No markdown files to review" PASS. |
+| 19 | `lecture-minimal.md` + `lecture.md` | The mixed PR. Changes `lecture.md` and `.translate/state/lecture.md.yml`, an update since the state file exists. Leaves `lecture-minimal.md` alone and lists it under `### Lectures Not Synced`. |
+| 20 | Rename `lecture.md` → `linear-algebra.md` + `_toc.yml` | In scope: the previous path has its state file. Adds `linear-algebra.md` and `.translate/state/linear-algebra.md.yml`, deletes `lecture.md` and `.translate/state/lecture.md.yml` (GitHub may show either pair as a rename), and updates `_toc.yml`. No `### Lectures Not Synced` section. |
+| 18 | Delete `lecture.md` + `_toc.yml` | Removals follow the `.md`: deletes `lecture.md` and its state file, and updates `_toc.yml`. |
+| 01–08, 16, 21, 24, 27 | `lecture-minimal.md` only | No translation PR. The sync run passes, and its job summary lists `lecture-minimal.md` as not synced. |
+| 09–15, 22, 23, 25, 26, 28 | `lecture.md` only | As under `all`, except that `.translate/state/lecture.md.yml` is updated rather than added. No `### Lectures Not Synced` section. |
+
+The table assumes every scope read succeeds. When a source PR changes or renames a lecture, the action reads the target repository first, because GitHub answers 404 for a repository the token cannot see, as it does for a missing state file. If that read fails, nothing syncs, not even `_toc.yml` or a removal. A state-file or `.md` read that fails with any status but 404 leaves only that lecture neither synced nor skipped, and the other lectures still sync. Either error fails the sync run, and its job summary lists the error under `### ❌ Scope unknown`. When an error leaves nothing to sync, the run fails at once with no PR, before it reads anything more from the target, and outside test mode it opens the failure issue. Test mode opens no failure issue, so the red sync run is the signal. For the scenarios that expect no translation PR, the evaluator reads that run.
+
+The evaluator holds a source PR with the label to the table (`evaluate/src/scope-expectations.ts`). Every scenario has an expectation, so a source PR with no translation PR is never left out of the report:
+
+- **17–20.** It compares the translation PR's files and its `### Lectures Not Synced` list with the table, and a mismatch makes the verdict FAIL. 17 and 18 translate no lecture, so it makes no model call for them. It evaluates `lecture.md` for 19 and `linear-algebra.md` for 20. The diff judge sees only the source files the run was meant to sync, so 19's `lecture-minimal.md` does not count against scope.
+- **09–15, 22, 23, 25, 26, 28.** The same comparison: the translation PR changes `lecture.md`, updates its state file, and has no `### Lectures Not Synced` section. The model evaluates `lecture.md` as under `all`.
+- **01–08, 16, 21, 24, 27.** A translation PR is a failure, found without a model call. No translation PR is the expected result only if the source PR's zh-cn sync run passed, since a run that fails opens no PR either. The evaluator reads the check runs of the `sync-translation-zh-cn` job on the source PR's head commit, ignoring the run that the scope label's own labeled event fires, which the job skips. A failed run, or none, is a failure. A run still in progress, or check runs it cannot read, leave the source PR unverified, never passed, and the evaluator exits non-zero.
+
+A source PR whose scenario expects a translation PR, and has none, is a failure: the report lists it, and the evaluator exits non-zero. The evaluator reads only the zh-cn target and its sync run, so check fa and ml by hand.
+
+### Caveats
+
+- **A smoke test, not the release gate.** The gate's lanes stay on the default, `all`, and the census says so under `existing`.
+- **Real API spend.** With `--scenarios 17,19,20`, as above, each language makes one billed sync translation (19's) and two billed reviews (19's and 20's); 17 makes no model call. A full scope run, without `--scenarios`, makes 13 billed sync translations per language, for 19 and the twelve scenarios that change only `lecture.md`. It makes 14 billed reviews, for those and 20, whose sync moves the lecture without translating it. 17, 18 and the scenarios that change only `lecture-minimal.md` make no model call.
+- **`--languages` still narrows the estate.** The source reset re-renders `.github/` from the narrowed list, so the other languages' sync workflows stay deleted until a run without `--languages`.
+- **The next default run undoes the setup.** Its reset deletes `.translate/` in every target, state file included, and its PRs carry no scope label.
 
 ## Directory Structure
 
@@ -178,6 +221,7 @@ tool-test-action-on-github/
 │   │   ├── evaluate.ts          # CLI entry point
 │   │   ├── evaluator.ts         # Opus 4.5 evaluation
 │   │   ├── github.ts            # PR fetching
+│   │   ├── scope-expectations.ts  # Expected results of a scope run (#344)
 │   │   └── types.ts             # TypeScript types
 │   ├── package.json
 │   └── tsconfig.json
