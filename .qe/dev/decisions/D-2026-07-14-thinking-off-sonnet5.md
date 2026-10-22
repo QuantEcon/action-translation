@@ -1,3 +1,9 @@
+> **Partly superseded 2026-10-19** by `D-2026-10-19-per-model-request-policy`: thinking stays
+> off on Sonnet 5, and Sonnet 5.5 gets its lowest setting (`between_tools`). Sonnet 5.5,
+> Opus 5.5 and both Fable models reject `disabled`, though, so the request is now set per
+> model, and the first-block text extraction this record calls valid was replaced by reading
+> every text block. Kept unedited below.
+
 # Keep extended thinking OFF for translation on Sonnet 5
 
 **Context**: Migrating the default model to `claude-sonnet-5` (PR #75) raised the

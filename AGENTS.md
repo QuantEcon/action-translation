@@ -86,7 +86,9 @@ translation:
 ```
 Title is stored explicitly; headings are a flat YAML map (nesting is encoded in the key as `Parent::Child` paths, never as nested YAML), include all heading levels, auto-populated on first translation. Keys are heading text verbatim minus `#` markers and MyST roles — no lowercasing or hyphenation (#91). Reads legacy `heading-map:` format (with a deprecation warning, #53), always writes `translation:` format.
 
-**Retry logic** (`translator.ts`) — retries `RateLimitError`, `APIConnectionError`, 5xx; never retries `AuthenticationError` or `BadRequestError`.
+**Retry logic** (`models.ts` → `isRetryableAnthropicError`) — retries `RateLimitError`, `APIConnectionError`, 5xx and mid-stream overloads; never retries `AuthenticationError`, `BadRequestError` or a model refusal.
+
+**Model request policy** (`models.ts` → `requestPolicyFor`) — every Claude call spreads `modelRequestParams(model, operation)` and caps output with `maxTokensFor(model, operation)`. Never hard-code `thinking`: Sonnet 5.5, Opus 5.5 and Fable reject `{type: 'disabled'}`. Call `assertCompleteResponse` first (only `end_turn` is usable; a refusal throws `ModelRefusalError`), then read text with `extractResponseText`, never `content[0]` (models that always think put a thinking block first). Recognising a model in `VALID_MODEL_PATTERNS` sends it `{type: 'disabled'}` unless `MODEL_REQUEST_POLICIES` has an entry for it, so a model that rejects `disabled` needs its entry in the same change.
 
 **Sync notifications** (`index.ts`) — On success, posts a confirmation comment on the source PR. On failure, opens a GitHub Issue with error details and recovery instructions. Comment `\translate-resync` on a merged PR to re-trigger sync.
 
@@ -320,6 +322,7 @@ Before creating a release, verify the following:
 |---|---|
 | Subsection reconstruction | `file-processor.ts` → `parseTranslatedSubsections` |
 | Translation prompts | `translator.ts` → `translateSection` / `translateNewSection` / `translateSectionResync` / `translateDocumentResync` |
+| Model request policy / response checks | `models.ts` → `requestPolicyFor` / `modelRequestParams` / `maxTokensFor` / `assertCompleteResponse` |
 | Review logic | `reviewer.ts` → `TranslationReviewer` |
 | Parsing | `parser.ts` → `parseSections` |
 | Change detection | `diff-detector.ts` → `detectSectionChanges` |

@@ -64,9 +64,28 @@ describe('Language Configuration', () => {
       );
     });
 
-    it('should return empty rules for unconfigured languages', () => {
+    it('should return Japanese config for ja', () => {
       const config = getLanguageConfig('ja');
       expect(config.code).toBe('ja');
+      expect(config.name).toBe('Japanese');
+      expect(config.additionalRules).toHaveLength(9);
+      expect(config.additionalRules[0]).toContain('full-width Japanese punctuation');
+      const rules = config.additionalRules.join('\n');
+      // The terminology policy from the PR #69 glossary review
+      expect(rules).toContain('if in doubt, keep English');
+      expect(rules).toContain('Keep ALL personal names in Latin script');
+      expect(rules).toContain('never with ＝');
+      // The house style ruled on #337 (2026-10-02 and 2026-10-22)
+      expect(rules).toContain('never ，．');
+      expect(rules).toContain('half-width space between Japanese characters and Latin words');
+      expect(rules).toContain('unless the glossary gives a Japanese one');
+      expect(config.additionalRules[7]).toContain('plain である style');
+      expect(config.additionalRules[8]).toContain('full-width parentheses around Latin text');
+    });
+
+    it('should return empty rules for unconfigured languages', () => {
+      const config = getLanguageConfig('ko');
+      expect(config.code).toBe('ko');
       expect(config.additionalRules).toHaveLength(0);
     });
 
@@ -84,7 +103,7 @@ describe('Language Configuration', () => {
     });
 
     it('should return empty string for unconfigured languages', () => {
-      const rules = formatAdditionalRules('ja');
+      const rules = formatAdditionalRules('ko');
       expect(rules).toBe('');
     });
 
@@ -111,10 +130,11 @@ describe('Language Configuration', () => {
     it('should return true for configured languages', () => {
       expect(isLanguageSupported('zh-cn')).toBe(true);
       expect(isLanguageSupported('ZH-CN')).toBe(true);
+      expect(isLanguageSupported('ja')).toBe(true);
     });
 
     it('should return false for unconfigured languages', () => {
-      expect(isLanguageSupported('ja')).toBe(false);
+      expect(isLanguageSupported('ko')).toBe(false);
       expect(isLanguageSupported('es')).toBe(false);
       expect(isLanguageSupported('unknown')).toBe(false);
     });
@@ -126,13 +146,17 @@ describe('Language Configuration', () => {
       expect(() => validateLanguageCode('ZH-CN')).not.toThrow();
     });
 
+    it('should not throw for ja', () => {
+      expect(() => validateLanguageCode('ja')).not.toThrow();
+    });
+
     it('should throw for unsupported languages', () => {
-      expect(() => validateLanguageCode('ja')).toThrow(/Unsupported target language/);
+      expect(() => validateLanguageCode('ko')).toThrow(/Unsupported target language/);
       expect(() => validateLanguageCode('unknown')).toThrow(/Unsupported target language/);
     });
 
     it('should include supported languages in error message', () => {
-      expect(() => validateLanguageCode('ja')).toThrow(/zh-cn/);
+      expect(() => validateLanguageCode('ko')).toThrow(/zh-cn/);
     });
 
     it('should suggest updating LANGUAGE_CONFIGS in error', () => {
@@ -145,6 +169,7 @@ describe('Language Configuration', () => {
       expect(languageLabel('en')).toBe('English (en)');
       expect(languageLabel('zh-cn')).toBe('Chinese (Simplified) (zh-cn)');
       expect(languageLabel('fa')).toBe('Persian (Farsi) (fa)');
+      expect(languageLabel('ja')).toBe('Japanese (ja)');
     });
 
     it('should handle case insensitive codes', () => {
@@ -153,8 +178,70 @@ describe('Language Configuration', () => {
     });
 
     it('should fall back to code for unknown languages', () => {
-      expect(languageLabel('ja')).toBe('ja (ja)');
+      expect(languageLabel('ko')).toBe('ko (ko)');
       expect(languageLabel('es')).toBe('es (es)');
+    });
+  });
+
+  describe('Japanese glossary (glossary/ja.json)', () => {
+    const glossaryPath = path.join(__dirname, '..', '..', 'glossary', 'ja.json');
+    type JaGlossaryTerm = { en: string; ja: string; context?: string };
+    const glossary: { terms: JaGlossaryTerm[] } = JSON.parse(
+      fs.readFileSync(glossaryPath, 'utf-8')
+    );
+
+    it('every term has en and ja string values', () => {
+      expect(glossary.terms.length).toBeGreaterThan(0);
+      for (const term of glossary.terms) {
+        expect(typeof term.en).toBe('string');
+        expect(typeof term.ja).toBe('string');
+      }
+    });
+
+    it('has no duplicate en keys', () => {
+      const keys = glossary.terms.map((t) => t.en);
+      expect(new Set(keys).size).toBe(keys.length);
+    });
+
+    it('mirrors the en term set of zh-cn.json', () => {
+      const zh: { terms: { en: string }[] } = JSON.parse(
+        fs.readFileSync(path.join(__dirname, '..', '..', 'glossary', 'zh-cn.json'), 'utf-8')
+      );
+      expect(glossary.terms.map((t) => t.en)).toEqual(zh.terms.map((t) => t.en));
+    });
+
+    // PR #69 review, unanimous (2026-07-29/30): every personal name stays in
+    // Latin script — no katakana transliteration, no guessed kanji.
+    it('keeps every personal name in Latin script (ja == en)', () => {
+      const names = glossary.terms.filter((t) => /name$/.test(t.context ?? ''));
+      expect(names.length).toBeGreaterThan(30);
+      for (const t of names) {
+        expect(t.ja).toBe(t.en);
+      }
+    });
+
+    it('joins compound names with ・, never ＝', () => {
+      for (const t of glossary.terms) {
+        expect(t.ja).not.toContain('＝');
+      }
+    });
+
+    // #337 rulings (2026-10-02): T1–T4.
+    it('carries the #337 glossary rulings', () => {
+      const ja = (en: string) => glossary.terms.find((t) => t.en === en)?.ja;
+      expect(ja('Authority centrality')).toBe('オーソリティ中心性');
+      expect(ja('Marginal product of capital')).toBe('資本の限界生産力');
+      expect(ja('Federal Reserve Economic Data')).toBe('連邦準備制度経済データ（FRED）');
+      expect(ja('Survey of Consumer Finances')).toBe('Survey of Consumer Finances（SCF）');
+    });
+
+    // #337 H4: a half-width space between Japanese and a Latin word (AR(1) 過程).
+    it('separates Japanese from a Latin word with a space', () => {
+      const abutting =
+        /[A-Za-z0-9)][\u3040-\u30ff\u3400-\u9fff]|[\u3040-\u30ff\u3400-\u9fff][A-Za-z0-9(]/;
+      for (const t of glossary.terms) {
+        expect(t.ja).not.toMatch(abutting);
+      }
     });
   });
 

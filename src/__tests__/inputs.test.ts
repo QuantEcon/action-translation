@@ -306,6 +306,10 @@ describe('Claude Model Validation', () => {
     'claude-3-5-sonnet-20241022',
     'claude-fable-5',
     'claude-opus-5',
+    'claude-sonnet-5-5',
+    'claude-opus-5-5',
+    'claude-fable-5-1',
+    'claude-haiku-5-5',
     'claude-sonnet-4-6',
     'claude-3-5-haiku-20241022',
     'claude-3-opus-20240229',
@@ -810,6 +814,7 @@ describe('Language Code Validation', () => {
   const supportedLanguages = [
     'zh-cn', // Simplified Chinese
     'fa', // Persian (Farsi)
+    'ja', // Japanese
     'fr', // French (draft glossary)
   ];
 
@@ -827,7 +832,7 @@ describe('Language Code Validation', () => {
   });
 
   // These languages are NOT YET configured - tests document future expansion
-  const futureLanguages = ['zh-tw', 'ja', 'ko', 'es', 'de'];
+  const futureLanguages = ['zh-tw', 'ko', 'es', 'de'];
 
   futureLanguages.forEach((lang) => {
     it(`should reject not-yet-configured language: ${lang}`, () => {

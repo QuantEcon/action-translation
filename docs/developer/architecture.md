@@ -113,7 +113,7 @@ src/
 ├── language-config.ts   # Language-specific translation rules (prompt-side)
 ├── localization-rules.ts # Code-cell localization rules for init (native-reviewer authored)
 ├── typography.ts        # Language typography applied in code, not via the prompt (nesting-aware fence walker)
-├── models.ts            # Model IDs, max_tokens budgets, thinking config, shared retry predicate
+├── models.ts            # Model IDs, per-model request policy (thinking, effort, max_tokens), response checks (stop_reason, text extraction), shared retry predicate
 ├── contracts.ts         # Cross-boundary constants: labels, auto-merge modes (owner module, #162)
 ├── branch-naming.ts     # Translation branch prefixes — the one owner (#115)
 ├── structural-parity.ts # Deterministic directive/anchor parity guard on every write path

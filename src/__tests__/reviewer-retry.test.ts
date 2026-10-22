@@ -58,6 +58,7 @@ jest.mock('@anthropic-ai/sdk', () => {
 });
 
 import Anthropic, { APIError, BadRequestError } from '@anthropic-ai/sdk';
+import { ModelRefusalError } from '../models.js';
 
 const MockAnthropic = Anthropic as unknown as jest.Mock;
 
@@ -133,5 +134,119 @@ describe('reviewer callWithRetry', () => {
       cacheReadInputTokens: 0,
       apiCalls: 2,
     });
+  });
+
+  it('a refusal propagates after exactly one call — neither retried nor a parse failure', async () => {
+    mockFinalMessage.mockResolvedValueOnce({
+      ...response('{"accuracy": 9'),
+      stop_reason: 'refusal',
+      stop_details: { type: 'refusal', category: 'cyber', explanation: null },
+    });
+
+    const outcome = expect(call(reviewer)).rejects.toBeInstanceOf(ModelRefusalError);
+    await jest.runAllTimersAsync();
+    await outcome;
+    expect(mockStream).toHaveBeenCalledTimes(1);
+    // The refused attempt was billed, so it is counted.
+    expect(reviewer.getUsage().apiCalls).toBe(1);
+  });
+
+  it('an end_turn with no text fails after one call instead of parse-failure retries', async () => {
+    mockFinalMessage.mockResolvedValueOnce({
+      ...response(''),
+      content: [{ type: 'thinking', thinking: '', signature: 'sig' }],
+    });
+
+    const outcome = expect(call(reviewer)).rejects.toThrow('test-op: response contained no text');
+    await jest.runAllTimersAsync();
+    await outcome;
+    expect(mockStream).toHaveBeenCalledTimes(1);
+  });
+
+  it('reads the verdict after a leading thinking block', async () => {
+    mockFinalMessage.mockResolvedValueOnce({
+      ...response(''),
+      content: [
+        { type: 'thinking', thinking: '', signature: 'sig' },
+        { type: 'text', text: '{"ok": true}' },
+      ],
+    });
+
+    await expect(call(reviewer)).resolves.toEqual({ ok: true });
+  });
+
+  it.each([
+    ['claude-sonnet-5', { thinking: { type: 'disabled' } }],
+    [
+      'claude-sonnet-5-5',
+      { thinking: { type: 'between_tools' }, output_config: { effort: 'high' } },
+    ],
+    ['claude-opus-5-5', { thinking: { type: 'adaptive' }, output_config: { effort: 'medium' } }],
+  ])('sends the review request policy of %s', async (model, fields) => {
+    mockFinalMessage.mockResolvedValueOnce(response('{"ok": true}'));
+    reviewer = new TranslationReviewer('test-key', 'test-token', model);
+
+    await call(reviewer);
+
+    const params = mockStream.mock.calls[0][0];
+    // The policy fields sit where `thinking` always did: before `messages`.
+    expect(Object.keys(params)).toEqual([
+      'model',
+      'max_tokens',
+      ...Object.keys(fields),
+      'messages',
+    ]);
+    const sentPolicy = Object.fromEntries(
+      Object.entries(params).filter(([key]) => key === 'thinking' || key === 'output_config')
+    );
+    expect(sentPolicy).toStrictEqual(fields);
+  });
+});
+
+describe('review call sites cap output with maxTokensFor(model, "review")', () => {
+  const TRANSLATION_VERDICT = {
+    accuracy: 9,
+    fluency: 9,
+    terminology: 9,
+    formatting: 9,
+    syntaxErrors: [],
+    findings: [],
+    strengths: [],
+    summary: 'Fine.',
+  };
+  const DIFF_VERDICT = {
+    scopeCorrect: true,
+    positionCorrect: true,
+    structurePreserved: true,
+    headingMapCorrect: true,
+    issues: [],
+    summary: 'Fine.',
+  };
+
+  it.each([
+    ['claude-sonnet-5', 8192],
+    ['claude-opus-5-5', 32768],
+  ])('%s → max_tokens %d on both review calls', async (model, expected) => {
+    const reviewer = new TranslationReviewer('test-key', 'test-token', model);
+    const caps: number[] = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (reviewer as any).callWithRetry = async (_p: string, maxTokens: number, operation: string) => {
+      caps.push(maxTokens);
+      return operation === 'evaluateTranslation' ? TRANSLATION_VERDICT : DIFF_VERDICT;
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const internals = reviewer as any;
+    await internals.evaluateTranslation(
+      'source',
+      'target',
+      [],
+      ['lectures/x.md'],
+      undefined,
+      'zh-cn'
+    );
+    await internals.evaluateDiff('before', 'after', 'target before', 'target after', []);
+
+    expect(caps).toEqual([expected, expected]);
   });
 });

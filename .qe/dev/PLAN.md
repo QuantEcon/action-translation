@@ -57,15 +57,18 @@ Everything here is a contained fix with an obvious correct behaviour. Ship as on
 ### 1.3 Truncation detection (minimal version)
 - [x] **[H]** Check `response.stop_reason` after every Anthropic call and **fail the file** on
       `max_tokens` instead of committing truncated output. Sites: `src/translator.ts:279, 361,
-      433, 512, 622`; `src/reviewer.ts:755, 863`; CLI: `src/cli/backward-evaluator.ts:364` (was :594 before the #166 dead-code deletion),
-      `src/cli/document-comparator.ts:246`, `src/cli/forward-triage.ts:237`.
+      433, 512, 622`; `src/reviewer.ts:755, 863`; CLI: `src/cli/backward-evaluator.ts:370` (was :594 before the #166 dead-code deletion),
+      `src/cli/document-comparator.ts:257`, `src/cli/forward-triage.ts:243`.
       (The full shared-client refactor is Phase 6; this is the per-site guard.)
 
 ### 1.4 Dependencies & packaging
 - [x] **[H]** `npm audit fix` — clears the two high-severity `ws` advisories (via `ink`, CLI-only)
 - [ ] **[H]** Bump `@actions/core` (1.11 → 3.x) and `@actions/github` (6 → 9.x) and rebuild —
       the committed `dist-action/index.js` currently **ships a vulnerable `undici`**
-- [ ] Bump `@anthropic-ai/sdk` (0.78 → current 0.110.x) and re-run the retry tests
+- [x] Bump `@anthropic-ai/sdk` (0.78 → current 0.110.x) and re-run the retry tests
+      *2026-10-19 (#342): landed as 0.78.0 → 0.131.0, the newest release at least two weeks
+      old, which predates 0.134.0's OpenTelemetry dependency; translator-retry and
+      reviewer-retry suites updated and green.*
 - [x] Fix `package-lock.json` self-version still saying `0.8.0` (lines 3, 9)
 - [x] Add an `engines` field to `package.json` (node >= 20 now; see Phase 5.6 for node24)
 - [x] Fix stale `.gitignore:6` comment ("ncc CJS bundle" — the build is esbuild)
@@ -342,8 +345,8 @@ but not sync; `overloaded` retry in the translator but not the reviewer or any C
 - [ ] **One shared Claude call helper** (retry + backoff + `retry-after` + `stop_reason` check +
       JSON extraction): replaces `translator.callWithRetry` (`src/translator.ts:153-190`),
       `reviewer.callWithRetry` (`src/reviewer.ts:281-330`), and the three CLI copies
-      (`document-comparator.ts:241-286`, `backward-evaluator.ts:277-315, 589-627`,
-      `forward-triage.ts:232-277`).
+      (`document-comparator.ts:243-285`, `backward-evaluator.ts:277-315, 589-627`,
+      `forward-triage.ts:235-276`).
       *2026-07-24 (#164): the retry PREDICATE is now shared (`isRetryableAnthropicError`
       in models.ts, overloaded branch included at all six sites) and the SDK stacking is
       fixed (`maxRetries: 0` on all six clients — the budget is RETRY_CONFIG's 3, not 9).
@@ -352,7 +355,7 @@ but not sync; `overloaded` retry in the translator but not the reviewer or any C
       *2026-10-06: `maxRetries: 0` also dropped the SDK's `retry-after` / `x-should-retry`
       handling and its jitter. The loops now make 3 attempts with 1 s and 2 s sleeps, so a
       parallel run fails together under a 429 that asked for ~30 s. Fix the stale "1s, 2s, 4s"
-      text in the same PR (`src/translator.ts:48`, `:228`; `src/reviewer.ts:61`;
+      text in the same PR (`src/translator.ts:52`, `:241`; `src/reviewer.ts:63`;
       `docs/user/faq.md:168`; `docs/developer/architecture.md:323`). Routed to #173.*
 - [ ] **Move `.translate/` state out of `src/cli/`** into core — the action imports backwards
       from the CLI today (`src/index.ts:8`, `src/sync-orchestrator.ts:20-21`) (ARCHITECTURE.md R3)
@@ -450,9 +453,12 @@ new-language adopter can go from zero to a working target repo following only pu
 - [ ] **#61** — create the `quantecon-services` PAT, grant repo access, rotate secrets in the
       ~6 workflow repos (pure ops; recent translation PRs still author as `mmcky`)
 - [ ] **#7** — resolve alongside the `presentations/` decision in Phase 7
-- [ ] For PRs **#68** (fr) / **#69** (ja): before merge, add the missing `LANGUAGE_CONFIGS`
+- [x] For PRs **#68** (fr) / **#69** (ja): before merge, add the missing `LANGUAGE_CONFIGS`
       entries (Copilot's catch — a glossary alone does not enable a language), resolve the
       flagged term-choice judgment calls with native speakers, rebase whichever lands second
+      — #68 merged 2026-07-14; #69 rebuilt on main 2026-09-01 with the `ja` config entry and
+      the review edits applied (72 terms), then brought up to date on 2026-10-22 with the #337
+      rulings (glossary v1.2), awaiting merge (#338)
 
 **Done when**: open-issue list contains only live work; translation PRs author as
 `quantecon-services`.

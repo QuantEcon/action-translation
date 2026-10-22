@@ -124,6 +124,7 @@ function createSuccessResponse(text: string = 'Translated text') {
   return {
     content: [{ type: 'text', text }],
     usage: { input_tokens: 100, output_tokens: 50 },
+    stop_reason: 'end_turn',
   };
 }
 
@@ -234,6 +235,84 @@ describe('TranslationService - Retry Logic', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
+      expect(result.error).toContain('refusal');
+      expect(mockStream).toHaveBeenCalledTimes(1);
+    });
+
+    it('fails a mid-stream refusal that kept partial text, naming its category, without retrying', async () => {
+      mockFinalMessage.mockResolvedValueOnce({
+        ...createSuccessResponse('Partial transl'),
+        stop_reason: 'refusal',
+        stop_details: { type: 'refusal', category: 'cyber', explanation: null },
+      });
+
+      const result = await service.translateSection({
+        mode: 'new',
+        sourceLanguage: 'en',
+        targetLanguage: 'zh-cn',
+        englishSection: '## Introduction\n\nSome content',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('refusal');
+      expect(result.error).toContain('category=cyber');
+      expect(result.translatedSection).toBeUndefined();
+      expect(mockStream).toHaveBeenCalledTimes(1);
+    });
+
+    it('fails any other stop reason instead of using the response', async () => {
+      mockFinalMessage.mockResolvedValueOnce({
+        ...createSuccessResponse('Looks complete'),
+        stop_reason: 'model_context_window_exceeded',
+      });
+
+      const result = await service.translateSection({
+        mode: 'new',
+        sourceLanguage: 'en',
+        targetLanguage: 'zh-cn',
+        englishSection: '## Introduction\n\nSome content',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('stop_reason=model_context_window_exceeded');
+      expect(mockStream).toHaveBeenCalledTimes(1);
+    });
+
+    it('reads the text after a leading thinking block (models that always think)', async () => {
+      mockFinalMessage.mockResolvedValueOnce({
+        ...createSuccessResponse(),
+        content: [
+          { type: 'thinking', thinking: '', signature: 'sig' },
+          { type: 'text', text: 'Translated ' },
+          { type: 'text', text: 'text\n' },
+        ],
+      });
+
+      const result = await service.translateSection({
+        mode: 'new',
+        sourceLanguage: 'en',
+        targetLanguage: 'zh-cn',
+        englishSection: '## Introduction\n\nSome content',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.translatedSection).toBe('Translated text');
+    });
+
+    it('fails an end_turn with no text instead of returning an empty translation', async () => {
+      mockFinalMessage.mockResolvedValueOnce({
+        ...createSuccessResponse(),
+        content: [{ type: 'thinking', thinking: '', signature: 'sig' }],
+      });
+
+      const result = await service.translateFullDocument({
+        content: '# Short doc\n\nContent',
+        sourceLanguage: 'en',
+        targetLanguage: 'zh-cn',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('translateFullDocument: response contained no text');
       expect(mockStream).toHaveBeenCalledTimes(1);
     });
   });

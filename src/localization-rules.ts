@@ -138,6 +138,10 @@ Example:
 Example:
   Before: # Calculate the steady state
   After:  # محاسبه حالت پایدار`,
+    ja: `
+Example:
+  Before: # Calculate the steady state
+  After:  # 定常状態を計算する`,
   };
   return examples[targetLanguage] || '';
 }

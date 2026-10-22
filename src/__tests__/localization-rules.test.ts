@@ -127,11 +127,17 @@ describe('localization-rules', () => {
       expect(prompt).toContain('دینامیک قیمت');
     });
 
+    it('produces the Japanese comment example for ja (#337 H5)', () => {
+      const prompt = buildLocalizationPrompt(['code-comments'], 'ja');
+      expect(prompt).toContain('定常状態を計算する');
+    });
+
     it('works for unsupported language (no examples)', () => {
-      const prompt = buildLocalizationPrompt(['code-comments', 'figure-labels'], 'ja');
+      const prompt = buildLocalizationPrompt(['code-comments', 'figure-labels'], 'ko');
       expect(prompt).toContain('Localize code comments');
       expect(prompt).toContain('Localize figure labels');
       expect(prompt).not.toContain('计算稳态');
+      expect(prompt).not.toContain('定常状態');
     });
   });
 

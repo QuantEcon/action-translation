@@ -36,6 +36,19 @@ Roadmap detail lives in the project trackers (reading order in
 
   The review's evidence for other open issues went as comments on #90, #154, #169, #170, #259,
   #261, #281 and #325; the per-finding disposition is in `log/2026-10-06-review-followup.md`.
+- **Claude 5.5 upgrade (#342, #334) — engine support in #394 (2026-10-19).** The engine runs
+  `claude-sonnet-5-5` (`between_tools`, effort `high`) and `claude-opus-5-5` (adaptive, effort
+  `medium`) through a per-model request policy in `models.ts`, and a refusal now fails the file
+  (R12). The default stays `claude-sonnet-5`. The flip waits on a `model-eval` report against
+  the standing golden set in QuantEcon/test-action-translation (decision
+  `D-2026-10-20-model-upgrades-measured-against-goldens`), and #395 is to be trimmed to the
+  engine-side tooling that report needs (`init --report-json`, the price table, a classified
+  `rate-check.sh`). The billed runs need an API key, so they are @mmcky's (handover
+  `log/2026-10-20-claude-5-5-eval-handover`). #342's live check passed on 2026-10-22, before
+  merge: one zh-cn draft of `game-theory.md` each from `claude-sonnet-5`, `claude-sonnet-5-5`
+  and `claude-opus-5-5`, all delivered with the source's structure. Decisions
+  `D-2026-10-19-per-model-request-policy` and `D-2026-10-19-opus-5-5-for-bulk-seed`; log
+  `2026-10-19-claude-5-5-engine`.
 - **fr typography fixes #324 and #325** (filed 2026-09-23 from the French editor's second
   round) — implementation branches in progress: **#324** (`fix/fr-elision-apostrophe`) sets the
   `fr` elision apostrophe before inline markup as U+2019; **#325**
@@ -169,12 +182,11 @@ Roadmap detail lives in the project trackers (reading order in
   source snapshot vs source `main` (English against English), and `mode: rebase` reads the same
   frozen snapshot.
   The bug stays open; W1's stale-resync box carries the guard.
-- **Glossary PR #69** (ja) — rebuilt on `main` 2026-09-01 with the thread's rulings applied
-  (`ja.json` v1.1, the `ja` entry in `LANGUAGE_CONFIGS`, decision record
-  `D-2026-09-01-ja-terminology-policy` on the branch; the Wikipedia cross-check idea is #300).
-  Two reviewers have since agreed three more edits (オーソリティ中心性, 資本の限界生産力,
-  連邦準備制度経済データ) and asked why `SCF` was left out (last reply 2026-09-21) — awaiting
-  the maintainer's reply; the branch is 21 behind `main` and conflicting.
+- **Glossary PR #69** (ja) — up to date with `main` on 2026-10-22 and carrying the #337
+  rulings (decided 2026-10-22): `ja.json` v1.2, nine `ja` rules, decision records
+  `D-2026-09-01-ja-terminology-policy` and `D-2026-10-22-ja-house-style`. Awaiting merge
+  (#338); the programming terms (#339) and the release (#340) follow, and merged is not
+  released. The Wikipedia cross-check idea is #300.
 
 ## Recently landed
 

@@ -1,3 +1,7 @@
+> **Superseded 2026-10-19** by `D-2026-10-19-opus-5-5-for-bulk-seed`: the bulk-seed model moves
+> to Claude Opus 5.5, the Opus line's successor; the choice of the Opus tier below stands. Kept
+> unedited below as the record of the 2026-07-14 evidence.
+
 # Use Opus 4.8 for one-time bulk seeds; keep Sonnet 5 as the default
 
 **Context**: `claude-sonnet-5` is the repo-wide default (PR #75) — the right call for

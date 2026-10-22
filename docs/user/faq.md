@@ -12,11 +12,11 @@ Only MyST Markdown (`.md`) files. The parser is specifically designed for MyST M
 
 ### What languages are supported?
 
-The GitHub Action supports the configured languages only — the target languages are currently Chinese (`zh-cn`), Farsi (`fa`), French (`fr`), and Malayalam (`ml`), each with language rules and a glossary, and `en` is configured as the source language (it passes validation too) — anything else is rejected as `target-language` before any work happens. The CLI accepts any language code, using Claude's general translation ability with no language-specific rules for unconfigured codes. Adding a language to the Action means adding a `LANGUAGE_CONFIGS` entry (see [Language configuration](language-config.md)).
+The GitHub Action supports the configured languages only — the target languages are currently Chinese (`zh-cn`), Farsi (`fa`), French (`fr`), Malayalam (`ml`), and Japanese (`ja`), each with language rules and a glossary, and `en` is configured as the source language (it passes validation too) — anything else is rejected as `target-language` before any work happens. The CLI accepts any language code, using Claude's general translation ability with no language-specific rules for unconfigured codes. Adding a language to the Action means adding a `LANGUAGE_CONFIGS` entry (see [Language configuration](language-config.md)).
 
 ### How much does it cost to run?
 
-Costs depend on document size and the Claude model used. With `claude-sonnet-5` at standard pricing ($3 / $15 per M input/output tokens; ~13% lower during the introductory rate through 2026-08-31):
+Costs depend on document size and the Claude model used. With `claude-sonnet-5` ($2 / $10 per M input/output tokens; rough estimates, see the [CLI cost table](cli-reference.md#cost-estimates)):
 - **Sync mode** (per PR): ~$0.06–0.25 depending on how many sections changed
 - **Backward analysis** (51 files): ~$1.10 total
 - **Forward resync** (per file): ~$0.16–0.22

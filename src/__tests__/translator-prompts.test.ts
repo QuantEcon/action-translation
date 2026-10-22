@@ -72,6 +72,7 @@ describe('every prompt builder numbers its rules contiguously', () => {
     mockFinalMessage.mockResolvedValue({
       content: [{ type: 'text', text: 'translated' }],
       usage: { input_tokens: 1, output_tokens: 1 },
+      stop_reason: 'end_turn',
     });
     service = new TranslationService('test-key', 'test-model', false);
   });
@@ -164,6 +165,7 @@ describe('glossary style_examples render as STYLE EXAMPLES in the stable block',
     mockFinalMessage.mockResolvedValue({
       content: [{ type: 'text', text: 'translated' }],
       usage: { input_tokens: 1, output_tokens: 1 },
+      stop_reason: 'end_turn',
     });
     service = new TranslationService('test-key', 'test-model', false);
   });
