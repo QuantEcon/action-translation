@@ -125,7 +125,7 @@ For measurements beyond the gate, such as the Claude 5.5 evaluation:
 | `--ref-deps own` | With `--ref`, runs `npm ci` from the ref's own lockfile. By default the ref borrows this checkout's `node_modules`, so an old ref runs on *this* checkout's SDK. `meta.txt` records the SDK actually loaded either way. |
 | `--engine-dir DIR` | Uses an engine you built yourself. |
 
-With no `--model`, a run draws the tested engine's own `DEFAULT_CLAUDE_MODEL`, read from its `dist/models.js`, so release step 4b compares what each release ships, the same-day control at the previous tag included. An engine from before v0.28.0 does not export it and needs `--model`.
+With no `--model`, a run draws the tested engine's own `DEFAULT_CLAUDE_MODEL`, read from its `dist/models.js`, so release step 4b compares what each release ships, the same-day control at the previous tag included. An engine whose `dist/models.js` does not export it is refused before any draw and needs `--model` (every tag from v0.20.0 up exports it).
 
 `meta.txt` also records the engine's commit and whether its tree was clean, along with hashes of `dist/`, `dist/structural-parity.js`, the glossaries and the fixtures. `summary.json` (schema `rate-check-summary/1`) carries the same, plus every draw's outcome, tokens, cost and timestamps. The statistics behind the tables are in `lib/stats.mjs`; `node lib/stats.mjs --self-test` checks them against exact values and against R, and CI runs it.
 

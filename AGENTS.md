@@ -266,8 +266,11 @@ Before creating a release, verify the following:
    failure: a refusal, a truncation, a parity break or a crash. Draws lost to rate limits,
    overloads or dropped connections are left out. A cell where those exceed 10% of its
    attempts reads **UNRELIABLE**, and a cell cut short reads **INCOMPLETE**. Neither is a
-   verdict on the release: re-run that cell, or continue the run with
-   `--run-dir <dir> --resume`.
+   verdict on the release. An INCOMPLETE run continues with `--run-dir <dir> --resume`. An
+   UNRELIABLE cell needs a fresh run, ideally at another time, or more draws: `--run-dir <dir>
+   --resume --redraw-infra --draws <larger N>`. A plain `--resume` has nothing left to draw
+   and reads UNRELIABLE again, and the replaced infra attempts stay in the share, so
+   `--redraw-infra` alone cannot clear it either (2 infra of 12 redrawn is still 2 of 14).
 
    **If a cell fails**, find out whether this release caused it before holding the tags.
    Draw a same-day control for the failing cell, 24 draws at the previous release and 24
