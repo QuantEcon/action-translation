@@ -41,6 +41,7 @@ import {
   emptyApiUsage,
   addUsage,
 } from './models.js';
+import { unwrapDocumentFence } from './whole-document.js';
 
 /**
  * Constants
@@ -161,6 +162,8 @@ export class TranslationService {
   private servedModels = new Set<string>();
   // Attempts retried after a transient error (429, 5xx, overload, connection).
   private retries = 0;
+  // Whole-document responses that came back wrapped in a code fence (#363).
+  private fenceUnwraps = 0;
   // Language keys already warned about matching no glossary term, so a
   // section-by-section run warns once rather than once per section (#348).
   private glossaryKeysWarned = new Set<string>();
@@ -193,6 +196,34 @@ export class TranslationService {
   /** How many attempts this instance retried after a transient error. */
   getRetryCount(): number {
     return this.retries;
+  }
+
+  /**
+   * How many whole-document responses on this instance came back wrapped in a
+   * code fence and were unwrapped (#363).
+   */
+  getFenceUnwrapCount(): number {
+    return this.fenceUnwraps;
+  }
+
+  /**
+   * A whole-document response with a code fence wrapping it removed, when
+   * `unwrapDocumentFence` finds one (#363). Each unwrap is logged with or
+   * without debug, and counted: how often the model wraps is a measurement.
+   */
+  private unwrapDocument(
+    text: string,
+    references: readonly string[],
+    operationName: string
+  ): string {
+    const result = unwrapDocumentFence(text, references);
+    if (result.unwrapped) {
+      this.fenceUnwraps++;
+      core.info(
+        `[Translator] ${operationName}: removed a code fence wrapping the whole document (#363)`
+      );
+    }
+    return result.text;
   }
 
   /**
@@ -672,7 +703,11 @@ Provide the complete translated document maintaining exact MyST structure.`;
       'fullDocument'
     );
 
-    const translatedText = extractResponseText(response).trim();
+    const translatedText = this.unwrapDocument(
+      extractResponseText(response).trim(),
+      [content],
+      'translateFullDocument'
+    );
     if (!translatedText) {
       return {
         success: false,
@@ -811,7 +846,11 @@ ${targetContent}`;
         'fullDocument'
       );
 
-      const translatedText = extractResponseText(response).trim();
+      const translatedText = this.unwrapDocument(
+        extractResponseText(response).trim(),
+        [sourceContent, targetContent],
+        'translateDocumentResync'
+      );
       if (!translatedText) {
         return {
           success: false,

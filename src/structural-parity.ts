@@ -129,17 +129,19 @@ const DIRECTIVE_INFO = /^\{([A-Za-z0-9_+:.-]+)\}\s*(.*)$/;
 const ANCHOR_LINE = /^\(([^()\s]+)\)=\s*$/;
 
 /**
- * Extract top-level structural tokens with a stateful fence walk.
+ * The guard's fence walk. Calls `visit` for every line at fence depth 0, the
+ * line that opens a fence included (with its match), and returns whether a
+ * fence is still open after the last line.
  *
  * Fence semantics are CommonMark-ish: an opening fence of N marker characters
  * is closed by a line of >= N of the same character and nothing else. While a
  * fence is open, lines are not inspected. Imperfections against full MyST
  * nesting are acceptable because parity compares two scans of the SAME walker.
  */
-export function extractStructuralTokens(content: string): StructuralTokens {
-  const directives: DirectiveToken[] = [];
-  const anchors: AnchorToken[] = [];
-
+function walkFences(
+  content: string,
+  visit: (line: string, index: number, fence: RegExpExecArray | null) => void
+): boolean {
   let openFence: { char: string; length: number } | null = null;
   const lines = content.split('\n');
 
@@ -159,22 +161,50 @@ export function extractStructuralTokens(content: string): StructuralTokens {
       continue;
     }
 
+    visit(line, i, fence);
     if (fence) {
       openFence = { char: fence[1][0], length: fence[1].length };
+    }
+  }
+
+  return openFence !== null;
+}
+
+/** Extract top-level structural tokens with the guard's fence walk. */
+export function extractStructuralTokens(content: string): StructuralTokens {
+  const directives: DirectiveToken[] = [];
+  const anchors: AnchorToken[] = [];
+
+  walkFences(content, (line, i, fence) => {
+    if (fence) {
       const info = DIRECTIVE_INFO.exec(fence[2].trim());
       if (info) {
         directives.push({ name: info[1], arg: info[2].trim(), line: i + 1 });
       }
-      continue;
+      return;
     }
 
     const anchor = ANCHOR_LINE.exec(line);
     if (anchor) {
       anchors.push({ label: anchor[1], line: i + 1 });
     }
-  }
+  });
 
   return { directives, anchors };
+}
+
+/**
+ * Whether a fence is still open after the last line of `content`, by the walk
+ * the guard scans with: true for a document cut off inside a code block, and
+ * for one whose closing fence was taken away (#363).
+ */
+export function endsInsideFence(content: string): boolean {
+  return walkFences(content, () => {});
+}
+
+/** Whether `line` opens or closes a fence, by the guard's definition of one. */
+export function isFenceLine(line: string): boolean {
+  return FENCE_LINE.test(line);
 }
 
 /**

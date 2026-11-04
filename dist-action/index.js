@@ -48218,6 +48218,192 @@ function validateReviewPREvent(context3) {
 init_sdk();
 init_sdk();
 var core2 = __toESM(require_core(), 1);
+
+// dist/structural-parity.js
+var FLEXIBLE_ARG_DIRECTIVES = /* @__PURE__ */ new Set([
+  "admonition",
+  "dropdown",
+  "card",
+  "grid-item-card",
+  "tab-item",
+  "exercise",
+  "exercise-start",
+  "contents",
+  "index",
+  "code-cell",
+  "attention",
+  "caution",
+  "danger",
+  "error",
+  "hint",
+  "important",
+  "note",
+  "seealso",
+  "tip",
+  "warning"
+]);
+var FLEXIBLE_ARG_PREFIX = "prf:";
+function isFlexibleArgDirective(name) {
+  return FLEXIBLE_ARG_DIRECTIVES.has(name) || name.startsWith(FLEXIBLE_ARG_PREFIX);
+}
+var FENCE_LINE2 = /^\s*(`{3,}|~{3,})(.*)$/;
+var DIRECTIVE_INFO2 = /^\{([A-Za-z0-9_+:.-]+)\}\s*(.*)$/;
+var ANCHOR_LINE = /^\(([^()\s]+)\)=\s*$/;
+function walkFences(content, visit) {
+  let openFence = null;
+  const lines = content.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const fence = FENCE_LINE2.exec(line);
+    if (openFence) {
+      if (fence && fence[1][0] === openFence.char && fence[1].length >= openFence.length && fence[2].trim() === "") {
+        openFence = null;
+      }
+      continue;
+    }
+    visit(line, i, fence);
+    if (fence) {
+      openFence = { char: fence[1][0], length: fence[1].length };
+    }
+  }
+  return openFence !== null;
+}
+function extractStructuralTokens(content) {
+  const directives = [];
+  const anchors = [];
+  walkFences(content, (line, i, fence) => {
+    if (fence) {
+      const info9 = DIRECTIVE_INFO2.exec(fence[2].trim());
+      if (info9) {
+        directives.push({ name: info9[1], arg: info9[2].trim(), line: i + 1 });
+      }
+      return;
+    }
+    const anchor = ANCHOR_LINE.exec(line);
+    if (anchor) {
+      anchors.push({ label: anchor[1], line: i + 1 });
+    }
+  });
+  return { directives, anchors };
+}
+function endsInsideFence(content) {
+  return walkFences(content, () => {
+  });
+}
+function isFenceLine(line) {
+  return FENCE_LINE2.test(line);
+}
+function checkStructuralParity(sourceContent, outputContent) {
+  const source = extractStructuralTokens(sourceContent);
+  const output = extractStructuralTokens(outputContent);
+  const violations = [];
+  if (source.directives.length !== output.directives.length) {
+    violations.push({
+      message: `directive count differs: source has ${source.directives.length}, output has ${output.directives.length} \u2014 a wholesale mismatch usually means the document was re-fenced or truncated`
+    });
+  }
+  const pairCount = Math.min(source.directives.length, output.directives.length);
+  for (let i = 0; i < pairCount; i++) {
+    const s = source.directives[i];
+    const o = output.directives[i];
+    if (s.name !== o.name) {
+      violations.push({
+        message: `directive #${i + 1} name changed: source line ${s.line} has {${s.name}}, output line ${o.line} has {${o.name}}`
+      });
+      continue;
+    }
+    if (isFlexibleArgDirective(s.name)) {
+      const sHas = s.arg !== "";
+      const oHas = o.arg !== "";
+      if (sHas !== oHas) {
+        violations.push({
+          message: `directive #${i + 1} {${s.name}} ${sHas ? "lost" : "gained"} its argument: source line ${s.line} has ${sHas ? `"${s.arg}"` : "no argument"}, output line ${o.line} has ${oHas ? `"${o.arg}"` : "none"}`
+        });
+      }
+    } else if (s.arg !== o.arg) {
+      violations.push({
+        message: `directive #${i + 1} {${s.name}} argument changed: source line ${s.line} has "${s.arg}", output line ${o.line} has "${o.arg}" \u2014 structural arguments are never translated`
+      });
+    }
+  }
+  const sourceLabels = source.anchors.map((a) => a.label);
+  const outputLabels = output.anchors.map((a) => a.label);
+  if (sourceLabels.join("\n") !== outputLabels.join("\n")) {
+    const counts = (labels) => {
+      const m = /* @__PURE__ */ new Map();
+      for (const l of labels)
+        m.set(l, (m.get(l) ?? 0) + 1);
+      return m;
+    };
+    const describe = (label, n) => n > 1 ? `(${label})= \xD7${n}` : `(${label})=`;
+    const sourceCounts = counts(sourceLabels);
+    const outputCounts = counts(outputLabels);
+    const missing = [];
+    const invented = [];
+    for (const [label, n] of sourceCounts) {
+      const d = n - (outputCounts.get(label) ?? 0);
+      if (d > 0)
+        missing.push(describe(label, d));
+    }
+    for (const [label, n] of outputCounts) {
+      const d = n - (sourceCounts.get(label) ?? 0);
+      if (d > 0)
+        invented.push(describe(label, d));
+    }
+    const parts = [];
+    if (missing.length > 0) {
+      parts.push(`missing from output: ${missing.join(", ")}`);
+    }
+    if (invented.length > 0) {
+      parts.push(`not in source: ${invented.join(", ")}`);
+    }
+    if (parts.length === 0) {
+      parts.push(`same labels, different order \u2014 source: ${sourceLabels.join(", ")}; output: ${outputLabels.join(", ")}`);
+    }
+    violations.push({
+      message: `target anchors diverge \u2014 ${parts.join("; ")}`
+    });
+  }
+  return { ok: violations.length === 0, violations };
+}
+function formatParityViolations(filename, result) {
+  const bullets = result.violations.map((v) => `  - ${v.message}`).join("\n");
+  return `structural parity check failed for ${filename}:
+${bullets}`;
+}
+
+// dist/whole-document.js
+var WRAPPER_OPENING = /^(`{3,}|~{3,})\s*(?:markdown|md|myst)?\s*$/i;
+var BARE_FENCE = /^(`{3,}|~{3,})\s*$/;
+function startsWithFence(content) {
+  const first = content.replace(/^\uFEFF/, "").split("\n").find((line) => line.trim() !== "");
+  return first !== void 0 && isFenceLine(first);
+}
+function unwrapDocumentFence(text, references) {
+  const unchanged = { text, unwrapped: false };
+  const lines = text.split("\n");
+  let first = 0;
+  while (first < lines.length && lines[first].trim() === "")
+    first++;
+  let last = lines.length - 1;
+  while (last > first && lines[last].trim() === "")
+    last--;
+  if (first >= last)
+    return unchanged;
+  const opening = WRAPPER_OPENING.exec(lines[first]);
+  const closing = BARE_FENCE.exec(lines[last]);
+  if (!opening || !closing || closing[1][0] !== opening[1][0] || closing[1].length < opening[1].length) {
+    return unchanged;
+  }
+  if (references.some(startsWithFence))
+    return unchanged;
+  const inner = lines.slice(first + 1, last).join("\n").trim();
+  if (endsInsideFence(inner))
+    return unchanged;
+  return { text: inner, unwrapped: true };
+}
+
+// dist/translator.js
 var INCOMPLETE_DOCUMENT_MARKER = "-----> INCOMPLETE DOCUMENT <------";
 var RETRY_CONFIG = {
   maxRetries: 3,
@@ -48288,6 +48474,8 @@ var TranslationService = class {
   servedModels = /* @__PURE__ */ new Set();
   // Attempts retried after a transient error (429, 5xx, overload, connection).
   retries = 0;
+  // Whole-document responses that came back wrapped in a code fence (#363).
+  fenceUnwraps = 0;
   // Language keys already warned about matching no glossary term, so a
   // section-by-section run warns once rather than once per section (#348).
   glossaryKeysWarned = /* @__PURE__ */ new Set();
@@ -48312,6 +48500,26 @@ var TranslationService = class {
   /** How many attempts this instance retried after a transient error. */
   getRetryCount() {
     return this.retries;
+  }
+  /**
+   * How many whole-document responses on this instance came back wrapped in a
+   * code fence and were unwrapped (#363).
+   */
+  getFenceUnwrapCount() {
+    return this.fenceUnwraps;
+  }
+  /**
+   * A whole-document response with a code fence wrapping it removed, when
+   * `unwrapDocumentFence` finds one (#363). Each unwrap is logged with or
+   * without debug, and counted: how often the model wraps is a measurement.
+   */
+  unwrapDocument(text, references, operationName) {
+    const result = unwrapDocumentFence(text, references);
+    if (result.unwrapped) {
+      this.fenceUnwraps++;
+      core2.info(`[Translator] ${operationName}: removed a code fence wrapping the whole document (#363)`);
+    }
+    return result.text;
   }
   /**
    * Sleep for a given number of milliseconds
@@ -48673,7 +48881,7 @@ Provide the complete translated document maintaining exact MyST structure.`;
       max_tokens: maxTokens,
       messages: this.cachedPromptMessages(stablePrefix, volatileSuffix)
     }, "translateFullDocument", "fullDocument");
-    const translatedText = extractResponseText(response).trim();
+    const translatedText = this.unwrapDocument(extractResponseText(response).trim(), [content], "translateFullDocument");
     if (!translatedText) {
       return {
         success: false,
@@ -48780,7 +48988,7 @@ ${targetContent}`;
         max_tokens: maxTokens,
         messages: this.cachedPromptMessages(stablePrefix, volatileSuffix)
       }, "translateDocumentResync", "fullDocument");
-      const translatedText = extractResponseText(response).trim();
+      const translatedText = this.unwrapDocument(extractResponseText(response).trim(), [sourceContent, targetContent], "translateDocumentResync");
       if (!translatedText) {
         return {
           success: false,
@@ -53191,144 +53399,6 @@ ${translatedContent}`;
     return parts.join("\n");
   }
 };
-
-// dist/structural-parity.js
-var FLEXIBLE_ARG_DIRECTIVES = /* @__PURE__ */ new Set([
-  "admonition",
-  "dropdown",
-  "card",
-  "grid-item-card",
-  "tab-item",
-  "exercise",
-  "exercise-start",
-  "contents",
-  "index",
-  "code-cell",
-  "attention",
-  "caution",
-  "danger",
-  "error",
-  "hint",
-  "important",
-  "note",
-  "seealso",
-  "tip",
-  "warning"
-]);
-var FLEXIBLE_ARG_PREFIX = "prf:";
-function isFlexibleArgDirective(name) {
-  return FLEXIBLE_ARG_DIRECTIVES.has(name) || name.startsWith(FLEXIBLE_ARG_PREFIX);
-}
-var FENCE_LINE2 = /^\s*(`{3,}|~{3,})(.*)$/;
-var DIRECTIVE_INFO2 = /^\{([A-Za-z0-9_+:.-]+)\}\s*(.*)$/;
-var ANCHOR_LINE = /^\(([^()\s]+)\)=\s*$/;
-function extractStructuralTokens(content) {
-  const directives = [];
-  const anchors = [];
-  let openFence = null;
-  const lines = content.split("\n");
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const fence = FENCE_LINE2.exec(line);
-    if (openFence) {
-      if (fence && fence[1][0] === openFence.char && fence[1].length >= openFence.length && fence[2].trim() === "") {
-        openFence = null;
-      }
-      continue;
-    }
-    if (fence) {
-      openFence = { char: fence[1][0], length: fence[1].length };
-      const info9 = DIRECTIVE_INFO2.exec(fence[2].trim());
-      if (info9) {
-        directives.push({ name: info9[1], arg: info9[2].trim(), line: i + 1 });
-      }
-      continue;
-    }
-    const anchor = ANCHOR_LINE.exec(line);
-    if (anchor) {
-      anchors.push({ label: anchor[1], line: i + 1 });
-    }
-  }
-  return { directives, anchors };
-}
-function checkStructuralParity(sourceContent, outputContent) {
-  const source = extractStructuralTokens(sourceContent);
-  const output = extractStructuralTokens(outputContent);
-  const violations = [];
-  if (source.directives.length !== output.directives.length) {
-    violations.push({
-      message: `directive count differs: source has ${source.directives.length}, output has ${output.directives.length} \u2014 a wholesale mismatch usually means the document was re-fenced or truncated`
-    });
-  }
-  const pairCount = Math.min(source.directives.length, output.directives.length);
-  for (let i = 0; i < pairCount; i++) {
-    const s = source.directives[i];
-    const o = output.directives[i];
-    if (s.name !== o.name) {
-      violations.push({
-        message: `directive #${i + 1} name changed: source line ${s.line} has {${s.name}}, output line ${o.line} has {${o.name}}`
-      });
-      continue;
-    }
-    if (isFlexibleArgDirective(s.name)) {
-      const sHas = s.arg !== "";
-      const oHas = o.arg !== "";
-      if (sHas !== oHas) {
-        violations.push({
-          message: `directive #${i + 1} {${s.name}} ${sHas ? "lost" : "gained"} its argument: source line ${s.line} has ${sHas ? `"${s.arg}"` : "no argument"}, output line ${o.line} has ${oHas ? `"${o.arg}"` : "none"}`
-        });
-      }
-    } else if (s.arg !== o.arg) {
-      violations.push({
-        message: `directive #${i + 1} {${s.name}} argument changed: source line ${s.line} has "${s.arg}", output line ${o.line} has "${o.arg}" \u2014 structural arguments are never translated`
-      });
-    }
-  }
-  const sourceLabels = source.anchors.map((a) => a.label);
-  const outputLabels = output.anchors.map((a) => a.label);
-  if (sourceLabels.join("\n") !== outputLabels.join("\n")) {
-    const counts = (labels) => {
-      const m = /* @__PURE__ */ new Map();
-      for (const l of labels)
-        m.set(l, (m.get(l) ?? 0) + 1);
-      return m;
-    };
-    const describe = (label, n) => n > 1 ? `(${label})= \xD7${n}` : `(${label})=`;
-    const sourceCounts = counts(sourceLabels);
-    const outputCounts = counts(outputLabels);
-    const missing = [];
-    const invented = [];
-    for (const [label, n] of sourceCounts) {
-      const d = n - (outputCounts.get(label) ?? 0);
-      if (d > 0)
-        missing.push(describe(label, d));
-    }
-    for (const [label, n] of outputCounts) {
-      const d = n - (sourceCounts.get(label) ?? 0);
-      if (d > 0)
-        invented.push(describe(label, d));
-    }
-    const parts = [];
-    if (missing.length > 0) {
-      parts.push(`missing from output: ${missing.join(", ")}`);
-    }
-    if (invented.length > 0) {
-      parts.push(`not in source: ${invented.join(", ")}`);
-    }
-    if (parts.length === 0) {
-      parts.push(`same labels, different order \u2014 source: ${sourceLabels.join(", ")}; output: ${outputLabels.join(", ")}`);
-    }
-    violations.push({
-      message: `target anchors diverge \u2014 ${parts.join("; ")}`
-    });
-  }
-  return { ok: violations.length === 0, violations };
-}
-function formatParityViolations(filename, result) {
-  const bullets = result.violations.map((v) => `  - ${v.message}`).join("\n");
-  return `structural parity check failed for ${filename}:
-${bullets}`;
-}
 
 // dist/verbatim-directives.js
 var FENCE_OPEN2 = /^(\s{0,3})(`{3,}|~{3,}|:{3,})\s*(?:\{([\w:+.-]+)\}.*)?$/;

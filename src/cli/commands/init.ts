@@ -447,6 +447,7 @@ function buildRunReport(
     costUSD: costUSD(options.model, usage),
     servedModels: translator.getServedModels(),
     retries: translator.getRetryCount(),
+    fenceUnwraps: translator.getFenceUnwrapCount(),
     summary: {
       total: lectures.length + stats.skippedCount,
       ok: stats.successCount,
@@ -641,6 +642,7 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     // API usage belongs to one lecture only when lectures run one at a time.
     const usageBefore = CONCURRENCY === 1 ? translator.getUsage() : undefined;
     const retriesBefore = translator.getRetryCount();
+    const unwrapsBefore = translator.getFenceUnwrapCount();
     let record: LectureReport;
     try {
       const result = await translateLecture(
@@ -695,6 +697,7 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     if (usageBefore) {
       record.usage = usageSince(usageBefore, translator.getUsage());
       record.retries = translator.getRetryCount() - retriesBefore;
+      record.fenceUnwraps = translator.getFenceUnwrapCount() - unwrapsBefore;
     }
     return record;
   }

@@ -11,7 +11,9 @@
 import {
   extractStructuralTokens,
   checkStructuralParity,
+  endsInsideFence,
   formatParityViolations,
+  isFenceLine,
 } from '../structural-parity.js';
 
 describe('extractStructuralTokens', () => {
@@ -227,6 +229,47 @@ describe('checkStructuralParity — legitimate translation must pass', () => {
   it('an untranslated structural doc passes byte-for-byte', () => {
     const doc = '```{include} _admonition/gpu.md\n```';
     expect(checkStructuralParity(doc, doc).ok).toBe(true);
+  });
+});
+
+describe('endsInsideFence — the walk the guard scans with (#363)', () => {
+  it('is false when every fence closes, nested longer fences included', () => {
+    const doc = [
+      '# Title',
+      '````{tab-set}',
+      '```{tab-item} A',
+      'body',
+      '```',
+      '````',
+      '',
+      '```{code-cell} ipython3',
+      'x = 1',
+      '```',
+    ].join('\n');
+    expect(endsInsideFence(doc)).toBe(false);
+    expect(endsInsideFence('')).toBe(false);
+  });
+
+  it('is true for a document cut off inside a code cell', () => {
+    expect(endsInsideFence('# Title\n\n```{code-cell} ipython3\nx = 1')).toBe(true);
+  });
+
+  it('closes a fence only with the same character, at least as long, and nothing else', () => {
+    expect(endsInsideFence('~~~\ncode\n```')).toBe(true);
+    expect(endsInsideFence('````\ncode\n```')).toBe(true);
+    expect(endsInsideFence('```\ncode\n```python')).toBe(true);
+    expect(endsInsideFence('```\ncode\n`````')).toBe(false);
+  });
+});
+
+describe('isFenceLine', () => {
+  it('matches backtick and tilde fences, indented or with an info string', () => {
+    for (const line of ['```', '~~~', '````{tab-set}', '  ```{code-cell} ipython3', '```python']) {
+      expect(isFenceLine(line)).toBe(true);
+    }
+    for (const line of ['---', '# Title', '``inline``', '(label)=', ':::{note}']) {
+      expect(isFenceLine(line)).toBe(false);
+    }
   });
 });
 

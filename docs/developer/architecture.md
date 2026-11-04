@@ -118,6 +118,7 @@ src/
 ├── contracts.ts         # Cross-boundary constants: labels, auto-merge modes (owner module, #162)
 ├── branch-naming.ts     # Translation branch prefixes — the one owner (#115)
 ├── structural-parity.ts # Deterministic directive/anchor parity guard on every write path
+├── whole-document.ts    # Whole-document response repairs in code: the code-fence unwrap (#363)
 ├── verbatim-directives.ts # Per-language verbatim directive families (ml exercise blocks), restored in code on every write path
 ├── bibliography.ts      # Citation-key extraction + bibliography backfill for shared .bib assets (#117)
 ├── review-verdict.ts    # Verdict v2 block: build/parse/sanitize + recommendation logic

@@ -194,6 +194,11 @@ export interface LectureReport {
   usage?: ApiUsage;
   /** `--parallel 1` only: attempts retried after a transient error. */
   retries?: number;
+  /**
+   * `--parallel 1` only: responses that came back wrapped in a code fence and
+   * were unwrapped before the parity guard (#363), whatever the outcome.
+   */
+  fenceUnwraps?: number;
 }
 
 /** The report `translate init --report-json` writes. */
@@ -237,6 +242,11 @@ export interface InitRunReport {
   servedModels: string[];
   /** Attempts retried after a transient error. */
   retries: number;
+  /**
+   * Responses that came back wrapped in a code fence and were unwrapped before
+   * the parity guard (#363), in lectures that failed too.
+   */
+  fenceUnwraps: number;
   /** total = ok + failed + skipped. */
   summary: { total: number; ok: number; failed: number; skipped: number };
   /** Every lecture translated or failed in this run, in run order. */

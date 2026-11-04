@@ -326,6 +326,7 @@ function readAttempt(base, fixture, config, warnings) {
     usage: null,
     servedModels: [],
     retries: null,
+    fenceUnwraps: null,
   };
   if (config.markers && !marker) return record; // never finished: excluded, the cell is INCOMPLETE
 
@@ -417,6 +418,9 @@ function readAttempt(base, fixture, config, warnings) {
     ? report.servedModels.filter((s) => typeof s === 'string')
     : [];
   record.retries = num(report.retries) ?? num(entry.retries);
+  // Engines after v0.30.0 report each response that came back wrapped in a code fence and was
+  // unwrapped before the parity guard (#363); null on older engines, which do not say.
+  record.fenceUnwraps = num(report.fenceUnwraps) ?? num(entry.fenceUnwraps);
   record.elapsedMs = num(entry.elapsedMs);
   if (entry.outcome === 'ok') {
     record.status = 'ok';
@@ -532,6 +536,13 @@ function summarizeCell(config, lang, fixture, warnings) {
   const costUSDTotal = sum(priced.map((a) => a.costUSD));
   const unpricedDraws = reported.length - priced.length;
   const ci = wilson(failed, valid);
+  // Valid draws whose response came back wrapped in a code fence (#363); null when the engine
+  // does not report unwraps.
+  const unwrapKnown = completed.filter(
+    (a) => a.status !== 'infra' && a.reported && a.fenceUnwraps !== null
+  );
+  const unwrappedDraws = unwrapKnown.filter((a) => a.fenceUnwraps > 0);
+  const unwrappedOk = unwrappedDraws.filter((a) => a.status === 'ok').length;
 
   return {
     fixture,
@@ -560,6 +571,8 @@ function summarizeCell(config, lang, fixture, warnings) {
       (a) => a.category ?? 'none'
     ),
     legacy: { refused, draws: legacyDraws, verdict: refused > config.threshold ? 'FAIL' : 'ok' },
+    unwrapped: unwrapKnown.length > 0 ? unwrappedDraws.length : null,
+    unwrappedOk: unwrapKnown.length > 0 ? unwrappedOk : null,
     // per draw: the current attempt of each completed draw; the totals below are all spend in the
     // cell, replaced infra attempts and failures included (cost per delivered file = total / ok)
     meanCostUSD: mean(completed.filter((a) => a.priced).map((a) => a.costUSD)),
@@ -608,6 +621,7 @@ function summarizeCell(config, lang, fixture, warnings) {
       cacheReadInputTokens: a.usage?.cacheReadInputTokens ?? null,
       cacheCreationInputTokens: a.usage?.cacheCreationInputTokens ?? null,
       retries: a.retries,
+      fenceUnwraps: a.fenceUnwraps,
       servedModels: a.servedModels,
     })),
   };
@@ -783,6 +797,11 @@ export function renderText(summary) {
     summary.cells.forEach((c, idx) => {
       lines.push(rendered[idx + 1]);
       if (c.failed > 0) lines.push(`      failed: ${kindList(c)}`);
+      if (c.unwrapped > 0) {
+        lines.push(
+          `      fence unwrapped: ${c.unwrapped} of ${c.valid} valid draws, ${c.unwrappedOk} of them ok (#363)`
+        );
+      }
       if (c.infra > 0 || c.redrawnInfra > 0) {
         lines.push(
           `      infra: ${c.infra + c.drawsDetail.filter((d) => d.attempt !== 'current' && d.status === 'infra').length} of ${c.attempts} attempts (${pct(c.infraShare)})` +
