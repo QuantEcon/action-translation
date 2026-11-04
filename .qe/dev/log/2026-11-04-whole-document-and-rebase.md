@@ -98,7 +98,8 @@ lists are capitalised).
 - **Merge order**: #419, then #421, then #422 (rebase it onto `main` after #421 squash-merges;
   CI runs only on PRs into `main`), then #423; #424 any time. All five touch `CHANGELOG.md`, so
   each later one needs a rebase; the four that touch `dist-action/` also need `npm run build`.
-  #426 merged first, so #419 and #423 already conflict with `main` in `CHANGELOG.md`.
+  #426 merged first; #419 and #423 were then rebased onto it, which moved only their
+  `CHANGELOG.md` lines.
 - **Merging zh-cn#308/#310/#311/#312 before #423 ships**: each merge runs the old rebase, which
   closed two siblings on 2026-10-21. Merge one at a time and check the others are still open, or
   pause `rebase-translations.yml` until all four are in.
