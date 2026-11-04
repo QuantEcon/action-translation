@@ -155,7 +155,11 @@ Roadmap detail lives in the project trackers (reading order in
        - The rule-2 arm is still to run. The round-4 lexical repairs (*see* → `നോക്കുക`,
          adverbial *element-wise*, standalone `മുൻ`) and the bracketed-paragraph stop are
          still open and had no site in `pandas`.
-    3. Round 7 at v0.29.6, the release that carries rule 8, after the round-6 review. Round 6
+    3. **#301's lowercase opener: PR #426** (open). `lowercase_initial` missed a lowercase word
+       with a Malayalam suffix (round 6's `economics-ലും`), so each round's draft choice was
+       blind to that class; #426 flags it outside list items and stops the terminal-punctuation
+       lint flagging pipe-table rows (42 fixture tests). Merge it before round 7 is seeded.
+    4. Round 7 at v0.29.6, the release that carries rule 8, after the round-6 review. Round 6
        (`intro`, ml#58, seeded at v0.29.5) is not re-seeded (Matt, 2026-10-21): `intro.md` has
        no rule-8 site.
 

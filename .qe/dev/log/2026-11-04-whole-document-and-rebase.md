@@ -4,7 +4,7 @@
 plan: triage the untriaged zh-cn sync failures; fix the whole-document paths (#363's fence
 unwrap, then #326's head region and #288's front-matter guard); then #280; ship them together
 with #346's French items. Smaller items: ml#58 round 6, #415's doc line, the #414 ruling. Not
-next: #416, #417, the #257 re-cut. Five PRs are open at the end, none merged.
+next: #416, #417, the #257 re-cut. Six PRs are open at the end, none merged.
 
 ## zh-cn failures → #418 (PR #419) and #420
 
@@ -83,11 +83,21 @@ The lint gap the page does show is the lowercase opener `economics-ലും`, w
 misses (#301, part 1). The other three are singletons and are not encoded under the recurrence
 rule. The suggestions are not applied: that is a write to the edition, held for Matt.
 
+**#301 → PR #426.** #301 is rewritten in place and retitled: part 2 (the hortative rule's
+dangling colon) was already done in #311, and part 1 now carries a tested change. #426 makes it,
+with `conda` in `LOWERCASE_OK`, pipe-table rows skipped by the terminal-punctuation lint, and the
+two `ഓർക്കുക:` comments. Against `main`: nothing new on the editor's five reviewed pages, two
+lines on the six seeds sent for review (both lines the editor changed), and 1290 → 1512 on the
+280 archived drafts, none lost. Round 6 alone is weak evidence, since ml#58's description had
+proposed the capital the editor accepted; the reviewed pages carry the case (49 of 49 suffixed
+paragraph openers outside lists are capitalised).
+
 ## Open for Matt
 
 - **Merge order**: #419, then #421, then #422 (rebase it onto `main` after #421 squash-merges;
-  CI runs only on PRs into `main`), then #423; #424 any time. All five touch `CHANGELOG.md` and
-  four touch `dist-action/`, so each later one needs a rebase and `npm run build`.
+  CI runs only on PRs into `main`), then #423; #424 and #426 any time. All six touch
+  `CHANGELOG.md`, so each later one needs a rebase; the four that touch `dist-action/` also need
+  `npm run build`.
 - **Merging zh-cn#308/#310/#311/#312 before #423 ships**: each merge runs the old rebase, which
   closed two siblings on 2026-10-21. Merge one at a time and check the others are still open, or
   pause `rebase-translations.yml` until all four are in.
