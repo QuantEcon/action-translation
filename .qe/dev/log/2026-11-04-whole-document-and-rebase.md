@@ -76,10 +76,12 @@ The editor approved on 2026-11-01 with two suggestions, touching both prose line
 Malayalam plural dropped from `series` (Copilot had flagged it); `ഈ lectures` → `ഇവിടെ കാണുന്ന
 lectures`; `Economics` capitalised with the `-ഉം` comma (both already encoded, after the v0.29.5
 seed); the accusative `applications-നെ`; `ശ്രദ്ധ കേന്ദ്രീകരിക്കുന്നത്` → `focus ചെയ്യുന്നത്`.
-The plural rule and its `ml_metrics` lint exist, so `series-കളുടെ` getting through points at a
-lint gap for an invariant noun, which is a project-translation-side fix. The other three are
-singletons and are not encoded under the recurrence rule. The suggestions are not applied: that
-is a write to the edition, held for Matt.
+The plural rule and its `ml_metrics` lint exist, and the lint flags `series-കളുടെ`, at v0.29.5
+and at `main`. The seeding run recorded it (the round-6 arm's `checks.jsonl`, `plural: 1`), but
+the PR's hand-written verification line said there were none: QuantEcon/project-translation#83.
+The lint gap the page does show is the lowercase opener `economics-ലും`, which `lowercase_initial`
+misses (#301, part 1). The other three are singletons and are not encoded under the recurrence
+rule. The suggestions are not applied: that is a write to the edition, held for Matt.
 
 ## Open for Matt
 
