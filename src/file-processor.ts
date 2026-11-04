@@ -17,6 +17,7 @@ import { DiffDetector } from './diff-detector.js';
 import { TranslationService } from './translator.js';
 import { Section, Glossary, RebaseCacheData } from './types.js';
 import { applyTypography } from './typography.js';
+import { restoreHead } from './whole-document.js';
 import * as core from '@actions/core';
 import {
   extractHeadingMap,
@@ -717,7 +718,20 @@ export class FileProcessor {
 
     // Apply deterministic typography before anything derives from the text, so the
     // heading map is built from the same strings that land in the body.
-    const translatedContent = applyTypography(result.translatedSection || '', targetLanguage);
+    const typeset = applyTypography(result.translatedSection || '', targetLanguage);
+
+    // The head region is the source's, byte for byte, as in UPDATE mode, which
+    // takes CONFIG and PRE-TITLE from the new source: the front matter and the
+    // pre-title lines above the H1 (#326). A draw that dropped `jupytext` and
+    // `kernelspec` would otherwise publish a page with every code cell missing.
+    const head = restoreHead(typeset, content);
+    if (head?.replaced) {
+      core.info(
+        `${filepath}: kept the source's front matter and pre-title in place of the model's ` +
+          `lines above the title (#326)`
+      );
+    }
+    const translatedContent = head ? head.text : typeset;
 
     // Build heading-map from source and translated sections.
     // Wrapped in try/catch so a malformed translation (e.g. missing # title)

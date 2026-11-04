@@ -14,7 +14,8 @@
 import { TranslationService } from './translator.js';
 import { FileProcessor } from './file-processor.js';
 import { MystParser } from './parser.js';
-import { checkStructuralParity, formatParityViolations } from './structural-parity.js';
+import { formatParityViolations } from './structural-parity.js';
+import { checkWrittenDocument } from './whole-document.js';
 import { applyVerbatimDirectives } from './verbatim-directives.js';
 import {
   BibliographyMode,
@@ -732,9 +733,10 @@ export class SyncOrchestrator {
     // target anchors must survive
     // translation verbatim (#119, #65). Failing the file loudly here is the
     // point — every defect in this class previously shipped as a success and
-    // surfaced weeks later on a downstream strict build.
+    // surfaced weeks later on a downstream strict build. The front-matter rule
+    // runs with it (#288): one front-matter block, keeping jupytext/kernelspec.
     translatedContent = this.restoreVerbatimDirectives(file, translatedContent);
-    const parity = checkStructuralParity(file.newContent, translatedContent);
+    const parity = checkWrittenDocument(file.newContent, translatedContent);
     if (!parity.ok) {
       throw new Error(formatParityViolations(file.filename, parity));
     }
@@ -813,10 +815,11 @@ export class SyncOrchestrator {
       );
     }
 
-    // Structural parity — same (and only) guard as processMarkdownFile
-    // (#119, #65; the dead validateMyST gate was deleted in #165).
+    // Structural parity and the front-matter rule — the same guard as
+    // processMarkdownFile (#119, #65, #288; the dead validateMyST gate was
+    // deleted in #165).
     translatedContent = this.restoreVerbatimDirectives(file, translatedContent);
-    const parity = checkStructuralParity(file.newContent, translatedContent);
+    const parity = checkWrittenDocument(file.newContent, translatedContent);
     if (!parity.ok) {
       throw new Error(formatParityViolations(file.filename, parity));
     }

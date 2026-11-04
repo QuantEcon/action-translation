@@ -327,6 +327,7 @@ function readAttempt(base, fixture, config, warnings) {
     servedModels: [],
     retries: null,
     fenceUnwraps: null,
+    headRestored: null,
   };
   if (config.markers && !marker) return record; // never finished: excluded, the cell is INCOMPLETE
 
@@ -421,6 +422,9 @@ function readAttempt(base, fixture, config, warnings) {
   // Engines after v0.30.0 report each response that came back wrapped in a code fence and was
   // unwrapped before the parity guard (#363); null on older engines, which do not say.
   record.fenceUnwraps = num(report.fenceUnwraps) ?? num(entry.fenceUnwraps);
+  // Engines after v0.30.0 say, for each delivered draw, whether the response's head was replaced
+  // with the source's (#326); null on older engines and for a draw that was not delivered.
+  record.headRestored = typeof entry.headRestored === 'boolean' ? entry.headRestored : null;
   record.elapsedMs = num(entry.elapsedMs);
   if (entry.outcome === 'ok') {
     record.status = 'ok';
@@ -543,6 +547,9 @@ function summarizeCell(config, lang, fixture, warnings) {
   );
   const unwrappedDraws = unwrapKnown.filter((a) => a.fenceUnwraps > 0);
   const unwrappedOk = unwrappedDraws.filter((a) => a.status === 'ok').length;
+  // Delivered draws written with the source's head in place of the response's (#326); null when
+  // the engine does not report head restores.
+  const headKnown = okAttempts.filter((a) => a.headRestored !== null);
 
   return {
     fixture,
@@ -573,6 +580,7 @@ function summarizeCell(config, lang, fixture, warnings) {
     legacy: { refused, draws: legacyDraws, verdict: refused > config.threshold ? 'FAIL' : 'ok' },
     unwrapped: unwrapKnown.length > 0 ? unwrappedDraws.length : null,
     unwrappedOk: unwrapKnown.length > 0 ? unwrappedOk : null,
+    headRestored: headKnown.length > 0 ? headKnown.filter((a) => a.headRestored).length : null,
     // per draw: the current attempt of each completed draw; the totals below are all spend in the
     // cell, replaced infra attempts and failures included (cost per delivered file = total / ok)
     meanCostUSD: mean(completed.filter((a) => a.priced).map((a) => a.costUSD)),
@@ -622,6 +630,7 @@ function summarizeCell(config, lang, fixture, warnings) {
       cacheCreationInputTokens: a.usage?.cacheCreationInputTokens ?? null,
       retries: a.retries,
       fenceUnwraps: a.fenceUnwraps,
+      headRestored: a.headRestored,
       servedModels: a.servedModels,
     })),
   };
@@ -801,6 +810,9 @@ export function renderText(summary) {
         lines.push(
           `      fence unwrapped: ${c.unwrapped} of ${c.valid} valid draws, ${c.unwrappedOk} of them ok (#363)`
         );
+      }
+      if (c.headRestored > 0) {
+        lines.push(`      head restored: ${c.headRestored} of ${c.ok} ok draws (#326)`);
       }
       if (c.infra > 0 || c.redrawnInfra > 0) {
         lines.push(

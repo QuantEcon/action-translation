@@ -1465,6 +1465,38 @@ config: test
     // Subsection uses path-based key
     expect(headingMap.get('Main Section::Subsection A')).toBe('子节 A');
   });
+
+  it("writes the source's front matter and pre-title in place of the model's head (#326)", async () => {
+    const sourceContent = `---
+jupytext:
+  text_representation:
+    format_name: myst
+kernelspec:
+  name: python3
+---
+
+(lecture)=
+# Lecture
+
+## Main Section
+
+Content.
+`;
+    // Commentary where the front matter was, and the anchor gone.
+    mockTranslator.translateFullDocument.mockResolvedValue({
+      success: true,
+      translatedSection: `以下是翻译。\n\n# 讲座\n\n## 主要部分\n\n内容。\n`,
+    });
+
+    const result = await processor.processFull(sourceContent, 'lecture.md', 'en', 'zh-cn');
+
+    expect(result).toMatch(
+      /^---\njupytext:\n {2}text_representation:\n {4}format_name: myst\nkernelspec:\n {2}name: python3\ntranslation:\n/
+    );
+    expect(result).toContain('---\n\n(lecture)=\n# 讲座\n');
+    expect(result).not.toContain('以下是翻译');
+    expect(extractHeadingMap(result).get('Main Section')).toBe('主要部分');
+  });
 });
 
 // =============================================================================

@@ -24,7 +24,8 @@ import { MystParser } from '../../parser.js';
 import { Glossary } from '../../types.js';
 import { updateHeadingMap, injectHeadingMap } from '../../heading-map.js';
 import { applyTypography } from '../../typography.js';
-import { checkStructuralParity, formatParityViolations } from '../../structural-parity.js';
+import { formatParityViolations } from '../../structural-parity.js';
+import { checkWrittenDocument, restoreHead } from '../../whole-document.js';
 import { applyVerbatimDirectives } from '../../verbatim-directives.js';
 import { RuleId, buildLocalizationPrompt, getFontRequirements } from '../../localization-rules.js';
 import { maxTokensFor, requestPolicyFor } from '../../models.js';
@@ -254,7 +255,7 @@ export async function translateLecture(
   translator: TranslationService,
   options: InitOptions,
   glossary: Glossary | undefined
-): Promise<{ tokensUsed: number; elapsedMs: number; outputChars: number }> {
+): Promise<{ tokensUsed: number; elapsedMs: number; outputChars: number; headRestored: boolean }> {
   const startTime = Date.now();
 
   // Validate lecture path doesn't escape docs folder (path traversal protection)
@@ -287,7 +288,19 @@ export async function translateLecture(
 
   // Apply deterministic typography before anything derives from the text, so the
   // heading map is built from the same strings that land in the body.
-  const translatedContent = applyTypography(result.translatedSection, options.targetLanguage);
+  const typeset = applyTypography(result.translatedSection, options.targetLanguage);
+
+  // The head region is the source's, byte for byte: its front matter and the
+  // pre-title lines above the H1 (#326). After typography, so that nothing
+  // rewrites them; before the heading map, which goes into this front matter.
+  const head = restoreHead(typeset, sourceContent);
+  if (head?.replaced) {
+    console.warn(
+      `  ${lectureFile}: kept the source's front matter and pre-title in place of the ` +
+        `model's lines above the title (#326)`
+    );
+  }
+  const translatedContent = head ? head.text : typeset;
 
   // Generate heading-map
   const { map: headingMap, title: translatedTitle } = await generateHeadingMap(
@@ -319,7 +332,8 @@ export async function translateLecture(
   // seeds whole editions — corruption here becomes the baseline the sync
   // guard compares forward from, so it can never be re-examined. Checks the
   // exact bytes that would be written; failing the file loudly is the point.
-  const parity = checkStructuralParity(sourceContent, finalContent);
+  // The front-matter rule runs with it (#288).
+  const parity = checkWrittenDocument(sourceContent, finalContent);
   if (!parity.ok) {
     throw new StructuralParityError(formatParityViolations(lectureFile, parity));
   }
@@ -338,6 +352,7 @@ export async function translateLecture(
     tokensUsed: result.tokensUsed || 0,
     elapsedMs,
     outputChars: finalContent.length,
+    headRestored: head?.replaced ?? false,
   };
 }
 
@@ -448,6 +463,7 @@ function buildRunReport(
     servedModels: translator.getServedModels(),
     retries: translator.getRetryCount(),
     fenceUnwraps: translator.getFenceUnwrapCount(),
+    headRestores: lectures.filter((lecture) => lecture.headRestored).length,
     summary: {
       total: lectures.length + stats.skippedCount,
       ok: stats.successCount,
@@ -660,6 +676,7 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
         elapsedMs: result.elapsedMs,
         tokensUsed: result.tokensUsed,
         outputChars: result.outputChars,
+        headRestored: result.headRestored,
       };
 
       stats.successCount++;

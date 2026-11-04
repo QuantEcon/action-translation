@@ -103,6 +103,46 @@ describe('translateLecture structural-parity guard', () => {
     expect(written).toContain('测试讲座');
   });
 
+  it("writes the source's front matter and pre-title when the model drops them (#326)", async () => {
+    const source = `---
+jupytext:
+  text_representation:
+    format_name: myst
+kernelspec:
+  name: python3
+---
+
+(test)=
+# Test Lecture
+
+Some text.
+`;
+    fs.writeFileSync(path.join(tmpDir, 'source', 'lectures', 'test.md'), source, 'utf-8');
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      // Without the restore, the front-matter rule would refuse this draw.
+      await run('# 测试讲座\n\n一些文字。');
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('#326'));
+    } finally {
+      warn.mockRestore();
+    }
+    const written = fs.readFileSync(targetFile(), 'utf-8');
+    expect(written).toMatch(
+      /^---\njupytext:\n {2}text_representation:\n {4}format_name: myst\nkernelspec:\n {2}name: python3\n/
+    );
+    expect(written).toContain('translation:\n  title: 测试讲座');
+    expect(written).toContain('---\n\n(test)=\n# 测试讲座\n');
+  });
+
+  it('refuses front-matter keys below the title, which no head restore reaches (#288)', async () => {
+    const corrupt = SOURCE.replace('# Test Lecture', '# 测试讲座').replace(
+      'Some text.',
+      'Some text.\n\nkernelspec:\n  name: python3'
+    );
+    await expect(run(corrupt)).rejects.toThrow(/front-matter key `kernelspec:` at output line/);
+    expect(fs.existsSync(targetFile())).toBe(false);
+  });
+
   it('writes a file that ends with a newline (sibling of #116)', async () => {
     // The real translator trims the model's response, so translateLecture
     // receives unterminated content — mimic that with trimEnd(). Before the

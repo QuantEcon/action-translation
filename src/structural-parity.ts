@@ -137,8 +137,10 @@ const ANCHOR_LINE = /^\(([^()\s]+)\)=\s*$/;
  * is closed by a line of >= N of the same character and nothing else. While a
  * fence is open, lines are not inspected. Imperfections against full MyST
  * nesting are acceptable because parity compares two scans of the SAME walker.
+ * Exported so that the other write-path checks (whole-document.ts) read fences
+ * exactly as the guard does.
  */
-function walkFences(
+export function walkFences(
   content: string,
   visit: (line: string, index: number, fence: RegExpExecArray | null) => void
 ): boolean {
