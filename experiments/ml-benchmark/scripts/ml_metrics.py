@@ -193,12 +193,12 @@ OVER_TRANSLATION_WATCH: list[tuple[str, str]] = [
     ("വിവിധ", "'various' → പല at 2 of 3 pandas sites"),
     ("ഇപ്പോൾ", "'now' meaning next / at this point → ഇനി (ml#25 Q3; ml#26 545, 561, 571); ഇപ്പോൾ only for 'at the moment' / 'for now'"),
 ]
-# Library names whose canonical spelling is lowercase: the editor keeps them so
-# at a paragraph start (pandas, ml#26 87), and a code-like opener (axis = 0) is
-# a token, not a word.
+# Library and tool names whose canonical spelling is lowercase: the editor keeps
+# them so at a paragraph start (pandas, ml#26 87), and a code-like opener
+# (axis = 0) is a token, not a word.
 LOWERCASE_OK = {
     "pandas", "numpy", "matplotlib", "python", "scipy", "sympy", "numba", "jax",
-    "polars", "statsmodels", "wbgapi", "yfinance",
+    "polars", "statsmodels", "wbgapi", "yfinance", "conda",
 }
 CODE_OPENER_RE = re.compile(r"^\w+ = ")
 # (The round-2 future-hortative watch was retired in round 4: since rule 13
@@ -280,8 +280,9 @@ SPLICE_RESUMPTIVE_RE = re.compile(
 SPLICE_TAG_TAIL_RE = re.compile(
     r"^\s*(?:താഴെ\s+\S+\s+(?:പോലെ|രീതിയിൽ)|`[^`]*`\s+(?:എന്ന\s+(?:പോലെ|രീതിയിൽ)|എന്നതുപോലെ|എന്നത്\s+പോലെ))\s*[.:]?\s*$"
 )
-# Finite-looking forms whose comma he keeps: the fronted imperatives rules 13/14
-# require (ശ്രദ്ധിക്കുക, / ഓർക്കുക,) and എല്ലാം ("all", which ends like the modal
+# Finite-looking forms whose comma is not a splice: the fronted imperatives rules
+# 13/14 require (ശ്രദ്ധിക്കുക, / ഓർക്കുക: — a comma after ഓർക്കുക is a slip for
+# its colon, not a splice) and എല്ലാം ("all", which ends like the modal
 # -ാം — his reviewed python_by_example 275 "objects-ന് എല്ലാം, അവയിൽ …" is kept
 # only by this). The concessive and additive endings are defensive: FIN admits
 # no bare -ും today, and they keep it that way if the future list grows.
@@ -299,7 +300,7 @@ _SPLICE_KEEP_FIN_RE = re.compile(r"(?:ശ്രദ്ധിക്കുക|ഓ�
 #     python_by_example 258 and 414), which also leaves pandas 272 to the lint;
 #   - an "X, not Y" contrast (`==` syntax ഉപയോഗിച്ചാണ്, `=` അല്ല — functions 366);
 #   - a locative adverb opening a where-clause, or a fronted imperative
-#     (ശ്രദ്ധിക്കുക, / ഓർക്കുക,) that rules 13/14 give its own comma.
+#     (ശ്രദ്ധിക്കുക, / ഓർക്കുക:) that rules 13/14 give its own comma or colon.
 # The one nominal ending he split is the cleft -ിരിക്കുന്നത് before അതിനാൽ /
 # കാരണം (ml#26 110); it has its own pattern since it is not a finite form.
 _SPLICE_KEEP_NEXT_RE = re.compile(
@@ -496,7 +497,12 @@ def round2_lints(text: str) -> dict:
         n, line, nxt = p["n"], p["line"], p["next"]
         has_ml = bool(MALAYALAM_RE.search(line))
         body = line.rstrip()
-        if has_ml and not p["in_item"] and p["ends_para"]:
+        # A pipe-table row (a line that opens with "|") ends in "|", not a stop,
+        # so a table's last row is not checked: it read as a paragraph without
+        # terminal punctuation, and before a code cell as a bare ending that
+        # ml_repair.py closed with "|:".
+        is_table_row = body.lstrip().startswith("|")
+        if has_ml and not p["in_item"] and p["ends_para"] and not is_table_row:
             # The editor's own convention (ml#7): a colon when the sentence
             # points forward ("… താഴെ കാണാം:"), a full stop when it merely
             # precedes the cell, a comma before a list it opens. Only a BARE
@@ -518,9 +524,16 @@ def round2_lints(text: str) -> dict:
             # A sentence may open with a MyST role — test the link text, since
             # the rule requires {ref}`Previous lecture …`, not `previous`.
             head = ROLE_PREFIX_RE.sub("", head)
-            # A plain lowercase English word opening the sentence; identifiers
-            # and code-like tokens (if/else, np.random, x_t) are exempt.
-            m = re.match(r"([a-z][a-z-]*)(\s|$)", head)
+            # A plain lowercase English word opening the sentence, bare or with a
+            # Malayalam suffix (economics-ലും at ml#58 18, which the editor
+            # capitalised). Tokens shaped like code are exempt (if/else,
+            # np.random, x_t, a[0], x-1); a bare lowercase name is not, so
+            # x-ന്റെ is flagged unless LOWERCASE_OK lists it. A list item keeps
+            # the bare-word test (whitespace or end of line after the word): the
+            # editor keeps a bullet that opens with a technical term as it is
+            # (ml#25), and capitalised some suffixed bullets but not others.
+            end = r"(\s|$)" if p["in_item"] else r"(\s|$|-" + MALAYALAM_RE.pattern + ")"
+            m = re.match(r"([a-z][a-z-]*)" + end, head)
             if m and m.group(1) not in LOWERCASE_OK and not CODE_OPENER_RE.match(head):
                 caps.append({"line": n, "text": head[:50]})
         for sub, fix in BANNED_RENDERINGS:
