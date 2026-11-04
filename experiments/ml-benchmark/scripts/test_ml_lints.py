@@ -1,10 +1,12 @@
-"""Fixture tests for the round-4 and round-5 ml lints and repairs, and for his
-ml#57 answers.
+"""Fixture tests for the round-4 and round-5 ml lints and repairs, for the
+editor's ml#57 answers, and for #301's suffixed paragraph openers and pipe-table
+rows.
 
 Positive fixtures are the editor's own lines from the round-4 and round-5
 reviews (lecture-python-programming.ml#23 and #26); negatives are forms he kept
 on his reviewed pages. Each guard in splice_sites has a fixture that reaches
-it. Stdlib only:
+it. The #301 opener fixtures flag seed lines the editor changed, and pass the
+editor's own forms, code tokens and canonical-lowercase names. Stdlib only:
 
     python3 -m unittest discover -s experiments/ml-benchmark/scripts -p 'test_*.py'
 """
@@ -483,6 +485,47 @@ class Round5Lints(unittest.TestCase):
         self.assertEqual(caps("data science, machine learning തുടങ്ങിയ മേഖലകളുടെ വളർച്ച.\n"), [1])
 
 
+class SuffixedOpeners(unittest.TestCase):
+    def test_lowercase_word_with_a_malayalam_suffix(self):
+        # #301: a lowercase English word with a hyphenated Malayalam suffix
+        # opening a paragraph; each line is linted as a one-line document.
+        caps = lambda t: [x["line"] for x in round2_lints(t)["lowercase_initial"]]  # noqa: E731
+        flagged = [
+            # the round-6 seed, intro 18 (ml#58); the editor capitalised it
+            "economics-ലും finance-ലും ഉള്ള applications ലക്ഷ്യം വെച്ചുകൊണ്ട്, Python-ൽ programming ചെയ്യാൻ പഠിക്കുന്നതിലാണ് ഇവ ശ്രദ്ധ കേന്ദ്രീകരിക്കുന്നത്.",
+            # the round-2 seed, functions 468 (ml#7); the editor reworded the opening
+            "recursion-ന്റെ കുറച്ചുകൂടെ contrived അല്ലാത്ത applications നമ്മൾ പിന്നീട് കാണും.",
+            # a list item keeps the bare-word test: the round-2 seed, functions
+            # 463 (ml#7); the editor capitalised it
+            "* function calls process ചെയ്യാൻ ഉപയോഗിക്കുന്ന memory ആണ് stack",
+        ]
+        not_flagged = [
+            # the editor's suggestion for intro 18 (ml#58)
+            "Economics-ലും, finance-ലും ഉള്ള applications-നെ ലക്ഷ്യം വെച്ചുകൊണ്ട്, Python-ൽ programming ചെയ്യാൻ പഠിക്കുക എന്നതിലാണ് ഈ lecture focus ചെയ്യുന്നത്.",
+            # canonical-lowercase names; the conda line opens a paragraph in the
+            # archived getting_started draft (arms/2026-08-03-postpacket-opus5, 154)
+            "pandas-ൽ data analysis എളുപ്പമാണ്.",
+            "conda-യെക്കുറിച്ചുള്ള കൂടുതൽ information-ന്, ഒരു terminal-ൽ conda help എന്ന് type ചെയ്യുക.",
+            # identifiers, code and expressions
+            "np.random-ൽ നിന്ന് ഒരു sample എടുക്കാം.",
+            "x_t-ന്റെ value നമുക്ക് നോക്കാം.",
+            "if/else-ന്റെ syntax നമുക്ക് നോക്കാം.",
+            "a[0]-ന്റെ value 1 ആണ്.",
+            "df[col]-ൽ ഓരോ value-ഉം ഉണ്ട്.",
+            "x-1 എന്നത് ഒരു integer ആണ്.",
+            # reviewed functions 361, its first sentence
+            "if/else clause-ന്റെ syntax, self-explanatory ആണെന്ന് വിശ്വസിക്കുന്നു.",
+            # reviewed matplotlib 52: a list item the editor kept lowercase
+            "* presentation-ന്റെ ഓരോ ചെറിയ കാര്യവും വരെ control ചെയ്യാൻ കഴിയുന്നു",
+            # the editor's suggestion for functions 463 (ml#7)
+            "* Function calls process ചെയ്യാൻ ഉപയോഗിക്കുന്ന memory ആണ് stack.",
+        ]
+        for line in flagged:
+            self.assertEqual(caps(line + "\n"), [1], line)
+        for line in not_flagged:
+            self.assertEqual(caps(line + "\n"), [], line)
+
+
 class ProseLines(unittest.TestCase):
     def setUp(self):
         self.lines = {p["n"]: p for p in prose_line_info(DOC)}
@@ -550,6 +593,18 @@ class TerminalPunctuation(unittest.TestCase):
     def test_wrapped_list_item_is_exempt(self):
         text = "ഈ list നോക്കുക:\n\n* ആദ്യത്തെ item ഒരു നീണ്ട വാചകം\n  അടുത്ത line-ലേക്ക് wrap ചെയ്യുന്നു\n* രണ്ടാമത്തെ item\n"
         self.assertEqual(self.kinds(text), [])
+
+    def test_pipe_table_is_exempt(self):
+        # #301: a table's last row ends in "|"; before a cell it read as a bare
+        # ending, and the repair closed it with "|:", a stray colon after the
+        # closing pipe that renderers drop as an extra cell
+        table = "| Function | ഉപയോഗം |\n|---|---|\n| `len` | ഒരു list-ന്റെ നീളം കണ്ടെത്തുന്നു |\n"
+        self.assertEqual(self.kinds(table), [])
+        self.assertEqual(self.kinds(table + CELL), [])
+        # the same table, indented inside a list item
+        nested = "* ഈ table നോക്കുക:\n\n" + "".join("  " + row for row in table.splitlines(True))
+        self.assertEqual(self.kinds(nested), [])
+        self.assertEqual(self.kinds(nested + CELL), [])
 
     def test_lowercase_only_at_paragraph_start(self):
         caps = lambda t: [x["line"] for x in round2_lints(t)["lowercase_initial"]]  # noqa: E731
