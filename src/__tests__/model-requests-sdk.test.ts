@@ -132,10 +132,11 @@ function promptBlocks(body: Readonly<Record<string, unknown>>): PromptBlock[] {
 
 describe('translator (streamed): the request', () => {
   it.each([
-    ['claude-sonnet-5', 16384, DISABLED],
-    ['claude-sonnet-5-5', 16384, BETWEEN_TOOLS_HIGH],
-    ['claude-opus-5-5', 32768, ADAPTIVE_MEDIUM],
-    ['test-model', 16384, API_DEFAULTS],
+    // The section cap is the whole-document cap (#418).
+    ['claude-sonnet-5', 64000, DISABLED],
+    ['claude-sonnet-5-5', 64000, BETWEEN_TOOLS_HIGH],
+    ['claude-opus-5-5', 128000, ADAPTIVE_MEDIUM],
+    ['test-model', 64000, API_DEFAULTS],
   ])(
     'translateSection (update), %s: max_tokens %d and exactly its policy',
     async (model, maxTokens, fields) => {
@@ -190,10 +191,11 @@ describe('translator (streamed): the request', () => {
     expect(body).not.toHaveProperty('output_config');
     expect(body.thinking).toStrictEqual({ type: 'disabled' });
     // v0.29.5 sent `{ ...createParams, thinking: { type: 'disabled' } }`; the SDK appends stream.
+    // Only the section cap has changed since, 16384 → 64000 (#418).
     expect(rawBody).toBe(
       JSON.stringify({
         model: 'claude-sonnet-5',
-        max_tokens: 16384,
+        max_tokens: 64000,
         messages: body.messages,
         thinking: { type: 'disabled' },
         stream: true,

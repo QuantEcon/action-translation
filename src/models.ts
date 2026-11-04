@@ -27,8 +27,11 @@ export const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-5';
  *
  * `max_tokens` caps thinking + output *combined*, but it is a ceiling, not a
  * charge — billing is on tokens actually generated, so generous caps cost
- * nothing until reached. Streamed paths (translation, review) can safely use
- * large caps; non-streamed CLI calls stay <= 16K to avoid SDK HTTP timeouts.
+ * nothing until reached. Nor does it count toward the output-tokens-per-minute
+ * rate limit, which counts only tokens generated
+ * (platform.claude.com/docs/en/api/rate-limits, read 2026-11-04). Streamed paths
+ * (translation, review) can safely use large caps; non-streamed CLI calls stay
+ * <= 16K to avoid SDK HTTP timeouts.
  *
  * Sized with headroom for Sonnet 5's tokenizer, which produces ~30% more tokens
  * than Sonnet 4.6 for the same text, so real content is not truncated.
@@ -38,8 +41,15 @@ export const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-5';
  * `fullDocument` is also `checkDocumentSize`'s admission budget, for every model.
  */
 export const MAX_TOKENS = {
-  /** Section-level translation (update / resync / new). Streamed. */
-  section: 16384,
+  /**
+   * Section-level translation (update / resync / new). Streamed. The same cap as
+   * `fullDocument`: a section is part of a document, so no section of a document
+   * the whole-document paths would admit needs more. At 16384 the two longest
+   * sections in the estate (~31K and ~39K characters of English) were cut off;
+   * zh-cn output runs at 0.49 tokens per source character at the median and up
+   * to 0.63 (#418).
+   */
+  section: 64000,
   /** Whole-document translation / resync (init, forward RESYNC). Streamed. */
   fullDocument: 64000,
   /** Quality / diff review verdicts. Streamed. */
@@ -58,14 +68,15 @@ export type EffortLevel = NonNullable<Anthropic.OutputConfig['effort']>;
  * Request caps for models whose thinking is always on (`alwaysThinks`).
  *
  * Thinking shares `max_tokens` with the visible output, so each cap leaves room
- * above `MAX_TOKENS` for it. Streamed paths pay only for tokens generated, but a
- * cap still reserves output-token rate limit, so these are not free to inflate.
- * `fullDocument` is the 128K model maximum. `analysis` is non-streamed and must
- * stay <= 21,333: above that the SDK refuses a non-streamed request client-side
+ * above `MAX_TOKENS` for it; as there, a larger cap is neither billed nor
+ * counted against the rate limit until tokens are generated. `section` and
+ * `fullDocument` share the 128K model maximum, for the reason given on
+ * `MAX_TOKENS.section`. `analysis` is non-streamed and must stay <= 21,333:
+ * above that the SDK refuses a non-streamed request client-side
  * (D-2026-07-24-tech-debt-audit-boundaries).
  */
 export const ALWAYS_THINKING_MAX_TOKENS: Readonly<Record<OperationClass, number>> = {
-  section: 32768,
+  section: 128000,
   fullDocument: 128000,
   review: 32768,
   analysis: 16384,

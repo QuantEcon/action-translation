@@ -157,19 +157,30 @@ describe('maxTokensFor', () => {
 
   it('pins the caps: today’s budgets, and room for thinking above them', () => {
     expect(MAX_TOKENS).toEqual({
-      section: 16384,
+      section: 64000,
       fullDocument: 64000,
       review: 8192,
       analysis: 8192,
     });
     expect(ALWAYS_THINKING_MAX_TOKENS).toEqual({
-      section: 32768,
+      section: 128000,
       fullDocument: 128000,
       review: 32768,
       analysis: 16384,
     });
     for (const op of OPERATIONS) {
       expect(ALWAYS_THINKING_MAX_TOKENS[op]).toBeGreaterThan(MAX_TOKENS[op]);
+    }
+  });
+
+  it('a section is never capped below its whole document (#418)', () => {
+    // A section is part of a document: any section of a document the
+    // whole-document paths admit fits in the section cap. At 16384 the two
+    // longest sections in the estate were cut off.
+    expect(MAX_TOKENS.section).toBe(MAX_TOKENS.fullDocument);
+    expect(ALWAYS_THINKING_MAX_TOKENS.section).toBe(ALWAYS_THINKING_MAX_TOKENS.fullDocument);
+    for (const model of ALL_MODELS) {
+      expect(maxTokensFor(model, 'section')).toBe(maxTokensFor(model, 'fullDocument'));
     }
   });
 
