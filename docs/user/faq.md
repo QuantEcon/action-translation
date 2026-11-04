@@ -69,6 +69,10 @@ Requirements:
 
 For drift recovery beyond a single PR, use the CLI `forward` command instead — it works on any file regardless of PR history.
 
+### Why didn't a PR merged from a fork sync?
+
+GitHub gives a workflow run that a fork's pull request triggers no secrets, so the sync cannot reach the Anthropic API or the target repo. Depending on the repository's setting for outside contributors' workflows, the runs are either held for approval or run and fail, and approving a held run cannot help. Nothing reports either outcome. Comment `\translate-resync` on the PR once it has merged: that run starts in the source repository's own context, with its secrets (#415).
+
 ### What happens when the sync workflow fails?
 
 When the sync workflow encounters an error (API failure, parsing error, etc.), it automatically opens a **GitHub Issue** in the source repository with:
