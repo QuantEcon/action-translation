@@ -175,7 +175,8 @@ jobs:
     # A PR merged from a fork never syncs on its own: GitHub gives a run that a
     # fork's pull request triggers no secrets, so the run is held for approval
     # or fails, and approving it cannot help. Comment \`\\translate-resync\` on
-    # the PR once it has merged (action-translation#415).
+    # the PR as soon as it has merged, before a later merge changes the same
+    # files (action-translation#415 and #276).
     if: >
       (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
       (github.event_name == 'issue_comment' &&
