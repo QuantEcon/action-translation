@@ -40,10 +40,15 @@ jobs:
       contents: write
       pull-requests: write
 
-    # Prevent concurrent rebases from overlapping
+    # One rebase at a time, in merge order. `queue: max` keeps every pending
+    # run (up to 100): without it a group holds one pending run, so a third
+    # merge cancels the run still waiting for the second, and a sibling PR that
+    # overlaps only the second merge is never rebased (action-translation#280).
+    # GitHub rejects `queue: max` together with `cancel-in-progress: true`.
     concurrency:
       group: rebase-translations
       cancel-in-progress: false
+      queue: max
 
     steps:
       - name: Rebase open translation PRs

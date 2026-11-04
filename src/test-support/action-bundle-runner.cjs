@@ -1,6 +1,7 @@
 /**
  * Runs the built action bundle against a fake GitHub API and a fake model
- * host, for src/__tests__/action-sync-scope.test.ts.
+ * host, for src/__tests__/action-sync-scope.test.ts and
+ * src/__tests__/action-rebase.test.ts.
  *
  *   node action-bundle-runner.cjs <scenario.json> <log.json>
  *
@@ -17,6 +18,15 @@
  *   editionStatus  optional status for the read of the target repository
  *   issues         optional: the source repository's open issues, as
  *                  `issues.listForRepo` lists them ([{ number, title }])
+ *
+ * Rebase mode runs in the edition, so GITHUB_REPOSITORY names the edition and
+ * RUNNER_SOURCE_REPO the source repository. Its scenario adds:
+ *
+ *   mergedPrFiles  the merged edition PR's files, as `pulls.listFiles` lists them
+ *   openPulls      the edition's open PRs, as `pulls.list` lists them
+ *   pullStates     optional { "<number>": state } a PR reads back as; "open"
+ *   treeUnchanged  optional: a new tree comes back as its base tree
+ *   gitFailures    optional { trees | commits | refs: status } that call answers
  *
  * A path the scenario does not list answers 404. In an array of answers, the
  * last one answers every later read. An update to an issue the source
@@ -46,7 +56,7 @@ const fs = require('fs');
 const [scenarioPath, logPath] = process.argv.slice(2);
 const { UNDICI_PATH, BUNDLE_PATH, GITHUB_API_URL, ANTHROPIC_BASE_URL, GITHUB_EVENT_PATH } =
   process.env;
-const SOURCE = process.env.GITHUB_REPOSITORY;
+const SOURCE = process.env.RUNNER_SOURCE_REPO || process.env.GITHUB_REPOSITORY;
 const TARGET = process.env['INPUT_TARGET-REPO'];
 if (
   !scenarioPath ||
@@ -84,6 +94,13 @@ const log = {
   comments: [],
   /** Updates to source issues, in order: the issue's number, then each field sent. */
   issueUpdates: [],
+  /** Git Data API writes to the edition, in order: each request's body. */
+  trees: [],
+  commits: [],
+  /** Ref moves in the edition: the ref (`heads/<branch>`), the SHA and `force`. */
+  refUpdates: [],
+  /** Updates to edition PRs: the PR's number, then each field sent. */
+  pullUpdates: [],
   /** Requests to the model host. */
   modelRequests: 0,
   /** Requests nothing here fakes, to GitHub or to any other host. Each one fails. */
@@ -147,6 +164,10 @@ const CONTENTS = /^\/repos\/([^/]+\/[^/]+)\/contents\/(.+)$/;
 const ISSUE = /^\/repos\/([^/]+\/[^/]+)\/issues\/(\d+)$/;
 const ISSUE_LABELS = /^\/repos\/[^/]+\/[^/]+\/issues\/\d+\/labels$/;
 const ISSUE_COMMENTS = /^\/repos\/([^/]+\/[^/]+)\/issues\/(\d+)\/comments$/;
+const PULL = /^\/repos\/([^/]+\/[^/]+)\/pulls\/(\d+)$/;
+const GIT_COMMIT = /^\/repos\/([^/]+\/[^/]+)\/git\/commits\/([^/]+)$/;
+const GIT_REF = /^\/repos\/([^/]+\/[^/]+)\/git\/refs\/(.+)$/;
+const GIT_FAILURES = scenario.gitFailures ?? {};
 /** The source repository's open issues. */
 const OPEN_ISSUES = scenario.issues ?? [];
 
@@ -162,6 +183,9 @@ function answerGitHub(request) {
   const contents = path.match(CONTENTS);
   const issue = path.match(ISSUE);
   const comments = path.match(ISSUE_COMMENTS);
+  const pull = path.match(PULL);
+  const gitCommit = path.match(GIT_COMMIT);
+  const gitRef = path.match(GIT_REF);
 
   if (method === 'GET' && contents) return readContents(contents[1], contents[2], ref);
   if (method === 'GET' && path === `/repos/${SOURCE}/pulls/${PR_NUMBER}/files`) {
@@ -177,6 +201,41 @@ function answerGitHub(request) {
   }
   if (method === 'GET' && path === `/repos/${TARGET}/git/ref/heads/main`) {
     return json(200, { ref: 'refs/heads/main', object: { sha: 'base000' } });
+  }
+  // Rebase mode: the edition's PRs, and the Git Data API.
+  const mergedPrFilesPath = `/repos/${TARGET}/pulls/${PR_NUMBER}/files`;
+  if (method === 'GET' && scenario.mergedPrFiles && path === mergedPrFilesPath) {
+    return json(200, scenario.mergedPrFiles);
+  }
+  if (method === 'GET' && path === `/repos/${TARGET}/pulls`) {
+    return json(200, scenario.openPulls ?? []);
+  }
+  if (method === 'GET' && pull && pull[1] === TARGET) {
+    const number = Number(pull[2]);
+    return json(200, { number, state: scenario.pullStates?.[number] ?? 'open' });
+  }
+  if (method === 'PATCH' && pull && pull[1] === TARGET) {
+    const number = Number(pull[2]);
+    log.pullUpdates.push({ number, ...body });
+    return json(200, { number, ...body });
+  }
+  if (method === 'GET' && gitCommit && gitCommit[1] === TARGET) {
+    return json(200, { sha: gitCommit[2], tree: { sha: `tree-of-${gitCommit[2]}` } });
+  }
+  if (method === 'POST' && path === `/repos/${TARGET}/git/trees`) {
+    log.trees.push(body);
+    if (GIT_FAILURES.trees) return json(GIT_FAILURES.trees, { message: 'tree refused' });
+    return json(201, { sha: scenario.treeUnchanged ? body.base_tree : 'tree-rebased' });
+  }
+  if (method === 'POST' && path === `/repos/${TARGET}/git/commits`) {
+    log.commits.push(body);
+    if (GIT_FAILURES.commits) return json(GIT_FAILURES.commits, { message: 'commit refused' });
+    return json(201, { sha: 'commit-rebased', tree: { sha: body.tree } });
+  }
+  if (method === 'PATCH' && gitRef && gitRef[1] === TARGET) {
+    log.refUpdates.push({ ref: gitRef[2], sha: body.sha, force: body.force });
+    if (GIT_FAILURES.refs) return json(GIT_FAILURES.refs, { message: 'ref refused' });
+    return json(200, { ref: `refs/${gitRef[2]}`, object: { sha: body.sha } });
   }
   if (method === 'POST' && path === `/repos/${TARGET}/git/refs`) {
     return json(201, { ref: body.ref, object: { sha: body.sha } });
