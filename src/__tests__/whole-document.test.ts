@@ -1,5 +1,5 @@
 /**
- * The whole-document fence unwrap (#363): each of unwrapDocumentFence's four
+ * The whole-document fence unwrap (#363): each of unwrapDocumentFence's six
  * conditions, and both translator paths that apply it (translateFullDocument
  * for init and sync's new files, translateDocumentResync for forward) through
  * the real SDK behind a fake fetch.
@@ -72,6 +72,14 @@ function wrap(document: string, opening = '```', closing = '```'): string {
   return `${opening}\n${document}\n${closing}`;
 }
 
+/** `text` with every non-blank line indented by two spaces. */
+function indent(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => (line.trim() ? `  ${line}` : line))
+    .join('\n');
+}
+
 describe('unwrapDocumentFence', () => {
   it('removes a bare fence wrapping the whole document, which the guard then passes', () => {
     const wrapped = wrap(DOCUMENT);
@@ -116,6 +124,43 @@ describe('unwrapDocumentFence', () => {
       const response = wrap(DOCUMENT, opening, closing);
       expect(unwrapDocumentFence(response, [SOURCE])).toEqual({ text: response, unwrapped: false });
     }
+  });
+
+  it('keeps a wrapper with an indented line: it came indented with the document inside it', () => {
+    // As the translator receives a wrapper indented as a whole: the trim leaves
+    // only its last line indented.
+    const asReceived = indent(wrap(DOCUMENT)).trim();
+    for (const response of [
+      asReceived,
+      wrap(DOCUMENT, '```', '  ```'),
+      wrap(DOCUMENT, '  ```', '```'),
+    ]) {
+      expect(unwrapDocumentFence(response, [SOURCE])).toEqual({ text: response, unwrapped: false });
+    }
+  });
+
+  it('keeps a wrapper when the source itself ends inside a fence by the walk (condition 5)', () => {
+    // The walk takes the indented bare line for the note's closing fence, so the
+    // source ends with a fence open: the note's real closer opens one.
+    const source =
+      '# Title\n\nSome text.\n\n```{note}\nFor example:\n\n    ```python\n    y = 2\n    ```\n```\n';
+    // A wrapper never closed: taking the last line would take the note's closer,
+    // leave a balanced walk, and pass the guard.
+    const response = `\`\`\`\n${source.trim()}`;
+    const withoutLastLine = source.trim().split('\n').slice(0, -1).join('\n');
+    expect(checkStructuralParity(source, withoutLastLine).ok).toBe(true);
+
+    expect(unwrapDocumentFence(response, [source])).toEqual({ text: response, unwrapped: false });
+  });
+
+  it('keeps a wrapper whose document is indented as a whole (condition 6)', () => {
+    const response = wrap(indent(DOCUMENT));
+    expect(unwrapDocumentFence(response, [SOURCE])).toEqual({ text: response, unwrapped: false });
+    // A document of one line has no later line to judge, and is unwrapped.
+    expect(unwrapDocumentFence(wrap('  Bonjour.'), [SOURCE])).toEqual({
+      text: 'Bonjour.',
+      unwrapped: true,
+    });
   });
 
   it('tolerates blank lines around the wrapper and inside it', () => {
@@ -217,6 +262,18 @@ describe('the translator unwraps each whole-document response', () => {
     expect(unwrapLogs()).toEqual([
       '[Translator] translateFullDocument: removed a code fence wrapping the whole document (#363)',
     ]);
+  });
+
+  it('translateFullDocument: leaves a wrapper indented as a whole for the guard', async () => {
+    const response = indent(wrap(DOCUMENT));
+    api.reply(endTurn(`${response}\n`));
+    const service = new TranslationService('test-key', 'claude-sonnet-5');
+
+    const result = await service.translateFullDocument(fullDocument);
+
+    expect(result).toMatchObject({ success: true, translatedSection: response.trim() });
+    expect(service.getFenceUnwrapCount()).toBe(0);
+    expect(unwrapLogs()).toEqual([]);
   });
 
   it('translateDocumentResync: unwraps against the source and the existing translation', async () => {

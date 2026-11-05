@@ -48379,6 +48379,10 @@ function startsWithFence(content) {
   const first = content.replace(/^\uFEFF/, "").split("\n").find((line) => line.trim() !== "");
   return first !== void 0 && isFenceLine(first);
 }
+function indentedAsAWhole(content) {
+  const later = content.split("\n").slice(1).filter((line) => line.trim() !== "");
+  return later.length > 0 && later.every((line) => /^\s/.test(line));
+}
 function unwrapDocumentFence(text, references) {
   const unchanged = { text, unwrapped: false };
   const lines = text.split("\n");
@@ -48397,8 +48401,10 @@ function unwrapDocumentFence(text, references) {
   }
   if (references.some(startsWithFence))
     return unchanged;
+  if (references.length > 0 && endsInsideFence(references[0]))
+    return unchanged;
   const inner = lines.slice(first + 1, last).join("\n").trim();
-  if (endsInsideFence(inner))
+  if (endsInsideFence(inner) || indentedAsAWhole(inner))
     return unchanged;
   return { text: inner, unwrapped: true };
 }
