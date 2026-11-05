@@ -4,7 +4,8 @@
 plan: triage the untriaged zh-cn sync failures; fix the whole-document paths (#363's fence
 unwrap, then #326's head region and #288's front-matter guard); then #280; ship them together
 with #346's French items. Smaller items: ml#58 round 6, #415's doc line, the #414 ruling. Not
-next: #416, #417, the #257 re-cut. Six PRs were opened: #426 merged, and the other five are open.
+next: #416, #417, the #257 re-cut. Six PRs were opened: #426 and #419 merged, and the other
+four are open.
 
 ## zh-cn failures â†’ #418 (PR #419) and #420
 
@@ -15,9 +16,10 @@ next: #416, #417, the #257 re-cut. Six PRs were opened: #426 merged, and the oth
 - **#418**: the section cap (16,384 output tokens) cut off the two longest `## Exercises` in
   the estate (`lq_mean_field_games`, `likelihood_ratio_process_2`). Over 252 zh-cn section
   updates, output runs 0.487 tokens per source character at the median and 0.625 at most.
-  **PR #419** gives a section its document's cap (64,000; 128,000 for models that always
-  think). Billing and the output-token rate limit count generated tokens, not `max_tokens`
-  (rate-limits doc, read 2026-11-04); the old comment saying otherwise is corrected.
+  **PR #419** (merged 2026-11-05 as `2ab18cd`; #418 closed with it) gives a section its
+  document's cap (64,000; 128,000 for models that always think). Billing and the output-token
+  rate limit count generated tokens, not `max_tokens` (rate-limits doc, read 2026-11-04); the
+  old comment saying otherwise is corrected.
 - **#420**: update mode diffs from English the translation never carried. When a lecture's
   previous sync PR is still open, or its last sync failed, every later sync fails parity, and
   the `\translate-resync` the failure issue advises fails the same way (#281). The state file's
@@ -59,7 +61,7 @@ measure it on the live model is not run: it needs Matt's go-ahead (about USD 3â€
   PR's source commit, as sync reads it.
 - **Tests**: 20 module tests, and 4 bundle tests through an extended `action-bundle-runner.cjs`
   (rebase routes, `RUNNER_SOURCE_REPO`). With `main`'s bundle in place all four bundle tests fail.
-  Suite 2,156 tests on the branch.
+  The full suite passes on the branch (2,156 tests).
 - The closing comment claims only what is checked. A declared file can be skipped by the read
   step: every forward PR declares its state file, which the source does not hold.
 
@@ -95,11 +97,12 @@ lists are capitalised).
 
 ## Open for Matt
 
-- **Merge order**: #419, then #421, then #422 (rebase it onto `main` after #421 squash-merges;
-  CI runs only on PRs into `main`), then #423; #424 any time. All five touch `CHANGELOG.md`, so
-  each later one needs a rebase; the four that touch `dist-action/` also need `npm run build`.
+- **Merge order**: #421, then #422 (rebase it onto `main` after #421 squash-merges; it gets CI
+  only once its base is `main`), then #423; #424 any time. All four touch `CHANGELOG.md`, so
+  each later one needs a rebase; the three that touch `dist-action/` also need `npm run build`.
   #426 merged first; #419 and #423 were then rebased onto it, which moved only their
-  `CHANGELOG.md` lines.
+  `CHANGELOG.md` lines. #419 merged next (2026-11-05, `2ab18cd`), after which #421 and #423
+  conflict with `main` in `dist-action/index.js.map` (#423 also in `CHANGELOG.md`).
 - **Merging zh-cn#308/#310/#311/#312 before #423 ships**: each merge runs the old rebase, which
   closed two siblings on 2026-10-21. Merge one at a time and check the others are still open, or
   pause `rebase-translations.yml` until all four are in.
