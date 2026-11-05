@@ -15,6 +15,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { translateLecture, InitOptions } from '../commands/init.js';
 import { TranslationService } from '../../translator.js';
+import { unwrapDocumentFence } from '../../whole-document.js';
 
 const SOURCE = `# Test Lecture
 
@@ -141,6 +142,82 @@ Some text.
     );
     await expect(run(corrupt)).rejects.toThrow(/front-matter key `kernelspec:` at output line/);
     expect(fs.existsSync(targetFile())).toBe(false);
+  });
+
+  describe('a code-fence wrapper the unwrap declines (#363)', () => {
+    // A {raw} block above the title closes the wrapper's opening line, so the
+    // head restore finds the H1 and replaces everything above it.
+    const source = `---
+jupytext:
+  text_representation:
+    format_name: myst
+kernelspec:
+  name: python3
+---
+
+(test)=
+\`\`\`{raw} jupyter
+<div id="qe-notebook-header"></div>
+\`\`\`
+
+# Test Lecture
+
+Some text.
+
+\`\`\`{code-cell} ipython3
+print("hi")
+\`\`\`
+`;
+    const translated = source
+      .replace('# Test Lecture', '# 测试讲座')
+      .replace('Some text.', '一些文字。');
+
+    beforeEach(() => {
+      fs.writeFileSync(path.join(tmpDir, 'source', 'lectures', 'test.md'), source, 'utf-8');
+    });
+
+    async function quietly(output: string): Promise<void> {
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try {
+        await run(output);
+      } finally {
+        warn.mockRestore();
+      }
+    }
+
+    it('refuses it when closed: its closing line would be the document’s last, an open fence', async () => {
+      // The translator trims the response, so no newline follows the wrapper.
+      await expect(quietly('```text\n' + translated + '```')).rejects.toThrow(
+        /output ends inside the fence opened at output line \d+, and the source does not/
+      );
+      expect(fs.existsSync(targetFile())).toBe(false);
+    });
+
+    it('writes the source’s front matter when the model opened it with a fence in place of `---`', async () => {
+      // #363's capture: the unwrap removes that first line, as for a wrapper
+      // never closed, which leaves the front matter without its opening line.
+      // Without the head restore, init would write a `translation:`-only front
+      // matter above the orphaned keys, and parity would pass it.
+      const draw = translated.replace(/^---\n/, '```\n').trimEnd();
+      const unwrapped = unwrapDocumentFence(draw, [source]);
+      expect(unwrapped.unwrapped).toBe(true);
+
+      await quietly(unwrapped.text);
+      const written = fs.readFileSync(targetFile(), 'utf-8');
+      expect(written).toMatch(/^---\njupytext:\n {2}text_representation:\n/);
+      expect(written).toContain('kernelspec:\n  name: python3\n');
+      expect(written).toContain('translation:\n  title: 测试讲座');
+      expect(written).toContain('---\n\n(test)=\n```{raw} jupyter\n');
+    });
+
+    it('writes it when never closed: the head restore removes its only line', async () => {
+      await quietly('```text\n' + translated.trimEnd());
+      const written = fs.readFileSync(targetFile(), 'utf-8');
+      expect(written).toMatch(/^---\njupytext:\n/);
+      expect(written).toContain('---\n\n(test)=\n```{raw} jupyter\n');
+      expect(written).not.toContain('```text');
+      expect(written.endsWith('print("hi")\n```\n')).toBe(true);
+    });
   });
 
   it('writes a file that ends with a newline (sibling of #116)', async () => {

@@ -48480,9 +48480,29 @@ function checkFrontMatter(sourceContent, outputContent) {
   }
   return violations;
 }
+function checkFenceEnd(sourceContent, outputContent) {
+  if (endsInsideFence(sourceContent))
+    return [];
+  let opened = -1;
+  const open = walkFences(outputContent, (_line, i, fence) => {
+    if (fence)
+      opened = i;
+  });
+  if (!open)
+    return [];
+  return [
+    {
+      message: `output ends inside the fence opened at output line ${opened + 1}, and the source does not: a stray fence line, such as a code-fence wrapper's closing line, or a closing fence left out`
+    }
+  ];
+}
 function checkWrittenDocument(sourceContent, outputContent) {
   const parity = checkStructuralParity(sourceContent, outputContent);
-  const violations = [...parity.violations, ...checkFrontMatter(sourceContent, outputContent)];
+  const violations = [
+    ...parity.violations,
+    ...checkFrontMatter(sourceContent, outputContent),
+    ...checkFenceEnd(sourceContent, outputContent)
+  ];
   return { ok: violations.length === 0, violations };
 }
 

@@ -53,6 +53,13 @@
  * The guard still runs on the result. Lives outside translator.ts so that it
  * is tested without a client.
  *
+ * One response looks like a wrapper never closed and is not one: a front matter
+ * whose opening `---` the model wrote as a bare fence (#363's capture, the only
+ * response it saw that removes only its first line). Removing that line leaves
+ * the front matter without its opening line, which parity does not see. The
+ * head restore below writes the source's front matter in its place, and where
+ * it cannot run, the front-matter rule refuses the write.
+ *
  * The head region, the front matter and the pre-title content above the H1, is
  * not the model's to write (#326). A whole-document draw that drops `jupytext`
  * and `kernelspec` passes structural parity, and MyST-NB then reads the page as
@@ -67,7 +74,8 @@
  * `checkWrittenDocument` is the check every write path runs on the exact bytes
  * it writes: structural parity, plus #288's rule that front-matter keys appear
  * only in the leading block and that the front matter keeps the source's
- * `jupytext` and `kernelspec`.
+ * `jupytext` and `kernelspec`, plus the rule that the document does not end
+ * inside a fence when its source does not.
  */
 
 import {
@@ -300,12 +308,46 @@ export function checkFrontMatter(sourceContent: string, outputContent: string): 
 }
 
 /**
+ * The fence rule, as a violation: the output ends inside a fence, by the
+ * guard's walk, when its source does not. A code-fence wrapper that the unwrap
+ * declines, such as one opened with ```` ```text ````, loses its first line
+ * with the model's head in `restoreHead`, and its closing line is then the
+ * document's last, where it opens a fence that runs to the end of the file. A
+ * closing fence the model left out ends the document the same way. Neither
+ * changes a directive or an anchor, so parity alone passes both. A source that
+ * ends inside a fence is exempt, since a faithful translation of it does too.
+ */
+export function checkFenceEnd(sourceContent: string, outputContent: string): ParityViolation[] {
+  if (endsInsideFence(sourceContent)) return [];
+  // The walk visits only lines outside a fence, so the last fence line it
+  // visits is the one still open at the end.
+  let opened = -1;
+  const open = walkFences(outputContent, (_line, i, fence) => {
+    if (fence) opened = i;
+  });
+  if (!open) return [];
+  return [
+    {
+      message:
+        `output ends inside the fence opened at output line ${opened + 1}, and the source ` +
+        `does not: a stray fence line, such as a code-fence wrapper's closing line, or a ` +
+        `closing fence left out`,
+    },
+  ];
+}
+
+/**
  * The checks every write path runs on the exact bytes it is about to write:
- * structural parity with the source (#119, #65) and the front-matter rule
- * (#288, #326). Reported with `formatParityViolations`, as parity was alone.
+ * structural parity with the source (#119, #65), the front-matter rule
+ * (#288, #326) and the fence rule. Reported with `formatParityViolations`, as
+ * parity was alone.
  */
 export function checkWrittenDocument(sourceContent: string, outputContent: string): ParityResult {
   const parity = checkStructuralParity(sourceContent, outputContent);
-  const violations = [...parity.violations, ...checkFrontMatter(sourceContent, outputContent)];
+  const violations = [
+    ...parity.violations,
+    ...checkFrontMatter(sourceContent, outputContent),
+    ...checkFenceEnd(sourceContent, outputContent),
+  ];
   return { ok: violations.length === 0, violations };
 }

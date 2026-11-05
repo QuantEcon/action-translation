@@ -10,10 +10,19 @@
  * - a second front matter wrapped in a stray code-cell fence, with a `#` code
  *   comment taken for the title (Haiku 5.5, `commod_price`);
  * - a second block below the first without its opening `---` (`hoist_failure`,
- *   2026-08-20), and one whose heading map does not parse (`ge_arrow`, 2026-10-09).
+ *   2026-08-20), and one whose heading map does not parse (`ge_arrow`, 2026-10-09);
+ * - a code-fence wrapper the unwrap declines (```` ```text ````), whose closing
+ *   line the head restore leaves as the document's last (#363's capture).
  */
 
-import { checkFrontMatter, checkWrittenDocument, restoreHead } from '../whole-document.js';
+import { checkStructuralParity } from '../structural-parity.js';
+import {
+  checkFenceEnd,
+  checkFrontMatter,
+  checkWrittenDocument,
+  restoreHead,
+  unwrapDocumentFence,
+} from '../whole-document.js';
 
 const FRONT_MATTER = `---
 jupytext:
@@ -256,6 +265,78 @@ ${BODY}`;
     expect(
       checkFrontMatter(source, '---\ntranslation:\n  title: À propos\n---\n\n# À propos\n')
     ).toEqual([]);
+  });
+});
+
+describe('checkFenceEnd', () => {
+  /** FAITHFUL ends in a newline, so this is the 1-based line just past it. */
+  const LAST_LINE = FAITHFUL.split('\n').length;
+
+  it('refuses the closing line of a wrapper the unwrap declined, which the head restore leaves last', () => {
+    // A ```text wrapper is closed by the {raw} block's closing fence, so the
+    // restore finds the H1 and replaces the head, wrapper line and all; the
+    // wrapper's closing line then opens a fence that runs to the end.
+    const draw = '```text\n' + FAITHFUL + '```';
+    const restored = restoreHead(draw, SOURCE)?.text;
+    expect(restored).toBe(FAITHFUL + '```');
+
+    // What the guard saw before this rule: nothing.
+    expect(checkStructuralParity(SOURCE, restored!).ok).toBe(true);
+    expect(checkFrontMatter(SOURCE, restored!)).toEqual([]);
+
+    const violations = checkFenceEnd(SOURCE, restored!);
+    expect(violations).toHaveLength(1);
+    expect(violations[0].message).toMatch(
+      new RegExp(`^output ends inside the fence opened at output line ${LAST_LINE}, `)
+    );
+    expect(checkWrittenDocument(SOURCE, restored!).ok).toBe(false);
+  });
+
+  it('passes the same wrapper never closed, which the head restore alone repairs', () => {
+    const restored = restoreHead('```text\n' + FAITHFUL.trimEnd(), SOURCE)?.text;
+    expect(restored).toBe(FAITHFUL.trimEnd());
+    expect(checkWrittenDocument(SOURCE, restored!)).toEqual({ ok: true, violations: [] });
+  });
+
+  it('refuses a document whose last closing fence was left out, naming the line that opened it', () => {
+    const cut = FAITHFUL.replace(/```\n$/, '');
+    const opened = cut.split('\n').indexOf('```{code-cell} python3') + 1;
+
+    expect(checkStructuralParity(SOURCE, cut).ok).toBe(true);
+    expect(checkFenceEnd(SOURCE, cut)[0]?.message).toMatch(
+      new RegExp(`^output ends inside the fence opened at output line ${opened}, `)
+    );
+  });
+
+  it('asks nothing of a document whose source ends inside a fence too', () => {
+    const source = SOURCE.replace(/```\n$/, '');
+    expect(checkFenceEnd(source, FAITHFUL.replace(/```\n$/, ''))).toEqual([]);
+    expect(checkFenceEnd(source, FAITHFUL)).toEqual([]);
+  });
+
+  it('passes a faithful translation', () => {
+    expect(checkFenceEnd(SOURCE, FAITHFUL)).toEqual([]);
+  });
+});
+
+describe('the head restore after the unwrap', () => {
+  it('writes the source’s head when the front matter opened with a fence in place of `---` (#363’s capture)', () => {
+    // The response the capture saw: no wrapper, but its first line a fence
+    // where the front matter's `---` belongs, and its last line the document's
+    // own closing fence. The unwrap reads it as a wrapper never closed.
+    const draw = FAITHFUL.replace(/^---\n/, '```\n');
+    const unwrapped = unwrapDocumentFence(draw, [SOURCE]);
+    expect(unwrapped.unwrapped).toBe(true);
+    expect(unwrapped.text.startsWith('jupytext:\n')).toBe(true);
+
+    // Parity passes the front matter without its opening line; the
+    // front-matter rule refuses it, for a page the restore cannot reach.
+    expect(checkStructuralParity(SOURCE, unwrapped.text).ok).toBe(true);
+    expect(checkFrontMatter(SOURCE, unwrapped.text)).not.toEqual([]);
+
+    const restored = restoreHead(unwrapped.text, SOURCE);
+    expect(restored).toEqual({ text: FAITHFUL.trimEnd(), replaced: true });
+    expect(checkWrittenDocument(SOURCE, restored!.text)).toEqual({ ok: true, violations: [] });
   });
 });
 
