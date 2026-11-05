@@ -201,7 +201,14 @@ function layoutOf(content: string): HeadLayout {
 export interface HeadRestore {
   /** The document with its head region restored. */
   text: string;
-  /** Whether the lines above the model's H1 differed from the restored head. */
+  /**
+   * Whether the lines above the model's H1 differed from the restored head,
+   * apart from blank lines at either end. The translator trims every response,
+   * so in practice that sets aside only the blank lines between the head and
+   * the H1, which MyST does not read: counted, they would make `headRestored`
+   * measure whitespace rather than damage. `text` carries the restored head
+   * byte for byte either way.
+   */
   replaced: boolean;
 }
 
