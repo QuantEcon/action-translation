@@ -1327,7 +1327,7 @@ async function fetchExistingStateShas(
   const shas = new Map<string, string>();
   const at = ref ? { ref } : {};
 
-  // Only need state SHAs for markdown and renamed files (ones that generate state)
+  // Markdown and renamed files write state; a removed file's state is deleted
   const markdownFiles = filesToSync.filter(
     (f) => f.type === 'markdown' || f.type === 'renamed' || f.type === 'removed'
   );
