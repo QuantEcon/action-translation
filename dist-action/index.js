@@ -47483,8 +47483,15 @@ function validateLanguageCode(languageCode) {
 init_sdk();
 var DEFAULT_CLAUDE_MODEL = "claude-sonnet-5";
 var MAX_TOKENS = {
-  /** Section-level translation (update / resync / new). Streamed. */
-  section: 16384,
+  /**
+   * Section-level translation (update / resync / new). Streamed. The same cap as
+   * `fullDocument`: a section is part of a document, so no section of a document
+   * the whole-document paths would admit needs more. At 16384 the two longest
+   * sections in the estate (~31K and ~39K characters of English) were cut off;
+   * zh-cn output runs at 0.49 tokens per source character at the median and up
+   * to 0.63 (#418).
+   */
+  section: 64e3,
   /** Whole-document translation / resync (init, forward RESYNC). Streamed. */
   fullDocument: 64e3,
   /** Quality / diff review verdicts. Streamed. */
@@ -47493,7 +47500,7 @@ var MAX_TOKENS = {
   analysis: 8192
 };
 var ALWAYS_THINKING_MAX_TOKENS = {
-  section: 32768,
+  section: 128e3,
   fullDocument: 128e3,
   review: 32768,
   analysis: 16384

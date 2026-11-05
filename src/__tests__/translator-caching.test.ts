@@ -230,20 +230,21 @@ describe('translator prompt caching', () => {
     fields: { thinking?: { type: string }; output_config?: { effort: string } };
     caps: [number, number];
   }> = [
-    // Today's request, byte for byte: thinking disabled, no output_config key
-    { model: 'claude-sonnet-5', fields: { thinking: { type: 'disabled' } }, caps: [16384, 64000] },
+    // Today's request, byte for byte: thinking disabled, no output_config key.
+    // A section is capped as its whole document is (#418).
+    { model: 'claude-sonnet-5', fields: { thinking: { type: 'disabled' } }, caps: [64000, 64000] },
     {
       model: 'claude-sonnet-5-5',
       fields: { thinking: { type: 'between_tools' }, output_config: { effort: 'high' } },
-      caps: [16384, 64000],
+      caps: [64000, 64000],
     },
     {
       model: 'claude-opus-5-5',
       fields: { thinking: { type: 'adaptive' }, output_config: { effort: 'medium' } },
-      caps: [32768, 128000],
+      caps: [128000, 128000],
     },
     // Unrecognized: the API's defaults, neither field sent
-    { model: 'test-model', fields: {}, caps: [16384, 64000] },
+    { model: 'test-model', fields: {}, caps: [64000, 64000] },
   ];
 
   it.each(POLICY_CASES)(
