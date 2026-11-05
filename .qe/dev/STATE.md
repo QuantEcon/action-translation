@@ -33,9 +33,10 @@ Roadmap detail lives in the project trackers (reading order in
   released; #418 closed with it) gives a section its document's cap.
   **#420**: update mode diffs from English the translation never carried, so a lecture whose
   previous sync PR is open, or whose last sync failed, fails every later sync; no PR yet. 32 of
-  the 35 lagging zh-cn lectures sit in zh-cn#308/#310/#311/#312, unreviewed; until #423 ships,
-  each merge runs the old rebase, so merge them one at a time (or pause
-  `rebase-translations.yml`). Log `2026-11-04-whole-document-and-rebase`.
+  the 35 lagging zh-cn lectures sit in zh-cn#308/#310/#311/#312, unreviewed. #423 merged
+  2026-11-05 (`2ce27b3`), but the editions run `@v0`, so until a release carries it each merge
+  runs the old rebase: merge them one at a time (or pause `rebase-translations.yml`). Logs
+  `2026-11-04-whole-document-and-rebase`, `2026-11-05-redraw-draw8-merges`.
 - **Hardening project #349** (created 2026-10-06 from the 2026-10-05 codebase review). It has two
   work items:
   - **#348 is fixed on `main`, not yet released.** `translate forward` passed display labels
@@ -44,10 +45,10 @@ Roadmap detail lives in the project trackers (reading order in
     term for the requested code warns on every path. Forward runs are open again from a `main`
     build; the CLI runs from a checkout, so they need no release.
   - **#280** (adopted): rebase moves a PR branch in one step and queues its runs. **PR #423**
-    (open, 2026-11-04) builds one Git Data API commit on the `main` SHA pinned when a PR's
-    rebase begins, moves the branch once, reads the PR back, and adds `queue: max` to the
-    rebase template. #280 closes only after the release, then the edition patches, then a
-    harness back-to-back merge test, in that order (PR body; log
+    (merged 2026-11-05 as `2ce27b3`, not yet released) builds one Git Data API commit on the
+    `main` SHA pinned when a PR's rebase begins, moves the branch once, reads the PR back, and
+    adds `queue: max` to the rebase template. #280 closes only after the release, then the
+    edition patches, then a harness back-to-back merge test, in that order (PR body; log
     `2026-11-04-whole-document-and-rebase`).
 
   The review's evidence for other open issues went as comments on #90, #154, #169, #170, #259,
@@ -71,20 +72,23 @@ Roadmap detail lives in the project trackers (reading order in
   round) — both open, with no branch: the two branch names recorded here before do not exist
   on origin (checked 2026-11-04; `fix/french-typography` is the July typography work). **#324**
   sets the `fr` elision apostrophe before inline markup to U+2019; **#325** stops U+00A0
-  being inserted inside raw `<style>` blocks. #422's head restore already keeps a pre-title
-  `<style>` block byte for byte on the whole-document paths, but not on UPDATE.
+  being inserted inside raw `<style>` blocks. #422's head restore (merged 2026-11-05) keeps a
+  pre-title `<style>` block byte for byte on the whole-document paths, but not on UPDATE.
   The fr edition already carries both defects, so each fix comes with a one-off edition repair.
   Also held for measurement from the same round: the *Ramasse-miettes* and *Renvoyer* pins.
-- **#326 and #203 — the whole-document paths** (filed / re-diagnosed 2026-09-23): those paths
-  take the head region from the model, so a front-matter drop passes parity and is written
-  (#326); #203 is re-diagnosed as a whole-document code-fence wrap, to be fixed by one unwrap
-  helper shared with #118's forward path. **Both are in PRs, open 2026-11-04**: #421
-  unwraps a fenced whole-document response (#363), and #422, stacked on it, writes the
-  source's head and refuses a second or broken front matter (#326, #288). Measured on zh-cn at
-  the v0.29.4 release (2026-10-09): `init` refuses the scenario 17 fixture `game-theory.md`
-  on ~4% of draws (v0.29.3 0/36, v0.29.4 3/36, identical request bytes). Each report has
-  #203's "transposed" shape, which is the source minus its first directive, consistent with the
-  wrap. At that rate the 4b rule (≤ 1 of 12) fails ~8% of releases by chance; see #203.
+- **#326 and #203 — the whole-document paths: repaired in code on `main` 2026-11-05, not yet
+  released.** #421 (`fe9700e`) unwraps a whole-document response wrapped in a code fence before
+  the guard (#363, closed), on init, forward and sync's new files. #422 (`bd24fca`) writes the
+  source's head, refuses a second or broken front matter (#326 and #288, closed), and refuses an
+  output that ends inside a fence its source closes. The French redraw at #421's head delivered
+  18 of 24 `python_essentials`/`python_oop` drafts (v0.29.4: 3 of 23). The capture of its
+  refusals found a front matter opened with a bare fence in place of `---`: #421's unwrap reads
+  it as a wrapper never closed, and only #422's head restore writes it correctly (log
+  `2026-11-05-redraw-draw8-merges`). **#203 stays open for the residual.** At v0.29.4 `init`
+  refused `game-theory.md` (scenario 17) on ~4% of zh-cn draws, each with #203's "transposed"
+  shape, consistent with the wrap; the next release's 4b check prints `fence unwrapped` and
+  `head restored` per cell and should show those unwrapped. The W5 box on #263 holds the
+  fallbacks (the anti-wrap prompt line, a bounded retry).
 - **#327 — narrowing `fr.additionalRules[2]`, measured 2026-09-23**: at 12 draws per arm per
   lecture the narrowed rule keeps 152/152 instructions imperative (current rule: 0/99),
   « On pose » 12/12, overshoot 0 in 36/36 draws — but the "Your first task" criterion fails:
@@ -222,6 +226,11 @@ Roadmap detail lives in the project trackers (reading order in
 
 ## Recently landed
 
+- **2026-11-05 — five PRs merged, not yet released**: #419 `2ab18cd` (a section gets its
+  document's output cap, #418), #421 `fe9700e` (the whole-document fence unwrap, #363), #422
+  `bd24fca` (the source's head; the front-matter and fence rules; #326, #288), #423 `2ce27b3`
+  (rebase moves a PR branch in one step and queues its runs, #280), #424 `1c0b20b` (a PR merged
+  from a fork needs `\translate-resync`, #415). Log `2026-11-05-redraw-draw8-merges`.
 - **2026-10-22 — v0.30.0 released** (release PR #410 `c9a40bc`; payload #394 `999bffa`, #69
   `301ea73`, #376 `9b0730f`, #395 `482b4d9`, #408 `126efe8`): Claude Sonnet 5.5 and Opus 5.5
   selectable, a refusal fails the file, SDK 0.131.0; Japanese; `sync-scope: existing`;
@@ -358,8 +367,8 @@ out without the edition's glossary and language rules; the text forward wrote in
 #154's to measure. #325 has a proposed widening (2026-10-06 comment): table
 delimiter rows, which already break a table in the fr edition's pandas lecture.
 
-0. **The fr engine queue, in this order**: finish, review and PR #324, then #325 (branches in
-   progress, each with its fr edition repair), then #326 together with #203's fence unwrap.
+0. **The fr engine queue, in this order**: #324, then #325 (no branch yet; each comes with its
+   fr edition repair). #326 and #203's fence unwrap merged 2026-11-05 (#421, #422).
    In parallel, **#327**: add the "Your first task" phrase, re-measure `python_by_example`, run
    the blind pairwise judge, and post the result on #327 before the narrowed rule ships.
 1. **Triage the post-review arrivals** into W1–W6 at #257's re-cut: #257 (stamped 2026-09-01)
@@ -399,8 +408,8 @@ delimiter rows, which already break a table in the fr edition's pandas lecture.
 
 ## Health & context
 
-- `main` green; **1,635 tests across 68 suites** (zero skips, type-checked) as of
-  `e7356cc` (counted 2026-10-19; #376 brings it to 1,839 across 70); lint at
+- `main` green; **2,228 tests across 81 suites** (zero skips, type-checked) as of
+  `1c0b20b` (counted 2026-11-05); lint at
   `--max-warnings 0` including root `*.mjs`, CI checks formatting and
   `.qe/dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale `dist/`
   — run `npm run build` first; that guard is deliberate, not a break.
