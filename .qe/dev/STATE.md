@@ -28,6 +28,14 @@ Roadmap detail lives in the project trackers (reading order in
   path has no state file is skipped, so the old file stays where it was.
 
   Logs `2026-10-19-sync-scope-existing`, `2026-10-20-lecture-removal-gaps`.
+- **zh-cn sync failures, triaged 2026-11-04.** **#418**: the section output cap cut off the two
+  longest `## Exercises` in the estate; **PR #419** (merged 2026-11-05 as `2ab18cd`, not yet
+  released; #418 closed with it) gives a section its document's cap.
+  **#420**: update mode diffs from English the translation never carried, so a lecture whose
+  previous sync PR is open, or whose last sync failed, fails every later sync; no PR yet. 32 of
+  the 35 lagging zh-cn lectures sit in zh-cn#308/#310/#311/#312, unreviewed; until #423 ships,
+  each merge runs the old rebase, so merge them one at a time (or pause
+  `rebase-translations.yml`). Log `2026-11-04-whole-document-and-rebase`.
 - **Hardening project #349** (created 2026-10-06 from the 2026-10-05 codebase review). It has two
   work items:
   - **#348 is fixed on `main`, not yet released.** `translate forward` passed display labels
@@ -35,7 +43,12 @@ Roadmap detail lives in the project trackers (reading order in
     rules. It now passes the codes and logs what each request carried, and a glossary with no
     term for the requested code warns on every path. Forward runs are open again from a `main`
     build; the CLI runs from a checkout, so they need no release.
-  - **#280** (adopted): rebase moves a PR branch in one step and queues its runs.
+  - **#280** (adopted): rebase moves a PR branch in one step and queues its runs. **PR #423**
+    (open, 2026-11-04) builds one Git Data API commit on the `main` SHA pinned when a PR's
+    rebase begins, moves the branch once, reads the PR back, and adds `queue: max` to the
+    rebase template. #280 closes only after the release, then the edition patches, then a
+    harness back-to-back merge test, in that order (PR body; log
+    `2026-11-04-whole-document-and-rebase`).
 
   The review's evidence for other open issues went as comments on #90, #154, #169, #170, #259,
   #261, #281 and #325; the per-finding disposition is in `log/2026-10-06-review-followup.md`.
@@ -55,15 +68,19 @@ Roadmap detail lives in the project trackers (reading order in
   `D-2026-10-19-opus-5-5-for-bulk-seed`; logs `2026-10-19-claude-5-5-engine` and
   `2026-10-20-claude-5-5-eval`.
 - **fr typography fixes #324 and #325** (filed 2026-09-23 from the French editor's second
-  round) — implementation branches in progress: **#324** (`fix/fr-elision-apostrophe`) sets the
-  `fr` elision apostrophe before inline markup as U+2019; **#325**
-  (`fix/typography-raw-html-blocks`) stops U+00A0 being inserted inside raw `<style>` blocks.
+  round) — both open, with no branch: the two branch names recorded here before do not exist
+  on origin (checked 2026-11-04; `fix/french-typography` is the July typography work). **#324**
+  sets the `fr` elision apostrophe before inline markup to U+2019; **#325** stops U+00A0
+  being inserted inside raw `<style>` blocks. #422's head restore already keeps a pre-title
+  `<style>` block byte for byte on the whole-document paths, but not on UPDATE.
   The fr edition already carries both defects, so each fix comes with a one-off edition repair.
   Also held for measurement from the same round: the *Ramasse-miettes* and *Renvoyer* pins.
 - **#326 and #203 — the whole-document paths** (filed / re-diagnosed 2026-09-23): those paths
   take the head region from the model, so a front-matter drop passes parity and is written
   (#326); #203 is re-diagnosed as a whole-document code-fence wrap, to be fixed by one unwrap
-  helper shared with #118's forward path. Queued after #324 and #325. Measured on zh-cn at
+  helper shared with #118's forward path. **Both are in PRs, open 2026-11-04**: #421
+  unwraps a fenced whole-document response (#363), and #422, stacked on it, writes the
+  source's head and refuses a second or broken front matter (#326, #288). Measured on zh-cn at
   the v0.29.4 release (2026-10-09): `init` refuses the scenario 17 fixture `game-theory.md`
   on ~4% of draws (v0.29.3 0/36, v0.29.4 3/36, identical request bytes). Each report has
   #203's "transposed" shape, which is the source minus its first directive, consistent with the
@@ -75,22 +92,25 @@ Roadmap detail lives in the project trackers (reading order in
   One phrase to add, then re-measure `python_by_example` and run the blind pairwise judge; the
   result goes on #327.
 - **ml calibration: round 5 (`pandas`) is merged and its repairs shipped in v0.29.5
-  (2026-10-19); round 6 (`intro`, lecture-python-programming.ml#58) is with the editor; his
+  (2026-10-19); round 6 (`intro`, lecture-python-programming.ml#58) is reviewed (approved
+  2026-11-01, two suggestions, not yet applied; dispositions in log
+  `2026-11-04-whole-document-and-rebase`); the editor's
   ml#57 answers (2026-10-20) are encoded in code (#403, merged 2026-10-20 as `888cdb7`); of
   the held rule edits, rule 8 passed its arm and merged as #404 (`88c132c`, shipped in v0.29.6),
   and rule 12 was withdrawn.**
   - **Round 4.** The editor's 73 suggestions on `numpy` (lecture-python-programming.ml#23:
     touch rate 67% → 51%, lines accepted 22 → 70) are applied and merged as `7e373de`.
-    His questions are on ml#25; ml#14 (exercise blocks restored) is still open.
+    Their questions are on ml#25; ml#14 (exercise blocks restored) merged 2026-10-06 as `bd929ff`.
     Dispositions: QuantEcon/project-translation `reports/2026-09-28-ml-numpy-review-disposition.md`.
   - **Engine outcome: code, not prompt.**
     - **#331** (`d9b243c`) adds the comma-splice lint and a fourth `ml_repair` repair, and
       rebuilds `ml_metrics`' prose scanner.
     - Its regeneration test (**#333**, arm `2026-09-28-round4-splice-repair-eval`) ran on 18
       fresh drafts. The split is preferred 68 : 8 by a reference-free Opus 5.5 judge
-      (20 : 0 on `functions`, a lecture it was not built from) and 60 : 21 against his
-      text; all 81 splits pass a two-reader screen. The splice rate falls 17.3 → 10.7 per
-      100 lines on `numpy`, still above his 2.8, so the repair covers only part of the class.
+      (20 : 0 on `functions`, a lecture it was not built from) and 60 : 21 against the
+      editor's text; all 81 splits pass a two-reader screen. The splice rate falls 17.3 → 10.7
+      per 100 lines on `numpy`, still above the editor's 2.8, so the repair covers only part of
+      the class.
   - **Prompt.** Of four trims measured before release (arm `2026-09-28-round4-prompt-trims`,
     192 drafts), only the rule-19 exception ships: **#335** (`7d58e01`, in v0.29.4).
     - It takes "have already seen / met" to `കണ്ടുകഴിഞ്ഞു`: `numpy` 0/19 → 23/23,
@@ -103,7 +123,7 @@ Roadmap detail lives in the project trackers (reading order in
     (v0.29.3): the cleanest of three drafts, with 11 scripted repairs disclosed. The arm is
     `2026-09-28-round5-pandas-v0.29.3`. No regeneration is needed for #335, which touches
     no sentence in `pandas`.
-  - **Round 5** (2026-10-19). His 85 suggestions on `pandas` are applied and merged as
+  - **Round 5** (2026-10-19). The editor's 85 suggestions on `pandas` are applied and merged as
     `5378fd3`; questions on ml#57. The convergence series reversed under one method (touch
     rate 67% → 51% → 68%, median similarity 0.82 → 0.90 → 0.86), yet every encoded class
     held and all 11 disclosed repairs were kept: the regression is over-translation of
@@ -112,8 +132,8 @@ Roadmap detail lives in the project trackers (reading order in
     `reports/2026-10-19-ml-pandas-review-disposition.md`.
   - **Engine outcome, again code:** the round-5 repairs PR (branch `ml/round5-pandas-repairs`)
     widens the splice repair to any finite-verb comma followed by a continuing clause (guards
-    from his five pages), restores the discourse formulas source-gated (*In fact* failed 3/3
-    draws despite rule 8), commas multi-word `-ഉം` pairs, adds the round's over-translations
+    from the editor's five pages), restores the discourse formulas source-gated (*In fact* failed
+    3/3 draws despite rule 8), commas multi-word `-ഉം` pairs, adds the round's over-translations
     to the lint, and ships glossary v0.8.0 (pins *efficient*, *convenient*, *satisfy*,
     *compare*, *success*; *work* unpinned). Fixed point on the merged `numpy`, `matplotlib`
     and `pandas`; 31 fixture tests.
@@ -137,7 +157,12 @@ Roadmap detail lives in the project trackers (reading order in
        - The rule-2 arm is still to run. The round-4 lexical repairs (*see* → `നോക്കുക`,
          adverbial *element-wise*, standalone `മുൻ`) and the bracketed-paragraph stop are
          still open and had no site in `pandas`.
-    3. Round 7 at v0.29.6, the release that carries rule 8, after the round-6 review. Round 6
+    3. ~~Merge #301's lowercase-opener lint before round 7 is seeded~~ (#426, merged 2026-11-04
+       as `9526671`). `lowercase_initial` at `main` now flags a lowercase opener with a
+       Malayalam suffix outside list items (round 6's `economics-ലും`), a class every earlier
+       lint-based draft choice was blind to, and the terminal-punctuation lint skips pipe-table
+       rows; 42 fixture tests.
+    4. Round 7 at v0.29.6, the release that carries rule 8, after the round-6 review. Round 6
        (`intro`, ml#58, seeded at v0.29.5) is not re-seeded (Matt, 2026-10-21): `intro.md` has
        no rule-8 site.
 
