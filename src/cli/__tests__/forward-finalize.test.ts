@@ -18,6 +18,7 @@ import {
   ForwardLogger,
 } from '../commands/forward.js';
 import { extractHeadingMap, extractTranslationTitle } from '../../heading-map.js';
+import { checkWrittenDocument } from '../../whole-document.js';
 
 const quietLogger: ForwardLogger = {
   info: () => {},
@@ -234,6 +235,86 @@ describe('model preamble before the document frontmatter (2026-07-22 field defec
     // `note:` is not a frontmatter signature key — nothing is stripped
     expect(result).toContain('更新的文字');
     expect(result).toContain('note: 像键的一行');
+  });
+});
+
+describe('the head region above the title (#326, #288)', () => {
+  function capture(): { logger: ForwardLogger; warnings: string[] } {
+    const warnings: string[] = [];
+    return { warnings, logger: { info: () => {}, warn: (m) => warnings.push(m), error: () => {} } };
+  }
+
+  it('drops commentary and the model’s own front matter, whose YAML does not parse (ge_arrow, 2026-10-09)', async () => {
+    // The response as #288 records it: commentary, then a front-matter copy
+    // with an unquoted `a: b: c` heading key. findEmbeddedFrontmatter rejects
+    // the block, so before #326 the target's front matter went above both.
+    const modelOutput = `I'll produce a comprehensive rewrite of this document given the extensive changes in the source.
+
+---
+jupytext:
+  text_representation:
+    format_name: myst
+translation:
+  headings:
+    History::Example 1: a constant aggregate endowment: 示例 1
+---
+
+# 蛛网模型
+
+介绍文字（更新）。
+
+## 概述
+
+更新的概述。
+
+## 历史
+
+更新的历史。
+`;
+    const { logger, warnings } = capture();
+
+    const result = await finalizeResyncContent(modelOutput, SOURCE, TARGET, 'cobweb.md', logger);
+
+    expect(result).not.toContain('comprehensive rewrite');
+    expect(result.match(/^jupytext:/gm)).toHaveLength(1);
+    expect(result).toContain('1.16.1');
+    expect(result).not.toContain('a constant aggregate endowment');
+    expect(checkWrittenDocument(SOURCE, result)).toEqual({ ok: true, violations: [] });
+    // The preamble strip did not fire; the head restore did.
+    expect(warnings.some((w) => w.includes('preamble'))).toBe(false);
+    expect(warnings.filter((w) => w.includes('#326'))).toHaveLength(1);
+  });
+
+  it("writes the source's pre-title, which the model dropped, below the target's front matter", async () => {
+    const source = SOURCE.replace(
+      '# Cobweb Model',
+      '(cobweb)=\n```{index} single: Cobweb\n```\n\n# Cobweb Model'
+    );
+    const modelOutput = MODEL_OUTPUT.replace('# 蛛网模型', '(cobweb)=\n# 蛛网模型').replace(
+      '介绍文字（更新）。',
+      '```{index} single: Cobweb\n```\n\n介绍文字（更新）。'
+    );
+    // The model moved the {index} entry below the title: written twice, the guard refuses it.
+    const moved = await finalizeResyncContent(
+      modelOutput,
+      source,
+      TARGET,
+      'cobweb.md',
+      quietLogger
+    );
+    expect(checkWrittenDocument(source, moved).ok).toBe(false);
+
+    // Dropped altogether, it is written from the source.
+    const dropped = await finalizeResyncContent(
+      MODEL_OUTPUT,
+      source,
+      TARGET,
+      'cobweb.md',
+      quietLogger
+    );
+    expect(dropped).toContain('1.16.1');
+    expect(dropped).toContain('---\n\n(cobweb)=\n```{index} single: Cobweb\n```\n\n# 蛛网模型\n');
+    expect(checkWrittenDocument(source, dropped)).toEqual({ ok: true, violations: [] });
   });
 });
 

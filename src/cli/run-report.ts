@@ -186,6 +186,12 @@ export interface LectureReport {
   /** ok only: characters written to the target file. */
   outputChars?: number;
   /**
+   * ok only: whether the lines above the response's title differed from the
+   * source's, so the source's front matter and pre-title were written in their
+   * place (#326).
+   */
+  headRestored?: boolean;
+  /**
    * `--parallel 1` only: this lecture's API usage, every call that returned a
    * final message (refused, truncated and parity-failed ones included). An
    * attempt that threw before its final message, every retried one among them,
@@ -247,6 +253,8 @@ export interface InitRunReport {
    * the parity guard (#363), in lectures that failed too.
    */
   fenceUnwraps: number;
+  /** Lectures written with the source's head in place of the response's (#326). */
+  headRestores: number;
   /** total = ok + failed + skipped. */
   summary: { total: number; ok: number; failed: number; skipped: number };
   /** Every lecture translated or failed in this run, in run order. */

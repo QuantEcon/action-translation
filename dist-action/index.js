@@ -48409,6 +48409,102 @@ function unwrapDocumentFence(text, references) {
     return unchanged;
   return { text: document, unwrapped: true };
 }
+var H1_LINE = /^#\s+\S/;
+function layoutOf(content) {
+  const lines = content.split("\n");
+  const frontMatterEnd = lines[0] === "---" ? lines.findIndex((l, i) => i > 0 && l === "---") : -1;
+  let title = -1;
+  walkFences(content, (line, i, fence) => {
+    if (title === -1 && !fence && i > frontMatterEnd && H1_LINE.test(line))
+      title = i;
+  });
+  return { lines, frontMatterEnd, title };
+}
+function restoreHead(output, source, frontMatterFrom = source) {
+  const out = layoutOf(output);
+  const src = layoutOf(source);
+  if (out.title === -1 || src.title === -1)
+    return null;
+  let head;
+  if (frontMatterFrom === source) {
+    head = src.lines.slice(0, src.title);
+  } else {
+    const from = layoutOf(frontMatterFrom);
+    const frontMatter = from.frontMatterEnd === -1 ? [] : from.lines.slice(0, from.frontMatterEnd + 1);
+    const preTitle = src.lines.slice(src.frontMatterEnd + 1, src.title);
+    while (preTitle.length > 0 && preTitle[0].trim() === "")
+      preTitle.shift();
+    head = frontMatter.length > 0 ? [...frontMatter, "", ...preTitle] : preTitle;
+  }
+  const modelHead = out.lines.slice(0, out.title).join("\n").trim();
+  return {
+    text: [...head, ...out.lines.slice(out.title)].join("\n"),
+    replaced: modelHead !== head.join("\n").trim()
+  };
+}
+var FRONT_MATTER_KEY = /^(jupytext|kernelspec|translation):/;
+var NOTEBOOK_KEYS = ["jupytext", "kernelspec"];
+var TOP_LEVEL_KEY = /^([A-Za-z_][A-Za-z0-9_-]*):/;
+function frontMatterKeys(layout) {
+  const keys = /* @__PURE__ */ new Set();
+  for (let i = 1; i < layout.frontMatterEnd; i++) {
+    const key = TOP_LEVEL_KEY.exec(layout.lines[i]);
+    if (key)
+      keys.add(key[1]);
+  }
+  return keys;
+}
+function checkFrontMatter(sourceContent, outputContent) {
+  const violations = [];
+  const output = layoutOf(outputContent);
+  const stray = [];
+  walkFences(outputContent, (line, i, fence) => {
+    if (fence || i <= output.frontMatterEnd)
+      return;
+    const key = FRONT_MATTER_KEY.exec(line);
+    if (key)
+      stray.push({ line: i + 1, key: key[1] });
+  });
+  if (stray.length > 0) {
+    violations.push({
+      message: `front-matter key \`${stray[0].key}:\` at output line ${stray[0].line} is outside the front matter (${stray.length} such line${stray.length === 1 ? "" : "s"}): a second, unopened or unclosed front-matter block`
+    });
+  }
+  const sourceKeys = frontMatterKeys(layoutOf(sourceContent));
+  const outputKeys = frontMatterKeys(output);
+  const lost = NOTEBOOK_KEYS.filter((key) => sourceKeys.has(key) && !outputKeys.has(key));
+  if (lost.length > 0) {
+    violations.push({
+      message: `front matter lost ${lost.map((key) => `\`${key}\``).join(" and ")}, which the source's has: without ${lost.length === 1 ? "it" : "them"} MyST-NB does not read the page as a notebook and drops every code cell`
+    });
+  }
+  return violations;
+}
+function checkFenceEnd(sourceContent, outputContent) {
+  if (endsInsideFence(sourceContent))
+    return [];
+  let opened = -1;
+  const open = walkFences(outputContent, (_line, i, fence) => {
+    if (fence)
+      opened = i;
+  });
+  if (!open)
+    return [];
+  return [
+    {
+      message: `output ends inside the fence opened at output line ${opened + 1}, and the source does not: a stray fence line, such as a code-fence wrapper's closing line, or a closing fence left out`
+    }
+  ];
+}
+function checkWrittenDocument(sourceContent, outputContent) {
+  const parity = checkStructuralParity(sourceContent, outputContent);
+  const violations = [
+    ...parity.violations,
+    ...checkFrontMatter(sourceContent, outputContent),
+    ...checkFenceEnd(sourceContent, outputContent)
+  ];
+  return { ok: violations.length === 0, violations };
+}
 
 // dist/translator.js
 var INCOMPLETE_DOCUMENT_MARKER = "-----> INCOMPLETE DOCUMENT <------";
@@ -53272,7 +53368,12 @@ ${bodyLines.join("\n")}`;
     if (!result.success) {
       throw new Error(`Full translation failed: ${result.error}`);
     }
-    const translatedContent = applyTypography(result.translatedSection || "", targetLanguage);
+    const typeset = applyTypography(result.translatedSection || "", targetLanguage);
+    const head = restoreHead(typeset, content);
+    if (head?.replaced) {
+      core5.info(`${filepath}: kept the source's front matter and pre-title in place of the model's lines above the title (#326)`);
+    }
+    const translatedContent = head ? head.text : typeset;
     try {
       const sourceParsed = await this.parser.parseDocumentComponents(content, filepath);
       const translatedParsed = await this.parser.parseDocumentComponents(translatedContent, filepath);
@@ -54079,7 +54180,7 @@ var SyncOrchestrator = class {
       }
     }
     translatedContent = this.restoreVerbatimDirectives(file, translatedContent);
-    const parity = checkStructuralParity(file.newContent, translatedContent);
+    const parity = checkWrittenDocument(file.newContent, translatedContent);
     if (!parity.ok) {
       throw new Error(formatParityViolations(file.filename, parity));
     }
@@ -54118,7 +54219,7 @@ var SyncOrchestrator = class {
       translatedContent = await this.processor.processFull(file.newContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary);
     }
     translatedContent = this.restoreVerbatimDirectives(file, translatedContent);
-    const parity = checkStructuralParity(file.newContent, translatedContent);
+    const parity = checkWrittenDocument(file.newContent, translatedContent);
     if (!parity.ok) {
       throw new Error(formatParityViolations(file.filename, parity));
     }

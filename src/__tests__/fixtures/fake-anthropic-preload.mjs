@@ -7,7 +7,8 @@
  *
  * The reply depends on the target language the prompt names ("… from en to <lang>."):
  *   zh-cn  the source document echoed back, end_turn — a "translation" every guard accepts
- *   ja     the same, wrapped in a ```markdown fence (#363's shape), which the engine unwraps
+ *   ja     the same without its front matter, wrapped in a ```markdown fence (#363's and #326's
+ *          shapes): the engine unwraps it and writes the source's head above the title
  *   fa     a streamed refusal, stop_details.category 'bio'
  *   ml     HTTP 529 overloaded_error on every attempt — the engine retries, then an infra failure
  *   fr     HTTP 400 invalid_request_error — not retried, not infra (an api-error)
@@ -146,7 +147,12 @@ globalThis.fetch = async (input, init) => {
     case 'ja':
       if (source === undefined)
         return apiError(400, 'invalid_request_error', 'fake: no CONTENT block');
-      return sse(body.model, `\`\`\`markdown\n${source}\n\`\`\`\n`, 'end_turn', null);
+      return sse(
+        body.model,
+        `\`\`\`markdown\n${source.replace(/^---\n[\s\S]*?\n---\n+/, '')}\n\`\`\`\n`,
+        'end_turn',
+        null
+      );
     case 'fa':
       return sse(body.model, 'I cannot help with', 'refusal', {
         type: 'refusal',

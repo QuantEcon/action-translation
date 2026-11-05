@@ -52,9 +52,40 @@
  *
  * The guard still runs on the result. Lives outside translator.ts so that it
  * is tested without a client.
+ *
+ * One response looks like a wrapper never closed and is not one: a front matter
+ * whose opening `---` the model wrote as a bare fence (#363's capture, the only
+ * response it saw that removes only its first line). Removing that line leaves
+ * the front matter without its opening line, which parity does not see. The
+ * head restore below writes the source's front matter in its place, and where
+ * it cannot run, the front-matter rule refuses the write.
+ *
+ * The head region, the front matter and the pre-title content above the H1, is
+ * not the model's to write (#326). A whole-document draw that drops `jupytext`
+ * and `kernelspec` passes structural parity, and MyST-NB then reads the page as
+ * plain Markdown and drops every code cell. Other draws have put commentary and
+ * a second front-matter block above the title. `restoreHead` takes the head
+ * from the documents the request carried, byte for byte, and keeps the model's
+ * text from its H1 on. That is safe because no source pre-title holds prose:
+ * across 228 of them there are only anchors, `{raw}` headers, `{index}`
+ * entries, one `<style>` block and two `+++` lines, and the target pre-titles
+ * that differ from their source's are all defects.
+ *
+ * `checkWrittenDocument` is the check every write path runs on the exact bytes
+ * it writes: structural parity, plus #288's rule that front-matter keys appear
+ * only in the leading block and that the front matter keeps the source's
+ * `jupytext` and `kernelspec`, plus the rule that the document does not end
+ * inside a fence when its source does not.
  */
 
-import { endsInsideFence, isFenceLine } from './structural-parity.js';
+import {
+  ParityResult,
+  ParityViolation,
+  checkStructuralParity,
+  endsInsideFence,
+  isFenceLine,
+  walkFences,
+} from './structural-parity.js';
 
 /** A wrapper's first line: a fence at column 0 with no info string, or one naming Markdown. */
 const WRAPPER_OPENING = /^(`{3,}|~{3,})\s*(?:markdown|md|myst)?\s*$/i;
@@ -134,4 +165,196 @@ export function unwrapDocumentFence(text: string, references: readonly string[])
   if (endsInsideFence(document) || indentedAsAWhole(document)) return unchanged;
 
   return { text: document, unwrapped: true };
+}
+
+// ─── The head region (#326) ─────────────────────────────────────────────────
+
+/** A document's lines, with where its front matter ends and where its H1 is. */
+interface HeadLayout {
+  lines: string[];
+  /** Index of the `---` closing a front-matter block opened on the first line; -1 if none. */
+  frontMatterEnd: number;
+  /** Index of the H1, outside the front matter and outside any fence; -1 if none. */
+  title: number;
+}
+
+/** An H1 line, as the parser reads one. */
+const H1_LINE = /^#\s+\S/;
+
+/**
+ * Where a document's head region ends. Front matter follows the parser's rule
+ * (`parser.ts`), until #170 gives the codebase one splitter: the first line is
+ * `---` and the block runs to the next `---` line. The H1 is
+ * the first `# ` line below the front matter and outside any fence, by the
+ * guard's fence walk, so a `# comment` in a code cell is never read as the title.
+ */
+function layoutOf(content: string): HeadLayout {
+  const lines = content.split('\n');
+  const frontMatterEnd = lines[0] === '---' ? lines.findIndex((l, i) => i > 0 && l === '---') : -1;
+  let title = -1;
+  walkFences(content, (line, i, fence) => {
+    if (title === -1 && !fence && i > frontMatterEnd && H1_LINE.test(line)) title = i;
+  });
+  return { lines, frontMatterEnd, title };
+}
+
+export interface HeadRestore {
+  /** The document with its head region restored. */
+  text: string;
+  /**
+   * Whether the lines above the model's H1 differed from the restored head,
+   * apart from blank lines at either end. The translator trims every response,
+   * so in practice that sets aside only the blank lines between the head and
+   * the H1, which MyST does not read: counted, they would make `headRestored`
+   * measure whitespace rather than damage. `text` carries the restored head
+   * byte for byte either way.
+   */
+  replaced: boolean;
+}
+
+/**
+ * The output with its head region taken from the request's documents (#326):
+ * the front-matter block of `frontMatterFrom` (the source for a new
+ * translation, the existing translation for a resync), then the source's
+ * pre-title lines, then the output from its H1 on. With the default
+ * `frontMatterFrom`, the head is the source's lines above its H1, byte for byte.
+ *
+ * Null when the source or the output has no H1 (a page such as
+ * `_admonition/gpu.md`): the caller keeps the output as it is, and the
+ * front-matter rule in `checkWrittenDocument` still applies to it.
+ */
+export function restoreHead(
+  output: string,
+  source: string,
+  frontMatterFrom: string = source
+): HeadRestore | null {
+  const out = layoutOf(output);
+  const src = layoutOf(source);
+  if (out.title === -1 || src.title === -1) return null;
+
+  let head: string[];
+  if (frontMatterFrom === source) {
+    head = src.lines.slice(0, src.title);
+  } else {
+    const from = layoutOf(frontMatterFrom);
+    const frontMatter =
+      from.frontMatterEnd === -1 ? [] : from.lines.slice(0, from.frontMatterEnd + 1);
+    const preTitle = src.lines.slice(src.frontMatterEnd + 1, src.title);
+    while (preTitle.length > 0 && preTitle[0].trim() === '') preTitle.shift();
+    // One blank line below the front matter, none above the first line.
+    head = frontMatter.length > 0 ? [...frontMatter, '', ...preTitle] : preTitle;
+  }
+
+  const modelHead = out.lines.slice(0, out.title).join('\n').trim();
+  return {
+    text: [...head, ...out.lines.slice(out.title)].join('\n'),
+    replaced: modelHead !== head.join('\n').trim(),
+  };
+}
+
+// ─── The front-matter rule (#288) ───────────────────────────────────────────
+
+/** Keys that belong only in a lecture's front matter. */
+const FRONT_MATTER_KEY = /^(jupytext|kernelspec|translation):/;
+/** The front-matter keys MyST-NB needs to read a page as a notebook. */
+const NOTEBOOK_KEYS = ['jupytext', 'kernelspec'];
+/** A top-level YAML key. */
+const TOP_LEVEL_KEY = /^([A-Za-z_][A-Za-z0-9_-]*):/;
+
+/** The top-level keys of a document's leading front-matter block. */
+function frontMatterKeys(layout: HeadLayout): Set<string> {
+  const keys = new Set<string>();
+  for (let i = 1; i < layout.frontMatterEnd; i++) {
+    const key = TOP_LEVEL_KEY.exec(layout.lines[i]);
+    if (key) keys.add(key[1]);
+  }
+  return keys;
+}
+
+/**
+ * #288's front-matter rule, as violations. Front-matter keys (`jupytext:`,
+ * `kernelspec:`, `translation:` at the start of a line, outside any fence)
+ * appear only in the leading block, and the output's front matter keeps the
+ * source's `jupytext` and `kernelspec`. Written files have broken each half: a
+ * second block below the first, opened or not (`forward`, 2026-08-20 and
+ * 2026-10-09), and a block holding only `translation:` (`init`, #326). Neither
+ * adds a directive, so parity alone passes both. The rule refuses the write;
+ * it does not repair it.
+ */
+export function checkFrontMatter(sourceContent: string, outputContent: string): ParityViolation[] {
+  const violations: ParityViolation[] = [];
+  const output = layoutOf(outputContent);
+
+  const stray: Array<{ line: number; key: string }> = [];
+  walkFences(outputContent, (line, i, fence) => {
+    if (fence || i <= output.frontMatterEnd) return;
+    const key = FRONT_MATTER_KEY.exec(line);
+    if (key) stray.push({ line: i + 1, key: key[1] });
+  });
+  if (stray.length > 0) {
+    violations.push({
+      message:
+        `front-matter key \`${stray[0].key}:\` at output line ${stray[0].line} is outside the ` +
+        `front matter (${stray.length} such line${stray.length === 1 ? '' : 's'}): a second, ` +
+        `unopened or unclosed front-matter block`,
+    });
+  }
+
+  const sourceKeys = frontMatterKeys(layoutOf(sourceContent));
+  const outputKeys = frontMatterKeys(output);
+  const lost = NOTEBOOK_KEYS.filter((key) => sourceKeys.has(key) && !outputKeys.has(key));
+  if (lost.length > 0) {
+    violations.push({
+      message:
+        `front matter lost ${lost.map((key) => `\`${key}\``).join(' and ')}, which the ` +
+        `source's has: without ${lost.length === 1 ? 'it' : 'them'} MyST-NB does not read the ` +
+        `page as a notebook and drops every code cell`,
+    });
+  }
+  return violations;
+}
+
+/**
+ * The fence rule, as a violation: the output ends inside a fence, by the
+ * guard's walk, when its source does not. A code-fence wrapper that the unwrap
+ * declines, such as one opened with ```` ```text ````, loses its first line
+ * with the model's head in `restoreHead`, and its closing line is then the
+ * document's last, where it opens a fence that runs to the end of the file. A
+ * closing fence the model left out ends the document the same way. Neither
+ * changes a directive or an anchor, so parity alone passes both. A source that
+ * ends inside a fence is exempt, since a faithful translation of it does too.
+ */
+export function checkFenceEnd(sourceContent: string, outputContent: string): ParityViolation[] {
+  if (endsInsideFence(sourceContent)) return [];
+  // The walk visits only lines outside a fence, so the last fence line it
+  // visits is the one still open at the end.
+  let opened = -1;
+  const open = walkFences(outputContent, (_line, i, fence) => {
+    if (fence) opened = i;
+  });
+  if (!open) return [];
+  return [
+    {
+      message:
+        `output ends inside the fence opened at output line ${opened + 1}, and the source ` +
+        `does not: a stray fence line, such as a code-fence wrapper's closing line, or a ` +
+        `closing fence left out`,
+    },
+  ];
+}
+
+/**
+ * The checks every write path runs on the exact bytes it is about to write:
+ * structural parity with the source (#119, #65), the front-matter rule
+ * (#288, #326) and the fence rule. Reported with `formatParityViolations`, as
+ * parity was alone.
+ */
+export function checkWrittenDocument(sourceContent: string, outputContent: string): ParityResult {
+  const parity = checkStructuralParity(sourceContent, outputContent);
+  const violations = [
+    ...parity.violations,
+    ...checkFrontMatter(sourceContent, outputContent),
+    ...checkFenceEnd(sourceContent, outputContent),
+  ];
+  return { ok: violations.length === 0, violations };
 }

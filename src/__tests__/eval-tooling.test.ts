@@ -117,6 +117,8 @@ type Draw =
       thinkingTokens?: number;
       /** Absent: the report has no fenceUnwraps field, as before #363. */
       fenceUnwraps?: number;
+      /** Absent: the lecture has no headRestored field, as before #326. */
+      headRestored?: boolean;
     }
   | {
       outcome: 'failed';
@@ -138,8 +140,10 @@ function initReport(language: string, draw: Draw): object {
     elapsedMs?: number;
     thinkingTokens?: number;
     fenceUnwraps?: number;
+    headRestored?: boolean;
   };
   const unwraps = detail.fenceUnwraps === undefined ? {} : { fenceUnwraps: detail.fenceUnwraps };
+  const head = detail.headRestored === undefined ? {} : { headRestored: detail.headRestored };
   const failure =
     draw.outcome === 'failed'
       ? {
@@ -179,6 +183,7 @@ function initReport(language: string, draw: Draw): object {
         failure,
         elapsedMs: detail.elapsedMs ?? 1000,
         ...unwraps,
+        ...head,
       },
     ],
   };
@@ -352,6 +357,7 @@ describe('rate-check-summary.mjs — classified from init reports', () => {
       'legacy',
       'unwrapped',
       'unwrappedOk',
+      'headRestored',
       'meanCostUSD',
       'costUSDTotal',
       'costUSDOkTotal',
@@ -462,6 +468,33 @@ describe('rate-check-summary.mjs — edge cases', () => {
     expect(cell(summary, 'fa')).toMatchObject({ unwrapped: null, unwrappedOk: null });
     expect(result.stdout).toContain('fence unwrapped: 3 of 4 valid draws, 2 of them ok (#363)');
     expect(result.stdout.match(/fence unwrapped/g)).toHaveLength(1);
+  });
+
+  it('counts the delivered draws written with the source’s head (#326)', () => {
+    const runDir = freshDir('head-run');
+    writeMeta(runDir, reportMeta(4, 'zh-cn,fa'));
+    writeDraws(runDir, 'zh-cn', [
+      { outcome: 'ok', headRestored: true },
+      { outcome: 'ok', headRestored: false },
+      { outcome: 'ok', headRestored: true },
+      PARITY,
+    ]);
+    // An engine from before #326 does not report head restores: unknown, not none.
+    writeDraws(runDir, 'fa', [OK, OK, OK, OK]);
+
+    const result = run('node', [SUMMARIZER, runDir]);
+
+    const summary = readSummary(runDir);
+    expect(cell(summary, 'zh-cn')).toMatchObject({ ok: 3, headRestored: 2 });
+    expect(cell(summary, 'zh-cn').drawsDetail.map((d: any) => d.headRestored)).toEqual([
+      true,
+      false,
+      true,
+      null,
+    ]);
+    expect(cell(summary, 'fa')).toMatchObject({ headRestored: null });
+    expect(result.stdout).toContain('head restored: 2 of 3 ok draws (#326)');
+    expect(result.stdout.match(/head restored/g)).toHaveLength(1);
   });
 });
 
@@ -794,18 +827,22 @@ describe('rate-check.sh — a run of this checkout against a fake API', () => {
       legacy: { refused: 2, verdict: 'FAIL' },
     });
     expect(cell(summary, 'fr')).toMatchObject({ failed: 2, byKind: { 'api-error': 2 } });
-    // The wrapped echo is unwrapped before the parity guard, delivered, and counted (#363).
+    // The wrapped echo without its front matter is unwrapped before the parity guard, written
+    // with the source's head, delivered, and counted (#363, #326).
     expect(cell(summary, 'ja')).toMatchObject({
       ok: 2,
       failed: 0,
       unwrapped: 2,
       unwrappedOk: 2,
+      headRestored: 2,
       verdict: 'ok',
     });
-    expect(cell(summary, 'zh-cn')).toMatchObject({ unwrapped: 0, unwrappedOk: 0 });
+    expect(cell(summary, 'zh-cn')).toMatchObject({ unwrapped: 0, unwrappedOk: 0, headRestored: 0 });
     expect(first.stdout).toContain('fence unwrapped: 2 of 2 valid draws, 2 of them ok (#363)');
+    expect(first.stdout).toContain('head restored: 2 of 2 ok draws (#326)');
     const delivered = fs.readFileSync(path.join(runDir, 'ja', 'game-theory', '1', FIXTURE), 'utf8');
-    expect(delivered.startsWith('```')).toBe(false);
+    expect(delivered.startsWith('---\njupytext:\n')).toBe(true);
+    expect(delivered).toContain('\nkernelspec:\n');
     expect(cell(summary, 'zh-cn').servedModels).toEqual(['claude-sonnet-5']);
     expect(fs.existsSync(path.join(runDir, 'zh-cn', 'game-theory', '1', FIXTURE))).toBe(true);
     expect(fs.existsSync(path.join(runDir, '.lock'))).toBe(false);

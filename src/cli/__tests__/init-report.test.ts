@@ -182,6 +182,7 @@ describe('translate init --report-json', () => {
       servedModels: ['claude-opus-5-5'],
       retries: 0,
       fenceUnwraps: 0,
+      headRestores: 0,
       summary: { total: 3, ok: 1, failed: 2, skipped: 0 },
     });
     // (6000 × $4 + 1755 × $20) / 1M
@@ -196,6 +197,7 @@ describe('translate init --report-json', () => {
         elapsedMs: expect.any(Number),
         tokensUsed: 2900,
         outputChars: written.length,
+        headRestored: false,
         usage: {
           inputTokens: 2000,
           outputTokens: 900,
@@ -352,6 +354,34 @@ describe('translate init --report-json', () => {
     expect(written).toContain('# 测试讲座');
     expect(written.trimEnd().endsWith('```')).toBe(true);
     expect(printed.filter((line) => line.includes('removed a code fence'))).toHaveLength(2);
+  });
+
+  it('records each lecture written with the source’s head in place of the response’s (#326)', async () => {
+    writeSource(['chatty.md', 'good.md']);
+    // Commentary above the title: the source has nothing there, so it goes.
+    api.reply(
+      { ...GOOD, content: [thinking, text(`I'll translate this lecture now.\n\n${CLEAN}`)] },
+      GOOD
+    );
+    const opts = options({ parallel: 2 });
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    await runInit(opts);
+
+    const warned = warn.mock.calls.map((call) => String(call[0]));
+    warn.mockRestore();
+    const report = readReport(opts.reportJson!);
+    expect(report.headRestores).toBe(1);
+    // Known per lecture whatever --parallel is: the restore is the lecture's own.
+    expect(report.lectures).toEqual([
+      expect.objectContaining({ file: 'chatty.md', outcome: 'ok', headRestored: true }),
+      expect.objectContaining({ file: 'good.md', outcome: 'ok', headRestored: false }),
+    ]);
+    const written = fs.readFileSync(path.join(opts.target, 'lectures', 'chatty.md'), 'utf-8');
+    expect(written).not.toContain('translate this lecture');
+    expect(
+      warned.filter((line) => line.includes('chatty.md') && line.includes('#326'))
+    ).toHaveLength(1);
   });
 
   it('writes no report on a dry run', async () => {

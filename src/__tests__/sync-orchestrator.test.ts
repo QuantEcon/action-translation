@@ -397,6 +397,24 @@ describe('SyncOrchestrator', () => {
       expect(result.errors).toHaveLength(0);
     });
 
+    it('refuses a translation whose front matter lost jupytext and kernelspec (#288)', async () => {
+      const source =
+        '---\njupytext:\n  text_representation:\n    format_name: myst\nkernelspec:\n  name: python3\n---\n\n# Introduction\n\nSome content\n';
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the mocked FileProcessor
+      (orchestrator as any).processor.processFull.mockResolvedValueOnce(
+        '---\ntranslation:\n  title: 介绍\n---\n\n# 介绍\n\n一些内容\n'
+      );
+      const files: FileToSync[] = [
+        { filename: 'lectures/intro.md', type: 'markdown', newContent: source, isNewFile: true },
+      ];
+
+      const result = await orchestrator.processFiles(files);
+
+      expect(result.translatedFiles).toHaveLength(0);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toContain('front matter lost `jupytext` and `kernelspec`');
+    });
+
     it('should error when no content provided', async () => {
       const files: FileToSync[] = [
         {

@@ -38,7 +38,8 @@ import {
 import { getFileGitMetadata } from '../git-metadata.js';
 import { MystParser } from '../../parser.js';
 import { applyTypography } from '../../typography.js';
-import { checkStructuralParity, formatParityViolations } from '../../structural-parity.js';
+import { formatParityViolations } from '../../structural-parity.js';
+import { checkWrittenDocument, restoreHead } from '../../whole-document.js';
 import { applyVerbatimDirectives } from '../../verbatim-directives.js';
 import {
   findTargetLocalReads,
@@ -199,7 +200,9 @@ export function findEmbeddedFrontmatter(content: string, signatureKeys: Set<stri
  *    instead, silently reverting target-side metadata (e.g. jupytext
  *    version bumps). Enforced deterministically here.
  * 2. Strip a stray lone `---` the model can invent on frontmatter-less
- *    documents (an unclosed delimiter corrupts MyST parsing).
+ *    documents (an unclosed delimiter corrupts MyST parsing). Then take the
+ *    pre-title lines, everything between the front matter and the H1, from
+ *    the source (#326), dropping whatever else the model put above its title.
  * 3. Rebuild and inject the heading map (`translation:` block) from the
  *    current source and resynced sections, matching what the action's
  *    processFull() path writes — without it every resynced file stays
@@ -244,6 +247,19 @@ export async function finalizeResyncContent(
   body = body.replace(/^\r?\n+/, '');
 
   let merged = targetSplit.yaml !== undefined ? `---\n${targetSplit.yaml}\n---\n\n${body}` : body;
+
+  // 2b. The pre-title lines are the source's (#326): anchors, `{raw}` headers
+  // and `{index}` entries, never prose, so no edition's differ from its source's
+  // but by a defect. Whatever the model wrote above its H1 goes with them:
+  // commentary, or a second copy of the front matter the strip above could not
+  // parse (#288's second instance, 2026-10-09).
+  const head = restoreHead(merged, sourceContent, merged);
+  if (head?.replaced) {
+    logger.warn(
+      `${file}: kept the source's pre-title in place of the model's lines above the title (#326)`
+    );
+  }
+  if (head) merged = head.text;
 
   // 3. Rebuild the heading map from current source + resynced body.
   // Mirrors processFull(): a malformed document must not fail the resync,
@@ -419,7 +435,8 @@ export async function resyncSingleFile(
       }
       outputContent = verbatim.content;
 
-      const parity = checkStructuralParity(sourceContent, outputContent);
+      // The front-matter rule runs with it (#288).
+      const parity = checkWrittenDocument(sourceContent, outputContent);
       if (!parity.ok) {
         logger.error(`  ${formatParityViolations(file, parity)}`);
         return {
