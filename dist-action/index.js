@@ -54885,6 +54885,164 @@ async function refreshStaleBranch(octokit, owner, repo, prNumber) {
   }
 }
 
+// dist/git-commit.js
+var DEFAULT_RETRY = {
+  attempts: 3,
+  delayMs: (attempt) => 2e3 * 4 ** (attempt - 1),
+  // 2 s, then 8 s
+  sleep: (ms) => new Promise((resolve4) => setTimeout(resolve4, ms))
+};
+var RETRY_AFTER_CAP_S = 60;
+function statusOf2(error4) {
+  const status = error4?.status;
+  return typeof status === "number" ? status : void 0;
+}
+function messageOf2(error4) {
+  return error4 instanceof Error ? error4.message : String(error4);
+}
+function isRetryableGitHubError(error4) {
+  const status = statusOf2(error4);
+  if (status === void 0)
+    return false;
+  if (status >= 500 || status === 429)
+    return true;
+  return status === 403 && /secondary rate limit/i.test(messageOf2(error4));
+}
+function retryAfterMs(error4) {
+  const headers = error4?.response?.headers;
+  const seconds = Number(headers?.["retry-after"]);
+  return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, RETRY_AFTER_CAP_S) * 1e3 : void 0;
+}
+async function withRetry(what, call, logger, policy) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await call();
+    } catch (error4) {
+      if (attempt >= policy.attempts || !isRetryableGitHubError(error4))
+        throw error4;
+      const wait = retryAfterMs(error4) ?? policy.delayMs(attempt);
+      logger.warning(`${what} failed (${statusOf2(error4)}: ${messageOf2(error4)}); attempt ${attempt + 1} of ${policy.attempts} in ${Math.round(wait / 1e3)} s`);
+      await policy.sleep(wait);
+    }
+  }
+}
+var short = (sha) => sha.slice(0, 7);
+async function existsAt(octokit, params, logger, policy) {
+  try {
+    await withRetry(`reading ${params.path} at ${short(params.ref)}`, () => octokit.rest.repos.getContent(params), logger, policy);
+    return true;
+  } catch (error4) {
+    if (statusOf2(error4) === 404)
+      return false;
+    throw error4;
+  }
+}
+async function buildCommit(octokit, params, logger, policy = DEFAULT_RETRY) {
+  const { owner, repo, baseSha } = params;
+  const written = new Set(params.files.map((file) => file.path));
+  const deletions = [];
+  for (const path8 of new Set(params.deletions)) {
+    if (written.has(path8))
+      continue;
+    if (await existsAt(octokit, { owner, repo, path: path8, ref: baseSha }, logger, policy)) {
+      deletions.push(path8);
+    } else {
+      logger.info(`${path8}: not in ${short(baseSha)}, so there is nothing to delete`);
+    }
+  }
+  const tree = [
+    ...params.files.map((file) => ({
+      path: file.path,
+      mode: "100644",
+      type: "blob",
+      content: file.content
+    })),
+    ...deletions.map((path8) => ({ path: path8, mode: "100644", type: "blob", sha: null }))
+  ];
+  if (tree.length === 0)
+    return { unchanged: true };
+  const base = await withRetry(`reading commit ${short(baseSha)}`, () => octokit.rest.git.getCommit({ owner, repo, commit_sha: baseSha }), logger, policy);
+  const created = await withRetry("creating the tree", () => octokit.rest.git.createTree({ owner, repo, base_tree: base.data.tree.sha, tree }), logger, policy);
+  if (created.data.sha === base.data.tree.sha)
+    return { unchanged: true };
+  const commit = await withRetry("creating the commit", () => octokit.rest.git.createCommit({
+    owner,
+    repo,
+    message: params.message,
+    tree: created.data.sha,
+    parents: [baseSha]
+  }), logger, policy);
+  return { unchanged: false, sha: commit.data.sha, treeSha: created.data.sha };
+}
+function rebaseCommitMessage(params) {
+  const lines = [
+    `Rebase translations onto ${params.baseBranch} (${short(params.baseSha)}) after #${params.mergedPrNumber}`,
+    "",
+    ...params.files.map((file) => file.path),
+    ...params.deletions.map((path8) => `deleted: ${path8}`)
+  ];
+  return lines.join("\n");
+}
+function nothingLeftComment(params) {
+  const declared = params.declaredFiles.map((path8) => `- \`${path8}\``).join("\n");
+  return `\u{1F5C2}\uFE0F **Closed: nothing left to carry.** After #${params.mergedPrNumber} was merged, this PR's translation was rebuilt on \`${params.baseBranch}\` (\`${short(params.baseSha)}\`), and the rebuilt files are identical to what \`${params.baseBranch}\` already holds.
+
+The files this PR declares:
+
+${declared}
+
+The branch was not changed, so it still holds this PR's previous commits. The rebase automation closed the PR rather than push a branch with no commits ahead of \`${params.baseBranch}\` (#280).`;
+}
+async function writeRebasedBranch(octokit, params, logger, policy = DEFAULT_RETRY) {
+  const { owner, repo, pullNumber, branch, baseBranch, baseSha } = params;
+  let built;
+  try {
+    built = await buildCommit(octokit, {
+      owner,
+      repo,
+      baseSha,
+      files: params.files,
+      deletions: params.deletions,
+      message: rebaseCommitMessage(params)
+    }, logger, policy);
+  } catch (error4) {
+    throw new Error(`could not build the rebased commit on ${baseBranch} (${short(baseSha)}); branch left untouched: ${messageOf2(error4)}`);
+  }
+  if (built.unchanged) {
+    await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: pullNumber,
+      body: nothingLeftComment(params)
+    });
+    await octokit.rest.pulls.update({ owner, repo, pull_number: pullNumber, state: "closed" });
+    logger.info(`PR #${pullNumber}: nothing left to carry onto ${baseBranch}; closed, branch unchanged`);
+    return { outcome: "closed" };
+  }
+  try {
+    await octokit.rest.git.updateRef({
+      owner,
+      repo,
+      ref: `heads/${branch}`,
+      sha: built.sha,
+      force: true
+    });
+  } catch (error4) {
+    throw new Error(`could not move ${branch} to the rebased commit ${short(built.sha)}: ${messageOf2(error4)}`);
+  }
+  let state;
+  try {
+    const { data } = await withRetry(`reading PR #${pullNumber} back`, () => octokit.rest.pulls.get({ owner, repo, pull_number: pullNumber }), logger, policy);
+    state = data.state;
+  } catch (error4) {
+    throw new Error(`${branch} moved to the rebased commit ${short(built.sha)}, but PR #${pullNumber} could not be read back: ${messageOf2(error4)}`);
+  }
+  if (state !== "open") {
+    throw new Error(`PR #${pullNumber} is ${state} after ${branch} moved to the rebased commit ${short(built.sha)}. The branch holds the rebased translation; recreate the PR from it (#280)`);
+  }
+  return { outcome: "moved", commitSha: built.sha };
+}
+
 // dist/action/review.js
 var core8 = __toESM(require_core(), 1);
 var github2 = __toESM(require_github(), 1);
@@ -56617,6 +56775,7 @@ async function runRebase() {
   core9.info(`Found ${siblingPRs.length} open translation PR(s). Checking for file overlaps...`);
   let rebasedCount = 0;
   let refreshedCount = 0;
+  let closedCount = 0;
   let skippedCount = 0;
   let errorCount = 0;
   for (const pr of siblingPRs) {
@@ -56666,9 +56825,13 @@ No content was changed \u2014 this PR's branch is simply still behind \`main\`. 
         continue;
       }
       core9.info(`PR #${pr.number}: ${overlapping.length} overlapping file(s) \u2014 rebasing...`);
-      const outcome = await rebaseSinglePR(octokit, pr, metadata, inputs);
+      const outcome = await rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber);
       if (outcome === "skipped") {
         skippedCount++;
+        continue;
+      }
+      if (outcome === "closed") {
+        closedCount++;
         continue;
       }
       rebasedCount++;
@@ -56703,17 +56866,27 @@ You may need to manually resolve conflicts or run \`/translate-resync\` on the s
     }
   }
   const refreshedNote = inputs.rebaseStaleSiblings ? `, ${refreshedCount} refreshed` : "";
-  const summary2 = `\u267B\uFE0F Rebase complete: ${rebasedCount} rebased${refreshedNote}, ${skippedCount} skipped, ${errorCount} errors.`;
+  const closedNote = closedCount > 0 ? `, ${closedCount} closed (nothing left to carry)` : "";
+  const summary2 = `\u267B\uFE0F Rebase complete: ${rebasedCount} rebased${refreshedNote}${closedNote}, ${skippedCount} skipped, ${errorCount} errors.`;
   if (errorCount > 0) {
     core9.setFailed(summary2);
   } else {
     core9.info(summary2);
   }
 }
-async function rebaseSinglePR(octokit, pr, metadata, inputs) {
+async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
   const { owner, repo } = github3.context.repo;
   const [sourceOwner, sourceRepoName] = metadata.sourceRepo.split("/");
   const sourceCommitSha = metadata.sourceCommitSha;
+  const { data: repoData } = await octokit.rest.repos.get({ owner, repo });
+  const baseBranch = repoData.default_branch;
+  const { data: baseRef } = await octokit.rest.git.getRef({
+    owner,
+    repo,
+    ref: `heads/${baseBranch}`
+  });
+  const baseSha = baseRef.object.sha;
+  core9.info(`PR #${pr.number}: rebasing onto ${baseBranch} at ${baseSha.slice(0, 7)}`);
   const filesToSync = [];
   const fetchErrors = [];
   for (const file of metadata.files) {
@@ -56722,7 +56895,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
       if (fileType === "removed") {
         let existingFileSha;
         try {
-          const result2 = await fetchFileContent(octokit, owner, repo, file.path);
+          const result2 = await fetchFileContent(octokit, owner, repo, file.path, baseSha);
           existingFileSha = result2.sha;
         } catch {
           core9.info(`${file.path}: Already gone from target repo \u2014 skip deletion`);
@@ -56748,7 +56921,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
         let existingFileSha;
         let targetContent;
         try {
-          const result2 = await fetchFileContent(octokit, owner, repo, file.path);
+          const result2 = await fetchFileContent(octokit, owner, repo, file.path, baseSha);
           existingFileSha = result2.sha;
           targetContent = result2.content;
         } catch (error4) {
@@ -56786,7 +56959,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
         let targetContent = "";
         let oldFileSha;
         try {
-          const result2 = await fetchFileContent(octokit, owner, repo, file.previousPath);
+          const result2 = await fetchFileContent(octokit, owner, repo, file.previousPath, baseSha);
           targetContent = result2.content;
           oldFileSha = result2.sha;
         } catch {
@@ -56808,7 +56981,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
         let existingFileSha;
         let isNewFile = false;
         try {
-          const result2 = await fetchFileContent(octokit, owner, repo, file.path);
+          const result2 = await fetchFileContent(octokit, owner, repo, file.path, baseSha);
           targetContent = result2.content;
           existingFileSha = result2.sha;
         } catch {
@@ -56863,7 +57036,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
   } else {
     core9.info("No targetBaseSha in metadata \u2014 rebase cache unavailable (pre-cache PR)");
   }
-  const existingStateShas = await fetchExistingStateShas(octokit, owner, repo, filesToSync, inputs.docsFolder);
+  const existingStateShas = await fetchExistingStateShas(octokit, owner, repo, filesToSync, inputs.docsFolder, baseSha);
   const stateConfig = {
     sourceCommitSha,
     existingStateShas,
@@ -56877,64 +57050,36 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs) {
     debugMode: true,
     bibliographyMode: inputs.bibliographyMode
   }, coreLogger, stateConfig);
-  const bibliography = inputs.bibliographyMode === "off" ? void 0 : await fetchBibliographies(octokit, { owner: metadata.sourceRepo.split("/")[0], repo: metadata.sourceRepo.split("/")[1] }, { owner, repo }, inputs.docsFolder);
+  const bibliography = inputs.bibliographyMode === "off" ? void 0 : await fetchBibliographies(
+    octokit,
+    // The source at the commit this PR translates, as sync mode reads it.
+    { owner: sourceOwner, repo: sourceRepoName, ref: sourceCommitSha },
+    { owner, repo, ref: baseSha },
+    inputs.docsFolder
+  );
   const result = await orchestrator.processFiles(filesToSync, glossary, rebaseCache, bibliography);
   if (result.errors.length > 0) {
     throw new Error(`translation produced ${result.errors.length} error(s); branch left untouched: ${result.errors.join("; ")}`);
   }
   if (result.translatedFiles.length === 0 && result.filesToDelete.length === 0) {
-    core9.info(`PR #${pr.number}: No translated files produced. Skipping force-push.`);
+    core9.info(`PR #${pr.number}: No translated files produced. Branch left as it was.`);
     return "skipped";
   }
-  const branchName = pr.head.ref;
-  const branchRef = `heads/${branchName}`;
-  const { data: defaultBranchData } = await octokit.rest.repos.get({ owner, repo });
-  const { data: mainRef } = await octokit.rest.git.getRef({
+  const written = await writeRebasedBranch(octokit, {
     owner,
     repo,
-    ref: `heads/${defaultBranchData.default_branch}`
-  });
-  const newBaseSha = mainRef.object.sha;
-  await octokit.rest.git.updateRef({
-    owner,
-    repo,
-    ref: branchRef,
-    sha: newBaseSha,
-    force: true
-  });
-  for (const file of result.translatedFiles) {
-    let fileSha;
-    try {
-      const { sha } = await fetchFileContent(octokit, owner, repo, file.path, branchName);
-      fileSha = sha;
-    } catch {
-    }
-    await octokit.rest.repos.createOrUpdateFileContents({
-      owner,
-      repo,
-      path: file.path,
-      message: `Update translation: ${file.path}`,
-      content: Buffer.from(file.content).toString("base64"),
-      branch: branchName,
-      sha: fileSha
-    });
-  }
-  for (const file of result.filesToDelete) {
-    try {
-      const { sha } = await fetchFileContent(octokit, owner, repo, file.path, branchName);
-      await octokit.rest.repos.deleteFile({
-        owner,
-        repo,
-        path: file.path,
-        message: `Delete removed file: ${file.path}`,
-        branch: branchName,
-        sha
-      });
-    } catch {
-      core9.info(`${file.path}: Not found on branch \u2014 skip deletion`);
-    }
-  }
-  core9.info(`PR #${pr.number}: Successfully rebased with ${result.translatedFiles.length} file(s).`);
+    pullNumber: pr.number,
+    branch: pr.head.ref,
+    baseBranch,
+    baseSha,
+    files: result.translatedFiles.map((file) => ({ path: file.path, content: file.content })),
+    deletions: result.filesToDelete.map((file) => file.path),
+    declaredFiles: metadata.files.map((file) => file.path),
+    mergedPrNumber
+  }, coreLogger);
+  if (written.outcome === "closed")
+    return "closed";
+  core9.info(`PR #${pr.number}: rebased in one commit (${written.commitSha.slice(0, 7)}) with ${result.translatedFiles.length} file(s) written and ${result.filesToDelete.length} marked for deletion.`);
   return "rebased";
 }
 async function runSync() {
@@ -57288,8 +57433,9 @@ async function fetchSourcePrInfo(octokit, prNumber) {
     return void 0;
   }
 }
-async function fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToSync, docsFolder) {
+async function fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToSync, docsFolder, ref) {
   const shas = /* @__PURE__ */ new Map();
+  const at = ref ? { ref } : {};
   const markdownFiles = filesToSync.filter((f) => f.type === "markdown" || f.type === "renamed" || f.type === "removed");
   for (const file of markdownFiles) {
     const docsRelName = docsFolder && file.filename.startsWith(docsFolder) ? file.filename.slice(docsFolder.length) : file.filename;
@@ -57298,7 +57444,8 @@ async function fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToS
       const { data } = await octokit.rest.repos.getContent({
         owner: targetOwner,
         repo: targetRepo,
-        path: statePath
+        path: statePath,
+        ...at
       });
       if ("sha" in data) {
         shas.set(statePath, data.sha);
@@ -57312,7 +57459,8 @@ async function fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToS
         const { data } = await octokit.rest.repos.getContent({
           owner: targetOwner,
           repo: targetRepo,
-          path: oldStatePath
+          path: oldStatePath,
+          ...at
         });
         if ("sha" in data) {
           shas.set(oldStatePath, data.sha);
@@ -57436,7 +57584,8 @@ async function fetchBibliographies(octokit, source, target, docsFolder) {
     const { data } = await octokit.rest.repos.getContent({
       owner: target.owner,
       repo: target.repo,
-      path: configPath
+      path: configPath,
+      ...target.ref ? { ref: target.ref } : {}
     });
     if (!("content" in data))
       return void 0;
@@ -57462,7 +57611,8 @@ async function fetchBibliographies(octokit, source, target, docsFolder) {
       const { data } = await octokit.rest.repos.getContent({
         owner: target.owner,
         repo: target.repo,
-        path: repoPath
+        path: repoPath,
+        ...target.ref ? { ref: target.ref } : {}
       });
       if (!("content" in data))
         throw new Error("not a file");

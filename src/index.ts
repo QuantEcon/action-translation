@@ -26,6 +26,7 @@ import { BibliographySources, BibFile, parseBibtexBibfiles } from './bibliograph
 import { isTranslationBranch } from './branch-naming.js';
 import { FAILURE_ISSUE_LABEL } from './contracts.js';
 import { refreshStaleBranch } from './rebase-siblings.js';
+import { writeRebasedBranch } from './git-commit.js';
 import { stateFileRelativePath } from './cli/translate-state.js';
 import {
   applySyncScope,
@@ -153,6 +154,7 @@ async function runRebase(): Promise<void> {
 
   let rebasedCount = 0;
   let refreshedCount = 0;
+  let closedCount = 0;
   let skippedCount = 0;
   let errorCount = 0;
 
@@ -215,11 +217,17 @@ async function runRebase(): Promise<void> {
       core.info(`PR #${pr.number}: ${overlapping.length} overlapping file(s) — rebasing...`);
 
       // Re-run the sync pipeline for this PR
-      const outcome = await rebaseSinglePR(octokit, pr, metadata, inputs);
+      const outcome = await rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber);
       if (outcome === 'skipped') {
         // Nothing was translated or pushed — a "rebased" comment here would
         // claim work that never happened.
         skippedCount++;
+        continue;
+      }
+      if (outcome === 'closed') {
+        // Its rebuilt content is already on main: writeRebasedBranch said so
+        // on the PR and closed it, leaving the branch as it was (#280).
+        closedCount++;
         continue;
       }
       rebasedCount++;
@@ -251,7 +259,8 @@ async function runRebase(): Promise<void> {
   }
 
   const refreshedNote = inputs.rebaseStaleSiblings ? `, ${refreshedCount} refreshed` : '';
-  const summary = `♻️ Rebase complete: ${rebasedCount} rebased${refreshedNote}, ${skippedCount} skipped, ${errorCount} errors.`;
+  const closedNote = closedCount > 0 ? `, ${closedCount} closed (nothing left to carry)` : '';
+  const summary = `♻️ Rebase complete: ${rebasedCount} rebased${refreshedNote}${closedNote}, ${skippedCount} skipped, ${errorCount} errors.`;
   if (errorCount > 0) {
     // A rebase run that failed PRs must fail the workflow — every error above
     // was caught per-PR, so without this the run reports green (#160/F37).
@@ -262,13 +271,17 @@ async function runRebase(): Promise<void> {
 }
 
 /**
- * Re-run the sync pipeline for a single translation PR and force-push the result.
+ * Re-run the sync pipeline for a single translation PR and move its branch to
+ * the result: one commit on the default branch, pinned when this PR's rebase
+ * began, written by `writeRebasedBranch` (#280).
  *
- * Returns 'rebased' only when the branch was actually reset and re-pushed;
- * 'skipped' when there was nothing to do. Throws — before any branch reset —
- * when translation produced errors: force-resetting first and committing only
- * the successful files would silently drop the errored files' translations
- * from the PR while reporting success (#160/F37).
+ * Returns 'rebased' when the branch moved; 'closed' when the rebuilt content
+ * was already on the default branch, so the PR was closed with a comment and
+ * its branch left alone; 'skipped' when there was nothing to do. Throws, with
+ * the branch where it was, when a content fetch or the translation failed
+ * (#165, #160/F37: committing only the files that succeeded would drop the
+ * others' translations while reporting success) or when the commit could not
+ * be built; and throws after the move when the PR did not stay open.
  */
 async function rebaseSinglePR(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -276,11 +289,27 @@ async function rebaseSinglePR(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   pr: any,
   metadata: TranslationSyncMetadata,
-  inputs: ReturnType<typeof getRebaseInputs>
-): Promise<'rebased' | 'skipped'> {
+  inputs: ReturnType<typeof getRebaseInputs>,
+  mergedPrNumber: number
+): Promise<'rebased' | 'skipped' | 'closed'> {
   const { owner, repo } = github.context.repo;
   const [sourceOwner, sourceRepoName] = metadata.sourceRepo.split('/');
   const sourceCommitSha = metadata.sourceCommitSha;
+
+  // Pin the default branch once, before any read (#280). Every target read
+  // below is made at this SHA, and the rebased commit's only parent is it. A
+  // merge that lands while this PR is being rebuilt then leaves the branch
+  // behind main, a visible conflict that the merge's own queued run repairs,
+  // instead of a commit built from pre-merge content that silently reverts it.
+  const { data: repoData } = await octokit.rest.repos.get({ owner, repo });
+  const baseBranch: string = repoData.default_branch;
+  const { data: baseRef } = await octokit.rest.git.getRef({
+    owner,
+    repo,
+    ref: `heads/${baseBranch}`,
+  });
+  const baseSha: string = baseRef.object.sha;
+  core.info(`PR #${pr.number}: rebasing onto ${baseBranch} at ${baseSha.slice(0, 7)}`);
 
   // Fetch content for each file and build FileToSync array
   const filesToSync: FileToSync[] = [];
@@ -295,7 +324,7 @@ async function rebaseSinglePR(
         // Removed files: just need the existing target SHA for deletion
         let existingFileSha: string | undefined;
         try {
-          const result = await fetchFileContent(octokit, owner, repo, file.path);
+          const result = await fetchFileContent(octokit, owner, repo, file.path, baseSha);
           existingFileSha = result.sha;
         } catch {
           core.info(`${file.path}: Already gone from target repo — skip deletion`);
@@ -332,7 +361,7 @@ async function rebaseSinglePR(
         let existingFileSha: string | undefined;
         let targetContent: string | undefined;
         try {
-          const result = await fetchFileContent(octokit, owner, repo, file.path);
+          const result = await fetchFileContent(octokit, owner, repo, file.path, baseSha);
           existingFileSha = result.sha;
           targetContent = result.content;
         } catch (error) {
@@ -394,7 +423,7 @@ async function rebaseSinglePR(
         let oldFileSha: string | undefined;
 
         try {
-          const result = await fetchFileContent(octokit, owner, repo, file.previousPath);
+          const result = await fetchFileContent(octokit, owner, repo, file.previousPath, baseSha);
           targetContent = result.content;
           oldFileSha = result.sha;
         } catch {
@@ -419,7 +448,7 @@ async function rebaseSinglePR(
         let isNewFile = false;
 
         try {
-          const result = await fetchFileContent(octokit, owner, repo, file.path);
+          const result = await fetchFileContent(octokit, owner, repo, file.path, baseSha);
           targetContent = result.content;
           existingFileSha = result.sha;
         } catch {
@@ -512,14 +541,16 @@ async function rebaseSinglePR(
     core.info('No targetBaseSha in metadata — rebase cache unavailable (pre-cache PR)');
   }
 
-  // Fetch existing state file SHAs — the branch was reset to main, so state files
-  // from main exist and need their SHAs for createOrUpdateFileContents to succeed
+  // The state files main holds at the pinned SHA. The orchestrator deletes a
+  // removed or renamed lecture's state file only when main has one, and the
+  // rebased commit is built on that same SHA, so the two agree.
   const existingStateShas = await fetchExistingStateShas(
     octokit,
     owner,
     repo,
     filesToSync,
-    inputs.docsFolder
+    inputs.docsFolder,
+    baseSha
   );
   const stateConfig: StateGenerationConfig = {
     sourceCommitSha,
@@ -546,16 +577,17 @@ async function rebaseSinglePR(
       ? undefined
       : await fetchBibliographies(
           octokit,
-          { owner: metadata.sourceRepo.split('/')[0], repo: metadata.sourceRepo.split('/')[1] },
-          { owner, repo },
+          // The source at the commit this PR translates, as sync mode reads it.
+          { owner: sourceOwner, repo: sourceRepoName, ref: sourceCommitSha },
+          { owner, repo, ref: baseSha },
           inputs.docsFolder
         );
 
   const result = await orchestrator.processFiles(filesToSync, glossary, rebaseCache, bibliography);
 
-  // Throw BEFORE any branch reset: committing only the successful files onto a
-  // freshly-reset branch drops the errored files' previous translations from
-  // the PR, then the caller comments "content is preserved" on it.
+  // Throw before the branch is touched: a commit of only the successful files
+  // drops the errored files' previous translations from the PR, then the
+  // caller comments "content is preserved" on it.
   if (result.errors.length > 0) {
     throw new Error(
       `translation produced ${result.errors.length} error(s); branch left untouched: ${result.errors.join('; ')}`
@@ -563,73 +595,34 @@ async function rebaseSinglePR(
   }
 
   if (result.translatedFiles.length === 0 && result.filesToDelete.length === 0) {
-    core.info(`PR #${pr.number}: No translated files produced. Skipping force-push.`);
+    core.info(`PR #${pr.number}: No translated files produced. Branch left as it was.`);
     return 'skipped';
   }
 
-  // Force-push: delete the old branch and recreate from current main
-  const branchName = pr.head.ref;
-  const branchRef = `heads/${branchName}`;
-
-  // Get current main SHA
-  const { data: defaultBranchData } = await octokit.rest.repos.get({ owner, repo });
-  const { data: mainRef } = await octokit.rest.git.getRef({
-    owner,
-    repo,
-    ref: `heads/${defaultBranchData.default_branch}`,
-  });
-  const newBaseSha = mainRef.object.sha;
-
-  // Reset the branch to current main
-  await octokit.rest.git.updateRef({
-    owner,
-    repo,
-    ref: branchRef,
-    sha: newBaseSha,
-    force: true,
-  });
-
-  // Commit translated files to the branch
-  for (const file of result.translatedFiles) {
-    // Get the SHA of this file on the newly-reset branch (it now matches main)
-    let fileSha: string | undefined;
-    try {
-      const { sha } = await fetchFileContent(octokit, owner, repo, file.path, branchName);
-      fileSha = sha;
-    } catch {
-      // File doesn't exist on this branch yet — that's fine
-    }
-
-    await octokit.rest.repos.createOrUpdateFileContents({
+  // One commit on the pinned base, then one ref move from the branch's old
+  // head straight to it: the branch never equals main, the state GitHub
+  // closes a PR on (#280).
+  const written = await writeRebasedBranch(
+    octokit,
+    {
       owner,
       repo,
-      path: file.path,
-      message: `Update translation: ${file.path}`,
-      content: Buffer.from(file.content).toString('base64'),
-      branch: branchName,
-      sha: fileSha,
-    });
-  }
-
-  // Delete removed files
-  for (const file of result.filesToDelete) {
-    try {
-      const { sha } = await fetchFileContent(octokit, owner, repo, file.path, branchName);
-      await octokit.rest.repos.deleteFile({
-        owner,
-        repo,
-        path: file.path,
-        message: `Delete removed file: ${file.path}`,
-        branch: branchName,
-        sha,
-      });
-    } catch {
-      core.info(`${file.path}: Not found on branch — skip deletion`);
-    }
-  }
+      pullNumber: pr.number,
+      branch: pr.head.ref,
+      baseBranch,
+      baseSha,
+      files: result.translatedFiles.map((file) => ({ path: file.path, content: file.content })),
+      deletions: result.filesToDelete.map((file) => file.path),
+      declaredFiles: metadata.files.map((file) => file.path),
+      mergedPrNumber,
+    },
+    coreLogger
+  );
+  if (written.outcome === 'closed') return 'closed';
 
   core.info(
-    `PR #${pr.number}: Successfully rebased with ${result.translatedFiles.length} file(s).`
+    `PR #${pr.number}: rebased in one commit (${written.commitSha.slice(0, 7)}) with ` +
+      `${result.translatedFiles.length} file(s) written and ${result.filesToDelete.length} marked for deletion.`
   );
   return 'rebased';
 }
@@ -1315,9 +1308,12 @@ async function fetchSourcePrInfo(
 }
 
 /**
- * Fetch existing .translate/state/ file SHAs from the target repo.
- * These SHAs are needed so Octokit can update (rather than create) state files.
- * Missing state files are silently skipped — they'll be created as new files.
+ * Fetch existing .translate/state/ file SHAs from the target repo, at `ref`
+ * when one is given (rebase mode pins it, #280) and on the default branch
+ * otherwise. Sync mode needs them so Octokit can update (rather than create)
+ * state files; both modes use them to decide whether a removed or renamed
+ * lecture has a state file to delete. Missing state files are silently
+ * skipped — they'll be created as new files.
  */
 async function fetchExistingStateShas(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1325,11 +1321,13 @@ async function fetchExistingStateShas(
   targetOwner: string,
   targetRepo: string,
   filesToSync: FileToSync[],
-  docsFolder: string
+  docsFolder: string,
+  ref?: string
 ): Promise<Map<string, string>> {
   const shas = new Map<string, string>();
+  const at = ref ? { ref } : {};
 
-  // Only need state SHAs for markdown and renamed files (ones that generate state)
+  // Markdown and renamed files write state; a removed file's state is deleted
   const markdownFiles = filesToSync.filter(
     (f) => f.type === 'markdown' || f.type === 'renamed' || f.type === 'removed'
   );
@@ -1346,6 +1344,7 @@ async function fetchExistingStateShas(
         owner: targetOwner,
         repo: targetRepo,
         path: statePath,
+        ...at,
       });
       if ('sha' in data) {
         shas.set(statePath, data.sha);
@@ -1366,6 +1365,7 @@ async function fetchExistingStateShas(
           owner: targetOwner,
           repo: targetRepo,
           path: oldStatePath,
+          ...at,
         });
         if ('sha' in data) {
           shas.set(oldStatePath, data.sha);
@@ -1558,7 +1558,9 @@ run();
  * Fetch the bibliographies a citation backfill needs (#117).
  *
  * The target's `_config.yml` names them via `bibtex_bibfiles`; the source is
- * read at the same docs-relative paths. Returns undefined when the target
+ * read at the same docs-relative paths. Each side is read at its `ref` when one
+ * is given: the source at the commit being translated, the target at the base
+ * rebase mode pinned (#280). Returns undefined when the target
  * configures no bibliography — correct for editions that have none. (The E2E
  * harness targets DO carry a minimal `_config.yml` + `references.bib` since
  * scenario 27, precisely so this path is exercisable end-to-end.)
@@ -1570,7 +1572,7 @@ export async function fetchBibliographies(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   octokit: any,
   source: { owner: string; repo: string; ref?: string },
-  target: { owner: string; repo: string },
+  target: { owner: string; repo: string; ref?: string },
   docsFolder: string
 ): Promise<BibliographySources | undefined> {
   const configPath = `${docsFolder}_config.yml`;
@@ -1581,6 +1583,7 @@ export async function fetchBibliographies(
       owner: target.owner,
       repo: target.repo,
       path: configPath,
+      ...(target.ref ? { ref: target.ref } : {}),
     });
     if (!('content' in data)) return undefined;
     configYaml = Buffer.from(data.content, 'base64').toString('utf8');
@@ -1617,6 +1620,7 @@ export async function fetchBibliographies(
         owner: target.owner,
         repo: target.repo,
         path: repoPath,
+        ...(target.ref ? { ref: target.ref } : {}),
       });
       if (!('content' in data)) throw new Error('not a file');
       targets.push({

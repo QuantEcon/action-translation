@@ -37,8 +37,10 @@ Runs in the **target** (translated) repository. When a translation PR is opened 
 Runs in the **target** (translated) repository, triggered when a translation PR is merged. Open translation PRs go stale as soon as the base moves, so the action:
 
 1. Finds the other open translation PRs — both sync (`translation-sync-*`) and CLI resync (`resync/*`) branches
-2. For each one whose files **overlap** the merged PR, re-runs the sync pipeline and force-pushes, resolving the conflict while preserving translated content
+2. For each one whose files **overlap** the merged PR, re-runs the sync pipeline on the current `main` and moves the PR's branch, in one step, to a single new commit on it, resolving the conflict while preserving translated content. When the rebuilt files are identical to what `main` already holds, it closes the PR with a comment naming its files instead; when anything fails before the move, the branch is left as it was
 3. For each one that does **not** overlap, skips by default — or, with `rebase-stale-siblings`, refreshes it against the new base without re-translating
+
+The rebase workflow template ([`examples/rebase-translations.yml`](https://github.com/QuantEcon/action-translation/blob/main/examples/rebase-translations.yml)) runs one rebase at a time and queues the rest with `queue: max`, so that every merge's run executes, in merge order. Without it, a third merge in quick succession cancels the run still waiting for the second.
 
 ## Inputs
 

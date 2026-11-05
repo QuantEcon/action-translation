@@ -124,6 +124,7 @@ src/
 ├── review-verdict.ts    # Verdict v2 block: build/parse/sanitize + recommendation logic
 ├── diff-checks.ts       # Deterministic halves of the four review diffChecks (#148)
 ├── rebase-siblings.ts   # Stale-sibling branch refresh for rebase mode (#123)
+├── git-commit.ts       # Rebase mode's branch write: one Git Data API commit on a pinned base, one ref move (#280)
 ├── inputs.ts            # Action input validation + resync trigger
 └── types.ts             # TypeScript type definitions
 ```

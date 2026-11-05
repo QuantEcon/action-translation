@@ -90,6 +90,24 @@ describe('the canonical review workflow template', () => {
   });
 });
 
+describe('the rebase workflow template', () => {
+  it('queues every pending rebase run instead of cancelling one (#280)', () => {
+    // A concurrency group holds one running and one pending run unless it
+    // says `queue: max`. A third merge then cancels the run waiting for the
+    // second, and a sibling PR that overlaps only the second merge is never
+    // rebased. GitHub rejects `queue: max` with `cancel-in-progress: true`.
+    const rebase = yaml.load(
+      fs.readFileSync(path.join(ROOT, 'examples', 'rebase-translations.yml'), 'utf8')
+    ) as { jobs: Record<string, { concurrency?: unknown }> };
+
+    expect(rebase.jobs.rebase.concurrency).toEqual({
+      group: 'rebase-translations',
+      'cancel-in-progress': false,
+      queue: 'max',
+    });
+  });
+});
+
 describe('every documented copy of the review workflow', () => {
   it.each(DOC_PAGES)('%s carries every structural line', (page) => {
     const content = fs.readFileSync(path.join(ROOT, page), 'utf8');
