@@ -201,12 +201,29 @@ describe('unwrapDocumentFence', () => {
     expect(unwrapDocumentFence(response, [SOURCE, TRANSLATION]).unwrapped).toBe(true);
   });
 
-  it('keeps a wrapper that never closed: the last line is the document’s own closing fence', () => {
-    // Taking the last line away would leave the final code cell open (condition 4).
+  it('removes only the first line of a wrapper that never closed (condition 4)', () => {
+    // The last line is the document's own closing fence. Taking it too would
+    // leave the final code cell open, and the guard would still pass that.
     const response = `\`\`\`\n${DOCUMENT}`;
-    expect(unwrapDocumentFence(response, [SOURCE])).toEqual({ text: response, unwrapped: false });
-    // And the refusal stays loud: the guard rejects the response as it is.
+    const withoutLastLine = DOCUMENT.split('\n').slice(0, -1).join('\n');
+    expect(checkStructuralParity(SOURCE, withoutLastLine).ok).toBe(true);
     expect(checkStructuralParity(SOURCE, response).ok).toBe(false);
+
+    const result = unwrapDocumentFence(response, [SOURCE]);
+
+    expect(result).toEqual({ text: DOCUMENT, unwrapped: true });
+    expect(checkStructuralParity(SOURCE, result.text).ok).toBe(true);
+    expect(unwrapDocumentFence(`\`\`\`markdown\n\n${DOCUMENT}\n\n`, [SOURCE])).toEqual({
+      text: DOCUMENT,
+      unwrapped: true,
+    });
+  });
+
+  it('keeps the fences when neither removal leaves the walk closed', () => {
+    // A tilde block left open: the last backtick fence cannot close it, so the
+    // walk ends open with that line and without it.
+    const response = wrap(`${DOCUMENT}\n\n~~~python\nz = 1`);
+    expect(unwrapDocumentFence(response, [SOURCE])).toEqual({ text: response, unwrapped: false });
   });
 
   it('keeps a single fence line, and empty text', () => {
@@ -262,6 +279,17 @@ describe('the translator unwraps each whole-document response', () => {
     expect(unwrapLogs()).toEqual([
       '[Translator] translateFullDocument: removed a code fence wrapping the whole document (#363)',
     ]);
+  });
+
+  it('translateFullDocument: unwraps a wrapper that never closed', async () => {
+    api.reply(endTurn(`\`\`\`\n${DOCUMENT}\n`));
+    const service = new TranslationService('test-key', 'claude-sonnet-5');
+
+    const result = await service.translateFullDocument(fullDocument);
+
+    expect(result).toMatchObject({ success: true, translatedSection: DOCUMENT });
+    expect(service.getFenceUnwrapCount()).toBe(1);
+    expect(unwrapLogs()).toHaveLength(1);
   });
 
   it('translateFullDocument: leaves a wrapper indented as a whole for the guard', async () => {

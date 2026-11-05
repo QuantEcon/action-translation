@@ -48404,9 +48404,10 @@ function unwrapDocumentFence(text, references) {
   if (references.length > 0 && endsInsideFence(references[0]))
     return unchanged;
   const inner = lines.slice(first + 1, last).join("\n").trim();
-  if (endsInsideFence(inner) || indentedAsAWhole(inner))
+  const document = endsInsideFence(inner) ? lines.slice(first + 1).join("\n").trim() : inner;
+  if (endsInsideFence(document) || indentedAsAWhole(document))
     return unchanged;
-  return { text: inner, unwrapped: true };
+  return { text: document, unwrapped: true };
 }
 
 // dist/translator.js

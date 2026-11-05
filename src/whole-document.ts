@@ -9,7 +9,8 @@
  * fence inside the document (a `{raw}` block's, say), so everything above that
  * line drops out of the guard's fence scan and the first directive reads as
  * renamed. The translation inside is sound; taking away the two lines is all
- * it needs. What is left is trimmed, as the translator trims every response.
+ * it needs, or only the first when the wrapper was never closed (condition 4).
+ * What is left is trimmed, as the translator trims every response.
  *
  * The wrapper is removed only when all six of these hold, so that nothing but
  * a wrapper is ever taken away:
@@ -21,17 +22,22 @@
  * 3. no document the request carried (the source, and for a resync the existing
  *    translation) starts with a fence, so the output's first fence cannot be
  *    the document's own;
- * 4. with the two lines removed, the guard's fence walk ends with no fence
- *    open. Without this, a response that opened a wrapper and never closed it,
- *    on a document that ends in a code cell's closing fence (as 20 of the 27
- *    programming lectures do), would lose that closing fence and still pass
- *    the guard;
- * 5. the source's own fence walk ends with no fence open. Condition 4 cannot
- *    protect a source the walk reads as unbalanced (an indented fence inside a
- *    directive, say): there an unclosed wrapper can take the document's last
- *    fence and leave a balanced walk. A faithful translation of such a source
- *    is unbalanced too, so condition 4 already refuses every wrapper around
- *    one, and this refuses nothing that would have been repaired;
+ * 4. once the wrapper is gone, the guard's fence walk ends with no fence open.
+ *    This also tells whether the wrapper was ever closed. If removing the
+ *    first and last lines leaves a fence open, the model opened a wrapper and
+ *    never closed it, on a document that ends in a closing fence of its own
+ *    (as 20 of the 27 programming lectures do, after a code cell or
+ *    `{solution-end}`). The last line is then the document's, and only the
+ *    first line is removed. At most one of the two removals can leave the walk
+ *    closed, since a bare fence line either closes the fence open before it or
+ *    opens one; when neither does, the text is left as it came;
+ * 5. the source's own fence walk ends with no fence open. Condition 4 reads
+ *    the walk as the document's, which it cannot be for a source the walk
+ *    reads as unbalanced (an indented fence inside a directive, say): there a
+ *    removal can leave a balanced walk with the document's last fence gone, or
+ *    with the wrapper's closing fence kept. A faithful translation of such a
+ *    source is unbalanced too, so neither removal would give it back, and this
+ *    refuses nothing that would have been repaired;
  * 6. the document left is not indented as a whole: when it has more than one
  *    non-blank line, a line after its first starts at column 0. A model that
  *    indents the document inside its wrapper would otherwise have the indented
@@ -117,7 +123,15 @@ export function unwrapDocumentFence(text: string, references: readonly string[])
     .slice(first + 1, last)
     .join('\n')
     .trim();
-  if (endsInsideFence(inner) || indentedAsAWhole(inner)) return unchanged;
+  // Condition 4: without its last line the walk ends open, so that line is the
+  // document's own closing fence and the wrapper was never closed.
+  const document = endsInsideFence(inner)
+    ? lines
+        .slice(first + 1)
+        .join('\n')
+        .trim()
+    : inner;
+  if (endsInsideFence(document) || indentedAsAWhole(document)) return unchanged;
 
-  return { text: inner, unwrapped: true };
+  return { text: document, unwrapped: true };
 }
