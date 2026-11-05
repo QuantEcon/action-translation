@@ -110,7 +110,14 @@ function reportMeta(draws: number, langs: string, threshold = 1): Record<string,
 }
 
 type Draw =
-  | { outcome: 'ok'; costUSD?: number | null; elapsedMs?: number; thinkingTokens?: number }
+  | {
+      outcome: 'ok';
+      costUSD?: number | null;
+      elapsedMs?: number;
+      thinkingTokens?: number;
+      /** Absent: the report has no fenceUnwraps field, as before #363. */
+      fenceUnwraps?: number;
+    }
   | {
       outcome: 'failed';
       kind: string;
@@ -118,6 +125,7 @@ type Draw =
       costUSD?: number | null;
       elapsedMs?: number;
       thinkingTokens?: number;
+      fenceUnwraps?: number;
     }
   | { outcome: 'crash' } // finished (marker) without a report
   | { outcome: 'garbled' } // a report cut off mid-write
@@ -125,7 +133,13 @@ type Draw =
 
 function initReport(language: string, draw: Draw): object {
   const ok = draw.outcome === 'ok';
-  const detail = draw as { costUSD?: number | null; elapsedMs?: number; thinkingTokens?: number };
+  const detail = draw as {
+    costUSD?: number | null;
+    elapsedMs?: number;
+    thinkingTokens?: number;
+    fenceUnwraps?: number;
+  };
+  const unwraps = detail.fenceUnwraps === undefined ? {} : { fenceUnwraps: detail.fenceUnwraps };
   const failure =
     draw.outcome === 'failed'
       ? {
@@ -156,6 +170,7 @@ function initReport(language: string, draw: Draw): object {
     costUSD: detail.costUSD === undefined ? 0.01 : detail.costUSD,
     servedModels: ['claude-sonnet-5-5'],
     retries: 0,
+    ...unwraps,
     summary: { total: 1, ok: ok ? 1 : 0, failed: ok ? 0 : 1, skipped: 0 },
     lectures: [
       {
@@ -163,6 +178,7 @@ function initReport(language: string, draw: Draw): object {
         outcome: ok ? 'ok' : 'failed',
         failure,
         elapsedMs: detail.elapsedMs ?? 1000,
+        ...unwraps,
       },
     ],
   };
@@ -334,6 +350,8 @@ describe('rate-check-summary.mjs — classified from init reports', () => {
       'byKind',
       'refusalCategories',
       'legacy',
+      'unwrapped',
+      'unwrappedOk',
       'meanCostUSD',
       'costUSDTotal',
       'costUSDOkTotal',
@@ -419,6 +437,31 @@ describe('rate-check-summary.mjs — edge cases', () => {
     expect(c).toMatchObject({ ok: 1, failed: 0, infra: 0, redrawnInfra: 1, attempts: 2 });
     expect(c.infraShare).toBe(0.5);
     expect(c.legacy).toEqual({ refused: 1, draws: 1, verdict: 'FAIL' });
+  });
+
+  it('counts the valid draws that came back wrapped in a code fence (#363)', () => {
+    const runDir = freshDir('unwrap-run');
+    writeMeta(runDir, reportMeta(5, 'zh-cn,fa'));
+    writeDraws(runDir, 'zh-cn', [
+      { outcome: 'ok', fenceUnwraps: 1 },
+      { outcome: 'ok', fenceUnwraps: 1 },
+      { outcome: 'ok', fenceUnwraps: 0 },
+      { outcome: 'failed', kind: 'parity', fenceUnwraps: 1 },
+      { outcome: 'failed', kind: 'infra', fenceUnwraps: 0 },
+    ]);
+    // An engine from before #363 does not report unwraps: unknown, not none.
+    writeDraws(runDir, 'fa', [OK, OK, OK, OK, OK]);
+
+    const result = run('node', [SUMMARIZER, runDir]);
+
+    const summary = readSummary(runDir);
+    expect(cell(summary, 'zh-cn')).toMatchObject({ valid: 4, unwrapped: 3, unwrappedOk: 2 });
+    expect(cell(summary, 'zh-cn').drawsDetail.map((d: any) => d.fenceUnwraps)).toEqual([
+      1, 1, 0, 1, 0,
+    ]);
+    expect(cell(summary, 'fa')).toMatchObject({ unwrapped: null, unwrappedOk: null });
+    expect(result.stdout).toContain('fence unwrapped: 3 of 4 valid draws, 2 of them ok (#363)');
+    expect(result.stdout.match(/fence unwrapped/g)).toHaveLength(1);
   });
 });
 
@@ -713,9 +756,9 @@ describe('rate-check.sh — a run of this checkout against a fake API', () => {
     '--draws',
     '2',
     '--languages',
-    'zh-cn,fa,ml,fr',
+    'zh-cn,fa,ml,fr,ja',
     '--parallel',
-    '8',
+    '10',
     '--run-dir',
     runDir,
   ];
@@ -751,6 +794,18 @@ describe('rate-check.sh — a run of this checkout against a fake API', () => {
       legacy: { refused: 2, verdict: 'FAIL' },
     });
     expect(cell(summary, 'fr')).toMatchObject({ failed: 2, byKind: { 'api-error': 2 } });
+    // The wrapped echo is unwrapped before the parity guard, delivered, and counted (#363).
+    expect(cell(summary, 'ja')).toMatchObject({
+      ok: 2,
+      failed: 0,
+      unwrapped: 2,
+      unwrappedOk: 2,
+      verdict: 'ok',
+    });
+    expect(cell(summary, 'zh-cn')).toMatchObject({ unwrapped: 0, unwrappedOk: 0 });
+    expect(first.stdout).toContain('fence unwrapped: 2 of 2 valid draws, 2 of them ok (#363)');
+    const delivered = fs.readFileSync(path.join(runDir, 'ja', 'game-theory', '1', FIXTURE), 'utf8');
+    expect(delivered.startsWith('```')).toBe(false);
     expect(cell(summary, 'zh-cn').servedModels).toEqual(['claude-sonnet-5']);
     expect(fs.existsSync(path.join(runDir, 'zh-cn', 'game-theory', '1', FIXTURE))).toBe(true);
     expect(fs.existsSync(path.join(runDir, '.lock'))).toBe(false);

@@ -112,6 +112,8 @@ Each cell gets a verdict, and the first match wins:
 
 Any verdict but ok exits 1; a usage or setup error exits 2. The table gives each cell's failure rate over its valid draws, with a Wilson 95% interval, and the failure kinds, mean cost, output and thinking tokens, and latency.
 
+Engines after v0.30.0 also report each response that came back wrapped in a code fence and was unwrapped before the parity guard (#363). A cell with any prints `fence unwrapped: N of M valid draws, K of them ok`, and `summary.json` carries the two counts as `unwrapped` and `unwrappedOk`, `null` for an engine that does not report unwraps. An unwrapped draw is counted by its outcome like any other; the line shows how often the model wraps, which the failure rate no longer does.
+
 An older engine (v0.29.5 and before, measured through `--ref`) writes no report, so it keeps the original rule: a draw without its output file counts as refused, infra failures included. The kinds are still read from each draw's `TRANSLATION-REPORT.md`, for information only. Whatever the engine, every cell in `summary.json` also carries that count (`legacy.refused` of `legacy.draws`), so a release can be compared with a control at an older tag on one rule. It judges each draw on its first attempt, so a run topped up with `--redraw-infra` still compares with a control, which cannot redraw.
 
 For measurements beyond the gate, such as the Claude 5.5 evaluation:

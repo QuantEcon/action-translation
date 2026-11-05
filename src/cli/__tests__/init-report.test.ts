@@ -181,6 +181,7 @@ describe('translate init --report-json', () => {
       },
       servedModels: ['claude-opus-5-5'],
       retries: 0,
+      fenceUnwraps: 0,
       summary: { total: 3, ok: 1, failed: 2, skipped: 0 },
     });
     // (6000 × $4 + 1755 × $20) / 1M
@@ -204,6 +205,7 @@ describe('translate init --report-json', () => {
           apiCalls: 1,
         },
         retries: 0,
+        fenceUnwraps: 0,
       },
       {
         file: 'broken.md',
@@ -217,6 +219,7 @@ describe('translate init --report-json', () => {
         elapsedMs: expect.any(Number),
         usage: expect.objectContaining({ outputTokens: 850, thinkingTokens: 250, apiCalls: 1 }),
         retries: 0,
+        fenceUnwraps: 0,
       },
       {
         file: 'refused.md',
@@ -229,6 +232,7 @@ describe('translate init --report-json', () => {
         elapsedMs: expect.any(Number),
         usage: expect.objectContaining({ outputTokens: 5, thinkingTokens: 0, apiCalls: 1 }),
         retries: 0,
+        fenceUnwraps: 0,
       },
     ]);
 
@@ -311,7 +315,43 @@ describe('translate init --report-json', () => {
       expect(lecture.outcome).toBe('ok');
       expect(lecture).not.toHaveProperty('usage');
       expect(lecture).not.toHaveProperty('retries');
+      expect(lecture).not.toHaveProperty('fenceUnwraps');
     }
+  });
+
+  it('counts each response that came wrapped in a code fence, the parity-failed one included (#363)', async () => {
+    writeSource(['wrapped.md', 'broken.md']);
+    // The wrapper's opening fence is closed by the code cell's own closing
+    // fence, so without the unwrap the guard refuses wrapped.md too.
+    api.reply(
+      { ...GOOD, content: [thinking, text(`\`\`\`markdown\n${CLEAN}\`\`\`\n`)] },
+      { ...BREAKS_PARITY, content: [thinking, text(`\`\`\`\n${DROPS_ANCHOR}\`\`\``)] }
+    );
+    const opts = options({});
+    const stdout = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+    const stats = await runInit(opts);
+
+    const printed = stdout.mock.calls.map((call) => String(call[0]));
+    stdout.mockRestore();
+    expect(stats).toMatchObject({ successCount: 1, failureCount: 1 });
+    const report = readReport(opts.reportJson!);
+    expect(report.fenceUnwraps).toBe(2);
+    expect(report.lectures).toEqual([
+      expect.objectContaining({ file: 'wrapped.md', outcome: 'ok', fenceUnwraps: 1 }),
+      expect.objectContaining({
+        file: 'broken.md',
+        outcome: 'failed',
+        failure: expect.objectContaining({ kind: 'parity' }),
+        fenceUnwraps: 1,
+      }),
+    ]);
+    // What was written is the translation inside the wrapper.
+    const written = fs.readFileSync(path.join(opts.target, 'lectures', 'wrapped.md'), 'utf-8');
+    expect(written.startsWith('```')).toBe(false);
+    expect(written).toContain('# 测试讲座');
+    expect(written.trimEnd().endsWith('```')).toBe(true);
+    expect(printed.filter((line) => line.includes('removed a code fence'))).toHaveLength(2);
   });
 
   it('writes no report on a dry run', async () => {

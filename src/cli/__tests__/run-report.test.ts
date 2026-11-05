@@ -417,6 +417,7 @@ describe('writeRunReport', () => {
     costUSD: 0,
     servedModels: [],
     retries: 0,
+    fenceUnwraps: 0,
     summary: { total: 0, ok: 0, failed: 0, skipped: 0 },
     lectures: [],
   };
