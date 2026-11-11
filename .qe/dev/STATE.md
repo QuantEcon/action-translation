@@ -340,6 +340,15 @@ Roadmap detail lives in the project trackers (reading order in
 
 **Resume here (2026-09-23, after v0.29.3):**
 
+*Release, 2026-11-11*: **v0.30.1 is prepared, not yet tagged.** #433 merged (`50438c0`: #307's
+rename check, #379 and #381), and the release PR promotes `[Unreleased]`: #412, #419, #421,
+#422, #423, #424, #426 and #433. Owed before the floating tags move, all Matt's: §4a at the tag,
+§4b (which also reads #203's residual: watch `fence unwrapped` and `head restored` per cell),
+then the `@v0` smoke. After the release: close #118; #280's sequence (a narrow harness run for
+`queue: max`, the edition workflow patches, the back-to-back merge test); merge
+zh-cn#308/#310/#311/#312. #420 with #281 is being built separately and is not in v0.30.1 unless
+it merges first.
+
 *Issue validation, 2026-11-11*: all 128 open issues were checked against `80d4ae6`; the
 verdicts that change the plan, the closable list, the tracker text owed and a proposed work
 order are in log `2026-11-11-issue-validation`. First in that order is a v0.30.1 release, then
