@@ -55050,6 +55050,258 @@ async function writeRebasedBranch(octokit, params, logger, policy = DEFAULT_RETR
   return { outcome: "moved", commitSha: built.sha };
 }
 
+// dist/sync-premise.js
+function recordedSourceSha(stateYaml) {
+  let parsed;
+  try {
+    parsed = load(stateYaml, { schema: CORE_SCHEMA });
+  } catch {
+    return void 0;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+    return void 0;
+  const value = parsed["source-sha"];
+  if (typeof value !== "string")
+    return void 0;
+  const sha = value.trim();
+  return sha === "" || sha === "unknown" ? void 0 : sha;
+}
+function takesUpdateMode(file) {
+  if (file.type === "markdown")
+    return !file.isNewFile;
+  if (file.type === "renamed")
+    return Boolean(file.targetContent);
+  return false;
+}
+function editionPath(file) {
+  return file.type === "renamed" && file.previousFilename ? file.previousFilename : file.filename;
+}
+function judgePremise(oldEnglish, newEnglish, englishAtState) {
+  if (englishAtState === oldEnglish)
+    return "holds";
+  if (englishAtState === newEnglish)
+    return "carried";
+  return "mismatch";
+}
+function findCarryingPulls(pulls, paths, sourcePr) {
+  const wanted = new Set(paths);
+  const numbers = [];
+  for (const pull of pulls) {
+    if (!isTranslationBranch(pull.head?.ref ?? ""))
+      continue;
+    const metadata = parseTranslationSyncMetadata(pull.body ?? "");
+    if (!metadata)
+      continue;
+    if (metadata.sourceRepo === sourcePr.repo && metadata.sourcePR === sourcePr.number)
+      continue;
+    const carries = metadata.files.some((entry) => entry.type !== "removed" && entry.type !== "toc" && (wanted.has(entry.path) || entry.previousPath !== void 0 && wanted.has(entry.previousPath)));
+    if (carries)
+      numbers.push(pull.number);
+  }
+  return numbers.sort((a, b) => a - b);
+}
+function shortSha(sha) {
+  return sha.slice(0, 7);
+}
+function lectureLabel2(failure) {
+  return failure.previousPath ? `${failure.file} (renamed from ${failure.previousPath})` : failure.file;
+}
+function listOf(items) {
+  if (items.length <= 1)
+    return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+function formatPremiseError(failure, targetLanguage) {
+  const at = `${targetLanguage}'s translation of it is at source \`${shortSha(failure.stateSha)}\``;
+  const label = lectureLabel2(failure);
+  const tail = "It was not synced, and no model call was made.";
+  switch (failure.case) {
+    case "still-open": {
+      const one = failure.openPulls.length === 1;
+      return `Translation behind: ${label}: ${at}. This PR's change assumes the English that ${one ? "translation PR" : "translation PRs"} ${listOf(failure.openPulls)} ${one ? "carries, and it is" : "carry, and they are"} still open in the edition. Merge ${one ? "it" : "them"}, then carry this change. ${tail}`;
+    }
+    case "behind":
+      return `Translation behind: ${label}: ${at}. The source changed the lecture after that, and that change never reached the edition. Recover the lecture first; that brings in this change too. ${tail}`;
+    case "ahead":
+      return `Translation ahead: ${label}: ${at}, which is later than this PR's merge commit \`${shortSha(failure.sourceSha)}\`. Carrying this change into it would undo the source changes made since (#276). ${tail}`;
+  }
+}
+function forwardArgument(path8, docsFolder) {
+  return docsRelativePath(path8, docsFolder);
+}
+function formatPremiseRecovery(failures, docsFolder, targetLanguage) {
+  if (failures.length === 0)
+    return [];
+  const items = failures.map((failure) => {
+    const label = failure.previousPath ? `\`${failure.file}\` (renamed from \`${failure.previousPath}\`)` : `\`${failure.file}\``;
+    const forward = `\`translate forward -f ${forwardArgument(failure.file, docsFolder)}\``;
+    const move = failure.previousPath ? `, after moving the edition's \`${failure.previousPath}\` and its state file to the new name` : "";
+    switch (failure.case) {
+      case "still-open":
+        return `- ${label}: merge ${listOf(failure.openPulls)} in the edition first, then carry this PR's change into the lecture.`;
+      case "behind":
+        return `- ${label}: recover the lecture first with ${forward}${move}, run from a checkout of the source's default branch. That includes this PR's change. A \`\\translate-resync\` of this PR cannot recover it.`;
+      case "ahead":
+        return `- ${label}: if the lecture already has this PR's change, nothing is owed. If it does not, bring it up to date with ${forward}${move}, run from a checkout of the source's default branch.`;
+    }
+  });
+  return [
+    `These lectures were not synced: ${targetLanguage}'s translation of each does not start from the English this PR changed, so its change cannot be carried in.`,
+    "",
+    ...items,
+    "",
+    "`translate forward` regenerates the whole lecture. On a lecture that has been natively reviewed, carry the missed changes in by hand instead."
+  ];
+}
+function statusOf3(error4) {
+  return error4?.status;
+}
+function messageOf3(error4) {
+  return error4 instanceof Error ? error4.message : String(error4);
+}
+function githubPremiseReader(octokit, source, edition) {
+  return {
+    async readSource(path8, ref) {
+      try {
+        const { data } = await octokit.rest.repos.getContent({ ...source, path: path8, ref });
+        if (!data || !("content" in data))
+          return void 0;
+        return Buffer.from(data.content, "base64").toString("utf-8");
+      } catch (error4) {
+        const status = statusOf3(error4);
+        if (status === 404 || status === 422)
+          return void 0;
+        throw error4;
+      }
+    },
+    async compareSource(base, head) {
+      const { data } = await octokit.rest.repos.compareCommitsWithBasehead({
+        ...source,
+        basehead: `${base}...${head}`,
+        per_page: 1
+      });
+      return String(data.status);
+    },
+    async listOpenPulls() {
+      return await octokit.paginate(octokit.rest.pulls.list, {
+        ...edition,
+        state: "open",
+        per_page: 100
+      });
+    }
+  };
+}
+async function checkSyncPremise(input, reader, logger) {
+  const edition = `${input.edition.owner}/${input.edition.repo}`;
+  const kept = [];
+  const held = [];
+  for (const file of input.files) {
+    if (!takesUpdateMode(file)) {
+      kept.push(file);
+      continue;
+    }
+    const lecturePath = editionPath(file);
+    const statePath = stateFileFor(lecturePath, input.docsFolder);
+    const uncheckable = (why) => {
+      logger.info(`${file.filename}: premise not checked \u2014 ${why}; syncing as before`);
+      kept.push(file);
+    };
+    const read = input.stateReads.get(statePath) ?? { status: "missing" };
+    if (read.status === "error") {
+      const error4 = `Fetch failed (state): ${file.filename}: could not read ${statePath} from ${edition} (${read.message}), so whether its translation starts from this PR's English could not be checked. It was not synced.`;
+      logger.error(error4);
+      held.push({ error: error4 });
+      continue;
+    }
+    if (read.status === "missing") {
+      uncheckable(`${edition} has no ${statePath}`);
+      continue;
+    }
+    const stateSha = recordedSourceSha(read.content);
+    if (!stateSha) {
+      uncheckable(`${statePath} records no usable source-sha`);
+      continue;
+    }
+    if (!file.oldContent || file.newContent === void 0) {
+      uncheckable("this run has no previous English for it");
+      continue;
+    }
+    let englishAtState;
+    try {
+      englishAtState = await reader.readSource(lecturePath, stateSha);
+    } catch (error4) {
+      logger.warning(`${file.filename}: premise not checked \u2014 could not read ${lecturePath} at ${shortSha(stateSha)} from the source (status ${statusOf3(error4) ?? "unknown"}): ${messageOf3(error4)}; syncing as before`);
+      kept.push(file);
+      continue;
+    }
+    if (englishAtState === void 0) {
+      uncheckable(`the source has no ${lecturePath} at ${shortSha(stateSha)}`);
+      continue;
+    }
+    const judgement = judgePremise(file.oldContent, file.newContent, englishAtState);
+    if (judgement === "holds") {
+      logger.info(`${file.filename}: premise holds \u2014 the translation is at source ${shortSha(stateSha)}, whose English is the English this PR changed`);
+      kept.push(file);
+      continue;
+    }
+    if (judgement === "carried") {
+      logger.info(`${file.filename}: the translation is at source ${shortSha(stateSha)}, whose English is this PR's new English; syncing as before`);
+      kept.push(file);
+      continue;
+    }
+    let comparison;
+    try {
+      comparison = await reader.compareSource(stateSha, input.sourceSha);
+    } catch (error4) {
+      logger.warning(`${file.filename}: could not compare source ${shortSha(stateSha)} with ${shortSha(input.sourceSha)} (${messageOf3(error4)}); reporting it as behind`);
+    }
+    held.push({
+      failure: {
+        file: file.filename,
+        ...file.type === "renamed" && file.previousFilename ? { previousPath: file.previousFilename } : {},
+        statePath,
+        stateSha,
+        sourceSha: input.sourceSha,
+        // `behind`: this PR's merge commit is behind the recorded commit.
+        case: comparison === "behind" ? "ahead" : "behind",
+        openPulls: []
+      }
+    });
+  }
+  const failures = held.flatMap((entry) => "failure" in entry ? [entry.failure] : []);
+  const behind = failures.filter((failure) => failure.case === "behind");
+  if (behind.length > 0) {
+    let pulls;
+    try {
+      pulls = await reader.listOpenPulls();
+    } catch (error4) {
+      logger.warning(`Could not list the open PRs in ${edition} (${messageOf3(error4)}); the lectures behind are reported without one`);
+    }
+    if (pulls) {
+      const sourceRepo = `${input.source.owner}/${input.source.repo}`;
+      for (const failure of behind) {
+        const paths = failure.previousPath ? [failure.file, failure.previousPath] : [failure.file];
+        const numbers = findCarryingPulls(pulls, paths, {
+          repo: sourceRepo,
+          number: input.prNumber
+        });
+        if (numbers.length > 0) {
+          failure.case = "still-open";
+          failure.openPulls = numbers.map((n) => `${edition}#${n}`);
+        }
+      }
+    }
+  }
+  const errors = held.map((entry) => {
+    if ("error" in entry)
+      return entry.error;
+    const error4 = formatPremiseError(entry.failure, input.targetLanguage);
+    logger.error(error4);
+    return error4;
+  });
+  return { files: kept, failures, errors };
+}
+
 // dist/action/review.js
 var core8 = __toESM(require_core(), 1);
 var github2 = __toESM(require_github(), 1);
@@ -57043,7 +57295,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
   } else {
     core9.info("No targetBaseSha in metadata \u2014 rebase cache unavailable (pre-cache PR)");
   }
-  const existingStateShas = await fetchExistingStateShas(octokit, owner, repo, filesToSync, inputs.docsFolder, baseSha);
+  const { shas: existingStateShas } = await fetchExistingStateShas(octokit, owner, repo, filesToSync, inputs.docsFolder, baseSha);
   const stateConfig = {
     sourceCommitSha,
     existingStateShas,
@@ -57183,7 +57435,19 @@ async function runSync() {
     filesToSync = held.files;
     fetchErrors.unshift(...scope.errors, ...held.errors);
   }
-  const existingStateShas = await fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToSync, inputs.docsFolder);
+  const { shas: existingStateShas, reads: stateReads } = await fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToSync, inputs.docsFolder);
+  const premise = await checkSyncPremise({
+    files: filesToSync,
+    stateReads,
+    docsFolder: inputs.docsFolder,
+    sourceSha: effectiveSha,
+    source: { owner: github3.context.repo.owner, repo: github3.context.repo.repo },
+    prNumber,
+    edition: { owner: targetOwner, repo: targetRepo },
+    targetLanguage: inputs.targetLanguage
+  }, githubPremiseReader(octokit, { owner: github3.context.repo.owner, repo: github3.context.repo.repo }, { owner: targetOwner, repo: targetRepo }), coreLogger);
+  filesToSync = premise.files;
+  fetchErrors.push(...premise.errors);
   const stateConfig = {
     sourceCommitSha: effectiveSha,
     existingStateShas,
@@ -57254,7 +57518,7 @@ async function runSync() {
   await writeScopeSummary(prUrl, result.errors.length);
   if (!isTestMode) {
     if (result.errors.length > 0) {
-      await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, result.errors);
+      await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, result.errors, premise.failures, inputs.docsFolder);
     } else if (prUrl) {
       await postSuccessComment(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, prUrl, result.processedFiles);
       await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, `\u2705 A later sync for PR #${prNumber} (${inputs.targetLanguage}) succeeded: ${prUrl}`);
@@ -57442,11 +57706,9 @@ async function fetchSourcePrInfo(octokit, prNumber) {
 }
 async function fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToSync, docsFolder, ref) {
   const shas = /* @__PURE__ */ new Map();
+  const reads = /* @__PURE__ */ new Map();
   const at = ref ? { ref } : {};
-  const markdownFiles = filesToSync.filter((f) => f.type === "markdown" || f.type === "renamed" || f.type === "removed");
-  for (const file of markdownFiles) {
-    const docsRelName = docsFolder && file.filename.startsWith(docsFolder) ? file.filename.slice(docsFolder.length) : file.filename;
-    const statePath = stateFileRelativePath(docsRelName);
+  const readState = async (statePath) => {
     try {
       const { data } = await octokit.rest.repos.getContent({
         owner: targetOwner,
@@ -57457,29 +57719,28 @@ async function fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToS
       if ("sha" in data) {
         shas.set(statePath, data.sha);
       }
-    } catch {
+      reads.set(statePath, "content" in data ? { status: "found", content: Buffer.from(data.content, "base64").toString("utf-8") } : { status: "error", message: "not a file" });
+    } catch (error4) {
+      const status = error4?.status;
+      reads.set(statePath, status === 404 ? { status: "missing" } : {
+        status: "error",
+        message: `status ${status ?? "unknown"}: ${error4 instanceof Error ? error4.message : String(error4)}`
+      });
     }
+  };
+  const markdownFiles = filesToSync.filter((f) => f.type === "markdown" || f.type === "renamed" || f.type === "removed");
+  for (const file of markdownFiles) {
+    const docsRelName = docsFolder && file.filename.startsWith(docsFolder) ? file.filename.slice(docsFolder.length) : file.filename;
+    await readState(stateFileRelativePath(docsRelName));
     if (file.type === "renamed" && file.previousFilename) {
       const oldDocsRelName = docsFolder && file.previousFilename.startsWith(docsFolder) ? file.previousFilename.slice(docsFolder.length) : file.previousFilename;
-      const oldStatePath = stateFileRelativePath(oldDocsRelName);
-      try {
-        const { data } = await octokit.rest.repos.getContent({
-          owner: targetOwner,
-          repo: targetRepo,
-          path: oldStatePath,
-          ...at
-        });
-        if ("sha" in data) {
-          shas.set(oldStatePath, data.sha);
-        }
-      } catch {
-      }
+      await readState(stateFileRelativePath(oldDocsRelName));
     }
   }
   if (shas.size > 0) {
     core9.info(`Found ${shas.size} existing state file(s) in target repo`);
   }
-  return shas;
+  return { shas, reads };
 }
 async function postSuccessComment(octokit, prNumber, targetLanguage, targetRepo, prUrl, processedFiles) {
   try {
@@ -57543,10 +57804,17 @@ function nothingToDeliverResolution(prNumber, targetLanguage) {
   const { owner, repo } = github3.context.repo;
   return `${resolution}: ${serverUrl}/${owner}/${repo}/actions/runs/${runId}`;
 }
-async function createFailureIssue(octokit, prNumber, targetLanguage, targetRepo, errors) {
+async function createFailureIssue(octokit, prNumber, targetLanguage, targetRepo, errors, premiseFailures = [], docsFolder = "") {
   try {
     const errorList = errors.map((e) => `- ${e}`).join("\n");
     const title = `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
+    const premiseAdvice = formatPremiseRecovery(premiseFailures, docsFolder, targetLanguage);
+    const otherErrors = errors.length > premiseFailures.length;
+    const resyncAdvice = `comment \`\\translate-resync\` on PR #${prNumber} to retry.`;
+    const recovery = premiseAdvice.length === 0 ? [`Once the issue is resolved, ${resyncAdvice}`] : [
+      ...premiseAdvice,
+      ...otherErrors ? ["", `For the other errors: once the issue is resolved, ${resyncAdvice}`] : []
+    ];
     const body = [
       `### Translation sync failure`,
       "",
@@ -57560,7 +57828,7 @@ async function createFailureIssue(octokit, prNumber, targetLanguage, targetRepo,
       "",
       `### Recovery`,
       "",
-      `Once the issue is resolved, comment \`\\translate-resync\` on PR #${prNumber} to retry.`
+      ...recovery
     ].join("\n");
     const { data: issue } = await octokit.rest.issues.create({
       owner: github3.context.repo.owner,

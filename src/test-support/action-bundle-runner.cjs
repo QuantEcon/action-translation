@@ -18,6 +18,12 @@
  *   editionStatus  optional status for the read of the target repository
  *   issues         optional: the source repository's open issues, as
  *                  `issues.listForRepo` lists them ([{ number, title }])
+ *   compare        optional { "<base>...<head>": status | { status: code } }:
+ *                  the source's commit comparisons. A string is the
+ *                  comparison's `status` (`ahead`, `behind`, ...); an object
+ *                  fails the request with that HTTP status
+ *   openPulls      also read by sync mode, which lists the edition's open PRs
+ *                  when a lecture's translation is behind (#420)
  *
  * Rebase mode runs in the edition, so GITHUB_REPOSITORY names the edition and
  * RUNNER_SOURCE_REPO the source repository. Its scenario adds:
@@ -167,6 +173,7 @@ const ISSUE_COMMENTS = /^\/repos\/([^/]+\/[^/]+)\/issues\/(\d+)\/comments$/;
 const PULL = /^\/repos\/([^/]+\/[^/]+)\/pulls\/(\d+)$/;
 const GIT_COMMIT = /^\/repos\/([^/]+\/[^/]+)\/git\/commits\/([^/]+)$/;
 const GIT_REF = /^\/repos\/([^/]+\/[^/]+)\/git\/refs\/(.+)$/;
+const COMPARE = /^\/repos\/([^/]+\/[^/]+)\/compare\/(.+)$/;
 const GIT_FAILURES = scenario.gitFailures ?? {};
 /** The source repository's open issues. */
 const OPEN_ISSUES = scenario.issues ?? [];
@@ -193,6 +200,14 @@ function answerGitHub(request) {
   }
   if (method === 'GET' && path === `/repos/${SOURCE}/pulls/${PR_NUMBER}`) {
     return json(200, { number: PR_NUMBER, title: 'Source change', labels: [], merged: true });
+  }
+  const compare = path.match(COMPARE);
+  if (method === 'GET' && compare && compare[1] === SOURCE) {
+    const answer = (scenario.compare ?? {})[compare[2]];
+    if (answer === undefined) return notFound();
+    if (typeof answer === 'object')
+      return json(answer.status, { message: `HTTP ${answer.status}` });
+    return json(200, { status: answer, files: [], commits: [] });
   }
   if (method === 'GET' && path === `/repos/${TARGET}`) {
     return scenario.editionStatus

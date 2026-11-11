@@ -31,6 +31,12 @@
  * - under `all`, the run makes the requests it made before the input existed,
  *   in the same order, and writes no job summary.
  *
+ * The last block pins the premise check of update mode (#420), which runs on
+ * either scope: a lecture whose translation does not start from the English
+ * the PR changed costs no model call, and its failure issue says which case it
+ * is; a lecture whose premise holds, or cannot be checked, reaches the model
+ * as before; and the other files of the PR still sync.
+ *
  * It runs the bundle, so it needs `npm run build` first, as CI does before
  * `npm test` (the CLI smoke tests need dist/ the same way). GitHub and the
  * model host are both fakes, on names that never resolve. The runner refuses
@@ -129,7 +135,13 @@ function translated(title: string): string {
   ].join('\n');
 }
 
-/** A state file in the edition. Scope only checks that one exists. */
+/**
+ * A state file in the edition. Scope only checks that one exists. Its
+ * unquoted all-digit `source-sha` loads as a number, which the premise check
+ * of update mode (#420) does not use, so the scope scenarios make no premise
+ * read and their request lists are those of the scope check alone. The
+ * premise block at the end uses quoted SHAs.
+ */
 const STATE = [
   'source-sha: 1111111',
   'synced-at: "2026-10-01"',
@@ -175,6 +187,10 @@ interface Scenario {
   issues?: Array<{ number: number; title: string; pull_request?: { url: string } }>;
   /** Leave GITHUB_RUN_ID unset, as outside Actions. */
   noRunId?: boolean;
+  /** The edition's open PRs, as `pulls.list` lists them; none when absent. */
+  openPulls?: Array<{ number: number; head: { ref: string }; body: string }>;
+  /** The source's commit comparisons, `<base>...<head>` → status; any other answers 404. */
+  compare?: Record<string, string>;
 }
 
 // =============================================================================
@@ -523,6 +539,13 @@ function declaredFiles(body: string) {
 /** The errors a failure issue lists. */
 function issueErrors(issue: { body: string }): string[] | undefined {
   return itemsUnder(issue.body, '### Errors');
+}
+
+/** A failure issue's Recovery section: its text after the heading. */
+function recoveryOf(issue: { body: string }): string {
+  const at = issue.body.indexOf('### Recovery\n');
+  if (at === -1) throw new Error('the failure issue has no Recovery section');
+  return issue.body.slice(at + '### Recovery\n'.length);
 }
 
 /**
@@ -1733,6 +1756,329 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
         expect(log.unmocked).toEqual([]);
         expect(log.mockKept).toBe(true);
         expect(log.crash).toBeNull();
+      });
+    });
+  });
+});
+
+describe("the premise of update mode in the built bundle's runSync (#420)", () => {
+  /** The source commit the edition's translation of a lecture was last synced to. */
+  const SYNCED_AT = 'beef1234';
+  /** A later source commit, past this PR's merge commit. */
+  const LATER = 'feed5678';
+  /** A state file recording `sha`, quoted as the sync writes one. */
+  const stateAt = (sha: string) =>
+    [
+      `source-sha: "${sha}"`,
+      'synced-at: "2026-11-02"',
+      'model: claude-sonnet-5',
+      'mode: UPDATE',
+      'section-count: 1',
+      '',
+    ].join('\n');
+  /** A source key: a path at a given commit. */
+  const atCommit = (p: string, sha: string) => `${p}@${sha}`;
+  /** The comparison of a recorded commit with this PR's merge commit. */
+  const compareFrom = (sha: string) => `GET /repos/${SOURCE_REPO}/compare/${sha}...${SHA}`;
+  const LIST_PULLS = `GET /repos/${EDITION}/pulls`;
+
+  /** An open sync PR in the edition that carries `lectures/a.md`, for source PR 6. */
+  const OPEN_SYNC_PR = {
+    number: 31,
+    head: { ref: 'translation-sync-2026-11-02T00-00-00-pr-6' },
+    body:
+      'Earlier sync.\n\n<!-- translation-sync-metadata\n' +
+      JSON.stringify({
+        sourceRepo: SOURCE_REPO,
+        sourcePR: 6,
+        sourceCommitSha: 'cafe0006',
+        targetBaseSha: 'base0006',
+        sourceLanguage: 'en',
+        targetLanguage: 'ml',
+        claudeModel: 'claude-sonnet-5',
+        files: [{ path: 'lectures/a.md', type: 'markdown' }],
+      }) +
+      '\n-->',
+  };
+
+  /**
+   * A source PR that changes `lectures/a.md`, whose translation was synced to
+   * `SYNCED_AT`. `englishThen` is the source's `a.md` at that commit: the
+   * English this PR changed when the premise holds, an earlier English when
+   * the translation is behind.
+   */
+  function changesA(englishThen: string): Scenario {
+    return {
+      scope: 'all',
+      prFiles: [{ filename: 'lectures/a.md', status: 'modified' }],
+      source: {
+        ...changedInSource('lectures/a.md', 'Alpha'),
+        [atCommit('lectures/a.md', SYNCED_AT)]: englishThen,
+      },
+      target: {
+        'lectures/a.md': translated('Alpha'),
+        '.translate/state/a.md.yml': stateAt(SYNCED_AT),
+      },
+    };
+  }
+
+  /** English from before a change that never reached the edition. */
+  const OLDER_ALPHA = lecture('Alpha', 'Body zero.');
+
+  /** The requests a lecture behind costs, from the PR files to the failure issue. */
+  const BEHIND_REQUESTS = [
+    PR_FILES,
+    readSource('lectures/a.md'),
+    readSource('lectures/a.md', `${SHA}^`),
+    readEdition('lectures/a.md'),
+    readEdition('.translate/state/a.md.yml'),
+    readSource('lectures/a.md', SYNCED_AT),
+    compareFrom(SYNCED_AT),
+    LIST_PULLS,
+    ...OPEN_FAILURE_ISSUE,
+  ];
+
+  describe('a lecture behind an open sync PR that carries it', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('premise-still-open', {
+        ...changesA(OLDER_ALPHA),
+        compare: { [`${SYNCED_AT}...${SHA}`]: 'ahead' },
+        openPulls: [OPEN_SYNC_PR],
+      });
+    }, 90_000);
+
+    it('reads the English at the recorded commit, compares, lists the open PRs once, and stops', () => {
+      check(run, (log) => {
+        expect(log.requests).toEqual(BEHIND_REQUESTS);
+      });
+    });
+
+    it('fails with a failure issue that names the open PR, and makes no model call', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(log.pulls).toEqual([]);
+        expect(log.writes).toEqual([]);
+        expect(log.issues).toHaveLength(1);
+        expect(issueErrors(log.issues[0])).toEqual([
+          "Translation behind: lectures/a.md: ml's translation of it is at source `beef123`. " +
+            "This PR's change assumes the English that translation PR " +
+            `${EDITION}#31 carries, and it is still open in the edition. Merge it, then carry ` +
+            'this change. It was not synced, and no model call was made.',
+        ]);
+        expectCleanRun(log);
+      });
+    });
+
+    it('advises merging the open PR first, and not a resync', () => {
+      check(run, (log) => {
+        const recovery = recoveryOf(log.issues[0]);
+        expect(linesOf(recovery)).toContain(
+          `- \`lectures/a.md\`: merge ${EDITION}#31 in the edition first, then carry this ` +
+            "PR's change into the lecture."
+        );
+        expect(recovery).not.toContain('comment `\\translate-resync`');
+      });
+    });
+  });
+
+  describe('a lecture behind a change that never reached the edition', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('premise-behind', {
+        ...changesA(OLDER_ALPHA),
+        compare: { [`${SYNCED_AT}...${SHA}`]: 'ahead' },
+        // An open PR that carries another lecture.
+        openPulls: [
+          {
+            ...OPEN_SYNC_PR,
+            body: OPEN_SYNC_PR.body.replace('lectures/a.md', 'lectures/z.md'),
+          },
+        ],
+      });
+    }, 90_000);
+
+    it('costs the same requests, and makes no model call', () => {
+      check(run, (log) => {
+        expect(log.requests).toEqual(BEHIND_REQUESTS);
+        expectCleanRun(log);
+      });
+    });
+
+    it('fails with a failure issue that says to recover the lecture first, not to resync', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(log.issues).toHaveLength(1);
+        expect(issueErrors(log.issues[0])).toEqual([
+          "Translation behind: lectures/a.md: ml's translation of it is at source `beef123`. " +
+            'The source changed the lecture after that, and that change never reached the ' +
+            'edition. Recover the lecture first; that brings in this change too. It was not ' +
+            'synced, and no model call was made.',
+        ]);
+        const recovery = recoveryOf(log.issues[0]);
+        expect(recovery).toContain(
+          '- `lectures/a.md`: recover the lecture first with `translate forward -f a.md`'
+        );
+        expect(recovery).not.toContain('comment `\\translate-resync`');
+        expect(run.stdout).toContain('::error::Translation behind: lectures/a.md: ');
+      });
+    });
+  });
+
+  describe('a lecture whose translation is already past this change (a resync of an older PR)', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('premise-ahead', {
+        ...changesA(lecture('Alpha', 'Body two.')),
+        target: {
+          'lectures/a.md': translated('Alpha'),
+          '.translate/state/a.md.yml': stateAt(LATER),
+        },
+        source: {
+          ...changedInSource('lectures/a.md', 'Alpha'),
+          [atCommit('lectures/a.md', LATER)]: lecture('Alpha', 'Body two.'),
+        },
+        compare: { [`${LATER}...${SHA}`]: 'behind' },
+      });
+    }, 90_000);
+
+    it('does not list the open PRs, makes no model call, and says the translation is ahead', () => {
+      check(run, (log) => {
+        expect(log.requests).not.toContain(LIST_PULLS);
+        expect(log.requests).toContain(compareFrom(LATER));
+        expectCleanRun(log);
+        expect(run.status).toBe(1);
+        expect(issueErrors(log.issues[0])).toEqual([
+          "Translation ahead: lectures/a.md: ml's translation of it is at source `feed567`, " +
+            "which is later than this PR's merge commit `cafe000`. Carrying this change into " +
+            'it would undo the source changes made since (#276). It was not synced, and no ' +
+            'model call was made.',
+        ]);
+      });
+    });
+  });
+
+  describe('a lecture whose translation starts from the English this PR changed', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('premise-holds', changesA(lecture('Alpha')));
+    }, 90_000);
+
+    it('reads the English at the recorded commit once, then reaches the model', () => {
+      check(run, (log) => {
+        expect(requestsFor(log, 'lectures/a.md')).toEqual([
+          readSource('lectures/a.md'),
+          readSource('lectures/a.md', `${SHA}^`),
+          readEdition('lectures/a.md'),
+          readEdition('.translate/state/a.md.yml'),
+          readSource('lectures/a.md', SYNCED_AT),
+        ]);
+        expect(log.requests).not.toContain(compareFrom(SYNCED_AT));
+        expect(log.requests).not.toContain(LIST_PULLS);
+        expect(log.modelRequests).toBeGreaterThan(0);
+        expect(log.unmocked).toEqual([]);
+      });
+    });
+
+    it('fails on the model, not on the premise', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(log.issues).toHaveLength(1);
+        const errors = issueErrors(log.issues[0]) ?? [];
+        expect(errors).toHaveLength(1);
+        expect(errors[0]).toMatch(/^Error processing lectures\/a\.md: /);
+        expect(run.stdout).toContain('premise holds');
+      });
+    });
+  });
+
+  describe('a lecture with no state file in the edition', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      const scenario = changesA(lecture('Alpha'));
+      run = runBundle('premise-no-state', {
+        ...scenario,
+        target: { 'lectures/a.md': translated('Alpha') },
+      });
+    }, 90_000);
+
+    it('reads nothing more for the check, logs that it could not check, and reaches the model', () => {
+      check(run, (log) => {
+        expect(requestsFor(log, 'lectures/a.md')).toEqual([
+          readSource('lectures/a.md'),
+          readSource('lectures/a.md', `${SHA}^`),
+          readEdition('lectures/a.md'),
+          readEdition('.translate/state/a.md.yml'),
+        ]);
+        expect(log.modelRequests).toBeGreaterThan(0);
+        expect(run.stdout).toContain(
+          `lectures/a.md: premise not checked — ${EDITION} has no .translate/state/a.md.yml; ` +
+            'syncing as before'
+        );
+        const errors = issueErrors(log.issues[0]) ?? [];
+        expect(errors).toHaveLength(1);
+        expect(errors[0]).toMatch(/^Error processing lectures\/a\.md: /);
+      });
+    });
+  });
+
+  describe('a lecture behind, beside a rename whose premise holds', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      const behind = changesA(OLDER_ALPHA);
+      run = runBundle('premise-behind-beside-rename', {
+        ...behind,
+        prFiles: [
+          { filename: 'lectures/a.md', status: 'modified' },
+          { filename: 'lectures/c-new.md', status: 'renamed', previous_filename: 'lectures/c.md' },
+        ],
+        source: {
+          ...behind.source,
+          [atMerge('lectures/c-new.md')]: lecture('Charlie'),
+          [atParent('lectures/c.md')]: lecture('Charlie'),
+          [atCommit('lectures/c.md', SYNCED_AT)]: lecture('Charlie'),
+        },
+        target: {
+          ...behind.target,
+          'lectures/c.md': translated('Charlie'),
+          '.translate/state/c.md.yml': stateAt(SYNCED_AT),
+        },
+        compare: { [`${SYNCED_AT}...${SHA}`]: 'ahead' },
+      });
+    }, 90_000);
+
+    it('syncs the rename in a PR that neither carries nor declares the lecture behind', () => {
+      check(run, (log) => {
+        expect(log.writes.map((w) => w.path)).toEqual([
+          'lectures/c-new.md',
+          '.translate/state/c-new.md.yml',
+        ]);
+        expect(log.deletes.map((d) => d.path)).toEqual([
+          'lectures/c.md',
+          '.translate/state/c.md.yml',
+        ]);
+        expect(log.pulls).toHaveLength(1);
+        expect(declaredFiles(log.pulls[0].body)).toEqual([
+          { path: 'lectures/c-new.md', type: 'renamed', previousPath: 'lectures/c.md' },
+        ]);
+      });
+    });
+
+    it('checks the rename under its old name, and makes no model call', () => {
+      check(run, (log) => {
+        expect(requestsFor(log, 'lectures/c.md')).toContain(readSource('lectures/c.md', SYNCED_AT));
+        expectCleanRun(log);
+      });
+    });
+
+    it('fails the run with a failure issue for the lecture behind only', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(log.issues).toHaveLength(1);
+        const errors = issueErrors(log.issues[0]) ?? [];
+        expect(errors).toHaveLength(1);
+        expect(errors[0]).toMatch(/^Translation behind: lectures\/a\.md: /);
+        expect(log.comments).toEqual([]);
       });
     });
   });

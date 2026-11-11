@@ -102,6 +102,7 @@ src/
 │   └── core-logger.ts   # @actions/core → Logger adapter, shared by the entry point and mode runners
 ├── sync-orchestrator.ts # Sync processing pipeline
 ├── sync-scope.ts        # sync-scope: existing — sync a changed lecture only if the target has its state file (#344)
+├── sync-premise.ts      # Update mode's premise: hold back a lecture whose translation does not start from the PR's old English, and say why (#420)
 ├── toc-captions.ts      # _toc.yml part-caption preservation on sync (#254)
 ├── pr-creator.ts        # PR creation in target repo
 ├── parser.ts            # MyST Markdown parser (stack-based, line-by-line)
@@ -200,6 +201,15 @@ PR merged in SOURCE repo
 │                         │  before any content is fetched (#344)
 │                         │  Nothing left to sync: job summary, no PR,
 │                         │  and the Issue only if a scope read failed
+└───────────┬─────────────┘
+            │
+            ▼
+┌─────────────────────────┐
+│ sync-premise.ts         │  For each lecture the target already has:
+│ (update mode's premise) │  does the English at its state file's
+│                         │  source-sha equal the PR's old English?
+│                         │  No: hold it back, no model call, and say
+│                         │  why in the Issue (#420)
 └───────────┬─────────────┘
             │
             ▼
