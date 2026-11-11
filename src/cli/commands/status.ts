@@ -28,10 +28,10 @@ import { MystParser } from '../../parser.js';
 import { extractHeadingMap } from '../../heading-map.js';
 import { getFileGitMetadata, fileChangedSince, commitsSince } from '../git-metadata.js';
 import {
+  inspectFileState,
   readFileState,
   writeFileState,
   writeConfig,
-  stateFileRelativePath,
 } from '../translate-state.js';
 import { triageForward } from '../forward-triage.js';
 import { DEFAULT_CLAUDE_MODEL } from '../../models.js';
@@ -517,19 +517,17 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
         const parsed = await parser.parseSections(sourceContent, sourceFilePath);
 
         // Preserve model from existing state if it was set by a prior command (e.g. forward)
-        const existingState = readFileState(target, entry.file);
+        const stateRead = inspectFileState(target, entry.file);
+        const existingState = stateRead.status === 'valid' ? stateRead.state : undefined;
 
         // A state file that exists but failed to read is corrupt, not absent.
         // Overwriting it with current source HEAD and mode RESYNC would erase
         // the real sync point (#165/F85) — refuse unless --force. Collected
         // and thrown after the loop: this try's catch treats errors as
-        // skip-this-file, which is exactly the silent overwrite path.
-        if (
-          !existingState &&
-          fs.existsSync(path.join(target, stateFileRelativePath(entry.file))) &&
-          !options.force
-        ) {
-          corruptStateFiles.push(entry.file);
+        // skip-this-file, which is exactly the silent overwrite path. The
+        // reason names the key to repair (#381).
+        if (stateRead.status === 'invalid' && !options.force) {
+          corruptStateFiles.push(`${entry.file}: ${stateRead.reason}`);
           continue;
         }
         const model =
@@ -553,7 +551,7 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
 
     if (corruptStateFiles.length > 0) {
       throw new Error(
-        `--write-state blocked: ${corruptStateFiles.length} state file(s) exist but are unreadable (corrupt YAML):\n` +
+        `--write-state blocked: ${corruptStateFiles.length} state file(s) exist but are unreadable:\n` +
           corruptStateFiles.map((f) => `  ${f}`).join('\n') +
           '\n\nRepair or delete them, or use --force to overwrite them with current HEAD.'
       );

@@ -439,7 +439,11 @@ program
   .option('-j, --parallel <n>', 'Number of parallel translations (default: 1)', '1')
   .option('-f, --file <file>', 'Translate a single lecture file (e.g., cobweb.md)')
   .option('--resume-from <file>', 'Resume from a specific lecture file (e.g., cobweb.md)')
-  .option('--skip-existing', 'Skip lectures already translated (reads .translate/state)', false)
+  .option(
+    '--skip-existing',
+    'Skip lectures the edition already has; never overwrites a translation',
+    false
+  )
   .option(
     '--glossary <path>',
     'Path to glossary JSON file (default: built-in glossary for the language)'

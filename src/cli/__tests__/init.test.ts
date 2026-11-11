@@ -344,9 +344,99 @@ describe('copyNonMarkdownFiles', () => {
 // ============================================================================
 
 describe('filterSkipExisting', () => {
+  const VALID_STATE = [
+    'source-sha: abc1234',
+    'synced-at: "2026-10-01"',
+    'model: claude-sonnet-5',
+    'mode: NEW',
+    'section-count: 1',
+    '',
+  ].join('\n');
+
+  /** An edition with one reviewed lecture and the given state file text. */
+  function editionWith(lecture: string, stateText?: string): string {
+    const targetDir = path.join(tmpDir, 'target');
+    writeFile(path.join(targetDir, 'lectures', lecture), '# Reviewed\n');
+    if (stateText !== undefined) {
+      writeFile(path.join(targetDir, '.translate', 'state', `${lecture}.yml`), stateText);
+    }
+    return targetDir;
+  }
+
+  // #379: each of these was translated again, over the edition's lecture.
+  it.each([
+    ['no model key', VALID_STATE.replace('model: claude-sonnet-5\n', ''), '`model` is missing'],
+    [
+      'a quoted section count',
+      VALID_STATE.replace('section-count: 1', 'section-count: "1"'),
+      '`section-count` is a string, not a number',
+    ],
+    [
+      'an all-digit source-sha',
+      VALID_STATE.replace('abc1234', '1111111'),
+      '`source-sha` is a number, not a string: quote it',
+    ],
+    ['text that is not YAML', '{{{ not yaml', 'could not be read as YAML'],
+  ])('skips a lecture whose state file has %s, and says why', (_name, stateText, reason) => {
+    const targetDir = editionWith('cobweb.md', stateText);
+
+    const result = filterSkipExisting(targetDir, ['cobweb.md'], 'lectures');
+
+    expect(result.remaining).toEqual([]);
+    expect(result.skipped).toEqual(['cobweb.md']);
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]).toContain('cobweb.md: skipped');
+    expect(result.warnings[0]).toContain(reason);
+  });
+
+  it('skips a lecture with an unquoted synced-at date, with no warning (#381)', () => {
+    const targetDir = editionWith('cobweb.md', VALID_STATE.replace('"2026-10-01"', '2026-10-01'));
+
+    const result = filterSkipExisting(targetDir, ['cobweb.md'], 'lectures');
+
+    expect(result.remaining).toEqual([]);
+    expect(result.skippedCount).toBe(1);
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('skips a lecture the edition has without a state file, with a warning', () => {
+    const targetDir = editionWith('pandas.md');
+
+    const result = filterSkipExisting(targetDir, ['pandas.md'], 'lectures');
+
+    expect(result.remaining).toEqual([]);
+    expect(result.skipped).toEqual(['pandas.md']);
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]).toContain('no .translate/state/pandas.md.yml');
+    expect(result.warnings[0]).toContain('does not overwrite');
+  });
+
+  it('translates a lecture whose state file has no lecture beside it, with a warning', () => {
+    const targetDir = path.join(tmpDir, 'target');
+    writeFile(path.join(targetDir, '.translate', 'state', 'gone.md.yml'), VALID_STATE);
+
+    const result = filterSkipExisting(targetDir, ['gone.md'], 'lectures');
+
+    expect(result.remaining).toEqual(['gone.md']);
+    expect(result.skippedCount).toBe(0);
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]).toContain('the edition has no gone.md');
+  });
+
+  it('reads a lecture in a docs subfolder at its own state path', () => {
+    const targetDir = editionWith('advanced/cobweb.md', VALID_STATE);
+
+    const result = filterSkipExisting(targetDir, ['advanced/cobweb.md'], 'lectures');
+
+    expect(result.skipped).toEqual(['advanced/cobweb.md']);
+    expect(result.warnings).toEqual([]);
+  });
+
   it('should skip lectures that have .translate/state entries', () => {
     const targetDir = path.join(tmpDir, 'target');
     fs.mkdirSync(targetDir, { recursive: true });
+    writeFile(path.join(targetDir, 'lectures', 'cobweb.md'), '# Cobweb\n');
+    writeFile(path.join(targetDir, 'lectures', 'solow.md'), '# Solow\n');
 
     // Create state for two of three lectures
     writeFileState(targetDir, 'cobweb.md', {
@@ -364,15 +454,15 @@ describe('filterSkipExisting', () => {
       'section-count': 3,
     });
 
-    const result = filterSkipExisting(targetDir, [
-      'intro.md',
-      'cobweb.md',
-      'solow.md',
-      'lake_model.md',
-    ]);
+    const result = filterSkipExisting(
+      targetDir,
+      ['intro.md', 'cobweb.md', 'solow.md', 'lake_model.md'],
+      'lectures'
+    );
 
     expect(result.skippedCount).toBe(2);
     expect(result.remaining).toEqual(['intro.md', 'lake_model.md']);
+    expect(result.warnings).toEqual([]);
   });
 
   it('should return all lectures when none have state', () => {
@@ -380,7 +470,7 @@ describe('filterSkipExisting', () => {
     fs.mkdirSync(targetDir, { recursive: true });
 
     const lectures = ['intro.md', 'cobweb.md'];
-    const result = filterSkipExisting(targetDir, lectures);
+    const result = filterSkipExisting(targetDir, lectures, 'lectures');
 
     expect(result.skippedCount).toBe(0);
     expect(result.remaining).toEqual(['intro.md', 'cobweb.md']);
@@ -389,6 +479,7 @@ describe('filterSkipExisting', () => {
   it('should return empty when all lectures have state', () => {
     const targetDir = path.join(tmpDir, 'target');
     fs.mkdirSync(targetDir, { recursive: true });
+    writeFile(path.join(targetDir, 'lectures', 'intro.md'), '# Intro\n');
 
     writeFileState(targetDir, 'intro.md', {
       'source-sha': 'aaa',
@@ -398,7 +489,7 @@ describe('filterSkipExisting', () => {
       'section-count': 1,
     });
 
-    const result = filterSkipExisting(targetDir, ['intro.md']);
+    const result = filterSkipExisting(targetDir, ['intro.md'], 'lectures');
 
     expect(result.skippedCount).toBe(1);
     expect(result.remaining).toEqual([]);

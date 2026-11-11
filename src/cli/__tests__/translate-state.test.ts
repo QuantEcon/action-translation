@@ -10,6 +10,7 @@ import {
   readConfig,
   writeConfig,
   readFileState,
+  inspectFileState,
   writeFileState,
   isSourceChanged,
   serializeFileState,
@@ -278,6 +279,70 @@ describe('file state read/write', () => {
 
   test('readFileState returns undefined when file does not exist', () => {
     expect(readFileState(tmpDir, 'nonexistent.md')).toBeUndefined();
+    expect(inspectFileState(tmpDir, 'nonexistent.md')).toEqual({ status: 'missing' });
+  });
+
+  describe('a hand-written state file (#381)', () => {
+    const lines = (overrides: Record<string, string | undefined> = {}): string => {
+      const fields: Record<string, string | undefined> = {
+        'source-sha': 'abc1234',
+        'synced-at': '"2026-10-19"',
+        model: 'claude-sonnet-5',
+        mode: 'NEW',
+        'section-count': '3',
+        ...overrides,
+      };
+      return Object.entries(fields)
+        .filter(([, value]) => value !== undefined)
+        .map(([key, value]) => `${key}: ${value}\n`)
+        .join('');
+    };
+    const write = (text: string): void => {
+      const statePath = path.join(tmpDir, '.translate', 'state', 'intro.md.yml');
+      fs.mkdirSync(path.dirname(statePath), { recursive: true });
+      fs.writeFileSync(statePath, text, 'utf-8');
+    };
+
+    test('an unquoted date is read, as the string it was written as', () => {
+      write(lines({ 'synced-at': '2026-10-19' }));
+
+      const state = readFileState(tmpDir, 'intro.md');
+      expect(state?.['synced-at']).toBe('2026-10-19');
+    });
+
+    test('a key the reader does not know is kept', () => {
+      write(lines() + 'signed-off-by: editor\n');
+
+      expect(readFileState(tmpDir, 'intro.md')).toMatchObject({ 'signed-off-by': 'editor' });
+    });
+
+    test.each([
+      [
+        'an all-digit source-sha',
+        lines({ 'source-sha': '1111111' }),
+        '`source-sha` is a number, not a string: quote it',
+      ],
+      ['a missing model', lines({ model: undefined }), '`model` is missing'],
+      [
+        'a quoted section count',
+        lines({ 'section-count': '"3"' }),
+        '`section-count` is a string, not a number: write it without quotes',
+      ],
+      ['a list', '- a\n- b\n', 'it is not a YAML mapping of keys to values'],
+    ])('%s is rejected, with the reason', (_name, text, reason) => {
+      write(text);
+
+      expect(inspectFileState(tmpDir, 'intro.md')).toEqual({ status: 'invalid', reason });
+      expect(readFileState(tmpDir, 'intro.md')).toBeUndefined();
+    });
+
+    test('text that does not parse is rejected as unreadable YAML', () => {
+      write('{{{ not yaml at all');
+
+      const read = inspectFileState(tmpDir, 'intro.md');
+      expect(read.status).toBe('invalid');
+      expect(read.status === 'invalid' && read.reason).toContain('could not be read as YAML');
+    });
   });
 
   test('handles subdirectory paths', () => {
