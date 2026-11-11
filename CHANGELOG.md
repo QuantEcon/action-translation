@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.30.1] - 2026-11-11
+
 ### Fixed
 
 - **A whole-document translation that comes back wrapped in a code fence is unwrapped, not refused** (#363). The model sometimes puts a bare ```` ``` ```` line above a complete, correct translation and another below it. The wrapper's opening fence is then closed by the first bare closing fence inside the document, and the structural-parity guard refused the translation: at v0.29.4, 20 of 23 French drafts of `python_essentials.md` and `python_oop.md`. `init`, `forward` and sync's new-file path now remove the two lines when all of these hold: the first is a fence at column 0 with no info string, or with `markdown`, `md` or `myst`; the last is a bare fence at column 0 of the same character, at least as long; neither the source nor, for `forward`, the existing translation starts with a fence; neither the source nor the document left ends with a fence open; and the document left is not indented as a whole. When the model opened a wrapper and never closed it, the last line is the document's own closing fence: the fence walk shows this, and only the first line is removed. A wrapper indented together with its document is left as it came, never written as an indented document. The guard still runs on the result. Each unwrap is logged, `init --report-json` counts them (`fenceUnwraps`), and `rate-check.sh` prints the count for each cell.
