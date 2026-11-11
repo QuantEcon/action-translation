@@ -47668,7 +47668,14 @@ function addUsage(usage, responseUsage) {
   usage.apiCalls += 1;
 }
 function isRetryableAnthropicError(error4) {
-  return error4 instanceof RateLimitError || error4 instanceof APIConnectionError || error4 instanceof APIError && (error4.status !== void 0 && error4.status >= 500 || error4.status === void 0 && error4.message?.includes("overloaded"));
+  return error4 instanceof RateLimitError || error4 instanceof APIConnectionError || error4 instanceof APIError && (error4.status !== void 0 && error4.status >= 500 || error4.status === void 0 && error4.message?.includes("overloaded")) || isStreamCutShort(error4);
+}
+var STREAM_ENDED_EARLY_MESSAGES = /* @__PURE__ */ new Set([
+  "stream ended without producing a Message with role=assistant",
+  "request ended without sending any chunks"
+]);
+function isStreamCutShort(error4) {
+  return error4 instanceof AnthropicError && !(error4 instanceof APIError) && (error4.cause instanceof TypeError || STREAM_ENDED_EARLY_MESSAGES.has(error4.message));
 }
 
 // dist/bibliography.js
@@ -48643,6 +48650,10 @@ var TranslationService = class {
    * - APIConnectionError (network issues)
    * - APIError with 5xx status (server errors)
    * - APIError with overloaded_error (status undefined)
+   * - a stream cut short: the connection dropped mid-read ('terminated'), or
+   *   the body ended before the message did (`isStreamCutShort`). The
+   *   abandoned attempt has no final usage, so none is counted for it; the
+   *   retry is counted as any other.
    *
    * Does NOT retry on:
    * - AuthenticationError (invalid API key)

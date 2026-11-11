@@ -6,19 +6,13 @@
  * `translate-init-report/1`), so that a measurement reads each failure's class
  * instead of grepping log text. A refusal, a truncation and a structural parity
  * failure are different findings about a model; an infra failure (a 429, 5xx,
- * overload or connection error that outlasted the retries, or a stream cut off
- * part-way, which is retried only for an overload) is not a finding about the
- * model at all.
+ * overload or connection error, or a stream cut off part-way, that outlasted
+ * the retries) is not a finding about the model at all.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import {
-  APIError,
-  AnthropicError,
-  AuthenticationError,
-  PermissionDeniedError,
-} from '@anthropic-ai/sdk';
+import { APIError, AuthenticationError, PermissionDeniedError } from '@anthropic-ai/sdk';
 import {
   ApiUsage,
   ModelRefusalError,
@@ -26,6 +20,7 @@ import {
   TruncatedResponseError,
   UnexpectedStopReasonError,
   isRetryableAnthropicError,
+  isStreamCutShort,
 } from '../models.js';
 
 /** The class of a failed file, in the order `classifyFailure` tests them. */
@@ -35,7 +30,7 @@ export type FailureKind =
   | 'unexpected-stop' // any other stop reason but end_turn
   | 'parity' // the structural parity guard refused the output
   | 'auth' // 401 / 403
-  | 'infra' // 429, 5xx, overload, connection error after the retries; a stream cut short
+  | 'infra' // 429, 5xx, overload, connection error or a stream cut short, after the retries
   | 'api-error' // any other API error: a 400, a 404 for an unknown model, ...
   | 'too-large' // refused before the call: over the whole-document output budget
   | 'incomplete' // the model printed the incomplete-document marker
@@ -80,26 +75,6 @@ const MID_STREAM_INFRA_TYPES: ReadonlySet<string> = new Set([
   'timeout_error',
   'overloaded_error',
 ]);
-
-/**
- * The SDK's own errors for a stream that stopped below the API: a body that
- * ended before the message did. A connection dropped mid-read reaches the SDK
- * as fetch's TypeError ('terminated'), which it wraps in a plain
- * AnthropicError. Neither is retried — neither is an APIConnectionError — and
- * neither says anything about the model.
- */
-const STREAM_ENDED_EARLY_MESSAGES: ReadonlySet<string> = new Set([
-  'stream ended without producing a Message with role=assistant',
-  'request ended without sending any chunks',
-]);
-
-function isStreamCutShort(error: unknown): boolean {
-  return (
-    error instanceof AnthropicError &&
-    !(error instanceof APIError) &&
-    (error.cause instanceof TypeError || STREAM_ENDED_EARLY_MESSAGES.has(error.message))
-  );
-}
 
 /** Sort a failed file's error into a FailureKind. */
 export function classifyFailure(error: unknown): FailureInfo {

@@ -49,6 +49,8 @@ jest.mock('@anthropic-ai/sdk', () => {
   return {
     __esModule: true,
     default: MockAnthropic,
+    // The retry predicate tests every error that is no APIError against it.
+    AnthropicError,
     APIError,
     AuthenticationError,
     RateLimitError,

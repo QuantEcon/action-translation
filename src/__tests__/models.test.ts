@@ -9,7 +9,13 @@
  * runs before it interprets a response.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import Anthropic, {
+  AnthropicError,
+  APIConnectionError,
+  AuthenticationError,
+  BadRequestError,
+  RateLimitError,
+} from '@anthropic-ai/sdk';
 import {
   ALWAYS_THINKING_MAX_TOKENS,
   MAX_TOKENS,
@@ -25,6 +31,7 @@ import {
   extractResponseText,
   isRecognizedModel,
   isRetryableAnthropicError,
+  isStreamCutShort,
   maxTokensFor,
   modelRequestParams,
   requestPolicyFor,
@@ -426,6 +433,64 @@ describe('assertCompleteResponse', () => {
     expect(isRetryableAnthropicError(new ModelRefusalError('op', 'cyber', null, 0))).toBe(false);
     expect(isRetryableAnthropicError(new UnexpectedStopReasonError('op', null))).toBe(false);
     expect(isRetryableAnthropicError(new TruncatedResponseError(1, 'op'))).toBe(false);
+  });
+});
+
+describe('isRetryableAnthropicError: a stream cut short below the API', () => {
+  /** What the SDK's MessageStream rejects with when the socket drops mid-read. */
+  function dropped(): AnthropicError {
+    const socket = Object.assign(new Error('other side closed'), { code: 'UND_ERR_SOCKET' });
+    return new AnthropicError('terminated', {
+      cause: new TypeError('terminated', { cause: socket }),
+    });
+  }
+
+  it('retries a connection dropped mid-read, and a body that ended early', () => {
+    expect(isStreamCutShort(dropped())).toBe(true);
+    expect(isRetryableAnthropicError(dropped())).toBe(true);
+    for (const message of [
+      'stream ended without producing a Message with role=assistant',
+      'request ended without sending any chunks',
+    ]) {
+      expect(isStreamCutShort(new AnthropicError(message))).toBe(true);
+      expect(isRetryableAnthropicError(new AnthropicError(message))).toBe(true);
+    }
+  });
+
+  it('does not retry any other SDK-side error, or a bare TypeError', () => {
+    const other = new AnthropicError(
+      'Unexpected event order, got message_start before receiving "message_stop"'
+    );
+    expect(isStreamCutShort(other)).toBe(false);
+    expect(isRetryableAnthropicError(other)).toBe(false);
+    expect(isRetryableAnthropicError(new TypeError('terminated'))).toBe(false);
+    expect(isRetryableAnthropicError(new Error('terminated'))).toBe(false);
+  });
+
+  it('keeps a refusal, a truncation, an auth error and a bad request non-retryable', () => {
+    const headers = new Headers();
+    expect(isRetryableAnthropicError(new ModelRefusalError('op', 'cyber', null, 0))).toBe(false);
+    expect(isRetryableAnthropicError(new TruncatedResponseError(1, 'op'))).toBe(false);
+    expect(
+      isRetryableAnthropicError(new AuthenticationError(401, undefined, 'bad key', headers))
+    ).toBe(false);
+    expect(
+      isRetryableAnthropicError(new BadRequestError(400, undefined, 'bad request', headers))
+    ).toBe(false);
+    // Even one with a TypeError behind it: an API error is judged by its status.
+    const badRequest = new BadRequestError(400, undefined, 'bad request', headers);
+    Object.assign(badRequest, { cause: new TypeError('terminated') });
+    expect(isStreamCutShort(badRequest)).toBe(false);
+    expect(isRetryableAnthropicError(badRequest)).toBe(false);
+  });
+
+  it('still retries the transient API errors it retried before', () => {
+    expect(
+      isRetryableAnthropicError(new APIConnectionError({ message: 'Connection error.' }))
+    ).toBe(true);
+    expect(
+      isRetryableAnthropicError(new RateLimitError(429, undefined, 'slow', new Headers()))
+    ).toBe(true);
   });
 });
 
