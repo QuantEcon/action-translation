@@ -351,9 +351,12 @@ says "not yet released" for #348, #418, #363, #326, #288, #280, #415 or #301 is 
 this. Owed now: close #118; #280's sequence (a narrow harness run for `queue: max`, the
 edition workflow patches, the back-to-back merge test), which closes #349; merge
 lecture-python.zh-cn#308/#310/#311/#312; `rate-check.sh` reads its key from the environment
-only (#435). **v0.30.2**: #420 with #281 is built on branch `claude/youthful-wright-rkvr54`
-and waits on one ruling (hold back every mismatch, or let a lecture whose earlier sync PR is
-still open sync as it does today); a retry for a stream cut mid-read goes with it. Log
+only (#435). **v0.30.2**, in one PR from branch `claude/youthful-wright-rkvr54`: #420's premise
+check, ruled 2026-11-11 to hold back a lecture that is behind or ahead and to let one whose
+earlier sync PR is still open sync as before, with a diagnosis
+(`D-2026-11-11-sync-premise-holds-back-behind-not-still-open`); #281's recovery text; and a
+retry for a stream cut mid-read. #420's third proposal (update a behind lecture from the
+English at its state commit) stays open. 2,342 tests across 83 suites on that branch. Log
 `2026-11-11-v0301-release`.
 
 *Issue validation, 2026-11-11*: all 128 open issues were checked against `80d4ae6`; the
