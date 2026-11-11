@@ -46,6 +46,19 @@ export interface PrCreatorConfig {
 export const SYNC_METADATA_SCHEMA_VERSION = 1;
 
 /**
+ * How the "Sections Pending Earlier Translation PR" notice says to recover
+ * when the earlier PR is abandoned (#281). Not a resync: resyncing this PR's
+ * source PR replays the same diff against the same target and skips the
+ * sections again, and resyncing the earlier source PR fails #276's
+ * precondition by construction, since a later merge changed the same file.
+ */
+export const PENDING_SECTIONS_RECOVERY =
+  'If that PR is abandoned, recover the lecture with `translate forward -f <file>`, run from ' +
+  "a checkout of the source's default branch, where `<file>` is the lecture's path inside the " +
+  'docs folder. That regenerates the whole lecture, so on a lecture that has been natively ' +
+  'reviewed, add the missing sections by hand instead.';
+
+/**
  * Machine-readable metadata embedded in translation sync PR bodies.
  * Used by rebase mode to reconstruct pipeline inputs, and documented as a
  * public contract for downstream tooling (#66, docs/user/metadata-contract.md).
@@ -319,7 +332,7 @@ export function buildPrBody(
         `- \`${file}\`: ${headings.map((h) => `\`${h.replace(/`/g, '\\`')}\``).join(', ')}`
       );
     }
-    skippedNotice = `\n\n### ⚠️ Sections Pending Earlier Translation PR\n\nThe following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. If that PR is abandoned, run \`/translate-resync\` to recover.\n\n${lines.join('\n')}`;
+    skippedNotice = `\n\n### ⚠️ Sections Pending Earlier Translation PR\n\nThe following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. ${PENDING_SECTIONS_RECOVERY}\n\n${lines.join('\n')}`;
   }
 
   // Build removed target-only sections notice (#90 defect 2): the sync mirrors

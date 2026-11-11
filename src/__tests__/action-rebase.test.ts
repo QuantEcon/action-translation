@@ -418,6 +418,14 @@ describe('rebase mode, run in the built bundle', () => {
     expect(log.comments[0].body).toContain(
       `PR #${SIBLING_PR} is closed after ${SIBLING_BRANCH} moved to the rebased commit`
     );
+    // The recovery advice (#281): the CLI route, and a resync of the source
+    // PR, named across repositories, only under #276's precondition.
+    expect(log.comments[0].body).toContain('`translate forward -f <file>`');
+    expect(log.comments[0].body).toContain(
+      `This PR syncs ${SOURCE_REPO}#12. A \`\\translate-resync\` on that PR`
+    );
+    // Every mention of the command carries its backslash.
+    expect(log.comments[0].body).not.toMatch(/(^|[^\\])translate-resync/);
     expect(run.stdout).toContain('Rebase complete: 0 rebased, 0 skipped, 1 errors.');
   });
 

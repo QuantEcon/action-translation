@@ -167,7 +167,20 @@ describe('buildPrBody', () => {
     expect(body).toContain('`lectures/intro.md`');
     expect(body).toContain('`Type Hints`');
     expect(body).toContain('`Advanced Topics`');
-    expect(body).toContain('/translate-resync');
+  });
+
+  it('recovers an abandoned earlier PR with translate forward, not a resync (#281)', () => {
+    const skipped = new Map<string, string[]>([['lectures/intro.md', ['Type Hints']]]);
+    const body = buildPrBody([], [], baseConfig, undefined, skipped);
+
+    expect(body).toContain(
+      'An earlier translation PR should add them. If that PR is abandoned, recover the ' +
+        "lecture with `translate forward -f <file>`, run from a checkout of the source's " +
+        "default branch, where `<file>` is the lecture's path inside the docs folder. That " +
+        'regenerates the whole lecture, so on a lecture that has been natively reviewed, add ' +
+        'the missing sections by hand instead.'
+    );
+    expect(body).not.toContain('translate-resync');
   });
 
   it('should not include skipped sections notice when empty', () => {

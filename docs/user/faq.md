@@ -67,7 +67,7 @@ Requirements:
 - The comment body must start with `\translate-resync`
 - The language code (if provided) must match a supported language; unsupported values are ignored with a warning and fall back to all-language resync
 
-For drift recovery beyond a single PR, use the CLI `forward` command instead — it works on any file regardless of PR history.
+A resync rebuilds every file the PR changed from the PR's merge-time snapshot, not from the source as it is now. Use it only when none of those files has changed on the source's default branch since the PR merged (`git rev-list --count <merge sha>..origin/main -- <path>` prints 0 for each); otherwise it reverts the later changes (#276). For anything else, including drift recovery beyond a single PR, use the CLI `forward` command — it works on any file regardless of PR history.
 
 ### Why didn't a PR merged from a fork sync?
 
@@ -78,10 +78,20 @@ GitHub gives a workflow run that a fork's pull request triggers no secrets, so t
 When the sync workflow encounters an error (API failure, parsing error, etc.), it automatically opens a **GitHub Issue** in the source repository with:
 - The title `Translation sync failed for PR #N (language)`
 - A list of errors encountered
-- Recovery instructions including the `\translate-resync` command
+- Recovery advice for each failed lecture
 - The label `translation-sync-failure`
 
-To recover, fix the underlying issue and comment `\translate-resync` on the original merged PR. To retry only a specific language, use `\translate-resync zh-cn` or `\translate-resync fa`. A later sync of the same PR and language closes the issue when it opens its translation PR without errors, or, under `sync-scope: existing`, when it passes with nothing to deliver.
+To recover, follow the issue's advice. For a lecture the edition has, run `translate forward -f <file>` from a checkout of the source's default branch, except on a natively reviewed lecture, which takes the change by hand; for a lecture the edition does not have yet, run `translate init -f <file>`. Comment `\translate-resync` on the original merged PR only when no file the PR changed has changed on the source's default branch since it merged (#276), and after fixing the cause: a resync repeats a structural-parity failure exactly. To retry only a specific language, use `\translate-resync zh-cn` or `\translate-resync fa`. A later sync of the same PR and language closes the issue when it opens its translation PR without errors, or, under `sync-scope: existing`, when it passes with nothing to deliver.
+
+### Why does the failure issue say a lecture's translation is "behind"?
+
+Sync carries one PR's change, from the English before it to the English after, into the edition's translation, so the translation has to match the English before (#420). Before calling the model, sync compares the English at the commit the lecture's state file records with the English the PR changed. If they differ, the lecture is not synced, and the issue says why:
+
+- **still open**: an earlier translation PR that carries the lecture is still open in the edition, and the issue names it. Merge it, then carry this change.
+- **behind**: an earlier change never reached the edition, for example because its sync failed. Recover the lecture first with `translate forward -f <file>`; that includes this change.
+- **ahead**: the translation is already past this PR, as after a resync of an older PR. Nothing is owed if the lecture has this PR's change.
+
+A `\translate-resync` cannot fix any of these, since it carries the same change into the same translation.
 
 ### Does the action post any status updates?
 

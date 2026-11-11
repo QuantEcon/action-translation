@@ -61,7 +61,7 @@ The following new file(s) could not be translated and are **absent from this PR*
 
 ### ⚠️ Sections Pending Earlier Translation PR
 
-The following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. If that PR is abandoned, run \`/translate-resync\` to recover.
+The following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. If that PR is abandoned, recover the lecture with \`translate forward -f <file>\`, run from a checkout of the source's default branch, where \`<file>\` is the lecture's path inside the docs folder. That regenerates the whole lecture, so on a lecture that has been natively reviewed, add the missing sections by hand instead.
 
 - \`lectures/functions.md\`: \`Exercises\`
 

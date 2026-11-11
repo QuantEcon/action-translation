@@ -197,6 +197,13 @@ export function findCarryingPulls(
   return numbers.sort((a, b) => a - b);
 }
 
+/**
+ * The engine's issue on rebuilding from a stale merge-time snapshot (#276),
+ * as messages cite it. They are posted to the source repository or the
+ * edition, where a bare `#276` would link that repository's own issue.
+ */
+export const STALE_SNAPSHOT_ISSUE = 'QuantEcon/action-translation#276';
+
 /** A commit SHA as messages print it. */
 export function shortSha(sha: string): string {
   return sha.slice(0, 7);
@@ -242,7 +249,7 @@ export function formatPremiseError(failure: PremiseFailure, targetLanguage: stri
       return (
         `Translation ahead: ${label}: ${at}, which is later than this PR's merge commit ` +
         `\`${shortSha(failure.sourceSha)}\`. Carrying this change into it would undo the source ` +
-        `changes made since (#276). ${tail}`
+        `changes made since (${STALE_SNAPSHOT_ISSUE}). ${tail}`
       );
   }
 }

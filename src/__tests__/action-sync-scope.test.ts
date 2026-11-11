@@ -1951,7 +1951,8 @@ describe("the premise of update mode in the built bundle's runSync (#420)", () =
         expect(issueErrors(log.issues[0])).toEqual([
           "Translation ahead: lectures/a.md: ml's translation of it is at source `feed567`, " +
             "which is later than this PR's merge commit `cafe000`. Carrying this change into " +
-            'it would undo the source changes made since (#276). It was not synced, and no ' +
+            'it would undo the source changes made since (QuantEcon/action-translation#276). ' +
+            'It was not synced, and no ' +
             'model call was made.',
         ]);
       });
@@ -1988,6 +1989,15 @@ describe("the premise of update mode in the built bundle's runSync (#420)", () =
         expect(errors).toHaveLength(1);
         expect(errors[0]).toMatch(/^Error processing lectures\/a\.md: /);
         expect(run.stdout).toContain('premise holds');
+      });
+    });
+
+    it('advises the CLI for the lecture, and a resync only under its precondition (#281)', () => {
+      check(run, (log) => {
+        const recovery = linesOf(recoveryOf(log.issues[0]));
+        expect(recovery).toContain('- `lectures/a.md`: `translate forward -f a.md`.');
+        expect(recovery).toContain(`    git rev-list --count ${SHA}..origin/main -- <path>`);
+        expect(recovery.join('\n')).not.toContain('Once the issue is resolved');
       });
     });
   });

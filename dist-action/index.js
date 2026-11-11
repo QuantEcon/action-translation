@@ -54603,6 +54603,7 @@ async function writeJobSummary(summary2, markdown, logger) {
 
 // dist/pr-creator.js
 var SYNC_METADATA_SCHEMA_VERSION = 1;
+var PENDING_SECTIONS_RECOVERY = "If that PR is abandoned, recover the lecture with `translate forward -f <file>`, run from a checkout of the source's default branch, where `<file>` is the lecture's path inside the docs folder. That regenerates the whole lecture, so on a lecture that has been natively reviewed, add the missing sections by hand instead.";
 async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped) {
   const { targetOwner, targetRepo } = config;
   const { data: targetRepoData } = await octokit.rest.repos.get({
@@ -54725,7 +54726,7 @@ function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skipp
 
 ### \u26A0\uFE0F Sections Pending Earlier Translation PR
 
-The following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. If that PR is abandoned, run \`/translate-resync\` to recover.
+The following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. ${PENDING_SECTIONS_RECOVERY}
 
 ${lines.join("\n")}`;
   }
@@ -55100,6 +55101,7 @@ function findCarryingPulls(pulls, paths, sourcePr) {
   }
   return numbers.sort((a, b) => a - b);
 }
+var STALE_SNAPSHOT_ISSUE = "QuantEcon/action-translation#276";
 function shortSha(sha) {
   return sha.slice(0, 7);
 }
@@ -55123,7 +55125,7 @@ function formatPremiseError(failure, targetLanguage) {
     case "behind":
       return `Translation behind: ${label}: ${at}. The source changed the lecture after that, and that change never reached the edition. Recover the lecture first; that brings in this change too. ${tail}`;
     case "ahead":
-      return `Translation ahead: ${label}: ${at}, which is later than this PR's merge commit \`${shortSha(failure.sourceSha)}\`. Carrying this change into it would undo the source changes made since (#276). ${tail}`;
+      return `Translation ahead: ${label}: ${at}, which is later than this PR's merge commit \`${shortSha(failure.sourceSha)}\`. Carrying this change into it would undo the source changes made since (${STALE_SNAPSHOT_ISSUE}). ${tail}`;
   }
 }
 function forwardArgument(path8, docsFolder) {
@@ -55300,6 +55302,85 @@ async function checkSyncPremise(input, reader, logger) {
     return error4;
   });
   return { files: kept, failures, errors };
+}
+
+// dist/recovery-advice.js
+function failureIssueTitle(prNumber, targetLanguage) {
+  return `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
+}
+function fileArgument(path8, docsFolder) {
+  return docsRelativePath(path8, docsFolder);
+}
+function failedLectureLine(lecture, docsFolder) {
+  const arg = fileArgument(lecture.file, docsFolder);
+  const label = lecture.previousPath ? `\`${lecture.file}\` (renamed from \`${lecture.previousPath}\`)` : `\`${lecture.file}\``;
+  if (!lecture.inEdition) {
+    return `- ${label}: \`translate init -f ${arg}\`; the edition does not have it yet.`;
+  }
+  const move = lecture.previousPath ? `, after moving the edition's \`${lecture.previousPath}\` and its state file to the new name` : "";
+  return `- ${label}: \`translate forward -f ${arg}\`${move}.`;
+}
+function resyncParagraph(prNumber, mergeSha) {
+  const sha = mergeSha ?? "<merge commit>";
+  return [
+    `\`${RESYNC_COMMAND}\` on #${prNumber} re-runs this sync from the PR's merge-time snapshot, for every file the PR changed, not only those named above. Use it only when none of those files has changed on the source's default branch since the PR merged; otherwise it reverts the later changes (${STALE_SNAPSHOT_ISSUE}). For each file the PR changed,`,
+    "",
+    `    git rev-list --count ${sha}..origin/main -- <path>`,
+    "",
+    "must print 0. A structural-parity failure repeats exactly on a resync, so fix its cause first."
+  ];
+}
+function failureRecoveryLines(input) {
+  const premiseFailures = input.premiseFailures ?? [];
+  const premise = formatPremiseRecovery(premiseFailures, input.docsFolder, input.targetLanguage);
+  const otherErrors = input.errors.length > premiseFailures.length;
+  if (!otherErrors)
+    return premise;
+  const lectures = input.failedLectures ?? [];
+  const lines = [];
+  if (premise.length > 0)
+    lines.push(...premise, "", "**For the other errors:**", "");
+  lines.push("Recover a lecture from a checkout of the source's default branch, not by re-running this sync:", "");
+  if (lectures.length > 0) {
+    lines.push(...lectures.map((lecture) => failedLectureLine(lecture, input.docsFolder)), "");
+    lines.push("Any other lecture named above:", "");
+  }
+  lines.push("- one the edition has: `translate forward -f <file>`;", "- one the edition does not have yet: `translate init -f <file>`.", "", "`<file>` is the lecture's path inside the docs folder. `translate forward` regenerates the whole lecture, so do not run it on a lecture that has been natively reviewed: carry the change into that one by hand. `translate init -f` overwrites a translation without asking, so use it only for a lecture the edition does not have.", "", ...resyncParagraph(input.prNumber, input.mergeSha));
+  return lines;
+}
+function buildFailureIssueBody(input) {
+  return [
+    `### Translation sync failure`,
+    "",
+    `**Source PR**: #${input.prNumber}`,
+    `**Target repo**: ${input.targetRepo}`,
+    `**Target language**: ${input.targetLanguage}`,
+    "",
+    `### Errors`,
+    "",
+    input.errors.map((e) => `- ${e}`).join("\n"),
+    "",
+    `### Recovery`,
+    "",
+    ...failureRecoveryLines(input)
+  ].join("\n");
+}
+function rebaseFailureComment(input) {
+  const lectures = input.overlapping.filter((path8) => path8.endsWith(".md")).map((path8) => `\`${fileArgument(path8, input.docsFolder)}\``);
+  const files = lectures.length > 0 ? ` (here: ${lectures.join(", ")})` : "";
+  const lines = [
+    `\u26A0\uFE0F **Automatic rebase failed** after #${input.mergedPrNumber} was merged.`,
+    "",
+    `Error: ${input.error}`,
+    "",
+    `Resolve the conflicts by hand, or regenerate the overlapping lectures with \`translate forward -f <file>\`${files}, run from a checkout of the source's default branch, where \`<file>\` is the lecture's path inside the docs folder. \`translate forward\` regenerates the whole lecture, so on a lecture that has been natively reviewed, carry the changes in by hand instead.`
+  ];
+  const metadata = input.metadata;
+  if (metadata && metadata.sourcePR > 0) {
+    const sourcePr = `${metadata.sourceRepo}#${metadata.sourcePR}`;
+    lines.push("", `This PR syncs ${sourcePr}. A \`${RESYNC_COMMAND}\` on that PR rebuilds every file it changed from its merge-time snapshot, so use it only when none of those files has changed on the source's default branch since the PR merged (${STALE_SNAPSHOT_ISSUE}).`);
+  }
+  return lines.join("\n");
 }
 
 // dist/action/review.js
@@ -57038,15 +57119,17 @@ async function runRebase() {
   let skippedCount = 0;
   let errorCount = 0;
   for (const pr of siblingPRs) {
+    let metadata;
+    let overlapping = [];
     try {
-      const metadata = parseTranslationSyncMetadata(pr.body || "");
+      metadata = parseTranslationSyncMetadata(pr.body || "");
       if (!metadata) {
         core9.info(`PR #${pr.number}: No translation-sync metadata found \u2014 skipping (pre-metadata PR).`);
         skippedCount++;
         continue;
       }
       const prFilePaths = metadata.files.map((f) => f.path);
-      const overlapping = prFilePaths.filter((p) => mergedFilePaths.has(p));
+      overlapping = prFilePaths.filter((p) => mergedFilePaths.has(p));
       if (overlapping.length === 0) {
         if (!inputs.rebaseStaleSiblings) {
           core9.info(`PR #${pr.number}: No file overlap with merged PR \u2014 skipping.`);
@@ -57113,11 +57196,15 @@ The translation content is preserved; only unchanged sections were updated to ma
           owner,
           repo,
           issue_number: pr.number,
-          body: `\u26A0\uFE0F **Automatic rebase failed** after #${mergedPrNumber} was merged.
-
-Error: ${msg}
-
-You may need to manually resolve conflicts or run \`/translate-resync\` on the source PR.`
+          // Built in recovery-advice.ts (#281): the CLI route, and a resync
+          // of the source PR only for a sync PR, under #276's precondition.
+          body: rebaseFailureComment({
+            mergedPrNumber,
+            error: msg,
+            metadata,
+            overlapping,
+            docsFolder: inputs.docsFolder
+          })
         });
       } catch {
         core9.warning(`Could not post error comment on PR #${pr.number}`);
@@ -57420,7 +57507,7 @@ async function runSync() {
     core9.setFailed(`Translation completed with ${scope.errors.length} errors`);
     await writeScopeSummary(void 0, scope.errors.length);
     if (!isTestMode) {
-      await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, scope.errors);
+      await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, scope.errors, { docsFolder: inputs.docsFolder, mergeSha: effectiveSha });
     }
     return;
   }
@@ -57518,7 +57605,17 @@ async function runSync() {
   await writeScopeSummary(prUrl, result.errors.length);
   if (!isTestMode) {
     if (result.errors.length > 0) {
-      await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, result.errors, premise.failures, inputs.docsFolder);
+      const failedLectures = filesToSync.filter((f) => (f.type === "markdown" || f.type === "renamed") && !result.processedFiles.includes(f.filename)).map((f) => ({
+        file: f.filename,
+        ...f.type === "renamed" && f.previousFilename ? { previousPath: f.previousFilename } : {},
+        inEdition: !f.isNewFile
+      }));
+      await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, result.errors, {
+        docsFolder: inputs.docsFolder,
+        mergeSha: effectiveSha,
+        premiseFailures: premise.failures,
+        failedLectures
+      });
     } else if (prUrl) {
       await postSuccessComment(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, prUrl, result.processedFiles);
       await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, `\u2705 A later sync for PR #${prNumber} (${inputs.targetLanguage}) succeeded: ${prUrl}`);
@@ -57766,7 +57863,7 @@ async function postSuccessComment(octokit, prNumber, targetLanguage, targetRepo,
 }
 async function closeFailureIssues(octokit, prNumber, targetLanguage, resolution) {
   try {
-    const title = `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
+    const title = failureIssueTitle(prNumber, targetLanguage);
     const openIssues = await octokit.paginate(octokit.rest.issues.listForRepo, {
       owner: github3.context.repo.owner,
       repo: github3.context.repo.repo,
@@ -57804,32 +57901,16 @@ function nothingToDeliverResolution(prNumber, targetLanguage) {
   const { owner, repo } = github3.context.repo;
   return `${resolution}: ${serverUrl}/${owner}/${repo}/actions/runs/${runId}`;
 }
-async function createFailureIssue(octokit, prNumber, targetLanguage, targetRepo, errors, premiseFailures = [], docsFolder = "") {
+async function createFailureIssue(octokit, prNumber, targetLanguage, targetRepo, errors, advice = { docsFolder: "" }) {
   try {
-    const errorList = errors.map((e) => `- ${e}`).join("\n");
-    const title = `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
-    const premiseAdvice = formatPremiseRecovery(premiseFailures, docsFolder, targetLanguage);
-    const otherErrors = errors.length > premiseFailures.length;
-    const resyncAdvice = `comment \`\\translate-resync\` on PR #${prNumber} to retry.`;
-    const recovery = premiseAdvice.length === 0 ? [`Once the issue is resolved, ${resyncAdvice}`] : [
-      ...premiseAdvice,
-      ...otherErrors ? ["", `For the other errors: once the issue is resolved, ${resyncAdvice}`] : []
-    ];
-    const body = [
-      `### Translation sync failure`,
-      "",
-      `**Source PR**: #${prNumber}`,
-      `**Target repo**: ${targetRepo}`,
-      `**Target language**: ${targetLanguage}`,
-      "",
-      `### Errors`,
-      "",
-      errorList,
-      "",
-      `### Recovery`,
-      "",
-      ...recovery
-    ].join("\n");
+    const title = failureIssueTitle(prNumber, targetLanguage);
+    const body = buildFailureIssueBody({
+      prNumber,
+      targetRepo,
+      targetLanguage,
+      errors,
+      ...advice
+    });
     const { data: issue } = await octokit.rest.issues.create({
       owner: github3.context.repo.owner,
       repo: github3.context.repo.repo,

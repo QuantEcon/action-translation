@@ -103,6 +103,7 @@ src/
 ├── sync-orchestrator.ts # Sync processing pipeline
 ├── sync-scope.ts        # sync-scope: existing — sync a changed lecture only if the target has its state file (#344)
 ├── sync-premise.ts      # Update mode's premise: hold back a lecture whose translation does not start from the PR's old English, and say why (#420)
+├── recovery-advice.ts   # Recovery text: the sync failure issue's body and the rebase-failure comment (CLI route; resync only under #276's precondition, #281)
 ├── toc-captions.ts      # _toc.yml part-caption preservation on sync (#254)
 ├── pr-creator.ts        # PR creation in target repo
 ├── parser.ts            # MyST Markdown parser (stack-based, line-by-line)
@@ -235,7 +236,7 @@ PR merged in SOURCE repo
 ┌─────────────────────────┐
 │ index.ts                │  On success: post comment on source PR
 │ (sync notifications)    │  On failure: open Issue with error details
-│                         │  + recovery instructions
+│ + recovery-advice.ts    │  + recovery advice per failed lecture
 └─────────────────────────┘
 ```
 

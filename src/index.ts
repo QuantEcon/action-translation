@@ -36,13 +36,13 @@ import {
   refuseUnreadLectures,
   writeJobSummary,
 } from './sync-scope.js';
+import { checkSyncPremise, githubPremiseReader, StateReads } from './sync-premise.js';
 import {
-  checkSyncPremise,
-  formatPremiseRecovery,
-  githubPremiseReader,
-  PremiseFailure,
-  StateReads,
-} from './sync-premise.js';
+  buildFailureIssueBody,
+  failureIssueTitle,
+  FailureIssueInput,
+  rebaseFailureComment,
+} from './recovery-advice.js';
 import { runReview } from './action/review.js';
 import { coreLogger } from './action/core-logger.js';
 import { getBuiltInGlossaryDir } from './runtime-paths.js';
@@ -167,9 +167,13 @@ async function runRebase(): Promise<void> {
   let errorCount = 0;
 
   for (const pr of siblingPRs) {
+    // Read again by the failure comment below, which names the PR's source PR
+    // and its overlapping lectures.
+    let metadata: TranslationSyncMetadata | undefined;
+    let overlapping: string[] = [];
     try {
       // Parse metadata from PR body
-      const metadata = parseTranslationSyncMetadata(pr.body || '');
+      metadata = parseTranslationSyncMetadata(pr.body || '');
       if (!metadata) {
         core.info(
           `PR #${pr.number}: No translation-sync metadata found — skipping (pre-metadata PR).`
@@ -180,7 +184,7 @@ async function runRebase(): Promise<void> {
 
       // Check file overlap
       const prFilePaths = metadata.files.map((f) => f.path);
-      const overlapping = prFilePaths.filter((p) => mergedFilePaths.has(p));
+      overlapping = prFilePaths.filter((p) => mergedFilePaths.has(p));
       if (overlapping.length === 0) {
         // No overlap means no merge conflict, so there is nothing to re-translate. The
         // branch is still behind the new base though, and its checks are now stale —
@@ -258,7 +262,15 @@ async function runRebase(): Promise<void> {
           owner,
           repo,
           issue_number: pr.number,
-          body: `⚠️ **Automatic rebase failed** after #${mergedPrNumber} was merged.\n\nError: ${msg}\n\nYou may need to manually resolve conflicts or run \`/translate-resync\` on the source PR.`,
+          // Built in recovery-advice.ts (#281): the CLI route, and a resync
+          // of the source PR only for a sync PR, under #276's precondition.
+          body: rebaseFailureComment({
+            mergedPrNumber,
+            error: msg,
+            metadata,
+            overlapping,
+            docsFolder: inputs.docsFolder,
+          }),
         });
       } catch {
         core.warning(`Could not post error comment on PR #${pr.number}`);
@@ -802,7 +814,8 @@ async function runSync(): Promise<void> {
         prNumber,
         inputs.targetLanguage,
         inputs.targetRepo,
-        scope.errors
+        scope.errors,
+        { docsFolder: inputs.docsFolder, mergeSha: effectiveSha }
       );
     }
     return;
@@ -1010,15 +1023,34 @@ async function runSync(): Promise<void> {
   // Post-sync notifications (skip in test mode)
   if (!isTestMode) {
     if (result.errors.length > 0) {
-      // On failure: open an Issue linked to the source PR
+      // On failure: open an Issue linked to the source PR. The lectures the
+      // orchestrator could not translate get one recovery line each:
+      // `forward` for one the edition has, `init` for a new one (#281).
+      const failedLectures = filesToSync
+        .filter(
+          (f) =>
+            (f.type === 'markdown' || f.type === 'renamed') &&
+            !result.processedFiles.includes(f.filename)
+        )
+        .map((f) => ({
+          file: f.filename,
+          ...(f.type === 'renamed' && f.previousFilename
+            ? { previousPath: f.previousFilename }
+            : {}),
+          inEdition: !f.isNewFile,
+        }));
       await createFailureIssue(
         octokit,
         prNumber,
         inputs.targetLanguage,
         inputs.targetRepo,
         result.errors,
-        premise.failures,
-        inputs.docsFolder
+        {
+          docsFolder: inputs.docsFolder,
+          mergeSha: effectiveSha,
+          premiseFailures: premise.failures,
+          failedLectures,
+        }
       );
     } else if (prUrl) {
       // On success: comment on the source PR
@@ -1498,7 +1530,7 @@ async function closeFailureIssues(
   resolution: string
 ): Promise<void> {
   try {
-    const title = `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
+    const title = failureIssueTitle(prNumber, targetLanguage);
     const openIssues = await octokit.paginate(octokit.rest.issues.listForRepo, {
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
@@ -1557,42 +1589,23 @@ async function createFailureIssue(
   targetLanguage: string,
   targetRepo: string,
   errors: string[],
-  premiseFailures: PremiseFailure[] = [],
-  docsFolder = ''
+  advice: Pick<
+    FailureIssueInput,
+    'docsFolder' | 'mergeSha' | 'premiseFailures' | 'failedLectures'
+  > = { docsFolder: '' }
 ): Promise<void> {
   try {
-    const errorList = errors.map((e) => `- ${e}`).join('\n');
-    const title = `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
-    // Lectures whose translation is behind or ahead get their own advice
-    // (#420): re-running this sync carries the same change into the same
-    // translation, so the resync line is only for the other errors.
-    const premiseAdvice = formatPremiseRecovery(premiseFailures, docsFolder, targetLanguage);
-    const otherErrors = errors.length > premiseFailures.length;
-    const resyncAdvice = `comment \`\\translate-resync\` on PR #${prNumber} to retry.`;
-    const recovery =
-      premiseAdvice.length === 0
-        ? [`Once the issue is resolved, ${resyncAdvice}`]
-        : [
-            ...premiseAdvice,
-            ...(otherErrors
-              ? ['', `For the other errors: once the issue is resolved, ${resyncAdvice}`]
-              : []),
-          ];
-    const body = [
-      `### Translation sync failure`,
-      '',
-      `**Source PR**: #${prNumber}`,
-      `**Target repo**: ${targetRepo}`,
-      `**Target language**: ${targetLanguage}`,
-      '',
-      `### Errors`,
-      '',
-      errorList,
-      '',
-      `### Recovery`,
-      '',
-      ...recovery,
-    ].join('\n');
+    const title = failureIssueTitle(prNumber, targetLanguage);
+    // The Recovery section is built in recovery-advice.ts (#281): the CLI
+    // route, and a resync only under #276's precondition. Lectures held back
+    // by the premise check (#420) get their own advice.
+    const body = buildFailureIssueBody({
+      prNumber,
+      targetRepo,
+      targetLanguage,
+      errors,
+      ...advice,
+    });
 
     const { data: issue } = await octokit.rest.issues.create({
       owner: github.context.repo.owner,

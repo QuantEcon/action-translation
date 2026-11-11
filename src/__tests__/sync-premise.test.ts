@@ -338,7 +338,8 @@ describe('message wording', () => {
     expect(formatPremiseError(failure({ case: 'ahead' }), 'fa')).toBe(
       "Translation ahead: lectures/olg_adaptive_money.md: fa's translation of it is at source " +
         "`a4fbd86`, which is later than this PR's merge commit `abcdef0`. Carrying this " +
-        'change into it would undo the source changes made since (#276). It was not synced, ' +
+        'change into it would undo the source changes made since ' +
+        '(QuantEcon/action-translation#276). It was not synced, ' +
         'and no model call was made.'
     );
   });
