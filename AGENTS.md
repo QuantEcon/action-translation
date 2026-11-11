@@ -133,18 +133,20 @@ npm run build    # Compile TypeScript + bundle dist-action/index.js
 
 ### Using the `gh` CLI
 
-Write command output and drafted bodies to a temporary directory outside the repository — `SCRATCH=$(mktemp -d)`, or the agent's own scratchpad — since nothing under `.qe/` is git-ignored and the repository holds no scratch location:
+Write command output and drafted bodies to a temporary directory outside the repository — `SCRATCH=$(mktemp -d)`, or the agent's own scratchpad — since nothing under `.qe/` is git-ignored and the repository holds no scratch location.
+
+Name the repository on every command with `--repo QuantEcon/action-translation`. A clone with no default repository set makes `gh` stop with "No default remote repository has been set" (it did at the v0.30.1 release), and naming it also keeps a command copied to another checkout pointed at the right place:
 
 ```bash
 # Read PR details
-gh pr view 123 > $SCRATCH/pr.txt && cat $SCRATCH/pr.txt
+gh pr view 123 --repo QuantEcon/action-translation > $SCRATCH/pr.txt && cat $SCRATCH/pr.txt
 
 # Create PR (write body with file tool first, then:)
-gh pr create --title "..." --body-file $SCRATCH/pr-body.txt --base main > $SCRATCH/pr-result.txt && cat $SCRATCH/pr-result.txt
+gh pr create --repo QuantEcon/action-translation --title "..." --body-file $SCRATCH/pr-body.txt --base main > $SCRATCH/pr-result.txt && cat $SCRATCH/pr-result.txt
 
 # Create release (write notes with file tool first; title is the tag alone — see the
 # release checklist for why)
-gh release create vX.Y.Z --title "vX.Y.Z" --notes-file $SCRATCH/release-notes.md > $SCRATCH/release-result.txt && cat $SCRATCH/release-result.txt
+gh release create vX.Y.Z --repo QuantEcon/action-translation --title "vX.Y.Z" --notes-file $SCRATCH/release-notes.md > $SCRATCH/release-result.txt && cat $SCRATCH/release-result.txt
 ```
 
 
@@ -324,8 +326,10 @@ Before creating a release, verify the following:
 6. **Create GitHub release** — the title is **the tag and nothing else**:
 
    ```bash
-   gh release create vX.Y.Z --title "vX.Y.Z" --notes-file $SCRATCH/release-notes.md
+   gh release create vX.Y.Z --repo QuantEcon/action-translation --title "vX.Y.Z" --notes-file $SCRATCH/release-notes.md
    ```
+
+   `--generate-notes` in place of `--notes-file` builds the notes from the merged PR titles; add `--notes "<headline>"` beside it to put the headline first.
 
    The repo sidebar and the releases list truncate long titles, so a descriptive
    suffix is cut off exactly where it stops being readable — `v0.24.0 — tech-debt
