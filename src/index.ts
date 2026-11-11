@@ -867,8 +867,11 @@ async function runSync(): Promise<void> {
 
   // The premise of update mode (#420): a lecture whose translation does not
   // start from the English this PR changed is held back before any model
-  // call, and its error says which case it is. The state files' content comes
-  // from the read above; a lecture new to the edition costs nothing here.
+  // call, and its error says which case it is, unless an open translation PR
+  // in the edition carries it: that one syncs as before, as a stacked PR, and
+  // its diagnosis goes to the PR body or, if it fails, the failure issue. The
+  // state files' content comes from the read above; a lecture new to the
+  // edition costs nothing here.
   const premise = await checkSyncPremise(
     {
       files: filesToSync,
@@ -1002,7 +1005,10 @@ async function runSync(): Promise<void> {
         result.failedNewFiles
           ? { files: result.failedNewFiles, filteredTocPaths: result.filteredTocPaths ?? [] }
           : undefined,
-        scope?.skipped
+        scope?.skipped,
+        // Only the lectures this PR delivers: one that failed is in the
+        // failure issue instead.
+        premise.stillOpen.filter((lecture) => result.processedFiles.includes(lecture.file))
       );
 
       prUrl = prResult.prUrl;
@@ -1025,7 +1031,9 @@ async function runSync(): Promise<void> {
     if (result.errors.length > 0) {
       // On failure: open an Issue linked to the source PR. The lectures the
       // orchestrator could not translate get one recovery line each:
-      // `forward` for one the edition has, `init` for a new one (#281).
+      // `forward` for one the edition has, `init` for a new one (#281), and,
+      // for one the premise check found behind an open translation PR, its
+      // diagnosis and the advice to merge that PR first (#420).
       const failedLectures = filesToSync
         .filter(
           (f) =>
@@ -1048,8 +1056,11 @@ async function runSync(): Promise<void> {
         {
           docsFolder: inputs.docsFolder,
           mergeSha: effectiveSha,
-          premiseFailures: premise.failures,
+          heldBack: premise.heldBack,
           failedLectures,
+          stillOpen: premise.stillOpen.filter(
+            (lecture) => !result.processedFiles.includes(lecture.file)
+          ),
         }
       );
     } else if (prUrl) {
@@ -1591,14 +1602,15 @@ async function createFailureIssue(
   errors: string[],
   advice: Pick<
     FailureIssueInput,
-    'docsFolder' | 'mergeSha' | 'premiseFailures' | 'failedLectures'
+    'docsFolder' | 'mergeSha' | 'heldBack' | 'failedLectures' | 'stillOpen'
   > = { docsFolder: '' }
 ): Promise<void> {
   try {
     const title = failureIssueTitle(prNumber, targetLanguage);
     // The Recovery section is built in recovery-advice.ts (#281): the CLI
     // route, and a resync only under #276's precondition. Lectures held back
-    // by the premise check (#420) get their own advice.
+    // by the premise check (#420), and failed lectures it found behind an
+    // open translation PR, get their own advice.
     const body = buildFailureIssueBody({
       prNumber,
       targetRepo,

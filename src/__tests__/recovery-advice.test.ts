@@ -20,7 +20,7 @@ import {
   failureRecoveryLines,
   rebaseFailureComment,
 } from '../recovery-advice.js';
-import { PremiseFailure } from '../sync-premise.js';
+import { HeldBackLecture, StillOpenLecture } from '../sync-premise.js';
 
 const MERGE = '0123456789abcdef0123456789abcdef01234567';
 
@@ -117,20 +117,19 @@ describe('failure issue (#281)', () => {
   });
 
   describe('with lectures held back by the premise check (#420)', () => {
-    const behind: PremiseFailure = {
+    const behind: HeldBackLecture = {
       file: 'lectures/mle_intro.md',
       statePath: '.translate/state/mle_intro.md.yml',
       stateSha: '0066783aaaa',
       sourceSha: MERGE,
       case: 'behind',
-      openPulls: [],
     };
 
     it('gives only their advice when they are the only errors, with no resync line', () => {
       const lines = failureRecoveryLines({
         ...BASE,
         errors: ['Translation behind: lectures/mle_intro.md: ...'],
-        premiseFailures: [behind],
+        heldBack: [behind],
       });
       expect(lines[0]).toMatch(/^These lectures were not synced: /);
       expect(lines.join('\n')).not.toContain('git rev-list');
@@ -141,7 +140,7 @@ describe('failure issue (#281)', () => {
       const lines = failureRecoveryLines({
         ...BASE,
         errors: ['Translation behind: lectures/mle_intro.md: ...', PARITY_ERROR],
-        premiseFailures: [behind],
+        heldBack: [behind],
         failedLectures: [{ file: 'lectures/mix_model.md', inEdition: true }],
       });
       const text = lines.join('\n');
@@ -151,6 +150,58 @@ describe('failure issue (#281)', () => {
         text.indexOf('`translate forward -f mix_model.md`')
       );
       expect(text).toContain('git rev-list --count');
+    });
+  });
+
+  describe('with a failed lecture the premise check found behind an open PR (#420)', () => {
+    const stillOpen: StillOpenLecture = {
+      file: 'lectures/mix_model.md',
+      statePath: '.translate/state/mix_model.md.yml',
+      stateSha: '0066783aaaa',
+      sourceSha: MERGE,
+      case: 'still-open',
+      openPulls: ['QuantEcon/lecture-python.zh-cn#311'],
+    };
+    const DIAGNOSIS =
+      "Translation behind: lectures/mix_model.md: zh-cn's translation of it is at source " +
+      "`0066783`. This PR's change assumes the English that translation PR " +
+      'QuantEcon/lecture-python.zh-cn#311 carries, and it is still open in the edition. ' +
+      'Merge it, then carry this change.';
+
+    it('keeps the error the lecture recorded, and puts the diagnosis beside it', () => {
+      const body = buildFailureIssueBody({
+        ...BASE,
+        errors: ['Fetch failed: lectures/other.md', PARITY_ERROR, 'second'],
+        stillOpen: [stillOpen],
+      });
+      expect(section(body, '### Errors')).toBe(
+        `\n- Fetch failed: lectures/other.md\n- ${PARITY_ERROR}\n  - ${DIAGNOSIS}\n- second\n`
+      );
+    });
+
+    it('lists the diagnosis as its own error when the lecture recorded none', () => {
+      const body = buildFailureIssueBody({ ...BASE, errors: ['other'], stillOpen: [stillOpen] });
+      expect(section(body, '### Errors')).toBe(`\n- other\n- ${DIAGNOSIS}\n`);
+    });
+
+    it('advises merging the open PR first, in place of the generic line', () => {
+      const lines = failureRecoveryLines({
+        ...BASE,
+        errors: [PARITY_ERROR, 'Error processing lectures/b.md: ...'],
+        failedLectures: [
+          { file: 'lectures/mix_model.md', inEdition: true },
+          { file: 'lectures/b.md', inEdition: true },
+        ],
+        stillOpen: [stillOpen],
+      });
+      expect(lines.slice(2, 4)).toEqual([
+        '- `lectures/mix_model.md`: merge QuantEcon/lecture-python.zh-cn#311 in the edition ' +
+          "first; it carries the English this PR's change assumes. Then carry this PR's change " +
+          `into the lecture: \`translate forward -f mix_model.md\`, or \`${RESYNC_COMMAND}\` on ` +
+          'this PR under the condition below.',
+        '- `lectures/b.md`: `translate forward -f b.md`.',
+      ]);
+      expect(lines.join('\n')).toContain('git rev-list --count');
     });
   });
 });

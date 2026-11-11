@@ -1,7 +1,8 @@
 /**
  * Tests for the sync premise check (#420): a lecture in update mode syncs only
  * when the edition's translation starts from the English the source PR
- * changed.
+ * changed, or when an open translation PR in the edition carries the English
+ * in between; that lecture syncs as a stacked PR, with its diagnosis recorded.
  *
  * The check reads the `source-sha` the edition's state file records, reads the
  * source file at that commit, and compares the text with the old English the
@@ -16,16 +17,18 @@ import {
   checkSyncPremise,
   editionPath,
   findCarryingPulls,
-  formatPremiseError,
+  formatHeldBackError,
   formatPremiseRecovery,
+  formatStillOpenDiagnosis,
   githubPremiseReader,
+  HeldBackLecture,
   judgePremise,
   OpenPull,
-  PremiseFailure,
   PremiseInput,
   PremiseReader,
   recordedSourceSha,
   StateRead,
+  StillOpenLecture,
   takesUpdateMode,
 } from '../sync-premise.js';
 import { FileToSync, Logger } from '../sync-orchestrator.js';
@@ -290,43 +293,42 @@ describe('findCarryingPulls', () => {
 });
 
 describe('message wording', () => {
-  const failure = (extra: Partial<PremiseFailure>): PremiseFailure => ({
+  const failure = (extra: Partial<HeldBackLecture>): HeldBackLecture => ({
     file: 'lectures/olg_adaptive_money.md',
     statePath: '.translate/state/olg_adaptive_money.md.yml',
     stateSha: STATE_SHA,
     sourceSha: MERGE,
     case: 'behind',
-    openPulls: [],
     ...extra,
   });
+  const stillOpen = (openPulls: string[]): StillOpenLecture => ({
+    file: 'lectures/olg_adaptive_money.md',
+    statePath: '.translate/state/olg_adaptive_money.md.yml',
+    stateSha: STATE_SHA,
+    sourceSha: MERGE,
+    case: 'still-open',
+    openPulls,
+  });
 
-  it('says a translation is behind an open PR, names it, and says to merge it first', () => {
-    expect(
-      formatPremiseError(
-        failure({ case: 'still-open', openPulls: [`${EDITION_NAME}#311`] }),
-        'zh-cn'
-      )
-    ).toBe(
+  it('diagnoses a translation behind an open PR: names it, says to merge it first', () => {
+    expect(formatStillOpenDiagnosis(stillOpen([`${EDITION_NAME}#311`]), 'zh-cn')).toBe(
       "Translation behind: lectures/olg_adaptive_money.md: zh-cn's translation of it is at " +
         "source `a4fbd86`. This PR's change assumes the English that translation PR " +
         'QuantEcon/lecture-python.zh-cn#311 carries, and it is still open in the edition. ' +
-        'Merge it, then carry this change. It was not synced, and no model call was made.'
+        'Merge it, then carry this change.'
     );
   });
 
   it('names every open PR that carries the lecture', () => {
-    const error = formatPremiseError(
-      failure({ case: 'still-open', openPulls: ['o/e#1', 'o/e#2', 'o/e#3'] }),
-      'zh-cn'
-    );
-    expect(error).toContain(
+    const diagnosis = formatStillOpenDiagnosis(stillOpen(['o/e#1', 'o/e#2', 'o/e#3']), 'zh-cn');
+    expect(diagnosis).toContain(
       'translation PRs o/e#1, o/e#2 and o/e#3 carry, and they are still open in the edition. ' +
         'Merge them, then carry this change.'
     );
   });
 
   it('says a translation is behind a change that never arrived, and to recover first', () => {
-    expect(formatPremiseError(failure({}), 'zh-cn')).toBe(
+    expect(formatHeldBackError(failure({}), 'zh-cn')).toBe(
       "Translation behind: lectures/olg_adaptive_money.md: zh-cn's translation of it is at " +
         'source `a4fbd86`. The source changed the lecture after that, and that change never ' +
         'reached the edition. Recover the lecture first; that brings in this change too. ' +
@@ -335,7 +337,7 @@ describe('message wording', () => {
   });
 
   it('says a translation past this change would have later changes undone', () => {
-    expect(formatPremiseError(failure({ case: 'ahead' }), 'fa')).toBe(
+    expect(formatHeldBackError(failure({ case: 'ahead' }), 'fa')).toBe(
       "Translation ahead: lectures/olg_adaptive_money.md: fa's translation of it is at source " +
         "`a4fbd86`, which is later than this PR's merge commit `abcdef0`. Carrying this " +
         'change into it would undo the source changes made since ' +
@@ -346,17 +348,27 @@ describe('message wording', () => {
 
   it('names both paths of a rename', () => {
     expect(
-      formatPremiseError(
+      formatHeldBackError(
         failure({ file: 'lectures/mle_intro.md', previousPath: 'lectures/mle.md' }),
         'zh-cn'
       )
     ).toMatch(/^Translation behind: lectures\/mle_intro\.md \(renamed from lectures\/mle\.md\): /);
   });
 
-  it('gives each case its own recovery, and no resync advice', () => {
+  /** The sub-item that says how to correct a wrong state file, for `-f <file>`. */
+  const correctState = (file: string, docs = 'lectures', language = 'zh-cn') =>
+    '  - If the edition already has the changes made since `a4fbd86`, the state file is ' +
+    'wrong, not the lecture: sibling sync PRs merged out of source order leave it at the older ' +
+    "PR's commit. Correct it instead of regenerating the lecture: check out this PR's parent, " +
+    '`abcdef0^`, in a source clone, run `translate status -s <source clone> -t <edition clone> ' +
+    `-l ${language} -d ${docs} -f ${file} --write-state --carried\`, and commit the state ` +
+    'file to the edition. A `\\translate-resync` of this PR can then carry its change, if none ' +
+    "of the PR's files has changed on the source's default branch since it merged " +
+    '(QuantEcon/action-translation#276).';
+
+  it('gives each case its own recovery, and no resync advice for regenerating', () => {
     const lines = formatPremiseRecovery(
       [
-        failure({ case: 'still-open', openPulls: [`${EDITION_NAME}#311`] }),
         failure({ file: 'lectures/mle_intro.md', previousPath: 'lectures/mle.md' }),
         failure({ file: 'lectures/sub/cons_smooth.md' }),
         failure({ file: 'lectures/later.md', case: 'ahead' }),
@@ -364,20 +376,21 @@ describe('message wording', () => {
       'lectures/',
       'zh-cn'
     );
-    expect(lines).toEqual([
+    expect(lines.join('\n').split('\n')).toEqual([
       "These lectures were not synced: zh-cn's translation of each does not start from the " +
         'English this PR changed, so its change cannot be carried in.',
       '',
-      '- `lectures/olg_adaptive_money.md`: merge QuantEcon/lecture-python.zh-cn#311 in the ' +
-        "edition first, then carry this PR's change into the lecture.",
       '- `lectures/mle_intro.md` (renamed from `lectures/mle.md`): recover the lecture first ' +
         "with `translate forward -f mle_intro.md`, after moving the edition's " +
         '`lectures/mle.md` and its state file to the new name, run from a checkout of the ' +
         "source's default branch. That includes this PR's change. A `\\translate-resync` of " +
         'this PR cannot recover it.',
+      // The state file and the source at this PR's parent go by the old name.
+      correctState('mle.md'),
       '- `lectures/sub/cons_smooth.md`: recover the lecture first with `translate forward -f ' +
         "sub/cons_smooth.md`, run from a checkout of the source's default branch. That " +
         "includes this PR's change. A `\\translate-resync` of this PR cannot recover it.",
+      correctState('sub/cons_smooth.md'),
       "- `lectures/later.md`: if the lecture already has this PR's change, nothing is owed. " +
         'If it does not, bring it up to date with `translate forward -f later.md`, run from a ' +
         "checkout of the source's default branch.",
@@ -387,7 +400,21 @@ describe('message wording', () => {
     ]);
   });
 
-  it('gives no recovery lines when no lecture failed the check', () => {
+  it('names the docs folder as the CLI takes it: no trailing slash, `.` for the root', () => {
+    expect(formatPremiseRecovery([failure({ file: 'a.md' })], '', 'fa')).toContain(
+      [
+        '- `a.md`: recover the lecture first with `translate forward -f a.md`, run from a ' +
+          "checkout of the source's default branch. That includes this PR's change. A " +
+          '`\\translate-resync` of this PR cannot recover it.',
+        correctState('a.md', '.', 'fa'),
+      ].join('\n')
+    );
+    expect(
+      formatPremiseRecovery([failure({ file: 'docs/a.md' })], 'docs', 'ml').join('\n')
+    ).toContain('-l ml -d docs -f a.md --write-state --carried');
+  });
+
+  it('gives no recovery lines when no lecture was held back', () => {
     expect(formatPremiseRecovery([], 'lectures/', 'zh-cn')).toEqual([]);
   });
 });
@@ -410,7 +437,7 @@ describe('checkSyncPremise', () => {
       reader,
       logger
     );
-    expect(result).toEqual({ files: [file], failures: [], errors: [] });
+    expect(result).toEqual({ files: [file], heldBack: [], stillOpen: [], errors: [] });
     expect(calls).toEqual([`source ${A}@${STATE_SHA}`]);
     expect(lines).toEqual([
       `info: ${A}: premise holds — the translation is at source a4fbd86, whose English is the ` +
@@ -431,16 +458,16 @@ describe('checkSyncPremise', () => {
       logger
     );
     expect(result.files).toEqual([]);
-    expect(result.failures).toEqual([
+    expect(result.heldBack).toEqual([
       {
         file: A,
         statePath: A_STATE,
         stateSha: STATE_SHA,
         sourceSha: MERGE,
         case: 'behind',
-        openPulls: [],
       },
     ]);
+    expect(result.stillOpen).toEqual([]);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toMatch(/^Translation behind: lectures\/a\.md: zh-cn's /);
     expect(lines).toContain(`error: ${result.errors[0]}`);
@@ -451,21 +478,48 @@ describe('checkSyncPremise', () => {
     ]);
   });
 
-  it('names the open translation PR that carries a lecture behind', async () => {
-    const { reader } = fakeReader({
+  it('syncs a lecture behind an open translation PR that carries it, and records the diagnosis', async () => {
+    const { reader, calls } = fakeReader({
       source: { [atState(A)]: OLDER },
       compare: { [`${STATE_SHA}...${MERGE}`]: 'ahead' },
-      pulls: [syncPull(311, [{ path: A, type: 'markdown' }])],
+      pulls: [
+        syncPull(312, [{ path: A, type: 'markdown' }]),
+        syncPull(311, [{ path: A, type: 'markdown' }]),
+      ],
     });
+    const { logger, lines } = recordingLogger();
+    const file = updated(A);
     const result = await checkSyncPremise(
-      input([updated(A)], { [A_STATE]: found(state(STATE_SHA)) }),
+      input([file], { [A_STATE]: found(state(STATE_SHA)) }),
       reader,
-      recordingLogger().logger
+      logger
     );
-    expect(result.failures.map((f) => [f.case, f.openPulls])).toEqual([
-      ['still-open', [`${EDITION_NAME}#311`]],
+    expect(result).toEqual({
+      files: [file],
+      heldBack: [],
+      stillOpen: [
+        {
+          file: A,
+          statePath: A_STATE,
+          stateSha: STATE_SHA,
+          sourceSha: MERGE,
+          case: 'still-open',
+          openPulls: [`${EDITION_NAME}#311`, `${EDITION_NAME}#312`],
+        },
+      ],
+      errors: [],
+    });
+    expect(calls).toEqual([
+      `source ${A}@${STATE_SHA}`,
+      `compare ${STATE_SHA}...${MERGE}`,
+      'list pulls',
     ]);
-    expect(result.errors[0]).toContain(`translation PR ${EDITION_NAME}#311 carries`);
+    // A warning, not an error: nothing is held back.
+    expect(lines).toEqual([
+      `warning: ${A}: the translation is at source a4fbd86, behind the English this PR ` +
+        `changed; translation PRs ${EDITION_NAME}#311 and ${EDITION_NAME}#312, still open in ` +
+        'the edition, carry the lecture. Syncing as before',
+    ]);
   });
 
   it('reports a lecture as behind, without a PR, when the listing fails', async () => {
@@ -480,7 +534,8 @@ describe('checkSyncPremise', () => {
       reader,
       logger
     );
-    expect(result.failures.map((f) => f.case)).toEqual(['behind']);
+    expect(result.files).toEqual([]);
+    expect(result.heldBack.map((f) => f.case)).toEqual(['behind']);
     expect(result.errors).toHaveLength(1);
     expect(lines).toContain(
       `warning: Could not list the open PRs in ${EDITION_NAME} (Server Error); the lectures ` +
@@ -495,7 +550,7 @@ describe('checkSyncPremise', () => {
       reader,
       recordingLogger().logger
     );
-    expect(result.failures.map((f) => f.case)).toEqual(['behind']);
+    expect(result.heldBack.map((f) => f.case)).toEqual(['behind']);
   });
 
   it('holds back a lecture already past this change, and lists no PRs for it', async () => {
@@ -509,7 +564,7 @@ describe('checkSyncPremise', () => {
       recordingLogger().logger
     );
     expect(result.files).toEqual([]);
-    expect(result.failures.map((f) => f.case)).toEqual(['ahead']);
+    expect(result.heldBack.map((f) => f.case)).toEqual(['ahead']);
     expect(result.errors[0]).toMatch(/^Translation ahead: /);
     expect(calls).not.toContain('list pulls');
   });
@@ -522,7 +577,7 @@ describe('checkSyncPremise', () => {
       reader,
       recordingLogger().logger
     );
-    expect(result).toEqual({ files: [file], failures: [], errors: [] });
+    expect(result).toEqual({ files: [file], heldBack: [], stillOpen: [], errors: [] });
     expect(calls).toEqual([`source ${A}@${STATE_SHA}`]);
   });
 
@@ -543,7 +598,7 @@ describe('checkSyncPremise', () => {
         reader,
         logger
       );
-      expect(result).toEqual({ files: [file], failures: [], errors: [] });
+      expect(result).toEqual({ files: [file], heldBack: [], stillOpen: [], errors: [] });
       expect(calls).toEqual([]);
       expect(lines).toHaveLength(1);
       expect(lines[0]).toMatch(/^info: lectures\/a\.md: premise not checked — /);
@@ -612,7 +667,7 @@ describe('checkSyncPremise', () => {
       `Fetch failed (state): ${A}: could not read ${A_STATE} from ${EDITION_NAME} (status 500: ` +
       "HTTP 500), so whether its translation starts from this PR's English could not be " +
       'checked. It was not synced.';
-    expect(result).toEqual({ files: [], failures: [], errors: [error] });
+    expect(result).toEqual({ files: [], heldBack: [], stillOpen: [], errors: [error] });
     expect(calls).toEqual([]);
     expect(lines).toEqual([`error: ${error}`]);
   });
@@ -632,7 +687,7 @@ describe('checkSyncPremise', () => {
       reader,
       recordingLogger().logger
     );
-    expect(result).toEqual({ files, failures: [], errors: [] });
+    expect(result).toEqual({ files, heldBack: [], stillOpen: [], errors: [] });
     expect(calls).toEqual([]);
   });
 
@@ -654,7 +709,7 @@ describe('checkSyncPremise', () => {
       `compare ${STATE_SHA}...${MERGE}`,
       'list pulls',
     ]);
-    expect(result.failures).toEqual([
+    expect(result.heldBack).toEqual([
       {
         file: 'lectures/mle_intro.md',
         previousPath: 'lectures/mle.md',
@@ -662,16 +717,20 @@ describe('checkSyncPremise', () => {
         stateSha: STATE_SHA,
         sourceSha: MERGE,
         case: 'behind',
-        openPulls: [],
       },
     ]);
   });
 
-  it('keeps the other files, in order, and lists the open PRs once for two lectures behind', async () => {
+  it('keeps the other files and the still-open lecture, in order, and lists the open PRs once', async () => {
     const B = 'lectures/b.md';
     const C = 'lectures/c.md';
     const { reader, calls } = fakeReader({
-      source: { [atState(A)]: OLDER, [atState(B)]: OLD, [atState(C)]: OLDER },
+      source: {
+        [atState(A)]: OLDER,
+        [atState(B)]: OLD,
+        [atState(C)]: OLDER,
+        [atState('lectures/d.md')]: OLDER,
+      },
       compare: { [`${STATE_SHA}...${MERGE}`]: 'ahead' },
       pulls: [syncPull(311, [{ path: C, type: 'markdown' }])],
     });
@@ -682,23 +741,27 @@ describe('checkSyncPremise', () => {
       isNewFile: false,
     };
     const b = updated(B);
+    const c = updated(C);
+    const d = updated('lectures/d.md');
     const result = await checkSyncPremise(
-      input([updated(A), b, toc, updated(C)], {
+      input([c, updated(A), b, toc, d], {
         [A_STATE]: found(state(STATE_SHA)),
         '.translate/state/b.md.yml': found(state(STATE_SHA)),
         '.translate/state/c.md.yml': found(state(STATE_SHA)),
+        '.translate/state/d.md.yml': found(state(STATE_SHA)),
       }),
       reader,
       recordingLogger().logger
     );
-    expect(result.files).toEqual([b, toc]);
-    expect(result.failures.map((f) => [f.file, f.case])).toEqual([
+    expect(result.files).toEqual([c, b, toc]);
+    expect(result.heldBack.map((f) => [f.file, f.case])).toEqual([
       [A, 'behind'],
-      [C, 'still-open'],
+      ['lectures/d.md', 'behind'],
     ]);
-    expect(result.errors.map((e) => e.split(':')[0])).toEqual([
-      'Translation behind',
-      'Translation behind',
+    expect(result.stillOpen.map((f) => [f.file, f.case])).toEqual([[C, 'still-open']]);
+    expect(result.errors.map((e) => e.split(':').slice(0, 2).join(':'))).toEqual([
+      'Translation behind: lectures/a.md',
+      'Translation behind: lectures/d.md',
     ]);
     expect(calls.filter((call) => call === 'list pulls')).toHaveLength(1);
   });

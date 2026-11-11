@@ -87,11 +87,12 @@ To recover, follow the issue's advice. For a lecture the edition has, run `trans
 
 Sync carries one PR's change, from the English before it to the English after, into the edition's translation, so the translation has to match the English before (#420). Before calling the model, sync compares the English at the commit the lecture's state file records with the English the PR changed. If they differ, the lecture is not synced, and the issue says why:
 
-- **still open**: an earlier translation PR that carries the lecture is still open in the edition, and the issue names it. Merge it, then carry this change.
-- **behind**: an earlier change never reached the edition, for example because its sync failed. Recover the lecture first with `translate forward -f <file>`; that includes this change.
+- **behind**: an earlier change never reached the edition, for example because its sync failed. Recover the lecture first with `translate forward -f <file>`; that includes this change. If the edition does have the earlier change, the state file is what is behind: sibling sync PRs merged out of source order leave it at the older PR's commit. The issue then says how to correct it with `translate status --write-state --carried`, from a source clone checked out at the PR's parent, instead of regenerating the lecture.
 - **ahead**: the translation is already past this PR, as after a resync of an older PR. Nothing is owed if the lecture has this PR's change.
 
-A `\translate-resync` cannot fix any of these, since it carries the same change into the same translation.
+A `\translate-resync` cannot fix either while the state file stands, since it carries the same change into the same translation.
+
+When an earlier translation PR that carries the lecture is still open in the edition, the lecture is synced anyway, on top of the translation without that PR's change. If that change left the lecture's structure alone, the sync PR is opened and its body names the open PR: merge that one first, and rebase mode rebuilds the sync PR. If the sync fails, the issue keeps the lecture's own error and adds that the open PR carries the English this change assumes, naming it: merge it first, then carry this change.
 
 ### Does the action post any status updates?
 

@@ -54604,7 +54604,19 @@ async function writeJobSummary(summary2, markdown, logger) {
 // dist/pr-creator.js
 var SYNC_METADATA_SCHEMA_VERSION = 1;
 var PENDING_SECTIONS_RECOVERY = "If that PR is abandoned, recover the lecture with `translate forward -f <file>`, run from a checkout of the source's default branch, where `<file>` is the lecture's path inside the docs folder. That regenerates the whole lecture, so on a lecture that has been natively reviewed, add the missing sections by hand instead.";
-async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped) {
+function formatStillOpenNotice(lectures) {
+  if (lectures.length === 0)
+    return "";
+  const lines = lectures.map((l) => `- \`${l.file}\`: translation at source \`${l.stateSha.slice(0, 7)}\`; ${l.openPulls.join(", ")} ${l.openPulls.length === 1 ? "carries" : "carry"} earlier changes to it`);
+  return `
+
+### \u26A0\uFE0F Earlier Translation PR Still Open
+
+The translation of each lecture below is at an earlier source commit than the English this source PR changed, and an open translation PR carries the changes in between. This PR was built on the translation without them. **Merge the earlier PR first**: once it merges, rebase mode rebuilds this PR on top of it.
+
+${lines.join("\n")}`;
+}
+async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen) {
   const { targetOwner, targetRepo } = config;
   const { data: targetRepoData } = await octokit.rest.repos.get({
     owner: targetOwner,
@@ -54650,7 +54662,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     });
     logger.info(`Deleted: ${file.path}`);
   }
-  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped);
+  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen);
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
   const { data: pr } = await octokit.rest.pulls.create({
     owner: targetOwner,
@@ -54697,7 +54709,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     prNumber: pr.number
   };
 }
-function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped) {
+function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen) {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);
   let filesChangedSection = "";
@@ -54757,6 +54769,7 @@ The following new file(s) could not be translated and are **absent from this PR*
 ${lines.join("\n")}`;
   }
   const scopeNotice = formatScopeNotice(scopeSkipped ?? []);
+  const stillOpenNotice = formatStillOpenNotice(stillOpen ?? []);
   const metadataFiles = fileMetadata ? fileMetadata.map((f) => {
     const entry = {
       path: f.path,
@@ -54791,7 +54804,7 @@ This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoNam
 ### Source PR
 **[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ""}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
 
-${filesChangedSection}${failedFilesNotice}${skippedNotice}${droppedNotice}${scopeNotice}
+${filesChangedSection}${failedFilesNotice}${stillOpenNotice}${skippedNotice}${droppedNotice}${scopeNotice}
 
 ### Details
 - **Source Language**: ${config.sourceLanguage}
@@ -55105,44 +55118,49 @@ var STALE_SNAPSHOT_ISSUE = "QuantEcon/action-translation#276";
 function shortSha(sha) {
   return sha.slice(0, 7);
 }
-function lectureLabel2(failure) {
-  return failure.previousPath ? `${failure.file} (renamed from ${failure.previousPath})` : failure.file;
+function lectureLabel2(lecture) {
+  return lecture.previousPath ? `${lecture.file} (renamed from ${lecture.previousPath})` : lecture.file;
 }
 function listOf(items) {
   if (items.length <= 1)
     return items.join("");
   return `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
-function formatPremiseError(failure, targetLanguage) {
-  const at = `${targetLanguage}'s translation of it is at source \`${shortSha(failure.stateSha)}\``;
-  const label = lectureLabel2(failure);
+function formatHeldBackError(lecture, targetLanguage) {
+  const at = `${targetLanguage}'s translation of it is at source \`${shortSha(lecture.stateSha)}\``;
+  const label = lectureLabel2(lecture);
   const tail = "It was not synced, and no model call was made.";
-  switch (failure.case) {
-    case "still-open": {
-      const one = failure.openPulls.length === 1;
-      return `Translation behind: ${label}: ${at}. This PR's change assumes the English that ${one ? "translation PR" : "translation PRs"} ${listOf(failure.openPulls)} ${one ? "carries, and it is" : "carry, and they are"} still open in the edition. Merge ${one ? "it" : "them"}, then carry this change. ${tail}`;
-    }
+  switch (lecture.case) {
     case "behind":
       return `Translation behind: ${label}: ${at}. The source changed the lecture after that, and that change never reached the edition. Recover the lecture first; that brings in this change too. ${tail}`;
     case "ahead":
-      return `Translation ahead: ${label}: ${at}, which is later than this PR's merge commit \`${shortSha(failure.sourceSha)}\`. Carrying this change into it would undo the source changes made since (${STALE_SNAPSHOT_ISSUE}). ${tail}`;
+      return `Translation ahead: ${label}: ${at}, which is later than this PR's merge commit \`${shortSha(lecture.sourceSha)}\`. Carrying this change into it would undo the source changes made since (${STALE_SNAPSHOT_ISSUE}). ${tail}`;
   }
 }
-function forwardArgument(path8, docsFolder) {
-  return docsRelativePath(path8, docsFolder);
+function formatStillOpenDiagnosis(lecture, targetLanguage) {
+  const one = lecture.openPulls.length === 1;
+  return `Translation behind: ${lectureLabel2(lecture)}: ${targetLanguage}'s translation of it is at source \`${shortSha(lecture.stateSha)}\`. This PR's change assumes the English that ${one ? "translation PR" : "translation PRs"} ${listOf(lecture.openPulls)} ${one ? "carries, and it is" : "carry, and they are"} still open in the edition. Merge ${one ? "it" : "them"}, then carry this change.`;
 }
-function formatPremiseRecovery(failures, docsFolder, targetLanguage) {
-  if (failures.length === 0)
+function cliDocsFolder(docsFolder) {
+  const trimmed = docsFolder.replace(/\/+$/, "");
+  return trimmed === "" ? "." : trimmed;
+}
+function formatPremiseRecovery(heldBack, docsFolder, targetLanguage) {
+  if (heldBack.length === 0)
     return [];
-  const items = failures.map((failure) => {
-    const label = failure.previousPath ? `\`${failure.file}\` (renamed from \`${failure.previousPath}\`)` : `\`${failure.file}\``;
-    const forward = `\`translate forward -f ${forwardArgument(failure.file, docsFolder)}\``;
-    const move = failure.previousPath ? `, after moving the edition's \`${failure.previousPath}\` and its state file to the new name` : "";
-    switch (failure.case) {
-      case "still-open":
-        return `- ${label}: merge ${listOf(failure.openPulls)} in the edition first, then carry this PR's change into the lecture.`;
-      case "behind":
-        return `- ${label}: recover the lecture first with ${forward}${move}, run from a checkout of the source's default branch. That includes this PR's change. A \`\\translate-resync\` of this PR cannot recover it.`;
+  const items = heldBack.map((lecture) => {
+    const label = lecture.previousPath ? `\`${lecture.file}\` (renamed from \`${lecture.previousPath}\`)` : `\`${lecture.file}\``;
+    const forward = `\`translate forward -f ${docsRelativePath(lecture.file, docsFolder)}\``;
+    const move = lecture.previousPath ? `, after moving the edition's \`${lecture.previousPath}\` and its state file to the new name` : "";
+    switch (lecture.case) {
+      case "behind": {
+        const statusFile = docsRelativePath(lecture.previousPath ?? lecture.file, docsFolder);
+        const status = `\`translate status -s <source clone> -t <edition clone> -l ${targetLanguage} -d ${cliDocsFolder(docsFolder)} -f ${statusFile} --write-state --carried\``;
+        return [
+          `- ${label}: recover the lecture first with ${forward}${move}, run from a checkout of the source's default branch. That includes this PR's change. A \`\\translate-resync\` of this PR cannot recover it.`,
+          `  - If the edition already has the changes made since \`${shortSha(lecture.stateSha)}\`, the state file is wrong, not the lecture: sibling sync PRs merged out of source order leave it at the older PR's commit. Correct it instead of regenerating the lecture: check out this PR's parent, \`${shortSha(lecture.sourceSha)}^\`, in a source clone, run ${status}, and commit the state file to the edition. A \`\\translate-resync\` of this PR can then carry its change, if none of the PR's files has changed on the source's default branch since it merged (${STALE_SNAPSHOT_ISSUE}).`
+        ].join("\n");
+      }
       case "ahead":
         return `- ${label}: if the lecture already has this PR's change, nothing is owed. If it does not, bring it up to date with ${forward}${move}, run from a checkout of the source's default branch.`;
     }
@@ -55195,24 +55213,23 @@ function githubPremiseReader(octokit, source, edition) {
 }
 async function checkSyncPremise(input, reader, logger) {
   const edition = `${input.edition.owner}/${input.edition.repo}`;
-  const kept = [];
-  const held = [];
+  const outcomes = [];
   for (const file of input.files) {
     if (!takesUpdateMode(file)) {
-      kept.push(file);
+      outcomes.push({ keep: file });
       continue;
     }
     const lecturePath = editionPath(file);
     const statePath = stateFileFor(lecturePath, input.docsFolder);
     const uncheckable = (why) => {
       logger.info(`${file.filename}: premise not checked \u2014 ${why}; syncing as before`);
-      kept.push(file);
+      outcomes.push({ keep: file });
     };
     const read = input.stateReads.get(statePath) ?? { status: "missing" };
     if (read.status === "error") {
       const error4 = `Fetch failed (state): ${file.filename}: could not read ${statePath} from ${edition} (${read.message}), so whether its translation starts from this PR's English could not be checked. It was not synced.`;
       logger.error(error4);
-      held.push({ error: error4 });
+      outcomes.push({ error: error4 });
       continue;
     }
     if (read.status === "missing") {
@@ -55233,7 +55250,7 @@ async function checkSyncPremise(input, reader, logger) {
       englishAtState = await reader.readSource(lecturePath, stateSha);
     } catch (error4) {
       logger.warning(`${file.filename}: premise not checked \u2014 could not read ${lecturePath} at ${shortSha(stateSha)} from the source (status ${statusOf3(error4) ?? "unknown"}): ${messageOf3(error4)}; syncing as before`);
-      kept.push(file);
+      outcomes.push({ keep: file });
       continue;
     }
     if (englishAtState === void 0) {
@@ -55243,12 +55260,12 @@ async function checkSyncPremise(input, reader, logger) {
     const judgement = judgePremise(file.oldContent, file.newContent, englishAtState);
     if (judgement === "holds") {
       logger.info(`${file.filename}: premise holds \u2014 the translation is at source ${shortSha(stateSha)}, whose English is the English this PR changed`);
-      kept.push(file);
+      outcomes.push({ keep: file });
       continue;
     }
     if (judgement === "carried") {
       logger.info(`${file.filename}: the translation is at source ${shortSha(stateSha)}, whose English is this PR's new English; syncing as before`);
-      kept.push(file);
+      outcomes.push({ keep: file });
       continue;
     }
     let comparison;
@@ -55257,21 +55274,20 @@ async function checkSyncPremise(input, reader, logger) {
     } catch (error4) {
       logger.warning(`${file.filename}: could not compare source ${shortSha(stateSha)} with ${shortSha(input.sourceSha)} (${messageOf3(error4)}); reporting it as behind`);
     }
-    held.push({
-      failure: {
+    outcomes.push({
+      file,
+      mismatch: {
         file: file.filename,
         ...file.type === "renamed" && file.previousFilename ? { previousPath: file.previousFilename } : {},
         statePath,
         stateSha,
         sourceSha: input.sourceSha,
         // `behind`: this PR's merge commit is behind the recorded commit.
-        case: comparison === "behind" ? "ahead" : "behind",
-        openPulls: []
+        case: comparison === "behind" ? "ahead" : "behind"
       }
     });
   }
-  const failures = held.flatMap((entry) => "failure" in entry ? [entry.failure] : []);
-  const behind = failures.filter((failure) => failure.case === "behind");
+  const behind = outcomes.flatMap((entry) => "mismatch" in entry && entry.mismatch.case === "behind" ? [entry] : []);
   if (behind.length > 0) {
     let pulls;
     try {
@@ -55281,27 +55297,42 @@ async function checkSyncPremise(input, reader, logger) {
     }
     if (pulls) {
       const sourceRepo = `${input.source.owner}/${input.source.repo}`;
-      for (const failure of behind) {
-        const paths = failure.previousPath ? [failure.file, failure.previousPath] : [failure.file];
-        const numbers = findCarryingPulls(pulls, paths, {
+      for (const entry of behind) {
+        const { file, previousPath } = entry.mismatch;
+        const numbers = findCarryingPulls(pulls, previousPath ? [file, previousPath] : [file], {
           repo: sourceRepo,
           number: input.prNumber
         });
         if (numbers.length > 0) {
-          failure.case = "still-open";
-          failure.openPulls = numbers.map((n) => `${edition}#${n}`);
+          entry.mismatch = {
+            ...entry.mismatch,
+            case: "still-open",
+            openPulls: numbers.map((n) => `${edition}#${n}`)
+          };
         }
       }
     }
   }
-  const errors = held.map((entry) => {
-    if ("error" in entry)
-      return entry.error;
-    const error4 = formatPremiseError(entry.failure, input.targetLanguage);
-    logger.error(error4);
-    return error4;
-  });
-  return { files: kept, failures, errors };
+  const result = { files: [], heldBack: [], stillOpen: [], errors: [] };
+  for (const entry of outcomes) {
+    if ("keep" in entry) {
+      result.files.push(entry.keep);
+    } else if ("error" in entry) {
+      result.errors.push(entry.error);
+    } else if (entry.mismatch.case === "still-open") {
+      const lecture = entry.mismatch;
+      const one = lecture.openPulls.length === 1;
+      logger.warning(`${lecture.file}: the translation is at source ${shortSha(lecture.stateSha)}, behind the English this PR changed; ${one ? "translation PR" : "translation PRs"} ${listOf(lecture.openPulls)}, still open in the edition, ${one ? "carries" : "carry"} the lecture. Syncing as before`);
+      result.files.push(entry.file);
+      result.stillOpen.push(lecture);
+    } else {
+      const error4 = formatHeldBackError(entry.mismatch, input.targetLanguage);
+      logger.error(error4);
+      result.heldBack.push(entry.mismatch);
+      result.errors.push(error4);
+    }
+  }
+  return result;
 }
 
 // dist/recovery-advice.js
@@ -55311,14 +55342,36 @@ function failureIssueTitle(prNumber, targetLanguage) {
 function fileArgument(path8, docsFolder) {
   return docsRelativePath(path8, docsFolder);
 }
-function failedLectureLine(lecture, docsFolder) {
+function failedLectureLine(lecture, docsFolder, stillOpen) {
   const arg = fileArgument(lecture.file, docsFolder);
   const label = lecture.previousPath ? `\`${lecture.file}\` (renamed from \`${lecture.previousPath}\`)` : `\`${lecture.file}\``;
   if (!lecture.inEdition) {
     return `- ${label}: \`translate init -f ${arg}\`; the edition does not have it yet.`;
   }
   const move = lecture.previousPath ? `, after moving the edition's \`${lecture.previousPath}\` and its state file to the new name` : "";
-  return `- ${label}: \`translate forward -f ${arg}\`${move}.`;
+  const forward = `\`translate forward -f ${arg}\`${move}`;
+  if (stillOpen) {
+    const one = stillOpen.openPulls.length === 1;
+    return `- ${label}: merge ${listOf(stillOpen.openPulls)} in the edition first; ${one ? "it carries" : "they carry"} the English this PR's change assumes. Then carry this PR's change into the lecture: ${forward}, or \`${RESYNC_COMMAND}\` on this PR under the condition below.`;
+  }
+  return `- ${label}: ${forward}.`;
+}
+function errorLines(errors, stillOpen, language) {
+  const placed = /* @__PURE__ */ new Set();
+  const lines = [];
+  for (const error4 of errors) {
+    lines.push(`- ${error4}`);
+    const lecture = stillOpen.find((s) => !placed.has(s) && error4.startsWith(`Error processing ${s.file}: `));
+    if (lecture) {
+      placed.add(lecture);
+      lines.push(`  - ${formatStillOpenDiagnosis(lecture, language)}`);
+    }
+  }
+  for (const lecture of stillOpen) {
+    if (!placed.has(lecture))
+      lines.push(`- ${formatStillOpenDiagnosis(lecture, language)}`);
+  }
+  return lines;
 }
 function resyncParagraph(prNumber, mergeSha) {
   const sha = mergeSha ?? "<merge commit>";
@@ -55331,18 +55384,19 @@ function resyncParagraph(prNumber, mergeSha) {
   ];
 }
 function failureRecoveryLines(input) {
-  const premiseFailures = input.premiseFailures ?? [];
-  const premise = formatPremiseRecovery(premiseFailures, input.docsFolder, input.targetLanguage);
-  const otherErrors = input.errors.length > premiseFailures.length;
+  const heldBack = input.heldBack ?? [];
+  const premise = formatPremiseRecovery(heldBack, input.docsFolder, input.targetLanguage);
+  const otherErrors = input.errors.length > heldBack.length;
   if (!otherErrors)
     return premise;
   const lectures = input.failedLectures ?? [];
+  const stillOpen = input.stillOpen ?? [];
   const lines = [];
   if (premise.length > 0)
     lines.push(...premise, "", "**For the other errors:**", "");
   lines.push("Recover a lecture from a checkout of the source's default branch, not by re-running this sync:", "");
   if (lectures.length > 0) {
-    lines.push(...lectures.map((lecture) => failedLectureLine(lecture, input.docsFolder)), "");
+    lines.push(...lectures.map((lecture) => failedLectureLine(lecture, input.docsFolder, stillOpen.find((s) => s.file === lecture.file))), "");
     lines.push("Any other lecture named above:", "");
   }
   lines.push("- one the edition has: `translate forward -f <file>`;", "- one the edition does not have yet: `translate init -f <file>`.", "", "`<file>` is the lecture's path inside the docs folder. `translate forward` regenerates the whole lecture, so do not run it on a lecture that has been natively reviewed: carry the change into that one by hand. `translate init -f` overwrites a translation without asking, so use it only for a lecture the edition does not have.", "", ...resyncParagraph(input.prNumber, input.mergeSha));
@@ -55358,7 +55412,7 @@ function buildFailureIssueBody(input) {
     "",
     `### Errors`,
     "",
-    input.errors.map((e) => `- ${e}`).join("\n"),
+    errorLines(input.errors, input.stillOpen ?? [], input.targetLanguage).join("\n"),
     "",
     `### Recovery`,
     "",
@@ -57593,7 +57647,22 @@ async function runSync() {
         }
         return entry;
       });
-      const prResult = await createTranslationPR(octokit, result.translatedFiles, result.filesToDelete, prConfig, coreLogger, sourcePrInfo, result.skippedSections, fileMetadata, result.droppedTargetSections, result.failedNewFiles ? { files: result.failedNewFiles, filteredTocPaths: result.filteredTocPaths ?? [] } : void 0, scope?.skipped);
+      const prResult = await createTranslationPR(
+        octokit,
+        result.translatedFiles,
+        result.filesToDelete,
+        prConfig,
+        coreLogger,
+        sourcePrInfo,
+        result.skippedSections,
+        fileMetadata,
+        result.droppedTargetSections,
+        result.failedNewFiles ? { files: result.failedNewFiles, filteredTocPaths: result.filteredTocPaths ?? [] } : void 0,
+        scope?.skipped,
+        // Only the lectures this PR delivers: one that failed is in the
+        // failure issue instead.
+        premise.stillOpen.filter((lecture) => result.processedFiles.includes(lecture.file))
+      );
       prUrl = prResult.prUrl;
       core9.setOutput("pr-url", prResult.prUrl);
       core9.setOutput("files-synced", result.processedFiles.length.toString());
@@ -57613,8 +57682,9 @@ async function runSync() {
       await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, result.errors, {
         docsFolder: inputs.docsFolder,
         mergeSha: effectiveSha,
-        premiseFailures: premise.failures,
-        failedLectures
+        heldBack: premise.heldBack,
+        failedLectures,
+        stillOpen: premise.stillOpen.filter((lecture) => !result.processedFiles.includes(lecture.file))
       });
     } else if (prUrl) {
       await postSuccessComment(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, prUrl, result.processedFiles);

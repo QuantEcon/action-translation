@@ -20,7 +20,9 @@
  *   only the one that failed.
  *
  * A lecture held back by update mode's premise check (#420) gets the advice
- * `formatPremiseRecovery` gives for its case instead.
+ * `formatPremiseRecovery` gives for its case instead. A lecture the check
+ * found behind an open translation PR is synced; if it then fails, the issue
+ * puts that diagnosis beside its error and advises merging the open PR first.
  *
  * It lives outside `src/index.ts`, which cannot be imported (#169), so the
  * text is tested directly.
@@ -28,7 +30,14 @@
 
 import { RESYNC_COMMAND } from './inputs.js';
 import type { TranslationSyncMetadata } from './pr-creator.js';
-import { formatPremiseRecovery, PremiseFailure, STALE_SNAPSHOT_ISSUE } from './sync-premise.js';
+import {
+  formatPremiseRecovery,
+  formatStillOpenDiagnosis,
+  HeldBackLecture,
+  listOf,
+  STALE_SNAPSHOT_ISSUE,
+  StillOpenLecture,
+} from './sync-premise.js';
 import { docsRelativePath } from './sync-scope.js';
 
 /** A lecture whose sync failed, for the per-lecture recovery lines. */
@@ -53,9 +62,15 @@ export interface FailureIssueInput {
   /** The source PR's merge commit, which a resync rebuilds from. */
   mergeSha?: string;
   /** Lectures the premise check held back (#420), each with its own advice. */
-  premiseFailures?: PremiseFailure[];
+  heldBack?: HeldBackLecture[];
   /** Other lectures whose translation failed, when the run knows them. */
   failedLectures?: FailedLecture[];
+  /**
+   * Lectures the premise check found behind an open translation PR (#420) and
+   * that then failed. Each gets its diagnosis beside its error, and the advice
+   * to merge the open PR first in place of its generic recovery line.
+   */
+  stillOpen?: StillOpenLecture[];
 }
 
 /** The deterministic title of a sync failure issue, which a later success closes by. */
@@ -68,7 +83,11 @@ function fileArgument(path: string, docsFolder: string): string {
   return docsRelativePath(path, docsFolder);
 }
 
-function failedLectureLine(lecture: FailedLecture, docsFolder: string): string {
+function failedLectureLine(
+  lecture: FailedLecture,
+  docsFolder: string,
+  stillOpen: StillOpenLecture | undefined
+): string {
   const arg = fileArgument(lecture.file, docsFolder);
   const label = lecture.previousPath
     ? `\`${lecture.file}\` (renamed from \`${lecture.previousPath}\`)`
@@ -79,7 +98,41 @@ function failedLectureLine(lecture: FailedLecture, docsFolder: string): string {
   const move = lecture.previousPath
     ? `, after moving the edition's \`${lecture.previousPath}\` and its state file to the new name`
     : '';
-  return `- ${label}: \`translate forward -f ${arg}\`${move}.`;
+  const forward = `\`translate forward -f ${arg}\`${move}`;
+  if (stillOpen) {
+    const one = stillOpen.openPulls.length === 1;
+    return (
+      `- ${label}: merge ${listOf(stillOpen.openPulls)} in the edition first; ` +
+      `${one ? 'it carries' : 'they carry'} the English this PR's change assumes. Then carry ` +
+      `this PR's change into the lecture: ${forward}, or \`${RESYNC_COMMAND}\` on this PR ` +
+      `under the condition below.`
+    );
+  }
+  return `- ${label}: ${forward}.`;
+}
+
+/**
+ * The Errors list: one item per error. A lecture behind an open translation
+ * PR that then failed gets its diagnosis as a sub-item under the error the
+ * orchestrator recorded for it, or, when it recorded none, as its own item.
+ */
+function errorLines(errors: string[], stillOpen: StillOpenLecture[], language: string): string[] {
+  const placed = new Set<StillOpenLecture>();
+  const lines: string[] = [];
+  for (const error of errors) {
+    lines.push(`- ${error}`);
+    const lecture = stillOpen.find(
+      (s) => !placed.has(s) && error.startsWith(`Error processing ${s.file}: `)
+    );
+    if (lecture) {
+      placed.add(lecture);
+      lines.push(`  - ${formatStillOpenDiagnosis(lecture, language)}`);
+    }
+  }
+  for (const lecture of stillOpen) {
+    if (!placed.has(lecture)) lines.push(`- ${formatStillOpenDiagnosis(lecture, language)}`);
+  }
+  return lines;
 }
 
 /**
@@ -107,12 +160,13 @@ function resyncParagraph(prNumber: number, mergeSha: string | undefined): string
  * follow when any other error is left.
  */
 export function failureRecoveryLines(input: FailureIssueInput): string[] {
-  const premiseFailures = input.premiseFailures ?? [];
-  const premise = formatPremiseRecovery(premiseFailures, input.docsFolder, input.targetLanguage);
-  const otherErrors = input.errors.length > premiseFailures.length;
+  const heldBack = input.heldBack ?? [];
+  const premise = formatPremiseRecovery(heldBack, input.docsFolder, input.targetLanguage);
+  const otherErrors = input.errors.length > heldBack.length;
   if (!otherErrors) return premise;
 
   const lectures = input.failedLectures ?? [];
+  const stillOpen = input.stillOpen ?? [];
   const lines: string[] = [];
   if (premise.length > 0) lines.push(...premise, '', '**For the other errors:**', '');
   lines.push(
@@ -121,7 +175,16 @@ export function failureRecoveryLines(input: FailureIssueInput): string[] {
     ''
   );
   if (lectures.length > 0) {
-    lines.push(...lectures.map((lecture) => failedLectureLine(lecture, input.docsFolder)), '');
+    lines.push(
+      ...lectures.map((lecture) =>
+        failedLectureLine(
+          lecture,
+          input.docsFolder,
+          stillOpen.find((s) => s.file === lecture.file)
+        )
+      ),
+      ''
+    );
     lines.push('Any other lecture named above:', '');
   }
   lines.push(
@@ -149,7 +212,7 @@ export function buildFailureIssueBody(input: FailureIssueInput): string {
     '',
     `### Errors`,
     '',
-    input.errors.map((e) => `- ${e}`).join('\n'),
+    errorLines(input.errors, input.stillOpen ?? [], input.targetLanguage).join('\n'),
     '',
     `### Recovery`,
     '',

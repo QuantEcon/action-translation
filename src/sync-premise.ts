@@ -5,11 +5,13 @@
  * Update mode sends the model one source PR's change, from the English at the
  * PR's parent to the English at its merge commit, to carry into the edition's
  * current translation. That works only if the translation already matches the
- * old English. When the edition is behind, because the lecture's previous sync
- * PR is still open or its previous sync failed, the rebuilt lecture cannot
- * match the new English, the structural-parity guard refuses it, and a
- * `\translate-resync` runs the same diff against the same translation and is
- * refused again.
+ * old English. When the edition is behind because the lecture's previous sync
+ * failed, the rebuilt lecture cannot match the new English, the
+ * structural-parity guard refuses it, and a `\translate-resync` runs the same
+ * diff against the same translation and is refused again. When it is behind
+ * because the lecture's previous sync PR is still open, the same happens if
+ * that PR changed the lecture's structure; if it did not, the sync succeeds as
+ * a stacked PR, which rebase mode rebuilds once the earlier PR merges.
  *
  * The edition's state file, `.translate/state/<docs-relative path>.yml`,
  * records `source-sha`: the source commit the translation was last synced to.
@@ -22,11 +24,17 @@
  * - Equal: the premise holds and the lecture syncs as before.
  * - Equal to the new English instead: the translation already carries this
  *   change (a resync of a PR that synced). The lecture syncs as before.
- * - Different: the lecture is not synced and no model call is made. Its error
- *   fails the run and opens the failure issue, which says which case it is.
- *   One commit comparison tells a translation that is behind this change from
- *   one already past it (a resync of an older PR, #276); a translation that is
- *   behind is then looked for in the edition's open translation PRs.
+ * - Different: one commit comparison tells a translation that is behind this
+ *   change from one already past it (a resync of an older PR, #276); a
+ *   translation that is behind is then looked for in the edition's open
+ *   translation PRs. That gives three cases:
+ *   - `still-open`, behind and carried by an open translation PR: the lecture
+ *     syncs as before, since the stacked sync may well succeed. The case is
+ *     kept as a diagnosis: the sync PR's body names the open PRs, or, when the
+ *     lecture then fails, the failure issue says why and to merge them first.
+ *   - `behind`, with no open PR that carries it, and `ahead`: the lecture is
+ *     held back and no model call is made. Its error fails the run and opens
+ *     the failure issue, which says which case it is.
  * - No state file, no usable `source-sha`, or no source file at that commit:
  *   the premise cannot be checked, which is logged, and the lecture syncs as
  *   before. A state file the edition cannot serve (a status other than 404) is
@@ -39,7 +47,7 @@
  * It costs no request of its own for the state file, whose content the run's
  * state-file read already returns, and none at all for a lecture new to the
  * edition, a ToC or a removal. A lecture in update mode with a usable
- * `source-sha` costs one source read; a lecture that fails the check costs a
+ * `source-sha` costs one source read; a lecture whose English differs costs a
  * commit comparison; and a run with a lecture behind lists the edition's open
  * PRs once.
  *
@@ -130,10 +138,11 @@ export function judgePremise(
 }
 
 /**
- * Which case a lecture whose premise failed is in:
+ * Which case a lecture whose translation does not start from this PR's old
+ * English is in:
  *
  * - `still-open`: the translation is behind, and an open translation PR in the
- *   edition carries the lecture: merge it, then carry this change;
+ *   edition carries the lecture. The lecture still syncs, as a stacked PR;
  * - `behind`: the translation is behind, and no open PR carries the lecture:
  *   a change never reached the edition, so recover the lecture first;
  * - `ahead`: the translation is at a source commit later than this PR's merge
@@ -141,8 +150,8 @@ export function judgePremise(
  */
 export type PremiseCase = 'still-open' | 'behind' | 'ahead';
 
-/** A lecture the check kept out of the run. */
-export interface PremiseFailure {
+/** What the check records of a lecture whose English differs, in every case. */
+interface MismatchDetails {
   /** Source path; for a rename, the new path. */
   file: string;
   /** For a rename, the old path, under which the edition holds the lecture. */
@@ -153,10 +162,26 @@ export interface PremiseFailure {
   stateSha: string;
   /** The source commit this run syncs: the PR's merge commit. */
   sourceSha: string;
-  case: PremiseCase;
-  /** For `still-open`: the open PRs that carry the lecture, as `owner/repo#N`. */
+}
+
+/** A lecture the check kept out of the run: `behind` or `ahead`. */
+export interface HeldBackLecture extends MismatchDetails {
+  case: 'behind' | 'ahead';
+}
+
+/**
+ * A lecture behind an open translation PR in the edition. It is synced as
+ * before; this is the diagnosis the sync PR's body, or the failure issue if
+ * the lecture then fails, gives for it.
+ */
+export interface StillOpenLecture extends MismatchDetails {
+  case: 'still-open';
+  /** The open PRs that carry the lecture, as `owner/repo#N`, in number order. */
   openPulls: string[];
 }
+
+/** A lecture whose translation does not start from this PR's old English. */
+export type PremiseMismatch = HeldBackLecture | StillOpenLecture;
 
 /** An open PR in the edition, as `pulls.list` returns it. */
 export interface OpenPull {
@@ -209,36 +234,28 @@ export function shortSha(sha: string): string {
   return sha.slice(0, 7);
 }
 
-function lectureLabel(failure: Pick<PremiseFailure, 'file' | 'previousPath'>): string {
-  return failure.previousPath
-    ? `${failure.file} (renamed from ${failure.previousPath})`
-    : failure.file;
+function lectureLabel(lecture: Pick<MismatchDetails, 'file' | 'previousPath'>): string {
+  return lecture.previousPath
+    ? `${lecture.file} (renamed from ${lecture.previousPath})`
+    : lecture.file;
 }
 
-function listOf(items: string[]): string {
+/** A list of names as prose: `a`, `a and b`, `a, b and c`. */
+export function listOf(items: string[]): string {
   if (items.length <= 1) return items.join('');
   return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
 }
 
 /**
- * The error a lecture that failed the check records, which the failure issue
- * lists in place of a parity listing. It says which case the lecture is in,
- * and that nothing was sent to the model.
+ * The error a held-back lecture records, which the failure issue lists in
+ * place of a parity listing. It says which case the lecture is in, and that
+ * nothing was sent to the model.
  */
-export function formatPremiseError(failure: PremiseFailure, targetLanguage: string): string {
-  const at = `${targetLanguage}'s translation of it is at source \`${shortSha(failure.stateSha)}\``;
-  const label = lectureLabel(failure);
+export function formatHeldBackError(lecture: HeldBackLecture, targetLanguage: string): string {
+  const at = `${targetLanguage}'s translation of it is at source \`${shortSha(lecture.stateSha)}\``;
+  const label = lectureLabel(lecture);
   const tail = 'It was not synced, and no model call was made.';
-  switch (failure.case) {
-    case 'still-open': {
-      const one = failure.openPulls.length === 1;
-      return (
-        `Translation behind: ${label}: ${at}. This PR's change assumes the English that ` +
-        `${one ? 'translation PR' : 'translation PRs'} ${listOf(failure.openPulls)} ` +
-        `${one ? 'carries, and it is' : 'carry, and they are'} still open in the edition. ` +
-        `Merge ${one ? 'it' : 'them'}, then carry this change. ${tail}`
-      );
-    }
+  switch (lecture.case) {
     case 'behind':
       return (
         `Translation behind: ${label}: ${at}. The source changed the lecture after that, and ` +
@@ -248,49 +265,90 @@ export function formatPremiseError(failure: PremiseFailure, targetLanguage: stri
     case 'ahead':
       return (
         `Translation ahead: ${label}: ${at}, which is later than this PR's merge commit ` +
-        `\`${shortSha(failure.sourceSha)}\`. Carrying this change into it would undo the source ` +
+        `\`${shortSha(lecture.sourceSha)}\`. Carrying this change into it would undo the source ` +
         `changes made since (${STALE_SNAPSHOT_ISSUE}). ${tail}`
       );
   }
 }
 
-/** The `translate forward -f` argument for a path: docs-relative. */
-function forwardArgument(path: string, docsFolder: string): string {
-  return docsRelativePath(path, docsFolder);
+/**
+ * Why a lecture behind an open translation PR may have failed, which the
+ * failure issue puts beside the lecture's own error when its sync failed. The
+ * lecture was synced; this names the open PRs and says to merge them first.
+ */
+export function formatStillOpenDiagnosis(
+  lecture: StillOpenLecture,
+  targetLanguage: string
+): string {
+  const one = lecture.openPulls.length === 1;
+  return (
+    `Translation behind: ${lectureLabel(lecture)}: ${targetLanguage}'s translation of it is at ` +
+    `source \`${shortSha(lecture.stateSha)}\`. This PR's change assumes the English that ` +
+    `${one ? 'translation PR' : 'translation PRs'} ${listOf(lecture.openPulls)} ` +
+    `${one ? 'carries, and it is' : 'carry, and they are'} still open in the edition. ` +
+    `Merge ${one ? 'it' : 'them'}, then carry this change.`
+  );
 }
 
 /**
- * The failure issue's recovery advice for the lectures that failed the check,
- * one item per lecture, or an empty list when there are none. It replaces the
- * generic advice for these lectures: re-running this sync cannot help them,
- * because it carries the same change into the same translation.
+ * The `-d` value the CLI takes for the Action's docs folder: no trailing
+ * slash, and `.` for the repository root, which the Action holds as ''.
+ */
+function cliDocsFolder(docsFolder: string): string {
+  const trimmed = docsFolder.replace(/\/+$/, '');
+  return trimmed === '' ? '.' : trimmed;
+}
+
+/**
+ * The failure issue's recovery advice for the held-back lectures, one item
+ * per lecture, or an empty list when there are none. It replaces the generic
+ * advice for these lectures: re-running this sync cannot help them, because
+ * it carries the same change into the same translation.
+ *
+ * A lecture reads `behind` also when its state file is wrong and the edition
+ * has the changes: rebase stamps each sync PR's own source commit, so sibling
+ * sync PRs merged out of source order leave the state file at the older PR's
+ * commit. The `behind` item says how to correct the state file in that case,
+ * with `translate status --write-state --carried` run from a source clone at
+ * this PR's parent, whose English is the English this PR changed: the CLI
+ * records the commit that last changed the file at the clone's HEAD.
  */
 export function formatPremiseRecovery(
-  failures: PremiseFailure[],
+  heldBack: HeldBackLecture[],
   docsFolder: string,
   targetLanguage: string
 ): string[] {
-  if (failures.length === 0) return [];
-  const items = failures.map((failure) => {
-    const label = failure.previousPath
-      ? `\`${failure.file}\` (renamed from \`${failure.previousPath}\`)`
-      : `\`${failure.file}\``;
-    const forward = `\`translate forward -f ${forwardArgument(failure.file, docsFolder)}\``;
-    const move = failure.previousPath
-      ? `, after moving the edition's \`${failure.previousPath}\` and its state file to the new name`
+  if (heldBack.length === 0) return [];
+  const items = heldBack.map((lecture) => {
+    const label = lecture.previousPath
+      ? `\`${lecture.file}\` (renamed from \`${lecture.previousPath}\`)`
+      : `\`${lecture.file}\``;
+    const forward = `\`translate forward -f ${docsRelativePath(lecture.file, docsFolder)}\``;
+    const move = lecture.previousPath
+      ? `, after moving the edition's \`${lecture.previousPath}\` and its state file to the new name`
       : '';
-    switch (failure.case) {
-      case 'still-open':
-        return (
-          `- ${label}: merge ${listOf(failure.openPulls)} in the edition first, then carry ` +
-          `this PR's change into the lecture.`
-        );
-      case 'behind':
-        return (
+    switch (lecture.case) {
+      case 'behind': {
+        // The state file is under the name the edition holds the lecture by,
+        // which is also its name at this PR's parent.
+        const statusFile = docsRelativePath(lecture.previousPath ?? lecture.file, docsFolder);
+        const status =
+          `\`translate status -s <source clone> -t <edition clone> -l ${targetLanguage} ` +
+          `-d ${cliDocsFolder(docsFolder)} -f ${statusFile} --write-state --carried\``;
+        return [
           `- ${label}: recover the lecture first with ${forward}${move}, run from a checkout ` +
-          `of the source's default branch. That includes this PR's change. A ` +
-          `\`\\translate-resync\` of this PR cannot recover it.`
-        );
+            `of the source's default branch. That includes this PR's change. A ` +
+            `\`\\translate-resync\` of this PR cannot recover it.`,
+          `  - If the edition already has the changes made since \`${shortSha(lecture.stateSha)}\`, ` +
+            `the state file is wrong, not the lecture: sibling sync PRs merged out of source ` +
+            `order leave it at the older PR's commit. Correct it instead of regenerating the ` +
+            `lecture: check out this PR's parent, \`${shortSha(lecture.sourceSha)}^\`, in a ` +
+            `source clone, run ${status}, and commit the state file to the edition. A ` +
+            `\`\\translate-resync\` of this PR can then carry its change, if none of the PR's ` +
+            `files has changed on the source's default branch since it merged ` +
+            `(${STALE_SNAPSHOT_ISSUE}).`,
+        ].join('\n');
+      }
       case 'ahead':
         return (
           `- ${label}: if the lecture already has this PR's change, nothing is owed. If it ` +
@@ -400,21 +458,27 @@ export interface PremiseInput {
 
 /** What the check decided. */
 export interface PremiseResult {
-  /** The files to sync: every file but those held back below. */
+  /** The files to sync, in order: every file but those held back below. */
   files: FileToSync[];
-  /** The lectures whose premise failed, each with its case. */
-  failures: PremiseFailure[];
+  /** The lectures held back, `behind` or `ahead`, in file order. */
+  heldBack: HeldBackLecture[];
   /**
-   * One error per lecture held back, in file order: a failed premise, or a
+   * The lectures behind an open translation PR, in file order. They are among
+   * `files`: each syncs as before, and this is the diagnosis for it.
+   */
+  stillOpen: StillOpenLecture[];
+  /**
+   * One error per lecture held back, in file order: a held-back lecture, or a
    * state file the edition could not serve. Each fails the run.
    */
   errors: string[];
 }
 
 /**
- * Check each lecture in update mode, before any model call, and hold back
- * those whose translation does not start from this PR's old English. Other
- * files pass through untouched.
+ * Check each lecture in update mode, before any model call. Hold back those
+ * whose translation does not start from this PR's old English, unless an open
+ * translation PR in the edition carries the lecture: that one syncs as before,
+ * with its diagnosis recorded. Other files pass through untouched.
  */
 export async function checkSyncPremise(
   input: PremiseInput,
@@ -422,20 +486,22 @@ export async function checkSyncPremise(
   logger: Logger
 ): Promise<PremiseResult> {
   const edition = `${input.edition.owner}/${input.edition.repo}`;
-  const kept: FileToSync[] = [];
-  // In file order: a held-back file's error, or its failure to word later.
-  const held: Array<{ error: string } | { failure: PremiseFailure }> = [];
+  // In file order: a file to sync, a held-back file's error, or a file whose
+  // English differs, whose case the listing of open PRs below may still change.
+  const outcomes: Array<
+    { keep: FileToSync } | { error: string } | { mismatch: PremiseMismatch; file: FileToSync }
+  > = [];
 
   for (const file of input.files) {
     if (!takesUpdateMode(file)) {
-      kept.push(file);
+      outcomes.push({ keep: file });
       continue;
     }
     const lecturePath = editionPath(file);
     const statePath = stateFileFor(lecturePath, input.docsFolder);
     const uncheckable = (why: string) => {
       logger.info(`${file.filename}: premise not checked — ${why}; syncing as before`);
-      kept.push(file);
+      outcomes.push({ keep: file });
     };
 
     const read = input.stateReads.get(statePath) ?? { status: 'missing' };
@@ -445,7 +511,7 @@ export async function checkSyncPremise(
         `(${read.message}), so whether its translation starts from this PR's English could not ` +
         `be checked. It was not synced.`;
       logger.error(error);
-      held.push({ error });
+      outcomes.push({ error });
       continue;
     }
     if (read.status === 'missing') {
@@ -471,7 +537,7 @@ export async function checkSyncPremise(
           `${shortSha(stateSha)} from the source (status ${statusOf(error) ?? 'unknown'}): ` +
           `${messageOf(error)}; syncing as before`
       );
-      kept.push(file);
+      outcomes.push({ keep: file });
       continue;
     }
     if (englishAtState === undefined) {
@@ -485,7 +551,7 @@ export async function checkSyncPremise(
         `${file.filename}: premise holds — the translation is at source ${shortSha(stateSha)}, ` +
           `whose English is the English this PR changed`
       );
-      kept.push(file);
+      outcomes.push({ keep: file });
       continue;
     }
     if (judgement === 'carried') {
@@ -493,7 +559,7 @@ export async function checkSyncPremise(
         `${file.filename}: the translation is at source ${shortSha(stateSha)}, whose English ` +
           `is this PR's new English; syncing as before`
       );
-      kept.push(file);
+      outcomes.push({ keep: file });
       continue;
     }
 
@@ -509,8 +575,9 @@ export async function checkSyncPremise(
           `${shortSha(input.sourceSha)} (${messageOf(error)}); reporting it as behind`
       );
     }
-    held.push({
-      failure: {
+    outcomes.push({
+      file,
+      mismatch: {
         file: file.filename,
         ...(file.type === 'renamed' && file.previousFilename
           ? { previousPath: file.previousFilename }
@@ -520,16 +587,17 @@ export async function checkSyncPremise(
         sourceSha: input.sourceSha,
         // `behind`: this PR's merge commit is behind the recorded commit.
         case: comparison === 'behind' ? 'ahead' : 'behind',
-        openPulls: [],
       },
     });
   }
 
-  const failures = held.flatMap((entry) => ('failure' in entry ? [entry.failure] : []));
-  const behind = failures.filter((failure) => failure.case === 'behind');
+  const behind = outcomes.flatMap((entry) =>
+    'mismatch' in entry && entry.mismatch.case === 'behind' ? [entry] : []
+  );
   if (behind.length > 0) {
     // One listing for the whole run, and only when a lecture is behind. A
-    // listing that fails leaves each lecture reported as behind, without a PR.
+    // listing that fails leaves each lecture reported as behind, without a PR,
+    // and so held back.
     let pulls: OpenPull[] | undefined;
     try {
       pulls = await reader.listOpenPulls();
@@ -541,25 +609,46 @@ export async function checkSyncPremise(
     }
     if (pulls) {
       const sourceRepo = `${input.source.owner}/${input.source.repo}`;
-      for (const failure of behind) {
-        const paths = failure.previousPath ? [failure.file, failure.previousPath] : [failure.file];
-        const numbers = findCarryingPulls(pulls, paths, {
+      for (const entry of behind) {
+        const { file, previousPath } = entry.mismatch;
+        const numbers = findCarryingPulls(pulls, previousPath ? [file, previousPath] : [file], {
           repo: sourceRepo,
           number: input.prNumber,
         });
         if (numbers.length > 0) {
-          failure.case = 'still-open';
-          failure.openPulls = numbers.map((n) => `${edition}#${n}`);
+          entry.mismatch = {
+            ...entry.mismatch,
+            case: 'still-open',
+            openPulls: numbers.map((n) => `${edition}#${n}`),
+          };
         }
       }
     }
   }
 
-  const errors = held.map((entry) => {
-    if ('error' in entry) return entry.error;
-    const error = formatPremiseError(entry.failure, input.targetLanguage);
-    logger.error(error);
-    return error;
-  });
-  return { files: kept, failures, errors };
+  const result: PremiseResult = { files: [], heldBack: [], stillOpen: [], errors: [] };
+  for (const entry of outcomes) {
+    if ('keep' in entry) {
+      result.files.push(entry.keep);
+    } else if ('error' in entry) {
+      result.errors.push(entry.error);
+    } else if (entry.mismatch.case === 'still-open') {
+      const lecture = entry.mismatch;
+      const one = lecture.openPulls.length === 1;
+      logger.warning(
+        `${lecture.file}: the translation is at source ${shortSha(lecture.stateSha)}, behind ` +
+          `the English this PR changed; ${one ? 'translation PR' : 'translation PRs'} ` +
+          `${listOf(lecture.openPulls)}, still open in the edition, ${one ? 'carries' : 'carry'} ` +
+          `the lecture. Syncing as before`
+      );
+      result.files.push(entry.file);
+      result.stillOpen.push(lecture);
+    } else {
+      const error = formatHeldBackError(entry.mismatch, input.targetLanguage);
+      logger.error(error);
+      result.heldBack.push(entry.mismatch);
+      result.errors.push(error);
+    }
+  }
+  return result;
 }
