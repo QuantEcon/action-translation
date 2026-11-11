@@ -88,6 +88,91 @@ describe('classifyChangedFiles', () => {
     expect(result.renamedMarkdownFiles).toHaveLength(1);
   });
 
+  // #307: the old path is read as the translation and then deleted, so a
+  // rename is one only when the old path is a lecture too.
+  describe('a rename whose old path is not a lecture (#307)', () => {
+    it('is an addition when the old path is outside the docs folder', () => {
+      const moved = {
+        filename: 'lectures/README.md',
+        status: 'renamed',
+        previous_filename: 'README.md',
+      };
+
+      const result = classifyChangedFiles([moved], 'lectures/');
+
+      expect(result.renamedMarkdownFiles).toEqual([]);
+      expect(result.changedMarkdownFiles).toEqual([moved]);
+      expect(result.removedMarkdownFiles).toEqual([]);
+    });
+
+    it('is an addition when the old path is in the docs folder but not markdown', () => {
+      const converted = {
+        filename: 'lectures/notes.md',
+        status: 'renamed',
+        previous_filename: 'lectures/notes.txt',
+      };
+
+      const result = classifyChangedFiles([converted], 'lectures/');
+
+      expect(result.renamedMarkdownFiles).toEqual([]);
+      expect(result.changedMarkdownFiles).toEqual([converted]);
+    });
+
+    it('is an addition when a sibling folder shares the docs folder name as a prefix', () => {
+      const moved = {
+        filename: 'lectures/a.md',
+        status: 'renamed',
+        previous_filename: 'lectures-old/a.md',
+      };
+
+      const result = classifyChangedFiles([moved], 'lectures/');
+
+      expect(result.renamedMarkdownFiles).toEqual([]);
+      expect(result.changedMarkdownFiles).toEqual([moved]);
+    });
+
+    it('stays a rename inside the docs folder, subfolders included', () => {
+      const files = [
+        { filename: 'lectures/b.md', status: 'renamed', previous_filename: 'lectures/a.md' },
+        {
+          filename: 'lectures/archive/c.md',
+          status: 'renamed',
+          previous_filename: 'lectures/c.md',
+        },
+      ];
+
+      const result = classifyChangedFiles(files, 'lectures/');
+
+      expect(result.renamedMarkdownFiles).toEqual(files);
+      expect(result.changedMarkdownFiles).toEqual([]);
+    });
+
+    it('stays a rename under an empty docs folder, which contains every path', () => {
+      const moved = { filename: 'sub/a.md', status: 'renamed', previous_filename: 'a.md' };
+
+      const result = classifyChangedFiles([moved], '');
+
+      expect(result.renamedMarkdownFiles).toEqual([moved]);
+      expect(result.changedMarkdownFiles).toEqual([]);
+    });
+
+    it('lists each file once', () => {
+      const files = [
+        { filename: 'lectures/README.md', status: 'renamed', previous_filename: 'README.md' },
+        { filename: 'lectures/b.md', status: 'renamed', previous_filename: 'lectures/a.md' },
+        { filename: 'lectures/d.md', status: 'modified' },
+      ];
+
+      const result = classifyChangedFiles(files, 'lectures/');
+
+      expect(result.changedMarkdownFiles.map((f) => f.filename)).toEqual([
+        'lectures/README.md',
+        'lectures/d.md',
+      ]);
+      expect(result.renamedMarkdownFiles.map((f) => f.filename)).toEqual(['lectures/b.md']);
+    });
+  });
+
   it('should classify TOC files separately', () => {
     const files = [
       { filename: 'lectures/intro.md', status: 'modified' },
@@ -854,6 +939,39 @@ parts:
       expect(result.filesToDelete).toHaveLength(2);
       expect(result.filesToDelete.map((f) => f.path)).toContain('lectures/old-name.md');
       expect(result.filesToDelete.map((f) => f.path)).toContain('.translate/state/old-name.md.yml');
+    });
+
+    it('refuses a rename whose old path is outside the docs folder (#307)', async () => {
+      const orchWithState = new SyncOrchestrator(
+        {
+          sourceLanguage: 'en',
+          targetLanguage: 'zh-cn',
+          claudeModel: 'claude-sonnet-4-20250514',
+          anthropicApiKey: 'test-key',
+        },
+        stateLogger,
+        { sourceCommitSha: 'abc123', existingStateShas: new Map(), docsFolder: 'lectures/' }
+      );
+
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/README.md',
+          type: 'renamed',
+          newContent: '# Readme\n\nText',
+          oldContent: '# Readme\n\nText',
+          targetContent: '# 自述\n\n文本',
+          previousFilename: 'README.md',
+          oldFileSha: 'edition-readme-sha',
+          isNewFile: false,
+        },
+      ];
+
+      const result = await orchWithState.processFiles(files);
+
+      expect(result.filesToDelete).toEqual([]);
+      expect(result.translatedFiles).toEqual([]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toContain('renamed from README.md');
     });
 
     it('should delete state file when source file is removed', async () => {

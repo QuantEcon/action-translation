@@ -1666,6 +1666,51 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
 
   // The runs above assert no model call. This one makes one, so a runner that
   // stopped seeing model calls would fail here instead of passing above.
+  // #307. Before the fix this run read the edition's root README.md as the
+  // lecture's translation, wrote it to lectures/README.md without a model call
+  // (the source text did not change), and deleted the edition's README.md.
+  describe("'all': a file renamed into the docs folder from outside it (#307)", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('all-rename-from-outside', {
+        scope: 'all',
+        prFiles: [
+          { filename: 'lectures/README.md', status: 'renamed', previous_filename: 'README.md' },
+        ],
+        source: {
+          [atMerge('lectures/README.md')]: lecture('Readme'),
+          [atParent('README.md')]: lecture('Readme'),
+        },
+        // The edition's own README, which no sync wrote.
+        target: { 'README.md': translated('Readme') },
+      });
+    }, 90_000);
+
+    it("never reads the edition's file at the old path, and deletes nothing", () => {
+      check(run, (log) => {
+        expect(log.requests).not.toContain(readEdition('README.md'));
+        expect(log.requests).not.toContain(deleteEdition('README.md'));
+        expect(log.requests).not.toContain(readSource('README.md', `${SHA}^`));
+        expect(log.deletes).toEqual([]);
+        expect(log.writes).toEqual([]);
+      });
+    });
+
+    it('takes the file as an addition: a new lecture, sent to the model', () => {
+      check(run, (log) => {
+        expect(log.requests).toContain(readSource('lectures/README.md'));
+        expect(log.requests).toContain(readEdition('lectures/README.md'));
+        // The fake model answers no call, so the new lecture fails and the run
+        // opens a failure issue; what matters is that it was translated from
+        // scratch, not carried from the old path.
+        expect(log.modelRequests).toBeGreaterThan(0);
+        expect(log.issues).toHaveLength(1);
+        expect(log.unmocked).toEqual([]);
+        expect(log.crash).toBeNull();
+      });
+    });
+  });
+
   describe('the runner: a changed lecture in scope reaches the fake model', () => {
     let run: BundleRun;
     beforeAll(() => {

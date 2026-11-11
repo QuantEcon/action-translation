@@ -207,32 +207,72 @@ function stateFilePath(targetPath: string, filename: string): string {
 }
 
 /**
+ * What `.translate/state/<filename>.yml` holds: nothing, a usable record, or a
+ * file that exists and cannot be used, with the reason.
+ */
+export type FileStateRead =
+  | { status: 'missing' }
+  | { status: 'valid'; state: FileState }
+  | { status: 'invalid'; reason: string };
+
+/** The keys a state file must carry, and the type each must load as. */
+const REQUIRED_STATE_KEYS: ReadonlyArray<[keyof FileState & string, 'string' | 'number']> = [
+  ['source-sha', 'string'],
+  ['synced-at', 'string'],
+  ['model', 'string'],
+  ['mode', 'string'],
+  ['section-count', 'number'],
+];
+
+/**
+ * Read per-file state, telling a missing file from one that exists and is
+ * rejected, and saying which key rejected it (#381).
+ *
+ * Loaded with CORE_SCHEMA, as the config is: the default schema turns a bare
+ * `synced-at: 2026-10-19`, the natural way to write a date by hand, into a
+ * `Date`, which then failed the string check. A value YAML still retypes, such
+ * as an all-digit `source-sha`, is rejected with the advice to quote it.
+ */
+export function inspectFileState(targetPath: string, filename: string): FileStateRead {
+  const filePath = stateFilePath(targetPath, filename);
+  if (!fs.existsSync(filePath)) return { status: 'missing' };
+
+  let parsed: unknown;
+  try {
+    parsed = yaml.load(fs.readFileSync(filePath, 'utf-8'), { schema: yaml.CORE_SCHEMA });
+  } catch (error) {
+    const message = error instanceof Error ? error.message.split('\n')[0] : String(error);
+    return { status: 'invalid', reason: `it could not be read as YAML (${message})` };
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return { status: 'invalid', reason: 'it is not a YAML mapping of keys to values' };
+  }
+
+  const obj = parsed as Record<string, unknown>;
+  for (const [key, expected] of REQUIRED_STATE_KEYS) {
+    const value = obj[key];
+    if (value === undefined || value === null) {
+      return { status: 'invalid', reason: `\`${key}\` is missing` };
+    }
+    if (typeof value !== expected) {
+      const fix = expected === 'string' ? 'quote it' : 'write it without quotes';
+      return {
+        status: 'invalid',
+        reason: `\`${key}\` is a ${typeof value}, not a ${expected}: ${fix}`,
+      };
+    }
+  }
+  return { status: 'valid', state: obj as unknown as FileState };
+}
+
+/**
  * Read per-file state from .translate/state/<filename>.yml.
- * Returns undefined if the file doesn't exist or is malformed.
+ * Returns undefined if the file doesn't exist or is malformed; use
+ * `inspectFileState` to tell the two apart.
  */
 export function readFileState(targetPath: string, filename: string): FileState | undefined {
-  const filePath = stateFilePath(targetPath, filename);
-  if (!fs.existsSync(filePath)) return undefined;
-
-  try {
-    const raw = fs.readFileSync(filePath, 'utf-8');
-    const parsed = yaml.load(raw);
-    if (!parsed || typeof parsed !== 'object') return undefined;
-
-    const obj = parsed as Record<string, unknown>;
-    if (
-      typeof obj['source-sha'] === 'string' &&
-      typeof obj['synced-at'] === 'string' &&
-      typeof obj['model'] === 'string' &&
-      typeof obj['mode'] === 'string' &&
-      typeof obj['section-count'] === 'number'
-    ) {
-      return obj as unknown as FileState;
-    }
-    return undefined;
-  } catch {
-    return undefined;
-  }
+  const read = inspectFileState(targetPath, filename);
+  return read.status === 'valid' ? read.state : undefined;
 }
 
 /**

@@ -31,7 +31,13 @@ import { RuleId, buildLocalizationPrompt, getFontRequirements } from '../../loca
 import { maxTokensFor, requestPolicyFor } from '../../models.js';
 import { costUSD } from '../../model-pricing.js';
 import { ensureTrailingNewline } from './forward.js';
-import { getToolVersion, readFileState, writeConfig, writeFileState } from '../translate-state.js';
+import {
+  getToolVersion,
+  inspectFileState,
+  stateFileRelativePath,
+  writeConfig,
+  writeFileState,
+} from '../translate-state.js';
 import { getFileGitMetadata } from '../git-metadata.js';
 import { loadGlossary } from '../glossary-loader.js';
 import {
@@ -149,23 +155,63 @@ export function parseTocLectures(sourceRepoPath: string, docsFolder: string): st
 // ============================================================================
 
 /**
- * Filter out lectures that already have .translate/state entries.
- * Returns the remaining (untranslated) lectures and the count of skipped ones.
+ * `--skip-existing`: leave out the lectures the edition already has.
+ *
+ * A lecture is skipped when its translation is in the edition, whatever its
+ * state file says (#379). The filter used to skip only on a state file the
+ * reader accepted, so a lecture whose state file was hand-written with one
+ * mistyped key, or that had no state file at all, was translated again over
+ * the edition's reviewed text. Each case that needs the operator is returned
+ * as a warning:
+ *
+ * - the lecture and a state file that does not validate: skipped; the warning
+ *   names the key, since `status` and `doctor` cannot use the file either;
+ * - the lecture with no state file: skipped, never overwritten;
+ * - a state file with no lecture beside it: translated, since there is nothing
+ *   to protect, and a stale state file would otherwise hide a lecture the
+ *   source added back.
  */
 export function filterSkipExisting(
   targetPath: string,
-  lectures: string[]
-): { remaining: string[]; skippedCount: number } {
+  lectures: string[],
+  docsFolder: string
+): { remaining: string[]; skipped: string[]; skippedCount: number; warnings: string[] } {
   const remaining: string[] = [];
-  let skippedCount = 0;
+  const skipped: string[] = [];
+  const warnings: string[] = [];
   for (const lecture of lectures) {
-    if (readFileState(targetPath, lecture)) {
-      skippedCount++;
-    } else {
+    const state = inspectFileState(targetPath, lecture);
+    const lectureExists = fs.existsSync(path.join(targetPath, docsFolder, lecture));
+    const statePath = stateFileRelativePath(lecture);
+
+    if (!lectureExists) {
+      if (state.status !== 'missing') {
+        warnings.push(
+          `${lecture}: ${statePath} exists but the edition has no ${lecture}, so it is ` +
+            `translated and the state file replaced. If the translation was removed by ` +
+            `mistake, restore it from git instead and run \`translate forward -f ${lecture}\`.`
+        );
+      }
       remaining.push(lecture);
+      continue;
+    }
+
+    skipped.push(lecture);
+    if (state.status === 'missing') {
+      warnings.push(
+        `${lecture}: skipped. The edition has this lecture but no ${statePath}, and ` +
+          `--skip-existing does not overwrite a translation. Record its state with ` +
+          `\`translate status -f ${lecture} --write-state\`; to translate it again, ` +
+          `run without --skip-existing.`
+      );
+    } else if (state.status === 'invalid') {
+      warnings.push(
+        `${lecture}: skipped, but ${statePath} cannot be used: ${state.reason}. ` +
+          `Until it is repaired, \`status\` and \`doctor\` cannot read this lecture's sync point.`
+      );
     }
   }
-  return { remaining, skippedCount };
+  return { remaining, skipped, skippedCount: skipped.length, warnings };
 }
 
 /**
@@ -550,13 +596,29 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   }
 
   if (options.dryRun) {
+    // The preview applies --skip-existing as the real run does, so its list
+    // is the real run's list (#379).
+    const skip = options.skipExisting
+      ? filterSkipExisting(options.target, lectures, options.docsFolder)
+      : undefined;
+    const skippedSet = new Set(skip?.skipped ?? []);
     console.log(chalk.yellow('Would translate the following lectures:'));
     lectures.forEach((lecture, index) => {
       const sourceFile = path.join(options.source, options.docsFolder, lecture);
       const exists = fs.existsSync(sourceFile);
-      const marker = exists ? chalk.green('✓') : chalk.red('✗ missing');
+      const marker = skippedSet.has(lecture)
+        ? chalk.yellow('⊘ skipped (already in the edition)')
+        : exists
+          ? chalk.green('✓')
+          : chalk.red('✗ missing');
       console.log(chalk.gray(`  ${index + 1}. ${lecture} ${marker}`));
     });
+    if (skip) {
+      for (const warning of skip.warnings) {
+        console.log(chalk.yellow(`⚠ ${warning}`));
+      }
+      stats.skippedCount = skip.skippedCount;
+    }
 
     // Show what non-md files would be copied
     const sourceDocsDir = path.join(options.source, options.docsFolder);
@@ -631,8 +693,11 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
 
   // Handle --skip-existing: filter out lectures that already have state
   if (options.skipExisting) {
-    const result = filterSkipExisting(options.target, remaining);
+    const result = filterSkipExisting(options.target, remaining, options.docsFolder);
     remaining = result.remaining;
+    for (const warning of result.warnings) {
+      console.log(chalk.yellow(`⚠ ${warning}`));
+    }
     if (result.skippedCount > 0) {
       stats.skippedCount = result.skippedCount;
       console.log(

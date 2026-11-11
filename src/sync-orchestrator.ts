@@ -262,6 +262,14 @@ export function formatGlossaryTerms(glossary: Glossary, targetLanguage: string):
 // =============================================================================
 
 /**
+ * True when `path` names a markdown file inside the docs folder. An empty
+ * `docsFolder` is the repository root, which contains every path.
+ */
+export function isDocsMarkdownPath(path: unknown, docsFolder: string): path is string {
+  return typeof path === 'string' && path.startsWith(docsFolder) && path.endsWith('.md');
+}
+
+/**
  * Classify GitHub PR files into sync categories.
  * Handles the docs-folder prefix filtering and file type detection.
  *
@@ -282,19 +290,28 @@ export function classifyChangedFiles(
 } {
   const prefix = docsFolder;
 
+  // A rename carries the edition's translation from the old path to the new
+  // one and deletes the old file, so it is a rename only when the old path is
+  // a lecture too. A file moved into the docs folder from outside it (or from
+  // a name that is not `.md`) has no translation to carry: it is an addition,
+  // and the edition's own file at the old path is left alone (#307).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const isLectureRename = (file: any): boolean =>
+    file.status === 'renamed' && isDocsMarkdownPath(file.previous_filename, prefix);
+
   const changedMarkdownFiles = files.filter(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (file: any) =>
       file.filename.startsWith(prefix) &&
       file.filename.endsWith('.md') &&
       file.status !== 'removed' &&
-      file.status !== 'renamed'
+      !isLectureRename(file)
   );
 
   const renamedMarkdownFiles = files.filter(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (file: any) =>
-      file.filename.startsWith(prefix) && file.filename.endsWith('.md') && file.status === 'renamed'
+      file.filename.startsWith(prefix) && file.filename.endsWith('.md') && isLectureRename(file)
   );
 
   const changedTocFiles = files.filter(
@@ -770,6 +787,21 @@ export class SyncOrchestrator {
     fileRebaseCache?: import('./types.js').RebaseCacheData
   ): Promise<void> {
     this.logger.info(`Processing renamed file: ${file.previousFilename} → ${file.filename}...`);
+
+    // The old path is read as the lecture's translation and then deleted, so
+    // it must be a lecture of this edition. Both builders already turn a
+    // rename from outside the docs folder into an addition; this holds the
+    // rule for any caller that does not (#307).
+    if (
+      file.previousFilename &&
+      this.stateConfig &&
+      !isDocsMarkdownPath(file.previousFilename, this.stateConfig.docsFolder)
+    ) {
+      throw new Error(
+        `${file.filename}: renamed from ${file.previousFilename}, which is not a markdown file ` +
+          `in the docs folder, so it was not read as this lecture's translation or deleted`
+      );
+    }
 
     if (!file.newContent) {
       throw new Error(`No content provided for ${file.filename}`);

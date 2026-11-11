@@ -53869,15 +53869,19 @@ async function readGlossaryFile(file) {
 function formatGlossaryTerms(glossary, targetLanguage) {
   return glossary.terms.filter((t) => typeof t[targetLanguage] === "string" && t[targetLanguage] !== "").map((t) => `- "${t.en}" \u2192 "${t[targetLanguage]}"${t.context ? ` (${t.context})` : ""}`).join("\n");
 }
+function isDocsMarkdownPath(path8, docsFolder) {
+  return typeof path8 === "string" && path8.startsWith(docsFolder) && path8.endsWith(".md");
+}
 function classifyChangedFiles(files, docsFolder) {
   const prefix = docsFolder;
+  const isLectureRename = (file) => file.status === "renamed" && isDocsMarkdownPath(file.previous_filename, prefix);
   const changedMarkdownFiles = files.filter(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (file) => file.filename.startsWith(prefix) && file.filename.endsWith(".md") && file.status !== "removed" && file.status !== "renamed"
+    (file) => file.filename.startsWith(prefix) && file.filename.endsWith(".md") && file.status !== "removed" && !isLectureRename(file)
   );
   const renamedMarkdownFiles = files.filter(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (file) => file.filename.startsWith(prefix) && file.filename.endsWith(".md") && file.status === "renamed"
+    (file) => file.filename.startsWith(prefix) && file.filename.endsWith(".md") && isLectureRename(file)
   );
   const changedTocFiles = files.filter(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -54199,6 +54203,9 @@ var SyncOrchestrator = class {
    */
   async processRenamedFile(file, glossary, result, fileRebaseCache) {
     this.logger.info(`Processing renamed file: ${file.previousFilename} \u2192 ${file.filename}...`);
+    if (file.previousFilename && this.stateConfig && !isDocsMarkdownPath(file.previousFilename, this.stateConfig.docsFolder)) {
+      throw new Error(`${file.filename}: renamed from ${file.previousFilename}, which is not a markdown file in the docs folder, so it was not read as this lecture's translation or deleted`);
+    }
     if (!file.newContent) {
       throw new Error(`No content provided for ${file.filename}`);
     }
@@ -56955,7 +56962,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
       } catch {
         core9.info(`${file.path}: New file (no parent commit content)`);
       }
-      if (fileType === "renamed" && file.previousPath) {
+      if (fileType === "renamed" && file.previousPath && isDocsMarkdownPath(file.previousPath, inputs.docsFolder)) {
         let targetContent = "";
         let oldFileSha;
         try {

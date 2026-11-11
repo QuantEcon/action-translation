@@ -19,7 +19,7 @@ import * as path from 'path';
 import { spawnSync } from 'child_process';
 import { MystParser } from '../../parser.js';
 import { extractHeadingMap } from '../../heading-map.js';
-import { readConfig, readFileState, stateFileRelativePath } from '../translate-state.js';
+import { readConfig, inspectFileState } from '../translate-state.js';
 import { discoverMarkdownFiles } from './status.js';
 import { REVIEW_TRIGGER_LABEL, TARGET_REPO_LABELS } from '../../contracts.js';
 
@@ -113,19 +113,18 @@ export function checkStateFiles(targetPath: string, docsFolder: string): CheckRe
   }
 
   const missing: string[] = [];
-  const corrupt: string[] = [];
+  const corrupt: Array<{ file: string; reason: string }> = [];
   for (const file of targetFiles) {
-    const state = readFileState(targetPath, file);
-    if (!state) {
-      // A state YAML that exists but is unreadable needs repair, not
-      // bootstrap — reporting it as "Missing" sent users to
-      // `status --write-state`, which overwrote it with current source
-      // HEAD and erased the real sync point (#165/F85).
-      if (fs.existsSync(path.join(targetPath, stateFileRelativePath(file)))) {
-        corrupt.push(file);
-      } else {
-        missing.push(file);
-      }
+    const state = inspectFileState(targetPath, file);
+    // A state YAML that exists but is unreadable needs repair, not
+    // bootstrap — reporting it as "Missing" sent users to
+    // `status --write-state`, which overwrote it with current source
+    // HEAD and erased the real sync point (#165/F85). The reason names the
+    // key to repair (#381).
+    if (state.status === 'invalid') {
+      corrupt.push({ file, reason: state.reason });
+    } else if (state.status === 'missing') {
+      missing.push(file);
     }
   }
 
@@ -136,7 +135,7 @@ export function checkStateFiles(targetPath: string, docsFolder: string): CheckRe
       message: `${corrupt.length} state file(s) exist but are unreadable — repair or delete them`,
       details: corrupt
         .slice(0, 5)
-        .map((f) => `Corrupt: ${f} (state YAML exists but is unreadable)`)
+        .map(({ file, reason }) => `Corrupt: ${file} (${reason})`)
         .concat(corrupt.length > 5 ? [`…and ${corrupt.length - 5} more`] : []),
     };
   }

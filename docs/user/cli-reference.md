@@ -318,7 +318,7 @@ npx translate init -s <source-path> -t <target-path> --target-language <code> [o
 | `-f, --file <file>` | *(all lectures)* | Translate a single lecture file (e.g., `cobweb.md`) |
 | `--batch-delay <ms>` | `1000` | Delay between lectures in ms (rate limiting) |
 | `--resume-from <file>` | *(none)* | Resume from a specific lecture file |
-| `--skip-existing` | `false` | Skip lectures already translated (reads `.translate/state/`) |
+| `--skip-existing` | `false` | Skip lectures the edition already has; never overwrites a translation |
 | `-j, --parallel <n>` | `1` | Number of parallel translations |
 | `--glossary <path>` | *(auto)* | Path to glossary JSON file (default: built-in glossary for the language) |
 | `--localize <rules>` | `code-comments,figure-labels,i18n-font-config` | Localization rules for code cells (use `none` to disable) |
@@ -445,7 +445,7 @@ npx translate init \
   --skip-existing
 ```
 
-This reads `.translate/state/` entries and skips lectures that were already translated. Unlike `--resume-from` (which is linear), `--skip-existing` handles scattered failures across the TOC.
+This skips every lecture the edition already has. Unlike `--resume-from` (which is linear), `--skip-existing` handles scattered failures across the TOC. It never overwrites a translation: a lecture that is in the edition is skipped whatever its state file says, with a warning when the state file is missing or cannot be read. A state file with no lecture beside it does not count, so that lecture is translated, also with a warning. `--dry-run --skip-existing` lists the same lectures the real run would skip.
 
 **Parallel translation (4 concurrent workers):**
 
@@ -564,6 +564,8 @@ section-count: 5               # Source section count at sync time
 tool-version: <tool version>   # Version that performed this sync
 ```
 
+A file written by hand needs `source-sha`, `synced-at`, `model` and `mode` as text and `section-count` as a number. A bare date (`synced-at: 2026-03-06`) is read as text, but a value YAML reads as a number must be quoted: an all-digit `source-sha: 1111111` is rejected, and `doctor` and `status --write-state` name the key.
+
 ### How each command uses `.translate/`
 
 | Command | Reads | Writes |
@@ -571,7 +573,7 @@ tool-version: <tool version>   # Version that performed this sync
 | `status` | Uses `source-sha` for exact staleness, and with `--write-state` to find English changes since it | `--write-state` bootstraps config + state |
 | `backward` | Skips files where `source-sha` is unchanged | — |
 | `forward` | — | Updates state after successful resync |
-| `init` | `--skip-existing` skips lectures with a readable state file | Writes config, and state for each lecture it translates |
+| `init` | `--skip-existing` skips lectures the edition has, and warns when one has no readable state file | Writes config, and state for each lecture it translates |
 | `setup` | — | Creates config as part of scaffolding |
 | `doctor` | Reads config, checks state files | — |
 | `headingmap` | — | Injects heading-maps into target files |

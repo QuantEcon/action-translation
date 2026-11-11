@@ -10,6 +10,7 @@ import {
 import {
   SyncOrchestrator,
   classifyChangedFiles,
+  isDocsMarkdownPath,
   loadGlossary,
   FileToSync,
   StateGenerationConfig,
@@ -417,8 +418,15 @@ async function rebaseSinglePR(
         core.info(`${file.path}: New file (no parent commit content)`);
       }
 
-      if (fileType === 'renamed' && file.previousPath) {
-        // Renamed files: fetch target content from old path
+      if (
+        fileType === 'renamed' &&
+        file.previousPath &&
+        isDocsMarkdownPath(file.previousPath, inputs.docsFolder)
+      ) {
+        // Renamed files: fetch target content from old path. A PR opened
+        // before #307's fix can record an old path outside the docs folder;
+        // that one falls through to the markdown branch, so the edition's own
+        // file there is neither read as a translation nor deleted.
         let targetContent = '';
         let oldFileSha: string | undefined;
 

@@ -728,7 +728,7 @@ describe('--write-state safeguard', () => {
         exclude: [],
         writeState: true,
       })
-    ).rejects.toThrow(/corrupt/i);
+    ).rejects.toThrow(/unreadable:\n {2}intro\.md: it could not be read as YAML/);
 
     // --force is the explicit escape hatch
     const result = await runStatus({
@@ -1182,7 +1182,7 @@ describe('--write-state carried-change guard (#380)', () => {
     fs.mkdirSync(path.dirname(statePath), { recursive: true });
     fs.writeFileSync(statePath, '{{{ not yaml at all', 'utf-8');
 
-    await expect(writeState({ carried: true })).rejects.toThrow(/corrupt/i);
+    await expect(writeState({ carried: true })).rejects.toThrow(/unreadable/i);
     expect(fs.readFileSync(statePath, 'utf-8')).toBe('{{{ not yaml at all');
   });
 

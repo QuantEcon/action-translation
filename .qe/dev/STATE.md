@@ -340,6 +340,13 @@ Roadmap detail lives in the project trackers (reading order in
 
 **Resume here (2026-09-23, after v0.29.3):**
 
+*Issue validation, 2026-11-11*: all 128 open issues were checked against `80d4ae6`; the
+verdicts that change the plan, the closable list, the tracker text owed and a proposed work
+order are in log `2026-11-11-issue-validation`. First in that order is a v0.30.1 release, then
+#420 with #281. Two fixes are on branch `claude/youthful-wright-rkvr54`, not yet merged: #307
+(a rename's old path must be a lecture) and #379 with #381 (`--skip-existing` never overwrites
+a lecture; state files load with `CORE_SCHEMA` and say why they are rejected).
+
 *#344, 2026-10-22*: #376 merged and shipped in v0.30.0, after the harness scope smoke passed
 on all three lanes (results in #377's log). #346's table row for #344 still describes the first version (`_toc.yml`
 left alone); the ToC is now mirrored. The fourteen issues filed from #376's reviews (#378–#391)
@@ -409,7 +416,7 @@ delimiter rows, which already break a table in the fr edition's pandas lecture.
 ## Health & context
 
 - `main` green; **2,228 tests across 81 suites** (zero skips, type-checked) as of
-  `1c0b20b` (counted 2026-11-05); lint at
+  `1c0b20b` (counted 2026-11-05; 2,252 on the 2026-11-11 branch); lint at
   `--max-warnings 0` including root `*.mjs`, CI checks formatting and
   `.qe/dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale `dist/`
   — run `npm run build` first; that guard is deliberate, not a break.
