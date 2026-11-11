@@ -340,14 +340,21 @@ Roadmap detail lives in the project trackers (reading order in
 
 **Resume here (2026-09-23, after v0.29.3):**
 
-*Release, 2026-11-11*: **v0.30.1 is prepared, not yet tagged.** #433 merged (`50438c0`: #307's
-rename check, #379 and #381), and the release PR promotes `[Unreleased]`: #412, #419, #421,
-#422, #423, #424, #426 and #433. Owed before the floating tags move, all Matt's: §4a at the tag,
-§4b (which also reads #203's residual: watch `fence unwrapped` and `head restored` per cell),
-then the `@v0` smoke. After the release: close #118; #280's sequence (a narrow harness run for
-`queue: max`, the edition workflow patches, the back-to-back merge test); merge
-zh-cn#308/#310/#311/#312. #420 with #281 is being built separately and is not in v0.30.1 unless
-it merges first.
+*Release, 2026-11-11*: **v0.30.1 is released** (#434, `248cf4e`); `v0.30` and `v0` point at
+it. Payload: #412, #419, #421, #422, #423, #424, #426 and #433 (`50438c0`: #307's rename
+check, #379 and #381). §4a read 84 of 84 over three runs: the first full run was 82 sync PRs
+and 81 reviews, scenario 09 failed on zh-cn and ml on a stream dropped mid-read (`terminated`,
+which the engine does not retry), ml's scenario 07 review never posted, and scoped reruns of
+09 and 07 passed on every lane; the one WARN is #375's. §4b read 0 of 12 on each lane. The
+default model stays `claude-sonnet-5`. Everything under In flight and Recently landed that
+says "not yet released" for #348, #418, #363, #326, #288, #280, #415 or #301 is released by
+this. Owed now: close #118; #280's sequence (a narrow harness run for `queue: max`, the
+edition workflow patches, the back-to-back merge test), which closes #349; merge
+lecture-python.zh-cn#308/#310/#311/#312; `rate-check.sh` reads its key from the environment
+only (#435). **v0.30.2**: #420 with #281 is built on branch `claude/youthful-wright-rkvr54`
+and waits on one ruling (hold back every mismatch, or let a lecture whose earlier sync PR is
+still open sync as it does today); a retry for a stream cut mid-read goes with it. Log
+`2026-11-11-v0301-release`.
 
 *Issue validation, 2026-11-11*: all 128 open issues were checked against `80d4ae6`; the
 verdicts that change the plan, the closable list, the tracker text owed and a proposed work
