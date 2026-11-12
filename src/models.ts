@@ -1,5 +1,5 @@
 import type Anthropic from '@anthropic-ai/sdk';
-import { APIConnectionError, APIError, RateLimitError } from '@anthropic-ai/sdk';
+import { AnthropicError, APIConnectionError, APIError, RateLimitError } from '@anthropic-ai/sdk';
 
 /**
  * Central Claude model configuration.
@@ -451,6 +451,10 @@ export function addUsage(
  * full-document translation and review calls, where a rerun at the same cap
  * cannot fit. ModelRefusalError and UnexpectedStopReasonError are not
  * APIErrors, so no call site retries them: a refusal is not transient.
+ *
+ * A stream cut short below the API (`isStreamCutShort`) is retried too: a
+ * connection dropped mid-read failed whole lectures at the v0.30.1 release
+ * gate ("Translation failed for modified section: terminated").
  */
 export function isRetryableAnthropicError(error: unknown): boolean {
   return (
@@ -458,6 +462,42 @@ export function isRetryableAnthropicError(error: unknown): boolean {
     error instanceof APIConnectionError ||
     (error instanceof APIError &&
       ((error.status !== undefined && error.status >= 500) ||
-        (error.status === undefined && error.message?.includes('overloaded'))))
+        (error.status === undefined && error.message?.includes('overloaded')))) ||
+    isStreamCutShort(error)
+  );
+}
+
+/**
+ * The SDK's own errors for a stream whose body ended before the message did,
+ * without an error from the API (SDK 0.131, `MessageStream`).
+ */
+const STREAM_ENDED_EARLY_MESSAGES: ReadonlySet<string> = new Set([
+  'stream ended without producing a Message with role=assistant',
+  'request ended without sending any chunks',
+]);
+
+/**
+ * Whether a streamed call (`messages.stream(...).finalMessage()`) stopped
+ * below the API: the connection dropped, or the body ended early. Neither
+ * says anything about the model or the request.
+ *
+ * A connection dropped while the body streams makes fetch's body read throw a
+ * `TypeError('terminated')` (its cause, undici's `SocketError: other side
+ * closed`, names the socket). It is not an APIConnectionError, which the SDK
+ * raises only when the request fails before a response arrives: the
+ * `MessageStream` catches it and wraps it in a plain `AnthropicError` with the
+ * same message and the TypeError as its `cause`. A body that closes cleanly
+ * before `message_stop` gives one of the messages above, with no cause. All
+ * three were reproduced against SDK 0.131 with a local server that drops the
+ * socket, or ends the response, part-way through an event stream.
+ *
+ * A non-streamed `messages.create()` whose body is cut off rejects with the
+ * bare TypeError instead, unwrapped; that is not matched here.
+ */
+export function isStreamCutShort(error: unknown): boolean {
+  return (
+    error instanceof AnthropicError &&
+    !(error instanceof APIError) &&
+    (error.cause instanceof TypeError || STREAM_ENDED_EARLY_MESSAGES.has(error.message))
   );
 }

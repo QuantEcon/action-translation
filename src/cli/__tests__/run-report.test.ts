@@ -314,6 +314,13 @@ describe('classifyFailure on a stream cut short below the API (real SDK)', () =>
   }
 
   let fetchSpy: jest.SpyInstance;
+  const BASE_DELAY_MS = RETRY_CONFIG.baseDelayMs;
+  beforeAll(() => {
+    RETRY_CONFIG.baseDelayMs = 0;
+  });
+  afterAll(() => {
+    RETRY_CONFIG.baseDelayMs = BASE_DELAY_MS;
+  });
   afterEach(() => {
     fetchSpy.mockRestore();
   });
@@ -321,17 +328,49 @@ describe('classifyFailure on a stream cut short below the API (real SDK)', () =>
   it.each([
     ['drop', 'terminated'],
     ['end', 'stream ended without producing a Message with role=assistant'],
-  ] as const)('%s: infra, and the engine does not retry it', async (mode, message) => {
-    fetchSpy = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => cutShort(mode));
+  ] as const)(
+    '%s: the engine retries it, and once the retries are spent it is infra',
+    async (mode, message) => {
+      fetchSpy = jest.spyOn(globalThis, 'fetch').mockImplementation(async () => cutShort(mode));
 
-    const error = await rejectionOf(
-      new TranslationService('test-key', 'claude-sonnet-5').translateFullDocument(DOCUMENT)
-    );
+      const service = new TranslationService('test-key', 'claude-sonnet-5');
+      const error = await rejectionOf(service.translateFullDocument(DOCUMENT));
 
-    expect(error).toBeInstanceOf(AnthropicError);
-    expect(error).not.toBeInstanceOf(APIError);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(classifyFailure(error)).toEqual({ kind: 'infra', message });
+      expect(error).toBeInstanceOf(AnthropicError);
+      expect(error).not.toBeInstanceOf(APIError);
+      expect(fetchSpy).toHaveBeenCalledTimes(RETRY_CONFIG.maxRetries);
+      expect(service.getRetryCount()).toBe(RETRY_CONFIG.maxRetries - 1);
+      expect(classifyFailure(error)).toEqual({ kind: 'infra', message });
+    }
+  );
+
+  it('drop: a stream that drops once and then completes is translated, with one retry', async () => {
+    // The fake API answers the retry; the spy, installed over it, drops the
+    // first attempt and passes every later request through to it.
+    const api = installFakeAnthropicApi();
+    try {
+      api.reply({
+        content: [{ type: 'text', text: '# 市场\n' }],
+        stop_reason: 'end_turn',
+        usage: { input_tokens: 10, output_tokens: 5 },
+      });
+      fetchSpy = jest
+        .spyOn(globalThis, 'fetch')
+        .mockImplementationOnce(async () => cutShort('drop'));
+
+      const service = new TranslationService('test-key', 'claude-sonnet-5');
+      const result = await service.translateFullDocument(DOCUMENT);
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(api.requests).toHaveLength(1);
+      expect(result).toMatchObject({ success: true, translatedSection: '# 市场' });
+      expect(service.getRetryCount()).toBe(1);
+      // Only the attempt that finished is counted: the dropped one has no usage.
+      expect(service.getUsage()).toMatchObject({ apiCalls: 1, inputTokens: 10, outputTokens: 5 });
+    } finally {
+      fetchSpy.mockRestore();
+      api.restore();
+    }
   });
 });
 

@@ -36,6 +36,13 @@ import {
   refuseUnreadLectures,
   writeJobSummary,
 } from './sync-scope.js';
+import { checkSyncPremise, githubPremiseReader, StateReads } from './sync-premise.js';
+import {
+  buildFailureIssueBody,
+  failureIssueTitle,
+  FailureIssueInput,
+  rebaseFailureComment,
+} from './recovery-advice.js';
 import { runReview } from './action/review.js';
 import { coreLogger } from './action/core-logger.js';
 import { getBuiltInGlossaryDir } from './runtime-paths.js';
@@ -160,9 +167,13 @@ async function runRebase(): Promise<void> {
   let errorCount = 0;
 
   for (const pr of siblingPRs) {
+    // Read again by the failure comment below, which names the PR's source PR
+    // and its overlapping lectures.
+    let metadata: TranslationSyncMetadata | undefined;
+    let overlapping: string[] = [];
     try {
       // Parse metadata from PR body
-      const metadata = parseTranslationSyncMetadata(pr.body || '');
+      metadata = parseTranslationSyncMetadata(pr.body || '');
       if (!metadata) {
         core.info(
           `PR #${pr.number}: No translation-sync metadata found — skipping (pre-metadata PR).`
@@ -173,7 +184,7 @@ async function runRebase(): Promise<void> {
 
       // Check file overlap
       const prFilePaths = metadata.files.map((f) => f.path);
-      const overlapping = prFilePaths.filter((p) => mergedFilePaths.has(p));
+      overlapping = prFilePaths.filter((p) => mergedFilePaths.has(p));
       if (overlapping.length === 0) {
         // No overlap means no merge conflict, so there is nothing to re-translate. The
         // branch is still behind the new base though, and its checks are now stale —
@@ -251,7 +262,15 @@ async function runRebase(): Promise<void> {
           owner,
           repo,
           issue_number: pr.number,
-          body: `⚠️ **Automatic rebase failed** after #${mergedPrNumber} was merged.\n\nError: ${msg}\n\nYou may need to manually resolve conflicts or run \`/translate-resync\` on the source PR.`,
+          // Built in recovery-advice.ts (#281): the CLI route, and a resync
+          // of the source PR only for a sync PR, under #276's precondition.
+          body: rebaseFailureComment({
+            mergedPrNumber,
+            error: msg,
+            metadata,
+            overlapping,
+            docsFolder: inputs.docsFolder,
+          }),
         });
       } catch {
         core.warning(`Could not post error comment on PR #${pr.number}`);
@@ -552,7 +571,7 @@ async function rebaseSinglePR(
   // The state files main holds at the pinned SHA. The orchestrator deletes a
   // removed or renamed lecture's state file only when main has one, and the
   // rebased commit is built on that same SHA, so the two agree.
-  const existingStateShas = await fetchExistingStateShas(
+  const { shas: existingStateShas } = await fetchExistingStateShas(
     octokit,
     owner,
     repo,
@@ -795,7 +814,8 @@ async function runSync(): Promise<void> {
         prNumber,
         inputs.targetLanguage,
         inputs.targetRepo,
-        scope.errors
+        scope.errors,
+        { docsFolder: inputs.docsFolder, mergeSha: effectiveSha }
       );
     }
     return;
@@ -837,13 +857,41 @@ async function runSync(): Promise<void> {
   }
 
   // Fetch existing state file SHAs from target repo for state generation
-  const existingStateShas = await fetchExistingStateShas(
+  const { shas: existingStateShas, reads: stateReads } = await fetchExistingStateShas(
     octokit,
     targetOwner,
     targetRepo,
     filesToSync,
     inputs.docsFolder
   );
+
+  // The premise of update mode (#420): a lecture whose translation does not
+  // start from the English this PR changed is held back before any model
+  // call, and its error says which case it is, unless an open translation PR
+  // in the edition carries it: that one syncs as before, as a stacked PR, and
+  // its diagnosis goes to the PR body or, if it fails, the failure issue. The
+  // state files' content comes from the read above; a lecture new to the
+  // edition costs nothing here.
+  const premise = await checkSyncPremise(
+    {
+      files: filesToSync,
+      stateReads,
+      docsFolder: inputs.docsFolder,
+      sourceSha: effectiveSha,
+      source: { owner: github.context.repo.owner, repo: github.context.repo.repo },
+      prNumber,
+      edition: { owner: targetOwner, repo: targetRepo },
+      targetLanguage: inputs.targetLanguage,
+    },
+    githubPremiseReader(
+      octokit,
+      { owner: github.context.repo.owner, repo: github.context.repo.repo },
+      { owner: targetOwner, repo: targetRepo }
+    ),
+    coreLogger
+  );
+  filesToSync = premise.files;
+  fetchErrors.push(...premise.errors);
 
   const stateConfig: StateGenerationConfig = {
     sourceCommitSha: effectiveSha,
@@ -957,7 +1005,10 @@ async function runSync(): Promise<void> {
         result.failedNewFiles
           ? { files: result.failedNewFiles, filteredTocPaths: result.filteredTocPaths ?? [] }
           : undefined,
-        scope?.skipped
+        scope?.skipped,
+        // Only the lectures this PR delivers: one that failed is in the
+        // failure issue instead.
+        premise.stillOpen.filter((lecture) => result.processedFiles.includes(lecture.file))
       );
 
       prUrl = prResult.prUrl;
@@ -978,13 +1029,39 @@ async function runSync(): Promise<void> {
   // Post-sync notifications (skip in test mode)
   if (!isTestMode) {
     if (result.errors.length > 0) {
-      // On failure: open an Issue linked to the source PR
+      // On failure: open an Issue linked to the source PR. The lectures the
+      // orchestrator could not translate get one recovery line each:
+      // `forward` for one the edition has, `init` for a new one (#281), and,
+      // for one the premise check found behind an open translation PR, its
+      // diagnosis and the advice to merge that PR first (#420).
+      const failedLectures = filesToSync
+        .filter(
+          (f) =>
+            (f.type === 'markdown' || f.type === 'renamed') &&
+            !result.processedFiles.includes(f.filename)
+        )
+        .map((f) => ({
+          file: f.filename,
+          ...(f.type === 'renamed' && f.previousFilename
+            ? { previousPath: f.previousFilename }
+            : {}),
+          inEdition: !f.isNewFile,
+        }));
       await createFailureIssue(
         octokit,
         prNumber,
         inputs.targetLanguage,
         inputs.targetRepo,
-        result.errors
+        result.errors,
+        {
+          docsFolder: inputs.docsFolder,
+          mergeSha: effectiveSha,
+          heldBack: premise.heldBack,
+          failedLectures,
+          stillOpen: premise.stillOpen.filter(
+            (lecture) => !result.processedFiles.includes(lecture.file)
+          ),
+        }
       );
     } else if (prUrl) {
       // On success: comment on the source PR
@@ -1331,9 +1408,46 @@ async function fetchExistingStateShas(
   filesToSync: FileToSync[],
   docsFolder: string,
   ref?: string
-): Promise<Map<string, string>> {
+): Promise<{ shas: Map<string, string>; reads: StateReads }> {
   const shas = new Map<string, string>();
+  // What each read returned, for sync's premise check (#420), which needs a
+  // state file's content and must tell a missing file from a failed read.
+  // The SHAs above keep their old rule: anything but a file is "no SHA".
+  const reads: StateReads = new Map();
   const at = ref ? { ref } : {};
+
+  const readState = async (statePath: string): Promise<void> => {
+    try {
+      const { data } = await octokit.rest.repos.getContent({
+        owner: targetOwner,
+        repo: targetRepo,
+        path: statePath,
+        ...at,
+      });
+      if ('sha' in data) {
+        shas.set(statePath, data.sha);
+      }
+      reads.set(
+        statePath,
+        'content' in data
+          ? { status: 'found', content: Buffer.from(data.content, 'base64').toString('utf-8') }
+          : { status: 'error', message: 'not a file' }
+      );
+    } catch (error) {
+      // A 404 means the state file doesn't exist yet: it will be created, or
+      // for an old path there is nothing to delete.
+      const status = (error as { status?: number } | null | undefined)?.status;
+      reads.set(
+        statePath,
+        status === 404
+          ? { status: 'missing' }
+          : {
+              status: 'error',
+              message: `status ${status ?? 'unknown'}: ${error instanceof Error ? error.message : String(error)}`,
+            }
+      );
+    }
+  };
 
   // Markdown and renamed files write state; a removed file's state is deleted
   const markdownFiles = filesToSync.filter(
@@ -1346,20 +1460,7 @@ async function fetchExistingStateShas(
       docsFolder && file.filename.startsWith(docsFolder)
         ? file.filename.slice(docsFolder.length)
         : file.filename;
-    const statePath = stateFileRelativePath(docsRelName);
-    try {
-      const { data } = await octokit.rest.repos.getContent({
-        owner: targetOwner,
-        repo: targetRepo,
-        path: statePath,
-        ...at,
-      });
-      if ('sha' in data) {
-        shas.set(statePath, data.sha);
-      }
-    } catch {
-      // State file doesn't exist yet — will be created
-    }
+    await readState(stateFileRelativePath(docsRelName));
 
     // For renamed files, also fetch the old state file SHA (for deletion)
     if (file.type === 'renamed' && file.previousFilename) {
@@ -1367,20 +1468,7 @@ async function fetchExistingStateShas(
         docsFolder && file.previousFilename.startsWith(docsFolder)
           ? file.previousFilename.slice(docsFolder.length)
           : file.previousFilename;
-      const oldStatePath = stateFileRelativePath(oldDocsRelName);
-      try {
-        const { data } = await octokit.rest.repos.getContent({
-          owner: targetOwner,
-          repo: targetRepo,
-          path: oldStatePath,
-          ...at,
-        });
-        if ('sha' in data) {
-          shas.set(oldStatePath, data.sha);
-        }
-      } catch {
-        // Old state file doesn't exist — nothing to delete
-      }
+      await readState(stateFileRelativePath(oldDocsRelName));
     }
   }
 
@@ -1388,7 +1476,7 @@ async function fetchExistingStateShas(
     core.info(`Found ${shas.size} existing state file(s) in target repo`);
   }
 
-  return shas;
+  return { shas, reads };
 }
 
 // =============================================================================
@@ -1453,7 +1541,7 @@ async function closeFailureIssues(
   resolution: string
 ): Promise<void> {
   try {
-    const title = `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
+    const title = failureIssueTitle(prNumber, targetLanguage);
     const openIssues = await octokit.paginate(octokit.rest.issues.listForRepo, {
       owner: github.context.repo.owner,
       repo: github.context.repo.repo,
@@ -1511,26 +1599,25 @@ async function createFailureIssue(
   prNumber: number,
   targetLanguage: string,
   targetRepo: string,
-  errors: string[]
+  errors: string[],
+  advice: Pick<
+    FailureIssueInput,
+    'docsFolder' | 'mergeSha' | 'heldBack' | 'failedLectures' | 'stillOpen'
+  > = { docsFolder: '' }
 ): Promise<void> {
   try {
-    const errorList = errors.map((e) => `- ${e}`).join('\n');
-    const title = `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
-    const body = [
-      `### Translation sync failure`,
-      '',
-      `**Source PR**: #${prNumber}`,
-      `**Target repo**: ${targetRepo}`,
-      `**Target language**: ${targetLanguage}`,
-      '',
-      `### Errors`,
-      '',
-      errorList,
-      '',
-      `### Recovery`,
-      '',
-      `Once the issue is resolved, comment \`\\translate-resync\` on PR #${prNumber} to retry.`,
-    ].join('\n');
+    const title = failureIssueTitle(prNumber, targetLanguage);
+    // The Recovery section is built in recovery-advice.ts (#281): the CLI
+    // route, and a resync only under #276's precondition. Lectures held back
+    // by the premise check (#420), and failed lectures it found behind an
+    // open translation PR, get their own advice.
+    const body = buildFailureIssueBody({
+      prNumber,
+      targetRepo,
+      targetLanguage,
+      errors,
+      ...advice,
+    });
 
     const { data: issue } = await octokit.rest.issues.create({
       owner: github.context.repo.owner,

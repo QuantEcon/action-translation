@@ -246,6 +246,10 @@ export class TranslationService {
    * - APIConnectionError (network issues)
    * - APIError with 5xx status (server errors)
    * - APIError with overloaded_error (status undefined)
+   * - a stream cut short: the connection dropped mid-read ('terminated'), or
+   *   the body ended before the message did (`isStreamCutShort`). The
+   *   abandoned attempt has no final usage, so none is counted for it; the
+   *   retry is counted as any other.
    *
    * Does NOT retry on:
    * - AuthenticationError (invalid API key)

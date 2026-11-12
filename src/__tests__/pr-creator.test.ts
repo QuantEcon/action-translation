@@ -14,8 +14,10 @@ import {
   buildPrBody,
   buildPrTitle,
   buildLabelSet,
+  formatStillOpenNotice,
   parseTranslationSyncMetadata,
   PrCreatorConfig,
+  StillOpenNotice,
 } from '../pr-creator.js';
 import {
   formatScopeNotice,
@@ -167,7 +169,20 @@ describe('buildPrBody', () => {
     expect(body).toContain('`lectures/intro.md`');
     expect(body).toContain('`Type Hints`');
     expect(body).toContain('`Advanced Topics`');
-    expect(body).toContain('/translate-resync');
+  });
+
+  it('recovers an abandoned earlier PR with translate forward, not a resync (#281)', () => {
+    const skipped = new Map<string, string[]>([['lectures/intro.md', ['Type Hints']]]);
+    const body = buildPrBody([], [], baseConfig, undefined, skipped);
+
+    expect(body).toContain(
+      'An earlier translation PR should add them. If that PR is abandoned, recover the ' +
+        "lecture with `translate forward -f <file>`, run from a checkout of the source's " +
+        "default branch, where `<file>` is the lecture's path inside the docs folder. That " +
+        'regenerates the whole lecture, so on a lecture that has been natively reviewed, add ' +
+        'the missing sections by hand instead.'
+    );
+    expect(body).not.toContain('translate-resync');
   });
 
   it('should not include skipped sections notice when empty', () => {
@@ -428,6 +443,84 @@ describe('buildPrBody sync-scope notice (#344)', () => {
       { path: 'lectures/functions.md' },
       { path: 'lectures/old_lecture.md' },
     ]);
+  });
+});
+
+// =============================================================================
+// EARLIER TRANSLATION PR STILL OPEN NOTICE (#420)
+// =============================================================================
+
+describe('buildPrBody still-open notice (#420)', () => {
+  const files: TranslatedFile[] = [
+    { path: 'lectures/functions.md', content: 'c1', sha: 'sha-functions' },
+    { path: 'lectures/names.md', content: 'c2', sha: 'sha-names' },
+  ];
+  const pendingSections = new Map([['lectures/functions.md', ['Exercises']]]);
+  const stillOpen: StillOpenNotice[] = [
+    {
+      file: 'lectures/functions.md',
+      stateSha: 'a4fbd86c0ffee000',
+      openPulls: ['QuantEcon/lecture-python.zh-cn#311'],
+    },
+    {
+      file: 'lectures/names.md',
+      stateSha: '0066783aaaa',
+      openPulls: ['QuantEcon/lecture-python.zh-cn#311', 'QuantEcon/lecture-python.zh-cn#312'],
+    },
+  ];
+
+  function body(notice: StillOpenNotice[] | undefined): string {
+    return buildPrBody(
+      files,
+      [],
+      baseConfig,
+      undefined,
+      pendingSections,
+      'target-sha',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      notice
+    );
+  }
+
+  it('names each lecture, the source its translation is at, and the open PRs to merge first', () => {
+    expect(body(stillOpen)).toContain(
+      [
+        '### ⚠️ Earlier Translation PR Still Open',
+        '',
+        'The translation of each lecture below is at an earlier source commit than the English ' +
+          'this source PR changed, and an open translation PR carries the changes in between. ' +
+          'This PR was built on the translation without them. **Merge the earlier PR first**: ' +
+          'once it merges, rebase mode rebuilds this PR on top of it.',
+        '',
+        '- `lectures/functions.md`: translation at source `a4fbd86`; ' +
+          'QuantEcon/lecture-python.zh-cn#311 carries earlier changes to it',
+        '- `lectures/names.md`: translation at source `0066783`; ' +
+          'QuantEcon/lecture-python.zh-cn#311, QuantEcon/lecture-python.zh-cn#312 carry earlier ' +
+          'changes to it',
+      ].join('\n')
+    );
+  });
+
+  it('comes before the pending-sections notice, which it explains', () => {
+    const text = body(stillOpen);
+    expect(text.indexOf('### ⚠️ Earlier Translation PR Still Open')).toBeLessThan(
+      text.indexOf('### ⚠️ Sections Pending Earlier Translation PR')
+    );
+  });
+
+  it('leaves the body byte-identical when no lecture is behind an open PR', () => {
+    expect(body([])).toBe(body(undefined));
+    expect(body(undefined)).not.toContain('Still Open');
+    expect(formatStillOpenNotice([])).toBe('');
+  });
+
+  it('keeps the notice out of the metadata', () => {
+    expect(parseTranslationSyncMetadata(body(stillOpen))).toEqual(
+      parseTranslationSyncMetadata(body(undefined))
+    );
   });
 });
 

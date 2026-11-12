@@ -130,7 +130,7 @@ This posts an AI-generated quality review comment on each translation PR, includ
 4. **The review workflow** (if configured) automatically reviews the translation PR and posts quality feedback
 5. **A human reviewer** approves and merges the translation PR
 
-If the sync fails, the action automatically opens a GitHub Issue with error details and recovery instructions. You can re-run the sync by commenting `\translate-resync` on the merged PR, or target a specific language with `\translate-resync fa`.
+If the sync fails, the action automatically opens a GitHub Issue with error details and recovery advice for each failed lecture, usually the CLI's `translate forward` (below). You can re-run the whole sync by commenting `\translate-resync` on the merged PR, or target a specific language with `\translate-resync fa`, but only while no file the PR changed has changed on the source since it merged: a resync rebuilds from the PR's merge-time snapshot (#276).
 
 Only changed sections are translated — the rest of the document is preserved exactly as-is.
 

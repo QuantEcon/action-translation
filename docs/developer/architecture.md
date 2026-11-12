@@ -102,6 +102,8 @@ src/
 │   └── core-logger.ts   # @actions/core → Logger adapter, shared by the entry point and mode runners
 ├── sync-orchestrator.ts # Sync processing pipeline
 ├── sync-scope.ts        # sync-scope: existing — sync a changed lecture only if the target has its state file (#344)
+├── sync-premise.ts      # Update mode's premise: hold back a lecture whose translation does not start from the PR's old English, and say why; one behind an open translation PR still syncs, with a diagnosis (#420)
+├── recovery-advice.ts   # Recovery text: the sync failure issue's body and the rebase-failure comment (CLI route; resync only under #276's precondition, #281)
 ├── toc-captions.ts      # _toc.yml part-caption preservation on sync (#254)
 ├── pr-creator.ts        # PR creation in target repo
 ├── parser.ts            # MyST Markdown parser (stack-based, line-by-line)
@@ -204,6 +206,17 @@ PR merged in SOURCE repo
             │
             ▼
 ┌─────────────────────────┐
+│ sync-premise.ts         │  For each lecture the target already has:
+│ (update mode's premise) │  does the English at its state file's
+│                         │  source-sha equal the PR's old English?
+│                         │  No: hold it back, no model call, and say
+│                         │  why in the Issue (#420), unless an open
+│                         │  translation PR carries it: then sync it,
+│                         │  and name that PR in the PR body or Issue
+└───────────┬─────────────┘
+            │
+            ▼
+┌─────────────────────────┐
 │ sync-orchestrator.ts    │  Classify files: new vs existing
 │                         │  For each file:
 │  ┌────────────────────┐ │
@@ -225,7 +238,7 @@ PR merged in SOURCE repo
 ┌─────────────────────────┐
 │ index.ts                │  On success: post comment on source PR
 │ (sync notifications)    │  On failure: open Issue with error details
-│                         │  + recovery instructions
+│ + recovery-advice.ts    │  + recovery advice per failed lecture
 └─────────────────────────┘
 ```
 
@@ -336,8 +349,8 @@ All three translation modes (UPDATE, section RESYNC, whole-file RESYNC) include 
 ### Retry logic
 
 API calls use exponential backoff retry (3 attempts: 1s, 2s, 4s delays):
-- **Retries on**: `RateLimitError`, `APIConnectionError`, transient 5xx errors
-- **Never retries on**: `AuthenticationError`, `BadRequestError`, document-too-large errors
+- **Retries on**: `RateLimitError`, `APIConnectionError`, transient 5xx errors, mid-stream overloads, and a stream cut short below the API (a connection dropped mid-read, or a body that ended early: `isStreamCutShort` in `models.ts`)
+- **Never retries on**: `AuthenticationError`, `BadRequestError`, a truncation or a refusal, document-too-large errors
 
 ### ESM + CJS dual build
 

@@ -46,6 +46,19 @@ export interface PrCreatorConfig {
 export const SYNC_METADATA_SCHEMA_VERSION = 1;
 
 /**
+ * How the "Sections Pending Earlier Translation PR" notice says to recover
+ * when the earlier PR is abandoned (#281). Not a resync: resyncing this PR's
+ * source PR replays the same diff against the same target and skips the
+ * sections again, and resyncing the earlier source PR fails #276's
+ * precondition by construction, since a later merge changed the same file.
+ */
+export const PENDING_SECTIONS_RECOVERY =
+  'If that PR is abandoned, recover the lecture with `translate forward -f <file>`, run from ' +
+  "a checkout of the source's default branch, where `<file>` is the lecture's path inside the " +
+  'docs folder. That regenerates the whole lecture, so on a lecture that has been natively ' +
+  'reviewed, add the missing sections by hand instead.';
+
+/**
  * Machine-readable metadata embedded in translation sync PR bodies.
  * Used by rebase mode to reconstruct pipeline inputs, and documented as a
  * public contract for downstream tooling (#66, docs/user/metadata-contract.md).
@@ -94,6 +107,34 @@ export interface FailedNewFilesNotice {
   filteredTocPaths: string[];
 }
 
+/**
+ * A lecture this PR syncs whose translation was behind an open translation PR
+ * in the edition (#420): the "Earlier Translation PR Still Open" notice.
+ */
+export interface StillOpenNotice {
+  /** Source path; for a rename, the new path. */
+  file: string;
+  /** The source commit the lecture's state file records. */
+  stateSha: string;
+  /** The open PRs that carry earlier changes to it, as `owner/repo#N`. */
+  openPulls: string[];
+}
+
+/**
+ * The PR-body notice for lectures synced on top of an open translation PR,
+ * or '' when there are none.
+ */
+export function formatStillOpenNotice(lectures: StillOpenNotice[]): string {
+  if (lectures.length === 0) return '';
+  const lines = lectures.map(
+    (l) =>
+      `- \`${l.file}\`: translation at source \`${l.stateSha.slice(0, 7)}\`; ` +
+      `${l.openPulls.join(', ')} ${l.openPulls.length === 1 ? 'carries' : 'carry'} earlier ` +
+      'changes to it'
+  );
+  return `\n\n### ⚠️ Earlier Translation PR Still Open\n\nThe translation of each lecture below is at an earlier source commit than the English this source PR changed, and an open translation PR carries the changes in between. This PR was built on the translation without them. **Merge the earlier PR first**: once it merges, rebase mode rebuilds this PR on top of it.\n\n${lines.join('\n')}`;
+}
+
 export interface PrCreationResult {
   prUrl: string;
   branchName: string;
@@ -117,6 +158,7 @@ export interface PrCreationResult {
  * @param logger - Logger instance
  * @param sourcePrInfo - Optional source PR metadata
  * @param scopeSkipped - Lectures `sync-scope: existing` left out of the run (#344)
+ * @param stillOpen - Lectures synced on top of an open translation PR (#420)
  * @returns PR creation result with URL and branch name
  */
 export async function createTranslationPR(
@@ -131,7 +173,8 @@ export async function createTranslationPR(
   fileMetadata?: Array<{ path: string; type: string; previousPath?: string }>,
   droppedTargetSections?: Map<string, string[]>,
   failedNewFiles?: FailedNewFilesNotice,
-  scopeSkipped?: ScopeSkip[]
+  scopeSkipped?: ScopeSkip[],
+  stillOpen?: StillOpenNotice[]
 ): Promise<PrCreationResult> {
   const { targetOwner, targetRepo } = config;
 
@@ -201,7 +244,8 @@ export async function createTranslationPR(
     fileMetadata,
     droppedTargetSections,
     failedNewFiles,
-    scopeSkipped
+    scopeSkipped,
+    stillOpen
   );
 
   // Build PR title
@@ -285,7 +329,8 @@ export function buildPrBody(
   fileMetadata?: Array<{ path: string; type: string; previousPath?: string }>,
   droppedTargetSections?: Map<string, string[]>,
   failedNewFiles?: FailedNewFilesNotice,
-  scopeSkipped?: ScopeSkip[]
+  scopeSkipped?: ScopeSkip[],
+  stillOpen?: StillOpenNotice[]
 ): string {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);
@@ -319,7 +364,7 @@ export function buildPrBody(
         `- \`${file}\`: ${headings.map((h) => `\`${h.replace(/`/g, '\\`')}\``).join(', ')}`
       );
     }
-    skippedNotice = `\n\n### ⚠️ Sections Pending Earlier Translation PR\n\nThe following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. If that PR is abandoned, run \`/translate-resync\` to recover.\n\n${lines.join('\n')}`;
+    skippedNotice = `\n\n### ⚠️ Sections Pending Earlier Translation PR\n\nThe following sections were **not modified by this source PR** and are missing from the target. They have been omitted from this PR to keep it scoped to the source PR's actual changes. An earlier translation PR should add them. ${PENDING_SECTIONS_RECOVERY}\n\n${lines.join('\n')}`;
   }
 
   // Build removed target-only sections notice (#90 defect 2): the sync mirrors
@@ -362,6 +407,10 @@ export function buildPrBody(
   // that body is unchanged; never part of the metadata's `files` below.
   const scopeNotice = formatScopeNotice(scopeSkipped ?? []);
 
+  // Lectures synced on top of an open translation PR (#420). Absent when there
+  // are none, so that body is unchanged.
+  const stillOpenNotice = formatStillOpenNotice(stillOpen ?? []);
+
   // Build machine-readable metadata for rebase mode
   // Use fileMetadata (with type info) if available, otherwise fall back to path-only
   const metadataFiles: TranslationSyncMetadata['files'] = fileMetadata
@@ -400,7 +449,7 @@ This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoNam
 ### Source PR
 **[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ''}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
 
-${filesChangedSection}${failedFilesNotice}${skippedNotice}${droppedNotice}${scopeNotice}
+${filesChangedSection}${failedFilesNotice}${stillOpenNotice}${skippedNotice}${droppedNotice}${scopeNotice}
 
 ### Details
 - **Source Language**: ${config.sourceLanguage}

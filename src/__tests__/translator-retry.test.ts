@@ -2,7 +2,8 @@
  * Tests for translator retry logic
  *
  * Tests the exponential backoff retry behavior:
- * - Retries on RateLimitError, APIConnectionError, 5xx APIError
+ * - Retries on RateLimitError, APIConnectionError, 5xx APIError, and a stream
+ *   cut off mid-read
  * - Does NOT retry on AuthenticationError, BadRequestError
  * - Respects max retries (3 attempts)
  * - Exponential backoff timing (1s, 2s, 4s)
@@ -99,6 +100,7 @@ jest.mock('@anthropic-ai/sdk', () => {
   return {
     __esModule: true,
     default: MockAnthropic,
+    AnthropicError,
     APIError,
     AuthenticationError,
     RateLimitError,
@@ -109,6 +111,7 @@ jest.mock('@anthropic-ai/sdk', () => {
 
 // Import the error classes for use in tests
 import {
+  AnthropicError,
   APIError,
   AuthenticationError,
   RateLimitError,
@@ -157,6 +160,14 @@ function overloadedError() {
     '{"type":"error","error":{"details":null,"type":"overloaded_error","message":"Overloaded"}}',
     null as any
   );
+}
+/**
+ * A connection dropped mid-stream, as the real SDK's MessageStream rejects
+ * `finalMessage()` with it: fetch's TypeError('terminated'), wrapped in a
+ * plain AnthropicError with the same message.
+ */
+function droppedStream() {
+  return new AnthropicError('terminated', { cause: new TypeError('terminated') });
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -415,6 +426,47 @@ describe('TranslationService - Retry Logic', () => {
 
       expect(result.success).toBe(true);
       expect(mockStream).toHaveBeenCalledTimes(2);
+    });
+
+    it('retries a stream cut off mid-read, returning the message with one retry counted', async () => {
+      mockFinalMessage
+        .mockRejectedValueOnce(droppedStream())
+        .mockResolvedValueOnce(createSuccessResponse('After the drop'));
+
+      const result = await service.translateSection({
+        mode: 'update',
+        sourceLanguage: 'en',
+        targetLanguage: 'zh-cn',
+        oldEnglish: '## Old content',
+        newEnglish: '## New content',
+        currentTranslation: '## 旧内容',
+      });
+
+      expect(result.success).toBe(true);
+      expect(result.translatedSection).toBe('After the drop');
+      expect(mockStream).toHaveBeenCalledTimes(2);
+      expect(service.getRetryCount()).toBe(1);
+      // Only the attempt that finished is counted: the dropped one has no usage.
+      expect(service.getUsage()).toMatchObject({ apiCalls: 1, inputTokens: 100, outputTokens: 50 });
+    });
+
+    it('fails with the drop once the retries are spent, after the same three attempts', async () => {
+      mockFinalMessage
+        .mockRejectedValueOnce(droppedStream())
+        .mockRejectedValueOnce(droppedStream())
+        .mockRejectedValueOnce(droppedStream());
+
+      const result = await service.translateSection({
+        mode: 'new',
+        sourceLanguage: 'en',
+        targetLanguage: 'zh-cn',
+        englishSection: '## Test\n\nContent',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('terminated');
+      expect(mockStream).toHaveBeenCalledTimes(3);
+      expect(service.getRetryCount()).toBe(2);
     });
 
     it('should fail after max retries on persistent overloaded_error', async () => {

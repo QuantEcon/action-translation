@@ -217,7 +217,9 @@ export class FileProcessor {
           // Skip rather than re-translate: keeps this PR scoped to the actual
           // changes in the source PR. Git's 3-way merge will combine this PR
           // with earlier translation PRs that introduce the missing sections.
-          // If the earlier PR is abandoned, a /translate-resync will recover this.
+          // If the earlier PR is abandoned, `translate forward -f <file>` from
+          // the source's default branch recovers the lecture; a resync of this
+          // PR would skip the same sections again (#281).
           const headingText = newSection.heading.replace(/^#+\s+/, '');
           this.log(
             `Section "${headingText}" unchanged in source but missing from target — skipping (pending earlier translation PR)`
