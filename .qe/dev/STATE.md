@@ -340,6 +340,12 @@ Roadmap detail lives in the project trackers (reading order in
 
 **Resume here (2026-09-23, after v0.29.3):**
 
+*Handover, 2026-11-12*: start from log `2026-11-12-handover`. The v0.30.2 payload is merged
+(#436, `805dc11`) and unreleased; no PR is open. Next, in order: decide whether #420 and #281
+close; release v0.30.2; #280's close sequence and the four zh-cn PRs; then step 3 of the work
+order (#389 with #351, #396 with #386, #398, #90 defect 6). The paragraph below predates the
+merge where it says "in one PR from branch".
+
 *Release, 2026-11-11*: **v0.30.1 is released** (#434, `248cf4e`); `v0.30` and `v0` point at
 it. Payload: #412, #419, #421, #422, #423, #424, #426 and #433 (`50438c0`: #307's rename
 check, #379 and #381). §4a read 84 of 84 over three runs: the first full run was 82 sync PRs
