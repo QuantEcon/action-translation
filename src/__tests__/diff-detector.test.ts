@@ -108,6 +108,19 @@ describe('DiffDetector', () => {
   });
 
   describe('Change Detection - detectSectionChanges()', () => {
+    it('reports a whitespace-only heading edit as one modified section (#90, defect 6)', async () => {
+      const changes = await detector.detectSectionChanges(
+        '## Supply and Demand \n\nContent.\n\n## Overview !\n\nMore.\n',
+        '## Supply and Demand\n\nContent.\n\n## Overview!\n\nMore.\n',
+        'test.md'
+      );
+
+      expect(changes.map((c: any) => [c.type, c.newSection?.id])).toEqual([
+        ['modified', 'supply-and-demand'],
+        ['modified', 'overview'],
+      ]);
+    });
+
     it('should detect added sections', async () => {
       const oldContent = `## Section A
 

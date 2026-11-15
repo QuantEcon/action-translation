@@ -181,6 +181,12 @@ export class MystParser {
    * Follows the same rules as MyST/Sphinx for consistency.
    * Uses Unicode-aware matching to preserve non-Latin scripts
    * (Chinese, Arabic, Japanese, etc.) in heading IDs.
+   *
+   * Leading and trailing hyphens are dropped, so a heading's surrounding
+   * whitespace, or whitespace left beside stripped punctuation, never
+   * changes its id: `## Foo ` and `## Foo` are one section, and so are
+   * `## Overview !` and `## Overview!` (#90, defect 6). Ids are recomputed
+   * on every run and never compared across runs, so nothing needs migrating.
    */
   private generateHeadingId(text: string): string {
     return text
@@ -188,7 +194,7 @@ export class MystParser {
       .replace(/[^\p{L}\p{N}\s-]/gu, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
-      .trim();
+      .replace(/^-+|-+$/g, '');
   }
 
   /**
