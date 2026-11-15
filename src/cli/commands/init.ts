@@ -339,7 +339,11 @@ export function checkEditionConfig(
   wanted: TranslateConfig
 ): 'absent' | 'matches' {
   const configPath = path.join(targetPath, '.translate', 'config.yml');
-  if (!fs.existsSync(configPath)) return 'absent';
+  if (!pathExists(configPath)) return 'absent';
+  // A dangling link is not an absent config: writing one would go through it.
+  if (!fs.existsSync(configPath)) {
+    throw new Error(`${configPath} is a symbolic link to nothing: fix or remove it, then re-run.`);
+  }
 
   let parsed: unknown;
   try {
@@ -350,7 +354,14 @@ export function checkEditionConfig(
   }
   // An empty or comment-only file is a document with no keys, as `writeConfig` reads it.
   if (parsed === undefined || parsed === null) parsed = {};
-  if (typeof parsed !== 'object' || Array.isArray(parsed)) {
+  // A plain mapping, as `writeConfig` requires: a typed scalar such as
+  // `!!binary` loads as an object, but has no keys to compare.
+  const proto = Object.getPrototypeOf(parsed);
+  if (
+    typeof parsed !== 'object' ||
+    Array.isArray(parsed) ||
+    (proto !== Object.prototype && proto !== null)
+  ) {
     throw new Error(`${configPath} is not a YAML mapping: fix or remove it, then re-run.`);
   }
 

@@ -437,6 +437,27 @@ describe('checkEditionConfig (#134)', () => {
     );
   });
 
+  it('refuses a dangling link at the config path, rather than writing through it', () => {
+    const targetDir = path.join(tmpDir, 'target');
+    fs.mkdirSync(path.join(targetDir, '.translate'), { recursive: true });
+    fs.symlinkSync(
+      path.join(tmpDir, 'elsewhere.yml'),
+      path.join(targetDir, '.translate', 'config.yml')
+    );
+    expect(() => checkEditionConfig(targetDir, wanted)).toThrow(
+      /config\.yml is a symbolic link to nothing: fix or remove it, then re-run\.$/
+    );
+    expect(fs.existsSync(path.join(tmpDir, 'elsewhere.yml'))).toBe(false);
+  });
+
+  // Under CORE_SCHEMA a typed scalar fails the parse; the plain-mapping check
+  // behind it matches writeConfig's, should the schema ever admit one.
+  it('refuses a typed scalar such as !!binary', () => {
+    expect(() => checkEditionConfig(writeConfigFile('!!binary aGVsbG8=\n'), wanted)).toThrow(
+      /config\.yml is not valid YAML \(unknown tag .*binary.*\): fix or remove it, then re-run\.$/
+    );
+  });
+
   it('refuses a config that is not YAML, or not a mapping', () => {
     expect(() => checkEditionConfig(writeConfigFile('a: [unclosed\n'), wanted)).toThrow(
       /config\.yml is not valid YAML \(.*\): fix or remove it, then re-run\.$/
