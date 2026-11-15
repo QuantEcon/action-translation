@@ -340,6 +340,22 @@ Roadmap detail lives in the project trackers (reading order in
 
 **Resume here (2026-09-23, after v0.29.3):**
 
+*Overnight stack, 2026-11-16*: the overnight plan of 2026-11-15 (WP1–WP4, on 20 rulings Matt
+accepted) is merged and **unreleased**; `main` is at `f214c5e`. #440 (#396, #386), #441 (#389,
+#351), #442 (#398), #443 (#90 defect 6; #90 stays open), #444 (#378, #401), #445 (#134), #446
+(#400), #447 (a non-streamed response cut off mid-read is retried) and #448 (dev-only dependency
+updates); WP1 was #439. The editions run `@v0` (v0.30.2), so none of it reaches them until a
+release, and #442 and #445 change what sync and `init` do to an edition's files. Records:
+`D-2026-11-15-only-a-404-means-absent`, `D-2026-11-15-rebase-decides-from-three-reads`,
+`D-2026-11-15-a-lecture-moved-out-of-docs-is-deleted`,
+`D-2026-11-15-a-failed-cli-state-write-is-a-failure` and
+`D-2026-11-15-init-keeps-the-editions-files`. Filed: #449, whether sync and the CLI take their
+lectures from the ToC's documents and the `.md` files they include, for Matt to rule on. Of the issues the
+2026-10-22 paragraph calls untriaged, these are still open: #382–#385, #387, #388, #390, #391,
+#397 and #399. Next: changelog fragments, which Matt agreed to on 2026-11-16 (from
+QuantEcon/infrastructure#123), then a release carrying the stack. #280's close sequence and the
+four zh-cn PRs stay Matt's. Log `2026-11-16-overnight-stack`.
+
 *Release, 2026-11-15*: **v0.30.2 is released** (#438, `fdab41f`), and `v0.30` and `v0` point at
 it. Payload: #436 (#420's premise check, #281's recovery text, the retry for a dropped stream),
 plus in-range bumps that clear six production advisories, four of them high (`undici` 6.29.1,
@@ -452,8 +468,9 @@ delimiter rows, which already break a table in the fr edition's pandas lecture.
 
 ## Health & context
 
-- `main` green; **2,228 tests across 81 suites** (zero skips, type-checked) as of
-  `1c0b20b` (counted 2026-11-05; 2,252 on the 2026-11-11 branch); lint at
+- `main` green; **2,467 tests across 84 suites** (zero skips, type-checked) as of
+  `f214c5e` (counted 2026-11-16 in a clean worktree; a tree holding the harness's gitignored
+  clones counts 15 more, see log `2026-11-16-overnight-stack`); lint at
   `--max-warnings 0` including root `*.mjs`, CI checks formatting and
   `.qe/dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale `dist/`
   — run `npm run build` first; that guard is deliberate, not a break.
@@ -462,10 +479,10 @@ delimiter rows, which already break a table in the fr edition's pandas lecture.
   lecture-python-intro#839 merged and no sync run was created, #282). Latent members found
   since, not yet seen in the field: #307 (a rename can delete outside `docs-folder`) and
   #326 (a front-matter drop passes parity and is written). W1 is its detection layer.
-- Prod dep advisories: **0 on `main`** (`npm audit --omit=dev`, 2026-10-09). The two high ones
-  found 2026-10-06, `js-yaml` 4.3.0 and `undici` 6.27.0, were cleared in range by #360
-  (`823a8fa`: 4.3.2 and 6.29.0). That fix is unreleased: `@v0` (v0.29.4) still bundles the old
-  versions until the next release. Dependabot stays with #177.
+- Prod dep advisories: **0 on `main`** (`npm audit --omit=dev`, 2026-11-15), and v0.30.2 ships
+  the in-range bumps that cleared the last six. Dev: #448 took `npm audit` from 18 advisories to
+  14. Six high ones, on `minimatch` 9 and the `@typescript-eslint` packages above it, wait for
+  #177's move to ESLint 9; eight low ones have only major-version fixes. Dependabot stays with #177.
   ESM-only `@actions/*` 3.x/9.x majors tracked as #177 F35.
 
 ## Map
