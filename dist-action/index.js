@@ -54423,28 +54423,34 @@ var SyncOrchestrator = class {
     }
   }
   /**
-   * Process a removed file (track for deletion in target repo).
+   * Process a removed file (track for deletion in target repo). Its state
+   * file goes with it, and goes alone when the target no longer has the file:
+   * a state file left behind claims a translation the target lacks (#396).
    */
   processRemovedFile(file, result) {
+    let deleted = false;
     if (file.existingFileSha) {
       result.filesToDelete.push({
         path: file.filename,
         sha: file.existingFileSha
       });
-      result.processedFiles.push(file.filename);
+      deleted = true;
       this.logger.info(`Marked ${file.filename} for deletion`);
-      if (this.stateConfig) {
-        const docsRelName = this.toDocsRelative(file.filename);
-        const statePath = stateFileRelativePath(docsRelName);
-        const stateSha = this.stateConfig.existingStateShas.get(statePath);
-        if (stateSha) {
-          result.filesToDelete.push({ path: statePath, sha: stateSha });
-          this.logger.info(`Marked state file for deletion: ${statePath}`);
-        }
-      }
     } else {
-      this.logger.info(`${file.filename} does not exist in target repo - skipping deletion`);
+      this.logger.info(`${file.filename} does not exist in target repo - skipping its deletion`);
     }
+    if (this.stateConfig) {
+      const docsRelName = this.toDocsRelative(file.filename);
+      const statePath = stateFileRelativePath(docsRelName);
+      const stateSha = this.stateConfig.existingStateShas.get(statePath);
+      if (stateSha) {
+        result.filesToDelete.push({ path: statePath, sha: stateSha });
+        deleted = true;
+        this.logger.info(`Marked state file for deletion: ${statePath}`);
+      }
+    }
+    if (deleted)
+      result.processedFiles.push(file.filename);
   }
   // ---------------------------------------------------------------------------
   // Private: State file generation
@@ -55479,18 +55485,21 @@ function resyncParagraph(prNumber, mergeSha) {
     "must print 0. A structural-parity failure repeats exactly on a resync, so fix its cause first."
   ];
 }
+function bibliographyIntro(input) {
+  return `This run synced nothing: it could not read the bibliography a sync needs to carry the entries its citations use (the edition's \`${input.docsFolder}_config.yml\`, and the files its \`bibtex_bibfiles\` lists, in the edition and in the source). No lecture was translated and nothing in ${input.targetRepo} changed. Make the file the error names readable (a transient error needs nothing), then sync this PR's changes again: with \`${RESYNC_COMMAND}\` under the condition below, or lecture by lecture from a checkout of the source's default branch:`;
+}
 function failureRecoveryLines(input) {
   const heldBack = input.heldBack ?? [];
   const premise = formatPremiseRecovery(heldBack, input.docsFolder, input.targetLanguage);
   const otherErrors = input.errors.length > heldBack.length;
   if (!otherErrors)
     return premise;
-  const lectures = input.failedLectures ?? [];
+  const lectures = input.bibliographyUnread ? [] : input.failedLectures ?? [];
   const stillOpen = input.stillOpen ?? [];
   const lines = [];
   if (premise.length > 0)
     lines.push(...premise, "", "**For the other errors:**", "");
-  lines.push("Recover a lecture from a checkout of the source's default branch, not by re-running this sync:", "");
+  lines.push(input.bibliographyUnread ? bibliographyIntro(input) : "Recover a lecture from a checkout of the source's default branch, not by re-running this sync:", "");
   if (lectures.length > 0) {
     lines.push(...lectures.map((lecture) => failedLectureLine(lecture, input.docsFolder, stillOpen.find((s) => s.file === lecture.file))), "");
     lines.push("Any other lecture named above:", "");
@@ -57393,9 +57402,14 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
         try {
           const result2 = await fetchFileContent(octokit, owner, repo, file.path, baseSha);
           existingFileSha = result2.sha;
-        } catch {
-          core9.info(`${file.path}: Already gone from target repo \u2014 skip deletion`);
-          continue;
+        } catch (error4) {
+          const status = error4?.status;
+          if (status !== 404) {
+            throw new Error(`Could not read ${file.path} from ${owner}/${repo} at ${baseSha.slice(0, 7)} (status ${status ?? "unknown"}): ${error4}`);
+          }
+          core9.info(`${file.path}: Already gone from target repo`);
+          if (!file.path.endsWith(".md"))
+            continue;
         }
         filesToSync.push({
           filename: file.path,
@@ -57532,7 +57546,11 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
   } else {
     core9.info("No targetBaseSha in metadata \u2014 rebase cache unavailable (pre-cache PR)");
   }
-  const { shas: existingStateShas } = await fetchExistingStateShas(octokit, owner, repo, filesToSync, inputs.docsFolder, baseSha);
+  const { shas: existingStateShas, reads: stateReads } = await fetchExistingStateShas(octokit, owner, repo, filesToSync, inputs.docsFolder, baseSha);
+  const unreadStates = holdUnreadDeletionStates(filesToSync, stateReads, inputs.docsFolder, `${owner}/${repo}`);
+  if (unreadStates.errors.length > 0) {
+    throw new Error(`state read failed for ${unreadStates.errors.length} file(s); branch left untouched: ` + unreadStates.errors.join("; "));
+  }
   const stateConfig = {
     sourceCommitSha,
     existingStateShas,
@@ -57673,6 +57691,11 @@ async function runSync() {
     fetchErrors.unshift(...scope.errors, ...held.errors);
   }
   const { shas: existingStateShas, reads: stateReads } = await fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToSync, inputs.docsFolder);
+  const unreadStates = holdUnreadDeletionStates(filesToSync, stateReads, inputs.docsFolder, `${targetOwner}/${targetRepo}`, takesUpdateMode);
+  for (const error4 of unreadStates.errors)
+    core9.error(error4);
+  filesToSync = unreadStates.files;
+  fetchErrors.push(...unreadStates.errors);
   const premise = await checkSyncPremise({
     files: filesToSync,
     stateReads,
@@ -57698,8 +57721,24 @@ async function runSync() {
     debugMode: true,
     bibliographyMode: inputs.bibliographyMode
   }, coreLogger, stateConfig);
-  const bibliography = inputs.bibliographyMode === "off" ? void 0 : await fetchBibliographies(octokit, { owner: github3.context.repo.owner, repo: github3.context.repo.repo, ref: effectiveSha }, { owner: targetOwner, repo: targetRepo }, inputs.docsFolder);
-  const result = await orchestrator.processFiles(filesToSync, glossary, void 0, bibliography, fetchFailedNewFiles);
+  let bibliography;
+  let bibliographyError;
+  if (inputs.bibliographyMode !== "off") {
+    try {
+      bibliography = await fetchBibliographies(octokit, { owner: github3.context.repo.owner, repo: github3.context.repo.repo, ref: effectiveSha }, { owner: targetOwner, repo: targetRepo }, inputs.docsFolder);
+    } catch (error4) {
+      bibliographyError = `Fetch failed (bibliography): ${error4 instanceof Error ? error4.message : String(error4)}. Nothing was synced.`;
+      core9.error(bibliographyError);
+    }
+  }
+  const result = bibliographyError ? {
+    translatedFiles: [],
+    filesToDelete: [],
+    processedFiles: [],
+    errors: [bibliographyError],
+    skippedSections: /* @__PURE__ */ new Map(),
+    droppedTargetSections: /* @__PURE__ */ new Map()
+  } : await orchestrator.processFiles(filesToSync, glossary, void 0, bibliography, fetchFailedNewFiles);
   result.errors.unshift(...fetchErrors);
   const hasErrors = result.errors.length > 0;
   if (hasErrors) {
@@ -57733,7 +57772,8 @@ async function runSync() {
         prReviewers: inputs.prReviewers,
         prTeamReviewers: inputs.prTeamReviewers
       };
-      const fileMetadata = filesToSync.map((f) => {
+      const delivered = filesToSync.filter((f) => f.type !== "removed" || result.processedFiles.includes(f.filename));
+      const fileMetadata = delivered.map((f) => {
         const entry = {
           path: f.filename,
           type: f.type
@@ -57780,7 +57820,10 @@ async function runSync() {
         mergeSha: effectiveSha,
         heldBack: premise.heldBack,
         failedLectures,
-        stillOpen: premise.stillOpen.filter((lecture) => !result.processedFiles.includes(lecture.file))
+        bibliographyUnread: bibliographyError !== void 0,
+        // A bibliography hold synced nothing, so no lecture behind an open
+        // PR failed: its diagnosis would read as an error of its own.
+        stillOpen: bibliographyError ? [] : premise.stillOpen.filter((lecture) => !result.processedFiles.includes(lecture.file))
       });
     } else if (prUrl) {
       await postSuccessComment(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, prUrl, result.processedFiles);
@@ -57919,16 +57962,32 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
       fetchErrors.push(`Fetch failed (toc): ${file.filename}: ${error4}`);
     }
   }
-  for (const file of [...classified.removedMarkdownFiles, ...classified.removedTocFiles]) {
+  let targetRepoRead;
+  const removals = [
+    ...classified.removedMarkdownFiles.map((file) => ({ file, lecture: true })),
+    ...classified.removedTocFiles.map((file) => ({ file, lecture: false }))
+  ];
+  for (const { file, lecture } of removals) {
     try {
       let existingFileSha;
       try {
         const result = await fetchFileContent(octokit, targetOwner, targetRepo, file.filename);
         existingFileSha = result.sha;
-      } catch {
-        core9.info(`${file.filename} does not exist in target repo - skipping deletion`);
+      } catch (error4) {
+        const status = error4?.status;
+        if (status !== 404) {
+          throw new Error(`Could not read ${file.filename} from ${targetOwner}/${targetRepo} (status ${status ?? "unknown"}): ${error4}`);
+        }
+        targetRepoRead ??= octokit.rest.repos.get({ owner: targetOwner, repo: targetRepo });
+        try {
+          await targetRepoRead;
+        } catch (repoError) {
+          const repoStatus = repoError?.status;
+          throw new Error(`could not read the target repo ${targetOwner}/${targetRepo} (status ${repoStatus ?? "unknown"}), so its 404 for this file cannot be trusted: ${repoError}`);
+        }
+        core9.info(`${file.filename} does not exist in target repo`);
       }
-      if (existingFileSha) {
+      if (existingFileSha || lecture) {
         filesToSync.push({
           filename: file.filename,
           type: "removed",
@@ -58004,6 +58063,21 @@ async function fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToS
     core9.info(`Found ${shas.size} existing state file(s) in target repo`);
   }
   return { shas, reads };
+}
+function holdUnreadDeletionStates(files, reads, docsFolder, targetRepo, reported = () => false) {
+  const kept = [];
+  const errors = [];
+  for (const file of files) {
+    const deletedPath = file.type === "removed" && file.filename.endsWith(".md") ? file.filename : file.type === "renamed" ? file.previousFilename : void 0;
+    const statePath = deletedPath ? stateFileFor(deletedPath, docsFolder) : void 0;
+    const read = statePath ? reads.get(statePath) : void 0;
+    if (statePath && read?.status === "error" && !reported(file)) {
+      errors.push(`Fetch failed (state): ${file.filename}: could not read ${statePath} from ${targetRepo} (${read.message}), so whether to delete it is unknown. It was not ${file.type === "removed" ? "removed" : "synced"}.`);
+      continue;
+    }
+    kept.push(file);
+  }
+  return { files: kept, errors };
 }
 async function postSuccessComment(octokit, prNumber, targetLanguage, targetRepo, prUrl, processedFiles) {
   try {

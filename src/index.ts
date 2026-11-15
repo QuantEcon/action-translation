@@ -14,6 +14,7 @@ import {
   loadGlossary,
   FileToSync,
   StateGenerationConfig,
+  SyncProcessingResult,
 } from './sync-orchestrator.js';
 import {
   createTranslationPR,
@@ -34,9 +35,15 @@ import {
   buildScopeSummary,
   nothingToSync,
   refuseUnreadLectures,
+  stateFileFor,
   writeJobSummary,
 } from './sync-scope.js';
-import { checkSyncPremise, githubPremiseReader, StateReads } from './sync-premise.js';
+import {
+  checkSyncPremise,
+  githubPremiseReader,
+  StateReads,
+  takesUpdateMode,
+} from './sync-premise.js';
 import {
   buildFailureIssueBody,
   failureIssueTitle,
@@ -341,14 +348,26 @@ async function rebaseSinglePR(
 
     try {
       if (fileType === 'removed') {
-        // Removed files: just need the existing target SHA for deletion
+        // Removed files: just need the existing target SHA for deletion. Only
+        // a 404 means main no longer has the file (#396): any other answer
+        // throws, and the rebase stops before the branch moves, where taking
+        // it as gone would drop the deletion from the PR.
         let existingFileSha: string | undefined;
         try {
           const result = await fetchFileContent(octokit, owner, repo, file.path, baseSha);
           existingFileSha = result.sha;
-        } catch {
-          core.info(`${file.path}: Already gone from target repo — skip deletion`);
-          continue;
+        } catch (error) {
+          const status = (error as { status?: number } | null | undefined)?.status;
+          if (status !== 404) {
+            throw new Error(
+              `Could not read ${file.path} from ${owner}/${repo} at ${baseSha.slice(0, 7)} ` +
+                `(status ${status ?? 'unknown'}): ${error}`
+            );
+          }
+          core.info(`${file.path}: Already gone from target repo`);
+          // A lecture already gone can leave its state file behind: the entry
+          // without a SHA lets the orchestrator delete that alone.
+          if (!file.path.endsWith('.md')) continue;
         }
 
         filesToSync.push({
@@ -570,8 +589,10 @@ async function rebaseSinglePR(
 
   // The state files main holds at the pinned SHA. The orchestrator deletes a
   // removed or renamed lecture's state file only when main has one, and the
-  // rebased commit is built on that same SHA, so the two agree.
-  const { shas: existingStateShas } = await fetchExistingStateShas(
+  // rebased commit is built on that same SHA, so the two agree. A read that
+  // failed leaves that unknown, so it stops the rebase before the branch
+  // moves (#396), as a failed content read does.
+  const { shas: existingStateShas, reads: stateReads } = await fetchExistingStateShas(
     octokit,
     owner,
     repo,
@@ -579,6 +600,18 @@ async function rebaseSinglePR(
     inputs.docsFolder,
     baseSha
   );
+  const unreadStates = holdUnreadDeletionStates(
+    filesToSync,
+    stateReads,
+    inputs.docsFolder,
+    `${owner}/${repo}`
+  );
+  if (unreadStates.errors.length > 0) {
+    throw new Error(
+      `state read failed for ${unreadStates.errors.length} file(s); branch left untouched: ` +
+        unreadStates.errors.join('; ')
+    );
+  }
   const stateConfig: StateGenerationConfig = {
     sourceCommitSha,
     existingStateShas,
@@ -865,6 +898,20 @@ async function runSync(): Promise<void> {
     inputs.docsFolder
   );
 
+  // A removed lecture's state file, and a renamed lecture's at its old path,
+  // go only when the read found one, so a lecture whose read failed is held
+  // back (#396). The premise check reports the renamed lectures it checks.
+  const unreadStates = holdUnreadDeletionStates(
+    filesToSync,
+    stateReads,
+    inputs.docsFolder,
+    `${targetOwner}/${targetRepo}`,
+    takesUpdateMode
+  );
+  for (const error of unreadStates.errors) core.error(error);
+  filesToSync = unreadStates.files;
+  fetchErrors.push(...unreadStates.errors);
+
   // The premise of update mode (#420): a lecture whose translation does not
   // start from the English this PR changed is held back before any model
   // call, and its error says which case it is, unless an open translation PR
@@ -914,24 +961,43 @@ async function runSync(): Promise<void> {
   );
 
   // Citations this sync introduces need their bibliography entries to cross
-  // with them, or the target stops building under -W (#117).
-  const bibliography =
-    inputs.bibliographyMode === 'off'
-      ? undefined
-      : await fetchBibliographies(
-          octokit,
-          { owner: github.context.repo.owner, repo: github.context.repo.repo, ref: effectiveSha },
-          { owner: targetOwner, repo: targetRepo },
-          inputs.docsFolder
-        );
+  // with them, or the target stops building under -W (#117). A bibliography
+  // that cannot be read holds the whole sync (#386): no lecture, ToC or
+  // removal goes ahead without it, and the run fails with a failure issue.
+  let bibliography: BibliographySources | undefined;
+  let bibliographyError: string | undefined;
+  if (inputs.bibliographyMode !== 'off') {
+    try {
+      bibliography = await fetchBibliographies(
+        octokit,
+        { owner: github.context.repo.owner, repo: github.context.repo.repo, ref: effectiveSha },
+        { owner: targetOwner, repo: targetRepo },
+        inputs.docsFolder
+      );
+    } catch (error) {
+      bibliographyError =
+        `Fetch failed (bibliography): ${error instanceof Error ? error.message : String(error)}. ` +
+        'Nothing was synced.';
+      core.error(bibliographyError);
+    }
+  }
 
-  const result = await orchestrator.processFiles(
-    filesToSync,
-    glossary,
-    undefined,
-    bibliography,
-    fetchFailedNewFiles
-  );
+  const result: SyncProcessingResult = bibliographyError
+    ? {
+        translatedFiles: [],
+        filesToDelete: [],
+        processedFiles: [],
+        errors: [bibliographyError],
+        skippedSections: new Map(),
+        droppedTargetSections: new Map(),
+      }
+    : await orchestrator.processFiles(
+        filesToSync,
+        glossary,
+        undefined,
+        bibliography,
+        fetchFailedNewFiles
+      );
 
   // Fetch failures count as processing errors: they fail the run and open a
   // failure issue instead of shipping a PR that silently misses files.
@@ -980,8 +1046,13 @@ async function runSync(): Promise<void> {
         prTeamReviewers: inputs.prTeamReviewers,
       };
 
-      // Build file metadata with type info for rebase mode
-      const fileMetadata = filesToSync.map((f) => {
+      // Build file metadata with type info for rebase mode. A removal that
+      // deleted nothing, a lecture already gone with no state file left, is
+      // not something the PR delivers.
+      const delivered = filesToSync.filter(
+        (f) => f.type !== 'removed' || result.processedFiles.includes(f.filename)
+      );
+      const fileMetadata = delivered.map((f) => {
         const entry: { path: string; type: string; previousPath?: string } = {
           path: f.filename,
           type: f.type,
@@ -1058,9 +1129,12 @@ async function runSync(): Promise<void> {
           mergeSha: effectiveSha,
           heldBack: premise.heldBack,
           failedLectures,
-          stillOpen: premise.stillOpen.filter(
-            (lecture) => !result.processedFiles.includes(lecture.file)
-          ),
+          bibliographyUnread: bibliographyError !== undefined,
+          // A bibliography hold synced nothing, so no lecture behind an open
+          // PR failed: its diagnosis would read as an error of its own.
+          stillOpen: bibliographyError
+            ? []
+            : premise.stillOpen.filter((lecture) => !result.processedFiles.includes(lecture.file)),
         }
       );
     } else if (prUrl) {
@@ -1316,18 +1390,47 @@ async function fetchAllFileContents(
     }
   }
 
-  // Removed files (markdown + TOC)
-  for (const file of [...classified.removedMarkdownFiles, ...classified.removedTocFiles]) {
+  // Removed files (markdown + TOC). Only a 404 means the target no longer has
+  // one (#396): any other answer leaves that unknown, and reading it as
+  // "already gone" passed the run with the file still in the target. GitHub
+  // also answers 404 for a repository the token cannot see, so a 404 counts
+  // only once the target repo itself reads, as in the scope check.
+  let targetRepoRead: Promise<unknown> | undefined;
+  const removals = [
+    ...classified.removedMarkdownFiles.map((file) => ({ file, lecture: true })),
+    ...classified.removedTocFiles.map((file) => ({ file, lecture: false })),
+  ];
+  for (const { file, lecture } of removals) {
     try {
       let existingFileSha: string | undefined;
       try {
         const result = await fetchFileContent(octokit, targetOwner, targetRepo, file.filename);
         existingFileSha = result.sha;
-      } catch {
-        core.info(`${file.filename} does not exist in target repo - skipping deletion`);
+      } catch (error) {
+        const status = (error as { status?: number } | null | undefined)?.status;
+        if (status !== 404) {
+          throw new Error(
+            `Could not read ${file.filename} from ${targetOwner}/${targetRepo} ` +
+              `(status ${status ?? 'unknown'}): ${error}`
+          );
+        }
+        targetRepoRead ??= octokit.rest.repos.get({ owner: targetOwner, repo: targetRepo });
+        try {
+          await targetRepoRead;
+        } catch (repoError) {
+          const repoStatus = (repoError as { status?: number } | null | undefined)?.status;
+          throw new Error(
+            `could not read the target repo ${targetOwner}/${targetRepo} ` +
+              `(status ${repoStatus ?? 'unknown'}), so its 404 for this file cannot be trusted: ` +
+              `${repoError}`
+          );
+        }
+        core.info(`${file.filename} does not exist in target repo`);
       }
 
-      if (existingFileSha) {
+      // A lecture already gone can leave its state file behind: the entry
+      // without a SHA lets the orchestrator delete that alone.
+      if (existingFileSha || lecture) {
         filesToSync.push({
           filename: file.filename,
           type: 'removed',
@@ -1479,6 +1582,45 @@ async function fetchExistingStateShas(
   return { shas, reads };
 }
 
+/**
+ * Hold back each removed lecture, and each renamed one, whose state file the
+ * run would delete but could not read (#396): a removed lecture's, and a
+ * renamed lecture's at its old path. The orchestrator deletes one only when
+ * its read found it, so going ahead would leave a state file that claims a
+ * translation the target no longer has. `reported` names the files whose read
+ * another check already reports as an error.
+ */
+function holdUnreadDeletionStates(
+  files: FileToSync[],
+  reads: StateReads,
+  docsFolder: string,
+  targetRepo: string,
+  reported: (file: FileToSync) => boolean = () => false
+): { files: FileToSync[]; errors: string[] } {
+  const kept: FileToSync[] = [];
+  const errors: string[] = [];
+  for (const file of files) {
+    const deletedPath =
+      file.type === 'removed' && file.filename.endsWith('.md')
+        ? file.filename
+        : file.type === 'renamed'
+          ? file.previousFilename
+          : undefined;
+    const statePath = deletedPath ? stateFileFor(deletedPath, docsFolder) : undefined;
+    const read = statePath ? reads.get(statePath) : undefined;
+    if (statePath && read?.status === 'error' && !reported(file)) {
+      errors.push(
+        `Fetch failed (state): ${file.filename}: could not read ${statePath} from ${targetRepo} ` +
+          `(${read.message}), so whether to delete it is unknown. ` +
+          `It was not ${file.type === 'removed' ? 'removed' : 'synced'}.`
+      );
+      continue;
+    }
+    kept.push(file);
+  }
+  return { files: kept, errors };
+}
+
 // =============================================================================
 // HELPERS - Post-sync notifications
 // =============================================================================
@@ -1602,7 +1744,7 @@ async function createFailureIssue(
   errors: string[],
   advice: Pick<
     FailureIssueInput,
-    'docsFolder' | 'mergeSha' | 'heldBack' | 'failedLectures' | 'stillOpen'
+    'docsFolder' | 'mergeSha' | 'heldBack' | 'failedLectures' | 'stillOpen' | 'bibliographyUnread'
   > = { docsFolder: '' }
 ): Promise<void> {
   try {

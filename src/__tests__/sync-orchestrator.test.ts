@@ -1004,6 +1004,30 @@ parts:
       expect(result.filesToDelete.map((f) => f.path)).toContain('.translate/state/removed.md.yml');
     });
 
+    it('deletes the state file alone when the target no longer has the lecture (#396)', async () => {
+      const existingShas = new Map([['.translate/state/removed.md.yml', 'orphan-state-sha']]);
+      const orchWithOrphan = new SyncOrchestrator(
+        {
+          sourceLanguage: 'en',
+          targetLanguage: 'zh-cn',
+          claudeModel: 'claude-sonnet-4-20250514',
+          anthropicApiKey: 'test-key',
+        },
+        stateLogger,
+        { sourceCommitSha: 'abc123', existingStateShas: existingShas, docsFolder: 'lectures/' }
+      );
+
+      const result = await orchWithOrphan.processFiles([
+        { filename: 'lectures/removed.md', type: 'removed', isNewFile: false },
+      ]);
+
+      expect(result.filesToDelete).toEqual([
+        { path: '.translate/state/removed.md.yml', sha: 'orphan-state-sha' },
+      ]);
+      expect(result.processedFiles).toEqual(['lectures/removed.md']);
+      expect(result.errors).toEqual([]);
+    });
+
     it('should not generate state for TOC files', async () => {
       const files: FileToSync[] = [
         {

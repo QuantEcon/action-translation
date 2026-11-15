@@ -71,6 +71,11 @@ export interface FailureIssueInput {
    * to merge the open PR first in place of its generic recovery line.
    */
   stillOpen?: StillOpenLecture[];
+  /**
+   * The edition's bibliography could not be read, so the run synced nothing
+   * (#386). No lecture failed, so none gets a recovery line of its own.
+   */
+  bibliographyUnread?: boolean;
 }
 
 /** The deterministic title of a sync failure issue, which a later success closes by. */
@@ -155,6 +160,23 @@ function resyncParagraph(prNumber: number, mergeSha: string | undefined): string
 }
 
 /**
+ * The opening of the advice when the edition's bibliography could not be read
+ * (#386). The sync stopped before any lecture, so it can run again once the
+ * read works, under the resync's precondition, or lecture by lecture.
+ */
+function bibliographyIntro(input: FailureIssueInput): string {
+  return (
+    'This run synced nothing: it could not read the bibliography a sync needs to carry the ' +
+    `entries its citations use (the edition's \`${input.docsFolder}_config.yml\`, and the files ` +
+    'its `bibtex_bibfiles` lists, in the edition and in the source). No lecture was translated ' +
+    `and nothing in ${input.targetRepo} changed. Make the file the error names readable (a ` +
+    "transient error needs nothing), then sync this PR's changes again: with " +
+    `\`${RESYNC_COMMAND}\` under the condition below, or lecture by lecture from a checkout of ` +
+    "the source's default branch:"
+  );
+}
+
+/**
  * The Recovery section's lines. Lectures held back by the premise check come
  * first, with their own advice; the CLI route and the resync precondition
  * follow when any other error is left.
@@ -165,13 +187,15 @@ export function failureRecoveryLines(input: FailureIssueInput): string[] {
   const otherErrors = input.errors.length > heldBack.length;
   if (!otherErrors) return premise;
 
-  const lectures = input.failedLectures ?? [];
+  const lectures = input.bibliographyUnread ? [] : (input.failedLectures ?? []);
   const stillOpen = input.stillOpen ?? [];
   const lines: string[] = [];
   if (premise.length > 0) lines.push(...premise, '', '**For the other errors:**', '');
   lines.push(
-    "Recover a lecture from a checkout of the source's default branch, not by re-running this " +
-      'sync:',
+    input.bibliographyUnread
+      ? bibliographyIntro(input)
+      : "Recover a lecture from a checkout of the source's default branch, not by re-running " +
+          'this sync:',
     ''
   );
   if (lectures.length > 0) {
