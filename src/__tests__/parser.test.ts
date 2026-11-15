@@ -214,6 +214,19 @@ Japanese heading content.
       expect(sections[2].id).toBe('المقدمة');
       expect(sections[3].id).toBe('はじめに');
     });
+
+    it('gives a heading the same id whatever whitespace surrounds it (#90, defect 6)', async () => {
+      const ids = async (content: string) =>
+        (await parser.parseSections(content, 'test.md')).sections.map((s) => s.id);
+
+      expect(await ids('## Supply and Demand \n\nA.\n')).toEqual(
+        await ids('## Supply and Demand\n\nA.\n')
+      );
+      expect(await ids('## Overview !\n\nA.\n')).toEqual(await ids('## Overview!\n\nA.\n'));
+      expect(
+        await ids('## Supply and Demand \n\nA.\n\n## Overview !\n\nB.\n\n## — Intro\n\nC.\n')
+      ).toEqual(['supply-and-demand', 'overview', 'intro']);
+    });
   });
 
   describe('Frontmatter and Preamble Extraction', () => {

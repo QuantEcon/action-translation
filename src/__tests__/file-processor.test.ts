@@ -2228,3 +2228,68 @@ translation:
     expect(result).toContain('修改后的介绍文本。');
   });
 });
+
+// =============================================================================
+// A WHITESPACE-ONLY HEADING EDIT (#90, defect 6)
+// =============================================================================
+
+describe('FileProcessor.processSectionBased — a heading trimmed of a trailing space', () => {
+  it('updates the section from its translation, keeping its refinements, and drops nothing', async () => {
+    const translateSection = jest.fn().mockResolvedValue({
+      success: true,
+      translatedSection: '## 供给与需求\n\n精炼的正文。\n\n### 均衡\n\n精炼的小节。',
+    });
+    const processor = new FileProcessor(
+      { translateSection, translateFullDocument: jest.fn() } as any,
+      false
+    );
+    const english = (heading: string) =>
+      `# Markets\n\nIntro.\n\n${heading}\n\nBody.\n\n### Equilibrium\n\nSub body.\n`;
+    const target = [
+      '---',
+      'translation:',
+      '  title: 市场',
+      '  headings:',
+      '    Supply and Demand: 供给与需求',
+      '    Supply and Demand::Equilibrium: 均衡',
+      '---',
+      '',
+      '# 市场',
+      '',
+      '介绍。',
+      '',
+      '## 供给与需求',
+      '',
+      '精炼的正文。',
+      '',
+      '### 均衡',
+      '',
+      '精炼的小节。',
+      '',
+    ].join('\n');
+    const dropped: string[] = [];
+
+    const result = await processor.processSectionBased(
+      english('## Supply and Demand '),
+      english('## Supply and Demand'),
+      target,
+      'markets.md',
+      'en',
+      'zh-cn',
+      undefined,
+      undefined,
+      undefined,
+      (heading) => dropped.push(heading)
+    );
+
+    // One update, given the refined translation to work from; no new-section call.
+    expect(translateSection).toHaveBeenCalledTimes(1);
+    const [request] = translateSection.mock.calls[0];
+    expect(request.mode).toBe('update');
+    expect(request.currentTranslation).toContain('精炼的正文。');
+    expect(request.currentTranslation).toContain('精炼的小节。');
+    expect(dropped).toEqual([]);
+    expect(result).toContain('精炼的正文。');
+    expect(result).toContain('### 均衡');
+  });
+});
