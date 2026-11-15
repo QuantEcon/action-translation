@@ -148,15 +148,15 @@ export interface BackwardReport {
   sectionPairs?: SectionPair[]; // Included for detail/debugging
 }
 
-/**
- * Summary report across multiple files (bulk mode)
- */
 /** A file only one repository has, which bulk `backward` does not analyse (#400). */
 export interface OneSidedFile {
   file: string;
   side: 'source only' | 'target only';
 }
 
+/**
+ * Summary report across multiple files (bulk mode)
+ */
 export interface BulkBackwardReport {
   schemaVersion?: string; // Added in v1.0.0
   timestamp: string;

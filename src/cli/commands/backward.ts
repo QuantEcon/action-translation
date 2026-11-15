@@ -449,7 +449,13 @@ export function discoverBulkFiles(
   targetRepoPath: string,
   docsFolder: string,
   exclude: string[]
-): { files: string[]; oneSided: OneSidedFile[]; excluded: number } {
+): {
+  files: string[];
+  oneSided: OneSidedFile[];
+  excluded: number;
+  sourceCount: number;
+  targetCount: number;
+} {
   const sourceFiles = new Set(discoverMarkdownFiles(sourceRepoPath, docsFolder));
   const targetFiles = new Set(discoverMarkdownFiles(targetRepoPath, docsFolder));
   const allFiles = resolveFilePairs([...sourceFiles], [...targetFiles]);
@@ -463,7 +469,13 @@ export function discoverBulkFiles(
       oneSided.push({ file, side: sourceFiles.has(file) ? 'source only' : 'target only' });
     }
   }
-  return { files, oneSided, excluded: allFiles.length - kept.length };
+  return {
+    files,
+    oneSided,
+    excluded: allFiles.length - kept.length,
+    sourceCount: sourceFiles.size,
+    targetCount: targetFiles.size,
+  };
 }
 
 /**
@@ -486,6 +498,20 @@ export async function runBackwardBulk(
 ): Promise<BulkBackwardReport> {
   const { source, target, docsFolder, language } = options;
 
+  // Discover files, before the output folder is touched: a refusal below must
+  // not wipe an earlier run's reports.
+  const discovered = discoverBulkFiles(source, target, docsFolder, exclude);
+  // One side with no lectures is a wrong path, not an edition (#400): every
+  // file would read as one-sided and the run would pass having done nothing.
+  if ((discovered.sourceCount === 0) !== (discovered.targetCount === 0)) {
+    const [flag, repo] = discovered.sourceCount === 0 ? ['--source', source] : ['--target', target];
+    throw new Error(
+      `No top-level .md files in ${path.join(repo, docsFolder)}, though the other repository ` +
+        `has some: check ${flag} and --docs-folder. Bulk mode reads only the top level of the ` +
+        `docs folder; use -f for a lecture in a subfolder.`
+    );
+  }
+
   // Build output directory — scoped to source repo name
   const sourceName = path.basename(source);
   const outputDir = resume
@@ -500,8 +526,6 @@ export async function runBackwardBulk(
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
-  // Discover files
-  const discovered = discoverBulkFiles(source, target, docsFolder, exclude);
   if (discovered.oneSided.length > 0) {
     logger.info(
       `Skipped ${discovered.oneSided.length} file(s) present on one side only: ` +
@@ -541,7 +565,21 @@ export async function runBackwardBulk(
     } else {
       logger.info(`No files to analyze: ${left.join(', ')}.`);
     }
-    return buildEmptyBulkReport(source, target, language, options.model, discovered.oneSided);
+    const emptyReport = buildEmptyBulkReport(
+      source,
+      target,
+      language,
+      options.model,
+      discovered.oneSided
+    );
+    // A fresh run's summary still lists the one-sided files. A resume keeps
+    // the summary its earlier run wrote.
+    if (resume) {
+      logger.info(`\nAggregate report from the earlier run: ${outputDir}`);
+    } else if (left.length > 0) {
+      writeBulkSummary(outputDir, emptyReport, options.json, logger);
+    }
+    return emptyReport;
   }
 
   // Check for resume
@@ -747,16 +785,7 @@ export async function runBackwardBulk(
     discovered.oneSided
   );
 
-  // Write aggregate summary
-  if (options.json) {
-    const summaryPath = path.join(outputDir, '_summary.json');
-    fs.writeFileSync(summaryPath, generateBulkJsonReport(bulkReport), 'utf-8');
-    logger.info(`\nAggregate report: ${summaryPath}`);
-  } else {
-    const summaryPath = path.join(outputDir, '_summary.md');
-    fs.writeFileSync(summaryPath, generateBulkMarkdownReport(bulkReport), 'utf-8');
-    logger.info(`\nAggregate report: ${summaryPath}`);
-  }
+  writeBulkSummary(outputDir, bulkReport, options.json, logger);
 
   // Print console summary
   const s = bulkReport;
@@ -766,6 +795,9 @@ export async function runBackwardBulk(
   logger.info(`  Suggestions: ${s.totalSuggestions} across ${s.filesFlagged} file(s)`);
   if (s.filesSkipped > 0) {
     logger.info(`  Skipped (too large): ${s.filesSkipped}`);
+  }
+  if (discovered.oneSided.length > 0) {
+    logger.info(`  Skipped (one side only): ${discovered.oneSided.length}`);
   }
   if (progress.erroredFiles.length > 0) {
     logger.info(`  Errors: ${progress.erroredFiles.length}`);
@@ -818,6 +850,19 @@ export function buildBulkReport(
     lowConfidence: allSuggestions.filter((s) => s.confidence < 0.6).length,
     fileReports,
   };
+}
+
+/** Write the aggregate summary, `_summary.json` with `--json`, else `_summary.md`. */
+function writeBulkSummary(
+  outputDir: string,
+  report: BulkBackwardReport,
+  json: boolean | undefined,
+  logger: BackwardLogger
+): void {
+  const summaryPath = path.join(outputDir, json ? '_summary.json' : '_summary.md');
+  const content = json ? generateBulkJsonReport(report) : generateBulkMarkdownReport(report);
+  fs.writeFileSync(summaryPath, content, 'utf-8');
+  logger.info(`\nAggregate report: ${summaryPath}`);
 }
 
 function buildEmptyBulkReport(

@@ -237,6 +237,8 @@ describe('discoverBulkFiles', () => {
       files: ['aligned-basics.md', 'cobweb.md', 'intro.md'],
       oneSided: [],
       excluded: 0,
+      sourceCount: 3,
+      targetCount: 3,
     });
   });
 
@@ -479,6 +481,42 @@ describe('runBackwardBulk', () => {
     expect(result.filesAnalyzed).toBe(0);
     expect(infos).toContain('No files to analyze: 3 on one side only, 3 excluded.');
     expect(warnings.join('\n')).not.toContain('No files found');
+    // The summary still lists what was left out.
+    const repoScopedDir = path.join(tmpDir, 'reports', path.basename(sourceDir));
+    const bulkDir = path.join(repoScopedDir, fs.readdirSync(repoScopedDir)[0]);
+    expect(fs.readFileSync(path.join(bulkDir, '_summary.md'), 'utf-8')).toContain(
+      'Not analyzed, present on one side only: `extra.md` (target only)'
+    );
+  });
+
+  // Every file would read as one-sided, and the run pass having done nothing.
+  it.each([
+    [
+      '--target',
+      (dirs: { sourceDir: string; targetDir: string }) => [
+        dirs.sourceDir,
+        path.join(tmpDir, 'typo'),
+      ],
+    ],
+    [
+      '--source',
+      (dirs: { sourceDir: string; targetDir: string }) => [
+        path.join(tmpDir, 'typo'),
+        dirs.targetDir,
+      ],
+    ],
+  ])('refuses a run whose %s has no .md files while the other has some', async (flag, pick) => {
+    const [sourceDir, targetDir] = pick(setupMultiFileFixture());
+
+    await expect(
+      runBackwardBulk(
+        buildBulkOptions(sourceDir, targetDir, path.join(tmpDir, 'reports')),
+        silentLogger
+      )
+    ).rejects.toThrow(
+      `No top-level .md files in ${path.join(tmpDir, 'typo', 'lectures')}, though the other repository has some: check ${flag} and --docs-folder.`
+    );
+    expect(fs.existsSync(path.join(tmpDir, 'reports'))).toBe(false);
   });
 
   it('should handle empty docs folder gracefully', async () => {
@@ -599,6 +637,37 @@ describe('runBackwardBulk with resume', () => {
 
     expect(result.filesAnalyzed).toBe(2);
     expect(result.filesErrored).toBe(0);
+    expect(readProgress(bulkDir)!.erroredFiles).toEqual([]);
+  });
+
+  it('converges from a checkpoint whose engine recorded one-sided files as errors (#400)', async () => {
+    const { sourceDir, targetDir } = setupOneSidedFixture();
+    const outputDir = path.join(tmpDir, 'reports');
+    await runBackwardBulk(buildBulkOptions(sourceDir, targetDir, outputDir), silentLogger);
+    const repoScopedDir = path.join(outputDir, path.basename(sourceDir));
+    const bulkDir = path.join(repoScopedDir, fs.readdirSync(repoScopedDir)[0]);
+
+    // What an older engine left: each one-sided file errored, and cobweb.md too.
+    const progress = readProgress(bulkDir)!;
+    progress.completedFiles = progress.completedFiles.filter((f) => f !== 'cobweb.md');
+    progress.erroredFiles = [
+      { file: 'cobweb.md', error: 'simulated crash' },
+      { file: 'extra.md', error: 'SOURCE file not found: extra.md' },
+      { file: 'untranslated.md', error: 'TARGET file not found: untranslated.md' },
+    ];
+    writeProgress(bulkDir, progress);
+    fs.rmSync(path.join(bulkDir, '.resync', 'cobweb.json'), { force: true });
+
+    const result = await runBackwardBulk(
+      buildBulkOptions(sourceDir, targetDir, bulkDir),
+      silentLogger,
+      [],
+      true
+    );
+
+    expect(result.filesAnalyzed).toBe(3);
+    expect(result.filesErrored).toBe(0);
+    expect(result.oneSidedFiles).toHaveLength(3);
     expect(readProgress(bulkDir)!.erroredFiles).toEqual([]);
   });
 
