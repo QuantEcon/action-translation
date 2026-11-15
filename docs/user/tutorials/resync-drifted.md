@@ -307,7 +307,7 @@ npx translate init \
   -f new_lecture.md
 ```
 
-`init -f` leaves the edition's other files alone: it copies only the non-markdown files from the source docs folder that the target lacks, never overwriting a localized `_config.yml`, `_toc.yml` or asset, and with `-f` it writes no `TRANSLATION-REPORT.md`. The edition's `.translate/config.yml` must match the flags (`--target-language`, and `-d` if the docs folder is not `lectures`), or the run stops before translating anything. Run it on a clean working tree and check `git status` before committing: a non-markdown file the source added since the edition last copied one is copied in, and the PR may not need it.
+`init -f` leaves the edition's other files alone: it copies only the non-markdown files from the source docs folder that the target lacks, never overwriting a localized `_config.yml`, `_toc.yml` or asset, and with `-f` it writes no `TRANSLATION-REPORT.md`. The edition's `.translate/config.yml` must match the flags (`--target-language`, and `-d` if the docs folder is not `lectures`), or the run stops before translating anything. Run it on a clean working tree and check `git status` before committing: a non-markdown file the source added since the edition last copied one is copied in, and the PR may not need it. The edition's `_toc.yml` is kept too, so add the new lecture's entry to it by hand.
 
 ### Target-only files (TARGET_ONLY)
 

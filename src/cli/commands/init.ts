@@ -348,7 +348,9 @@ export function checkEditionConfig(
     const message = error instanceof Error ? error.message.split('\n')[0] : String(error);
     throw new Error(`${configPath} is not valid YAML (${message}): fix or remove it, then re-run.`);
   }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+  // An empty or comment-only file is a document with no keys, as `writeConfig` reads it.
+  if (parsed === undefined || parsed === null) parsed = {};
+  if (typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error(`${configPath} is not a YAML mapping: fix or remove it, then re-run.`);
   }
 
@@ -363,7 +365,9 @@ export function checkEditionConfig(
         : have === wanted[key]);
     if (!same) {
       const shown = have === undefined ? 'no value' : JSON.stringify(have);
-      mismatches.push(`  ${key}: the config has ${shown}, ${flag} gives "${wanted[key]}"`);
+      mismatches.push(
+        `  ${key}: the config has ${shown}, and this run's ${flag} is "${wanted[key]}"`
+      );
     }
   }
   if (mismatches.length > 0) {
@@ -972,6 +976,14 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   for (const record of lectureReports) {
     if (record.failure) {
       console.error(formatFailureLine(record.file, record.failure));
+    }
+  }
+  // The failure line keeps 200 characters. With `-f` no TRANSLATION-REPORT.md
+  // carries the rest, such as a parity check's full list (#134), so it is
+  // printed here.
+  if (options.file) {
+    for (const failure of stats.failures) {
+      console.error(`\n${failure.file} failed:\n${failure.error}`);
     }
   }
   // Untruncated, unlike the failure lines: each command is the recovery.

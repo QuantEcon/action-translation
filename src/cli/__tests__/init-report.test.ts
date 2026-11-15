@@ -564,6 +564,28 @@ describe('translate init into an existing edition (#134)', () => {
     );
   });
 
+  it('an -f round prints a failure in full, since no TRANSLATION-REPORT.md carries it', async () => {
+    const target = writeEdition(MATCHING_CONFIG);
+    api.reply(BREAKS_PARITY);
+
+    const stats = await runInit(options({ file: 'good.md' }));
+
+    expect(stats.failureCount).toBe(1);
+    expect(fs.existsSync(path.join(target, 'TRANSLATION-REPORT.md'))).toBe(false);
+    const stderr = errorSpy.mock.calls.map((call) => String(call[0]));
+    expect(stderr).toContain(`\ngood.md failed:\n${stats.failures[0].error}`);
+  });
+
+  it('a dry run into an empty target says it would write the config', async () => {
+    writeSource(['good.md']);
+
+    await runInit(options({ dryRun: true, file: 'good.md' }));
+
+    expect(logLines()).toEqual(
+      expect.arrayContaining([expect.stringContaining('Would write .translate/config.yml')])
+    );
+  });
+
   it('a dry run counts what it would copy and keep, and says the config stays', async () => {
     writeEdition(MATCHING_CONFIG);
 
@@ -587,7 +609,7 @@ describe('translate init into an existing edition (#134)', () => {
       api.reply(GOOD);
 
       await expect(runInit(options({ dryRun, file: 'good.md' }))).rejects.toThrow(
-        /does not match this run's flags, so nothing was translated or written:\n {2}docs-folder: the config has "book", -d gives "lectures"$/m
+        /does not match this run's flags, so nothing was translated or written:\n {2}docs-folder: the config has "book", and this run's -d is "lectures"$/m
       );
 
       expect(api.requests).toHaveLength(0);

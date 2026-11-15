@@ -428,9 +428,9 @@ npx translate init \
 
 **Into an existing edition**, with or without `-f`, `init` leaves the edition's own files alone:
 
-- It copies only the non-Markdown files in the source docs folder that the target does not have, and prints how many it copied and how many it kept. A file the target has, such as a localised `_toc.yml` or `_config.yml`, is never overwritten.
+- It copies only the non-Markdown files in the source docs folder that the target does not have, and prints how many it copied and how many it kept. A file the target has, such as a localised `_toc.yml` or `_config.yml`, is never overwritten, so a change the source has made to one since is not carried: update the edition's copy by hand.
 - It writes `.translate/config.yml` only when the target has none. A config whose `source-language`, `target-language` and `docs-folder` match the flags is left byte for byte. One that differs stops the run before any translation, dry run included, naming each key with both values: pass the edition's own flags, or correct the config.
-- With `-f` it writes no `TRANSLATION-REPORT.md`. A failed lecture is reported on stderr, and `--report-json` still records the run.
+- With `-f` it writes no `TRANSLATION-REPORT.md`. A failed lecture's error is printed on stderr in full, and `--report-json` still records the run.
 
 **Resume from a specific lecture (after a failure or interruption):**
 

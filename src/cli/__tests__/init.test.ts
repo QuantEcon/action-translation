@@ -413,8 +413,27 @@ describe('checkEditionConfig (#134)', () => {
   it('names every key that differs, a missing one included, with both values', () => {
     const targetDir = writeConfigFile('source-language: en\ntarget-language: fa\n');
     expect(() => checkEditionConfig(targetDir, wanted)).toThrow(
-      'target-language: the config has "fa", --target-language gives "zh-cn"\n' +
-        '  docs-folder: the config has no value, -d gives "lectures"'
+      'target-language: the config has "fa", and this run\'s --target-language is "zh-cn"\n' +
+        '  docs-folder: the config has no value, and this run\'s -d is "lectures"'
+    );
+  });
+
+  it.each(['', '# routing notes, keys to follow\n'])(
+    'reads an empty or comment-only config (%j) as one with no keys, and names each',
+    (content) => {
+      const targetDir = writeConfigFile(content);
+      expect(() => checkEditionConfig(targetDir, wanted)).toThrow(
+        /source-language: the config has no value.*\n.*target-language: the config has no value.*\n.*docs-folder: the config has no value/
+      );
+    }
+  );
+
+  it('shows a value that is not text as YAML read it', () => {
+    const targetDir = writeConfigFile(
+      'source-language: en\ntarget-language: zh-cn\ndocs-folder: 5\n'
+    );
+    expect(() => checkEditionConfig(targetDir, wanted)).toThrow(
+      'docs-folder: the config has 5, and this run\'s -d is "lectures"'
     );
   });
 
