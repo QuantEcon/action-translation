@@ -9,6 +9,7 @@
  * runs before it interprets a response.
  */
 
+import * as vm from 'vm';
 import Anthropic, {
   AnthropicError,
   APIConnectionError,
@@ -477,6 +478,16 @@ describe('isRetryableAnthropicError: a stream cut short below the API', () => {
     }
     expect(isBodyCutShort(new Error('terminated'))).toBe(false);
     expect(isBodyCutShort(dropped())).toBe(false);
+  });
+
+  // Fetch's errors come from Node's own undici, another realm under Jest,
+  // where they fail `instanceof TypeError`; the match is by name and message.
+  it("matches a TypeError from another realm, bare or as a stream drop's cause", () => {
+    const foreign = vm.runInNewContext("new TypeError('terminated')") as Error;
+    expect(foreign instanceof TypeError).toBe(false);
+    expect(isBodyCutShort(foreign)).toBe(true);
+    expect(isRetryableAnthropicError(foreign)).toBe(true);
+    expect(isStreamCutShort(new AnthropicError('terminated', { cause: foreign }))).toBe(true);
   });
 
   it('keeps a refusal, a truncation, an auth error and a bad request non-retryable', () => {

@@ -47760,10 +47760,13 @@ var STREAM_ENDED_EARLY_MESSAGES = /* @__PURE__ */ new Set([
   "request ended without sending any chunks"
 ]);
 function isStreamCutShort(error4) {
-  return error4 instanceof AnthropicError && !(error4 instanceof APIError) && (error4.cause instanceof TypeError || STREAM_ENDED_EARLY_MESSAGES.has(error4.message));
+  return error4 instanceof AnthropicError && !(error4 instanceof APIError) && (isNamedError(error4.cause, "TypeError") || STREAM_ENDED_EARLY_MESSAGES.has(error4.message));
+}
+function isNamedError(value, name) {
+  return typeof value === "object" && value !== null && value.name === name && typeof value.message === "string";
 }
 function isBodyCutShort(error4) {
-  return error4 instanceof TypeError && error4.message === "terminated";
+  return isNamedError(error4, "TypeError") && error4.message === "terminated";
 }
 
 // dist/bibliography.js

@@ -25,8 +25,8 @@
  * - Non-streamed: the whole Message as `application/json` (without that
  *   content type the SDK returns the body as a string). A reply with
  *   `cutOffBody` sends the first half of that JSON, then fails the body read
- *   with `TypeError('terminated')`, as fetch does when the connection drops
- *   after the headers.
+ *   with a TypeError of that message: `'terminated'` is what fetch raises
+ *   when the connection drops after the headers.
  */
 
 import type Anthropic from '@anthropic-ai/sdk';
@@ -52,8 +52,11 @@ export interface FakeReply {
   usage?: { input_tokens: number; output_tokens: number; thinking_tokens?: number };
   /** Streamed requests only: end the stream with this error after the content blocks. */
   midStreamError?: { type: string; message: string };
-  /** Non-streamed requests only: drop the connection half-way through the body. */
-  cutOffBody?: boolean;
+  /**
+   * Non-streamed requests only: fail the body read half-way with a TypeError
+   * of this message, `'terminated'` being fetch's for a dropped connection.
+   */
+  cutOffBody?: string;
 }
 
 /** An SSE `error` frame, which the SDK raises as an APIError with no status. */
@@ -119,10 +122,13 @@ export function installFakeAnthropicApi(): FakeAnthropicApi {
 
     const message = completeMessage(serial, String(body.model), reply);
     if (body.stream === true) {
+      if (reply.cutOffBody !== undefined) {
+        throw new Error('fake-anthropic-api: cutOffBody is for non-streamed requests');
+      }
       return sseResponse(serial, streamEvents(message, reply.content, reply.midStreamError));
     }
-    return reply.cutOffBody
-      ? cutOffJsonResponse(serial, message)
+    return reply.cutOffBody !== undefined
+      ? cutOffJsonResponse(serial, message, reply.cutOffBody)
       : jsonResponse(serial, 200, message);
   });
 
@@ -319,7 +325,7 @@ function jsonResponse(serial: number, status: number, payload: unknown): Respons
 }
 
 /** A 200 whose JSON body stops half-way, the read failing as fetch's does. */
-function cutOffJsonResponse(serial: number, payload: unknown): Response {
+function cutOffJsonResponse(serial: number, payload: unknown, errorMessage: string): Response {
   const bytes = new TextEncoder().encode(JSON.stringify(payload));
   let sent = false;
   const body = new ReadableStream<Uint8Array>({
@@ -328,7 +334,7 @@ function cutOffJsonResponse(serial: number, payload: unknown): Response {
         sent = true;
         controller.enqueue(bytes.slice(0, Math.floor(bytes.length / 2)));
       } else {
-        controller.error(new TypeError('terminated'));
+        controller.error(new TypeError(errorMessage));
       }
     },
   });

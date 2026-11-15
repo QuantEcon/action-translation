@@ -631,7 +631,7 @@ describe('CLI analysis (non-streamed): triageForward', () => {
   // The non-streamed twin of the stream drop at the v0.30.1 gate: the SDK
   // passes fetch's TypeError through unwrapped, and it used to fail the call.
   it('a body cut off mid-read is retried, and the retry is used', async () => {
-    api.reply({ ...endTurn(text(VERDICT)), cutOffBody: true }, endTurn(text(VERDICT)));
+    api.reply({ ...endTurn(text(VERDICT)), cutOffBody: 'terminated' }, endTurn(text(VERDICT)));
 
     await expect(triage('claude-sonnet-5')).resolves.toMatchObject({ verdict: 'I18N_ONLY' });
 
@@ -640,13 +640,22 @@ describe('CLI analysis (non-streamed): triageForward', () => {
   });
 
   it('a body cut off on all 3 attempts rejects with the TypeError the SDK passed through', async () => {
-    const cut = { ...endTurn(text(VERDICT)), cutOffBody: true };
+    const cut = { ...endTurn(text(VERDICT)), cutOffBody: 'terminated' };
     api.reply(cut, cut, cut);
 
     const error = await rejectionOf(triage('claude-sonnet-5'));
 
     expect(error).toMatchObject({ name: 'TypeError', message: 'terminated' });
     expect(api.requests).toHaveLength(3);
+  });
+
+  it('a body read that fails with any other TypeError is not retried', async () => {
+    api.reply({ ...endTurn(text(VERDICT)), cutOffBody: 'Invalid response body' });
+
+    const error = await rejectionOf(triage('claude-sonnet-5'));
+
+    expect(error).toMatchObject({ name: 'TypeError', message: 'Invalid response body' });
+    expect(api.requests).toHaveLength(1);
   });
 
   it('a max_tokens stop on all 3 attempts rejects with TruncatedResponseError', async () => {

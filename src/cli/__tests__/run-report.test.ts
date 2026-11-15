@@ -147,6 +147,15 @@ describe('classifyFailure', () => {
     });
   });
 
+  // What a non-streamed messages.create() rejects with on the same drop.
+  it('infra: a non-streamed body cut off mid-read, the bare TypeError', () => {
+    expect(classifyFailure(new TypeError('terminated'))).toEqual({
+      kind: 'infra',
+      message: 'terminated',
+    });
+    expect(classifyFailure(new TypeError('fetch failed')).kind).toBe('error');
+  });
+
   it('infra: a stream cut short below the API — a dropped connection, or a body that ended early', () => {
     const dropped = new AnthropicError('terminated', { cause: new TypeError('terminated') });
     expect(classifyFailure(dropped)).toEqual({ kind: 'infra', message: 'terminated' });

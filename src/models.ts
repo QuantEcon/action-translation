@@ -500,7 +500,21 @@ export function isStreamCutShort(error: unknown): boolean {
   return (
     error instanceof AnthropicError &&
     !(error instanceof APIError) &&
-    (error.cause instanceof TypeError || STREAM_ENDED_EARLY_MESSAGES.has(error.message))
+    (isNamedError(error.cause, 'TypeError') || STREAM_ENDED_EARLY_MESSAGES.has(error.message))
+  );
+}
+
+/**
+ * Whether `value` is an error named `name`, judged by shape: fetch's errors
+ * come from Node's own undici, and under Jest's per-file realm such an error
+ * fails `instanceof TypeError`, so a real one would slip a type check there.
+ */
+function isNamedError(value: unknown, name: string): value is Error {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as { name?: unknown }).name === name &&
+    typeof (value as { message?: unknown }).message === 'string'
   );
 }
 
@@ -510,11 +524,13 @@ export function isStreamCutShort(error: unknown): boolean {
  * being read. Fetch's body read rejects with `TypeError('terminated')`, and
  * the SDK passes it through unwrapped: it parses the body after the request
  * has resolved, outside the handling that turns a failed request into an
- * APIConnectionError (SDK 0.131, `core/api-promise.js`). Matched exactly, by
- * type and message, because any other TypeError is a bug, not the network.
+ * APIConnectionError (SDK 0.131, `core/api-promise.js`). Undici raises it for
+ * every drop after the headers, its cause naming the socket error
+ * (`ECONNRESET`, `UND_ERR_SOCKET`, a parser EOF). Matched exactly, by name and
+ * message, because any other TypeError is a bug, not the network.
  * The three CLI analysis calls (forward triage, document comparison,
  * backward evaluation) are the non-streamed ones.
  */
 export function isBodyCutShort(error: unknown): boolean {
-  return error instanceof TypeError && error.message === 'terminated';
+  return isNamedError(error, 'TypeError') && error.message === 'terminated';
 }
