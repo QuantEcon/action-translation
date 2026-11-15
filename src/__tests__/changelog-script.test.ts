@@ -221,7 +221,7 @@ describe('changelog.mjs --release', () => {
     [
       'an unknown argument, such as a mistyped --date',
       ['--release', '1.0.0', '--dat', '2026-01-01'],
-      /unknown argument\(s\): --dat 2026-01-01/,
+      /unexpected argument\(s\): --dat 2026-01-01/,
     ],
   ])('refuses %s and writes nothing', (_label, args, message) => {
     write(EMPTY, { 'a.md': '### Fixed\n\n- **A**.\n' });
@@ -293,10 +293,13 @@ describe('changelog.mjs --release', () => {
 });
 
 describe('changelog.mjs usage', () => {
-  it.each([[[]], [['--check', '--release', '1.0.0']]])('rejects %j', (args) => {
-    write(EMPTY, {});
-    const r = run(...args);
-    expect(r.status).toBe(1);
-    expect(r.stderr).toContain('usage:');
-  });
+  it.each([[[]], [['--check', '--release', '1.0.0']], [['--check', '--date', '2026-01-01']]])(
+    'rejects %j',
+    (args) => {
+      write(EMPTY, {});
+      const r = run(...args);
+      expect(r.status).toBe(1);
+      expect(r.stderr).toContain('usage:');
+    }
+  );
 });

@@ -470,7 +470,7 @@ delimiter rows, which already break a table in the fr edition's pandas lecture.
 
 ## Health & context
 
-- `main` green; **2,498 tests across 85 suites** (zero skips, type-checked) with the
+- `main` green; **2,499 tests across 85 suites** (zero skips, type-checked) with the
   changelog-fragments PR, 2,467 across 84 before it at `eb28fc1` (counted 2026-11-16 in a clean
   worktree; a tree holding the harness's gitignored clones counts 15 more, see log
   `2026-11-16-overnight-stack`); lint at

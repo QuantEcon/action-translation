@@ -26,7 +26,7 @@ fragments, one per PR (#439 had none). A trial release reproduced every entry by
 each in its section. The order is file-name order rather than merge order, so the block as a
 whole differs.
 
-The PR adds 31 tests. AGENTS.md's rule, its documentation line and release steps 1 and 6
+The PR adds 32 tests. AGENTS.md's rule, its documentation line and release steps 1 and 6
 changed to match, and so did CONTRIBUTING.md.
 
 ## The reviews
@@ -45,9 +45,11 @@ Two Fable passes:
   - a CRLF fragment leaked `\r` into the changelog;
   - this session had no log entry.
 
-  Also adopted: a real-date check, a pre-write check that `changelog.d/` is writable, a message
-  for fragments left after the write, clearer messages for an indented section line and a lazy
-  continuation, and `process.execPath` in the tests.
+  Also adopted from that pass: a real-date check, a pre-write check that `changelog.d/` is
+  writable, a message for fragments left after the write, clearer messages for an indented
+  section line and a lazy continuation, and `process.execPath` in the tests.
+- **Copilot** then found that `--check --date …` was accepted with the date ignored. It is now
+  refused, like any flag the mode would ignore.
 
 Two of my own mistakes were caught before committing:
 - a test expected the wrong line number;

@@ -185,13 +185,16 @@ function main(argv) {
   const dateAt = argv.indexOf('--date');
   const version = releaseAt >= 0 ? argv[releaseAt + 1] : undefined;
   const date = dateAt >= 0 ? argv[dateAt + 1] : localDate();
-  // `--release` writes, so a typo (`--dat`) must stop it rather than be ignored.
+  // `--release` writes, so a typo (`--dat`) must stop it rather than be ignored,
+  // and so must a flag that this mode would ignore (`--check --date …`).
   const known = new Set([argv.indexOf('--check')]);
-  for (const at of [releaseAt, dateAt]) if (at >= 0) known.add(at).add(at + 1);
+  if (releaseAt >= 0) {
+    for (const at of [releaseAt, dateAt]) if (at >= 0) known.add(at).add(at + 1);
+  }
   const unknown = argv.filter((_a, i) => !known.has(i));
   if (check === releaseAt >= 0 || unknown.length) {
     fail([
-      unknown.length ? `unknown argument(s): ${unknown.join(' ')}` : USAGE,
+      unknown.length ? `unexpected argument(s): ${unknown.join(' ')}` : USAGE,
       ...(unknown.length ? [USAGE] : []),
     ]);
   }
