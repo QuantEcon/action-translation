@@ -340,14 +340,17 @@ Roadmap detail lives in the project trackers (reading order in
 
 **Resume here (2026-09-23, after v0.29.3):**
 
-*Release, 2026-11-15*: **v0.30.2 is prepared, not yet tagged.** The release PR promotes
-`[Unreleased]`, which holds #436's payload (#420's premise check, #281's recovery text, the
-retry for a dropped stream), and adds in-range bumps that clear six new production advisories
-(four high): `undici` 6.29.1, which is in the bundle, and `zod` 4.6.7, which only the CLI uses. #420 and #281
-close with it (ruled 2026-11-15, @mmcky), and #420's third proposal moves to #437, CLI first.
-Owed before the floating tags move, all Matt's: §4a at the tag, which is the stream retry's
-first field test (a clean scenario 09 on zh-cn and ml); §4b, run from a laptop session; then
-the `@v0` smoke. The local session on qe-mini1 took over from the cloud session on 2026-11-12.
+*Release, 2026-11-15*: **v0.30.2 is released** (#438, `fdab41f`), and `v0.30` and `v0` point at
+it. Payload: #436 (#420's premise check, #281's recovery text, the retry for a dropped stream),
+plus in-range bumps that clear six production advisories, four of them high (`undici` 6.29.1,
+bundled; `zod` 4.6.7, CLI only). #420 and #281 closed; #420's third proposal is #437, CLI first.
+§4a read 84 of 84 on the first run, with one WARN, #375's. §4b read 0 of 36. The `@v0` smoke
+passed on all three lanes. The stream retry was not exercised in the field, since no
+connection dropped. #349 was auto-closed by #434's body and is reopened. Log
+`2026-11-15-v0302-release`. Next: #280's close sequence and the four zh-cn PRs, both Matt's;
+then step 3 of the work order, from the paragraph below, which an overnight PR stack takes up
+(2b #396 with #386, 2a #389 with #351, 2c #398, 2d #90 defect 6), and step 4's #378, #401, #134 and
+#400. The work is now run from a local session on qe-mini1.
 
 *Handover, 2026-11-12*: start from log `2026-11-12-handover`. The v0.30.2 payload is merged
 (#436, `805dc11`) and unreleased; no PR is open. Next, in order: decide whether #420 and #281

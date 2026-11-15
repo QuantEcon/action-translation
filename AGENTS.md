@@ -149,6 +149,12 @@ gh pr create --repo QuantEcon/action-translation --title "..." --body-file $SCRA
 gh release create vX.Y.Z --repo QuantEcon/action-translation --title "vX.Y.Z" --notes-file $SCRATCH/release-notes.md > $SCRATCH/release-result.txt && cat $SCRATCH/release-result.txt
 ```
 
+A closing keyword before an issue reference in a PR body closes that issue when the PR merges. That holds for this repository's own issues and in mid-sentence: "#280's close sequence, which closes #349" in #434's body closed #349 on merge while #280 was still open (reopened 2026-11-15). Write `Closes #N` only for an issue the PR resolves, and "#N waits on #M" otherwise. After opening a PR, check what it will close:
+
+```bash
+gh pr view N --repo QuantEcon/action-translation --json closingIssuesReferences --jq '[.closingIssuesReferences[].number]'
+```
+
 
 ### Addressing Copilot PR Review Comments
 
@@ -229,7 +235,7 @@ tool-test-action-on-github/
 
 ✅ Update `CHANGELOG.md` for every release — promote `[Unreleased]` → `[X.Y.Z] - YYYY-MM-DD`
 ✅ Update `README.md` for user-facing changes
-✅ Update test counts in this file when adding tests
+✅ Update the test count in `.qe/dev/STATE.md` (*Health & context*) when a change moves it — this file carries none
 ✅ Clean up any `.backup` or `-old` files before committing
 ❌ Never create standalone summary/notes markdown files for individual changes
 
@@ -240,7 +246,7 @@ Docs live in `docs/` — see `docs/index.md` for the full structure.
 Before creating a release, verify the following:
 
 1. **CHANGELOG is up to date** — all merged PRs and features are listed under `[Unreleased]`; promote `[Unreleased]` → `[X.Y.Z] - YYYY-MM-DD` and leave a fresh empty `## [Unreleased]` header above it, so the next PR's entry has somewhere to go that is not the released section (adopted v0.28.0, #304)
-2. **Version bumped** — update `package.json`, this file (`AGENTS.md`), and `.qe/dev/PLAN.md`
+2. **Version bumped** — `npm version X.Y.Z --no-git-tag-version`, which updates `package.json` and both version fields of `package-lock.json`. No other file carries the current version; this file and `.qe/dev/PLAN.md` hold none
 3. **Tests pass** — run `npm test` and confirm all tests pass
 4. **Build succeeds** — run `npm run build` to compile TypeScript and update `dist-action/`
 4a. **E2E-gate the tagged release** — after tagging and before moving the floating tags:
