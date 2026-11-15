@@ -287,6 +287,54 @@ describe('rebase-failure comment (#281)', () => {
     );
     expect(comment).not.toContain('translate-resync');
   });
+
+  it('for a lecture deleted since the PR opened, says so, and does not offer to regenerate it (#389)', () => {
+    const comment = rebaseFailureComment({
+      ...input,
+      deletedSinceOpened: [{ editionPath: 'lectures/a.md', path: 'lectures/a.md' }],
+    });
+    expect(comment.split('\n').slice(4, 6)).toEqual([
+      '`lectures/a.md` is no longer on `main`: it was there when this PR opened, and a PR ' +
+        'merged since deleted it. The rebase does not bring a deleted lecture back. If the ' +
+        "deletion stands, remove the lecture and its state file from this PR's branch (the " +
+        'next rebase then leaves it out), or close the PR if nothing else is left in it. If ' +
+        'the lecture should stay in the edition, restore it on `main` first, then resolve ' +
+        'this PR by hand.',
+      '',
+    ]);
+    expect(comment).toContain('`translate forward -f <file>` (here: `sub/b.md`)');
+  });
+
+  it('names several deleted lectures together', () => {
+    const comment = rebaseFailureComment({
+      ...input,
+      deletedSinceOpened: [
+        { editionPath: 'lectures/a.md', path: 'lectures/a.md' },
+        { editionPath: 'lectures/sub/b.md', path: 'lectures/sub/b.md' },
+      ],
+    });
+    expect(comment).toContain(
+      '`lectures/a.md` and `lectures/sub/b.md` are no longer on `main`: they were there when ' +
+        'this PR opened, and a PR merged since deleted them.'
+    );
+    expect(comment).toContain(
+      "remove those lectures and their state files from this PR's branch (the next rebase " +
+        'then leaves them out)'
+    );
+    expect(comment).not.toContain('(here:');
+  });
+
+  it("names a deleted rename's old path with its path in the PR, and does not offer it to forward", () => {
+    const comment = rebaseFailureComment({
+      ...input,
+      overlapping: ['lectures/a-new.md', 'lectures/sub/b.md'],
+      deletedSinceOpened: [{ editionPath: 'lectures/a.md', path: 'lectures/a-new.md' }],
+    });
+    expect(comment).toContain(
+      '`lectures/a.md` (`lectures/a-new.md` in this PR) is no longer on `main`'
+    );
+    expect(comment).toContain('`translate forward -f <file>` (here: `sub/b.md`)');
+  });
 });
 
 describe('the resync command is spelt with a backslash everywhere (#281)', () => {

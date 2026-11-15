@@ -14,7 +14,9 @@
  *
  *   prFiles        the source PR's files, as `pulls.listFiles` lists them
  *   source         { "<path>@<ref>": content }
- *   target         { "<path>": content | { status } | [answers, in turn] }
+ *   target         { "<path>": content | { status } | [answers, in turn] }; a
+ *                  "<path>@<ref>" key answers reads at that ref, ahead of the
+ *                  plain "<path>" key, which answers at every ref
  *   editionStatus  optional status for the read of the target repository
  *   issues         optional: the source repository's open issues, as
  *                  `issues.listForRepo` lists them ([{ number, title }])
@@ -155,7 +157,8 @@ function readContents(repo, path, ref) {
     return content === undefined ? notFound() : file(path, content, `s-${path}`);
   }
   if (repo === TARGET) {
-    let answer = scenario.target[path];
+    const atRef = ref ? scenario.target[`${path}@${ref}`] : undefined;
+    let answer = atRef !== undefined ? atRef : scenario.target[path];
     if (Array.isArray(answer)) answer = answer.length > 1 ? answer.shift() : answer[0];
     if (answer === undefined) return notFound();
     if (typeof answer === 'object') {

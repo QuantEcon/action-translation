@@ -39,6 +39,7 @@ import {
   StillOpenLecture,
 } from './sync-premise.js';
 import { docsRelativePath } from './sync-scope.js';
+import type { DeletedLecture } from './rebase-plan.js';
 
 /** A lecture whose sync failed, for the per-lecture recovery lines. */
 export interface FailedLecture {
@@ -255,6 +256,18 @@ export interface RebaseFailureInput {
   /** The PR's files that the merged PR also changed. */
   overlapping: string[];
   docsFolder: string;
+  /**
+   * Lectures the PR changes that were on `main` when it opened and that a PR
+   * merged since deleted (#389). The rebase does not bring them back.
+   */
+  deletedSinceOpened?: DeletedLecture[];
+}
+
+/** A deleted lecture as the comment names it, with its path in the PR for a rename. */
+function deletedName(lecture: DeletedLecture): string {
+  return lecture.path === lecture.editionPath
+    ? `\`${lecture.path}\``
+    : `\`${lecture.editionPath}\` (\`${lecture.path}\` in this PR)`;
 }
 
 /**
@@ -265,8 +278,13 @@ export interface RebaseFailureInput {
  * offered for it.
  */
 export function rebaseFailureComment(input: RebaseFailureInput): string {
+  const deleted = input.deletedSinceOpened ?? [];
+  // A deleted lecture is not one to regenerate: `forward` would bring it back.
   const lectures = input.overlapping
-    .filter((path) => path.endsWith('.md'))
+    .filter(
+      (path) =>
+        path.endsWith('.md') && !deleted.some((d) => d.path === path || d.editionPath === path)
+    )
     .map((path) => `\`${fileArgument(path, input.docsFolder)}\``);
   const files = lectures.length > 0 ? ` (here: ${lectures.join(', ')})` : '';
   const lines = [
@@ -274,12 +292,29 @@ export function rebaseFailureComment(input: RebaseFailureInput): string {
     '',
     `Error: ${input.error}`,
     '',
+  ];
+  if (deleted.length > 0) {
+    const one = deleted.length === 1;
+    lines.push(
+      `${listOf(deleted.map(deletedName))} ${one ? 'is' : 'are'} no longer on ` +
+        `\`main\`: ${one ? 'it was' : 'they were'} there when this PR opened, and a PR merged ` +
+        `since deleted ${one ? 'it' : 'them'}. The rebase does not bring a deleted lecture ` +
+        'back. If the deletion stands, remove ' +
+        (one ? 'the lecture and its state file' : 'those lectures and their state files') +
+        ` from this PR's branch (the next rebase then leaves ${one ? 'it' : 'them'} out), or ` +
+        'close the PR if nothing else is left in it. If ' +
+        `${one ? 'the lecture' : 'a lecture'} should stay in the edition, restore it on \`main\` ` +
+        'first, then resolve this PR by hand.',
+      ''
+    );
+  }
+  lines.push(
     'Resolve the conflicts by hand, or regenerate the overlapping lectures with ' +
       `\`translate forward -f <file>\`${files}, run from a checkout of the source's default ` +
       "branch, where `<file>` is the lecture's path inside the docs folder. `translate forward` " +
       'regenerates the whole lecture, so on a lecture that has been natively reviewed, carry the ' +
-      'changes in by hand instead.',
-  ];
+      'changes in by hand instead.'
+  );
   const metadata = input.metadata;
   if (metadata && metadata.sourcePR > 0) {
     const sourcePr = `${metadata.sourceRepo}#${metadata.sourcePR}`;

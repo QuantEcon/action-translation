@@ -88,14 +88,18 @@ const METADATA = {
     { path: 'lectures/old.md', type: 'removed' },
   ],
 };
-const SIBLING_BODY = [
-  'Translation sync for source PR #12.',
-  '',
-  '<!-- translation-sync-metadata',
-  JSON.stringify(METADATA, null, 2),
-  '-->',
-  '',
-].join('\n');
+/** A sibling PR's body, carrying `metadata`. */
+function bodyFor(metadata: object): string {
+  return [
+    'Translation sync for source PR #12.',
+    '',
+    '<!-- translation-sync-metadata',
+    JSON.stringify(metadata, null, 2),
+    '-->',
+    '',
+  ].join('\n');
+}
+const SIBLING_BODY = bodyFor(METADATA);
 
 interface Scenario {
   mergedPrFiles: Array<{ filename: string; status: string }>;
@@ -502,5 +506,301 @@ describe('rebase mode, a removed lecture main cannot serve (#396)', () => {
     ]);
     expect(log.refUpdates).toHaveLength(1);
     expect(run.stdout).toContain('♻️ Rebase complete: 1 rebased, 0 skipped, 0 errors.');
+  });
+});
+
+describe('rebase mode, a lecture main does not have (#389, #351)', () => {
+  const EN = '# Lecture X\n\nIntro.\n\n## Part One\n\nBody one, revised.\n';
+  const EN_BEFORE = '# Lecture X\n\nIntro.\n\n## Part One\n\nBody one.\n';
+  const ML = '# പാഠം X\n\nആമുഖം.\n\n## ഭാഗം ഒന്ന്\n\nഉള്ളടക്കം.\n';
+  const ML_REVIEWED = '# പാഠം X\n\nആമുഖം.\n\n## ഭാഗം ഒന്ന്\n\nപരിശോധിച്ച ഉള്ളടക്കം.\n';
+  const NEW_STATE = STATE.replace('mode: NEW', 'mode: NEW\n# carried');
+
+  /** The sibling PR, its metadata listing `extra` too, with or without a baseline. */
+  function siblingWith(
+    extra: Array<{ path: string; type: string; previousPath?: string }>,
+    baseline = true
+  ): Scenario['openPulls'] {
+    const metadata = Object.fromEntries(
+      Object.entries({ ...METADATA, files: [...METADATA.files, ...extra] }).filter(
+        ([key]) => baseline || key !== 'targetBaseSha'
+      )
+    );
+    return [
+      {
+        number: SIBLING_PR,
+        head: { ref: SIBLING_BRANCH, sha: 'head000' },
+        body: bodyFor(metadata),
+      },
+    ];
+  }
+  const base = rebaseScenario();
+  const reads = (log: RunLog, p: string) =>
+    editionReads(log).filter((line) => line.includes(`/contents/${p}?`));
+  const at = (p: string, ref: string) => `GET /repos/${EDITION}/contents/${p}?ref=${ref}`;
+
+  it('fails, with the branch untouched, for a lecture a PR merged since deleted (#389)', () => {
+    const run = runRebase(
+      'deleted-since-opened',
+      rebaseScenario({
+        mergedPrFiles: [
+          { filename: 'lectures/_toc.yml', status: 'modified' },
+          { filename: 'lectures/x.md', status: 'removed' },
+        ],
+        openPulls: siblingWith([{ path: 'lectures/x.md', type: 'markdown' }]),
+        source: {
+          ...base.source,
+          [`lectures/x.md@${SOURCE_SHA}`]: EN,
+          [`lectures/x.md@${SOURCE_SHA}^`]: EN_BEFORE,
+        },
+        target: {
+          ...base.target,
+          [`lectures/x.md@${OLD_BASE}`]: ML,
+          [`lectures/x.md@${SIBLING_BRANCH}`]: ML_REVIEWED,
+        },
+      })
+    );
+    const log = checkedLog(run, 1);
+
+    // Main, the baseline, which has it, and the branch, which still has it.
+    expect(reads(log, 'lectures/x.md')).toEqual([
+      at('lectures/x.md', BASE),
+      at('lectures/x.md', OLD_BASE),
+      at('lectures/x.md', SIBLING_BRANCH),
+    ]);
+    expect(log.trees).toEqual([]);
+    expect(log.commits).toEqual([]);
+    expect(log.refUpdates).toEqual([]);
+    expect(log.comments).toHaveLength(1);
+    const { body } = log.comments[0];
+    expect(body).toContain(
+      `lectures/x.md: Error: lectures/x.md was on main when this PR opened (${OLD_BASE}) and ` +
+        `is not there now (${BASE}): a PR merged since deleted it, so this PR's change to it ` +
+        'was not carried'
+    );
+    expect(body).toContain(
+      '`lectures/x.md` is no longer on `main`: it was there when this PR opened, and a PR ' +
+        'merged since deleted it. The rebase does not bring a deleted lecture back.'
+    );
+    // The deleted lecture is not offered for regeneration.
+    expect(body).not.toContain('(here: `x.md`)');
+  });
+
+  it('fails the same way for a rename whose old path a PR merged since deleted', () => {
+    const run = runRebase(
+      'renamed-deleted-since-opened',
+      rebaseScenario({
+        openPulls: siblingWith([
+          { path: 'lectures/x-new.md', type: 'renamed', previousPath: 'lectures/x.md' },
+        ]),
+        source: {
+          ...base.source,
+          [`lectures/x-new.md@${SOURCE_SHA}`]: EN,
+          [`lectures/x-new.md@${SOURCE_SHA}^`]: EN_BEFORE,
+        },
+        target: {
+          ...base.target,
+          [`lectures/x.md@${OLD_BASE}`]: ML,
+          [`lectures/x-new.md@${SIBLING_BRANCH}`]: ML_REVIEWED,
+        },
+      })
+    );
+    const log = checkedLog(run, 1);
+
+    // The old path on main and at the baseline; the new path on main and on the branch.
+    expect(reads(log, 'lectures/x.md')).toEqual([
+      at('lectures/x.md', BASE),
+      at('lectures/x.md', OLD_BASE),
+    ]);
+    expect(reads(log, 'lectures/x-new.md')).toEqual([
+      at('lectures/x-new.md', BASE),
+      at('lectures/x-new.md', SIBLING_BRANCH),
+    ]);
+    expect(log.refUpdates).toEqual([]);
+    const { body } = log.comments[0];
+    expect(body).toContain(
+      `lectures/x-new.md: Error: lectures/x.md was on main when this PR opened (${OLD_BASE})`
+    );
+    expect(body).toContain(
+      '`lectures/x.md` (`lectures/x-new.md` in this PR) is no longer on `main`'
+    );
+  });
+
+  it('leaves out a lecture deleted since the PR opened once its branch no longer has it', () => {
+    const run = runRebase(
+      'deleted-and-dropped',
+      rebaseScenario({
+        openPulls: siblingWith([{ path: 'lectures/x.md', type: 'markdown' }]),
+        source: {
+          ...base.source,
+          [`lectures/x.md@${SOURCE_SHA}`]: EN,
+          [`lectures/x.md@${SOURCE_SHA}^`]: EN_BEFORE,
+        },
+        target: { ...base.target, [`lectures/x.md@${OLD_BASE}`]: ML },
+      })
+    );
+    const log = checkedLog(run, 0);
+
+    expect(log.trees).toEqual([
+      {
+        base_tree: BASE_TREE,
+        tree: [
+          { path: 'lectures/_toc.yml', mode: '100644', type: 'blob', content: TOC_AFTER },
+          { path: 'lectures/old.md', mode: '100644', type: 'blob', sha: null },
+          { path: '.translate/state/old.md.yml', mode: '100644', type: 'blob', sha: null },
+        ],
+      },
+    ]);
+    expect(log.refUpdates).toHaveLength(1);
+    expect(run.stdout).toContain(
+      `lectures/x.md: deleted from main since this PR opened, and lectures/x.md is no longer ` +
+        `on ${SIBLING_BRANCH}: nothing to carry`
+    );
+  });
+
+  it('rebuilds a rename as an update of its new path when main already has it there', () => {
+    const run = runRebase(
+      'renamed-already-on-main',
+      rebaseScenario({
+        openPulls: siblingWith([
+          { path: 'lectures/x-new.md', type: 'renamed', previousPath: 'lectures/x.md' },
+        ]),
+        // The English did not change, so the update needs no model call.
+        source: {
+          ...base.source,
+          [`lectures/x-new.md@${SOURCE_SHA}`]: EN,
+          [`lectures/x-new.md@${SOURCE_SHA}^`]: EN,
+        },
+        target: { ...base.target, [`lectures/x-new.md@${BASE}`]: ML },
+      })
+    );
+    const log = checkedLog(run, 0);
+
+    // The old path is read on main only: the new path there settles it.
+    expect(reads(log, 'lectures/x.md')).toEqual([at('lectures/x.md', BASE)]);
+    expect(reads(log, 'lectures/x-new.md')).toContain(at('lectures/x-new.md', BASE));
+    const paths = log.trees[0].tree.map((entry) => entry.path);
+    expect(paths).toContain('lectures/x-new.md');
+    expect(paths).not.toContain('lectures/x.md');
+    expect(run.stdout).toContain(
+      'lectures/x-new.md: on main already, and lectures/x.md is not: rebuilt as an update of ' +
+        'lectures/x-new.md'
+    );
+  });
+
+  it('carries a lecture the PR adds, and its state file, unchanged from the branch (#351)', () => {
+    const run = runRebase(
+      'carried',
+      rebaseScenario({
+        openPulls: siblingWith([{ path: 'lectures/new.md', type: 'markdown' }]),
+        source: { ...base.source, [`lectures/new.md@${SOURCE_SHA}`]: EN },
+        target: {
+          ...base.target,
+          [`lectures/new.md@${SIBLING_BRANCH}`]: ML_REVIEWED,
+          [`.translate/state/new.md.yml@${SIBLING_BRANCH}`]: NEW_STATE,
+        },
+      })
+    );
+    // No model call: checkedLog fails on one.
+    const log = checkedLog(run, 0);
+
+    expect(reads(log, 'lectures/new.md')).toEqual([
+      at('lectures/new.md', BASE),
+      at('lectures/new.md', OLD_BASE),
+      at('lectures/new.md', SIBLING_BRANCH),
+    ]);
+    expect(log.trees).toEqual([
+      {
+        base_tree: BASE_TREE,
+        tree: [
+          { path: 'lectures/_toc.yml', mode: '100644', type: 'blob', content: TOC_AFTER },
+          { path: 'lectures/new.md', mode: '100644', type: 'blob', content: ML_REVIEWED },
+          { path: '.translate/state/new.md.yml', mode: '100644', type: 'blob', content: NEW_STATE },
+          { path: 'lectures/old.md', mode: '100644', type: 'blob', sha: null },
+          { path: '.translate/state/old.md.yml', mode: '100644', type: 'blob', sha: null },
+        ],
+      },
+    ]);
+    expect(log.refUpdates).toHaveLength(1);
+    expect(run.stdout).toContain(
+      `lectures/new.md: new to the edition and on ${SIBLING_BRANCH}: carried unchanged, with ` +
+        'its state file'
+    );
+  });
+
+  it('rebases a PR whose only file left to write is the one it carries', () => {
+    const run = runRebase(
+      'carried-only',
+      rebaseScenario({
+        openPulls: siblingWith([{ path: 'lectures/new.md', type: 'markdown' }]),
+        // The ToC's source cannot be read, so it is skipped, and main no
+        // longer has the removed lecture or its state file: nothing is left
+        // to rebuild but the carried lecture.
+        source: { [`lectures/new.md@${SOURCE_SHA}`]: EN },
+        target: {
+          [`lectures/new.md@${SIBLING_BRANCH}`]: ML_REVIEWED,
+          [`.translate/state/new.md.yml@${SIBLING_BRANCH}`]: NEW_STATE,
+        },
+      })
+    );
+    const log = checkedLog(run, 0);
+
+    expect(log.trees).toEqual([
+      {
+        base_tree: BASE_TREE,
+        tree: [
+          { path: 'lectures/new.md', mode: '100644', type: 'blob', content: ML_REVIEWED },
+          { path: '.translate/state/new.md.yml', mode: '100644', type: 'blob', content: NEW_STATE },
+        ],
+      },
+    ]);
+    expect(log.refUpdates).toHaveLength(1);
+    expect(run.stdout).toContain('♻️ Rebase complete: 1 rebased, 0 skipped, 0 errors.');
+  });
+
+  it('fails for a lecture main lacks when the PR records no baseline', () => {
+    const run = runRebase(
+      'no-baseline',
+      rebaseScenario({
+        openPulls: siblingWith([{ path: 'lectures/x.md', type: 'markdown' }], false),
+        source: {
+          ...base.source,
+          [`lectures/x.md@${SOURCE_SHA}`]: EN,
+          [`lectures/x.md@${SOURCE_SHA}^`]: EN_BEFORE,
+        },
+      })
+    );
+    const log = checkedLog(run, 1);
+
+    expect(reads(log, 'lectures/x.md')).toEqual([at('lectures/x.md', BASE)]);
+    expect(log.refUpdates).toEqual([]);
+    expect(log.comments[0].body).toContain(
+      'lectures/x.md: Error: lectures/x.md is not on main, and this PR records no baseline (it ' +
+        'predates the rebase cache), so a lecture deleted since it opened cannot be told from ' +
+        'one it adds. It was not translated from scratch'
+    );
+  });
+
+  it('fails when the read of main fails, rather than translate the lecture as new', () => {
+    const run = runRebase(
+      'main-read-502',
+      rebaseScenario({
+        openPulls: siblingWith([{ path: 'lectures/x.md', type: 'markdown' }]),
+        source: {
+          ...base.source,
+          [`lectures/x.md@${SOURCE_SHA}`]: EN,
+          [`lectures/x.md@${SOURCE_SHA}^`]: EN_BEFORE,
+        },
+        target: { ...base.target, 'lectures/x.md': { status: 502 } },
+      })
+    );
+    const log = checkedLog(run, 1);
+
+    expect(reads(log, 'lectures/x.md')).toEqual([at('lectures/x.md', BASE)]);
+    expect(log.refUpdates).toEqual([]);
+    expect(log.comments[0].body).toContain(
+      `lectures/x.md: Error: Could not read lectures/x.md from ${EDITION} at ${BASE} ` +
+        '(status 502: HTTP 502)'
+    );
   });
 });

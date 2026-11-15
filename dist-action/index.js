@@ -55166,6 +55166,37 @@ async function writeRebasedBranch(octokit, params, logger, policy = DEFAULT_RETR
   return { outcome: "moved", commitSha: built.sha };
 }
 
+// dist/rebase-plan.js
+function planRebaseRead(reads) {
+  if (reads.onMain === "found")
+    return { action: "update" };
+  if (reads.onMain === "error")
+    return { action: "error", reason: "main-read" };
+  if (reads.newPathOnMain === "found")
+    return { action: "update-at-new-path" };
+  if (reads.newPathOnMain === "error")
+    return { action: "error", reason: "main-read" };
+  if (reads.atBaseline === void 0)
+    return { action: "error", reason: "no-baseline" };
+  if (reads.atBaseline === "error")
+    return { action: "error", reason: "baseline-read" };
+  if (reads.onBranch === void 0 || reads.onBranch === "error") {
+    return { action: "error", reason: "branch-read" };
+  }
+  if (reads.atBaseline === "found") {
+    return reads.onBranch === "found" ? { action: "deleted-since-opened" } : { action: "drop" };
+  }
+  return reads.onBranch === "found" ? { action: "carry" } : { action: "translate-new" };
+}
+var RebaseReadError = class extends Error {
+  deletedSinceOpened;
+  constructor(message, deletedSinceOpened) {
+    super(message);
+    this.deletedSinceOpened = deletedSinceOpened;
+    this.name = "RebaseReadError";
+  }
+};
+
 // dist/sync-premise.js
 function recordedSourceSha(stateYaml) {
   let parsed;
@@ -55524,16 +55555,24 @@ function buildFailureIssueBody(input) {
     ...failureRecoveryLines(input)
   ].join("\n");
 }
+function deletedName(lecture) {
+  return lecture.path === lecture.editionPath ? `\`${lecture.path}\`` : `\`${lecture.editionPath}\` (\`${lecture.path}\` in this PR)`;
+}
 function rebaseFailureComment(input) {
-  const lectures = input.overlapping.filter((path8) => path8.endsWith(".md")).map((path8) => `\`${fileArgument(path8, input.docsFolder)}\``);
+  const deleted = input.deletedSinceOpened ?? [];
+  const lectures = input.overlapping.filter((path8) => path8.endsWith(".md") && !deleted.some((d) => d.path === path8 || d.editionPath === path8)).map((path8) => `\`${fileArgument(path8, input.docsFolder)}\``);
   const files = lectures.length > 0 ? ` (here: ${lectures.join(", ")})` : "";
   const lines = [
     `\u26A0\uFE0F **Automatic rebase failed** after #${input.mergedPrNumber} was merged.`,
     "",
     `Error: ${input.error}`,
-    "",
-    `Resolve the conflicts by hand, or regenerate the overlapping lectures with \`translate forward -f <file>\`${files}, run from a checkout of the source's default branch, where \`<file>\` is the lecture's path inside the docs folder. \`translate forward\` regenerates the whole lecture, so on a lecture that has been natively reviewed, carry the changes in by hand instead.`
+    ""
   ];
+  if (deleted.length > 0) {
+    const one = deleted.length === 1;
+    lines.push(`${listOf(deleted.map(deletedName))} ${one ? "is" : "are"} no longer on \`main\`: ${one ? "it was" : "they were"} there when this PR opened, and a PR merged since deleted ${one ? "it" : "them"}. The rebase does not bring a deleted lecture back. If the deletion stands, remove ` + (one ? "the lecture and its state file" : "those lectures and their state files") + ` from this PR's branch (the next rebase then leaves ${one ? "it" : "them"} out), or close the PR if nothing else is left in it. If ${one ? "the lecture" : "a lecture"} should stay in the edition, restore it on \`main\` first, then resolve this PR by hand.`, "");
+  }
+  lines.push(`Resolve the conflicts by hand, or regenerate the overlapping lectures with \`translate forward -f <file>\`${files}, run from a checkout of the source's default branch, where \`<file>\` is the lecture's path inside the docs folder. \`translate forward\` regenerates the whole lecture, so on a lecture that has been natively reviewed, carry the changes in by hand instead.`);
   const metadata = input.metadata;
   if (metadata && metadata.sourcePR > 0) {
     const sourcePr = `${metadata.sourceRepo}#${metadata.sourcePR}`;
@@ -57362,7 +57401,8 @@ The translation content is preserved; only unchanged sections were updated to ma
             error: msg,
             metadata,
             overlapping,
-            docsFolder: inputs.docsFolder
+            docsFolder: inputs.docsFolder,
+            deletedSinceOpened: error4 instanceof RebaseReadError ? error4.deletedSinceOpened : void 0
           })
         });
       } catch {
@@ -57394,6 +57434,8 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
   core9.info(`PR #${pr.number}: rebasing onto ${baseBranch} at ${baseSha.slice(0, 7)}`);
   const filesToSync = [];
   const fetchErrors = [];
+  const carried = [];
+  const deletedSinceOpened = [];
   for (const file of metadata.files) {
     const fileType = file.type || "markdown";
     try {
@@ -57465,47 +57507,101 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
       } catch {
         core9.info(`${file.path}: New file (no parent commit content)`);
       }
-      if (fileType === "renamed" && file.previousPath && isDocsMarkdownPath(file.previousPath, inputs.docsFolder)) {
-        let targetContent = "";
-        let oldFileSha;
-        try {
-          const result2 = await fetchFileContent(octokit, owner, repo, file.previousPath, baseSha);
-          targetContent = result2.content;
-          oldFileSha = result2.sha;
-        } catch {
-          core9.info(`${file.previousPath}: Previous path not found in target repo`);
+      const renamed = fileType === "renamed" && file.previousPath !== void 0 && isDocsMarkdownPath(file.previousPath, inputs.docsFolder);
+      const editionPath2 = renamed && file.previousPath ? file.previousPath : file.path;
+      const onMain = await readEditionFile(octokit, owner, repo, editionPath2, baseSha);
+      const reads = { onMain: onMain.status };
+      let newOnMain;
+      let atBaseline;
+      let onBranch;
+      if (onMain.status === "missing" && renamed) {
+        newOnMain = await readEditionFile(octokit, owner, repo, file.path, baseSha);
+        reads.newPathOnMain = newOnMain.status;
+      }
+      const newPathSettles = newOnMain?.status === "found" || newOnMain?.status === "error";
+      if (onMain.status === "missing" && !newPathSettles && metadata.targetBaseSha) {
+        atBaseline = await readEditionFile(octokit, owner, repo, editionPath2, metadata.targetBaseSha);
+        reads.atBaseline = atBaseline.status;
+        if (atBaseline.status !== "error") {
+          onBranch = await readEditionFile(octokit, owner, repo, file.path, pr.head.ref);
+          reads.onBranch = onBranch.status;
         }
-        filesToSync.push({
-          filename: file.path,
-          type: "renamed",
-          newContent,
-          oldContent,
-          targetContent,
-          previousFilename: file.previousPath,
-          oldFileSha,
-          isNewFile: !targetContent,
-          sourceCommitSha
-        });
-      } else {
-        let targetContent = "";
-        let existingFileSha;
-        let isNewFile = false;
-        try {
-          const result2 = await fetchFileContent(octokit, owner, repo, file.path, baseSha);
-          targetContent = result2.content;
-          existingFileSha = result2.sha;
-        } catch {
-          isNewFile = true;
-          core9.info(`${file.path}: Not found in target repo \u2014 treating as new file`);
+      }
+      const plan = planRebaseRead(reads);
+      const failure = (read) => read?.status === "error" ? read.message : "unknown";
+      if (plan.action === "error") {
+        switch (plan.reason) {
+          case "main-read": {
+            const [path8, read] = onMain.status === "error" ? [editionPath2, onMain] : [file.path, newOnMain];
+            throw new Error(`Could not read ${path8} from ${owner}/${repo} at ${baseSha.slice(0, 7)} (${failure(read)})`);
+          }
+          case "baseline-read":
+            throw new Error(`Could not read ${editionPath2} at this PR's baseline ${metadata.targetBaseSha?.slice(0, 7)} (${failure(atBaseline)})`);
+          case "branch-read":
+            throw new Error(`Could not read ${file.path} on ${pr.head.ref} (${failure(onBranch)})`);
+          case "no-baseline":
+            throw new Error(`${editionPath2} is not on ${baseBranch}, and this PR records no baseline (it predates the rebase cache), so a lecture deleted since it opened cannot be told from one it adds. It was not translated from scratch`);
         }
+      }
+      if (plan.action === "deleted-since-opened") {
+        deletedSinceOpened.push({ editionPath: editionPath2, path: file.path });
+        throw new Error(`${editionPath2} was on ${baseBranch} when this PR opened (${metadata.targetBaseSha?.slice(0, 7)}) and is not there now (${baseSha.slice(0, 7)}): a PR merged since deleted it, so this PR's change to it was not carried`);
+      }
+      if (plan.action === "drop") {
+        core9.info(`${editionPath2}: deleted from ${baseBranch} since this PR opened, and ${file.path} is no longer on ${pr.head.ref}: nothing to carry`);
+        continue;
+      }
+      if (plan.action === "carry" && onBranch?.status === "found") {
+        const statePath = stateFileFor(file.path, inputs.docsFolder);
+        const state = await readEditionFile(octokit, owner, repo, statePath, pr.head.ref);
+        if (state.status === "error") {
+          throw new Error(`Could not read ${statePath} on ${pr.head.ref} (${state.message})`);
+        }
+        carried.push({ path: file.path, content: onBranch.content });
+        if (state.status === "found")
+          carried.push({ path: statePath, content: state.content });
+        core9.info(`${file.path}: new to the edition and on ${pr.head.ref}: carried unchanged` + (state.status === "found" ? ", with its state file" : ""));
+        continue;
+      }
+      if (plan.action === "update-at-new-path" && newOnMain?.status === "found") {
+        core9.info(`${file.path}: on ${baseBranch} already, and ${editionPath2} is not: rebuilt as an update of ${file.path}`);
         filesToSync.push({
           filename: file.path,
           type: "markdown",
           newContent,
           oldContent,
-          targetContent,
-          existingFileSha,
-          isNewFile,
+          targetContent: newOnMain.content,
+          existingFileSha: newOnMain.sha,
+          isNewFile: false,
+          sourceCommitSha
+        });
+        continue;
+      }
+      const target = onMain.status === "found" ? onMain : void 0;
+      if (!target) {
+        core9.info(`${editionPath2}: not in the edition, at this PR's baseline or on its branch: translating as new`);
+      }
+      if (renamed) {
+        filesToSync.push({
+          filename: file.path,
+          type: "renamed",
+          newContent,
+          oldContent,
+          targetContent: target?.content ?? "",
+          previousFilename: file.previousPath,
+          oldFileSha: target?.sha,
+          isNewFile: !target?.content,
+          sourceCommitSha
+        });
+      } else {
+        filesToSync.push({
+          filename: file.path,
+          type: "markdown",
+          newContent,
+          oldContent,
+          targetContent: target?.content ?? "",
+          existingFileSha: target?.sha,
+          isNewFile: !target,
           sourceCommitSha
         });
       }
@@ -57515,9 +57611,9 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
     }
   }
   if (fetchErrors.length > 0) {
-    throw new Error(`content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join("; ")}`);
+    throw new RebaseReadError(`content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join("; ")}`, deletedSinceOpened);
   }
-  if (filesToSync.length === 0) {
+  if (filesToSync.length === 0 && carried.length === 0) {
     core9.info(`PR #${pr.number}: No files to process after content fetch. Skipping.`);
     return "skipped";
   }
@@ -57575,7 +57671,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
   if (result.errors.length > 0) {
     throw new Error(`translation produced ${result.errors.length} error(s); branch left untouched: ${result.errors.join("; ")}`);
   }
-  if (result.translatedFiles.length === 0 && result.filesToDelete.length === 0) {
+  if (result.translatedFiles.length === 0 && result.filesToDelete.length === 0 && carried.length === 0) {
     core9.info(`PR #${pr.number}: No translated files produced. Branch left as it was.`);
     return "skipped";
   }
@@ -57586,14 +57682,17 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
     branch: pr.head.ref,
     baseBranch,
     baseSha,
-    files: result.translatedFiles.map((file) => ({ path: file.path, content: file.content })),
+    files: [
+      ...result.translatedFiles.map((file) => ({ path: file.path, content: file.content })),
+      ...carried
+    ],
     deletions: result.filesToDelete.map((file) => file.path),
     declaredFiles: metadata.files.map((file) => file.path),
     mergedPrNumber
   }, coreLogger);
   if (written.outcome === "closed")
     return "closed";
-  core9.info(`PR #${pr.number}: rebased in one commit (${written.commitSha.slice(0, 7)}) with ${result.translatedFiles.length} file(s) written and ${result.filesToDelete.length} marked for deletion.`);
+  core9.info(`PR #${pr.number}: rebased in one commit (${written.commitSha.slice(0, 7)}) with ${result.translatedFiles.length} file(s) written, ${carried.length} carried unchanged and ${result.filesToDelete.length} marked for deletion.`);
   return "rebased";
 }
 async function runSync() {
@@ -57845,6 +57944,20 @@ async function fetchFileContent(octokit, owner, repo, filepath, ref) {
     content: Buffer.from(data.content, "base64").toString("utf-8"),
     sha: data.sha
   };
+}
+async function readEditionFile(octokit, owner, repo, filepath, ref) {
+  try {
+    const { content, sha } = await fetchFileContent(octokit, owner, repo, filepath, ref);
+    return { status: "found", content, sha };
+  } catch (error4) {
+    const status = error4?.status;
+    if (status === 404)
+      return { status: "missing" };
+    return {
+      status: "error",
+      message: `status ${status ?? "unknown"}: ${error4 instanceof Error ? error4.message : String(error4)}`
+    };
+  }
 }
 async function fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo, commitSha) {
   const filesToSync = [];
