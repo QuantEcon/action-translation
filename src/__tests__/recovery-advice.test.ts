@@ -116,6 +116,30 @@ describe('failure issue (#281)', () => {
     expect(lines).toContain('    git rev-list --count <merge commit>..origin/main -- <path>');
   });
 
+  it('when the bibliography could not be read, says nothing synced and gives no line per lecture (#386)', () => {
+    const lines = failureRecoveryLines({
+      ...BASE,
+      errors: ['Fetch failed (bibliography): ... Nothing was synced.'],
+      failedLectures: [{ file: 'lectures/mix_model.md', inEdition: true }],
+      bibliographyUnread: true,
+    });
+    expect(lines.slice(0, 5)).toEqual([
+      'This run synced nothing: it could not read the bibliography a sync needs to carry the ' +
+        "entries its citations use (the edition's `lectures/_config.yml`, and the files its " +
+        '`bibtex_bibfiles` lists, in the edition and in the source). No lecture was translated ' +
+        'and nothing in QuantEcon/lecture-python.zh-cn changed. Make the file the error names ' +
+        "readable (a transient error needs nothing), then sync this PR's changes again: with " +
+        `\`${RESYNC_COMMAND}\` under the condition below, or lecture by lecture from a ` +
+        "checkout of the source's default branch:",
+      '',
+      '- one the edition has: `translate forward -f <file>`;',
+      '- one the edition does not have yet: `translate init -f <file>`.',
+      '',
+    ]);
+    expect(lines.join('\n')).not.toContain('translate forward -f mix_model.md');
+    expect(lines).toContain(`    git rev-list --count ${MERGE}..origin/main -- <path>`);
+  });
+
   describe('with lectures held back by the premise check (#420)', () => {
     const behind: HeldBackLecture = {
       file: 'lectures/mle_intro.md',

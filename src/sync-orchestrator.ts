@@ -997,30 +997,35 @@ export class SyncOrchestrator {
   }
 
   /**
-   * Process a removed file (track for deletion in target repo).
+   * Process a removed file (track for deletion in target repo). Its state
+   * file goes with it, and goes alone when the target no longer has the file:
+   * a state file left behind claims a translation the target lacks (#396).
    */
   private processRemovedFile(file: FileToSync, result: SyncProcessingResult): void {
+    let deleted = false;
     if (file.existingFileSha) {
       result.filesToDelete.push({
         path: file.filename,
         sha: file.existingFileSha,
       });
-      result.processedFiles.push(file.filename);
+      deleted = true;
       this.logger.info(`Marked ${file.filename} for deletion`);
-
-      // Also delete the corresponding state file
-      if (this.stateConfig) {
-        const docsRelName = this.toDocsRelative(file.filename);
-        const statePath = stateFileRelativePath(docsRelName);
-        const stateSha = this.stateConfig.existingStateShas.get(statePath);
-        if (stateSha) {
-          result.filesToDelete.push({ path: statePath, sha: stateSha });
-          this.logger.info(`Marked state file for deletion: ${statePath}`);
-        }
-      }
     } else {
-      this.logger.info(`${file.filename} does not exist in target repo - skipping deletion`);
+      this.logger.info(`${file.filename} does not exist in target repo - skipping its deletion`);
     }
+
+    if (this.stateConfig) {
+      const docsRelName = this.toDocsRelative(file.filename);
+      const statePath = stateFileRelativePath(docsRelName);
+      const stateSha = this.stateConfig.existingStateShas.get(statePath);
+      if (stateSha) {
+        result.filesToDelete.push({ path: statePath, sha: stateSha });
+        deleted = true;
+        this.logger.info(`Marked state file for deletion: ${statePath}`);
+      }
+    }
+
+    if (deleted) result.processedFiles.push(file.filename);
   }
 
   // ---------------------------------------------------------------------------

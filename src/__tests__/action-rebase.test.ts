@@ -101,7 +101,8 @@ interface Scenario {
   mergedPrFiles: Array<{ filename: string; status: string }>;
   openPulls: Array<{ number: number; head: { ref: string; sha: string }; body: string }>;
   source: Record<string, string>;
-  target: Record<string, string>;
+  /** A path absent here answers 404; `{ status }` fails the read with that status. */
+  target: Record<string, string | { status: number }>;
   pullStates?: Record<string, string>;
   treeUnchanged?: boolean;
   gitFailures?: { trees?: number; commits?: number; refs?: number };
@@ -440,5 +441,66 @@ describe('rebase mode, run in the built bundle', () => {
     expect(log.comments[0].body).toContain(
       `could not build the rebased commit on main (${BASE}); branch left untouched`
     );
+  });
+});
+
+describe('rebase mode, a removed lecture main cannot serve (#396)', () => {
+  const target = rebaseScenario().target;
+
+  it('fails the run with the branch untouched when the lecture read fails', () => {
+    const run = runRebase(
+      'removal-502',
+      rebaseScenario({ target: { ...target, 'lectures/old.md': { status: 502 } } })
+    );
+    const log = checkedLog(run, 1);
+
+    expect(log.trees).toEqual([]);
+    expect(log.commits).toEqual([]);
+    expect(log.refUpdates).toEqual([]);
+    expect(log.comments).toHaveLength(1);
+    expect(log.comments[0].body).toContain(
+      `⚠️ **Automatic rebase failed** after #${MERGED_PR} was merged.`
+    );
+    expect(log.comments[0].body).toContain(
+      `content fetch failed for 1 file(s); branch left untouched: lectures/old.md: Error: ` +
+        `Could not read lectures/old.md from ${EDITION} at ${BASE} (status 502)`
+    );
+  });
+
+  it('fails the run with the branch untouched when its state file read fails', () => {
+    const run = runRebase(
+      'removal-state-502',
+      rebaseScenario({ target: { ...target, '.translate/state/old.md.yml': { status: 502 } } })
+    );
+    const log = checkedLog(run, 1);
+
+    expect(log.trees).toEqual([]);
+    expect(log.refUpdates).toEqual([]);
+    expect(log.comments).toHaveLength(1);
+    expect(log.comments[0].body).toContain(
+      'state read failed for 1 file(s); branch left untouched: Fetch failed (state): ' +
+        `lectures/old.md: could not read .translate/state/old.md.yml from ${EDITION} ` +
+        '(status 502: HTTP 502), so whether to delete it is unknown. It was not removed.'
+    );
+  });
+
+  it('deletes the state file alone when main no longer has the lecture', () => {
+    const withoutLecture = Object.fromEntries(
+      Object.entries(target).filter(([p]) => p !== 'lectures/old.md')
+    );
+    const run = runRebase('removal-orphan-state', rebaseScenario({ target: withoutLecture }));
+    const log = checkedLog(run, 0);
+
+    expect(log.trees).toEqual([
+      {
+        base_tree: BASE_TREE,
+        tree: [
+          { path: 'lectures/_toc.yml', mode: '100644', type: 'blob', content: TOC_AFTER },
+          { path: '.translate/state/old.md.yml', mode: '100644', type: 'blob', sha: null },
+        ],
+      },
+    ]);
+    expect(log.refUpdates).toHaveLength(1);
+    expect(run.stdout).toContain('♻️ Rebase complete: 1 rebased, 0 skipped, 0 errors.');
   });
 });

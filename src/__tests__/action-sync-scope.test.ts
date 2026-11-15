@@ -1147,6 +1147,53 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
     });
   });
 
+  describe("'existing': a state file and the bibliography the edition cannot serve (#386)", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('existing-state-500-bibliography-502', {
+        ...STATE_UNREADABLE,
+        defaultBibliography: true,
+        target: { ...STATE_UNREADABLE.target, 'lectures/_config.yml': { status: 502 } },
+      });
+    }, 90_000);
+
+    it('holds the lecture in scope too, and opens no PR', () => {
+      check(run, (log) => {
+        expect(log.writes).toEqual([]);
+        expect(log.deletes).toEqual([]);
+        expect(log.pulls).toEqual([]);
+      });
+    });
+
+    it('lists the scope error, then the bibliography error, in the failure issue', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(log.issues).toHaveLength(1);
+        const errors = issueErrors(log.issues[0]) ?? [];
+        expect(errors).toHaveLength(2);
+        expect(errors[0]).toBe(STATE_UNREADABLE_ERROR);
+        expect(errors[1]).toMatch(
+          /^Fetch failed \(bibliography\): Could not read lectures\/_config\.yml /
+        );
+      });
+    });
+
+    it('counts both errors in the job summary, and lists only the scope error', () => {
+      check(run, () => {
+        expect(linesOf(run.summary)).toContain(
+          '**No translation PR.** The run failed with 2 error(s); see the log.'
+        );
+        expect(itemsUnder(run.summary, '### ❌ Scope unknown (1)')).toEqual([
+          STATE_UNREADABLE_ERROR,
+        ]);
+      });
+    });
+
+    it('makes no model call, and sends every request to the fake', () => {
+      check(run, expectCleanRun);
+    });
+  });
+
   describe("'existing': a lecture in scope that the content fetch cannot read", () => {
     let run: BundleRun;
     beforeAll(() => {
@@ -1532,11 +1579,15 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
       });
     }, 90_000);
 
-    it('looks for the lecture to delete, then closes the failure issue', () => {
+    // Its 404 counts once the edition reads, and a state file left behind
+    // would be deleted (#396).
+    it('looks for the lecture and its state file, then closes the failure issue', () => {
       check(run, (log) => {
         expect(log.requests).toEqual([
           PR_FILES,
           readEdition('lectures/gone.md'),
+          EDITION_READ,
+          readEdition('.translate/state/gone.md.yml'),
           ...CLOSE_FAILURE_ISSUE,
         ]);
       });
@@ -1573,11 +1624,16 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
       run = runBundle('all-removal-open-issue', { scope: 'all', ...REMOVES_A_MISSING_LECTURE });
     }, 90_000);
 
-    // The requests main's bundle makes for this run: #387's scoped half leaves
-    // `all` as it was.
-    it('makes the requests it made before, none of them for an issue', () => {
+    // #387's scoped half leaves `all` as it was: no request for an issue.
+    // #396 adds the edition read its 404 needs, and the state file's read.
+    it('makes no request for an issue', () => {
       check(run, (log) => {
-        expect(log.requests).toEqual([PR_FILES, readEdition('lectures/gone.md')]);
+        expect(log.requests).toEqual([
+          PR_FILES,
+          readEdition('lectures/gone.md'),
+          EDITION_READ,
+          readEdition('.translate/state/gone.md.yml'),
+        ]);
       });
     });
 
@@ -2160,6 +2216,361 @@ describe("the premise of update mode in the built bundle's runSync (#420)", () =
         expect(errors).toHaveLength(1);
         expect(errors[0]).toMatch(/^Translation behind: lectures\/a\.md: /);
         expect(log.comments).toEqual([]);
+      });
+    });
+  });
+});
+
+describe("failed reads in the built bundle's runSync (#396, #386)", () => {
+  /** The error for a removal the edition answered `status` for. */
+  const removalError = (p: string, status: number) =>
+    `Fetch failed (removed): ${p}: Error: Could not read ${p} from ${EDITION} ` +
+    `(status ${status}): HttpError: HTTP ${status}`;
+
+  describe.each(['all', 'existing'] as const)(
+    "'%s': a removal the edition cannot read, with a failure issue open",
+    (scope) => {
+      let run: BundleRun;
+      beforeAll(() => {
+        run = runBundle(`removal-500-${scope}`, {
+          scope,
+          prFiles: [{ filename: 'lectures/f.md', status: 'removed' }],
+          source: {},
+          target: { 'lectures/f.md': { status: 500 } },
+          issues: OPEN_ISSUES,
+        });
+      }, 90_000);
+
+      it('reads nothing more for it, opens no PR, and leaves the failure issue open', () => {
+        check(run, (log) => {
+          expect(log.requests).toEqual([
+            PR_FILES,
+            readEdition('lectures/f.md'),
+            ...OPEN_FAILURE_ISSUE,
+          ]);
+          expect(log.pulls).toEqual([]);
+          expect(log.deletes).toEqual([]);
+          expect(log.issueUpdates).toEqual([]);
+        });
+      });
+
+      it('fails the run with a failure issue that names the read', () => {
+        check(run, (log) => {
+          expect(run.status).toBe(1);
+          expect(log.issues).toHaveLength(1);
+          expect(issueErrors(log.issues[0])).toEqual([removalError('lectures/f.md', 500)]);
+          expect(log.comments).toEqual([]);
+          expectCleanRun(log);
+        });
+      });
+    }
+  );
+
+  describe('a removal the edition cannot read, beside a ToC change', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('removal-500-toc', {
+        scope: 'all',
+        prFiles: [
+          { filename: 'lectures/_toc.yml', status: 'modified' },
+          { filename: 'lectures/f.md', status: 'removed' },
+        ],
+        source: { [atMerge('lectures/_toc.yml')]: TOC_AFTER },
+        target: { 'lectures/_toc.yml': TOC_BEFORE, 'lectures/f.md': { status: 500 } },
+        issues: OPEN_ISSUES,
+      });
+    }, 90_000);
+
+    it('delivers the ToC in a PR that neither deletes nor declares the lecture', () => {
+      check(run, (log) => {
+        expect(log.writes).toEqual([updated('lectures/_toc.yml', TOC_AFTER)]);
+        expect(log.deletes).toEqual([]);
+        expect(log.pulls).toHaveLength(1);
+        expect(declaredFiles(log.pulls[0].body)).toEqual([
+          { path: 'lectures/_toc.yml', type: 'toc' },
+        ]);
+      });
+    });
+
+    it('fails the run with a failure issue for the removal, and closes none', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(log.issues).toHaveLength(1);
+        expect(issueErrors(log.issues[0])).toEqual([removalError('lectures/f.md', 500)]);
+        expect(log.comments).toEqual([]);
+        expect(log.issueUpdates).toEqual([]);
+        expectCleanRun(log);
+      });
+    });
+  });
+
+  describe('a removed lecture whose state file the edition cannot serve', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('removal-state-500', {
+        scope: 'all',
+        prFiles: [{ filename: 'lectures/f.md', status: 'removed' }],
+        source: {},
+        target: {
+          'lectures/f.md': translated('Foxtrot'),
+          '.translate/state/f.md.yml': { status: 500 },
+        },
+      });
+    }, 90_000);
+
+    it('removes neither the lecture nor its state file, and opens no PR', () => {
+      check(run, (log) => {
+        expect(requestsFor(log, 'lectures/f.md')).toEqual([
+          readEdition('lectures/f.md'),
+          readEdition('.translate/state/f.md.yml'),
+        ]);
+        expect(log.deletes).toEqual([]);
+        expect(log.pulls).toEqual([]);
+      });
+    });
+
+    it('fails the run with a failure issue that names the state file', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(issueErrors(log.issues[0])).toEqual([
+          `Fetch failed (state): lectures/f.md: could not read .translate/state/f.md.yml from ` +
+            `${EDITION} (status 500: HTTP 500), so whether to delete it is unknown. ` +
+            'It was not removed.',
+        ]);
+        expectCleanRun(log);
+      });
+    });
+  });
+
+  describe('a removed lecture the edition no longer has, whose state file it still has', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('removal-orphan-state', {
+        scope: 'all',
+        prFiles: [{ filename: 'lectures/gone.md', status: 'removed' }],
+        source: {},
+        target: { '.translate/state/gone.md.yml': STATE },
+      });
+    }, 90_000);
+
+    it('confirms the edition before it trusts the 404', () => {
+      check(run, (log) => {
+        expect(log.requests.slice(0, 4)).toEqual([
+          PR_FILES,
+          readEdition('lectures/gone.md'),
+          EDITION_READ,
+          readEdition('.translate/state/gone.md.yml'),
+        ]);
+      });
+    });
+
+    it('deletes the state file alone, in a PR that lists it under Files Deleted', () => {
+      check(run, (log) => {
+        expect(log.writes).toEqual([]);
+        expect(log.deletes).toEqual([deleted('.translate/state/gone.md.yml')]);
+        expect(log.pulls).toHaveLength(1);
+        const { body } = log.pulls[0];
+        expect(pathsUnder(body, '### Files Deleted')).toEqual(['.translate/state/gone.md.yml']);
+        expect(declaredFiles(body)).toEqual([{ path: 'lectures/gone.md', type: 'removed' }]);
+      });
+    });
+
+    it('passes, with no failure issue', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(0);
+        expect(log.issues).toEqual([]);
+        expect(run.outputs['files-synced']).toBe('1');
+        expectCleanRun(log);
+      });
+    });
+  });
+
+  describe('a removal-only PR against an edition the token cannot read', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('removal-edition-unreadable', {
+        scope: 'all',
+        editionStatus: 404,
+        prFiles: [{ filename: 'lectures/gone.md', status: 'removed' }],
+        source: {},
+        // GitHub answers 404 for every path in a repository the token cannot see.
+        target: {},
+      });
+    }, 90_000);
+
+    it('does not take the 404 as the lecture gone: it fails the run, naming the edition', () => {
+      check(run, (log) => {
+        expect(log.requests).toEqual([
+          PR_FILES,
+          readEdition('lectures/gone.md'),
+          EDITION_READ,
+          ...OPEN_FAILURE_ISSUE,
+        ]);
+        expect(run.status).toBe(1);
+        expect(log.pulls).toEqual([]);
+        expect(issueErrors(log.issues[0])).toEqual([
+          `Fetch failed (removed): lectures/gone.md: Error: could not read the target repo ` +
+            `${EDITION} (status 404), so its 404 for this file cannot be trusted: ` +
+            'HttpError: Not Found',
+        ]);
+        expectCleanRun(log);
+      });
+    });
+  });
+
+  describe('a removal the edition has nothing left of, beside a ToC change', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('removal-nothing-left-toc', {
+        scope: 'all',
+        prFiles: [
+          { filename: 'lectures/_toc.yml', status: 'modified' },
+          { filename: 'lectures/gone.md', status: 'removed' },
+        ],
+        source: { [atMerge('lectures/_toc.yml')]: TOC_AFTER },
+        target: { 'lectures/_toc.yml': TOC_BEFORE },
+      });
+    }, 90_000);
+
+    it('delivers the ToC in a PR that neither deletes nor declares the lecture', () => {
+      check(run, (log) => {
+        expect(requestsFor(log, 'lectures/gone.md')).toEqual([
+          readEdition('lectures/gone.md'),
+          readEdition('.translate/state/gone.md.yml'),
+        ]);
+        expect(log.writes).toEqual([updated('lectures/_toc.yml', TOC_AFTER)]);
+        expect(log.deletes).toEqual([]);
+        expect(log.pulls).toHaveLength(1);
+        expect(declaredFiles(log.pulls[0].body)).toEqual([
+          { path: 'lectures/_toc.yml', type: 'toc' },
+        ]);
+        expect(run.status).toBe(0);
+        expectCleanRun(log);
+      });
+    });
+  });
+
+  /** A rename of `c.md` to `c-new.md`, whose old state file answers 500. */
+  const renameWithOldState500 = (edition: Record<string, EditionAnswer>): Scenario => ({
+    scope: 'all',
+    prFiles: [
+      { filename: 'lectures/c-new.md', status: 'renamed', previous_filename: 'lectures/c.md' },
+    ],
+    source: {
+      [atMerge('lectures/c-new.md')]: lecture('Charlie'),
+      [atParent('lectures/c.md')]: lecture('Charlie'),
+    },
+    target: { ...edition, '.translate/state/c.md.yml': { status: 500 } },
+  });
+
+  describe('a rename whose old state file the edition cannot serve', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle(
+        'rename-old-state-500',
+        renameWithOldState500({ 'lectures/c.md': translated('Charlie') })
+      );
+    }, 90_000);
+
+    // The premise check reads the same state file, so the error is its own.
+    it("fails the run with one error, the premise check's, and moves nothing", () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(issueErrors(log.issues[0])).toEqual([
+          `Fetch failed (state): lectures/c-new.md: could not read .translate/state/c.md.yml ` +
+            `from ${EDITION} (status 500: HTTP 500), so whether its translation starts from ` +
+            "this PR's English could not be checked. It was not synced.",
+        ]);
+        expect(log.writes).toEqual([]);
+        expect(log.deletes).toEqual([]);
+        expect(log.pulls).toEqual([]);
+        expectCleanRun(log);
+      });
+    });
+  });
+
+  describe('a rename the edition lacks at its old path, whose old state file it cannot serve', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('rename-new-old-state-500', renameWithOldState500({}));
+    }, 90_000);
+
+    // Without the hold, the lecture would be translated from scratch.
+    it('holds the lecture back before any model call, and fails the run', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(issueErrors(log.issues[0])).toEqual([
+          `Fetch failed (state): lectures/c-new.md: could not read .translate/state/c.md.yml ` +
+            `from ${EDITION} (status 500: HTTP 500), so whether to delete it is unknown. ` +
+            'It was not synced.',
+        ]);
+        expect(log.writes).toEqual([]);
+        expect(log.pulls).toEqual([]);
+        expectCleanRun(log);
+      });
+    });
+  });
+
+  describe('a bibliography the edition cannot serve (#386)', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('bibliography-502', {
+        scope: 'all',
+        defaultBibliography: true,
+        prFiles: [
+          { filename: 'lectures/a.md', status: 'modified' },
+          { filename: 'lectures/_toc.yml', status: 'modified' },
+          { filename: 'lectures/f.md', status: 'removed' },
+          { filename: 'lectures/g.md', status: 'removed' },
+        ],
+        source: {
+          ...changedInSource('lectures/a.md', 'Alpha'),
+          [atMerge('lectures/_toc.yml')]: TOC_AFTER,
+        },
+        target: {
+          'lectures/a.md': translated('Alpha'),
+          'lectures/_toc.yml': TOC_BEFORE,
+          'lectures/f.md': translated('Foxtrot'),
+          'lectures/g.md': { status: 500 },
+          'lectures/_config.yml': { status: 502 },
+        },
+      });
+    }, 90_000);
+
+    it('holds the whole sync: no lecture, ToC or removal, and no model call', () => {
+      check(run, (log) => {
+        expect(log.writes).toEqual([]);
+        expect(log.deletes).toEqual([]);
+        expect(log.pulls).toEqual([]);
+        expectCleanRun(log);
+      });
+    });
+
+    it('fails the run with one failure issue that lists every error, the bibliography last', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(log.issues).toHaveLength(1);
+        expect(issueErrors(log.issues[0])).toEqual([
+          removalError('lectures/g.md', 500),
+          `Fetch failed (bibliography): Could not read lectures/_config.yml from ${EDITION} ` +
+            '(status 502): HttpError: HTTP 502. Nothing was synced.',
+        ]);
+        expect(log.comments).toEqual([]);
+      });
+    });
+
+    it('advises making the bibliography readable, with no recovery line per lecture', () => {
+      check(run, (log) => {
+        const recovery = recoveryOf(log.issues[0]);
+        expect(recovery).toContain(
+          'This run synced nothing: it could not read the bibliography a sync needs to carry ' +
+            "the entries its citations use (the edition's `lectures/_config.yml`, and the " +
+            'files its `bibtex_bibfiles` lists, in the edition and in the source)'
+        );
+        expect(recovery).toContain('- one the edition has: `translate forward -f <file>`;');
+        expect(recovery).toContain(`\`\\translate-resync\` on #${PR_NUMBER}`);
+        expect(recovery).not.toContain('translate forward -f a.md');
+        expect(recovery).not.toContain('Any other lecture named above');
       });
     });
   });
