@@ -10,6 +10,7 @@ import {
 import {
   SyncOrchestrator,
   classifyChangedFiles,
+  findRenamesOut,
   isDocsMarkdownPath,
   loadGlossary,
   FileToSync,
@@ -883,6 +884,44 @@ async function runSync(): Promise<void> {
 
   // Classify files into categories
   const classified = classifyChangedFiles(files, inputs.docsFolder);
+
+  // Renames sync does not carry out (#398). A lecture renamed to a name that
+  // is not `.md` keeps its translation, no longer synced. The docs folder's
+  // `_toc.yml` moved out of it means the source moved its book, which a sync
+  // cannot follow: each lecture's move would read as a removal.
+  const renamesOut = findRenamesOut(files, inputs.docsFolder);
+  for (const { from, to } of renamesOut.notMarkdown) {
+    core.warning(
+      `${from} was renamed to ${to}, which is not a .md file: ${inputs.targetRepo} keeps its ` +
+        `translation of ${from}, which sync no longer updates`
+    );
+  }
+  if (renamesOut.tocMovedOut) {
+    const { from, to } = renamesOut.tocMovedOut;
+    const error =
+      `Sync refused: ${from} was moved to ${to}, out of docs-folder '${inputs.docsFolder}', ` +
+      'so the source has moved its book. Nothing was synced.';
+    core.setFailed(error);
+    if (!isTestMode) {
+      await createFailureIssue(
+        octokit,
+        prNumber,
+        inputs.targetLanguage,
+        inputs.targetRepo,
+        [error],
+        { docsFolder: inputs.docsFolder, mergeSha: effectiveSha, folderMoved: { from, to } }
+      );
+    }
+    return;
+  }
+  for (const file of classified.removedMarkdownFiles) {
+    if (file.renamedTo) {
+      core.info(
+        `${file.filename} was moved to ${file.renamedTo}, out of docs-folder: its translation ` +
+          'and state file are deleted'
+      );
+    }
+  }
 
   if (
     classified.changedMarkdownFiles.length === 0 &&
@@ -1884,7 +1923,13 @@ async function createFailureIssue(
   errors: string[],
   advice: Pick<
     FailureIssueInput,
-    'docsFolder' | 'mergeSha' | 'heldBack' | 'failedLectures' | 'stillOpen' | 'bibliographyUnread'
+    | 'docsFolder'
+    | 'mergeSha'
+    | 'heldBack'
+    | 'failedLectures'
+    | 'stillOpen'
+    | 'bibliographyUnread'
+    | 'folderMoved'
   > = { docsFolder: '' }
 ): Promise<void> {
   try {

@@ -2575,3 +2575,166 @@ describe("failed reads in the built bundle's runSync (#396, #386)", () => {
     });
   });
 });
+
+describe("renames out of the docs folder in the built bundle's runSync (#398)", () => {
+  // Removals are not scoped, so `existing` deletes the moved lecture too.
+  describe.each(['all', 'existing'] as const)(
+    "'%s': a lecture moved out of the docs folder, beside a ToC edit",
+    (scope) => {
+      let run: BundleRun;
+      beforeAll(() => {
+        run = runBundle(`moved-out-${scope}`, {
+          scope,
+          prFiles: [
+            { filename: 'archive/foo.md', status: 'renamed', previous_filename: 'lectures/foo.md' },
+            { filename: 'lectures/_toc.yml', status: 'modified' },
+          ],
+          source: { [atMerge('lectures/_toc.yml')]: TOC_AFTER },
+          target: {
+            'lectures/foo.md': translated('Foxtrot'),
+            '.translate/state/foo.md.yml': STATE,
+            'lectures/_toc.yml': TOC_BEFORE,
+          },
+        });
+      }, 90_000);
+
+      it('deletes the translation and its state file, and mirrors the ToC', () => {
+        check(run, (log) => {
+          expect(log.writes).toEqual([updated('lectures/_toc.yml', TOC_AFTER)]);
+          expect(log.deletes).toEqual([
+            deleted('lectures/foo.md'),
+            deleted('.translate/state/foo.md.yml'),
+          ]);
+          expect(log.pulls).toHaveLength(1);
+          const { body } = log.pulls[0];
+          expect(pathsUnder(body, '### Files Deleted')).toEqual([
+            'lectures/foo.md',
+            '.translate/state/foo.md.yml',
+          ]);
+          expect(declaredFiles(body)).toEqual([
+            { path: 'lectures/_toc.yml', type: 'toc' },
+            { path: 'lectures/foo.md', type: 'removed' },
+          ]);
+        });
+      });
+
+      it('says why in the log, and passes', () => {
+        check(run, (log) => {
+          expect(run.stdout).toContain(
+            'lectures/foo.md was moved to archive/foo.md, out of docs-folder: its translation and ' +
+              'state file are deleted'
+          );
+          expect(run.status).toBe(0);
+          expect(log.issues).toEqual([]);
+          expectCleanRun(log);
+        });
+      });
+    }
+  );
+
+  describe("the docs folder's _toc.yml removed and another added outside it, as for a rewritten move", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('book-moved-rewritten', {
+        scope: 'all',
+        prFiles: [
+          { filename: 'lectures/_toc.yml', status: 'removed' },
+          { filename: 'src/_toc.yml', status: 'added' },
+          { filename: 'src/foo.md', status: 'renamed', previous_filename: 'lectures/foo.md' },
+        ],
+        source: {},
+        target: {
+          'lectures/foo.md': translated('Foxtrot'),
+          '.translate/state/foo.md.yml': STATE,
+          'lectures/_toc.yml': TOC_BEFORE,
+        },
+      });
+    }, 90_000);
+
+    it('refuses the run the same way, deleting neither the lectures nor the ToC', () => {
+      check(run, (log) => {
+        expect(log.requests).toEqual([PR_FILES, ...OPEN_FAILURE_ISSUE]);
+        expect(log.deletes).toEqual([]);
+        expect(run.status).toBe(1);
+        expect(issueErrors(log.issues[0])).toEqual([
+          "Sync refused: lectures/_toc.yml was moved to src/_toc.yml, out of docs-folder 'lectures/', " +
+            'so the source has moved its book. Nothing was synced.',
+        ]);
+        expectCleanRun(log);
+      });
+    });
+  });
+
+  describe("the docs folder's _toc.yml moved out of it", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('book-moved', {
+        scope: 'all',
+        prFiles: [
+          { filename: 'src/_toc.yml', status: 'renamed', previous_filename: 'lectures/_toc.yml' },
+          { filename: 'src/foo.md', status: 'renamed', previous_filename: 'lectures/foo.md' },
+        ],
+        source: {},
+        target: { 'lectures/foo.md': translated('Foxtrot'), '.translate/state/foo.md.yml': STATE },
+      });
+    }, 90_000);
+
+    it('reads nothing, deletes nothing, and fails with a failure issue', () => {
+      check(run, (log) => {
+        expect(log.requests).toEqual([PR_FILES, ...OPEN_FAILURE_ISSUE]);
+        expect(log.deletes).toEqual([]);
+        expect(log.pulls).toEqual([]);
+        expect(run.status).toBe(1);
+        expect(issueErrors(log.issues[0])).toEqual([
+          "Sync refused: lectures/_toc.yml was moved to src/_toc.yml, out of docs-folder 'lectures/', " +
+            'so the source has moved its book. Nothing was synced.',
+        ]);
+        expectCleanRun(log);
+      });
+    });
+
+    it('says to move the edition by hand and point the workflow at the new folder', () => {
+      check(run, (log) => {
+        const recovery = recoveryOf(log.issues[0]);
+        expect(recovery).toContain(
+          'The source moved its book: `lectures/_toc.yml` became `src/_toc.yml`, outside ' +
+            '`docs-folder` (`lectures/`).'
+        );
+        expect(recovery).toContain("Set the sync workflow's `docs-folder` input to `src`");
+        expect(recovery).toContain('Do not use `\\translate-resync` on this PR');
+        expect(recovery).not.toContain('translate forward');
+      });
+    });
+  });
+
+  describe('a lecture renamed to a name that is not .md', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('renamed-not-markdown', {
+        scope: 'all',
+        prFiles: [
+          {
+            filename: 'lectures/foo.ipynb',
+            status: 'renamed',
+            previous_filename: 'lectures/foo.md',
+          },
+        ],
+        source: {},
+        target: { 'lectures/foo.md': translated('Foxtrot') },
+      });
+    }, 90_000);
+
+    it('warns that the translation is no longer synced, deletes nothing, and passes', () => {
+      check(run, (log) => {
+        expect(run.stdout).toContain(
+          `::warning::lectures/foo.md was renamed to lectures/foo.ipynb, which is not a .md ` +
+            `file: ${EDITION} keeps its translation of lectures/foo.md, which sync no longer updates`
+        );
+        expect(log.requests).toEqual([PR_FILES]);
+        expect(log.deletes).toEqual([]);
+        expect(run.status).toBe(0);
+        expectCleanRun(log);
+      });
+    });
+  });
+});

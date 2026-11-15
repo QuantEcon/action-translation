@@ -299,7 +299,7 @@ jobs:
 
 When a PR is merged into the default branch, sync mode:
 
-1. **Identifies changed files** — Compares the PR's diff against the docs folder pattern
+1. **Identifies changed files** — Compares the PR's diff against the docs folder pattern. A rename counts as one only when both of its paths are lectures in the docs folder. A lecture moved out of the folder is deleted from the edition, with its state file, as a removal. A lecture renamed inside the folder to a name that is not `.md` is left in the edition, with a warning that sync no longer updates it. A move of the folder's own `_toc.yml` out of it, or its removal beside a `_toc.yml` added outside it, means the source moved its book, and the run fails with a failure issue saying how to move the edition (#307, #398)
 2. **Checks scope** — Under `sync-scope: existing` only: keeps a changed or renamed lecture only if the edition has both its state file and the lecture, before any content is fetched. If nothing is left to sync, the run ends here with a job summary and no PR: it passes if every check succeeded, and otherwise fails and opens the failure issue (see [Partial editions](#partial-editions))
 3. **Classifies each file** — New file (full translation) or existing file (section-level update)
 4. **Parses sections** — Splits documents at `##` headings using a stack-based parser

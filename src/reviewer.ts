@@ -529,6 +529,10 @@ export class TranslationReviewer {
    * from "the fetch failed" — two states the F40 guard could not distinguish,
    * so every deletion PR failed its review run (#210).
    *
+   * A lecture the source PR moved out of `docsFolder` counts as deleted too:
+   * sync deletes its translation as for a removal (#398), and GitHub lists
+   * the move as `renamed`, under the new path.
+   *
    * Fail-closed by construction: if listing the source PR throws, the outer
    * catch returns an EMPTY `removed` set, so no file is excused and absent
    * source content stays fatal. Absence of evidence is never read as evidence
@@ -538,7 +542,8 @@ export class TranslationReviewer {
     sourceOwner: string,
     sourceRepoName: string,
     sourcePrNumber: number,
-    filenames: string[]
+    filenames: string[],
+    docsFolder: string
   ): Promise<{ before: Map<string, string>; after: Map<string, string>; removed: Set<string> }> {
     const before = new Map<string, string>();
     const after = new Map<string, string>();
@@ -565,8 +570,14 @@ export class TranslationReviewer {
       for (const filename of filenames) {
         // Check if this file was changed in source PR
         const sourceFile = sourceFiles.find((f: PrListFile) => f.filename === filename);
+        const movedOut = sourceFiles.some(
+          (f: PrListFile) =>
+            f.status === 'renamed' &&
+            f.previous_filename === filename &&
+            !f.filename.startsWith(docsFolder)
+        );
 
-        if (sourceFile?.status === 'removed') {
+        if (sourceFile?.status === 'removed' || (!sourceFile && movedOut)) {
           removed.add(filename);
         }
 
@@ -594,7 +605,7 @@ export class TranslationReviewer {
         }
 
         // Get content AFTER (from head ref)
-        if (!sourceFile || sourceFile.status !== 'removed') {
+        if (!removed.has(filename)) {
           try {
             const { data: afterData } = await this.octokit.rest.repos.getContent({
               owner: sourceOwner,
@@ -785,7 +796,13 @@ export class TranslationReviewer {
           resyncMetadata.sourceCommitSha,
           filenames
         )
-      : await this.getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber as number, filenames);
+      : await this.getSourceDiff(
+          sourceOwner,
+          sourceRepoName,
+          sourcePrNumber as number,
+          filenames,
+          docsFolder
+        );
 
     // Deletions are not reviewable, and pretending otherwise fails the run
     // (#210). A document the source PR deleted has no source content BY

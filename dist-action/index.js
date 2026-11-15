@@ -53968,6 +53968,33 @@ function formatGlossaryTerms(glossary, targetLanguage) {
 function isDocsMarkdownPath(path8, docsFolder) {
   return typeof path8 === "string" && path8.startsWith(docsFolder) && path8.endsWith(".md");
 }
+function isMovedOutOfDocs(file, docsFolder) {
+  return file.status === "renamed" && isDocsMarkdownPath(file.previous_filename, docsFolder) && typeof file.filename === "string" && !file.filename.startsWith(docsFolder);
+}
+function findRenamesOut(files, docsFolder) {
+  const renamesOut = { notMarkdown: [] };
+  const toc = `${docsFolder}_toc.yml`;
+  const outside = (path8) => typeof path8 === "string" && !path8.startsWith(docsFolder);
+  for (const file of files) {
+    if (file.status !== "renamed" || typeof file.previous_filename !== "string")
+      continue;
+    const from = file.previous_filename;
+    const to = file.filename;
+    if (!from.startsWith(docsFolder))
+      continue;
+    if (from === toc && outside(to)) {
+      renamesOut.tocMovedOut ??= { from, to };
+    } else if (from.endsWith(".md") && to.startsWith(docsFolder) && !to.endsWith(".md")) {
+      renamesOut.notMarkdown.push({ from, to });
+    }
+  }
+  if (!renamesOut.tocMovedOut && files.some((f) => f.status === "removed" && f.filename === toc)) {
+    const added = files.find((f) => f.status === "added" && outside(f.filename) && (f.filename === "_toc.yml" || f.filename.endsWith("/_toc.yml")));
+    if (added)
+      renamesOut.tocMovedOut = { from: toc, to: added.filename };
+  }
+  return renamesOut;
+}
 function classifyChangedFiles(files, docsFolder) {
   const prefix = docsFolder;
   const isLectureRename = (file) => file.status === "renamed" && isDocsMarkdownPath(file.previous_filename, prefix);
@@ -53983,9 +54010,24 @@ function classifyChangedFiles(files, docsFolder) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (file) => file.filename.startsWith(prefix) && file.filename.endsWith("_toc.yml") && file.status !== "removed" && file.status !== "renamed"
   );
-  const removedMarkdownFiles = files.filter(
+  const removedMarkdownFiles = files.flatMap(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (file) => file.filename.startsWith(prefix) && file.filename.endsWith(".md") && file.status === "removed"
+    (file) => {
+      if (file.filename.startsWith(prefix) && file.filename.endsWith(".md") && file.status === "removed") {
+        return [file];
+      }
+      if (isMovedOutOfDocs(file, prefix)) {
+        return [
+          {
+            ...file,
+            filename: file.previous_filename,
+            status: "removed",
+            renamedTo: file.filename
+          }
+        ];
+      }
+      return [];
+    }
   );
   const removedTocFiles = files.filter(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -55519,7 +55561,21 @@ function resyncParagraph(prNumber, mergeSha) {
 function bibliographyIntro(input) {
   return `This run synced nothing: it could not read the bibliography a sync needs to carry the entries its citations use (the edition's \`${input.docsFolder}_config.yml\`, and the files its \`bibtex_bibfiles\` lists, in the edition and in the source). No lecture was translated and nothing in ${input.targetRepo} changed. Make the file the error names readable (a transient error needs nothing), then sync this PR's changes again: with \`${RESYNC_COMMAND}\` under the condition below, or lecture by lecture from a checkout of the source's default branch:`;
 }
+function folderMovedLines(moved, docsFolder) {
+  const slash = moved.to.lastIndexOf("/");
+  const folder = slash === -1 ? "." : moved.to.slice(0, slash);
+  return [
+    `The source moved its book: \`${moved.from}\` became \`${moved.to}\`, outside \`docs-folder\` (\`${docsFolder}\`). A sync carries changes into the lectures the edition already has, by path, so it cannot follow the move, and nothing was synced.`,
+    "",
+    `1. In the edition, move the docs folder's files to \`${folder}\` the same way, in a PR of its own. The state files under \`.translate/state/\` are named relative to the docs folder, so they stay where they are.`,
+    `2. Set the sync workflow's \`docs-folder\` input to \`${folder}\`, and its \`paths:\` filter to match.`,
+    "",
+    `Do not use \`${RESYNC_COMMAND}\` on this PR: under the new \`docs-folder\`, each lecture it moved reads as a file added from outside the folder, not as a change to a lecture the edition has.`
+  ];
+}
 function failureRecoveryLines(input) {
+  if (input.folderMoved)
+    return folderMovedLines(input.folderMoved, input.docsFolder);
   const heldBack = input.heldBack ?? [];
   const premise = formatPremiseRecovery(heldBack, input.docsFolder, input.targetLanguage);
   const otherErrors = input.errors.length > heldBack.length;
@@ -56198,12 +56254,16 @@ var TranslationReviewer = class {
    * from "the fetch failed" — two states the F40 guard could not distinguish,
    * so every deletion PR failed its review run (#210).
    *
+   * A lecture the source PR moved out of `docsFolder` counts as deleted too:
+   * sync deletes its translation as for a removal (#398), and GitHub lists
+   * the move as `renamed`, under the new path.
+   *
    * Fail-closed by construction: if listing the source PR throws, the outer
    * catch returns an EMPTY `removed` set, so no file is excused and absent
    * source content stays fatal. Absence of evidence is never read as evidence
    * of deletion.
    */
-  async getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames) {
+  async getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames, docsFolder) {
     const before = /* @__PURE__ */ new Map();
     const after = /* @__PURE__ */ new Map();
     const removed = /* @__PURE__ */ new Set();
@@ -56220,7 +56280,8 @@ var TranslationReviewer = class {
       });
       for (const filename of filenames) {
         const sourceFile = sourceFiles.find((f) => f.filename === filename);
-        if (sourceFile?.status === "removed") {
+        const movedOut = sourceFiles.some((f) => f.status === "renamed" && f.previous_filename === filename && !f.filename.startsWith(docsFolder));
+        if (sourceFile?.status === "removed" || !sourceFile && movedOut) {
           removed.add(filename);
         }
         const beforeFilename = sourceFile?.status === "renamed" && sourceFile.previous_filename ? sourceFile.previous_filename : filename;
@@ -56238,7 +56299,7 @@ var TranslationReviewer = class {
           } catch {
           }
         }
-        if (!sourceFile || sourceFile.status !== "removed") {
+        if (!removed.has(filename)) {
           try {
             const { data: afterData } = await this.octokit.rest.repos.getContent({
               owner: sourceOwner,
@@ -56364,7 +56425,7 @@ var TranslationReviewer = class {
       core6.info(`Found source PR reference: #${sourcePrNumber}`);
     }
     const filenames = markdownFiles.map((f) => f.filename);
-    const { before: sourceBeforeMap, after: sourceAfterMap, removed: sourceRemoved } = resyncMetadata ? await this.getSourceAtCommit(sourceOwner, sourceRepoName, resyncMetadata.sourceCommitSha, filenames) : await this.getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames);
+    const { before: sourceBeforeMap, after: sourceAfterMap, removed: sourceRemoved } = resyncMetadata ? await this.getSourceAtCommit(sourceOwner, sourceRepoName, resyncMetadata.sourceCommitSha, filenames) : await this.getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames, docsFolder);
     const deletedFiles = markdownFiles.filter((f) => sourceRemoved.has(f.filename));
     const reviewableFiles = markdownFiles.filter((f) => !sourceRemoved.has(f.filename));
     for (const file of deletedFiles) {
@@ -57742,6 +57803,24 @@ async function runSync() {
     pull_number: prNumber
   });
   const classified = classifyChangedFiles(files, inputs.docsFolder);
+  const renamesOut = findRenamesOut(files, inputs.docsFolder);
+  for (const { from, to } of renamesOut.notMarkdown) {
+    core9.warning(`${from} was renamed to ${to}, which is not a .md file: ${inputs.targetRepo} keeps its translation of ${from}, which sync no longer updates`);
+  }
+  if (renamesOut.tocMovedOut) {
+    const { from, to } = renamesOut.tocMovedOut;
+    const error4 = `Sync refused: ${from} was moved to ${to}, out of docs-folder '${inputs.docsFolder}', so the source has moved its book. Nothing was synced.`;
+    core9.setFailed(error4);
+    if (!isTestMode) {
+      await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, [error4], { docsFolder: inputs.docsFolder, mergeSha: effectiveSha, folderMoved: { from, to } });
+    }
+    return;
+  }
+  for (const file of classified.removedMarkdownFiles) {
+    if (file.renamedTo) {
+      core9.info(`${file.filename} was moved to ${file.renamedTo}, out of docs-folder: its translation and state file are deleted`);
+    }
+  }
   if (classified.changedMarkdownFiles.length === 0 && classified.changedTocFiles.length === 0 && classified.removedMarkdownFiles.length === 0 && classified.removedTocFiles.length === 0 && classified.renamedMarkdownFiles.length === 0) {
     core9.info("No markdown or TOC files changed in docs folder. Exiting.");
     return;
