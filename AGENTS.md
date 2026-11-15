@@ -41,7 +41,10 @@ convention; its home is the Project Management Protocols QEP — QuantEcon/qeps 
 - Scratch and working files live outside the tree (the agent's own scratchpad, or
   `SCRATCH=$(mktemp -d)`); never create standalone summary/notes markdown files for
   individual changes.
-- Update `CHANGELOG.md` under `[Unreleased]` for user-visible changes.
+- For a user-visible change, add a changelog fragment, `changelog.d/<branch without its
+  prefix>.md`, in the format of [`changelog.d/README.md`](changelog.d/README.md). Never edit
+  `CHANGELOG.md`'s `[Unreleased]`: it stays empty until the release PR collects the
+  fragments, and `npm run changelog:check` fails in CI otherwise.
 
 ---
 
@@ -233,7 +236,7 @@ tool-test-action-on-github/
 
 ## Documentation Guidelines
 
-✅ Update `CHANGELOG.md` for every release — promote `[Unreleased]` → `[X.Y.Z] - YYYY-MM-DD`
+✅ Collect the changelog fragments into `CHANGELOG.md` for every release: `npm run changelog -- --release X.Y.Z`
 ✅ Update `README.md` for user-facing changes
 ✅ Update the test count in `.qe/dev/STATE.md` (*Health & context*) when a change moves it — this file carries none
 ✅ Clean up any `.backup` or `-old` files before committing
@@ -245,7 +248,7 @@ Docs live in `docs/` — see `docs/index.md` for the full structure.
 
 Before creating a release, verify the following:
 
-1. **CHANGELOG is up to date** — all merged PRs and features are listed under `[Unreleased]`; promote `[Unreleased]` → `[X.Y.Z] - YYYY-MM-DD` and leave a fresh empty `## [Unreleased]` header above it, so the next PR's entry has somewhere to go that is not the released section (adopted v0.28.0, #304)
+1. **CHANGELOG is up to date** — every merged PR with a user-visible change has its fragment in `changelog.d/`. Run `npm run -s changelog -- --release X.Y.Z > $SCRATCH/release-notes.md` (`-s` keeps npm's own lines out of the notes). It writes the fragments under `## [X.Y.Z] - YYYY-MM-DD`, below a fresh empty `## [Unreleased]` (the rule since v0.28.0, #304), deletes them, and prints the release's sections, the draft for step 6's notes. The date is today's local date unless `--date` is given. Review `git diff CHANGELOG.md` and reorder entries by hand if the order matters; `git checkout -- CHANGELOG.md changelog.d` undoes it (D-2026-11-16-changelog-fragments)
 2. **Version bumped** — `npm version X.Y.Z --no-git-tag-version`, which updates `package.json` and both version fields of `package-lock.json`. No other file carries the current version; this file and `.qe/dev/PLAN.md` hold none
 3. **Tests pass** — run `npm test` and confirm all tests pass
 4. **Build succeeds** — run `npm run build` to compile TypeScript and update `dist-action/`
@@ -335,7 +338,7 @@ Before creating a release, verify the following:
    gh release create vX.Y.Z --repo QuantEcon/action-translation --title "vX.Y.Z" --notes-file $SCRATCH/release-notes.md
    ```
 
-   `--generate-notes` in place of `--notes-file` builds the notes from the merged PR titles; add `--notes "<headline>"` beside it to put the headline first.
+   `$SCRATCH/release-notes.md` starts as step 1's output: add the headline as its first line. `--generate-notes` in place of `--notes-file` builds the notes from the merged PR titles instead; add `--notes "<headline>"` beside it to put the headline first.
 
    The repo sidebar and the releases list truncate long titles, so a descriptive
    suffix is cut off exactly where it stops being readable — `v0.24.0 — tech-debt

@@ -352,9 +352,11 @@ release, and #442 and #445 change what sync and `init` do to an edition's files.
 `D-2026-11-15-init-keeps-the-editions-files`. Filed: #449, whether sync and the CLI take their
 lectures from the ToC's documents and the `.md` files they include, for Matt to rule on. Of the issues the
 2026-10-22 paragraph calls untriaged, these are still open: #382–#385, #387, #388, #390, #391,
-#397 and #399. Next: changelog fragments, which Matt agreed to on 2026-11-16 (from
-QuantEcon/infrastructure#123), then a release carrying the stack. #280's close sequence and the
-four zh-cn PRs stay Matt's. Log `2026-11-16-overnight-stack`.
+#397 and #399. Changelog entries now go in `changelog.d/` fragments, a prototype Matt chose on
+2026-11-16 (from QuantEcon/infrastructure#123; `D-2026-11-16-changelog-fragments`), and
+`[Unreleased]` stays empty until a release collects them. Next: a release carrying the stack,
+the first through `npm run changelog -- --release`. #280's close sequence and the four zh-cn
+PRs stay Matt's. Log `2026-11-16-overnight-stack`.
 
 *Release, 2026-11-15*: **v0.30.2 is released** (#438, `fdab41f`), and `v0.30` and `v0` point at
 it. Payload: #436 (#420's premise check, #281's recovery text, the retry for a dropped stream),
@@ -468,9 +470,10 @@ delimiter rows, which already break a table in the fr edition's pandas lecture.
 
 ## Health & context
 
-- `main` green; **2,467 tests across 84 suites** (zero skips, type-checked) as of
-  `f214c5e` (counted 2026-11-16 in a clean worktree; a tree holding the harness's gitignored
-  clones counts 15 more, see log `2026-11-16-overnight-stack`); lint at
+- `main` green; **2,499 tests across 85 suites** (zero skips, type-checked) with the
+  changelog-fragments PR, 2,467 across 84 before it at `eb28fc1` (counted 2026-11-16 in a clean
+  worktree; a tree holding the harness's gitignored clones counts 15 more, see log
+  `2026-11-16-overnight-stack`); lint at
   `--max-warnings 0` including root `*.mjs`, CI checks formatting and
   `.qe/dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale `dist/`
   — run `npm run build` first; that guard is deliberate, not a break.

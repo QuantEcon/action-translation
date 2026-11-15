@@ -45,8 +45,9 @@ CI fails if `dist-action/` is out of date relative to the source.
 
 1. Branch from `main` (e.g. `fix/short-description` or `feat/short-description`).
 2. Keep changes focused; add or update tests for behavior changes.
-3. Update relevant docs under [`docs/`](docs/) and the [CHANGELOG](CHANGELOG.md)
-   (under the `[Unreleased]` heading).
+3. Update relevant docs under [`docs/`](docs/), and add a changelog fragment to
+   [`changelog.d/`](changelog.d/README.md) for a user-visible change. Leave
+   [`CHANGELOG.md`](CHANGELOG.md) itself alone: the release collects the fragments.
 4. Ensure lint, tests, and build pass.
 5. Open the PR against `main` with a clear description.
 

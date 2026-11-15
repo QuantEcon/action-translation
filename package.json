@@ -18,7 +18,9 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\" \"*.mjs\" --max-warnings 0",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"*.mjs\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"*.mjs\"",
-    "check-dev-refs": "node check-dev-refs.mjs"
+    "check-dev-refs": "node check-dev-refs.mjs",
+    "changelog": "node changelog.mjs",
+    "changelog:check": "node changelog.mjs --check"
   },
   "keywords": [
     "github-action",

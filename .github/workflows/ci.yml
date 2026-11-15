@@ -34,6 +34,11 @@ jobs:
       - name: Format check
         run: npm run format:check
 
+      # Entries go in changelog.d/ fragments; [Unreleased] stays empty until
+      # the release PR collects them (changelog.d/README.md).
+      - name: Check changelog fragments
+        run: npm run changelog:check
+
       # Source changes are what usually invalidate .qe/ path:line references, so
       # this runs on the normal CI trigger. .qe-only PRs skip CI but can still add
       # a broken reference: run `npm run check-dev-refs` before merging one.
