@@ -40,7 +40,7 @@ export type FailureKind =
 
 /**
  * A lecture whose translation was written but whose state file could not be
- * (#378). Without the state file the lecture is out of sync's scope under
+ * written (#378). Without the state file the lecture is out of sync's scope under
  * `sync-scope: existing`, so it counts as a failure, not a success.
  */
 export class StateWriteError extends Error {

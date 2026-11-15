@@ -454,6 +454,24 @@ describe('translate init: a state file it cannot write (#378)', () => {
     expect(fs.existsSync(path.join(target, 'lectures', 'good.md'))).toBe(false);
   });
 
+  // Root passes every access check, so the case cannot be set up as root.
+  (process.getuid?.() === 0 ? it.skip : it)(
+    'also stops when the state folder can be written but not searched',
+    async () => {
+      writeSource(['good.md']);
+      api.reply(GOOD);
+      const stateDir = path.join(tmpDir, 'target', '.translate', 'state');
+      fs.mkdirSync(stateDir, { recursive: true });
+      fs.chmodSync(stateDir, 0o600);
+      try {
+        await expect(runInit(options({}))).rejects.toThrow(/^Cannot write lecture state files/);
+        expect(api.requests).toHaveLength(0);
+      } finally {
+        fs.chmodSync(stateDir, 0o700);
+      }
+    }
+  );
+
   it('warns, after the run, when the source clone has no commit for the lecture', async () => {
     // writeSource makes a plain folder, not a git clone.
     writeSource(['good.md']);

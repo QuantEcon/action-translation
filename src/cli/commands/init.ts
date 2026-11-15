@@ -687,7 +687,8 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   const stateDir = path.join(options.target, path.dirname(stateFileRelativePath('lecture.md')));
   try {
     fs.mkdirSync(stateDir, { recursive: true });
-    fs.accessSync(stateDir, fs.constants.W_OK);
+    // Creating a file in a folder takes search permission as well as write.
+    fs.accessSync(stateDir, fs.constants.W_OK | fs.constants.X_OK);
   } catch (error) {
     throw new Error(
       `Cannot write lecture state files in ${stateDir} (` +
