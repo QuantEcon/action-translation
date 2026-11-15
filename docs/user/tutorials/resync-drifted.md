@@ -307,7 +307,7 @@ npx translate init \
   -f new_lecture.md
 ```
 
-**Caution:** `init` is repo-scoped even with `-f`. Besides translating the one file, it rewrites `.translate/config.yml` and copies every non-markdown file from the source docs folder over the target's — including `_config.yml`, `_toc.yml`, and any localized assets, which are replaced with the English source copies. Run it on a clean working tree, review the diff before committing, and revert any overwritten localized files (e.g. `git checkout -- lectures/_config.yml lectures/_toc.yml`).
+`init -f` leaves the edition's other files alone: it copies only the non-markdown files from the source docs folder that the target lacks, never overwriting a localized `_config.yml`, `_toc.yml` or asset, and with `-f` it writes no `TRANSLATION-REPORT.md`. The edition's `.translate/config.yml` must match the flags (`--target-language`, and `-d` if the docs folder is not `lectures`), or the run stops before translating anything. Run it on a clean working tree and check `git status` before committing: a non-markdown file the source added since the edition last copied one is copied in, and the PR may not need it.
 
 ### Target-only files (TARGET_ONLY)
 

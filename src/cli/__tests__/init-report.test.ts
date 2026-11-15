@@ -514,3 +514,103 @@ describe('translate init -f', () => {
     expect(picked).toContain('Translating single file: jax_intro.md');
   });
 });
+
+describe('translate init into an existing edition (#134)', () => {
+  const MATCHING_CONFIG =
+    '# routing notes the edition keeps\nsource-language: en\ntarget-language: zh-cn\n' +
+    'docs-folder: lectures\ntool-version: 0.1.0\neditors:\n  - someone\n';
+
+  /** The source plus an edition holding localised build files and its own config. */
+  function writeEdition(config: string): string {
+    const source = writeSource(['good.md', 'other.md']);
+    fs.writeFileSync(path.join(source, 'lectures', '_config.yml'), 'title: Lectures\n');
+    fs.mkdirSync(path.join(source, 'lectures', '_static'));
+    fs.writeFileSync(path.join(source, 'lectures', '_static', 'new.png'), 'PNG');
+    const target = path.join(tmpDir, 'target');
+    fs.mkdirSync(path.join(target, 'lectures'), { recursive: true });
+    fs.writeFileSync(path.join(target, 'lectures', '_toc.yml'), 'caption: 讲座\n');
+    fs.writeFileSync(path.join(target, 'lectures', '_config.yml'), 'title: 讲座\n');
+    fs.mkdirSync(path.join(target, '.translate'));
+    fs.writeFileSync(path.join(target, '.translate', 'config.yml'), config);
+    return target;
+  }
+
+  const logLines = (): string[] => logSpy.mock.calls.map((call) => String(call[0]));
+
+  it('an -f round keeps the edition files, its matching config byte for byte, and writes no TRANSLATION-REPORT.md', async () => {
+    const target = writeEdition(MATCHING_CONFIG);
+    api.reply(GOOD);
+
+    const stats = await runInit(options({ file: 'good.md' }));
+
+    expect(stats).toMatchObject({ successCount: 1, failureCount: 0 });
+    expect(fs.readFileSync(path.join(target, 'lectures', '_toc.yml'), 'utf-8')).toBe(
+      'caption: 讲座\n'
+    );
+    expect(fs.readFileSync(path.join(target, 'lectures', '_config.yml'), 'utf-8')).toBe(
+      'title: 讲座\n'
+    );
+    // The one file the edition lacked is copied.
+    expect(fs.readFileSync(path.join(target, 'lectures', '_static', 'new.png'), 'utf-8')).toBe(
+      'PNG'
+    );
+    expect(fs.readFileSync(path.join(target, '.translate', 'config.yml'), 'utf-8')).toBe(
+      MATCHING_CONFIG
+    );
+    expect(fs.existsSync(path.join(target, 'TRANSLATION-REPORT.md'))).toBe(false);
+    expect(fs.existsSync(path.join(target, '.translate', 'state', 'good.md.yml'))).toBe(true);
+    expect(logLines()).toContain(
+      `Copied 1 non-markdown file(s), and kept 2 the edition already has\n`
+    );
+  });
+
+  it('a dry run counts what it would copy and keep, and says the config stays', async () => {
+    writeEdition(MATCHING_CONFIG);
+
+    await runInit(options({ dryRun: true, file: 'good.md' }));
+
+    expect(logLines()).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(
+          'Would copy 1 non-markdown file(s), and keep 2 the edition already has'
+        ),
+        expect.stringContaining('Would leave .translate/config.yml as it is'),
+      ])
+    );
+  });
+
+  it.each([false, true])(
+    'refuses a config that differs from the flags before any model call (dry run: %s)',
+    async (dryRun) => {
+      const config = MATCHING_CONFIG.replace('docs-folder: lectures', 'docs-folder: book');
+      const target = writeEdition(config);
+      api.reply(GOOD);
+
+      await expect(runInit(options({ dryRun, file: 'good.md' }))).rejects.toThrow(
+        /does not match this run's flags, so nothing was translated or written:\n {2}docs-folder: the config has "book", -d gives "lectures"$/m
+      );
+
+      expect(api.requests).toHaveLength(0);
+      expect(fs.existsSync(path.join(target, 'lectures', 'good.md'))).toBe(false);
+      expect(fs.existsSync(path.join(target, 'lectures', '_static'))).toBe(false);
+      expect(fs.readFileSync(path.join(target, '.translate', 'config.yml'), 'utf-8')).toBe(config);
+    }
+  );
+
+  it('a bulk run into an empty target writes the config and the report, and copies every file', async () => {
+    writeSource(['good.md']);
+    api.reply(GOOD);
+    const opts = options({});
+
+    await runInit(opts);
+
+    expect(fs.readFileSync(path.join(opts.target, '.translate', 'config.yml'), 'utf-8')).toMatch(
+      /^source-language: en\ntarget-language: zh-cn\ndocs-folder: lectures\ntool-version: /
+    );
+    expect(fs.existsSync(path.join(opts.target, 'TRANSLATION-REPORT.md'))).toBe(true);
+    expect(fs.existsSync(path.join(opts.target, 'lectures', '_toc.yml'))).toBe(true);
+    expect(logLines()).toContain(
+      `Copied 1 non-markdown file(s), and kept 0 the edition already has\n`
+    );
+  });
+});
