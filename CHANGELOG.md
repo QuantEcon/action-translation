@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   A rename is looked up by its old path on `main` and at the baseline. When `main` lacks the old path but already has the new one, as after another PR made the same move, the rename is rebuilt as an update of the new path. A read that fails with any status but 404, on any of the three, fails the rebase with the branch untouched, where it used to translate the lecture as new. So does a 404 on `main` for a PR opened before the rebase cache, which records no baseline to tell the cases apart.
 
+### Security
+
+- **Development dependencies: `handlebars` 4.7.9 → 4.7.10, `browserslist` 4.28.6 → 4.29.5, and `brace-expansion`'s five 1.x copies 1.1.16 → 1.1.22**, which clears these advisories that `npm audit` reported on 2026-11-15: three against `handlebars` (critical GHSA-8r5x-fm3f-whwj and GHSA-p8wg-vrv2-v86f, moderate GHSA-xw65-4hp5-5hc7), two high against `browserslist` (GHSA-c83g-rgw3-j3cx, GHSA-73wf-gq98-2v4g), and five against `brace-expansion` below 1.1.21 (GHSA-mh99-v99m-4gvg, GHSA-rgw5-rvv9-x895, GHSA-qhr7-859c-m2p7, GHSA-6j4f-fj2g-mc7p, GHSA-q2hr-2g5m-vwhr). The `browserslist` update also takes the data packages its new version requires, `baseline-browser-mapping` 2.10.43 → 2.11.37 among them, past GHSA-w5vr-8v7q-w6rv (moderate). `handlebars` arrives through `ts-jest`, `browserslist` through `@babel/core` under `ts-jest` and `jest`, and `brace-expansion` 1.x through `eslint`, `jest` and `ts-jest`: none is in the action bundle or the CLI's runtime, every update is within an existing range, and `package.json` and `dist-action/` are unchanged. `npm audit --omit=dev` still reports none. Fifteen advisories stay. Seven high ones, on `brace-expansion`'s 2.x copy, `minimatch` 9 and the `@typescript-eslint` packages above them, wait for #177's move to ESLint 9: `npm audit fix` would clear them only by downgrading `@typescript-eslint/*` from 6.21.0 to 6.15.0. Eight low ones, on `esbuild` and, through `jest`, `deepmerge`, have only major-version fixes.
+
 ## [0.30.2] - 2026-11-15
 
 ### Fixed
