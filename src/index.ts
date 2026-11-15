@@ -29,6 +29,7 @@ import { isTranslationBranch } from './branch-naming.js';
 import { FAILURE_ISSUE_LABEL } from './contracts.js';
 import { refreshStaleBranch } from './rebase-siblings.js';
 import { writeRebasedBranch } from './git-commit.js';
+import { DeletedLecture, planRebaseRead, RebaseReadError, RebaseReads } from './rebase-plan.js';
 import { stateFileRelativePath } from './cli/translate-state.js';
 import {
   applySyncScope,
@@ -277,6 +278,8 @@ async function runRebase(): Promise<void> {
             metadata,
             overlapping,
             docsFolder: inputs.docsFolder,
+            deletedSinceOpened:
+              error instanceof RebaseReadError ? error.deletedSinceOpened : undefined,
           }),
         });
       } catch {
@@ -341,6 +344,10 @@ async function rebaseSinglePR(
   // Fetch content for each file and build FileToSync array
   const filesToSync: FileToSync[] = [];
   const fetchErrors: string[] = [];
+  // Lectures carried unchanged from the PR's branch (#351), and lectures a PR
+  // merged since this one opened deleted (#389).
+  const carried: Array<{ path: string; content: string }> = [];
+  const deletedSinceOpened: DeletedLecture[] = [];
 
   for (const file of metadata.files) {
     // Determine file type from metadata (default to 'markdown' for backward compat)
@@ -456,60 +463,157 @@ async function rebaseSinglePR(
         core.info(`${file.path}: New file (no parent commit content)`);
       }
 
-      if (
+      // Where the edition holds the lecture until this PR moves it: the old
+      // path for a rename. A PR opened before #307's fix can record an old
+      // path outside the docs folder; that one is rebuilt as a plain lecture,
+      // so the edition's own file there is neither read as a translation nor
+      // deleted.
+      const renamed =
         fileType === 'renamed' &&
-        file.previousPath &&
-        isDocsMarkdownPath(file.previousPath, inputs.docsFolder)
-      ) {
-        // Renamed files: fetch target content from old path. A PR opened
-        // before #307's fix can record an old path outside the docs folder;
-        // that one falls through to the markdown branch, so the edition's own
-        // file there is neither read as a translation nor deleted.
-        let targetContent = '';
-        let oldFileSha: string | undefined;
+        file.previousPath !== undefined &&
+        isDocsMarkdownPath(file.previousPath, inputs.docsFolder);
+      const editionPath = renamed && file.previousPath ? file.previousPath : file.path;
 
-        try {
-          const result = await fetchFileContent(octokit, owner, repo, file.previousPath, baseSha);
-          targetContent = result.content;
-          oldFileSha = result.sha;
-        } catch {
-          core.info(`${file.previousPath}: Previous path not found in target repo`);
+      // What the edition has decides what the rebase does with the lecture
+      // (#389, #351; see rebase-plan.ts). The other reads are made only when
+      // `main` answers 404.
+      const onMain = await readEditionFile(octokit, owner, repo, editionPath, baseSha);
+      const reads: RebaseReads = { onMain: onMain.status };
+      let newOnMain: EditionRead | undefined;
+      let atBaseline: EditionRead | undefined;
+      let onBranch: EditionRead | undefined;
+      if (onMain.status === 'missing' && renamed) {
+        newOnMain = await readEditionFile(octokit, owner, repo, file.path, baseSha);
+        reads.newPathOnMain = newOnMain.status;
+      }
+      const newPathSettles = newOnMain?.status === 'found' || newOnMain?.status === 'error';
+      if (onMain.status === 'missing' && !newPathSettles && metadata.targetBaseSha) {
+        atBaseline = await readEditionFile(
+          octokit,
+          owner,
+          repo,
+          editionPath,
+          metadata.targetBaseSha
+        );
+        reads.atBaseline = atBaseline.status;
+        if (atBaseline.status !== 'error') {
+          onBranch = await readEditionFile(octokit, owner, repo, file.path, pr.head.ref);
+          reads.onBranch = onBranch.status;
         }
+      }
+      const plan = planRebaseRead(reads);
+      const failure = (read: EditionRead | undefined) =>
+        read?.status === 'error' ? read.message : 'unknown';
 
-        filesToSync.push({
-          filename: file.path,
-          type: 'renamed',
-          newContent,
-          oldContent,
-          targetContent,
-          previousFilename: file.previousPath,
-          oldFileSha,
-          isNewFile: !targetContent,
-          sourceCommitSha,
-        });
-      } else {
-        // Default: markdown file
-        let targetContent = '';
-        let existingFileSha: string | undefined;
-        let isNewFile = false;
-
-        try {
-          const result = await fetchFileContent(octokit, owner, repo, file.path, baseSha);
-          targetContent = result.content;
-          existingFileSha = result.sha;
-        } catch {
-          isNewFile = true;
-          core.info(`${file.path}: Not found in target repo — treating as new file`);
+      if (plan.action === 'error') {
+        switch (plan.reason) {
+          case 'main-read': {
+            const [path, read] =
+              onMain.status === 'error' ? [editionPath, onMain] : [file.path, newOnMain];
+            throw new Error(
+              `Could not read ${path} from ${owner}/${repo} at ${baseSha.slice(0, 7)} ` +
+                `(${failure(read)})`
+            );
+          }
+          case 'baseline-read':
+            throw new Error(
+              `Could not read ${editionPath} at this PR's baseline ` +
+                `${metadata.targetBaseSha?.slice(0, 7)} (${failure(atBaseline)})`
+            );
+          case 'branch-read':
+            throw new Error(`Could not read ${file.path} on ${pr.head.ref} (${failure(onBranch)})`);
+          case 'no-baseline':
+            throw new Error(
+              `${editionPath} is not on ${baseBranch}, and this PR records no baseline (it ` +
+                'predates the rebase cache), so a lecture deleted since it opened cannot be ' +
+                'told from one it adds. It was not translated from scratch'
+            );
         }
+      }
+      if (plan.action === 'deleted-since-opened') {
+        deletedSinceOpened.push({ editionPath, path: file.path });
+        throw new Error(
+          `${editionPath} was on ${baseBranch} when this PR opened ` +
+            `(${metadata.targetBaseSha?.slice(0, 7)}) and is not there now ` +
+            `(${baseSha.slice(0, 7)}): a PR merged since deleted it, so this PR's change to it ` +
+            'was not carried'
+        );
+      }
+      if (plan.action === 'drop') {
+        // Deleted from main since the PR opened, and off its branch too:
+        // nothing to bring back, so the rebuilt PR goes without it.
+        core.info(
+          `${editionPath}: deleted from ${baseBranch} since this PR opened, and ${file.path} is ` +
+            `no longer on ${pr.head.ref}: nothing to carry`
+        );
+        continue;
+      }
+      if (plan.action === 'carry' && onBranch?.status === 'found') {
+        // The PR adds the lecture, and its branch has the translation: carry
+        // it and its state file as they are, with no model call (#351).
+        const statePath = stateFileFor(file.path, inputs.docsFolder);
+        const state = await readEditionFile(octokit, owner, repo, statePath, pr.head.ref);
+        if (state.status === 'error') {
+          throw new Error(`Could not read ${statePath} on ${pr.head.ref} (${state.message})`);
+        }
+        carried.push({ path: file.path, content: onBranch.content });
+        if (state.status === 'found') carried.push({ path: statePath, content: state.content });
+        core.info(
+          `${file.path}: new to the edition and on ${pr.head.ref}: carried unchanged` +
+            (state.status === 'found' ? ', with its state file' : '')
+        );
+        continue;
+      }
 
+      if (plan.action === 'update-at-new-path' && newOnMain?.status === 'found') {
+        // Another PR already made this move: the edition has the lecture at
+        // its new path, so the rebuild updates that file and deletes nothing.
+        core.info(
+          `${file.path}: on ${baseBranch} already, and ${editionPath} is not: rebuilt as an ` +
+            `update of ${file.path}`
+        );
         filesToSync.push({
           filename: file.path,
           type: 'markdown',
           newContent,
           oldContent,
-          targetContent,
-          existingFileSha,
-          isNewFile,
+          targetContent: newOnMain.content,
+          existingFileSha: newOnMain.sha,
+          isNewFile: false,
+          sourceCommitSha,
+        });
+        continue;
+      }
+
+      // 'update', or 'translate-new' for a lecture the PR never delivered.
+      const target = onMain.status === 'found' ? onMain : undefined;
+      if (!target) {
+        core.info(
+          `${editionPath}: not in the edition, at this PR's baseline or on its branch: ` +
+            'translating as new'
+        );
+      }
+      if (renamed) {
+        filesToSync.push({
+          filename: file.path,
+          type: 'renamed',
+          newContent,
+          oldContent,
+          targetContent: target?.content ?? '',
+          previousFilename: file.previousPath,
+          oldFileSha: target?.sha,
+          isNewFile: !target?.content,
+          sourceCommitSha,
+        });
+      } else {
+        filesToSync.push({
+          filename: file.path,
+          type: 'markdown',
+          newContent,
+          oldContent,
+          targetContent: target?.content ?? '',
+          existingFileSha: target?.sha,
+          isNewFile: !target,
           sourceCommitSha,
         });
       }
@@ -522,12 +626,13 @@ async function rebaseSinglePR(
   // Same rule as translation errors (#160): throw BEFORE any branch reset —
   // rebasing without a file the metadata says the PR carries would drop it.
   if (fetchErrors.length > 0) {
-    throw new Error(
-      `content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join('; ')}`
+    throw new RebaseReadError(
+      `content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join('; ')}`,
+      deletedSinceOpened
     );
   }
 
-  if (filesToSync.length === 0) {
+  if (filesToSync.length === 0 && carried.length === 0) {
     core.info(`PR #${pr.number}: No files to process after content fetch. Skipping.`);
     return 'skipped';
   }
@@ -654,7 +759,11 @@ async function rebaseSinglePR(
     );
   }
 
-  if (result.translatedFiles.length === 0 && result.filesToDelete.length === 0) {
+  if (
+    result.translatedFiles.length === 0 &&
+    result.filesToDelete.length === 0 &&
+    carried.length === 0
+  ) {
     core.info(`PR #${pr.number}: No translated files produced. Branch left as it was.`);
     return 'skipped';
   }
@@ -671,7 +780,10 @@ async function rebaseSinglePR(
       branch: pr.head.ref,
       baseBranch,
       baseSha,
-      files: result.translatedFiles.map((file) => ({ path: file.path, content: file.content })),
+      files: [
+        ...result.translatedFiles.map((file) => ({ path: file.path, content: file.content })),
+        ...carried,
+      ],
       deletions: result.filesToDelete.map((file) => file.path),
       declaredFiles: metadata.files.map((file) => file.path),
       mergedPrNumber,
@@ -682,7 +794,8 @@ async function rebaseSinglePR(
 
   core.info(
     `PR #${pr.number}: rebased in one commit (${written.commitSha.slice(0, 7)}) with ` +
-      `${result.translatedFiles.length} file(s) written and ${result.filesToDelete.length} marked for deletion.`
+      `${result.translatedFiles.length} file(s) written, ${carried.length} carried unchanged ` +
+      `and ${result.filesToDelete.length} marked for deletion.`
   );
   return 'rebased';
 }
@@ -1197,6 +1310,33 @@ async function fetchFileContent(
     content: Buffer.from(data.content, 'base64').toString('utf-8'),
     sha: data.sha,
   };
+}
+
+/** One read of the edition at a ref, for rebase-plan.ts: the file, a 404, or the failure. */
+type EditionRead =
+  | { status: 'found'; content: string; sha?: string }
+  | { status: 'missing' }
+  | { status: 'error'; message: string };
+
+async function readEditionFile(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  octokit: any,
+  owner: string,
+  repo: string,
+  filepath: string,
+  ref: string
+): Promise<EditionRead> {
+  try {
+    const { content, sha } = await fetchFileContent(octokit, owner, repo, filepath, ref);
+    return { status: 'found', content, sha };
+  } catch (error) {
+    const status = (error as { status?: number } | null | undefined)?.status;
+    if (status === 404) return { status: 'missing' };
+    return {
+      status: 'error',
+      message: `status ${status ?? 'unknown'}: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
 }
 
 /**
