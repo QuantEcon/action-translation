@@ -500,42 +500,36 @@ export async function resyncSingleFile(
 
   // Compute per-file state once — committed alongside the content in --github
   // mode (so discovery works after merge), written to the working tree in
-  // local mode. Failure to compute state is non-fatal.
-  let fileState: FileState | undefined;
-  try {
-    const docsRelPath = docsFolder ? path.join(docsFolder, file) : file;
-    const sourceGit = await getFileGitMetadata(sourceRepoPath, docsRelPath);
+  // local mode. A file without it never syncs under `sync-scope: existing`, so
+  // an error here fails the file rather than leaving the state out (#378).
+  const docsRelPath = docsFolder ? path.join(docsFolder, file) : file;
+  const sourceGit = await getFileGitMetadata(sourceRepoPath, docsRelPath);
+  const parser = new MystParser();
+  const parsed = await parser.parseSections(sourceContent, file);
+  const fileState: FileState = {
+    'source-sha': sourceGit?.lastCommit ?? 'unknown',
+    'synced-at': new Date().toISOString().split('T')[0],
+    model: options.model,
+    mode: 'RESYNC',
+    'section-count': parsed.sections.length,
+  };
+
+  if (outputContent) {
     if (!sourceGit) {
       logger.warn(
         `  ${file}: the source clone has no commit for it, so its state file records ` +
           '`source-sha: unknown`, and `translate status` will report it OUTDATED once it is ' +
-          'committed (#378)'
+          'committed. Commit the file in the source first, or correct the state file.'
       );
     }
-    const parser = new MystParser();
-    const parsed = await parser.parseSections(sourceContent, file);
-    fileState = {
-      'source-sha': sourceGit?.lastCommit ?? 'unknown',
-      'synced-at': new Date().toISOString().split('T')[0],
-      model: options.model,
-      mode: 'RESYNC',
-      'section-count': parsed.sections.length,
-    };
-  } catch {
-    fileState = undefined;
-  }
-
-  if (outputContent) {
     if (options.github) {
       // Git: create branch, write content + state, commit, push
-      const stateFiles = fileState
-        ? [
-            {
-              relPath: stateFileRelativePath(file),
-              content: serializeFileState({ ...fileState, 'tool-version': getToolVersion() }),
-            },
-          ]
-        : [];
+      const stateFiles = [
+        {
+          relPath: stateFileRelativePath(file),
+          content: serializeFileState({ ...fileState, 'tool-version': getToolVersion() }),
+        },
+      ];
       const gRunner = gitRunner ?? realGitRunner;
       const gitResult = gitPrepareAndPush(
         file,
@@ -571,12 +565,12 @@ export async function resyncSingleFile(
         docsFolder,
         triageResult.reason,
         {
-          sourceCommitSha: fileState?.['source-sha'] ?? 'unknown',
+          sourceCommitSha: fileState['source-sha'],
           targetBaseSha: gitResult.baseSha ?? '',
           sourceLanguage: options.sourceLanguage,
           targetLanguage: options.language,
           model: options.model,
-          statePath: fileState ? stateFileRelativePath(file) : undefined,
+          statePath: stateFileRelativePath(file),
         }
       );
       if (prResult.success) {
@@ -596,25 +590,23 @@ export async function resyncSingleFile(
       // Write to local disk (state goes to .translate/state/ in the worktree)
       fs.writeFileSync(targetFilePath, outputContent, 'utf-8');
       logger.info(`  ✅ Written to ${targetFilePath}`);
-      if (fileState) {
-        // A lecture without its state file is out of sync's scope under
-        // `sync-scope: existing`, so a failed write is an error (#378); the
-        // translation stays on disk.
-        try {
-          writeFileState(targetRepoPath, file, fileState);
-        } catch (error) {
-          logger.error(
-            `  ${file} was written, but ${stateFileRelativePath(file)} was not: ` +
-              (error instanceof Error ? error.message : String(error))
-          );
-          return {
-            file,
-            triageResult,
-            outputContent,
-            tokensUsed,
-            summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
-          };
-        }
+      // A lecture without its state file is out of sync's scope under
+      // `sync-scope: existing`, so a failed write is an error (#378); the
+      // translation stays on disk.
+      try {
+        writeFileState(targetRepoPath, file, fileState);
+      } catch (error) {
+        logger.error(
+          `  ${file} was written, but ${stateFileRelativePath(file)} was not: ` +
+            (error instanceof Error ? error.message : String(error))
+        );
+        return {
+          file,
+          triageResult,
+          outputContent,
+          tokensUsed,
+          summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
+        };
       }
     }
   }

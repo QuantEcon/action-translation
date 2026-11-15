@@ -173,10 +173,10 @@ export function parseTocLectures(sourceRepoPath: string, docsFolder: string): st
  *   source added back.
  */
 export function filterSkipExisting(
-  targetPath: string,
-  lectures: string[],
-  docsFolder: string
+  edition: EditionFlags,
+  lectures: string[]
 ): { remaining: string[]; skipped: string[]; skippedCount: number; warnings: string[] } {
+  const { target: targetPath, docsFolder } = edition;
   const remaining: string[] = [];
   const skipped: string[] = [];
   const warnings: string[] = [];
@@ -202,7 +202,7 @@ export function filterSkipExisting(
       warnings.push(
         `${lecture}: skipped. The edition has this lecture but no ${statePath}, and ` +
           `--skip-existing does not overwrite a translation. Record its state with ` +
-          `\`translate status -f ${lecture} --write-state\`; to translate it again, ` +
+          `\`${writeStateCommand(edition, lecture)}\`; to translate it again, ` +
           `run without --skip-existing.`
       );
     } else if (state.status === 'invalid') {
@@ -213,6 +213,36 @@ export function filterSkipExisting(
     }
   }
   return { remaining, skipped, skippedCount: skipped.length, warnings };
+}
+
+/** The flags that name an edition, for a command printed to the operator. */
+export type EditionFlags = Pick<
+  InitOptions,
+  'source' | 'target' | 'targetLanguage' | 'sourceLanguage' | 'docsFolder'
+>;
+
+/** `value`, quoted for a POSIX shell when it needs to be. */
+function shellArg(value: string): string {
+  return /^[\w@%+=:,./-]+$/.test(value) ? value : `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+/**
+ * The `translate status --write-state` run that records one lecture's state
+ * file, with the edition's own flags. `status` reads no config: its language
+ * and docs folder come from its flags, which default to `zh-cn` and
+ * `lectures`, and `--write-state` rewrites `.translate/config.yml` from them,
+ * so a bare `status -f <file> --write-state` resets an `fa` edition's config
+ * to `zh-cn`. The paths are absolute, so the command runs from any folder.
+ */
+export function writeStateCommand(edition: EditionFlags, lecture: string): string {
+  const sourceLanguage =
+    edition.sourceLanguage === 'en' ? '' : ` --source-language ${shellArg(edition.sourceLanguage)}`;
+  return (
+    `translate status -s ${shellArg(path.resolve(edition.source))} ` +
+    `-t ${shellArg(path.resolve(edition.target))} ` +
+    `-l ${shellArg(edition.targetLanguage)}${sourceLanguage} -d ${shellArg(edition.docsFolder)} ` +
+    `-f ${shellArg(lecture)} --write-state`
+  );
 }
 
 /**
@@ -599,9 +629,7 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   if (options.dryRun) {
     // The preview applies --skip-existing as the real run does, so its list
     // is the real run's list (#379).
-    const skip = options.skipExisting
-      ? filterSkipExisting(options.target, lectures, options.docsFolder)
-      : undefined;
+    const skip = options.skipExisting ? filterSkipExisting(options, lectures) : undefined;
     const skippedSet = new Set(skip?.skipped ?? []);
     console.log(chalk.yellow('Would translate the following lectures:'));
     lectures.forEach((lecture, index) => {
@@ -654,6 +682,21 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   // Phase 3: Setup target folder
   fs.mkdirSync(path.join(options.target, options.docsFolder), { recursive: true });
 
+  // A state folder init cannot write fails every lecture once its translation
+  // is paid for (#378), so it is checked before the first model call.
+  const stateDir = path.join(options.target, path.dirname(stateFileRelativePath('lecture.md')));
+  try {
+    fs.mkdirSync(stateDir, { recursive: true });
+    fs.accessSync(stateDir, fs.constants.W_OK);
+  } catch (error) {
+    throw new Error(
+      `Cannot write lecture state files in ${stateDir} (` +
+        (error instanceof Error ? error.message : String(error)) +
+        '), so nothing was translated: without its state file a lecture never syncs ' +
+        'under `sync-scope: existing`.'
+    );
+  }
+
   // Write .translate/config.yml
   writeConfig(options.target, {
     'source-language': options.sourceLanguage,
@@ -694,7 +737,7 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
 
   // Handle --skip-existing: filter out lectures that already have state
   if (options.skipExisting) {
-    const result = filterSkipExisting(options.target, remaining, options.docsFolder);
+    const result = filterSkipExisting(options, remaining);
     remaining = result.remaining;
     for (const warning of result.warnings) {
       console.log(chalk.yellow(`⚠ ${warning}`));
@@ -747,13 +790,6 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
       const statePath = stateFileRelativePath(lecture);
       const docsRelPath = options.docsFolder ? path.join(options.docsFolder, lecture) : lecture;
       const sourceGit = await getFileGitMetadata(options.source, docsRelPath);
-      if (!sourceGit) {
-        stateWarnings.push(
-          `${lecture}: the source clone has no commit for it, so ${statePath} records ` +
-            '`source-sha: unknown`, and `translate status` will report it OUTDATED once it is ' +
-            'committed. Commit the lecture in the source first, or correct the state file.'
-        );
-      }
       try {
         const sourceFile = path.join(options.source, options.docsFolder, lecture);
         const sourceContent = fs.readFileSync(sourceFile, 'utf-8');
@@ -768,8 +804,14 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
       } catch (error) {
         throw new StateWriteError(
           `translated, but ${statePath} was not written: ` +
-            (error instanceof Error ? error.message : String(error)) +
-            `. Once the cause is fixed, record it with \`translate status -f ${lecture} --write-state\`.`
+            (error instanceof Error ? error.message : String(error))
+        );
+      }
+      if (!sourceGit) {
+        stateWarnings.push(
+          `${lecture}: the source clone has no commit for it, so ${statePath} records ` +
+            '`source-sha: unknown`, and `translate status` will report it OUTDATED once it is ' +
+            'committed. Commit the lecture in the source first, or correct the state file.'
         );
       }
 
@@ -834,6 +876,19 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
       console.error(formatFailureLine(record.file, record.failure));
     }
   }
+  // Untruncated, unlike the failure lines: each command is the recovery.
+  const unrecorded = lectureReports.filter((record) => record.failure?.kind === 'state-write');
+  if (unrecorded.length > 0) {
+    console.error(
+      chalk.yellow(
+        `\n${unrecorded.length} lecture(s) were translated but have no state file. Once the ` +
+          'cause is fixed, record each sync point (as `model: unknown`, `mode: RESYNC`) with:'
+      )
+    );
+    for (const record of unrecorded) {
+      console.error(`  ${writeStateCommand(options, record.file)}`);
+    }
+  }
 
   // Phase 6: Generate report
   generateReport(options.target, options, stats, termCount);
@@ -873,8 +928,12 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   console.log(chalk.gray(`  Time: ${(stats.totalTimeMs / 1000 / 60).toFixed(1)} minutes`));
   console.log(chalk.bold.cyan('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'));
 
-  // Font setup guidance — shown after translation so the user sees it last
-  if (stats.successCount > 0 && options.localize.includes('i18n-font-config')) {
+  // Font setup guidance — shown after translation so the user sees it last.
+  // A lecture written without its state file references the fonts too.
+  if (
+    (stats.successCount > 0 || unrecorded.length > 0) &&
+    options.localize.includes('i18n-font-config')
+  ) {
     const fontReqs = getFontRequirements(options.targetLanguage);
     if (fontReqs.length > 0) {
       const fontsDir = path.join(options.target, options.docsFolder, '_fonts');

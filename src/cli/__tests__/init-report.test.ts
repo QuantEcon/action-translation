@@ -396,13 +396,14 @@ describe('translate init --report-json', () => {
 });
 
 describe('translate init: a state file it cannot write (#378)', () => {
-  it('fails the lecture with a state-write failure naming the file, and keeps the translation', async () => {
+  const stderrText = (): string => errorSpy.mock.calls.map((call) => String(call[0])).join('\n');
+
+  it('fails the lecture with a state-write failure naming the file, keeps the translation, and prints the recovery command', async () => {
     writeSource(['good.md']);
     api.reply(GOOD);
-    // A file where the state folder should be: the state write throws.
+    // A folder where the lecture's state file should be: only that write throws.
     const target = path.join(tmpDir, 'target');
-    fs.mkdirSync(path.join(target, '.translate'), { recursive: true });
-    fs.writeFileSync(path.join(target, '.translate', 'state'), 'not a folder', 'utf-8');
+    fs.mkdirSync(path.join(target, '.translate', 'state', 'good.md.yml'), { recursive: true });
     const opts = options({});
 
     const stats = await runInit(opts);
@@ -412,7 +413,7 @@ describe('translate init: a state file it cannot write (#378)', () => {
       {
         file: 'good.md',
         error: expect.stringMatching(
-          /^translated, but \.translate\/state\/good\.md\.yml was not written: .*record it with `translate status -f good\.md --write-state`\.$/
+          /^translated, but \.translate\/state\/good\.md\.yml was not written: .*EISDIR/
         ),
       },
     ]);
@@ -429,6 +430,28 @@ describe('translate init: a state file it cannot write (#378)', () => {
     expect(failureLines()).toEqual([
       expect.stringMatching(/^✗ good\.md: state-write — translated/),
     ]);
+    // In full, with the edition's own flags, whatever the failure line's length.
+    expect(stderrText()).toContain(
+      `  translate status -s ${opts.source} -t ${target} -l zh-cn -d lectures -f good.md --write-state`
+    );
+    // No state file was written, so none records an unknown source-sha.
+    const logged = logSpy.mock.calls.map((call) => String(call[0])).join('\n');
+    expect(logged).not.toContain('source-sha: unknown');
+  });
+
+  it('stops before any model call when the state folder cannot be written', async () => {
+    writeSource(['good.md']);
+    api.reply(GOOD);
+    // A file where the state folder should be: every lecture's write would throw.
+    const target = path.join(tmpDir, 'target');
+    fs.mkdirSync(path.join(target, '.translate'), { recursive: true });
+    fs.writeFileSync(path.join(target, '.translate', 'state'), 'not a folder', 'utf-8');
+
+    await expect(runInit(options({}))).rejects.toThrow(
+      /^Cannot write lecture state files in .*\.translate\/state \(.*\), so nothing was translated/
+    );
+    expect(api.requests).toHaveLength(0);
+    expect(fs.existsSync(path.join(target, 'lectures', 'good.md'))).toBe(false);
   });
 
   it('warns, after the run, when the source clone has no commit for the lecture', async () => {
