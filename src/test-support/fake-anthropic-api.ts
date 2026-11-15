@@ -23,7 +23,10 @@
  *   `midStreamError` ends after its content blocks with an `error` frame
  *   instead, as the API ends a stream that fails part-way.
  * - Non-streamed: the whole Message as `application/json` (without that
- *   content type the SDK returns the body as a string).
+ *   content type the SDK returns the body as a string). A reply with
+ *   `cutOffBody` sends the first half of that JSON, then fails the body read
+ *   with `TypeError('terminated')`, as fetch does when the connection drops
+ *   after the headers.
  */
 
 import type Anthropic from '@anthropic-ai/sdk';
@@ -49,6 +52,8 @@ export interface FakeReply {
   usage?: { input_tokens: number; output_tokens: number; thinking_tokens?: number };
   /** Streamed requests only: end the stream with this error after the content blocks. */
   midStreamError?: { type: string; message: string };
+  /** Non-streamed requests only: drop the connection half-way through the body. */
+  cutOffBody?: boolean;
 }
 
 /** An SSE `error` frame, which the SDK raises as an APIError with no status. */
@@ -113,8 +118,11 @@ export function installFakeAnthropicApi(): FakeAnthropicApi {
     }
 
     const message = completeMessage(serial, String(body.model), reply);
-    return body.stream === true
-      ? sseResponse(serial, streamEvents(message, reply.content, reply.midStreamError))
+    if (body.stream === true) {
+      return sseResponse(serial, streamEvents(message, reply.content, reply.midStreamError));
+    }
+    return reply.cutOffBody
+      ? cutOffJsonResponse(serial, message)
       : jsonResponse(serial, 200, message);
   });
 
@@ -306,6 +314,26 @@ function sseResponse(
 function jsonResponse(serial: number, status: number, payload: unknown): Response {
   return new Response(JSON.stringify(payload), {
     status,
+    headers: { 'content-type': 'application/json', 'request-id': `req_fake_${serial}` },
+  });
+}
+
+/** A 200 whose JSON body stops half-way, the read failing as fetch's does. */
+function cutOffJsonResponse(serial: number, payload: unknown): Response {
+  const bytes = new TextEncoder().encode(JSON.stringify(payload));
+  let sent = false;
+  const body = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (!sent) {
+        sent = true;
+        controller.enqueue(bytes.slice(0, Math.floor(bytes.length / 2)));
+      } else {
+        controller.error(new TypeError('terminated'));
+      }
+    },
+  });
+  return new Response(body, {
+    status: 200,
     headers: { 'content-type': 'application/json', 'request-id': `req_fake_${serial}` },
   });
 }

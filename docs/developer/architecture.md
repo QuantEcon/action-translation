@@ -350,7 +350,7 @@ All three translation modes (UPDATE, section RESYNC, whole-file RESYNC) include 
 ### Retry logic
 
 API calls use exponential backoff retry (3 attempts: 1s, 2s, 4s delays):
-- **Retries on**: `RateLimitError`, `APIConnectionError`, transient 5xx errors, mid-stream overloads, and a stream cut short below the API (a connection dropped mid-read, or a body that ended early: `isStreamCutShort` in `models.ts`)
+- **Retries on**: `RateLimitError`, `APIConnectionError`, transient 5xx errors, mid-stream overloads, and a stream cut short below the API (a connection dropped mid-read, or a body that ended early: `isStreamCutShort` in `models.ts`), and the same drop under a non-streamed call (`isBodyCutShort`: exactly `TypeError('terminated')`)
 - **Never retries on**: `AuthenticationError`, `BadRequestError`, a truncation or a refusal, document-too-large errors
 
 ### ESM + CJS dual build

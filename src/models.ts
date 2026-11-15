@@ -454,7 +454,8 @@ export function addUsage(
  *
  * A stream cut short below the API (`isStreamCutShort`) is retried too: a
  * connection dropped mid-read failed whole lectures at the v0.30.1 release
- * gate ("Translation failed for modified section: terminated").
+ * gate ("Translation failed for modified section: terminated"). So is the
+ * same drop under a non-streamed call (`isBodyCutShort`).
  */
 export function isRetryableAnthropicError(error: unknown): boolean {
   return (
@@ -463,7 +464,8 @@ export function isRetryableAnthropicError(error: unknown): boolean {
     (error instanceof APIError &&
       ((error.status !== undefined && error.status >= 500) ||
         (error.status === undefined && error.message?.includes('overloaded')))) ||
-    isStreamCutShort(error)
+    isStreamCutShort(error) ||
+    isBodyCutShort(error)
   );
 }
 
@@ -492,7 +494,7 @@ const STREAM_ENDED_EARLY_MESSAGES: ReadonlySet<string> = new Set([
  * socket, or ends the response, part-way through an event stream.
  *
  * A non-streamed `messages.create()` whose body is cut off rejects with the
- * bare TypeError instead, unwrapped; that is not matched here.
+ * bare TypeError instead, unwrapped; `isBodyCutShort` matches that.
  */
 export function isStreamCutShort(error: unknown): boolean {
   return (
@@ -500,4 +502,19 @@ export function isStreamCutShort(error: unknown): boolean {
     !(error instanceof APIError) &&
     (error.cause instanceof TypeError || STREAM_ENDED_EARLY_MESSAGES.has(error.message))
   );
+}
+
+/**
+ * Whether a non-streamed call (`messages.create()`) lost its response body
+ * part-way: the connection dropped after the headers, while the JSON was
+ * being read. Fetch's body read rejects with `TypeError('terminated')`, and
+ * the SDK passes it through unwrapped: it parses the body after the request
+ * has resolved, outside the handling that turns a failed request into an
+ * APIConnectionError (SDK 0.131, `core/api-promise.js`). Matched exactly, by
+ * type and message, because any other TypeError is a bug, not the network.
+ * The three CLI analysis calls (forward triage, document comparison,
+ * backward evaluation) are the non-streamed ones.
+ */
+export function isBodyCutShort(error: unknown): boolean {
+  return error instanceof TypeError && error.message === 'terminated';
 }

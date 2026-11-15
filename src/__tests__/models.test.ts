@@ -29,6 +29,7 @@ import {
   assertCompleteResponse,
   emptyApiUsage,
   extractResponseText,
+  isBodyCutShort,
   isRecognizedModel,
   isRetryableAnthropicError,
   isStreamCutShort,
@@ -457,14 +458,25 @@ describe('isRetryableAnthropicError: a stream cut short below the API', () => {
     }
   });
 
-  it('does not retry any other SDK-side error, or a bare TypeError', () => {
+  it('does not retry any other SDK-side error', () => {
     const other = new AnthropicError(
       'Unexpected event order, got message_start before receiving "message_stop"'
     );
     expect(isStreamCutShort(other)).toBe(false);
     expect(isRetryableAnthropicError(other)).toBe(false);
-    expect(isRetryableAnthropicError(new TypeError('terminated'))).toBe(false);
     expect(isRetryableAnthropicError(new Error('terminated'))).toBe(false);
+  });
+
+  // What messages.create() rejects with when the body is cut off mid-read.
+  it('retries a bare TypeError("terminated"), and no other TypeError', () => {
+    expect(isBodyCutShort(new TypeError('terminated'))).toBe(true);
+    expect(isRetryableAnthropicError(new TypeError('terminated'))).toBe(true);
+    for (const message of ['fetch failed', "Cannot read properties of undefined (reading 'x')"]) {
+      expect(isBodyCutShort(new TypeError(message))).toBe(false);
+      expect(isRetryableAnthropicError(new TypeError(message))).toBe(false);
+    }
+    expect(isBodyCutShort(new Error('terminated'))).toBe(false);
+    expect(isBodyCutShort(dropped())).toBe(false);
   });
 
   it('keeps a refusal, a truncation, an auth error and a bad request non-retryable', () => {

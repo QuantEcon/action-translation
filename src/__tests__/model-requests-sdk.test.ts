@@ -628,6 +628,27 @@ describe('CLI analysis (non-streamed): triageForward', () => {
     expect(api.requests[1].rawBody).toBe(api.requests[0].rawBody);
   });
 
+  // The non-streamed twin of the stream drop at the v0.30.1 gate: the SDK
+  // passes fetch's TypeError through unwrapped, and it used to fail the call.
+  it('a body cut off mid-read is retried, and the retry is used', async () => {
+    api.reply({ ...endTurn(text(VERDICT)), cutOffBody: true }, endTurn(text(VERDICT)));
+
+    await expect(triage('claude-sonnet-5')).resolves.toMatchObject({ verdict: 'I18N_ONLY' });
+
+    expect(api.requests).toHaveLength(2);
+    expect(api.requests[1].rawBody).toBe(api.requests[0].rawBody);
+  });
+
+  it('a body cut off on all 3 attempts rejects with the TypeError the SDK passed through', async () => {
+    const cut = { ...endTurn(text(VERDICT)), cutOffBody: true };
+    api.reply(cut, cut, cut);
+
+    const error = await rejectionOf(triage('claude-sonnet-5'));
+
+    expect(error).toMatchObject({ name: 'TypeError', message: 'terminated' });
+    expect(api.requests).toHaveLength(3);
+  });
+
   it('a max_tokens stop on all 3 attempts rejects with TruncatedResponseError', async () => {
     api.reply(TRUNCATED, TRUNCATED, TRUNCATED);
 
