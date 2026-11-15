@@ -22,6 +22,7 @@ import { VERSION as SDK_VERSION } from '@anthropic-ai/sdk/version';
 import { TranslationService } from '../../translator.js';
 import { MystParser } from '../../parser.js';
 import { Glossary } from '../../types.js';
+import { TranslateConfig } from '../types.js';
 import { updateHeadingMap, injectHeadingMap } from '../../heading-map.js';
 import { applyTypography } from '../../typography.js';
 import { formatParityViolations } from '../../structural-parity.js';
@@ -246,22 +247,21 @@ export function writeStateCommand(edition: EditionFlags, lecture: string): strin
 }
 
 /**
- * Copy all non-.md files from source docs folder to target.
- * Preserves _config.yml, _toc.yml, images, CSS, data files, etc.
+ * The non-.md files in the source docs folder (`_config.yml`, `_toc.yml`,
+ * images, CSS, data files), relative to it, split by whether the edition
+ * already has something at the same path (#134). The dry run counts the same
+ * split that the real run copies.
  */
-export function copyNonMarkdownFiles(
+export function planNonMarkdownCopy(
   sourceRepoPath: string,
   targetPath: string,
   docsFolder: string
-): number {
+): { copy: string[]; keep: string[] } {
+  const plan = { copy: [] as string[], keep: [] as string[] };
   const sourceDocsDir = path.join(sourceRepoPath, docsFolder);
-  if (!fs.existsSync(sourceDocsDir)) {
-    return 0;
-  }
+  if (!fs.existsSync(sourceDocsDir)) return plan;
 
-  let count = 0;
-
-  function walkAndCopy(dir: string) {
+  function walk(dir: string) {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
@@ -271,18 +271,124 @@ export function copyNonMarkdownFiles(
       if (entry.isSymbolicLink()) continue;
 
       if (entry.isDirectory()) {
-        walkAndCopy(fullPath);
+        walk(fullPath);
       } else if (!entry.name.endsWith('.md')) {
         const targetFilePath = path.join(targetPath, docsFolder, relativePath);
-        fs.mkdirSync(path.dirname(targetFilePath), { recursive: true });
-        fs.copyFileSync(fullPath, targetFilePath);
-        count++;
+        (pathExists(targetFilePath) ? plan.keep : plan.copy).push(relativePath);
       }
     }
   }
 
-  walkAndCopy(sourceDocsDir);
-  return count;
+  walk(sourceDocsDir);
+  return plan;
+}
+
+/** Whether anything is at `p`, a dangling symlink included. */
+function pathExists(p: string): boolean {
+  try {
+    fs.lstatSync(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Copy the source docs folder's non-.md files that the edition does not have
+ * (#134). A file the edition already has is never overwritten: in an
+ * existing edition it is usually localised (a translated `_toc.yml` caption,
+ * a `_config.yml` title, a figure with translated labels), and an `init -f`
+ * round used to replace each with the English copy.
+ */
+export function copyNonMarkdownFiles(
+  sourceRepoPath: string,
+  targetPath: string,
+  docsFolder: string
+): { copied: number; kept: number } {
+  const plan = planNonMarkdownCopy(sourceRepoPath, targetPath, docsFolder);
+  for (const relativePath of plan.copy) {
+    const targetFilePath = path.join(targetPath, docsFolder, relativePath);
+    fs.mkdirSync(path.dirname(targetFilePath), { recursive: true });
+    fs.copyFileSync(path.join(sourceRepoPath, docsFolder, relativePath), targetFilePath);
+  }
+  return { copied: plan.copy.length, kept: plan.keep.length };
+}
+
+const CONFIG_FLAGS: ReadonlyArray<[keyof TranslateConfig & string, string]> = [
+  ['source-language', '--source-language'],
+  ['target-language', '--target-language'],
+  ['docs-folder', '-d'],
+];
+
+/** `lectures`, `lectures/` and `./lectures` name one folder; so do `.` and ``. */
+function normalizeDocsFolder(folder: string): string {
+  return path.posix.normalize(folder.replace(/\\/g, '/')).replace(/(.)\/+$/, '$1');
+}
+
+/**
+ * Hold the run to the edition's `.translate/config.yml` (#134). `init` used to
+ * rewrite it from its flags on every run, so an `init -f` round into an
+ * existing edition reset any core key the flags did not match and dropped the
+ * file's comments. Now an absent config is written; one whose three core keys
+ * match the flags is left byte for byte; and one that differs refuses the run
+ * before any model call, naming each key with both values, since only the
+ * operator knows whether the flags or the config are wrong.
+ */
+export function checkEditionConfig(
+  targetPath: string,
+  wanted: TranslateConfig
+): 'absent' | 'matches' {
+  const configPath = path.join(targetPath, '.translate', 'config.yml');
+  if (!pathExists(configPath)) return 'absent';
+  // A dangling link is not an absent config: writing one would go through it.
+  if (!fs.existsSync(configPath)) {
+    throw new Error(`${configPath} is a symbolic link to nothing: fix or remove it, then re-run.`);
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = yaml.load(fs.readFileSync(configPath, 'utf-8'), { schema: yaml.CORE_SCHEMA });
+  } catch (error) {
+    const message = error instanceof Error ? error.message.split('\n')[0] : String(error);
+    throw new Error(`${configPath} is not valid YAML (${message}): fix or remove it, then re-run.`);
+  }
+  // An empty or comment-only file is a document with no keys, as `writeConfig` reads it.
+  if (parsed === undefined || parsed === null) parsed = {};
+  // A plain mapping, as `writeConfig` requires: a typed scalar such as
+  // `!!binary` loads as an object, but has no keys to compare.
+  const proto = Object.getPrototypeOf(parsed);
+  if (
+    typeof parsed !== 'object' ||
+    Array.isArray(parsed) ||
+    (proto !== Object.prototype && proto !== null)
+  ) {
+    throw new Error(`${configPath} is not a YAML mapping: fix or remove it, then re-run.`);
+  }
+
+  const config = parsed as Record<string, unknown>;
+  const mismatches: string[] = [];
+  for (const [key, flag] of CONFIG_FLAGS) {
+    const have = config[key];
+    const same =
+      typeof have === 'string' &&
+      (key === 'docs-folder'
+        ? normalizeDocsFolder(have) === normalizeDocsFolder(wanted[key])
+        : have === wanted[key]);
+    if (!same) {
+      const shown = have === undefined ? 'no value' : JSON.stringify(have);
+      mismatches.push(
+        `  ${key}: the config has ${shown}, and this run's ${flag} is "${wanted[key]}"`
+      );
+    }
+  }
+  if (mismatches.length > 0) {
+    throw new Error(
+      `${configPath} does not match this run's flags, so nothing was translated or written:\n` +
+        mismatches.join('\n') +
+        `\n\nPass the values the edition's config names, or correct the config if it is wrong.`
+    );
+  }
+  return 'matches';
 }
 
 // ============================================================================
@@ -626,6 +732,14 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     console.log(chalk.bold(`\nFound ${lectures.length} lectures in _toc.yml\n`));
   }
 
+  // Checked before the dry run returns, so a preview refuses as the run would.
+  const editionConfig: TranslateConfig = {
+    'source-language': options.sourceLanguage,
+    'target-language': options.targetLanguage,
+    'docs-folder': options.docsFolder,
+  };
+  const configState = checkEditionConfig(options.target, editionConfig);
+
   if (options.dryRun) {
     // The preview applies --skip-existing as the real run does, so its list
     // is the real run's list (#379).
@@ -649,21 +763,19 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
       stats.skippedCount = skip.skippedCount;
     }
 
-    // Show what non-md files would be copied
-    const sourceDocsDir = path.join(options.source, options.docsFolder);
-    if (fs.existsSync(sourceDocsDir)) {
-      let nonMdCount = 0;
-      const countNonMd = (dir: string): void => {
-        const entries = fs.readdirSync(dir, { withFileTypes: true });
-        for (const entry of entries) {
-          if (entry.name.startsWith('.git')) continue;
-          if (entry.isDirectory()) countNonMd(path.join(dir, entry.name));
-          else if (!entry.name.endsWith('.md')) nonMdCount++;
-        }
-      };
-      countNonMd(sourceDocsDir);
-      console.log(chalk.yellow(`\nWould copy ${nonMdCount} non-markdown file(s)`));
-    }
+    const plan = planNonMarkdownCopy(options.source, options.target, options.docsFolder);
+    console.log(
+      chalk.yellow(
+        `\nWould copy ${plan.copy.length} non-markdown file(s), and keep ${plan.keep.length} the edition already has`
+      )
+    );
+    console.log(
+      chalk.yellow(
+        configState === 'absent'
+          ? 'Would write .translate/config.yml'
+          : 'Would leave .translate/config.yml as it is: it matches the flags'
+      )
+    );
 
     console.log(chalk.yellow('\nRun without --dry-run to translate.'));
     console.log(
@@ -698,16 +810,16 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     );
   }
 
-  // Write .translate/config.yml
-  writeConfig(options.target, {
-    'source-language': options.sourceLanguage,
-    'target-language': options.targetLanguage,
-    'docs-folder': options.docsFolder,
-  });
+  // Write .translate/config.yml, unless the edition has one that matches
+  if (configState === 'absent') writeConfig(options.target, editionConfig);
 
-  // Phase 4: Copy non-markdown files
-  const copiedCount = copyNonMarkdownFiles(options.source, options.target, options.docsFolder);
-  console.log(chalk.green(`Copied ${copiedCount} non-markdown file(s)\n`));
+  // Phase 4: Copy the non-markdown files the edition does not have
+  const copy = copyNonMarkdownFiles(options.source, options.target, options.docsFolder);
+  console.log(
+    chalk.green(
+      `Copied ${copy.copied} non-markdown file(s), and kept ${copy.kept} the edition already has\n`
+    )
+  );
 
   // Phase 5: Translate lectures
   const translator = new TranslationService(options.apiKey, options.model, false);
@@ -877,6 +989,14 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
       console.error(formatFailureLine(record.file, record.failure));
     }
   }
+  // The failure line keeps 200 characters. With `-f` no TRANSLATION-REPORT.md
+  // carries the rest, such as a parity check's full list (#134), so it is
+  // printed here.
+  if (options.file) {
+    for (const failure of stats.failures) {
+      console.error(`\n${failure.file} failed:\n${failure.error}`);
+    }
+  }
   // Untruncated, unlike the failure lines: each command is the recovery.
   const unrecorded = lectureReports.filter((record) => record.failure?.kind === 'state-write');
   if (unrecorded.length > 0) {
@@ -891,11 +1011,15 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     }
   }
 
-  // Phase 6: Generate report
-  generateReport(options.target, options, stats, termCount);
-  console.log(
-    chalk.green(`\n📄 Report saved to: ${path.join(options.target, 'TRANSLATION-REPORT.md')}`)
-  );
+  // Phase 6: Generate report. Not for `-f`, whose round's PR would have to
+  // delete it (#134): its one lecture's failure is on stderr above, and
+  // `--report-json` still records the run.
+  if (!options.file) {
+    generateReport(options.target, options, stats, termCount);
+    console.log(
+      chalk.green(`\n📄 Report saved to: ${path.join(options.target, 'TRANSLATION-REPORT.md')}`)
+    );
+  }
   if (options.reportJson) {
     const runReport = buildRunReport(
       options,

@@ -364,11 +364,11 @@ Download: [Source Han Serif SC](https://github.com/adobe-fonts/source-han-serif/
 
 1. **Load glossary** — `--glossary` if given, else a repo-local `glossary/<lang>.json`, else the built-in glossary shipped with the package (see [Glossary](glossary.md#using-a-custom-glossary))
 2. **Parse `_toc.yml`** — discovers lectures from the source repo's table of contents
-3. **Setup target folder** — creates the target directory structure
-4. **Copy non-markdown files** — images, config, data files, CSS (preserves directory structure)
+3. **Setup target folder** — creates the target directory structure, and writes `.translate/config.yml` if the target has none
+4. **Copy non-markdown files** — images, config, data files, CSS (preserves directory structure); a file the target already has is kept, never overwritten
 5. **Translate lectures** — sequentially with retry + progress bar
 6. **Generate heading-maps** — position-based section matching, injected into frontmatter
-7. **Write report** — `TRANSLATION-REPORT.md` with stats, config, and failure details
+7. **Write report** — `TRANSLATION-REPORT.md` with stats, config, and failure details (not with `-f`)
 
 **Dry run example (preview without API calls):**
 
@@ -398,7 +398,8 @@ Would translate the following lectures:
   3. cobweb.md ✓
   ...
 
-Would copy 24 non-markdown file(s)
+Would copy 24 non-markdown file(s), and keep 0 the edition already has
+Would write .translate/config.yml
 
 Run without --dry-run to translate.
 ```
@@ -423,7 +424,13 @@ npx translate init \
   --dry-run
 ```
 
-`-f` names a lecture listed in the source `_toc.yml`, and takes the first entry in ToC order that equals or contains the name. Preview with `--dry-run` first: it prints the `Translating single file:` line with the lecture it matched, and stops before translating or writing anything. Then run the same command without `--dry-run`. `-f` narrows the translation, not the rest of the run: every run except a dry run rewrites `.translate/config.yml` and `TRANSLATION-REPORT.md`, and copies every non-Markdown file in the source docs folder into the target, `_toc.yml` and `_config.yml` included. Each lecture then joins the edition in its own PR, with its state file (see [Tutorial: Fresh Setup](tutorials/fresh-setup.md#one-reviewed-lecture-at-a-time)).
+`-f` names a lecture listed in the source `_toc.yml`, and takes the first entry in ToC order that equals or contains the name. Preview with `--dry-run` first: it prints the `Translating single file:` line with the lecture it matched, and stops before translating or writing anything. Then run the same command without `--dry-run`. Each lecture then joins the edition in its own PR, with its state file (see [Tutorial: Fresh Setup](tutorials/fresh-setup.md#one-reviewed-lecture-at-a-time)).
+
+**Into an existing edition**, with or without `-f`, `init` leaves the edition's own files alone:
+
+- It copies only the non-Markdown files in the source docs folder that the target does not have, and prints how many it copied and how many it kept. A file the target has, such as a localised `_toc.yml` or `_config.yml`, is never overwritten, so a change the source has made to one since is not carried: update the edition's copy by hand.
+- It writes `.translate/config.yml` only when the target has none. A config whose `source-language`, `target-language` and `docs-folder` match the flags is left byte for byte. One that differs stops the run before any translation, dry run included, naming each key with both values: pass the edition's own flags, or correct the config.
+- With `-f` it writes no `TRANSLATION-REPORT.md`. A failed lecture's error is printed on stderr in full, and `--report-json` still records the run.
 
 **Resume from a specific lecture (after a failure or interruption):**
 
@@ -461,7 +468,7 @@ npx translate init \
 
 **Output:**
 
-A `TRANSLATION-REPORT.md` file is written to the target directory with:
+A run without `-f` writes `TRANSLATION-REPORT.md` to the target directory with:
 - Total lectures, success/failure/skipped counts
 - Total tokens used, total time
 - Configuration details

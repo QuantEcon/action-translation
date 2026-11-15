@@ -1,7 +1,7 @@
 /**
  * Tests for the init command — bulk project translation
  *
- * Tests the pure functions: parseTocLectures, copyNonMarkdownFiles.
+ * Tests the pure functions: parseTocLectures, copyNonMarkdownFiles, checkEditionConfig.
  * Uses temporary directories, no LLM calls.
  */
 
@@ -10,9 +10,11 @@ import * as path from 'path';
 import * as os from 'os';
 import {
   EditionFlags,
+  checkEditionConfig,
   copyNonMarkdownFiles,
   filterSkipExisting,
   parseTocLectures,
+  planNonMarkdownCopy,
   writeStateCommand,
 } from '../commands/init.js';
 import { writeFileState } from '../translate-state.js';
@@ -242,7 +244,7 @@ describe('copyNonMarkdownFiles', () => {
     writeFile(path.join(sourceDir, 'lectures', 'images', 'fig1.png'), 'PNG_DATA');
     writeFile(path.join(sourceDir, 'lectures', 'skip.md'), '# Skip me');
 
-    const count = copyNonMarkdownFiles(sourceDir, targetDir, 'lectures');
+    const { copied: count } = copyNonMarkdownFiles(sourceDir, targetDir, 'lectures');
 
     expect(count).toBe(3);
     expect(fs.existsSync(path.join(targetDir, 'lectures', '_config.yml'))).toBe(true);
@@ -260,7 +262,7 @@ describe('copyNonMarkdownFiles', () => {
     writeFile(path.join(sourceDir, 'lectures', '.gitignore'), 'node_modules');
     writeFile(path.join(sourceDir, 'lectures', 'data.csv'), 'a,b,c');
 
-    const count = copyNonMarkdownFiles(sourceDir, targetDir, 'lectures');
+    const { copied: count } = copyNonMarkdownFiles(sourceDir, targetDir, 'lectures');
 
     // .git dir and .gitignore are both skipped (startsWith('.git'))
     expect(count).toBe(1);
@@ -273,7 +275,7 @@ describe('copyNonMarkdownFiles', () => {
     const sourceDir = path.join(tmpDir, 'missing');
     const targetDir = path.join(tmpDir, 'target');
 
-    const count = copyNonMarkdownFiles(sourceDir, targetDir, 'lectures');
+    const { copied: count } = copyNonMarkdownFiles(sourceDir, targetDir, 'lectures');
     expect(count).toBe(0);
   });
 
@@ -283,7 +285,7 @@ describe('copyNonMarkdownFiles', () => {
 
     writeFile(path.join(sourceDir, 'lectures', 'a', 'b', 'c', 'deep.json'), '{}');
 
-    const count = copyNonMarkdownFiles(sourceDir, targetDir, 'lectures');
+    const { copied: count } = copyNonMarkdownFiles(sourceDir, targetDir, 'lectures');
 
     expect(count).toBe(1);
     expect(fs.existsSync(path.join(targetDir, 'lectures', 'a', 'b', 'c', 'deep.json'))).toBe(true);
@@ -295,7 +297,7 @@ describe('copyNonMarkdownFiles', () => {
 
     fs.mkdirSync(path.join(sourceDir, 'lectures'), { recursive: true });
 
-    const count = copyNonMarkdownFiles(sourceDir, targetDir, 'lectures');
+    const { copied: count } = copyNonMarkdownFiles(sourceDir, targetDir, 'lectures');
     expect(count).toBe(0);
   });
 
@@ -308,7 +310,7 @@ describe('copyNonMarkdownFiles', () => {
     writeFile(path.join(sourceDir, 'lectures', 'script.py'), 'print("hi")');
     writeFile(path.join(sourceDir, 'lectures', 'config.json'), '{}');
 
-    const count = copyNonMarkdownFiles(sourceDir, targetDir, 'lectures');
+    const { copied: count } = copyNonMarkdownFiles(sourceDir, targetDir, 'lectures');
 
     expect(count).toBe(4);
     expect(fs.readFileSync(path.join(targetDir, 'lectures', 'style.css'), 'utf-8')).toBe('body {}');
@@ -337,11 +339,132 @@ describe('copyNonMarkdownFiles', () => {
     writeFile(path.join(tmpDir, 'outside.txt'), 'outside');
     fs.symlinkSync(path.join(tmpDir, 'outside.txt'), path.join(sourceDir, 'lectures', 'link.txt'));
 
-    const count = copyNonMarkdownFiles(sourceDir, targetDir, 'lectures');
+    const { copied: count } = copyNonMarkdownFiles(sourceDir, targetDir, 'lectures');
 
     expect(count).toBe(1); // Only real.txt
     expect(fs.existsSync(path.join(targetDir, 'lectures', 'real.txt'))).toBe(true);
     expect(fs.existsSync(path.join(targetDir, 'lectures', 'link.txt'))).toBe(false);
+  });
+
+  // An existing edition's copies are usually localised (#134).
+  it('never overwrites a file the edition already has, and counts it as kept', () => {
+    const sourceDir = path.join(tmpDir, 'source');
+    const targetDir = path.join(tmpDir, 'target');
+    writeFile(path.join(sourceDir, 'lectures', '_toc.yml'), 'caption: Lectures');
+    writeFile(path.join(sourceDir, 'lectures', 'images', 'fig1.png'), 'ENGLISH');
+    writeFile(path.join(sourceDir, 'lectures', 'images', 'fig2.png'), 'NEW');
+    writeFile(path.join(targetDir, 'lectures', '_toc.yml'), 'caption: 讲座');
+    writeFile(path.join(targetDir, 'lectures', 'images', 'fig1.png'), 'LOCALISED');
+    // A dangling link is something at the path too: copying would write through it.
+    fs.symlinkSync(path.join(tmpDir, 'nowhere.css'), path.join(targetDir, 'lectures', 'style.css'));
+    writeFile(path.join(sourceDir, 'lectures', 'style.css'), 'body {}');
+
+    expect(planNonMarkdownCopy(sourceDir, targetDir, 'lectures')).toEqual({
+      copy: [path.join('images', 'fig2.png')],
+      keep: expect.arrayContaining(['_toc.yml', path.join('images', 'fig1.png'), 'style.css']),
+    });
+    expect(copyNonMarkdownFiles(sourceDir, targetDir, 'lectures')).toEqual({ copied: 1, kept: 3 });
+
+    const read = (rel: string) => fs.readFileSync(path.join(targetDir, 'lectures', rel), 'utf-8');
+    expect(read('_toc.yml')).toBe('caption: 讲座');
+    expect(read(path.join('images', 'fig1.png'))).toBe('LOCALISED');
+    expect(read(path.join('images', 'fig2.png'))).toBe('NEW');
+    expect(fs.existsSync(path.join(tmpDir, 'nowhere.css'))).toBe(false);
+  });
+});
+
+// ============================================================================
+// checkEditionConfig
+// ============================================================================
+
+describe('checkEditionConfig (#134)', () => {
+  const wanted = {
+    'source-language': 'en',
+    'target-language': 'zh-cn',
+    'docs-folder': 'lectures',
+  };
+  const writeConfigFile = (content: string): string => {
+    const targetDir = path.join(tmpDir, 'target');
+    writeFile(path.join(targetDir, '.translate', 'config.yml'), content);
+    return targetDir;
+  };
+
+  it('reports a missing config as absent', () => {
+    expect(checkEditionConfig(path.join(tmpDir, 'nothing-here'), wanted)).toBe('absent');
+  });
+
+  it.each(['lectures', 'lectures/', './lectures'])(
+    'matches a config whose docs-folder is written %s',
+    (folder) => {
+      const targetDir = writeConfigFile(
+        `source-language: en\ntarget-language: zh-cn\ndocs-folder: ${folder}\n`
+      );
+      expect(checkEditionConfig(targetDir, wanted)).toBe('matches');
+    }
+  );
+
+  it("matches '.' with '', both the repository root", () => {
+    const targetDir = writeConfigFile(
+      `source-language: en\ntarget-language: zh-cn\ndocs-folder: ''\n`
+    );
+    expect(checkEditionConfig(targetDir, { ...wanted, 'docs-folder': '.' })).toBe('matches');
+  });
+
+  it('names every key that differs, a missing one included, with both values', () => {
+    const targetDir = writeConfigFile('source-language: en\ntarget-language: fa\n');
+    expect(() => checkEditionConfig(targetDir, wanted)).toThrow(
+      'target-language: the config has "fa", and this run\'s --target-language is "zh-cn"\n' +
+        '  docs-folder: the config has no value, and this run\'s -d is "lectures"'
+    );
+  });
+
+  it.each(['', '# routing notes, keys to follow\n'])(
+    'reads an empty or comment-only config (%j) as one with no keys, and names each',
+    (content) => {
+      const targetDir = writeConfigFile(content);
+      expect(() => checkEditionConfig(targetDir, wanted)).toThrow(
+        /source-language: the config has no value.*\n.*target-language: the config has no value.*\n.*docs-folder: the config has no value/
+      );
+    }
+  );
+
+  it('shows a value that is not text as YAML read it', () => {
+    const targetDir = writeConfigFile(
+      'source-language: en\ntarget-language: zh-cn\ndocs-folder: 5\n'
+    );
+    expect(() => checkEditionConfig(targetDir, wanted)).toThrow(
+      'docs-folder: the config has 5, and this run\'s -d is "lectures"'
+    );
+  });
+
+  it('refuses a dangling link at the config path, rather than writing through it', () => {
+    const targetDir = path.join(tmpDir, 'target');
+    fs.mkdirSync(path.join(targetDir, '.translate'), { recursive: true });
+    fs.symlinkSync(
+      path.join(tmpDir, 'elsewhere.yml'),
+      path.join(targetDir, '.translate', 'config.yml')
+    );
+    expect(() => checkEditionConfig(targetDir, wanted)).toThrow(
+      /config\.yml is a symbolic link to nothing: fix or remove it, then re-run\.$/
+    );
+    expect(fs.existsSync(path.join(tmpDir, 'elsewhere.yml'))).toBe(false);
+  });
+
+  // Under CORE_SCHEMA a typed scalar fails the parse; the plain-mapping check
+  // behind it matches writeConfig's, should the schema ever admit one.
+  it('refuses a typed scalar such as !!binary', () => {
+    expect(() => checkEditionConfig(writeConfigFile('!!binary aGVsbG8=\n'), wanted)).toThrow(
+      /config\.yml is not valid YAML \(unknown tag .*binary.*\): fix or remove it, then re-run\.$/
+    );
+  });
+
+  it('refuses a config that is not YAML, or not a mapping', () => {
+    expect(() => checkEditionConfig(writeConfigFile('a: [unclosed\n'), wanted)).toThrow(
+      /config\.yml is not valid YAML \(.*\): fix or remove it, then re-run\.$/
+    );
+    expect(() => checkEditionConfig(writeConfigFile('- a\n- b\n'), wanted)).toThrow(
+      /config\.yml is not a YAML mapping: fix or remove it, then re-run\.$/
+    );
   });
 });
 

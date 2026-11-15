@@ -128,7 +128,7 @@ npx translate init \
   --dry-run
 ```
 
-This lists all lectures that would be translated and all non-markdown files that would be copied, without making any API calls.
+This lists all lectures that would be translated, and counts the non-markdown files it would copy and those the target already has, without making any API calls.
 
 **Run the translation:**
 
@@ -145,11 +145,11 @@ The `init` command runs a 7-phase pipeline:
 |---|---|
 | 1. Load glossary | Loads `glossary/zh-cn.json` (357 technical terms) |
 | 2. Parse `_toc.yml` | Discovers all lectures in the source project |
-| 3. Setup target | Creates the docs folder structure |
-| 4. Copy non-markdown files | Images, `_config.yml`, `_toc.yml`, CSS, data files |
+| 3. Setup target | Creates the docs folder structure, and writes `.translate/config.yml` if the target has none |
+| 4. Copy non-markdown files | Images, `_config.yml`, `_toc.yml`, CSS, data files the target does not already have |
 | 5. Translate lectures | Sequential translation with progress bar |
 | 6. Generate heading-maps | Position-based section matching, injected into frontmatter |
-| 7. Write report | `TRANSLATION-REPORT.md` with stats and any failures |
+| 7. Write report | `TRANSLATION-REPORT.md` with stats and any failures (not with `-f`) |
 
 A progress bar shows the current lecture being translated.
 
@@ -295,18 +295,14 @@ If the line shows the lecture you meant, run the same command without `--dry-run
 
 ### Keep only what the PR needs
 
-`-f` narrows the translation, not the rest of the run: every `init` run except a dry run rewrites `.translate/config.yml` and `TRANSLATION-REPORT.md`, and copies every non-Markdown file in the source docs folder into the target, `_toc.yml` and `_config.yml` included. See what changed:
+`-f` narrows the translation, not the rest of the run: `init` also copies each non-Markdown file in the source docs folder that the edition does not have, and writes `.translate/config.yml` if the edition has none. It never overwrites a file the edition has, and with `-f` it writes no `TRANSLATION-REPORT.md`. See what changed:
 
 ```bash
 cd ~/repos/lecture-python-intro.zh-cn
 git status
 ```
 
-The first lecture's PR keeps the copied build files (`_config.yml`, `_toc.yml`, images and other static files): the edition has none yet, and cannot build without them. A later PR needs only the lecture, its state file and any new file the lecture uses, such as an image: restore the edition's copies of everything else, and delete the new files the PR does not need, `TRANSLATION-REPORT.md` among them. For example:
-
-```bash
-git restore lectures/_toc.yml lectures/_config.yml
-```
+The first lecture's PR keeps the copied build files (`_config.yml`, `_toc.yml`, images and other static files) and the config: the edition has none yet, and cannot build without them. A later round copies only the files the source has added since, and its PR needs only the lecture, its state file and any new file the lecture uses, such as an image: delete the new files the PR does not need. A later round also stops before translating if the edition's config does not match its flags, so pass the edition's own `--target-language`, and `-d` if the docs folder is not `lectures`.
 
 ### Keep the state file
 
