@@ -35,7 +35,20 @@ export type FailureKind =
   | 'too-large' // refused before the call: over the whole-document output budget
   | 'incomplete' // the model printed the incomplete-document marker
   | 'no-text' // an end_turn without a text block
+  | 'state-write' // the lecture was written, its state file was not (#378)
   | 'error'; // anything else
+
+/**
+ * A lecture whose translation was written but whose state file could not be
+ * (#378). Without the state file the lecture is out of sync's scope under
+ * `sync-scope: existing`, so it counts as a failure, not a success.
+ */
+export class StateWriteError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'StateWriteError';
+  }
+}
 
 /** Why one file failed. */
 export interface FailureInfo {
@@ -92,6 +105,9 @@ export function classifyFailure(error: unknown): FailureInfo {
   }
   if (error instanceof StructuralParityError) {
     return { kind: 'parity', message };
+  }
+  if (error instanceof StateWriteError) {
+    return { kind: 'state-write', message };
   }
   if (error instanceof APIError) {
     const details: Pick<FailureInfo, 'status' | 'type'> = {};

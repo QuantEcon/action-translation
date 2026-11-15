@@ -44,6 +44,7 @@ import {
   INIT_REPORT_SCHEMA,
   InitRunReport,
   LectureReport,
+  StateWriteError,
   StructuralParityError,
   classifyFailure,
   formatFailureLine,
@@ -715,6 +716,8 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   bar.start(remaining.length, 0, { status: '' });
 
   const stateParser = new MystParser();
+  // Printed after the progress bar: a lecture whose state records no source commit.
+  const stateWarnings: string[] = [];
 
   // Process a single lecture — used by both sequential and parallel paths.
   // Returns its record for the run report.
@@ -735,23 +738,23 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
         options,
         glossary
       );
-      record = {
-        file: lecture,
-        outcome: 'ok',
-        elapsedMs: result.elapsedMs,
-        tokensUsed: result.tokensUsed,
-        outputChars: result.outputChars,
-        headRestored: result.headRestored,
-      };
-
-      stats.successCount++;
       stats.totalTokens += result.tokensUsed;
       stats.totalTimeMs += result.elapsedMs;
 
-      // Write per-file state
+      // Write the lecture's state file before counting the lecture (#378).
+      // Under `sync-scope: existing` a lecture without one never syncs, so a
+      // failed write fails the lecture; the translation stays on disk.
+      const statePath = stateFileRelativePath(lecture);
+      const docsRelPath = options.docsFolder ? path.join(options.docsFolder, lecture) : lecture;
+      const sourceGit = await getFileGitMetadata(options.source, docsRelPath);
+      if (!sourceGit) {
+        stateWarnings.push(
+          `${lecture}: the source clone has no commit for it, so ${statePath} records ` +
+            '`source-sha: unknown`, and `translate status` will report it OUTDATED once it is ' +
+            'committed. Commit the lecture in the source first, or correct the state file.'
+        );
+      }
       try {
-        const docsRelPath = options.docsFolder ? path.join(options.docsFolder, lecture) : lecture;
-        const sourceGit = await getFileGitMetadata(options.source, docsRelPath);
         const sourceFile = path.join(options.source, options.docsFolder, lecture);
         const sourceContent = fs.readFileSync(sourceFile, 'utf-8');
         const parsed = await stateParser.parseSections(sourceContent, sourceFile);
@@ -762,9 +765,23 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
           mode: 'NEW',
           'section-count': parsed.sections.length,
         });
-      } catch {
-        // State write failure is non-fatal
+      } catch (error) {
+        throw new StateWriteError(
+          `translated, but ${statePath} was not written: ` +
+            (error instanceof Error ? error.message : String(error)) +
+            `. Once the cause is fixed, record it with \`translate status -f ${lecture} --write-state\`.`
+        );
       }
+
+      record = {
+        file: lecture,
+        outcome: 'ok',
+        elapsedMs: result.elapsedMs,
+        tokensUsed: result.tokensUsed,
+        outputChars: result.outputChars,
+        headRestored: result.headRestored,
+      };
+      stats.successCount++;
     } catch (error) {
       stats.failureCount++;
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -805,6 +822,10 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
 
   bar.update(remaining.length, { status: 'done' });
   bar.stop();
+
+  for (const warning of stateWarnings) {
+    console.log(chalk.yellow(`⚠️  ${warning}`));
+  }
 
   // One stderr line per failed lecture, naming its failure class: the reason
   // used to reach only TRANSLATION-REPORT.md, so a log showed `✗ Failed: N`.

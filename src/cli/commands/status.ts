@@ -80,6 +80,31 @@ export interface StatusResult {
     targetOnly: number;
     notFound: number;
   };
+  /** What `--write-state` did; absent without it (#401). */
+  writeState?: WriteStateResult;
+}
+
+/**
+ * What `--write-state` wrote, and what it did not, with why (#401). A file
+ * gets a state file only when both repositories have it.
+ */
+export interface WriteStateResult {
+  /** Whether `.translate/config.yml` was written: only once some file is eligible. */
+  configWritten: boolean;
+  /** The files that got a state file. */
+  written: string[];
+  /** The files with no state file because a repository lacks them. */
+  skipped: Array<{ file: string; reason: 'source only' | 'target only' | 'not found' }>;
+  /** The files whose state could not be written, with the error. */
+  failed: Array<{ file: string; error: string }>;
+}
+
+/**
+ * Whether a `--write-state` run failed (#401): a write failed, or nothing
+ * was written, whether the run named one file with `-f` or ran in bulk.
+ */
+export function writeStateFailed(result: WriteStateResult): boolean {
+  return result.failed.length > 0 || result.written.length === 0;
 }
 
 export interface StatusOptions {
@@ -440,6 +465,7 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
   }
 
   // --write-state: bootstrap .translate/ metadata
+  let writeState: WriteStateResult | undefined;
   if (options.writeState) {
     // Safety check: warn if SOURCE files are newer than TARGET files
     if (!options.force) {
@@ -485,22 +511,34 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
       }
     }
 
-    const srcLang = options.sourceLanguage ?? 'en';
-    writeConfig(target, {
-      'source-language': srcLang,
-      'target-language': language,
-      'docs-folder': docsFolder,
-    });
+    const SKIP_REASONS = {
+      SOURCE_ONLY: 'source only',
+      TARGET_ONLY: 'target only',
+      NOT_FOUND: 'not found',
+    } as const;
+    writeState = { configWritten: false, written: [], skipped: [], failed: [] };
+
+    // The config is written only once some file can get a state file, so a
+    // run that can write none leaves the edition as it was (#401).
+    if (entries.some((entry) => !(entry.status in SKIP_REASONS))) {
+      const srcLang = options.sourceLanguage ?? 'en';
+      writeConfig(target, {
+        'source-language': srcLang,
+        'target-language': language,
+        'docs-folder': docsFolder,
+      });
+      writeState.configWritten = true;
+    }
 
     const parser = new MystParser();
     const corruptStateFiles: string[] = [];
     for (const entry of entries) {
       // Only bootstrap state for files that exist in both repos
-      if (
-        entry.status === 'SOURCE_ONLY' ||
-        entry.status === 'TARGET_ONLY' ||
-        entry.status === 'NOT_FOUND'
-      ) {
+      if (entry.status in SKIP_REASONS) {
+        writeState.skipped.push({
+          file: entry.file,
+          reason: SKIP_REASONS[entry.status as keyof typeof SKIP_REASONS],
+        });
         continue;
       }
 
@@ -544,8 +582,14 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
           mode: 'RESYNC',
           'section-count': parsed.sections.length,
         });
-      } catch {
-        // Non-fatal: skip files where state can't be determined
+        writeState.written.push(entry.file);
+      } catch (error) {
+        // Recorded, not thrown: the other files still get theirs, and the
+        // CLI fails the run once the table is printed (#401).
+        writeState.failed.push({
+          file: entry.file,
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
 
@@ -613,6 +657,7 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
     language,
     entries,
     summary,
+    ...(writeState ? { writeState } : {}),
   };
 }
 
@@ -631,6 +676,32 @@ const STATUS_ICONS: Record<FileSyncStatus, string> = {
   TARGET_ONLY: '🔸',
   NOT_FOUND: '❌',
 };
+
+/**
+ * What `--write-state` did, for the console (#401): the banner only when a
+ * state file was written, then each file left without one, and why.
+ */
+export function formatWriteStateSummary(result: WriteStateResult, target: string): string {
+  const lines = [''];
+  if (result.written.length > 0) {
+    lines.push(
+      `📁 .translate/ metadata written to ${target}: ${result.written.length} state file(s)` +
+        (result.configWritten ? ' and the config' : '')
+    );
+  } else {
+    lines.push(
+      '❌ --write-state wrote no state file' +
+        (result.configWritten
+          ? ', only .translate/config.yml'
+          : ', and left .translate/config.yml as it was')
+    );
+  }
+  for (const skip of result.skipped) lines.push(`  ⊘ ${skip.file}: no state file (${skip.reason})`);
+  for (const failure of result.failed) {
+    lines.push(`  ✗ ${failure.file}: state file not written: ${failure.error}`);
+  }
+  return lines.join('\n');
+}
 
 /**
  * Format a StatusResult as a console-friendly table string.

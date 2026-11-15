@@ -505,6 +505,13 @@ export async function resyncSingleFile(
   try {
     const docsRelPath = docsFolder ? path.join(docsFolder, file) : file;
     const sourceGit = await getFileGitMetadata(sourceRepoPath, docsRelPath);
+    if (!sourceGit) {
+      logger.warn(
+        `  ${file}: the source clone has no commit for it, so its state file records ` +
+          '`source-sha: unknown`, and `translate status` will report it OUTDATED once it is ' +
+          'committed (#378)'
+      );
+    }
     const parser = new MystParser();
     const parsed = await parser.parseSections(sourceContent, file);
     fileState = {
@@ -590,10 +597,23 @@ export async function resyncSingleFile(
       fs.writeFileSync(targetFilePath, outputContent, 'utf-8');
       logger.info(`  ✅ Written to ${targetFilePath}`);
       if (fileState) {
+        // A lecture without its state file is out of sync's scope under
+        // `sync-scope: existing`, so a failed write is an error (#378); the
+        // translation stays on disk.
         try {
           writeFileState(targetRepoPath, file, fileState);
-        } catch {
-          // State write failure is non-fatal
+        } catch (error) {
+          logger.error(
+            `  ${file} was written, but ${stateFileRelativePath(file)} was not: ` +
+              (error instanceof Error ? error.message : String(error))
+          );
+          return {
+            file,
+            triageResult,
+            outputContent,
+            tokensUsed,
+            summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
+          };
         }
       }
     }

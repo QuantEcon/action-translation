@@ -308,15 +308,9 @@ The first lecture's PR keeps the copied build files (`_config.yml`, `_toc.yml`, 
 git restore lectures/_toc.yml lectures/_config.yml
 ```
 
-### Confirm the state file
+### Keep the state file
 
-`init` does not fail when it cannot write the state file, and without it the lecture never syncs:
-
-```bash
-ls .translate/state/cobweb.md.yml
-```
-
-`translate doctor` also flags lectures at the top level of the docs folder that have no state file.
+Without its state file, `.translate/state/cobweb.md.yml`, the lecture never syncs, so the PR carries it beside the lecture. `init` fails a lecture whose state file it cannot write, and exits 1. `translate doctor` flags lectures at the top level of the docs folder that have no state file.
 
 ### Open the PR, and check for English changes before merging
 

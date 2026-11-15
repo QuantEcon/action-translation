@@ -124,7 +124,7 @@ Under `sync-scope: existing`, this happens when the lecture is out of scope and 
 
 If the edition does have the lecture, check that:
 
-- Its state file is on the edition's default branch. `translate init` does not fail when it cannot write one.
+- Its state file is on the edition's default branch: the lecture's PR must carry `.translate/state/<file>.yml` beside the lecture.
 - Its PR merged before the change did. A lecture is out of scope until then, so a change that merges after the lecture is drafted and before its PR merges must be carried in that PR (see the known gap under [Partial editions](action-reference.md#partial-editions)).
 - It was not renamed in a sync PR that is still open. Until that PR merges, the edition's state file is under the old name, so a change to the lecture at its new path is not synced. Once it merges, `translate status -f <new name>` reports the lecture `OUTDATED`.
 
