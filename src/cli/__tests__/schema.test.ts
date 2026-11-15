@@ -361,6 +361,31 @@ describe('BulkBackwardReportSchema', () => {
     };
     const result = BulkBackwardReportSchema.parse(bulk);
     expect(result.fileReports).toHaveLength(0);
+    expect(result.oneSidedFiles).toBeUndefined();
+  });
+
+  it('keeps the files left out for being on one side only (#400)', () => {
+    const oneSidedFiles = [{ file: 'extra.md', side: 'target only' }];
+    const result = BulkBackwardReportSchema.parse({
+      timestamp: '2026-11-15T00:00:00.000Z',
+      sourceRepo: 's',
+      targetRepo: 't',
+      language: 'fa',
+      filesAnalyzed: 0,
+      filesInSync: 0,
+      filesFlagged: 0,
+      filesSkipped: 0,
+      totalSuggestions: 0,
+      highConfidence: 0,
+      mediumConfidence: 0,
+      lowConfidence: 0,
+      fileReports: [],
+      oneSidedFiles,
+    });
+    expect(result.oneSidedFiles).toEqual(oneSidedFiles);
+    expect(() =>
+      BulkBackwardReportSchema.parse({ ...result, oneSidedFiles: [{ file: 'x.md', side: 'both' }] })
+    ).toThrow();
   });
 });
 

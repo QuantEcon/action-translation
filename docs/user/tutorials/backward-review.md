@@ -102,7 +102,7 @@ A progress bar shows status:
 ████████████████████░░░░ 42/51 | ✓ 30 sync  📝 8 suggestions  ❌ 0 errors | solow.md
 ```
 
-**Smart skipping**: If `.translate/state/` exists, files where the source hasn't changed since the last sync are automatically skipped — saving both time and money on repeated runs.
+**Smart skipping**: If `.translate/state/` exists, files where the source hasn't changed since the last sync are automatically skipped — saving both time and money on repeated runs. A file only one repository has, such as a lecture the edition has not translated yet, is skipped too and listed in the summary; it is not an error.
 
 ### Output structure
 

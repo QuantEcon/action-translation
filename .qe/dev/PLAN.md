@@ -179,8 +179,8 @@ See ARCHITECTURE.md R4 for the design rationale.
       file permanently done. Abort the run on non-retryable auth errors; retry errored files on
       resume; validate checkpoints with the already-written-but-unused `ProgressCheckpointSchema`
       (`src/cli/schema.ts:192-261`) instead of raw `JSON.parse` (`backward.ts:377-387`)
-- [ ] **[M]** `backward` bulk analyzes the source∪target **union** (`backward.ts:417-428`), so
-      every untranslated file errors ("TARGET file not found") — use the intersection
+- [x] **[M]** `backward` bulk analyzes the source∪target **union** (`backward.ts:417-428`), so
+      every untranslated file errors ("TARGET file not found") — use the intersection (#400)
 - [ ] **[M]** `TARGET_HAS_ADDITIONS` files are destructively resynced after only a console
       warning (`src/cli/commands/forward.ts:127-135`; the RESYNC prompt orders removal of
       non-source content, `src/translator.ts:575`) and then reported as "skipped (i18n only)"

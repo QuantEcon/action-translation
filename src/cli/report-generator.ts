@@ -235,6 +235,14 @@ export function generateBulkMarkdownReport(report: BulkBackwardReport): string {
   lines.push(`| Medium confidence (0.6-0.85) | ${report.mediumConfidence} |`);
   lines.push(`| Low confidence (<0.6) | ${report.lowConfidence} |`);
   lines.push('');
+  const oneSided = report.oneSidedFiles ?? [];
+  if (oneSided.length > 0) {
+    lines.push(
+      `Not analyzed, present on one side only: ` +
+        oneSided.map((f) => `\`${f.file}\` (${f.side})`).join(', ')
+    );
+    lines.push('');
+  }
 
   // Per-file details (only files with suggestions)
   const filesWithSuggestions = report.fileReports.filter((f) =>
