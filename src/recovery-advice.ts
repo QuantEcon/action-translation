@@ -77,6 +77,11 @@ export interface FailureIssueInput {
    * (#386). No lecture failed, so none gets a recovery line of its own.
    */
   bibliographyUnread?: boolean;
+  /**
+   * The docs folder's `_toc.yml` moved out of it, so the source moved its
+   * book and the run was refused (#398). Its advice replaces the rest.
+   */
+  folderMoved?: { from: string; to: string };
 }
 
 /** The deterministic title of a sync failure issue, which a later success closes by. */
@@ -178,11 +183,37 @@ function bibliographyIntro(input: FailureIssueInput): string {
 }
 
 /**
+ * The advice when the source moved its book out of the docs folder (#398).
+ * A sync follows changes lecture by lecture and path by path, so the move is
+ * made in the edition by hand, and the workflow pointed at the new folder.
+ */
+function folderMovedLines(moved: { from: string; to: string }, docsFolder: string): string[] {
+  const slash = moved.to.lastIndexOf('/');
+  const folder = slash === -1 ? '.' : moved.to.slice(0, slash);
+  return [
+    `The source moved its book: \`${moved.from}\` became \`${moved.to}\`, outside ` +
+      `\`docs-folder\` (\`${docsFolder}\`). A sync carries changes into the lectures the edition ` +
+      'already has, by path, so it cannot follow the move, and nothing was synced.',
+    '',
+    `1. In the edition, move the docs folder's files to \`${folder}\` the same way, in a PR of ` +
+      'its own. The state files under `.translate/state/` are named relative to the docs ' +
+      'folder, so they stay where they are.',
+    `2. Set the sync workflow's \`docs-folder\` input to \`${folder}\`, and its \`paths:\` ` +
+      'filter to match.',
+    '',
+    `Do not use \`${RESYNC_COMMAND}\` on this PR: under the new \`docs-folder\`, each lecture ` +
+      'it moved reads as a file added from outside the folder, not as a change to a lecture the ' +
+      'edition has.',
+  ];
+}
+
+/**
  * The Recovery section's lines. Lectures held back by the premise check come
  * first, with their own advice; the CLI route and the resync precondition
  * follow when any other error is left.
  */
 export function failureRecoveryLines(input: FailureIssueInput): string[] {
+  if (input.folderMoved) return folderMovedLines(input.folderMoved, input.docsFolder);
   const heldBack = input.heldBack ?? [];
   const premise = formatPremiseRecovery(heldBack, input.docsFolder, input.targetLanguage);
   const otherErrors = input.errors.length > heldBack.length;

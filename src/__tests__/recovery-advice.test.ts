@@ -116,6 +116,27 @@ describe('failure issue (#281)', () => {
     expect(lines).toContain('    git rev-list --count <merge commit>..origin/main -- <path>');
   });
 
+  it('when the source moved its book, gives only the move advice (#398)', () => {
+    const lines = failureRecoveryLines({
+      ...BASE,
+      errors: ['Sync refused: ...'],
+      failedLectures: [{ file: 'lectures/mix_model.md', inEdition: true }],
+      folderMoved: { from: 'lectures/_toc.yml', to: '_toc.yml' },
+    });
+    expect(lines[0]).toBe(
+      'The source moved its book: `lectures/_toc.yml` became `_toc.yml`, outside ' +
+        '`docs-folder` (`lectures/`). A sync carries changes into the lectures the edition ' +
+        'already has, by path, so it cannot follow the move, and nothing was synced.'
+    );
+    // Moved to the repository root, whose `docs-folder` is `.`.
+    expect(lines).toContain(
+      "2. Set the sync workflow's `docs-folder` input to `.`, and its `paths:` filter to match."
+    );
+    const text = lines.join('\n');
+    expect(text).not.toContain('translate forward');
+    expect(text).not.toContain('git rev-list');
+  });
+
   it('when the bibliography could not be read, says nothing synced and gives no line per lecture (#386)', () => {
     const lines = failureRecoveryLines({
       ...BASE,

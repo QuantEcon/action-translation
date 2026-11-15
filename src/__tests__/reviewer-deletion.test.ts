@@ -293,6 +293,91 @@ describe('reviewPR on deletion PRs (#210)', () => {
     expect(result.recommendation).toBe('editor');
   });
 
+  it('takes a lecture the source PR moved out of the docs folder as deleted (#398)', async () => {
+    const rec = newRecorder();
+    // GitHub lists the move under its new path, outside the docs folder; sync
+    // deletes the translation at the old path, as for a removal.
+    const movedOut = {
+      filename: 'archive/lecture.md',
+      previous_filename: 'lectures/lecture.md',
+      status: 'renamed',
+      additions: 0,
+      deletions: 0,
+    };
+    const reviewer = makeReviewer(
+      {
+        targetFiles: [removed('lectures/lecture.md')],
+        sourceFiles: [movedOut],
+        sourceContent: {},
+        targetHeadContent: {},
+      },
+      rec
+    );
+
+    const result = await run(reviewer);
+
+    expect(result.verdict).toBe('PASS');
+    expect(result.recommendation).toBe('editor');
+    expect(rec.modelCalls).toEqual([]);
+    expect(rec.comments).toHaveLength(1);
+    expect(rec.comments[0]).toContain('deletion only');
+  });
+
+  it('reviews the other lectures, with no blocker, beside a lecture moved out of the folder', async () => {
+    const rec = newRecorder();
+    const movedOut = {
+      filename: 'archive/lecture.md',
+      previous_filename: 'lectures/lecture.md',
+      status: 'renamed',
+      additions: 0,
+      deletions: 0,
+    };
+    const reviewer = makeReviewer(
+      {
+        targetFiles: [removed('lectures/lecture.md'), modified('lectures/intro.md')],
+        sourceFiles: [movedOut, modified('lectures/intro.md')],
+        sourceContent: { 'lectures/intro.md': SOURCE_INTRO },
+        targetHeadContent: { 'lectures/intro.md': TARGET_INTRO_AFTER },
+        targetBaseContent: { 'lectures/intro.md': TARGET_INTRO_BEFORE },
+      },
+      rec
+    );
+
+    const result = await run(reviewer);
+
+    expect(rec.modelCalls).toContain('evaluateTranslation');
+    expect(result.verdict).toBe('PASS');
+    const verdict = parseReviewVerdict(result.reviewComment);
+    expect(verdict?.findings.filter((f) => f.severity === 'blocker')).toHaveLength(0);
+  });
+
+  it('still flags a deletion when the source PR moved the lecture within the docs folder', async () => {
+    const rec = newRecorder();
+    // A move within the folder is a rename the sync carries across; a
+    // translation PR that only deletes the old path has dropped the lecture.
+    const movedWithin = {
+      filename: 'lectures/archive/lecture.md',
+      previous_filename: 'lectures/lecture.md',
+      status: 'renamed',
+      additions: 0,
+      deletions: 0,
+    };
+    const reviewer = makeReviewer(
+      {
+        targetFiles: [removed('lectures/lecture.md')],
+        sourceFiles: [movedWithin],
+        sourceContent: {},
+        targetHeadContent: {},
+        targetBaseContent: { 'lectures/lecture.md': TARGET_INTRO_BEFORE },
+      },
+      rec
+    );
+
+    // Not excused as a deletion, so the missing source stays fatal (F40).
+    await expect(run(reviewer)).rejects.toThrow(/Review aborted: no source content/);
+    expect(rec.comments).toEqual([]);
+  });
+
   it('reviews a rename reported as delete+add, skipping only the vanished old path', async () => {
     const rec = newRecorder();
     const reviewer = makeReviewer(

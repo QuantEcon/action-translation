@@ -270,6 +270,74 @@ export function isDocsMarkdownPath(path: unknown, docsFolder: string): path is s
 }
 
 /**
+ * True when `file` is a docs-folder lecture renamed to a path outside the
+ * docs folder. The repository root contains every path, so nothing moves out
+ * of an empty `docsFolder`.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isMovedOutOfDocs(file: any, docsFolder: string): boolean {
+  return (
+    file.status === 'renamed' &&
+    isDocsMarkdownPath(file.previous_filename, docsFolder) &&
+    typeof file.filename === 'string' &&
+    !file.filename.startsWith(docsFolder)
+  );
+}
+
+/** A rename sync does not carry out, beside a lecture moved out of the folder (#398). */
+export interface RenamesOut {
+  /**
+   * The docs folder's own `_toc.yml` moved out of it, or removed while a
+   * `_toc.yml` outside the folder is added: the source has moved its book.
+   * Taking each lecture's move as a removal would delete every translation,
+   * so the run is refused instead.
+   */
+  tocMovedOut?: { from: string; to: string };
+  /**
+   * Lectures renamed inside the docs folder to a name that is not `.md`. The
+   * edition keeps the translation, which sync no longer updates; the run
+   * warns about each.
+   */
+  notMarkdown: Array<{ from: string; to: string }>;
+}
+
+/** The renames out of what sync handles, other than a lecture moved out of the folder. */
+export function findRenamesOut(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  files: any[],
+  docsFolder: string
+): RenamesOut {
+  const renamesOut: RenamesOut = { notMarkdown: [] };
+  const toc = `${docsFolder}_toc.yml`;
+  const outside = (path: unknown): path is string =>
+    typeof path === 'string' && !path.startsWith(docsFolder);
+  for (const file of files) {
+    if (file.status !== 'renamed' || typeof file.previous_filename !== 'string') continue;
+    const from: string = file.previous_filename;
+    const to: string = file.filename;
+    if (!from.startsWith(docsFolder)) continue;
+    if (from === toc && outside(to)) {
+      renamesOut.tocMovedOut ??= { from, to };
+    } else if (from.endsWith('.md') && to.startsWith(docsFolder) && !to.endsWith('.md')) {
+      renamesOut.notMarkdown.push({ from, to });
+    }
+  }
+  // GitHub lists a file that was moved and rewritten past its similarity
+  // threshold as a removal plus an addition, and a book move is when its ToC
+  // is likeliest to be rewritten.
+  if (!renamesOut.tocMovedOut && files.some((f) => f.status === 'removed' && f.filename === toc)) {
+    const added = files.find(
+      (f) =>
+        f.status === 'added' &&
+        outside(f.filename) &&
+        (f.filename === '_toc.yml' || f.filename.endsWith('/_toc.yml'))
+    );
+    if (added) renamesOut.tocMovedOut = { from: toc, to: added.filename };
+  }
+  return renamesOut;
+}
+
+/**
  * Classify GitHub PR files into sync categories.
  * Handles the docs-folder prefix filtering and file type detection.
  *
@@ -323,10 +391,31 @@ export function classifyChangedFiles(
       file.status !== 'renamed'
   );
 
-  const removedMarkdownFiles = files.filter(
+  // A lecture moved out of the docs folder is gone from the book, so the
+  // edition deletes its translation and state file, as for a removal (#398).
+  // The entry names the old path, where the edition has the lecture.
+  const removedMarkdownFiles = files.flatMap(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (file: any) =>
-      file.filename.startsWith(prefix) && file.filename.endsWith('.md') && file.status === 'removed'
+    (file: any) => {
+      if (
+        file.filename.startsWith(prefix) &&
+        file.filename.endsWith('.md') &&
+        file.status === 'removed'
+      ) {
+        return [file];
+      }
+      if (isMovedOutOfDocs(file, prefix)) {
+        return [
+          {
+            ...file,
+            filename: file.previous_filename,
+            status: 'removed',
+            renamedTo: file.filename,
+          },
+        ];
+      }
+      return [];
+    }
   );
 
   const removedTocFiles = files.filter(

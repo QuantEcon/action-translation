@@ -15,6 +15,7 @@
 
 import {
   classifyChangedFiles,
+  findRenamesOut,
   loadGlossary,
   formatGlossaryTerms,
   removeTocFileEntries,
@@ -170,6 +171,147 @@ describe('classifyChangedFiles', () => {
         'lectures/d.md',
       ]);
       expect(result.renamedMarkdownFiles.map((f) => f.filename)).toEqual(['lectures/b.md']);
+    });
+  });
+
+  // #398: the opposite half of #307, a rename whose new path sync does not
+  // handle. Before, it matched no list and was dropped.
+  describe('a lecture renamed to a path sync does not handle (#398)', () => {
+    it('is a removal of its old path when it moves out of the docs folder', () => {
+      const moved = {
+        filename: 'archive/foo.md',
+        status: 'renamed',
+        previous_filename: 'lectures/foo.md',
+      };
+
+      const result = classifyChangedFiles([moved], 'lectures/');
+
+      expect(result.removedMarkdownFiles).toEqual([
+        { ...moved, filename: 'lectures/foo.md', status: 'removed', renamedTo: 'archive/foo.md' },
+      ]);
+      expect(result.renamedMarkdownFiles).toEqual([]);
+      expect(result.changedMarkdownFiles).toEqual([]);
+      expect(findRenamesOut([moved], 'lectures/')).toEqual({ notMarkdown: [] });
+    });
+
+    it('is a removal when it moves to a sibling folder that shares the prefix name', () => {
+      const moved = {
+        filename: 'lectures-old/foo.md',
+        status: 'renamed',
+        previous_filename: 'lectures/foo.md',
+      };
+
+      const result = classifyChangedFiles([moved], 'lectures/');
+
+      expect(result.removedMarkdownFiles.map((f) => f.filename)).toEqual(['lectures/foo.md']);
+    });
+
+    it('keeps the source order among removals', () => {
+      const files = [
+        { filename: 'lectures/a.md', status: 'removed' },
+        { filename: 'archive/b.md', status: 'renamed', previous_filename: 'lectures/b.md' },
+        { filename: 'lectures/c.md', status: 'removed' },
+      ];
+
+      const result = classifyChangedFiles(files, 'lectures/');
+
+      expect(result.removedMarkdownFiles.map((f) => f.filename)).toEqual([
+        'lectures/a.md',
+        'lectures/b.md',
+        'lectures/c.md',
+      ]);
+    });
+
+    it('is neither a removal nor a rename when renamed to a name that is not .md, and warns', () => {
+      const converted = {
+        filename: 'lectures/foo.ipynb',
+        status: 'renamed',
+        previous_filename: 'lectures/foo.md',
+      };
+
+      const result = classifyChangedFiles([converted], 'lectures/');
+
+      expect(result.removedMarkdownFiles).toEqual([]);
+      expect(result.renamedMarkdownFiles).toEqual([]);
+      expect(result.changedMarkdownFiles).toEqual([]);
+      expect(findRenamesOut([converted], 'lectures/')).toEqual({
+        notMarkdown: [{ from: 'lectures/foo.md', to: 'lectures/foo.ipynb' }],
+      });
+    });
+
+    it("refuses the docs folder's _toc.yml moved out of it: the source moved its book", () => {
+      const files = [
+        { filename: 'src/_toc.yml', status: 'renamed', previous_filename: 'lectures/_toc.yml' },
+        { filename: 'src/foo.md', status: 'renamed', previous_filename: 'lectures/foo.md' },
+      ];
+
+      expect(findRenamesOut(files, 'lectures/')).toEqual({
+        tocMovedOut: { from: 'lectures/_toc.yml', to: 'src/_toc.yml' },
+        notMarkdown: [],
+      });
+    });
+
+    it('refuses the same move when GitHub lists the rewritten ToC as a removal plus an addition', () => {
+      const files = [
+        { filename: 'lectures/_toc.yml', status: 'removed' },
+        { filename: 'src/_toc.yml', status: 'added' },
+        { filename: 'src/foo.md', status: 'renamed', previous_filename: 'lectures/foo.md' },
+      ];
+
+      expect(findRenamesOut(files, 'lectures/')).toEqual({
+        tocMovedOut: { from: 'lectures/_toc.yml', to: 'src/_toc.yml' },
+        notMarkdown: [],
+      });
+    });
+
+    it('refuses nothing for a ToC removed with no ToC added outside the folder', () => {
+      const files = [
+        { filename: 'lectures/_toc.yml', status: 'removed' },
+        { filename: 'lectures/other_toc.yml', status: 'added' },
+      ];
+
+      expect(findRenamesOut(files, 'lectures/')).toEqual({ notMarkdown: [] });
+    });
+
+    it("refuses nothing for a ToC other than the docs folder's own", () => {
+      const files = [
+        {
+          filename: 'other/_toc.yml',
+          status: 'renamed',
+          previous_filename: 'lectures/sub/_toc.yml',
+        },
+        { filename: 'x/my_toc.yml', status: 'renamed', previous_filename: 'lectures/my_toc.yml' },
+      ];
+
+      expect(findRenamesOut(files, 'lectures/')).toEqual({ notMarkdown: [] });
+    });
+
+    it('is a removal when it moves out of the folder to a name that is not .md', () => {
+      const moved = {
+        filename: 'archive/foo.ipynb',
+        status: 'renamed',
+        previous_filename: 'lectures/foo.md',
+      };
+
+      expect(classifyChangedFiles([moved], 'lectures/').removedMarkdownFiles).toEqual([
+        {
+          ...moved,
+          filename: 'lectures/foo.md',
+          status: 'removed',
+          renamedTo: 'archive/foo.ipynb',
+        },
+      ]);
+      expect(findRenamesOut([moved], 'lectures/')).toEqual({ notMarkdown: [] });
+    });
+
+    it('finds nothing to refuse or warn about under an empty docs folder', () => {
+      const files = [
+        { filename: 'src/_toc.yml', status: 'renamed', previous_filename: '_toc.yml' },
+        { filename: 'sub/foo.md', status: 'renamed', previous_filename: 'foo.md' },
+      ];
+
+      expect(findRenamesOut(files, '')).toEqual({ notMarkdown: [] });
+      expect(classifyChangedFiles(files, '').removedMarkdownFiles).toEqual([]);
     });
   });
 
