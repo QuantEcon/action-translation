@@ -17,9 +17,11 @@ import {
   runStatus,
   formatStatusTable,
   formatStatusJson,
+  formatWriteStateSummary,
   FileSyncStatus,
   StatusOptions,
   StatusResult,
+  writeStateFailed,
 } from '../commands/status.js';
 import { readFileState, writeFileState } from '../translate-state.js';
 import { getFileGitMetadata } from '../git-metadata.js';
@@ -1293,7 +1295,18 @@ describe('--write-state carried-change guard (#380)', () => {
     const result = await writeState();
 
     expect(result.entries.map((e) => e.status)).toEqual(['SOURCE_ONLY', 'TARGET_ONLY']);
-    expect(fs.existsSync(path.join(target, '.translate', 'config.yml'))).toBe(true);
+    // Neither file is in both repositories, so nothing is eligible: the run
+    // writes no state file and holds the config (#401).
+    expect(fs.existsSync(path.join(target, '.translate', 'config.yml'))).toBe(false);
+    expect(result.writeState).toEqual({
+      configWritten: false,
+      written: [],
+      skipped: [
+        { file: 'new.md', reason: 'source only' },
+        { file: 'old.md', reason: 'target only' },
+      ],
+      failed: [],
+    });
     expect(readFileState(target, 'old.md')?.['source-sha']).toBe(drafted);
   });
 
@@ -1404,5 +1417,126 @@ describe('--check-sync', () => {
     });
 
     expect(result.entries[0].contentSync).toBeUndefined();
+  });
+});
+
+describe('--write-state reports what it wrote (#401)', () => {
+  const source = () => path.join(tmpDir, 'source');
+  const target = () => path.join(tmpDir, 'target');
+  const configPath = () => path.join(target(), '.translate', 'config.yml');
+  const writeState = (file?: string) =>
+    runStatus({
+      source: source(),
+      target: target(),
+      docsFolder: 'lectures',
+      language: 'zh-cn',
+      exclude: [],
+      writeState: true,
+      ...(file ? { file } : {}),
+    });
+
+  beforeEach(() => {
+    writeMd(path.join(source(), 'lectures', 'intro.md'), SOURCE_2_SECTIONS);
+    writeMd(path.join(target(), 'lectures', 'intro.md'), TARGET_2_SECTIONS_WITH_MAP);
+    writeMd(path.join(source(), 'lectures', 'extra.md'), SOURCE_2_SECTIONS);
+    writeMd(path.join(target(), 'lectures', 'orphan.md'), TARGET_2_SECTIONS_WITH_MAP);
+  });
+
+  it('in bulk, writes the files both sides have and lists the others with why', async () => {
+    const result = await writeState();
+
+    expect(result.writeState).toEqual({
+      configWritten: true,
+      written: ['intro.md'],
+      skipped: [
+        { file: 'extra.md', reason: 'source only' },
+        { file: 'orphan.md', reason: 'target only' },
+      ],
+      failed: [],
+    });
+    expect(writeStateFailed(result.writeState!)).toBe(false);
+    expect(readFileState(target(), 'intro.md')).not.toBeNull();
+    expect(fs.existsSync(configPath())).toBe(true);
+  });
+
+  it.each([
+    ['orphan.md', 'target only'],
+    ['extra.md', 'source only'],
+    ['a_typo.md', 'not found'],
+  ] as const)(
+    'with -f %s, writes nothing, holds the config, and fails (%s)',
+    async (file, reason) => {
+      const result = await writeState(file);
+
+      expect(result.writeState).toEqual({
+        configWritten: false,
+        written: [],
+        skipped: [{ file, reason }],
+        failed: [],
+      });
+      expect(writeStateFailed(result.writeState!)).toBe(true);
+      expect(fs.existsSync(configPath())).toBe(false);
+    }
+  );
+
+  it('records a state file it could not write, and fails, after writing the config', async () => {
+    // A file where the state folder should be: every state write throws.
+    fs.mkdirSync(path.join(target(), '.translate'), { recursive: true });
+    fs.writeFileSync(path.join(target(), '.translate', 'state'), 'not a folder', 'utf-8');
+
+    const result = await writeState('intro.md');
+
+    expect(result.writeState?.written).toEqual([]);
+    expect(result.writeState?.failed).toHaveLength(1);
+    expect(result.writeState?.failed[0].file).toBe('intro.md');
+    expect(result.writeState?.configWritten).toBe(true);
+    expect(writeStateFailed(result.writeState!)).toBe(true);
+  });
+
+  it('has no record without --write-state', async () => {
+    const result = await runStatus({
+      source: source(),
+      target: target(),
+      docsFolder: 'lectures',
+      language: 'zh-cn',
+      exclude: [],
+    });
+
+    expect(result.writeState).toBeUndefined();
+    expect(JSON.parse(formatStatusJson(result))).not.toHaveProperty('writeState');
+  });
+
+  it('prints the banner only when it wrote a state file, then each file left without one', () => {
+    expect(
+      formatWriteStateSummary(
+        {
+          configWritten: true,
+          written: ['intro.md'],
+          skipped: [{ file: 'orphan.md', reason: 'target only' }],
+          failed: [{ file: 'other.md', error: 'EACCES' }],
+        },
+        'tgt'
+      ).split('\n')
+    ).toEqual([
+      '',
+      '📁 .translate/ metadata written to tgt: 1 state file(s) and the config',
+      '  ⊘ orphan.md: no state file (target only)',
+      '  ✗ other.md: state file not written: EACCES',
+    ]);
+    expect(
+      formatWriteStateSummary(
+        {
+          configWritten: false,
+          written: [],
+          skipped: [{ file: 'a_typo.md', reason: 'not found' }],
+          failed: [],
+        },
+        'tgt'
+      ).split('\n')
+    ).toEqual([
+      '',
+      '❌ --write-state wrote no state file, and left .translate/config.yml as it was',
+      '  ⊘ a_typo.md: no state file (not found)',
+    ]);
   });
 });

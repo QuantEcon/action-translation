@@ -295,6 +295,70 @@ describe('resyncSingleFile', () => {
     });
   });
 
+  describe('the state file (#378)', () => {
+    it('counts a state file it could not write as an error, keeping the translation', async () => {
+      const fixture = createTempFixture({
+        sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## Section\n\nNew content.',
+        targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## 部分\n\n旧内容。',
+        filename: 'state-write.md',
+      });
+      // A file where the state folder should be: the state write throws.
+      fs.mkdirSync(path.join(fixture.targetRepo, '.translate'), { recursive: true });
+      fs.writeFileSync(path.join(fixture.targetRepo, '.translate', 'state'), 'not a folder');
+      const errors: string[] = [];
+
+      try {
+        const result = await resyncSingleFile(
+          fixture.filename,
+          fixture.sourceRepo,
+          fixture.targetRepo,
+          'lectures',
+          makeOptions({ source: fixture.sourceRepo, target: fixture.targetRepo }),
+          { ...silentLogger, error: (msg: string) => errors.push(msg) }
+        );
+
+        expect(result.summary.errors).toBe(1);
+        expect(result.summary.resynced).toBe(0);
+        expect(errors).toEqual([
+          expect.stringMatching(
+            /state-write\.md was written, but \.translate\/state\/state-write\.md\.yml was not: /
+          ),
+        ]);
+        const written = path.join(fixture.targetRepo, 'lectures', fixture.filename);
+        expect(fs.readFileSync(written, 'utf-8')).toContain('[TEST RESYNC]');
+      } finally {
+        fixture.cleanup();
+      }
+    });
+
+    it('warns when the source clone has no commit for the lecture', async () => {
+      // createTempFixture makes plain folders, not git clones.
+      const fixture = createTempFixture({
+        sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## Section\n\nNew content.',
+        targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## 部分\n\n旧内容。',
+        filename: 'no-commit.md',
+      });
+      const warnings: string[] = [];
+
+      try {
+        await resyncSingleFile(
+          fixture.filename,
+          fixture.sourceRepo,
+          fixture.targetRepo,
+          'lectures',
+          makeOptions({ source: fixture.sourceRepo, target: fixture.targetRepo }),
+          { ...silentLogger, warn: (msg: string) => warnings.push(msg) }
+        );
+
+        expect(warnings).toContainEqual(
+          expect.stringContaining('no-commit.md: the source clone has no commit for it')
+        );
+      } finally {
+        fixture.cleanup();
+      }
+    });
+  });
+
   describe('error handling', () => {
     it('throws on missing source file', async () => {
       const fixture = createTempFixture({

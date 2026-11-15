@@ -20,7 +20,9 @@ import {
   runStatus,
   formatStatusTable,
   formatStatusJson,
+  formatWriteStateSummary,
   StatusOptions,
+  writeStateFailed,
 } from './commands/status.js';
 import { runReview, ReviewOptions } from './commands/review.js';
 import { resyncSingleFile, runForwardBulk } from './commands/forward.js';
@@ -288,8 +290,11 @@ program
         console.log(formatStatusTable(result));
       }
 
-      if (opts.writeState) {
-        console.log(`\n📁 .translate/ metadata written to ${opts.target}`);
+      // With --json the record is in the JSON. Either way, a run that wrote
+      // no state file, or failed to write one, exits 1 (#401).
+      if (result.writeState) {
+        if (!opts.json) console.log(formatWriteStateSummary(result.writeState, opts.target));
+        if (writeStateFailed(result.writeState)) process.exit(1);
       }
     } catch (error) {
       fail(error);

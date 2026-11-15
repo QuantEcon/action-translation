@@ -395,6 +395,101 @@ describe('translate init --report-json', () => {
   });
 });
 
+describe('translate init: a state file it cannot write (#378)', () => {
+  const stderrText = (): string => errorSpy.mock.calls.map((call) => String(call[0])).join('\n');
+
+  it('fails the lecture with a state-write failure naming the file, keeps the translation, and prints the recovery command', async () => {
+    writeSource(['good.md']);
+    api.reply(GOOD);
+    // A folder where the lecture's state file should be: only that write throws.
+    const target = path.join(tmpDir, 'target');
+    fs.mkdirSync(path.join(target, '.translate', 'state', 'good.md.yml'), { recursive: true });
+    const opts = options({});
+
+    const stats = await runInit(opts);
+
+    expect(stats).toMatchObject({ successCount: 0, failureCount: 1 });
+    expect(stats.failures).toEqual([
+      {
+        file: 'good.md',
+        error: expect.stringMatching(
+          /^translated, but \.translate\/state\/good\.md\.yml was not written: .*EISDIR/
+        ),
+      },
+    ]);
+    // The spent tokens still count.
+    expect(stats.totalTokens).toBe(2900);
+    expect(fs.existsSync(path.join(target, 'lectures', 'good.md'))).toBe(true);
+    const report = readReport(opts.reportJson!);
+    expect(report.summary).toMatchObject({ ok: 0, failed: 1 });
+    expect(report.lectures[0]).toMatchObject({
+      file: 'good.md',
+      outcome: 'failed',
+      failure: { kind: 'state-write' },
+    });
+    expect(failureLines()).toEqual([
+      expect.stringMatching(/^✗ good\.md: state-write — translated/),
+    ]);
+    // In full, with the edition's own flags, whatever the failure line's length.
+    expect(stderrText()).toContain(
+      `  translate status -s ${opts.source} -t ${target} -l zh-cn -d lectures -f good.md --write-state`
+    );
+    // No state file was written, so none records an unknown source-sha.
+    const logged = logSpy.mock.calls.map((call) => String(call[0])).join('\n');
+    expect(logged).not.toContain('source-sha: unknown');
+  });
+
+  it('stops before any model call when the state folder cannot be written', async () => {
+    writeSource(['good.md']);
+    api.reply(GOOD);
+    // A file where the state folder should be: every lecture's write would throw.
+    const target = path.join(tmpDir, 'target');
+    fs.mkdirSync(path.join(target, '.translate'), { recursive: true });
+    fs.writeFileSync(path.join(target, '.translate', 'state'), 'not a folder', 'utf-8');
+
+    await expect(runInit(options({}))).rejects.toThrow(
+      /^Cannot write lecture state files in .*\.translate\/state \(.*\), so nothing was translated/
+    );
+    expect(api.requests).toHaveLength(0);
+    expect(fs.existsSync(path.join(target, 'lectures', 'good.md'))).toBe(false);
+  });
+
+  // Root passes every access check, so the case cannot be set up as root.
+  (process.getuid?.() === 0 ? it.skip : it)(
+    'also stops when the state folder can be written but not searched',
+    async () => {
+      writeSource(['good.md']);
+      api.reply(GOOD);
+      const stateDir = path.join(tmpDir, 'target', '.translate', 'state');
+      fs.mkdirSync(stateDir, { recursive: true });
+      fs.chmodSync(stateDir, 0o600);
+      try {
+        await expect(runInit(options({}))).rejects.toThrow(/^Cannot write lecture state files/);
+        expect(api.requests).toHaveLength(0);
+      } finally {
+        fs.chmodSync(stateDir, 0o700);
+      }
+    }
+  );
+
+  it('warns, after the run, when the source clone has no commit for the lecture', async () => {
+    // writeSource makes a plain folder, not a git clone.
+    writeSource(['good.md']);
+    api.reply(GOOD);
+
+    const stats = await runInit(options({}));
+
+    expect(stats.successCount).toBe(1);
+    const warnings = logSpy.mock.calls
+      .map((call) => String(call[0]))
+      .filter((line) => line.includes('source-sha: unknown'));
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain(
+      'good.md: the source clone has no commit for it, so .translate/state/good.md.yml records'
+    );
+  });
+});
+
 describe('translate init -f', () => {
   it('prefers the lecture named exactly over an earlier one whose name contains it', async () => {
     writeSource(['jax_intro.md', 'intro.md']);

@@ -163,6 +163,38 @@ describe('CLI smoke tests', () => {
         fs.rmSync(tmpDir, { recursive: true, force: true });
       }
     });
+
+    // The record is unit-tested in status.test.ts; this pins the banner and
+    // the exit code, which the CLI sets from it (#401).
+    it('status --write-state exits 1 with no banner when it wrote no state file', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cli-smoke-write-state-'));
+      try {
+        const source = path.join(tmpDir, 'source');
+        const target = path.join(tmpDir, 'target');
+        for (const repo of [source, target]) {
+          fs.mkdirSync(path.join(repo, 'lectures'), { recursive: true });
+          fs.writeFileSync(path.join(repo, 'lectures', 'lecture.md'), '# L\n\n## One\n\nText.\n');
+        }
+
+        const base = ['status', '-s', source, '-t', target, '--write-state'];
+        const typo = await run([...base, '-f', 'a_typo.md']);
+        expect(typo.code).toBe(1);
+        expect(typo.stdout).not.toContain('metadata written');
+        expect(typo.stdout).toContain(
+          '❌ --write-state wrote no state file, and left .translate/config.yml as it was'
+        );
+        expect(typo.stdout).toContain('⊘ a_typo.md: no state file (not found)');
+        expect(fs.existsSync(path.join(target, '.translate', 'config.yml'))).toBe(false);
+
+        const written = await run([...base, '-f', 'lecture.md']);
+        expect(written.code).toBe(0);
+        expect(written.stdout).toContain(
+          `📁 .translate/ metadata written to ${target}: 1 state file(s) and the config`
+        );
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
   });
 
   // ──────────────────────────────────────────────────────────────────────────

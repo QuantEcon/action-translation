@@ -8,7 +8,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { parseTocLectures, copyNonMarkdownFiles, filterSkipExisting } from '../commands/init.js';
+import {
+  EditionFlags,
+  copyNonMarkdownFiles,
+  filterSkipExisting,
+  parseTocLectures,
+  writeStateCommand,
+} from '../commands/init.js';
 import { writeFileState } from '../translate-state.js';
 
 // ============================================================================
@@ -353,6 +359,14 @@ describe('filterSkipExisting', () => {
     '',
   ].join('\n');
 
+  const editionAt = (targetDir: string): EditionFlags => ({
+    source: '/repos/source',
+    target: targetDir,
+    targetLanguage: 'fa',
+    sourceLanguage: 'en',
+    docsFolder: 'lectures',
+  });
+
   /** An edition with one reviewed lecture and the given state file text. */
   function editionWith(lecture: string, stateText?: string): string {
     const targetDir = path.join(tmpDir, 'target');
@@ -380,7 +394,7 @@ describe('filterSkipExisting', () => {
   ])('skips a lecture whose state file has %s, and says why', (_name, stateText, reason) => {
     const targetDir = editionWith('cobweb.md', stateText);
 
-    const result = filterSkipExisting(targetDir, ['cobweb.md'], 'lectures');
+    const result = filterSkipExisting(editionAt(targetDir), ['cobweb.md']);
 
     expect(result.remaining).toEqual([]);
     expect(result.skipped).toEqual(['cobweb.md']);
@@ -392,7 +406,7 @@ describe('filterSkipExisting', () => {
   it('skips a lecture with an unquoted synced-at date, with no warning (#381)', () => {
     const targetDir = editionWith('cobweb.md', VALID_STATE.replace('"2026-10-01"', '2026-10-01'));
 
-    const result = filterSkipExisting(targetDir, ['cobweb.md'], 'lectures');
+    const result = filterSkipExisting(editionAt(targetDir), ['cobweb.md']);
 
     expect(result.remaining).toEqual([]);
     expect(result.skippedCount).toBe(1);
@@ -402,20 +416,24 @@ describe('filterSkipExisting', () => {
   it('skips a lecture the edition has without a state file, with a warning', () => {
     const targetDir = editionWith('pandas.md');
 
-    const result = filterSkipExisting(targetDir, ['pandas.md'], 'lectures');
+    const result = filterSkipExisting(editionAt(targetDir), ['pandas.md']);
 
     expect(result.remaining).toEqual([]);
     expect(result.skipped).toEqual(['pandas.md']);
     expect(result.warnings).toHaveLength(1);
     expect(result.warnings[0]).toContain('no .translate/state/pandas.md.yml');
     expect(result.warnings[0]).toContain('does not overwrite');
+    // The edition's own flags: a bare `status --write-state` would reset its config to zh-cn.
+    expect(result.warnings[0]).toContain(
+      `\`translate status -s /repos/source -t ${targetDir} -l fa -d lectures -f pandas.md --write-state\``
+    );
   });
 
   it('translates a lecture whose state file has no lecture beside it, with a warning', () => {
     const targetDir = path.join(tmpDir, 'target');
     writeFile(path.join(targetDir, '.translate', 'state', 'gone.md.yml'), VALID_STATE);
 
-    const result = filterSkipExisting(targetDir, ['gone.md'], 'lectures');
+    const result = filterSkipExisting(editionAt(targetDir), ['gone.md']);
 
     expect(result.remaining).toEqual(['gone.md']);
     expect(result.skippedCount).toBe(0);
@@ -426,7 +444,7 @@ describe('filterSkipExisting', () => {
   it('reads a lecture in a docs subfolder at its own state path', () => {
     const targetDir = editionWith('advanced/cobweb.md', VALID_STATE);
 
-    const result = filterSkipExisting(targetDir, ['advanced/cobweb.md'], 'lectures');
+    const result = filterSkipExisting(editionAt(targetDir), ['advanced/cobweb.md']);
 
     expect(result.skipped).toEqual(['advanced/cobweb.md']);
     expect(result.warnings).toEqual([]);
@@ -454,11 +472,12 @@ describe('filterSkipExisting', () => {
       'section-count': 3,
     });
 
-    const result = filterSkipExisting(
-      targetDir,
-      ['intro.md', 'cobweb.md', 'solow.md', 'lake_model.md'],
-      'lectures'
-    );
+    const result = filterSkipExisting(editionAt(targetDir), [
+      'intro.md',
+      'cobweb.md',
+      'solow.md',
+      'lake_model.md',
+    ]);
 
     expect(result.skippedCount).toBe(2);
     expect(result.remaining).toEqual(['intro.md', 'lake_model.md']);
@@ -470,7 +489,7 @@ describe('filterSkipExisting', () => {
     fs.mkdirSync(targetDir, { recursive: true });
 
     const lectures = ['intro.md', 'cobweb.md'];
-    const result = filterSkipExisting(targetDir, lectures, 'lectures');
+    const result = filterSkipExisting(editionAt(targetDir), lectures);
 
     expect(result.skippedCount).toBe(0);
     expect(result.remaining).toEqual(['intro.md', 'cobweb.md']);
@@ -489,9 +508,42 @@ describe('filterSkipExisting', () => {
       'section-count': 1,
     });
 
-    const result = filterSkipExisting(targetDir, ['intro.md'], 'lectures');
+    const result = filterSkipExisting(editionAt(targetDir), ['intro.md']);
 
     expect(result.skippedCount).toBe(1);
     expect(result.remaining).toEqual([]);
+  });
+});
+
+// ============================================================================
+// writeStateCommand
+// ============================================================================
+
+describe('writeStateCommand', () => {
+  const edition: EditionFlags = {
+    source: '/repos/lecture-python-intro',
+    target: '/repos/lecture-python-intro.fa',
+    targetLanguage: 'fa',
+    sourceLanguage: 'en',
+    docsFolder: 'lectures',
+  };
+
+  it("names the edition's own language and docs folder, since status reads no config", () => {
+    expect(writeStateCommand(edition, 'cobweb.md')).toBe(
+      'translate status -s /repos/lecture-python-intro -t /repos/lecture-python-intro.fa ' +
+        '-l fa -d lectures -f cobweb.md --write-state'
+    );
+  });
+
+  it('adds a source language other than en, and quotes what the shell would split', () => {
+    expect(
+      writeStateCommand(
+        { ...edition, target: "/repos/my edition's copy", sourceLanguage: 'fr', docsFolder: '' },
+        'cobweb.md'
+      )
+    ).toBe(
+      "translate status -s /repos/lecture-python-intro -t '/repos/my edition'\\''s copy' " +
+        "-l fa --source-language fr -d '' -f cobweb.md --write-state"
+    );
   });
 });

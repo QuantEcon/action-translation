@@ -579,7 +579,7 @@ A file written by hand needs `source-sha`, `synced-at`, `model` and `mode` as te
 | `headingmap` | — | Injects heading-maps into target files |
 | Sync Action | Under `sync-scope: existing`, syncs a changed lecture only if its state file exists | Writes state for each lecture it syncs; deletes it with a removed lecture |
 
-`init` does not fail when it cannot write a lecture's state file. Check that `.translate/state/<file>.yml` exists before committing the lecture: without it, the lecture is out of scope under `sync-scope: existing`.
+Without its state file a lecture is out of scope under `sync-scope: existing`, so `init` fails a lecture whose state file it cannot write: the translation stays on disk, the lecture is reported failed (`state-write` in `--report-json`), and the run exits 1. A state folder it cannot write at all stops the run before any translation. For each lecture left without its state file, the run prints the `translate status --write-state` command that records it once the cause is fixed, with the edition's own `-s`, `-t`, `-l` and `-d`, since `status` reads no config. That run records the lecture's sync point with `model: unknown` and `mode: RESYNC`; if it refuses because the English has a commit dated after the lecture's last commit, commit the lecture first. `forward` reports the same failure for a file it writes locally. When the source clone has no commit for a lecture, both warn that its state file records `source-sha: unknown`, which `status` reports `OUTDATED` once the lecture is committed.
 
 ### Graceful absence
 
@@ -610,6 +610,8 @@ It refuses in three cases:
 - **A state file that exists but cannot be read.** It is left as it is: repair or delete it.
 
 The first two checks refuse the whole run before anything is written. The third lets the run write the config and the other files' state, then fails, naming each unreadable file. `--force` skips all three; `--carried` skips only the second.
+
+A file gets a state file only when both repositories have it. After the table, the run prints how many state files it wrote, then each file it left without one and why: `source only`, `target only`, `not found` (a `-f` name neither repository has), or the error that stopped the write. A run that wrote no state file, or failed to write one, exits 1. One that can write none, such as a mistyped `-f`, also leaves `.translate/config.yml` as it was. With `--json` the same record is the `writeState` field of the output.
 
 On a partial edition, write state only for the lectures it has translated. Without `-f` or `--exclude`, `--write-state` writes one for every `.md` file at the top level of the docs folder that both repositories have, English copies included, and under `sync-scope: existing` each state file puts its lecture in scope. Run it once per translated lecture with `-f`, or leave the English copies out with `--exclude`; a translated lecture in a subfolder needs `-f` either way, for example `-f advanced/topic.md`. Pass the edition's own `-l` and `-d` every time, since each run rewrites `.translate/config.yml` from the flags:
 
