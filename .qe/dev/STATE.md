@@ -342,8 +342,8 @@ Roadmap detail lives in the project trackers (reading order in
 
 *Release, 2026-11-15*: **v0.30.2 is prepared, not yet tagged.** The release PR promotes
 `[Unreleased]`, which holds #436's payload (#420's premise check, #281's recovery text, the
-retry for a dropped stream), and adds in-range bumps for two new high production advisories:
-`undici` 6.29.1, which is in the bundle, and `zod` 4.6.7, which only the CLI uses. #420 and #281
+retry for a dropped stream), and adds in-range bumps that clear six new production advisories
+(four high): `undici` 6.29.1, which is in the bundle, and `zod` 4.6.7, which only the CLI uses. #420 and #281
 close with it (ruled 2026-11-15, @mmcky), and #420's third proposal moves to #437, CLI first.
 Owed before the floating tags move, all Matt's: §4a at the tag, which is the stream retry's
 first field test (a clean scenario 09 on zh-cn and ml); §4b, run from a laptop session; then

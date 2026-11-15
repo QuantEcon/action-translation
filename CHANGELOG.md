@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-- **`undici` 6.29.0 → 6.29.1 and `zod` 4.3.6 → 4.6.7**, which clears the two high-severity advisories that `npm audit --omit=dev` reported against production dependencies on 2026-11-12. Both fixes are within the existing ranges, so the dependency ranges in `package.json` are unchanged and no `@actions/*` major version moves. `undici` arrives through `@actions/github` and `@actions/http-client` and is bundled into `dist-action/index.js`, so its fix reaches `@v0` workflows with this release. `zod` is not in the action bundle: it is a direct dependency of the `translate` CLI's schemas, shared with the Anthropic SDK, and its fix reaches a CLI checkout with this lockfile.
+- **`undici` 6.29.0 → 6.29.1 and `zod` 4.3.6 → 4.6.7**, which clears the advisories that `npm audit --omit=dev` reported against these two production packages on 2026-11-12: five against `undici` 6.29.0 (three high, two moderate: GHSA-2m5v-pch6-74hx, GHSA-qrxm-fqhp-jwvm, GHSA-xjj6-f33q-929c, GHSA-9fm3-97px-rjf6, GHSA-4qv8-2p9j-2685) and one high against `zod` 4.3.6 (GHSA-mrhx-c7xc-m3w5). Both fixes are within the existing ranges, so the dependency ranges in `package.json` are unchanged and no `@actions/*` major version moves. `undici` arrives through `@actions/github` and `@actions/http-client` and is bundled into `dist-action/index.js`, so its fix reaches `@v0` workflows with this release. `zod` is not in the action bundle: it is a direct dependency of the `translate` CLI's schemas, shared with the Anthropic SDK, and its fix reaches a CLI checkout with this lockfile.
 
 ## [0.30.1] - 2026-11-11
 
