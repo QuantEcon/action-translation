@@ -47753,14 +47753,20 @@ function addUsage(usage, responseUsage) {
   usage.apiCalls += 1;
 }
 function isRetryableAnthropicError(error4) {
-  return error4 instanceof RateLimitError || error4 instanceof APIConnectionError || error4 instanceof APIError && (error4.status !== void 0 && error4.status >= 500 || error4.status === void 0 && error4.message?.includes("overloaded")) || isStreamCutShort(error4);
+  return error4 instanceof RateLimitError || error4 instanceof APIConnectionError || error4 instanceof APIError && (error4.status !== void 0 && error4.status >= 500 || error4.status === void 0 && error4.message?.includes("overloaded")) || isStreamCutShort(error4) || isBodyCutShort(error4);
 }
 var STREAM_ENDED_EARLY_MESSAGES = /* @__PURE__ */ new Set([
   "stream ended without producing a Message with role=assistant",
   "request ended without sending any chunks"
 ]);
 function isStreamCutShort(error4) {
-  return error4 instanceof AnthropicError && !(error4 instanceof APIError) && (error4.cause instanceof TypeError || STREAM_ENDED_EARLY_MESSAGES.has(error4.message));
+  return error4 instanceof AnthropicError && !(error4 instanceof APIError) && (isNamedError(error4.cause, "TypeError") || STREAM_ENDED_EARLY_MESSAGES.has(error4.message));
+}
+function isNamedError(value, name) {
+  return typeof value === "object" && value !== null && value.name === name && typeof value.message === "string";
+}
+function isBodyCutShort(error4) {
+  return isNamedError(error4, "TypeError") && error4.message === "terminated";
 }
 
 // dist/bibliography.js

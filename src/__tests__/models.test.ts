@@ -9,6 +9,7 @@
  * runs before it interprets a response.
  */
 
+import * as vm from 'vm';
 import Anthropic, {
   AnthropicError,
   APIConnectionError,
@@ -29,6 +30,7 @@ import {
   assertCompleteResponse,
   emptyApiUsage,
   extractResponseText,
+  isBodyCutShort,
   isRecognizedModel,
   isRetryableAnthropicError,
   isStreamCutShort,
@@ -457,14 +459,35 @@ describe('isRetryableAnthropicError: a stream cut short below the API', () => {
     }
   });
 
-  it('does not retry any other SDK-side error, or a bare TypeError', () => {
+  it('does not retry any other SDK-side error', () => {
     const other = new AnthropicError(
       'Unexpected event order, got message_start before receiving "message_stop"'
     );
     expect(isStreamCutShort(other)).toBe(false);
     expect(isRetryableAnthropicError(other)).toBe(false);
-    expect(isRetryableAnthropicError(new TypeError('terminated'))).toBe(false);
     expect(isRetryableAnthropicError(new Error('terminated'))).toBe(false);
+  });
+
+  // What messages.create() rejects with when the body is cut off mid-read.
+  it('retries a bare TypeError("terminated"), and no other TypeError', () => {
+    expect(isBodyCutShort(new TypeError('terminated'))).toBe(true);
+    expect(isRetryableAnthropicError(new TypeError('terminated'))).toBe(true);
+    for (const message of ['fetch failed', "Cannot read properties of undefined (reading 'x')"]) {
+      expect(isBodyCutShort(new TypeError(message))).toBe(false);
+      expect(isRetryableAnthropicError(new TypeError(message))).toBe(false);
+    }
+    expect(isBodyCutShort(new Error('terminated'))).toBe(false);
+    expect(isBodyCutShort(dropped())).toBe(false);
+  });
+
+  // Fetch's errors come from Node's own undici, another realm under Jest,
+  // where they fail `instanceof TypeError`; the match is by name and message.
+  it("matches a TypeError from another realm, bare or as a stream drop's cause", () => {
+    const foreign = vm.runInNewContext("new TypeError('terminated')") as Error;
+    expect(foreign instanceof TypeError).toBe(false);
+    expect(isBodyCutShort(foreign)).toBe(true);
+    expect(isRetryableAnthropicError(foreign)).toBe(true);
+    expect(isStreamCutShort(new AnthropicError('terminated', { cause: foreign }))).toBe(true);
   });
 
   it('keeps a refusal, a truncation, an auth error and a bad request non-retryable', () => {

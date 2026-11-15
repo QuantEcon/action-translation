@@ -19,6 +19,7 @@ import {
   ModelRequestPolicy,
   TruncatedResponseError,
   UnexpectedStopReasonError,
+  isBodyCutShort,
   isRetryableAnthropicError,
   isStreamCutShort,
 } from '../models.js';
@@ -30,7 +31,7 @@ export type FailureKind =
   | 'unexpected-stop' // any other stop reason but end_turn
   | 'parity' // the structural parity guard refused the output
   | 'auth' // 401 / 403
-  | 'infra' // 429, 5xx, overload, connection error or a stream cut short, after the retries
+  | 'infra' // 429, 5xx, overload, connection error or a stream or body cut short, after the retries
   | 'api-error' // any other API error: a 400, a 404 for an unknown model, ...
   | 'too-large' // refused before the call: over the whole-document output budget
   | 'incomplete' // the model printed the incomplete-document marker
@@ -124,7 +125,7 @@ export function classifyFailure(error: unknown): FailureInfo {
     }
     return { kind: 'api-error', message, ...details };
   }
-  if (isStreamCutShort(error)) {
+  if (isStreamCutShort(error) || isBodyCutShort(error)) {
     return { kind: 'infra', message };
   }
   if (fullMessage.startsWith('Document too large')) {
