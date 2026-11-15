@@ -141,6 +141,8 @@ npx translate backward \
   -t ~/repos/lecture-intro.zh-cn
 ```
 
+Bulk mode analyses the `.md` files at the top level of the docs folder that both repositories have, since a file on one side only has nothing to compare: a lecture the edition has not translated yet, an edition-only page, or a translation whose English was removed. The run lists each such file as skipped, with its side, on the console and in `_summary.md` (`oneSidedFiles` in `_summary.json`), and does not count it as an error. `-f` names one file, and fails when either repository lacks it.
+
 **Output structure (bulk mode):**
 
 ```

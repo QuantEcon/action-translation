@@ -39,7 +39,7 @@ import {
   generateBulkMarkdownReport,
   generateBulkJsonReport,
 } from '../report-generator.js';
-import { BackwardReport, BackwardOptions, BulkBackwardReport } from '../types.js';
+import { BackwardReport, BackwardOptions, BulkBackwardReport, OneSidedFile } from '../types.js';
 import { SCHEMA_VERSION, parseProgressCheckpoint } from '../schema.js';
 import { discoverMarkdownFiles, resolveFilePairs, applyExcludes } from './status.js';
 import { readFileState, isSourceChanged } from '../translate-state.js';
@@ -436,20 +436,34 @@ export function buildBulkOutputDir(baseOutput: string, sourceName: string): stri
 }
 
 /**
- * Discover files to analyze in bulk mode.
- * Uses both SOURCE and TARGET file lists, applies exclusions.
+ * Discover files to analyze in bulk mode: those both repositories have, after
+ * exclusions (#400). Backward analysis compares a translation with its
+ * source, so a file on one side only has nothing to compare: a lecture the
+ * edition has not translated yet, an edition-only page, or a translation whose
+ * English was removed. Analysing one threw before any model call and counted
+ * as an error, so on an edition with any, every run and every resume exited 1.
+ * They are returned apart, for the run to report; `-f` stays strict.
  */
 export function discoverBulkFiles(
   sourceRepoPath: string,
   targetRepoPath: string,
   docsFolder: string,
   exclude: string[]
-): string[] {
-  const sourceFiles = discoverMarkdownFiles(sourceRepoPath, docsFolder);
-  const targetFiles = discoverMarkdownFiles(targetRepoPath, docsFolder);
-  let allFiles = resolveFilePairs(sourceFiles, targetFiles);
-  allFiles = applyExcludes(allFiles, exclude);
-  return allFiles;
+): { files: string[]; oneSided: OneSidedFile[]; excluded: number } {
+  const sourceFiles = new Set(discoverMarkdownFiles(sourceRepoPath, docsFolder));
+  const targetFiles = new Set(discoverMarkdownFiles(targetRepoPath, docsFolder));
+  const allFiles = resolveFilePairs([...sourceFiles], [...targetFiles]);
+  const kept = applyExcludes(allFiles, exclude);
+  const files: string[] = [];
+  const oneSided: OneSidedFile[] = [];
+  for (const file of kept) {
+    if (sourceFiles.has(file) && targetFiles.has(file)) {
+      files.push(file);
+    } else {
+      oneSided.push({ file, side: sourceFiles.has(file) ? 'source only' : 'target only' });
+    }
+  }
+  return { files, oneSided, excluded: allFiles.length - kept.length };
 }
 
 /**
@@ -487,7 +501,15 @@ export async function runBackwardBulk(
   }
 
   // Discover files
-  let allFiles = discoverBulkFiles(source, target, docsFolder, exclude);
+  const discovered = discoverBulkFiles(source, target, docsFolder, exclude);
+  if (discovered.oneSided.length > 0) {
+    logger.info(
+      `Skipped ${discovered.oneSided.length} file(s) present on one side only: ` +
+        discovered.oneSided.map((f) => `${f.file} (${f.side})`).join(', ') +
+        '.'
+    );
+  }
+  let allFiles = discovered.files;
 
   // Skip files where source hasn't changed since last sync (source-sha optimisation)
   let skippedByState = 0;
@@ -509,8 +531,17 @@ export async function runBackwardBulk(
   logger.info(`Found ${allFiles.length} files to analyze.`);
 
   if (allFiles.length === 0) {
-    logger.warn('No files found. Check --source, --target, and --docs-folder paths.');
-    return buildEmptyBulkReport(source, target, language, options.model);
+    // The path hint fits only when discovery itself found nothing (#400).
+    const left: string[] = [];
+    if (skippedByState > 0) left.push(`${skippedByState} unchanged since last sync`);
+    if (discovered.oneSided.length > 0) left.push(`${discovered.oneSided.length} on one side only`);
+    if (discovered.excluded > 0) left.push(`${discovered.excluded} excluded`);
+    if (left.length === 0) {
+      logger.warn('No files found. Check --source, --target, and --docs-folder paths.');
+    } else {
+      logger.info(`No files to analyze: ${left.join(', ')}.`);
+    }
+    return buildEmptyBulkReport(source, target, language, options.model, discovered.oneSided);
   }
 
   // Check for resume
@@ -712,7 +743,8 @@ export async function runBackwardBulk(
     language,
     fileReports,
     options.model,
-    progress.erroredFiles
+    progress.erroredFiles,
+    discovered.oneSided
   );
 
   // Write aggregate summary
@@ -756,7 +788,8 @@ export function buildBulkReport(
   language: string,
   fileReports: BackwardReport[],
   model?: string,
-  erroredFiles: Array<{ file: string; error: string }> = []
+  erroredFiles: Array<{ file: string; error: string }> = [],
+  oneSidedFiles: OneSidedFile[] = []
 ): BulkBackwardReport {
   const allSuggestions = fileReports.flatMap((r) =>
     r.suggestions.filter((s) => s.recommendation === 'BACKPORT')
@@ -771,6 +804,7 @@ export function buildBulkReport(
     language,
     filesErrored: erroredFiles.length,
     erroredFiles,
+    oneSidedFiles,
     filesAnalyzed: fileReports.length,
     filesInSync: fileReports.filter((r) => r.triageResult.verdict === 'IN_SYNC').length,
     filesFlagged: fileReports.filter((r) =>
@@ -790,9 +824,10 @@ function buildEmptyBulkReport(
   sourceRepo: string,
   targetRepo: string,
   language: string,
-  model?: string
+  model?: string,
+  oneSidedFiles: OneSidedFile[] = []
 ): BulkBackwardReport {
-  return buildBulkReport(sourceRepo, targetRepo, language, [], model);
+  return buildBulkReport(sourceRepo, targetRepo, language, [], model, [], oneSidedFiles);
 }
 
 function resolveReportPath(outputDir: string, file: string, json: boolean): string {

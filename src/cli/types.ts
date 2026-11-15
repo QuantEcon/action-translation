@@ -151,6 +151,12 @@ export interface BackwardReport {
 /**
  * Summary report across multiple files (bulk mode)
  */
+/** A file only one repository has, which bulk `backward` does not analyse (#400). */
+export interface OneSidedFile {
+  file: string;
+  side: 'source only' | 'target only';
+}
+
 export interface BulkBackwardReport {
   schemaVersion?: string; // Added in v1.0.0
   timestamp: string;
@@ -166,6 +172,8 @@ export interface BulkBackwardReport {
   filesErrored?: number;
   /** Per-file error detail for the errored files (added with filesErrored) */
   erroredFiles?: Array<{ file: string; error: string }>;
+  /** Files only one repository has, left out of the analysis — optional: absent before #400 */
+  oneSidedFiles?: OneSidedFile[];
   totalSuggestions: number;
   highConfidence: number; // confidence >= 0.85
   mediumConfidence: number; // confidence 0.6-0.85
