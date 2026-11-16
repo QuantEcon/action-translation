@@ -735,7 +735,19 @@ export class FileProcessor {
     // matter, is dropped, as `translate forward` drops one: an `{include}`
     // would render it as text.
     if (!newContent.startsWith('---') && !targetContent.startsWith('---')) {
-      text = text.replace(/^---[ \t]*\r?\n(?:---[ \t]*\r?\n)?\n*/, '');
+      const lines = text.split('\n');
+      if (/^---[ \t]*\r?$/.test(lines[0] ?? '')) {
+        // A block with keys cannot be told from the body by its fences alone:
+        // fail the file rather than guess where it ends.
+        if (/^[A-Za-z_][\w-]*:(\s|$)/.test(lines[1] ?? '')) {
+          throw new Error(
+            `Whole-file update failed: ${filepath}: the response begins with front matter that ` +
+              'neither the source nor the edition has'
+          );
+        }
+        const drop = /^---[ \t]*\r?$/.test(lines[1] ?? '') ? 2 : 1;
+        text = lines.slice(drop).join('\n').replace(/^\n+/, '');
+      }
     }
     // The response is trimmed; the file ends with a newline, as on every
     // other write path (#116).

@@ -716,6 +716,24 @@ describe('SyncOrchestrator', () => {
       ).toBe(true);
     });
 
+    it('fails a file whose edition copy is empty, rather than translating it from scratch', async () => {
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/_admonition/gpu.md',
+          type: 'markdown',
+          newContent: fragment,
+          oldContent: fragment.replace('uses a GPU', 'was built with a GPU'),
+          targetContent: '\n',
+          isNewFile: false,
+        },
+      ];
+
+      const result = await orchestrator.processFiles(files);
+
+      expect(result.translatedFiles).toHaveLength(0);
+      expect(result.errors.join('\n')).toContain("the edition's copy is empty");
+    });
+
     it("keeps the PR's translation in a rebase when the edition's copy is unchanged", async () => {
       const files: FileToSync[] = [
         {

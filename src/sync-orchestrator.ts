@@ -862,6 +862,12 @@ export class SyncOrchestrator {
           `${file.filename} has no # title, so it is updated whole rather than section by section`
         );
       }
+      if (targetContent.trim() === '') {
+        // Updating an empty copy would translate the file from scratch.
+        throw new Error(
+          `${file.filename}: the edition's copy is empty, so there is no translation to update`
+        );
+      }
       if (targetContent === oldContent || targetContent === newContent) {
         this.logger.warning(
           `${file.filename}: the edition's copy is the English, so it takes the new English ` +

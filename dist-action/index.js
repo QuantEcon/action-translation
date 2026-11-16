@@ -53504,7 +53504,14 @@ ${bodyLines.join("\n")}`;
     }
     let text = applyTypography(result.translatedSection, targetLanguage);
     if (!newContent.startsWith("---") && !targetContent.startsWith("---")) {
-      text = text.replace(/^---[ \t]*\r?\n(?:---[ \t]*\r?\n)?\n*/, "");
+      const lines = text.split("\n");
+      if (/^---[ \t]*\r?$/.test(lines[0] ?? "")) {
+        if (/^[A-Za-z_][\w-]*:(\s|$)/.test(lines[1] ?? "")) {
+          throw new Error(`Whole-file update failed: ${filepath}: the response begins with front matter that neither the source nor the edition has`);
+        }
+        const drop = /^---[ \t]*\r?$/.test(lines[1] ?? "") ? 2 : 1;
+        text = lines.slice(drop).join("\n").replace(/^\n+/, "");
+      }
     }
     return text.endsWith("\n") ? text : `${text}
 `;
@@ -54426,6 +54433,9 @@ var SyncOrchestrator = class {
         this.logger.warning(`${file.filename}: the new English has no # title, though the old English or the edition's copy has one, so the whole file is updated rather than section by section; check the title`);
       } else {
         this.logger.info(`${file.filename} has no # title, so it is updated whole rather than section by section`);
+      }
+      if (targetContent.trim() === "") {
+        throw new Error(`${file.filename}: the edition's copy is empty, so there is no translation to update`);
       }
       if (targetContent === oldContent || targetContent === newContent) {
         this.logger.warning(`${file.filename}: the edition's copy is the English, so it takes the new English unchanged; sync does not translate it`);

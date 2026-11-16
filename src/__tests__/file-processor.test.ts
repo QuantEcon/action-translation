@@ -1370,6 +1370,16 @@ describe('FileProcessor.processWholeFile — a file with no title (#449)', () =>
     }
   });
 
+  it('fails the file when the response adds a front-matter block with keys', async () => {
+    mockTranslator.translateDocumentResync.mockResolvedValue({
+      success: true,
+      translatedSection: `---\ntitle: GPU\n---\n\n${updated}`,
+    });
+    await expect(
+      processor.processWholeFile(english, current, 'gpu.md', 'en', 'zh-cn')
+    ).rejects.toThrow('begins with front matter that neither the source nor the edition has');
+  });
+
   it('fails the file when a successful response carries no text', async () => {
     mockTranslator.translateDocumentResync.mockResolvedValue({ success: true });
     await expect(
