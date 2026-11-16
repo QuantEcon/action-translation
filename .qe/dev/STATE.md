@@ -251,7 +251,7 @@ Roadmap detail lives in the project trackers (reading order in
   6.29.0, in range, which clears both high-severity production advisories (#359). Shipped in
   v0.29.5.
 - **Release step 4b failure procedure (#357, `0178ec7`, 2026-10-09)** — when a rate-check cell
-  fails, draw a same-day control at the previous tag before holding the floating tags; decision
+  fails, draw a same-day control at the previous tag before holding the floating tag; decision
   `D-2026-10-09-rate-check-failure-control`. The CLI's refused draws report `Tokens: 0`; that
   is #356.
 - **2026-10-09 — v0.29.4 released** (release PR #354 `fcee846`; payload #291 `a872b53`, #289
@@ -338,7 +338,15 @@ Roadmap detail lives in the project trackers (reading order in
 
 ## Next
 
-**Resume here (2026-09-23, after v0.29.3):**
+**Resume here (2026-11-16, after v0.31.0):**
+
+*Released, 2026-11-16*: **v0.31.0 is released** (#452, `ef79ba5`), and `v0` points at it. No
+`v0.31` tag was made: a release now moves one floating major tag
+(`D-2026-11-16-one-floating-major-tag`), and `v0.30` stays on `fdab41f`. Payload #439–#451.
+§4a read 84 of 84, with zh-cn's one WARN #375's; §4b read 0 of 36; the `@v0` smoke passed on
+all three lanes. Log `2026-11-16-v0310-release`. Next: #449's build, and the rest of the action
+family's standard (SECURITY.md, Dependabot, CODEOWNERS, topics, a `uses: ./` CI job,
+`deploy-docs.yml` on Node 24), to plan with Matt.
 
 *Release, 2026-11-16*: **v0.31.0's release PR** collects the overnight stack's ten changelog
 fragments (#439–#451), the first release through `npm run changelog -- --release`, and bumps

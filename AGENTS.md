@@ -252,7 +252,7 @@ Before creating a release, verify the following:
 2. **Version bumped** — `npm version X.Y.Z --no-git-tag-version`, which updates `package.json` and both version fields of `package-lock.json`. No other file carries the current version; this file and `.qe/dev/PLAN.md` hold none
 3. **Tests pass** — run `npm test` and confirm all tests pass
 4. **Build succeeds** — run `npm run build` to compile TypeScript and update `dist-action/`
-4a. **E2E-gate the tagged release** — after tagging and before moving the floating tags:
+4a. **E2E-gate the tagged release** — after tagging and before moving the floating tag:
 
    ```bash
    ./tool-test-action-on-github/test-action-on-github.sh --action-ref vX.Y.Z
@@ -260,7 +260,7 @@ Before creating a release, verify the following:
 
    The harness defaults to `main`, so the release itself is only gated if you ask for it by
    name. This step verifies the **tagged bytes**, not a branch that may have moved since.
-4b. **Rate-check the full-document fixtures at the tag** — alongside 4a, before moving the floating tags:
+4b. **Rate-check the full-document fixtures at the tag** — alongside 4a, before moving the floating tag:
 
    ```bash
    ./tool-test-action-on-github/rate-check.sh --ref vX.Y.Z
@@ -283,7 +283,7 @@ Before creating a release, verify the following:
    and reads UNRELIABLE again, and the replaced infra attempts stay in the share, so
    `--redraw-infra` alone cannot clear it either (2 infra of 12 redrawn is still 2 of 14).
 
-   **If a cell fails**, find out whether this release caused it before holding the tags.
+   **If a cell fails**, find out whether this release caused it before holding the tag.
    Draw a same-day control for the failing cell, 24 draws at the previous release and 24
    more at this tag:
 
@@ -306,10 +306,10 @@ Before creating a release, verify the following:
    entry, and the modules the CLI `init` path imports.
 
    - **This tag's rate is clearly higher** than the previous release's (Fisher's exact
-     test, p < 0.05): treat it as a failed gate. The floating tags stay where they are, the
+     test, p < 0.05): treat it as a failed gate. The floating tag stays where it is, the
      tally goes on the release PR, and the repair ships as the next patch.
    - **The two cannot be told apart**, and above all when the request did not change: the
-     rate predates this release, and holding the tags protects no one from it. Release,
+     rate predates this release, and holding the tag protects no one from it. Release,
      put both tables on the release PR, and post the measurement on the defect's issue.
 
    Keep the threshold as it is. At #320's ~40% it misses about 2% of the time; at a latent
@@ -318,14 +318,13 @@ Before creating a release, verify the following:
    v0.29.3 against 3/36 at v0.29.4, with identical request bytes (#203, #354;
    `D-2026-10-09-rate-check-failure-control`).
 
-5. **Commit, tag, push** — commit all changes, create git tag `vX.Y.Z`, push with `--tags`; **then move both floating tags** to the release commit:
+5. **Commit, tag, push** — commit all changes, create git tag `vX.Y.Z`, push with `--tags`; **then move the floating major tag** to the release commit:
 
    ```bash
-   git tag -f vX.Y vX.Y.Z && git push -f origin vX.Y   # e.g. v0.16
-   git tag -f v0   vX.Y.Z && git push -f origin v0
+   git tag -f v0 vX.Y.Z && git push -f origin v0
    ```
 
-   The README quickstart recommends `@v0`; it went stale for 9 releases once (stuck at v0.7.0-era code through v0.16.0).
+   Only `v0` moves. QuantEcon's standalone actions move one floating major tag each, and no consumer pins a `v0.N`; the `v0.N` tags made up to v0.30.2 stay where they are, and none is added (`D-2026-11-16-one-floating-major-tag`). The README quickstart recommends `@v0`; it went stale for 9 releases once (stuck at v0.7.0-era code through v0.16.0).
 
    Then smoke the moved tag — cheap, and the only check that the alias resolves:
 
