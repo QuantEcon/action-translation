@@ -338,52 +338,41 @@ Roadmap detail lives in the project trackers (reading order in
 
 ## Next
 
-**Resume here (2026-11-16, after v0.31.0):**
+**Resume here (2026-11-16, after v0.32.0):**
 
-*Release, 2026-11-16*: **v0.32.0's release PR** collects #449's build: #455 (sync updates a file with no title,
-such as `_admonition/gpu.md`, whole), #456 (the CLI on the lecture set; #385) and #457 (sync on the
-lecture set), with #454's checklist change. #457 changes which files every sync run takes, so the
-notes lead with it, and #455's fix of a live failure in four editions leads the fixes. Matt said
-"Release now"; the tag, §4a, §4b, `v0`, the `@v0` smoke and the GitHub release each wait on his
-go. #449 is closed; P4 (`doctor --require-state`, #370) is in design.
+*Released, 2026-11-16*: **v0.32.0 is released** (#458, `d73f874`), and `v0` points at it;
+`v0.30` stays on `fdab41f`, and no `v0.32` was made. The payload is #449's build: #455 (sync
+updates a file with no title, such as `_admonition/gpu.md`, whole), #456 (the CLI on the lecture
+set; closed #385) and #457 (sync on the lecture set; closed #449), with #454's checklist change.
+Every production sync now takes the source's lecture set; on all three sources it holds every
+`.md` under `lectures/`, so nothing that synced before drops out. §4a read 84 of 84, and
+zh-cn's one WARN was #375's, as at v0.31.0; §4b read 0 of 36; the `@v0` smoke passed on all three lanes. The
+same day lecture-python-programming.fa#181 translated fa's English `gpu.md`, with its state file.
+Log `2026-11-16-v0320-release`. Next: P4, `doctor --require-state` (#370), the state check whose
+rollout in every edition, with the backfills its record lists, retires `sync-scope`; the
+rollout is edition work, on Matt's go. Then the action family's standard (SECURITY.md,
+Dependabot, CODEOWNERS, topics, a `uses: ./` CI job, `deploy-docs.yml` on Node 24), to plan
+with Matt.
 
-*Released, 2026-11-16*: **v0.31.0 is released** (#452, `ef79ba5`), and `v0` points at it. No
-`v0.31` tag was made: a release now moves one floating major tag
-(`D-2026-11-16-one-floating-major-tag`), and `v0.30` stays on `fdab41f`. Payload #439–#451.
-§4a read 84 of 84, with zh-cn's one WARN #375's; §4b read 0 of 36; the `@v0` smoke passed on
-all three lanes. Log `2026-11-16-v0310-release`. Next: #449's build, and the rest of the action
-family's standard (SECURITY.md, Dependabot, CODEOWNERS, topics, a `uses: ./` CI job,
-`deploy-docs.yml` on Node 24), to plan with Matt.
-
-*Release, 2026-11-16*: **v0.31.0's release PR** collects the overnight stack's ten changelog
-fragments (#439–#451), the first release through `npm run changelog -- --release`, and bumps
-the version. #442 and #445 change what sync and `init` do to an edition's files, so the
-release notes lead with them. The tag, §4a, §4b, the floating tags, the `@v0` smoke and the
-GitHub release each wait on Matt's go. #449 was ruled on 2026-11-16, all eight questions as
-recommended (on 8: design the reader for two front ends, and build `myst.yml`'s at the first
-mystmd edition). Record `D-2026-11-16-the-lecture-set-is-the-toc-and-its-includes`. The build is
-four PRs: P1, the reader (`src/lecture-set.ts`, no change in behaviour); P2, the CLI on it
-(closes #385); P3, sync on it (closes #449); P4, the state check on it (closes #370). Matt
-ruled the CLI fails with no `_toc.yml`; a file with no title, such as a fragment, is updated whole
-(#455; it used to fail, in four editions).
+*Released, 2026-11-16*: v0.31.0 (#452, `ef79ba5`), payload #439–#451, the first release
+through the changelog script and the first to move only `v0`
+(`D-2026-11-16-one-floating-major-tag`). Log `2026-11-16-v0310-release`.
 
 *Overnight stack, 2026-11-16*: the overnight plan of 2026-11-15 (WP1–WP4, on 20 rulings Matt
-accepted) is merged and **unreleased**; `main` is at `f214c5e`. #440 (#396, #386), #441 (#389,
+accepted) shipped in v0.31.0 (above). #440 (#396, #386), #441 (#389,
 #351), #442 (#398), #443 (#90 defect 6; #90 stays open), #444 (#378, #401), #445 (#134), #446
 (#400), #447 (a non-streamed response cut off mid-read is retried) and #448 (dev-only dependency
-updates); WP1 was #439. The editions run `@v0` (v0.30.2), so none of it reaches them until a
-release, and #442 and #445 change what sync and `init` do to an edition's files. Records:
+updates); WP1 was #439. #442 and #445 change what sync and `init` do to an edition's files. Records:
 `D-2026-11-15-only-a-404-means-absent`, `D-2026-11-15-rebase-decides-from-three-reads`,
 `D-2026-11-15-a-lecture-moved-out-of-docs-is-deleted`,
 `D-2026-11-15-a-failed-cli-state-write-is-a-failure` and
 `D-2026-11-15-init-keeps-the-editions-files`. Filed: #449, whether sync and the CLI take their
 lectures from the ToC's documents and the `.md` files they include (ruled 2026-11-16; above). Of the issues the
-2026-10-22 paragraph calls untriaged, these are still open: #382–#385, #387, #388, #390, #391,
-#397 and #399. Changelog entries now go in `changelog.d/` fragments, a prototype Matt chose on
+2026-10-22 paragraph calls untriaged, these are still open: #382–#384, #387, #388, #390, #391,
+#397 and #399 (#385 closed with #456). Changelog entries now go in `changelog.d/` fragments, a prototype Matt chose on
 2026-11-16 (from QuantEcon/infrastructure#123; `D-2026-11-16-changelog-fragments`), and
-`[Unreleased]` stays empty until a release collects them. Next: a release carrying the stack,
-the first through `npm run changelog -- --release`. #280's close sequence and the four zh-cn
-PRs stay Matt's. Log `2026-11-16-overnight-stack`.
+`[Unreleased]` stays empty until a release collects them. #280's close sequence and the four
+zh-cn PRs stay Matt's. Log `2026-11-16-overnight-stack`.
 
 *Release, 2026-11-15*: **v0.30.2 is released** (#438, `fdab41f`), and `v0.30` and `v0` point at
 it. Payload: #436 (#420's premise check, #281's recovery text, the retry for a dropped stream),
