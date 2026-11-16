@@ -807,7 +807,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           repository: QuantEcon/action-translation
-          ref: vX.Y.Z # a release that has --require-state
+          ref: v0.33.0 # or a later release; v0.33.0 is the first with --require-state
           path: action-translation
       - uses: actions/setup-node@v4
         with:
