@@ -778,32 +778,13 @@ export class SyncOrchestrator {
         glossary
       );
     } else {
-      const skipped: string[] = [];
-      const dropped: string[] = [];
-      translatedContent = await this.processor.processSectionBased(
-        file.oldContent || '',
-        file.newContent,
+      translatedContent = await this.updateTranslation(
+        file,
         file.targetContent || '',
-        file.filename,
-        this.config.sourceLanguage,
-        this.config.targetLanguage,
         glossary,
-        (heading) => skipped.push(heading),
-        fileRebaseCache,
-        (heading) => dropped.push(heading)
+        result,
+        fileRebaseCache
       );
-      if (skipped.length > 0) {
-        result.skippedSections.set(file.filename, skipped);
-        this.logger.warning(
-          `${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target — pending earlier translation PR`
-        );
-      }
-      if (dropped.length > 0) {
-        result.droppedTargetSections.set(file.filename, dropped);
-        this.logger.warning(
-          `${file.filename}: removed ${dropped.length} target-only section(s) with no source counterpart — correct if upstream deleted them; destructive if human-added (see PR body)`
-        );
-      }
     }
 
     // Structural parity — the single honest guard on this path (#165: the
@@ -839,6 +820,108 @@ export class SyncOrchestrator {
   }
 
   /**
+   * Update an existing translation. A document with a `# title` is updated
+   * section by section, which keeps every unchanged section's translation as
+   * it is. One without, such as an included fragment (`_admonition/gpu.md`),
+   * cannot be split into sections, and the section-based update used to fail
+   * it with "Document must have a # title heading", in every edition holding
+   * the file. It is updated whole instead, from the current source and the
+   * existing translation: an update of a file the edition has, not a first
+   * translation (#449). So is a file whose old English or edition copy has no
+   * title, which the section-based update cannot split either.
+   *
+   * On that whole-file route, two cases need no model call. An edition copy
+   * that is the English itself (lecture-python-programming.fa keeps an English
+   * `gpu.md`) takes the new English: translating it here would be the first
+   * translation D2 rules out. And in a rebase, an edition copy unchanged since
+   * the PR's base keeps the PR's translation, as an unchanged section does.
+   */
+  private async updateTranslation(
+    file: FileToSync,
+    targetContent: string,
+    glossary: Glossary | undefined,
+    result: SyncProcessingResult,
+    fileRebaseCache?: import('./types.js').RebaseCacheData
+  ): Promise<string> {
+    const newContent = file.newContent || '';
+    const oldContent = file.oldContent || '';
+    const newTitled = await this.parser.hasTitle(newContent, file.filename);
+    const oldTitled = oldContent === '' || (await this.parser.hasTitle(oldContent, file.filename));
+    const targetTitled = await this.parser.hasTitle(targetContent, file.filename);
+    if (!newTitled || !oldTitled || !targetTitled) {
+      if (!newTitled && ((oldContent !== '' && oldTitled) || targetTitled)) {
+        // A lecture whose `# title` went missing in this PR, perhaps by an
+        // editing slip, loses the per-section update: say so where it is seen.
+        this.logger.warning(
+          `${file.filename}: the new English has no # title, though the old English or the ` +
+            "edition's copy has one, " +
+            'so the whole file is updated rather than section by section; check the title'
+        );
+      } else {
+        this.logger.info(
+          `${file.filename} has no # title, so it is updated whole rather than section by section`
+        );
+      }
+      if (targetContent.trim() === '') {
+        // Updating an empty copy would translate the file from scratch.
+        throw new Error(
+          `${file.filename}: the edition's copy is empty, so there is no translation to update`
+        );
+      }
+      if (targetContent === oldContent || targetContent === newContent) {
+        this.logger.warning(
+          `${file.filename}: the edition's copy is the English, so it takes the new English ` +
+            'unchanged; sync does not translate it'
+        );
+        return newContent;
+      }
+      if (fileRebaseCache && fileRebaseCache.oldTargetContent === targetContent) {
+        this.logger.info(
+          `${file.filename}: the edition's copy is unchanged since this PR's base, so the PR's ` +
+            'translation is kept'
+        );
+        return fileRebaseCache.previousTranslation;
+      }
+      return this.processor.processWholeFile(
+        newContent,
+        targetContent,
+        file.filename,
+        this.config.sourceLanguage,
+        this.config.targetLanguage,
+        glossary
+      );
+    }
+
+    const skipped: string[] = [];
+    const dropped: string[] = [];
+    const translatedContent = await this.processor.processSectionBased(
+      file.oldContent || '',
+      newContent,
+      targetContent,
+      file.filename,
+      this.config.sourceLanguage,
+      this.config.targetLanguage,
+      glossary,
+      (heading) => skipped.push(heading),
+      fileRebaseCache,
+      (heading) => dropped.push(heading)
+    );
+    if (skipped.length > 0) {
+      result.skippedSections.set(file.filename, skipped);
+      this.logger.warning(
+        `${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target — pending earlier translation PR`
+      );
+    }
+    if (dropped.length > 0) {
+      result.droppedTargetSections.set(file.filename, dropped);
+      this.logger.warning(
+        `${file.filename}: removed ${dropped.length} target-only section(s) with no source counterpart — correct if upstream deleted them; destructive if human-added (see PR body)`
+      );
+    }
+    return translatedContent;
+  }
+
+  /**
    * Process a renamed markdown file.
    * Preserves existing translation at new path, deletes old path.
    */
@@ -871,33 +954,14 @@ export class SyncOrchestrator {
 
     let translatedContent: string;
     if (file.targetContent) {
-      // Existing translation — use section-based processing to update
-      const skipped: string[] = [];
-      const dropped: string[] = [];
-      translatedContent = await this.processor.processSectionBased(
-        file.oldContent || '',
-        file.newContent,
+      // Existing translation — update it
+      translatedContent = await this.updateTranslation(
+        file,
         file.targetContent,
-        file.filename,
-        this.config.sourceLanguage,
-        this.config.targetLanguage,
         glossary,
-        (heading) => skipped.push(heading),
-        fileRebaseCache,
-        (heading) => dropped.push(heading)
+        result,
+        fileRebaseCache
       );
-      if (skipped.length > 0) {
-        result.skippedSections.set(file.filename, skipped);
-        this.logger.warning(
-          `${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target — pending earlier translation PR`
-        );
-      }
-      if (dropped.length > 0) {
-        result.droppedTargetSections.set(file.filename, dropped);
-        this.logger.warning(
-          `${file.filename}: removed ${dropped.length} target-only section(s) with no source counterpart — correct if upstream deleted them; destructive if human-added (see PR body)`
-        );
-      }
     } else {
       // No existing translation — full translation
       translatedContent = await this.processor.processFull(

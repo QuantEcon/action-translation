@@ -1,6 +1,7 @@
 import { Section } from '../types.js';
 import { FileProcessor } from '../file-processor.js';
 import { TranslationService } from '../translator.js';
+import { checkWrittenDocument } from '../whole-document.js';
 import { extractHeadingMap, extractTranslationTitle } from '../heading-map.js';
 
 /**
@@ -1304,6 +1305,98 @@ Market equilibrium occurs when supply equals demand.
 // ============================================================================
 // processFull — Heading-Map Injection
 // ============================================================================
+
+describe('FileProcessor.processWholeFile — a file with no title (#449)', () => {
+  let processor: FileProcessor;
+  let mockTranslator: jest.Mocked<TranslationService>;
+
+  const english = '```{admonition} GPU\n:class: warning\n\nThis lecture uses a GPU.\n```\n';
+  const current = '```{admonition} GPU\n:class: warning\n\n本讲座使用图形处理器。\n```\n';
+  const updated = '```{admonition} GPU\n:class: warning\n\n本讲座使用 GPU 构建。\n```\n';
+
+  beforeEach(() => {
+    mockTranslator = {
+      translateSection: jest.fn(),
+      translateFullDocument: jest.fn(),
+      translateDocumentResync: jest.fn(),
+    } as any;
+    processor = new FileProcessor(mockTranslator, false);
+  });
+
+  it('updates the file whole, from the current source and the existing translation', async () => {
+    mockTranslator.translateDocumentResync.mockResolvedValue({
+      success: true,
+      translatedSection: updated,
+    });
+    const out = await processor.processWholeFile(
+      english,
+      current,
+      '_admonition/gpu.md',
+      'en',
+      'zh-cn'
+    );
+    expect(mockTranslator.translateDocumentResync).toHaveBeenCalledWith({
+      sourceLanguage: 'en',
+      targetLanguage: 'zh-cn',
+      glossary: undefined,
+      sourceContent: english,
+      targetContent: current,
+    });
+    expect(mockTranslator.translateFullDocument).not.toHaveBeenCalled();
+    expect(out).toBe(updated);
+    // No front matter or heading map is added: an {include} would render it as text.
+    expect(out.startsWith('---')).toBe(false);
+  });
+
+  it('ends the file with a newline, since the response is trimmed (#116)', async () => {
+    mockTranslator.translateDocumentResync.mockResolvedValue({
+      success: true,
+      translatedSection: updated.trimEnd(),
+    });
+    const out = await processor.processWholeFile(english, current, 'gpu.md', 'en', 'zh-cn');
+    expect(out).toBe(updated);
+    // The real write check passes on it, as sync runs it next.
+    expect(checkWrittenDocument(english, out).ok).toBe(true);
+  });
+
+  it('drops a front-matter fence the model invented, when neither file has front matter', async () => {
+    for (const invented of [`---\n---\n${updated}`, `---\n\n${updated}`]) {
+      mockTranslator.translateDocumentResync.mockResolvedValue({
+        success: true,
+        translatedSection: invented,
+      });
+      const out = await processor.processWholeFile(english, current, 'gpu.md', 'en', 'zh-cn');
+      expect(out).toBe(updated);
+    }
+  });
+
+  it('fails the file when the response adds a front-matter block with keys', async () => {
+    mockTranslator.translateDocumentResync.mockResolvedValue({
+      success: true,
+      translatedSection: `---\ntitle: GPU\n---\n\n${updated}`,
+    });
+    await expect(
+      processor.processWholeFile(english, current, 'gpu.md', 'en', 'zh-cn')
+    ).rejects.toThrow('begins with front matter that neither the source nor the edition has');
+  });
+
+  it('fails the file when a successful response carries no text', async () => {
+    mockTranslator.translateDocumentResync.mockResolvedValue({ success: true });
+    await expect(
+      processor.processWholeFile(english, current, 'gpu.md', 'en', 'zh-cn')
+    ).rejects.toThrow('Whole-file update failed: the response carried no text');
+  });
+
+  it('fails the file when the update fails', async () => {
+    mockTranslator.translateDocumentResync.mockResolvedValue({
+      success: false,
+      error: 'overloaded',
+    });
+    await expect(
+      processor.processWholeFile(english, current, '_admonition/gpu.md', 'en', 'zh-cn')
+    ).rejects.toThrow('Whole-file update failed: overloaded');
+  });
+});
 
 describe('FileProcessor.processFull — heading-map injection', () => {
   let processor: FileProcessor;

@@ -51,6 +51,9 @@ jest.mock('../file-processor', () => ({
     processSectionBased: jest.fn().mockImplementation(async (_old: string, newContent: string) => {
       return `[UPDATED] ${newContent}`;
     }),
+    processWholeFile: jest.fn().mockImplementation(async (newContent: string) => {
+      return `${newContent}\n[WHOLE]\n`;
+    }),
   })),
 }));
 
@@ -657,6 +660,196 @@ describe('SyncOrchestrator', () => {
       expect(result.processedFiles).toHaveLength(0);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toContain('No content provided');
+    });
+  });
+
+  describe('processFiles - a file with no title (#449)', () => {
+    const fragment = '```{admonition} GPU\n:class: warning\n\nThis lecture uses a GPU.\n```\n';
+    const translated = '```{admonition} GPU\n:class: warning\n\n本讲座使用 GPU。\n```\n';
+
+    it('updates an existing fragment whole, where it used to fail the file', async () => {
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/_admonition/gpu.md',
+          type: 'markdown',
+          newContent: fragment,
+          oldContent: fragment.replace('uses a GPU', 'was built with a GPU'),
+          targetContent: translated,
+          existingFileSha: 'gpu-sha',
+          isNewFile: false,
+        },
+      ];
+
+      const result = await orchestrator.processFiles(files);
+
+      expect(result.errors).toHaveLength(0);
+      expect(result.processedFiles).toEqual(['lectures/_admonition/gpu.md']);
+      expect(result.translatedFiles[0].content).toContain('[WHOLE]');
+      expect(result.translatedFiles[0].sha).toBe('gpu-sha');
+      expect(
+        logger.messages.some((m) => m.msg.includes('has no # title, so it is updated whole'))
+      ).toBe(true);
+    });
+
+    it("gives an edition's English copy the new English, with no model call", async () => {
+      // lecture-python-programming.fa keeps the English gpu.md.
+      const old = fragment.replace('uses a GPU', 'was built with a GPU');
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/_admonition/gpu.md',
+          type: 'markdown',
+          newContent: fragment,
+          oldContent: old,
+          targetContent: old,
+          isNewFile: false,
+        },
+      ];
+
+      const result = await orchestrator.processFiles(files);
+
+      expect(result.errors).toHaveLength(0);
+      expect(result.translatedFiles[0].content).toBe(fragment);
+      expect(
+        logger.messages.some(
+          (m) => m.level === 'warning' && m.msg.includes("the edition's copy is the English")
+        )
+      ).toBe(true);
+    });
+
+    it('fails a file whose edition copy is empty, rather than translating it from scratch', async () => {
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/_admonition/gpu.md',
+          type: 'markdown',
+          newContent: fragment,
+          oldContent: fragment.replace('uses a GPU', 'was built with a GPU'),
+          targetContent: '\n',
+          isNewFile: false,
+        },
+      ];
+
+      const result = await orchestrator.processFiles(files);
+
+      expect(result.translatedFiles).toHaveLength(0);
+      expect(result.errors.join('\n')).toContain("the edition's copy is empty");
+    });
+
+    it("keeps the PR's translation in a rebase when the edition's copy is unchanged", async () => {
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/_admonition/gpu.md',
+          type: 'markdown',
+          newContent: fragment,
+          oldContent: fragment.replace('uses a GPU', 'was built with a GPU'),
+          targetContent: translated,
+          isNewFile: false,
+        },
+      ];
+      const cache = new Map([
+        [
+          'lectures/_admonition/gpu.md',
+          { previousTranslation: `${translated}<!-- reviewed -->\n`, oldTargetContent: translated },
+        ],
+      ]);
+
+      const result = await orchestrator.processFiles(files, undefined, cache);
+
+      expect(result.errors).toHaveLength(0);
+      expect(result.translatedFiles[0].content).toBe(`${translated}<!-- reviewed -->\n`);
+    });
+
+    it('updates whole when only the old English or the edition copy has no title', async () => {
+      const titled = '# GPU note\n\nThis lecture uses a GPU.\n';
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/_admonition/grew-a-title.md',
+          type: 'markdown',
+          newContent: titled,
+          oldContent: fragment,
+          targetContent: translated,
+          isNewFile: false,
+        },
+        {
+          filename: 'lectures/_admonition/edition-untitled.md',
+          type: 'markdown',
+          newContent: titled,
+          oldContent: '# GPU note\n\nOld text.\n',
+          targetContent: translated,
+          isNewFile: false,
+        },
+      ];
+
+      const result = await orchestrator.processFiles(files);
+
+      expect(result.errors).toHaveLength(0);
+      expect(result.translatedFiles.map((f) => f.content.includes('[WHOLE]'))).toEqual([
+        true,
+        true,
+      ]);
+    });
+
+    it('warns when a lecture loses its title in the new English', async () => {
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/slip.md',
+          type: 'markdown',
+          newContent: 'Intro text, title lost.\n\n## Part One\n\nBody.\n',
+          oldContent: '# Slip\n\nIntro text.\n\n## Part One\n\nBody.\n',
+          targetContent: '# 失误\n\n介绍。\n\n## 第一部分\n\n正文。\n',
+          isNewFile: false,
+        },
+      ];
+
+      const result = await orchestrator.processFiles(files);
+
+      expect(result.translatedFiles[0].content).toContain('[WHOLE]');
+      expect(
+        logger.messages.some(
+          (m) => m.level === 'warning' && m.msg.includes('the new English has no # title')
+        )
+      ).toBe(true);
+    });
+
+    it('still updates a file with a title section by section', async () => {
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/intro.md',
+          type: 'markdown',
+          newContent: '# Introduction\n\nUpdated',
+          oldContent: '# Introduction\n\nOld',
+          targetContent: '# 介绍\n\n旧',
+          isNewFile: false,
+        },
+      ];
+
+      const result = await orchestrator.processFiles(files);
+
+      expect(result.translatedFiles[0].content).toContain('[UPDATED]');
+      expect(result.translatedFiles[0].content).not.toContain('[WHOLE]');
+    });
+
+    it('updates a renamed fragment whole, and deletes its old path', async () => {
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/_admonition/gpu-note.md',
+          type: 'renamed',
+          newContent: fragment,
+          oldContent: fragment,
+          targetContent: translated,
+          previousFilename: 'lectures/_admonition/gpu.md',
+          oldFileSha: 'old-gpu-sha',
+          isNewFile: false,
+        },
+      ];
+
+      const result = await orchestrator.processFiles(files);
+
+      expect(result.errors).toHaveLength(0);
+      expect(result.translatedFiles[0].path).toBe('lectures/_admonition/gpu-note.md');
+      expect(result.translatedFiles[0].content).toContain('[WHOLE]');
+      expect(result.filesToDelete).toEqual([
+        { path: 'lectures/_admonition/gpu.md', sha: 'old-gpu-sha' },
+      ]);
     });
   });
 

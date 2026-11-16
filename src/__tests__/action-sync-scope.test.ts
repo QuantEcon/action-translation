@@ -2738,3 +2738,39 @@ describe("renames out of the docs folder in the built bundle's runSync (#398)", 
     });
   });
 });
+
+describe("a fragment with no title in the built bundle's runSync (#449)", () => {
+  // `_admonition/gpu.md`: one admonition, no `# title`, included by lectures. The
+  // section-based update cannot split it, and used to fail it with "Document must
+  // have a # title heading" in every edition holding the file.
+  const GPU = 'lectures/_admonition/gpu.md';
+  const fragment = (text: string) => `\`\`\`{admonition} GPU\n:class: warning\n\n${text}\n\`\`\`\n`;
+
+  let run: BundleRun;
+  beforeAll(() => {
+    run = runBundle('fragment-whole-file', {
+      scope: 'all',
+      prFiles: [{ filename: GPU, status: 'modified' }],
+      source: {
+        [atMerge(GPU)]: fragment('This lecture was built on a GPU.'),
+        [atParent(GPU)]: fragment('This lecture uses a GPU.'),
+      },
+      target: { [GPU]: fragment('ഈ പ്രഭാഷണം ഒരു GPU ഉപയോഗിക്കുന്നു.') },
+    });
+  }, 90_000);
+
+  it('updates it whole, so it reaches the model instead of failing on its missing title', () => {
+    check(run, (log) => {
+      expect(run.stdout).toContain(
+        `${GPU} has no # title, so it is updated whole rather than section by section`
+      );
+      expect(log.modelRequests).toBeGreaterThan(0);
+      // The fake model fails every call, so the run still fails, on the model.
+      const errors = issueErrors(log.issues[0]) ?? [];
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toMatch(/^Error processing lectures\/_admonition\/gpu\.md: /);
+      expect(errors[0]).not.toContain('must have a # title');
+      expect(log.unmocked).toEqual([]);
+    });
+  });
+});

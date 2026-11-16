@@ -696,6 +696,65 @@ export class FileProcessor {
   }
 
   /**
+   * Update a translation whole, from the current source and the existing
+   * translation (the RESYNC prompt `translate forward` uses). For a document
+   * the section-based update cannot split because it has no `# title`, such
+   * as an included fragment (`_admonition/gpu.md`). No heading map is built:
+   * it is keyed by the title and its sections, and a fragment gets no front
+   * matter, which an `{include}` would render as text.
+   */
+  async processWholeFile(
+    newContent: string,
+    targetContent: string,
+    filepath: string,
+    sourceLanguage: string,
+    targetLanguage: string,
+    glossary?: Glossary
+  ): Promise<string> {
+    this.log(`Processing whole file (no title): ${filepath}`);
+
+    const result = await this.translator.translateDocumentResync({
+      sourceLanguage,
+      targetLanguage,
+      glossary,
+      sourceContent: newContent,
+      targetContent,
+    });
+
+    if (!result.success || !result.translatedSection) {
+      throw new Error(
+        `Whole-file update failed: ${result.error ?? 'the response carried no text'}`
+      );
+    }
+
+    let text = applyTypography(result.translatedSection, targetLanguage);
+    // No head region to restore: `restoreHead` keys on the title. The write
+    // check every sync path runs after this (`checkWrittenDocument`, #288)
+    // still fails a file whose front matter the model dropped or changed. A
+    // front-matter fence the model invented, when neither file has front
+    // matter, is dropped, as `translate forward` drops one: an `{include}`
+    // would render it as text.
+    if (!newContent.startsWith('---') && !targetContent.startsWith('---')) {
+      const lines = text.split('\n');
+      if (/^---[ \t]*\r?$/.test(lines[0] ?? '')) {
+        // A block with keys cannot be told from the body by its fences alone:
+        // fail the file rather than guess where it ends.
+        if (/^[A-Za-z_][\w-]*:(\s|$)/.test(lines[1] ?? '')) {
+          throw new Error(
+            `Whole-file update failed: ${filepath}: the response begins with front matter that ` +
+              'neither the source nor the edition has'
+          );
+        }
+        const drop = /^---[ \t]*\r?$/.test(lines[1] ?? '') ? 2 : 1;
+        text = lines.slice(drop).join('\n').replace(/^\n+/, '');
+      }
+    }
+    // The response is trimmed; the file ends with a newline, as on every
+    // other write path (#116).
+    return text.endsWith('\n') ? text : `${text}\n`;
+  }
+
+  /**
    * Process a full document (for new files)
    */
   async processFull(
