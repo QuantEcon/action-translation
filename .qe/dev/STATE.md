@@ -340,6 +340,14 @@ Roadmap detail lives in the project trackers (reading order in
 
 **Resume here (2026-09-23, after v0.29.3):**
 
+*Release, 2026-11-16*: **v0.31.0's release PR** collects the overnight stack's ten changelog
+fragments (#439–#451), the first release through `npm run changelog -- --release`, and bumps
+the version. #442 and #445 change what sync and `init` do to an edition's files, so the
+release notes lead with them. The tag, §4a, §4b, the floating tags, the `@v0` smoke and the
+GitHub release each wait on Matt's go. #449 was ruled on 2026-11-16, all eight questions as
+recommended (on 8: design the reader for two front ends, and build `myst.yml`'s at the first
+mystmd edition); its build waits on a plan Matt approves.
+
 *Overnight stack, 2026-11-16*: the overnight plan of 2026-11-15 (WP1–WP4, on 20 rulings Matt
 accepted) is merged and **unreleased**; `main` is at `f214c5e`. #440 (#396, #386), #441 (#389,
 #351), #442 (#398), #443 (#90 defect 6; #90 stays open), #444 (#378, #401), #445 (#134), #446
