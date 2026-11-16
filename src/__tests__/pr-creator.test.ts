@@ -25,6 +25,14 @@ import {
   NOT_SYNCED_HEADING,
   ScopeSkip,
 } from '../sync-scope.js';
+import {
+  formatLectureSetNotice,
+  LectureSetReport,
+  MISSING_INCLUDES_HEADING,
+  OUTSIDE_SET_HEADING,
+  TOC_ADDED_HEADING,
+  TOC_REMOVED_HEADING,
+} from '../sync-lecture-set.js';
 import { TranslatedFile } from '../types.js';
 
 // =============================================================================
@@ -521,6 +529,88 @@ describe('buildPrBody still-open notice (#420)', () => {
     expect(parseTranslationSyncMetadata(body(stillOpen))).toEqual(
       parseTranslationSyncMetadata(body(undefined))
     );
+  });
+});
+
+// =============================================================================
+// LECTURE SET NOTICE (#449)
+// =============================================================================
+
+describe('buildPrBody lecture-set notice (#449)', () => {
+  const files: TranslatedFile[] = [
+    { path: 'lectures/jv.md', content: 'c1', sha: 'sha-jv' },
+    { path: 'lectures/_toc.yml', content: 'toc', sha: 'sha-toc' },
+  ];
+  const fileMetadata = [
+    { path: 'lectures/jv.md', type: 'markdown' },
+    { path: 'lectures/_toc.yml', type: 'toc' },
+  ];
+  const scopeSkipped: ScopeSkip[] = [
+    {
+      path: 'lectures/intro.md',
+      statePath: '.translate/state/intro.md.yml',
+      reason: 'not-in-edition',
+    },
+  ];
+  const report: LectureSetReport = {
+    docsFolder: 'lectures/',
+    outside: [{ path: 'lectures/README.md' }],
+    tocRemoved: ['lectures/old.md'],
+    tocAdded: [{ path: 'lectures/fresh.md', inEdition: false }],
+    missingIncludes: [{ path: 'lectures/_admonition/gpu.md', includedBy: ['lectures/jv.md'] }],
+  };
+
+  function body(lectureSet: LectureSetReport | undefined): string {
+    return buildPrBody(
+      files,
+      [],
+      baseConfig,
+      undefined,
+      undefined,
+      'target-sha',
+      fileMetadata,
+      undefined,
+      undefined,
+      scopeSkipped,
+      undefined,
+      lectureSet
+    );
+  }
+
+  it('lists the lecture set after the scope notice and before the details', () => {
+    const text = body(report);
+
+    expect(text).toContain(`${formatLectureSetNotice(report)}\n\n### Details`);
+    for (const heading of [
+      OUTSIDE_SET_HEADING,
+      TOC_REMOVED_HEADING,
+      TOC_ADDED_HEADING,
+      MISSING_INCLUDES_HEADING,
+    ]) {
+      expect(text.indexOf(heading)).toBeGreaterThan(text.indexOf(NOT_SYNCED_HEADING));
+    }
+  });
+
+  it('leaves the body byte-identical when there is nothing to list', () => {
+    const empty: LectureSetReport = {
+      docsFolder: 'lectures/',
+      outside: [],
+      tocRemoved: [],
+      tocAdded: [],
+      missingIncludes: [],
+    };
+    expect(body(empty)).toBe(body(undefined));
+  });
+
+  it('keeps every file it lists out of the metadata, which rebase still parses', () => {
+    const metadata = parseTranslationSyncMetadata(body(report));
+
+    expect(metadata).toBeDefined();
+    expect(metadata).toEqual(parseTranslationSyncMetadata(body(undefined)));
+    expect(metadata!.files).toEqual([
+      { path: 'lectures/jv.md', type: 'markdown' },
+      { path: 'lectures/_toc.yml', type: 'toc' },
+    ]);
   });
 });
 

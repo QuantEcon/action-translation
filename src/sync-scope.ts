@@ -351,7 +351,7 @@ export function formatScopeNotice(skipped: ScopeSkip[]): string {
   return notice;
 }
 
-/** What the job summary of a scoped run reports. */
+/** What the job summary of a sync run reports. */
 export interface ScopeSummaryInput {
   targetLanguage: string;
   /** `owner/repo` of the edition. */
@@ -359,7 +359,20 @@ export interface ScopeSummaryInput {
   /** `owner/repo` of the source. */
   sourceRepo: string;
   prNumber: number;
-  scoped: ScopedFiles;
+  /** The run's `sync-scope`. When absent, `existing` if `scoped` is given, `all` otherwise. */
+  syncScope?: SyncScope;
+  /**
+   * The scope check, under `sync-scope: existing`. Absent under `all`, and on
+   * a run that stopped before the check.
+   */
+  scoped?: ScopedFiles;
+  /**
+   * What was left to sync after the lecture set narrowed the source PR's
+   * changes, on a run without a scope check; `scoped.classified` otherwise.
+   */
+  remaining?: ClassifiedFiles;
+  /** The lecture set's sections (#449), from `formatLectureSetSummary`; none when '' or absent. */
+  lectureSet?: string;
   /** The translation PR, when one was opened. */
   prUrl?: string;
   /** Errors the run recorded; non-zero means it failed. */
@@ -367,13 +380,16 @@ export interface ScopeSummaryInput {
 }
 
 /**
- * The job summary of a scoped run. When nothing is left to sync and every
- * scope read succeeded, it is the run's only output: no PR, no failure issue,
- * and no comment on the source PR. When a scope read failed, the run fails
- * and, outside test mode, also opens the failure issue.
+ * The job summary of a sync run: every run under `sync-scope: existing`, and
+ * a run under `all` that has something to list (#449). When nothing is left
+ * to sync and every read succeeded, it is the run's only output: no PR, no
+ * failure issue, and no comment on the source PR. When a read failed, the run
+ * fails and, outside test mode, also opens the failure issue.
  */
 export function buildScopeSummary(input: ScopeSummaryInput): string {
   const { scoped } = input;
+  const existing = (input.syncScope ?? (scoped ? 'existing' : 'all')) === 'existing';
+  const left = scoped?.classified ?? input.remaining;
   const sourcePr = `[${input.sourceRepo}#${input.prNumber}](https://github.com/${input.sourceRepo}/pull/${input.prNumber})`;
 
   let outcome: string;
@@ -385,21 +401,32 @@ export function buildScopeSummary(input: ScopeSummaryInput): string {
         : '');
   } else if (input.errorCount > 0) {
     outcome = `**No translation PR.** The run failed with ${input.errorCount} error(s); see the log.`;
-  } else if (nothingToSync(scoped.classified)) {
-    outcome = '**No translation PR.** Nothing this source PR changed is in scope.';
+  } else if (left && nothingToSync(left)) {
+    outcome = scoped
+      ? '**No translation PR.** Nothing this source PR changed is in scope.'
+      : '**No translation PR.** Nothing this source PR changed is in the lecture set.';
   } else {
     outcome = '**No translation PR.** The run produced no changes.';
   }
 
-  const notInEdition = scoped.skipped.filter((s) => s.reason === 'not-in-edition');
-  const lectureMissing = scoped.skipped.filter((s) => s.reason === 'lecture-missing');
-
   const lines = [
-    `## Translation sync (${input.targetLanguage}): \`sync-scope: existing\``,
+    `## Translation sync (${input.targetLanguage})` + (existing ? ': `sync-scope: existing`' : ''),
     '',
     `Source PR ${sourcePr} → edition \`${input.targetRepo}\``,
     '',
     outcome,
+  ];
+  if (scoped) lines.push(...scopeSections(scoped));
+  if (input.lectureSet) lines.push('', input.lectureSet);
+  return lines.join('\n') + '\n';
+}
+
+/** The summary's sections for the scope check: what it kept, skipped and could not read. */
+function scopeSections(scoped: ScopedFiles): string[] {
+  const notInEdition = scoped.skipped.filter((s) => s.reason === 'not-in-edition');
+  const lectureMissing = scoped.skipped.filter((s) => s.reason === 'lecture-missing');
+
+  const lines = [
     '',
     'A changed lecture syncs only when this edition has its state file under ' +
       '`.translate/state/`. Removals and `_toc.yml` are not scoped.',
@@ -437,7 +464,7 @@ export function buildScopeSummary(input: ScopeSummaryInput): string {
       ...scoped.errors.map((e) => `- ${e}`)
     );
   }
-  return lines.join('\n') + '\n';
+  return lines;
 }
 
 /** The part of `core.summary` used here, so a test can stand in for it. */
