@@ -357,8 +357,8 @@ recommended (on 8: design the reader for two front ends, and build `myst.yml`'s 
 mystmd edition). Record `D-2026-11-16-the-lecture-set-is-the-toc-and-its-includes`. The build is
 four PRs: P1, the reader (`src/lecture-set.ts`, no change in behaviour); P2, the CLI on it
 (closes #385); P3, sync on it (closes #449); P4, the state check on it (closes #370). Matt
-ruled the CLI fails with no `_toc.yml`; how sync updates a fragment with no title (today it
-fails, in four editions) waits on him and belongs to P3.
+ruled the CLI fails with no `_toc.yml`; a file with no title, such as a fragment, is updated whole
+(#455; it used to fail, in four editions).
 
 *Overnight stack, 2026-11-16*: the overnight plan of 2026-11-15 (WP1–WP4, on 20 rulings Matt
 accepted) is merged and **unreleased**; `main` is at `f214c5e`. #440 (#396, #386), #441 (#389,
@@ -490,7 +490,7 @@ delimiter rows, which already break a table in the fr edition's pandas lecture.
 
 ## Health & context
 
-- `main` green; **2,563 tests across 86 suites** (zero skips, type-checked) with the untitled-file
+- `main` green; **2,570 tests across 86 suites** (zero skips, type-checked) with the untitled-file
   update (#449's question A), 2,556 before it at `7e71a24` (counted 2026-11-16 in a clean worktree; a tree
   holding the harness's gitignored clones counts 15 more, see log
   `2026-11-16-overnight-stack`); lint at

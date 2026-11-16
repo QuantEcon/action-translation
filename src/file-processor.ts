@@ -721,14 +721,25 @@ export class FileProcessor {
       targetContent,
     });
 
-    if (!result.success) {
-      throw new Error(`Whole-file update failed: ${result.error}`);
+    if (!result.success || !result.translatedSection) {
+      throw new Error(
+        `Whole-file update failed: ${result.error ?? 'the response carried no text'}`
+      );
     }
 
+    let text = applyTypography(result.translatedSection, targetLanguage);
     // No head region to restore: `restoreHead` keys on the title. The write
     // check every sync path runs after this (`checkWrittenDocument`, #288)
-    // still fails a file whose front matter the model dropped or changed.
-    return applyTypography(result.translatedSection || '', targetLanguage);
+    // still fails a file whose front matter the model dropped or changed. A
+    // front-matter fence the model invented, when neither file has front
+    // matter, is dropped, as `translate forward` drops one: an `{include}`
+    // would render it as text.
+    if (!newContent.startsWith('---') && !targetContent.startsWith('---')) {
+      text = text.replace(/^---[ \t]*\r?\n(?:---[ \t]*\r?\n)?\n*/, '');
+    }
+    // The response is trimmed; the file ends with a newline, as on every
+    // other write path (#116).
+    return text.endsWith('\n') ? text : `${text}\n`;
   }
 
   /**
