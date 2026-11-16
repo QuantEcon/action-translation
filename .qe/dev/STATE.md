@@ -340,6 +340,13 @@ Roadmap detail lives in the project trackers (reading order in
 
 **Resume here (2026-11-16, after v0.31.0):**
 
+*Release, 2026-11-16*: **v0.32.0's release PR** collects #449's build: #455 (sync updates a file with no title,
+such as `_admonition/gpu.md`, whole), #456 (the CLI on the lecture set; #385) and #457 (sync on the
+lecture set), with #454's checklist change. #457 changes which files every sync run takes, so the
+notes lead with it, and #455's fix of a live failure in four editions leads the fixes. Matt said
+"Release now"; the tag, §4a, §4b, `v0`, the `@v0` smoke and the GitHub release each wait on his
+go. #449 is closed; P4 (`doctor --require-state`, #370) is in design.
+
 *Released, 2026-11-16*: **v0.31.0 is released** (#452, `ef79ba5`), and `v0` points at it. No
 `v0.31` tag was made: a release now moves one floating major tag
 (`D-2026-11-16-one-floating-major-tag`), and `v0.30` stays on `fdab41f`. Payload #439–#451.
