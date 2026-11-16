@@ -345,8 +345,8 @@ Roadmap detail lives in the project trackers (reading order in
 updates a file with no title, such as `_admonition/gpu.md`, whole), #456 (the CLI on the lecture
 set; closed #385) and #457 (sync on the lecture set; closed #449), with #454's checklist change.
 Every production sync now takes the source's lecture set; on all three sources it holds every
-`.md` under `lectures/`, so nothing that synced before drops out. §4a read 84 of 84, with
-zh-cn's one WARN #375's again; §4b read 0 of 36; the `@v0` smoke passed on all three lanes. The
+`.md` under `lectures/`, so nothing that synced before drops out. §4a read 84 of 84, and
+zh-cn's one WARN was #375's, as at v0.31.0; §4b read 0 of 36; the `@v0` smoke passed on all three lanes. The
 same day lecture-python-programming.fa#181 translated fa's English `gpu.md`, with its state file.
 Log `2026-11-16-v0320-release`. Next: P4, `doctor --require-state` (#370), the state check whose
 rollout in every edition, with the backfills its record lists, retires `sync-scope`; the
