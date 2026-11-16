@@ -340,6 +340,14 @@ Roadmap detail lives in the project trackers (reading order in
 
 **Resume here (2026-09-23, after v0.29.3):**
 
+*Released, 2026-11-16*: **v0.31.0 is released** (#452, `ef79ba5`), and `v0` points at it. No
+`v0.31` tag was made: a release now moves one floating major tag
+(`D-2026-11-16-one-floating-major-tag`), and `v0.30` stays on `fdab41f`. Payload #439–#451.
+§4a read 84 of 84, with zh-cn's one WARN #375's; §4b read 0 of 36; the `@v0` smoke passed on
+all three lanes. Log `2026-11-16-v0310-release`. Next: #449's build, and the rest of the action
+family's standard (SECURITY.md, Dependabot, CODEOWNERS, topics, a `uses: ./` CI job,
+`deploy-docs.yml` on Node 24), to plan with Matt.
+
 *Release, 2026-11-16*: **v0.31.0's release PR** collects the overnight stack's ten changelog
 fragments (#439–#451), the first release through `npm run changelog -- --release`, and bumps
 the version. #442 and #445 change what sync and `init` do to an edition's files, so the
