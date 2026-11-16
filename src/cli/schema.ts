@@ -293,8 +293,9 @@ export function loadResyncDirectory(resyncDir: string): {
   };
   walk(resyncDir, '');
   for (const file of files) {
-    // Skip meta-files and non-JSON
-    if (path.posix.basename(file).startsWith('_') || !file.endsWith('.json')) continue;
+    // Skip the run's progress manifest and non-JSON. Only that file is a
+    // meta-file: a lecture may start with `_` too (`_foo.md` → `_foo.json`).
+    if (file === '_progress.json' || !file.endsWith('.json')) continue;
 
     const fullPath = path.join(resyncDir, file);
     try {

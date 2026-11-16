@@ -379,8 +379,8 @@ async function writeReport(
 
 /**
  * A lecture's report under `dir`, without its extension: its docs-relative
- * path without `.md`, so `_admonition/gpu.md` reports to `_admonition/gpu.md`
- * and two lectures that share a name in different folders never share a report
+ * path without `.md`, so `_admonition/gpu.md` has the stem `_admonition/gpu`
+ * (`_admonition/gpu.md`, `.resync/_admonition/gpu.json`), and two lectures that share a name in different folders never share a report
  * or a resume sidecar (#449). A path that would leave `dir` falls back to the
  * file's name.
  */
