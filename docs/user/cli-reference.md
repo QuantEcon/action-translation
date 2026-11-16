@@ -754,7 +754,7 @@ Under `sync-scope: existing` a lecture's state file decides whether it syncs: a 
 |---|---|---|
 | (a) | A lecture in the edition's lecture set with no state file, `.translate/state/<path>.yml`, that `state-exceptions` does not declare | Record its sync point with `translate status -f <file> --write-state`, or declare it |
 | (b) | A declared exception in the lecture set that has a state file, which puts it in sync's scope | Delete the state file, or take the file out of `state-exceptions` |
-| (c) | A file under `.translate/state/` with no lecture: the edition has no `.md` at its path, or it is not a `<path>.md.yml` at all (a `.DS_Store`, a `notes.yml`), which sync never reads | Restore the lecture, or delete the file |
+| (c) | A file under `.translate/state/` with no lecture: the edition has no `.md` at its path, or it is not a `<path>.md.yml` at all (a `.gitkeep`, a `.DS_Store`, a `notes.yml`), which sync never reads | Restore the lecture, or delete the file |
 | (d) | A state file of a lecture the edition has that cannot be read, with the reason, which names the key it rejects | Repair it, or delete it |
 
 It also fails on a `state-exceptions` it cannot use (see [Declaring exceptions](#declaring-exceptions)). Every item is reported in one run.

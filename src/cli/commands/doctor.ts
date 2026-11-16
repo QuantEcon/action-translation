@@ -329,6 +329,10 @@ export function readDeclaredExceptions(targetPath: string): {
   for (const { key, reason } of read.entries) {
     // A trailing `/` would name a folder; drop it, as the key names a file.
     const file = normalizeDocsPath(key.replace(/[\\/]+$/, ''));
+    if (key.trim() === '') {
+      problems.push('an empty key: name the lecture, relative to the docs folder');
+      continue;
+    }
     if (file === undefined) {
       problems.push(
         `\`${key}\`: the path is absolute or leaves the docs folder; write it relative to the ` +
@@ -336,7 +340,7 @@ export function readDeclaredExceptions(targetPath: string): {
       );
       continue;
     }
-    if (!file.endsWith('.md')) {
+    if (!file.endsWith('.md') || path.posix.basename(file) === '.md') {
       problems.push(`\`${key}\`: not a .md file; only a lecture's .md has a state file`);
       continue;
     }
@@ -388,6 +392,16 @@ export function checkRequiredState(
       status: 'fail',
       message: '--require-state: the edition has no lecture set, so no state file was checked',
       details: ['The Lecture set check says why'],
+      // Every list is present, as on every other path, for a consumer of `--json`.
+      data: {
+        missing: [],
+        declaredWithState: [],
+        orphaned: [],
+        corrupt: [],
+        unlisted: [],
+        staleExceptions: [],
+        exceptionErrors: [],
+      },
     };
   }
 
@@ -434,7 +448,11 @@ export function checkRequiredState(
   const docsPrefix = normalizeDocsPath(docsFolder.replace(/[\\/]+$/, ''));
   const whyStale = (e: { key: string; file: string }): string => {
     const rest = docsPrefix ? e.file.slice(docsPrefix.length + 1) : '';
-    if (docsPrefix && e.file.startsWith(`${docsPrefix}/`) && inSet.has(rest)) {
+    if (
+      docsPrefix &&
+      e.file.startsWith(`${docsPrefix}/`) &&
+      (inSet.has(rest) || inEdition.has(rest))
+    ) {
       return (
         `${shown(e)}: the key is relative to the repository; write it relative to the docs ` +
         `folder, as ${rest}`
@@ -443,7 +461,7 @@ export function checkRequiredState(
     return inEdition.has(e.file)
       ? `${shown(e)}: outside the lecture set (no ToC entry lists it, and no lecture of the ` +
           'edition includes it)'
-      : `${shown(e)}: the edition has no such file`;
+      : `${shown(e)}: the edition has no lecture at that path`;
   };
 
   const phrases = (counts: Array<[number, string, string]>) =>
@@ -493,7 +511,8 @@ export function checkRequiredState(
       declaredWithState.map(shown)
     ),
     ...detailGroup(
-      'State file without a lecture: the edition has no such .md. Restore the lecture, or ' +
+      'State file without a lecture: the edition has no lecture at its path (no such .md, or ' +
+        'one in a folder the book never builds from, such as _build). Restore the lecture, or ' +
         'delete the state file:',
       orphaned
     ),

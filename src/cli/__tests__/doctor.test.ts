@@ -762,7 +762,8 @@ describe('checkRequiredState (--require-state, #370)', () => {
     expect(result.status).toBe('fail');
     expect(result.message).toBe('--require-state: 2 files in the state folder without a lecture');
     expect(result.details).toEqual([
-      'State file without a lecture: the edition has no such .md. Restore the lecture, or ' +
+      'State file without a lecture: the edition has no lecture at its path (no such .md, or ' +
+        'one in a folder the book never builds from, such as _build). Restore the lecture, or ' +
         'delete the state file:',
       '  .translate/state/_admonition/gpu.md.yml',
       '  .translate/state/old.md.yml',
@@ -872,7 +873,7 @@ describe('checkRequiredState (--require-state, #370)', () => {
   });
 
   describe('a stale exception', () => {
-    test('warns when the edition has no such file', async () => {
+    test('warns when the edition has no lecture at that path', async () => {
       twoLectures();
       state('intro.md');
       state('cobweb.md');
@@ -885,7 +886,7 @@ describe('checkRequiredState (--require-state, #370)', () => {
         details: [
           'Stale exception (a warning): declared, but not a lecture of the edition. Remove it ' +
             'from state-exceptions:',
-          '  gone.md: the edition has no such file',
+          '  gone.md: the edition has no lecture at that path',
         ],
         data: { ...NO_FINDINGS, staleExceptions: ['gone.md'] },
       });
@@ -943,6 +944,8 @@ describe('checkRequiredState (--require-state, #370)', () => {
         '\n  intro.ipynb: English copy\n',
         '`intro.ipynb`: not a .md file',
       ],
+      ['an empty key', '\n  "": English copy\n', 'an empty key: name the lecture'],
+      ['a bare .md key', '\n  .md: English copy\n', '`.md`: not a .md file'],
       [
         'a repeated key',
         '\n  intro.md: English copy\n  intro.md: Still English\n',
@@ -969,6 +972,21 @@ describe('checkRequiredState (--require-state, #370)', () => {
         `  ${result.data?.exceptionErrors[0]}`,
       ]);
     });
+  });
+
+  test('names a docs-folder-prefixed key as repo-relative for a file outside the set too', async () => {
+    twoLectures();
+    state('intro.md');
+    state('cobweb.md');
+    writeMd(path.join(docs(), 'README.md'), '# Readme\n');
+    config('state-exceptions:\n  lectures/README.md: not a lecture\n');
+
+    const result = await check();
+    expect(result.status).toBe('warn');
+    expect(result.details).toContain(
+      '  lectures/README.md: the key is relative to the repository; write it relative to the ' +
+        'docs folder, as README.md'
+    );
   });
 
   test('matches a ./ key, and names a docs-folder-prefixed one as repo-relative', async () => {
@@ -1085,6 +1103,7 @@ describe('checkRequiredState (--require-state, #370)', () => {
       status: 'fail',
       message: '--require-state: the edition has no lecture set, so no state file was checked',
       details: ['The Lecture set check says why'],
+      data: NO_FINDINGS,
     });
   });
 
@@ -1323,7 +1342,7 @@ describe('runDoctor', () => {
 
     // The shape a CI script reads: the mode at the top, every list in the
     // check's `data`, sorted, and `summary` as it was.
-    test('--json carries all six lists', async () => {
+    test('--json carries all seven lists', async () => {
       config(
         'state-exceptions:\n' +
           '  intro.md: English copy until its review round\n' +
@@ -1370,7 +1389,8 @@ describe('runDoctor', () => {
           "Declared in state-exceptions, but has a state file, which puts it in sync's scope. " +
             'Delete one or the other:',
           '  intro.md',
-          'State file without a lecture: the edition has no such .md. Restore the lecture, or ' +
+          'State file without a lecture: the edition has no lecture at its path (no such .md, or ' +
+            'one in a folder the book never builds from, such as _build). Restore the lecture, or ' +
             'delete the state file:',
           '  .translate/state/old.md.yml',
           'Corrupt: the state file exists but cannot be read. Repair or delete it:',
@@ -1380,7 +1400,7 @@ describe('runDoctor', () => {
           '  draft.md',
           'Stale exception (a warning): declared, but not a lecture of the edition. Remove it ' +
             'from state-exceptions:',
-          '  gone.md: the edition has no such file',
+          '  gone.md: the edition has no lecture at that path',
         ],
         data: {
           missing: ['cobweb.md'],

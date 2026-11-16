@@ -43,11 +43,12 @@ comment left the exceptions key's name and shape open. Built from the design of 
   js-yaml refuses. A key equal to `<docs-folder>/<a lecture in the set>` is named as
   repo-relative. `TranslateConfig` gains the optional key; its three core keys, and so
   `checkEditionConfig` and `setup`, are unchanged.
-- **`--json`** carries a top-level `requireState: true`, and the check's `data` holds the six
-  lists in full, each sorted: `missing`, `declaredWithState`, `orphaned`, `corrupt`,
-  `unlisted` and `staleExceptions`. `summary` keeps its shape.
+- **`--json`** carries a top-level `requireState: true`, and the check's `data` holds seven
+  lists in full, each sorted, on every path (an edition with no lecture set too): `missing`,
+  `declaredWithState`, `orphaned`, `corrupt`, `unlisted`, `staleExceptions` and
+  `exceptionErrors`. `summary` keeps its shape.
 
-**Implementation readings, for @mmcky to confirm** (listed in the PR body):
+**Implementation readings**, put to Matt in the PR body; this record merges only on his yes:
 
 1. A state file whose `.md` the edition has but that is outside the set (`status`'s
    `UNLISTED`: a lecture taken out of the ToC and kept with its state file, which ruling 4
@@ -61,7 +62,7 @@ comment left the exceptions key's name and shape open. Built from the design of 
 4. `doctor` gets no `--exclude`. The 2026-10-19 ruling chose exceptions declared in the
    config, each listed by name: they stay in one place, are reviewed in the edition's own PRs,
    and CI runs one command with no flags to keep in step. This replaces #370's proposal.
-5. A file under `.translate/state/` that is not `<path>.md.yml` (`.DS_Store`, `notes.yml`,
+5. A file under `.translate/state/` that is not `<path>.md.yml` (`.gitkeep`, `.DS_Store`, `notes.yml`,
    `foo.ipynb.yml`) fails under (c), with its own wording: sync never reads it, so it can only
    be a mistake.
 6. The correction below.
