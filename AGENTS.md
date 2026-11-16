@@ -283,7 +283,7 @@ Before creating a release, verify the following:
    and reads UNRELIABLE again, and the replaced infra attempts stay in the share, so
    `--redraw-infra` alone cannot clear it either (2 infra of 12 redrawn is still 2 of 14).
 
-   **If a cell fails**, find out whether this release caused it before holding the tags.
+   **If a cell fails**, find out whether this release caused it before holding the tag.
    Draw a same-day control for the failing cell, 24 draws at the previous release and 24
    more at this tag:
 
@@ -309,7 +309,7 @@ Before creating a release, verify the following:
      test, p < 0.05): treat it as a failed gate. The floating tag stays where it is, the
      tally goes on the release PR, and the repair ships as the next patch.
    - **The two cannot be told apart**, and above all when the request did not change: the
-     rate predates this release, and holding the tags protects no one from it. Release,
+     rate predates this release, and holding the tag protects no one from it. Release,
      put both tables on the release PR, and post the measurement on the defect's issue.
 
    Keep the threshold as it is. At #320's ~40% it misses about 2% of the time; at a latent

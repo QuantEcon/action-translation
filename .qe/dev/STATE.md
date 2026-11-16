@@ -251,7 +251,7 @@ Roadmap detail lives in the project trackers (reading order in
   6.29.0, in range, which clears both high-severity production advisories (#359). Shipped in
   v0.29.5.
 - **Release step 4b failure procedure (#357, `0178ec7`, 2026-10-09)** — when a rate-check cell
-  fails, draw a same-day control at the previous tag before holding the floating tags; decision
+  fails, draw a same-day control at the previous tag before holding the floating tag; decision
   `D-2026-10-09-rate-check-failure-control`. The CLI's refused draws report `Tokens: 0`; that
   is #356.
 - **2026-10-09 — v0.29.4 released** (release PR #354 `fcee846`; payload #291 `a872b53`, #289
@@ -338,7 +338,7 @@ Roadmap detail lives in the project trackers (reading order in
 
 ## Next
 
-**Resume here (2026-09-23, after v0.29.3):**
+**Resume here (2026-11-16, after v0.31.0):**
 
 *Released, 2026-11-16*: **v0.31.0 is released** (#452, `ef79ba5`), and `v0` points at it. No
 `v0.31` tag was made: a release now moves one floating major tag
