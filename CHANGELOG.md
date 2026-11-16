@@ -10,6 +10,15 @@ are collected here at each release.
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-11-16
+
+### Added
+
+- **`translate doctor --require-state` fails on any gap in an edition's state files, for a required CI check** (#370). Under `sync-scope: existing` a lecture's state file decides whether it syncs, but `doctor` only warned about a lecture without one, so a CI step running it passed. With the flag, the `.translate/state/` check fails on (a) a lecture in the edition's lecture set with no state file that is not a declared exception, (b) a declared exception that has a state file, (c) a file under `.translate/state/` with no lecture, including one that is not a `<path>.md.yml` at all, such as a `.DS_Store`, and (d) a state file that cannot be read, and reports every one in a single run. It warns, without failing, on a lecture taken out of the ToC and kept with its state file (`status`'s `UNLISTED`) and on a stale exception. The state folder is compared with the lecture set by exact name, so a state file whose name differs in case from its lecture's fails on a macOS clone as it does on a Linux runner. Without a `_toc.yml` the check fails with the `Lecture set` check. `--json` adds `"requireState": true` and lists every file of each kind under the check's `data`. Without the flag nothing changes.
+  - **Exceptions are declared in `.translate/config.yml`**, under `state-exceptions`, a mapping from a docs-relative path to the reason, such as `intro.md: English copy until its review round`. It is a mapping so that the reasons survive `status --write-state`, which rewrites the config and keeps the key. A reason must be non-empty text; a bare date is read as text. A key that is not usable fails the check by name: a `state-exceptions` that is not a mapping, an empty reason, an absolute path or one that leaves the docs folder, a path that is not a `.md`, a repeated key, or two keys naming one file. A key written relative to the repository (`lectures/intro.md`) is named as such. This takes the place of the `--exclude` that #370 proposed.
+  - **`doctor` names a config it cannot read**, a repeated key among them, where it reported "missing required fields".
+  - The CLI reference has a CI job that builds the CLI from a pinned release and runs the check.
+
 ## [0.32.0] - 2026-11-16
 
 ### Changed
