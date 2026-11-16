@@ -1,3 +1,5 @@
+> **Partly superseded 2026-11-16** by `D-2026-11-16-the-lecture-set-is-the-toc-and-its-includes`: condition (3)'s state check, item (a), checks the edition's lecture set (its ToC's documents and the files its lectures include, limited to the `.md` files it has) instead of every `.md` under the docs folder, so lecture-intro.zh-cn's `README.md` needs no declared exception. The rest stands.
+
 # Sync scope is read from the edition's state files; `sync-scope` is a temporary switch
 
 **Context**: Some editions are built one reviewed lecture at a time. The first,

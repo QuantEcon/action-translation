@@ -53935,6 +53935,49 @@ function mergeTargetCaptions(sourceYaml, targetYaml, logger) {
   return dump(expected, { lineWidth: -1, noArrayIndent: true });
 }
 
+// dist/lecture-set.js
+function tocYmlEntries(doc) {
+  const out = [];
+  const visit = (entries) => {
+    if (!Array.isArray(entries))
+      return;
+    for (const entry of entries) {
+      if (typeof entry !== "object" || entry === null)
+        continue;
+      const e = entry;
+      if (typeof e.file === "string")
+        out.push({ kind: "file", value: e.file });
+      else if (typeof e.glob === "string")
+        out.push({ kind: "glob", value: e.glob });
+      else if (typeof e.url === "string")
+        out.push({ kind: "url", value: e.url });
+      visit(e.chapters);
+      visit(e.sections);
+    }
+  };
+  if (!doc || typeof doc !== "object")
+    return out;
+  const root = doc;
+  if (typeof root.root === "string")
+    out.push({ kind: "file", value: root.root });
+  visit(root.chapters);
+  visit(root.sections);
+  if (Array.isArray(root.parts)) {
+    for (const part of root.parts) {
+      if (typeof part === "object" && part !== null) {
+        visit(part.chapters);
+      }
+    }
+  }
+  return out;
+}
+function collectTocFiles(doc) {
+  const rootFile = doc && typeof doc === "object" ? doc.root : void 0;
+  const entries = tocYmlEntries(doc);
+  const rest = typeof rootFile === "string" ? entries.slice(1) : entries;
+  return rest.filter((e) => e.kind === "file").map((e) => e.value);
+}
+
 // dist/sync-orchestrator.js
 async function loadGlossary(targetLanguage, builtInGlossaryDir, customGlossaryPath, logger) {
   if (customGlossaryPath) {
@@ -54054,35 +54097,6 @@ function classifyChangedFiles(files, docsFolder) {
   };
 }
 var TOC_FILE_LINE_RE = /^(\s*)-\s+file:\s*(?:"([^"]*)"|'([^']*)'|([^\s#]+))\s*(?:#.*)?$/;
-function collectTocFiles(doc) {
-  const out = [];
-  const visit = (entries) => {
-    if (!Array.isArray(entries))
-      return;
-    for (const entry of entries) {
-      if (typeof entry !== "object" || entry === null)
-        continue;
-      const e = entry;
-      if (typeof e.file === "string")
-        out.push(e.file);
-      visit(e.chapters);
-      visit(e.sections);
-    }
-  };
-  if (!doc || typeof doc !== "object")
-    return out;
-  const root = doc;
-  visit(root.chapters);
-  visit(root.sections);
-  if (Array.isArray(root.parts)) {
-    for (const part of root.parts) {
-      if (typeof part === "object" && part !== null) {
-        visit(part.chapters);
-      }
-    }
-  }
-  return out;
-}
 function spliceTocEntryLines(tocContent, entriesToDrop) {
   const lines = tocContent.split("\n");
   const out = [];
