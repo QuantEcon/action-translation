@@ -308,7 +308,7 @@ The first lecture's PR keeps the copied build files (`_config.yml`, `_toc.yml`, 
 
 ### Keep the state file
 
-Without its state file, `.translate/state/cobweb.md.yml`, the lecture never syncs, so the PR carries it beside the lecture. `init` fails a lecture whose state file it cannot write, and exits 1. `translate doctor` flags each lecture in the edition's lecture set, an included file such as `_admonition/gpu.md` too, that has no state file.
+Without its state file, `.translate/state/cobweb.md.yml`, the lecture never syncs, so the PR carries it beside the lecture. `init` fails a lecture whose state file it cannot write, and exits 1. `translate doctor` flags each lecture in the edition's lecture set, an included file such as `_admonition/gpu.md` too, that has no state file. With `--require-state` it fails such a lecture unless `.translate/config.yml` declares it under `state-exceptions`, as an English copy kept until its round is: run that as a required check in the edition's CI, and a PR that forgets the state file cannot merge (see [Requiring state files](../cli-reference.md#requiring-state-files)).
 
 ### Open the PR, and check for English changes before merging
 

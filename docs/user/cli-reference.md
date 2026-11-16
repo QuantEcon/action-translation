@@ -579,7 +579,7 @@ docs-folder: lectures
 tool-version: <tool version>    # Version that last wrote this config
 ```
 
-Provides defaults so CLI flags don't need to be repeated every invocation.
+Provides defaults so CLI flags don't need to be repeated every invocation. A partial edition can also declare the lectures meant to have no state file, such as an English copy, under `state-exceptions`, which `doctor --require-state` reads (see [Declaring exceptions](#declaring-exceptions)). Commands that rewrite the file keep keys they do not set, but not YAML comments.
 
 ### Per-file state (`state/<file>.yml`)
 
@@ -603,7 +603,7 @@ A file written by hand needs `source-sha`, `synced-at`, `model` and `mode` as te
 | `forward` | — | Updates state after successful resync |
 | `init` | `--skip-existing` skips lectures the edition has, and warns when one has no readable state file | Writes config, and state for each lecture it translates |
 | `setup` | — | Creates config as part of scaffolding |
-| `doctor` | Reads config, checks state files | — |
+| `doctor` | Reads config, checks state files; with `--require-state`, also `state-exceptions` | — |
 | `headingmap` | — | Injects heading-maps into target files |
 | Sync Action | Under `sync-scope: existing`, syncs a changed lecture only if its state file exists | Writes state for each lecture it syncs; deletes it with a removed lecture |
 
@@ -710,15 +710,16 @@ npx translate doctor -t <target-path> [options]
 | `-s, --source <path>` | *(optional)* | Source repository path (enables cross-repo checks) |
 | `-d, --docs-folder <folder>` | from config | Documentation folder (reads from `.translate/config.yml` if not provided) |
 | `--check-gh` | `false` | Also check `gh` CLI availability and authentication |
+| `--require-state` | `false` | Fail on any gap in the edition's state files, for a required CI check (see [Requiring state files](#requiring-state-files)) |
 | `--json` | `false` | Output as JSON |
 
 **What it checks:**
 
 | Check | Description |
 |-------|-------------|
-| `.translate/config.yml` | Config exists and has required fields |
+| `.translate/config.yml` | Config exists, can be read (a repeated key is named) and has required fields |
 | Lecture set | The edition's `_toc.yml` can be read; counts its lectures, and the entries with no file in the edition |
-| `.translate/state/` | Every lecture in the edition's lecture set has a state entry |
+| `.translate/state/` | Every lecture in the edition's lecture set has a state entry. With `--require-state`, the four checks below |
 | Heading maps | Every lecture in it that has sections has a `heading-map` in frontmatter |
 | Workflow | `.github/workflows/` has a translation workflow |
 | Source repo | Source path is accessible, and its docs folder has a lecture set (if `-s` provided) |
@@ -740,7 +741,85 @@ npx translate doctor -t ~/repos/lecture-python-intro.zh-cn -s ~/repos/lecture-py
 
 # JSON output for scripting
 npx translate doctor -t ~/repos/lecture-python-intro.zh-cn --json
+
+# Fail on any gap in the state files, as a required CI check does
+npx translate doctor -t ~/repos/lecture-python-programming.ml --require-state
 ```
+
+### Requiring state files
+
+Under `sync-scope: existing` a lecture's state file decides whether it syncs: a lecture without one is never synced, and an English copy with one is (see [Partial editions](action-reference.md#partial-editions)). Without the flag, a lecture without a state file is only a warning. With `--require-state`, the `.translate/state/` check fails on each of these, and names every file ([#370](https://github.com/QuantEcon/action-translation/issues/370)):
+
+| | Fails on | Fix |
+|---|---|---|
+| (a) | A lecture in the edition's lecture set with no state file, `.translate/state/<path>.yml`, that `state-exceptions` does not declare | Record its sync point with `translate status -f <file> --write-state`, or declare it |
+| (b) | A declared exception in the lecture set that has a state file, which puts it in sync's scope | Delete the state file, or take the file out of `state-exceptions` |
+| (c) | A file under `.translate/state/` with no lecture: the edition has no `.md` at its path, or it is not a `<path>.md.yml` at all (a `.gitkeep`, a `.DS_Store`, a `notes.yml`), which sync never reads | Restore the lecture, or delete the file |
+| (d) | A state file of a lecture the edition has that cannot be read, with the reason, which names the key it rejects | Repair it, or delete it |
+
+It also fails on a `state-exceptions` it cannot use (see [Declaring exceptions](#declaring-exceptions)). Every item is reported in one run.
+
+The lecture set is the edition's own (see [Which files the commands see](#which-files-the-commands-see)): the documents its `_toc.yml` lists, then the `.md` files they include, limited to the files the edition has. A partial edition's mirrored ToC lists lectures it has not taken; with no file behind them they are not lectures, and they do not fail. An included file such as `_admonition/gpu.md` is in the set only when one of the edition's own lectures includes it. A state file that has no lecture and cannot be read counts as one with no lecture. Names are compared exactly, so on a macOS clone a state file `Intro.md.yml` for `intro.md` fails as both a missing state file and one without a lecture, as it does on a Linux runner and for sync.
+
+Two cases warn and do not fail:
+
+- **A lecture outside the lecture set kept with its state file**, which `status` lists as `UNLISTED`: a lecture taken out of the ToC and kept, which sync no longer updates ([#449](https://github.com/QuantEcon/action-translation/issues/449)). If its state file cannot be read, that still fails (d).
+- **A stale exception**: a declared file the edition does not have, or one outside its lecture set. It changes nothing for sync, so it does not block CI; remove it to keep the list honest.
+
+Without a `_toc.yml` the edition has no lecture set: the `Lecture set` check fails, and so does the state check, which then checks nothing. `doctor` exits 1 on any failed check, so a CI job that runs `--require-state` also fails on the other checks, such as `.translate/config.yml`, `Lecture set` and `Workflow`.
+
+The console names the first five files of each group. `--json` adds `"requireState": true` at the top, and the state check's `data` holds every one, each list sorted: `missing` (a), `declaredWithState` (b), `orphaned` (c, as paths under `.translate/state/`), `corrupt` (d, each with its `reason`), `unlisted`, `staleExceptions`, and `exceptionErrors`, the problems with `state-exceptions`. `summary` is unchanged.
+
+#### Declaring exceptions
+
+A lecture meant to have no state file, such as an English copy that a partial edition keeps until its review round, is declared in `.translate/config.yml` under `state-exceptions`, a mapping from its path, relative to the docs folder, to the reason:
+
+```yaml
+state-exceptions:
+  intro.md: English copy until its review round
+```
+
+It is a mapping rather than a list so that each reason survives the commands that rewrite the config, such as `status --write-state`, which keep the key but drop YAML comments. A bare date as a reason (`2026-12-01`) is read as text. A key is read in the lecture set's spelling, so `./intro.md` names `intro.md`. A key written relative to the repository, such as `lectures/intro.md`, names no lecture: `doctor` lists it as stale and says to write it relative to the docs folder. The check fails, naming each problem, on a `state-exceptions` that is not a mapping, a reason that is not non-empty text, a path that is absolute or leaves the docs folder, a path that is not a `.md` file, a repeated key, and two keys that name one file.
+
+Declare only what the lecture set holds. An included file such as `_admonition/gpu.md` joins the set when the edition takes the first lecture that includes it, and needs its declaration from then on; declared before, it is a stale exception.
+
+`doctor` has no `--exclude`. [#370](https://github.com/QuantEcon/action-translation/issues/370) proposed one; the exceptions are declared in the config instead, each by name, so that they are reviewed in the edition's own PRs and every CI job runs the same command.
+
+#### Running it in CI
+
+The check is meant to run in every edition that syncs, as a required status check on every PR and on pushes to `main`: `sync-scope` retires once every syncing edition does (see [Partial editions](action-reference.md#partial-editions)). The CLI is not on npm, so the job checks out this repository at a release tag beside the edition and builds it, as in [Installation](#installation). Pin a release that has `--require-state`, and move the pin when you upgrade. `translate setup` is to scaffold this job ([#371](https://github.com/QuantEcon/action-translation/issues/371)).
+
+```yaml
+name: State files
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  state-files:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: edition
+      - uses: actions/checkout@v7
+        with:
+          repository: QuantEcon/action-translation
+          ref: vX.Y.Z # a release that has --require-state
+          path: action-translation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Build the translate CLI
+        working-directory: action-translation
+        run: npm ci && npm run build:cli
+      - name: Check the state files
+        run: node action-translation/dist/cli/index.js doctor -t edition --require-state
+```
+
+`doctor` reads the docs folder from the edition's `.translate/config.yml`. Then make the job a required status check in the edition's branch protection, so that a PR cannot merge while it fails.
 
 ## `headingmap` — Generate heading-maps
 

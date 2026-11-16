@@ -1,3 +1,5 @@
+> **Partly superseded 2026-11-16** by `D-2026-11-16-require-state-check`: ruling 7's last sentence is corrected. ml's `_admonition/gpu.md` is outside ml's lecture set today, since none of ml's lectures includes it, so it needs no declared exception until a lecture that includes it lands; and lecture-python-programming.fa's `_admonition/gpu.md` is translated, with its state file (QuantEcon/lecture-python-programming.fa#181), so it needs none either. Of the three, only ml's `intro.md` is still declared. The rest stands.
+
 # The lecture set is the ToC's documents and the `.md` files they include, for every tool
 
 **Context**: Three tools held three lecture sets (#449). `translate init` took the ToC's

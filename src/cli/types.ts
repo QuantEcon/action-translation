@@ -286,6 +286,14 @@ export interface TranslateConfig {
   'target-language': string; // e.g., "zh-cn"
   'docs-folder': string; // e.g., "lectures"
   'tool-version'?: string; // Version of action-translation that last wrote this config
+  /**
+   * Lectures meant to have no state file, such as an English copy in a
+   * partial edition: docs-relative path → why. `doctor --require-state` fails
+   * a lecture without a state file unless it is listed here (#370). A mapping,
+   * so that the reason survives `writeConfig`, which keeps the key but not
+   * YAML comments. Read with `readStateExceptions`, which checks its shape.
+   */
+  'state-exceptions'?: Record<string, string>;
 }
 
 /**

@@ -54088,7 +54088,7 @@ function findTocFrontEnd(files) {
   }
   return found;
 }
-function normalize(file) {
+function normalizeDocsPath(file) {
   const n = path5.posix.normalize(file.replace(/\\/g, "/"));
   if (n === ".." || n.startsWith("../") || n.startsWith("/"))
     return void 0;
@@ -54119,7 +54119,7 @@ function globPattern(glob2) {
 }
 var SOURCE_SUFFIXES = [".md", ".ipynb", ".rst", ".Rmd", ".myst"];
 function resolveTocFile(entry, files) {
-  const value = normalize(entry);
+  const value = normalizeDocsPath(entry);
   if (value === void 0 || value === "")
     return { kind: "missing", entry };
   const suffix = SOURCE_SUFFIXES.find((s) => value.endsWith(s) && value.length > s.length);
@@ -54133,7 +54133,7 @@ function resolveTocFile(entry, files) {
   return { kind: "missing", entry };
 }
 function expandTocGlob(glob2, files) {
-  const value = normalize(glob2);
+  const value = normalizeDocsPath(glob2);
   if (value === void 0)
     return [];
   const re = globPattern(value);
@@ -54193,7 +54193,7 @@ function includesOf(text, fromFile) {
   for (const raw of includeArguments(text)) {
     const arg = raw.replace(/^(["'])(.*)\1$/, "$2");
     const joined = arg.startsWith("/") ? arg.slice(1) : path5.posix.join(dir, arg);
-    const target = normalize(joined);
+    const target = normalizeDocsPath(joined);
     if (target === void 0 || !target.endsWith(".md"))
       continue;
     if (!out.includes(target))

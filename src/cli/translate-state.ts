@@ -193,6 +193,125 @@ export function writeConfig(targetPath: string, config: TranslateConfig): void {
   fs.writeFileSync(configPath, content, 'utf-8');
 }
 
+/** What a YAML value that should have been non-empty text is, for a message. */
+function shapeOf(value: unknown): string {
+  if (value === null || value === '') return 'empty';
+  if (typeof value === 'string') return 'blank';
+  if (Array.isArray(value)) return 'a list';
+  if (typeof value === 'object') return 'a mapping';
+  return `a ${typeof value}`;
+}
+
+/** A plain YAML mapping: not a list, and not a typed object such as a `!!binary` value. */
+function isPlainMapping(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+/**
+ * Why YAML text did not load, in one line. js-yaml refuses a duplicate key,
+ * which `readConfig` reports only as a config with no usable fields, so it is
+ * named here, with its line.
+ */
+function yamlLoadProblem(error: unknown, raw: string): string {
+  if (error instanceof yaml.YAMLException && error.reason === 'duplicated mapping key') {
+    const line = error.mark ? raw.split(/\r?\n/)[error.mark.line] : undefined;
+    return line === undefined
+      ? 'it repeats a key, which YAML does not allow'
+      : `it repeats a key at line ${error.mark.line + 1} (\`${line.trim()}\`), which YAML does not allow`;
+  }
+  const message = error instanceof Error ? error.message.split('\n')[0] : String(error);
+  return `it could not be read as YAML (${message})`;
+}
+
+/**
+ * Why `.translate/config.yml` does not load as YAML, or `undefined` when it
+ * loads or does not exist. Loaded with CORE_SCHEMA, as `writeConfig` loads it.
+ */
+export function configLoadProblem(targetPath: string): string | undefined {
+  const configPath = path.join(targetPath, TRANSLATE_DIR, CONFIG_FILE);
+  if (!fs.existsSync(configPath)) return undefined;
+  const raw = fs.readFileSync(configPath, 'utf-8');
+  try {
+    yaml.load(raw, { schema: yaml.CORE_SCHEMA });
+    return undefined;
+  } catch (error) {
+    return yamlLoadProblem(error, raw);
+  }
+}
+
+/** One entry of `state-exceptions`, as the config writes it. */
+export interface StateExceptionEntry {
+  /** The key, a docs-relative path as written, such as `./intro.md`. */
+  key: string;
+  /** Why the file has no state file. */
+  reason: string;
+}
+
+/** `state-exceptions` as read: the entries whose reason is text, and a message for each problem. */
+export interface StateExceptionsRead {
+  entries: StateExceptionEntry[];
+  problems: string[];
+}
+
+/**
+ * Read `state-exceptions` from `.translate/config.yml`: the lectures meant to
+ * have no state file, such as an English copy in a partial edition, each with
+ * its reason (#370). No config, no key, or a key with nothing under it is no
+ * exceptions. Each key is returned as written: `doctor --require-state` puts
+ * it in the lecture set's spelling and checks the path.
+ *
+ * Loaded with CORE_SCHEMA, as `writeConfig` loads the file, so a bare reason
+ * such as `2026-12-01` is the text it was written as, not a date. Each problem
+ * is named, and the entries without one are still returned: a config that
+ * does not load (a repeated key among them, which YAML refuses), a key that is
+ * not a mapping, and a reason that is not non-empty text.
+ */
+export function readStateExceptions(targetPath: string): StateExceptionsRead {
+  const none: StateExceptionsRead = { entries: [], problems: [] };
+  const shown = `${TRANSLATE_DIR}/${CONFIG_FILE}`;
+  const configPath = path.join(targetPath, TRANSLATE_DIR, CONFIG_FILE);
+  if (!fs.existsSync(configPath)) return none;
+
+  const raw = fs.readFileSync(configPath, 'utf-8');
+  let parsed: unknown;
+  try {
+    parsed = yaml.load(raw, { schema: yaml.CORE_SCHEMA });
+  } catch (error) {
+    const problem = `${shown}: ${yamlLoadProblem(error, raw)}, so state-exceptions could not be read`;
+    return { entries: [], problems: [problem] };
+  }
+  if (parsed === undefined || parsed === null) return none;
+  if (!isPlainMapping(parsed)) {
+    const problem = `${shown} is not a YAML mapping, so state-exceptions could not be read`;
+    return { entries: [], problems: [problem] };
+  }
+
+  const declared = parsed['state-exceptions'];
+  if (declared === undefined || declared === null) return none;
+  if (!isPlainMapping(declared)) {
+    const shape = Array.isArray(declared) ? 'a list' : `a ${typeof declared}`;
+    const problem =
+      `state-exceptions is ${shape}, not a mapping of docs-relative path to reason ` +
+      '(`intro.md: English copy until its review round`)';
+    return { entries: [], problems: [problem] };
+  }
+
+  const entries: StateExceptionEntry[] = [];
+  const problems: string[] = [];
+  for (const [key, reason] of Object.entries(declared)) {
+    if (typeof reason !== 'string' || reason.trim() === '') {
+      problems.push(
+        `\`${key}\`: its reason is ${shapeOf(reason)}; write why it has no state file, as text`
+      );
+      continue;
+    }
+    entries.push({ key, reason });
+  }
+  return { entries, problems };
+}
+
 // ============================================================================
 // PER-FILE STATE
 // ============================================================================
@@ -285,6 +404,53 @@ export function writeFileState(targetPath: string, filename: string, state: File
   const withVersion = { ...state, 'tool-version': getToolVersion() };
   const content = serializeFileState(withVersion);
   fs.writeFileSync(filePath, content, 'utf-8');
+}
+
+/**
+ * Every file under `.translate/state/`, subfolders included, as paths relative
+ * to it with `/` (`intro.md.yml`, `_admonition/gpu.md.yml`), sorted. Anything
+ * else there, such as a `.DS_Store`, is listed too, for the caller to judge.
+ * No state folder is an empty listing.
+ *
+ * Symbolic links are followed, as the lecture set's `fileSystemSource` follows
+ * them, when their target is inside the state folder; a link out of it or to
+ * nothing is left out. No folder is skipped: a file sync would never read is
+ * still a file the caller should hear about.
+ *
+ * `doctor --require-state` compares this listing with the lecture set as
+ * strings (#370), not with `fs.existsSync`: on a case-insensitive filesystem,
+ * such as a macOS clone, `existsSync` finds `Intro.md.yml` for `intro.md`,
+ * and neither a Linux CI runner nor sync's reads through the GitHub API do.
+ */
+export function listStateFiles(targetPath: string): string[] {
+  const root = path.join(targetPath, TRANSLATE_DIR, STATE_DIR);
+  if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) return [];
+  const realRoot = fs.realpathSync(root);
+  const inside = (real: string) => real === realRoot || real.startsWith(realRoot + path.sep);
+  const files: string[] = [];
+  // The folders being walked, by real path: a link back to one of them is a cycle.
+  const ancestors = new Set<string>();
+  const walk = (dir: string, rel: string): void => {
+    const real = fs.realpathSync(dir);
+    if (ancestors.has(real)) return;
+    ancestors.add(real);
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      const childRel = rel ? `${rel}/${entry.name}` : entry.name;
+      let stat: fs.Stats;
+      try {
+        if (entry.isSymbolicLink() && !inside(fs.realpathSync(full))) continue;
+        stat = fs.statSync(full);
+      } catch {
+        continue; // a link to nothing
+      }
+      if (stat.isDirectory()) walk(full, childRel);
+      else if (stat.isFile()) files.push(childRel);
+    }
+    ancestors.delete(real);
+  };
+  walk(root, '');
+  return files.sort();
 }
 
 // ============================================================================

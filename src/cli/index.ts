@@ -525,6 +525,13 @@ program
   .option('-s, --source <path>', 'Path to SOURCE (English) repository (enables cross-repo checks)')
   .option('-d, --docs-folder <folder>', 'Documentation folder (overrides .translate/config.yml)')
   .option('--check-gh', 'Check gh CLI availability and authentication', false)
+  .option(
+    '--require-state',
+    'Fail on a lecture without a state file unless .translate/config.yml declares it under ' +
+      'state-exceptions, a declared one with a state file, a state file without a lecture, ' +
+      'or an unreadable one (for a required CI check)',
+    false
+  )
   .option('--json', 'Output as JSON', false)
   .action(async (opts) => {
     const doctorOptions: DoctorOptions = {
@@ -533,6 +540,7 @@ program
       docsFolder: opts.docsFolder,
       checkGh: opts.checkGh,
       json: opts.json,
+      requireState: opts.requireState,
     };
 
     try {
