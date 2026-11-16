@@ -180,25 +180,34 @@ export function applyExcludes(files: string[], excludes: string[]): string[] {
  * file (#449, ruling 4). Sync no longer updates them, so `status` names them,
  * or they would go stale with no tool saying so. A `.md` without a state
  * file, such as a `README.md`, is not a lecture and is left out (ruling 3). A
- * state file counts by existence, a corrupt one too.
+ * state file counts by existence, a corrupt one too, and its fault is kept:
+ * no other check reads a state file outside the set, so this is where it
+ * shows.
  */
 export function findUnlistedLectures(
   targetRepoPath: string,
   edition: RepoLectures,
   listed: ReadonlySet<string>
-): string[] {
-  return edition.markdownFiles.filter(
-    (file) => !listed.has(file) && inspectFileState(targetRepoPath, file).status !== 'missing'
-  );
+): Map<string, string | undefined> {
+  const unlisted = new Map<string, string | undefined>();
+  for (const file of edition.markdownFiles) {
+    if (listed.has(file)) continue;
+    const state = inspectFileState(targetRepoPath, file);
+    if (state.status === 'missing') continue;
+    unlisted.set(file, state.status === 'invalid' ? state.reason : undefined);
+  }
+  return unlisted;
 }
 
 /** The entry for an un-listed lecture: reported, never compared or written. */
-function unlistedEntry(file: string): FileStatusEntry {
+function unlistedEntry(file: string, stateFault?: string): FileStatusEntry {
   return {
     file,
     status: 'UNLISTED',
     flags: ['UNLISTED'],
-    details: 'not in the lecture set: kept with its state file, so sync no longer updates it',
+    details:
+      'not in the lecture set: kept with its state file, so sync no longer updates it' +
+      (stateFault ? `; its state file is unreadable: ${stateFault}` : ''),
   };
 }
 
@@ -465,7 +474,7 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
   const stateAware = fs.existsSync(path.join(target, '.translate', 'state'));
 
   let allFiles: string[];
-  let unlisted: ReadonlySet<string> = new Set();
+  let unlisted: ReadonlyMap<string, string | undefined> = new Map();
 
   if (file) {
     // Single-file mode — skip discovery
@@ -475,17 +484,17 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
     // (#449). Without a ToC on either side this throws, naming it.
     const lectures = await readBulkLectures(source, target, docsFolder);
     const listed = resolveFilePairs(lectures.source.lectures, lectures.target.lectures);
-    unlisted = new Set(findUnlistedLectures(target, lectures.target, new Set(listed)));
+    unlisted = findUnlistedLectures(target, lectures.target, new Set(listed));
 
     // Apply exclusions
-    allFiles = applyExcludes(resolveFilePairs(listed, [...unlisted]), exclude);
+    allFiles = applyExcludes(resolveFilePairs(listed, [...unlisted.keys()]), exclude);
   }
 
   // Check each file
   const entries: FileStatusEntry[] = [];
   for (const f of allFiles) {
     const entry = unlisted.has(f)
-      ? unlistedEntry(f)
+      ? unlistedEntry(f, unlisted.get(f))
       : await checkFileStatus(f, source, target, docsFolder, stateAware);
     entries.push(entry);
   }

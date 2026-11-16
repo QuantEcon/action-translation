@@ -708,7 +708,12 @@ describe('runStatus on the lecture set (#449)', () => {
 
       const result = await status();
 
-      expect(result.entries.find((e) => e.file === 'drafts/kept.md')?.status).toBe('UNLISTED');
+      const kept = result.entries.find((e) => e.file === 'drafts/kept.md');
+      expect(kept?.status).toBe('UNLISTED');
+      // No other check reads a state file outside the set, so its fault shows here.
+      expect(kept?.details).toMatch(
+        /^not in the lecture set: kept with its state file, so sync no longer updates it; its state file is unreadable: it could not be read as YAML/
+      );
     });
 
     it('shows it in the table and in --json', async () => {

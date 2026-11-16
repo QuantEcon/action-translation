@@ -443,7 +443,7 @@ npx translate init \
   --dry-run
 ```
 
-`-f` names a lecture in the source's lecture set: a document `_toc.yml` lists, or a file one of them includes, such as `-f _admonition/gpu.md`. It takes the lecture named exactly, or else the first in the set's order whose path contains the name. A file outside the set is refused, by name, before any translation. Preview with `--dry-run` first: it prints the `Translating single file:` line with the lecture it matched, and stops before translating or writing anything. Then run the same command without `--dry-run`. Each lecture then joins the edition in its own PR, with its state file (see [Tutorial: Fresh Setup](tutorials/fresh-setup.md#one-reviewed-lecture-at-a-time)).
+`-f` names a lecture in the source's lecture set: a document `_toc.yml` lists, or a file one of them includes, such as `-f _admonition/gpu.md`. It takes the lecture at that path in the docs folder; else the one with that file name, in any folder (`-f gpu.md`); else the one whose path contains the name. A name that matches more than one lecture at the first of those steps that matches any is refused, naming them, so name it by its path (`-f a/topic.md`). A file outside the set is refused, by name, before any translation. Preview with `--dry-run` first: it prints the `Translating single file:` line with the lecture it matched, and stops before translating or writing anything. Then run the same command without `--dry-run`. Each lecture then joins the edition in its own PR, with its state file (see [Tutorial: Fresh Setup](tutorials/fresh-setup.md#one-reviewed-lecture-at-a-time)).
 
 **Into an existing edition**, with or without `-f`, `init` leaves the edition's own files alone:
 

@@ -109,6 +109,8 @@ describe('CLI smoke tests', () => {
         'SOURCE: the docs folder /nonexistent/path/lectures does not exist\n' +
           "A bulk run takes its lectures from the docs folder's _toc.yml"
       );
+      // The operator's to fix, not a crash: no stack under the message.
+      expect(stderr).not.toContain('at readRepoLectures');
     });
 
     // The carried-change guard is unit-tested in status.test.ts; this pins the

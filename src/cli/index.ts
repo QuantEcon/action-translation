@@ -45,6 +45,7 @@ import { BackwardOptions, ForwardOptions } from './types.js';
 import { DEFAULT_RULES, parseLocalizationRules } from '../localization-rules.js';
 import { checkGhAvailable } from './issue-creator.js';
 import { readConfig } from './translate-state.js';
+import { LectureSetError } from '../lecture-set.js';
 
 // Read version from package.json — use createRequire since JSON imports
 // need import assertions which aren't stable in all Node versions.
@@ -75,11 +76,13 @@ program
 /**
  * Terminal failure: print the message, then the stack the catch sites used to
  * discard (#160/F29 — without it a crash in a bulk run reads as one message
- * with no pointer into the code), and exit non-zero.
+ * with no pointer into the code), and exit non-zero. A lecture set the reader
+ * refuses (no `_toc.yml`, #449) is the operator's to fix, not a crash: its
+ * message says what to do, and a stack would only bury it.
  */
 function fail(error: unknown): never {
   console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
-  if (error instanceof Error && error.stack) {
+  if (error instanceof Error && error.stack && !(error instanceof LectureSetError)) {
     console.error(chalk.dim(error.stack));
   }
   process.exit(1);

@@ -127,21 +127,55 @@ export function describeUntranslatedEntries(set: LectureSet): string[] {
   return lines;
 }
 
+/** A ToC entry or a file without its source suffix, as the ToC names it. */
+const tocStem = (file: string) => file.replace(/\.(md|ipynb|rst|Rmd|myst)$/, '');
+
 /**
  * Why `init -f <file>` refuses a file: it is not in the source's lecture set,
  * neither a document the ToC lists nor a file one of them includes (#449).
- * When the ToC does list the name but no `.md` is behind it, it says so: that
- * is a lecture not written yet, not a mistyped name.
+ * When the ToC does list the name, it says what is behind the entry instead:
+ * no file, which is a lecture not written yet rather than a mistyped name, or
+ * a file that is not Markdown, which the run copies and does not translate.
  */
 function notInLectureSet(file: string, set: LectureSet, lectures: string[]): string {
-  const stem = file.replace(/\.md$/, '');
-  const listed = set.missingEntries.find((entry) => entry.replace(/\.md$/, '') === stem);
+  const stem = tocStem(file);
+  const missing = set.missingEntries.find((entry) => tocStem(entry) === stem);
+  const other = set.otherDocuments.find((doc) => tocStem(doc) === stem);
+  const why = missing
+    ? `${set.toc} lists ${missing}, but the docs folder has no ${stem}.md.`
+    : other
+      ? `${set.toc} lists ${stem}, backed by ${other}, which is not Markdown: a run copies it ` +
+        'with the other non-Markdown files and does not translate it.'
+      : `${set.toc} does not list it, and no lecture it lists includes it.`;
   return (
-    `${file} is not in the source's lecture set: ${set.toc} does not list it, and no lecture ` +
-    `it lists includes it.\n` +
-    (listed ? `${set.toc} lists ${listed}, but the docs folder has no ${stem}.md.\n` : '') +
+    `${file} is not in the source's lecture set: ${why}\n` +
     `Available lectures: ${lectures.slice(0, 5).join(', ')}${lectures.length > 5 ? ', ...' : ''}`
   );
+}
+
+/**
+ * The lecture `init -f <file>` names (#449): the one at that path; else the
+ * one with that file name, in any folder; else the one whose path contains
+ * the name. A name that matches more than one lecture at the first step that
+ * matches any is refused, naming them, rather than translating the first:
+ * `-f topic` must not pick `a/topic.md` over `b/topic.md` unseen.
+ */
+export function findInitLecture(file: string, set: LectureSet, lectures: string[]): string {
+  const target = file.endsWith('.md') ? file : `${file}.md`;
+  const steps = [
+    lectures.filter((l) => l === target),
+    lectures.filter((l) => path.posix.basename(l) === target),
+    lectures.filter((l) => l.includes(file)),
+  ];
+  const matches = steps.find((found) => found.length > 0);
+  if (!matches) throw new Error(notInLectureSet(file, set, lectures));
+  if (matches.length > 1) {
+    throw new Error(
+      `${file} names ${matches.length} lectures: ${matches.join(', ')}. Name one by its path ` +
+        'in the docs folder.'
+    );
+  }
+  return matches[0];
 }
 
 // ============================================================================
@@ -708,18 +742,12 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
 
   // Filter to single file if specified
   if (options.file) {
-    const target = options.file.endsWith('.md') ? options.file : `${options.file}.md`;
-    // An exact match wins over an earlier entry that merely contains the name:
-    // `-f intro.md` must not translate a `jax_intro.md` listed before it.
-    const found =
-      lectures.find((l) => l === target) ?? lectures.find((l) => l.includes(options.file!));
-    if (found) {
-      lectures = [found];
-      stats.totalLectures = 1;
-      console.log(chalk.bold(`Translating single file: ${found}\n`));
-    } else {
-      throw new Error(notInLectureSet(options.file, set, lectures));
-    }
+    // An exact match wins over an entry that merely contains the name: `-f
+    // intro.md` must not translate a `jax_intro.md` listed before it.
+    const found = findInitLecture(options.file, set, lectures);
+    lectures = [found];
+    stats.totalLectures = 1;
+    console.log(chalk.bold(`Translating single file: ${found}\n`));
   } else {
     const included = set.fragments.length;
     console.log(

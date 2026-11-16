@@ -16,6 +16,7 @@ import {
   copyNonMarkdownFiles,
   describeUntranslatedEntries,
   filterSkipExisting,
+  findInitLecture,
   planNonMarkdownCopy,
   writeStateCommand,
 } from '../commands/init.js';
@@ -73,6 +74,68 @@ describe('describeUntranslatedEntries', () => {
     expect(describeUntranslatedEntries(set({ missingEntries: ['index', 'about'] }))).toEqual([
       '⚠ Not translated: 2 _toc.yml entries with no .md file behind them: index, about',
     ]);
+  });
+});
+
+// ============================================================================
+// findInitLecture (#449)
+// ============================================================================
+
+describe('findInitLecture', () => {
+  const set = (overrides: Partial<LectureSet>): LectureSet => ({
+    toc: '_toc.yml',
+    documents: [],
+    otherDocuments: [],
+    missingEntries: [],
+    fragments: [],
+    missingIncludes: [],
+    has: () => false,
+    ...overrides,
+  });
+  const lectures = ['jax_intro.md', 'intro.md', 'a/topic.md', 'b/topic.md', '_admonition/gpu.md'];
+  const find = (file: string, overrides: Partial<LectureSet> = {}) =>
+    findInitLecture(file, set(overrides), lectures);
+
+  it('takes the lecture at the path, before one whose path contains the name', () => {
+    expect(find('intro.md')).toBe('intro.md');
+    expect(find('intro')).toBe('intro.md');
+    expect(find('a/topic')).toBe('a/topic.md');
+  });
+
+  it('takes a lecture by its file name, in any folder', () => {
+    expect(find('gpu.md')).toBe('_admonition/gpu.md');
+  });
+
+  it('takes the one lecture whose path contains the name', () => {
+    expect(find('jax')).toBe('jax_intro.md');
+  });
+
+  it('refuses a name that matches more than one lecture, naming them', () => {
+    expect(() => find('topic')).toThrow(
+      'topic names 2 lectures: a/topic.md, b/topic.md. Name one by its path in the docs folder.'
+    );
+    expect(() => find('o')).toThrow(/^o names 5 lectures: /);
+  });
+
+  it('refuses a file outside the set', () => {
+    expect(() => find('draft.md')).toThrow(
+      "draft.md is not in the source's lecture set: _toc.yml does not list it, and no " +
+        'lecture it lists includes it.'
+    );
+  });
+
+  it('says what is behind a ToC entry that is not a lecture', () => {
+    expect(() => find('index', { missingEntries: ['index'] })).toThrow(
+      "index is not in the source's lecture set: _toc.yml lists index, but the docs folder " +
+        'has no index.md.'
+    );
+    for (const name of ['nb', 'nb.ipynb']) {
+      expect(() => find(name, { otherDocuments: ['nb.ipynb'] })).toThrow(
+        `${name} is not in the source's lecture set: _toc.yml lists nb, backed by nb.ipynb, ` +
+          'which is not Markdown: a run copies it with the other non-Markdown files and does ' +
+          'not translate it.'
+      );
+    }
   });
 });
 
