@@ -51,6 +51,9 @@ jest.mock('../file-processor', () => ({
     processSectionBased: jest.fn().mockImplementation(async (_old: string, newContent: string) => {
       return `[UPDATED] ${newContent}`;
     }),
+    processWholeFile: jest.fn().mockImplementation(async (newContent: string) => {
+      return `${newContent}\n[WHOLE]\n`;
+    }),
   })),
 }));
 
@@ -657,6 +660,77 @@ describe('SyncOrchestrator', () => {
       expect(result.processedFiles).toHaveLength(0);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toContain('No content provided');
+    });
+  });
+
+  describe('processFiles - a file with no title (#449)', () => {
+    const fragment = '```{admonition} GPU\n:class: warning\n\nThis lecture uses a GPU.\n```\n';
+    const translated = '```{admonition} GPU\n:class: warning\n\n本讲座使用 GPU。\n```\n';
+
+    it('updates an existing fragment whole, where it used to fail the file', async () => {
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/_admonition/gpu.md',
+          type: 'markdown',
+          newContent: fragment,
+          oldContent: fragment.replace('uses a GPU', 'was built with a GPU'),
+          targetContent: translated,
+          existingFileSha: 'gpu-sha',
+          isNewFile: false,
+        },
+      ];
+
+      const result = await orchestrator.processFiles(files);
+
+      expect(result.errors).toHaveLength(0);
+      expect(result.processedFiles).toEqual(['lectures/_admonition/gpu.md']);
+      expect(result.translatedFiles[0].content).toContain('[WHOLE]');
+      expect(result.translatedFiles[0].sha).toBe('gpu-sha');
+      expect(
+        logger.messages.some((m) => m.msg.includes('has no # title, so it is updated whole'))
+      ).toBe(true);
+    });
+
+    it('still updates a file with a title section by section', async () => {
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/intro.md',
+          type: 'markdown',
+          newContent: '# Introduction\n\nUpdated',
+          oldContent: '# Introduction\n\nOld',
+          targetContent: '# 介绍\n\n旧',
+          isNewFile: false,
+        },
+      ];
+
+      const result = await orchestrator.processFiles(files);
+
+      expect(result.translatedFiles[0].content).toContain('[UPDATED]');
+      expect(result.translatedFiles[0].content).not.toContain('[WHOLE]');
+    });
+
+    it('updates a renamed fragment whole, and deletes its old path', async () => {
+      const files: FileToSync[] = [
+        {
+          filename: 'lectures/_admonition/gpu-note.md',
+          type: 'renamed',
+          newContent: fragment,
+          oldContent: fragment,
+          targetContent: translated,
+          previousFilename: 'lectures/_admonition/gpu.md',
+          oldFileSha: 'old-gpu-sha',
+          isNewFile: false,
+        },
+      ];
+
+      const result = await orchestrator.processFiles(files);
+
+      expect(result.errors).toHaveLength(0);
+      expect(result.translatedFiles[0].path).toBe('lectures/_admonition/gpu-note.md');
+      expect(result.translatedFiles[0].content).toContain('[WHOLE]');
+      expect(result.filesToDelete).toEqual([
+        { path: 'lectures/_admonition/gpu.md', sha: 'old-gpu-sha' },
+      ]);
     });
   });
 

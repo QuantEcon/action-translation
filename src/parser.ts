@@ -11,6 +11,17 @@
 
 import { Section, ParsedSections, DocumentComponents } from './types.js';
 
+/**
+ * A document with no `# title` heading, such as an included fragment
+ * (`_admonition/gpu.md`), cannot be split into title, intro and sections.
+ */
+export class MissingTitleError extends Error {
+  constructor() {
+    super('Document must have a # title heading');
+    this.name = 'MissingTitleError';
+  }
+}
+
 export class MystParser {
   /**
    * Parse markdown content into sections based on ## headings
@@ -221,6 +232,20 @@ export class MystParser {
   }
 
   /**
+   * Whether a document has a `# title` heading, by the rule
+   * `parseDocumentComponents` splits on.
+   */
+  async hasTitle(content: string, filepath: string): Promise<boolean> {
+    try {
+      await this.parseDocumentComponents(content, filepath);
+      return true;
+    } catch (error) {
+      if (error instanceof MissingTitleError) return false;
+      throw error;
+    }
+  }
+
+  /**
    * Parse document into explicit components: CONFIG + TITLE + INTRO + SECTIONS
    *
    * This provides a more structured view of the document that ensures
@@ -290,7 +315,7 @@ export class MystParser {
     const preTitle = preTitleLines.join('\n').trim();
 
     if (!title) {
-      throw new Error('Document must have a # title heading');
+      throw new MissingTitleError();
     }
 
     // 3. Extract INTRO (content after title, before first ## section)

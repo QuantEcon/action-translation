@@ -2,7 +2,7 @@
  * Tests for parseDocumentComponents method
  */
 
-import { MystParser } from '../parser.js';
+import { MissingTitleError, MystParser } from '../parser.js';
 
 describe('MystParser.parseDocumentComponents', () => {
   let parser: MystParser;
@@ -123,6 +123,20 @@ This is invalid.`;
 
     await expect(parser.parseDocumentComponents(content, 'test.md')).rejects.toThrow(
       'Document must have a # title heading'
+    );
+  });
+
+  it('throws a MissingTitleError, which hasTitle reads as false (#449)', async () => {
+    // `_admonition/gpu.md`: one admonition, no title, included by lectures.
+    const fragment = '```{admonition} GPU\n:class: warning\n\nBuilt with a GPU.\n```\n';
+    await expect(parser.parseDocumentComponents(fragment, 'gpu.md')).rejects.toBeInstanceOf(
+      MissingTitleError
+    );
+    expect(await parser.hasTitle(fragment, '_admonition/gpu.md')).toBe(false);
+    expect(await parser.hasTitle('```\n# not a title\n```\n', 'a.md')).toBe(false);
+    expect(await parser.hasTitle('# Title\n\nText.\n', 'a.md')).toBe(true);
+    expect(await parser.hasTitle('---\njupytext: {}\n---\n\n(label)=\n# Title\n', 'a.md')).toBe(
+      true
     );
   });
 

@@ -49274,6 +49274,12 @@ ${pairs2}
 };
 
 // dist/parser.js
+var MissingTitleError = class extends Error {
+  constructor() {
+    super("Document must have a # title heading");
+    this.name = "MissingTitleError";
+  }
+};
 var MystParser = class _MystParser {
   /**
    * Parse markdown content into sections based on ## headings
@@ -49424,6 +49430,20 @@ var MystParser = class _MystParser {
     return sections[index];
   }
   /**
+   * Whether a document has a `# title` heading, by the rule
+   * `parseDocumentComponents` splits on.
+   */
+  async hasTitle(content, filepath) {
+    try {
+      await this.parseDocumentComponents(content, filepath);
+      return true;
+    } catch (error4) {
+      if (error4 instanceof MissingTitleError)
+        return false;
+      throw error4;
+    }
+  }
+  /**
    * Parse document into explicit components: CONFIG + TITLE + INTRO + SECTIONS
    *
    * This provides a more structured view of the document that ensures
@@ -49472,7 +49492,7 @@ var MystParser = class _MystParser {
     }
     const preTitle = preTitleLines.join("\n").trim();
     if (!title) {
-      throw new Error("Document must have a # title heading");
+      throw new MissingTitleError();
     }
     let intro = "";
     const introEndIndex = parsed.sections.length > 0 ? parsed.sections[0].startLine - 1 : lines.length;
@@ -53463,6 +53483,28 @@ ${bodyLines.join("\n")}`;
     return joined.replace(/(\([a-zA-Z0-9_.:-]+\)=)\n\n(#+\s)/g, "$1\n$2");
   }
   /**
+   * Update a translation whole, from the current source and the existing
+   * translation (the RESYNC prompt `translate forward` uses). For a document
+   * the section-based update cannot split because it has no `# title`, such
+   * as an included fragment (`_admonition/gpu.md`). No heading map is built:
+   * it is keyed by the title and its sections, and a fragment gets no front
+   * matter, which an `{include}` would render as text.
+   */
+  async processWholeFile(newContent, targetContent, filepath, sourceLanguage, targetLanguage, glossary) {
+    this.log(`Processing whole file (no title): ${filepath}`);
+    const result = await this.translator.translateDocumentResync({
+      sourceLanguage,
+      targetLanguage,
+      glossary,
+      sourceContent: newContent,
+      targetContent
+    });
+    if (!result.success) {
+      throw new Error(`Whole-file update failed: ${result.error}`);
+    }
+    return applyTypography(result.translatedSection || "", targetLanguage);
+  }
+  /**
    * Process a full document (for new files)
    */
   async processFull(content, filepath, sourceLanguage, targetLanguage, glossary) {
@@ -54335,17 +54377,7 @@ var SyncOrchestrator = class {
     if (file.isNewFile) {
       translatedContent = await this.processor.processFull(file.newContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary);
     } else {
-      const skipped = [];
-      const dropped = [];
-      translatedContent = await this.processor.processSectionBased(file.oldContent || "", file.newContent, file.targetContent || "", file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary, (heading) => skipped.push(heading), fileRebaseCache, (heading) => dropped.push(heading));
-      if (skipped.length > 0) {
-        result.skippedSections.set(file.filename, skipped);
-        this.logger.warning(`${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target \u2014 pending earlier translation PR`);
-      }
-      if (dropped.length > 0) {
-        result.droppedTargetSections.set(file.filename, dropped);
-        this.logger.warning(`${file.filename}: removed ${dropped.length} target-only section(s) with no source counterpart \u2014 correct if upstream deleted them; destructive if human-added (see PR body)`);
-      }
+      translatedContent = await this.updateTranslation(file, file.targetContent || "", glossary, result, fileRebaseCache);
     }
     translatedContent = this.restoreVerbatimDirectives(file, translatedContent);
     const parity = checkWrittenDocument(file.newContent, translatedContent);
@@ -54362,6 +54394,35 @@ var SyncOrchestrator = class {
     await this.maybeGenerateStateFile(file.filename, file.newContent, file.sourceCommitSha, file.isNewFile ? "NEW" : "UPDATE", result);
   }
   /**
+   * Update an existing translation. A document with a `# title` is updated
+   * section by section, which keeps every unchanged section's translation as
+   * it is. One without, such as an included fragment (`_admonition/gpu.md`),
+   * cannot be split into sections, and the section-based update used to fail
+   * it with "Document must have a # title heading", in every edition holding
+   * the file. It is updated whole instead, from the current source and the
+   * existing translation: an update of a file the edition has, not a first
+   * translation (#449).
+   */
+  async updateTranslation(file, targetContent, glossary, result, fileRebaseCache) {
+    const newContent = file.newContent || "";
+    if (!await this.parser.hasTitle(newContent, file.filename)) {
+      this.logger.info(`${file.filename} has no # title, so it is updated whole rather than section by section`);
+      return this.processor.processWholeFile(newContent, targetContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary);
+    }
+    const skipped = [];
+    const dropped = [];
+    const translatedContent = await this.processor.processSectionBased(file.oldContent || "", newContent, targetContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary, (heading) => skipped.push(heading), fileRebaseCache, (heading) => dropped.push(heading));
+    if (skipped.length > 0) {
+      result.skippedSections.set(file.filename, skipped);
+      this.logger.warning(`${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target \u2014 pending earlier translation PR`);
+    }
+    if (dropped.length > 0) {
+      result.droppedTargetSections.set(file.filename, dropped);
+      this.logger.warning(`${file.filename}: removed ${dropped.length} target-only section(s) with no source counterpart \u2014 correct if upstream deleted them; destructive if human-added (see PR body)`);
+    }
+    return translatedContent;
+  }
+  /**
    * Process a renamed markdown file.
    * Preserves existing translation at new path, deletes old path.
    */
@@ -54375,17 +54436,7 @@ var SyncOrchestrator = class {
     }
     let translatedContent;
     if (file.targetContent) {
-      const skipped = [];
-      const dropped = [];
-      translatedContent = await this.processor.processSectionBased(file.oldContent || "", file.newContent, file.targetContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary, (heading) => skipped.push(heading), fileRebaseCache, (heading) => dropped.push(heading));
-      if (skipped.length > 0) {
-        result.skippedSections.set(file.filename, skipped);
-        this.logger.warning(`${file.filename}: skipped ${skipped.length} section(s) unchanged in source but missing from target \u2014 pending earlier translation PR`);
-      }
-      if (dropped.length > 0) {
-        result.droppedTargetSections.set(file.filename, dropped);
-        this.logger.warning(`${file.filename}: removed ${dropped.length} target-only section(s) with no source counterpart \u2014 correct if upstream deleted them; destructive if human-added (see PR body)`);
-      }
+      translatedContent = await this.updateTranslation(file, file.targetContent, glossary, result, fileRebaseCache);
     } else {
       translatedContent = await this.processor.processFull(file.newContent, file.filename, this.config.sourceLanguage, this.config.targetLanguage, glossary);
     }

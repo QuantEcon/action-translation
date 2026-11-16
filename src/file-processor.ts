@@ -696,6 +696,42 @@ export class FileProcessor {
   }
 
   /**
+   * Update a translation whole, from the current source and the existing
+   * translation (the RESYNC prompt `translate forward` uses). For a document
+   * the section-based update cannot split because it has no `# title`, such
+   * as an included fragment (`_admonition/gpu.md`). No heading map is built:
+   * it is keyed by the title and its sections, and a fragment gets no front
+   * matter, which an `{include}` would render as text.
+   */
+  async processWholeFile(
+    newContent: string,
+    targetContent: string,
+    filepath: string,
+    sourceLanguage: string,
+    targetLanguage: string,
+    glossary?: Glossary
+  ): Promise<string> {
+    this.log(`Processing whole file (no title): ${filepath}`);
+
+    const result = await this.translator.translateDocumentResync({
+      sourceLanguage,
+      targetLanguage,
+      glossary,
+      sourceContent: newContent,
+      targetContent,
+    });
+
+    if (!result.success) {
+      throw new Error(`Whole-file update failed: ${result.error}`);
+    }
+
+    // No head region to restore: `restoreHead` keys on the title. The write
+    // check every sync path runs after this (`checkWrittenDocument`, #288)
+    // still fails a file whose front matter the model dropped or changed.
+    return applyTypography(result.translatedSection || '', targetLanguage);
+  }
+
+  /**
    * Process a full document (for new files)
    */
   async processFull(
