@@ -340,6 +340,14 @@ Roadmap detail lives in the project trackers (reading order in
 
 **Resume here (2026-11-16, after v0.32.0):**
 
+*Release, 2026-11-16*: **v0.33.0's release PR** carries #460, `translate doctor --require-state`
+(closed #370), CLI only, so no sync run changes. It is step 2 of the rollout that makes the check a
+required CI check in the five editions that sync, which meets `sync-scope`'s retirement condition
+3 (`D-2026-10-19-sync-scope-existing-reads-state-files`); Matt ruled that it ships when the rollout
+starts. Step 1, three edition PRs adding `_admonition/gpu.md`'s state file, is with a laptop
+session; step 3, a workflow per edition, pins this release. The tag, §4a, §4b, `v0`, the `@v0`
+smoke and the GitHub release each wait on his go. Conditions 1 and 2 (#259, #142) stay open.
+
 *Released, 2026-11-16*: **v0.32.0 is released** (#458, `d73f874`), and `v0` points at it;
 `v0.30` stays on `fdab41f`, and no `v0.32` was made. The payload is #449's build: #455 (sync
 updates a file with no title, such as `_admonition/gpu.md`, whole), #456 (the CLI on the lecture
@@ -348,9 +356,8 @@ Every production sync now takes the source's lecture set; on all three sources i
 `.md` under `lectures/`, so nothing that synced before drops out. §4a read 84 of 84, and
 zh-cn's one WARN was #375's, as at v0.31.0; §4b read 0 of 36; the `@v0` smoke passed on all three lanes. The
 same day lecture-python-programming.fa#181 translated fa's English `gpu.md`, with its state file.
-Log `2026-11-16-v0320-release`. Next: P4, `doctor --require-state` (#370), the state check whose
-rollout in every edition, with the backfills its record lists, retires `sync-scope`; the
-rollout is edition work, on Matt's go. Then the action family's standard (SECURITY.md,
+Log `2026-11-16-v0320-release`. Then #460 merged (above). Next after the rollout: the action
+family's standard (SECURITY.md,
 Dependabot, CODEOWNERS, topics, a `uses: ./` CI job, `deploy-docs.yml` on Node 24), to plan
 with Matt.
 
