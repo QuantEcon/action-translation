@@ -2,8 +2,10 @@
  * Init Command — Bulk-translate a new project
  *
  * One-time bulk translation of an entire lecture series from a local source repo.
- * Reads _toc.yml for lecture discovery, translates each lecture sequentially,
- * generates heading-maps, and produces a translation report.
+ * Takes its lectures from the source's lecture set (#449): the documents
+ * _toc.yml lists, then the .md files they include, such as
+ * `_admonition/gpu.md`. Translates each lecture sequentially, generates
+ * heading-maps, and produces a translation report.
  *
  * Adapted from tool-bulk-translator with local-path approach (no Octokit).
  *
@@ -41,6 +43,8 @@ import {
 } from '../translate-state.js';
 import { getFileGitMetadata } from '../git-metadata.js';
 import { loadGlossary } from '../glossary-loader.js';
+import { LectureSet } from '../../lecture-set.js';
+import { readRepoLectures } from '../lecture-discovery.js';
 import {
   INIT_REPORT_SCHEMA,
   InitRunReport,
@@ -87,69 +91,92 @@ interface TranslationStats {
   failures: Array<{ file: string; error: string }>;
 }
 
-interface TocEntry {
-  file?: string;
-  sections?: TocEntry[];
-  caption?: string;
-  chapters?: TocEntry[];
+// ============================================================================
+// THE LECTURE SET
+// ============================================================================
+
+/** `n` and the noun for it, singular or plural. */
+function count(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`;
 }
 
-// ============================================================================
-// TOC PARSER
-// ============================================================================
-
 /**
- * Parse _toc.yml from the source repo to get ordered list of lecture files.
+ * The lines a bulk run prints about the ToC entries it does not translate
+ * (#449): an entry with no `.md` behind it, such as a `root: index` the
+ * folder has no `index.md` for, and an entry backed by a file that is not
+ * Markdown, such as a notebook, which the run copies as it is with the other
+ * non-Markdown files. Empty when the ToC has neither.
  */
-export function parseTocLectures(sourceRepoPath: string, docsFolder: string): string[] {
-  const tocPath = path.join(sourceRepoPath, docsFolder, '_toc.yml');
-  if (!fs.existsSync(tocPath)) {
-    throw new Error(`_toc.yml not found at ${tocPath}`);
-  }
-
-  const tocContent = fs.readFileSync(tocPath, 'utf-8');
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- yaml.load is untyped; fields are runtime-checked
-  let toc: any;
-  try {
-    toc = yaml.load(tocContent);
-  } catch (e) {
-    throw new Error(
-      `Malformed _toc.yml at ${tocPath}: ${e instanceof Error ? e.message : String(e)}`
+export function describeUntranslatedEntries(set: LectureSet): string[] {
+  const lines: string[] = [];
+  const entries = (n: number) => count(n, `${set.toc} entry`, `${set.toc} entries`);
+  const missing = set.missingEntries;
+  if (missing.length > 0) {
+    lines.push(
+      `⚠ Not translated: ${entries(missing.length)} with no .md file behind ` +
+        `${missing.length === 1 ? 'it' : 'them'}: ${missing.join(', ')}`
     );
   }
-
-  if (!toc || typeof toc !== 'object') {
-    throw new Error(`_toc.yml at ${tocPath} is empty or not a valid YAML mapping`);
+  const other = set.otherDocuments;
+  if (other.length > 0) {
+    lines.push(
+      `ℹ Not translated: ${entries(other.length)} backed by a file that is not Markdown, ` +
+        `copied with the other non-Markdown files: ${other.join(', ')}`
+    );
   }
+  return lines;
+}
 
-  const lectures: string[] = [];
+/** A ToC entry or a file without its source suffix, as the ToC names it. */
+const tocStem = (file: string) => file.replace(/\.(md|ipynb|rst|Rmd|myst)$/, '');
 
-  const extractFiles = (entries: TocEntry[] | undefined) => {
-    if (!entries) return;
-    for (const entry of entries) {
-      if (entry.file) {
-        lectures.push(entry.file.endsWith('.md') ? entry.file : `${entry.file}.md`);
-      }
-      if (entry.sections) extractFiles(entry.sections);
-      if (entry.chapters) extractFiles(entry.chapters);
-    }
-  };
+/**
+ * Why `init -f <file>` refuses a file: it is not in the source's lecture set,
+ * neither a document the ToC lists nor a file one of them includes (#449).
+ * When the ToC does list the name, it says what is behind the entry instead:
+ * no file, which is a lecture not written yet rather than a mistyped name, or
+ * a file that is not Markdown, which the run copies and does not translate.
+ */
+function notInLectureSet(file: string, set: LectureSet, lectures: string[]): string {
+  const stem = tocStem(file);
+  const missing = set.missingEntries.find((entry) => tocStem(entry) === stem);
+  const other = set.otherDocuments.find((doc) => tocStem(doc) === stem);
+  const why = missing
+    ? `${set.toc} lists ${missing}, but the docs folder has no ${stem}.md.`
+    : other
+      ? `${set.toc} lists ${stem}, backed by ${other}, which is not Markdown: a run copies it ` +
+        'with the other non-Markdown files and does not translate it.'
+      : `${set.toc} does not list it, and no lecture it lists includes it.`;
+  return (
+    `${file} is not in the source's lecture set: ${why}\n` +
+    `Available lectures: ${lectures.slice(0, 5).join(', ')}${lectures.length > 5 ? ', ...' : ''}`
+  );
+}
 
-  // TOC can have 'chapters' or 'parts' at root level
-  if (toc.chapters) {
-    extractFiles(toc.chapters);
+/**
+ * The lecture `init -f <file>` names (#449): the one at that path; else the
+ * one with that file name, in any folder; else the one whose path contains
+ * the name. A name that matches more than one lecture at the first step that
+ * matches any is refused, naming them, rather than translating the first:
+ * `-f topic` must not pick `a/topic.md` over `b/topic.md` unseen.
+ */
+export function findInitLecture(file: string, set: LectureSet, lectures: string[]): string {
+  // `-f intro`, `-f intro.md` and `-f intro.ipynb` all name `intro.md`.
+  const target = `${tocStem(file)}.md`;
+  const steps = [
+    lectures.filter((l) => l === target),
+    lectures.filter((l) => path.posix.basename(l) === target),
+    lectures.filter((l) => l.includes(file)),
+  ];
+  const matches = steps.find((found) => found.length > 0);
+  if (!matches) throw new Error(notInLectureSet(file, set, lectures));
+  if (matches.length > 1) {
+    throw new Error(
+      `${file} names ${matches.length} lectures: ${matches.join(', ')}. Name one by its path ` +
+        'in the docs folder.'
+    );
   }
-  if (toc.parts) {
-    for (const part of toc.parts) {
-      if (part.chapters) extractFiles(part.chapters);
-    }
-  }
-  // Also check for root-level file (intro page)
-  if (toc.root) {
-    lectures.unshift(toc.root.endsWith('.md') ? toc.root : `${toc.root}.md`);
-  }
-
-  return lectures;
+  return matches[0];
 }
 
 // ============================================================================
@@ -698,8 +725,11 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   );
   const termCount = glossary?.terms?.length ?? 0;
 
-  // Phase 2: Parse TOC for lecture list
-  let lectures = parseTocLectures(options.source, options.docsFolder);
+  // Phase 2: The source's lecture set (#449): the ToC's documents, then the
+  // files they include. No usable ToC stops the run here, before any model call.
+  const sourceLectures = await readRepoLectures(options.source, options.docsFolder, 'SOURCE');
+  const { set } = sourceLectures;
+  let lectures = sourceLectures.lectures;
 
   const stats: TranslationStats = {
     totalLectures: lectures.length,
@@ -713,23 +743,26 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
 
   // Filter to single file if specified
   if (options.file) {
-    const target = options.file.endsWith('.md') ? options.file : `${options.file}.md`;
-    // An exact match wins over an earlier entry that merely contains the name:
-    // `-f intro.md` must not translate a `jax_intro.md` listed before it.
-    const found =
-      lectures.find((l) => l === target) ?? lectures.find((l) => l.includes(options.file!));
-    if (found) {
-      lectures = [found];
-      stats.totalLectures = 1;
-      console.log(chalk.bold(`Translating single file: ${found}\n`));
-    } else {
-      throw new Error(
-        `File not found in _toc.yml: ${options.file}\n` +
-          `Available lectures: ${lectures.slice(0, 5).join(', ')}${lectures.length > 5 ? ', ...' : ''}`
-      );
-    }
+    // An exact match wins over an entry that merely contains the name: `-f
+    // intro.md` must not translate a `jax_intro.md` listed before it.
+    const found = findInitLecture(options.file, set, lectures);
+    lectures = [found];
+    stats.totalLectures = 1;
+    console.log(chalk.bold(`Translating single file: ${found}\n`));
   } else {
-    console.log(chalk.bold(`\nFound ${lectures.length} lectures in _toc.yml\n`));
+    const included = set.fragments.length;
+    console.log(
+      chalk.bold(
+        `\nFound ${lectures.length} lectures` +
+          (included > 0
+            ? `: ${set.documents.length} in ${set.toc}, and ${count(included, 'file', 'files')} they include`
+            : ` in ${set.toc}`)
+      )
+    );
+    for (const line of describeUntranslatedEntries(set)) {
+      console.log(chalk.yellow(line));
+    }
+    console.log('');
   }
 
   // Checked before the dry run returns, so a preview refuses as the run would.
@@ -745,15 +778,13 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     // is the real run's list (#379).
     const skip = options.skipExisting ? filterSkipExisting(options, lectures) : undefined;
     const skippedSet = new Set(skip?.skipped ?? []);
+    // Every lecture in the set has its file: a ToC entry without one is
+    // reported above, not listed here (#449).
     console.log(chalk.yellow('Would translate the following lectures:'));
     lectures.forEach((lecture, index) => {
-      const sourceFile = path.join(options.source, options.docsFolder, lecture);
-      const exists = fs.existsSync(sourceFile);
       const marker = skippedSet.has(lecture)
         ? chalk.yellow('⊘ skipped (already in the edition)')
-        : exists
-          ? chalk.green('✓')
-          : chalk.red('✗ missing');
+        : chalk.green('✓');
       console.log(chalk.gray(`  ${index + 1}. ${lecture} ${marker}`));
     });
     if (skip) {

@@ -490,9 +490,9 @@ delimiter rows, which already break a table in the fr edition's pandas lecture.
 
 ## Health & context
 
-- `main` green; **2,572 tests across 86 suites** (zero skips, type-checked) with the untitled-file
-  update (#449's question A), 2,556 before it at `7e71a24` (counted 2026-11-16 in a clean worktree; a tree
-  holding the harness's gitignored clones counts 15 more, see log
+- `main` green; **2,621 tests across 87 suites** (zero skips, type-checked) with #449's P2 (the
+  CLI on the lecture set), 2,572 across 86 before it at `a3f5d94` (counted 2026-11-16 in a clean
+  worktree; a tree holding the harness's gitignored clones counts 15 more, see log
   `2026-11-16-overnight-stack`); lint at
   `--max-warnings 0` including root `*.mjs`, CI checks formatting and
   `.qe/dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale `dist/`

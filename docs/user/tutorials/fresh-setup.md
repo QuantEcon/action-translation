@@ -144,7 +144,7 @@ The `init` command runs a 7-phase pipeline:
 | Phase | What happens |
 |---|---|
 | 1. Load glossary | Loads `glossary/zh-cn.json` (357 technical terms) |
-| 2. Parse `_toc.yml` | Discovers all lectures in the source project |
+| 2. Read the lecture set | The lectures the source's `_toc.yml` lists, then the `.md` files they include, such as `_admonition/gpu.md`, which is translated like any lecture |
 | 3. Setup target | Creates the docs folder structure, and writes `.translate/config.yml` if the target has none |
 | 4. Copy non-markdown files | Images, `_config.yml`, `_toc.yml`, CSS, data files the target does not already have |
 | 5. Translate lectures | Sequential translation with progress bar |
@@ -279,7 +279,7 @@ git pull
 git switch -c translate-cobweb
 ```
 
-`-f` names a lecture listed in the source `_toc.yml`, and takes the first entry in ToC order that equals or contains the name: `-f solow.md` would match `ak_solow.md` if that came first. Preview the match with `--dry-run`, which prints the `Translating single file:` line and stops before translating or writing anything:
+`-f` names a lecture in the source's lecture set: a document the source `_toc.yml` lists, or a file one of them includes. It takes the lecture at that path, else the one with that file name in any folder, else the one whose path contains the name, and refuses a name that matches more than one, naming them: `-f solow` takes `solow.md` even when `ak_solow.md` is listed first, and `-f sol` names both and stops. Preview the match with `--dry-run`, which prints the `Translating single file:` line and stops before translating or writing anything:
 
 ```bash
 cd /path/to/action-translation
@@ -292,6 +292,8 @@ npx translate init \
 ```
 
 If the line shows the lecture you meant, run the same command without `--dry-run` to translate it.
+
+A lecture can include another file with MyST's `{include}` directive, such as the GPU notice `_admonition/gpu.md` in the QuantEcon lectures. The edition needs that file before the lecture builds, and `init` copies only non-Markdown files, so translate it in the same round, with its state file: `init -f _admonition/gpu.md`. It is a lecture like any other, and later rounds leave it alone once the edition has it.
 
 ### Keep only what the PR needs
 
@@ -306,7 +308,7 @@ The first lecture's PR keeps the copied build files (`_config.yml`, `_toc.yml`, 
 
 ### Keep the state file
 
-Without its state file, `.translate/state/cobweb.md.yml`, the lecture never syncs, so the PR carries it beside the lecture. `init` fails a lecture whose state file it cannot write, and exits 1. `translate doctor` flags lectures at the top level of the docs folder that have no state file.
+Without its state file, `.translate/state/cobweb.md.yml`, the lecture never syncs, so the PR carries it beside the lecture. `init` fails a lecture whose state file it cannot write, and exits 1. `translate doctor` flags each lecture in the edition's lecture set, an included file such as `_admonition/gpu.md` too, that has no state file.
 
 ### Open the PR, and check for English changes before merging
 

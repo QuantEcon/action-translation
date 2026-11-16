@@ -265,7 +265,9 @@ export function parseProgressCheckpoint(json: string): LoadResult<ProgressCheckp
 }
 
 /**
- * Load all per-file sidecar reports from a .resync directory.
+ * Load all per-file sidecar reports from a .resync directory, subfolders
+ * included: a sidecar sits at its lecture's docs-relative path, so a lecture
+ * in a subfolder has its sidecar in one (`_admonition/gpu.json`, #449).
  * Skips _progress.json, _log.txt, and any non-JSON files.
  * Returns validated reports and a list of load errors.
  */
@@ -280,10 +282,20 @@ export function loadResyncDirectory(resyncDir: string): {
     return { reports, errors: [{ file: resyncDir, error: 'Directory not found' }] };
   }
 
-  const files: string[] = fs.readdirSync(resyncDir);
+  // Paths relative to resyncDir; a folder is entered whatever its name.
+  const files: string[] = [];
+  const walk = (dir: string, rel: string): void => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const childRel = rel ? `${rel}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) walk(path.join(dir, entry.name), childRel);
+      else files.push(childRel);
+    }
+  };
+  walk(resyncDir, '');
   for (const file of files) {
-    // Skip meta-files and non-JSON
-    if (file.startsWith('_') || !file.endsWith('.json')) continue;
+    // Skip the run's progress manifest and non-JSON. Only that file is a
+    // meta-file: a lecture may start with `_` too (`_foo.md` → `_foo.json`).
+    if (file === '_progress.json' || !file.endsWith('.json')) continue;
 
     const fullPath = path.join(resyncDir, file);
     try {

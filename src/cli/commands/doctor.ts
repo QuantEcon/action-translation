@@ -6,11 +6,13 @@
  *
  * Checks:
  * - .translate/config.yml exists and is valid
- * - .translate/state/ has entries for all target .md files
- * - All target files have heading-map in frontmatter
+ * - The edition's lecture set can be read: its _toc.yml's documents and the
+ *   files they include, limited to the .md files it has (#449)
+ * - .translate/state/ has entries for every lecture in it
+ * - Every lecture in it has a heading-map in frontmatter
  * - Section counts match between source and target
  * - GitHub workflow file exists (.github/workflows/)
- * - Source repo is accessible (if -s provided)
+ * - Source repo is accessible, with a lecture set (if -s provided)
  * - gh CLI is available and authenticated (if --check-gh)
  */
 
@@ -19,8 +21,9 @@ import * as path from 'path';
 import { spawnSync } from 'child_process';
 import { MystParser } from '../../parser.js';
 import { extractHeadingMap } from '../../heading-map.js';
+import { LectureSetError } from '../../lecture-set.js';
 import { readConfig, inspectFileState } from '../translate-state.js';
-import { discoverMarkdownFiles } from './status.js';
+import { RepoLectures, RepoSide, readRepoLectures } from '../lecture-discovery.js';
 import { REVIEW_TRIGGER_LABEL, TARGET_REPO_LABELS } from '../../contracts.js';
 
 // ============================================================================
@@ -52,6 +55,27 @@ export interface DoctorResult {
     fail: number;
     total: number;
   };
+}
+
+/**
+ * A repository's lecture set as doctor reads it, or the reader's reason it has
+ * none (#449). Doctor reports a missing `_toc.yml` as a failed check, beside
+ * the checks that need no lecture set, rather than stopping.
+ */
+export type DoctorLectures = { lectures: RepoLectures } | { error: string };
+
+/** Read a repository's lecture set for doctor; a `LectureSetError` becomes `{ error }`. */
+export async function readDoctorLectures(
+  repoPath: string,
+  docsFolder: string,
+  side: RepoSide
+): Promise<DoctorLectures> {
+  try {
+    return { lectures: await readRepoLectures(repoPath, docsFolder, side) };
+  } catch (error) {
+    if (error instanceof LectureSetError) return { error: error.message };
+    throw error;
+  }
 }
 
 // ============================================================================
@@ -89,16 +113,59 @@ export function checkConfig(targetPath: string): CheckResult {
 }
 
 /**
- * Check: .translate/state/ has entries for all target .md files.
+ * Check: the edition's lecture set can be read (#449). The state-file,
+ * heading-map and section checks run on it, so without one they do not run,
+ * and this check fails with the reader's message: a docs folder with no
+ * `_toc.yml` has no lecture set (ruling 9). A partial edition's `_toc.yml` is
+ * a mirror that lists lectures it lacks; those entries are counted, not failed.
  */
-export function checkStateFiles(targetPath: string, docsFolder: string): CheckResult {
-  const targetFiles = discoverMarkdownFiles(targetPath, docsFolder);
+export function checkLectureSet(read: DoctorLectures): CheckResult {
+  if ('error' in read) {
+    return {
+      name: 'Lecture set',
+      status: 'fail',
+      message: read.error,
+      details: [
+        'The state-file, heading-map and section-alignment checks run on the lecture set, ' +
+          'so they did not run',
+      ],
+    };
+  }
 
+  const { set, lectures } = read.lectures;
+  const included = set.fragments.length;
+  const result: CheckResult = {
+    name: 'Lecture set',
+    status: lectures.length > 0 ? 'pass' : 'warn',
+    message:
+      lectures.length > 0
+        ? `${lectures.length} lectures: ${set.documents.length} in ${set.toc}` +
+          (included > 0 ? `, ${included} included by them` : '')
+        : `No lectures: no entry in ${set.toc} has a .md file behind it`,
+  };
+  const missing = set.missingEntries;
+  if (missing.length > 0) {
+    result.details = [
+      `${missing.length} ${set.toc} ${missing.length === 1 ? 'entry has' : 'entries have'} ` +
+        `no .md file in the edition ` +
+        `(a partial edition's ToC lists lectures it has not translated):`,
+      ...missing.slice(0, 5).map((entry) => `  ${entry}`),
+      ...(missing.length > 5 ? [`  …and ${missing.length - 5} more`] : []),
+    ];
+  }
+  return result;
+}
+
+/**
+ * Check: .translate/state/ has entries for every lecture in the edition's
+ * lecture set (`targetFiles`, docs-relative, subfolders included).
+ */
+export function checkStateFiles(targetPath: string, targetFiles: readonly string[]): CheckResult {
   if (targetFiles.length === 0) {
     return {
       name: '.translate/state/',
       status: 'warn',
-      message: 'No .md files found in docs folder',
+      message: "No .md files in the docs folder's lecture set",
     };
   }
 
@@ -172,17 +239,20 @@ export function checkStateFiles(targetPath: string, docsFolder: string): CheckRe
 }
 
 /**
- * Check: All target .md files have heading-map in frontmatter.
- * Files with 0 sections (no ## headings) are expected to have no heading-map.
+ * Check: every lecture in the edition's lecture set (`targetFiles`) has a
+ * heading-map in frontmatter. Files with 0 sections (no ## headings, such as
+ * an included admonition) are expected to have no heading-map.
  */
-export function checkHeadingMaps(targetPath: string, docsFolder: string): CheckResult {
-  const targetFiles = discoverMarkdownFiles(targetPath, docsFolder);
-
+export function checkHeadingMaps(
+  targetPath: string,
+  docsFolder: string,
+  targetFiles: readonly string[]
+): CheckResult {
   if (targetFiles.length === 0) {
     return {
       name: 'Heading maps',
       status: 'warn',
-      message: 'No .md files found in docs folder',
+      message: "No .md files in the docs folder's lecture set",
     };
   }
 
@@ -236,19 +306,19 @@ export function checkHeadingMaps(targetPath: string, docsFolder: string): CheckR
 }
 
 /**
- * Check: Section counts match between source and target files.
- * Only runs when source path is provided.
+ * Check: Section counts match between source and target files, for the
+ * lectures both lecture sets hold. Only runs when source path is provided.
  */
 export async function checkSectionAlignment(
   sourcePath: string,
   targetPath: string,
-  docsFolder: string
+  docsFolder: string,
+  sourceLectures: readonly string[],
+  targetLectures: readonly string[]
 ): Promise<CheckResult> {
-  const sourceFiles = discoverMarkdownFiles(sourcePath, docsFolder);
-  const targetFiles = discoverMarkdownFiles(targetPath, docsFolder);
-
   // Only check files that exist in both repos
-  const commonFiles = sourceFiles.filter((f) => targetFiles.includes(f));
+  const inTarget = new Set(targetLectures);
+  const commonFiles = sourceLectures.filter((f) => inTarget.has(f));
 
   if (commonFiles.length === 0) {
     return {
@@ -388,9 +458,14 @@ export function checkWorkflow(targetPath: string): CheckResult {
 }
 
 /**
- * Check: Source repo is accessible (directory exists with .md files).
+ * Check: Source repo is accessible, and its docs folder has a lecture set
+ * (`read`, #449) with lectures in it.
  */
-export function checkSourceAccess(sourcePath: string, docsFolder: string): CheckResult {
+export function checkSourceAccess(
+  sourcePath: string,
+  docsFolder: string,
+  read: DoctorLectures
+): CheckResult {
   if (!fs.existsSync(sourcePath)) {
     return {
       name: 'Source repo',
@@ -399,19 +474,26 @@ export function checkSourceAccess(sourcePath: string, docsFolder: string): Check
     };
   }
 
-  const files = discoverMarkdownFiles(sourcePath, docsFolder);
-  if (files.length === 0) {
+  if ('error' in read) {
+    return { name: 'Source repo', status: 'fail', message: read.error };
+  }
+
+  const { set, lectures } = read.lectures;
+  if (lectures.length === 0) {
     return {
       name: 'Source repo',
       status: 'warn',
-      message: `Source path exists but no .md files in ${docsFolder}/`,
+      message: `Source path exists but no entry in ${docsFolder}/${set.toc} has a .md file behind it`,
     };
   }
 
+  const included = set.fragments.length;
   return {
     name: 'Source repo',
     status: 'pass',
-    message: `${files.length} .md files in ${docsFolder}/`,
+    message:
+      `${lectures.length} lectures in ${docsFolder}/: ${set.documents.length} in ${set.toc}` +
+      (included > 0 ? `, ${included} included by them` : ''),
   };
 }
 
@@ -560,19 +642,34 @@ export async function runDoctor(options: DoctorOptions): Promise<DoctorResult> {
     }
   }
 
-  // 2. State files check
-  checks.push(checkStateFiles(options.target, docsFolder));
+  // 2. The edition's lecture set (#449): the checks below run on it
+  const edition = await readDoctorLectures(options.target, docsFolder, 'TARGET');
+  checks.push(checkLectureSet(edition));
 
-  // 3. Heading maps check
-  checks.push(checkHeadingMaps(options.target, docsFolder));
+  // 3. State files and heading maps, for each lecture in it
+  if ('lectures' in edition) {
+    checks.push(checkStateFiles(options.target, edition.lectures.lectures));
+    checks.push(checkHeadingMaps(options.target, docsFolder, edition.lectures.lectures));
+  }
 
   // 4. Workflow check
   checks.push(checkWorkflow(options.target));
 
   // 5. Source repo checks (only if source provided)
   if (options.source) {
-    checks.push(checkSourceAccess(options.source, docsFolder));
-    checks.push(await checkSectionAlignment(options.source, options.target, docsFolder));
+    const source = await readDoctorLectures(options.source, docsFolder, 'SOURCE');
+    checks.push(checkSourceAccess(options.source, docsFolder, source));
+    if ('lectures' in source && 'lectures' in edition) {
+      checks.push(
+        await checkSectionAlignment(
+          options.source,
+          options.target,
+          docsFolder,
+          source.lectures.lectures,
+          edition.lectures.lectures
+        )
+      );
+    }
   }
 
   // 6. gh CLI + label checks (only if requested — both need network + auth)

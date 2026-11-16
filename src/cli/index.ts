@@ -45,6 +45,7 @@ import { BackwardOptions, ForwardOptions } from './types.js';
 import { DEFAULT_RULES, parseLocalizationRules } from '../localization-rules.js';
 import { checkGhAvailable } from './issue-creator.js';
 import { readConfig } from './translate-state.js';
+import { LectureSetError } from '../lecture-set.js';
 
 // Read version from package.json — use createRequire since JSON imports
 // need import assertions which aren't stable in all Node versions.
@@ -75,11 +76,13 @@ program
 /**
  * Terminal failure: print the message, then the stack the catch sites used to
  * discard (#160/F29 — without it a crash in a bulk run reads as one message
- * with no pointer into the code), and exit non-zero.
+ * with no pointer into the code), and exit non-zero. A lecture set the reader
+ * refuses (no `_toc.yml`, #449) is the operator's to fix, not a crash: its
+ * message says what to do, and a stack would only bury it.
  */
 function fail(error: unknown): never {
   console.error(`\n❌ ${error instanceof Error ? error.message : String(error)}`);
-  if (error instanceof Error && error.stack) {
+  if (error instanceof Error && error.stack && !(error instanceof LectureSetError)) {
     console.error(chalk.dim(error.stack));
   }
   process.exit(1);
@@ -156,7 +159,7 @@ program
   .option('--min-confidence <number>', 'Minimum confidence for reporting', '0.6')
   .option(
     '--exclude <pattern>',
-    'Exclude files matching pattern (repeatable, comma-separated)',
+    'Exclude files by docs-relative path; * at either end matches any text (repeatable, comma-separated)',
     collectExclude,
     []
   )
@@ -237,7 +240,7 @@ program
   .option('--source-language <code>', 'Source language code (required with --write-state)', 'en')
   .option(
     '--exclude <pattern>',
-    'Exclude files matching pattern (repeatable, comma-separated)',
+    'Exclude files by docs-relative path; * at either end matches any text (repeatable, comma-separated)',
     collectExclude,
     []
   )
@@ -350,7 +353,7 @@ program
   )
   .option(
     '--exclude <pattern>',
-    'Exclude files matching pattern (repeatable, comma-separated)',
+    'Exclude files by docs-relative path; * at either end matches any text (repeatable, comma-separated)',
     collectExclude,
     []
   )
@@ -566,7 +569,7 @@ program
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
   .option(
     '--exclude <pattern>',
-    'Exclude files matching pattern (repeatable, comma-separated)',
+    'Exclude files by docs-relative path; * at either end matches any text (repeatable, comma-separated)',
     collectExclude,
     []
   )

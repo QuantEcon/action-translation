@@ -9,6 +9,8 @@
  * - Malformed input rejection
  */
 
+import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import {
   SCHEMA_VERSION,
@@ -518,6 +520,25 @@ describe('loadResyncDirectory', () => {
     );
     // bugfix.json and clarification.json carry BACKPORT suggestions
     expect(withBackport.length).toBeGreaterThan(0);
+  });
+
+  it("loads a lecture's report whose name starts with _, and one in a subfolder (#449)", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'resync-'));
+    try {
+      const report = fs.readFileSync(path.join(fixtureDir, 'bugfix.json'), 'utf-8');
+      fs.copyFileSync(path.join(fixtureDir, '_progress.json'), path.join(dir, '_progress.json'));
+      fs.copyFileSync(path.join(fixtureDir, '_log.txt'), path.join(dir, '_log.txt'));
+      fs.writeFileSync(path.join(dir, '_foo.json'), report);
+      fs.mkdirSync(path.join(dir, '_admonition'));
+      fs.writeFileSync(path.join(dir, '_admonition', 'gpu.json'), report);
+
+      const { reports, errors } = loadResyncDirectory(dir);
+
+      expect(errors).toEqual([]);
+      expect(reports).toHaveLength(2);
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it('returns error for non-existent directory', () => {

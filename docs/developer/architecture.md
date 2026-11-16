@@ -153,6 +153,7 @@ src/cli/
 ├── forward-triage.ts      # Forward: content-vs-i18n LLM filter
 ├── forward-pr-creator.ts  # Forward: git ops + PR creation via gh CLI
 ├── glossary-loader.ts     # Shared glossary resolution: --glossary > repo-local > built-in (#149)
+├── lecture-discovery.ts   # Each repository's lecture set from disk, for init and the bulk modes; no _toc.yml, no bulk run (#449)
 ├── target-local-reads.ts  # Pins target-only data-source reads through resync (#140)
 ├── translate-state.ts     # .translate/ config + per-file state
 ├── components/

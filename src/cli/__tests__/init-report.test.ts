@@ -636,3 +636,157 @@ describe('translate init into an existing edition (#134)', () => {
     );
   });
 });
+
+describe('translate init on the lecture set (#449)', () => {
+  /** The GPU notice lectures pull in, shaped like lecture-python.myst's: no title, one block. */
+  const GPU =
+    '```{admonition} GPU\n:class: warning\n\nThis lecture was built using a machine with ' +
+    'access to a GPU, although it will also run without one.\n```\n';
+  const GPU_ZH =
+    '```{admonition} GPU\n:class: warning\n\n本讲座是在一台可以使用 GPU 的机器上构建的，没有 GPU 也能运行。\n```\n';
+  const GPU_REPLY: FakeReply = {
+    content: [thinking, text(GPU_ZH)],
+    stop_reason: 'end_turn',
+    usage: { input_tokens: 400, output_tokens: 60 },
+  };
+  const INCLUDE = '```{include} _admonition/gpu.md\n```';
+  const GOOD_INCLUDES: FakeReply = {
+    ...GOOD,
+    content: [thinking, text(CLEAN.replace('一些文字。', `一些文字。\n\n${INCLUDE}`))],
+  };
+
+  const docs = () => path.join(tmpDir, 'source', 'lectures');
+  const logLines = (): string[] => logSpy.mock.calls.map((call) => String(call[0]));
+
+  /** A source whose `good.md` includes `_admonition/gpu.md`, beside a README the ToC does not list. */
+  function writeSourceWithFragment(toc?: string): string {
+    const source = writeSource(['good.md']);
+    fs.writeFileSync(
+      path.join(docs(), 'good.md'),
+      SOURCE.replace('Some text.', `Some text.\n\n${INCLUDE}`),
+      'utf-8'
+    );
+    fs.mkdirSync(path.join(docs(), '_admonition'));
+    fs.writeFileSync(path.join(docs(), '_admonition', 'gpu.md'), GPU, 'utf-8');
+    fs.writeFileSync(path.join(docs(), 'README.md'), '# Lectures\n', 'utf-8');
+    if (toc) fs.writeFileSync(path.join(docs(), '_toc.yml'), toc, 'utf-8');
+    return source;
+  }
+
+  it('translates the included fragment after the documents, and not the README', async () => {
+    writeSourceWithFragment();
+    api.reply(GOOD_INCLUDES, GPU_REPLY);
+    const opts = options({});
+
+    const stats = await runInit(opts);
+
+    expect(stats).toMatchObject({ totalLectures: 2, successCount: 2, failureCount: 0 });
+    expect(api.requests).toHaveLength(2);
+    expect(readReport(opts.reportJson!).lectures.map((l) => l.file)).toEqual([
+      'good.md',
+      '_admonition/gpu.md',
+    ]);
+    expect(logLines()).toContain('\nFound 2 lectures: 1 in _toc.yml, and 1 file they include');
+    expect(fs.existsSync(path.join(opts.target, 'lectures', 'README.md'))).toBe(false);
+  });
+
+  it('writes a fragment as translated, with no front matter, and its state file in its folder', async () => {
+    writeSourceWithFragment();
+    api.reply(GPU_REPLY);
+    const opts = options({ file: '_admonition/gpu.md' });
+
+    const stats = await runInit(opts);
+
+    expect(stats).toMatchObject({ successCount: 1, failureCount: 0 });
+    expect(JSON.stringify(api.requests[0].body)).toContain(
+      'This lecture was built using a machine'
+    );
+    // No title and no sections: no heading map, so nothing is added above the block
+    expect(
+      fs.readFileSync(path.join(opts.target, 'lectures', '_admonition', 'gpu.md'), 'utf-8')
+    ).toBe(GPU_ZH);
+    const state = fs.readFileSync(
+      path.join(opts.target, '.translate', 'state', '_admonition', 'gpu.md.yml'),
+      'utf-8'
+    );
+    expect(state).toMatch(/^mode: NEW$/m);
+    expect(state).toMatch(/^section-count: 0$/m);
+    expect(fs.existsSync(path.join(opts.target, 'lectures', 'good.md'))).toBe(false);
+  });
+
+  it('holds a fragment to the parity guard, as any lecture', async () => {
+    writeSourceWithFragment();
+    api.reply({
+      ...GPU_REPLY,
+      content: [thinking, text(GPU_ZH.replace('{admonition}', '{note}'))],
+    });
+    const opts = options({ file: '_admonition/gpu.md' });
+
+    const stats = await runInit(opts);
+
+    expect(stats.failureCount).toBe(1);
+    expect(stats.failures[0].error).toMatch(
+      /structural parity check failed for _admonition\/gpu\.md/
+    );
+    expect(fs.existsSync(path.join(opts.target, 'lectures', '_admonition', 'gpu.md'))).toBe(false);
+  });
+
+  it('matches a fragment by part of its name with -f', async () => {
+    writeSourceWithFragment();
+
+    await runInit(options({ dryRun: true, file: 'gpu.md' }));
+
+    expect(logLines()).toContain('Translating single file: _admonition/gpu.md\n');
+  });
+
+  it('refuses -f for a file outside the lecture set, naming it, before any model call', async () => {
+    writeSourceWithFragment('format: jb-book\nroot: index\nchapters:\n  - file: good\n');
+    api.reply(GOOD);
+
+    await expect(runInit(options({ file: 'README.md' }))).rejects.toThrow(
+      "README.md is not in the source's lecture set: _toc.yml does not list it, and no lecture " +
+        'it lists includes it.\nAvailable lectures: good.md, _admonition/gpu.md'
+    );
+    await expect(runInit(options({ file: 'index' }))).rejects.toThrow(
+      '_toc.yml lists index, but the docs folder has no index.md.'
+    );
+    expect(api.requests).toHaveLength(0);
+  });
+
+  it('a dry run lists the fragment, and names the ToC entries it cannot translate', async () => {
+    writeSourceWithFragment(
+      'format: jb-book\nroot: index\nchapters:\n  - file: good\n  - file: notebook\n'
+    );
+    fs.writeFileSync(path.join(docs(), 'notebook.ipynb'), '{}', 'utf-8');
+
+    const stats = await runInit(options({ dryRun: true }));
+
+    expect(stats.totalLectures).toBe(2);
+    const lines = logLines();
+    expect(lines).toEqual(
+      expect.arrayContaining([
+        '⚠ Not translated: 1 _toc.yml entry with no .md file behind it: index',
+        'ℹ Not translated: 1 _toc.yml entry backed by a file that is not Markdown, copied with ' +
+          'the other non-Markdown files: notebook.ipynb',
+        '  1. good.md ✓',
+        '  2. _admonition/gpu.md ✓',
+      ])
+    );
+    // The entry with no file is reported once, above, not as a missing lecture
+    expect(lines.some((line) => line.includes('✗ missing'))).toBe(false);
+    expect(lines.some((line) => line.includes('index.md'))).toBe(false);
+  });
+
+  it('stops before any model call when the source has no _toc.yml, with the reader’s message', async () => {
+    writeSourceWithFragment();
+    fs.rmSync(path.join(docs(), '_toc.yml'));
+    api.reply(GOOD_INCLUDES, GPU_REPLY);
+    const opts = options({});
+
+    await expect(runInit(opts)).rejects.toThrow(
+      `SOURCE ${docs()}: the docs folder has no _toc.yml or myst.yml, so it has no lecture set`
+    );
+    expect(api.requests).toHaveLength(0);
+    expect(fs.existsSync(opts.target)).toBe(false);
+  });
+});

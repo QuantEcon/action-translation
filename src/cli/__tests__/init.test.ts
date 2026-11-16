@@ -1,8 +1,10 @@
 /**
  * Tests for the init command — bulk project translation
  *
- * Tests the pure functions: parseTocLectures, copyNonMarkdownFiles, checkEditionConfig.
- * Uses temporary directories, no LLM calls.
+ * Tests the pure functions: copyNonMarkdownFiles, checkEditionConfig, and the
+ * notice for ToC entries init does not translate. Uses temporary directories,
+ * no LLM calls. The lecture list itself is the source's lecture set (#449),
+ * tested in lecture-discovery.test.ts; runInit is tested in init-report.test.ts.
  */
 
 import * as fs from 'fs';
@@ -12,11 +14,13 @@ import {
   EditionFlags,
   checkEditionConfig,
   copyNonMarkdownFiles,
+  describeUntranslatedEntries,
   filterSkipExisting,
-  parseTocLectures,
+  findInitLecture,
   planNonMarkdownCopy,
   writeStateCommand,
 } from '../commands/init.js';
+import { LectureSet } from '../../lecture-set.js';
 import { writeFileState } from '../translate-state.js';
 
 // ============================================================================
@@ -40,193 +44,99 @@ function writeFile(filePath: string, content: string): void {
 }
 
 // ============================================================================
-// parseTocLectures
+// describeUntranslatedEntries (#449)
 // ============================================================================
 
-describe('parseTocLectures', () => {
-  it('should parse chapters from _toc.yml', () => {
-    const sourceDir = path.join(tmpDir, 'source');
-    writeFile(
-      path.join(sourceDir, 'lectures', '_toc.yml'),
-      `
-format: jb-book
-root: intro
-chapters:
-  - file: getting_started
-  - file: cobweb
-  - file: solow
-`
+describe('describeUntranslatedEntries', () => {
+  const set = (overrides: Partial<LectureSet>): LectureSet => ({
+    toc: '_toc.yml',
+    documents: ['intro.md'],
+    otherDocuments: [],
+    missingEntries: [],
+    fragments: [],
+    missingIncludes: [],
+    has: () => false,
+    ...overrides,
+  });
+
+  it('says nothing when every entry has a .md behind it', () => {
+    expect(describeUntranslatedEntries(set({}))).toEqual([]);
+  });
+
+  it('names the entries with no file, and those that are not Markdown', () => {
+    expect(
+      describeUntranslatedEntries(set({ missingEntries: ['index'], otherDocuments: ['nb.ipynb'] }))
+    ).toEqual([
+      '⚠ Not translated: 1 _toc.yml entry with no .md file behind it: index',
+      'ℹ Not translated: 1 _toc.yml entry backed by a file that is not Markdown, copied with ' +
+        'the other non-Markdown files: nb.ipynb',
+    ]);
+    expect(describeUntranslatedEntries(set({ missingEntries: ['index', 'about'] }))).toEqual([
+      '⚠ Not translated: 2 _toc.yml entries with no .md file behind them: index, about',
+    ]);
+  });
+});
+
+// ============================================================================
+// findInitLecture (#449)
+// ============================================================================
+
+describe('findInitLecture', () => {
+  const set = (overrides: Partial<LectureSet>): LectureSet => ({
+    toc: '_toc.yml',
+    documents: [],
+    otherDocuments: [],
+    missingEntries: [],
+    fragments: [],
+    missingIncludes: [],
+    has: () => false,
+    ...overrides,
+  });
+  const lectures = ['jax_intro.md', 'intro.md', 'a/topic.md', 'b/topic.md', '_admonition/gpu.md'];
+  const find = (file: string, overrides: Partial<LectureSet> = {}) =>
+    findInitLecture(file, set(overrides), lectures);
+
+  it('takes the lecture at the path, before one whose path contains the name', () => {
+    expect(find('intro.md')).toBe('intro.md');
+    expect(find('intro')).toBe('intro.md');
+    expect(find('intro.ipynb')).toBe('intro.md');
+    expect(find('a/topic')).toBe('a/topic.md');
+  });
+
+  it('takes a lecture by its file name, in any folder', () => {
+    expect(find('gpu.md')).toBe('_admonition/gpu.md');
+  });
+
+  it('takes the one lecture whose path contains the name', () => {
+    expect(find('jax')).toBe('jax_intro.md');
+  });
+
+  it('refuses a name that matches more than one lecture, naming them', () => {
+    expect(() => find('topic')).toThrow(
+      'topic names 2 lectures: a/topic.md, b/topic.md. Name one by its path in the docs folder.'
     );
-
-    const lectures = parseTocLectures(sourceDir, 'lectures');
-    expect(lectures).toEqual(['intro.md', 'getting_started.md', 'cobweb.md', 'solow.md']);
+    expect(() => find('o')).toThrow(/^o names 5 lectures: /);
   });
 
-  it('should parse parts with chapters', () => {
-    const sourceDir = path.join(tmpDir, 'source');
-    writeFile(
-      path.join(sourceDir, 'lectures', '_toc.yml'),
-      `
-format: jb-book
-root: intro
-parts:
-  - caption: Part 1
-    chapters:
-      - file: chapter1
-      - file: chapter2
-  - caption: Part 2
-    chapters:
-      - file: chapter3
-`
+  it('refuses a file outside the set', () => {
+    expect(() => find('draft.md')).toThrow(
+      "draft.md is not in the source's lecture set: _toc.yml does not list it, and no " +
+        'lecture it lists includes it.'
     );
-
-    const lectures = parseTocLectures(sourceDir, 'lectures');
-    expect(lectures).toEqual(['intro.md', 'chapter1.md', 'chapter2.md', 'chapter3.md']);
   });
 
-  it('should parse nested sections within chapters', () => {
-    const sourceDir = path.join(tmpDir, 'source');
-    writeFile(
-      path.join(sourceDir, 'lectures', '_toc.yml'),
-      `
-format: jb-book
-root: intro
-chapters:
-  - file: main
-    sections:
-      - file: sub1
-      - file: sub2
-`
+  it('says what is behind a ToC entry that is not a lecture', () => {
+    expect(() => find('index', { missingEntries: ['index'] })).toThrow(
+      "index is not in the source's lecture set: _toc.yml lists index, but the docs folder " +
+        'has no index.md.'
     );
-
-    const lectures = parseTocLectures(sourceDir, 'lectures');
-    expect(lectures).toEqual(['intro.md', 'main.md', 'sub1.md', 'sub2.md']);
-  });
-
-  it('should place root file first', () => {
-    const sourceDir = path.join(tmpDir, 'source');
-    writeFile(
-      path.join(sourceDir, 'lectures', '_toc.yml'),
-      `
-format: jb-book
-root: intro
-chapters:
-  - file: alpha
-`
-    );
-
-    const lectures = parseTocLectures(sourceDir, 'lectures');
-    expect(lectures[0]).toBe('intro.md');
-    expect(lectures[1]).toBe('alpha.md');
-  });
-
-  it('should work without root', () => {
-    const sourceDir = path.join(tmpDir, 'source');
-    writeFile(
-      path.join(sourceDir, 'lectures', '_toc.yml'),
-      `
-format: jb-book
-chapters:
-  - file: only_chapter
-`
-    );
-
-    const lectures = parseTocLectures(sourceDir, 'lectures');
-    expect(lectures).toEqual(['only_chapter.md']);
-  });
-
-  it('should throw if _toc.yml is missing', () => {
-    const sourceDir = path.join(tmpDir, 'source');
-    fs.mkdirSync(path.join(sourceDir, 'lectures'), { recursive: true });
-
-    expect(() => parseTocLectures(sourceDir, 'lectures')).toThrow('_toc.yml not found');
-  });
-
-  it('should throw with details on malformed YAML', () => {
-    const sourceDir = path.join(tmpDir, 'source');
-    writeFile(
-      path.join(sourceDir, 'lectures', '_toc.yml'),
-      `
-format: jb-book
-chapters:
-  - file: intro
-  bad indentation here
-  : broken
-`
-    );
-    expect(() => parseTocLectures(sourceDir, 'lectures')).toThrow(/Malformed _toc\.yml/);
-  });
-
-  it('should throw if _toc.yml is empty', () => {
-    const sourceDir = path.join(tmpDir, 'source');
-    writeFile(path.join(sourceDir, 'lectures', '_toc.yml'), '');
-    expect(() => parseTocLectures(sourceDir, 'lectures')).toThrow(/empty or not a valid YAML/);
-  });
-
-  it('should handle custom docs folder', () => {
-    const sourceDir = path.join(tmpDir, 'source');
-    writeFile(
-      path.join(sourceDir, 'docs', '_toc.yml'),
-      `
-format: jb-book
-chapters:
-  - file: page1
-`
-    );
-
-    const lectures = parseTocLectures(sourceDir, 'docs');
-    expect(lectures).toEqual(['page1.md']);
-  });
-
-  it('should handle empty chapters list', () => {
-    const sourceDir = path.join(tmpDir, 'source');
-    writeFile(
-      path.join(sourceDir, 'lectures', '_toc.yml'),
-      `
-format: jb-book
-root: intro
-chapters: []
-`
-    );
-
-    const lectures = parseTocLectures(sourceDir, 'lectures');
-    expect(lectures).toEqual(['intro.md']);
-  });
-
-  it('should handle deeply nested sections', () => {
-    const sourceDir = path.join(tmpDir, 'source');
-    writeFile(
-      path.join(sourceDir, 'lectures', '_toc.yml'),
-      `
-format: jb-book
-chapters:
-  - file: top
-    sections:
-      - file: mid
-        sections:
-          - file: deep
-`
-    );
-
-    const lectures = parseTocLectures(sourceDir, 'lectures');
-    expect(lectures).toEqual(['top.md', 'mid.md', 'deep.md']);
-  });
-
-  it('should not double-append .md if entry already has extension', () => {
-    const sourceDir = path.join(tmpDir, 'source');
-    writeFile(
-      path.join(sourceDir, 'lectures', '_toc.yml'),
-      `
-format: jb-book
-root: intro.md
-chapters:
-  - file: chapter1.md
-  - file: chapter2
-`
-    );
-
-    const lectures = parseTocLectures(sourceDir, 'lectures');
-    expect(lectures).toEqual(['intro.md', 'chapter1.md', 'chapter2.md']);
+    for (const name of ['nb', 'nb.ipynb']) {
+      expect(() => find(name, { otherDocuments: ['nb.ipynb'] })).toThrow(
+        `${name} is not in the source's lecture set: _toc.yml lists nb, backed by nb.ipynb, ` +
+          'which is not Markdown: a run copies it with the other non-Markdown files and does ' +
+          'not translate it.'
+      );
+    }
   });
 });
 

@@ -165,8 +165,9 @@ builder-agnostic by design. The exceptions are exactly where it will break:
 
 - **TOC**: mystmd replaces `_toc.yml` with `myst.yml` (project `toc:`). The action hardcodes
   `_toc.yml` (`classifyChangedFiles`) and the dead `toc-file` input doesn't help; the CLI's
-  `init` (`parseTocLectures`) and `setup` workflow `paths` filters parse/point at `_toc.yml`
-  too. Migration work: support both TOC formats behind one abstraction, auto-detected.
+  `init` and bulk modes (through `src/lecture-set.ts`, #449) and `setup` workflow `paths`
+  filters parse/point at `_toc.yml` too. Migration work: support both TOC formats behind one
+  abstraction, auto-detected; the lecture set's reader already names a `myst.yml` front end.
   (PLAN Phase 4 wires the input; the abstraction belongs to the migration.)
 - **Frontmatter**: the `translation:` block (title + heading-map) rides in page frontmatter.
   mystmd *validates* frontmatter and warns on unknown keys — verify the key survives cleanly

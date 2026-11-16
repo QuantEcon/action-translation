@@ -8,6 +8,8 @@
  * - Connect existing target repos that lack heading-maps
  * - Fix missing heading-maps after manual edits
  * - Regenerate heading-maps after structural changes
+ *
+ * A bulk run takes both repositories' lecture sets (#449); `-f` names one file.
  */
 
 import * as fs from 'fs';
@@ -22,7 +24,8 @@ import {
   normalizeHeadingForMatch,
 } from '../../heading-map.js';
 export { buildHeadingMap } from '../../heading-map.js';
-import { discoverMarkdownFiles, resolveFilePairs, applyExcludes } from './status.js';
+import { resolveFilePairs, applyExcludes } from './status.js';
+import { readBulkLectures } from '../lecture-discovery.js';
 import { readFileState, writeFileState } from '../translate-state.js';
 
 // ============================================================================
@@ -208,9 +211,9 @@ export async function runHeadingmap(options: HeadingmapOptions): Promise<Heading
   if (file) {
     allFiles = [file];
   } else {
-    const sourceFiles = discoverMarkdownFiles(source, docsFolder);
-    const targetFiles = discoverMarkdownFiles(target, docsFolder);
-    allFiles = resolveFilePairs(sourceFiles, targetFiles);
+    // Both lecture sets, paired by path (#449); without a ToC this throws
+    const lectures = await readBulkLectures(source, target, docsFolder);
+    allFiles = resolveFilePairs(lectures.source.lectures, lectures.target.lectures);
     allFiles = applyExcludes(allFiles, exclude);
   }
 

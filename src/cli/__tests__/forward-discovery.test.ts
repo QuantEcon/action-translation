@@ -9,11 +9,23 @@
  * Summary: buckets by what the pipeline actually did — TARGET_HAS_ADDITIONS
  * files get resynced, but the old summary bucketed by verdict and reported
  * them as "skipped: i18n only" while their PRs existed.
+ *
+ * The files come from `status`, so from both lecture sets (#449).
  */
 
-import { selectForwardCandidates, printBulkSummary, ForwardLogger } from '../commands/forward.js';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import {
+  selectForwardCandidates,
+  printBulkSummary,
+  runForwardBulk,
+  ForwardLogger,
+} from '../commands/forward.js';
 import { FileStatusEntry } from '../commands/status.js';
 import { ForwardFileResult } from '../types.js';
+import { writeFileState } from '../translate-state.js';
+import { writeToc } from '../../test-support/toc-fixture.js';
 
 function entry(file: string, flags: FileStatusEntry['flags']): FileStatusEntry {
   // Primary status mirrors checkFileStatus priority:
@@ -55,13 +67,73 @@ describe('selectForwardCandidates (#106)', () => {
     ]);
   });
 
-  it('never selects SOURCE_ONLY / TARGET_ONLY / NOT_FOUND files', () => {
+  it('never selects SOURCE_ONLY / TARGET_ONLY / NOT_FOUND / UNLISTED files', () => {
     const entries: FileStatusEntry[] = [
       { file: 'new.md', status: 'SOURCE_ONLY', flags: ['SOURCE_ONLY'] },
       { file: 'gone.md', status: 'TARGET_ONLY', flags: ['TARGET_ONLY'] },
       { file: 'ghost.md', status: 'NOT_FOUND', flags: ['NOT_FOUND'] },
+      { file: 'kept.md', status: 'UNLISTED', flags: ['UNLISTED'] },
     ];
     expect(selectForwardCandidates(entries)).toEqual([]);
+  });
+});
+
+describe('runForwardBulk discovery on the lecture set (#449)', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'forward-discovery-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  const write = (repo: string, file: string, content: string): void => {
+    const full = path.join(tmpDir, repo, 'lectures', file);
+    fs.mkdirSync(path.dirname(full), { recursive: true });
+    fs.writeFileSync(full, content, 'utf-8');
+  };
+  /** A source a section ahead of its translation: SOURCE_AHEAD, a forward candidate */
+  const AHEAD = '# Topic\n\n## One\n\nText.\n\n## Two\n\nMore.\n';
+  const BEHIND = '# 主题\n\n## 一\n\n文字。\n';
+
+  it('resyncs a lecture in a subfolder that the ToC lists, and not an un-listed one', async () => {
+    write('source', 'intro.md', '# Intro\n\nNo sections.\n');
+    write('target', 'intro.md', '# 介绍\n\n没有章节。\n');
+    write('source', 'advanced/topic.md', AHEAD);
+    write('target', 'advanced/topic.md', BEHIND);
+    // Taken out of the ToC and kept, with its state file: sync no longer updates it
+    write('source', 'old.md', AHEAD);
+    write('target', 'old.md', BEHIND);
+    writeFileState(path.join(tmpDir, 'target'), 'old.md', {
+      'source-sha': 'abc1234',
+      'synced-at': '2026-10-01',
+      model: 'claude-sonnet-5',
+      mode: 'NEW',
+      'section-count': 1,
+    });
+    for (const repo of ['source', 'target']) {
+      writeToc(path.join(tmpDir, repo, 'lectures'), ['intro', 'advanced/topic']);
+    }
+    const { logger } = captureLogger();
+
+    const results = await runForwardBulk(
+      {
+        source: path.join(tmpDir, 'source'),
+        target: path.join(tmpDir, 'target'),
+        docsFolder: 'lectures',
+        language: 'zh-cn',
+        sourceLanguage: 'en',
+        model: 'claude-sonnet-5',
+        test: true,
+        apiKey: 'test-key',
+        glossary: { version: '1', terms: [] },
+      },
+      logger
+    );
+
+    expect(results.map((r) => r.file)).toEqual(['advanced/topic.md']);
   });
 });
 
