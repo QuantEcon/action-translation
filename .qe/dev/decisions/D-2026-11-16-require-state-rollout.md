@@ -19,8 +19,8 @@ organiser session.
   The ml and ja editions have no sync workflow, so they join when they start to sync.
 - **The steps, in order.**
   1. Three edition PRs add `.translate/state/_admonition/gpu.md.yml`: in
-     lecture-python-programming.fr and .zh-cn, recording `3e4f703`, and in lecture-python.zh-cn,
-     recording `1f6b3fa`. Each is written by `translate status -f _admonition/gpu.md
+     lecture-python-programming.fr and .zh-cn, recording `3e4f703` of lecture-python-programming,
+     and in lecture-python.zh-cn, recording `1f6b3fa` of lecture-python.myst. Each is written by `translate status -f _admonition/gpu.md
      --write-state` from full clones, with `.translate/config.yml` restored afterwards. These
      editions failed the check on that file alone. lecture-intro.zh-cn and fa already pass.
   2. **v0.33.0 ships when the rollout starts**, not before, so that the CI jobs can pin a
