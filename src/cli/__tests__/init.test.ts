@@ -99,6 +99,7 @@ describe('findInitLecture', () => {
   it('takes the lecture at the path, before one whose path contains the name', () => {
     expect(find('intro.md')).toBe('intro.md');
     expect(find('intro')).toBe('intro.md');
+    expect(find('intro.ipynb')).toBe('intro.md');
     expect(find('a/topic')).toBe('a/topic.md');
   });
 

@@ -221,7 +221,7 @@ If each lecture is reviewed before it is published, skip the two subsections abo
 
 Once, before the first lecture's PR, make the edition's build prune its table of contents (see [Prune the table of contents at build time](fresh-setup.md#prune-the-table-of-contents-at-build-time)). Sync keeps the committed `_toc.yml` a mirror of the source's, so it lists lectures the edition does not have yet.
 
-Then, for each lecture, update the source clone, start a branch from an up-to-date `main` in `lecture-python-intro.ja`, and preview the draft. `-f` takes a lecture in the source's lecture set, a `_toc.yml` entry or a file one of them includes: the one named exactly, or else the first whose path contains the name. `--dry-run` prints that lecture on the `Translating single file:` line, then stops before translating or writing anything:
+Then, for each lecture, update the source clone, start a branch from an up-to-date `main` in `lecture-python-intro.ja`, and preview the draft. `-f` takes a lecture in the source's lecture set, a `_toc.yml` entry or a file one of them includes: the one at that path, else the one with that file name in any folder, else the one whose path contains the name; a name that matches more than one is refused, naming them. `--dry-run` prints that lecture on the `Translating single file:` line, then stops before translating or writing anything:
 
 ```bash
 npx translate init \

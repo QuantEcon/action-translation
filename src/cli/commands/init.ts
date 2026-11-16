@@ -161,7 +161,8 @@ function notInLectureSet(file: string, set: LectureSet, lectures: string[]): str
  * `-f topic` must not pick `a/topic.md` over `b/topic.md` unseen.
  */
 export function findInitLecture(file: string, set: LectureSet, lectures: string[]): string {
-  const target = file.endsWith('.md') ? file : `${file}.md`;
+  // `-f intro`, `-f intro.md` and `-f intro.ipynb` all name `intro.md`.
+  const target = `${tocStem(file)}.md`;
   const steps = [
     lectures.filter((l) => l === target),
     lectures.filter((l) => path.posix.basename(l) === target),

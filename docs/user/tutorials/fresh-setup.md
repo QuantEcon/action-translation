@@ -279,7 +279,7 @@ git pull
 git switch -c translate-cobweb
 ```
 
-`-f` names a lecture in the source's lecture set: a document the source `_toc.yml` lists, or a file one of them includes. It takes the lecture named exactly, or else the first in ToC order whose path contains the name: `-f solow` would match `ak_solow.md` if that came first. Preview the match with `--dry-run`, which prints the `Translating single file:` line and stops before translating or writing anything:
+`-f` names a lecture in the source's lecture set: a document the source `_toc.yml` lists, or a file one of them includes. It takes the lecture at that path, else the one with that file name in any folder, else the one whose path contains the name, and refuses a name that matches more than one, naming them: `-f solow` takes `solow.md` even when `ak_solow.md` is listed first, and `-f sol` names both and stops. Preview the match with `--dry-run`, which prints the `Translating single file:` line and stops before translating or writing anything:
 
 ```bash
 cd /path/to/action-translation
