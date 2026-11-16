@@ -161,6 +161,55 @@ describe('failure issue (#281)', () => {
     expect(lines).toContain(`    git rev-list --count ${MERGE}..origin/main -- <path>`);
   });
 
+  it('when the lecture set could not be read, says nothing synced and when a resync helps (#449)', () => {
+    const lines = failureRecoveryLines({
+      ...BASE,
+      errors: ["Sync refused: the source's lecture set at cafe000 could not be read: ..."],
+      failedLectures: [{ file: 'lectures/mix_model.md', inEdition: true }],
+      lectureSetUnread: true,
+    });
+    expect(lines.slice(0, 5)).toEqual([
+      "This run synced nothing: it could not read the source's lecture set at the PR's merge " +
+        'commit (`lectures/_toc.yml`, the lectures it lists and the files they include), which ' +
+        'says which changed files are lectures. No lecture was translated and nothing in ' +
+        'QuantEcon/lecture-python.zh-cn changed. If the read failed for a transient reason, ' +
+        `sync this PR's changes again with \`${RESYNC_COMMAND}\` under the condition below. If ` +
+        'the ToC is missing or broken at that commit, a resync fails the same way: fix the ToC ' +
+        "in the source, then carry this PR's lectures from a checkout of the source's default " +
+        'branch:',
+      '',
+      '- one the edition has: `translate forward -f <file>`;',
+      '- one the edition does not have yet: `translate init -f <file>`.',
+      '',
+    ]);
+    expect(lines.join('\n')).not.toContain('translate forward -f mix_model.md');
+    expect(lines).toContain(`    git rev-list --count ${MERGE}..origin/main -- <path>`);
+  });
+
+  it("names the held PR's removals, which no later sync deletes, with their state files (#449)", () => {
+    const lines = failureRecoveryLines({
+      ...BASE,
+      errors: ["Sync refused: the source's lecture set at cafe000 could not be read: ..."],
+      lectureSetUnread: true,
+      heldRemovals: ['lectures/old.md', 'lectures/_admonition/gpu.md'],
+    });
+    expect(lines.slice(1, 8)).toEqual([
+      '',
+      'This PR also removed or renamed lectures, and no later sync deletes them from ' +
+        'QuantEcon/lecture-python.zh-cn: the change that removed them is this one. Delete each ' +
+        'from the edition by hand, with its state file, where the edition has it:',
+      '',
+      '- `lectures/old.md` and `.translate/state/old.md.yml`',
+      '- `lectures/_admonition/gpu.md` and `.translate/state/_admonition/gpu.md.yml`',
+      '',
+      'Then carry the lectures this PR changed:',
+    ]);
+    // Only a held run names them: any other run deletes its removals itself.
+    expect(
+      failureRecoveryLines({ ...BASE, errors: ['x'], heldRemovals: ['lectures/old.md'] }).join('\n')
+    ).not.toContain('Delete each from the edition by hand');
+  });
+
   describe('with lectures held back by the premise check (#420)', () => {
     const behind: HeldBackLecture = {
       file: 'lectures/mle_intro.md',

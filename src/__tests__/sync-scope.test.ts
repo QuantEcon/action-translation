@@ -1280,8 +1280,11 @@ describe('formatScopeNotice', () => {
 describe('buildScopeSummary', () => {
   const PR_URL = 'https://github.com/QuantEcon/lecture-python-programming.ml/pull/88';
 
+  /** A scoped run: the summary input with its scope check. */
+  type ScopedSummaryInput = ScopeSummaryInput & { scoped: ScopedFiles };
+
   /** A run with two lectures in scope and one lecture of each kind left out. */
-  function summaryInput(overrides: Partial<ScopeSummaryInput> = {}): ScopeSummaryInput {
+  function summaryInput(overrides: Partial<ScopedSummaryInput> = {}): ScopedSummaryInput {
     return {
       targetLanguage: 'ml',
       targetRepo: 'QuantEcon/lecture-python-programming.ml',
@@ -1331,7 +1334,7 @@ describe('buildScopeSummary', () => {
     'and the run failed.';
 
   /** The default run, with `SCOPE_ERRORS` among its errors. */
-  function withScopeErrors(overrides: Partial<ScopeSummaryInput> = {}): ScopeSummaryInput {
+  function withScopeErrors(overrides: Partial<ScopedSummaryInput> = {}): ScopeSummaryInput {
     const run = summaryInput(overrides);
     return { ...run, scoped: { ...run.scoped, errors: SCOPE_ERRORS } };
   }

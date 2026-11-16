@@ -1354,14 +1354,14 @@ var require_util = __commonJS({
         }
         const port = url.port != null ? url.port : url.protocol === "https:" ? 443 : 80;
         let origin = url.origin != null ? url.origin : `${url.protocol || ""}//${url.hostname || ""}:${port}`;
-        let path8 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
+        let path9 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
         if (origin[origin.length - 1] === "/") {
           origin = origin.slice(0, origin.length - 1);
         }
-        if (path8 && path8[0] !== "/") {
-          path8 = `/${path8}`;
+        if (path9 && path9[0] !== "/") {
+          path9 = `/${path9}`;
         }
-        return new URL(`${origin}${path8}`);
+        return new URL(`${origin}${path9}`);
       }
       if (!isHttpOrHttpsPrefixed(url.origin || url.protocol)) {
         throw new InvalidArgumentError("Invalid URL protocol: the URL must start with `http:` or `https:`.");
@@ -1812,39 +1812,39 @@ var require_diagnostics = __commonJS({
       });
       diagnosticsChannel.channel("undici:client:sendHeaders").subscribe((evt) => {
         const {
-          request: { method, path: path8, origin }
+          request: { method, path: path9, origin }
         } = evt;
-        debuglog("sending request to %s %s/%s", method, origin, path8);
+        debuglog("sending request to %s %s/%s", method, origin, path9);
       });
       diagnosticsChannel.channel("undici:request:headers").subscribe((evt) => {
         const {
-          request: { method, path: path8, origin },
+          request: { method, path: path9, origin },
           response: { statusCode }
         } = evt;
         debuglog(
           "received response to %s %s/%s - HTTP %d",
           method,
           origin,
-          path8,
+          path9,
           statusCode
         );
       });
       diagnosticsChannel.channel("undici:request:trailers").subscribe((evt) => {
         const {
-          request: { method, path: path8, origin }
+          request: { method, path: path9, origin }
         } = evt;
-        debuglog("trailers received from %s %s/%s", method, origin, path8);
+        debuglog("trailers received from %s %s/%s", method, origin, path9);
       });
       diagnosticsChannel.channel("undici:request:error").subscribe((evt) => {
         const {
-          request: { method, path: path8, origin },
+          request: { method, path: path9, origin },
           error: error4
         } = evt;
         debuglog(
           "request to %s %s/%s errored - %s",
           method,
           origin,
-          path8,
+          path9,
           error4.message
         );
       });
@@ -1893,9 +1893,9 @@ var require_diagnostics = __commonJS({
         });
         diagnosticsChannel.channel("undici:client:sendHeaders").subscribe((evt) => {
           const {
-            request: { method, path: path8, origin }
+            request: { method, path: path9, origin }
           } = evt;
-          debuglog("sending request to %s %s/%s", method, origin, path8);
+          debuglog("sending request to %s %s/%s", method, origin, path9);
         });
       }
       diagnosticsChannel.channel("undici:websocket:open").subscribe((evt) => {
@@ -1958,7 +1958,7 @@ var require_request = __commonJS({
     var kHandler = /* @__PURE__ */ Symbol("handler");
     var Request = class {
       constructor(origin, {
-        path: path8,
+        path: path9,
         method,
         body,
         headers,
@@ -1973,11 +1973,11 @@ var require_request = __commonJS({
         expectContinue,
         servername
       }, handler2) {
-        if (typeof path8 !== "string") {
+        if (typeof path9 !== "string") {
           throw new InvalidArgumentError("path must be a string");
-        } else if (path8[0] !== "/" && !(path8.startsWith("http://") || path8.startsWith("https://")) && method !== "CONNECT") {
+        } else if (path9[0] !== "/" && !(path9.startsWith("http://") || path9.startsWith("https://")) && method !== "CONNECT") {
           throw new InvalidArgumentError("path must be an absolute URL or start with a slash");
-        } else if (invalidPathRegex.test(path8)) {
+        } else if (invalidPathRegex.test(path9)) {
           throw new InvalidArgumentError("invalid request path");
         }
         if (typeof method !== "string") {
@@ -2043,7 +2043,7 @@ var require_request = __commonJS({
         this.completed = false;
         this.aborted = false;
         this.upgrade = upgrade || null;
-        this.path = query ? buildURL(path8, query) : path8;
+        this.path = query ? buildURL(path9, query) : path9;
         this.origin = origin;
         this.idempotent = idempotent == null ? method === "HEAD" || method === "GET" : idempotent;
         this.blocking = blocking == null ? false : blocking;
@@ -6736,7 +6736,7 @@ var require_client_h1 = __commonJS({
       return method !== "GET" && method !== "HEAD" && method !== "OPTIONS" && method !== "TRACE" && method !== "CONNECT";
     }
     function writeH1(client, request2) {
-      const { method, path: path8, host, upgrade, blocking, reset } = request2;
+      const { method, path: path9, host, upgrade, blocking, reset } = request2;
       let { body, headers, contentLength } = request2;
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH" || method === "QUERY" || method === "PROPFIND" || method === "PROPPATCH";
       if (util2.isFormDataLike(body)) {
@@ -6817,7 +6817,7 @@ var require_client_h1 = __commonJS({
       if (blocking) {
         socket[kBlocking] = true;
       }
-      let header = `${method} ${path8} HTTP/1.1\r
+      let header = `${method} ${path9} HTTP/1.1\r
 `;
       if (typeof host === "string") {
         header += `host: ${host}\r
@@ -7346,7 +7346,7 @@ var require_client_h2 = __commonJS({
     }
     function writeH2(client, request2) {
       const session = client[kHTTP2Session];
-      const { method, path: path8, host, upgrade, expectContinue, signal, headers: reqHeaders } = request2;
+      const { method, path: path9, host, upgrade, expectContinue, signal, headers: reqHeaders } = request2;
       let { body } = request2;
       if (upgrade) {
         util2.errorRequest(client, request2, new Error("Upgrade not supported for H2"));
@@ -7443,7 +7443,7 @@ var require_client_h2 = __commonJS({
         });
         return true;
       }
-      headers[HTTP2_HEADER_PATH] = path8;
+      headers[HTTP2_HEADER_PATH] = path9;
       headers[HTTP2_HEADER_SCHEME] = "https";
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH";
       if (body && typeof body.read === "function") {
@@ -7796,9 +7796,9 @@ var require_redirect_handler = __commonJS({
           return this.handler.onHeaders(statusCode, headers, resume, statusText);
         }
         const { origin, pathname, search } = util2.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
-        const path8 = search ? `${pathname}${search}` : pathname;
+        const path9 = search ? `${pathname}${search}` : pathname;
         this.opts.headers = cleanRequestHeaders(this.opts.headers, statusCode === 303, this.opts.origin !== origin);
-        this.opts.path = path8;
+        this.opts.path = path9;
         this.opts.origin = origin;
         this.opts.maxRedirections = 0;
         this.opts.query = null;
@@ -9037,10 +9037,10 @@ var require_proxy_agent = __commonJS({
         };
         const {
           origin,
-          path: path8 = "/",
+          path: path9 = "/",
           headers = {}
         } = opts;
-        opts.path = origin + path8;
+        opts.path = origin + path9;
         if (!("host" in headers) && !("Host" in headers)) {
           const { host } = new URL2(origin);
           headers.host = host;
@@ -11012,20 +11012,20 @@ var require_mock_utils = __commonJS({
       }
       return true;
     }
-    function safeUrl(path8) {
-      if (typeof path8 !== "string") {
-        return path8;
+    function safeUrl(path9) {
+      if (typeof path9 !== "string") {
+        return path9;
       }
-      const pathSegments = path8.split("?");
+      const pathSegments = path9.split("?");
       if (pathSegments.length !== 2) {
-        return path8;
+        return path9;
       }
       const qp = new URLSearchParams(pathSegments.pop());
       qp.sort();
       return [...pathSegments, qp.toString()].join("?");
     }
-    function matchKey(mockDispatch2, { path: path8, method, body, headers }) {
-      const pathMatch = matchValue(mockDispatch2.path, path8);
+    function matchKey(mockDispatch2, { path: path9, method, body, headers }) {
+      const pathMatch = matchValue(mockDispatch2.path, path9);
       const methodMatch = matchValue(mockDispatch2.method, method);
       const bodyMatch = typeof mockDispatch2.body !== "undefined" ? matchValue(mockDispatch2.body, body) : true;
       const headersMatch = matchHeaders(mockDispatch2, headers);
@@ -11047,7 +11047,7 @@ var require_mock_utils = __commonJS({
     function getMockDispatch(mockDispatches, key) {
       const basePath = key.query ? buildURL(key.path, key.query) : key.path;
       const resolvedPath = typeof basePath === "string" ? safeUrl(basePath) : basePath;
-      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path8 }) => matchValue(safeUrl(path8), resolvedPath));
+      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path9 }) => matchValue(safeUrl(path9), resolvedPath));
       if (matchedMockDispatches.length === 0) {
         throw new MockNotMatchedError(`Mock dispatch not matched for path '${resolvedPath}'`);
       }
@@ -11085,9 +11085,9 @@ var require_mock_utils = __commonJS({
       }
     }
     function buildKey(opts) {
-      const { path: path8, method, body, headers, query } = opts;
+      const { path: path9, method, body, headers, query } = opts;
       return {
-        path: path8,
+        path: path9,
         method,
         body,
         headers,
@@ -11550,10 +11550,10 @@ var require_pending_interceptors_formatter = __commonJS({
       }
       format(pendingInterceptors) {
         const withPrettyHeaders = pendingInterceptors.map(
-          ({ method, path: path8, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
+          ({ method, path: path9, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
             Method: method,
             Origin: origin,
-            Path: path8,
+            Path: path9,
             "Status code": statusCode,
             Persistent: persist ? PERSISTENT : NOT_PERSISTENT,
             Invocations: timesInvoked,
@@ -16432,9 +16432,9 @@ var require_util6 = __commonJS({
         }
       }
     }
-    function validateCookiePath(path8) {
-      for (let i = 0; i < path8.length; ++i) {
-        const code = path8.charCodeAt(i);
+    function validateCookiePath(path9) {
+      for (let i = 0; i < path9.length; ++i) {
+        const code = path9.charCodeAt(i);
         if (code < 32 || // exclude CTLs (0-31)
         code > 126 || // exclude DEL and non-ascii
         code === 59) {
@@ -19354,11 +19354,11 @@ var require_undici = __commonJS({
           if (typeof opts.path !== "string") {
             throw new InvalidArgumentError("invalid opts.path");
           }
-          let path8 = opts.path;
+          let path9 = opts.path;
           if (!opts.path.startsWith("/")) {
-            path8 = `/${path8}`;
+            path9 = `/${path9}`;
           }
-          url = new URL(util2.parseOrigin(url).origin + path8);
+          url = new URL(util2.parseOrigin(url).origin + path9);
         } else {
           if (!opts) {
             opts = typeof url === "object" ? url : {};
@@ -20661,7 +20661,7 @@ var require_path_utils = __commonJS({
     exports2.toPosixPath = toPosixPath;
     exports2.toWin32Path = toWin32Path;
     exports2.toPlatformPath = toPlatformPath;
-    var path8 = __importStar(require("path"));
+    var path9 = __importStar(require("path"));
     function toPosixPath(pth) {
       return pth.replace(/[\\]/g, "/");
     }
@@ -20669,7 +20669,7 @@ var require_path_utils = __commonJS({
       return pth.replace(/[/]/g, "\\");
     }
     function toPlatformPath(pth) {
-      return pth.replace(/[/\\]/g, path8.sep);
+      return pth.replace(/[/\\]/g, path9.sep);
     }
   }
 });
@@ -20752,7 +20752,7 @@ var require_io_util = __commonJS({
     exports2.tryGetExecutablePath = tryGetExecutablePath;
     exports2.getCmdPath = getCmdPath;
     var fs8 = __importStar(require("fs"));
-    var path8 = __importStar(require("path"));
+    var path9 = __importStar(require("path"));
     _a2 = fs8.promises, exports2.chmod = _a2.chmod, exports2.copyFile = _a2.copyFile, exports2.lstat = _a2.lstat, exports2.mkdir = _a2.mkdir, exports2.open = _a2.open, exports2.readdir = _a2.readdir, exports2.rename = _a2.rename, exports2.rm = _a2.rm, exports2.rmdir = _a2.rmdir, exports2.stat = _a2.stat, exports2.symlink = _a2.symlink, exports2.unlink = _a2.unlink;
     exports2.IS_WINDOWS = process.platform === "win32";
     function readlink(fsPath) {
@@ -20807,7 +20807,7 @@ var require_io_util = __commonJS({
         }
         if (stats && stats.isFile()) {
           if (exports2.IS_WINDOWS) {
-            const upperExt = path8.extname(filePath).toUpperCase();
+            const upperExt = path9.extname(filePath).toUpperCase();
             if (extensions.some((validExt) => validExt.toUpperCase() === upperExt)) {
               return filePath;
             }
@@ -20831,11 +20831,11 @@ var require_io_util = __commonJS({
           if (stats && stats.isFile()) {
             if (exports2.IS_WINDOWS) {
               try {
-                const directory = path8.dirname(filePath);
-                const upperName = path8.basename(filePath).toUpperCase();
+                const directory = path9.dirname(filePath);
+                const upperName = path9.basename(filePath).toUpperCase();
                 for (const actualName of yield (0, exports2.readdir)(directory)) {
                   if (upperName === actualName.toUpperCase()) {
-                    filePath = path8.join(directory, actualName);
+                    filePath = path9.join(directory, actualName);
                     break;
                   }
                 }
@@ -20947,7 +20947,7 @@ var require_io = __commonJS({
     exports2.which = which;
     exports2.findInPath = findInPath;
     var assert_1 = require("assert");
-    var path8 = __importStar(require("path"));
+    var path9 = __importStar(require("path"));
     var ioUtil = __importStar(require_io_util());
     function cp2(source_1, dest_1) {
       return __awaiter(this, arguments, void 0, function* (source, dest, options = {}) {
@@ -20956,7 +20956,7 @@ var require_io = __commonJS({
         if (destStat && destStat.isFile() && !force) {
           return;
         }
-        const newDest = destStat && destStat.isDirectory() && copySourceDirectory ? path8.join(dest, path8.basename(source)) : dest;
+        const newDest = destStat && destStat.isDirectory() && copySourceDirectory ? path9.join(dest, path9.basename(source)) : dest;
         if (!(yield ioUtil.exists(source))) {
           throw new Error(`no such file or directory: ${source}`);
         }
@@ -20968,7 +20968,7 @@ var require_io = __commonJS({
             yield cpDirRecursive(source, newDest, 0, force);
           }
         } else {
-          if (path8.relative(source, newDest) === "") {
+          if (path9.relative(source, newDest) === "") {
             throw new Error(`'${newDest}' and '${source}' are the same file`);
           }
           yield copyFile(source, newDest, force);
@@ -20980,7 +20980,7 @@ var require_io = __commonJS({
         if (yield ioUtil.exists(dest)) {
           let destExists = true;
           if (yield ioUtil.isDirectory(dest)) {
-            dest = path8.join(dest, path8.basename(source));
+            dest = path9.join(dest, path9.basename(source));
             destExists = yield ioUtil.exists(dest);
           }
           if (destExists) {
@@ -20991,7 +20991,7 @@ var require_io = __commonJS({
             }
           }
         }
-        yield mkdirP(path8.dirname(dest));
+        yield mkdirP(path9.dirname(dest));
         yield ioUtil.rename(source, dest);
       });
     }
@@ -21050,7 +21050,7 @@ var require_io = __commonJS({
         }
         const extensions = [];
         if (ioUtil.IS_WINDOWS && process.env["PATHEXT"]) {
-          for (const extension of process.env["PATHEXT"].split(path8.delimiter)) {
+          for (const extension of process.env["PATHEXT"].split(path9.delimiter)) {
             if (extension) {
               extensions.push(extension);
             }
@@ -21063,12 +21063,12 @@ var require_io = __commonJS({
           }
           return [];
         }
-        if (tool.includes(path8.sep)) {
+        if (tool.includes(path9.sep)) {
           return [];
         }
         const directories = [];
         if (process.env.PATH) {
-          for (const p of process.env.PATH.split(path8.delimiter)) {
+          for (const p of process.env.PATH.split(path9.delimiter)) {
             if (p) {
               directories.push(p);
             }
@@ -21076,7 +21076,7 @@ var require_io = __commonJS({
         }
         const matches = [];
         for (const directory of directories) {
-          const filePath = yield ioUtil.tryGetExecutablePath(path8.join(directory, tool), extensions);
+          const filePath = yield ioUtil.tryGetExecutablePath(path9.join(directory, tool), extensions);
           if (filePath) {
             matches.push(filePath);
           }
@@ -21206,7 +21206,7 @@ var require_toolrunner = __commonJS({
     var os2 = __importStar(require("os"));
     var events = __importStar(require("events"));
     var child = __importStar(require("child_process"));
-    var path8 = __importStar(require("path"));
+    var path9 = __importStar(require("path"));
     var io = __importStar(require_io());
     var ioUtil = __importStar(require_io_util());
     var timers_1 = require("timers");
@@ -21421,7 +21421,7 @@ var require_toolrunner = __commonJS({
       exec() {
         return __awaiter(this, void 0, void 0, function* () {
           if (!ioUtil.isRooted(this.toolPath) && (this.toolPath.includes("/") || IS_WINDOWS && this.toolPath.includes("\\"))) {
-            this.toolPath = path8.resolve(process.cwd(), this.options.cwd || process.cwd(), this.toolPath);
+            this.toolPath = path9.resolve(process.cwd(), this.options.cwd || process.cwd(), this.toolPath);
           }
           this.toolPath = yield io.which(this.toolPath, true);
           return new Promise((resolve4, reject) => __awaiter(this, void 0, void 0, function* () {
@@ -21974,7 +21974,7 @@ var require_core = __commonJS({
     var file_command_1 = require_file_command();
     var utils_1 = require_utils();
     var os2 = __importStar(require("os"));
-    var path8 = __importStar(require("path"));
+    var path9 = __importStar(require("path"));
     var oidc_utils_1 = require_oidc_utils();
     var ExitCode;
     (function(ExitCode2) {
@@ -22000,7 +22000,7 @@ var require_core = __commonJS({
       } else {
         (0, command_1.issueCommand)("add-path", {}, inputPath);
       }
-      process.env["PATH"] = `${inputPath}${path8.delimiter}${process.env["PATH"]}`;
+      process.env["PATH"] = `${inputPath}${path9.delimiter}${process.env["PATH"]}`;
     }
     function getInput2(name, options) {
       const val = process.env[`INPUT_${name.replace(/ /g, "_").toUpperCase()}`] || "";
@@ -22137,8 +22137,8 @@ var require_context = __commonJS({
           if ((0, fs_1.existsSync)(process.env.GITHUB_EVENT_PATH)) {
             this.payload = JSON.parse((0, fs_1.readFileSync)(process.env.GITHUB_EVENT_PATH, { encoding: "utf8" }));
           } else {
-            const path8 = process.env.GITHUB_EVENT_PATH;
-            process.stdout.write(`GITHUB_EVENT_PATH ${path8} does not exist${os_1.EOL}`);
+            const path9 = process.env.GITHUB_EVENT_PATH;
+            process.stdout.write(`GITHUB_EVENT_PATH ${path9} does not exist${os_1.EOL}`);
           }
         }
         this.eventName = process.env.GITHUB_EVENT_NAME;
@@ -27742,14 +27742,14 @@ function redactSensitive(body) {
   }
   return null;
 }
-async function checkCredentialsFileSafety(path8, onWarn = (m) => console.warn(`anthropic-sdk: ${m}`)) {
+async function checkCredentialsFileSafety(path9, onWarn = (m) => console.warn(`anthropic-sdk: ${m}`)) {
   if (typeof process === "undefined" || process.platform === "win32")
     return;
   const { fs: fs8 } = await Promise.resolve().then(() => (init_node(), node_exports));
-  let resolved = path8;
+  let resolved = path9;
   let st;
   try {
-    resolved = await fs8.promises.realpath(path8);
+    resolved = await fs8.promises.realpath(path9);
     st = await fs8.promises.stat(resolved);
   } catch {
     return;
@@ -27766,8 +27766,8 @@ async function checkCredentialsFileSafety(path8, onWarn = (m) => console.warn(`a
   }
 }
 async function writeCredentialsFileAtomic(targetPath, data) {
-  const { fs: fs8, path: path8 } = await Promise.resolve().then(() => (init_node(), node_exports));
-  const dir = path8.dirname(targetPath);
+  const { fs: fs8, path: path9 } = await Promise.resolve().then(() => (init_node(), node_exports));
+  const dir = path9.dirname(targetPath);
   await fs8.promises.mkdir(dir, { recursive: true, mode: 448 });
   const tmpPath = `${targetPath}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
   try {
@@ -28187,8 +28187,8 @@ var init_credentials = __esm({
         return null;
       }
       validateProfileName(profileName);
-      const { fs: fs8, path: path8 } = await Promise.resolve().then(() => (init_node(), node_exports));
-      const configPath = path8.join(rootConfigPath, "configs", `${profileName}.json`);
+      const { fs: fs8, path: path9 } = await Promise.resolve().then(() => (init_node(), node_exports));
+      const configPath = path9.join(rootConfigPath, "configs", `${profileName}.json`);
       let configRaw;
       try {
         configRaw = await fs8.promises.readFile(configPath, "utf-8");
@@ -28272,14 +28272,14 @@ var init_credentials = __esm({
         return null;
       }
       validateProfileName(profileName);
-      const { path: path8 } = await Promise.resolve().then(() => (init_node(), node_exports));
-      return path8.join(rootConfigPath, "credentials", `${profileName}.json`);
+      const { path: path9 } = await Promise.resolve().then(() => (init_node(), node_exports));
+      return path9.join(rootConfigPath, "credentials", `${profileName}.json`);
     };
     getRootConfigPath = async () => {
       if (!supportsLocalConfigFiles()) {
         return null;
       }
-      const { path: path8 } = await Promise.resolve().then(() => (init_node(), node_exports));
+      const { path: path9 } = await Promise.resolve().then(() => (init_node(), node_exports));
       const configDir = readEnv("ANTHROPIC_CONFIG_DIR");
       if (configDir) {
         return configDir;
@@ -28288,21 +28288,21 @@ var init_credentials = __esm({
       if (os2 === "Windows") {
         const appData = readEnv("APPDATA");
         if (appData) {
-          return path8.join(appData, "Anthropic");
+          return path9.join(appData, "Anthropic");
         }
         const userProfile = readEnv("USERPROFILE");
         if (userProfile) {
-          return path8.join(userProfile, "AppData", "Roaming", "Anthropic");
+          return path9.join(userProfile, "AppData", "Roaming", "Anthropic");
         }
         return null;
       }
       const xdgConfigHome = readEnv("XDG_CONFIG_HOME");
       if (xdgConfigHome) {
-        return path8.join(xdgConfigHome, "anthropic");
+        return path9.join(xdgConfigHome, "anthropic");
       }
       const home = readEnv("HOME");
       if (home) {
-        return path8.join(home, ".config", "anthropic");
+        return path9.join(home, ".config", "anthropic");
       }
       return null;
     };
@@ -28319,8 +28319,8 @@ var init_credentials = __esm({
       if (profileName) {
         return profileName;
       }
-      const { fs: fs8, path: path8 } = await Promise.resolve().then(() => (init_node(), node_exports));
-      const filePath = path8.join(rootConfigPath, "active_config");
+      const { fs: fs8, path: path9 } = await Promise.resolve().then(() => (init_node(), node_exports));
+      const filePath = path9.join(rootConfigPath, "active_config");
       try {
         return (await fs8.promises.readFile(filePath, "utf-8")).trim() || "default";
       } catch (err) {
@@ -28334,21 +28334,21 @@ var init_credentials = __esm({
 });
 
 // node_modules/@anthropic-ai/sdk/lib/credentials/identity-token.mjs
-function identityTokenFromFile(path8) {
-  if (!path8) {
+function identityTokenFromFile(path9) {
+  if (!path9) {
     throw new AnthropicError("Identity token file path is empty");
   }
   return async () => {
     const { fs: fs8 } = await Promise.resolve().then(() => (init_node(), node_exports));
     let content;
     try {
-      content = await fs8.promises.readFile(path8, "utf-8");
+      content = await fs8.promises.readFile(path9, "utf-8");
     } catch (err) {
-      throw new AnthropicError(`Failed to read identity token file at ${path8}: ${err}`);
+      throw new AnthropicError(`Failed to read identity token file at ${path9}: ${err}`);
     }
     const token = content.trim();
     if (!token) {
-      throw new AnthropicError(`Identity token file at ${path8} is empty`);
+      throw new AnthropicError(`Identity token file at ${path9} is empty`);
     }
     return token;
   };
@@ -29675,12 +29675,12 @@ var init_path = __esm({
   "node_modules/@anthropic-ai/sdk/internal/utils/path.mjs"() {
     init_error();
     EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
-    createPathTagFunction = (pathEncoder = encodeURIPath) => function path8(statics, ...params) {
+    createPathTagFunction = (pathEncoder = encodeURIPath) => function path9(statics, ...params) {
       if (statics.length === 1)
         return statics[0];
       let postPath = false;
       const invalidSegments = [];
-      const path9 = statics.reduce((previousValue, currentValue, index) => {
+      const path10 = statics.reduce((previousValue, currentValue, index) => {
         if (/[?#]/.test(currentValue)) {
           postPath = true;
         }
@@ -29697,7 +29697,7 @@ var init_path = __esm({
         }
         return previousValue + currentValue + (index === params.length ? "" : encoded);
       }, "");
-      const pathOnly = path9.split(/[?#]/, 1)[0];
+      const pathOnly = path10.split(/[?#]/, 1)[0];
       const invalidSegmentPattern = /(?<=^|\/)(?:\.|%2e){1,2}(?=\/|$)/gi;
       let match;
       while ((match = invalidSegmentPattern.exec(pathOnly)) !== null) {
@@ -29718,10 +29718,10 @@ var init_path = __esm({
         }, "");
         throw new AnthropicError(`Path parameters result in path with invalid segments:
 ${invalidSegments.map((e) => e.error).join("\n")}
-${path9}
+${path10}
 ${underline}`);
       }
-      return path9;
+      return path10;
     };
     path2 = /* @__PURE__ */ createPathTagFunction(encodeURIPath);
   }
@@ -46875,9 +46875,9 @@ var init_client = __esm({
         makeStatusError(status, error4, message, headers) {
           return APIError.generate(status, error4, message, headers);
         }
-        buildURL(path8, query, defaultBaseURL) {
+        buildURL(path9, query, defaultBaseURL) {
           const baseURL = !__classPrivateFieldGet(this, _BaseAnthropic_instances, "m", _BaseAnthropic_baseURLOverridden).call(this) && defaultBaseURL || this.baseURL;
-          const url = isAbsoluteURL(path8) ? new URL(path8) : new URL(baseURL + (baseURL.endsWith("/") && path8.startsWith("/") ? path8.slice(1) : path8));
+          const url = isAbsoluteURL(path9) ? new URL(path9) : new URL(baseURL + (baseURL.endsWith("/") && path9.startsWith("/") ? path9.slice(1) : path9));
           const defaultQuery = this.defaultQuery();
           const pathQuery = Object.fromEntries(url.searchParams);
           if (!isEmptyObj(defaultQuery) || !isEmptyObj(pathQuery)) {
@@ -46949,24 +46949,24 @@ var init_client = __esm({
         backendMiddleware() {
           return [];
         }
-        get(path8, opts) {
-          return this.methodRequest("get", path8, opts);
+        get(path9, opts) {
+          return this.methodRequest("get", path9, opts);
         }
-        post(path8, opts) {
-          return this.methodRequest("post", path8, opts);
+        post(path9, opts) {
+          return this.methodRequest("post", path9, opts);
         }
-        patch(path8, opts) {
-          return this.methodRequest("patch", path8, opts);
+        patch(path9, opts) {
+          return this.methodRequest("patch", path9, opts);
         }
-        put(path8, opts) {
-          return this.methodRequest("put", path8, opts);
+        put(path9, opts) {
+          return this.methodRequest("put", path9, opts);
         }
-        delete(path8, opts) {
-          return this.methodRequest("delete", path8, opts);
+        delete(path9, opts) {
+          return this.methodRequest("delete", path9, opts);
         }
-        methodRequest(method, path8, opts) {
+        methodRequest(method, path9, opts) {
           return this.request(Promise.resolve(opts).then((opts2) => {
-            return { method, path: path8, ...opts2 };
+            return { method, path: path9, ...opts2 };
           }));
         }
         request(options, remainingRetries = null) {
@@ -47087,8 +47087,8 @@ var init_client = __esm({
           armAbandonmentBackstop(response.body ?? response, controller);
           return { response, options, controller, requestLogID, retryOfRequestLogID, startTime };
         }
-        getAPIList(path8, Page2, opts) {
-          return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path8, ...opts2 })) : { method: "get", path: path8, ...opts });
+        getAPIList(path9, Page2, opts) {
+          return this.requestAPIList(Page2, opts && "then" in opts ? opts.then((opts2) => ({ method: "get", path: path9, ...opts2 })) : { method: "get", path: path9, ...opts });
         }
         requestAPIList(Page2, options) {
           const request2 = this.makeRequest(options, null, void 0);
@@ -47206,14 +47206,14 @@ var init_client = __esm({
         }
         async buildRequest(inputOptions, { retryCount = 0 } = {}) {
           const options = { ...inputOptions };
-          const { method, path: path8, query, defaultBaseURL } = options;
+          const { method, path: path9, query, defaultBaseURL } = options;
           if (this._authState.resolution) {
             await this._authState.resolution;
           }
           if (!this._baseURLIsExplicit && this._authState.baseURL && this.baseURL !== this._authState.baseURL) {
             this.baseURL = this._authState.baseURL;
           }
-          const url = this.buildURL(path8, query, defaultBaseURL);
+          const url = this.buildURL(path9, query, defaultBaseURL);
           if ("timeout" in options)
             validatePositiveInteger("timeout", options.timeout);
           options.timeout = options.timeout ?? this.timeout;
@@ -52929,16 +52929,16 @@ function updateHeadingMap(existingMap, sourceSections, targetSections, titleHead
   const processSections = (sourceSecs, targetSecs, parentPath = "", level = 0) => {
     sourceSecs.forEach((sourceSection, i) => {
       const sourceHeading = cleanHeading(sourceSection.heading);
-      const path8 = parentPath ? `${parentPath}${PATH_SEPARATOR}${sourceHeading}` : sourceHeading;
-      currentSourcePaths.add(path8);
+      const path9 = parentPath ? `${parentPath}${PATH_SEPARATOR}${sourceHeading}` : sourceHeading;
+      currentSourcePaths.add(path9);
       const targetSection = targetSecs[i];
       if (targetSection) {
         const targetHeading = cleanHeading(targetSection.heading);
-        updated.set(path8, targetHeading);
+        updated.set(path9, targetHeading);
         if (sourceSection.subsections.length > 0 && targetSection.subsections.length > 0) {
-          processSections(sourceSection.subsections, targetSection.subsections, path8, level + 1);
+          processSections(sourceSection.subsections, targetSection.subsections, path9, level + 1);
         } else if (sourceSection.subsections.length > 0) {
-          addSourceSubsections(sourceSection.subsections, path8);
+          addSourceSubsections(sourceSection.subsections, path9);
         }
       }
     });
@@ -52946,10 +52946,10 @@ function updateHeadingMap(existingMap, sourceSections, targetSections, titleHead
   const addSourceSubsections = (subsections, parentPath) => {
     for (const sub of subsections) {
       const subHeading = cleanHeading(sub.heading);
-      const path8 = `${parentPath}${PATH_SEPARATOR}${subHeading}`;
-      currentSourcePaths.add(path8);
+      const path9 = `${parentPath}${PATH_SEPARATOR}${subHeading}`;
+      currentSourcePaths.add(path9);
       if (sub.subsections.length > 0) {
-        addSourceSubsections(sub.subsections, path8);
+        addSourceSubsections(sub.subsections, path9);
       }
     }
   };
@@ -52985,8 +52985,8 @@ function serializeHeadingMap(map2, title) {
 }
 function lookupTargetHeading(sourceHeading, headingMap, parentPath) {
   const clean = MystParser.stripMystRoles(sourceHeading.replace(/^#+\s+/, "").trim());
-  const path8 = parentPath ? `${parentPath}${PATH_SEPARATOR}${clean}` : clean;
-  const translation = headingMap.get(path8);
+  const path9 = parentPath ? `${parentPath}${PATH_SEPARATOR}${clean}` : clean;
+  const translation = headingMap.get(path9);
   if (translation) {
     return translation;
   }
@@ -52994,7 +52994,7 @@ function lookupTargetHeading(sourceHeading, headingMap, parentPath) {
   if (simple) {
     return simple;
   }
-  const pathLower = path8.toLowerCase();
+  const pathLower = path9.toLowerCase();
   const cleanLower = clean.toLowerCase();
   for (const [key, value] of headingMap) {
     const keyLower = key.toLowerCase();
@@ -53788,7 +53788,7 @@ function findVerbatimViolations(source, target) {
 
 // dist/sync-orchestrator.js
 var import_fs = require("fs");
-var path5 = __toESM(require("path"), 1);
+var path6 = __toESM(require("path"), 1);
 
 // dist/cli/translate-state.js
 var fs5 = __toESM(require("fs"), 1);
@@ -53990,6 +53990,23 @@ function mergeTargetCaptions(sourceYaml, targetYaml, logger) {
 }
 
 // dist/lecture-set.js
+var path5 = __toESM(require("path"), 1);
+var LectureSetError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "LectureSetError";
+  }
+};
+var LectureReadError = class extends Error {
+  file;
+  cause;
+  constructor(file, cause) {
+    super(`${file} could not be read: ${cause instanceof Error ? cause.message : String(cause)}`);
+    this.file = file;
+    this.cause = cause;
+    this.name = "LectureReadError";
+  }
+};
 function tocYmlEntries(doc) {
   const out = [];
   const visit = (entries) => {
@@ -54031,6 +54048,288 @@ function collectTocFiles(doc) {
   const rest = typeof rootFile === "string" ? entries.slice(1) : entries;
   return rest.filter((e) => e.kind === "file").map((e) => e.value);
 }
+var TOC_YML_FORMATS = ["jb-book", "jb-article"];
+var TOC_YML = {
+  file: "_toc.yml",
+  built: true,
+  entries(text) {
+    let doc;
+    try {
+      doc = load(text);
+    } catch (e) {
+      throw new LectureSetError(`_toc.yml is not valid YAML: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    if (!doc || typeof doc !== "object" || Array.isArray(doc)) {
+      throw new LectureSetError("_toc.yml is empty or not a YAML mapping");
+    }
+    const { format, root } = doc;
+    if (format !== void 0 && !TOC_YML_FORMATS.includes(String(format))) {
+      throw new LectureSetError(`_toc.yml has format '${String(format)}'; the lecture set reads ${TOC_YML_FORMATS.join(" and ")}`);
+    }
+    if (typeof root !== "string") {
+      throw new LectureSetError("_toc.yml has no root: jb-book and jb-article both name one");
+    }
+    return tocYmlEntries(doc);
+  }
+};
+var MYST_YML = {
+  file: "myst.yml",
+  built: false,
+  entries() {
+    throw new LectureSetError("myst.yml's ToC is not supported yet: the lecture set reads _toc.yml only, until the first edition moves to mystmd (#449)");
+  }
+};
+var TOC_FRONT_ENDS = [TOC_YML, MYST_YML];
+function findTocFrontEnd(files) {
+  const present = new Set(files);
+  const found = TOC_FRONT_ENDS.find((f) => present.has(f.file));
+  if (!found) {
+    throw new LectureSetError(`the docs folder has no ${TOC_FRONT_ENDS.map((f) => f.file).join(" or ")}, so it has no lecture set`);
+  }
+  return found;
+}
+function normalize(file) {
+  const n = path5.posix.normalize(file.replace(/\\/g, "/"));
+  if (n === ".." || n.startsWith("../") || n.startsWith("/"))
+    return void 0;
+  return n === "." ? "" : n;
+}
+function globPattern(glob2) {
+  const escape2 = (c) => c.replace(/[.+^${}()|[\]\\/-]/g, "\\$&");
+  let re = "";
+  for (let i = 0; i < glob2.length; i++) {
+    const c = glob2[i];
+    const close = c === "[" ? glob2.indexOf("]", i + 2) : -1;
+    if (c === "*" && glob2[i + 1] === "*") {
+      re += ".*";
+      i++;
+    } else if (c === "*")
+      re += "[^/]*";
+    else if (c === "?")
+      re += "[^/]";
+    else if (close > 0) {
+      const body = glob2.slice(i + 1, close);
+      const cls = (b) => b.replace(/[\\^]/g, "\\$&");
+      re += body.startsWith("!") ? `[^${cls(body.slice(1))}]` : `[${cls(body)}]`;
+      i = close;
+    } else
+      re += escape2(c);
+  }
+  return new RegExp(`^${re}$`);
+}
+var SOURCE_SUFFIXES = [".md", ".ipynb", ".rst", ".Rmd", ".myst"];
+function resolveTocFile(entry, files) {
+  const value = normalize(entry);
+  if (value === void 0 || value === "")
+    return { kind: "missing", entry };
+  const suffix = SOURCE_SUFFIXES.find((s) => value.endsWith(s) && value.length > s.length);
+  const stem = suffix ? value.slice(0, -suffix.length) : value;
+  if (files.has(`${stem}.md`))
+    return { kind: "markdown", file: `${stem}.md` };
+  for (const s of SOURCE_SUFFIXES) {
+    if (files.has(`${stem}${s}`))
+      return { kind: "other", file: `${stem}${s}` };
+  }
+  return { kind: "missing", entry };
+}
+function expandTocGlob(glob2, files) {
+  const value = normalize(glob2);
+  if (value === void 0)
+    return [];
+  const re = globPattern(value);
+  return files.filter((f) => f.endsWith(".md")).map((f) => f.slice(0, -3)).filter((stem) => re.test(stem)).sort().map((stem) => `${stem}.md`);
+}
+var FENCE_RE = /^\s*(`{3,}|~{3,}|:{3,})(.*)$/;
+var DIRECTIVE_RE = /^\{([A-Za-z0-9_+:.-]+)\}\s*(.*)$/;
+var VERBATIM_DIRECTIVES = /* @__PURE__ */ new Set([
+  "code",
+  "code-block",
+  "code-cell",
+  "sourcecode",
+  "literalinclude",
+  "include",
+  "math",
+  "raw",
+  "eval-rst",
+  "mermaid",
+  "graphviz"
+]);
+function includeArguments(text) {
+  const out = [];
+  const open = [];
+  for (const line of text.split(/\r?\n/)) {
+    const m = FENCE_RE.exec(line);
+    const top = open[open.length - 1];
+    const closes = m !== null && top !== void 0 && m[1][0] === top.char && m[1].length >= top.length && m[2].trim() === "";
+    if (top?.verbatim) {
+      if (closes)
+        open.pop();
+      continue;
+    }
+    if (!m)
+      continue;
+    if (closes) {
+      open.pop();
+      continue;
+    }
+    const directive = DIRECTIVE_RE.exec(m[2].trim());
+    if (directive) {
+      if (directive[1] === "include" && directive[2] !== "")
+        out.push(directive[2]);
+      open.push({
+        char: m[1][0],
+        length: m[1].length,
+        verbatim: VERBATIM_DIRECTIVES.has(directive[1])
+      });
+    } else if (m[1][0] !== ":") {
+      open.push({ char: m[1][0], length: m[1].length, verbatim: true });
+    }
+  }
+  return out;
+}
+function includesOf(text, fromFile) {
+  const out = [];
+  const dir = path5.posix.dirname(fromFile);
+  for (const raw of includeArguments(text)) {
+    const arg = raw.replace(/^(["'])(.*)\1$/, "$2");
+    const joined = arg.startsWith("/") ? arg.slice(1) : path5.posix.join(dir, arg);
+    const target = normalize(joined);
+    if (target === void 0 || !target.endsWith(".md"))
+      continue;
+    if (!out.includes(target))
+      out.push(target);
+  }
+  return out;
+}
+var SKIPPED_FOLDERS = /* @__PURE__ */ new Set(["_build", "node_modules"]);
+function isBookFile(file) {
+  const folders = file.split("/").slice(0, -1);
+  return !folders.some((f) => f.startsWith(".") || SKIPPED_FOLDERS.has(f));
+}
+var DEFAULT_CONCURRENCY = 8;
+var LectureSetReader = class {
+  source;
+  files;
+  fileSet;
+  cache = /* @__PURE__ */ new Map();
+  concurrency;
+  tocPromise;
+  constructor(source, options = {}) {
+    this.source = source;
+    this.files = source.files.filter(isBookFile);
+    this.fileSet = new Set(this.files);
+    this.concurrency = Math.max(1, options.concurrency ?? DEFAULT_CONCURRENCY);
+  }
+  /**
+   * Walk the documents, then the files they include, in order, reading a
+   * batch at a time. `visit` sees each file's includes in queue order and
+   * returns true to stop the walk.
+   */
+  async walk(documents, visit) {
+    const seen = new Set(documents);
+    const queue = [...documents];
+    for (let i = 0; i < queue.length; ) {
+      const batch = queue.slice(i, i + this.concurrency);
+      const texts = await Promise.all(batch.map((f) => this.read(f)));
+      for (let j = 0; j < batch.length; j++) {
+        const includes = includesOf(texts[j], batch[j]);
+        if (visit(batch[j], includes))
+          return;
+        for (const target of includes) {
+          if (this.fileSet.has(target) && !seen.has(target)) {
+            seen.add(target);
+            queue.push(target);
+          }
+        }
+      }
+      i += batch.length;
+    }
+  }
+  read(file) {
+    let p = this.cache.get(file);
+    if (!p) {
+      p = this.source.read(file).catch((e) => {
+        throw new LectureReadError(file, e);
+      });
+      this.cache.set(file, p);
+    }
+    return p;
+  }
+  /** The ToC's documents. Throws a `LectureSetError` when the folder has no usable ToC. */
+  toc() {
+    this.tocPromise ??= this.readToc();
+    return this.tocPromise;
+  }
+  async readToc() {
+    const frontEnd = findTocFrontEnd(this.files);
+    const entries = frontEnd.built ? frontEnd.entries(await this.read(frontEnd.file)) : frontEnd.entries("");
+    const documents = [];
+    const otherDocuments = [];
+    const missingEntries = [];
+    const add = (file) => {
+      if (!documents.includes(file))
+        documents.push(file);
+    };
+    for (const entry of entries) {
+      if (entry.kind === "url")
+        continue;
+      if (entry.kind === "glob") {
+        expandTocGlob(entry.value, this.files).forEach(add);
+        continue;
+      }
+      const resolved = resolveTocFile(entry.value, this.fileSet);
+      if (resolved.kind === "markdown")
+        add(resolved.file);
+      else if (resolved.kind === "other")
+        otherDocuments.push(resolved.file);
+      else if (!missingEntries.includes(resolved.entry))
+        missingEntries.push(resolved.entry);
+    }
+    return { toc: frontEnd.file, documents, otherDocuments, missingEntries };
+  }
+  /**
+   * The whole set: the documents, then every `.md` they include, followed
+   * through further includes. Reads every document and fragment once.
+   */
+  async lectureSet() {
+    const toc = await this.toc();
+    const fragments = [];
+    const missingIncludes = [];
+    const inSet = new Set(toc.documents);
+    await this.walk(toc.documents, (from, includes) => {
+      for (const target of includes) {
+        if (!this.fileSet.has(target)) {
+          missingIncludes.push({ from, target });
+        } else if (!inSet.has(target)) {
+          inSet.add(target);
+          fragments.push(target);
+        }
+      }
+      return false;
+    });
+    return { ...toc, fragments, missingIncludes, has: (file) => inSet.has(file) };
+  }
+  /**
+   * Where one file stands, reading no more than it must: a ToC document is
+   * known from the ToC alone, and the include scan stops at the first file
+   * that includes this one (after the batch it is in). For sync, where every
+   * read is an API call. A ToC entry backed by a notebook is 'outside': it is
+   * a document, but not a lecture.
+   */
+  async membership(file) {
+    const toc = await this.toc();
+    if (toc.documents.includes(file))
+      return "document";
+    if (!this.fileSet.has(file))
+      return "outside";
+    let found = false;
+    await this.walk(toc.documents, (_from, includes) => {
+      found = includes.includes(file);
+      return found;
+    });
+    return found ? "fragment" : "outside";
+  }
+};
 
 // dist/sync-orchestrator.js
 async function loadGlossary(targetLanguage, builtInGlossaryDir, customGlossaryPath, logger) {
@@ -54044,7 +54343,7 @@ async function loadGlossary(targetLanguage, builtInGlossaryDir, customGlossaryPa
     logger?.info(`\u2713 Loaded custom glossary from ${customGlossaryPath} with ${glossary.terms.length} terms`);
     return glossary;
   }
-  const builtInPath = path5.join(builtInGlossaryDir, `${targetLanguage}.json`);
+  const builtInPath = path6.join(builtInGlossaryDir, `${targetLanguage}.json`);
   try {
     const glossary = await readGlossaryFile(builtInPath);
     logger?.info(`\u2713 Loaded built-in glossary for ${targetLanguage} with ${glossary.terms.length} terms`);
@@ -54074,8 +54373,8 @@ async function readGlossaryFile(file) {
 function formatGlossaryTerms(glossary, targetLanguage) {
   return glossary.terms.filter((t) => typeof t[targetLanguage] === "string" && t[targetLanguage] !== "").map((t) => `- "${t.en}" \u2192 "${t[targetLanguage]}"${t.context ? ` (${t.context})` : ""}`).join("\n");
 }
-function isDocsMarkdownPath(path8, docsFolder) {
-  return typeof path8 === "string" && path8.startsWith(docsFolder) && path8.endsWith(".md");
+function isDocsMarkdownPath(path9, docsFolder) {
+  return typeof path9 === "string" && path9.startsWith(docsFolder) && path9.endsWith(".md");
 }
 function isMovedOutOfDocs(file, docsFolder) {
   return file.status === "renamed" && isDocsMarkdownPath(file.previous_filename, docsFolder) && typeof file.filename === "string" && !file.filename.startsWith(docsFolder);
@@ -54083,7 +54382,7 @@ function isMovedOutOfDocs(file, docsFolder) {
 function findRenamesOut(files, docsFolder) {
   const renamesOut = { notMarkdown: [] };
   const toc = `${docsFolder}_toc.yml`;
-  const outside = (path8) => typeof path8 === "string" && !path8.startsWith(docsFolder);
+  const outside = (path9) => typeof path9 === "string" && !path9.startsWith(docsFolder);
   for (const file of files) {
     if (file.status !== "renamed" || typeof file.previous_filename !== "string")
       continue;
@@ -54562,11 +54861,11 @@ var SyncOrchestrator = class {
     result.failedNewFiles = failedNewFiles;
     result.filteredTocPaths = [];
     for (const translated of result.translatedFiles) {
-      if (path5.basename(translated.path) !== "_toc.yml")
+      if (path6.basename(translated.path) !== "_toc.yml")
         continue;
-      const tocDir = path5.dirname(translated.path);
+      const tocDir = path6.dirname(translated.path);
       const entriesToDrop = new Set(failedNewFiles.map((filename) => {
-        const rel = tocDir === "." ? filename : path5.relative(tocDir, filename);
+        const rel = tocDir === "." ? filename : path6.relative(tocDir, filename);
         return rel.replace(/\.md$/, "");
       }));
       const before = translated.content;
@@ -54574,7 +54873,7 @@ var SyncOrchestrator = class {
       if (filtered !== before) {
         translated.content = filtered;
         result.filteredTocPaths.push(translated.path);
-        const names = failedNewFiles.map((f) => path5.basename(f, ".md")).join(", ");
+        const names = failedNewFiles.map((f) => path6.basename(f, ".md")).join(", ");
         this.logger.warning(`${translated.path}: removed ${names} from TOC \u2014 file(s) were not delivered and are absent from the target`);
       }
     }
@@ -54683,15 +54982,15 @@ function statusOf(error4) {
 function messageOf(error4) {
   return error4 instanceof Error ? error4.message : String(error4);
 }
-async function targetHasFile(client, target, path8) {
+async function targetHasFile(client, target, path9) {
   try {
-    await client.rest.repos.getContent({ owner: target.owner, repo: target.repo, path: path8 });
+    await client.rest.repos.getContent({ owner: target.owner, repo: target.repo, path: path9 });
     return true;
   } catch (error4) {
     const status = statusOf(error4);
     if (status === 404)
       return false;
-    throw new Error(`could not read ${path8} from ${target.owner}/${target.repo} (status ${status ?? "unknown"}): ${messageOf(error4)}`);
+    throw new Error(`could not read ${path9} from ${target.owner}/${target.repo} (status ${status ?? "unknown"}): ${messageOf(error4)}`);
   }
 }
 async function scopeChangedLectures(client, classified, target, docsFolder, logger) {
@@ -54719,28 +55018,28 @@ async function scopeChangedLectures(client, classified, target, docsFolder, logg
       };
     }
   }
-  const keep = async (path8, previousPath) => {
-    const decidingPath = previousPath ?? path8;
+  const keep = async (path9, previousPath) => {
+    const decidingPath = previousPath ?? path9;
     const statePath = stateFileFor(decidingPath, docsFolder);
-    const skip = (reason) => previousPath ? { path: path8, previousPath, statePath, reason } : { path: path8, statePath, reason };
+    const skip = (reason) => previousPath ? { path: path9, previousPath, statePath, reason } : { path: path9, statePath, reason };
     try {
       if (!await targetHasFile(client, target, statePath)) {
         skipped.push(skip("not-in-edition"));
-        logger.info(`${path8}: not synced \u2014 ${edition} has no ${statePath}`);
+        logger.info(`${path9}: not synced \u2014 ${edition} has no ${statePath}`);
         return false;
       }
       if (!await targetHasFile(client, target, decidingPath)) {
         skipped.push(skip("lecture-missing"));
-        logger.warning(`${path8}: not synced \u2014 ${edition} has ${statePath} but not ${decidingPath}, so the lecture is not translated from scratch. Restore the lecture or remove its state file.`);
+        logger.warning(`${path9}: not synced \u2014 ${edition} has ${statePath} but not ${decidingPath}, so the lecture is not translated from scratch. Restore the lecture or remove its state file.`);
         return false;
       }
     } catch (error4) {
-      const message = `Fetch failed (scope): ${path8}: ${messageOf(error4)}`;
+      const message = `Fetch failed (scope): ${path9}: ${messageOf(error4)}`;
       errors.push(message);
       logger.error(message);
       return false;
     }
-    inScope.push(path8);
+    inScope.push(path9);
     return true;
   };
   const changedMarkdownFiles = [];
@@ -54815,25 +55114,36 @@ This edition has a state file for each of these lectures but not the lecture its
 }
 function buildScopeSummary(input) {
   const { scoped } = input;
+  const existing = (input.syncScope ?? (scoped ? "existing" : "all")) === "existing";
+  const left = scoped?.classified ?? input.remaining;
   const sourcePr = `[${input.sourceRepo}#${input.prNumber}](https://github.com/${input.sourceRepo}/pull/${input.prNumber})`;
   let outcome;
   if (input.prUrl) {
     outcome = `**Translation PR:** ${input.prUrl}` + (input.errorCount > 0 ? ` The run also failed with ${input.errorCount} error(s); see the log.` : "");
   } else if (input.errorCount > 0) {
     outcome = `**No translation PR.** The run failed with ${input.errorCount} error(s); see the log.`;
-  } else if (nothingToSync(scoped.classified)) {
-    outcome = "**No translation PR.** Nothing this source PR changed is in scope.";
+  } else if (left && nothingToSync(left)) {
+    outcome = scoped ? "**No translation PR.** Nothing this source PR changed is in scope." : "**No translation PR.** Nothing this source PR changed is in the lecture set.";
   } else {
     outcome = "**No translation PR.** The run produced no changes.";
   }
-  const notInEdition = scoped.skipped.filter((s) => s.reason === "not-in-edition");
-  const lectureMissing = scoped.skipped.filter((s) => s.reason === "lecture-missing");
   const lines = [
-    `## Translation sync (${input.targetLanguage}): \`sync-scope: existing\``,
+    `## Translation sync (${input.targetLanguage})` + (existing ? ": `sync-scope: existing`" : ""),
     "",
     `Source PR ${sourcePr} \u2192 edition \`${input.targetRepo}\``,
     "",
-    outcome,
+    outcome
+  ];
+  if (scoped)
+    lines.push(...scopeSections(scoped));
+  if (input.lectureSet)
+    lines.push("", input.lectureSet);
+  return lines.join("\n") + "\n";
+}
+function scopeSections(scoped) {
+  const notInEdition = scoped.skipped.filter((s) => s.reason === "not-in-edition");
+  const lectureMissing = scoped.skipped.filter((s) => s.reason === "lecture-missing");
+  const lines = [
     "",
     "A changed lecture syncs only when this edition has its state file under `.translate/state/`. Removals and `_toc.yml` are not scoped.",
     "",
@@ -54850,7 +55160,7 @@ function buildScopeSummary(input) {
   if (scoped.errors.length > 0) {
     lines.push("", `### \u274C Scope unknown (${scoped.errors.length})`, "", "These reads failed, so the lectures they cover were neither synced nor skipped, and the run failed.", "", ...scoped.errors.map((e) => `- ${e}`));
   }
-  return lines.join("\n") + "\n";
+  return lines;
 }
 async function writeJobSummary(summary2, markdown, logger) {
   try {
@@ -54858,6 +55168,469 @@ async function writeJobSummary(summary2, markdown, logger) {
   } catch (error4) {
     logger.warning(`Could not write the job summary: ${error4 instanceof Error ? error4.message : String(error4)}`);
   }
+}
+
+// dist/git-commit.js
+var DEFAULT_RETRY = {
+  attempts: 3,
+  delayMs: (attempt) => 2e3 * 4 ** (attempt - 1),
+  // 2 s, then 8 s
+  sleep: (ms) => new Promise((resolve4) => setTimeout(resolve4, ms))
+};
+var RETRY_AFTER_CAP_S = 60;
+function statusOf2(error4) {
+  const status = error4?.status;
+  return typeof status === "number" ? status : void 0;
+}
+function messageOf2(error4) {
+  return error4 instanceof Error ? error4.message : String(error4);
+}
+function isRetryableGitHubError(error4) {
+  const status = statusOf2(error4);
+  if (status === void 0)
+    return false;
+  if (status >= 500 || status === 429)
+    return true;
+  return status === 403 && /secondary rate limit/i.test(messageOf2(error4));
+}
+function retryAfterMs(error4) {
+  const headers = error4?.response?.headers;
+  const seconds = Number(headers?.["retry-after"]);
+  return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, RETRY_AFTER_CAP_S) * 1e3 : void 0;
+}
+async function withRetry(what, call, logger, policy) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await call();
+    } catch (error4) {
+      if (attempt >= policy.attempts || !isRetryableGitHubError(error4))
+        throw error4;
+      const wait = retryAfterMs(error4) ?? policy.delayMs(attempt);
+      logger.warning(`${what} failed (${statusOf2(error4)}: ${messageOf2(error4)}); attempt ${attempt + 1} of ${policy.attempts} in ${Math.round(wait / 1e3)} s`);
+      await policy.sleep(wait);
+    }
+  }
+}
+var short = (sha) => sha.slice(0, 7);
+async function existsAt(octokit, params, logger, policy) {
+  try {
+    await withRetry(`reading ${params.path} at ${short(params.ref)}`, () => octokit.rest.repos.getContent(params), logger, policy);
+    return true;
+  } catch (error4) {
+    if (statusOf2(error4) === 404)
+      return false;
+    throw error4;
+  }
+}
+async function buildCommit(octokit, params, logger, policy = DEFAULT_RETRY) {
+  const { owner, repo, baseSha } = params;
+  const written = new Set(params.files.map((file) => file.path));
+  const deletions = [];
+  for (const path9 of new Set(params.deletions)) {
+    if (written.has(path9))
+      continue;
+    if (await existsAt(octokit, { owner, repo, path: path9, ref: baseSha }, logger, policy)) {
+      deletions.push(path9);
+    } else {
+      logger.info(`${path9}: not in ${short(baseSha)}, so there is nothing to delete`);
+    }
+  }
+  const tree = [
+    ...params.files.map((file) => ({
+      path: file.path,
+      mode: "100644",
+      type: "blob",
+      content: file.content
+    })),
+    ...deletions.map((path9) => ({ path: path9, mode: "100644", type: "blob", sha: null }))
+  ];
+  if (tree.length === 0)
+    return { unchanged: true };
+  const base = await withRetry(`reading commit ${short(baseSha)}`, () => octokit.rest.git.getCommit({ owner, repo, commit_sha: baseSha }), logger, policy);
+  const created = await withRetry("creating the tree", () => octokit.rest.git.createTree({ owner, repo, base_tree: base.data.tree.sha, tree }), logger, policy);
+  if (created.data.sha === base.data.tree.sha)
+    return { unchanged: true };
+  const commit = await withRetry("creating the commit", () => octokit.rest.git.createCommit({
+    owner,
+    repo,
+    message: params.message,
+    tree: created.data.sha,
+    parents: [baseSha]
+  }), logger, policy);
+  return { unchanged: false, sha: commit.data.sha, treeSha: created.data.sha };
+}
+function rebaseCommitMessage(params) {
+  const lines = [
+    `Rebase translations onto ${params.baseBranch} (${short(params.baseSha)}) after #${params.mergedPrNumber}`,
+    "",
+    ...params.files.map((file) => file.path),
+    ...params.deletions.map((path9) => `deleted: ${path9}`)
+  ];
+  return lines.join("\n");
+}
+function nothingLeftComment(params) {
+  const declared = params.declaredFiles.map((path9) => `- \`${path9}\``).join("\n");
+  return `\u{1F5C2}\uFE0F **Closed: nothing left to carry.** After #${params.mergedPrNumber} was merged, this PR's translation was rebuilt on \`${params.baseBranch}\` (\`${short(params.baseSha)}\`), and the rebuilt files are identical to what \`${params.baseBranch}\` already holds.
+
+The files this PR declares:
+
+${declared}
+
+The branch was not changed, so it still holds this PR's previous commits. The rebase automation closed the PR rather than push a branch with no commits ahead of \`${params.baseBranch}\` (#280).`;
+}
+async function writeRebasedBranch(octokit, params, logger, policy = DEFAULT_RETRY) {
+  const { owner, repo, pullNumber, branch, baseBranch, baseSha } = params;
+  let built;
+  try {
+    built = await buildCommit(octokit, {
+      owner,
+      repo,
+      baseSha,
+      files: params.files,
+      deletions: params.deletions,
+      message: rebaseCommitMessage(params)
+    }, logger, policy);
+  } catch (error4) {
+    throw new Error(`could not build the rebased commit on ${baseBranch} (${short(baseSha)}); branch left untouched: ${messageOf2(error4)}`);
+  }
+  if (built.unchanged) {
+    await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: pullNumber,
+      body: nothingLeftComment(params)
+    });
+    await octokit.rest.pulls.update({ owner, repo, pull_number: pullNumber, state: "closed" });
+    logger.info(`PR #${pullNumber}: nothing left to carry onto ${baseBranch}; closed, branch unchanged`);
+    return { outcome: "closed" };
+  }
+  try {
+    await octokit.rest.git.updateRef({
+      owner,
+      repo,
+      ref: `heads/${branch}`,
+      sha: built.sha,
+      force: true
+    });
+  } catch (error4) {
+    throw new Error(`could not move ${branch} to the rebased commit ${short(built.sha)}: ${messageOf2(error4)}`);
+  }
+  let state;
+  try {
+    const { data } = await withRetry(`reading PR #${pullNumber} back`, () => octokit.rest.pulls.get({ owner, repo, pull_number: pullNumber }), logger, policy);
+    state = data.state;
+  } catch (error4) {
+    throw new Error(`${branch} moved to the rebased commit ${short(built.sha)}, but PR #${pullNumber} could not be read back: ${messageOf2(error4)}`);
+  }
+  if (state !== "open") {
+    throw new Error(`PR #${pullNumber} is ${state} after ${branch} moved to the rebased commit ${short(built.sha)}. The branch holds the rebased translation; recreate the PR from it (#280)`);
+  }
+  return { outcome: "moved", commitSha: built.sha };
+}
+
+// dist/sync-lecture-set.js
+function statusOf3(error4) {
+  return error4?.status;
+}
+function messageOf3(error4) {
+  return (error4 instanceof Error ? error4.message : String(error4)).split("\n")[0];
+}
+function prefixOf(docsFolder) {
+  return docsFolder && !docsFolder.endsWith("/") ? `${docsFolder}/` : docsFolder;
+}
+function shortRef(ref) {
+  return ref.endsWith("^") ? `${ref.slice(0, 7)}^` : ref.slice(0, 7);
+}
+async function githubLectureSetSource(client, source, docsFolder, ref, read, logger = SILENT, retry = DEFAULT_RETRY) {
+  const prefix = prefixOf(docsFolder);
+  const where = `${source.owner}/${source.repo} at ${shortRef(ref)}`;
+  let data;
+  try {
+    ({ data } = await withRetry(`Reading the file list of ${where}`, () => client.rest.git.getTree({
+      owner: source.owner,
+      repo: source.repo,
+      tree_sha: ref,
+      recursive: "true"
+    }), logger, retry));
+  } catch (error4) {
+    throw new Error(`could not read the file list of ${source.owner}/${source.repo} at ${shortRef(ref)} (status ${statusOf3(error4) ?? "unknown"}): ${messageOf3(error4)}`);
+  }
+  if (data.truncated) {
+    throw new Error(`GitHub truncated the file list of ${source.owner}/${source.repo} at ${shortRef(ref)}, so the lecture set cannot be read whole`);
+  }
+  const files = data.tree.filter((entry) => entry.type === "blob" && typeof entry.path === "string").map((entry) => entry.path).filter((path9) => path9.startsWith(prefix)).map((path9) => path9.slice(prefix.length));
+  return {
+    files,
+    read: (file) => file === TOC_FILE ? withRetry(`Reading ${prefix}${file} from ${where}`, () => read(`${prefix}${file}`, ref), logger, retry) : read(`${prefix}${file}`, ref)
+  };
+}
+var TOC_FILE = "_toc.yml";
+var SILENT = { info: () => {
+}, warning: () => {
+} };
+async function placeOnLectureSet(client, source, read, classified, docsFolder, sha, edition, logger, retry = DEFAULT_RETRY) {
+  const prefix = prefixOf(docsFolder);
+  const tocPath = `${prefix}_toc.yml`;
+  const sourceName = `${source.owner}/${source.repo}`;
+  const unchanged = {
+    classified,
+    outside: [],
+    tocRemoved: [],
+    tocAdded: [],
+    errors: []
+  };
+  const tocChanged = classified.changedTocFiles.some((file) => file.filename === tocPath);
+  const lectures = classified.changedMarkdownFiles.length + classified.renamedMarkdownFiles.length;
+  if (lectures === 0 && !tocChanged)
+    return unchanged;
+  const readSetAt = async (ref) => {
+    const texts = /* @__PURE__ */ new Map();
+    const folder = await githubLectureSetSource(client, source, docsFolder, ref, read, logger, retry);
+    const reader = new LectureSetReader({
+      files: folder.files,
+      read: async (file) => {
+        const text = await folder.read(file);
+        texts.set(file, text);
+        return text;
+      }
+    });
+    const toc = await reader.toc();
+    return {
+      reader,
+      files: new Set(folder.files.filter(isBookFile)),
+      toc,
+      tocText: texts.get(toc.toc)
+    };
+  };
+  const failure = (error4, ref) => {
+    if (error4 instanceof LectureReadError) {
+      return `could not read ${prefix}${error4.file} from ${sourceName} at ${shortRef(ref)} (status ${statusOf3(error4.cause) ?? "unknown"}): ${messageOf3(error4.cause)}`;
+    }
+    return messageOf3(error4);
+  };
+  let after;
+  try {
+    after = await readSetAt(sha);
+  } catch (error4) {
+    const refused = `Sync refused: the source's lecture set at ${shortRef(sha)} could not be read: ${failure(error4, sha)}. Without it the run cannot tell which changed files are lectures, so nothing was synced.`;
+    logger.error(refused);
+    return { ...unchanged, errors: [refused], refused };
+  }
+  if (after.toc.missingEntries.length > 0) {
+    const one = after.toc.missingEntries.length === 1;
+    logger.info(`${tocPath} lists ${after.toc.missingEntries.map((e) => `'${e}'`).join(", ")}, with no file behind ${one ? "it" : "them"}; ${one ? "it is" : "they are"} not in the lecture set`);
+  }
+  const errors = [];
+  const recordError = (message) => {
+    errors.push(message);
+    logger.error(message);
+  };
+  const places = /* @__PURE__ */ new Map();
+  const place = async (path9) => {
+    try {
+      const membership = await after.reader.membership(docsRelativePath(path9, docsFolder));
+      return membership === "outside" ? "outside" : "in";
+    } catch (error4) {
+      recordError(`Fetch failed (lecture set): ${path9}: ${failure(error4, sha)}, so whether it is in the lecture set is unknown. It was not synced.`);
+      return "error";
+    }
+  };
+  for (const file of classified.changedMarkdownFiles) {
+    places.set(file.filename, await place(file.filename));
+  }
+  for (const file of classified.renamedMarkdownFiles) {
+    places.set(file.filename, await place(file.filename));
+  }
+  const tocRemoved = [];
+  const tocAdded = [];
+  if (tocChanged) {
+    let before;
+    const parent = `${sha}^`;
+    try {
+      before = await readSetAt(parent);
+    } catch (error4) {
+      if (error4 instanceof LectureSetError) {
+        logger.info(`${tocPath} before this PR could not be read as a ToC (${messageOf3(error4)}), so the lectures this PR adds to it or takes out of it are not listed`);
+      } else {
+        recordError(`Fetch failed (lecture set): ${tocPath}: ${failure(error4, parent)}, so the lectures this PR adds to it or takes out of it are unknown.`);
+      }
+    }
+    if (before) {
+      const changed = /* @__PURE__ */ new Set([
+        ...classified.changedMarkdownFiles.map((f) => f.filename),
+        ...classified.renamedMarkdownFiles.map((f) => f.filename)
+      ]);
+      const stillOutside = async (set2, ref, doc) => {
+        try {
+          return await set2.reader.membership(doc) === "outside";
+        } catch (error4) {
+          recordError(`Fetch failed (lecture set): ${prefix}${doc}: ${failure(error4, ref)}, so whether this PR's change to ${tocPath} leaves it in the lecture set is unknown.`);
+          return false;
+        }
+      };
+      for (const doc of before.toc.documents) {
+        if (after.toc.documents.includes(doc) || !after.files.has(doc))
+          continue;
+        const path9 = `${prefix}${doc}`;
+        const known = places.get(path9);
+        if (known === "outside" || known === void 0 && await stillOutside(after, sha, doc)) {
+          tocRemoved.push(path9);
+        }
+      }
+      for (const doc of after.toc.documents) {
+        const path9 = `${prefix}${doc}`;
+        if (before.toc.documents.includes(doc) || changed.has(path9))
+          continue;
+        if (await stillOutside(before, parent, doc))
+          tocAdded.push(path9);
+      }
+    }
+  }
+  const outside = [];
+  const changedMarkdownFiles = classified.changedMarkdownFiles.filter((file) => {
+    const where = places.get(file.filename);
+    if (where === "outside" && !tocRemoved.includes(file.filename)) {
+      outside.push({ path: file.filename });
+      logger.info(`${file.filename}: not synced \u2014 outside the lecture set (${tocPath} does not list it, and no lecture includes it)`);
+    }
+    return where === "in";
+  });
+  const renamedMarkdownFiles = classified.renamedMarkdownFiles.filter((file) => {
+    const where = places.get(file.filename);
+    if (where === "outside") {
+      const previousPath = file.previous_filename;
+      outside.push({ path: file.filename, previousPath });
+      logger.warning(`${previousPath} was renamed to ${file.filename}, which is outside the lecture set: ${edition} keeps its translation of ${previousPath}, which sync no longer updates`);
+    }
+    return where === "in";
+  });
+  for (const path9 of tocRemoved) {
+    logger.info(`${path9}: taken out of ${tocPath} and kept in the docs folder \u2014 ${edition} keeps its translation, which sync no longer updates`);
+  }
+  return {
+    classified: { ...classified, changedMarkdownFiles, renamedMarkdownFiles },
+    outside,
+    tocRemoved,
+    tocAdded,
+    errors,
+    sourceFiles: after.files,
+    ...after.tocText !== void 0 ? { toc: { path: tocPath, content: after.tocText } } : {}
+  };
+}
+async function findLectureSetGaps(client, target, docsFolder, input, logger) {
+  const prefix = prefixOf(docsFolder);
+  const tocAdded = [];
+  const missingIncludes = [];
+  const errors = [];
+  const recordError = (message) => {
+    errors.push(message);
+    logger.error(message);
+  };
+  for (const path9 of input.tocAdded) {
+    try {
+      tocAdded.push({
+        path: path9,
+        inEdition: await targetHasFile(client, target, stateFileFor(path9, docsFolder))
+      });
+    } catch (error4) {
+      recordError(`Fetch failed (lecture set): ${path9}: ${messageOf3(error4)}, so the catch-up for this lecture, which this PR adds to the ToC without delivering it, is unknown.`);
+    }
+  }
+  const delivered = new Set(input.delivered.map((lecture) => lecture.path));
+  const includedBy = /* @__PURE__ */ new Map();
+  for (const lecture of input.delivered) {
+    for (const file of includesOf(lecture.content, docsRelativePath(lecture.path, docsFolder))) {
+      const path9 = `${prefix}${file}`;
+      if (delivered.has(path9) || input.sourceFiles && !input.sourceFiles.has(file))
+        continue;
+      includedBy.set(path9, [...includedBy.get(path9) ?? [], lecture.path]);
+    }
+  }
+  for (const [path9, by] of includedBy) {
+    try {
+      if (!await targetHasFile(client, target, path9)) {
+        missingIncludes.push({ path: path9, includedBy: by });
+        logger.warning(`${path9}: ${by.join(", ")} ${by.length === 1 ? "includes" : "include"} it, and ${target.owner}/${target.repo} does not have it`);
+      }
+    } catch (error4) {
+      recordError(`Fetch failed (lecture set): ${path9}: ${messageOf3(error4)}, so whether the edition has this file, which ${by.join(", ")} ${by.length === 1 ? "includes" : "include"}, is unknown.`);
+    }
+  }
+  return { tocAdded, missingIncludes, errors };
+}
+var OUTSIDE_SET_HEADING = "### Files Outside the Lecture Set";
+var TOC_REMOVED_HEADING = "### Lectures Taken Out of the ToC";
+var TOC_ADDED_HEADING = "### \u26A0\uFE0F ToC Entries With Nothing Delivered";
+var MISSING_INCLUDES_HEADING = "### \u26A0\uFE0F Included Files the Edition Lacks";
+function outsideItem(file) {
+  return file.previousPath ? `- \`${file.path}\` (renamed from \`${file.previousPath}\`): the edition keeps its translation of \`${file.previousPath}\`, which sync no longer updates` : `- \`${file.path}\``;
+}
+function tocAddedItem(entry, docsFolder) {
+  const file = docsRelativePath(entry.path, docsFolder);
+  return entry.inEdition ? `- \`${entry.path}\`: \`translate status -f ${file}\`, then \`translate forward -f ${file}\`` : `- \`${entry.path}\`: \`translate init -f ${file}\``;
+}
+function missingIncludeItem(include, docsFolder) {
+  const by = include.includedBy.map((p) => `\`${p}\``).join(", ");
+  return `- \`${include.path}\` (included by ${by}): \`translate init -f ${docsRelativePath(include.path, docsFolder)}\``;
+}
+function formatLectureSetNotice(report) {
+  const toc = `\`${prefixOf(report.docsFolder)}_toc.yml\``;
+  let notice2 = "";
+  if (report.outside.length > 0) {
+    notice2 += `
+
+${OUTSIDE_SET_HEADING}
+
+The source PR also changed these \`.md\` files. ${toc} does not list them and no lecture includes them, so they are not lectures, and this PR leaves them out.
+
+` + report.outside.map(outsideItem).join("\n");
+  }
+  if (report.tocRemoved.length > 0) {
+    notice2 += `
+
+${TOC_REMOVED_HEADING}
+
+The source PR took these lectures out of ${toc} and kept them in the docs folder, so sync no longer updates them. The edition keeps its translation and state file of each, and its \`_toc.yml\`, a mirror of the source's, no longer lists them.
+
+` + report.tocRemoved.map((p) => `- \`${p}\``).join("\n");
+  }
+  if (report.tocAdded.length > 0) {
+    notice2 += `
+
+${TOC_ADDED_HEADING}
+
+The source PR added these lectures to ${toc} without changing them, so this PR delivers nothing for them, though the edition's \`_toc.yml\` now lists them. Catch each one up from a checkout of the source's default branch: with \`translate status\` and \`translate forward\` when the edition has its state file, and with \`translate init -f\` when it has none, as for a lecture listed for the first time. \`translate init -f\` overwrites a translation without asking, so use it only for a lecture the edition does not have.
+
+` + report.tocAdded.map((e) => tocAddedItem(e, report.docsFolder)).join("\n");
+  }
+  if (report.missingIncludes.length > 0) {
+    notice2 += `
+
+${MISSING_INCLUDES_HEADING}
+
+Lectures this PR delivers include these files with \`{include}\`, and the edition does not have them, so its build cannot resolve those includes. Translate each one from a checkout of the source's default branch:
+
+` + report.missingIncludes.map((i) => missingIncludeItem(i, report.docsFolder)).join("\n");
+  }
+  return notice2;
+}
+function formatLectureSetSummary(report, errors) {
+  const lines = [];
+  const section = (heading, items, note) => {
+    if (items.length === 0)
+      return;
+    lines.push("", `${heading} (${items.length})`, "");
+    if (note)
+      lines.push(note, "");
+    lines.push(...items);
+  };
+  const toc = `\`${prefixOf(report.docsFolder)}_toc.yml\``;
+  section("### Not synced: outside the lecture set", report.outside.map(outsideItem), `${toc} does not list these files, and no lecture includes them.`);
+  section("### Not synced: taken out of the ToC", report.tocRemoved.map((p) => `- \`${p}\``), "The edition keeps its translation and state file of each.");
+  section("### \u26A0\uFE0F Added to the ToC, nothing delivered", report.tocAdded.map((e) => tocAddedItem(e, report.docsFolder)), "Catch each one up from a checkout of the source's default branch.");
+  section("### \u26A0\uFE0F Included, but not in this edition", report.missingIncludes.map((i) => missingIncludeItem(i, report.docsFolder)), "Translate each one from a checkout of the source's default branch.");
+  section("### \u274C Lecture set unknown", errors.map((e) => `- ${e}`), "These reads failed, so the files they cover were neither synced nor listed, and the run failed.");
+  return lines.length > 0 ? lines.join("\n").slice(1) : "";
 }
 
 // dist/pr-creator.js
@@ -54875,7 +55648,7 @@ The translation of each lecture below is at an earlier source commit than the En
 
 ${lines.join("\n")}`;
 }
-async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen) {
+async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet) {
   const { targetOwner, targetRepo } = config;
   const { data: targetRepoData } = await octokit.rest.repos.get({
     owner: targetOwner,
@@ -54921,7 +55694,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     });
     logger.info(`Deleted: ${file.path}`);
   }
-  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen);
+  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet);
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
   const { data: pr } = await octokit.rest.pulls.create({
     owner: targetOwner,
@@ -54968,7 +55741,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     prNumber: pr.number
   };
 }
-function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen) {
+function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet) {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);
   let filesChangedSection = "";
@@ -55029,6 +55802,7 @@ ${lines.join("\n")}`;
   }
   const scopeNotice = formatScopeNotice(scopeSkipped ?? []);
   const stillOpenNotice = formatStillOpenNotice(stillOpen ?? []);
+  const lectureSetNotice = lectureSet ? formatLectureSetNotice(lectureSet) : "";
   const metadataFiles = fileMetadata ? fileMetadata.map((f) => {
     const entry = {
       path: f.path,
@@ -55063,7 +55837,7 @@ This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoNam
 ### Source PR
 **[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ""}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
 
-${filesChangedSection}${failedFilesNotice}${stillOpenNotice}${skippedNotice}${droppedNotice}${scopeNotice}
+${filesChangedSection}${failedFilesNotice}${stillOpenNotice}${skippedNotice}${droppedNotice}${scopeNotice}${lectureSetNotice}
 
 ### Details
 - **Source Language**: ${config.sourceLanguage}
@@ -55163,164 +55937,6 @@ async function refreshStaleBranch(octokit, owner, repo, prNumber) {
     }
     throw error4;
   }
-}
-
-// dist/git-commit.js
-var DEFAULT_RETRY = {
-  attempts: 3,
-  delayMs: (attempt) => 2e3 * 4 ** (attempt - 1),
-  // 2 s, then 8 s
-  sleep: (ms) => new Promise((resolve4) => setTimeout(resolve4, ms))
-};
-var RETRY_AFTER_CAP_S = 60;
-function statusOf2(error4) {
-  const status = error4?.status;
-  return typeof status === "number" ? status : void 0;
-}
-function messageOf2(error4) {
-  return error4 instanceof Error ? error4.message : String(error4);
-}
-function isRetryableGitHubError(error4) {
-  const status = statusOf2(error4);
-  if (status === void 0)
-    return false;
-  if (status >= 500 || status === 429)
-    return true;
-  return status === 403 && /secondary rate limit/i.test(messageOf2(error4));
-}
-function retryAfterMs(error4) {
-  const headers = error4?.response?.headers;
-  const seconds = Number(headers?.["retry-after"]);
-  return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, RETRY_AFTER_CAP_S) * 1e3 : void 0;
-}
-async function withRetry(what, call, logger, policy) {
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await call();
-    } catch (error4) {
-      if (attempt >= policy.attempts || !isRetryableGitHubError(error4))
-        throw error4;
-      const wait = retryAfterMs(error4) ?? policy.delayMs(attempt);
-      logger.warning(`${what} failed (${statusOf2(error4)}: ${messageOf2(error4)}); attempt ${attempt + 1} of ${policy.attempts} in ${Math.round(wait / 1e3)} s`);
-      await policy.sleep(wait);
-    }
-  }
-}
-var short = (sha) => sha.slice(0, 7);
-async function existsAt(octokit, params, logger, policy) {
-  try {
-    await withRetry(`reading ${params.path} at ${short(params.ref)}`, () => octokit.rest.repos.getContent(params), logger, policy);
-    return true;
-  } catch (error4) {
-    if (statusOf2(error4) === 404)
-      return false;
-    throw error4;
-  }
-}
-async function buildCommit(octokit, params, logger, policy = DEFAULT_RETRY) {
-  const { owner, repo, baseSha } = params;
-  const written = new Set(params.files.map((file) => file.path));
-  const deletions = [];
-  for (const path8 of new Set(params.deletions)) {
-    if (written.has(path8))
-      continue;
-    if (await existsAt(octokit, { owner, repo, path: path8, ref: baseSha }, logger, policy)) {
-      deletions.push(path8);
-    } else {
-      logger.info(`${path8}: not in ${short(baseSha)}, so there is nothing to delete`);
-    }
-  }
-  const tree = [
-    ...params.files.map((file) => ({
-      path: file.path,
-      mode: "100644",
-      type: "blob",
-      content: file.content
-    })),
-    ...deletions.map((path8) => ({ path: path8, mode: "100644", type: "blob", sha: null }))
-  ];
-  if (tree.length === 0)
-    return { unchanged: true };
-  const base = await withRetry(`reading commit ${short(baseSha)}`, () => octokit.rest.git.getCommit({ owner, repo, commit_sha: baseSha }), logger, policy);
-  const created = await withRetry("creating the tree", () => octokit.rest.git.createTree({ owner, repo, base_tree: base.data.tree.sha, tree }), logger, policy);
-  if (created.data.sha === base.data.tree.sha)
-    return { unchanged: true };
-  const commit = await withRetry("creating the commit", () => octokit.rest.git.createCommit({
-    owner,
-    repo,
-    message: params.message,
-    tree: created.data.sha,
-    parents: [baseSha]
-  }), logger, policy);
-  return { unchanged: false, sha: commit.data.sha, treeSha: created.data.sha };
-}
-function rebaseCommitMessage(params) {
-  const lines = [
-    `Rebase translations onto ${params.baseBranch} (${short(params.baseSha)}) after #${params.mergedPrNumber}`,
-    "",
-    ...params.files.map((file) => file.path),
-    ...params.deletions.map((path8) => `deleted: ${path8}`)
-  ];
-  return lines.join("\n");
-}
-function nothingLeftComment(params) {
-  const declared = params.declaredFiles.map((path8) => `- \`${path8}\``).join("\n");
-  return `\u{1F5C2}\uFE0F **Closed: nothing left to carry.** After #${params.mergedPrNumber} was merged, this PR's translation was rebuilt on \`${params.baseBranch}\` (\`${short(params.baseSha)}\`), and the rebuilt files are identical to what \`${params.baseBranch}\` already holds.
-
-The files this PR declares:
-
-${declared}
-
-The branch was not changed, so it still holds this PR's previous commits. The rebase automation closed the PR rather than push a branch with no commits ahead of \`${params.baseBranch}\` (#280).`;
-}
-async function writeRebasedBranch(octokit, params, logger, policy = DEFAULT_RETRY) {
-  const { owner, repo, pullNumber, branch, baseBranch, baseSha } = params;
-  let built;
-  try {
-    built = await buildCommit(octokit, {
-      owner,
-      repo,
-      baseSha,
-      files: params.files,
-      deletions: params.deletions,
-      message: rebaseCommitMessage(params)
-    }, logger, policy);
-  } catch (error4) {
-    throw new Error(`could not build the rebased commit on ${baseBranch} (${short(baseSha)}); branch left untouched: ${messageOf2(error4)}`);
-  }
-  if (built.unchanged) {
-    await octokit.rest.issues.createComment({
-      owner,
-      repo,
-      issue_number: pullNumber,
-      body: nothingLeftComment(params)
-    });
-    await octokit.rest.pulls.update({ owner, repo, pull_number: pullNumber, state: "closed" });
-    logger.info(`PR #${pullNumber}: nothing left to carry onto ${baseBranch}; closed, branch unchanged`);
-    return { outcome: "closed" };
-  }
-  try {
-    await octokit.rest.git.updateRef({
-      owner,
-      repo,
-      ref: `heads/${branch}`,
-      sha: built.sha,
-      force: true
-    });
-  } catch (error4) {
-    throw new Error(`could not move ${branch} to the rebased commit ${short(built.sha)}: ${messageOf2(error4)}`);
-  }
-  let state;
-  try {
-    const { data } = await withRetry(`reading PR #${pullNumber} back`, () => octokit.rest.pulls.get({ owner, repo, pull_number: pullNumber }), logger, policy);
-    state = data.state;
-  } catch (error4) {
-    throw new Error(`${branch} moved to the rebased commit ${short(built.sha)}, but PR #${pullNumber} could not be read back: ${messageOf2(error4)}`);
-  }
-  if (state !== "open") {
-    throw new Error(`PR #${pullNumber} is ${state} after ${branch} moved to the rebased commit ${short(built.sha)}. The branch holds the rebased translation; recreate the PR from it (#280)`);
-  }
-  return { outcome: "moved", commitSha: built.sha };
 }
 
 // dist/rebase-plan.js
@@ -55463,22 +56079,22 @@ function formatPremiseRecovery(heldBack, docsFolder, targetLanguage) {
     "`translate forward` regenerates the whole lecture. On a lecture that has been natively reviewed, carry the missed changes in by hand instead."
   ];
 }
-function statusOf3(error4) {
+function statusOf4(error4) {
   return error4?.status;
 }
-function messageOf3(error4) {
+function messageOf4(error4) {
   return error4 instanceof Error ? error4.message : String(error4);
 }
 function githubPremiseReader(octokit, source, edition) {
   return {
-    async readSource(path8, ref) {
+    async readSource(path9, ref) {
       try {
-        const { data } = await octokit.rest.repos.getContent({ ...source, path: path8, ref });
+        const { data } = await octokit.rest.repos.getContent({ ...source, path: path9, ref });
         if (!data || !("content" in data))
           return void 0;
         return Buffer.from(data.content, "base64").toString("utf-8");
       } catch (error4) {
-        const status = statusOf3(error4);
+        const status = statusOf4(error4);
         if (status === 404 || status === 422)
           return void 0;
         throw error4;
@@ -55539,7 +56155,7 @@ async function checkSyncPremise(input, reader, logger) {
     try {
       englishAtState = await reader.readSource(lecturePath, stateSha);
     } catch (error4) {
-      logger.warning(`${file.filename}: premise not checked \u2014 could not read ${lecturePath} at ${shortSha(stateSha)} from the source (status ${statusOf3(error4) ?? "unknown"}): ${messageOf3(error4)}; syncing as before`);
+      logger.warning(`${file.filename}: premise not checked \u2014 could not read ${lecturePath} at ${shortSha(stateSha)} from the source (status ${statusOf4(error4) ?? "unknown"}): ${messageOf4(error4)}; syncing as before`);
       outcomes.push({ keep: file });
       continue;
     }
@@ -55562,7 +56178,7 @@ async function checkSyncPremise(input, reader, logger) {
     try {
       comparison = await reader.compareSource(stateSha, input.sourceSha);
     } catch (error4) {
-      logger.warning(`${file.filename}: could not compare source ${shortSha(stateSha)} with ${shortSha(input.sourceSha)} (${messageOf3(error4)}); reporting it as behind`);
+      logger.warning(`${file.filename}: could not compare source ${shortSha(stateSha)} with ${shortSha(input.sourceSha)} (${messageOf4(error4)}); reporting it as behind`);
     }
     outcomes.push({
       file,
@@ -55583,7 +56199,7 @@ async function checkSyncPremise(input, reader, logger) {
     try {
       pulls = await reader.listOpenPulls();
     } catch (error4) {
-      logger.warning(`Could not list the open PRs in ${edition} (${messageOf3(error4)}); the lectures behind are reported without one`);
+      logger.warning(`Could not list the open PRs in ${edition} (${messageOf4(error4)}); the lectures behind are reported without one`);
     }
     if (pulls) {
       const sourceRepo = `${input.source.owner}/${input.source.repo}`;
@@ -55629,8 +56245,8 @@ async function checkSyncPremise(input, reader, logger) {
 function failureIssueTitle(prNumber, targetLanguage) {
   return `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
 }
-function fileArgument(path8, docsFolder) {
-  return docsRelativePath(path8, docsFolder);
+function fileArgument(path9, docsFolder) {
+  return docsRelativePath(path9, docsFolder);
 }
 function failedLectureLine(lecture, docsFolder, stillOpen) {
   const arg = fileArgument(lecture.file, docsFolder);
@@ -55676,6 +56292,9 @@ function resyncParagraph(prNumber, mergeSha) {
 function bibliographyIntro(input) {
   return `This run synced nothing: it could not read the bibliography a sync needs to carry the entries its citations use (the edition's \`${input.docsFolder}_config.yml\`, and the files its \`bibtex_bibfiles\` lists, in the edition and in the source). No lecture was translated and nothing in ${input.targetRepo} changed. Make the file the error names readable (a transient error needs nothing), then sync this PR's changes again: with \`${RESYNC_COMMAND}\` under the condition below, or lecture by lecture from a checkout of the source's default branch:`;
 }
+function lectureSetIntro(input) {
+  return `This run synced nothing: it could not read the source's lecture set at the PR's merge commit (\`${input.docsFolder}_toc.yml\`, the lectures it lists and the files they include), which says which changed files are lectures. No lecture was translated and nothing in ${input.targetRepo} changed. If the read failed for a transient reason, sync this PR's changes again with \`${RESYNC_COMMAND}\` under the condition below. If the ToC is missing or broken at that commit, a resync fails the same way: fix the ToC in the source, then carry this PR's lectures from a checkout of the source's default branch:`;
+}
 function folderMovedLines(moved, docsFolder) {
   const slash = moved.to.lastIndexOf("/");
   const folder = slash === -1 ? "." : moved.to.slice(0, slash);
@@ -55696,12 +56315,17 @@ function failureRecoveryLines(input) {
   const otherErrors = input.errors.length > heldBack.length;
   if (!otherErrors)
     return premise;
-  const lectures = input.bibliographyUnread ? [] : input.failedLectures ?? [];
+  const syncedNothing = input.bibliographyUnread || input.lectureSetUnread;
+  const lectures = syncedNothing ? [] : input.failedLectures ?? [];
   const stillOpen = input.stillOpen ?? [];
   const lines = [];
   if (premise.length > 0)
     lines.push(...premise, "", "**For the other errors:**", "");
-  lines.push(input.bibliographyUnread ? bibliographyIntro(input) : "Recover a lecture from a checkout of the source's default branch, not by re-running this sync:", "");
+  lines.push(input.lectureSetUnread ? lectureSetIntro(input) : input.bibliographyUnread ? bibliographyIntro(input) : "Recover a lecture from a checkout of the source's default branch, not by re-running this sync:", "");
+  const removals = input.lectureSetUnread ? input.heldRemovals ?? [] : [];
+  if (removals.length > 0) {
+    lines.push(`This PR also removed or renamed ${removals.length === 1 ? "a lecture" : "lectures"}, and no later sync deletes ${removals.length === 1 ? "it" : "them"} from ${input.targetRepo}: the change that removed ${removals.length === 1 ? "it" : "them"} is this one. Delete each from the edition by hand, with its state file, where the edition has it:`, "", ...removals.map((file) => `- \`${file}\` and \`${stateFileRelativePath(docsRelativePath(file, input.docsFolder))}\``), "", "Then carry the lectures this PR changed:", "");
+  }
   if (lectures.length > 0) {
     lines.push(...lectures.map((lecture) => failedLectureLine(lecture, input.docsFolder, stillOpen.find((s) => s.file === lecture.file))), "");
     lines.push("Any other lecture named above:", "");
@@ -55731,7 +56355,7 @@ function deletedName(lecture) {
 }
 function rebaseFailureComment(input) {
   const deleted = input.deletedSinceOpened ?? [];
-  const lectures = input.overlapping.filter((path8) => path8.endsWith(".md") && !deleted.some((d) => d.path === path8 || d.editionPath === path8)).map((path8) => `\`${fileArgument(path8, input.docsFolder)}\``);
+  const lectures = input.overlapping.filter((path9) => path9.endsWith(".md") && !deleted.some((d) => d.path === path9 || d.editionPath === path9)).map((path9) => `\`${fileArgument(path9, input.docsFolder)}\``);
   const files = lectures.length > 0 ? ` (here: ${lectures.join(", ")})` : "";
   const lines = [
     `\u26A0\uFE0F **Automatic rebase failed** after #${input.mergedPrNumber} was merged.`,
@@ -55867,7 +56491,7 @@ async function runDeterministicDiffChecks(parser, pairs2, targetLanguage) {
 
 // dist/review-verdict.js
 var fs7 = __toESM(require("fs"), 1);
-var path6 = __toESM(require("path"), 1);
+var path7 = __toESM(require("path"), 1);
 var REVIEW_VERDICT_MARKER = "translation-review-verdict";
 var REVIEW_VERDICT_SCHEMA_VERSION = 1;
 var MAX_FINDINGS = 20;
@@ -55909,7 +56533,7 @@ function resolvePackageVersion() {
     return _cachedPackageVersion;
   if (typeof __dirname === "string") {
     try {
-      const pkgPath = path6.resolve(__dirname, "../package.json");
+      const pkgPath = path7.resolve(__dirname, "../package.json");
       const pkg = JSON.parse(fs7.readFileSync(pkgPath, "utf-8"));
       if (pkg.name === "action-translation" && typeof pkg.version === "string") {
         _cachedPackageVersion = pkg.version;
@@ -55918,7 +56542,7 @@ function resolvePackageVersion() {
     } catch {
     }
     try {
-      const pkgPath = path6.resolve(__dirname, "../../package.json");
+      const pkgPath = path7.resolve(__dirname, "../../package.json");
       const pkg = JSON.parse(fs7.readFileSync(pkgPath, "utf-8"));
       if (pkg.name === "action-translation" && typeof pkg.version === "string") {
         _cachedPackageVersion = pkg.version;
@@ -57423,13 +58047,13 @@ function detectTargetLanguage(repoName) {
 }
 
 // dist/runtime-paths.js
-var path7 = __toESM(require("path"), 1);
+var path8 = __toESM(require("path"), 1);
 var import_url = require("url");
 function getModuleDir() {
-  return path7.dirname((0, import_url.fileURLToPath)(__importMetaUrl));
+  return path8.dirname((0, import_url.fileURLToPath)(__importMetaUrl));
 }
 function getBuiltInGlossaryDir() {
-  return path7.join(getModuleDir(), "..", "glossary");
+  return path8.join(getModuleDir(), "..", "glossary");
 }
 
 // dist/index.js
@@ -57708,8 +58332,8 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
       if (plan.action === "error") {
         switch (plan.reason) {
           case "main-read": {
-            const [path8, read] = onMain.status === "error" ? [editionPath2, onMain] : [file.path, newOnMain];
-            throw new Error(`Could not read ${path8} from ${owner}/${repo} at ${baseSha.slice(0, 7)} (${failure(read)})`);
+            const [path9, read] = onMain.status === "error" ? [editionPath2, onMain] : [file.path, newOnMain];
+            throw new Error(`Could not read ${path9} from ${owner}/${repo} at ${baseSha.slice(0, 7)} (${failure(read)})`);
           }
           case "baseline-read":
             throw new Error(`Could not read ${editionPath2} at this PR's baseline ${metadata.targetBaseSha?.slice(0, 7)} (${failure(atBaseline)})`);
@@ -57945,44 +58569,86 @@ async function runSync() {
   core9.info(`Found ${classified.changedTocFiles.length} changed TOC files`);
   core9.info(`Found ${classified.removedMarkdownFiles.length} removed markdown files`);
   core9.info(`Found ${classified.removedTocFiles.length} removed TOC files`);
+  const source = { owner: github3.context.repo.owner, repo: github3.context.repo.repo };
+  const placement = await placeOnLectureSet(octokit, source, async (filePath, ref) => (await fetchFileContent(octokit, source.owner, source.repo, filePath, ref)).content, classified, inputs.docsFolder, effectiveSha, inputs.targetRepo, coreLogger);
+  const noGaps = { tocAdded: [], missingIncludes: [], errors: [] };
+  const reportOf = (gaps2) => ({
+    docsFolder: inputs.docsFolder,
+    outside: placement.outside,
+    tocRemoved: placement.tocRemoved,
+    tocAdded: gaps2.tocAdded,
+    missingIncludes: gaps2.missingIncludes
+  });
+  const writeSummary = (run2) => {
+    const gaps2 = run2.gaps ?? noGaps;
+    const lectureSet = formatLectureSetSummary(reportOf(gaps2), [
+      ...placement.errors,
+      ...gaps2.errors
+    ]);
+    if (inputs.syncScope !== "existing" && lectureSet === "")
+      return Promise.resolve();
+    return writeJobSummary(core9.summary, buildScopeSummary({
+      targetLanguage: inputs.targetLanguage,
+      targetRepo: inputs.targetRepo,
+      sourceRepo: `${source.owner}/${source.repo}`,
+      prNumber,
+      syncScope: inputs.syncScope,
+      scoped: run2.scope,
+      remaining: placement.classified,
+      lectureSet,
+      prUrl: run2.prUrl,
+      errorCount: run2.errorCount
+    }), coreLogger);
+  };
+  if (placement.refused) {
+    core9.setFailed(placement.refused);
+    await writeSummary({ errorCount: 1 });
+    if (!isTestMode) {
+      await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, [placement.refused], {
+        docsFolder: inputs.docsFolder,
+        mergeSha: effectiveSha,
+        lectureSetUnread: true,
+        heldRemovals: [
+          ...classified.removedMarkdownFiles.map((file) => file.filename),
+          ...classified.renamedMarkdownFiles.flatMap((file) => file.previous_filename ? [file.previous_filename] : [])
+        ]
+      });
+    }
+    return;
+  }
   const [targetOwner, targetRepo] = inputs.targetRepo.split("/");
-  const scope = await applySyncScope(inputs.syncScope, octokit, classified, { owner: targetOwner, repo: targetRepo }, inputs.docsFolder, coreLogger);
-  const writeScopeSummary = (prUrl2, errorCount) => scope ? writeJobSummary(core9.summary, buildScopeSummary({
-    targetLanguage: inputs.targetLanguage,
-    targetRepo: inputs.targetRepo,
-    sourceRepo: `${github3.context.repo.owner}/${github3.context.repo.repo}`,
-    prNumber,
-    scoped: scope,
-    prUrl: prUrl2,
-    errorCount
-  }), coreLogger) : Promise.resolve();
-  if (scope && nothingToSync(scope.classified)) {
-    if (scope.errors.length === 0) {
-      core9.info("sync-scope: existing \u2014 nothing this PR changed is in scope. No translation PR.");
-      await writeScopeSummary(void 0, 0);
-      if (!isTestMode) {
+  const scope = await applySyncScope(inputs.syncScope, octokit, placement.classified, { owner: targetOwner, repo: targetRepo }, inputs.docsFolder, coreLogger);
+  const remaining = scope ? scope.classified : placement.classified;
+  const placeErrors = [...placement.errors, ...scope?.errors ?? []];
+  if (nothingToSync(remaining)) {
+    if (placeErrors.length === 0) {
+      core9.info(scope ? "sync-scope: existing \u2014 nothing this PR changed is in scope. No translation PR." : "Nothing this PR changed is in the lecture set. No translation PR.");
+      await writeSummary({ scope, errorCount: 0 });
+      if (!isTestMode && scope) {
         await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, nothingToDeliverResolution(prNumber, inputs.targetLanguage));
       }
       return;
     }
-    core9.setFailed(`Translation completed with ${scope.errors.length} errors`);
-    await writeScopeSummary(void 0, scope.errors.length);
+    core9.setFailed(`Translation completed with ${placeErrors.length} errors`);
+    await writeSummary({ scope, errorCount: placeErrors.length });
     if (!isTestMode) {
-      await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, scope.errors, { docsFolder: inputs.docsFolder, mergeSha: effectiveSha });
+      await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, placeErrors, { docsFolder: inputs.docsFolder, mergeSha: effectiveSha });
     }
     return;
   }
   const builtInGlossaryDir = getBuiltInGlossaryDir();
   const glossary = await loadGlossary(inputs.targetLanguage, builtInGlossaryDir, inputs.glossaryPath || void 0, coreLogger);
-  const { files: fetchedFiles, errors: fetchErrors, fetchFailedNewFiles } = await fetchAllFileContents(octokit, scope ? scope.classified : classified, inputs, targetOwner, targetRepo, effectiveSha);
+  const { files: fetchedFiles, errors: fetchErrors, fetchFailedNewFiles } = await fetchAllFileContents(octokit, remaining, inputs, targetOwner, targetRepo, effectiveSha, placement.toc);
   let filesToSync = fetchedFiles;
+  const heldErrors = [];
   if (scope) {
     const held = refuseUnreadLectures(fetchedFiles);
     for (const error4 of held.errors)
       core9.error(error4);
     filesToSync = held.files;
-    fetchErrors.unshift(...scope.errors, ...held.errors);
+    heldErrors.push(...held.errors);
   }
+  fetchErrors.unshift(...placeErrors, ...heldErrors);
   const { shas: existingStateShas, reads: stateReads } = await fetchExistingStateShas(octokit, targetOwner, targetRepo, filesToSync, inputs.docsFolder);
   const unreadStates = holdUnreadDeletionStates(filesToSync, stateReads, inputs.docsFolder, `${targetOwner}/${targetRepo}`, takesUpdateMode);
   for (const error4 of unreadStates.errors)
@@ -58033,6 +58699,12 @@ async function runSync() {
     droppedTargetSections: /* @__PURE__ */ new Map()
   } : await orchestrator.processFiles(filesToSync, glossary, void 0, bibliography, fetchFailedNewFiles);
   result.errors.unshift(...fetchErrors);
+  const gaps = await findLectureSetGaps(octokit, { owner: targetOwner, repo: targetRepo }, inputs.docsFolder, {
+    tocAdded: placement.tocAdded,
+    delivered: filesToSync.filter((f) => (f.type === "markdown" || f.type === "renamed") && result.processedFiles.includes(f.filename)).map((f) => ({ path: f.filename, content: f.newContent ?? "" })),
+    sourceFiles: placement.sourceFiles
+  }, coreLogger);
+  result.errors.push(...gaps.errors);
   const hasErrors = result.errors.length > 0;
   if (hasErrors) {
     core9.setFailed(`Translation completed with ${result.errors.length} errors`);
@@ -58090,7 +58762,8 @@ async function runSync() {
         scope?.skipped,
         // Only the lectures this PR delivers: one that failed is in the
         // failure issue instead.
-        premise.stillOpen.filter((lecture) => result.processedFiles.includes(lecture.file))
+        premise.stillOpen.filter((lecture) => result.processedFiles.includes(lecture.file)),
+        reportOf(gaps)
       );
       prUrl = prResult.prUrl;
       core9.setOutput("pr-url", prResult.prUrl);
@@ -58100,7 +58773,7 @@ async function runSync() {
       result.errors.push(`PR creation failed: ${prError instanceof Error ? prError.message : String(prError)}`);
     }
   }
-  await writeScopeSummary(prUrl, result.errors.length);
+  await writeSummary({ scope, prUrl, errorCount: result.errors.length, gaps });
   if (!isTestMode) {
     if (result.errors.length > 0) {
       const failedLectures = filesToSync.filter((f) => (f.type === "markdown" || f.type === "renamed") && !result.processedFiles.includes(f.filename)).map((f) => ({
@@ -58153,7 +58826,7 @@ async function readEditionFile(octokit, owner, repo, filepath, ref) {
     };
   }
 }
-async function fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo, commitSha) {
+async function fetchAllFileContents(octokit, classified, inputs, targetOwner, targetRepo, commitSha, sourceToc) {
   const filesToSync = [];
   const fetchErrors = [];
   const fetchFailedNewFiles = [];
@@ -58242,7 +58915,7 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
   }
   for (const file of classified.changedTocFiles) {
     try {
-      const { content: newContent } = await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, sha);
+      const newContent = sourceToc && sourceToc.path === file.filename ? sourceToc.content : (await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, sha)).content;
       let existingFileSha;
       let targetContent;
       try {

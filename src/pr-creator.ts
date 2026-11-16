@@ -16,6 +16,7 @@ import { TranslatedFile } from './types.js';
 import { Logger } from './sync-orchestrator.js';
 import { SYNC_BRANCH_PREFIX } from './branch-naming.js';
 import { ScopeSkip, formatScopeNotice } from './sync-scope.js';
+import { LectureSetReport, formatLectureSetNotice } from './sync-lecture-set.js';
 
 // =============================================================================
 // INTERFACES
@@ -159,6 +160,7 @@ export interface PrCreationResult {
  * @param sourcePrInfo - Optional source PR metadata
  * @param scopeSkipped - Lectures `sync-scope: existing` left out of the run (#344)
  * @param stillOpen - Lectures synced on top of an open translation PR (#420)
+ * @param lectureSet - What the lecture set left out or found missing (#449)
  * @returns PR creation result with URL and branch name
  */
 export async function createTranslationPR(
@@ -174,7 +176,8 @@ export async function createTranslationPR(
   droppedTargetSections?: Map<string, string[]>,
   failedNewFiles?: FailedNewFilesNotice,
   scopeSkipped?: ScopeSkip[],
-  stillOpen?: StillOpenNotice[]
+  stillOpen?: StillOpenNotice[],
+  lectureSet?: LectureSetReport
 ): Promise<PrCreationResult> {
   const { targetOwner, targetRepo } = config;
 
@@ -245,7 +248,8 @@ export async function createTranslationPR(
     droppedTargetSections,
     failedNewFiles,
     scopeSkipped,
-    stillOpen
+    stillOpen,
+    lectureSet
   );
 
   // Build PR title
@@ -330,7 +334,8 @@ export function buildPrBody(
   droppedTargetSections?: Map<string, string[]>,
   failedNewFiles?: FailedNewFilesNotice,
   scopeSkipped?: ScopeSkip[],
-  stillOpen?: StillOpenNotice[]
+  stillOpen?: StillOpenNotice[],
+  lectureSet?: LectureSetReport
 ): string {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);
@@ -411,6 +416,11 @@ export function buildPrBody(
   // are none, so that body is unchanged.
   const stillOpenNotice = formatStillOpenNotice(stillOpen ?? []);
 
+  // Changed files outside the lecture set, lectures taken out of the ToC or
+  // added to it with nothing delivered, and includes the edition lacks (#449).
+  // Absent when there are none; never part of the metadata's `files` below.
+  const lectureSetNotice = lectureSet ? formatLectureSetNotice(lectureSet) : '';
+
   // Build machine-readable metadata for rebase mode
   // Use fileMetadata (with type info) if available, otherwise fall back to path-only
   const metadataFiles: TranslationSyncMetadata['files'] = fileMetadata
@@ -449,7 +459,7 @@ This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoNam
 ### Source PR
 **[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ''}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
 
-${filesChangedSection}${failedFilesNotice}${stillOpenNotice}${skippedNotice}${droppedNotice}${scopeNotice}
+${filesChangedSection}${failedFilesNotice}${stillOpenNotice}${skippedNotice}${droppedNotice}${scopeNotice}${lectureSetNotice}
 
 ### Details
 - **Source Language**: ${config.sourceLanguage}

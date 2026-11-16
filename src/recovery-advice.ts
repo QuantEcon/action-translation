@@ -39,6 +39,7 @@ import {
   StillOpenLecture,
 } from './sync-premise.js';
 import { docsRelativePath } from './sync-scope.js';
+import { stateFileRelativePath } from './cli/translate-state.js';
 import type { DeletedLecture } from './rebase-plan.js';
 
 /** A lecture whose sync failed, for the per-lecture recovery lines. */
@@ -77,6 +78,19 @@ export interface FailureIssueInput {
    * (#386). No lecture failed, so none gets a recovery line of its own.
    */
   bibliographyUnread?: boolean;
+  /**
+   * The source's lecture set could not be read at the merge commit, so the
+   * run synced nothing (#449). No lecture failed, so none gets a recovery
+   * line of its own.
+   */
+  lectureSetUnread?: boolean;
+  /**
+   * With `lectureSetUnread`: the `.md` files the held PR removed, and the old
+   * paths of those it renamed (#449). No later sync deletes them, since the
+   * change that removed them is this one, so each is named with its state
+   * file, to delete from the edition by hand.
+   */
+  heldRemovals?: string[];
   /**
    * The docs folder's `_toc.yml` moved out of it, so the source moved its
    * book and the run was refused (#398). Its advice replaces the rest.
@@ -183,6 +197,24 @@ function bibliographyIntro(input: FailureIssueInput): string {
 }
 
 /**
+ * The opening of the advice when the source's lecture set could not be read
+ * (#449). A resync reads the same merge commit, so it helps only when the
+ * read failed for a transient reason; a ToC broken at that commit takes the
+ * CLI, whose `forward -f` names its file and reads no ToC.
+ */
+function lectureSetIntro(input: FailureIssueInput): string {
+  return (
+    "This run synced nothing: it could not read the source's lecture set at the PR's merge " +
+    `commit (\`${input.docsFolder}_toc.yml\`, the lectures it lists and the files they ` +
+    'include), which says which changed files are lectures. No lecture was translated and ' +
+    `nothing in ${input.targetRepo} changed. If the read failed for a transient reason, sync ` +
+    `this PR's changes again with \`${RESYNC_COMMAND}\` under the condition below. If the ToC ` +
+    'is missing or broken at that commit, a resync fails the same way: fix the ToC in the ' +
+    "source, then carry this PR's lectures from a checkout of the source's default branch:"
+  );
+}
+
+/**
  * The advice when the source moved its book out of the docs folder (#398).
  * A sync follows changes lecture by lecture and path by path, so the move is
  * made in the edition by hand, and the workflow pointed at the new folder.
@@ -219,17 +251,38 @@ export function failureRecoveryLines(input: FailureIssueInput): string[] {
   const otherErrors = input.errors.length > heldBack.length;
   if (!otherErrors) return premise;
 
-  const lectures = input.bibliographyUnread ? [] : (input.failedLectures ?? []);
+  const syncedNothing = input.bibliographyUnread || input.lectureSetUnread;
+  const lectures = syncedNothing ? [] : (input.failedLectures ?? []);
   const stillOpen = input.stillOpen ?? [];
   const lines: string[] = [];
   if (premise.length > 0) lines.push(...premise, '', '**For the other errors:**', '');
   lines.push(
-    input.bibliographyUnread
-      ? bibliographyIntro(input)
-      : "Recover a lecture from a checkout of the source's default branch, not by re-running " +
+    input.lectureSetUnread
+      ? lectureSetIntro(input)
+      : input.bibliographyUnread
+        ? bibliographyIntro(input)
+        : "Recover a lecture from a checkout of the source's default branch, not by re-running " +
           'this sync:',
     ''
   );
+  const removals = input.lectureSetUnread ? (input.heldRemovals ?? []) : [];
+  if (removals.length > 0) {
+    lines.push(
+      `This PR also removed or renamed ${removals.length === 1 ? 'a lecture' : 'lectures'}, ` +
+        `and no later sync deletes ${removals.length === 1 ? 'it' : 'them'} from ` +
+        `${input.targetRepo}: the change that removed ${removals.length === 1 ? 'it' : 'them'} ` +
+        'is this one. Delete each from the edition by hand, with its state file, where the ' +
+        'edition has it:',
+      '',
+      ...removals.map(
+        (file) =>
+          `- \`${file}\` and \`${stateFileRelativePath(docsRelativePath(file, input.docsFolder))}\``
+      ),
+      '',
+      'Then carry the lectures this PR changed:',
+      ''
+    );
+  }
   if (lectures.length > 0) {
     lines.push(
       ...lectures.map((lecture) =>

@@ -23,15 +23,30 @@
  * - a state file that cannot be read fails the run, and its error heads the
  *   failure issue's list, while the lectures that could be read still sync;
  * - an edition that cannot be read fails the run with nothing synced, the ToC
- *   and removals included, and no file in it is read;
+ *   and removals included, and no file in it is read, nor any source file but
+ *   the lecture set's;
  * - an in-scope lecture the content fetch cannot read is not translated from
  *   scratch, and its error is logged;
  * - the job summary of a failed run says that it failed, and with how many
  *   errors;
  * - under `all`, the run makes the requests it made before the input existed,
- *   in the same order, and writes no job summary.
+ *   in the same order, besides the lecture set's, and writes no job summary
+ *   when it has nothing to list.
  *
- * The last block pins the premise check of update mode (#420), which runs on
+ * Every scenario that changes a lecture gives the source a `_toc.yml` that
+ * lists it, since sync syncs only the lecture set (#449). The block on the
+ * lecture set pins what that adds: a changed fragment is found by the include
+ * scan, which stops at the first includer; a changed draft or `README.md` is
+ * listed and not synced, under either scope, and a PR that changes only such
+ * files passes with no PR; a ToC that cannot be read, or a truncated tree,
+ * holds the whole run with a failure issue; a lecture the scan cannot read is
+ * an error for the file it decides while the others sync; a lecture renamed
+ * out of the set is not carried; a ToC change lists the lectures it takes out
+ * and those it adds with nothing delivered; an include a delivered lecture
+ * names that the edition lacks is listed; and an `all` run that lists any of
+ * these writes the job summary.
+ *
+ * A later block pins the premise check of update mode (#420), which runs on
  * either scope: a lecture whose translation is behind with no open PR that
  * carries it, or ahead, costs no model call, and its failure issue says which
  * case it is; a lecture behind an open sync PR that carries it is synced, and
@@ -59,6 +74,12 @@ import * as os from 'os';
 import * as path from 'path';
 import { parseTranslationSyncMetadata } from '../pr-creator.js';
 import { LECTURE_MISSING_HEADING, NOT_SYNCED_HEADING } from '../sync-scope.js';
+import {
+  MISSING_INCLUDES_HEADING,
+  OUTSIDE_SET_HEADING,
+  TOC_ADDED_HEADING,
+  TOC_REMOVED_HEADING,
+} from '../sync-lecture-set.js';
 
 const ROOT = path.join(__dirname, '..', '..');
 const BUNDLE = path.join(ROOT, 'dist-action', 'index.js');
@@ -162,6 +183,24 @@ const TOC_AFTER =
 const atMerge = (p: string) => `${p}@${SHA}`;
 const atParent = (p: string) => `${p}@${SHA}^`;
 
+/**
+ * A `_toc.yml` that lists `stems`, files inside `lectures/` named without
+ * `.md`, under the root `intro`, which no fixture has: an entry with nothing
+ * behind it is reported in the log and fails nothing.
+ */
+function tocListing(...stems: string[]): string {
+  return `format: jb-book\nroot: intro\nchapters:\n${stems.map((s) => `  - file: ${s}\n`).join('')}`;
+}
+
+/**
+ * The source's `_toc.yml` at the merge commit, listing `stems`. Sync reads
+ * the lecture set there, and a changed `.md` it does not list is left out
+ * (#449), so every scenario that changes a lecture lists it.
+ */
+const listedAtMerge = (...stems: string[]) => ({
+  [atMerge('lectures/_toc.yml')]: tocListing(...stems),
+});
+
 /** A source lecture whose section changed, so syncing it would need the model. */
 function changedInSource(p: string, title: string): Record<string, string> {
   return { [atMerge(p)]: lecture(title, 'Body one, revised.'), [atParent(p)]: lecture(title) };
@@ -182,7 +221,16 @@ interface Scenario {
    */
   defaultBibliography?: boolean;
   prFiles: Array<{ filename: string; status: string; previous_filename?: string }>;
-  source: Record<string, string>;
+  /** `<path>@<ref>` → its content, or the status its read fails with. */
+  source: Record<string, string | { status: number }>;
+  /**
+   * The source's tree at a ref, when it is not every path `source` holds at
+   * that ref: its paths, truncated or not, or a status the read fails with.
+   */
+  sourceTrees?: Record<
+    string,
+    string[] | { paths?: string[]; truncated?: boolean; status?: number }
+  >;
   /** A path absent here answers 404. An array answers successive reads in turn. */
   target: Record<string, EditionAnswer | EditionAnswer[]>;
   /** The source repository's open issues; none when absent. */
@@ -477,6 +525,10 @@ const PR_FILES = `GET /repos/${SOURCE_REPO}/pulls/${PR_NUMBER}/files`;
 /** The scope check's first read, and later the PR creator's read of the default branch. */
 const EDITION_READ = `GET /repos/${EDITION}`;
 const readSource = (p: string, ref = SHA) => `GET /repos/${SOURCE_REPO}/contents/${p}?ref=${ref}`;
+/** The source's whole tree at a commit, which the lecture set reads first (#449). */
+const readTree = (ref = SHA) => `GET /repos/${SOURCE_REPO}/git/trees/${ref}?recursive=true`;
+/** The lecture set's reads at the merge commit: the tree, then the ToC. */
+const READ_LECTURE_SET = [readTree(), readSource('lectures/_toc.yml')];
 const readEdition = (p: string) => `GET /repos/${EDITION}/contents/${p}`;
 const writeEdition = (p: string) => `PUT /repos/${EDITION}/contents/${p}`;
 const deleteEdition = (p: string) => `DELETE /repos/${EDITION}/contents/${p}`;
@@ -609,6 +661,7 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
           [atMerge('lectures/c-new.md')]: lecture('Charlie'),
           [atParent('lectures/c.md')]: lecture('Charlie'),
           [atMerge('lectures/_toc.yml')]: TOC_AFTER,
+          [atParent('lectures/_toc.yml')]: TOC_BEFORE,
         },
         // No state files: under `all` the run does not ask.
         target: {
@@ -621,16 +674,21 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
 
     // The list is main's request sequence as of #344: main's bundle, which
     // predates the input, makes the same requests. Update it when runSync's
-    // requests change for another reason. The next test pins the rule #344
-    // adds, which must hold through any such change.
+    // requests change for another reason, as the lecture set did (#449): it
+    // reads the tree and the ToC at the merge commit and, since the PR changes
+    // the ToC, at its parent, and the content fetch reuses the ToC it read.
+    // The next test pins the rule #344 adds, which must hold through any such
+    // change.
     it('makes the same requests, in the same order, with no scope read', () => {
       check(run, (log) => {
         expect(log.requests).toEqual([
           PR_FILES,
+          ...READ_LECTURE_SET,
+          readTree(`${SHA}^`),
+          readSource('lectures/_toc.yml', `${SHA}^`),
           readSource('lectures/c-new.md'),
           readSource('lectures/c.md', `${SHA}^`),
           readEdition('lectures/c.md'),
-          readSource('lectures/_toc.yml'),
           readEdition('lectures/_toc.yml'),
           readEdition('lectures/f.md'),
           readEdition('.translate/state/c-new.md.yml'),
@@ -727,6 +785,16 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
       'lectures/d.md',
     ];
 
+    /** The ToC after the PR, which lists every lecture it changes, fragments included. */
+    const MIXED_TOC = tocListing(
+      'a-new',
+      'b',
+      'c-new',
+      'd',
+      '_admonition/gpu',
+      '_admonition/sub-new'
+    );
+
     let run: BundleRun;
     beforeAll(() => {
       run = runBundle('existing-mixed', {
@@ -751,7 +819,8 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
           [atParent('lectures/a.md')]: lecture('Alpha'),
           [atMerge('lectures/_admonition/sub-new.md')]: lecture('Sub'),
           [atParent('lectures/_admonition/sub.md')]: lecture('Sub'),
-          [atMerge('lectures/_toc.yml')]: TOC_AFTER,
+          [atMerge('lectures/_toc.yml')]: MIXED_TOC,
+          [atParent('lectures/_toc.yml')]: TOC_BEFORE,
           // Out of scope: real changes, which would need the model if synced.
           ...changedInSource('lectures/b.md', 'Bravo'),
           ...changedInSource('lectures/d.md', 'Delta'),
@@ -779,10 +848,15 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
       });
     }, 90_000);
 
+    // The lecture set comes first (#449): the tree and the ToC, at the merge
+    // commit and, since the PR changes the ToC, at its parent.
     it('checks every changed lecture against the edition before fetching any content', () => {
       check(run, (log) => {
-        expect(log.requests.slice(0, 11)).toEqual([
+        expect(log.requests.slice(0, 15)).toEqual([
           PR_FILES,
+          ...READ_LECTURE_SET,
+          readTree(`${SHA}^`),
+          readSource('lectures/_toc.yml', `${SHA}^`),
           EDITION_READ,
           readEdition('.translate/state/b.md.yml'),
           readEdition('.translate/state/d.md.yml'),
@@ -825,7 +899,7 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
           added('.translate/state/a-new.md.yml', STATE_WRITTEN),
           added('lectures/_admonition/sub-new.md', translated('Sub')),
           added('.translate/state/_admonition/sub-new.md.yml', STATE_WRITTEN),
-          updated('lectures/_toc.yml', TOC_AFTER),
+          updated('lectures/_toc.yml', MIXED_TOC),
         ]);
         expect(log.deletes).toEqual([
           deleted('lectures/a.md'),
@@ -935,7 +1009,7 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
   const NOTHING_IN_SCOPE: Scenario = {
     scope: 'existing',
     prFiles: [{ filename: 'lectures/b.md', status: 'modified' }],
-    source: changedInSource('lectures/b.md', 'Bravo'),
+    source: { ...changedInSource('lectures/b.md', 'Bravo'), ...listedAtMerge('b') },
     target: { 'lectures/b.md': lecture('Bravo') },
   };
 
@@ -945,10 +1019,11 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
       run = runBundle('existing-nothing', NOTHING_IN_SCOPE);
     }, 90_000);
 
-    it('reads the PR files, the edition and one state file, then lists the open issues', () => {
+    it('reads the PR files, the lecture set, the edition and one state file, then lists the open issues', () => {
       check(run, (log) => {
         expect(log.requests).toEqual([
           PR_FILES,
+          ...READ_LECTURE_SET,
           EDITION_READ,
           readEdition('.translate/state/b.md.yml'),
           // For failure issues an earlier run left open (#387). There are none.
@@ -1000,6 +1075,7 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
       [atMerge('lectures/a-new.md')]: lecture('Alpha'),
       [atParent('lectures/a.md')]: lecture('Alpha'),
       ...changedInSource('lectures/e.md', 'Echo'),
+      ...listedAtMerge('a-new', 'e'),
     },
     target: {
       '.translate/state/a.md.yml': STATE,
@@ -1110,12 +1186,12 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
         ...STATE_UNREADABLE,
         // A second error, from the ToC's content fetch. The ToC is listed
         // first in the source PR, so the scope error heads the failure
-        // issue's list only if the run puts scope errors first.
+        // issue's list only if the run puts scope errors first. The ToC the
+        // PR changes is the one STATE_UNREADABLE lists its lectures in.
         prFiles: [
           { filename: 'lectures/_toc.yml', status: 'modified' },
           ...STATE_UNREADABLE.prFiles,
         ],
-        source: { ...STATE_UNREADABLE.source, [atMerge('lectures/_toc.yml')]: TOC_AFTER },
         target: { ...STATE_UNREADABLE.target, 'lectures/_toc.yml': { status: 500 } },
       });
     }, 90_000);
@@ -1274,14 +1350,21 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
         // GitHub answers 404 for a repository the token cannot see.
         editionStatus: 404,
         prFiles: [{ filename: 'lectures/a.md', status: 'modified' }],
-        source: changedInSource('lectures/a.md', 'Alpha'),
+        source: { ...changedInSource('lectures/a.md', 'Alpha'), ...listedAtMerge('a') },
         target: {},
       });
     }, 90_000);
 
-    it('reads no file, from the source or the edition', () => {
+    // The lecture set comes before scope (#449), so the source's tree and ToC
+    // are read; no lecture is.
+    it("reads no lecture, from the source or the edition, only the source's lecture set", () => {
       check(run, (log) => {
-        expect(log.requests).toEqual([PR_FILES, EDITION_READ, ...OPEN_FAILURE_ISSUE]);
+        expect(log.requests).toEqual([
+          PR_FILES,
+          ...READ_LECTURE_SET,
+          EDITION_READ,
+          ...OPEN_FAILURE_ISSUE,
+        ]);
       });
     });
 
@@ -1314,9 +1397,11 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
    * An unreadable edition, beside a ToC change and a removal, with the
    * `bibliography` input left at its default. An edition that cannot be read
    * can take no change, so the ToC and the removal are dropped with the
-   * lecture, and the run fails before it reads any file: not the ToC, not the
-   * lecture the removal would delete, and not the `_config.yml` the default
-   * bibliography mode reads.
+   * lecture, and the run fails before it reads any file but the source's
+   * lecture set (#449): not the edition's ToC, not the lecture the removal
+   * would delete, and not the `_config.yml` the default bibliography mode
+   * reads. The source had no ToC before this PR, so there is none to read at
+   * the parent commit.
    */
   const EDITION_UNREADABLE_WITH_TOC: Scenario = {
     scope: 'existing',
@@ -1327,13 +1412,13 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
       { filename: 'lectures/a.md', status: 'modified' },
       { filename: 'lectures/f.md', status: 'removed' },
     ],
-    source: {
-      ...changedInSource('lectures/a.md', 'Alpha'),
-      [atMerge('lectures/_toc.yml')]: TOC_AFTER,
-    },
+    source: { ...changedInSource('lectures/a.md', 'Alpha'), ...listedAtMerge('a') },
     // GitHub answers 404 for every path in a repository the token cannot see.
     target: {},
   };
+
+  /** What the run reads of the source's lecture set: at the merge commit, then the tree before it. */
+  const READ_LECTURE_SETS = [...READ_LECTURE_SET, readTree(`${SHA}^`)];
 
   describe("'existing': an unreadable edition, beside a ToC change and a removal", () => {
     let run: BundleRun;
@@ -1341,9 +1426,14 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
       run = runBundle('existing-edition-unreadable-toc', EDITION_UNREADABLE_WITH_TOC);
     }, 90_000);
 
-    it('reads no file at all before it opens the failure issue', () => {
+    it("reads no file but the source's lecture set before it opens the failure issue", () => {
       check(run, (log) => {
-        expect(log.requests).toEqual([PR_FILES, EDITION_READ, ...OPEN_FAILURE_ISSUE]);
+        expect(log.requests).toEqual([
+          PR_FILES,
+          ...READ_LECTURE_SETS,
+          EDITION_READ,
+          ...OPEN_FAILURE_ISSUE,
+        ]);
       });
     });
 
@@ -1383,9 +1473,9 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
       });
     }, 90_000);
 
-    it('reads no file at all, and opens no failure issue', () => {
+    it("reads no file but the source's lecture set, and opens no failure issue", () => {
       check(run, (log) => {
-        expect(log.requests).toEqual([PR_FILES, EDITION_READ]);
+        expect(log.requests).toEqual([PR_FILES, ...READ_LECTURE_SETS, EDITION_READ]);
         expect(log.issues).toEqual([]);
       });
     });
@@ -1426,6 +1516,7 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
       check(run, (log) => {
         expect(log.requests).toEqual([
           PR_FILES,
+          ...READ_LECTURE_SET,
           EDITION_READ,
           readEdition('.translate/state/b.md.yml'),
           ...CLOSE_FAILURE_ISSUE,
@@ -1497,6 +1588,7 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
       check(run, (log) => {
         expect(log.requests).toEqual([
           PR_FILES,
+          ...READ_LECTURE_SET,
           EDITION_READ,
           readEdition('.translate/state/b.md.yml'),
         ]);
@@ -1522,6 +1614,7 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
         source: {
           [atMerge('lectures/a-new.md')]: lecture('Alpha'),
           [atParent('lectures/a.md')]: lecture('Alpha'),
+          ...listedAtMerge('a-new'),
         },
         target: {
           '.translate/state/a.md.yml': STATE,
@@ -1687,6 +1780,7 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
         source: {
           [atMerge('lectures/a-new.md')]: lecture('Alpha'),
           [atParent('lectures/a.md')]: lecture('Alpha'),
+          ...listedAtMerge('a-new'),
         },
         target: {
           '.translate/state/a.md.yml': STATE,
@@ -1728,6 +1822,7 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
       check(run, (log) => {
         expect(log.requests).toEqual([
           PR_FILES,
+          ...READ_LECTURE_SET,
           EDITION_READ,
           readEdition('.translate/state/e.md.yml'),
           ...OPEN_FAILURE_ISSUE,
@@ -1758,9 +1853,12 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
         prFiles: [
           { filename: 'lectures/README.md', status: 'renamed', previous_filename: 'README.md' },
         ],
+        // The ToC lists the moved file, so it is a lecture (#449): left out
+        // of the ToC, it would not be synced at all.
         source: {
           [atMerge('lectures/README.md')]: lecture('Readme'),
           [atParent('README.md')]: lecture('Readme'),
+          ...listedAtMerge('README'),
         },
         // The edition's own README, which no sync wrote.
         target: { 'README.md': translated('Readme') },
@@ -1798,7 +1896,7 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
       run = runBundle('existing-model-call', {
         scope: 'existing',
         prFiles: [{ filename: 'lectures/a.md', status: 'modified' }],
-        source: changedInSource('lectures/a.md', 'Alpha'),
+        source: { ...changedInSource('lectures/a.md', 'Alpha'), ...listedAtMerge('a') },
         target: {
           '.translate/state/a.md.yml': STATE,
           'lectures/a.md': translated('Alpha'),
@@ -1814,6 +1912,597 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
         expect(log.unmocked).toEqual([]);
         expect(log.mockKept).toBe(true);
         expect(log.crash).toBeNull();
+      });
+    });
+  });
+});
+
+describe("the lecture set in the built bundle's runSync (#449)", () => {
+  /** An `{include}` of `target`, as a lecture's body holds one. */
+  const include = (target: string) => `\`\`\`{include} ${target}\n\`\`\``;
+  /** The job summary's outcome line for a run that failed with one error and opened no PR. */
+  const FAILED_WITH_NO_PR = '**No translation PR.** The run failed with 1 error(s); see the log.';
+  /** The run's one error when the lecture set could not be read. */
+  const refused = (detail: string) =>
+    `Sync refused: the source's lecture set at cafe000 could not be read: ${detail}. Without ` +
+    'it the run cannot tell which changed files are lectures, so nothing was synced.';
+
+  // A changed fragment is synced as any lecture is, so it reaches the fake
+  // model, whose refusal fails the run: what matters is that it was synced,
+  // and what the scan read to find that it may be.
+  describe("'all': a changed fragment, found by the include scan", () => {
+    const stems = Array.from({ length: 10 }, (_, i) => `l${i}`);
+    let run: BundleRun;
+    beforeAll(() => {
+      const source: Scenario['source'] = {
+        ...listedAtMerge(...stems),
+        ...changedInSource('lectures/_admonition/gpu.md', 'GPU'),
+      };
+      for (const stem of stems) {
+        source[atMerge(`lectures/${stem}.md`)] =
+          stem === 'l1' ? lecture('L1', include('_admonition/gpu.md')) : lecture(stem);
+      }
+      run = runBundle('lecture-set-fragment', {
+        scope: 'all',
+        prFiles: [{ filename: 'lectures/_admonition/gpu.md', status: 'modified' }],
+        source,
+        target: { 'lectures/_admonition/gpu.md': translated('GPU') },
+      });
+    }, 90_000);
+
+    it('reads the ToC documents in batches, and stops after the batch with the includer', () => {
+      check(run, (log) => {
+        expect(log.requests.slice(0, 11)).toEqual([
+          PR_FILES,
+          ...READ_LECTURE_SET,
+          ...stems.slice(0, 8).map((stem) => readSource(`lectures/${stem}.md`)),
+        ]);
+        expect(log.requests).not.toContain(readSource('lectures/l8.md'));
+        expect(log.requests).not.toContain(readSource('lectures/l9.md'));
+      });
+    });
+
+    it('syncs the fragment as a lecture, and lists nothing', () => {
+      check(run, (log) => {
+        expect(requestsFor(log, 'lectures/_admonition/gpu.md')).toEqual([
+          readSource('lectures/_admonition/gpu.md'),
+          readSource('lectures/_admonition/gpu.md', `${SHA}^`),
+          readEdition('lectures/_admonition/gpu.md'),
+          readEdition('.translate/state/_admonition/gpu.md.yml'),
+        ]);
+        expect(log.modelRequests).toBeGreaterThan(0);
+        expect(issueErrors(log.issues[0])?.[0]).toMatch(
+          /^Error processing lectures\/_admonition\/gpu\.md: /
+        );
+        expect(run.summary).toBe('');
+        expect(log.unmocked).toEqual([]);
+        expect(log.crash).toBeNull();
+      });
+    });
+  });
+
+  describe.each(['all', 'existing'] as const)(
+    "'%s': a changed draft outside the lecture set, beside a lecture in it",
+    (scope) => {
+      let run: BundleRun;
+      beforeAll(() => {
+        run = runBundle(`lecture-set-draft-${scope}`, {
+          scope,
+          prFiles: [
+            {
+              filename: 'lectures/a-new.md',
+              status: 'renamed',
+              previous_filename: 'lectures/a.md',
+            },
+            { filename: 'lectures/draft.md', status: 'modified' },
+          ],
+          source: {
+            [atMerge('lectures/a-new.md')]: lecture('Alpha'),
+            [atParent('lectures/a.md')]: lecture('Alpha'),
+            ...changedInSource('lectures/draft.md', 'Draft'),
+            ...listedAtMerge('a-new'),
+          },
+          // The edition has the draft and a state file for it, so syncing it
+          // under either scope would call the model.
+          target: {
+            '.translate/state/a.md.yml': STATE,
+            'lectures/a.md': translated('Alpha'),
+            '.translate/state/draft.md.yml': STATE,
+            'lectures/draft.md': translated('Draft'),
+          },
+        });
+      }, 90_000);
+
+      it('reads nothing of the draft, nor its state file', () => {
+        check(run, (log) => {
+          expect(requestsFor(log, 'lectures/draft.md')).toEqual([]);
+          // The include scan read the ToC's one document, to look for an includer.
+          expect(log.requests.slice(0, 4)).toEqual([
+            PR_FILES,
+            ...READ_LECTURE_SET,
+            readSource('lectures/a-new.md'),
+          ]);
+        });
+      });
+
+      it('syncs the lecture, and lists the draft in the PR body but not its metadata', () => {
+        check(run, (log) => {
+          expect(log.writes.map((w) => w.path)).toEqual([
+            'lectures/a-new.md',
+            '.translate/state/a-new.md.yml',
+          ]);
+          expect(log.pulls).toHaveLength(1);
+          const { body } = log.pulls[0];
+          expect(itemsUnder(body, OUTSIDE_SET_HEADING)).toEqual(['`lectures/draft.md`']);
+          expect(body).not.toContain(NOT_SYNCED_HEADING);
+          expect(declaredFiles(body)).toEqual([
+            { path: 'lectures/a-new.md', type: 'renamed', previousPath: 'lectures/a.md' },
+          ]);
+          expect(log.comments).toHaveLength(1);
+          expect(log.comments[0].body).not.toContain('draft.md');
+        });
+      });
+
+      it('lists the draft in the job summary', () => {
+        check(run, () => {
+          expect(run.summary.split('\n')[0]).toBe(
+            scope === 'all'
+              ? '## Translation sync (ml)'
+              : '## Translation sync (ml): `sync-scope: existing`'
+          );
+          expect(linesOf(run.summary)).toContain(`**Translation PR:** ${PR_URL}`);
+          expect(itemsUnder(run.summary, '### Not synced: outside the lecture set (1)')).toEqual([
+            '`lectures/draft.md`',
+          ]);
+          if (scope === 'existing') {
+            expect(itemsUnder(run.summary, '### In scope (1)')).toEqual(['`lectures/a-new.md`']);
+          } else {
+            expect(run.summary).not.toContain('### In scope');
+          }
+        });
+      });
+
+      it('passes, with no failure issue, and no model call', () => {
+        check(run, (log) => {
+          expect(run.status).toBe(0);
+          expect(log.issues).toEqual([]);
+          expect(run.stdout).toContain(
+            'lectures/draft.md: not synced — outside the lecture set (lectures/_toc.yml does not ' +
+              'list it, and no lecture includes it)'
+          );
+          expectCleanRun(log);
+        });
+      });
+    }
+  );
+
+  describe.each(['all', 'existing'] as const)(
+    "'%s': a source PR that changes only a README.md, with a failure issue open",
+    (scope) => {
+      let run: BundleRun;
+      beforeAll(() => {
+        run = runBundle(`lecture-set-readme-${scope}`, {
+          scope,
+          prFiles: [{ filename: 'lectures/README.md', status: 'modified' }],
+          source: {
+            ...changedInSource('lectures/README.md', 'Readme'),
+            [atMerge('lectures/a.md')]: lecture('Alpha'),
+            ...listedAtMerge('a'),
+          },
+          target: { 'lectures/README.md': translated('Readme') },
+          issues: OPEN_ISSUES,
+        });
+      }, 90_000);
+
+      it('reads the lecture set, and nothing of the edition', () => {
+        check(run, (log) => {
+          expect(log.requests).toEqual([
+            PR_FILES,
+            ...READ_LECTURE_SET,
+            readSource('lectures/a.md'),
+            // A scoped run that passes with nothing to deliver closes the
+            // failure issue, as before (#387); an `all` run leaves it open.
+            ...(scope === 'existing' ? CLOSE_FAILURE_ISSUE : []),
+          ]);
+        });
+      });
+
+      it('passes with no PR, no failure issue and no comment on the source PR', () => {
+        check(run, (log) => {
+          expect(run.status).toBe(0);
+          expect(log.pulls).toEqual([]);
+          expect(log.issues).toEqual([]);
+          expect(log.writes).toEqual([]);
+          expect(run.outputs).toEqual({});
+          expect(log.issueUpdates).toEqual(scope === 'existing' ? [CLOSED] : []);
+          expectCleanRun(log);
+        });
+      });
+
+      it('says so in the job summary, and lists the README.md', () => {
+        check(run, () => {
+          expect(linesOf(run.summary)).toContain(
+            scope === 'existing'
+              ? '**No translation PR.** Nothing this source PR changed is in scope.'
+              : '**No translation PR.** Nothing this source PR changed is in the lecture set.'
+          );
+          expect(itemsUnder(run.summary, '### Not synced: outside the lecture set (1)')).toEqual([
+            '`lectures/README.md`',
+          ]);
+        });
+      });
+    }
+  );
+
+  describe("'all': a ToC that is not YAML", () => {
+    const ERROR = refused(
+      // js-yaml's message goes on to quote the ToC's lines; only its first
+      // line is kept, so the error stays one item of the issue's list.
+      '_toc.yml is not valid YAML: unexpected end of the stream within a flow collection (3:1)'
+    );
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('lecture-set-toc-unparseable', {
+        scope: 'all',
+        prFiles: [
+          { filename: 'lectures/a.md', status: 'modified' },
+          { filename: 'lectures/f.md', status: 'removed' },
+        ],
+        source: {
+          ...changedInSource('lectures/a.md', 'Alpha'),
+          [atMerge('lectures/_toc.yml')]: 'format: jb-book\nroot: [intro\n',
+        },
+        target: { 'lectures/a.md': translated('Alpha'), 'lectures/f.md': translated('Foxtrot') },
+      });
+    }, 90_000);
+
+    it('reads the tree and the ToC, then opens the failure issue, and syncs nothing', () => {
+      check(run, (log) => {
+        expect(log.requests).toEqual([PR_FILES, ...READ_LECTURE_SET, ...OPEN_FAILURE_ISSUE]);
+        expect(log.writes).toEqual([]);
+        expect(log.deletes).toEqual([]);
+        expect(log.pulls).toEqual([]);
+        expectCleanRun(log);
+      });
+    });
+
+    it('fails the run, and never falls back to the folder', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(issueErrors(log.issues[0])).toEqual([ERROR]);
+        expect(recoveryOf(log.issues[0])).toContain(
+          "This run synced nothing: it could not read the source's lecture set at the PR's merge commit"
+        );
+        expect(recoveryOf(log.issues[0])).not.toContain('translate forward -f a.md');
+      });
+    });
+
+    it('lists the error in the job summary of the `all` run', () => {
+      check(run, () => {
+        expect(run.summary.split('\n')[0]).toBe('## Translation sync (ml)');
+        expect(linesOf(run.summary)).toContain(FAILED_WITH_NO_PR);
+        expect(itemsUnder(run.summary, '### ❌ Lecture set unknown (1)')).toEqual([ERROR]);
+      });
+    });
+  });
+
+  describe("'existing': a tree GitHub truncated", () => {
+    const ERROR = refused(
+      `GitHub truncated the file list of ${SOURCE_REPO} at cafe000, so the lecture set cannot ` +
+        'be read whole'
+    );
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('lecture-set-tree-truncated', {
+        scope: 'existing',
+        prFiles: [{ filename: 'lectures/a.md', status: 'modified' }],
+        source: { ...changedInSource('lectures/a.md', 'Alpha'), ...listedAtMerge('a') },
+        sourceTrees: {
+          [SHA]: { paths: ['lectures/_toc.yml', 'lectures/a.md'], truncated: true },
+        },
+        target: { '.translate/state/a.md.yml': STATE, 'lectures/a.md': translated('Alpha') },
+      });
+    }, 90_000);
+
+    it('reads nothing after the tree, not even the edition, and fails with a failure issue', () => {
+      check(run, (log) => {
+        expect(log.requests).toEqual([PR_FILES, readTree(), ...OPEN_FAILURE_ISSUE]);
+        expect(run.status).toBe(1);
+        expect(issueErrors(log.issues[0])).toEqual([ERROR]);
+        expect(log.pulls).toEqual([]);
+        expectCleanRun(log);
+      });
+    });
+
+    it('writes the scoped job summary, with the error and no scope check', () => {
+      check(run, () => {
+        expect(run.summary.split('\n')[0]).toBe('## Translation sync (ml): `sync-scope: existing`');
+        expect(linesOf(run.summary)).toContain(FAILED_WITH_NO_PR);
+        expect(run.summary).not.toContain('### In scope');
+        expect(itemsUnder(run.summary, '### ❌ Lecture set unknown (1)')).toEqual([ERROR]);
+      });
+    });
+  });
+
+  describe("'all': a lecture the include scan cannot read, beside a lecture that syncs", () => {
+    const ERROR =
+      'Fetch failed (lecture set): lectures/_admonition/gpu.md: could not read lectures/b.md ' +
+      `from ${SOURCE_REPO} at cafe000 (status 500): HTTP 500, so whether it is in the lecture ` +
+      'set is unknown. It was not synced.';
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('lecture-set-scan-500', {
+        scope: 'all',
+        prFiles: [
+          { filename: 'lectures/a-new.md', status: 'renamed', previous_filename: 'lectures/a.md' },
+          { filename: 'lectures/_admonition/gpu.md', status: 'modified' },
+        ],
+        source: {
+          [atMerge('lectures/a-new.md')]: lecture('Alpha'),
+          [atParent('lectures/a.md')]: lecture('Alpha'),
+          [atMerge('lectures/b.md')]: { status: 500 },
+          ...changedInSource('lectures/_admonition/gpu.md', 'GPU'),
+          ...listedAtMerge('a-new', 'b'),
+        },
+        target: {
+          'lectures/a.md': translated('Alpha'),
+          'lectures/_admonition/gpu.md': translated('GPU'),
+        },
+      });
+    }, 90_000);
+
+    it('still syncs the lecture whose place it could read, in a PR', () => {
+      check(run, (log) => {
+        expect(log.writes.map((w) => w.path)).toEqual([
+          'lectures/a-new.md',
+          '.translate/state/a-new.md.yml',
+        ]);
+        expect(log.pulls).toHaveLength(1);
+        expect(declaredFiles(log.pulls[0].body)).toEqual([
+          { path: 'lectures/a-new.md', type: 'renamed', previousPath: 'lectures/a.md' },
+        ]);
+      });
+    });
+
+    it('neither syncs nor lists the file whose place it could not read', () => {
+      check(run, (log) => {
+        expect(requestsFor(log, 'lectures/_admonition/gpu.md')).toEqual([]);
+        expect(log.pulls[0].body).not.toContain(OUTSIDE_SET_HEADING);
+      });
+    });
+
+    it('fails the run with a failure issue that names the read', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(issueErrors(log.issues[0])).toEqual([ERROR]);
+        expect(log.comments).toEqual([]);
+        expect(linesOf(run.stdout)).toContain(`::error::${ERROR}`);
+        expectCleanRun(log);
+      });
+    });
+
+    it('lists the error in the job summary, beside the PR', () => {
+      check(run, () => {
+        expect(linesOf(run.summary)).toContain(
+          `**Translation PR:** ${PR_URL} The run also failed with 1 error(s); see the log.`
+        );
+        expect(itemsUnder(run.summary, '### ❌ Lecture set unknown (1)')).toEqual([ERROR]);
+      });
+    });
+  });
+
+  describe("'all': a lecture renamed to a path outside the lecture set", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('lecture-set-renamed-out', {
+        scope: 'all',
+        prFiles: [
+          {
+            filename: 'lectures/drafts/c.md',
+            status: 'renamed',
+            previous_filename: 'lectures/c.md',
+          },
+          { filename: 'lectures/_toc.yml', status: 'modified' },
+        ],
+        source: {
+          // A real change, so carrying it would call the model.
+          [atMerge('lectures/drafts/c.md')]: lecture('Charlie', 'Body one, revised.'),
+          [atParent('lectures/c.md')]: lecture('Charlie'),
+          [atMerge('lectures/a.md')]: lecture('Alpha'),
+          [atParent('lectures/a.md')]: lecture('Alpha'),
+          ...listedAtMerge('a'),
+          [atParent('lectures/_toc.yml')]: tocListing('a', 'c'),
+        },
+        target: {
+          'lectures/c.md': translated('Charlie'),
+          '.translate/state/c.md.yml': STATE,
+          'lectures/_toc.yml': tocListing('a', 'c'),
+        },
+      });
+    }, 90_000);
+
+    it('keeps the old file and its state file in the edition, and mirrors the ToC', () => {
+      check(run, (log) => {
+        expect(requestsFor(log, 'lectures/c.md')).toEqual([]);
+        expect(log.writes).toEqual([updated('lectures/_toc.yml', tocListing('a'))]);
+        expect(log.deletes).toEqual([]);
+      });
+    });
+
+    it('lists the rename in the PR body, beside the warning in the log', () => {
+      check(run, (log) => {
+        expect(log.pulls).toHaveLength(1);
+        const { body } = log.pulls[0];
+        expect(itemsUnder(body, OUTSIDE_SET_HEADING)).toEqual([
+          '`lectures/drafts/c.md` (renamed from `lectures/c.md`): the edition keeps its ' +
+            'translation of `lectures/c.md`, which sync no longer updates',
+        ]);
+        // The lecture left the folder's ToC with its move, so it is listed once.
+        expect(body).not.toContain(TOC_REMOVED_HEADING);
+        expect(declaredFiles(body)).toEqual([{ path: 'lectures/_toc.yml', type: 'toc' }]);
+        expect(run.stdout).toContain(
+          '::warning::lectures/c.md was renamed to lectures/drafts/c.md, which is outside the ' +
+            `lecture set: ${EDITION} keeps its translation of lectures/c.md, which sync no ` +
+            'longer updates'
+        );
+        expect(run.status).toBe(0);
+        expectCleanRun(log);
+      });
+    });
+  });
+
+  describe("'all': a ToC change that takes a lecture out and adds two it does not change", () => {
+    const BEFORE_TOC = tocListing('a', 'b', 'c');
+    const AFTER_TOC = tocListing('a', 'c', 'd', 'e');
+    let run: BundleRun;
+    beforeAll(() => {
+      const source: Scenario['source'] = {
+        [atMerge('lectures/_toc.yml')]: AFTER_TOC,
+        [atParent('lectures/_toc.yml')]: BEFORE_TOC,
+      };
+      for (const stem of ['a', 'b', 'c', 'd', 'e']) {
+        source[atMerge(`lectures/${stem}.md`)] = lecture(stem);
+        source[atParent(`lectures/${stem}.md`)] = lecture(stem);
+      }
+      run = runBundle('lecture-set-toc-change', {
+        scope: 'all',
+        prFiles: [{ filename: 'lectures/_toc.yml', status: 'modified' }],
+        source,
+        // `d` was listed before, and the edition kept its state file; `e` is
+        // listed for the first time.
+        target: { 'lectures/_toc.yml': BEFORE_TOC, '.translate/state/d.md.yml': STATE },
+      });
+    }, 90_000);
+
+    it('mirrors the ToC, and declares only it', () => {
+      check(run, (log) => {
+        expect(log.writes).toEqual([updated('lectures/_toc.yml', AFTER_TOC)]);
+        expect(declaredFiles(log.pulls[0].body)).toEqual([
+          { path: 'lectures/_toc.yml', type: 'toc' },
+        ]);
+      });
+    });
+
+    it('reads one state file per added lecture, after the content fetch and before the PR', () => {
+      check(run, (log) => {
+        const at = (request: string) => log.requests.indexOf(request);
+        const gapReads = [
+          readEdition('.translate/state/d.md.yml'),
+          readEdition('.translate/state/e.md.yml'),
+        ];
+        expect(log.requests.filter((r) => gapReads.includes(r))).toEqual(gapReads);
+        expect(at(gapReads[0])).toBeGreaterThan(at(readEdition('lectures/_toc.yml')));
+        expect(at(gapReads[1])).toBeLessThan(at(`GET /repos/${SOURCE_REPO}/pulls/${PR_NUMBER}`));
+      });
+    });
+
+    it('lists the lecture taken out as kept, and the added ones with their catch-up', () => {
+      check(run, (log) => {
+        const { body } = log.pulls[0];
+        expect(itemsUnder(body, TOC_REMOVED_HEADING)).toEqual(['`lectures/b.md`']);
+        expect(itemsUnder(body, TOC_ADDED_HEADING)).toEqual([
+          '`lectures/d.md`: `translate status -f d.md`, then `translate forward -f d.md`',
+          '`lectures/e.md`: `translate init -f e.md`',
+        ]);
+        expect(itemsUnder(run.summary, '### Not synced: taken out of the ToC (1)')).toEqual([
+          '`lectures/b.md`',
+        ]);
+        expect(itemsUnder(run.summary, '### ⚠️ Added to the ToC, nothing delivered (2)')).toEqual([
+          '`lectures/d.md`: `translate status -f d.md`, then `translate forward -f d.md`',
+          '`lectures/e.md`: `translate init -f e.md`',
+        ]);
+      });
+    });
+
+    it('passes, with no failure issue, and no model call', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(0);
+        expect(log.issues).toEqual([]);
+        expectCleanRun(log);
+      });
+    });
+  });
+
+  describe("'all': a delivered lecture that includes a file the edition lacks", () => {
+    const INCLUDES = `${include('_admonition/gpu.md')}\n\n${include('_admonition/x-new.md')}`;
+    const ALPHA = lecture('Alpha', `Body one.\n\n${INCLUDES}`);
+    /** Its translation, which keeps the includes, as structural parity requires. */
+    const ALPHA_ML = translated('Alpha').replace('ഉള്ളടക്കം.\n', `ഉള്ളടക്കം.\n\n${INCLUDES}\n`);
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('lecture-set-missing-include', {
+        scope: 'all',
+        prFiles: [
+          { filename: 'lectures/a-new.md', status: 'renamed', previous_filename: 'lectures/a.md' },
+          {
+            filename: 'lectures/_admonition/x-new.md',
+            status: 'renamed',
+            previous_filename: 'lectures/_admonition/x.md',
+          },
+        ],
+        // Pure renames, which need no model call: the lecture's text is the
+        // same at both commits, though in a real PR its include would change
+        // with the fragment's name. The renamed fragment is found by the scan,
+        // since the lecture names its new path.
+        source: {
+          [atMerge('lectures/a-new.md')]: ALPHA,
+          [atParent('lectures/a.md')]: ALPHA,
+          [atMerge('lectures/_admonition/x-new.md')]: lecture('Xray'),
+          [atParent('lectures/_admonition/x.md')]: lecture('Xray'),
+          [atMerge('lectures/_admonition/gpu.md')]: lecture('GPU'),
+          ...listedAtMerge('a-new'),
+        },
+        target: {
+          'lectures/a.md': ALPHA_ML,
+          'lectures/_admonition/x.md': translated('Xray'),
+        },
+      });
+    }, 90_000);
+
+    it('delivers both renames, the fragment found by the scan', () => {
+      check(run, (log) => {
+        expect(log.writes.map((w) => w.path)).toEqual([
+          'lectures/a-new.md',
+          '.translate/state/a-new.md.yml',
+          'lectures/_admonition/x-new.md',
+          '.translate/state/_admonition/x-new.md.yml',
+        ]);
+        expect(declaredFiles(log.pulls[0].body)).toEqual([
+          { path: 'lectures/a-new.md', type: 'renamed', previousPath: 'lectures/a.md' },
+          {
+            path: 'lectures/_admonition/x-new.md',
+            type: 'renamed',
+            previousPath: 'lectures/_admonition/x.md',
+          },
+        ]);
+      });
+    });
+
+    it('reads the edition for the include it lacks, and not for the one this PR delivers', () => {
+      check(run, (log) => {
+        expect(log.requests).toContain(readEdition('lectures/_admonition/gpu.md'));
+        expect(log.requests).not.toContain(readEdition('lectures/_admonition/x-new.md'));
+      });
+    });
+
+    it('lists the missing include, with its catch-up, in the PR body and the job summary', () => {
+      check(run, (log) => {
+        const item =
+          '`lectures/_admonition/gpu.md` (included by `lectures/a-new.md`): ' +
+          '`translate init -f _admonition/gpu.md`';
+        expect(itemsUnder(log.pulls[0].body, MISSING_INCLUDES_HEADING)).toEqual([item]);
+        expect(itemsUnder(run.summary, '### ⚠️ Included, but not in this edition (1)')).toEqual([
+          item,
+        ]);
+        expect(run.summary.split('\n')[0]).toBe('## Translation sync (ml)');
+      });
+    });
+
+    it('passes, with no failure issue, and no model call', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(0);
+        expect(log.issues).toEqual([]);
+        expectCleanRun(log);
       });
     });
   });
@@ -1872,6 +2561,7 @@ describe("the premise of update mode in the built bundle's runSync (#420)", () =
       source: {
         ...changedInSource('lectures/a.md', 'Alpha'),
         [atCommit('lectures/a.md', SYNCED_AT)]: englishThen,
+        ...listedAtMerge('a'),
       },
       target: {
         'lectures/a.md': translated('Alpha'),
@@ -1886,6 +2576,7 @@ describe("the premise of update mode in the built bundle's runSync (#420)", () =
   /** The requests a lecture behind costs, from the PR files to the failure issue. */
   const BEHIND_REQUESTS = [
     PR_FILES,
+    ...READ_LECTURE_SET,
     readSource('lectures/a.md'),
     readSource('lectures/a.md', `${SHA}^`),
     readEdition('lectures/a.md'),
@@ -1973,6 +2664,7 @@ describe("the premise of update mode in the built bundle's runSync (#420)", () =
           [atMerge('lectures/c-new.md')]: lecture('Charlie'),
           [atParent('lectures/c.md')]: lecture('Charlie'),
           [atCommit('lectures/c.md', SYNCED_AT)]: lecture('Charlie', 'Body zero.'),
+          ...listedAtMerge('c-new'),
         },
         target: {
           'lectures/c.md': translated('Charlie'),
@@ -2064,6 +2756,7 @@ describe("the premise of update mode in the built bundle's runSync (#420)", () =
         source: {
           ...changedInSource('lectures/a.md', 'Alpha'),
           [atCommit('lectures/a.md', LATER)]: lecture('Alpha', 'Body two.'),
+          ...listedAtMerge('a'),
         },
         compare: { [`${LATER}...${SHA}`]: 'behind' },
       });
@@ -2174,6 +2867,7 @@ describe("the premise of update mode in the built bundle's runSync (#420)", () =
           [atMerge('lectures/c-new.md')]: lecture('Charlie'),
           [atParent('lectures/c.md')]: lecture('Charlie'),
           [atCommit('lectures/c.md', SYNCED_AT)]: lecture('Charlie'),
+          ...listedAtMerge('a', 'c-new'),
         },
         target: {
           ...behind.target,
@@ -2459,6 +3153,7 @@ describe("failed reads in the built bundle's runSync (#396, #386)", () => {
     source: {
       [atMerge('lectures/c-new.md')]: lecture('Charlie'),
       [atParent('lectures/c.md')]: lecture('Charlie'),
+      ...listedAtMerge('c-new'),
     },
     target: { ...edition, '.translate/state/c.md.yml': { status: 500 } },
   });
@@ -2523,10 +3218,8 @@ describe("failed reads in the built bundle's runSync (#396, #386)", () => {
           { filename: 'lectures/f.md', status: 'removed' },
           { filename: 'lectures/g.md', status: 'removed' },
         ],
-        source: {
-          ...changedInSource('lectures/a.md', 'Alpha'),
-          [atMerge('lectures/_toc.yml')]: TOC_AFTER,
-        },
+        // The changed ToC lists the lecture, so the hold is what keeps it out.
+        source: { ...changedInSource('lectures/a.md', 'Alpha'), ...listedAtMerge('a') },
         target: {
           'lectures/a.md': translated('Alpha'),
           'lectures/_toc.yml': TOC_BEFORE,
@@ -2752,6 +3445,9 @@ describe("a fragment with no title in the built bundle's runSync (#449)", () => 
       scope: 'all',
       prFiles: [{ filename: GPU, status: 'modified' }],
       source: {
+        // A lecture includes it, so it is in the lecture set sync reads.
+        ...listedAtMerge('l1'),
+        [atMerge('lectures/l1.md')]: lecture('L1', '```{include} _admonition/gpu.md\n```'),
         [atMerge(GPU)]: fragment('This lecture was built on a GPU.'),
         [atParent(GPU)]: fragment('This lecture uses a GPU.'),
       },

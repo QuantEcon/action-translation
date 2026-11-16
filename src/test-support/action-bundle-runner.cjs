@@ -13,7 +13,12 @@
  * The scenario says what the source PR changed and what each repository holds:
  *
  *   prFiles        the source PR's files, as `pulls.listFiles` lists them
- *   source         { "<path>@<ref>": content }
+ *   source         { "<path>@<ref>": content | { status } }; a status fails
+ *                  the read with it
+ *   sourceTrees    optional { "<ref>": [paths] | { paths, truncated } |
+ *                  { status } }: the source's recursive tree at a ref, as
+ *                  `git.getTree` lists it (#449). A ref not listed answers
+ *                  with every path `source` holds at that ref
  *   target         { "<path>": content | { status } | [answers, in turn] }; a
  *                  "<path>@<ref>" key answers reads at that ref, ahead of the
  *                  plain "<path>" key, which answers at every ref
@@ -154,7 +159,11 @@ const file = (path, content, sha) =>
 function readContents(repo, path, ref) {
   if (repo === SOURCE) {
     const content = scenario.source[`${path}@${ref}`];
-    return content === undefined ? notFound() : file(path, content, `s-${path}`);
+    if (content === undefined) return notFound();
+    if (typeof content === 'object') {
+      return json(content.status, { message: `HTTP ${content.status}` });
+    }
+    return file(path, content, `s-${path}`);
   }
   if (repo === TARGET) {
     const atRef = ref ? scenario.target[`${path}@${ref}`] : undefined;
@@ -169,7 +178,26 @@ function readContents(repo, path, ref) {
   return notFound();
 }
 
+/** The source's tree at `ref`: `sourceTrees` when it lists the ref, else what `source` holds there. */
+function readSourceTree(ref) {
+  const answer = (scenario.sourceTrees ?? {})[ref];
+  if (answer !== undefined && !Array.isArray(answer) && answer.status) {
+    return json(answer.status, { message: `HTTP ${answer.status}` });
+  }
+  const paths =
+    answer === undefined
+      ? Object.keys(scenario.source)
+          .filter((key) => key.endsWith(`@${ref}`))
+          .map((key) => key.slice(0, -`@${ref}`.length))
+      : Array.isArray(answer)
+        ? answer
+        : answer.paths;
+  const tree = paths.map((p) => ({ path: p, mode: '100644', type: 'blob', sha: `s-${p}` }));
+  return json(200, { sha: ref, tree, truncated: Boolean(answer && answer.truncated) });
+}
+
 const CONTENTS = /^\/repos\/([^/]+\/[^/]+)\/contents\/(.+)$/;
+const GIT_TREE = /^\/repos\/([^/]+\/[^/]+)\/git\/trees\/(.+)$/;
 const ISSUE = /^\/repos\/([^/]+\/[^/]+)\/issues\/(\d+)$/;
 const ISSUE_LABELS = /^\/repos\/[^/]+\/[^/]+\/issues\/\d+\/labels$/;
 const ISSUE_COMMENTS = /^\/repos\/([^/]+\/[^/]+)\/issues\/(\d+)\/comments$/;
@@ -186,7 +214,11 @@ function answerGitHub(request) {
   const path = decodeURIComponent(url.pathname);
   const method = request.method.toUpperCase();
   const ref = url.searchParams.get('ref');
-  const line = `${method} ${path}${ref ? `?ref=${ref}` : ''}`;
+  // A tree read names its ref in the path, and asks for the whole tree.
+  const recursive = url.searchParams.get('recursive');
+  const line =
+    `${method} ${path}${ref ? `?ref=${ref}` : ''}` +
+    `${recursive ? `?recursive=${recursive}` : ''}`;
   log.requests.push(line);
   fs.appendFileSync(REQUEST_TRAIL_PATH, `${line}\n`);
   const body = request.body ? JSON.parse(String(request.body)) : {};
@@ -198,6 +230,8 @@ function answerGitHub(request) {
   const gitRef = path.match(GIT_REF);
 
   if (method === 'GET' && contents) return readContents(contents[1], contents[2], ref);
+  const gitTree = path.match(GIT_TREE);
+  if (method === 'GET' && gitTree && gitTree[1] === SOURCE) return readSourceTree(gitTree[2]);
   if (method === 'GET' && path === `/repos/${SOURCE}/pulls/${PR_NUMBER}/files`) {
     return json(200, scenario.prFiles);
   }

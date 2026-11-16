@@ -103,6 +103,7 @@ src/
 ├── sync-orchestrator.ts # Sync processing pipeline
 ├── sync-scope.ts        # sync-scope: existing — sync a changed lecture only if the target has its state file (#344)
 ├── lecture-set.ts       # The lecture set: the ToC's documents plus the .md files they include, for init, sync and the CLI; _toc.yml's front end built, myst.yml's named (#449)
+├── sync-lecture-set.ts  # Sync on the lecture set: keep the changed .md files in it, read at the commit; list the rest, the ToC's added and removed lectures, and includes the edition lacks (#449)
 ├── sync-premise.ts      # Update mode's premise: hold back a lecture whose translation does not start from the PR's old English, and say why; one behind an open translation PR still syncs, with a diagnosis (#420)
 ├── recovery-advice.ts   # Recovery text: the sync failure issue's body and the rebase-failure comment (CLI route; resync only under #276's precondition, #281)
 ├── toc-captions.ts      # _toc.yml part-caption preservation on sync (#254)
@@ -196,6 +197,15 @@ PR merged in SOURCE repo
 ┌─────────────────────────┐
 │ index.ts                │  Fetch PR diff, identify changed files
 │ (GitHub Action entry)   │
+└───────────┬─────────────┘
+            │
+            ▼
+┌─────────────────────────┐
+│ sync-lecture-set.ts     │  Read the source's lecture set at the
+│ (+ lecture-set.ts)      │  commit (tree, _toc.yml, includes); keep
+│                         │  the changed .md files in it, list the
+│                         │  rest (#449). A ToC that cannot be read
+│                         │  holds the run, with the Issue
 └───────────┬─────────────┘
             │
             ▼

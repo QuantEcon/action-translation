@@ -120,7 +120,9 @@ A lecture listed under **State File Without a Lecture** needs fixing: the editio
 
 ### Why did a changed lecture get no sync PR?
 
-Under `sync-scope: existing`, this happens when the lecture is out of scope and the run has nothing else to sync (no `_toc.yml` change, no removal). Such a run passes without a PR, a new failure issue or a comment on the source PR; its job summary, on the workflow run's page, lists each skipped lecture and why. If an earlier run opened a failure issue for the same PR and language, this run closes it.
+Under either `sync-scope`, a changed `.md` file syncs only when it is in the source's lecture set: listed in the docs folder's `_toc.yml`, or included with `{include}` by a lecture that is. A draft, a `README.md` or an entry commented out of the ToC is left alone, and the job summary on the workflow run's page lists it under **Not synced: outside the lecture set**. A source PR that changes only such files passes with no PR. To sync the file, list it in `_toc.yml`, or include it from a lecture that is listed. See [Which files sync](action-reference.md#which-files-sync).
+
+Under `sync-scope: existing`, it also happens when the lecture is out of scope and the run has nothing else to sync (no `_toc.yml` change, no removal). Such a run passes without a PR, a new failure issue or a comment on the source PR; its job summary, on the workflow run's page, lists each skipped lecture and why. If an earlier run opened a failure issue for the same PR and language, this run closes it.
 
 If the edition does have the lecture, check that:
 

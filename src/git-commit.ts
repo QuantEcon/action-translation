@@ -145,7 +145,7 @@ function retryAfterMs(error: unknown): number | undefined {
     : undefined;
 }
 
-async function withRetry<T>(
+export async function withRetry<T>(
   what: string,
   call: () => Promise<T>,
   logger: GitWriteLogger,

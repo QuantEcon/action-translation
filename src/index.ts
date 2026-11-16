@@ -37,9 +37,16 @@ import {
   buildScopeSummary,
   nothingToSync,
   refuseUnreadLectures,
+  ScopedFiles,
   stateFileFor,
   writeJobSummary,
 } from './sync-scope.js';
+import {
+  findLectureSetGaps,
+  formatLectureSetSummary,
+  LectureSetReport,
+  placeOnLectureSet,
+} from './sync-lecture-set.js';
 import {
   checkSyncPremise,
   githubPremiseReader,
@@ -806,7 +813,8 @@ async function rebaseSinglePR(
  *
  * Workflow:
  * 1. Validate inputs and PR event
- * 2. List and classify changed files
+ * 2. List and classify changed files, keep the `.md` files in the source's
+ *    lecture set (#449), then, under `sync-scope: existing`, those in scope
  * 3. Fetch content from GitHub API (source + target repos)
  * 4. Process files via SyncOrchestrator (translation + validation)
  * 5. Create PR in target repo via PrCreator
@@ -940,6 +948,94 @@ async function runSync(): Promise<void> {
   core.info(`Found ${classified.removedMarkdownFiles.length} removed markdown files`);
   core.info(`Found ${classified.removedTocFiles.length} removed TOC files`);
 
+  // The lecture set (#449): a changed or renamed `.md` syncs only when the
+  // source's `_toc.yml` lists it, or a lecture it lists includes it, at the
+  // commit being synced. One outside the set is left alone and listed. A set
+  // that cannot be read holds the whole run; a lecture the include scan cannot
+  // read is an error for the file it decides. Under `existing` this comes
+  // before scope, so a file outside the set is never checked for a state
+  // file. Removals are not narrowed (see sync-lecture-set.ts).
+  const source = { owner: github.context.repo.owner, repo: github.context.repo.repo };
+  const placement = await placeOnLectureSet(
+    octokit,
+    source,
+    async (filePath, ref) =>
+      (await fetchFileContent(octokit, source.owner, source.repo, filePath, ref)).content,
+    classified,
+    inputs.docsFolder,
+    effectiveSha,
+    inputs.targetRepo,
+    coreLogger
+  );
+
+  // The job summary: every run under `existing`, as before, and a run under
+  // `all` with something from the lecture set to list (#449). The gaps are
+  // known only once the run knows what it delivers.
+  type Gaps = Awaited<ReturnType<typeof findLectureSetGaps>>;
+  const noGaps: Gaps = { tocAdded: [], missingIncludes: [], errors: [] };
+  const reportOf = (gaps: Gaps): LectureSetReport => ({
+    docsFolder: inputs.docsFolder,
+    outside: placement.outside,
+    tocRemoved: placement.tocRemoved,
+    tocAdded: gaps.tocAdded,
+    missingIncludes: gaps.missingIncludes,
+  });
+  const writeSummary = (run: {
+    scope?: ScopedFiles;
+    prUrl?: string;
+    errorCount: number;
+    gaps?: Gaps;
+  }): Promise<void> => {
+    const gaps = run.gaps ?? noGaps;
+    const lectureSet = formatLectureSetSummary(reportOf(gaps), [
+      ...placement.errors,
+      ...gaps.errors,
+    ]);
+    if (inputs.syncScope !== 'existing' && lectureSet === '') return Promise.resolve();
+    return writeJobSummary(
+      core.summary,
+      buildScopeSummary({
+        targetLanguage: inputs.targetLanguage,
+        targetRepo: inputs.targetRepo,
+        sourceRepo: `${source.owner}/${source.repo}`,
+        prNumber,
+        syncScope: inputs.syncScope,
+        scoped: run.scope,
+        remaining: placement.classified,
+        lectureSet,
+        prUrl: run.prUrl,
+        errorCount: run.errorCount,
+      }),
+      coreLogger
+    );
+  };
+
+  if (placement.refused) {
+    core.setFailed(placement.refused);
+    await writeSummary({ errorCount: 1 });
+    if (!isTestMode) {
+      await createFailureIssue(
+        octokit,
+        prNumber,
+        inputs.targetLanguage,
+        inputs.targetRepo,
+        [placement.refused],
+        {
+          docsFolder: inputs.docsFolder,
+          mergeSha: effectiveSha,
+          lectureSetUnread: true,
+          heldRemovals: [
+            ...classified.removedMarkdownFiles.map((file) => file.filename),
+            ...classified.renamedMarkdownFiles.flatMap((file) =>
+              file.previous_filename ? [file.previous_filename] : []
+            ),
+          ],
+        }
+      );
+    }
+    return;
+  }
+
   // sync-scope (#344): under `existing`, a changed or renamed lecture syncs
   // only when the edition has its state file, checked before any content is
   // fetched. Removals and `_toc.yml` are not scoped. `all` returns undefined
@@ -948,40 +1044,33 @@ async function runSync(): Promise<void> {
   const scope = await applySyncScope(
     inputs.syncScope,
     octokit,
-    classified,
+    placement.classified,
     { owner: targetOwner, repo: targetRepo },
     inputs.docsFolder,
     coreLogger
   );
-  const writeScopeSummary = (prUrl: string | undefined, errorCount: number) =>
-    scope
-      ? writeJobSummary(
-          core.summary,
-          buildScopeSummary({
-            targetLanguage: inputs.targetLanguage,
-            targetRepo: inputs.targetRepo,
-            sourceRepo: `${github.context.repo.owner}/${github.context.repo.repo}`,
-            prNumber,
-            scoped: scope,
-            prUrl,
-            errorCount,
-          }),
-          coreLogger
-        )
-      : Promise.resolve();
+  const remaining = scope ? scope.classified : placement.classified;
+  // The lecture set's errors come first, as its test comes first.
+  const placeErrors = [...placement.errors, ...(scope?.errors ?? [])];
 
-  // Nothing left to sync. Without a scope error the run passes: no PR, no
-  // failure issue and no comment on the source PR. Besides the job summary, it
-  // closes the failure issues earlier runs opened for this PR (the scoped half
-  // of #387): on a partial edition, passing with nothing in scope is an
+  // Nothing left to sync. Without an error the run passes: no PR, no failure
+  // issue and no comment on the source PR. Besides the job summary, a scoped
+  // run closes the failure issues earlier runs opened for this PR (the scoped
+  // half of #387): on a partial edition, passing with nothing in scope is an
   // ordinary recovery, such as a rerun after a transient read error left a
-  // lecture's scope unknown. With a scope error, some changed lecture's scope
-  // is unknown, so the run fails here, before it reads the edition again.
-  if (scope && nothingToSync(scope.classified)) {
-    if (scope.errors.length === 0) {
-      core.info('sync-scope: existing — nothing this PR changed is in scope. No translation PR.');
-      await writeScopeSummary(undefined, 0);
-      if (!isTestMode) {
+  // lecture's scope unknown. Under `all`, which reaches here only when every
+  // changed `.md` is outside the lecture set (#449), they stay open, as for
+  // any `all` run without a PR. With an error, some changed file's place is
+  // unknown, so the run fails here, before it reads the edition again.
+  if (nothingToSync(remaining)) {
+    if (placeErrors.length === 0) {
+      core.info(
+        scope
+          ? 'sync-scope: existing — nothing this PR changed is in scope. No translation PR.'
+          : 'Nothing this PR changed is in the lecture set. No translation PR.'
+      );
+      await writeSummary({ scope, errorCount: 0 });
+      if (!isTestMode && scope) {
         await closeFailureIssues(
           octokit,
           prNumber,
@@ -991,15 +1080,15 @@ async function runSync(): Promise<void> {
       }
       return;
     }
-    core.setFailed(`Translation completed with ${scope.errors.length} errors`);
-    await writeScopeSummary(undefined, scope.errors.length);
+    core.setFailed(`Translation completed with ${placeErrors.length} errors`);
+    await writeSummary({ scope, errorCount: placeErrors.length });
     if (!isTestMode) {
       await createFailureIssue(
         octokit,
         prNumber,
         inputs.targetLanguage,
         inputs.targetRepo,
-        scope.errors,
+        placeErrors,
         { docsFolder: inputs.docsFolder, mergeSha: effectiveSha }
       );
     }
@@ -1022,24 +1111,27 @@ async function runSync(): Promise<void> {
     fetchFailedNewFiles,
   } = await fetchAllFileContents(
     octokit,
-    scope ? scope.classified : classified,
+    remaining,
     inputs,
     targetOwner,
     targetRepo,
-    effectiveSha
+    effectiveSha,
+    placement.toc
   );
 
-  // Under scope, a lecture whose scope could not be read, and an in-scope
-  // lecture the fetch could not read, each fail the run: neither is
-  // translated, and an in-scope lecture is never translated from scratch
-  // (see sync-scope.ts).
+  // A changed file whose place in the lecture set could not be read fails the
+  // run. Under scope, so does a lecture whose scope could not be read, and an
+  // in-scope lecture the fetch could not read: none is translated, and an
+  // in-scope lecture is never translated from scratch (see sync-scope.ts).
   let filesToSync = fetchedFiles;
+  const heldErrors: string[] = [];
   if (scope) {
     const held = refuseUnreadLectures(fetchedFiles);
     for (const error of held.errors) core.error(error);
     filesToSync = held.files;
-    fetchErrors.unshift(...scope.errors, ...held.errors);
+    heldErrors.push(...held.errors);
   }
+  fetchErrors.unshift(...placeErrors, ...heldErrors);
 
   // Fetch existing state file SHAs from target repo for state generation
   const { shas: existingStateShas, reads: stateReads } = await fetchExistingStateShas(
@@ -1155,6 +1247,29 @@ async function runSync(): Promise<void> {
   // failure issue instead of shipping a PR that silently misses files.
   result.errors.unshift(...fetchErrors);
 
+  // The lecture set's gaps (#449), listed and never translated: a lecture the
+  // PR added to the ToC without changing it, and a file a delivered lecture
+  // includes that the edition lacks. Each costs one edition read, after the
+  // scope check's read of the edition; a read that fails is an error.
+  const gaps = await findLectureSetGaps(
+    octokit,
+    { owner: targetOwner, repo: targetRepo },
+    inputs.docsFolder,
+    {
+      tocAdded: placement.tocAdded,
+      delivered: filesToSync
+        .filter(
+          (f) =>
+            (f.type === 'markdown' || f.type === 'renamed') &&
+            result.processedFiles.includes(f.filename)
+        )
+        .map((f) => ({ path: f.filename, content: f.newContent ?? '' })),
+      sourceFiles: placement.sourceFiles,
+    },
+    coreLogger
+  );
+  result.errors.push(...gaps.errors);
+
   // Report results
   const hasErrors = result.errors.length > 0;
   if (hasErrors) {
@@ -1231,7 +1346,8 @@ async function runSync(): Promise<void> {
         scope?.skipped,
         // Only the lectures this PR delivers: one that failed is in the
         // failure issue instead.
-        premise.stillOpen.filter((lecture) => result.processedFiles.includes(lecture.file))
+        premise.stillOpen.filter((lecture) => result.processedFiles.includes(lecture.file)),
+        reportOf(gaps)
       );
 
       prUrl = prResult.prUrl;
@@ -1247,7 +1363,7 @@ async function runSync(): Promise<void> {
     }
   }
 
-  await writeScopeSummary(prUrl, result.errors.length);
+  await writeSummary({ scope, prUrl, errorCount: result.errors.length, gaps });
 
   // Post-sync notifications (skip in test mode)
   if (!isTestMode) {
@@ -1380,6 +1496,8 @@ async function readEditionFile(
 
 /**
  * Build FileToSync[] by fetching content from GitHub API for all classified files.
+ * `sourceToc` is the docs folder's `_toc.yml` as the lecture set already read
+ * it at `commitSha` (#449), so a changed ToC is not read twice.
  */
 async function fetchAllFileContents(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1388,7 +1506,8 @@ async function fetchAllFileContents(
   inputs: ReturnType<typeof getInputs>,
   targetOwner: string,
   targetRepo: string,
-  commitSha?: string
+  commitSha?: string,
+  sourceToc?: { path: string; content: string }
 ): Promise<{ files: FileToSync[]; errors: string[]; fetchFailedNewFiles: string[] }> {
   const filesToSync: FileToSync[] = [];
   // Fetch failures are returned, not swallowed: a transient 5xx on one file
@@ -1526,13 +1645,10 @@ async function fetchAllFileContents(
   // TOC files
   for (const file of classified.changedTocFiles) {
     try {
-      const { content: newContent } = await fetchFileContent(
-        octokit,
-        sourceOwner,
-        sourceRepo,
-        file.filename,
-        sha
-      );
+      const newContent =
+        sourceToc && sourceToc.path === file.filename
+          ? sourceToc.content
+          : (await fetchFileContent(octokit, sourceOwner, sourceRepo, file.filename, sha)).content;
 
       let existingFileSha: string | undefined;
       let targetContent: string | undefined;
@@ -1929,6 +2045,8 @@ async function createFailureIssue(
     | 'failedLectures'
     | 'stillOpen'
     | 'bibliographyUnread'
+    | 'lectureSetUnread'
+    | 'heldRemovals'
     | 'folderMoved'
   > = { docsFolder: '' }
 ): Promise<void> {
