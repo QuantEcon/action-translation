@@ -39,6 +39,7 @@ import {
   StillOpenLecture,
 } from './sync-premise.js';
 import { docsRelativePath } from './sync-scope.js';
+import { stateFileRelativePath } from './cli/translate-state.js';
 import type { DeletedLecture } from './rebase-plan.js';
 
 /** A lecture whose sync failed, for the per-lecture recovery lines. */
@@ -83,6 +84,13 @@ export interface FailureIssueInput {
    * line of its own.
    */
   lectureSetUnread?: boolean;
+  /**
+   * With `lectureSetUnread`: the `.md` files the held PR removed, and the old
+   * paths of those it renamed (#449). No later sync deletes them, since the
+   * change that removed them is this one, so each is named with its state
+   * file, to delete from the edition by hand.
+   */
+  heldRemovals?: string[];
   /**
    * The docs folder's `_toc.yml` moved out of it, so the source moved its
    * book and the run was refused (#398). Its advice replaces the rest.
@@ -257,6 +265,24 @@ export function failureRecoveryLines(input: FailureIssueInput): string[] {
           'this sync:',
     ''
   );
+  const removals = input.lectureSetUnread ? (input.heldRemovals ?? []) : [];
+  if (removals.length > 0) {
+    lines.push(
+      `This PR also removed or renamed ${removals.length === 1 ? 'a lecture' : 'lectures'}, ` +
+        `and no later sync deletes ${removals.length === 1 ? 'it' : 'them'} from ` +
+        `${input.targetRepo}: the change that removed ${removals.length === 1 ? 'it' : 'them'} ` +
+        'is this one. Delete each from the edition by hand, with its state file, where the ' +
+        'edition has it:',
+      '',
+      ...removals.map(
+        (file) =>
+          `- \`${file}\` and \`${stateFileRelativePath(docsRelativePath(file, input.docsFolder))}\``
+      ),
+      '',
+      'Then carry the lectures this PR changed:',
+      ''
+    );
+  }
   if (lectures.length > 0) {
     lines.push(
       ...lectures.map((lecture) =>

@@ -35,8 +35,10 @@
  * It lives outside `src/index.ts`, which cannot be imported (#169).
  */
 
+import { DEFAULT_RETRY, GitWriteLogger, RetryPolicy, withRetry } from './git-commit.js';
 import {
   includesOf,
+  isBookFile,
   LectureReadError,
   LectureSetError,
   LectureSetReader,
@@ -175,23 +177,36 @@ function shortRef(ref: string): string {
  * tree), filtered to the docs folder and made docs-relative, and each file
  * read at `ref`. A tree GitHub truncated is refused, never read as a smaller
  * folder, which would narrow the set in silence.
+ *
+ * The tree read and the ToC read are retried on a 5xx or a rate limit, as
+ * the commit's own calls are: either failing holds the whole run, where a
+ * failed read of one lecture fails only that lecture.
  */
 export async function githubLectureSetSource(
   client: TreeReader,
   source: SourceRepo,
   docsFolder: string,
   ref: string,
-  read: SourceRead
+  read: SourceRead,
+  logger: GitWriteLogger = SILENT,
+  retry: RetryPolicy = DEFAULT_RETRY
 ): Promise<LectureSetSource> {
   const prefix = prefixOf(docsFolder);
+  const where = `${source.owner}/${source.repo} at ${shortRef(ref)}`;
   let data: Awaited<ReturnType<TreeReader['rest']['git']['getTree']>>['data'];
   try {
-    ({ data } = await client.rest.git.getTree({
-      owner: source.owner,
-      repo: source.repo,
-      tree_sha: ref,
-      recursive: 'true',
-    }));
+    ({ data } = await withRetry(
+      `Reading the file list of ${where}`,
+      () =>
+        client.rest.git.getTree({
+          owner: source.owner,
+          repo: source.repo,
+          tree_sha: ref,
+          recursive: 'true',
+        }),
+      logger,
+      retry
+    ));
   } catch (error) {
     throw new Error(
       `could not read the file list of ${source.owner}/${source.repo} at ${shortRef(ref)} ` +
@@ -209,8 +224,24 @@ export async function githubLectureSetSource(
     .map((entry) => entry.path as string)
     .filter((path) => path.startsWith(prefix))
     .map((path) => path.slice(prefix.length));
-  return { files, read: (file) => read(`${prefix}${file}`, ref) };
+  return {
+    files,
+    read: (file) =>
+      file === TOC_FILE
+        ? withRetry(
+            `Reading ${prefix}${file} from ${where}`,
+            () => read(`${prefix}${file}`, ref),
+            logger,
+            retry
+          )
+        : read(`${prefix}${file}`, ref),
+  };
 }
+
+/** The docs folder's ToC, whose read is retried with the tree's. */
+const TOC_FILE = '_toc.yml';
+
+const SILENT: GitWriteLogger = { info: () => {}, warning: () => {} };
 
 /** The set at one ref: the reader, the folder's files and the ToC's documents. */
 interface SetAtRef {
@@ -235,7 +266,8 @@ export async function placeOnLectureSet(
   sha: string,
   /** `owner/repo` of the edition, for the messages. */
   edition: string,
-  logger: Logger
+  logger: Logger,
+  retry: RetryPolicy = DEFAULT_RETRY
 ): Promise<LectureSetPlacement> {
   const prefix = prefixOf(docsFolder);
   const tocPath = `${prefix}_toc.yml`;
@@ -253,7 +285,15 @@ export async function placeOnLectureSet(
 
   const readSetAt = async (ref: string): Promise<SetAtRef> => {
     const texts = new Map<string, string>();
-    const folder = await githubLectureSetSource(client, source, docsFolder, ref, read);
+    const folder = await githubLectureSetSource(
+      client,
+      source,
+      docsFolder,
+      ref,
+      read,
+      logger,
+      retry
+    );
     const reader = new LectureSetReader({
       files: folder.files,
       read: async (file) => {
@@ -263,7 +303,13 @@ export async function placeOnLectureSet(
       },
     });
     const toc = await reader.toc();
-    return { reader, files: new Set(folder.files), toc, tocText: texts.get(toc.toc) };
+    // The files the reader resolves against, so `has` agrees with it.
+    return {
+      reader,
+      files: new Set(folder.files.filter(isBookFile)),
+      toc,
+      tocText: texts.get(toc.toc),
+    };
   };
 
   /** Why a read the reader made failed, naming the file it could not read. */

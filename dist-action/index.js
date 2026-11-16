@@ -55170,11 +55170,169 @@ async function writeJobSummary(summary2, markdown, logger) {
   }
 }
 
-// dist/sync-lecture-set.js
+// dist/git-commit.js
+var DEFAULT_RETRY = {
+  attempts: 3,
+  delayMs: (attempt) => 2e3 * 4 ** (attempt - 1),
+  // 2 s, then 8 s
+  sleep: (ms) => new Promise((resolve4) => setTimeout(resolve4, ms))
+};
+var RETRY_AFTER_CAP_S = 60;
 function statusOf2(error4) {
-  return error4?.status;
+  const status = error4?.status;
+  return typeof status === "number" ? status : void 0;
 }
 function messageOf2(error4) {
+  return error4 instanceof Error ? error4.message : String(error4);
+}
+function isRetryableGitHubError(error4) {
+  const status = statusOf2(error4);
+  if (status === void 0)
+    return false;
+  if (status >= 500 || status === 429)
+    return true;
+  return status === 403 && /secondary rate limit/i.test(messageOf2(error4));
+}
+function retryAfterMs(error4) {
+  const headers = error4?.response?.headers;
+  const seconds = Number(headers?.["retry-after"]);
+  return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, RETRY_AFTER_CAP_S) * 1e3 : void 0;
+}
+async function withRetry(what, call, logger, policy) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await call();
+    } catch (error4) {
+      if (attempt >= policy.attempts || !isRetryableGitHubError(error4))
+        throw error4;
+      const wait = retryAfterMs(error4) ?? policy.delayMs(attempt);
+      logger.warning(`${what} failed (${statusOf2(error4)}: ${messageOf2(error4)}); attempt ${attempt + 1} of ${policy.attempts} in ${Math.round(wait / 1e3)} s`);
+      await policy.sleep(wait);
+    }
+  }
+}
+var short = (sha) => sha.slice(0, 7);
+async function existsAt(octokit, params, logger, policy) {
+  try {
+    await withRetry(`reading ${params.path} at ${short(params.ref)}`, () => octokit.rest.repos.getContent(params), logger, policy);
+    return true;
+  } catch (error4) {
+    if (statusOf2(error4) === 404)
+      return false;
+    throw error4;
+  }
+}
+async function buildCommit(octokit, params, logger, policy = DEFAULT_RETRY) {
+  const { owner, repo, baseSha } = params;
+  const written = new Set(params.files.map((file) => file.path));
+  const deletions = [];
+  for (const path9 of new Set(params.deletions)) {
+    if (written.has(path9))
+      continue;
+    if (await existsAt(octokit, { owner, repo, path: path9, ref: baseSha }, logger, policy)) {
+      deletions.push(path9);
+    } else {
+      logger.info(`${path9}: not in ${short(baseSha)}, so there is nothing to delete`);
+    }
+  }
+  const tree = [
+    ...params.files.map((file) => ({
+      path: file.path,
+      mode: "100644",
+      type: "blob",
+      content: file.content
+    })),
+    ...deletions.map((path9) => ({ path: path9, mode: "100644", type: "blob", sha: null }))
+  ];
+  if (tree.length === 0)
+    return { unchanged: true };
+  const base = await withRetry(`reading commit ${short(baseSha)}`, () => octokit.rest.git.getCommit({ owner, repo, commit_sha: baseSha }), logger, policy);
+  const created = await withRetry("creating the tree", () => octokit.rest.git.createTree({ owner, repo, base_tree: base.data.tree.sha, tree }), logger, policy);
+  if (created.data.sha === base.data.tree.sha)
+    return { unchanged: true };
+  const commit = await withRetry("creating the commit", () => octokit.rest.git.createCommit({
+    owner,
+    repo,
+    message: params.message,
+    tree: created.data.sha,
+    parents: [baseSha]
+  }), logger, policy);
+  return { unchanged: false, sha: commit.data.sha, treeSha: created.data.sha };
+}
+function rebaseCommitMessage(params) {
+  const lines = [
+    `Rebase translations onto ${params.baseBranch} (${short(params.baseSha)}) after #${params.mergedPrNumber}`,
+    "",
+    ...params.files.map((file) => file.path),
+    ...params.deletions.map((path9) => `deleted: ${path9}`)
+  ];
+  return lines.join("\n");
+}
+function nothingLeftComment(params) {
+  const declared = params.declaredFiles.map((path9) => `- \`${path9}\``).join("\n");
+  return `\u{1F5C2}\uFE0F **Closed: nothing left to carry.** After #${params.mergedPrNumber} was merged, this PR's translation was rebuilt on \`${params.baseBranch}\` (\`${short(params.baseSha)}\`), and the rebuilt files are identical to what \`${params.baseBranch}\` already holds.
+
+The files this PR declares:
+
+${declared}
+
+The branch was not changed, so it still holds this PR's previous commits. The rebase automation closed the PR rather than push a branch with no commits ahead of \`${params.baseBranch}\` (#280).`;
+}
+async function writeRebasedBranch(octokit, params, logger, policy = DEFAULT_RETRY) {
+  const { owner, repo, pullNumber, branch, baseBranch, baseSha } = params;
+  let built;
+  try {
+    built = await buildCommit(octokit, {
+      owner,
+      repo,
+      baseSha,
+      files: params.files,
+      deletions: params.deletions,
+      message: rebaseCommitMessage(params)
+    }, logger, policy);
+  } catch (error4) {
+    throw new Error(`could not build the rebased commit on ${baseBranch} (${short(baseSha)}); branch left untouched: ${messageOf2(error4)}`);
+  }
+  if (built.unchanged) {
+    await octokit.rest.issues.createComment({
+      owner,
+      repo,
+      issue_number: pullNumber,
+      body: nothingLeftComment(params)
+    });
+    await octokit.rest.pulls.update({ owner, repo, pull_number: pullNumber, state: "closed" });
+    logger.info(`PR #${pullNumber}: nothing left to carry onto ${baseBranch}; closed, branch unchanged`);
+    return { outcome: "closed" };
+  }
+  try {
+    await octokit.rest.git.updateRef({
+      owner,
+      repo,
+      ref: `heads/${branch}`,
+      sha: built.sha,
+      force: true
+    });
+  } catch (error4) {
+    throw new Error(`could not move ${branch} to the rebased commit ${short(built.sha)}: ${messageOf2(error4)}`);
+  }
+  let state;
+  try {
+    const { data } = await withRetry(`reading PR #${pullNumber} back`, () => octokit.rest.pulls.get({ owner, repo, pull_number: pullNumber }), logger, policy);
+    state = data.state;
+  } catch (error4) {
+    throw new Error(`${branch} moved to the rebased commit ${short(built.sha)}, but PR #${pullNumber} could not be read back: ${messageOf2(error4)}`);
+  }
+  if (state !== "open") {
+    throw new Error(`PR #${pullNumber} is ${state} after ${branch} moved to the rebased commit ${short(built.sha)}. The branch holds the rebased translation; recreate the PR from it (#280)`);
+  }
+  return { outcome: "moved", commitSha: built.sha };
+}
+
+// dist/sync-lecture-set.js
+function statusOf3(error4) {
+  return error4?.status;
+}
+function messageOf3(error4) {
   return (error4 instanceof Error ? error4.message : String(error4)).split("\n")[0];
 }
 function prefixOf(docsFolder) {
@@ -55183,26 +55341,34 @@ function prefixOf(docsFolder) {
 function shortRef(ref) {
   return ref.endsWith("^") ? `${ref.slice(0, 7)}^` : ref.slice(0, 7);
 }
-async function githubLectureSetSource(client, source, docsFolder, ref, read) {
+async function githubLectureSetSource(client, source, docsFolder, ref, read, logger = SILENT, retry = DEFAULT_RETRY) {
   const prefix = prefixOf(docsFolder);
+  const where = `${source.owner}/${source.repo} at ${shortRef(ref)}`;
   let data;
   try {
-    ({ data } = await client.rest.git.getTree({
+    ({ data } = await withRetry(`Reading the file list of ${where}`, () => client.rest.git.getTree({
       owner: source.owner,
       repo: source.repo,
       tree_sha: ref,
       recursive: "true"
-    }));
+    }), logger, retry));
   } catch (error4) {
-    throw new Error(`could not read the file list of ${source.owner}/${source.repo} at ${shortRef(ref)} (status ${statusOf2(error4) ?? "unknown"}): ${messageOf2(error4)}`);
+    throw new Error(`could not read the file list of ${source.owner}/${source.repo} at ${shortRef(ref)} (status ${statusOf3(error4) ?? "unknown"}): ${messageOf3(error4)}`);
   }
   if (data.truncated) {
     throw new Error(`GitHub truncated the file list of ${source.owner}/${source.repo} at ${shortRef(ref)}, so the lecture set cannot be read whole`);
   }
   const files = data.tree.filter((entry) => entry.type === "blob" && typeof entry.path === "string").map((entry) => entry.path).filter((path9) => path9.startsWith(prefix)).map((path9) => path9.slice(prefix.length));
-  return { files, read: (file) => read(`${prefix}${file}`, ref) };
+  return {
+    files,
+    read: (file) => file === TOC_FILE ? withRetry(`Reading ${prefix}${file} from ${where}`, () => read(`${prefix}${file}`, ref), logger, retry) : read(`${prefix}${file}`, ref)
+  };
 }
-async function placeOnLectureSet(client, source, read, classified, docsFolder, sha, edition, logger) {
+var TOC_FILE = "_toc.yml";
+var SILENT = { info: () => {
+}, warning: () => {
+} };
+async function placeOnLectureSet(client, source, read, classified, docsFolder, sha, edition, logger, retry = DEFAULT_RETRY) {
   const prefix = prefixOf(docsFolder);
   const tocPath = `${prefix}_toc.yml`;
   const sourceName = `${source.owner}/${source.repo}`;
@@ -55219,7 +55385,7 @@ async function placeOnLectureSet(client, source, read, classified, docsFolder, s
     return unchanged;
   const readSetAt = async (ref) => {
     const texts = /* @__PURE__ */ new Map();
-    const folder = await githubLectureSetSource(client, source, docsFolder, ref, read);
+    const folder = await githubLectureSetSource(client, source, docsFolder, ref, read, logger, retry);
     const reader = new LectureSetReader({
       files: folder.files,
       read: async (file) => {
@@ -55229,13 +55395,18 @@ async function placeOnLectureSet(client, source, read, classified, docsFolder, s
       }
     });
     const toc = await reader.toc();
-    return { reader, files: new Set(folder.files), toc, tocText: texts.get(toc.toc) };
+    return {
+      reader,
+      files: new Set(folder.files.filter(isBookFile)),
+      toc,
+      tocText: texts.get(toc.toc)
+    };
   };
   const failure = (error4, ref) => {
     if (error4 instanceof LectureReadError) {
-      return `could not read ${prefix}${error4.file} from ${sourceName} at ${shortRef(ref)} (status ${statusOf2(error4.cause) ?? "unknown"}): ${messageOf2(error4.cause)}`;
+      return `could not read ${prefix}${error4.file} from ${sourceName} at ${shortRef(ref)} (status ${statusOf3(error4.cause) ?? "unknown"}): ${messageOf3(error4.cause)}`;
     }
-    return messageOf2(error4);
+    return messageOf3(error4);
   };
   let after;
   try {
@@ -55279,7 +55450,7 @@ async function placeOnLectureSet(client, source, read, classified, docsFolder, s
       before = await readSetAt(parent);
     } catch (error4) {
       if (error4 instanceof LectureSetError) {
-        logger.info(`${tocPath} before this PR could not be read as a ToC (${messageOf2(error4)}), so the lectures this PR adds to it or takes out of it are not listed`);
+        logger.info(`${tocPath} before this PR could not be read as a ToC (${messageOf3(error4)}), so the lectures this PR adds to it or takes out of it are not listed`);
       } else {
         recordError(`Fetch failed (lecture set): ${tocPath}: ${failure(error4, parent)}, so the lectures this PR adds to it or takes out of it are unknown.`);
       }
@@ -55362,7 +55533,7 @@ async function findLectureSetGaps(client, target, docsFolder, input, logger) {
         inEdition: await targetHasFile(client, target, stateFileFor(path9, docsFolder))
       });
     } catch (error4) {
-      recordError(`Fetch failed (lecture set): ${path9}: ${messageOf2(error4)}, so the catch-up for this lecture, which this PR adds to the ToC without delivering it, is unknown.`);
+      recordError(`Fetch failed (lecture set): ${path9}: ${messageOf3(error4)}, so the catch-up for this lecture, which this PR adds to the ToC without delivering it, is unknown.`);
     }
   }
   const delivered = new Set(input.delivered.map((lecture) => lecture.path));
@@ -55382,7 +55553,7 @@ async function findLectureSetGaps(client, target, docsFolder, input, logger) {
         logger.warning(`${path9}: ${by.join(", ")} ${by.length === 1 ? "includes" : "include"} it, and ${target.owner}/${target.repo} does not have it`);
       }
     } catch (error4) {
-      recordError(`Fetch failed (lecture set): ${path9}: ${messageOf2(error4)}, so whether the edition has this file, which ${by.join(", ")} ${by.length === 1 ? "includes" : "include"}, is unknown.`);
+      recordError(`Fetch failed (lecture set): ${path9}: ${messageOf3(error4)}, so whether the edition has this file, which ${by.join(", ")} ${by.length === 1 ? "includes" : "include"}, is unknown.`);
     }
   }
   return { tocAdded, missingIncludes, errors };
@@ -55768,164 +55939,6 @@ async function refreshStaleBranch(octokit, owner, repo, prNumber) {
   }
 }
 
-// dist/git-commit.js
-var DEFAULT_RETRY = {
-  attempts: 3,
-  delayMs: (attempt) => 2e3 * 4 ** (attempt - 1),
-  // 2 s, then 8 s
-  sleep: (ms) => new Promise((resolve4) => setTimeout(resolve4, ms))
-};
-var RETRY_AFTER_CAP_S = 60;
-function statusOf3(error4) {
-  const status = error4?.status;
-  return typeof status === "number" ? status : void 0;
-}
-function messageOf3(error4) {
-  return error4 instanceof Error ? error4.message : String(error4);
-}
-function isRetryableGitHubError(error4) {
-  const status = statusOf3(error4);
-  if (status === void 0)
-    return false;
-  if (status >= 500 || status === 429)
-    return true;
-  return status === 403 && /secondary rate limit/i.test(messageOf3(error4));
-}
-function retryAfterMs(error4) {
-  const headers = error4?.response?.headers;
-  const seconds = Number(headers?.["retry-after"]);
-  return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, RETRY_AFTER_CAP_S) * 1e3 : void 0;
-}
-async function withRetry(what, call, logger, policy) {
-  for (let attempt = 1; ; attempt++) {
-    try {
-      return await call();
-    } catch (error4) {
-      if (attempt >= policy.attempts || !isRetryableGitHubError(error4))
-        throw error4;
-      const wait = retryAfterMs(error4) ?? policy.delayMs(attempt);
-      logger.warning(`${what} failed (${statusOf3(error4)}: ${messageOf3(error4)}); attempt ${attempt + 1} of ${policy.attempts} in ${Math.round(wait / 1e3)} s`);
-      await policy.sleep(wait);
-    }
-  }
-}
-var short = (sha) => sha.slice(0, 7);
-async function existsAt(octokit, params, logger, policy) {
-  try {
-    await withRetry(`reading ${params.path} at ${short(params.ref)}`, () => octokit.rest.repos.getContent(params), logger, policy);
-    return true;
-  } catch (error4) {
-    if (statusOf3(error4) === 404)
-      return false;
-    throw error4;
-  }
-}
-async function buildCommit(octokit, params, logger, policy = DEFAULT_RETRY) {
-  const { owner, repo, baseSha } = params;
-  const written = new Set(params.files.map((file) => file.path));
-  const deletions = [];
-  for (const path9 of new Set(params.deletions)) {
-    if (written.has(path9))
-      continue;
-    if (await existsAt(octokit, { owner, repo, path: path9, ref: baseSha }, logger, policy)) {
-      deletions.push(path9);
-    } else {
-      logger.info(`${path9}: not in ${short(baseSha)}, so there is nothing to delete`);
-    }
-  }
-  const tree = [
-    ...params.files.map((file) => ({
-      path: file.path,
-      mode: "100644",
-      type: "blob",
-      content: file.content
-    })),
-    ...deletions.map((path9) => ({ path: path9, mode: "100644", type: "blob", sha: null }))
-  ];
-  if (tree.length === 0)
-    return { unchanged: true };
-  const base = await withRetry(`reading commit ${short(baseSha)}`, () => octokit.rest.git.getCommit({ owner, repo, commit_sha: baseSha }), logger, policy);
-  const created = await withRetry("creating the tree", () => octokit.rest.git.createTree({ owner, repo, base_tree: base.data.tree.sha, tree }), logger, policy);
-  if (created.data.sha === base.data.tree.sha)
-    return { unchanged: true };
-  const commit = await withRetry("creating the commit", () => octokit.rest.git.createCommit({
-    owner,
-    repo,
-    message: params.message,
-    tree: created.data.sha,
-    parents: [baseSha]
-  }), logger, policy);
-  return { unchanged: false, sha: commit.data.sha, treeSha: created.data.sha };
-}
-function rebaseCommitMessage(params) {
-  const lines = [
-    `Rebase translations onto ${params.baseBranch} (${short(params.baseSha)}) after #${params.mergedPrNumber}`,
-    "",
-    ...params.files.map((file) => file.path),
-    ...params.deletions.map((path9) => `deleted: ${path9}`)
-  ];
-  return lines.join("\n");
-}
-function nothingLeftComment(params) {
-  const declared = params.declaredFiles.map((path9) => `- \`${path9}\``).join("\n");
-  return `\u{1F5C2}\uFE0F **Closed: nothing left to carry.** After #${params.mergedPrNumber} was merged, this PR's translation was rebuilt on \`${params.baseBranch}\` (\`${short(params.baseSha)}\`), and the rebuilt files are identical to what \`${params.baseBranch}\` already holds.
-
-The files this PR declares:
-
-${declared}
-
-The branch was not changed, so it still holds this PR's previous commits. The rebase automation closed the PR rather than push a branch with no commits ahead of \`${params.baseBranch}\` (#280).`;
-}
-async function writeRebasedBranch(octokit, params, logger, policy = DEFAULT_RETRY) {
-  const { owner, repo, pullNumber, branch, baseBranch, baseSha } = params;
-  let built;
-  try {
-    built = await buildCommit(octokit, {
-      owner,
-      repo,
-      baseSha,
-      files: params.files,
-      deletions: params.deletions,
-      message: rebaseCommitMessage(params)
-    }, logger, policy);
-  } catch (error4) {
-    throw new Error(`could not build the rebased commit on ${baseBranch} (${short(baseSha)}); branch left untouched: ${messageOf3(error4)}`);
-  }
-  if (built.unchanged) {
-    await octokit.rest.issues.createComment({
-      owner,
-      repo,
-      issue_number: pullNumber,
-      body: nothingLeftComment(params)
-    });
-    await octokit.rest.pulls.update({ owner, repo, pull_number: pullNumber, state: "closed" });
-    logger.info(`PR #${pullNumber}: nothing left to carry onto ${baseBranch}; closed, branch unchanged`);
-    return { outcome: "closed" };
-  }
-  try {
-    await octokit.rest.git.updateRef({
-      owner,
-      repo,
-      ref: `heads/${branch}`,
-      sha: built.sha,
-      force: true
-    });
-  } catch (error4) {
-    throw new Error(`could not move ${branch} to the rebased commit ${short(built.sha)}: ${messageOf3(error4)}`);
-  }
-  let state;
-  try {
-    const { data } = await withRetry(`reading PR #${pullNumber} back`, () => octokit.rest.pulls.get({ owner, repo, pull_number: pullNumber }), logger, policy);
-    state = data.state;
-  } catch (error4) {
-    throw new Error(`${branch} moved to the rebased commit ${short(built.sha)}, but PR #${pullNumber} could not be read back: ${messageOf3(error4)}`);
-  }
-  if (state !== "open") {
-    throw new Error(`PR #${pullNumber} is ${state} after ${branch} moved to the rebased commit ${short(built.sha)}. The branch holds the rebased translation; recreate the PR from it (#280)`);
-  }
-  return { outcome: "moved", commitSha: built.sha };
-}
-
 // dist/rebase-plan.js
 function planRebaseRead(reads) {
   if (reads.onMain === "found")
@@ -56309,6 +56322,10 @@ function failureRecoveryLines(input) {
   if (premise.length > 0)
     lines.push(...premise, "", "**For the other errors:**", "");
   lines.push(input.lectureSetUnread ? lectureSetIntro(input) : input.bibliographyUnread ? bibliographyIntro(input) : "Recover a lecture from a checkout of the source's default branch, not by re-running this sync:", "");
+  const removals = input.lectureSetUnread ? input.heldRemovals ?? [] : [];
+  if (removals.length > 0) {
+    lines.push(`This PR also removed or renamed ${removals.length === 1 ? "a lecture" : "lectures"}, and no later sync deletes ${removals.length === 1 ? "it" : "them"} from ${input.targetRepo}: the change that removed ${removals.length === 1 ? "it" : "them"} is this one. Delete each from the edition by hand, with its state file, where the edition has it:`, "", ...removals.map((file) => `- \`${file}\` and \`${stateFileRelativePath(docsRelativePath(file, input.docsFolder))}\``), "", "Then carry the lectures this PR changed:", "");
+  }
   if (lectures.length > 0) {
     lines.push(...lectures.map((lecture) => failedLectureLine(lecture, input.docsFolder, stillOpen.find((s) => s.file === lecture.file))), "");
     lines.push("Any other lecture named above:", "");
@@ -58587,7 +58604,15 @@ async function runSync() {
     core9.setFailed(placement.refused);
     await writeSummary({ errorCount: 1 });
     if (!isTestMode) {
-      await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, [placement.refused], { docsFolder: inputs.docsFolder, mergeSha: effectiveSha, lectureSetUnread: true });
+      await createFailureIssue(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, [placement.refused], {
+        docsFolder: inputs.docsFolder,
+        mergeSha: effectiveSha,
+        lectureSetUnread: true,
+        heldRemovals: [
+          ...classified.removedMarkdownFiles.map((file) => file.filename),
+          ...classified.renamedMarkdownFiles.flatMap((file) => file.previous_filename ? [file.previous_filename] : [])
+        ]
+      });
     }
     return;
   }

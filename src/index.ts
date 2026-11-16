@@ -1020,7 +1020,17 @@ async function runSync(): Promise<void> {
         inputs.targetLanguage,
         inputs.targetRepo,
         [placement.refused],
-        { docsFolder: inputs.docsFolder, mergeSha: effectiveSha, lectureSetUnread: true }
+        {
+          docsFolder: inputs.docsFolder,
+          mergeSha: effectiveSha,
+          lectureSetUnread: true,
+          heldRemovals: [
+            ...classified.removedMarkdownFiles.map((file) => file.filename),
+            ...classified.renamedMarkdownFiles.flatMap((file) =>
+              file.previous_filename ? [file.previous_filename] : []
+            ),
+          ],
+        }
       );
     }
     return;
@@ -2036,6 +2046,7 @@ async function createFailureIssue(
     | 'stillOpen'
     | 'bibliographyUnread'
     | 'lectureSetUnread'
+    | 'heldRemovals'
     | 'folderMoved'
   > = { docsFolder: '' }
 ): Promise<void> {

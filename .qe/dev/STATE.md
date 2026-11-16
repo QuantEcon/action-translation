@@ -490,10 +490,8 @@ delimiter rows, which already break a table in the fr edition's pandas lecture.
 
 ## Health & context
 
-- `main` green; **COUNT tests across 88 suites** (zero skips, type-checked) with #449's sync on
+- `main` green; **2,705 tests across 88 suites** (zero skips, type-checked) with #449's sync on
   the lecture set (P3b), 2,621 across 87 before it at `73bd6a8` (counted 2026-11-16 in a clean
-  worktree; a tree holding the harness's gitignored clones counts 15 more, see log
-  `2026-11-16-overnight-stack`); lint at
   worktree; a tree holding the harness's gitignored clones counts 15 more, see log
   `2026-11-16-overnight-stack`); lint at
   `--max-warnings 0` including root `*.mjs`, CI checks formatting and

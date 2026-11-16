@@ -138,6 +138,9 @@ function prFile(filename: string, status: string, previousFilename?: string) {
 
 type PrFile = ReturnType<typeof prFile>;
 
+/** Retries at once: the attempts of `DEFAULT_RETRY`, with no wait. */
+const NO_WAIT = { attempts: 3, delayMs: () => 0, sleep: async () => {} };
+
 /** Place a source PR's files on the source's lecture set at `SHA`. */
 function place(
   source: Source,
@@ -153,7 +156,8 @@ function place(
     docsFolder,
     SHA,
     EDITION_NAME,
-    logger
+    logger,
+    NO_WAIT
   );
 }
 
@@ -231,13 +235,53 @@ describe('githubLectureSetSource', () => {
     );
   });
 
-  it('names the status of a tree read that failed', async () => {
+  it('names the status of a tree read that failed, after its retries', async () => {
     const source = fakeSource({}, { [PARENT]: { status: 502 } });
+    const logger = recordingLogger();
     await expect(
-      githubLectureSetSource(source.client, SOURCE, DOCS, PARENT, source.read)
+      githubLectureSetSource(source.client, SOURCE, DOCS, PARENT, source.read, logger, NO_WAIT)
     ).rejects.toThrow(
       'could not read the file list of QuantEcon/lecture-python.myst at cafe000^ (status 502): HTTP 502'
     );
+    expect(source.getTree).toHaveBeenCalledTimes(3);
+  });
+
+  it('retries a tree read and a ToC read that fail once with a 5xx, since either holds the run', async () => {
+    const source = fakeSource({ [SHA]: LECTURES });
+    source.getTree.mockRejectedValueOnce(httpError(502));
+    const read = source.read;
+    read.mockRejectedValueOnce(httpError(503));
+    const logger = recordingLogger();
+
+    const folder = await githubLectureSetSource(
+      source.client,
+      SOURCE,
+      DOCS,
+      SHA,
+      read,
+      logger,
+      NO_WAIT
+    );
+    expect(await folder.read('_toc.yml')).toBe(LECTURES['lectures/_toc.yml']);
+
+    expect(source.getTree).toHaveBeenCalledTimes(2);
+    expect(read).toHaveBeenCalledTimes(2);
+    expect(logger.warning).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry a lecture read, whose failure fails only its own file', async () => {
+    const source = fakeSource({ [SHA]: { ...LECTURES, 'lectures/jv.md': { status: 502 } } });
+    const folder = await githubLectureSetSource(
+      source.client,
+      SOURCE,
+      DOCS,
+      SHA,
+      source.read,
+      recordingLogger(),
+      NO_WAIT
+    );
+    await expect(folder.read('jv.md')).rejects.toThrow('HTTP 502');
+    expect(source.read).toHaveBeenCalledTimes(1);
   });
 });
 
