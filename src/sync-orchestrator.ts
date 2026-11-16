@@ -37,6 +37,10 @@ import {
 } from './cli/translate-state.js';
 import { FileState } from './cli/types.js';
 import { mergeTargetCaptions } from './toc-captions.js';
+import { collectTocFiles } from './lecture-set.js';
+
+// The ToC walk lives with the lecture set (#449); re-exported for this module's callers and tests.
+export { collectTocFiles };
 
 // =============================================================================
 // INTERFACES
@@ -445,37 +449,6 @@ export function classifyChangedFiles(
  * dash; groups 2-4 carry the stem.
  */
 const TOC_FILE_LINE_RE = /^(\s*)-\s+file:\s*(?:"([^"]*)"|'([^']*)'|([^\s#]+))\s*(?:#.*)?$/;
-
-/**
- * Every `file:` value in a parsed TOC, in document order, at any depth —
- * `chapters:` and `sections:` under the root, under a part, or nested under
- * an entry.  Exported for unit testing.
- */
-export function collectTocFiles(doc: unknown): string[] {
-  const out: string[] = [];
-  const visit = (entries: unknown): void => {
-    if (!Array.isArray(entries)) return;
-    for (const entry of entries) {
-      if (typeof entry !== 'object' || entry === null) continue;
-      const e = entry as Record<string, unknown>;
-      if (typeof e.file === 'string') out.push(e.file);
-      visit(e.chapters);
-      visit(e.sections);
-    }
-  };
-  if (!doc || typeof doc !== 'object') return out;
-  const root = doc as Record<string, unknown>;
-  visit(root.chapters);
-  visit(root.sections);
-  if (Array.isArray(root.parts)) {
-    for (const part of root.parts) {
-      if (typeof part === 'object' && part !== null) {
-        visit((part as Record<string, unknown>).chapters);
-      }
-    }
-  }
-  return out;
-}
 
 /**
  * Splice the lines of the dropped entries out of the original TOC text.  An

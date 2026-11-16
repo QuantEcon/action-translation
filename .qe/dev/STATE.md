@@ -346,7 +346,11 @@ the version. #442 and #445 change what sync and `init` do to an edition's files,
 release notes lead with them. The tag, §4a, §4b, the floating tags, the `@v0` smoke and the
 GitHub release each wait on Matt's go. #449 was ruled on 2026-11-16, all eight questions as
 recommended (on 8: design the reader for two front ends, and build `myst.yml`'s at the first
-mystmd edition); its build waits on a plan Matt approves.
+mystmd edition). Record `D-2026-11-16-the-lecture-set-is-the-toc-and-its-includes`. The build is
+four PRs: P1, the reader (`src/lecture-set.ts`, no change in behaviour); P2, the CLI on it
+(closes #385); P3, sync on it (closes #449); P4, the state check on it (closes #370). Matt
+ruled the CLI fails with no `_toc.yml`; how sync updates a fragment with no title (today it
+fails, in four editions) waits on him and belongs to P3.
 
 *Overnight stack, 2026-11-16*: the overnight plan of 2026-11-15 (WP1–WP4, on 20 rulings Matt
 accepted) is merged and **unreleased**; `main` is at `f214c5e`. #440 (#396, #386), #441 (#389,
@@ -358,7 +362,7 @@ release, and #442 and #445 change what sync and `init` do to an edition's files.
 `D-2026-11-15-a-lecture-moved-out-of-docs-is-deleted`,
 `D-2026-11-15-a-failed-cli-state-write-is-a-failure` and
 `D-2026-11-15-init-keeps-the-editions-files`. Filed: #449, whether sync and the CLI take their
-lectures from the ToC's documents and the `.md` files they include, for Matt to rule on. Of the issues the
+lectures from the ToC's documents and the `.md` files they include (ruled 2026-11-16; above). Of the issues the
 2026-10-22 paragraph calls untriaged, these are still open: #382–#385, #387, #388, #390, #391,
 #397 and #399. Changelog entries now go in `changelog.d/` fragments, a prototype Matt chose on
 2026-11-16 (from QuantEcon/infrastructure#123; `D-2026-11-16-changelog-fragments`), and
@@ -478,9 +482,9 @@ delimiter rows, which already break a table in the fr edition's pandas lecture.
 
 ## Health & context
 
-- `main` green; **2,499 tests across 85 suites** (zero skips, type-checked) with the
-  changelog-fragments PR, 2,467 across 84 before it at `eb28fc1` (counted 2026-11-16 in a clean
-  worktree; a tree holding the harness's gitignored clones counts 15 more, see log
+- `main` green; **2,556 tests across 86 suites** (zero skips, type-checked) with #449's reader
+  (P1), 2,499 across 85 before it at `ef79ba5` (counted 2026-11-16 in a clean worktree; a tree
+  holding the harness's gitignored clones counts 15 more, see log
   `2026-11-16-overnight-stack`); lint at
   `--max-warnings 0` including root `*.mjs`, CI checks formatting and
   `.qe/dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale `dist/`
