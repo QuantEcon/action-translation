@@ -2,8 +2,8 @@
 
 **Trigger**: the rollout in `D-2026-11-16-require-state-rollout`, which started with v0.33.0
 (log `2026-11-16-v0330-release`). Its four steps ran the same day. A laptop session did the
-edition work, on Matt's go at each step. This repository's organiser session wrote the briefs and checked
-each result read-only. It made no edition writes.
+edition work, on Matt's go at each step. This repository's organiser session wrote the briefs
+and checked each result read-only. It made no edition writes.
 
 ## The steps
 
