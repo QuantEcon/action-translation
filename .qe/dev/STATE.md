@@ -338,19 +338,21 @@ Roadmap detail lives in the project trackers (reading order in
 
 ## Next
 
-**Resume here (2026-11-16, after v0.33.0):**
+**Resume here (2026-11-16, after the `--require-state` rollout):**
 
 *Released, 2026-11-16*: **v0.33.0 is released** (#461, `d68f54d`), and `v0` points at it. Its
 payload is #460, `translate doctor --require-state` (closed #370), CLI only. §4a read 84 of 84,
 and zh-cn's one WARN was #375's; §4b read 0 of 36; the `@v0` smoke passed on all three lanes.
-Log `2026-11-16-v0330-release`. **The rollout is under way**
-(`D-2026-11-16-require-state-rollout`). It makes the check a required CI check in the five
-editions that sync, which meets `sync-scope`'s retirement condition 3
-(`D-2026-10-19-sync-scope-existing-reads-state-files`). Step 1's three `gpu.md` state-file PRs
-are open in the editions, and step 3, a `State files` workflow per edition pinned to `v0.33.0`,
-is with a laptop session. Each edition PR waits on Matt's review.
-Step 4, the required-check rule in each edition's ruleset, follows. Conditions 1 and 2 (#259,
-#142) stay open. Next after the rollout: the action family's standard (SECURITY.md, Dependabot,
+Log `2026-11-16-v0330-release`.
+
+*Rolled out, 2026-11-16*: **`state-files` is a required check on `main` in the five editions
+that sync** (`D-2026-11-16-require-state-rollout`; log `2026-11-16-require-state-rollout`).
+Each edition runs a `State files` workflow pinned to `v0.33.0`, and its ruleset requires it,
+with no bypass. So **`sync-scope`'s retirement condition 3 is met**
+(`D-2026-10-19-sync-scope-existing-reads-state-files`), and conditions 1 and 2 (#259, #142) stay
+open. #463 looks back at the friction around 2026-11-23. A later release reaches the editions'
+check only when their pins move, and an edition that starts to sync (ml) joins the rollout first.
+Next: the action family's standard (SECURITY.md, Dependabot,
 CODEOWNERS, topics, a `uses: ./` CI job, `deploy-docs.yml` on Node 24), to plan with Matt.
 
 *Released, 2026-11-16*: v0.32.0 (#458, `d73f874`), #449's build: #455 (sync updates a file with
