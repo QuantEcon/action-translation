@@ -540,7 +540,7 @@ On a partial edition, some of this reads differently:
 - `status` shows the lectures the edition has not taken as `SOURCE_ONLY`. Under `sync-scope: existing`, sync never translates them: each joins the edition in its own reviewed PR, as in [One reviewed lecture at a time](fresh-setup.md#one-reviewed-lecture-at-a-time).
 - The English copies have no state file and no heading-map, on purpose. `doctor` warns about the missing state files, and about the missing heading-maps of the copies that have sections, which `status` shows with `MISSING_HEADINGMAP`.
 - A copy the source has moved on from shows `OUTDATED`, or `SOURCE_AHEAD` when the source added a section. Leave it: `forward` would rewrite it and give it a state file, which puts it in sync's scope.
-- `doctor` names at most five files without a state file, and checks only the lectures in the edition's lecture set: the documents its `_toc.yml` lists that it has, and the files they include. Compare `.translate/state/` with the lectures the edition has translated: each translated lecture needs a state file, and no English copy may have one.
+- `doctor` checks only the lectures in the edition's lecture set: the documents its `_toc.yml` lists that it has, and the files they include. Each translated lecture needs a state file, and no English copy may have one. Declare the English copies in the set under `state-exceptions` in `.translate/config.yml`, and `doctor --require-state` checks both: its console names the first five files of each kind, and `--json` names them all (see [Requiring state files](../cli-reference.md#requiring-state-files)).
 
 ---
 

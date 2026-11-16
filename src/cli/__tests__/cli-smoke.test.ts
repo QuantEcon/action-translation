@@ -275,6 +275,84 @@ chapters:
   });
 
   // ──────────────────────────────────────────────────────────────────────────
+  // doctor command
+  // ──────────────────────────────────────────────────────────────────────────
+
+  // The check is unit-tested in doctor.test.ts; this pins the flag's wiring and
+  // the exit code a required CI check reads (#370).
+  describe('doctor command', () => {
+    let tmpDir: string;
+    const config = (extra = '') =>
+      fs.writeFileSync(
+        path.join(tmpDir, '.translate', 'config.yml'),
+        `source-language: en\ntarget-language: ml\ndocs-folder: lectures\n${extra}`,
+        'utf-8'
+      );
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cli-smoke-doctor-'));
+      const lectures = path.join(tmpDir, 'lectures');
+      fs.mkdirSync(lectures, { recursive: true });
+      fs.writeFileSync(
+        path.join(lectures, '_toc.yml'),
+        'format: jb-book\nroot: intro\nchapters:\n  - file: cobweb\n'
+      );
+      // No `##` sections, so neither needs a heading-map
+      fs.writeFileSync(path.join(lectures, 'intro.md'), '# Introduction\n\nAn English copy.\n');
+      fs.writeFileSync(path.join(lectures, 'cobweb.md'), '# 蛛网模型\n\n内容。\n');
+      fs.mkdirSync(path.join(tmpDir, '.translate', 'state'), { recursive: true });
+      fs.writeFileSync(
+        path.join(tmpDir, '.translate', 'state', 'cobweb.md.yml'),
+        "source-sha: abc123\nsynced-at: '2026-11-16'\nmodel: claude-sonnet-5\nmode: NEW\n" +
+          'section-count: 0\n',
+        'utf-8'
+      );
+      config();
+      fs.mkdirSync(path.join(tmpDir, '.github', 'workflows'), { recursive: true });
+      fs.writeFileSync(
+        path.join(tmpDir, '.github', 'workflows', 'sync.yml'),
+        'uses: QuantEcon/action-translation@v0\n',
+        'utf-8'
+      );
+    });
+
+    afterEach(() => {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it('doctor --help shows --require-state', async () => {
+      const { stdout, code } = await run(['doctor', '--help']);
+      expect(code).toBe(0);
+      expect(stdout).toContain('--require-state');
+    });
+
+    it('--require-state exits 1 on a lecture without a state file, and 0 once it is declared', async () => {
+      const plain = await run(['doctor', '-t', tmpDir]);
+      expect(plain.code).toBe(0);
+      expect(plain.stdout).toContain('⚠️ .translate/state/: 1/2 files tracked (1 missing)');
+
+      const missing = await run(['doctor', '-t', tmpDir, '--require-state']);
+      expect(missing.code).toBe(1);
+      expect(missing.stdout).toContain(
+        '❌ .translate/state/: --require-state: 1 lecture without a state file'
+      );
+      expect(missing.stdout).toContain('       intro.md');
+
+      config('state-exceptions:\n  intro.md: English copy until its review round\n');
+      const declared = await run(['doctor', '-t', tmpDir, '--require-state', '--json']);
+      expect(declared.code).toBe(0);
+      const json = JSON.parse(declared.stdout);
+      expect(json.requireState).toBe(true);
+      expect(
+        json.checks.find((c: { name: string }) => c.name === '.translate/state/')
+      ).toMatchObject({
+        status: 'pass',
+        message: '2 lectures covered: 1 with a state file, 1 declared in state-exceptions',
+      });
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
   // backward command
   // ──────────────────────────────────────────────────────────────────────────
 

@@ -15,6 +15,8 @@ import {
   checkConfig,
   checkLectureSet,
   checkStateFiles,
+  checkRequiredState,
+  readDeclaredExceptions,
   checkHeadingMaps,
   checkSectionAlignment,
   checkWorkflow,
@@ -154,6 +156,25 @@ describe('checkConfig', () => {
     const result = checkConfig(tmpDir);
     expect(result.status).toBe('fail');
     expect(result.message).toContain('malformed');
+  });
+
+  // #370: readConfig reported a repeated key as a config missing its fields
+  test('names a repeated key, which YAML refuses', () => {
+    const configDir = path.join(tmpDir, '.translate');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(configDir, 'config.yml'),
+      'source-language: en\ntarget-language: ml\ndocs-folder: lectures\ntarget-language: fa\n',
+      'utf-8'
+    );
+
+    expect(checkConfig(tmpDir)).toEqual({
+      name: '.translate/config.yml',
+      status: 'fail',
+      message:
+        'Config file exists but cannot be read: it repeats a key at line 4 ' +
+        '(`target-language: fa`), which YAML does not allow',
+    });
   });
 });
 
@@ -603,6 +624,492 @@ describe('checkLectureSet', () => {
 });
 
 // ============================================================================
+// checkRequiredState TESTS (--require-state, #370)
+// ============================================================================
+
+const VALID_STATE = {
+  'source-sha': 'abc123',
+  'synced-at': '2026-03-16',
+  model: 'claude-sonnet-4-6',
+  mode: 'NEW' as const,
+  'section-count': 2,
+};
+
+/** Every list `--require-state` reports, empty: a test spreads in the ones it expects. */
+const NO_FINDINGS = {
+  missing: [],
+  declaredWithState: [],
+  orphaned: [],
+  corrupt: [],
+  unlisted: [],
+  staleExceptions: [],
+  exceptionErrors: [],
+};
+
+describe('checkRequiredState (--require-state, #370)', () => {
+  const docs = () => path.join(tmpDir, 'lectures');
+  const lecture = (file: string, content = TARGET_WITH_MAP) =>
+    writeMd(path.join(docs(), file), content);
+  const state = (file: string) => writeFileState(tmpDir, file, VALID_STATE);
+  /** A file under `.translate/state/`, written as given. */
+  const rawState = (rel: string, content: string) =>
+    writeMd(path.join(tmpDir, '.translate', 'state', rel), content);
+  /** The edition's config: its three core keys, then `extra` as written. */
+  const config = (extra = '') =>
+    writeMd(
+      path.join(tmpDir, '.translate', 'config.yml'),
+      `source-language: en\ntarget-language: ml\ndocs-folder: lectures\n${extra}`
+    );
+  const check = async () =>
+    checkRequiredState(tmpDir, 'lectures', await readDoctorLectures(tmpDir, 'lectures', 'TARGET'));
+
+  /** Two lectures in the ToC, intro.md and cobweb.md. */
+  const twoLectures = () => {
+    lecture('intro.md');
+    lecture('cobweb.md');
+    writeToc(docs(), ['intro', 'cobweb']);
+  };
+
+  describe("#370's four cases", () => {
+    test('passes when every lecture has a state file', async () => {
+      twoLectures();
+      state('intro.md');
+      state('cobweb.md');
+      config();
+
+      expect(await check()).toEqual({
+        name: '.translate/state/',
+        status: 'pass',
+        message: '2 lectures covered: 2 with a state file',
+        data: NO_FINDINGS,
+      });
+    });
+
+    test('fails a lecture without a state file', async () => {
+      twoLectures();
+      state('intro.md');
+      config();
+
+      expect(await check()).toEqual({
+        name: '.translate/state/',
+        status: 'fail',
+        message: '--require-state: 1 lecture without a state file',
+        details: [
+          'Missing: no state file, and not declared in state-exceptions. Record one with ' +
+            '`translate status -f <file> --write-state`, or declare the file:',
+          '  cobweb.md',
+        ],
+        data: { ...NO_FINDINGS, missing: ['cobweb.md'] },
+      });
+    });
+
+    test('passes a lecture without a state file that state-exceptions declares', async () => {
+      twoLectures();
+      state('cobweb.md');
+      config('state-exceptions:\n  intro.md: English copy until its review round\n');
+
+      expect(await check()).toEqual({
+        name: '.translate/state/',
+        status: 'pass',
+        message: '2 lectures covered: 1 with a state file, 1 declared in state-exceptions',
+        data: NO_FINDINGS,
+      });
+    });
+
+    test('fails an unreadable state file, with the reason', async () => {
+      twoLectures();
+      state('intro.md');
+      rawState('cobweb.md.yml', "source-sha: abc123\nsynced-at: '2026-03-16'\n");
+      config();
+
+      const result = await check();
+      expect(result.status).toBe('fail');
+      expect(result.message).toBe('--require-state: 1 unreadable state file');
+      expect(result.details).toEqual([
+        'Corrupt: the state file exists but cannot be read. Repair or delete it:',
+        '  cobweb.md (`model` is missing)',
+      ]);
+      expect(result.data?.corrupt).toEqual([{ file: 'cobweb.md', reason: '`model` is missing' }]);
+    });
+  });
+
+  test('(b) fails a declared exception that has a state file', async () => {
+    twoLectures();
+    state('intro.md');
+    state('cobweb.md');
+    config('state-exceptions:\n  intro.md: English copy\n');
+
+    const result = await check();
+    expect(result.status).toBe('fail');
+    expect(result.message).toBe('--require-state: 1 declared exception with a state file');
+    expect(result.details).toEqual([
+      "Declared in state-exceptions, but has a state file, which puts it in sync's scope. " +
+        'Delete one or the other:',
+      '  intro.md',
+    ]);
+    expect(result.data).toEqual({ ...NO_FINDINGS, declaredWithState: ['intro.md'] });
+  });
+
+  test('(c) fails a state file without a lecture, in a subfolder too', async () => {
+    twoLectures();
+    state('intro.md');
+    state('cobweb.md');
+    state('old.md');
+    state('_admonition/gpu.md');
+    config();
+
+    const result = await check();
+    expect(result.status).toBe('fail');
+    expect(result.message).toBe('--require-state: 2 files in the state folder without a lecture');
+    expect(result.details).toEqual([
+      'State file without a lecture: the edition has no such .md. Restore the lecture, or ' +
+        'delete the state file:',
+      '  .translate/state/_admonition/gpu.md.yml',
+      '  .translate/state/old.md.yml',
+    ]);
+    expect(result.data?.orphaned).toEqual([
+      '.translate/state/_admonition/gpu.md.yml',
+      '.translate/state/old.md.yml',
+    ]);
+  });
+
+  test('(c) fails a file in the state folder that is not a <path>.md.yml', async () => {
+    twoLectures();
+    state('intro.md');
+    state('cobweb.md');
+    rawState('.DS_Store', '');
+    rawState('notes.yml', 'note: kept by hand\n');
+    rawState('intro.ipynb.yml', 'source-sha: abc123\n');
+    config();
+
+    const result = await check();
+    expect(result.status).toBe('fail');
+    expect(result.details).toEqual([
+      'Not a state file: sync reads only .translate/state/<path>.md.yml. Delete it:',
+      '  .translate/state/.DS_Store',
+      '  .translate/state/intro.ipynb.yml',
+      '  .translate/state/notes.yml',
+    ]);
+    expect(result.data?.orphaned).toEqual([
+      '.translate/state/.DS_Store',
+      '.translate/state/intro.ipynb.yml',
+      '.translate/state/notes.yml',
+    ]);
+  });
+
+  test('counts a state file that is orphaned and unreadable as orphaned', async () => {
+    twoLectures();
+    state('intro.md');
+    state('cobweb.md');
+    rawState('old.md.yml', '{{{ not yaml at all');
+    config();
+
+    expect((await check()).data).toEqual({
+      ...NO_FINDINGS,
+      orphaned: ['.translate/state/old.md.yml'],
+    });
+  });
+
+  // On a case-insensitive filesystem `existsSync` finds Intro.md.yml for
+  // intro.md, where a Linux runner and sync's API reads do not. The two files
+  // are in different folders, so this fixture is the same on every filesystem.
+  test('reads a state file named in another case as missing plus orphaned', async () => {
+    lecture('intro.md');
+    writeToc(docs(), ['intro']);
+    rawState('Intro.md.yml', fs.readFileSync(path.join(docs(), 'intro.md'), 'utf-8'));
+    config();
+
+    const result = await check();
+    expect(result.status).toBe('fail');
+    expect(result.data).toEqual({
+      ...NO_FINDINGS,
+      missing: ['intro.md'],
+      orphaned: ['.translate/state/Intro.md.yml'],
+    });
+  });
+
+  describe('a lecture outside the lecture set, kept with a state file (ruling 4)', () => {
+    test('warns', async () => {
+      twoLectures();
+      state('intro.md');
+      state('cobweb.md');
+      lecture('draft.md');
+      state('draft.md');
+      config();
+
+      expect(await check()).toEqual({
+        name: '.translate/state/',
+        status: 'warn',
+        message:
+          '2 lectures covered: 2 with a state file; 1 lecture outside the lecture set kept ' +
+          'with a state file',
+        details: [
+          'Unlisted (a warning): outside the lecture set, kept with a state file, so sync does ' +
+            'not update it:',
+          '  draft.md',
+        ],
+        data: { ...NO_FINDINGS, unlisted: ['draft.md'] },
+      });
+    });
+
+    test('fails when its state file cannot be read', async () => {
+      twoLectures();
+      state('intro.md');
+      state('cobweb.md');
+      lecture('draft.md');
+      rawState('draft.md.yml', '- not\n- a mapping\n');
+      config();
+
+      const result = await check();
+      expect(result.status).toBe('fail');
+      expect(result.message).toBe('--require-state: 1 unreadable state file');
+      expect(result.data).toEqual({
+        ...NO_FINDINGS,
+        corrupt: [{ file: 'draft.md', reason: 'it is not a YAML mapping of keys to values' }],
+        unlisted: ['draft.md'],
+      });
+    });
+  });
+
+  describe('a stale exception', () => {
+    test('warns when the edition has no such file', async () => {
+      twoLectures();
+      state('intro.md');
+      state('cobweb.md');
+      config('state-exceptions:\n  gone.md: English copy\n');
+
+      expect(await check()).toEqual({
+        name: '.translate/state/',
+        status: 'warn',
+        message: '2 lectures covered: 2 with a state file; 1 stale exception',
+        details: [
+          'Stale exception (a warning): declared, but not a lecture of the edition. Remove it ' +
+            'from state-exceptions:',
+          '  gone.md: the edition has no such file',
+        ],
+        data: { ...NO_FINDINGS, staleExceptions: ['gone.md'] },
+      });
+    });
+
+    // lecture-python-programming.ml: the lectures that include gpu.md are ToC
+    // entries it has no file for, so gpu.md is outside its lecture set.
+    test('warns on a fragment that no lecture of the edition includes (the ml case)', async () => {
+      lecture('intro.md', '# Introduction\n\nAn English copy.\n');
+      lecture('_admonition/gpu.md', '```{note}\nGPU\n```\n');
+      writeToc(docs(), ['intro', 'autodiff', 'jax_intro']);
+      config(
+        'state-exceptions:\n' +
+          '  intro.md: English copy until its review round\n' +
+          '  _admonition/gpu.md: English copy until its review round\n'
+      );
+
+      const result = await check();
+      expect(result.status).toBe('warn');
+      expect(result.message).toBe(
+        '1 lecture covered: 0 with a state file, 1 declared in state-exceptions; 1 stale exception'
+      );
+      expect(result.details).toEqual([
+        'Stale exception (a warning): declared, but not a lecture of the edition. Remove it ' +
+          'from state-exceptions:',
+        '  _admonition/gpu.md: outside the lecture set (no ToC entry lists it, and no lecture ' +
+          'of the edition includes it)',
+      ]);
+      expect(result.data).toEqual({ ...NO_FINDINGS, staleExceptions: ['_admonition/gpu.md'] });
+    });
+  });
+
+  describe('a malformed state-exceptions', () => {
+    // The core keys take lines 1-3, so `state-exceptions:` is line 4.
+    test.each([
+      ['a list', '\n  - intro.md\n', 'state-exceptions is a list, not a mapping'],
+      ['text', ' intro.md\n', 'state-exceptions is a string, not a mapping'],
+      ['an empty reason', '\n  intro.md: ""\n', '`intro.md`: its reason is empty'],
+      ['no reason', '\n  intro.md:\n', '`intro.md`: its reason is empty'],
+      ['a blank reason', "\n  intro.md: '  '\n", '`intro.md`: its reason is blank'],
+      ['a number for a reason', '\n  intro.md: 2026\n', '`intro.md`: its reason is a number'],
+      ['a list for a reason', '\n  intro.md: [a, b]\n', '`intro.md`: its reason is a list'],
+      [
+        'an absolute path',
+        '\n  /intro.md: English copy\n',
+        '`/intro.md`: the path is absolute or leaves the docs folder',
+      ],
+      [
+        'a path out of the docs folder',
+        '\n  ../intro.md: English copy\n',
+        '`../intro.md`: the path is absolute or leaves the docs folder',
+      ],
+      [
+        'a file that is not .md',
+        '\n  intro.ipynb: English copy\n',
+        '`intro.ipynb`: not a .md file',
+      ],
+      [
+        'a repeated key',
+        '\n  intro.md: English copy\n  intro.md: Still English\n',
+        '.translate/config.yml: it repeats a key at line 6 (`intro.md: Still English`), which ' +
+          'YAML does not allow, so state-exceptions could not be read',
+      ],
+      [
+        'two spellings of one file',
+        '\n  intro.md: English copy\n  ./intro.md: English copy\n',
+        '`./intro.md` and `intro.md` both name intro.md; keep one',
+      ],
+    ])('fails on %s, and names it', async (_shape, body, problem) => {
+      twoLectures();
+      state('cobweb.md');
+      config(`state-exceptions:${body}`);
+
+      const result = await check();
+      expect(result.status).toBe('fail');
+      expect(result.message).toContain('1 problem in state-exceptions');
+      expect(result.data?.exceptionErrors).toHaveLength(1);
+      expect(result.data?.exceptionErrors[0]).toContain(problem);
+      expect(result.details?.slice(0, 2)).toEqual([
+        'state-exceptions in .translate/config.yml, as written:',
+        `  ${result.data?.exceptionErrors[0]}`,
+      ]);
+    });
+  });
+
+  test('matches a ./ key, and names a docs-folder-prefixed one as repo-relative', async () => {
+    twoLectures();
+    config(
+      'state-exceptions:\n' +
+        '  ./intro.md: English copy\n' +
+        '  lectures/cobweb.md: English copy\n'
+    );
+
+    const result = await check();
+    expect(result.status).toBe('fail');
+    expect(result.message).toBe('--require-state: 1 lecture without a state file');
+    expect(result.details).toEqual([
+      'Missing: no state file, and not declared in state-exceptions. Record one with ' +
+        '`translate status -f <file> --write-state`, or declare the file:',
+      '  cobweb.md',
+      'Stale exception (a warning): declared, but not a lecture of the edition. Remove it ' +
+        'from state-exceptions:',
+      '  lectures/cobweb.md: the key is relative to the repository; write it relative to the ' +
+        'docs folder, as cobweb.md',
+    ]);
+    expect(result.data).toEqual({
+      ...NO_FINDINGS,
+      missing: ['cobweb.md'],
+      staleExceptions: ['lectures/cobweb.md'],
+    });
+  });
+
+  test("puts each key in the lecture set's spelling, keeping it as written", () => {
+    config(
+      'state-exceptions:\n' +
+        '  ./intro.md: a\n' +
+        '  cobweb.md/: b\n' +
+        "  '_admonition\\gpu.md': c\n" +
+        '  advanced//./solow.md: d\n'
+    );
+
+    expect(readDeclaredExceptions(tmpDir)).toEqual({
+      exceptions: [
+        { key: './intro.md', file: 'intro.md', reason: 'a' },
+        { key: 'cobweb.md/', file: 'cobweb.md', reason: 'b' },
+        { key: '_admonition\\gpu.md', file: '_admonition/gpu.md', reason: 'c' },
+        { key: 'advanced//./solow.md', file: 'advanced/solow.md', reason: 'd' },
+      ],
+      problems: [],
+    });
+  });
+
+  test('reads a bare date as a reason, as text', async () => {
+    twoLectures();
+    state('cobweb.md');
+    config('state-exceptions:\n  intro.md: 2026-12-01\n');
+
+    expect((await check()).status).toBe('pass');
+  });
+
+  test("does not fail the entries a partial edition's mirrored ToC lists without a file", async () => {
+    lecture('intro.md');
+    state('intro.md');
+    writeToc(docs(), ['intro', 'cobweb', 'solow']);
+    config();
+
+    expect(await check()).toEqual({
+      name: '.translate/state/',
+      status: 'pass',
+      message: '1 lecture covered: 1 with a state file',
+      data: NO_FINDINGS,
+    });
+  });
+
+  test('checks a fragment in the set, without its state file and then with it', async () => {
+    lecture('intro.md', '# 介绍\n\n```{include} _admonition/gpu.md\n```\n');
+    lecture('_admonition/gpu.md', '```{note}\nGPU\n```\n');
+    writeToc(docs(), ['intro']);
+    state('intro.md');
+    config();
+
+    const without = await check();
+    expect(without.status).toBe('fail');
+    expect(without.data?.missing).toEqual(['_admonition/gpu.md']);
+
+    state('_admonition/gpu.md');
+    expect(await check()).toMatchObject({
+      status: 'pass',
+      message: '2 lectures covered: 2 with a state file',
+    });
+  });
+
+  test('passes with no state folder when every lecture is declared', async () => {
+    lecture('intro.md', '# Introduction\n\n```{include} _admonition/gpu.md\n```\n');
+    lecture('_admonition/gpu.md', '```{note}\nGPU\n```\n');
+    writeToc(docs(), ['intro']);
+    config(
+      'state-exceptions:\n' + '  intro.md: English copy\n' + '  _admonition/gpu.md: English copy\n'
+    );
+
+    expect(fs.existsSync(path.join(tmpDir, '.translate', 'state'))).toBe(false);
+    expect(await check()).toEqual({
+      name: '.translate/state/',
+      status: 'pass',
+      message: '2 lectures covered: 0 with a state file, 2 declared in state-exceptions',
+      data: NO_FINDINGS,
+    });
+  });
+
+  test('fails, and checks nothing, when the edition has no lecture set', async () => {
+    lecture('intro.md');
+    state('intro.md');
+    config();
+
+    expect(await check()).toEqual({
+      name: '.translate/state/',
+      status: 'fail',
+      message: '--require-state: the edition has no lecture set, so no state file was checked',
+      details: ['The Lecture set check says why'],
+    });
+  });
+
+  test('caps each group at five, and --json lists every one', async () => {
+    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+    for (const f of files) lecture(`${f}.md`);
+    writeToc(docs(), files);
+    config();
+
+    const result = await check();
+    expect(result.details).toEqual([
+      'Missing: no state file, and not declared in state-exceptions. Record one with ' +
+        '`translate status -f <file> --write-state`, or declare the file:',
+      '  a.md',
+      '  b.md',
+      '  c.md',
+      '  d.md',
+      '  e.md',
+      '  …and 2 more',
+    ]);
+    expect(result.data?.missing).toEqual(files.map((f) => `${f}.md`));
+  });
+});
+
+// ============================================================================
 // runDoctor INTEGRATION TESTS
 // ============================================================================
 
@@ -758,6 +1265,134 @@ describe('runDoctor', () => {
 
     // Should find the file in docs/ not lectures/
     expect(result.checks.find((c) => c.name === '.translate/state/')?.status).toBe('pass');
+  });
+
+  describe('with --require-state (#370)', () => {
+    const docs = () => path.join(tmpDir, 'lectures');
+    const config = (extra = '') =>
+      writeMd(
+        path.join(tmpDir, '.translate', 'config.yml'),
+        `source-language: en\ntarget-language: ml\ndocs-folder: lectures\n${extra}`
+      );
+
+    test('fails a partial gap that is only a warning without it', async () => {
+      config();
+      writeMd(path.join(docs(), 'intro.md'), TARGET_WITH_MAP);
+      writeMd(path.join(docs(), 'cobweb.md'), TARGET_WITH_MAP);
+      writeToc(docs(), ['intro', 'cobweb']);
+      writeFileState(tmpDir, 'intro.md', VALID_STATE);
+
+      const plain = await runDoctor({ target: tmpDir, checkGh: false, json: false });
+      expect(plain).not.toHaveProperty('requireState');
+      expect(plain.checks.find((c) => c.name === '.translate/state/')).toEqual({
+        name: '.translate/state/',
+        status: 'warn',
+        message: '1/2 files tracked (1 missing)',
+        details: ['Missing: cobweb.md'],
+      });
+
+      const required = await runDoctor({
+        target: tmpDir,
+        checkGh: false,
+        json: false,
+        requireState: true,
+      });
+      expect(required.requireState).toBe(true);
+      expect(required.checks.find((c) => c.name === '.translate/state/')?.status).toBe('fail');
+    });
+
+    test('fails the state check, and the lecture set, without a _toc.yml', async () => {
+      config();
+      writeMd(path.join(docs(), 'intro.md'), TARGET_WITH_MAP);
+      writeFileState(tmpDir, 'intro.md', VALID_STATE);
+
+      const result = await runDoctor({
+        target: tmpDir,
+        checkGh: false,
+        json: false,
+        requireState: true,
+      });
+
+      expect(result.checks.map((c) => [c.name, c.status])).toEqual([
+        ['.translate/config.yml', 'pass'],
+        ['Lecture set', 'fail'],
+        ['.translate/state/', 'fail'],
+        ['Workflow', 'fail'],
+      ]);
+    });
+
+    // The shape a CI script reads: the mode at the top, every list in the
+    // check's `data`, sorted, and `summary` as it was.
+    test('--json carries all six lists', async () => {
+      config(
+        'state-exceptions:\n' +
+          '  intro.md: English copy until its review round\n' +
+          '  gone.md: Removed upstream\n'
+      );
+      for (const f of ['intro', 'cobweb', 'solow', 'lln']) {
+        writeMd(path.join(docs(), `${f}.md`), TARGET_WITH_MAP);
+      }
+      writeMd(path.join(docs(), 'draft.md'), TARGET_WITH_MAP);
+      writeToc(docs(), ['intro', 'cobweb', 'solow', 'lln']);
+      for (const f of ['intro.md', 'lln.md', 'draft.md', 'old.md']) {
+        writeFileState(tmpDir, f, VALID_STATE);
+      }
+      writeMd(path.join(tmpDir, '.translate', 'state', 'solow.md.yml'), 'source-sha: abc123\n');
+      const workflowDir = path.join(tmpDir, '.github', 'workflows');
+      fs.mkdirSync(workflowDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(workflowDir, 'sync.yml'),
+        'uses: QuantEcon/action-translation@v0',
+        'utf-8'
+      );
+
+      const result = await runDoctor({
+        target: tmpDir,
+        checkGh: false,
+        json: true,
+        requireState: true,
+      });
+      const json = JSON.parse(formatDoctorJson(result));
+
+      expect(Object.keys(json)).toEqual(['requireState', 'checks', 'summary']);
+      expect(json.requireState).toBe(true);
+      expect(json.summary).toEqual({ pass: 4, warn: 0, fail: 1, total: 5 });
+      expect(json.checks.find((c: { name: string }) => c.name === '.translate/state/')).toEqual({
+        name: '.translate/state/',
+        status: 'fail',
+        message:
+          '--require-state: 1 lecture without a state file, 1 declared exception with a state ' +
+          'file, 1 file in the state folder without a lecture, 1 unreadable state file',
+        details: [
+          'Missing: no state file, and not declared in state-exceptions. Record one with ' +
+            '`translate status -f <file> --write-state`, or declare the file:',
+          '  cobweb.md',
+          "Declared in state-exceptions, but has a state file, which puts it in sync's scope. " +
+            'Delete one or the other:',
+          '  intro.md',
+          'State file without a lecture: the edition has no such .md. Restore the lecture, or ' +
+            'delete the state file:',
+          '  .translate/state/old.md.yml',
+          'Corrupt: the state file exists but cannot be read. Repair or delete it:',
+          '  solow.md (`synced-at` is missing)',
+          'Unlisted (a warning): outside the lecture set, kept with a state file, so sync does ' +
+            'not update it:',
+          '  draft.md',
+          'Stale exception (a warning): declared, but not a lecture of the edition. Remove it ' +
+            'from state-exceptions:',
+          '  gone.md: the edition has no such file',
+        ],
+        data: {
+          missing: ['cobweb.md'],
+          declaredWithState: ['intro.md'],
+          orphaned: ['.translate/state/old.md.yml'],
+          corrupt: [{ file: 'solow.md', reason: '`synced-at` is missing' }],
+          unlisted: ['draft.md'],
+          staleExceptions: ['gone.md'],
+          exceptionErrors: [],
+        },
+      });
+    });
   });
 });
 

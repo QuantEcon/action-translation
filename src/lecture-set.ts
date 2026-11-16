@@ -201,8 +201,13 @@ export function findTocFrontEnd(files: readonly string[]): TocFrontEnd {
 // ENTRIES AND INCLUDES
 // =============================================================================
 
-/** `a/./b`, `./a/b` and `a//b` name one file; `..` past the folder's top is `undefined`. */
-function normalize(file: string): string | undefined {
+/**
+ * A docs-relative path in one spelling: backslashes become `/`, and `a/./b`,
+ * `./a/b` and `a//b` name one file. An absolute path, or one whose `..` goes
+ * past the folder's top, is `undefined`. A trailing `/` is kept. Exported for
+ * `doctor --require-state`, which matches `state-exceptions` keys with it (#370).
+ */
+export function normalizeDocsPath(file: string): string | undefined {
   const n = path.posix.normalize(file.replace(/\\/g, '/'));
   if (n === '..' || n.startsWith('../') || n.startsWith('/')) return undefined;
   return n === '.' ? '' : n;
@@ -252,7 +257,7 @@ const SOURCE_SUFFIXES = ['.md', '.ipynb', '.rst', '.Rmd', '.myst'];
  * relative to the docs folder and has no leading `/` (unlike an include).
  */
 export function resolveTocFile(entry: string, files: ReadonlySet<string>): ResolvedEntry {
-  const value = normalize(entry);
+  const value = normalizeDocsPath(entry);
   if (value === undefined || value === '') return { kind: 'missing', entry };
   const suffix = SOURCE_SUFFIXES.find((s) => value.endsWith(s) && value.length > s.length);
   const stem = suffix ? value.slice(0, -suffix.length) : value;
@@ -268,7 +273,7 @@ export function resolveTocFile(entry: string, files: ReadonlySet<string>): Resol
  * pattern matches a path without its extension, as a `file:` entry names one.
  */
 export function expandTocGlob(glob: string, files: readonly string[]): string[] {
-  const value = normalize(glob);
+  const value = normalizeDocsPath(glob);
   if (value === undefined) return [];
   const re = globPattern(value);
   // Sphinx sorts document names, which have no suffix: `a` before `a-b`.
@@ -359,7 +364,7 @@ export function includesOf(text: string, fromFile: string): string[] {
   for (const raw of includeArguments(text)) {
     const arg = raw.replace(/^(["'])(.*)\1$/, '$2');
     const joined = arg.startsWith('/') ? arg.slice(1) : path.posix.join(dir, arg);
-    const target = normalize(joined);
+    const target = normalizeDocsPath(joined);
     if (target === undefined || !target.endsWith('.md')) continue;
     if (!out.includes(target)) out.push(target);
   }
@@ -606,7 +611,7 @@ export function fileSystemSource(repoPath: string, docsFolder: string): LectureS
   return {
     files,
     read: async (file: string) => {
-      const rel = normalize(file);
+      const rel = normalizeDocsPath(file);
       if (rel === undefined || rel === '') throw new Error(`${file} is not inside the docs folder`);
       const real = await fs.promises.realpath(path.join(root, rel));
       if (!inside(real)) throw new Error(`${file} is not inside the docs folder`);

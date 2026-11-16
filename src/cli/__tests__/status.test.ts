@@ -23,7 +23,7 @@ import {
   StatusResult,
   writeStateFailed,
 } from '../commands/status.js';
-import { readFileState, writeFileState } from '../translate-state.js';
+import { readFileState, readStateExceptions, writeFileState } from '../translate-state.js';
 import { getFileGitMetadata } from '../git-metadata.js';
 import { writeToc } from '../../test-support/toc-fixture.js';
 
@@ -1743,6 +1743,25 @@ describe('--write-state reports what it wrote (#401)', () => {
     expect(result.writeState?.failed[0].file).toBe('intro.md');
     expect(result.writeState?.configWritten).toBe(true);
     expect(writeStateFailed(result.writeState!)).toBe(true);
+  });
+
+  // #370: the config it rewrites keeps the edition's declared exceptions, reasons included
+  it('keeps state-exceptions in the config it rewrites', async () => {
+    fs.mkdirSync(path.dirname(configPath()), { recursive: true });
+    fs.writeFileSync(
+      configPath(),
+      'source-language: en\ntarget-language: zh-cn\ndocs-folder: lectures\n' +
+        'state-exceptions:\n  orphan.md: English copy until its review round\n',
+      'utf-8'
+    );
+
+    const result = await writeState();
+
+    expect(result.writeState?.configWritten).toBe(true);
+    expect(readStateExceptions(target())).toEqual({
+      entries: [{ key: 'orphan.md', reason: 'English copy until its review round' }],
+      problems: [],
+    });
   });
 
   it('has no record without --write-state', async () => {

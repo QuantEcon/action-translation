@@ -18,6 +18,8 @@ import {
   stateFileRelativePath,
   configRelativePath,
   getToolVersion,
+  listStateFiles,
+  readStateExceptions,
 } from '../translate-state.js';
 import { TranslateConfig, FileState } from '../types.js';
 
@@ -246,6 +248,86 @@ describe('config read/write', () => {
       expect(content).toContain('primary: HumphreyYang');
       expect(content).not.toContain('# zh lead');
     });
+
+    // #370: the reasons are values, so they survive the rewrite that drops comments
+    test('state-exceptions survives a writeConfig round trip, reasons included', () => {
+      writeRaw(
+        'source-language: en\ntarget-language: ml\ndocs-folder: lectures\n' +
+          'state-exceptions:\n' +
+          '  intro.md: English copy until its review round\n' +
+          '  _admonition/gpu.md: 2026-12-01\n'
+      );
+      const before = readStateExceptions(tmpDir);
+
+      writeConfig(tmpDir, coreConfig);
+
+      expect(readStateExceptions(tmpDir)).toEqual(before);
+      expect(before.entries.map((e) => e.reason)).toEqual([
+        'English copy until its review round',
+        '2026-12-01',
+      ]);
+    });
+  });
+});
+
+describe('readStateExceptions (#370)', () => {
+  const writeRaw = (content: string) => {
+    fs.mkdirSync(path.join(tmpDir, '.translate'), { recursive: true });
+    fs.writeFileSync(path.join(tmpDir, '.translate', 'config.yml'), content, 'utf-8');
+  };
+  const CORE = 'source-language: en\ntarget-language: ml\ndocs-folder: lectures\n';
+
+  test.each([
+    ['no config', undefined],
+    ['no key', CORE],
+    ['a key with nothing under it', `${CORE}state-exceptions:\n`],
+    ['an empty mapping', `${CORE}state-exceptions: {}\n`],
+  ])('reads %s as no exceptions', (_case, content) => {
+    if (content !== undefined) writeRaw(content);
+    expect(readStateExceptions(tmpDir)).toEqual({ entries: [], problems: [] });
+  });
+
+  test('returns each key as written, for the caller to put in its spelling', () => {
+    writeRaw(`${CORE}state-exceptions:\n  ./intro.md: a\n  _admonition/gpu.md: b\n`);
+
+    expect(readStateExceptions(tmpDir)).toEqual({
+      entries: [
+        { key: './intro.md', reason: 'a' },
+        { key: '_admonition/gpu.md', reason: 'b' },
+      ],
+      problems: [],
+    });
+  });
+
+  test('reads a bare date as the text it was written as (CORE_SCHEMA)', () => {
+    writeRaw(`${CORE}state-exceptions:\n  intro.md: 2026-12-01\n`);
+    expect(readStateExceptions(tmpDir).entries[0].reason).toBe('2026-12-01');
+  });
+
+  test('keeps the entries it can use beside the ones it names as problems', () => {
+    writeRaw(`${CORE}state-exceptions:\n  intro.md: English copy\n  cobweb.md: 2026\n`);
+    expect(readStateExceptions(tmpDir)).toEqual({
+      entries: [{ key: 'intro.md', reason: 'English copy' }],
+      problems: ['`cobweb.md`: its reason is a number; write why it has no state file, as text'],
+    });
+  });
+
+  test('names a repeated key, with its line, and uses no entry', () => {
+    writeRaw(`${CORE}state-exceptions:\n  intro.md: a\n  intro.md: b\n`);
+    expect(readStateExceptions(tmpDir)).toEqual({
+      entries: [],
+      problems: [
+        '.translate/config.yml: it repeats a key at line 6 (`intro.md: b`), which YAML does ' +
+          'not allow, so state-exceptions could not be read',
+      ],
+    });
+  });
+
+  test('names a config that is not a mapping', () => {
+    writeRaw('- source-language: en\n');
+    expect(readStateExceptions(tmpDir).problems).toEqual([
+      '.translate/config.yml is not a YAML mapping, so state-exceptions could not be read',
+    ]);
   });
 });
 
@@ -407,6 +489,62 @@ describe('file state read/write', () => {
     const result = readFileState(tmpDir, 'intro.md');
     expect(result?.['source-sha']).toBe('new1234f');
     expect(result?.mode).toBe('RESYNC');
+  });
+});
+
+describe('listStateFiles (#370)', () => {
+  const stateDir = () => path.join(tmpDir, '.translate', 'state');
+  const write = (rel: string, content = 'x: 1\n') => {
+    fs.mkdirSync(path.dirname(path.join(stateDir(), rel)), { recursive: true });
+    fs.writeFileSync(path.join(stateDir(), rel), content, 'utf-8');
+  };
+
+  test('is empty when there is no state folder', () => {
+    expect(listStateFiles(tmpDir)).toEqual([]);
+  });
+
+  test('lists every file, subfolders and non-state files included, sorted', () => {
+    write('intro.md.yml');
+    write('_admonition/gpu.md.yml');
+    write('.DS_Store');
+    write('.hidden/notes.yml');
+    write('cobweb.md.yml');
+
+    expect(listStateFiles(tmpDir)).toEqual([
+      '.DS_Store',
+      '.hidden/notes.yml',
+      '_admonition/gpu.md.yml',
+      'cobweb.md.yml',
+      'intro.md.yml',
+    ]);
+  });
+
+  // Names come from the folder listing, so a check can compare them as strings
+  test('keeps the case each file is written in', () => {
+    write('Intro.md.yml');
+    expect(listStateFiles(tmpDir)).toEqual(['Intro.md.yml']);
+  });
+
+  test('follows links inside the state folder, and leaves out links out of it or to nothing', () => {
+    write('intro.md.yml');
+    write('_admonition/gpu.md.yml');
+    fs.writeFileSync(path.join(tmpDir, 'outside.md.yml'), 'x: 1\n', 'utf-8');
+    fs.symlinkSync(path.join(stateDir(), 'intro.md.yml'), path.join(stateDir(), 'linked.md.yml'));
+    fs.symlinkSync(path.join(stateDir(), '_admonition'), path.join(stateDir(), 'linked-folder'));
+    fs.symlinkSync(path.join(tmpDir, 'outside.md.yml'), path.join(stateDir(), 'leak.md.yml'));
+    fs.symlinkSync(
+      path.join(stateDir(), 'nothing.md.yml'),
+      path.join(stateDir(), 'dangling.md.yml')
+    );
+    // A link back to a folder being walked is a cycle, not an endless listing
+    fs.symlinkSync(stateDir(), path.join(stateDir(), '_admonition', 'loop'));
+
+    expect(listStateFiles(tmpDir)).toEqual([
+      '_admonition/gpu.md.yml',
+      'intro.md.yml',
+      'linked-folder/gpu.md.yml',
+      'linked.md.yml',
+    ]);
   });
 });
 
