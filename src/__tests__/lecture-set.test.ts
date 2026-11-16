@@ -21,6 +21,7 @@ import {
   fileSystemSource,
   findTocFrontEnd,
   includesOf,
+  isBookFile,
   LectureReadError,
   LectureSetError,
   LectureSetReader,
@@ -30,7 +31,7 @@ import {
   resolveTocFile,
   TOC_YML,
   tocYmlEntries,
-} from '../lecture-set';
+} from '../lecture-set.js';
 
 /** An in-memory docs folder that records every read. */
 function memorySource(
@@ -196,6 +197,16 @@ describe('TOC_YML.entries', () => {
     expect(() => TOC_YML.entries('chapters: [unclosed')).toThrow(/_toc.yml is not valid YAML/);
   });
 
+  it('refuses a layout the walk does not read, so the set is never empty in silence', () => {
+    expect(() => TOC_YML.entries('format: default\nroot: a\nentries:\n- file: b\n')).toThrow(
+      "_toc.yml has format 'default'"
+    );
+    expect(() => TOC_YML.entries('chapters:\n- file: a\n')).toThrow('_toc.yml has no root');
+    expect(TOC_YML.entries('format: jb-article\nroot: a\n')).toEqual([
+      { kind: 'file', value: 'a' },
+    ]);
+  });
+
   it('refuses an empty ToC, or one that is not a mapping', () => {
     expect(() => TOC_YML.entries('')).toThrow('_toc.yml is empty or not a YAML mapping');
     expect(() => TOC_YML.entries('- file: a\n')).toThrow(LectureSetError);
@@ -207,19 +218,35 @@ describe('TOC_YML.entries', () => {
 // =============================================================================
 
 describe('resolveTocFile', () => {
-  const files = new Set(['intro.md', 'nb.ipynb', 'page.rst', 'exact.txt', 'sub/deep.md']);
+  const files = new Set([
+    'intro.md',
+    'nb.ipynb',
+    'page.rst',
+    'exact.txt',
+    'sub/deep.md',
+    'stray.md.bak',
+    'stray.png',
+  ]);
 
   it('finds the .md behind an extensionless entry, or behind one that names it', () => {
     expect(resolveTocFile('intro', files)).toEqual({ kind: 'markdown', file: 'intro.md' });
     expect(resolveTocFile('intro.md', files)).toEqual({ kind: 'markdown', file: 'intro.md' });
     expect(resolveTocFile('./sub//deep', files)).toEqual({ kind: 'markdown', file: 'sub/deep.md' });
+    expect(resolveTocFile('sub/../intro', files)).toEqual({ kind: 'markdown', file: 'intro.md' });
+    expect(resolveTocFile('sub\\deep', files)).toEqual({ kind: 'markdown', file: 'sub/deep.md' });
   });
 
   it('takes an entry backed by another kind of file as a document, not a lecture', () => {
     expect(resolveTocFile('nb', files)).toEqual({ kind: 'other', file: 'nb.ipynb' });
     expect(resolveTocFile('nb.ipynb', files)).toEqual({ kind: 'other', file: 'nb.ipynb' });
     expect(resolveTocFile('page', files)).toEqual({ kind: 'other', file: 'page.rst' });
-    expect(resolveTocFile('exact.txt', files)).toEqual({ kind: 'other', file: 'exact.txt' });
+    // sphinx-external-toc strips a source suffix before it looks the document up.
+    expect(resolveTocFile('nb.md', files)).toEqual({ kind: 'other', file: 'nb.ipynb' });
+  });
+
+  it('takes only source files as documents: a stray file does not hide a missing entry', () => {
+    expect(resolveTocFile('stray', files)).toEqual({ kind: 'missing', entry: 'stray' });
+    expect(resolveTocFile('exact.txt', files)).toEqual({ kind: 'missing', entry: 'exact.txt' });
   });
 
   it('reports an entry with nothing behind it, or outside the folder', () => {
@@ -250,6 +277,16 @@ describe('expandTocGlob', () => {
     expect(expandTocGlob('other', files)).toEqual(['other.md']);
     expect(expandTocGlob('oth.r', files)).toEqual([]);
   });
+
+  it('sorts document names as Sphinx does, so a before a-b', () => {
+    expect(expandTocGlob('*', ['a-b.md', 'a.md'])).toEqual(['a.md', 'a-b.md']);
+  });
+
+  it('reads [seq] and [!seq] classes, with ranges', () => {
+    expect(expandTocGlob('parts/[a]', files)).toEqual(['parts/a.md']);
+    expect(expandTocGlob('parts/[!a]', files)).toEqual(['parts/b.md']);
+    expect(expandTocGlob('parts/[a-z]', files)).toEqual(['parts/a.md', 'parts/b.md']);
+  });
 });
 
 describe('includesOf', () => {
@@ -278,16 +315,54 @@ describe('includesOf', () => {
   it('leaves out literalinclude, non-.md targets and targets outside the folder', () => {
     const text = [
       '```{literalinclude} code.md',
+      '```',
       '```{include} table.html',
+      '```',
       '```{include} ../../README.md',
+      '```',
       '```{include} "quoted.md"',
+      '```',
       '```{include} quoted.md',
+      '```',
     ].join('\n');
     expect(includesOf(text, 'x/lecture.md')).toEqual(['x/quoted.md']);
   });
 
-  it('reads CRLF text', () => {
+  it('reads CRLF text, and an argument with no space before it', () => {
     expect(includesOf('```{include} a.md\r\n```\r\n', 'b.md')).toEqual(['a.md']);
+    expect(includesOf('```{include}a.md\n```\n', 'b.md')).toEqual(['a.md']);
+  });
+
+  it('skips an {include} shown inside a code block or a code cell', () => {
+    const text = [
+      '````md',
+      '```{include} shown-in-md.md',
+      '```',
+      '````',
+      '~~~',
+      '```{include} shown-in-tilde.md',
+      '~~~',
+      '```{code-cell} python',
+      '```{include} not-real.md',
+      '```',
+      '```{include} real.md',
+      '```',
+    ].join('\n');
+    expect(includesOf(text, 'x.md')).toEqual(['real.md']);
+  });
+
+  it('counts an {include} nested in a directive whose body is MyST', () => {
+    const text = [
+      '````{admonition} Note',
+      '```{include} _admonition/gpu.md',
+      '```',
+      '````',
+      ':::{note}',
+      '```{include} inside-colon.md',
+      '```',
+      ':::',
+    ].join('\n');
+    expect(includesOf(text, 'x.md')).toEqual(['_admonition/gpu.md', 'inside-colon.md']);
   });
 });
 
@@ -351,6 +426,26 @@ describe('LectureSetReader.lectureSet', () => {
     expect(set.missingIncludes).toEqual([{ from: 'lecture.md', target: '_admonition/gpu.md' }]);
   });
 
+  it('lists a missing entry once', async () => {
+    const source = memorySource({ '_toc.yml': 'root: a\nchapters:\n- file: a\n', 'b.md': '' });
+    expect((await readLectureSet(source)).missingEntries).toEqual(['a']);
+  });
+
+  it('leaves out files under _build, node_modules and dot-folders, whatever the source lists', async () => {
+    const source = memorySource({
+      '_toc.yml': 'root: a\nchapters:\n- glob: "**"\n',
+      'a.md': '# A\n',
+      '_build/html/b.md': '',
+      'node_modules/x/README.md': '',
+      '.github/c.md': '',
+      'ok/d.md': '',
+    });
+    expect((await readLectureSet(source)).documents).toEqual(['a.md', 'ok/d.md']);
+    expect(isBookFile('_build/x.md')).toBe(false);
+    expect(isBookFile('a/.ipynb_checkpoints/x.md')).toBe(false);
+    expect(isBookFile('.hidden.md')).toBe(true);
+  });
+
   it('lists a document once when the ToC names it twice or a glob repeats it', async () => {
     const source = memorySource({
       '_toc.yml': 'root: a\nchapters:\n- file: a.md\n- glob: "*"\n',
@@ -388,10 +483,27 @@ describe('LectureSetReader.membership', () => {
 
   it('stops the include scan at the first lecture that includes the file', async () => {
     const source = memorySource(lectureFolder());
-    const reader = new LectureSetReader(source);
+    const reader = new LectureSetReader(source, { concurrency: 1 });
     expect(await reader.membership('_admonition/gpu.md')).toBe('fragment');
     // intro.md does not include it; jv.md, the second document, does.
     expect(source.reads).toEqual(['_toc.yml', 'intro.md', 'jv.md']);
+  });
+
+  it('reads a batch at a time, and stops after the batch that finds the includer', async () => {
+    const source = memorySource(lectureFolder());
+    const reader = new LectureSetReader(source, { concurrency: 2 });
+    expect(await reader.membership('_admonition/gpu.md')).toBe('fragment');
+    expect(source.reads).toEqual(['_toc.yml', 'intro.md', 'jv.md']);
+    const wide = memorySource(lectureFolder());
+    expect(
+      await new LectureSetReader(wide, { concurrency: 3 }).membership('_admonition/gpu.md')
+    ).toBe('fragment');
+    expect(wide.reads).toEqual(['_toc.yml', 'intro.md', 'jv.md', 'mle.md']);
+  });
+
+  it('says a ToC entry backed by a notebook is outside: a document, but not a lecture', async () => {
+    const source = memorySource(lectureFolder());
+    expect(await new LectureSetReader(source).membership('notebook_lecture.ipynb')).toBe('outside');
   });
 
   it('reads every lecture once to say a file is outside, and caches the reads', async () => {
@@ -448,21 +560,43 @@ describe('fileSystemSource', () => {
     fs.symlinkSync(path.join(docs, 'status.md'), path.join(docs, 'linked.md'));
     fs.symlinkSync(path.join(docs, '_admonition'), path.join(docs, 'linked-folder'));
     fs.symlinkSync(path.join(docs, 'nothing.md'), path.join(docs, 'dangling.md'));
+    fs.writeFileSync(path.join(dir, 'secret.md'), 'outside the docs folder');
+    fs.symlinkSync(path.join(dir, 'secret.md'), path.join(docs, 'leak.md'));
+    fs.symlinkSync(dir, path.join(docs, 'leak-folder'));
+    fs.symlinkSync(docs, path.join(docs, '_admonition', 'loop'));
   });
 
   afterEach(() => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  it('lists the folder recursively, skipping build output, dot-folders and links to folders', () => {
+  it('lists the folder recursively, skipping build output and dot-folders', () => {
     const source = fileSystemSource(dir, 'lectures');
     expect(source.files).toContain('_admonition/gpu.md');
-    expect(source.files).toContain('linked.md');
     expect(source.files.some((f) => f.startsWith('_build/'))).toBe(false);
     expect(source.files.some((f) => f.startsWith('.ipynb_checkpoints/'))).toBe(false);
-    expect(source.files).not.toContain('linked-folder');
-    expect(source.files).not.toContain('dangling.md');
     expect([...source.files]).toEqual([...source.files].sort());
+  });
+
+  it('follows links inside the docs folder, to files and folders, and stops at a cycle', () => {
+    const source = fileSystemSource(dir, 'lectures');
+    expect(source.files).toContain('linked.md');
+    expect(source.files).toContain('linked-folder/gpu.md');
+    expect(source.files).not.toContain('dangling.md');
+    expect(source.files.some((f) => f.includes('loop/loop'))).toBe(false);
+  });
+
+  it('leaves out a link that points out of the docs folder', () => {
+    const source = fileSystemSource(dir, 'lectures');
+    expect(source.files).not.toContain('leak.md');
+    expect(source.files.some((f) => f.startsWith('leak-folder/'))).toBe(false);
+  });
+
+  it('refuses to read a path that leaves the docs folder', async () => {
+    const source = fileSystemSource(dir, 'lectures');
+    await expect(source.read('../secret.md')).rejects.toThrow('not inside the docs folder');
+    await expect(source.read('leak.md')).rejects.toThrow('not inside the docs folder');
+    await expect(source.read('jv.md')).resolves.toContain('# Job Search');
   });
 
   it('reads the lecture set from disk', async () => {
@@ -471,7 +605,9 @@ describe('fileSystemSource', () => {
     expect(set.fragments).toEqual(['_admonition/gpu.md']);
   });
 
-  it('has no files for a folder that does not exist', () => {
-    expect(fileSystemSource(dir, 'missing').files).toEqual([]);
+  it('says so when the docs folder does not exist', () => {
+    expect(() => fileSystemSource(dir, 'missing')).toThrow(
+      /the docs folder .*missing does not exist/
+    );
   });
 });

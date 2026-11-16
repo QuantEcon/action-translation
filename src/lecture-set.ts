@@ -126,7 +126,10 @@ export function collectTocFiles(doc: unknown): string[] {
   return rest.filter((e) => e.kind === 'file').map((e) => e.value);
 }
 
-/** Jupyter Book 1's `_toc.yml`: `jb-book` and `jb-article`. */
+/** The `_toc.yml` formats the walk reads. */
+const TOC_YML_FORMATS = ['jb-book', 'jb-article'];
+
+/** Jupyter Book 1's `_toc.yml`: `jb-book` and `jb-article`. Any other `format` is refused. */
 export const TOC_YML: TocFrontEnd = {
   file: '_toc.yml',
   built: true,
@@ -141,6 +144,17 @@ export const TOC_YML: TocFrontEnd = {
     }
     if (!doc || typeof doc !== 'object' || Array.isArray(doc)) {
       throw new LectureSetError('_toc.yml is empty or not a YAML mapping');
+    }
+    // A layout the walk does not know would read as an empty book, so every
+    // lecture would fall outside the set in silence. Refuse it instead.
+    const { format, root } = doc as Record<string, unknown>;
+    if (format !== undefined && !TOC_YML_FORMATS.includes(String(format))) {
+      throw new LectureSetError(
+        `_toc.yml has format '${String(format)}'; the lecture set reads ${TOC_YML_FORMATS.join(' and ')}`
+      );
+    }
+    if (typeof root !== 'string') {
+      throw new LectureSetError('_toc.yml has no root: jb-book and jb-article both name one');
     }
     return tocYmlEntries(doc);
   },
@@ -194,17 +208,28 @@ function normalize(file: string): string | undefined {
   return n === '.' ? '' : n;
 }
 
-/** A glob over docs-relative paths: `*` and `?` stay within one folder, `**` crosses them. */
+/**
+ * A glob over docs-relative paths: `*` and `?` stay within one folder, `**`
+ * crosses them, and `[seq]` and `[!seq]` are character classes, as in
+ * Python's `fnmatch`.
+ */
 function globPattern(glob: string): RegExp {
+  const escape = (c: string) => c.replace(/[.+^${}()|[\]\\/-]/g, '\\$&');
   let re = '';
   for (let i = 0; i < glob.length; i++) {
     const c = glob[i];
+    const close = c === '[' ? glob.indexOf(']', i + 2) : -1;
     if (c === '*' && glob[i + 1] === '*') {
       re += '.*';
       i++;
     } else if (c === '*') re += '[^/]*';
     else if (c === '?') re += '[^/]';
-    else re += c.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+    else if (close > 0) {
+      const body = glob.slice(i + 1, close);
+      const cls = (b: string) => b.replace(/[\\^]/g, '\\$&');
+      re += body.startsWith('!') ? `[^${cls(body.slice(1))}]` : `[${cls(body)}]`;
+      i = close;
+    } else re += escape(c);
   }
   return new RegExp(`^${re}$`);
 }
@@ -215,24 +240,25 @@ export type ResolvedEntry =
   | { kind: 'other'; file: string }
   | { kind: 'missing'; entry: string };
 
+/** The source suffixes a Jupyter Book 1 document can have, `.md` first. */
+const SOURCE_SUFFIXES = ['.md', '.ipynb', '.rst', '.Rmd', '.myst'];
+
 /**
- * Resolve a `file:` entry as Sphinx does: `intro` is `intro.md` when that
- * exists; an entry backed by any other file (`intro.ipynb`, `intro.rst`, or
- * an exact name that is not `.md`) is a document but not a lecture; an entry
- * with nothing behind it is missing.
+ * Resolve a `file:` entry as sphinx-external-toc does: a source suffix is
+ * stripped, then the document is the file with that stem and a source suffix.
+ * `intro` and `intro.md` are `intro.md` when it exists; an entry backed only
+ * by another source (`intro.ipynb`, `intro.rst`) is a document but not a
+ * lecture; an entry with no source behind it is missing. A ToC entry is
+ * relative to the docs folder and has no leading `/` (unlike an include).
  */
 export function resolveTocFile(entry: string, files: ReadonlySet<string>): ResolvedEntry {
   const value = normalize(entry);
   if (value === undefined || value === '') return { kind: 'missing', entry };
-  if (value.endsWith('.md')) {
-    return files.has(value) ? { kind: 'markdown', file: value } : { kind: 'missing', entry };
-  }
-  if (files.has(`${value}.md`)) return { kind: 'markdown', file: `${value}.md` };
-  if (files.has(value)) return { kind: 'other', file: value };
-  for (const f of files) {
-    if (f.startsWith(`${value}.`) && !f.slice(value.length + 1).includes('/')) {
-      return { kind: 'other', file: f };
-    }
+  const suffix = SOURCE_SUFFIXES.find((s) => value.endsWith(s) && value.length > s.length);
+  const stem = suffix ? value.slice(0, -suffix.length) : value;
+  if (files.has(`${stem}.md`)) return { kind: 'markdown', file: `${stem}.md` };
+  for (const s of SOURCE_SUFFIXES) {
+    if (files.has(`${stem}${s}`)) return { kind: 'other', file: `${stem}${s}` };
   }
   return { kind: 'missing', entry };
 }
@@ -245,15 +271,81 @@ export function expandTocGlob(glob: string, files: readonly string[]): string[] 
   const value = normalize(glob);
   if (value === undefined) return [];
   const re = globPattern(value);
-  return files.filter((f) => f.endsWith('.md') && re.test(f.slice(0, -3))).sort();
+  // Sphinx sorts document names, which have no suffix: `a` before `a-b`.
+  return files
+    .filter((f) => f.endsWith('.md'))
+    .map((f) => f.slice(0, -3))
+    .filter((stem) => re.test(stem))
+    .sort()
+    .map((stem) => `${stem}.md`);
 }
 
+/** A fence line: its marker and the rest of the line. */
+const FENCE_RE = /^\s*(`{3,}|~{3,}|:{3,})(.*)$/;
+/** A directive's info string: `{name}`, then its argument. */
+const DIRECTIVE_RE = /^\{([A-Za-z0-9_+:.-]+)\}\s*(.*)$/;
 /**
- * A line opening an `{include}` directive, in a backtick, tilde or colon
- * fence. Group 2 is the argument. `{literalinclude}` does not match: its
- * target is code.
+ * Directives whose body is not MyST, so an `{include}` written inside one is
+ * an example, not an include. `{literalinclude}` is here too: its target is
+ * code, and its body only options.
  */
-const INCLUDE_RE = /^\s*(`{3,}|~{3,}|:{3,})\{include\}\s+(\S.*?)\s*$/;
+const VERBATIM_DIRECTIVES = new Set([
+  'code',
+  'code-block',
+  'code-cell',
+  'sourcecode',
+  'literalinclude',
+  'include',
+  'math',
+  'raw',
+  'eval-rst',
+  'mermaid',
+  'graphviz',
+]);
+
+/**
+ * The `{include}` arguments in MyST text, in order. The walk tracks fences:
+ * a code block (```python, a bare ```, ~~~) and a verbatim directive are
+ * skipped to their closing fence, which uses the same character, is at least
+ * as long and carries nothing else; any other directive's body is MyST, so
+ * an include nested in an `{admonition}` counts.
+ */
+function includeArguments(text: string): string[] {
+  const out: string[] = [];
+  const open: { char: string; length: number; verbatim: boolean }[] = [];
+  for (const line of text.split(/\r?\n/)) {
+    const m = FENCE_RE.exec(line);
+    const top = open[open.length - 1];
+    const closes =
+      m !== null &&
+      top !== undefined &&
+      m[1][0] === top.char &&
+      m[1].length >= top.length &&
+      m[2].trim() === '';
+    if (top?.verbatim) {
+      if (closes) open.pop();
+      continue;
+    }
+    if (!m) continue;
+    if (closes) {
+      open.pop();
+      continue;
+    }
+    const directive = DIRECTIVE_RE.exec(m[2].trim());
+    if (directive) {
+      if (directive[1] === 'include' && directive[2] !== '') out.push(directive[2]);
+      open.push({
+        char: m[1][0],
+        length: m[1].length,
+        verbatim: VERBATIM_DIRECTIVES.has(directive[1]),
+      });
+    } else if (m[1][0] !== ':') {
+      // A code block. A colon fence is only ever a directive's.
+      open.push({ char: m[1][0], length: m[1].length, verbatim: true });
+    }
+  }
+  return out;
+}
 
 /**
  * The docs-relative `.md` files that `text`, the file at `fromFile`, includes,
@@ -264,10 +356,8 @@ const INCLUDE_RE = /^\s*(`{3,}|~{3,}|:{3,})\{include\}\s+(\S.*?)\s*$/;
 export function includesOf(text: string, fromFile: string): string[] {
   const out: string[] = [];
   const dir = path.posix.dirname(fromFile);
-  for (const line of text.split(/\r?\n/)) {
-    const m = INCLUDE_RE.exec(line);
-    if (!m) continue;
-    const arg = m[2].replace(/^(["'])(.*)\1$/, '$2');
+  for (const raw of includeArguments(text)) {
+    const arg = raw.replace(/^(["'])(.*)\1$/, '$2');
     const joined = arg.startsWith('/') ? arg.slice(1) : path.posix.join(dir, arg);
     const target = normalize(joined);
     if (target === undefined || !target.endsWith('.md')) continue;
@@ -305,19 +395,72 @@ export interface LectureSet extends TocDocuments {
 /** Where a file stands, for a caller that needs one answer and not the whole set. */
 export type Membership = 'document' | 'fragment' | 'outside';
 
+/** Folders a book never builds from: dot-folders, `_build` and `node_modules`. */
+const SKIPPED_FOLDERS = new Set(['_build', 'node_modules']);
+
+/**
+ * Whether a docs-relative path can be part of the book: not under a
+ * dot-folder (`.ipynb_checkpoints`, `.github`), `_build` or `node_modules`.
+ * The reader applies it to every source, so the CLI and sync see one set.
+ */
+export function isBookFile(file: string): boolean {
+  const folders = file.split('/').slice(0, -1);
+  return !folders.some((f) => f.startsWith('.') || SKIPPED_FOLDERS.has(f));
+}
+
+/** How many reads the reader has in flight at once. */
+const DEFAULT_CONCURRENCY = 8;
+
 /**
  * Reads a docs folder's lecture set through a source. Reads are cached, so a
- * caller asking about several files pays for each file once. A read that
- * fails rejects with a `LectureReadError` naming the file; the ToC's own
- * problems are `LectureSetError`s.
+ * caller asking about several files pays for each file once, and they run a
+ * few at a time (`concurrency`), which matters when each is an API call. A
+ * failed read is cached too, so a reader is for one run: make a new one to
+ * retry. A read that fails rejects with a `LectureReadError` naming the file;
+ * the ToC's own problems are `LectureSetError`s.
  */
 export class LectureSetReader {
+  private readonly files: readonly string[];
   private readonly fileSet: ReadonlySet<string>;
   private readonly cache = new Map<string, Promise<string>>();
+  private readonly concurrency: number;
   private tocPromise?: Promise<TocDocuments>;
 
-  constructor(private readonly source: LectureSetSource) {
-    this.fileSet = new Set(source.files);
+  constructor(
+    private readonly source: LectureSetSource,
+    options: { concurrency?: number } = {}
+  ) {
+    this.files = source.files.filter(isBookFile);
+    this.fileSet = new Set(this.files);
+    this.concurrency = Math.max(1, options.concurrency ?? DEFAULT_CONCURRENCY);
+  }
+
+  /**
+   * Walk the documents, then the files they include, in order, reading a
+   * batch at a time. `visit` sees each file's includes in queue order and
+   * returns true to stop the walk.
+   */
+  private async walk(
+    documents: readonly string[],
+    visit: (from: string, includes: string[]) => boolean
+  ): Promise<void> {
+    const seen = new Set(documents);
+    const queue = [...documents];
+    for (let i = 0; i < queue.length; ) {
+      const batch = queue.slice(i, i + this.concurrency);
+      const texts = await Promise.all(batch.map((f) => this.read(f)));
+      for (let j = 0; j < batch.length; j++) {
+        const includes = includesOf(texts[j], batch[j]);
+        if (visit(batch[j], includes)) return;
+        for (const target of includes) {
+          if (this.fileSet.has(target) && !seen.has(target)) {
+            seen.add(target);
+            queue.push(target);
+          }
+        }
+      }
+      i += batch.length;
+    }
   }
 
   private read(file: string): Promise<string> {
@@ -338,7 +481,7 @@ export class LectureSetReader {
   }
 
   private async readToc(): Promise<TocDocuments> {
-    const frontEnd = findTocFrontEnd(this.source.files);
+    const frontEnd = findTocFrontEnd(this.files);
     // A front end not built yet refuses before its file is read.
     const entries = frontEnd.built
       ? frontEnd.entries(await this.read(frontEnd.file))
@@ -352,13 +495,13 @@ export class LectureSetReader {
     for (const entry of entries) {
       if (entry.kind === 'url') continue;
       if (entry.kind === 'glob') {
-        expandTocGlob(entry.value, this.source.files).forEach(add);
+        expandTocGlob(entry.value, this.files).forEach(add);
         continue;
       }
       const resolved = resolveTocFile(entry.value, this.fileSet);
       if (resolved.kind === 'markdown') add(resolved.file);
       else if (resolved.kind === 'other') otherDocuments.push(resolved.file);
-      else missingEntries.push(resolved.entry);
+      else if (!missingEntries.includes(resolved.entry)) missingEntries.push(resolved.entry);
     }
     return { toc: frontEnd.file, documents, otherDocuments, missingEntries };
   }
@@ -371,45 +514,38 @@ export class LectureSetReader {
     const toc = await this.toc();
     const fragments: string[] = [];
     const missingIncludes: { from: string; target: string }[] = [];
-    const seen = new Set(toc.documents);
-    const queue = [...toc.documents];
-    for (let i = 0; i < queue.length; i++) {
-      const from = queue[i];
-      for (const target of includesOf(await this.read(from), from)) {
+    const inSet = new Set(toc.documents);
+    await this.walk(toc.documents, (from, includes) => {
+      for (const target of includes) {
         if (!this.fileSet.has(target)) {
           missingIncludes.push({ from, target });
-        } else if (!seen.has(target)) {
-          seen.add(target);
+        } else if (!inSet.has(target)) {
+          inSet.add(target);
           fragments.push(target);
-          queue.push(target);
         }
       }
-    }
-    return { ...toc, fragments, missingIncludes, has: (file: string) => seen.has(file) };
+      return false;
+    });
+    return { ...toc, fragments, missingIncludes, has: (file: string) => inSet.has(file) };
   }
 
   /**
    * Where one file stands, reading no more than it must: a ToC document is
    * known from the ToC alone, and the include scan stops at the first file
-   * that includes this one. For sync, where every read is an API call.
+   * that includes this one (after the batch it is in). For sync, where every
+   * read is an API call. A ToC entry backed by a notebook is 'outside': it is
+   * a document, but not a lecture.
    */
   async membership(file: string): Promise<Membership> {
     const toc = await this.toc();
     if (toc.documents.includes(file)) return 'document';
     if (!this.fileSet.has(file)) return 'outside';
-    const seen = new Set(toc.documents);
-    const queue = [...toc.documents];
-    for (let i = 0; i < queue.length; i++) {
-      const from = queue[i];
-      for (const target of includesOf(await this.read(from), from)) {
-        if (target === file) return 'fragment';
-        if (this.fileSet.has(target) && !seen.has(target)) {
-          seen.add(target);
-          queue.push(target);
-        }
-      }
-    }
-    return 'outside';
+    let found = false;
+    await this.walk(toc.documents, (_from, includes) => {
+      found = includes.includes(file);
+      return found;
+    });
+    return found ? 'fragment' : 'outside';
   }
 }
 
@@ -422,44 +558,59 @@ export function readLectureSet(source: LectureSetSource): Promise<LectureSet> {
 // THE FILESYSTEM SOURCE
 // =============================================================================
 
-/** A symbolic link to a file, followed; a link to a folder or to nothing is not a file. */
-function isFileTarget(link: string): boolean {
-  try {
-    return fs.statSync(link).isFile();
-  } catch {
-    return false;
-  }
-}
-
-/** Folders a book never builds from: dot-folders, `_build` and `node_modules`. */
-const SKIPPED_FOLDERS = new Set(['_build', 'node_modules']);
-
 /**
  * A docs folder on disk as a `LectureSetSource`, for the CLI. Symbolic links
- * to folders are not followed. An edition's own lecture set is this source on
- * the edition's docs folder: its ToC's documents and what its lectures
- * include, limited to the `.md` files it has.
+ * are followed, to files and to folders, as Sphinx follows them, but only
+ * when their target is inside the docs folder: a link out of it is left out,
+ * so a clone cannot hand the reader a file from elsewhere on the machine.
+ * `read` refuses a path that leaves the folder. An edition's own lecture set
+ * is this source on the edition's docs folder: its ToC's documents and what
+ * its lectures include, limited to the `.md` files it has. A docs folder that
+ * does not exist is a `LectureSetError`.
  */
 export function fileSystemSource(repoPath: string, docsFolder: string): LectureSetSource {
   const root = path.join(repoPath, docsFolder);
+  if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
+    throw new LectureSetError(`the docs folder ${root} does not exist`);
+  }
+  const realRoot = fs.realpathSync(root);
+  const inside = (real: string) => real === realRoot || real.startsWith(realRoot + path.sep);
   const files: string[] = [];
+  // The folders being walked, by real path: a link back to one of them is a cycle.
+  const ancestors = new Set<string>();
   const walk = (dir: string, rel: string): void => {
+    const real = fs.realpathSync(dir);
+    if (ancestors.has(real)) return;
+    ancestors.add(real);
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
       const childRel = rel ? `${rel}/${entry.name}` : entry.name;
-      if (entry.isDirectory()) {
+      let stat: fs.Stats;
+      try {
+        if (entry.isSymbolicLink() && !inside(fs.realpathSync(full))) continue;
+        stat = fs.statSync(full);
+      } catch {
+        continue; // a link to nothing
+      }
+      if (stat.isDirectory()) {
         if (entry.name.startsWith('.') || SKIPPED_FOLDERS.has(entry.name)) continue;
-        walk(path.join(dir, entry.name), childRel);
-      } else if (entry.isFile()) {
-        files.push(childRel);
-      } else if (entry.isSymbolicLink() && isFileTarget(path.join(dir, entry.name))) {
+        walk(full, childRel);
+      } else if (stat.isFile()) {
         files.push(childRel);
       }
     }
+    ancestors.delete(real);
   };
-  if (fs.existsSync(root)) walk(root, '');
+  walk(root, '');
   files.sort();
   return {
     files,
-    read: (file: string) => fs.promises.readFile(path.join(root, file), 'utf-8'),
+    read: async (file: string) => {
+      const rel = normalize(file);
+      if (rel === undefined || rel === '') throw new Error(`${file} is not inside the docs folder`);
+      const real = await fs.promises.realpath(path.join(root, rel));
+      if (!inside(real)) throw new Error(`${file} is not inside the docs folder`);
+      return fs.promises.readFile(real, 'utf-8');
+    },
   };
 }

@@ -47,11 +47,14 @@ build plan.
 8. **The reader has two front ends by design:** `_toc.yml` (`jb-book` and `jb-article`) and
    mystmd's `myst.yml` (`project.toc`). Only `_toc.yml`'s is built. `myst.yml`'s is named and
    refused, and is built, with a test against lecture-wasm's ToC, when the first edition moves
-   to mystmd. A folder with both reads `_toc.yml`.
+   to mystmd. Implementation reading, not ruled: a folder with both reads `_toc.yml`, and a
+   `_toc.yml` whose `format` is neither `jb-book` nor `jb-article`, or that names no `root`, is
+   refused rather than read as an empty book.
 9. **No ToC, no lecture set.** A sync run whose source ToC cannot be read or parsed fails; it
    never falls back to the folder, which would quietly widen the set. The CLI's bulk modes fail
-   the same way when the docs folder has no `_toc.yml`, as `init` already did. `-f` names a
-   file and needs no ToC.
+   the same way when the docs folder has no `_toc.yml`, as `init` already did. A bulk mode's
+   `-f` names a file and skips discovery, so it needs no ToC; `init -f` still reads the ToC,
+   since it accepts only a file in the set.
 
 **Consequences**:
 
@@ -67,6 +70,9 @@ build plan.
 - The reader is `src/lecture-set.ts`. It reads through a source, a file list and a reader, so
   the CLI drives it from disk and sync from the GitHub API at one commit. Its first PR moved
   sync's ToC walk there and changed no behaviour; the tools move onto it in the PRs after.
+- The edition's set (7) is the same reader run on the edition's docs folder: entries with no
+  `.md` behind them are reported, not included, so it is limited to the files the edition has.
+  There is no separate edition reader.
 
 **Refs**: #449 (the design and the ruling), #385, #370, #259 (D2 and the ToC merge), #222, #117,
 #142, #254, #398, D-2026-10-19-sync-scope-existing-reads-state-files.
