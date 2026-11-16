@@ -23,11 +23,19 @@ The CLI is available as `npx translate` from within the repository.
 |----------|-------------|-------------|
 | `ANTHROPIC_API_KEY` | `backward`, `forward`, `init`, `status --check-sync` | Anthropic API key for Claude. Not needed with `--test` or `--dry-run`. |
 
+## Which files the commands see
+
+`init`, and `status`, `forward`, `backward`, `headingmap` and `doctor` without `-f`, work on each repository's **lecture set**: the documents its docs folder's `_toc.yml` lists, then the `.md` files those documents include with MyST's `{include}` directive, followed through further includes ([#449](https://github.com/QuantEcon/action-translation/issues/449)). An included file such as `_admonition/gpu.md` is a lecture like any other, named by its path relative to the docs folder, and its state file is `.translate/state/_admonition/gpu.md.yml`. A `.md` file that the ToC does not list and no lecture includes, such as a `README.md` or a draft, is left out, and so is a ToC entry backed by a notebook rather than a `.md` file.
+
+- **The source side is the source's set, and the target side is the edition's own.** The edition's `_toc.yml` is a mirror of the source's, so it can list lectures a partial edition has not translated. Such an entry has no file behind it, so it is not a lecture of the edition: `status` shows a lecture the source has and the edition lacks as `SOURCE_ONLY`.
+- **No `_toc.yml`, no bulk run.** When either repository's docs folder has no `_toc.yml`, or does not exist, a bulk run stops with exit 1 and names the repository and the folder; `doctor` fails its `Lecture set` check instead. `-f <file>` names one file and skips this discovery, so it works on any folder. `init -f` still reads the ToC, since it translates only a file in the set.
+- **`--exclude` matches the path relative to the docs folder**, so `--exclude _admonition/gpu.md` leaves out the admonition and not a top-level `gpu.md`. A `*` at either end of a pattern matches any text there: `*.yml` (a suffix), `troubleshoot*` and `_admonition/*` (a prefix), `*draft*` (anywhere).
+
 ## Commands
 
 ### `status` — Sync diagnostic
 
-Fast structural check with no LLM calls. Compares source and target repositories and reports per-file sync status.
+Fast structural check with no LLM calls. Compares source and target repositories and reports per-file sync status, for the lectures in either repository's lecture set (see [Which files the commands see](#which-files-the-commands-see)).
 
 ```bash
 npx translate status -s <source-path> -t <target-path> [options]
@@ -43,7 +51,7 @@ npx translate status -s <source-path> -t <target-path> [options]
 | `-d, --docs-folder <folder>` | `lectures` | Documentation folder within repos |
 | `-l, --language <code>` | `zh-cn` | Target language code |
 | `--source-language <code>` | `en` | Source language code (used with `--write-state`) |
-| `--exclude <pattern>` | *(none)* | Exclude files matching pattern (repeatable) |
+| `--exclude <pattern>` | *(none)* | Exclude files by docs-relative path; `*` at either end matches any text (repeatable) |
 | `--json` | `false` | Output as JSON |
 | `--write-state` | `false` | Bootstrap `.translate/` metadata from current state |
 | `--carried` | `false` | With `--write-state`: confirm the translation carries the English changes since each lecture's recorded sync point |
@@ -62,6 +70,9 @@ npx translate status -s <source-path> -t <target-path> [options]
 | `MISSING_HEADINGMAP` | No heading-map in target frontmatter |
 | `SOURCE_ONLY` | File exists in source but not target |
 | `TARGET_ONLY` | File exists in target but not source |
+| `UNLISTED` | The edition has the file and its state file, but neither lecture set holds it: a lecture taken out of the ToC and kept, which sync no longer updates |
+
+An `UNLISTED` lecture is listed so that it cannot go stale unnoticed ([#449](https://github.com/QuantEcon/action-translation/issues/449), ruling 4). It is only reported: `--write-state` leaves its state file as it is, `--check-sync` does not triage it, and `forward` does not resync it. Put it back in the ToC, or remove it with its state file; `-f` still works on it. A `.md` file outside the lecture sets with no state file, such as a `README.md`, is not listed. With `--json`, `summary.unlisted` counts them.
 
 **Example:**
 
@@ -114,7 +125,7 @@ npx translate backward -s <source-path> -t <target-path> [options]
 | `--json` | `false` | Include JSON reports |
 | `--test` | `false` | Use deterministic mock responses (no LLM) |
 | `--min-confidence <n>` | `0.6` | Minimum confidence threshold for reporting |
-| `--exclude <pattern>` | *(none)* | Exclude files matching pattern |
+| `--exclude <pattern>` | *(none)* | Exclude files by docs-relative path; `*` at either end matches any text |
 | `--resume` | `false` | Resume a previous bulk run from checkpoint |
 | `--source-language <code>` | *(config, then `en`)* | Source language code |
 | `-j, --parallel <n>` | `5` | Concurrent analyses in bulk mode (clamped to 1–10) |
@@ -141,7 +152,7 @@ npx translate backward \
   -t ~/repos/lecture-intro.zh-cn
 ```
 
-Bulk mode analyses the `.md` files at the top level of the docs folder that both repositories have, since a file on one side only has nothing to compare: a lecture the edition has not translated yet, an edition-only page, or a translation whose English was removed. The run lists each such file as skipped, with its side, on the console and in `_summary.md` (`oneSidedFiles` in `_summary.json`), and does not count it as an error. A run in which one repository's docs folder has no `.md` files at its top level while the other's has some stops with exit 1, before writing anything, since `-s`, `-t` or `-d` is usually wrong. `-f` names one file, and fails when either repository lacks it.
+Bulk mode analyses the lectures that both repositories' lecture sets hold (see [Which files the commands see](#which-files-the-commands-see)), since a file on one side only has nothing to compare: a lecture the edition has not translated yet, an edition-only page, or a translation whose English was removed. The run lists each such file as skipped, with its side, on the console and in `_summary.md` (`oneSidedFiles` in `_summary.json`), and does not count it as an error. A run stops with exit 1, before writing anything, when either docs folder has no `_toc.yml` or does not exist, or when one repository has no lectures (no ToC entry with a `.md` file behind it) while the other has some, since `-s`, `-t` or `-d` is usually wrong. `-f` names one file, and fails when either repository lacks it.
 
 **Output structure (bulk mode):**
 
@@ -153,7 +164,11 @@ reports/backward-2026-03-06/
 │   ├── _progress.json    # Checkpoint manifest
 │   ├── _log.txt          # Detailed processing log
 │   ├── cobweb.json       # Per-file JSON sidecar
-│   └── solow.json
+│   ├── solow.json
+│   └── _admonition/
+│       └── gpu.json      # A lecture in a subfolder keeps its path
+├── _admonition/
+│   └── gpu.md
 ├── cobweb.md             # Per-file Markdown report
 └── solow.md
 ```
@@ -245,7 +260,7 @@ npx translate forward -s <source-path> -t <target-path> [options]
 | `--test` | `false` | Use deterministic mock responses (no LLM) |
 | `--github <owner/repo>` | *(none)* | Create one PR per file in the target repo |
 | `--glossary <path>` | *(auto)* | Path to glossary JSON file (default: built-in glossary for the language) |
-| `--exclude <pattern>` | *(none)* | Exclude files matching pattern |
+| `--exclude <pattern>` | *(none)* | Exclude files by docs-relative path; `*` at either end matches any text |
 | `--source-language <code>` | *(config, then `en`)* | Source language code |
 | `-j, --parallel <n>` | `5` | Concurrent resyncs in bulk mode (clamped to 1–10; forced to 1 with `--github`) |
 
@@ -273,7 +288,9 @@ npx translate forward \
   -t ~/repos/lecture-intro.zh-cn
 ```
 
-On a partial edition, name each translated lecture with `-f`, or leave the English copies out with `--exclude`. A bulk run resyncs each copy the source has moved on from and writes a state file for it, and under `sync-scope: existing` that state file puts the copy in sync's scope (see [Partial editions](action-reference.md#partial-editions)).
+A bulk run takes its files from `status`, so from both lecture sets (see [Which files the commands see](#which-files-the-commands-see)).
+
+On a partial edition, name each translated lecture with `-f`, or leave the English copies out with `--exclude`. A bulk run resyncs each copy the source has moved on from and writes a state file for it, and under `sync-scope: existing` that state file puts the copy in sync's scope (see [Partial editions](action-reference.md#partial-editions)). That includes an English copy of a file the lectures include, such as `_admonition/gpu.md`: exclude it by that path.
 
 **GitHub PR mode:**
 
@@ -299,7 +316,7 @@ Creates one PR per file in the target repo with branch `resync/{filename}` and l
 
 ### `init` — Bulk-translate a new project
 
-One-time bulk translation of an entire lecture series from a local source repository. Reads `_toc.yml` for lecture discovery, translates each lecture sequentially with `translateFullDocument()`, generates heading-maps, and produces a translation report.
+One-time bulk translation of an entire lecture series from a local source repository. Takes its lectures from the source's lecture set (see [Which files the commands see](#which-files-the-commands-see)): the documents `_toc.yml` lists, in order, then the `.md` files they include, such as `_admonition/gpu.md`, which it translates like any lecture, with its state file. It translates each lecture sequentially with `translateFullDocument()`, generates heading-maps, and produces a translation report.
 
 This is intended for onboarding a new project — use `forward` for incremental updates after the initial translation.
 
@@ -363,7 +380,7 @@ Download: [Source Han Serif SC](https://github.com/adobe-fonts/source-han-serif/
 **7-phase pipeline:**
 
 1. **Load glossary** — `--glossary` if given, else a repo-local `glossary/<lang>.json`, else the built-in glossary shipped with the package (see [Glossary](glossary.md#using-a-custom-glossary))
-2. **Parse `_toc.yml`** — discovers lectures from the source repo's table of contents
+2. **Read the lecture set** — the documents the source's `_toc.yml` lists, then the files they include. A ToC entry with no `.md` file behind it, or one backed by a notebook, is named on the console and not translated. A docs folder with no `_toc.yml` stops the run before any translation
 3. **Setup target folder** — creates the target directory structure, and writes `.translate/config.yml` if the target has none
 4. **Copy non-markdown files** — images, config, data files, CSS (preserves directory structure); a file the target already has is kept, never overwritten
 5. **Translate lectures** — sequentially with retry + progress bar
@@ -404,6 +421,8 @@ Would write .translate/config.yml
 Run without --dry-run to translate.
 ```
 
+On a source whose lectures include other files, the count names them (`Found 52 lectures: 51 in _toc.yml, and 1 file they include`), and the list ends with them. A ToC entry with nothing to translate is named above the list, once, rather than marked in it: `⚠ Not translated: 1 _toc.yml entry with no .md file behind it: index`.
+
 **Full translation example:**
 
 ```bash
@@ -424,7 +443,7 @@ npx translate init \
   --dry-run
 ```
 
-`-f` names a lecture listed in the source `_toc.yml`, and takes the first entry in ToC order that equals or contains the name. Preview with `--dry-run` first: it prints the `Translating single file:` line with the lecture it matched, and stops before translating or writing anything. Then run the same command without `--dry-run`. Each lecture then joins the edition in its own PR, with its state file (see [Tutorial: Fresh Setup](tutorials/fresh-setup.md#one-reviewed-lecture-at-a-time)).
+`-f` names a lecture in the source's lecture set: a document `_toc.yml` lists, or a file one of them includes, such as `-f _admonition/gpu.md`. It takes the lecture named exactly, or else the first in the set's order whose path contains the name. A file outside the set is refused, by name, before any translation. Preview with `--dry-run` first: it prints the `Translating single file:` line with the lecture it matched, and stops before translating or writing anything. Then run the same command without `--dry-run`. Each lecture then joins the edition in its own PR, with its state file (see [Tutorial: Fresh Setup](tutorials/fresh-setup.md#one-reviewed-lecture-at-a-time)).
 
 **Into an existing edition**, with or without `-f`, `init` leaves the edition's own files alone:
 
@@ -620,9 +639,9 @@ It refuses in three cases:
 
 The first two checks refuse the whole run before anything is written. The third lets the run write the config and the other files' state, then fails, naming each unreadable file. `--force` skips all three; `--carried` skips only the second.
 
-A file gets a state file only when both repositories have it. After the table, the run prints how many state files it wrote, then each file it left without one and why: `source only`, `target only`, `not found` (a `-f` name neither repository has), or the error that stopped the write. A run that wrote no state file, or failed to write one, exits 1. One that can write none, such as a mistyped `-f`, also leaves `.translate/config.yml` as it was. With `--json` the same record is the `writeState` field of the output.
+A file gets a state file only when both repositories have it. After the table, the run prints how many state files it wrote, then each file it left without one and why: `source only`, `target only`, `not found` (a `-f` name neither repository has), or the error that stopped the write. An `UNLISTED` lecture keeps the state file it has, and is listed as `state file left as it is (not in the lecture set)`. A run that wrote no state file, or failed to write one, exits 1. One that can write none, such as a mistyped `-f`, also leaves `.translate/config.yml` as it was. With `--json` the same record is the `writeState` field of the output.
 
-On a partial edition, write state only for the lectures it has translated. Without `-f` or `--exclude`, `--write-state` writes one for every `.md` file at the top level of the docs folder that both repositories have, English copies included, and under `sync-scope: existing` each state file puts its lecture in scope. Run it once per translated lecture with `-f`, or leave the English copies out with `--exclude`; a translated lecture in a subfolder needs `-f` either way, for example `-f advanced/topic.md`. Pass the edition's own `-l` and `-d` every time, since each run rewrites `.translate/config.yml` from the flags:
+On a partial edition, write state only for the lectures it has translated. Without `-f` or `--exclude`, `--write-state` writes one for every lecture both lecture sets hold, subfolders and included files such as `_admonition/gpu.md` too, English copies included, and under `sync-scope: existing` each state file puts its lecture in scope. Run it once per translated lecture with `-f`, or leave the English copies out with `--exclude`, by their paths in the docs folder (`--exclude _admonition/gpu.md`). Pass the edition's own `-l` and `-d` every time, since each run rewrites `.translate/config.yml` from the flags:
 
 ```bash
 npx translate status \
@@ -698,12 +717,15 @@ npx translate doctor -t <target-path> [options]
 | Check | Description |
 |-------|-------------|
 | `.translate/config.yml` | Config exists and has required fields |
-| `.translate/state/` | All target `.md` files have state entries |
-| Heading maps | All target files have `heading-map` in frontmatter |
+| Lecture set | The edition's `_toc.yml` can be read; counts its lectures, and the entries with no file in the edition |
+| `.translate/state/` | Every lecture in the edition's lecture set has a state entry |
+| Heading maps | Every lecture in it that has sections has a `heading-map` in frontmatter |
 | Workflow | `.github/workflows/` has a translation workflow |
-| Source repo | Source path is accessible with `.md` files (if `-s` provided) |
-| Section alignment | Section counts match between source and target (if `-s` provided) |
+| Source repo | Source path is accessible, and its docs folder has a lecture set (if `-s` provided) |
+| Section alignment | Section counts match between source and target, for the lectures both lecture sets hold (if `-s` provided) |
 | `gh` CLI | `gh` is installed and authenticated (if `--check-gh`) |
+
+The lecture set is the edition's own (see [Which files the commands see](#which-files-the-commands-see)). Without a `_toc.yml` the `Lecture set` check fails with the reason, and the state-file, heading-map and section-alignment checks, which run on it, do not run; the others still do.
 
 Exits with code 1 if any check fails — suitable for CI.
 
@@ -736,11 +758,11 @@ npx translate headingmap -s <source-path> -t <target-path> [options]
 | `-t, --target <path>` | *(required)* | Target repository path |
 | `-f, --file <filename>` | *(optional)* | Single file to process |
 | `-d, --docs-folder <folder>` | `lectures` | Documentation folder |
-| `--exclude <glob>` | *(optional)* | Exclude pattern (repeatable) |
+| `--exclude <glob>` | *(optional)* | Exclude files by docs-relative path; `*` at either end matches any text (repeatable) |
 | `--json` | `false` | Output as JSON |
 | `--dry-run` | `false` | Show what would be generated without writing |
 
-**What it does:**
+**What it does**, for each lecture both lecture sets hold, or the `-f` file (see [Which files the commands see](#which-files-the-commands-see)):
 
 1. Parses both source and target files to extract section headings
 2. Matches sections by position (first source section → first target section)
@@ -750,7 +772,7 @@ npx translate headingmap -s <source-path> -t <target-path> [options]
 **Example:**
 
 ```bash
-# Generate heading-maps for all files
+# Generate heading-maps for every lecture
 npx translate headingmap -s ~/repos/lecture-python-intro -t ~/repos/lecture-python-intro.zh-cn
 
 # Single file, preview only

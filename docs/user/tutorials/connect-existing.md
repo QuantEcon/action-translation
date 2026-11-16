@@ -120,7 +120,7 @@ This uses a lightweight LLM comparison to classify each file:
 If all files show `IDENTICAL` or `I18N_ONLY`, skip to Step 4. If any show `CONTENT_CHANGES`, proceed to Step 3. If any show `TARGET_HAS_ADDITIONS`, consider running `translate backward` first to capture improvements before resyncing.
 
 :::{note}
-**On a partial edition**, the check also reports the English copies: a byte-identical copy as `IDENTICAL` (`Files are byte-identical`), and one the source has moved on from as `CONTENT_CHANGES`. Neither is a translation, so leave the copies out of Steps 3 to 5: name each translated lecture with `-f`, or leave the copies out with `--exclude`. Without either, both commands take every `.md` file at the top level of the docs folder: `forward` (Steps 3 and 5) rewrites each copy the source has moved on from and writes a state file for it, and `status --write-state` (Step 4) writes one for every copy. (If any copy is stale, `--write-state` refuses the whole run and suggests `forward` or `--force`; on a partial edition take neither, and rerun with `-f` or `--exclude`.) Under `sync-scope: existing` (Step 6), a state file puts its copy in sync's scope.
+**On a partial edition**, the check also reports the English copies: a byte-identical copy as `IDENTICAL` (`Files are byte-identical`), and one the source has moved on from as `CONTENT_CHANGES`. Neither is a translation, so leave the copies out of Steps 3 to 5: name each translated lecture with `-f`, or leave the copies out with `--exclude`. Without either, both commands take every lecture in the lecture sets, the documents each `_toc.yml` lists and the files they include, such as an English `_admonition/gpu.md` (exclude it by that path): `forward` (Steps 3 and 5) rewrites each copy the source has moved on from and writes a state file for it, and `status --write-state` (Step 4) writes one for every copy. (If any copy is stale, `--write-state` refuses the whole run and suggests `forward` or `--force`; on a partial edition take neither, and rerun with `-f` or `--exclude`.) Under `sync-scope: existing` (Step 6), a state file puts its copy in sync's scope.
 :::
 
 :::{tip}
@@ -205,7 +205,7 @@ section-count: 5           # Current source section count
 ```
 
 :::{warning}
-**On a partial edition, write state for the translated lectures only.** Without `-f` or `--exclude`, `--write-state` writes a state file for every `.md` file at the top level of the docs folder that both repositories have, English copies included. Under `sync-scope: existing` (Step 6), a state file is what puts a lecture in sync's scope, so the next English change to a copy with one would be synced into it as a half-translated page. Run the command once per translated lecture with `-f`, or leave the copies out with `--exclude`; a translated lecture in a subfolder needs `-f` in any case. Keep `-l`, and `-d` if the docs folder is not `lectures`, on every run, since each one rewrites `.translate/config.yml` from its flags. See [Bootstrapping existing projects](../cli-reference.md#bootstrapping-existing-projects).
+**On a partial edition, write state for the translated lectures only.** Without `-f` or `--exclude`, `--write-state` writes a state file for every lecture both lecture sets hold, subfolders and included files such as `_admonition/gpu.md` too, English copies included. Under `sync-scope: existing` (Step 6), a state file is what puts a lecture in sync's scope, so the next English change to a copy with one would be synced into it as a half-translated page. Run the command once per translated lecture with `-f`, or leave the copies out with `--exclude`, by their paths in the docs folder (`--exclude _admonition/gpu.md`). Keep `-l`, and `-d` if the docs folder is not `lectures`, on every run, since each one rewrites `.translate/config.yml` from its flags. See [Bootstrapping existing projects](../cli-reference.md#bootstrapping-existing-projects).
 
 ```bash
 npx translate status \
@@ -540,7 +540,7 @@ On a partial edition, some of this reads differently:
 - `status` shows the lectures the edition has not taken as `SOURCE_ONLY`. Under `sync-scope: existing`, sync never translates them: each joins the edition in its own reviewed PR, as in [One reviewed lecture at a time](fresh-setup.md#one-reviewed-lecture-at-a-time).
 - The English copies have no state file and no heading-map, on purpose. `doctor` warns about the missing state files, and about the missing heading-maps of the copies that have sections, which `status` shows with `MISSING_HEADINGMAP`.
 - A copy the source has moved on from shows `OUTDATED`, or `SOURCE_AHEAD` when the source added a section. Leave it: `forward` would rewrite it and give it a state file, which puts it in sync's scope.
-- `doctor` names at most five files without a state file, and checks only the top level of the docs folder. Compare `.translate/state/` with the lectures the edition has translated, subfolders included: each translated lecture needs a state file, and no English copy may have one.
+- `doctor` names at most five files without a state file, and checks only the lectures in the edition's lecture set: the documents its `_toc.yml` lists that it has, and the files they include. Compare `.translate/state/` with the lectures the edition has translated: each translated lecture needs a state file, and no English copy may have one.
 
 ---
 

@@ -100,10 +100,15 @@ describe('CLI smoke tests', () => {
       expect(stdout).toContain('--target');
     });
 
-    it('status handles missing source gracefully', async () => {
-      const { code } = await run(['status', '-s', '/nonexistent/path', '-t', '/tmp']);
-      // Status command reports 0 files found rather than crashing
-      expect(code).toBe(0);
+    // A folder with no ToC has no lecture set, so a bulk run stops there and
+    // says why (#449); before, it reported 0 files and exited 0.
+    it('status exits 1 with the reader’s message when the source has no docs folder', async () => {
+      const { code, stderr } = await run(['status', '-s', '/nonexistent/path', '-t', '/tmp']);
+      expect(code).toBe(1);
+      expect(stderr).toContain(
+        'SOURCE: the docs folder /nonexistent/path/lectures does not exist\n' +
+          "A bulk run takes its lectures from the docs folder's _toc.yml"
+      );
     });
 
     // The carried-change guard is unit-tested in status.test.ts; this pins the
@@ -143,6 +148,14 @@ describe('CLI smoke tests', () => {
         // Source first, so the date guard passes
         commitFile(source, 'lectures/lecture.md', '# Lecture\n\n## One\n\nText.\n');
         commitFile(target, 'lectures/lecture.md', '# 讲座\n\n## 一\n\n文字。\n');
+        // Both lecture sets list it (#449)
+        for (const repo of [source, target]) {
+          fs.writeFileSync(
+            path.join(repo, 'lectures', '_toc.yml'),
+            'format: jb-book\nroot: lecture\n',
+            'utf-8'
+          );
+        }
         // A sync point the source clone does not have: the guard cannot check it
         fs.mkdirSync(path.join(target, '.translate', 'state'), { recursive: true });
         fs.writeFileSync(

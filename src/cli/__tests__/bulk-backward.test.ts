@@ -2,7 +2,8 @@
  * Tests for bulk backward processing
  *
  * Tests file discovery, checkpointing, cost estimation, and bulk orchestration.
- * Uses --test mode (no LLM calls) with temporary directories.
+ * Uses --test mode (no LLM calls) with temporary directories. Discovery reads
+ * each repository's lecture set (#449), so the fixtures write a `_toc.yml`.
  */
 
 import * as fs from 'fs';
@@ -19,6 +20,8 @@ import {
   BackwardLogger,
 } from '../commands/backward.js';
 import { BackwardOptions, BackwardReport } from '../types.js';
+import { loadResyncDirectory } from '../schema.js';
+import { writeToc } from '../../test-support/toc-fixture.js';
 
 // ============================================================================
 // HELPERS
@@ -134,6 +137,10 @@ function setupMultiFileFixture(): { sourceDir: string; targetDir: string } {
   writeMd(path.join(sourceDir, 'lectures', 'cobweb.md'), SOURCE_CONTENT);
   writeMd(path.join(targetDir, 'lectures', 'cobweb.md'), TARGET_BUGFIX);
 
+  const lectures = ['intro', 'aligned-basics', 'cobweb'];
+  writeToc(path.join(sourceDir, 'lectures'), lectures);
+  writeToc(path.join(targetDir, 'lectures'), lectures);
+
   return { sourceDir, targetDir };
 }
 
@@ -225,13 +232,26 @@ function setupOneSidedFixture(): { sourceDir: string; targetDir: string } {
     path.join(dirs.targetDir, '.translate', 'state', 'gone.md.yml'),
     "source-sha: abc1234\nsynced-at: '2026-10-01'\nmodel: claude-sonnet-5\nmode: NEW\nsection-count: 1\n"
   );
+  writeToc(path.join(dirs.sourceDir, 'lectures'), [
+    'intro',
+    'aligned-basics',
+    'cobweb',
+    'untranslated',
+  ]);
+  writeToc(path.join(dirs.targetDir, 'lectures'), [
+    'intro',
+    'aligned-basics',
+    'cobweb',
+    'extra',
+    'gone',
+  ]);
   return dirs;
 }
 
 describe('discoverBulkFiles', () => {
-  it('returns the files both repos have', () => {
+  it('returns the files both repos have', async () => {
     const { sourceDir, targetDir } = setupMultiFileFixture();
-    const discovered = discoverBulkFiles(sourceDir, targetDir, 'lectures', []);
+    const discovered = await discoverBulkFiles(sourceDir, targetDir, 'lectures', []);
 
     expect(discovered).toEqual({
       files: ['aligned-basics.md', 'cobweb.md', 'intro.md'],
@@ -242,9 +262,9 @@ describe('discoverBulkFiles', () => {
     });
   });
 
-  it('returns a file on one side only apart, naming the side (#400)', () => {
+  it('returns a file on one side only apart, naming the side (#400)', async () => {
     const { sourceDir, targetDir } = setupOneSidedFixture();
-    const discovered = discoverBulkFiles(sourceDir, targetDir, 'lectures', []);
+    const discovered = await discoverBulkFiles(sourceDir, targetDir, 'lectures', []);
 
     expect(discovered.files).toEqual(['aligned-basics.md', 'cobweb.md', 'intro.md']);
     expect(discovered.oneSided).toEqual([
@@ -254,9 +274,9 @@ describe('discoverBulkFiles', () => {
     ]);
   });
 
-  it('applies exclude patterns before either list, and counts what they removed', () => {
+  it('applies exclude patterns before either list, and counts what they removed', async () => {
     const { sourceDir, targetDir } = setupOneSidedFixture();
-    const discovered = discoverBulkFiles(sourceDir, targetDir, 'lectures', [
+    const discovered = await discoverBulkFiles(sourceDir, targetDir, 'lectures', [
       'intro.md',
       'extra.md',
     ]);
@@ -265,7 +285,44 @@ describe('discoverBulkFiles', () => {
     expect(discovered.oneSided.map((f) => f.file)).toEqual(['gone.md', 'untranslated.md']);
     expect(discovered.excluded).toBe(2);
   });
+
+  // #385: bulk discovery read only the top level of the docs folder
+  it('takes the fragments the lectures include, and no .md outside the lecture set', async () => {
+    const { sourceDir, targetDir } = setupMultiFileFixture();
+    writeFragment(sourceDir, targetDir);
+
+    const discovered = await discoverBulkFiles(sourceDir, targetDir, 'lectures', []);
+    expect(discovered.files).toEqual([
+      '_admonition/gpu.md',
+      'aligned-basics.md',
+      'cobweb.md',
+      'intro.md',
+    ]);
+
+    const excluded = await discoverBulkFiles(sourceDir, targetDir, 'lectures', [
+      '_admonition/gpu.md',
+    ]);
+    expect(excluded.files).not.toContain('_admonition/gpu.md');
+    expect(excluded.excluded).toBe(1);
+  });
 });
+
+/**
+ * `cobweb.md` in both repositories includes `_admonition/gpu.md`, and each
+ * docs folder holds a README its ToC does not list.
+ */
+function writeFragment(sourceDir: string, targetDir: string): void {
+  const include = '```{include} _admonition/gpu.md\n```\n\n';
+  for (const [dir, content, gpu] of [
+    [sourceDir, SOURCE_CONTENT, 'This lecture was built with a GPU.'],
+    [targetDir, TARGET_BUGFIX, '本讲座使用 GPU 构建。'],
+  ]) {
+    const docs = path.join(dir, 'lectures');
+    writeMd(path.join(docs, 'cobweb.md'), content.replace(/\n## /, `\n${include}## `));
+    writeMd(path.join(docs, '_admonition', 'gpu.md'), `\`\`\`{admonition} GPU\n${gpu}\n\`\`\`\n`);
+    writeMd(path.join(docs, 'README.md'), '# Lectures\n');
+  }
+}
 
 // ============================================================================
 // BUILD BULK REPORT
@@ -505,25 +562,102 @@ describe('runBackwardBulk', () => {
         dirs.targetDir,
       ],
     ],
-  ])('refuses a run whose %s has no .md files while the other has some', async (flag, pick) => {
+  ])('refuses a run whose %s has no docs folder, before writing anything', async (flag, pick) => {
     const [sourceDir, targetDir] = pick(setupMultiFileFixture());
+    const side = flag === '--source' ? 'SOURCE' : 'TARGET';
 
+    // The reader stops a wrong path now: a docs folder that is not there has no lecture set (#449)
     await expect(
       runBackwardBulk(
         buildBulkOptions(sourceDir, targetDir, path.join(tmpDir, 'reports')),
         silentLogger
       )
     ).rejects.toThrow(
-      `No top-level .md files in ${path.join(tmpDir, 'typo', 'lectures')}, though the other repository has some: check ${flag} and --docs-folder.`
+      `${side}: the docs folder ${path.join(tmpDir, 'typo', 'lectures')} does not exist`
     );
     expect(fs.existsSync(path.join(tmpDir, 'reports'))).toBe(false);
+  });
+
+  it.each(['--source', '--target'])(
+    'refuses a run whose %s has a ToC with no lecture behind it while the other has lectures (#400)',
+    async (flag) => {
+      const dirs = setupMultiFileFixture();
+      const typo = path.join(tmpDir, 'typo');
+      writeToc(path.join(typo, 'lectures'), ['intro', 'cobweb']);
+      const [sourceDir, targetDir] =
+        flag === '--source' ? [typo, dirs.targetDir] : [dirs.sourceDir, typo];
+
+      await expect(
+        runBackwardBulk(
+          buildBulkOptions(sourceDir, targetDir, path.join(tmpDir, 'reports')),
+          silentLogger
+        )
+      ).rejects.toThrow(
+        `No lectures in ${path.join(typo, 'lectures')}: no entry in its _toc.yml has a .md file ` +
+          `behind it, though the other repository has lectures. Check ${flag} and --docs-folder.`
+      );
+      expect(fs.existsSync(path.join(tmpDir, 'reports'))).toBe(false);
+    }
+  );
+
+  it('refuses a run when a docs folder has no _toc.yml, before writing anything (#449)', async () => {
+    const { sourceDir, targetDir } = setupMultiFileFixture();
+    fs.rmSync(path.join(sourceDir, 'lectures', '_toc.yml'));
+
+    await expect(
+      runBackwardBulk(
+        buildBulkOptions(sourceDir, targetDir, path.join(tmpDir, 'reports')),
+        silentLogger
+      )
+    ).rejects.toThrow(/^SOURCE .*has no _toc\.yml or myst\.yml, so it has no lecture set\n/);
+    expect(fs.existsSync(path.join(tmpDir, 'reports'))).toBe(false);
+  });
+
+  it('writes a fragment’s report at its docs-relative path, where resume and review find it', async () => {
+    const { sourceDir, targetDir } = setupMultiFileFixture();
+    writeFragment(sourceDir, targetDir);
+    const outputDir = path.join(tmpDir, 'reports');
+
+    const result = await runBackwardBulk(
+      buildBulkOptions(sourceDir, targetDir, outputDir),
+      silentLogger
+    );
+
+    expect(result.filesAnalyzed).toBe(4);
+    const repoScopedDir = path.join(outputDir, path.basename(sourceDir));
+    const bulkDir = path.join(repoScopedDir, fs.readdirSync(repoScopedDir)[0]);
+    expect(fs.existsSync(path.join(bulkDir, '_admonition', 'gpu.md'))).toBe(true);
+    expect(fs.existsSync(path.join(bulkDir, '.resync', '_admonition', 'gpu.json'))).toBe(true);
+    expect(fs.existsSync(path.join(bulkDir, 'gpu.md'))).toBe(false);
+    expect(fs.existsSync(path.join(bulkDir, 'README.md'))).toBe(false);
+
+    const loaded = loadResyncDirectory(path.join(bulkDir, '.resync'));
+    expect(loaded.errors).toEqual([]);
+    expect(loaded.reports.map((r) => r.file).sort()).toEqual([
+      '_admonition/gpu.md',
+      'aligned-basics.md',
+      'cobweb.md',
+      'intro.md',
+    ]);
+
+    // A resume reloads every report from its sidecar, the nested one included
+    const resumed = await runBackwardBulk(
+      buildBulkOptions(sourceDir, targetDir, bulkDir),
+      silentLogger,
+      [],
+      true
+    );
+    expect(resumed.fileReports.map((r) => r.file).sort()).toEqual(
+      loaded.reports.map((r) => r.file).sort()
+    );
   });
 
   it('should handle empty docs folder gracefully', async () => {
     const sourceDir = path.join(tmpDir, 'empty-source');
     const targetDir = path.join(tmpDir, 'empty-target');
-    fs.mkdirSync(sourceDir, { recursive: true });
-    fs.mkdirSync(targetDir, { recursive: true });
+    // ToCs whose root has no file behind it: lecture sets with no lectures
+    writeToc(path.join(sourceDir, 'lectures'), ['index']);
+    writeToc(path.join(targetDir, 'lectures'), ['index']);
 
     const outputDir = path.join(tmpDir, 'reports');
     const options = buildBulkOptions(sourceDir, targetDir, outputDir);
@@ -695,12 +829,10 @@ describe('runBackwardBulk with resume', () => {
   it('should error when no resumable run exists', async () => {
     const emptyDir = path.join(tmpDir, 'no-runs');
     fs.mkdirSync(emptyDir, { recursive: true });
+    // Discovery runs first, so the repositories need their lecture sets
+    const { sourceDir, targetDir } = setupMultiFileFixture();
 
-    const options = buildBulkOptions(
-      path.join(tmpDir, 'source'),
-      path.join(tmpDir, 'target'),
-      emptyDir
-    );
+    const options = buildBulkOptions(sourceDir, targetDir, emptyDir);
 
     await expect(runBackwardBulk(options, silentLogger, [], true)).rejects.toThrow(
       'No resumable run found'

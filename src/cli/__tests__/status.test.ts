@@ -2,7 +2,8 @@
  * Tests for the status command
  *
  * Tests file discovery, per-file status checking, and console output formatting.
- * Uses temporary directories with fixture-style .md files.
+ * Uses temporary directories with fixture-style .md files; a bulk run reads
+ * each repository's lecture set (#449), so its fixtures write a `_toc.yml`.
  */
 
 import * as fs from 'fs';
@@ -10,7 +11,6 @@ import * as path from 'path';
 import * as os from 'os';
 import { execFileSync } from 'child_process';
 import {
-  discoverMarkdownFiles,
   resolveFilePairs,
   applyExcludes,
   checkFileStatus,
@@ -25,6 +25,7 @@ import {
 } from '../commands/status.js';
 import { readFileState, writeFileState } from '../translate-state.js';
 import { getFileGitMetadata } from '../git-metadata.js';
+import { writeToc } from '../../test-support/toc-fixture.js';
 
 // ============================================================================
 // HELPERS
@@ -192,36 +193,6 @@ heading-map:
 // FILE DISCOVERY
 // ============================================================================
 
-describe('discoverMarkdownFiles', () => {
-  it('should find .md files in a directory', () => {
-    const docsDir = path.join(tmpDir, 'lectures');
-    writeMd(path.join(docsDir, 'intro.md'), '# Intro');
-    writeMd(path.join(docsDir, 'cobweb.md'), '# Cobweb');
-    writeMd(path.join(docsDir, 'solow.md'), '# Solow');
-
-    const files = discoverMarkdownFiles(tmpDir, 'lectures');
-
-    expect(files).toEqual(['cobweb.md', 'intro.md', 'solow.md']);
-  });
-
-  it('should return empty array for missing directory', () => {
-    const files = discoverMarkdownFiles(tmpDir, 'nonexistent');
-    expect(files).toEqual([]);
-  });
-
-  it('should ignore non-.md files', () => {
-    const docsDir = path.join(tmpDir, 'lectures');
-    writeMd(path.join(docsDir, 'intro.md'), '# Intro');
-    fs.mkdirSync(docsDir, { recursive: true });
-    fs.writeFileSync(path.join(docsDir, '_toc.yml'), 'toc content');
-    fs.writeFileSync(path.join(docsDir, 'data.csv'), 'x,y\n1,2');
-
-    const files = discoverMarkdownFiles(tmpDir, 'lectures');
-
-    expect(files).toEqual(['intro.md']);
-  });
-});
-
 describe('resolveFilePairs', () => {
   it('should union and sort files from both repos', () => {
     const source = ['alpha.md', 'beta.md'];
@@ -262,6 +233,29 @@ describe('applyExcludes', () => {
   it('should pass through with empty excludes', () => {
     const files = ['a.md', 'b.md'];
     expect(applyExcludes(files, [])).toEqual(['a.md', 'b.md']);
+  });
+
+  // Files are docs-relative paths, subfolders included (#449).
+  it('matches a subfolder file by its docs-relative path, not by its name alone', () => {
+    const files = ['_admonition/gpu.md', 'gpu.md', 'intro.md'];
+    expect(applyExcludes(files, ['_admonition/gpu.md'])).toEqual(['gpu.md', 'intro.md']);
+    expect(applyExcludes(files, ['*/gpu.md'])).toEqual(['gpu.md', 'intro.md']);
+  });
+
+  it('reads a trailing * as a prefix, so it can exclude a folder', () => {
+    const files = ['_admonition/gpu.md', 'intro.md', 'troubleshooting.md', 'troubleshoot.md'];
+    expect(applyExcludes(files, ['troubleshoot*'])).toEqual(['_admonition/gpu.md', 'intro.md']);
+    expect(applyExcludes(files, ['_admonition/*'])).toEqual([
+      'intro.md',
+      'troubleshooting.md',
+      'troubleshoot.md',
+    ]);
+  });
+
+  it('reads * at both ends as anywhere, and a lone * as everything', () => {
+    const files = ['draft_notes.md', 'old/draft.md', 'intro.md'];
+    expect(applyExcludes(files, ['*draft*'])).toEqual(['intro.md']);
+    expect(applyExcludes(files, ['*'])).toEqual([]);
   });
 });
 
@@ -481,6 +475,9 @@ describe('runStatus', () => {
     // target-only
     writeMd(path.join(targetDir, 'old-lecture.md'), TARGET_2_SECTIONS_WITH_MAP);
 
+    writeToc(sourceDir, ['aligned', 'drift', 'new-lecture']);
+    writeToc(targetDir, ['aligned', 'drift', 'old-lecture']);
+
     const result = await runStatus({
       source: path.join(tmpDir, 'source'),
       target: path.join(tmpDir, 'target'),
@@ -504,6 +501,9 @@ describe('runStatus', () => {
     writeMd(path.join(sourceDir, 'README.md'), '# README');
     writeMd(path.join(sourceDir, 'intro.md'), SOURCE_2_SECTIONS);
     writeMd(path.join(targetDir, 'intro.md'), TARGET_2_SECTIONS_WITH_MAP);
+    // Listed, so that the exclusion is what leaves it out
+    writeToc(sourceDir, ['intro', 'README']);
+    writeToc(targetDir, ['intro']);
 
     const result = await runStatus({
       source: path.join(tmpDir, 'source'),
@@ -518,6 +518,10 @@ describe('runStatus', () => {
   });
 
   it('should handle empty docs folders', async () => {
+    // A ToC whose root has no file behind it: a lecture set with no lectures
+    writeToc(path.join(tmpDir, 'source', 'lectures'), ['index']);
+    writeToc(path.join(tmpDir, 'target', 'lectures'), ['index']);
+
     const result = await runStatus({
       source: path.join(tmpDir, 'source'),
       target: path.join(tmpDir, 'target'),
@@ -534,7 +538,7 @@ describe('runStatus', () => {
     const sourceDir = path.join(tmpDir, 'source', 'lectures');
     const targetDir = path.join(tmpDir, 'target', 'lectures');
 
-    // Create multiple files
+    // Create multiple files, and no _toc.yml: -f skips discovery (#449)
     writeMd(path.join(sourceDir, 'aligned.md'), SOURCE_2_SECTIONS);
     writeMd(path.join(targetDir, 'aligned.md'), TARGET_2_SECTIONS_WITH_MAP);
     writeMd(path.join(sourceDir, 'drift.md'), SOURCE_2_SECTIONS);
@@ -554,6 +558,217 @@ describe('runStatus', () => {
     expect(result.entries[0].file).toBe('drift.md');
     expect(result.entries[0].status).toBe('TARGET_AHEAD');
     expect(result.summary.total).toBe(1);
+  });
+});
+
+// ============================================================================
+// THE LECTURE SET (#449)
+// ============================================================================
+
+describe('runStatus on the lecture set (#449)', () => {
+  const source = () => path.join(tmpDir, 'source');
+  const target = () => path.join(tmpDir, 'target');
+  const sourceDocs = () => path.join(source(), 'lectures');
+  const targetDocs = () => path.join(target(), 'lectures');
+  const status = (extra: Partial<StatusOptions> = {}) =>
+    runStatus({
+      source: source(),
+      target: target(),
+      docsFolder: 'lectures',
+      language: 'zh-cn',
+      exclude: [],
+      ...extra,
+    });
+
+  /** The GPU notice lectures pull in, shaped like lecture-python.myst's. */
+  const GPU =
+    '```{admonition} GPU\n:class: warning\n\nThis lecture was built using a machine with a GPU.\n```\n';
+  const GPU_ZH =
+    '```{admonition} GPU\n:class: warning\n\n本讲座是在一台带有 GPU 的机器上构建的。\n```\n';
+  const INCLUDES_GPU = SOURCE_2_SECTIONS.replace(
+    '## Section One',
+    '```{include} _admonition/gpu.md\n```\n\n## Section One'
+  );
+  const INCLUDES_GPU_ZH = TARGET_2_SECTIONS_WITH_MAP.replace(
+    '## 第一节',
+    '```{include} _admonition/gpu.md\n```\n\n## 第一节'
+  );
+
+  /** Both repositories with `intro.md`, which includes `_admonition/gpu.md`, and a README. */
+  function writePair(): void {
+    writeMd(path.join(sourceDocs(), 'intro.md'), INCLUDES_GPU);
+    writeMd(path.join(sourceDocs(), '_admonition', 'gpu.md'), GPU);
+    writeMd(path.join(sourceDocs(), 'README.md'), '# Lectures\n');
+    writeMd(path.join(targetDocs(), 'intro.md'), INCLUDES_GPU_ZH);
+    writeMd(path.join(targetDocs(), '_admonition', 'gpu.md'), GPU_ZH);
+    writeMd(path.join(targetDocs(), 'README.md'), '# 讲座\n');
+    writeToc(sourceDocs(), ['intro']);
+    writeToc(targetDocs(), ['intro']);
+  }
+
+  it('sees a fragment the lectures include, by its docs-relative path, and not a README', async () => {
+    writePair();
+
+    const result = await status();
+
+    expect(result.entries.map((e) => e.file)).toEqual(['_admonition/gpu.md', 'intro.md']);
+    // A fragment has no sections, so it needs no heading-map
+    expect(result.entries[0].status).toBe('ALIGNED');
+  });
+
+  it('excludes a subfolder file by its docs-relative path', async () => {
+    writePair();
+
+    const result = await status({ exclude: ['_admonition/gpu.md'] });
+
+    expect(result.entries.map((e) => e.file)).toEqual(['intro.md']);
+  });
+
+  it("takes the edition's set from its own ToC, whose entries without a file are not lectures", async () => {
+    writePair();
+    writeMd(path.join(sourceDocs(), 'cobweb.md'), SOURCE_2_SECTIONS);
+    writeToc(sourceDocs(), ['intro', 'cobweb']);
+    // The mirror lists a lecture this partial edition has not translated
+    writeToc(targetDocs(), ['intro', 'cobweb', 'solow']);
+
+    const result = await status();
+
+    expect(result.entries.map((e) => [e.file, e.status])).toEqual([
+      ['_admonition/gpu.md', 'ALIGNED'],
+      ['cobweb.md', 'SOURCE_ONLY'],
+      ['intro.md', 'ALIGNED'],
+    ]);
+  });
+
+  it('fails a bulk run when either docs folder has no _toc.yml, naming it', async () => {
+    writePair();
+    fs.rmSync(path.join(targetDocs(), '_toc.yml'));
+
+    await expect(status()).rejects.toThrow(
+      `TARGET ${targetDocs()}: the docs folder has no _toc.yml or myst.yml, so it has no ` +
+        'lecture set\nA bulk run takes its lectures'
+    );
+    fs.rmSync(path.join(sourceDocs(), '_toc.yml'));
+    await expect(status()).rejects.toThrow(/^SOURCE .*has no _toc\.yml/);
+    await expect(status({ source: path.join(tmpDir, 'nowhere') })).rejects.toThrow(
+      `SOURCE: the docs folder ${path.join(tmpDir, 'nowhere', 'lectures')} does not exist`
+    );
+  });
+
+  it('still checks one file with -f when the docs folder has no _toc.yml', async () => {
+    writePair();
+    fs.rmSync(path.join(sourceDocs(), '_toc.yml'));
+    fs.rmSync(path.join(targetDocs(), '_toc.yml'));
+
+    const result = await status({ file: '_admonition/gpu.md' });
+
+    expect(result.entries.map((e) => [e.file, e.status])).toEqual([
+      ['_admonition/gpu.md', 'ALIGNED'],
+    ]);
+  });
+
+  describe('a lecture taken out of the ToC and kept (ruling 4)', () => {
+    /** The pair, plus `old.md` in both repositories, in neither ToC, with a state file. */
+    function writeUnlisted(): void {
+      writePair();
+      writeMd(path.join(sourceDocs(), 'old.md'), SOURCE_2_SECTIONS);
+      writeMd(path.join(targetDocs(), 'old.md'), TARGET_2_SECTIONS_WITH_MAP);
+      writeFileState(target(), 'old.md', {
+        'source-sha': 'abc1234',
+        'synced-at': '2026-10-01',
+        model: 'claude-sonnet-5',
+        mode: 'NEW',
+        'section-count': 2,
+      });
+    }
+
+    it('lists it as UNLISTED, and a README without a state file not at all', async () => {
+      writeUnlisted();
+
+      const result = await status();
+
+      expect(result.entries.map((e) => [e.file, e.status])).toEqual([
+        ['_admonition/gpu.md', 'ALIGNED'],
+        ['intro.md', 'ALIGNED'],
+        ['old.md', 'UNLISTED'],
+      ]);
+      expect(result.entries[2]).toEqual({
+        file: 'old.md',
+        status: 'UNLISTED',
+        flags: ['UNLISTED'],
+        details: 'not in the lecture set: kept with its state file, so sync no longer updates it',
+      });
+      expect(result.summary).toMatchObject({ total: 3, aligned: 2, unlisted: 1 });
+    });
+
+    it('counts a state file it cannot read, and an un-listed lecture in a subfolder', async () => {
+      writePair();
+      writeMd(path.join(targetDocs(), 'drafts', 'kept.md'), TARGET_2_SECTIONS_WITH_MAP);
+      writeMd(path.join(target(), '.translate', 'state', 'drafts', 'kept.md.yml'), '{{{ not yaml');
+
+      const result = await status();
+
+      expect(result.entries.find((e) => e.file === 'drafts/kept.md')?.status).toBe('UNLISTED');
+    });
+
+    it('shows it in the table and in --json', async () => {
+      writeUnlisted();
+
+      const result = await status();
+      const table = formatStatusTable(result);
+
+      expect(table).toMatch(/\n {2}old\.md +📦 UNLISTED\n/);
+      expect(table).toContain(
+        '↳ not in the lecture set: kept with its state file, so sync no longer updates it'
+      );
+      expect(table).toContain('📦 1 unlisted (out of the ToC, kept with a state file; not synced)');
+      const json = JSON.parse(formatStatusJson(result));
+      expect(json.summary.unlisted).toBe(1);
+      expect(json.entries[2]).toMatchObject({ file: 'old.md', status: 'UNLISTED' });
+    });
+
+    it('leaves its state file as it is under --write-state, and says so', async () => {
+      writeUnlisted();
+      const before = fs.readFileSync(
+        path.join(target(), '.translate', 'state', 'old.md.yml'),
+        'utf-8'
+      );
+
+      const result = await status({ writeState: true });
+
+      expect(result.writeState).toEqual({
+        configWritten: true,
+        written: ['_admonition/gpu.md', 'intro.md'],
+        skipped: [{ file: 'old.md', reason: 'not in the lecture set' }],
+        failed: [],
+      });
+      expect(
+        fs.readFileSync(path.join(target(), '.translate', 'state', 'old.md.yml'), 'utf-8')
+      ).toBe(before);
+      expect(
+        fs.existsSync(path.join(target(), '.translate', 'state', '_admonition', 'gpu.md.yml'))
+      ).toBe(true);
+      expect(formatWriteStateSummary(result.writeState!, 'tgt')).toContain(
+        '  ⊘ old.md: state file left as it is (not in the lecture set)'
+      );
+    });
+
+    it('is not triaged by --check-sync', async () => {
+      writeUnlisted();
+
+      const result = await status({ checkSync: true, testMode: true, apiKey: 'test-key' });
+
+      expect(result.entries.find((e) => e.file === 'old.md')?.contentSync).toBeUndefined();
+      expect(result.entries.find((e) => e.file === 'intro.md')?.contentSync).toBeDefined();
+    });
+
+    it('is read with -f like any file', async () => {
+      writeUnlisted();
+
+      const result = await status({ file: 'old.md' });
+
+      expect(result.entries[0].status).toBe('ALIGNED');
+    });
   });
 });
 
@@ -594,6 +809,7 @@ describe('formatStatusTable', () => {
         missingHeadingMap: 0,
         sourceOnly: 1,
         targetOnly: 0,
+        unlisted: 0,
         notFound: 0,
       },
     };
@@ -635,6 +851,7 @@ describe('formatStatusTable', () => {
         missingHeadingMap: 0,
         sourceOnly: 0,
         targetOnly: 0,
+        unlisted: 0,
         notFound: 0,
       },
     };
@@ -646,6 +863,7 @@ describe('formatStatusTable', () => {
     expect(output).not.toContain('source ahead');
     expect(output).not.toContain('source only');
     expect(output).not.toContain('target only');
+    expect(output).not.toContain('unlisted');
   });
 });
 
@@ -671,6 +889,7 @@ describe('formatStatusJson', () => {
         missingHeadingMap: 0,
         sourceOnly: 0,
         targetOnly: 0,
+        unlisted: 0,
         notFound: 0,
       },
     };
@@ -689,6 +908,12 @@ describe('formatStatusJson', () => {
 // ============================================================================
 
 describe('--write-state safeguard', () => {
+  // Each test pairs intro.md: both lecture sets list it (#449)
+  beforeEach(() => {
+    writeToc(path.join(tmpDir, 'source', 'lectures'), ['intro']);
+    writeToc(path.join(tmpDir, 'target', 'lectures'), ['intro']);
+  });
+
   it('should block --write-state when SOURCE files are newer than TARGET (no git dates in tmpDir → allowed)', async () => {
     // In tmpDir there is no git history, so sourceLastModified/targetLastModified
     // are both undefined → no stale files detected → write-state proceeds
@@ -892,7 +1117,18 @@ describe('--write-state carried-change guard (#380)', () => {
     });
   }
 
+  /**
+   * Every lecture these tests write. Both lecture sets list them all (#449),
+   * so a name a repository has no file for is a ToC entry the reader reports
+   * as missing, not a lecture.
+   */
+  const LECTURES = ['lecture', 'aligned', 'other', 'old', 'new'];
+
   function statusOf(extra: Partial<StatusOptions> = {}): Promise<StatusResult> {
+    // Written just before the run, untracked, so no commit carries it: `source`
+    // is a shallow clone in one test.
+    writeToc(path.join(source, 'lectures'), LECTURES);
+    writeToc(path.join(target, 'lectures'), LECTURES);
     return runStatus({
       source,
       target,
@@ -1342,6 +1578,8 @@ describe('--check-sync', () => {
     const targetDir = path.join(tmpDir, 'target', 'lectures');
     writeMd(path.join(sourceDir, 'cobweb.md'), SOURCE_2_SECTIONS);
     writeMd(path.join(targetDir, 'cobweb.md'), TARGET_2_SECTIONS_WITH_MAP);
+    writeToc(sourceDir, ['cobweb']);
+    writeToc(targetDir, ['cobweb']);
 
     const result = await runStatus({
       source: path.join(tmpDir, 'source'),
@@ -1362,6 +1600,9 @@ describe('--check-sync', () => {
   it('should skip content sync for SOURCE_ONLY files', async () => {
     const sourceDir = path.join(tmpDir, 'source', 'lectures');
     writeMd(path.join(sourceDir, 'new-file.md'), SOURCE_2_SECTIONS);
+    writeToc(sourceDir, ['new-file']);
+    // The edition's mirrored ToC lists the lecture it has not translated
+    writeToc(path.join(tmpDir, 'target', 'lectures'), ['new-file']);
 
     const result = await runStatus({
       source: path.join(tmpDir, 'source'),
@@ -1385,6 +1626,8 @@ describe('--check-sync', () => {
     const content = SOURCE_2_SECTIONS;
     writeMd(path.join(sourceDir, 'same.md'), content);
     writeMd(path.join(targetDir, 'same.md'), content);
+    writeToc(sourceDir, ['same']);
+    writeToc(targetDir, ['same']);
 
     const result = await runStatus({
       source: path.join(tmpDir, 'source'),
@@ -1407,6 +1650,8 @@ describe('--check-sync', () => {
     const targetDir = path.join(tmpDir, 'target', 'lectures');
     writeMd(path.join(sourceDir, 'intro.md'), SOURCE_2_SECTIONS);
     writeMd(path.join(targetDir, 'intro.md'), TARGET_2_SECTIONS_WITH_MAP);
+    writeToc(sourceDir, ['intro']);
+    writeToc(targetDir, ['intro']);
 
     const result = await runStatus({
       source: path.join(tmpDir, 'source'),
@@ -1440,6 +1685,8 @@ describe('--write-state reports what it wrote (#401)', () => {
     writeMd(path.join(target(), 'lectures', 'intro.md'), TARGET_2_SECTIONS_WITH_MAP);
     writeMd(path.join(source(), 'lectures', 'extra.md'), SOURCE_2_SECTIONS);
     writeMd(path.join(target(), 'lectures', 'orphan.md'), TARGET_2_SECTIONS_WITH_MAP);
+    writeToc(path.join(source(), 'lectures'), ['intro', 'extra']);
+    writeToc(path.join(target(), 'lectures'), ['intro', 'orphan']);
   });
 
   it('in bulk, writes the files both sides have and lists the others with why', async () => {

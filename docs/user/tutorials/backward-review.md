@@ -127,8 +127,9 @@ reports/lecture-python-intro/backward-2026-03-16/
 # Lower confidence threshold to see more suggestions
 npx translate backward ... --min-confidence 0.5
 
-# Exclude files you don't want to analyze
-npx translate backward ... --exclude intro.md --exclude "troubleshoot*"
+# Exclude files you don't want to analyze, by path in the docs folder;
+# a * at either end matches any text, so troubleshoot* is a prefix
+npx translate backward ... --exclude intro.md --exclude "troubleshoot*" --exclude "_admonition/*"
 
 # Include JSON output alongside Markdown reports
 npx translate backward ... --json

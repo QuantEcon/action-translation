@@ -2,8 +2,10 @@
  * Tests for the doctor command
  *
  * Tests health checks for target translation repositories:
- * config validation, state files, heading-maps, workflows,
- * section alignment, and console output formatting.
+ * config validation, the lecture set, state files, heading-maps, workflows,
+ * section alignment, and console output formatting. The per-file checks take
+ * the lectures the edition's lecture set holds (#449); runDoctor reads it from
+ * the fixture's `_toc.yml`.
  */
 
 import * as fs from 'fs';
@@ -11,16 +13,19 @@ import * as path from 'path';
 import * as os from 'os';
 import {
   checkConfig,
+  checkLectureSet,
   checkStateFiles,
   checkHeadingMaps,
   checkSectionAlignment,
   checkWorkflow,
   checkSourceAccess,
+  readDoctorLectures,
   runDoctor,
   formatDoctorTable,
   formatDoctorJson,
 } from '../commands/doctor.js';
 import { writeConfig, writeFileState } from '../translate-state.js';
+import { writeToc } from '../../test-support/toc-fixture.js';
 
 // ============================================================================
 // HELPERS
@@ -167,7 +172,7 @@ describe('checkStateFiles', () => {
       'section-count': 2,
     });
 
-    const result = checkStateFiles(tmpDir, 'lectures');
+    const result = checkStateFiles(tmpDir, ['intro.md']);
     expect(result.status).toBe('pass');
     expect(result.message).toContain('1');
   });
@@ -183,7 +188,7 @@ describe('checkStateFiles', () => {
       'section-count': 2,
     });
 
-    const result = checkStateFiles(tmpDir, 'lectures');
+    const result = checkStateFiles(tmpDir, ['intro.md', 'cobweb.md']);
     expect(result.status).toBe('warn');
     expect(result.message).toContain('1/2');
     expect(result.details).toBeDefined();
@@ -193,17 +198,34 @@ describe('checkStateFiles', () => {
   test('fails when state directory does not exist', () => {
     writeMd(path.join(tmpDir, 'lectures', 'intro.md'), TARGET_WITH_MAP);
 
-    const result = checkStateFiles(tmpDir, 'lectures');
+    const result = checkStateFiles(tmpDir, ['intro.md']);
     expect(result.status).toBe('fail');
     expect(result.message).toContain('not found');
   });
 
-  test('warns when no md files in docs folder', () => {
+  test('warns when the lecture set has no files', () => {
     fs.mkdirSync(path.join(tmpDir, 'lectures'), { recursive: true });
 
-    const result = checkStateFiles(tmpDir, 'lectures');
+    const result = checkStateFiles(tmpDir, []);
     expect(result.status).toBe('warn');
     expect(result.message).toContain('No .md files');
+  });
+
+  // #385: a lecture in a subfolder, such as an included admonition, was never checked
+  test('checks a lecture in a subfolder at its own state path', () => {
+    writeMd(path.join(tmpDir, 'lectures', 'intro.md'), TARGET_WITH_MAP);
+    writeMd(path.join(tmpDir, 'lectures', '_admonition', 'gpu.md'), '```{note}\nGPU\n```\n');
+    writeFileState(tmpDir, 'intro.md', {
+      'source-sha': 'abc123',
+      'synced-at': '2026-03-16',
+      model: 'claude-sonnet-4-6',
+      mode: 'NEW',
+      'section-count': 2,
+    });
+
+    const result = checkStateFiles(tmpDir, ['intro.md', '_admonition/gpu.md']);
+    expect(result.status).toBe('warn');
+    expect(result.details).toEqual(['Missing: _admonition/gpu.md']);
   });
 
   test('reports a corrupt state YAML as corrupt, not missing (#165)', () => {
@@ -214,7 +236,7 @@ describe('checkStateFiles', () => {
     fs.mkdirSync(path.dirname(statePath), { recursive: true });
     fs.writeFileSync(statePath, '{{{ not yaml at all', 'utf-8');
 
-    const result = checkStateFiles(tmpDir, 'lectures');
+    const result = checkStateFiles(tmpDir, ['intro.md']);
     expect(result.status).toBe('fail');
     expect(result.message).toContain('unreadable');
     expect(result.details?.some((d) => d.includes('Corrupt: intro.md'))).toBe(true);
@@ -229,7 +251,7 @@ describe('checkHeadingMaps', () => {
   test('passes when all files have heading-maps', () => {
     writeMd(path.join(tmpDir, 'lectures', 'intro.md'), TARGET_WITH_MAP);
 
-    const result = checkHeadingMaps(tmpDir, 'lectures');
+    const result = checkHeadingMaps(tmpDir, 'lectures', ['intro.md']);
     expect(result.status).toBe('pass');
     expect(result.message).toContain('1');
   });
@@ -238,7 +260,7 @@ describe('checkHeadingMaps', () => {
     writeMd(path.join(tmpDir, 'lectures', 'intro.md'), TARGET_WITH_MAP);
     writeMd(path.join(tmpDir, 'lectures', 'cobweb.md'), TARGET_WITHOUT_MAP);
 
-    const result = checkHeadingMaps(tmpDir, 'lectures');
+    const result = checkHeadingMaps(tmpDir, 'lectures', ['intro.md', 'cobweb.md']);
     expect(result.status).toBe('warn');
     expect(result.message).toContain('1/2');
   });
@@ -246,7 +268,7 @@ describe('checkHeadingMaps', () => {
   test('fails when no files have heading-maps', () => {
     writeMd(path.join(tmpDir, 'lectures', 'intro.md'), TARGET_WITHOUT_MAP);
 
-    const result = checkHeadingMaps(tmpDir, 'lectures');
+    const result = checkHeadingMaps(tmpDir, 'lectures', ['intro.md']);
     expect(result.status).toBe('fail');
     expect(result.message).toContain('0/1');
   });
@@ -270,7 +292,7 @@ Just a title and some text.
 `
     );
 
-    const result = checkHeadingMaps(tmpDir, 'lectures');
+    const result = checkHeadingMaps(tmpDir, 'lectures', ['intro.md', 'status.md']);
     expect(result.status).toBe('pass');
     expect(result.message).toContain('section-less');
   });
@@ -278,7 +300,7 @@ Just a title and some text.
   test('passes when all files are section-less', () => {
     writeMd(path.join(tmpDir, 'lectures', 'readme.md'), `# Just a title\n\nNo sections.\n`);
 
-    const result = checkHeadingMaps(tmpDir, 'lectures');
+    const result = checkHeadingMaps(tmpDir, 'lectures', ['readme.md']);
     expect(result.status).toBe('pass');
     expect(result.message).toContain('0 sections');
   });
@@ -295,8 +317,35 @@ describe('checkSectionAlignment', () => {
     writeMd(path.join(sourceDir, 'lectures', 'intro.md'), SOURCE_2_SECTIONS);
     writeMd(path.join(targetDir, 'lectures', 'intro.md'), TARGET_WITH_MAP);
 
-    const result = await checkSectionAlignment(sourceDir, targetDir, 'lectures');
+    const result = await checkSectionAlignment(
+      sourceDir,
+      targetDir,
+      'lectures',
+      ['intro.md'],
+      ['intro.md']
+    );
     expect(result.status).toBe('pass');
+  });
+
+  test('compares only the lectures both lecture sets hold', async () => {
+    const sourceDir = path.join(tmpDir, 'source');
+    const targetDir = path.join(tmpDir, 'target');
+    writeMd(path.join(sourceDir, 'lectures', 'intro.md'), SOURCE_2_SECTIONS);
+    writeMd(path.join(targetDir, 'lectures', 'intro.md'), TARGET_WITH_MAP);
+    writeMd(path.join(sourceDir, 'lectures', 'draft.md'), SOURCE_3_SECTIONS);
+    writeMd(path.join(targetDir, 'lectures', 'draft.md'), TARGET_WITH_MAP);
+
+    const result = await checkSectionAlignment(
+      sourceDir,
+      targetDir,
+      'lectures',
+      ['intro.md'],
+      ['intro.md']
+    );
+    expect(result).toMatchObject({
+      status: 'pass',
+      message: 'All 1 common files have matching section counts',
+    });
   });
 
   test('warns when section counts differ', async () => {
@@ -305,7 +354,13 @@ describe('checkSectionAlignment', () => {
     writeMd(path.join(sourceDir, 'lectures', 'intro.md'), SOURCE_3_SECTIONS);
     writeMd(path.join(targetDir, 'lectures', 'intro.md'), TARGET_WITH_MAP);
 
-    const result = await checkSectionAlignment(sourceDir, targetDir, 'lectures');
+    const result = await checkSectionAlignment(
+      sourceDir,
+      targetDir,
+      'lectures',
+      ['intro.md'],
+      ['intro.md']
+    );
     expect(result.status).toBe('warn');
     expect(result.details?.some((d) => d.includes('3 source vs 2 target'))).toBe(true);
   });
@@ -450,25 +505,100 @@ describe('checkWorkflow', () => {
 // ============================================================================
 
 describe('checkSourceAccess', () => {
-  test('passes when source has md files', () => {
+  const check = async (sourceDir: string) =>
+    checkSourceAccess(
+      sourceDir,
+      'lectures',
+      await readDoctorLectures(sourceDir, 'lectures', 'SOURCE')
+    );
+
+  test('passes when source has md files', async () => {
+    const sourceDir = path.join(tmpDir, 'source');
+    writeMd(path.join(sourceDir, 'lectures', 'intro.md'), SOURCE_2_SECTIONS);
+    writeToc(path.join(sourceDir, 'lectures'), ['intro']);
+
+    const result = await check(sourceDir);
+    expect(result.status).toBe('pass');
+    expect(result.message).toBe('1 lectures in lectures/: 1 in _toc.yml');
+  });
+
+  test('fails when source path does not exist', async () => {
+    const result = await check('/nonexistent/path');
+    expect(result.status).toBe('fail');
+    expect(result.message).toBe('Source path not found: /nonexistent/path');
+  });
+
+  // #449, ruling 9: no _toc.yml, no lecture set
+  test('fails when the source docs folder has no _toc.yml', async () => {
     const sourceDir = path.join(tmpDir, 'source');
     writeMd(path.join(sourceDir, 'lectures', 'intro.md'), SOURCE_2_SECTIONS);
 
-    const result = checkSourceAccess(sourceDir, 'lectures');
-    expect(result.status).toBe('pass');
-  });
-
-  test('fails when source path does not exist', () => {
-    const result = checkSourceAccess('/nonexistent/path', 'lectures');
+    const result = await check(sourceDir);
     expect(result.status).toBe('fail');
+    expect(result.message).toBe(
+      `SOURCE ${path.join(sourceDir, 'lectures')}: the docs folder has no _toc.yml or myst.yml, ` +
+        'so it has no lecture set'
+    );
   });
 
-  test('warns when source has no md files', () => {
+  test('warns when no entry in the source ToC has a file behind it', async () => {
     const sourceDir = path.join(tmpDir, 'source');
-    fs.mkdirSync(path.join(sourceDir, 'lectures'), { recursive: true });
+    writeToc(path.join(sourceDir, 'lectures'), ['index']);
 
-    const result = checkSourceAccess(sourceDir, 'lectures');
+    const result = await check(sourceDir);
     expect(result.status).toBe('warn');
+  });
+});
+
+// ============================================================================
+// checkLectureSet TESTS (#449)
+// ============================================================================
+
+describe('checkLectureSet', () => {
+  const docs = () => path.join(tmpDir, 'lectures');
+  const check = async () => checkLectureSet(await readDoctorLectures(tmpDir, 'lectures', 'TARGET'));
+
+  test('counts the documents and the files they include', async () => {
+    writeMd(path.join(docs(), 'intro.md'), '# 介绍\n\n```{include} _admonition/gpu.md\n```\n');
+    writeMd(path.join(docs(), '_admonition', 'gpu.md'), '```{note}\nGPU\n```\n');
+    writeMd(path.join(docs(), 'README.md'), '# 讲座\n');
+    writeToc(docs(), ['intro']);
+
+    expect(await check()).toEqual({
+      name: 'Lecture set',
+      status: 'pass',
+      message: '2 lectures: 1 in _toc.yml, 1 included by them',
+    });
+  });
+
+  test("counts the entries a partial edition's mirrored ToC lists without a file", async () => {
+    writeMd(path.join(docs(), 'intro.md'), TARGET_WITH_MAP);
+    writeToc(docs(), ['intro', 'cobweb', 'solow']);
+
+    const result = await check();
+    expect(result.status).toBe('pass');
+    expect(result.details).toEqual([
+      "2 _toc.yml entries have no .md file in the edition (a partial edition's ToC lists " +
+        'lectures it has not translated):',
+      '  cobweb',
+      '  solow',
+    ]);
+  });
+
+  test('warns when no entry has a file behind it', async () => {
+    writeToc(docs(), ['index']);
+
+    expect((await check()).status).toBe('warn');
+  });
+
+  test("fails with the reader's message when the docs folder has no _toc.yml", async () => {
+    writeMd(path.join(docs(), 'intro.md'), TARGET_WITH_MAP);
+
+    const result = await check();
+    expect(result.status).toBe('fail');
+    expect(result.message).toBe(
+      `TARGET ${docs()}: the docs folder has no _toc.yml or myst.yml, so it has no lecture set`
+    );
   });
 });
 
@@ -485,6 +615,7 @@ describe('runDoctor', () => {
       'docs-folder': 'lectures',
     });
     writeMd(path.join(tmpDir, 'lectures', 'intro.md'), TARGET_WITH_MAP);
+    writeToc(path.join(tmpDir, 'lectures'), ['intro']);
     writeFileState(tmpDir, 'intro.md', {
       'source-sha': 'abc123',
       'synced-at': '2026-03-16',
@@ -509,6 +640,7 @@ describe('runDoctor', () => {
     expect(result.summary.fail).toBe(0);
     expect(result.summary.pass).toBeGreaterThanOrEqual(3);
     expect(result.checks.find((c) => c.name === '.translate/config.yml')?.status).toBe('pass');
+    expect(result.checks.find((c) => c.name === 'Lecture set')?.status).toBe('pass');
     expect(result.checks.find((c) => c.name === '.translate/state/')?.status).toBe('pass');
     expect(result.checks.find((c) => c.name === 'Heading maps')?.status).toBe('pass');
     expect(result.checks.find((c) => c.name === 'Workflow')?.status).toBe('pass');
@@ -528,6 +660,56 @@ describe('runDoctor', () => {
     expect(result.checks.find((c) => c.name === '.translate/config.yml')?.status).toBe('fail');
   });
 
+  // #449, ruling 9: the checks that need no lecture set still run
+  test('fails the lecture set without a _toc.yml, and skips only the checks that need it', async () => {
+    writeConfig(tmpDir, {
+      'source-language': 'en',
+      'target-language': 'zh-cn',
+      'docs-folder': 'lectures',
+    });
+    writeMd(path.join(tmpDir, 'lectures', 'intro.md'), TARGET_WITH_MAP);
+
+    const result = await runDoctor({ target: tmpDir, checkGh: false, json: false });
+
+    expect(result.checks.map((c) => [c.name, c.status])).toEqual([
+      ['.translate/config.yml', 'pass'],
+      ['Lecture set', 'fail'],
+      ['Workflow', 'fail'],
+    ]);
+    expect(result.checks[1].message).toContain('has no _toc.yml or myst.yml');
+  });
+
+  // #385: doctor never saw a lecture in a subfolder
+  test('checks an included fragment, and not a README outside the ToC', async () => {
+    writeConfig(tmpDir, {
+      'source-language': 'en',
+      'target-language': 'zh-cn',
+      'docs-folder': 'lectures',
+    });
+    writeMd(
+      path.join(tmpDir, 'lectures', 'intro.md'),
+      TARGET_WITH_MAP.replace('## 第一节', '```{include} _admonition/gpu.md\n```\n\n## 第一节')
+    );
+    writeMd(path.join(tmpDir, 'lectures', '_admonition', 'gpu.md'), '```{note}\nGPU\n```\n');
+    writeMd(path.join(tmpDir, 'lectures', 'README.md'), '# 讲座\n');
+    writeToc(path.join(tmpDir, 'lectures'), ['intro']);
+    writeFileState(tmpDir, 'intro.md', {
+      'source-sha': 'abc123',
+      'synced-at': '2026-03-16',
+      model: 'claude-sonnet-4-6',
+      mode: 'NEW',
+      'section-count': 2,
+    });
+
+    const result = await runDoctor({ target: tmpDir, checkGh: false, json: false });
+
+    expect(result.checks.find((c) => c.name === '.translate/state/')).toMatchObject({
+      status: 'warn',
+      message: '1/2 files tracked (1 missing)',
+      details: ['Missing: _admonition/gpu.md'],
+    });
+  });
+
   test('includes source checks when source provided', async () => {
     const sourceDir = path.join(tmpDir, 'source');
     const targetDir = path.join(tmpDir, 'target');
@@ -538,6 +720,8 @@ describe('runDoctor', () => {
     });
     writeMd(path.join(sourceDir, 'lectures', 'intro.md'), SOURCE_2_SECTIONS);
     writeMd(path.join(targetDir, 'lectures', 'intro.md'), TARGET_WITH_MAP);
+    writeToc(path.join(sourceDir, 'lectures'), ['intro']);
+    writeToc(path.join(targetDir, 'lectures'), ['intro']);
 
     const result = await runDoctor({
       target: targetDir,
@@ -557,6 +741,7 @@ describe('runDoctor', () => {
       'docs-folder': 'docs',
     });
     writeMd(path.join(tmpDir, 'docs', 'intro.md'), TARGET_WITH_MAP);
+    writeToc(path.join(tmpDir, 'docs'), ['intro']);
     writeFileState(tmpDir, 'intro.md', {
       'source-sha': 'abc123',
       'synced-at': '2026-03-16',

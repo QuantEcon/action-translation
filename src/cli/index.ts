@@ -156,7 +156,7 @@ program
   .option('--min-confidence <number>', 'Minimum confidence for reporting', '0.6')
   .option(
     '--exclude <pattern>',
-    'Exclude files matching pattern (repeatable, comma-separated)',
+    'Exclude files by docs-relative path; * at either end matches any text (repeatable, comma-separated)',
     collectExclude,
     []
   )
@@ -237,7 +237,7 @@ program
   .option('--source-language <code>', 'Source language code (required with --write-state)', 'en')
   .option(
     '--exclude <pattern>',
-    'Exclude files matching pattern (repeatable, comma-separated)',
+    'Exclude files by docs-relative path; * at either end matches any text (repeatable, comma-separated)',
     collectExclude,
     []
   )
@@ -350,7 +350,7 @@ program
   )
   .option(
     '--exclude <pattern>',
-    'Exclude files matching pattern (repeatable, comma-separated)',
+    'Exclude files by docs-relative path; * at either end matches any text (repeatable, comma-separated)',
     collectExclude,
     []
   )
@@ -566,7 +566,7 @@ program
   .option('-d, --docs-folder <folder>', 'Documentation folder within repos', 'lectures')
   .option(
     '--exclude <pattern>',
-    'Exclude files matching pattern (repeatable, comma-separated)',
+    'Exclude files by docs-relative path; * at either end matches any text (repeatable, comma-separated)',
     collectExclude,
     []
   )

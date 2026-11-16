@@ -221,7 +221,7 @@ If each lecture is reviewed before it is published, skip the two subsections abo
 
 Once, before the first lecture's PR, make the edition's build prune its table of contents (see [Prune the table of contents at build time](fresh-setup.md#prune-the-table-of-contents-at-build-time)). Sync keeps the committed `_toc.yml` a mirror of the source's, so it lists lectures the edition does not have yet.
 
-Then, for each lecture, update the source clone, start a branch from an up-to-date `main` in `lecture-python-intro.ja`, and preview the draft. `-f` takes the first `_toc.yml` entry that equals or contains the name; `--dry-run` prints that entry on the `Translating single file:` line, then stops before translating or writing anything:
+Then, for each lecture, update the source clone, start a branch from an up-to-date `main` in `lecture-python-intro.ja`, and preview the draft. `-f` takes a lecture in the source's lecture set, a `_toc.yml` entry or a file one of them includes: the one named exactly, or else the first whose path contains the name. `--dry-run` prints that lecture on the `Translating single file:` line, then stops before translating or writing anything:
 
 ```bash
 npx translate init \
@@ -236,6 +236,7 @@ Run the same command without `--dry-run` to translate the lecture. Merging its P
 
 - **Check `git status`.** `-f` narrows the translation, not the rest of the run: `init` also copies each non-Markdown file in the source docs folder that the edition does not have, and writes `.translate/config.yml` if the edition has none. It never overwrites a file the edition has, and with `-f` it writes no `TRANSLATION-REPORT.md`. The first lecture's PR keeps the copied build files (`_config.yml`, `_toc.yml`, images and other static files) and the config, since the new edition has none. A later round copies only the files the source has added since, and its PR keeps only the lecture, its state file and any new file the lecture uses: delete the new files the PR does not need.
 - **Keep the state file**, here `.translate/state/cobweb.md.yml`: without it the lecture never syncs. `init` fails a lecture whose state file it cannot write, and exits 1.
+- **Bring the files the lecture includes.** A lecture that pulls in a file with `{include}`, such as `_admonition/gpu.md`, does not build without it, and `init` copies only non-Markdown files. Translate it in the same round with `init -f _admonition/gpu.md`, and keep it and its state file in the PR.
 
 Before merging, check whether the English changed after the draft. Update the source clone, put the edition's clone on the PR's branch and pull it, since reviewers' suggestions land there as commits, and run:
 

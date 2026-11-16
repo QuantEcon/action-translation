@@ -69,6 +69,9 @@ Sync Status: lecture-python-intro ↔ lecture-python-intro.zh-cn (zh-cn)
 | `SOURCE_AHEAD` | Source added new sections | `forward` resync |
 | `SOURCE_ONLY` | Entirely new file in source | `init -f <file>` |
 | `TARGET_AHEAD` | Target has more sections than source | Investigate manually |
+| `UNLISTED` | Taken out of the ToC, kept in the edition with its state file; sync no longer updates it | Put it back in the ToC, or remove it and its state file |
+
+`status` lists the lectures in either repository's lecture set: the documents its `_toc.yml` lists, and the files they include, such as `_admonition/gpu.md` (see [Which files the commands see](../cli-reference.md#which-files-the-commands-see)).
 
 Before resyncing, run a health check to verify the target repo is properly configured:
 
@@ -297,7 +300,7 @@ If any files still show as `OUTDATED`, it may be because the source changed *aga
 
 ### New files (SOURCE_ONLY)
 
-Files that exist only in the source need a fresh translation, which is `init`'s job — `forward` resyncs an *existing* translation and errors with `Target file not found` when there is nothing to resync. Use `init -f` to translate the single new file:
+Files that exist only in the source need a fresh translation, which is `init`'s job — `forward` resyncs an *existing* translation and errors with `Target file not found` when there is nothing to resync. Use `init -f` to translate the single new file, which may be one the lectures include, such as `-f _admonition/gpu.md`:
 
 ```bash
 npx translate init \

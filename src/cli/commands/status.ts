@@ -6,6 +6,10 @@
  *
  * Output goes to the CLI console (like `git status`), not report files.
  *
+ * A bulk run takes its files from both repositories' lecture sets (#449): the
+ * docs folder's ToC documents and the `.md` files they include, subfolders
+ * included. `-f` names one file and skips that discovery.
+ *
  * Primary status (most significant issue):
  * - ALIGNED:            Structure matches, heading-map present, no newer SOURCE commits
  * - OUTDATED:           Structure/heading-map OK, but SOURCE has newer commits than TARGET
@@ -14,6 +18,9 @@
  * - MISSING_HEADINGMAP: No heading-map in TARGET file
  * - SOURCE_ONLY:        File exists in SOURCE but not TARGET
  * - TARGET_ONLY:        File exists in TARGET but not SOURCE
+ * - UNLISTED:           TARGET file in neither lecture set, with a state file: a
+ *                       lecture taken out of the ToC and kept, which sync no
+ *                       longer updates (#449, ruling 4)
  * - NOT_FOUND:          File not found in either repo (only with --file)
  *
  * Flags (compound conditions — a file may have multiple):
@@ -34,6 +41,7 @@ import {
   writeConfig,
 } from '../translate-state.js';
 import { triageForward } from '../forward-triage.js';
+import { RepoLectures, readBulkLectures } from '../lecture-discovery.js';
 import { DEFAULT_CLAUDE_MODEL } from '../../models.js';
 import { languageLabel } from '../../language-config.js';
 
@@ -49,6 +57,7 @@ export type FileSyncStatus =
   | 'MISSING_HEADINGMAP'
   | 'SOURCE_ONLY'
   | 'TARGET_ONLY'
+  | 'UNLISTED'
   | 'NOT_FOUND';
 
 export interface FileStatusEntry {
@@ -78,6 +87,7 @@ export interface StatusResult {
     missingHeadingMap: number;
     sourceOnly: number;
     targetOnly: number;
+    unlisted: number;
     notFound: number;
   };
   /** What `--write-state` did; absent without it (#401). */
@@ -93,8 +103,14 @@ export interface WriteStateResult {
   configWritten: boolean;
   /** The files that got a state file. */
   written: string[];
-  /** The files with no state file because a repository lacks them. */
-  skipped: Array<{ file: string; reason: 'source only' | 'target only' | 'not found' }>;
+  /**
+   * The files with no state file written: a repository lacks them, or the
+   * file is outside the lecture set and keeps the state file it has.
+   */
+  skipped: Array<{
+    file: string;
+    reason: 'source only' | 'target only' | 'not found' | 'not in the lecture set';
+  }>;
   /** The files whose state could not be written, with the error. */
   failed: Array<{ file: string; error: string }>;
 }
@@ -112,7 +128,7 @@ export interface StatusOptions {
   target: string;
   docsFolder: string;
   language: string;
-  exclude: string[]; // Glob patterns to exclude
+  exclude: string[]; // Docs-relative paths to exclude; `*` at either end matches any text
   file?: string; // Single file to check (relative to docs-folder)
   writeState?: boolean; // Bootstrap .translate/ metadata from current state
   sourceLanguage?: string; // Required when writeState is true
@@ -129,24 +145,8 @@ export interface StatusOptions {
 // ============================================================================
 
 /**
- * Find all .md files in a docs folder (non-recursive, flat list).
- * Use --exclude patterns to filter out non-lecture files.
- */
-export function discoverMarkdownFiles(repoPath: string, docsFolder: string): string[] {
-  const fullPath = path.join(repoPath, docsFolder);
-  if (!fs.existsSync(fullPath)) {
-    return [];
-  }
-
-  return fs
-    .readdirSync(fullPath)
-    .filter((f) => f.endsWith('.md'))
-    .sort();
-}
-
-/**
- * Resolve the set of all files across SOURCE and TARGET, paired by filename.
- * Returns a deduplicated sorted list of filenames.
+ * Resolve the set of all files across SOURCE and TARGET, paired by their
+ * docs-relative path. Returns a deduplicated sorted list.
  */
 export function resolveFilePairs(sourceFiles: string[], targetFiles: string[]): string[] {
   const all = new Set([...sourceFiles, ...targetFiles]);
@@ -154,25 +154,61 @@ export function resolveFilePairs(sourceFiles: string[], targetFiles: string[]): 
 }
 
 /**
- * Apply exclude patterns to a list of filenames.
- * Supports simple glob: exact match or leading * wildcard (e.g., "README.md", "*.yml").
+ * Apply exclude patterns to a list of docs-relative paths. A pattern matches
+ * a whole path, and a `*` at either end matches any text there: `README.md`,
+ * `_admonition/gpu.md`, `*.yml` (a suffix), `troubleshoot*` and
+ * `_admonition/*` (a prefix), `*draft*` (anywhere).
  */
 export function applyExcludes(files: string[], excludes: string[]): string[] {
   if (excludes.length === 0) return files;
 
-  return files.filter((file) => {
-    for (const pattern of excludes) {
-      if (pattern.startsWith('*')) {
-        // Suffix match: *.yml matches foo.yml
-        const suffix = pattern.slice(1);
-        if (file.endsWith(suffix)) return false;
-      } else if (file === pattern) {
-        return false;
-      }
-    }
-    return true;
-  });
+  const matches = (file: string, pattern: string): boolean => {
+    const leading = pattern.startsWith('*');
+    const trailing = pattern.length > 1 && pattern.endsWith('*');
+    const core = pattern.slice(leading ? 1 : 0, trailing ? -1 : undefined);
+    if (leading && trailing) return file.includes(core);
+    if (leading) return file.endsWith(core);
+    if (trailing) return file.startsWith(core);
+    return file === pattern;
+  };
+  return files.filter((file) => !excludes.some((pattern) => matches(file, pattern)));
 }
+
+/**
+ * The edition's `.md` files outside both lecture sets that have a state file:
+ * lectures taken out of the ToC and kept, with their translation and state
+ * file (#449, ruling 4). Sync no longer updates them, so `status` names them,
+ * or they would go stale with no tool saying so. A `.md` without a state
+ * file, such as a `README.md`, is not a lecture and is left out (ruling 3). A
+ * state file counts by existence, a corrupt one too.
+ */
+export function findUnlistedLectures(
+  targetRepoPath: string,
+  edition: RepoLectures,
+  listed: ReadonlySet<string>
+): string[] {
+  return edition.markdownFiles.filter(
+    (file) => !listed.has(file) && inspectFileState(targetRepoPath, file).status !== 'missing'
+  );
+}
+
+/** The entry for an un-listed lecture: reported, never compared or written. */
+function unlistedEntry(file: string): FileStatusEntry {
+  return {
+    file,
+    status: 'UNLISTED',
+    flags: ['UNLISTED'],
+    details: 'not in the lecture set: kept with its state file, so sync no longer updates it',
+  };
+}
+
+/** Statuses whose file is not in both repositories' lecture sets, so nothing compares them. */
+const NOT_COMPARED: ReadonlySet<FileSyncStatus> = new Set([
+  'SOURCE_ONLY',
+  'TARGET_ONLY',
+  'NOT_FOUND',
+  'UNLISTED',
+]);
 
 // ============================================================================
 // PER-FILE STATUS CHECK
@@ -351,13 +387,7 @@ async function findUncarriedChanges(
 ): Promise<UncarriedChange[]> {
   const uncarried: UncarriedChange[] = [];
   for (const entry of entries) {
-    if (
-      entry.status === 'SOURCE_ONLY' ||
-      entry.status === 'TARGET_ONLY' ||
-      entry.status === 'NOT_FOUND'
-    ) {
-      continue;
-    }
+    if (NOT_COMPARED.has(entry.status)) continue;
 
     const recorded = readFileState(target, entry.file)?.['source-sha'];
     if (!recorded || recorded === 'unknown') continue;
@@ -435,24 +465,28 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
   const stateAware = fs.existsSync(path.join(target, '.translate', 'state'));
 
   let allFiles: string[];
+  let unlisted: ReadonlySet<string> = new Set();
 
   if (file) {
     // Single-file mode — skip discovery
     allFiles = [file];
   } else {
-    // Discover files
-    const sourceFiles = discoverMarkdownFiles(source, docsFolder);
-    const targetFiles = discoverMarkdownFiles(target, docsFolder);
-    allFiles = resolveFilePairs(sourceFiles, targetFiles);
+    // Both lecture sets, paired by path, and the edition's un-listed lectures
+    // (#449). Without a ToC on either side this throws, naming it.
+    const lectures = await readBulkLectures(source, target, docsFolder);
+    const listed = resolveFilePairs(lectures.source.lectures, lectures.target.lectures);
+    unlisted = new Set(findUnlistedLectures(target, lectures.target, new Set(listed)));
 
     // Apply exclusions
-    allFiles = applyExcludes(allFiles, exclude);
+    allFiles = applyExcludes(resolveFilePairs(listed, [...unlisted]), exclude);
   }
 
   // Check each file
   const entries: FileStatusEntry[] = [];
   for (const f of allFiles) {
-    const entry = await checkFileStatus(f, source, target, docsFolder, stateAware);
+    const entry = unlisted.has(f)
+      ? unlistedEntry(f)
+      : await checkFileStatus(f, source, target, docsFolder, stateAware);
     entries.push(entry);
   }
 
@@ -511,10 +545,13 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
       }
     }
 
+    // An un-listed lecture keeps the state file it has: sync no longer
+    // updates it, so recording a new sync point would claim one never made.
     const SKIP_REASONS = {
       SOURCE_ONLY: 'source only',
       TARGET_ONLY: 'target only',
       NOT_FOUND: 'not found',
+      UNLISTED: 'not in the lecture set',
     } as const;
     writeState = { configWritten: false, written: [], skipped: [], failed: [] };
 
@@ -606,14 +643,8 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
   if (options.checkSync && options.apiKey) {
     const srcLang = options.sourceLanguage ?? 'en';
     for (const entry of entries) {
-      // Only triage files that exist in both repos
-      if (
-        entry.status === 'SOURCE_ONLY' ||
-        entry.status === 'TARGET_ONLY' ||
-        entry.status === 'NOT_FOUND'
-      ) {
-        continue;
-      }
+      // Only triage files that exist in both repos, in the lecture set
+      if (NOT_COMPARED.has(entry.status)) continue;
 
       try {
         const sourceFilePath = path.join(source, docsFolder, entry.file);
@@ -648,6 +679,7 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
     missingHeadingMap: entries.filter((e) => e.status === 'MISSING_HEADINGMAP').length,
     sourceOnly: entries.filter((e) => e.status === 'SOURCE_ONLY').length,
     targetOnly: entries.filter((e) => e.status === 'TARGET_ONLY').length,
+    unlisted: entries.filter((e) => e.status === 'UNLISTED').length,
     notFound: entries.filter((e) => e.status === 'NOT_FOUND').length,
   };
 
@@ -674,6 +706,7 @@ const STATUS_ICONS: Record<FileSyncStatus, string> = {
   MISSING_HEADINGMAP: '📋',
   SOURCE_ONLY: '➕',
   TARGET_ONLY: '🔸',
+  UNLISTED: '📦',
   NOT_FOUND: '❌',
 };
 
@@ -696,7 +729,12 @@ export function formatWriteStateSummary(result: WriteStateResult, target: string
           : ', and left .translate/config.yml as it was')
     );
   }
-  for (const skip of result.skipped) lines.push(`  ⊘ ${skip.file}: no state file (${skip.reason})`);
+  for (const skip of result.skipped) {
+    // An un-listed lecture has a state file; it is the one left as it is.
+    const what =
+      skip.reason === 'not in the lecture set' ? 'state file left as it is' : 'no state file';
+    lines.push(`  ⊘ ${skip.file}: ${what} (${skip.reason})`);
+  }
   for (const failure of result.failed) {
     lines.push(`  ✗ ${failure.file}: state file not written: ${failure.error}`);
   }
@@ -779,6 +817,10 @@ export function formatStatusTable(result: StatusResult): string {
     lines.push(`  ${STATUS_ICONS.SOURCE_ONLY} ${s.sourceOnly} source only (not yet translated)`);
   if (s.targetOnly > 0)
     lines.push(`  ${STATUS_ICONS.TARGET_ONLY} ${s.targetOnly} target only (not in source)`);
+  if (s.unlisted > 0)
+    lines.push(
+      `  ${STATUS_ICONS.UNLISTED} ${s.unlisted} unlisted (out of the ToC, kept with a state file; not synced)`
+    );
   if (s.notFound > 0)
     lines.push(`  ${STATUS_ICONS.NOT_FOUND} ${s.notFound} not found (missing from both repos)`);
 

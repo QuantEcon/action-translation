@@ -18,10 +18,17 @@ import {
   HeadingmapOptions,
 } from '../commands/headingmap.js';
 import { extractHeadingMap } from '../../heading-map.js';
+import { writeToc } from '../../test-support/toc-fixture.js';
 
 // ============================================================================
 // HELPERS
 // ============================================================================
+
+/** List `files` in both repositories' `_toc.yml`: a bulk run reads each lecture set (#449). */
+function writeTocs(sourceDir: string, targetDir: string, files: string[]): void {
+  writeToc(path.join(sourceDir, 'lectures'), files);
+  writeToc(path.join(targetDir, 'lectures'), files);
+}
 
 let tmpDir: string;
 
@@ -545,6 +552,16 @@ describe('generateHeadingmapForFile', () => {
 // ============================================================================
 
 describe('runHeadingmap', () => {
+  // Every lecture these tests write; a name a test has no file for is a
+  // ToC entry the reader reports as missing, not a lecture.
+  beforeEach(() => {
+    writeTocs(path.join(tmpDir, 'source'), path.join(tmpDir, 'target'), [
+      'intro',
+      'vectors',
+      'README',
+    ]);
+  });
+
   test('processes all files in docs folder', async () => {
     const sourceDir = path.join(tmpDir, 'source');
     const targetDir = path.join(tmpDir, 'target');
@@ -740,6 +757,64 @@ describe('runHeadingmap', () => {
   });
 });
 
+describe('runHeadingmap on the lecture set (#449)', () => {
+  const sourceDir = () => path.join(tmpDir, 'source');
+  const targetDir = () => path.join(tmpDir, 'target');
+  const GPU = '```{admonition} GPU\n:class: warning\n\nBuilt with a GPU.\n```\n';
+  const GPU_ZH = '```{admonition} GPU\n:class: warning\n\n使用 GPU 构建。\n```\n';
+  const run = (extra: Partial<HeadingmapOptions> = {}) =>
+    runHeadingmap({
+      source: sourceDir(),
+      target: targetDir(),
+      docsFolder: 'lectures',
+      exclude: [],
+      dryRun: false,
+      ...extra,
+    });
+
+  beforeEach(() => {
+    const include = '```{include} _admonition/gpu.md\n```\n\n';
+    writeMd(
+      path.join(sourceDir(), 'lectures', 'intro.md'),
+      SOURCE_2_SECTIONS.replace('## Section One', `${include}## Section One`)
+    );
+    writeMd(
+      path.join(targetDir(), 'lectures', 'intro.md'),
+      TARGET_2_SECTIONS_NO_MAP.replace('## 第一节', `${include}## 第一节`)
+    );
+    writeMd(path.join(sourceDir(), 'lectures', '_admonition', 'gpu.md'), GPU);
+    writeMd(path.join(targetDir(), 'lectures', '_admonition', 'gpu.md'), GPU_ZH);
+    writeMd(path.join(sourceDir(), 'lectures', 'README.md'), SOURCE_2_SECTIONS);
+    writeMd(path.join(targetDir(), 'lectures', 'README.md'), TARGET_2_SECTIONS_NO_MAP);
+    writeTocs(sourceDir(), targetDir(), ['intro']);
+  });
+
+  test('takes the included fragment and leaves it as it is, and never sees the README', async () => {
+    const result = await run();
+
+    expect(result.results.map((r) => [r.file, r.status])).toEqual([
+      ['_admonition/gpu.md', 'unchanged'],
+      ['intro.md', 'generated'],
+    ]);
+    expect(
+      fs.readFileSync(path.join(targetDir(), 'lectures', '_admonition', 'gpu.md'), 'utf-8')
+    ).toBe(GPU_ZH);
+    expect(
+      extractHeadingMap(fs.readFileSync(path.join(targetDir(), 'lectures', 'README.md'), 'utf-8'))
+        .size
+    ).toBe(0);
+  });
+
+  test("fails without the edition's _toc.yml, and works on one file with -f", async () => {
+    fs.rmSync(path.join(targetDir(), 'lectures', '_toc.yml'));
+
+    await expect(run()).rejects.toThrow(/^TARGET .*has no _toc\.yml or myst\.yml/);
+
+    const result = await run({ file: 'intro.md' });
+    expect(result.results.map((r) => [r.file, r.status])).toEqual([['intro.md', 'generated']]);
+  });
+});
+
 // ============================================================================
 // FORMATTING TESTS
 // ============================================================================
@@ -873,6 +948,10 @@ translation:
 `;
 
 describe('Title-only files', () => {
+  beforeEach(() => {
+    writeTocs(path.join(tmpDir, 'source'), path.join(tmpDir, 'target'), ['preamble']);
+  });
+
   test('generates translation metadata for title-only file', async () => {
     const sourceDir = path.join(tmpDir, 'source');
     const targetDir = path.join(tmpDir, 'target');

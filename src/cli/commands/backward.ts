@@ -14,8 +14,9 @@
  *
  * Supports two modes:
  * - Single-file: `npx resync backward -f file.md`
- * - Bulk: `npx resync backward` (all files in docs folder)
- *   - Writes reports to a timestamped folder
+ * - Bulk: `npx resync backward` (the lectures both repositories' lecture sets
+ *   hold, #449: the ToC's documents and the files they include)
+ *   - Writes reports to a timestamped folder, at each lecture's docs-relative path
  *   - Incremental checkpointing via .resync/_progress.json
  *   - Supports --resume to continue interrupted runs
  */
@@ -41,7 +42,8 @@ import {
 } from '../report-generator.js';
 import { BackwardReport, BackwardOptions, BulkBackwardReport, OneSidedFile } from '../types.js';
 import { SCHEMA_VERSION, parseProgressCheckpoint } from '../schema.js';
-import { discoverMarkdownFiles, resolveFilePairs, applyExcludes } from './status.js';
+import { resolveFilePairs, applyExcludes } from './status.js';
+import { readBulkLectures } from '../lecture-discovery.js';
 import { readFileState, isSourceChanged } from '../translate-state.js';
 import { languageLabel } from '../../language-config.js';
 
@@ -325,7 +327,6 @@ async function writeReport(
   logger: BackwardLogger
 ): Promise<void> {
   const output = options.output;
-  const basename = path.basename(report.file, '.md');
 
   // Detect whether the user specified a file path or a directory.
   const looksLikeFile = /\.(md|json)$/i.test(output);
@@ -358,21 +359,37 @@ async function writeReport(
     }
 
     if (options.json) {
-      const jsonPath = path.join(output, `${basename}.json`);
+      const jsonPath = `${reportStem(output, report.file)}.json`;
+      fs.mkdirSync(path.dirname(jsonPath), { recursive: true });
       fs.writeFileSync(jsonPath, generateJsonReport(report), 'utf-8');
       logger.info(`  Report written: ${jsonPath}`);
     } else {
-      const mdPath = path.join(output, `${basename}.md`);
+      const mdPath = `${reportStem(output, report.file)}.md`;
+      fs.mkdirSync(path.dirname(mdPath), { recursive: true });
       fs.writeFileSync(mdPath, generateMarkdownReport(report), 'utf-8');
       logger.info(`  Report written: ${mdPath}`);
 
       // Always write a JSON sidecar for resume reliability (in .resync/ subfolder)
-      const resyncDir = path.join(output, '.resync');
-      if (!fs.existsSync(resyncDir)) fs.mkdirSync(resyncDir, { recursive: true });
-      const jsonSidecar = path.join(resyncDir, `${basename}.json`);
+      const jsonSidecar = resolveReportPath(output, report.file, true);
+      fs.mkdirSync(path.dirname(jsonSidecar), { recursive: true });
       fs.writeFileSync(jsonSidecar, generateJsonReport(report), 'utf-8');
     }
   }
+}
+
+/**
+ * A lecture's report under `dir`, without its extension: its docs-relative
+ * path without `.md`, so `_admonition/gpu.md` reports to `_admonition/gpu.md`
+ * and two lectures that share a name in different folders never share a report
+ * or a resume sidecar (#449). A path that would leave `dir` falls back to the
+ * file's name.
+ */
+function reportStem(dir: string, file: string): string {
+  const stem = path.normalize(file.replace(/\.md$/, ''));
+  if (path.isAbsolute(stem) || stem === '..' || stem.startsWith(`..${path.sep}`)) {
+    return path.join(dir, path.basename(stem));
+  }
+  return path.join(dir, stem);
 }
 
 // ============================================================================
@@ -436,28 +453,31 @@ export function buildBulkOutputDir(baseOutput: string, sourceName: string): stri
 }
 
 /**
- * Discover files to analyze in bulk mode: those both repositories have, after
- * exclusions (#400). Backward analysis compares a translation with its
+ * Discover files to analyze in bulk mode: the lectures both repositories'
+ * lecture sets hold, after exclusions (#449, #400). Each side is its own set:
+ * the source's, and the edition's from its own `_toc.yml`; a docs folder
+ * without one throws. Backward analysis compares a translation with its
  * source, so a file on one side only has nothing to compare: a lecture the
  * edition has not translated yet, an edition-only page, or a translation whose
  * English was removed. Analysing one threw before any model call and counted
  * as an error, so on an edition with any, every run and every resume exited 1.
  * They are returned apart, for the run to report; `-f` stays strict.
  */
-export function discoverBulkFiles(
+export async function discoverBulkFiles(
   sourceRepoPath: string,
   targetRepoPath: string,
   docsFolder: string,
   exclude: string[]
-): {
+): Promise<{
   files: string[];
   oneSided: OneSidedFile[];
   excluded: number;
   sourceCount: number;
   targetCount: number;
-} {
-  const sourceFiles = new Set(discoverMarkdownFiles(sourceRepoPath, docsFolder));
-  const targetFiles = new Set(discoverMarkdownFiles(targetRepoPath, docsFolder));
+}> {
+  const lectures = await readBulkLectures(sourceRepoPath, targetRepoPath, docsFolder);
+  const sourceFiles = new Set(lectures.source.lectures);
+  const targetFiles = new Set(lectures.target.lectures);
   const allFiles = resolveFilePairs([...sourceFiles], [...targetFiles]);
   const kept = applyExcludes(allFiles, exclude);
   const files: string[] = [];
@@ -499,16 +519,16 @@ export async function runBackwardBulk(
   const { source, target, docsFolder, language } = options;
 
   // Discover files, before the output folder is touched: a refusal below must
-  // not wipe an earlier run's reports.
-  const discovered = discoverBulkFiles(source, target, docsFolder, exclude);
+  // not wipe an earlier run's reports. A wrong path usually stops here, as a
+  // docs folder with no _toc.yml (#449).
+  const discovered = await discoverBulkFiles(source, target, docsFolder, exclude);
   // One side with no lectures is a wrong path, not an edition (#400): every
   // file would read as one-sided and the run would pass having done nothing.
   if ((discovered.sourceCount === 0) !== (discovered.targetCount === 0)) {
     const [flag, repo] = discovered.sourceCount === 0 ? ['--source', source] : ['--target', target];
     throw new Error(
-      `No top-level .md files in ${path.join(repo, docsFolder)}, though the other repository ` +
-        `has some: check ${flag} and --docs-folder. Bulk mode reads only the top level of the ` +
-        `docs folder; use -f for a lecture in a subfolder.`
+      `No lectures in ${path.join(repo, docsFolder)}: no entry in its _toc.yml has a .md file ` +
+        `behind it, though the other repository has lectures. Check ${flag} and --docs-folder.`
     );
   }
 
@@ -876,11 +896,10 @@ function buildEmptyBulkReport(
 }
 
 function resolveReportPath(outputDir: string, file: string, json: boolean): string {
-  const basename = path.basename(file, '.md');
   const ext = json ? '.json' : '.md';
   // JSON sidecars live in .resync/ subfolder; markdown reports stay in outputDir
   const dir = json ? path.join(outputDir, '.resync') : outputDir;
-  return path.join(dir, `${basename}${ext}`);
+  return `${reportStem(dir, file)}${ext}`;
 }
 
 /**
