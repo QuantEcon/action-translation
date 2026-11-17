@@ -192,6 +192,10 @@ OVER_TRANSLATION_WATCH: list[tuple[str, str]] = [
     ("ചെയ്യൽ", "a verbal-noun bullet: he returned the five such pandas bullets to English (ml#57 Q1)"),
     ("വിവിധ", "'various' → പല at 2 of 3 pandas sites"),
     ("ഇപ്പോൾ", "'now' meaning next / at this point → ഇനി (ml#25 Q3; ml#26 545, 561, 571); ഇപ്പോൾ only for 'at the moment' / 'for now'"),
+    # Round 6: one site so far, so a watch and not a ban or a word-list entry
+    # (decision 6's recurrence filter). The engine wrote it in all six intro
+    # drafts; the next site is python_essentials 25 ("with a focus on").
+    ("ശ്രദ്ധ കേന്ദ്രീകരി", "'focus' → focus ചെയ്യുക at ml#58 18, the only reviewed site so far — put it to him"),
 ]
 # Library and tool names whose canonical spelling is lowercase: the editor keeps
 # them so at a paragraph start (pandas, ml#26 87), and a code-like opener
@@ -480,6 +484,36 @@ def prose_lines(text: str) -> list[tuple[int, str, str | None]]:
     return [(p["n"], p["line"], p["next"]) for p in prose_line_info(text)]
 
 
+def lowercase_opener(body: str, in_item: bool) -> dict | None:
+    """The lowercase English word opening a paragraph or list item, or None.
+
+    One test for the lint (lowercase_initial) and the repair (ml_repair.py's
+    capitalise_openers), so the two cannot disagree about a site. Returns the
+    word, its offset in ``body`` and whether it sits in MyST role link text.
+
+    A plain lowercase English word, bare or with a Malayalam suffix
+    (economics-ലും at ml#58 18, which the editor capitalised). A sentence may
+    open with a MyST role, so the link text is tested: the rule requires
+    {ref}`Previous lecture …`, not `previous`. Tokens shaped like code are
+    exempt (if/else, np.random, x_t, a[0], x-1); a bare lowercase name is not,
+    so x-ന്റെ is flagged unless LOWERCASE_OK lists it. A list item keeps the
+    bare-word test (whitespace or end of line after the word): the editor
+    keeps a bullet that opens with a technical term as it is (ml#25), and
+    capitalised some suffixed bullets but not others."""
+    m = LIST_ITEM_RE.match(body)
+    off = m.end() if m else 0
+    off += len(body[off:]) - len(body[off:].lstrip("("))
+    role = ROLE_PREFIX_RE.match(body[off:])
+    if role:
+        off += role.end()
+    head = body[off:]
+    end = r"(\s|$)" if in_item else r"(\s|$|-" + MALAYALAM_RE.pattern + ")"
+    w = re.match(r"([a-z][a-z-]*)" + end, head)
+    if not w or w.group(1) in LOWERCASE_OK or CODE_OPENER_RE.match(head):
+        return None
+    return {"word": w.group(1), "offset": off, "in_role": bool(role), "head": head}
+
+
 def round2_lints(text: str) -> dict:
     """Terminal punctuation, sentence-initial capitalisation, banned renderings,
     plurals, -ഉം pairs and comma splices — only on lines that carry Malayalam,
@@ -520,22 +554,9 @@ def round2_lints(text: str) -> dict:
             elif not introduces and not re.search(r"(?:[.:?!]|[.:?!…]\))$", body):
                 punct.append({"line": n, "kind": "paragraph without terminal punctuation", "text": body[-60:]})
         if has_ml and p["starts_para"]:
-            head = LIST_ITEM_RE.sub("", body).lstrip("(")
-            # A sentence may open with a MyST role — test the link text, since
-            # the rule requires {ref}`Previous lecture …`, not `previous`.
-            head = ROLE_PREFIX_RE.sub("", head)
-            # A plain lowercase English word opening the sentence, bare or with a
-            # Malayalam suffix (economics-ലും at ml#58 18, which the editor
-            # capitalised). Tokens shaped like code are exempt (if/else,
-            # np.random, x_t, a[0], x-1); a bare lowercase name is not, so
-            # x-ന്റെ is flagged unless LOWERCASE_OK lists it. A list item keeps
-            # the bare-word test (whitespace or end of line after the word): the
-            # editor keeps a bullet that opens with a technical term as it is
-            # (ml#25), and capitalised some suffixed bullets but not others.
-            end = r"(\s|$)" if p["in_item"] else r"(\s|$|-" + MALAYALAM_RE.pattern + ")"
-            m = re.match(r"([a-z][a-z-]*)" + end, head)
-            if m and m.group(1) not in LOWERCASE_OK and not CODE_OPENER_RE.match(head):
-                caps.append({"line": n, "text": head[:50]})
+            o = lowercase_opener(body, p["in_item"])
+            if o:
+                caps.append({"line": n, "text": o["head"][:50]})
         for sub, fix in BANNED_RENDERINGS:
             if sub in line:
                 banned.append({"line": n, "rendering": sub, "rule": fix})
