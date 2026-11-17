@@ -20,7 +20,7 @@ from ml_metrics import (  # noqa: E402
     add_um_commas, is_label_list, label_list_sites, list_blocks, prose_line_info, round2_lints,
     split_resumptive_splices, split_splices,
 )
-from ml_repair import repair, restore_formulas, restore_label_lists  # noqa: E402
+from ml_repair import capitalise_openers, repair, restore_formulas, restore_label_lists  # noqa: E402
 
 # (seed line, the editor's suggestion): the repair must reproduce his line exactly.
 HIS_SPLITS = [
@@ -524,6 +524,56 @@ class SuffixedOpeners(unittest.TestCase):
             self.assertEqual(caps(line + "\n"), [1], line)
         for line in not_flagged:
             self.assertEqual(caps(line + "\n"), [], line)
+
+
+class CapitalisedOpeners(unittest.TestCase):
+    # Round 6 (ml#58): the repair capitalises what lowercase_initial flags,
+    # except in list items and role link text, which the lint still reports.
+    SEED_18 = "economics-ലും finance-ലും ഉള്ള applications ലക്ഷ്യം വെച്ചുകൊണ്ട്, Python-ൽ programming ചെയ്യാൻ പഠിക്കുന്നതിലാണ് ഇവ ശ്രദ്ധ കേന്ദ്രീകരിക്കുന്നത്."
+
+    def test_the_round6_seed_line_gets_his_capital_and_comma(self):
+        text = self.SEED_18 + "\n"
+        lint = round2_lints(text)
+        out, stats = repair(text, [], [x["line"] for x in lint["um_pair_without_comma"]])
+        self.assertTrue(out.startswith("Economics-ലും, finance-ലും ഉള്ള applications "), out)
+        self.assertEqual((stats["openers_capitalised"], stats["um_commas_added"]), (1, 1))
+        self.assertEqual(round2_lints(out)["lowercase_initial"], [])
+
+    def test_capitalised_sites(self):
+        for before, after in [
+            ("recursion-ന്റെ കുറച്ചുകൂടെ contrived അല്ലാത്ത applications നമ്മൾ പിന്നീട് കാണും.\n",
+             "Recursion-ന്റെ കുറച്ചുകൂടെ contrived അല്ലാത്ത applications നമ്മൾ പിന്നീട് കാണും.\n"),
+            ("data science, machine learning തുടങ്ങിയ മേഖലകളുടെ വളർച്ച.\n",
+             "Data science, machine learning തുടങ്ങിയ മേഖലകളുടെ വളർച്ച.\n"),
+            ("(economics-ൽ ഇത് സാധാരണമാണ്.)\n", "(Economics-ൽ ഇത് സാധാരണമാണ്.)\n"),
+        ]:
+            self.assertEqual(capitalise_openers(before), (after, 1))
+
+    def test_left_alone(self):
+        for text in [
+            # a list item: he keeps a bullet that opens with a technical term (ml#25)
+            "* function calls process ചെയ്യാൻ ഉപയോഗിക്കുന്ന memory ആണ് stack\n",
+            # role link text: his own suggestion, reviewed functions 290
+            "{doc}`previous lecture <python_by_example>`-ൽ നമ്മൾ കണ്ട ഈ code ഒരിക്കൽക്കൂടി നോക്കാം:\n",
+            # canonical-lowercase names and code
+            "pandas-ൽ data analysis എളുപ്പമാണ്.\n",
+            "np.random-ൽ നിന്ന് ഒരു sample എടുക്കാം.\n",
+            "x_t-ന്റെ value നമുക്ക് നോക്കാം.\n",
+            # a wrapped continuation line is not a paragraph start
+            "ഇത് ഒരു\nsimple example ആണ്.\n",
+            # an English-retained line, kept byte-identical to the source
+            "economics and finance.\n",
+            # already capitalised
+            "Economics-ലും, finance-ലും ഉള്ള applications-നെ ലക്ഷ്യം വെച്ചുകൊണ്ട്.\n",
+        ]:
+            self.assertEqual(capitalise_openers(text), (text, 0), text)
+        # the lint still reports the item and the role text
+        self.assertEqual(len(round2_lints("* function calls process ചെയ്യാൻ ഉപയോഗിക്കുന്ന memory ആണ് stack\n")["lowercase_initial"]), 1)
+        self.assertEqual(len(round2_lints("{doc}`previous lecture <python_by_example>`-ൽ നമ്മൾ കണ്ട ഈ code ഒരിക്കൽക്കൂടി നോക്കാം:\n")["lowercase_initial"]), 1)
+
+    def test_watch_sees_focus(self):
+        lint = round2_lints(self.SEED_18 + "\n")
+        self.assertEqual([x["rendering"] for x in lint["over_translation_watch"]], ["ശ്രദ്ധ കേന്ദ്രീകരി"])
 
 
 class ProseLines(unittest.TestCase):

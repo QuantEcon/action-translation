@@ -1,4 +1,4 @@
-"""Deterministic repair of four Malayalam rule misses the model makes reliably
+"""Deterministic repair of seven Malayalam rule misses the model makes reliably
 even though the prompt states the rule (the #260 post-processing prototype):
 
   1. sentence-initial "ഉദാഹരണത്തിന്," → "For example," (discourse rule);
@@ -29,7 +29,17 @@ even though the prompt states the rule (the #260 post-processing prototype):
      byte for byte, gated on the source (ml_metrics.is_label_list). The editor
      returned the five such pandas bullets to English (ml#26 68-72) and ruled on
      lecture-python-programming.ml#57 (Q1, 2026-10-20) that short bullets stay
-     English as a general rule. Needs --source.
+     English as a general rule. Needs --source;
+  7. a lowercase English word opening a Malayalam paragraph is capitalised
+     (economics-ലും → Economics-ലും), at the sites ml_metrics' lowercase_initial
+     flags, which share one test (lowercase_opener). The capitals rule
+     (ml#25) is in the prompt, yet all six round-6 drafts of intro opened
+     line 18 lowercase, and the editor capitalised it
+     (lecture-python-programming.ml#58). On his six reviewed pages every such
+     paragraph opener is capitalised. List items are left alone: he keeps a
+     bullet that opens with a technical term as it is (ml#25). Role link text
+     is left alone too: his own suggestion at functions 290 keeps
+     {doc}`previous lecture …` lowercase.
 
 Repair 3 also covers case-marked pairs since his ml#57 answer (Q2, "always a
 comma"): speed-ന്റെയും memory-യുടെയും → speed-ന്റെയും, memory-യുടെയും.
@@ -55,7 +65,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from ml_metrics import LIST_ITEM_RE, add_um_commas, label_list_sites, prose_line_info, split_splices  # noqa: E402
+from ml_metrics import (  # noqa: E402
+    LIST_ITEM_RE, MALAYALAM_RE, add_um_commas, label_list_sites, lowercase_opener, prose_line_info, split_splices,
+)
 FOR_EXAMPLE = re.compile(r'(^|\n)(\s*(?:[*-]|\d+\.)?\s*)ഉദാഹരണത്തിന്,')
 # (English opener, the Malayalam openers the model writes for it). Each entry
 # is editor-attested: he restored the English at every site across rounds.
@@ -153,6 +165,24 @@ def restore_label_lists(text: str, source: str) -> tuple[str, int]:
     return '\n'.join(lines), len(sites)
 
 
+def capitalise_openers(text: str) -> tuple[str, int]:
+    """Capitalise a lowercase English word that opens a Malayalam paragraph
+    (economics-ലും → Economics-ലും), at exactly the sites lowercase_initial
+    flags outside list items and MyST role link text."""
+    lines = text.split('\n')
+    n = 0
+    for p in prose_line_info(text):
+        if not p['starts_para'] or p['in_item'] or not MALAYALAM_RE.search(p['line']):
+            continue
+        o = lowercase_opener(p['line'].rstrip(), False)
+        if o is None or o['in_role']:
+            continue
+        line, k = lines[p['n'] - 1], o['offset']
+        lines[p['n'] - 1] = line[:k] + line[k].upper() + line[k + 1:]
+        n += 1
+    return '\n'.join(lines), n
+
+
 def lint(output: Path, source: Path | None):
     cmd = [sys.executable, str(HERE / 'ml_metrics.py'), '--output', str(output), '--json']
     if source:
@@ -194,8 +224,12 @@ def repair(text: str, bare_lines: list[int], um_lines: list[int] | None = None,
     formulas = 0
     if source is not None:
         out, formulas = restore_formulas(out, source)
+    # Last, so an opener the formula restore put back in English is not seen
+    # as a lowercase miss; no repair above changes a paragraph's first word.
+    out, capitals = capitalise_openers(out)
     return out, {'colons_added': colons, 'for_example_restored': examples, 'um_commas_added': commas,
-                 'splices_split': splits, 'formulas_restored': formulas, 'label_bullets_restored': labels}
+                 'splices_split': splits, 'formulas_restored': formulas, 'label_bullets_restored': labels,
+                 'openers_capitalised': capitals}
 
 
 if __name__ == '__main__':
