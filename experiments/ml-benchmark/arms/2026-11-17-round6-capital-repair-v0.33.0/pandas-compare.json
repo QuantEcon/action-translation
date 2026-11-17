@@ -1,0 +1,110 @@
+[
+ {
+  "draft": "draft-w1-1.md",
+  "main": {
+   "lower": 19,
+   "um": 0,
+   "plural": 0,
+   "watch": 5,
+   "sim": 0.7975383168045157,
+   "lines_equal_ref": 7,
+   "ml_lines": 120,
+   "repairs": {
+    "colons_added": 2,
+    "um_commas_added": 10,
+    "splices_split": 8,
+    "formulas_restored": 2,
+    "label_bullets_restored": 5
+   }
+  },
+  "pr": {
+   "lower": 0,
+   "um": 0,
+   "plural": 0,
+   "watch": 5,
+   "sim": 0.7987142801144604,
+   "lines_equal_ref": 7,
+   "ml_lines": 120,
+   "repairs": {
+    "colons_added": 2,
+    "um_commas_added": 10,
+    "splices_split": 8,
+    "formulas_restored": 2,
+    "label_bullets_restored": 5,
+    "openers_capitalised": 19
+   }
+  }
+ },
+ {
+  "draft": "draft-w2-1.md",
+  "main": {
+   "lower": 1,
+   "um": 0,
+   "plural": 0,
+   "watch": 5,
+   "sim": 0.8026993290684974,
+   "lines_equal_ref": 12,
+   "ml_lines": 120,
+   "repairs": {
+    "colons_added": 2,
+    "um_commas_added": 14,
+    "splices_split": 7,
+    "formulas_restored": 2,
+    "label_bullets_restored": 5
+   }
+  },
+  "pr": {
+   "lower": 0,
+   "um": 0,
+   "plural": 0,
+   "watch": 5,
+   "sim": 0.8027773443594944,
+   "lines_equal_ref": 12,
+   "ml_lines": 120,
+   "repairs": {
+    "colons_added": 2,
+    "um_commas_added": 14,
+    "splices_split": 7,
+    "formulas_restored": 2,
+    "label_bullets_restored": 5,
+    "openers_capitalised": 1
+   }
+  }
+ },
+ {
+  "draft": "draft-w3-1.md",
+  "main": {
+   "lower": 15,
+   "um": 0,
+   "plural": 0,
+   "watch": 5,
+   "sim": 0.8054465547009888,
+   "lines_equal_ref": 11,
+   "ml_lines": 120,
+   "repairs": {
+    "colons_added": 2,
+    "um_commas_added": 10,
+    "splices_split": 6,
+    "formulas_restored": 1,
+    "label_bullets_restored": 5
+   }
+  },
+  "pr": {
+   "lower": 0,
+   "um": 0,
+   "plural": 0,
+   "watch": 5,
+   "sim": 0.8064668026997331,
+   "lines_equal_ref": 12,
+   "ml_lines": 120,
+   "repairs": {
+    "colons_added": 2,
+    "um_commas_added": 10,
+    "splices_split": 6,
+    "formulas_restored": 1,
+    "label_bullets_restored": 5,
+    "openers_capitalised": 15
+   }
+  }
+ }
+]
