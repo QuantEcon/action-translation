@@ -44,7 +44,7 @@
 #   --resume         continue the run in --run-dir: draws with a completion marker are kept,
 #                    unfinished ones are drawn again. The engine and inputs must match the run's
 #                    meta.txt (commit, dist/ and glossary hashes, SDK, model, localize, fixtures and
-#                    their hashes, languages, report mode), or it exits 2. --draws may grow, not shrink.
+#                    their hashes, languages, report mode, --max-refusals), or it exits 2. --draws may grow, not shrink.
 #   --redraw-infra   with --run-dir (implies --resume): move every draw whose current attempt was
 #                    an infra failure aside to <i>.infra<k>.* and draw it again. The replaced
 #                    attempts stay in the cell's infra share. Needs an engine with --report-json.
@@ -290,7 +290,12 @@ if [ -n "$ENGINE_DIR_ARG" ]; then
 elif [ -n "$REF" ]; then
     ENGINE_MODE="ref"; REF_DEPS="${REF_DEPS:-shared}"
     WORKTREE="${TMPDIR:-/tmp}/rate-check-wt.$$"
-    git -C "$REPO_ROOT" worktree add -q --detach "$WORKTREE" "$REF" || { echo "cannot check out $REF" >&2; WORKTREE=""; exit 2; }
+    # Resolve to a commit first: --detach takes no remote-only branch name, which a plain
+    # `worktree add` would have turned into a local tracking branch.
+    REF_SHA="$(git -C "$REPO_ROOT" rev-parse -q --verify "$REF^{commit}" 2>/dev/null \
+        || git -C "$REPO_ROOT" rev-parse -q --verify "origin/$REF^{commit}" 2>/dev/null)" \
+        || { echo "cannot check out $REF" >&2; WORKTREE=""; exit 2; }
+    git -C "$REPO_ROOT" worktree add -q --detach "$WORKTREE" "$REF_SHA" || { echo "cannot check out $REF" >&2; WORKTREE=""; exit 2; }
     if [ "$REF_DEPS" = own ]; then
         echo "Installing $REF's own dependencies (npm ci from its package-lock.json)..."
         (cd "$WORKTREE" && npm ci --ignore-scripts --no-audit --no-fund --loglevel=error) || { echo "npm ci failed in the $REF worktree" >&2; exit 2; }

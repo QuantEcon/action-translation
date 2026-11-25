@@ -703,6 +703,32 @@ describe('rate-check.sh --ref (#409)', () => {
     expect(result.stderr).not.toContain('cannot check out');
     expect(result.stderr).toContain('compiling main failed');
     expect(result.code).toBe(2);
+
+    // A branch that exists only on the remote resolves through origin/<name>, as it did
+    // before --detach; a name that resolves nowhere is refused before any worktree exists.
+    const refRun = (ref: string, dir: string) =>
+      run(
+        'bash',
+        [
+          path.join(tool, 'rate-check.sh'),
+          '--ref',
+          ref,
+          '--draws',
+          '1',
+          '--languages',
+          'zh-cn',
+          '--run-dir',
+          path.join(root, dir),
+        ],
+        { cwd: repo, env: { PATH: `${bin}:${process.env.PATH}`, TMPDIR: root } }
+      );
+    expect(git('update-ref', 'refs/remotes/origin/feature', 'HEAD').code).toBe(0);
+    const remoteOnly = refRun('feature', 'run-remote');
+    expect(remoteOnly.stderr).not.toContain('cannot check out');
+    expect(remoteOnly.stderr).toContain('compiling feature failed');
+    const unknown = refRun('no-such-ref', 'run-unknown');
+    expect(unknown.stderr).toContain('cannot check out no-such-ref');
+    expect(unknown.code).toBe(2);
   });
 });
 

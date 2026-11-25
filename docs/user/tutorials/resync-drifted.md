@@ -319,24 +319,27 @@ Files that exist only in the target are either **deliberate additions** — the 
 ```bash
 cd ~/repos/lecture-python-intro
 git log --oneline --all --follow -- lectures/old_name.md
+git show --name-status -M <newest commit from that log>
 ```
+
+The second command says which it was: `D lectures/old_name.md` for a deletion, or `R100 lectures/old_name.md lectures/new_name.md` for a rename (the log alone lists the commit either way).
 
 If the file was deleted intentionally, remove it from the target together with its state file, `.translate/state/<file>.yml` (for `lectures/old_name.md`, `.translate/state/old_name.md.yml`):
 
 ```bash
 cd ~/repos/lecture-python-intro.zh-cn
-git rm lectures/old_name.md .translate/state/old_name.md.yml
+git rm --ignore-unmatch lectures/old_name.md .translate/state/old_name.md.yml
 git commit -m "Remove orphaned translation (source deleted)"
 ```
 
-If the edition's `_toc.yml` still lists the lecture, remove its entry too. Removing only the `.md` leaves the state file behind. The file reads as a lecture the edition still tracks, and under `sync-scope: existing` a state file puts the lecture in sync's scope, so a lecture the English later restores is not synced as new.
+`--ignore-unmatch` lets the command pass when the lecture never had a state file. If the edition's `_toc.yml` still lists the lecture, remove its entry too. Removing only the `.md` leaves the state file behind. The file reads as a lecture the edition still tracks, and under `sync-scope: existing` a state file puts the lecture in sync's scope, so a lecture the English later restores is not synced as new.
 
-If the source **renamed** the file (the git history above shows the new name), keep the translation and move it, with its state file, to the new name:
+If the source **renamed** the file (the `R` line above gives the new name), keep the translation and move it, with its state file, to the new name:
 
 ```bash
 cd ~/repos/lecture-python-intro.zh-cn
 git mv lectures/old_name.md lectures/new_name.md
-git mv .translate/state/old_name.md.yml .translate/state/new_name.md.yml
+git mv .translate/state/old_name.md.yml .translate/state/new_name.md.yml   # skip if it has no state file
 ```
 
 Update the lecture's entry in the edition's `_toc.yml` to the new name, then run `npx translate status -s ~/repos/lecture-python-intro -t . -f new_name.md`. The state file still records the commit from before the rename, so the lecture reads `OUTDATED`. Resync it with `forward -f new_name.md`. If `forward` finds nothing to change (its triage reports the content identical, or the changes only i18n), it skips the file and writes no state file, so record the rename commit with `status -f new_name.md --write-state`. That command stops and lists the rename commit as an English change since the recorded sync point, because it cannot tell that the commit changed no content. Once you have checked that the translation matches the renamed source, rerun it with `--carried`. Then commit the moved files and the new state file.
