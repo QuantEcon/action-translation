@@ -532,6 +532,7 @@ function walk(target: string): string[] {
   if (fs.statSync(abs).isFile()) return [target];
   return fs
     .readdirSync(abs, { withFileTypes: true })
+    .filter((e) => !(e.isDirectory() && e.name.startsWith('test-translation-sync')))
     .flatMap((e) => walk(path.join(target, e.name)));
 }
 
@@ -611,6 +612,23 @@ describe('the \\translate-resync trigger gate', () => {
       expect(job.permissions).toEqual({ contents: 'read' });
     }
   );
+
+  it('never sweeps the harness clones, which exist only in some working trees (#465)', () => {
+    // The clones are gitignored, so plant one: the sweep must not depend on
+    // whether the harness has run in this checkout.
+    const clone = path.join(ROOT, 'tool-test-action-on-github', 'test-translation-sync-walk-probe');
+    fs.mkdirSync(path.join(clone, '.github', 'workflows'), { recursive: true });
+    fs.writeFileSync(path.join(clone, '.github', 'workflows', 'probe.yml'), 'jobs: {}\n');
+    try {
+      const swept = SYNC_WORKFLOW_ROOTS.flatMap(walk);
+      expect(swept.length).toBeGreaterThan(0);
+      expect(
+        swept.filter((f) => f.split(path.sep).some((s) => s.startsWith('test-translation-sync')))
+      ).toEqual([]);
+    } finally {
+      fs.rmSync(clone, { recursive: true, force: true });
+    }
+  });
 
   it('leaves no copy of the pre-#192 ungated form anywhere', () => {
     const offenders = SYNC_WORKFLOW_ROOTS.flatMap(walk).filter((f) =>
