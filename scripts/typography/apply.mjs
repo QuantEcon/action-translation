@@ -133,9 +133,12 @@ for (const f of files) {
   }
 
   if (out === src) { console.log(`  · ${f} — already correct`); continue; }
+  // Net change: a negative count is a repaired table delimiter row, which loses the
+  // non-breaking spaces an earlier engine wrote into it (#325).
   const added = (out.match(/\u00A0/g) || []).length - (src.match(/\u00A0/g) || []).length;
+  const spaces = added < 0 ? `${-added} non-breaking space(s) removed` : `${added} non-breaking space(s)`;
   const elisions = (out.match(ELISION_CURLED) || []).length - (src.match(ELISION_CURLED) || []).length;
-  console.log(`  ✓ ${f} — ${added} non-breaking space(s), ${elisions} elision apostrophe(s)`);
+  console.log(`  ✓ ${f} — ${spaces} (net), ${elisions} elision apostrophe(s)`);
   if (!dryRun) fs.writeFileSync(p, out, 'utf-8');
   changed++;
 }

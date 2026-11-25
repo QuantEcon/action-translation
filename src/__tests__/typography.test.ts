@@ -1,4 +1,4 @@
-import { applyTypography, hasTypographyRules } from '../typography.js';
+import { applyTypography, ELISION_PREFIXES, hasTypographyRules } from '../typography.js';
 
 const NBSP = '\u00A0';
 
@@ -267,6 +267,13 @@ describe('applyTypography', () => {
 
   // #325: lines that are not prose although they sit where prose may appear.
   describe('raw HTML literal blocks (#325)', () => {
+    it('ends a one-line block on its own line, so the prose after it is still typeset', () => {
+      const src = ['<pre>a : b</pre>', '', 'Oui : non'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        ['<pre>a : b</pre>', '', `Oui${NBSP}: non`].join('\n')
+      );
+    });
+
     // English getting_started.md: the fr edition shipped `width : 70% ;` with
     // U+00A0, which is not CSS whitespace, so the declarations were dropped.
     const styleBlock = [
@@ -485,6 +492,24 @@ describe('applyTypography', () => {
   // (`de l”Exercice 1`), so an elision before markup is written as U+2019.
   describe('French elision apostrophe before inline markup (#324)', () => {
     const R = '’';
+
+    // Every prefix of the closed list, so that dropping one fails a test.
+    it.each(ELISION_PREFIXES.split('|'))('curls the elision after %s', (prefix) => {
+      expect(applyTypography(`${prefix}'*x*`, 'fr')).toBe(`${prefix}${R}*x*`);
+    });
+
+    it('curls before a footnote or reference-link bracket, which no mask covers', () => {
+      expect(applyTypography("l'[^1] et l'[texte][ref]", 'fr')).toBe(
+        `l${R}[^1] et l${R}[texte][ref]`
+      );
+    });
+
+    it.each(["2l'*x*", "‘l'*x*", "’l'*x*"])(
+      'leaves %s alone: the prefix does not start a word',
+      (src) => {
+        expect(applyTypography(src, 'fr')).toBe(src);
+      }
+    );
 
     it.each([
       ["de l'[Exercice 1](x)", `de l${R}[Exercice 1](x)`], // link
