@@ -7,13 +7,15 @@
  * - buildLabelSet
  *
  * GitHub API interaction (createTranslationPR) is tested via
- * integration tests with the real GitHub Action workflow.
+ * integration tests with the real GitHub Action workflow, and here, against a
+ * mock Octokit, for what happens when `pulls.create` fails (#92).
  */
 
 import {
   buildPrBody,
   buildPrTitle,
   buildLabelSet,
+  createTranslationPR,
   formatStillOpenNotice,
   parseTranslationSyncMetadata,
   PrCreatorConfig,
@@ -878,5 +880,166 @@ describe('parseTranslationSyncMetadata', () => {
     expect(result!.files[1].previousPath).toBe('oldname.md');
     expect(result!.files[2].type).toBe('removed');
     expect(result!.files[3].type).toBe('toc');
+  });
+});
+
+// =============================================================================
+// createTranslationPR: a pulls.create that fails (#92)
+// =============================================================================
+
+describe('createTranslationPR when pulls.create fails (#92)', () => {
+  const PR = { number: 73, html_url: 'https://github.com/QuantEcon/lecture-python.zh-cn/pull/73' };
+  const createError = new Error("We couldn't respond to your request in time.");
+  const files: TranslatedFile[] = [{ path: 'lecture.md', content: '# 标题\n' }];
+  const config: PrCreatorConfig = {
+    ...baseConfig,
+    prReviewers: ['reviewer'],
+  };
+
+  function mockOctokit(create: jest.Mock, list: jest.Mock) {
+    return {
+      rest: {
+        repos: {
+          get: jest.fn().mockResolvedValue({ data: { default_branch: 'main' } }),
+          createOrUpdateFileContents: jest.fn().mockResolvedValue({}),
+          deleteFile: jest.fn().mockResolvedValue({}),
+        },
+        git: {
+          getRef: jest.fn().mockResolvedValue({ data: { object: { sha: 'base-sha' } } }),
+          createRef: jest.fn().mockResolvedValue({}),
+        },
+        pulls: {
+          create,
+          list,
+          requestReviewers: jest.fn().mockResolvedValue({}),
+        },
+        issues: { addLabels: jest.fn().mockResolvedValue({}) },
+      },
+    };
+  }
+
+  function mockLogger() {
+    return { info: jest.fn(), error: jest.fn(), warning: jest.fn() };
+  }
+
+  /** The branch the run created, which the lookup must name. */
+  function createdBranch(octokit: ReturnType<typeof mockOctokit>): string {
+    return octokit.rest.git.createRef.mock.calls[0][0].ref.replace(/^refs\/heads\//, '');
+  }
+
+  /** Run createTranslationPR with fake timers, so the lookups' waits take no time. */
+  async function run(octokit: ReturnType<typeof mockOctokit>, logger = mockLogger()) {
+    const promise = createTranslationPR(octokit, files, [], config, logger);
+    const settled = promise.then(
+      (value) => ({ value, error: undefined as unknown }),
+      (error: unknown) => ({ value: undefined, error })
+    );
+    await jest.runAllTimersAsync();
+    return settled;
+  }
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('adopts the PR the lookup finds, applies labels and reviewers, and creates no second PR', async () => {
+    const create = jest.fn().mockRejectedValue(createError);
+    const list = jest.fn();
+    const octokit = mockOctokit(create, list);
+    list.mockImplementation(async () => ({
+      data: [{ ...PR, head: { ref: createdBranch(octokit) } }],
+    }));
+    const logger = mockLogger();
+
+    const { value, error } = await run(octokit, logger);
+
+    expect(error).toBeUndefined();
+    expect(value).toEqual({ prUrl: PR.html_url, branchName: createdBranch(octokit), prNumber: 73 });
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(list).toHaveBeenCalledTimes(1);
+    expect(list).toHaveBeenCalledWith({
+      owner: 'QuantEcon',
+      repo: 'lecture-python.zh-cn',
+      head: `QuantEcon:${createdBranch(octokit)}`,
+      state: 'all',
+    });
+    expect(octokit.rest.issues.addLabels).toHaveBeenCalledWith(
+      expect.objectContaining({ issue_number: 73, labels: ['action-translation', 'automated'] })
+    );
+    expect(octokit.rest.pulls.requestReviewers).toHaveBeenCalledWith(
+      expect.objectContaining({ pull_number: 73, reviewers: ['reviewer'] })
+    );
+    expect(logger.warning).toHaveBeenCalledWith(expect.stringContaining('adopting it'));
+  });
+
+  it('finds the PR on a later lookup, when the first lists none', async () => {
+    const create = jest.fn().mockRejectedValue(createError);
+    const list = jest.fn();
+    const octokit = mockOctokit(create, list);
+    list.mockResolvedValueOnce({ data: [] }).mockImplementation(async () => ({
+      data: [{ ...PR, head: { ref: createdBranch(octokit) } }],
+    }));
+
+    const { value, error } = await run(octokit);
+
+    expect(error).toBeUndefined();
+    expect(value?.prNumber).toBe(73);
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('rethrows the original error when three lookups find no PR', async () => {
+    const create = jest.fn().mockRejectedValue(createError);
+    const list = jest.fn().mockResolvedValue({ data: [] });
+    const octokit = mockOctokit(create, list);
+
+    const { error } = await run(octokit);
+
+    expect(error).toBe(createError);
+    expect(list).toHaveBeenCalledTimes(3);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(octokit.rest.issues.addLabels).not.toHaveBeenCalled();
+    expect(octokit.rest.pulls.requestReviewers).not.toHaveBeenCalled();
+  });
+
+  it('ignores a listed PR whose head is another branch', async () => {
+    const create = jest.fn().mockRejectedValue(createError);
+    const list = jest
+      .fn()
+      .mockResolvedValue({ data: [{ ...PR, head: { ref: 'translation-sync-other' } }] });
+    const octokit = mockOctokit(create, list);
+
+    const { error } = await run(octokit);
+
+    expect(error).toBe(createError);
+  });
+
+  it('rethrows the original error when the lookup itself fails', async () => {
+    const create = jest.fn().mockRejectedValue(createError);
+    const list = jest.fn().mockRejectedValue(new Error('lookup failed'));
+    const octokit = mockOctokit(create, list);
+
+    const { error } = await run(octokit);
+
+    expect(error).toBe(createError);
+    expect(list).toHaveBeenCalledTimes(3);
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('makes no lookup when pulls.create succeeds', async () => {
+    const create = jest.fn().mockResolvedValue({ data: PR });
+    const list = jest.fn();
+    const octokit = mockOctokit(create, list);
+
+    const { value, error } = await run(octokit);
+
+    expect(error).toBeUndefined();
+    expect(value?.prUrl).toBe(PR.html_url);
+    expect(list).not.toHaveBeenCalled();
+    expect(octokit.rest.issues.addLabels).toHaveBeenCalledTimes(1);
   });
 });

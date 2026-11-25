@@ -55696,15 +55696,23 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
   }
   const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet);
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
-  const { data: pr } = await octokit.rest.pulls.create({
-    owner: targetOwner,
-    repo: targetRepo,
-    title: prTitle,
-    body: prBody,
-    head: branchName,
-    base: defaultBranch
-  });
-  logger.info(`Created PR: ${pr.html_url}`);
+  let pr;
+  try {
+    ({ data: pr } = await octokit.rest.pulls.create({
+      owner: targetOwner,
+      repo: targetRepo,
+      title: prTitle,
+      body: prBody,
+      head: branchName,
+      base: defaultBranch
+    }));
+    logger.info(`Created PR: ${pr.html_url}`);
+  } catch (createError) {
+    pr = await findPullForBranch(octokit, targetOwner, targetRepo, branchName, logger);
+    if (!pr)
+      throw createError;
+    logger.warning(`Creating the PR reported an error (${createError instanceof Error ? createError.message : String(createError)}), but PR #${pr.number} exists for branch ${branchName}: adopting it: ${pr.html_url}`);
+  }
   const labelsToAdd = buildLabelSet(config.prLabels, sourcePrInfo?.labels);
   if (labelsToAdd.length > 0) {
     const maxAttempts = 3;
@@ -55740,6 +55748,30 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     branchName,
     prNumber: pr.number
   };
+}
+async function findPullForBranch(octokit, targetOwner, targetRepo, branchName, logger) {
+  const maxAttempts = 3;
+  const delayMs = 2e3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const { data } = await octokit.rest.pulls.list({
+        owner: targetOwner,
+        repo: targetRepo,
+        head: `${targetOwner}:${branchName}`,
+        state: "all"
+      });
+      const found = (data ?? []).find((p) => p?.head?.ref === branchName);
+      if (found)
+        return found;
+      logger.info(`No PR found for branch ${branchName} (lookup ${attempt}/${maxAttempts})`);
+    } catch (lookupError) {
+      logger.info(`Lookup ${attempt}/${maxAttempts} of the PR for branch ${branchName} failed: ${lookupError instanceof Error ? lookupError.message : String(lookupError)}`);
+    }
+    if (attempt < maxAttempts) {
+      await new Promise((resolve4) => setTimeout(resolve4, delayMs));
+    }
+  }
+  return void 0;
 }
 function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet) {
   const newFiles = translatedFiles.filter((f) => !f.sha);
