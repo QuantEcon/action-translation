@@ -286,9 +286,9 @@ export function nothingToSync(classified: ClassifiedFiles): boolean {
 /**
  * Hold an in-scope lecture to the rule that it is never translated from
  * scratch. The scope check saw the lecture's `.md` in the edition, so a file
- * that comes back from the content fetch marked new is one the fetch could not
- * read: on the `all` path a failed target read is taken as "absent" (F36 on
- * #169). Translating it would put a fresh machine translation over a reviewed
+ * that comes back from the content fetch marked new is one the fetch found
+ * missing after the scope check saw it (the fetch fails on any other status,
+ * #466). Translating it would put a fresh machine translation over a reviewed
  * lecture, or beside it for a rename. Such files are dropped and each becomes
  * an error, which fails the run.
  */

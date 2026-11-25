@@ -1,0 +1,3 @@
+### Fixed
+
+- **Sync no longer translates a lecture from scratch when the edition read fails** (#466). Under `sync-scope: all`, sync took any failed read of a changed lecture, or of a renamed lecture's old path, from the edition (a 5xx, a 403, a rate limit) to mean the edition did not have it: a changed lecture was translated from scratch over its reviewed translation, and a rename left the old file in the edition beside a fresh translation, and the run passed. Only a 404 now means the edition lacks the lecture, as for the ToC and removal reads. Any other status is a `Fetch failed (markdown)` or `Fetch failed (renamed)` error for that lecture: it is not translated, the run fails and opens its failure issue, and the PR's other files still sync.

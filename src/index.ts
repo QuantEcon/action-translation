@@ -1557,7 +1557,17 @@ async function fetchAllFileContents(
         const result = await fetchFileContent(octokit, targetOwner, targetRepo, file.filename);
         targetContent = result.content;
         existingFileSha = result.sha;
-      } catch {
+      } catch (error) {
+        // Only a 404 means the edition lacks this lecture (#466). Any other
+        // status fails the file: reading it as new would translate a reviewed
+        // lecture from scratch over its translation.
+        const status = (error as { status?: number } | null | undefined)?.status;
+        if (status !== 404) {
+          throw new Error(
+            `Could not read ${file.filename} from ${targetOwner}/${targetRepo} ` +
+              `(status ${status ?? 'unknown'}): ${error}`
+          );
+        }
         isNewFile = true;
         core.info(`${file.filename} does not exist in target repo - will create it`);
       }
@@ -1620,7 +1630,17 @@ async function fetchAllFileContents(
           core.info(
             `Found existing translation at ${previousFilename} - will transfer to ${file.filename}`
           );
-        } catch {
+        } catch (error) {
+          // Only a 404 means the edition lacks the old path (#466). Any other
+          // status fails the rename: reading it as absent would translate the
+          // new path from scratch and leave the old file in the edition.
+          const status = (error as { status?: number } | null | undefined)?.status;
+          if (status !== 404) {
+            throw new Error(
+              `Could not read ${previousFilename} from ${targetOwner}/${targetRepo} ` +
+                `(status ${status ?? 'unknown'}): ${error}`
+            );
+          }
           core.info(`${previousFilename} does not exist in target repo`);
         }
       }

@@ -58850,7 +58850,11 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
         const result = await fetchFileContent(octokit, targetOwner, targetRepo, file.filename);
         targetContent = result.content;
         existingFileSha = result.sha;
-      } catch {
+      } catch (error4) {
+        const status = error4?.status;
+        if (status !== 404) {
+          throw new Error(`Could not read ${file.filename} from ${targetOwner}/${targetRepo} (status ${status ?? "unknown"}): ${error4}`);
+        }
         isNewFile = true;
         core9.info(`${file.filename} does not exist in target repo - will create it`);
       }
@@ -58893,7 +58897,11 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
           targetContent = result.content;
           oldFileSha = result.sha;
           core9.info(`Found existing translation at ${previousFilename} - will transfer to ${file.filename}`);
-        } catch {
+        } catch (error4) {
+          const status = error4?.status;
+          if (status !== 404) {
+            throw new Error(`Could not read ${previousFilename} from ${targetOwner}/${targetRepo} (status ${status ?? "unknown"}): ${error4}`);
+          }
           core9.info(`${previousFilename} does not exist in target repo`);
         }
       }

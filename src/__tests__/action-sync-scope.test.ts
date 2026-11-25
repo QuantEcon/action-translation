@@ -26,7 +26,9 @@
  *   and removals included, and no file in it is read, nor any source file but
  *   the lecture set's;
  * - an in-scope lecture the content fetch cannot read is not translated from
- *   scratch, and its error is logged;
+ *   scratch, and its error is logged; under `all`, neither is a changed or
+ *   renamed lecture whose edition read fails with anything but a 404, while a
+ *   404 still makes it a new lecture (#466);
  * - the job summary of a failed run says that it failed, and with how many
  *   errors;
  * - under `all`, the run makes the requests it made before the input existed,
@@ -1286,8 +1288,10 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
         },
         target: {
           '.translate/state/a.md.yml': STATE,
-          // The scope check reads the lecture; the content fetch then gets a 502.
-          'lectures/a.md': [translated('Alpha'), { status: 502 }],
+          // The scope check reads the lecture; the content fetch then gets a
+          // 404, as if it went in between. (Any other status fails the fetch
+          // itself, as under `all`: #466.)
+          'lectures/a.md': [translated('Alpha'), { status: 404 }],
           'lectures/_toc.yml': TOC_BEFORE,
         },
       });
@@ -1332,6 +1336,116 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
 
     it('makes no model call, and sends every request to the fake', () => {
       check(run, expectCleanRun);
+    });
+  });
+
+  // #466: under `all` there is no scope check, so the content fetch's own read
+  // decides whether the edition has the lecture. Only a 404 means it does not;
+  // any other status used to read as "absent" and translate the lecture from
+  // scratch over its reviewed translation.
+  describe("'all': a changed lecture whose edition read answers 500 (#466)", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('all-changed-lecture-500', {
+        scope: 'all',
+        prFiles: [{ filename: 'lectures/b.md', status: 'modified' }],
+        source: { ...changedInSource('lectures/b.md', 'Bravo'), ...listedAtMerge('b') },
+        target: { 'lectures/b.md': { status: 500 } },
+      });
+    }, 90_000);
+
+    it('does not translate the lecture from scratch, write it or open a PR', () => {
+      check(run, (log) => {
+        expect(log.writes).toEqual([]);
+        expect(log.deletes).toEqual([]);
+        expect(log.pulls).toEqual([]);
+      });
+    });
+
+    it('fails the run with a failure issue that names the read', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(log.issues).toHaveLength(1);
+        const errors = issueErrors(log.issues[0]) ?? [];
+        expect(errors).toHaveLength(1);
+        expect(errors[0]).toMatch(/^Fetch failed \(markdown\): lectures\/b\.md: /);
+        expect(errors[0]).toContain(`Could not read lectures/b.md from ${EDITION} (status 500)`);
+        expect(log.comments).toEqual([]);
+      });
+    });
+
+    it('makes no model call, and sends every request to the fake', () => {
+      check(run, expectCleanRun);
+    });
+  });
+
+  describe("'all': a renamed lecture whose old path's edition read answers 500 (#466)", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('all-renamed-lecture-500', {
+        scope: 'all',
+        prFiles: [
+          { filename: 'lectures/a-new.md', status: 'renamed', previous_filename: 'lectures/a.md' },
+        ],
+        source: {
+          [atMerge('lectures/a-new.md')]: lecture('Alpha'),
+          [atParent('lectures/a.md')]: lecture('Alpha'),
+          ...listedAtMerge('a-new'),
+        },
+        target: { 'lectures/a.md': { status: 500 } },
+      });
+    }, 90_000);
+
+    it('neither translates the new path from scratch nor touches the old one', () => {
+      check(run, (log) => {
+        expect(log.writes).toEqual([]);
+        expect(log.deletes).toEqual([]);
+        expect(log.pulls).toEqual([]);
+      });
+    });
+
+    it('fails the run with a failure issue that names the read', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(log.issues).toHaveLength(1);
+        const errors = issueErrors(log.issues[0]) ?? [];
+        expect(errors).toHaveLength(1);
+        expect(errors[0]).toMatch(/^Fetch failed \(renamed\): lectures\/a-new\.md: /);
+        expect(errors[0]).toContain(`Could not read lectures/a.md from ${EDITION} (status 500)`);
+        expect(log.comments).toEqual([]);
+        expect(run.stdout).toContain(
+          '::error::Error fetching content for renamed file lectures/a-new.md: '
+        );
+      });
+    });
+
+    it('makes no model call, and sends every request to the fake', () => {
+      check(run, expectCleanRun);
+    });
+  });
+
+  describe("'all': a changed lecture the edition answers 404 for (#466)", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('all-changed-lecture-404', {
+        scope: 'all',
+        prFiles: [{ filename: 'lectures/b.md', status: 'modified' }],
+        source: { ...changedInSource('lectures/b.md', 'Bravo'), ...listedAtMerge('b') },
+        target: {},
+      });
+    }, 90_000);
+
+    it('still takes it as a new lecture and sends it to the model', () => {
+      check(run, (log) => {
+        expect(log.requests).toContain(readEdition('lectures/b.md'));
+        // The fake model answers no call, so the new lecture fails and the run
+        // opens a failure issue; what matters is that it reached the model.
+        expect(log.modelRequests).toBeGreaterThan(0);
+        expect(log.issues).toHaveLength(1);
+        expect(issueErrors(log.issues[0])?.[0]).toMatch(/^Error processing lectures\/b\.md: /);
+        expect(log.unmocked).toEqual([]);
+        expect(log.crash).toBeNull();
+      });
     });
   });
 
