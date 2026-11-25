@@ -1054,14 +1054,14 @@ async function runSync(): Promise<void> {
   const placeErrors = [...placement.errors, ...(scope?.errors ?? [])];
 
   // Nothing left to sync. Without an error the run passes: no PR, no failure
-  // issue and no comment on the source PR. Besides the job summary, a scoped
-  // run closes the failure issues earlier runs opened for this PR (the scoped
-  // half of #387): on a partial edition, passing with nothing in scope is an
-  // ordinary recovery, such as a rerun after a transient read error left a
-  // lecture's scope unknown. Under `all`, which reaches here only when every
-  // changed `.md` is outside the lecture set (#449), they stay open, as for
-  // any `all` run without a PR. With an error, some changed file's place is
-  // unknown, so the run fails here, before it reads the edition again.
+  // issue and no comment on the source PR. Besides the job summary, the run
+  // closes the failure issues earlier runs opened for this PR (#387): on a
+  // partial edition, passing with nothing in scope is an ordinary recovery,
+  // such as a rerun after a transient read error left a lecture's scope
+  // unknown. Under `all` this is reached only when every changed `.md` is
+  // outside the lecture set (#449), and closes them the same way. With an
+  // error, some changed file's place is unknown, so the run fails here,
+  // before it reads the edition again.
   if (nothingToSync(remaining)) {
     if (placeErrors.length === 0) {
       core.info(
@@ -1070,12 +1070,12 @@ async function runSync(): Promise<void> {
           : 'Nothing this PR changed is in the lecture set. No translation PR.'
       );
       await writeSummary({ scope, errorCount: 0 });
-      if (!isTestMode && scope) {
+      if (!isTestMode) {
         await closeFailureIssues(
           octokit,
           prNumber,
           inputs.targetLanguage,
-          nothingToDeliverResolution(prNumber, inputs.targetLanguage)
+          nothingToDeliverResolution(prNumber, inputs.targetLanguage, scope !== undefined)
         );
       }
       return;
@@ -1422,16 +1422,15 @@ async function runSync(): Promise<void> {
         inputs.targetLanguage,
         `✅ A later sync for PR #${prNumber} (${inputs.targetLanguage}) succeeded: ${prUrl}`
       );
-    } else if (scope) {
-      // The scoped half of #387: a scoped run that passes with nothing to
-      // deliver, such as one whose only change removes a lecture the edition
-      // no longer has, closes the PR's failure issues too. Under `all` such a
-      // run leaves them open, as it always has; #387 stays open for that half.
+    } else {
+      // #387: a run that passes with nothing to deliver, such as one whose
+      // only change removes a lecture the edition no longer has, closes the
+      // PR's failure issues too, under either scope.
       await closeFailureIssues(
         octokit,
         prNumber,
         inputs.targetLanguage,
-        nothingToDeliverResolution(prNumber, inputs.targetLanguage)
+        nothingToDeliverResolution(prNumber, inputs.targetLanguage, scope !== undefined)
       );
     }
   }
@@ -1986,9 +1985,8 @@ async function postSuccessComment(
  * be missing.
  *
  * `resolution` opens the closing comment and says how the PR recovered: with
- * the translation PR a later run opened, or, under `sync-scope: existing`,
- * with a later run that passed with nothing to deliver
- * (`nothingToDeliverResolution`, the scoped half of #387).
+ * the translation PR a later run opened, or with a later run that passed with
+ * nothing to deliver (`nothingToDeliverResolution`, #387).
  */
 async function closeFailureIssues(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2032,15 +2030,19 @@ async function closeFailureIssues(
 }
 
 /**
- * How a scoped run that passed with nothing to deliver resolves the PR's
- * failure issues (the scoped half of #387). With no translation PR to cite, it
- * cites this run. Outside Actions GITHUB_RUN_ID is unset, `runId` is NaN, and
- * the sentence ends without a link.
+ * How a run that passed with nothing to deliver resolves the PR's failure
+ * issues (#387). With no translation PR to cite, it cites this run. It names
+ * `sync-scope: existing` only for a scoped run. Outside Actions GITHUB_RUN_ID
+ * is unset, `runId` is NaN, and the sentence ends without a link.
  */
-function nothingToDeliverResolution(prNumber: number, targetLanguage: string): string {
+function nothingToDeliverResolution(
+  prNumber: number,
+  targetLanguage: string,
+  scoped: boolean
+): string {
   const resolution =
     `✅ A later sync for PR #${prNumber} (${targetLanguage}) passed with nothing to deliver ` +
-    `to this edition (sync-scope: existing)`;
+    `to this edition${scoped ? ' (sync-scope: existing)' : ''}`;
   const { serverUrl, runId } = github.context;
   if (!Number.isFinite(runId) || runId <= 0) return `${resolution}.`;
   const { owner, repo } = github.context.repo;

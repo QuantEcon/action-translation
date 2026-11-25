@@ -58656,8 +58656,8 @@ async function runSync() {
     if (placeErrors.length === 0) {
       core9.info(scope ? "sync-scope: existing \u2014 nothing this PR changed is in scope. No translation PR." : "Nothing this PR changed is in the lecture set. No translation PR.");
       await writeSummary({ scope, errorCount: 0 });
-      if (!isTestMode && scope) {
-        await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, nothingToDeliverResolution(prNumber, inputs.targetLanguage));
+      if (!isTestMode) {
+        await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, nothingToDeliverResolution(prNumber, inputs.targetLanguage, scope !== void 0));
       }
       return;
     }
@@ -58826,8 +58826,8 @@ async function runSync() {
     } else if (prUrl) {
       await postSuccessComment(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, prUrl, result.processedFiles);
       await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, `\u2705 A later sync for PR #${prNumber} (${inputs.targetLanguage}) succeeded: ${prUrl}`);
-    } else if (scope) {
-      await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, nothingToDeliverResolution(prNumber, inputs.targetLanguage));
+    } else {
+      await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, nothingToDeliverResolution(prNumber, inputs.targetLanguage, scope !== void 0));
     }
   }
 }
@@ -59153,8 +59153,8 @@ Closing this failure report.`
     core9.warning(`Could not close failure issues for PR #${prNumber}: ${error4}`);
   }
 }
-function nothingToDeliverResolution(prNumber, targetLanguage) {
-  const resolution = `\u2705 A later sync for PR #${prNumber} (${targetLanguage}) passed with nothing to deliver to this edition (sync-scope: existing)`;
+function nothingToDeliverResolution(prNumber, targetLanguage, scoped) {
+  const resolution = `\u2705 A later sync for PR #${prNumber} (${targetLanguage}) passed with nothing to deliver to this edition${scoped ? " (sync-scope: existing)" : ""}`;
   const { serverUrl, runId } = github3.context;
   if (!Number.isFinite(runId) || runId <= 0)
     return `${resolution}.`;
