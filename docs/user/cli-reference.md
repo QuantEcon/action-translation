@@ -336,7 +336,7 @@ npx translate init -s <source-path> -t <target-path> --target-language <code> [o
 | `-m, --model <model>` | `claude-sonnet-5` | Claude model |
 | `-f, --file <file>` | *(all lectures)* | Translate a single lecture file (e.g., `cobweb.md`) |
 | `--batch-delay <ms>` | `1000` | Delay between lectures in ms (rate limiting) |
-| `--resume-from <file>` | *(none)* | Resume from a specific lecture file |
+| `--resume-from <file>` | *(none)* | Resume from a specific lecture file, named as for `-f` |
 | `--skip-existing` | `false` | Skip lectures the edition already has; never overwrites a translation |
 | `-j, --parallel <n>` | `1` | Number of parallel translations |
 | `--glossary <path>` | *(auto)* | Path to glossary JSON file (default: built-in glossary for the language) |
@@ -461,7 +461,7 @@ npx translate init \
   --resume-from cobweb.md
 ```
 
-Partial filename matches are supported — `--resume-from cobweb` will also work.
+`--resume-from` names the lecture as `-f` does, by the same steps: `--resume-from cobweb` also works, and so does `--resume-from gpu.md` for `_admonition/gpu.md`. A name that matches no lecture, or more than one, stops the run before any translation or write, naming the lectures it matched, instead of starting again from the first lecture. The run translates that lecture and every one after it in ToC order, and `--dry-run` lists those.
 
 **Re-run after partial failure (skip already-translated files):**
 

@@ -765,6 +765,17 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     console.log('');
   }
 
+  // --resume-from names a lecture as -f does, through the same resolver: a
+  // name that matches none, or more than one, stops the run here, before any
+  // model call, rather than restarting the series from its first lecture or
+  // resuming from the first entry that contains the name (#384).
+  let startIndex = 0;
+  if (options.resumeFrom) {
+    const from = findInitLecture(options.resumeFrom, set, lectures);
+    startIndex = lectures.indexOf(from);
+    console.log(chalk.yellow(`Resuming from: ${from}\n`));
+  }
+
   // Checked before the dry run returns, so a preview refuses as the run would.
   const editionConfig: TranslateConfig = {
     'source-language': options.sourceLanguage,
@@ -776,16 +787,19 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   if (options.dryRun) {
     // The preview applies --skip-existing as the real run does, so its list
     // is the real run's list (#379).
-    const skip = options.skipExisting ? filterSkipExisting(options, lectures) : undefined;
+    // ...and starts where --resume-from does, numbering each lecture by its
+    // place in the series.
+    const planned = lectures.slice(startIndex);
+    const skip = options.skipExisting ? filterSkipExisting(options, planned) : undefined;
     const skippedSet = new Set(skip?.skipped ?? []);
     // Every lecture in the set has its file: a ToC entry without one is
     // reported above, not listed here (#449).
     console.log(chalk.yellow('Would translate the following lectures:'));
-    lectures.forEach((lecture, index) => {
+    planned.forEach((lecture, index) => {
       const marker = skippedSet.has(lecture)
         ? chalk.yellow('⊘ skipped (already in the edition)')
         : chalk.green('✓');
-      console.log(chalk.gray(`  ${index + 1}. ${lecture} ${marker}`));
+      console.log(chalk.gray(`  ${startIndex + index + 1}. ${lecture} ${marker}`));
     });
     if (skip) {
       for (const warning of skip.warnings) {
@@ -854,27 +868,6 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
 
   // Phase 5: Translate lectures
   const translator = new TranslationService(options.apiKey, options.model, false);
-
-  // Handle resume
-  let startIndex = 0;
-  if (options.resumeFrom) {
-    const idx = lectures.indexOf(options.resumeFrom);
-    if (idx === -1) {
-      // Try partial match
-      const partial = lectures.findIndex((l) => l.includes(options.resumeFrom!));
-      if (partial !== -1) {
-        startIndex = partial;
-        console.log(chalk.yellow(`Resuming from: ${lectures[partial]}\n`));
-      } else {
-        console.log(
-          chalk.yellow(`Resume file not found: ${options.resumeFrom}, starting from beginning\n`)
-        );
-      }
-    } else {
-      startIndex = idx;
-      console.log(chalk.yellow(`Resuming from: ${lectures[idx]}\n`));
-    }
-  }
 
   const CONCURRENCY = options.parallel;
   let remaining = lectures.slice(startIndex);

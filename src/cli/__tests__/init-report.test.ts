@@ -515,6 +515,63 @@ describe('translate init -f', () => {
   });
 });
 
+describe('translate init --resume-from (#384)', () => {
+  const logLines = (): string[] => logSpy.mock.calls.map((call) => String(call[0]));
+
+  it('resumes from the lecture named exactly, not an earlier one whose name contains it', async () => {
+    writeSource(['intro.md', 'ak_solow.md', 'solow.md', 'cobweb.md']);
+
+    await runInit(options({ dryRun: true, resumeFrom: 'solow' }));
+
+    const lines = logLines();
+    expect(lines).toContain('Resuming from: solow.md\n');
+    const listed = lines.filter((line) => /^ {2}\d+\. /.test(line));
+    expect(listed.map((line) => line.trim().split(' ').slice(0, 2).join(' '))).toEqual([
+      '3. solow.md',
+      '4. cobweb.md',
+    ]);
+  });
+
+  it('translates from the resumed lecture on', async () => {
+    writeSource(['intro.md', 'ak_solow.md', 'solow.md', 'cobweb.md']);
+    api.reply(GOOD, GOOD);
+
+    const stats = await runInit(options({ resumeFrom: 'solow.md' }));
+
+    expect(api.requests).toHaveLength(2);
+    expect(stats.successCount).toBe(2);
+    const docs = path.join(tmpDir, 'target', 'lectures');
+    expect(fs.existsSync(path.join(docs, 'solow.md'))).toBe(true);
+    expect(fs.existsSync(path.join(docs, 'cobweb.md'))).toBe(true);
+    expect(fs.existsSync(path.join(docs, 'intro.md'))).toBe(false);
+    expect(fs.existsSync(path.join(docs, 'ak_solow.md'))).toBe(false);
+  });
+
+  it('refuses a name that matches no lecture, before any model call or write', async () => {
+    writeSource(['intro.md', 'solow.md', 'cobweb.md']);
+
+    await expect(runInit(options({ resumeFrom: 'sollow.md' }))).rejects.toThrow(
+      "sollow.md is not in the source's lecture set"
+    );
+
+    expect(api.requests).toHaveLength(0);
+    expect(fs.existsSync(path.join(tmpDir, 'target'))).toBe(false);
+  });
+
+  it('refuses a name that matches more than one lecture, naming them', async () => {
+    writeSource(['intro.md', 'ak_solow.md', 'solow_model.md']);
+
+    await expect(runInit(options({ resumeFrom: 'solow' }))).rejects.toThrow(
+      'solow names 2 lectures: ak_solow.md, solow_model.md. Name one by its path in the docs folder.'
+    );
+    await expect(runInit(options({ dryRun: true, resumeFrom: 'solow' }))).rejects.toThrow(
+      /^solow names 2 lectures/
+    );
+
+    expect(api.requests).toHaveLength(0);
+  });
+});
+
 describe('translate init into an existing edition (#134)', () => {
   const MATCHING_CONFIG =
     '# routing notes the edition keeps\nsource-language: en\ntarget-language: zh-cn\n' +
