@@ -556,5 +556,31 @@ Text.`;
   return summary(identifyChangedSections(before, after, before, after)) === 'modified:### Results';
 });
 
+test('A level change on one of two same-text headings reads as one modification (#283)', () => {
+  const before = `## Exercises
+
+Top-level exercises.
+
+## Exercises
+
+More exercises.`;
+  const after = before.replace('## Exercises\n\nMore', '### Exercises\n\nMore');
+  return summary(identifyChangedSections(before, after, before, after)) === 'modified:### Exercises';
+});
+
+test('Deleting one of two same-text headings at different levels deletes that level (#283)', () => {
+  const before = `## Exercises
+
+Top-level exercises.
+
+### Exercises
+
+Sub exercises.`;
+  const after = `### Exercises
+
+Sub exercises.`;
+  return summary(identifyChangedSections(before, after, before, after)) === 'deleted:## Exercises';
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);

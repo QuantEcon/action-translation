@@ -256,7 +256,7 @@ describe('reviewPR when evaluateDiff never parses (#284)', () => {
 
   let comments: string[];
 
-  function makeReviewer(): TranslationReviewer {
+  function makeReviewer(targetAfter = TARGET_AFTER): TranslationReviewer {
     const reviewer = new TranslationReviewer('test-key', 'test-token');
     comments = [];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -280,7 +280,7 @@ describe('reviewPR when evaluateDiff never parses (#284)', () => {
             const content =
               p.repo === 'tgt'
                 ? p.ref === 'targethead'
-                  ? TARGET_AFTER
+                  ? targetAfter
                   : TARGET_BEFORE
                 : p.ref === 'sourcehead'
                   ? SOURCE_AFTER
@@ -300,8 +300,8 @@ describe('reviewPR when evaluateDiff never parses (#284)', () => {
     return reviewer;
   }
 
-  async function review(reviewer: TranslationReviewer) {
-    const promise = reviewer.reviewPR(1, 'o/src', 'o', 'tgt', 'lectures', undefined, 'zh-cn');
+  async function review(reviewer: TranslationReviewer, mode: 'off' | 'shadow' = 'off') {
+    const promise = reviewer.reviewPR(1, 'o/src', 'o', 'tgt', 'lectures', undefined, 'zh-cn', mode);
     // Settle the promise before draining timers, so a rejection is never unhandled.
     const settled = promise.then(
       (value) => ({ value, error: undefined }),
@@ -366,6 +366,14 @@ describe('reviewPR when evaluateDiff never parses (#284)', () => {
     expect(verdict?.diffChecks.structurePreserved).toBe(true);
     expect(verdict?.diffChecks.headingMapCorrect).toBe(true);
     expect(verdict?.recommendationReasons.join('\n')).not.toMatch(/diff check failed/);
+    // And the rubric gates on a reason of its own, not only through findings.
+    expect(verdict?.recommendationReasons).toContain(
+      `${DIFF_EVALUATION_UNPARSEABLE} — scopeCorrect and positionCorrect were not judged`
+    );
+
+    // The diff score counts the published checks: two of four pass.
+    expect(verdict?.scores.diff).toBe(5);
+    expect(result?.diffQuality.score).toBe(5);
 
     // A workflow warning, not an error annotation.
     const warnings = coreMock.warning.mock.calls.map((c) => String(c[0]));
@@ -374,6 +382,86 @@ describe('reviewPR when evaluateDiff never parses (#284)', () => {
 
     // Every paid attempt counts, the three failed ones included.
     expect(reviewer.getUsage().apiCalls).toBe(4);
+  });
+
+  // The cap hole: `sortAndCapFindings` keeps the first twenty findings by
+  // severity, translation findings first, so twenty minor model findings push
+  // both `diff-check` findings out of the list, and the rubric skips the
+  // model-sourced booleans. Without the reason of its own, this recorded
+  // auto-merge.
+  const TWENTY_MINORS_JSON = JSON.stringify({
+    accuracy: 10,
+    fluency: 9,
+    terminology: 10,
+    formatting: 10,
+    syntaxErrors: [],
+    issues: [],
+    findings: Array.from({ length: 20 }, (_, i) => ({
+      severity: 'minor',
+      category: 'fluency',
+      file: 'lectures/intro.md',
+      location: null,
+      description: `Slightly stiff phrasing ${i + 1}.`,
+      suggestion: null,
+    })),
+    strengths: ['good'],
+    summary: 'Fine.',
+  });
+
+  it.each(['off', 'shadow'] as const)(
+    'routes to editor when twenty minor findings crowd the diff-check findings out (auto-merge-mode %s)',
+    async (mode) => {
+      mockFinalMessage
+        .mockResolvedValueOnce(response(TWENTY_MINORS_JSON))
+        .mockResolvedValueOnce(response(UNPARSEABLE))
+        .mockResolvedValueOnce(response(UNPARSEABLE))
+        .mockResolvedValueOnce(response(UNPARSEABLE));
+
+      const { value: result, error } = await review(makeReviewer(), mode);
+
+      expect(error).toBeUndefined();
+      const verdict = parseReviewVerdict(comments[0]);
+      // The findings list really is full of the model's minors ...
+      expect(verdict?.findings).toHaveLength(20);
+      expect(verdict?.findings.some((f) => f.category === 'diff-check')).toBe(false);
+      // ... and the PR still routes to editor, by the phrase in the reasons.
+      expect(result?.recommendation).toBe('editor');
+      expect(verdict?.recommendation).toBe('editor');
+      expect(verdict?.recommendationReasons).toEqual([
+        `${DIFF_EVALUATION_UNPARSEABLE} — scopeCorrect and positionCorrect were not judged`,
+      ]);
+      if (mode === 'shadow') {
+        expect(result?.wouldAutoMerge).toBe(false);
+        expect(verdict?.wouldAutoMerge).toBe(false);
+      } else {
+        expect(verdict?.wouldAutoMerge).toBeUndefined();
+      }
+    }
+  );
+
+  it('still reports a failed deterministic check as failed when the diff evaluation degrades', async () => {
+    mockFinalMessage
+      .mockResolvedValueOnce(response(TRANSLATION_JSON))
+      .mockResolvedValueOnce(response(UNPARSEABLE))
+      .mockResolvedValueOnce(response(UNPARSEABLE))
+      .mockResolvedValueOnce(response(UNPARSEABLE));
+    // The translation gains a section the source does not have.
+    const reviewer = makeReviewer(`${TARGET_AFTER}\n## 额外\n\n多余的内容。\n`);
+
+    const { value: result, error } = await review(reviewer);
+
+    expect(error).toBeUndefined();
+    const verdict = parseReviewVerdict(comments[0]);
+    expect(verdict?.diffChecks.structurePreserved).toBe(false);
+    expect(verdict?.diffCheckSources?.structurePreserved).toBe('deterministic');
+    expect(verdict?.recommendationReasons).toContain('diff check failed: structurePreserved');
+    // The new `##` heading has no heading-map entry, so that check fails too.
+    expect(verdict?.diffChecks.headingMapCorrect).toBe(false);
+    expect(verdict?.diffCheckSources?.headingMapCorrect).toBe('deterministic');
+    expect(verdict?.recommendationReasons).toContain('diff check failed: headingMapCorrect');
+    expect(result?.recommendation).toBe('editor');
+    // All four checks failed.
+    expect(verdict?.scores.diff).toBe(0);
   });
 
   it('takes the normal path when the second diff attempt parses', async () => {
@@ -436,7 +524,7 @@ describe('reviewPR when evaluateDiff never parses (#284)', () => {
 
     expect(error).toBeInstanceOf(ReviewParseExhaustedError);
     expect((error as Error).message).toMatch(
-      /evaluateTranslation: Failed to parse response after 3 attempts/
+      /evaluateTranslation: the retry budget of 3 attempts ended on a reply that does not parse/
     );
     expect(comments).toEqual([]);
   });

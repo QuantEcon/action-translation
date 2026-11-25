@@ -56758,6 +56758,9 @@ function computeRecommendation(input) {
     if (input.diffChecks?.[check] !== true)
       reasons.push(`diff check failed: ${check}`);
   }
+  if (input.diffEvaluationUnparseable) {
+    reasons.push(`${DIFF_EVALUATION_UNPARSEABLE} \u2014 scopeCorrect and positionCorrect were not judged`);
+  }
   if (input.findingsMalformed) {
     reasons.push("findings payload missing or malformed (fail-closed)");
   }
@@ -56860,9 +56863,7 @@ var ReviewParseExhaustedError = class extends Error {
   attempts;
   constructor(operation, attempts, cause) {
     const detail = cause instanceof Error ? cause.message : String(cause);
-    super(`${operation}: Failed to parse response after ${attempts} attempts: ${detail}`, {
-      cause
-    });
+    super(`${operation}: the retry budget of ${attempts} attempts ended on a reply that does not parse: ${detail}`, { cause });
     this.name = "ReviewParseExhaustedError";
     this.operation = operation;
     this.attempts = attempts;
@@ -56877,17 +56878,31 @@ function unparseableDiffQuality(attempts) {
     structurePreserved: false,
     headingMapCorrect: false,
     issues: [
-      `${DIFF_EVALUATION_UNPARSEABLE} after ${attempts} attempts \u2014 the model-judged diff checks were not judged and are recorded as failed (#284).`
+      `${DIFF_EVALUATION_UNPARSEABLE}: the retry budget of ${attempts} attempts ended on a parse failure. The model-judged diff checks were not judged and are recorded as failed (#284).`
     ],
-    summary: `The ${DIFF_EVALUATION_UNPARSEABLE} after ${attempts} attempts; the model-judged diff checks are recorded as failed.`,
+    summary: `The ${DIFF_EVALUATION_UNPARSEABLE}: the retry budget of ${attempts} attempts ended on a parse failure, and the model-judged diff checks are recorded as failed.`,
     scopeDetails: notJudged,
     positionDetails: notJudged,
     structureDetails: notJudged
   };
 }
+var FileContentOmittedError = class extends Error {
+  constructor(side, path9, ref, size) {
+    super(`Could not read ${side} ${path9} @ ${ref.substring(0, 7)}: the contents API returned no content for this ${size}-byte file (GitHub omits the content of a file over 1 MB) \u2014 failing the review rather than reviewing the PR without this file`);
+    this.name = "FileContentOmittedError";
+  }
+};
 function sourceReadError(path9, ref, error4) {
+  if (error4 instanceof FileContentOmittedError)
+    return error4;
   const message = error4 instanceof Error ? error4.message : String(error4);
   return new Error(`Could not read source ${path9} @ ${ref.substring(0, 7)}: ${message} \u2014 failing the review rather than reviewing the PR without this file`, { cause: error4 });
+}
+function decodeFileContent(data, side, path9, ref) {
+  if (data.content === "" && typeof data.size === "number" && data.size > 0) {
+    throw new FileContentOmittedError(side, path9, ref, data.size);
+  }
+  return Buffer.from(data.content, "base64").toString("utf-8");
 }
 function parseJsonResponse(text) {
   let parsed;
@@ -56990,6 +57005,25 @@ function sectionMatchKeys(before, after) {
   };
   return { beforeKeys: keysFor(before), afterKeys: keysFor(after) };
 }
+function pairSections(before, after) {
+  const { beforeKeys, afterKeys } = sectionMatchKeys(before, after);
+  const beforeIndexByKey = new Map(beforeKeys.map((key, j) => [key, j]));
+  const afterToBefore = afterKeys.map((key) => beforeIndexByKey.get(key));
+  const matched = new Set(afterToBefore.filter((j) => j !== void 0));
+  const leftoverById = /* @__PURE__ */ new Map();
+  before.forEach((s, j) => {
+    if (matched.has(j))
+      return;
+    const id = headingToId(s.heading);
+    leftoverById.set(id, [...leftoverById.get(id) ?? [], j]);
+  });
+  after.forEach((s, i) => {
+    if (afterToBefore[i] !== void 0)
+      return;
+    afterToBefore[i] = leftoverById.get(headingToId(s.heading))?.shift();
+  });
+  return afterToBefore;
+}
 function identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter) {
   const changedSections = [];
   if (!sourceAfter && !targetAfter) {
@@ -57025,12 +57059,12 @@ function identifyChangedSections(sourceBefore, sourceAfter, targetBefore, target
   const sourceBeforeSections = extractSections(sourceBefore);
   const sourceAfterSections = extractSections(sourceAfter);
   const targetAfterSections = extractSections(targetAfter);
-  const { beforeKeys, afterKeys } = sectionMatchKeys(sourceBeforeSections, sourceAfterSections);
-  const beforeByKey = new Map(sourceBeforeSections.map((s, i) => [beforeKeys[i], s]));
-  const afterKeySet = new Set(afterKeys);
+  const afterToBefore = pairSections(sourceBeforeSections, sourceAfterSections);
+  const pairedBefore = new Set(afterToBefore);
   for (let i = 0; i < sourceAfterSections.length; i++) {
     const section = sourceAfterSections[i];
-    const beforeSection = beforeByKey.get(afterKeys[i]);
+    const j = afterToBefore[i];
+    const beforeSection = j === void 0 ? void 0 : sourceBeforeSections[j];
     const targetSection = targetAfterSections[i];
     if (!beforeSection) {
       changedSections.push({
@@ -57050,7 +57084,7 @@ function identifyChangedSections(sourceBefore, sourceAfter, targetBefore, target
   }
   for (let i = 0; i < sourceBeforeSections.length; i++) {
     const section = sourceBeforeSections[i];
-    if (!afterKeySet.has(beforeKeys[i])) {
+    if (!pairedBefore.has(i)) {
       changedSections.push({
         heading: section.heading,
         changeType: "deleted"
@@ -57196,7 +57230,7 @@ var TranslationReviewer = class {
             ref: sourcePr.base.sha
           });
           if ("content" in beforeData) {
-            before.set(filename, Buffer.from(beforeData.content, "base64").toString("utf-8"));
+            before.set(filename, decodeFileContent(beforeData, "source", beforeFilename, sourcePr.base.sha));
           }
         } catch (error4) {
           if (!isNotFoundError(error4)) {
@@ -57213,7 +57247,7 @@ var TranslationReviewer = class {
             ref: sourcePr.head.sha
           });
           if ("content" in afterData) {
-            after.set(filename, Buffer.from(afterData.content, "base64").toString("utf-8"));
+            after.set(filename, decodeFileContent(afterData, "source", filename, sourcePr.head.sha));
           }
         } catch (error4) {
           if (!isNotFoundError(error4)) {
@@ -57250,7 +57284,7 @@ var TranslationReviewer = class {
           ref: commitSha
         });
         if ("content" in data) {
-          after.set(filename, Buffer.from(data.content, "base64").toString("utf-8"));
+          after.set(filename, decodeFileContent(data, "source", filename, commitSha));
         }
       } catch (error4) {
         if (!isNotFoundError(error4))
@@ -57368,7 +57402,7 @@ var TranslationReviewer = class {
           ref: pr.head.sha
         });
         if ("content" in targetData) {
-          const content = Buffer.from(targetData.content, "base64").toString("utf-8");
+          const content = decodeFileContent(targetData, "target", file.filename, pr.head.sha);
           targetTranslation += content + "\n\n";
           filePairs.set(file.filename, { ...filePairs.get(file.filename), target: content });
         }
@@ -57385,7 +57419,7 @@ var TranslationReviewer = class {
           ref: pr.base.sha
         });
         if ("content" in targetBeforeData) {
-          targetBefore += Buffer.from(targetBeforeData.content, "base64").toString("utf-8") + "\n\n";
+          targetBefore += decodeFileContent(targetBeforeData, "target", file.filename, pr.base.sha) + "\n\n";
         }
       } catch (error4) {
         if (!isNotFoundError(error4))
@@ -57427,7 +57461,7 @@ var TranslationReviewer = class {
     } catch (error4) {
       if (!(error4 instanceof ReviewParseExhaustedError))
         throw error4;
-      core6.warning(`evaluateDiff: ${DIFF_EVALUATION_UNPARSEABLE} after ${error4.attempts} attempts (${error4.message}) \u2014 scopeCorrect and positionCorrect are recorded as failed and the PR routes to editor; the deterministic diff checks still run (#284)`);
+      core6.warning(`evaluateDiff: ${DIFF_EVALUATION_UNPARSEABLE} (${error4.message}) \u2014 scopeCorrect and positionCorrect are recorded as failed and the PR routes to editor; the deterministic diff checks still run (#284)`);
       diffUnparseable = true;
       diffQuality = unparseableDiffQuality(error4.attempts);
     }
@@ -57539,6 +57573,10 @@ var TranslationReviewer = class {
       findingsMalformed: translationQuality.findingsMalformed,
       sourceContentMissing,
       sourceContentMissingFiles,
+      // Gates by its own reason (#284): the two `diff-check` findings that
+      // also record it can be capped out of `allFindings` by twenty model
+      // findings, and the model-sourced booleans are skipped by the rubric.
+      diffEvaluationUnparseable: diffUnparseable,
       // With max-suggestions: 0 the prompt asks for no findings at all, so an
       // empty findings array is not evidence of a clean translation.
       findingsSuppressed: this.maxSuggestions === 0

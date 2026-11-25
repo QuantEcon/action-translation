@@ -775,6 +775,47 @@ Text.`;
         'modified:### Results',
       ]);
     });
+
+    it('reads a level change on one of two same-text headings as one modification', () => {
+      const before = `# Title
+
+## Exercises
+
+Top-level exercises.
+
+## Exercises
+
+More exercises.`;
+      const after = before.replace('## Exercises\n\nMore', '### Exercises\n\nMore');
+      expect(after).not.toBe(before);
+
+      // As for a unique heading: no false DELETED line before the reviewer.
+      expect(summary(identifyChangedSections(before, after, T_BEFORE, T_AFTER))).toEqual([
+        'modified:### Exercises',
+      ]);
+    });
+
+    it('deletes the right level when one of two same-text headings goes', () => {
+      const before = `# Title
+
+## Exercises
+
+Top-level exercises.
+
+### Exercises
+
+Sub exercises.`;
+      const after = `# Title
+
+### Exercises
+
+Sub exercises.`;
+
+      // Exactly the deleted `##`, not the surviving `###` paired to it.
+      expect(identifyChangedSections(before, after, T_BEFORE, T_AFTER)).toEqual([
+        { heading: '## Exercises', changeType: 'deleted' },
+      ]);
+    });
   });
 });
 

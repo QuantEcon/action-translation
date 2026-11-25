@@ -470,6 +470,14 @@ export interface RecommendationInput {
   sourceContentMissingFiles?: string[];
   /** `max-suggestions: 0` asked the model for no findings, so an empty list proves nothing. */
   findingsSuppressed?: boolean;
+  /**
+   * The diff evaluation returned no parseable verdict (#284), so the
+   * model-judged checks were never judged. Gates by a reason of its own: the
+   * `diff-check` findings that also record it can be capped out of the
+   * findings list by twenty model findings, and the model-sourced booleans
+   * are skipped above.
+   */
+  diffEvaluationUnparseable?: boolean;
 }
 
 /**
@@ -514,6 +522,11 @@ export function computeRecommendation(input: RecommendationInput): {
   for (const check of DIFF_CHECK_NAMES) {
     if (input.diffCheckSources?.[check] === 'model') continue;
     if (input.diffChecks?.[check] !== true) reasons.push(`diff check failed: ${check}`);
+  }
+  if (input.diffEvaluationUnparseable) {
+    reasons.push(
+      `${DIFF_EVALUATION_UNPARSEABLE} — scopeCorrect and positionCorrect were not judged`
+    );
   }
   if (input.findingsMalformed) {
     reasons.push('findings payload missing or malformed (fail-closed)');

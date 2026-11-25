@@ -25,7 +25,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { runDir, loadState } from './lib.mjs';
+import { runDir, loadState, diffEvaluationDegraded } from './lib.mjs';
 
 const RUN_ID = process.env.RUN_ID || 'm0';
 const dir = runDir(RUN_ID);
@@ -42,7 +42,9 @@ const tasks = [];
 for (const r of rows) {
   // A run that died posted no verdict, so there is nothing to attribute. It is
   // still scored (as a non-catch that routes to `editor`), just not here.
-  if (r.unparseable || r.reviewFailed) continue;
+  // A review whose diff evaluation never parsed (#284) is scored as a failed
+  // run too, so attributing its findings would be wasted work.
+  if (r.unparseable || r.reviewFailed || diffEvaluationDegraded(r.verdict)) continue;
   if (r.kind !== 'injection') continue;
   const f = fixtureById[r.fixtureId] || {};
   tasks.push({

@@ -193,6 +193,37 @@ function sectionMatchKeys(
 }
 
 /**
+ * Pair each after-section with its before-section (#283), kept in step with
+ * src/reviewer.ts: the index into `before`, or `undefined` (added). First by
+ * `sectionMatchKeys`; then the sections left over on both sides that share an
+ * id are paired in document order, so a level change on a colliding heading
+ * reads as one modification, as it does on a unique heading. Only colliding
+ * ids can be left over on both sides, so a document with no such collision
+ * is paired exactly as by the keys alone.
+ */
+function pairSections(
+  before: Array<{ heading: string }>,
+  after: Array<{ heading: string }>
+): Array<number | undefined> {
+  const { beforeKeys, afterKeys } = sectionMatchKeys(before, after);
+  const beforeIndexByKey = new Map(beforeKeys.map((key, j) => [key, j]));
+  const afterToBefore = afterKeys.map(key => beforeIndexByKey.get(key));
+
+  const matched = new Set(afterToBefore.filter((j): j is number => j !== undefined));
+  const leftoverById = new Map<string, number[]>();
+  before.forEach((s, j) => {
+    if (matched.has(j)) return;
+    const id = headingToId(s.heading);
+    leftoverById.set(id, [...(leftoverById.get(id) ?? []), j]);
+  });
+  after.forEach((s, i) => {
+    if (afterToBefore[i] !== undefined) return;
+    afterToBefore[i] = leftoverById.get(headingToId(s.heading))?.shift();
+  });
+  return afterToBefore;
+}
+
+/**
  * Identify changed sections by comparing before and after content
  * Handles: preamble changes, section additions, modifications, deletions, reordering
  */
@@ -251,16 +282,16 @@ export function identifyChangedSections(
   const sourceAfterSections = extractSections(sourceAfter);
   const targetAfterSections = extractSections(targetAfter);
   
-  // Build maps for quick lookup by matching key (#283: not the bare id, which
-  // collides for headings that differ only by level or repeat)
-  const { beforeKeys, afterKeys } = sectionMatchKeys(sourceBeforeSections, sourceAfterSections);
-  const beforeByKey = new Map(sourceBeforeSections.map((s, i) => [beforeKeys[i], s]));
-  const afterKeySet = new Set(afterKeys);
+  // Pair sections before and after (#283: not by the bare id, which collides
+  // for headings that differ only by level or repeat)
+  const afterToBefore = pairSections(sourceBeforeSections, sourceAfterSections);
+  const pairedBefore = new Set(afterToBefore);
 
   // Check for added and modified sections
   for (let i = 0; i < sourceAfterSections.length; i++) {
     const section = sourceAfterSections[i];
-    const beforeSection = beforeByKey.get(afterKeys[i]);
+    const j = afterToBefore[i];
+    const beforeSection = j === undefined ? undefined : sourceBeforeSections[j];
     
     // Find corresponding Chinese section by position
     const targetSection = targetAfterSections[i];
@@ -287,7 +318,7 @@ export function identifyChangedSections(
   // Check for deleted sections
   for (let i = 0; i < sourceBeforeSections.length; i++) {
     const section = sourceBeforeSections[i];
-    if (!afterKeySet.has(beforeKeys[i])) {
+    if (!pairedBefore.has(i)) {
       changedSections.push({
         heading: section.heading,
         changeType: 'deleted',

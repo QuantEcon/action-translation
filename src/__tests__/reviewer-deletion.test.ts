@@ -77,6 +77,11 @@ interface Harness {
   sourceFetchError?: { error: Error; paths: string[]; ref?: string };
   /** Make the translation PR a CLI forward resync PR pinned to this commit. */
   resyncSha?: string;
+  /**
+   * Serve these paths as GitHub serves a file over 1 MB: `content: ""` with
+   * the file's real `size`.
+   */
+  omittedContent?: { side: 'source' | 'target'; paths: string[]; ref?: string };
 }
 
 interface Recorder {
@@ -129,7 +134,17 @@ function makeReviewer(h: Harness, rec: Recorder): TranslationReviewer {
               : (h.sourceContent ?? {});
           const content = table[p.path];
           if (content === undefined) throw new NotFound();
-          return { data: { content: b64(content) } };
+          const size = Buffer.byteLength(content, 'utf-8');
+          const omit = h.omittedContent;
+          if (
+            omit &&
+            (omit.side === 'target') === (p.repo === TARGET_REPO) &&
+            omit.paths.includes(p.path) &&
+            (omit.ref === undefined || omit.ref === p.ref)
+          ) {
+            return { data: { content: '', encoding: 'none', size } };
+          }
+          return { data: { content: b64(content), size } };
         },
       },
     },
@@ -652,5 +667,80 @@ describe('reviewPR per-file source-fetch gate (#261)', () => {
       /source content could not be fetched/
     );
     expect(result.recommendationReasons.join('\n')).toMatch(/blocker/);
+  });
+
+  // GitHub returns a file over 1 MB with `content: ""` and its real size.
+  // Decoded as is, that was an empty document: neither failed nor named, so a
+  // multi-file PR could still record auto-merge. It is not a 404 — the file
+  // exists — so it fails the run like any other failed read.
+  const SIZE = Buffer.byteLength(SOURCE_INTRO, 'utf-8');
+
+  it.each([
+    ['head', SOURCE_HEAD, 'sourceh'],
+    ['base', SOURCE_BASE, 'sourceb'],
+  ])(
+    'fails the run, naming the file and its size, when a source read at %s comes back without content',
+    async (_side, ref, short) => {
+      const rec = newRecorder();
+      const reviewer = makeReviewer(
+        threeFiles({ omittedContent: { side: 'source', paths: ['lectures/b.md'], ref } }),
+        rec
+      );
+
+      await expect(run(reviewer)).rejects.toThrow(
+        `Could not read source lectures/b.md @ ${short}: the contents API returned no content ` +
+          `for this ${SIZE}-byte file`
+      );
+      expect(rec.modelCalls).toEqual([]);
+      expect(rec.comments).toEqual([]);
+    }
+  );
+
+  it("fails a resync PR's run, naming the file, when a source read comes back without content", async () => {
+    const rec = newRecorder();
+    const reviewer = makeReviewer(
+      threeFiles({
+        resyncSha: '450bafecd23db638602150b47f4272b98aad3146',
+        omittedContent: { side: 'source', paths: ['lectures/b.md'] },
+      }),
+      rec
+    );
+
+    await expect(run(reviewer)).rejects.toThrow(
+      `Could not read source lectures/b.md @ 450bafe: the contents API returned no content ` +
+        `for this ${SIZE}-byte file`
+    );
+    expect(rec.modelCalls).toEqual([]);
+  });
+
+  it.each([
+    ['head', TARGET_HEAD],
+    ['base', TARGET_BASE],
+  ])(
+    'fails the run, naming the file, when a target read at %s comes back without content',
+    async (_side, ref) => {
+      const rec = newRecorder();
+      const reviewer = makeReviewer(
+        threeFiles({ omittedContent: { side: 'target', paths: ['lectures/b.md'], ref } }),
+        rec
+      );
+
+      await expect(run(reviewer)).rejects.toThrow(
+        /Could not read target lectures\/b\.md @ \w+: the contents API returned no content for this \d+-byte file/
+      );
+      expect(rec.modelCalls).toEqual([]);
+      expect(rec.comments).toEqual([]);
+    }
+  );
+
+  it('reviews a genuinely empty source file (size 0) as empty, as before', async () => {
+    const rec = newRecorder();
+    const result = await run(
+      makeReviewer(threeFiles({ sourceContent: { ...allSources, 'lectures/b.md': '' } }), rec)
+    );
+
+    // Not a failed read and not a missing file: the run reviews all three.
+    expect(rec.modelCalls).toEqual(['evaluateTranslation', 'evaluateDiff']);
+    expect(result.recommendationReasons.join('\n')).not.toMatch(/source content/);
   });
 });

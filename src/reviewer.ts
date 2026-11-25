@@ -176,9 +176,11 @@ function isNotFoundError(error: unknown): boolean {
 }
 
 /**
- * Every attempt of a review call came back as text that does not parse as the
- * verdict JSON (#284). Thrown by `callWithRetry` only when the retry budget is
- * spent on parse failures; API errors, refusals, truncation and an empty
+ * A review call's retry budget ended on a reply that does not parse as the
+ * verdict JSON (#284). Thrown by `callWithRetry` when its last attempt is a
+ * parse failure. Earlier attempts may have failed to parse too, or may have
+ * hit a retryable API error such as an overload, so this does not mean every
+ * attempt was unparseable. API errors, refusals, truncation and an empty
  * response keep their own errors. `reviewPR` degrades on this error from
  * `evaluateDiff` alone; from `evaluateTranslation` it fails the run, as before.
  */
@@ -188,9 +190,11 @@ export class ReviewParseExhaustedError extends Error {
 
   constructor(operation: string, attempts: number, cause: unknown) {
     const detail = cause instanceof Error ? cause.message : String(cause);
-    super(`${operation}: Failed to parse response after ${attempts} attempts: ${detail}`, {
-      cause,
-    });
+    super(
+      `${operation}: the retry budget of ${attempts} attempts ended on a reply that does not ` +
+        `parse: ${detail}`,
+      { cause }
+    );
     this.name = 'ReviewParseExhaustedError';
     this.operation = operation;
     this.attempts = attempts;
@@ -213,14 +217,29 @@ function unparseableDiffQuality(attempts: number): DiffQualityResult {
     structurePreserved: false,
     headingMapCorrect: false,
     issues: [
-      `${DIFF_EVALUATION_UNPARSEABLE} after ${attempts} attempts — the model-judged diff ` +
-        `checks were not judged and are recorded as failed (#284).`,
+      `${DIFF_EVALUATION_UNPARSEABLE}: the retry budget of ${attempts} attempts ended on a ` +
+        `parse failure. The model-judged diff checks were not judged and are recorded as ` +
+        `failed (#284).`,
     ],
-    summary: `The ${DIFF_EVALUATION_UNPARSEABLE} after ${attempts} attempts; the model-judged diff checks are recorded as failed.`,
+    summary:
+      `The ${DIFF_EVALUATION_UNPARSEABLE}: the retry budget of ${attempts} attempts ended on a ` +
+      `parse failure, and the model-judged diff checks are recorded as failed.`,
     scopeDetails: notJudged,
     positionDetails: notJudged,
     structureDetails: notJudged,
   };
+}
+
+/** A contents response with no content for a non-empty file (see `decodeFileContent`). */
+class FileContentOmittedError extends Error {
+  constructor(side: 'source' | 'target', path: string, ref: string, size: number) {
+    super(
+      `Could not read ${side} ${path} @ ${ref.substring(0, 7)}: the contents API returned no ` +
+        `content for this ${size}-byte file (GitHub omits the content of a file over 1 MB) — ` +
+        `failing the review rather than reviewing the PR without this file`
+    );
+    this.name = 'FileContentOmittedError';
+  }
 }
 
 /**
@@ -232,12 +251,35 @@ function unparseableDiffQuality(attempts: number): DiffQualityResult {
  * the PR (#261). It now fails the run, so a rerun reviews the whole PR.
  */
 function sourceReadError(path: string, ref: string, error: unknown): Error {
+  // Already names the file, its ref and why.
+  if (error instanceof FileContentOmittedError) return error;
   const message = error instanceof Error ? error.message : String(error);
   return new Error(
     `Could not read source ${path} @ ${ref.substring(0, 7)}: ${message} — ` +
       `failing the review rather than reviewing the PR without this file`,
     { cause: error }
   );
+}
+
+/**
+ * Decode a contents-API file response, refusing one that came back without
+ * its content. Above 1 MB GitHub returns the file with `content: ""` and its
+ * real `size`; decoded as is, that is an empty document, so the file was
+ * neither reviewed nor named and the PR could still record `auto-merge`. It
+ * is not a 404 — the file exists — so it fails the run like any other failed
+ * read, naming the file and its size. A genuinely empty file (`size` 0)
+ * decodes to the empty string, as before.
+ */
+function decodeFileContent(
+  data: { content: string; size?: number },
+  side: 'source' | 'target',
+  path: string,
+  ref: string
+): string {
+  if (data.content === '' && typeof data.size === 'number' && data.size > 0) {
+    throw new FileContentOmittedError(side, path, ref, data.size);
+  }
+  return Buffer.from(data.content, 'base64').toString('utf-8');
 }
 
 /**
@@ -371,7 +413,7 @@ function headingToId(heading: string): string {
  * occurrence instead, so the nth such heading at a level matches the nth. An
  * id unique on both sides keeps the id alone as its key, so a document with
  * no such collision matches exactly as before, a heading whose level changed
- * included.
+ * included. `pairSections` then pairs what these keys leave over.
  */
 function sectionMatchKeys(
   before: Array<{ heading: string }>,
@@ -404,6 +446,40 @@ function sectionMatchKeys(
     });
   };
   return { beforeKeys: keysFor(before), afterKeys: keysFor(after) };
+}
+
+/**
+ * Pair each after-section with its before-section (#283): the index into
+ * `before`, or `undefined` for a section with no counterpart (added).
+ *
+ * First by `sectionMatchKeys`. Then the sections left over on both sides that
+ * share an id are paired in document order: with a colliding id the key
+ * carries the level, so a level change would otherwise read as a deletion
+ * plus an addition, where the same change on a unique heading reads as one
+ * modification. Only colliding ids can be left over on both sides — a unique
+ * id present on both matched in the first pass — so a document with no such
+ * collision is paired exactly as by the keys alone.
+ */
+function pairSections(
+  before: Array<{ heading: string }>,
+  after: Array<{ heading: string }>
+): Array<number | undefined> {
+  const { beforeKeys, afterKeys } = sectionMatchKeys(before, after);
+  const beforeIndexByKey = new Map(beforeKeys.map((key, j) => [key, j]));
+  const afterToBefore = afterKeys.map((key) => beforeIndexByKey.get(key));
+
+  const matched = new Set(afterToBefore.filter((j): j is number => j !== undefined));
+  const leftoverById = new Map<string, number[]>();
+  before.forEach((s, j) => {
+    if (matched.has(j)) return;
+    const id = headingToId(s.heading);
+    leftoverById.set(id, [...(leftoverById.get(id) ?? []), j]);
+  });
+  after.forEach((s, i) => {
+    if (afterToBefore[i] !== undefined) return;
+    afterToBefore[i] = leftoverById.get(headingToId(s.heading))?.shift();
+  });
+  return afterToBefore;
 }
 
 /**
@@ -466,16 +542,16 @@ export function identifyChangedSections(
   const sourceAfterSections = extractSections(sourceAfter);
   const targetAfterSections = extractSections(targetAfter);
 
-  // Build maps for quick lookup by matching key (#283: not the bare id, which
-  // collides for headings that differ only by level or repeat)
-  const { beforeKeys, afterKeys } = sectionMatchKeys(sourceBeforeSections, sourceAfterSections);
-  const beforeByKey = new Map(sourceBeforeSections.map((s, i) => [beforeKeys[i], s]));
-  const afterKeySet = new Set(afterKeys);
+  // Pair sections before and after (#283: not by the bare id, which collides
+  // for headings that differ only by level or repeat)
+  const afterToBefore = pairSections(sourceBeforeSections, sourceAfterSections);
+  const pairedBefore = new Set(afterToBefore);
 
   // Check for added and modified sections
   for (let i = 0; i < sourceAfterSections.length; i++) {
     const section = sourceAfterSections[i];
-    const beforeSection = beforeByKey.get(afterKeys[i]);
+    const j = afterToBefore[i];
+    const beforeSection = j === undefined ? undefined : sourceBeforeSections[j];
     const targetSection = targetAfterSections[i];
 
     if (!beforeSection) {
@@ -501,7 +577,7 @@ export function identifyChangedSections(
   // Check for deleted sections
   for (let i = 0; i < sourceBeforeSections.length; i++) {
     const section = sourceBeforeSections[i];
-    if (!afterKeySet.has(beforeKeys[i])) {
+    if (!pairedBefore.has(i)) {
       changedSections.push({
         heading: section.heading,
         changeType: 'deleted',
@@ -721,7 +797,10 @@ export class TranslationReviewer {
             ref: sourcePr.base.sha,
           });
           if ('content' in beforeData) {
-            before.set(filename, Buffer.from(beforeData.content, 'base64').toString('utf-8'));
+            before.set(
+              filename,
+              decodeFileContent(beforeData, 'source', beforeFilename, sourcePr.base.sha)
+            );
           }
         } catch (error) {
           // A 404: the file didn't exist before. Anything else is a failed read.
@@ -741,7 +820,10 @@ export class TranslationReviewer {
             ref: sourcePr.head.sha,
           });
           if ('content' in afterData) {
-            after.set(filename, Buffer.from(afterData.content, 'base64').toString('utf-8'));
+            after.set(
+              filename,
+              decodeFileContent(afterData, 'source', filename, sourcePr.head.sha)
+            );
           }
         } catch (error) {
           // A 404: the source has no such file at head, and the caller routes
@@ -791,7 +873,7 @@ export class TranslationReviewer {
           ref: commitSha,
         });
         if ('content' in data) {
-          after.set(filename, Buffer.from(data.content, 'base64').toString('utf-8'));
+          after.set(filename, decodeFileContent(data, 'source', filename, commitSha));
         }
       } catch (error) {
         // Only a 404 means the source has no such file (#261); the caller
@@ -1022,7 +1104,9 @@ export class TranslationReviewer {
         });
 
         if ('content' in targetData) {
-          const content = Buffer.from(targetData.content, 'base64').toString('utf-8');
+          // A file over 1 MB comes back with no content and fails the run,
+          // naming it, rather than being reviewed as an empty document.
+          const content = decodeFileContent(targetData, 'target', file.filename, pr.head.sha);
           targetTranslation += content + '\n\n';
           filePairs.set(file.filename, { ...filePairs.get(file.filename), target: content });
         }
@@ -1054,7 +1138,7 @@ export class TranslationReviewer {
         });
         if ('content' in targetBeforeData) {
           targetBefore +=
-            Buffer.from(targetBeforeData.content, 'base64').toString('utf-8') + '\n\n';
+            decodeFileContent(targetBeforeData, 'target', file.filename, pr.base.sha) + '\n\n';
         }
       } catch (error) {
         // A 404 means the file is new in the target — a normal state, and the
@@ -1157,8 +1241,7 @@ export class TranslationReviewer {
     } catch (error) {
       if (!(error instanceof ReviewParseExhaustedError)) throw error;
       core.warning(
-        `evaluateDiff: ${DIFF_EVALUATION_UNPARSEABLE} after ${error.attempts} attempts ` +
-          `(${error.message}) — scopeCorrect and positionCorrect are recorded as failed and the ` +
+        `evaluateDiff: ${DIFF_EVALUATION_UNPARSEABLE} (${error.message}) — scopeCorrect and positionCorrect are recorded as failed and the ` +
           `PR routes to editor; the deterministic diff checks still run (#284)`
       );
       diffUnparseable = true;
@@ -1393,6 +1476,10 @@ export class TranslationReviewer {
       findingsMalformed: translationQuality.findingsMalformed,
       sourceContentMissing,
       sourceContentMissingFiles,
+      // Gates by its own reason (#284): the two `diff-check` findings that
+      // also record it can be capped out of `allFindings` by twenty model
+      // findings, and the model-sourced booleans are skipped by the rubric.
+      diffEvaluationUnparseable: diffUnparseable,
       // With max-suggestions: 0 the prompt asks for no findings at all, so an
       // empty findings array is not evidence of a clean translation.
       findingsSuppressed: this.maxSuggestions === 0,
