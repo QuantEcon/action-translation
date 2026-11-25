@@ -78,6 +78,97 @@ describe('keepRefusedOutput', () => {
     expect(fs.readFileSync(refused('.gitignore'), 'utf-8')).toBe('# mine\n*\n');
   });
 
+  it.each([
+    ['empty', ''],
+    ['without a * line', '# mine\n!keep.md\n'],
+  ])('replaces an ignore file that is %s, so the output stays out of git', (_, content) => {
+    const git = (...args: string[]) =>
+      execFileSync('git', args, {
+        cwd: target,
+        encoding: 'utf-8',
+        env: { ...process.env, GIT_CONFIG_GLOBAL: os.devNull, GIT_CONFIG_NOSYSTEM: '1' },
+      });
+    git('init', '-q');
+    fs.mkdirSync(refused(), { recursive: true });
+    fs.writeFileSync(refused('.gitignore'), content);
+
+    expect(keepRefusedOutput(target, 'intro.md', 'x')).toEqual({
+      kept: true,
+      path: '.translate/refused/intro.md',
+    });
+    expect(fs.readFileSync(refused('.gitignore'), 'utf-8')).toBe('*\n');
+    expect(git('status', '--porcelain', '--untracked-files=all')).toBe('');
+  });
+
+  it('keeps nothing when the ignore file is a symbolic link, dangling or not, and writes nothing through it', () => {
+    const outside = path.join(tmpDir, 'outside');
+    fs.mkdirSync(outside);
+    fs.mkdirSync(refused(), { recursive: true });
+    fs.symlinkSync(path.join(outside, 'ignore'), refused('.gitignore'));
+
+    expect(keepRefusedOutput(target, 'intro.md', 'x')).toEqual({
+      kept: false,
+      reason: '.translate/refused/.gitignore is a symbolic link',
+    });
+    expect(filesUnder(outside)).toEqual([]);
+    expect(fs.existsSync(refused('intro.md'))).toBe(false);
+
+    fs.writeFileSync(path.join(outside, 'ignore'), '');
+    expect(keepRefusedOutput(target, 'intro.md', 'x')).toMatchObject({ kept: false });
+    expect(fs.readFileSync(path.join(outside, 'ignore'), 'utf-8')).toBe('');
+  });
+
+  it.each(['.gitignore', 'sub/.gitignore', '.GITIGNORE'])(
+    'refuses the lecture path %j, which would replace the folder’s ignore file',
+    (lecture) => {
+      keepRefusedOutput(target, 'intro.md', 'x');
+      expect(keepRefusedOutput(target, lecture, 'model output')).toEqual({
+        kept: false,
+        reason: `${lecture} would replace .translate/refused/.gitignore`,
+      });
+      expect(fs.readFileSync(refused('.gitignore'), 'utf-8')).toBe('*\n');
+      expect(removeRefusedOutput(target, lecture)).toBe(false);
+      expect(fs.readFileSync(refused('.gitignore'), 'utf-8')).toBe('*\n');
+    }
+  );
+
+  describe('two processes keeping outputs in one target at once', () => {
+    // The real module object, which refused-output.ts calls into
+    const realFs = jest.requireActual<typeof fs>('fs');
+    afterEach(() => jest.restoreAllMocks());
+
+    it('takes a folder the other created first as made', () => {
+      const mkdir = realFs.mkdirSync.bind(realFs);
+      jest.spyOn(realFs, 'mkdirSync').mockImplementation(((p: fs.PathLike, o?: unknown) => {
+        mkdir(p, o as fs.MakeDirectoryOptions); // the other process wins the race
+        return mkdir(p, o as fs.MakeDirectoryOptions);
+      }) as typeof fs.mkdirSync);
+
+      expect(keepRefusedOutput(target, 'sub/intro.md', 'x')).toEqual({
+        kept: true,
+        path: '.translate/refused/sub/intro.md',
+      });
+    });
+
+    it('takes an ignore file the other wrote first as written', () => {
+      const write = realFs.writeFileSync.bind(realFs);
+      jest.spyOn(realFs, 'writeFileSync').mockImplementation(((
+        p: fs.PathOrFileDescriptor,
+        data: string,
+        o?: fs.WriteFileOptions
+      ) => {
+        if (String(p).endsWith('.gitignore')) write(p, '*\n'); // the other process wins the race
+        return write(p, data, o);
+      }) as typeof fs.writeFileSync);
+
+      expect(keepRefusedOutput(target, 'intro.md', 'x')).toEqual({
+        kept: true,
+        path: '.translate/refused/intro.md',
+      });
+      expect(fs.readFileSync(refused('.gitignore'), 'utf-8')).toBe('*\n');
+    });
+  });
+
   it('keeps it out of git in an edition whose own .gitignore does not name it', () => {
     const git = (...args: string[]) =>
       execFileSync('git', args, {
@@ -183,6 +274,38 @@ describe('refusedOutputPreview', () => {
       'line 9',
       'line 10',
     ]);
+  });
+
+  it('starts after the front matter, so a fence that opens the reply is the first line shown', () => {
+    const output =
+      '---\ntranslation:\n  title: 蛛网\n  headings:\n    Introduction: 介绍\n---\n\n' +
+      '```markdown\n# 蛛网\n\n## 介绍\n\n一些文字。\n\n结尾。\n```\n';
+    expect(refusedOutputPreview(output)).toEqual([
+      '```markdown',
+      '# 蛛网',
+      '',
+      '…',
+      '',
+      '结尾。',
+      '```',
+    ]);
+  });
+
+  it('shows the front matter when there is nothing after it', () => {
+    expect(refusedOutputPreview('---\ntitle: x\n---\n')).toEqual(['---', 'title: x', '---']);
+  });
+
+  it('drops a CRLF’s \\r and shows other control characters as U+FFFD, tabs kept', () => {
+    expect(refusedOutputPreview('a\r\n\u001b[31mred\tx\u0007\r\nend\r\n')).toEqual([
+      'a',
+      '�[31mred\tx�',
+      'end',
+    ]);
+  });
+
+  it('clips a long line at 200 characters, saying how many more there were', () => {
+    const [line] = refusedOutputPreview(`${'字'.repeat(200_000)}\n`);
+    expect(line).toBe(`${'字'.repeat(200)}… [199800 more characters]`);
   });
 });
 

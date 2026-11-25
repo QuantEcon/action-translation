@@ -4,6 +4,7 @@ import { getReviewInputs, validateReviewPREvent } from '../inputs.js';
 import { TranslationReviewer } from '../reviewer.js';
 import { loadGlossary, formatGlossaryTerms } from '../sync-orchestrator.js';
 import { coreLogger } from './core-logger.js';
+import { formatUsage } from '../models.js';
 
 /**
  * Run the REVIEW mode - evaluate translation quality on a PR
@@ -87,9 +88,7 @@ export async function runReview(builtInGlossaryDir: string): Promise<void> {
   core.setOutput('cache-creation-input-tokens', String(usage.cacheCreationInputTokens));
   core.setOutput('cache-read-input-tokens', String(usage.cacheReadInputTokens));
   core.setOutput('api-calls', String(usage.apiCalls));
-  core.info(
-    `API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens, cache: ${usage.cacheReadInputTokens} read + ${usage.cacheCreationInputTokens} written`
-  );
+  core.info(`API usage: ${formatUsage(usage)}`);
 
   core.info(
     `✅ Review complete: ${result.verdict} → ${result.recommendation} (Translation: ${result.translationQuality.score}/10, Diff: ${result.diffQuality.score}/10)`

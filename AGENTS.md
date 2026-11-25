@@ -377,4 +377,5 @@ Before creating a release, verify the following:
 | Rebase mode | `index.ts` → `runRebase` / `rebaseSinglePR` |
 | PR metadata | `pr-creator.ts` → `TranslationSyncMetadata` / `parseTranslationSyncMetadata` |
 | Translation cache | `file-processor.ts` → `processSectionBased` (rebaseCache param) |
+| Refused output (parity guard) | `cli/refused-output.ts` → `keepRefusedOutput` / `removeRefusedOutput` |
 

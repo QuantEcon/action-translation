@@ -327,6 +327,58 @@ export async function resyncSingleFile(
   return { ...result, usage: { ...usage } };
 }
 
+/**
+ * `forward -f`: resync one file and print its outcome and API usage.
+ *
+ * The usage line is printed whether the resync returns or throws: a triage
+ * the model refused, or a document found too large after a paid triage, was
+ * paid for too (#356). It is left out only when no call was made.
+ */
+export async function runForwardSingleFile(
+  file: string,
+  options: ForwardOptions,
+  print: (line: string) => void = (line) => console.log(line),
+  logger: ForwardLogger = defaultLogger,
+  ghRunner?: GhRunner,
+  gitRunner?: GitRunner
+): Promise<ForwardFileResult> {
+  const usage = emptyApiUsage();
+  try {
+    const result = await resyncSingleFile(
+      file,
+      options.source,
+      options.target,
+      options.docsFolder,
+      options,
+      logger,
+      ghRunner,
+      gitRunner,
+      usage
+    );
+    const { summary, triageResult } = result;
+    if (
+      triageResult.verdict !== 'CONTENT_CHANGES' &&
+      triageResult.verdict !== 'TARGET_HAS_ADDITIONS'
+    ) {
+      const label = triageResult.verdict === 'IDENTICAL' ? 'identical' : 'i18n only';
+      print(`\n  ${file}: SKIPPED (${label})`);
+    } else {
+      if (triageResult.verdict === 'TARGET_HAS_ADDITIONS') {
+        print(`\n  ⚠️  ${file}: TARGET has additions that were lost during resync`);
+      }
+      print(
+        `\n  ${file}: ${summary.resynced} resynced, ${summary.new} new, ${summary.removed} removed, ${summary.unchanged} unchanged${summary.errors > 0 ? `, ${summary.errors} errors` : ''}`
+      );
+    }
+    return result;
+  } finally {
+    // Triage and resync, a refused file's included (#356)
+    if (usage.apiCalls > 0) {
+      print(`  API usage: ${formatUsage(usage)}`);
+    }
+  }
+}
+
 /** resyncSingleFile's work, adding every API call's usage to `usage`. */
 async function resyncFile(
   file: string,

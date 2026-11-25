@@ -58077,7 +58077,7 @@ async function runReview(builtInGlossaryDir) {
   core8.setOutput("cache-creation-input-tokens", String(usage.cacheCreationInputTokens));
   core8.setOutput("cache-read-input-tokens", String(usage.cacheReadInputTokens));
   core8.setOutput("api-calls", String(usage.apiCalls));
-  core8.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens, cache: ${usage.cacheReadInputTokens} read + ${usage.cacheCreationInputTokens} written`);
+  core8.info(`API usage: ${formatUsage(usage)}`);
   core8.info(`\u2705 Review complete: ${result.verdict} \u2192 ${result.recommendation} (Translation: ${result.translationQuality.score}/10, Diff: ${result.diffQuality.score}/10)`);
 }
 function detectTargetLanguage(repoName) {

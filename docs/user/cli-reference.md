@@ -336,7 +336,7 @@ npx translate init -s <source-path> -t <target-path> --target-language <code> [o
 | `-m, --model <model>` | `claude-sonnet-5` | Claude model |
 | `-f, --file <file>` | *(all lectures)* | Translate a single lecture file (e.g., `cobweb.md`) |
 | `--batch-delay <ms>` | `1000` | Delay between lectures in ms (rate limiting) |
-| `--resume-from <file>` | *(none)* | Resume from a specific lecture file, named as for `-f` |
+| `--resume-from <file>` | *(none)* | Resume a bulk run from a specific lecture file, named as for `-f`; cannot be combined with `-f` |
 | `--skip-existing` | `false` | Skip lectures the edition already has; never overwrites a translation |
 | `-j, --parallel <n>` | `1` | Number of parallel translations |
 | `--glossary <path>` | *(auto)* | Path to glossary JSON file (default: built-in glossary for the language) |
@@ -461,7 +461,7 @@ npx translate init \
   --resume-from cobweb.md
 ```
 
-`--resume-from` names the lecture as `-f` does, by the same steps: `--resume-from cobweb` also works, and so does `--resume-from gpu.md` for `_admonition/gpu.md`. A name that matches no lecture, or more than one, stops the run before any translation or write, naming the lectures it matched, instead of starting again from the first lecture. The run translates that lecture and every one after it in ToC order, and `--dry-run` lists those.
+`--resume-from` names the lecture as `-f` does, by the same steps: `--resume-from cobweb` also works, and so does `--resume-from gpu.md` for `_admonition/gpu.md`. A name that matches no lecture, or more than one, stops the run before any translation or write, naming the lectures it matched, instead of starting again from the first lecture. The run translates that lecture and every one after it in ToC order, and `--dry-run` lists those. It applies to a bulk run: with `-f` too, `init` stops before any translation or write and says the two cannot be combined.
 
 **Re-run after partial failure (skip already-translated files):**
 
@@ -618,11 +618,12 @@ Without its state file a lecture is out of scope under `sync-scope: existing`, s
 Before `init` or `forward` writes a translation, the structural parity guard checks the exact bytes it would write: among other checks, every directive and anchor of the English must survive. When the guard refuses them, the lecture fails as before and nothing is written to the docs folder, but the refused bytes are kept, so the refusal can be diagnosed ([#364](https://github.com/QuantEcon/action-translation/issues/364)): a whole-document code fence, for instance, reads in the guard's message only as a renamed directive.
 
 - **Where.** `.translate/refused/<lecture>` in the target, at the lecture's path under the docs folder, `.md` kept: `cobweb.md` goes to `.translate/refused/cobweb.md`, `_admonition/gpu.md` to `.translate/refused/_admonition/gpu.md`. `forward --github` keeps it in the same place in the target clone.
-- **Named.** The failure says `The refused output is kept at .translate/refused/<lecture>`: in `TRANSLATION-REPORT.md`'s Failures entry, in the full error `init -f` prints on stderr, in `forward`'s log and bulk summary, and in `--report-json` as the failure's `refusedOutput`. The console, and the Failures entry, also show the output's first and last three lines, where a wrapper shows at a glance.
+- **Named.** The failure says `The refused output is kept at .translate/refused/<lecture>`: in `TRANSLATION-REPORT.md`'s Failures entry, in the full error `init -f` prints on stderr, in `forward`'s log and bulk summary, and in `--report-json` as the failure's `refusedOutput`; on the console, `init` also names it above the preview, since its one-line failure summary keeps 200 characters. The console, and the Failures entry, also show the output's first and last three lines, where a wrapper shows at a glance: the first three are the body's, after the front matter `init` and `forward` put on it, so a code fence that opens the reply is the first line shown. Each preview line drops a Windows line ending, shows other control characters as `�`, and stops at 200 characters, saying how many more there were.
 - **Whole message.** `--report-json` keeps a parity failure's message whole, every violation listed; other failures' messages are still cut at 500 characters ([#430](https://github.com/QuantEcon/action-translation/issues/430)).
-- **Out of git.** The folder holds a `.gitignore` of `*`, written with it, so it is never committed, in an edition set up before this folder existed too. `setup` also lists `.translate/refused/` in the `.gitignore` it writes. `status`, `doctor` (with `--require-state` too) and sync do not read the folder: a refused output is neither a lecture nor a state file.
+- **Out of git.** The folder holds a `.gitignore` of `*`, checked before every write and replaced when it has no `*` line (an empty one, say), so the folder is never committed, in an edition set up before this folder existed too. A lecture named `.gitignore` is not kept there. `setup` also lists `.translate/refused/` in the `.gitignore` it writes. `status`, `doctor` (with `--require-state` too) and sync do not read the folder: a refused output is neither a lecture nor a state file.
 - **Cleared.** A later translation of the lecture that is written removes its refused output.
-- **Not kept** when the way there is a symbolic link (`.translate`, `.translate/refused`, a folder below it or the file) or the folder cannot be written: the failure says `The refused output was not kept:` and why, and the lecture fails as it would have.
+- **Not kept** when the way there is a symbolic link (`.translate`, `.translate/refused`, its `.gitignore`, a folder below it or the file) or the folder cannot be written: the failure says `The refused output was not kept:` and why, and the lecture fails as it would have.
+- **A local build at the root.** With `docs-folder: .`, `.translate/refused/` is inside the docs folder. CI never sees it, since it is not committed, but a local `jupyter-book build .` does not skip folders whose names start with a dot, so it would parse a refused lecture and, with a kernelspec, execute it. Delete `.translate/refused/` before a local build, or add `.translate` to `exclude_patterns` in `_config.yml`.
 
 `rate-check.sh` runs `init` with each draw's run directory as the target, so a refused draw's output is in `<draw>/.translate/refused/` there.
 

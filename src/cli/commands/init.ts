@@ -106,7 +106,7 @@ interface TranslationStats {
   usage: ApiUsage;
   totalTimeMs: number;
   /** `preview`: a parity refusal's first and last lines, as refusedOutputPreview gives them (#364). */
-  failures: Array<{ file: string; error: string; preview?: string[] }>;
+  failures: Array<{ file: string; error: string; preview?: string[]; keptNote?: string }>;
 }
 
 // ============================================================================
@@ -565,10 +565,12 @@ export async function translateLecture(
   const parity = checkWrittenDocument(sourceContent, finalContent);
   if (!parity.ok) {
     const kept = keepRefusedOutput(targetPath, lectureFile, finalContent);
+    const note = describeKeptOutput(kept);
     throw new StructuralParityError(
-      `${formatParityViolations(lectureFile, parity)}\n${describeKeptOutput(kept)}`,
+      `${formatParityViolations(lectureFile, parity)}\n${note}`,
       kept.kept ? kept.path : undefined,
-      refusedOutputPreview(finalContent)
+      refusedOutputPreview(finalContent),
+      note
     );
   }
 
@@ -649,7 +651,14 @@ function generateReport(
   if (stats.failures.length > 0) {
     report += `\n## Failures\n\n`;
     for (const failure of stats.failures) {
-      report += `- **${failure.file}**: ${failure.error}\n`;
+      // The note on the refused output is a paragraph of its own in the
+      // entry: on the line after the indented violations, Markdown would fold
+      // it into the last one.
+      const note = failure.keptNote;
+      const split = note !== undefined && failure.error.endsWith(`\n${note}`);
+      const body = split ? failure.error.slice(0, -(note.length + 1)) : failure.error;
+      report += `- **${failure.file}**: ${body}\n`;
+      if (split) report += `\n  ${note}\n`;
       if (failure.preview) report += previewBlock(failure.preview);
     }
   }
@@ -737,6 +746,14 @@ function buildRunReport(
  * Run the init command — bulk translate all lectures in a project.
  */
 export async function runInit(options: InitOptions): Promise<TranslationStats> {
+  // -f narrows the lecture list to one before --resume-from would look in it,
+  // so any other name read as "not in the source's lecture set".
+  if (options.file && options.resumeFrom) {
+    throw new Error(
+      '--resume-from applies to a bulk run; it cannot be combined with -f. ' +
+        'Use -f alone to translate one lecture, or --resume-from alone to translate from it on.'
+    );
+  }
   const startedAt = new Date();
   if (options.dryRun) {
     console.log(chalk.bold.yellow('\n🔍 DRY RUN — No changes will be made\n'));
@@ -1014,6 +1031,9 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
         ...(error instanceof StructuralParityError && error.preview
           ? { preview: error.preview }
           : {}),
+        ...(error instanceof StructuralParityError && error.keptNote
+          ? { keptNote: error.keptNote }
+          : {}),
       });
       record = {
         file: lecture,
@@ -1065,10 +1085,12 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   }
   // What the parity guard refused, at a glance: a wrapper such as a code
   // fence shows in its first and last lines (#364). The whole output is in
-  // .translate/refused/, as each failure's message says.
+  // .translate/refused/. The header names where, since the failure line above
+  // keeps 200 characters and a long list of violations cuts the note off.
   for (const failure of stats.failures) {
     if (!failure.preview) continue;
-    console.error(`\n${failure.file}: the refused output's first and last lines:`);
+    const where = failure.keptNote ? `${failure.keptNote}. Its` : "The refused output's";
+    console.error(`\n${failure.file}: ${where} first and last lines:`);
     for (const line of failure.preview) console.error(`  | ${line}`);
   }
   // The failure line keeps 200 characters. With `-f` no TRANSLATION-REPORT.md

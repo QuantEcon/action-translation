@@ -82,11 +82,14 @@ export class StructuralParityError extends Error {
    * @param message - The guard's violations, and where the output was kept
    * @param refusedOutput - Where the refused output was kept, when it was (#364)
    * @param preview - The refused output's first and last lines, for the console
+   * @param keptNote - The message's last line, which says where the output was
+   *   kept or why it was not, for a caller that shows it apart from the list
    */
   constructor(
     message: string,
     readonly refusedOutput?: string,
-    readonly preview?: string[]
+    readonly preview?: string[],
+    readonly keptNote?: string
   ) {
     super(message);
     this.name = 'StructuralParityError';

@@ -25,7 +25,7 @@ import {
   writeStateFailed,
 } from './commands/status.js';
 import { runReview, ReviewOptions } from './commands/review.js';
-import { resyncSingleFile, runForwardBulk } from './commands/forward.js';
+import { runForwardBulk, runForwardSingleFile } from './commands/forward.js';
 import { runInit, InitOptions } from './commands/init.js';
 import { runSetup, SetupOptions } from './commands/setup.js';
 import {
@@ -34,7 +34,7 @@ import {
   formatHeadingmapJson,
   HeadingmapOptions,
 } from './commands/headingmap.js';
-import { DEFAULT_CLAUDE_MODEL, formatUsage } from '../models.js';
+import { DEFAULT_CLAUDE_MODEL } from '../models.js';
 import {
   runDoctor,
   formatDoctorTable,
@@ -389,34 +389,9 @@ program
         checkGhAvailable();
       }
       if (opts.file) {
-        // Single file mode
-        const result = await resyncSingleFile(
-          opts.file,
-          opts.source,
-          opts.target,
-          opts.docsFolder,
-          options
-        );
-
-        const { summary } = result;
-        if (
-          result.triageResult.verdict !== 'CONTENT_CHANGES' &&
-          result.triageResult.verdict !== 'TARGET_HAS_ADDITIONS'
-        ) {
-          const label = result.triageResult.verdict === 'IDENTICAL' ? 'identical' : 'i18n only';
-          console.log(`\n  ${opts.file}: SKIPPED (${label})`);
-        } else {
-          if (result.triageResult.verdict === 'TARGET_HAS_ADDITIONS') {
-            console.log(`\n  ⚠️  ${opts.file}: TARGET has additions that were lost during resync`);
-          }
-          console.log(
-            `\n  ${opts.file}: ${summary.resynced} resynced, ${summary.new} new, ${summary.removed} removed, ${summary.unchanged} unchanged${summary.errors > 0 ? `, ${summary.errors} errors` : ''}`
-          );
-        }
-        // Triage and resync, a refused file's included (#356)
-        if (result.usage && result.usage.apiCalls > 0) {
-          console.log(`  API usage: ${formatUsage(result.usage)}`);
-        }
+        // Single file mode: prints the outcome, and the API usage even when
+        // a paid call throws (#356)
+        const { summary } = await runForwardSingleFile(opts.file, options);
         if (summary.errors > 0) {
           process.exit(1);
         }
@@ -450,7 +425,10 @@ program
   .option('--batch-delay <ms>', 'Delay between batches in ms (rate limiting)', '1000')
   .option('-j, --parallel <n>', 'Number of parallel translations (default: 1)', '1')
   .option('-f, --file <file>', 'Translate a single lecture file (e.g., cobweb.md)')
-  .option('--resume-from <file>', 'Resume from a specific lecture file (e.g., cobweb.md)')
+  .option(
+    '--resume-from <file>',
+    'Resume a bulk run from a specific lecture file (e.g., cobweb.md); not with -f'
+  )
   .option(
     '--skip-existing',
     'Skip lectures the edition already has; never overwrites a translation',

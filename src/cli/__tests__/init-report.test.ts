@@ -542,16 +542,26 @@ describe('translate init keeps what the parity guard refused (#364, #430)', () =
     const note = 'The refused output is kept at .translate/refused/broken.md';
     const markdown = fs.readFileSync(path.join(target, 'TRANSLATION-REPORT.md'), 'utf-8');
     expect(markdown).toContain(`- **broken.md**: structural parity check failed for broken.md:\n`);
-    expect(markdown).toContain(`${note}\n\n  First and last lines of the refused output:\n`);
+    // A paragraph of the entry, after a blank line: on the line after the
+    // indented violations Markdown would fold it into the last one
+    expect(markdown).toMatch(/\n {2}- [^\n]+\n\n {2}The refused output is kept at /);
+    expect(markdown).toContain(`\n\n  ${note}\n\n  First and last lines of the refused output:\n`);
     expect(readReport(opts.reportJson!).lectures[1].failure).toMatchObject({
       kind: 'parity',
       message: expect.stringContaining(note),
       refusedOutput: '.translate/refused/broken.md',
     });
+    // The preview starts with the body, after the front matter init put on
+    // it, and its header names where the output is: the ✗ line above keeps
+    // 200 characters, which a long list of violations fills
+    expect(bytes.startsWith('---\ntranslation:\n')).toBe(true);
     const lines = bytes.replace(/\n$/, '').split('\n');
+    const body = lines.slice(lines.indexOf('---', 1) + 1);
+    while (body[0] === '') body.shift();
+    expect(body[0]).toBe('# 测试讲座');
     expect(stderrText()).toContain(
-      "broken.md: the refused output's first and last lines:\n" +
-        `  | ${lines[0]}\n  | ${lines[1]}\n  | ${lines[2]}\n  | …\n` +
+      `broken.md: ${note}. Its first and last lines:\n` +
+        `  | ${body[0]}\n  | ${body[1]}\n  | ${body[2]}\n  | …\n` +
         `  | ${lines[lines.length - 3]}\n  | ${lines[lines.length - 2]}\n  | ${lines[lines.length - 1]}`
     );
   });
@@ -649,6 +659,22 @@ describe('translate init --resume-from (#384)', () => {
     await expect(runInit(options({ resumeFrom: 'sollow.md' }))).rejects.toThrow(
       "sollow.md is not in the source's lecture set"
     );
+
+    expect(api.requests).toHaveLength(0);
+    expect(fs.existsSync(path.join(tmpDir, 'target'))).toBe(false);
+  });
+
+  it('refuses to be combined with -f, before any model call or write', async () => {
+    writeSource(['good.md', 'broken.md']);
+
+    for (const dryRun of [false, true]) {
+      await expect(
+        runInit(options({ dryRun, file: 'good.md', resumeFrom: 'broken.md' }))
+      ).rejects.toThrow(
+        '--resume-from applies to a bulk run; it cannot be combined with -f. ' +
+          'Use -f alone to translate one lecture, or --resume-from alone to translate from it on.'
+      );
+    }
 
     expect(api.requests).toHaveLength(0);
     expect(fs.existsSync(path.join(tmpDir, 'target'))).toBe(false);

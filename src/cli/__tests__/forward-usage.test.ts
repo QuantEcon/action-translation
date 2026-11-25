@@ -12,7 +12,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { runForwardBulk } from '../commands/forward.js';
+import { runForwardBulk, runForwardSingleFile } from '../commands/forward.js';
 import { ForwardOptions } from '../types.js';
 import {
   FakeAnthropicApi,
@@ -135,9 +135,69 @@ describe('forward bulk summary: API usage (#356)', () => {
       '  The refused output is kept at .translate/refused/broken.md. Its first and last lines:'
     );
     const keptLines = kept.replace(/\n$/, '').split('\n');
-    expect(lines).toContain(`    | ${keptLines[0]}`);
+    // The preview starts with the body, after the front matter forward put on it
+    expect(keptLines[0]).toBe('---');
+    expect(lines).not.toContain('    | ---');
+    expect(lines).toContain('    | # 标题');
     expect(lines).toContain(`    | ${keptLines[keptLines.length - 1]}`);
     expect(lines).toContain('    broken.md (refused output: .translate/refused/broken.md)');
     expect(fs.existsSync(path.join(refusedDir, 'good.md'))).toBe(false);
+  });
+
+  it('forward -f prints the usage of a triage the model refused, though the resync throws', async () => {
+    api.reply(TRIAGE_REFUSED);
+    const printed: string[] = [];
+    const quiet = { info: () => undefined, warn: () => undefined, error: () => undefined };
+    const options: ForwardOptions = {
+      source: path.join(tmpDir, 'source'),
+      target: path.join(tmpDir, 'target'),
+      docsFolder: 'lectures',
+      language: 'zh-cn',
+      sourceLanguage: 'en',
+      model: 'claude-sonnet-5',
+      test: false,
+      apiKey: 'test-key',
+      file: 'refused.md',
+    };
+
+    await expect(
+      runForwardSingleFile('refused.md', options, (line) => printed.push(line), quiet)
+    ).rejects.toThrow();
+
+    expect(api.requests).toHaveLength(1);
+    expect(printed).toEqual([
+      '  API usage: 1 call(s), 100 input + 5 output tokens, cache: 0 read + 0 written',
+    ]);
+  });
+
+  it('forward -f prints the outcome, then the usage, when the resync returns', async () => {
+    api.reply(triage(10), GOOD);
+    const printed: string[] = [];
+    const quiet = { info: () => undefined, warn: () => undefined, error: () => undefined };
+    const options: ForwardOptions = {
+      source: path.join(tmpDir, 'source'),
+      target: path.join(tmpDir, 'target'),
+      docsFolder: 'lectures',
+      language: 'zh-cn',
+      sourceLanguage: 'en',
+      model: 'claude-sonnet-5',
+      test: false,
+      apiKey: 'test-key',
+      builtInGlossaryDir: path.join(__dirname, '..', '..', '..', 'glossary'),
+      file: 'good.md',
+    };
+
+    const result = await runForwardSingleFile(
+      'good.md',
+      options,
+      (line) => printed.push(line),
+      quiet
+    );
+
+    expect(result.summary).toMatchObject({ resynced: 1, errors: 0 });
+    expect(printed).toEqual([
+      '\n  good.md: 1 resynced, 0 new, 0 removed, 0 unchanged',
+      '  API usage: 2 call(s), 1100 input + 210 output tokens, cache: 0 read + 0 written',
+    ]);
   });
 });

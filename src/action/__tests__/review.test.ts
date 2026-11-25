@@ -207,6 +207,22 @@ describe('runReview', () => {
     expect(mockedCore.setOutput).toHaveBeenCalledWith('api-calls', '2');
   });
 
+  it('logs one API usage line, in the shape the CLI prints', async () => {
+    mockGetUsage.mockReturnValue({
+      inputTokens: 1200,
+      outputTokens: 340,
+      cacheReadInputTokens: 900,
+      cacheCreationInputTokens: 75,
+      apiCalls: 3,
+    });
+
+    await runReview(GLOSSARY_DIR);
+
+    expect(mockedCore.info).toHaveBeenCalledWith(
+      'API usage: 3 call(s), 1200 input + 340 output tokens, cache: 900 read + 75 written'
+    );
+  });
+
   it('omits the would-auto-merge output when the result has none (off mode)', async () => {
     await runReview(GLOSSARY_DIR);
 
