@@ -696,3 +696,119 @@ Contenu de section.`;
     expect(map.get('Sec::Sub Two')).toBe('Sub Two');
   });
 });
+
+describe('UPDATE sync passes non-prose lines through byte-identical (#325)', () => {
+  let processor: FileProcessor;
+  let mockTranslator: jest.Mocked<TranslationService>;
+
+  beforeEach(() => {
+    mockTranslator = {
+      translateSection: jest.fn(),
+      translateFullDocument: jest.fn(),
+    } as any;
+    processor = new FileProcessor(mockTranslator, false);
+  });
+
+  // English getting_started.md carries its <style> block before the title: the
+  // pre-title is re-copied from the source on every UPDATE sync, then typeset.
+  const styleBlock = [
+    '<style>',
+    '  .auto {',
+    '    width: 70%;',
+    '    height: auto;',
+    '  }',
+    '</style>',
+  ];
+
+  const oldSource = [
+    '---',
+    'title: Test',
+    '---',
+    '',
+    ...styleBlock,
+    '',
+    '# Test Lecture',
+    '',
+    'Intro.',
+    '',
+    '## Table Section',
+    '',
+    '| A | B |',
+    '| :-: | ---: |',
+    '| 1 | 2 |',
+    '',
+    '+++ {"user_expressions": []}',
+    '',
+    '## Changed Section',
+    '',
+    'Old content.',
+  ].join('\n');
+  const newSource = oldSource.replace('Old content.', 'New content.');
+
+  const target = (delimiterRow: string) =>
+    [
+      '---',
+      'title: Test',
+      'translation:',
+      '  title: Leçon de test',
+      '  headings:',
+      '    Table Section: Section tableau',
+      '    Changed Section: Section modifiée',
+      '---',
+      '',
+      ...styleBlock,
+      '',
+      '# Leçon de test',
+      '',
+      'Introduction.',
+      '',
+      '## Section tableau',
+      '',
+      '| A | B |',
+      delimiterRow,
+      '| 1 | 2 |',
+      '',
+      '+++ {"user_expressions": []}',
+      '',
+      '## Section modifiée',
+      '',
+      'Ancien contenu.',
+    ].join('\n');
+
+  beforeEach(() => {
+    mockTranslator.translateSection.mockResolvedValue({
+      success: true,
+      translatedSection: '## Section modifiée\n\nNouveau contenu : enfin !',
+    });
+  });
+
+  it('keeps the pre-title <style> block, the table and the cell break byte-identical', async () => {
+    const out = await processor.processSectionBased(
+      oldSource,
+      newSource,
+      target('| :-: | ---: |'),
+      'test.md',
+      'en',
+      'fr'
+    );
+
+    expect(out).toContain(styleBlock.join('\n'));
+    expect(out).toContain('| A | B |\n| :-: | ---: |\n| 1 | 2 |');
+    expect(out).toContain('+++ {"user_expressions": []}');
+    expect(out).toContain(`Nouveau contenu${NBSP}: enfin${NBSP}!`);
+  });
+
+  it('heals a delimiter row an earlier sync damaged, in a section the PR did not touch', async () => {
+    const out = await processor.processSectionBased(
+      oldSource,
+      newSource,
+      target(`| :-${NBSP}: | ---${NBSP}: |`),
+      'test.md',
+      'en',
+      'fr'
+    );
+
+    expect(out).toContain('| A | B |\n| :-: | ---: |\n| 1 | 2 |');
+    expect(out).not.toContain(`-${NBSP}:`);
+  });
+});

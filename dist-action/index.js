@@ -49694,12 +49694,28 @@ var PROSE_DIRECTIVES = /* @__PURE__ */ new Set([
 var FENCE_OPEN = /^(\s{0,3})(`{3,}|~{3,}|:{3,})\s*(?:\{([\w:-]+)\})?/;
 var DIRECTIVE_OPTION = /^\s*:[a-zA-Z][\w-]*:/;
 var MATH_DELIM = /\$\$/g;
+var HTML_LITERAL_OPEN = /^\s*<(script|pre|style|textarea)(?=[\s>]|$)/i;
+var CELL_BREAK = /^\s*\+\+\+/;
+function isDelimiterRow(line) {
+  return /^[\s|:-]+$/.test(line) && line.includes("|") && line.includes("-");
+}
+function repairDelimiterRow(line) {
+  return line.replace(/[\u00A0\u202F]/g, "");
+}
+function proseContextClass(line) {
+  if (isDelimiterRow(line))
+    return "delimiter-row";
+  if (CELL_BREAK.test(line) || /^[\s|:-]+$/.test(line))
+    return "literal";
+  return "prose";
+}
 function classifyLines(lines) {
-  const eligible = new Array(lines.length).fill(false);
+  const classes = new Array(lines.length).fill("literal");
   const stack = [];
   let inFrontmatter = false;
   let inMathBlock = false;
   let awaitingOptions = false;
+  let htmlCloser = null;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (i === 0 && line.trim() === "---") {
@@ -49709,6 +49725,11 @@ function classifyLines(lines) {
     if (inFrontmatter) {
       if (line.trim() === "---")
         inFrontmatter = false;
+      continue;
+    }
+    if (htmlCloser) {
+      if (htmlCloser.test(line))
+        htmlCloser = null;
       continue;
     }
     const top = stack[stack.length - 1];
@@ -49738,20 +49759,23 @@ function classifyLines(lines) {
       awaitingOptions = prose;
       continue;
     }
-    if (!top) {
-      eligible[i] = true;
-      continue;
-    }
-    if (awaitingOptions) {
+    if (top && awaitingOptions) {
       if (DIRECTIVE_OPTION.test(line))
         continue;
       if (line.trim() === "")
         continue;
       awaitingOptions = false;
     }
-    eligible[i] = true;
+    const html = HTML_LITERAL_OPEN.exec(line);
+    if (html) {
+      const closer = new RegExp(`</${html[1]}>`, "i");
+      if (!closer.test(line))
+        htmlCloser = closer;
+      continue;
+    }
+    classes[i] = proseContextClass(line);
   }
-  return eligible;
+  return classes;
 }
 var INLINE_PROTECTED = [
   /\$[^$\n]+\$/g,
@@ -49760,6 +49784,9 @@ var INLINE_PROTECTED = [
   // inline code — also covers MyST roles: {doc}`intro <sec:intro>`
   /!?\[[^\]]*\]\([^)]*\)/g,
   // links and images, including the URL
+  // A whole one-line <style>…</style> (or script/pre/textarea) span, content
+  // included — the generic tag mask below masks only the tags (#325).
+  /<(script|pre|style|textarea)\b[^>]*>.*?<\/\1>/gi,
   /<[^>\n]+>/g,
   // HTML tags and autolinks
   /&(?:[a-zA-Z]+\d*|#\d+|#x[0-9a-fA-F]+);/g,
@@ -49813,8 +49840,14 @@ function applyTypography(content, language) {
   if (!rule)
     return content;
   const lines = content.split("\n");
-  const eligible = classifyLines(lines);
-  return lines.map((line, i) => eligible[i] ? applyToProse(line, rule) : line).join("\n");
+  const classes = classifyLines(lines);
+  return lines.map((line, i) => {
+    if (classes[i] === "prose")
+      return applyToProse(line, rule);
+    if (classes[i] === "delimiter-row")
+      return repairDelimiterRow(line);
+    return line;
+  }).join("\n");
 }
 
 // dist/file-processor.js

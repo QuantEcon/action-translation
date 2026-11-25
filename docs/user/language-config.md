@@ -40,6 +40,8 @@ Each target language can have specific translation rules that are automatically 
 
 The register and anti-calque rules encode the first native-editor review of machine output (August 2026); each generalises a correction made at least twice across the reviewed lectures.
 
+**Enforced in code.** The model does not reliably follow the non-breaking-space rule, so after every translation the French output is typeset deterministically (`src/typography.ts`), on every write path (`init`, `forward`, sync). The pass touches prose only: it leaves frontmatter, code, math, inline code and roles, links and URLs, HTML tags, MyST anchors and directive options alone, and also raw `<style>`, `<script>`, `<pre>` and `<textarea>` blocks, `+++` cell breaks and table delimiter rows (`| :-: | ---: |`). A delimiter row that an earlier version damaged with a non-breaking space is repaired on the next sync of the file.
+
 ### Japanese — `ja`
 
 - Use full-width Japanese punctuation (、。「」) in prose, never ASCII punctuation (,.) and never ，．

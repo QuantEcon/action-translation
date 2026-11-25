@@ -11,8 +11,10 @@
  *
  * The hard part is NOT the substitution, it is knowing where prose ends. Code
  * (`a ? b : c`), math (`$\{x : x > 0\}$`), YAML frontmatter (`key: value`),
- * MyST anchors (`(sec:intro)=`) and URLs (`https://`) all contain the same
- * characters and must never be touched. Two independent defences:
+ * MyST anchors (`(sec:intro)=`), URLs (`https://`), raw `<style>`/`<script>`
+ * blocks (CSS `width: 70%;`), `+++ {json}` cell breaks and GFM table delimiter
+ * rows (`| :-: |`) all contain the same characters and must never be touched
+ * (#325). Two independent defences:
  *
  *   1. classify every line as prose-eligible or not, then mask inline
  *      constructs within the eligible ones, and
@@ -95,18 +97,77 @@ const DIRECTIVE_OPTION = /^\s*:[a-zA-Z][\w-]*:/;
  */
 const MATH_DELIM = /\$\$/g;
 
+/**
+ * CommonMark type-1 HTML blocks: `<script>`, `<pre>`, `<style>`, `<textarea>`
+ * (case-insensitive). Their content is literal — CSS, JavaScript, preformatted
+ * text — and U+00A0 is not CSS whitespace, so a typeset `width : 70% ;` drops
+ * the declaration (#325, the fr `getting_started` figures). The block runs from
+ * the opener through the first line holding the matching closer; opener and
+ * closer may share a line, and an unclosed block runs to the end of the
+ * document, as in CommonMark. Leading whitespace of any width is accepted, so
+ * an indented block is protected too.
+ */
+const HTML_LITERAL_OPEN = /^\s*<(script|pre|style|textarea)(?=[\s>]|$)/i;
+
+/**
+ * A MyST cell break, `+++` optionally followed by JSON metadata
+ * (`+++ {"user_expressions": []}`). U+00A0 is not JSON whitespace, so a typeset
+ * colon makes jupytext reject the file (#325).
+ */
+const CELL_BREAK = /^\s*\+\+\+/;
+
+/**
+ * A GFM table delimiter row (`| :-: | ---: |`): only pipes, colons, dashes and
+ * whitespace, with at least one pipe and one dash. The pipe requirement keeps a
+ * thematic break or frontmatter fence (`---`) and a bare `:---:` out. JS `\s`
+ * includes U+00A0 and U+202F, so a row the earlier transform damaged
+ * (`| :-\u00A0: |`) matches too and is repaired by `repairDelimiterRow`.
+ */
+function isDelimiterRow(line: string): boolean {
+  return /^[\s|:-]+$/.test(line) && line.includes('|') && line.includes('-');
+}
+
+/**
+ * The earlier transform spaced the colon of a delimiter cell (`:-:` →
+ * `:-\u00A0:`), which stops the row parsing as a delimiter row and renders the
+ * whole table as a paragraph of pipes (the fr `pandas.md` table). No
+ * non-breaking space is legitimate in a delimiter row, so they are removed —
+ * the same healing `DEFINITION_CORRUPTED` gives definitions, so an
+ * already-damaged edition heals on its next sync.
+ */
+function repairDelimiterRow(line: string): string {
+  return line.replace(/[\u00A0\u202F]/g, '');
+}
+
+/** How `applyTypography` treats a line. */
+type LineClass = 'literal' | 'prose' | 'delimiter-row';
+
+/**
+ * The class of a line that sits where prose may appear. A line of nothing but
+ * pipes, colons, dashes and whitespace that is not a delimiter row (`:---:`,
+ * `- :`) holds no words to typeset either, so it is left as written rather than
+ * spaced into `:---\u00A0:`; only a row with a pipe is repaired.
+ */
+function proseContextClass(line: string): LineClass {
+  if (isDelimiterRow(line)) return 'delimiter-row';
+  if (CELL_BREAK.test(line) || /^[\s|:-]+$/.test(line)) return 'literal';
+  return 'prose';
+}
+
 interface Fence {
   marker: string;
   prose: boolean;
 }
 
 /** Decide, line by line, which lines may carry prose typography. */
-function classifyLines(lines: string[]): boolean[] {
-  const eligible: boolean[] = new Array(lines.length).fill(false);
+function classifyLines(lines: string[]): LineClass[] {
+  const classes: LineClass[] = new Array(lines.length).fill('literal');
   const stack: Fence[] = [];
   let inFrontmatter = false;
   let inMathBlock = false;
   let awaitingOptions = false;
+  /** The closer of the open type-1 HTML block, if any. */
+  let htmlCloser: RegExp | null = null;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -118,6 +179,13 @@ function classifyLines(lines: string[]): boolean[] {
     }
     if (inFrontmatter) {
       if (line.trim() === '---') inFrontmatter = false;
+      continue;
+    }
+
+    // Inside a raw <style>/<script>/<pre>/<textarea> block, look only for its
+    // closer: fences and `$$` inside it are literal text, not structure.
+    if (htmlCloser) {
+      if (htmlCloser.test(line)) htmlCloser = null;
       continue;
     }
 
@@ -160,21 +228,25 @@ function classifyLines(lines: string[]): boolean[] {
       continue;
     }
 
-    if (!top) {
-      eligible[i] = true;
-      continue;
-    }
-
     // Directive options (`:name: fig-one`) sit directly under the opener.
-    if (awaitingOptions) {
+    if (top && awaitingOptions) {
       if (DIRECTIVE_OPTION.test(line)) continue;
       if (line.trim() === '') continue;
       awaitingOptions = false;
     }
-    eligible[i] = true;
+
+    // A type-1 HTML block opens here, at top level or inside a prose directive.
+    const html = HTML_LITERAL_OPEN.exec(line);
+    if (html) {
+      const closer = new RegExp(`</${html[1]}>`, 'i');
+      if (!closer.test(line)) htmlCloser = closer;
+      continue;
+    }
+
+    classes[i] = proseContextClass(line);
   }
 
-  return eligible;
+  return classes;
 }
 
 /** Inline constructs that must survive untouched inside an otherwise-prose line. */
@@ -182,6 +254,9 @@ const INLINE_PROTECTED: RegExp[] = [
   /\$[^$\n]+\$/g, // inline math
   /`[^`\n]+`/g, // inline code — also covers MyST roles: {doc}`intro <sec:intro>`
   /!?\[[^\]]*\]\([^)]*\)/g, // links and images, including the URL
+  // A whole one-line <style>…</style> (or script/pre/textarea) span, content
+  // included — the generic tag mask below masks only the tags (#325).
+  /<(script|pre|style|textarea)\b[^>]*>.*?<\/\1>/gi,
   /<[^>\n]+>/g, // HTML tags and autolinks
   /&(?:[a-zA-Z]+\d*|#\d+|#x[0-9a-fA-F]+);/g, // HTML entities — &nbsp; ends in ;
   /https?:\/\/\S+/g, // bare URLs
@@ -286,8 +361,14 @@ export function applyTypography(content: string, language: string): string {
   if (!rule) return content;
 
   const lines = content.split('\n');
-  const eligible = classifyLines(lines);
-  return lines.map((line, i) => (eligible[i] ? applyToProse(line, rule) : line)).join('\n');
+  const classes = classifyLines(lines);
+  return lines
+    .map((line, i) => {
+      if (classes[i] === 'prose') return applyToProse(line, rule);
+      if (classes[i] === 'delimiter-row') return repairDelimiterRow(line);
+      return line;
+    })
+    .join('\n');
 }
 
 /** Languages with a deterministic typography pass. */

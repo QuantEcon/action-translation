@@ -265,6 +265,221 @@ describe('applyTypography', () => {
     });
   });
 
+  // #325: lines that are not prose although they sit where prose may appear.
+  describe('raw HTML literal blocks (#325)', () => {
+    // English getting_started.md: the fr edition shipped `width : 70% ;` with
+    // U+00A0, which is not CSS whitespace, so the declarations were dropped.
+    const styleBlock = [
+      '<style>',
+      '  .auto {',
+      '    width: 70%;',
+      '    height: auto;',
+      '  }',
+      '  .terminal {',
+      '    width: 80%;',
+      '    height: auto;',
+      '  }',
+      '</style>',
+    ];
+
+    it('leaves a multi-line <style> block byte-identical', () => {
+      const src = ['Voici :', '', ...styleBlock, '', 'Fini !'].join('\n');
+      const out = applyTypography(src, 'fr');
+      expect(out).toContain(styleBlock.join('\n'));
+      expect(out).not.toMatch(/width\s+:/);
+    });
+
+    it('still typesets prose immediately before and after the block', () => {
+      const src = ['Voici :', ...styleBlock, 'Fini !'].join('\n');
+      const out = applyTypography(src, 'fr');
+      expect(out).toBe([`Voici${NBSP}:`, ...styleBlock, `Fini${NBSP}!`].join('\n'));
+    });
+
+    it('leaves a single-line <style> span alone', () => {
+      const src = '<style>.a { width: 1px; }</style>';
+      expect(applyTypography(src, 'fr')).toBe(src);
+    });
+
+    it('masks a one-line <style> span mid-line and typesets the prose around it', () => {
+      const src = 'Avant : <style>.a { width: 1px; }</style> après !';
+      expect(applyTypography(src, 'fr')).toBe(
+        `Avant${NBSP}: <style>.a { width: 1px; }</style> après${NBSP}!`
+      );
+    });
+
+    it('matches the tag case-insensitively', () => {
+      const src = ['<STYLE type="text/css">', 'p { margin: 0; }', '</Style>', 'Fini !'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        ['<STYLE type="text/css">', 'p { margin: 0; }', '</Style>', `Fini${NBSP}!`].join('\n')
+      );
+    });
+
+    it.each(['script', 'pre', 'textarea'])('leaves a <%s> block alone', (tag) => {
+      const src = [`<${tag}>`, 'a ? b : c;', 'Quoi !', `</${tag}>`, 'Fini !'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        [`<${tag}>`, 'a ? b : c;', 'Quoi !', `</${tag}>`, `Fini${NBSP}!`].join('\n')
+      );
+    });
+
+    it('leaves a <style> block inside a {note} alone, typesetting the note prose', () => {
+      const src = ['```{note}', 'Voici :', ...styleBlock, 'Fini !', '```', 'Après !'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        ['```{note}', `Voici${NBSP}:`, ...styleBlock, `Fini${NBSP}!`, '```', `Après${NBSP}!`].join(
+          '\n'
+        )
+      );
+    });
+
+    it('treats fences and $$ inside the block as literal text', () => {
+      const src = ['<pre>', '```', '$$', 'a : b', '</pre>', 'Fini !'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        ['<pre>', '```', '$$', 'a : b', '</pre>', `Fini${NBSP}!`].join('\n')
+      );
+    });
+
+    it('runs an unclosed block to the end of the document, as CommonMark does', () => {
+      const src = ['Avant !', '<style>', 'p { margin: 0; }', '', 'Après !'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        [`Avant${NBSP}!`, '<style>', 'p { margin: 0; }', '', 'Après !'].join('\n')
+      );
+    });
+
+    it('does not take a longer tag name for an opener', () => {
+      // `<prefix>` is not `<pre>`; the line is prose with an inline tag.
+      expect(applyTypography('<prefix> Voici :', 'fr')).toBe(`<prefix> Voici${NBSP}:`);
+    });
+
+    it('leaves a <style> block inside a code fence to the fence', () => {
+      const src = ['```html', '<style>', '```', 'Fini !'].join('\n');
+      // The fence closes on line 3; `<style>` inside code never opens a block.
+      expect(applyTypography(src, 'fr')).toBe(
+        ['```html', '<style>', '```', `Fini${NBSP}!`].join('\n')
+      );
+    });
+
+    it('does not heal an already-damaged <style> block', () => {
+      // The edition repair is a separate, one-off PR (#325); the engine only stops
+      // writing new damage.
+      const damaged = ['<style>', `  width${NBSP}: 70%${NBSP};`, '</style>'].join('\n');
+      expect(applyTypography(damaged, 'fr')).toBe(damaged);
+    });
+  });
+
+  describe('MyST cell breaks (#325)', () => {
+    it('leaves a +++ line with JSON metadata alone', () => {
+      const src = ['Avant :', '+++ {"user_expressions": []}', 'Après !'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        [`Avant${NBSP}:`, '+++ {"user_expressions": []}', `Après${NBSP}!`].join('\n')
+      );
+    });
+
+    it('leaves a +++ line inside a {note} alone', () => {
+      const src = ['```{note}', '+++ {"tags": ["x"]}', 'Voici !', '```'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        ['```{note}', '+++ {"tags": ["x"]}', `Voici${NBSP}!`, '```'].join('\n')
+      );
+    });
+
+    it('leaves a bare +++ alone', () => {
+      expect(applyTypography('+++', 'fr')).toBe('+++');
+    });
+  });
+
+  describe('GFM table delimiter rows (#325)', () => {
+    const table = (delimiter: string) =>
+      ['Le tableau :', '', '| A | B |', delimiter, '| x : y | z ! |', '', 'Fini !'].join('\n');
+    const typesetTable = (delimiter: string) =>
+      [
+        `Le tableau${NBSP}:`,
+        '',
+        '| A | B |',
+        delimiter,
+        `| x${NBSP}: y | z${NBSP}! |`,
+        '',
+        `Fini${NBSP}!`,
+      ].join('\n');
+
+    it.each([
+      '| :-: | ---: |',
+      '| :--- | ---: |',
+      '| :---: | :---: |',
+      '| :-: | :-: |',
+      '|:--|--:|',
+      '|-----|----:|',
+      ':-: | --:',
+      '   | --- | --- |',
+    ])('leaves %p alone and still typesets the rows and prose around it', (delimiter) => {
+      expect(applyTypography(table(delimiter), 'fr')).toBe(typesetTable(delimiter));
+    });
+
+    it('leaves a delimiter row inside a {note} alone', () => {
+      const src = ['```{note}', '| A | B |', '| :-: | ---: |', '```'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(src);
+    });
+
+    it.each([
+      [`| :-${NBSP}: | :-${NBSP}: |`, '| :-: | :-: |'], // the fr pandas.md row
+      [`| :---${NBSP}: | ---\u202F: |`, '| :---: | ---: |'],
+    ])('repairs the damaged row %p', (damaged, repaired) => {
+      expect(applyTypography(table(damaged), 'fr')).toBe(typesetTable(repaired));
+    });
+
+    it('leaves a damaged-looking row inside a code fence alone', () => {
+      const src = ['```text', `| :-${NBSP}: |`, '```'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(src);
+    });
+
+    it.each([
+      // A thematic break and a bare colon-dash run carry no pipe: never repaired,
+      // and, holding no words, never spaced either (`:---:` used to become `:---\u00A0:`).
+      ['---', '---'],
+      [':---:', ':---:'],
+      [`:---${NBSP}:`, `:---${NBSP}:`],
+      // Prose with a pipe or a dash is still prose.
+      ['- item : un', `- item${NBSP}: un`],
+      ['a | b : c', `a | b${NBSP}: c`],
+      // A thematic break with a stray NBSP is not a delimiter row, so it is not "repaired".
+      [`---${NBSP}`, `---${NBSP}`],
+    ])('does not treat %p as a delimiter row', (line, expected) => {
+      expect(applyTypography(['Avant.', '', line].join('\n'), 'fr')).toBe(
+        ['Avant.', '', expected].join('\n')
+      );
+    });
+
+    it('does not repair a delimiter row in a language without rules', () => {
+      const src = `| :-${NBSP}: |`;
+      expect(applyTypography(src, 'zh-cn')).toBe(src);
+    });
+  });
+
+  describe('idempotence over every line class', () => {
+    it('applying twice equals applying once', () => {
+      const src = [
+        '---',
+        'title: Essai',
+        '---',
+        'Voici : un essai ! Vraiment ?',
+        '<style>',
+        '  .auto { width: 70%; }',
+        '</style>',
+        '<style>.a { width: 1px; }</style>',
+        '+++ {"user_expressions": []}',
+        '| A | B |',
+        `| :-${NBSP}: | ---: |`,
+        '| x : y | z ! |',
+        '[^a]: Une note ! Vraiment ?',
+        '```{note}',
+        '<pre>',
+        'a : b',
+        '</pre>',
+        'Dans la note ?!',
+        '```',
+      ].join('\n');
+      const once = applyTypography(src, 'fr');
+      expect(applyTypography(once, 'fr')).toBe(once);
+    });
+  });
+
   describe('display math state tracking', () => {
     // Regression: a $$ block opening with content on the same line was missed,
     // so its closing $$ read as an opener and every later line in the file was
