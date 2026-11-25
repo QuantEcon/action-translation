@@ -56963,6 +56963,33 @@ function extractSections(content) {
 function headingToId(heading) {
   return heading.replace(/^#{2,6}\s+/, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
 }
+function sectionMatchKeys(before, after) {
+  const count = (sections) => {
+    const counts = /* @__PURE__ */ new Map();
+    for (const s of sections) {
+      const id = headingToId(s.heading);
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    return counts;
+  };
+  const beforeCounts = count(before);
+  const afterCounts = count(after);
+  const collides = (id) => (beforeCounts.get(id) ?? 0) > 1 || (afterCounts.get(id) ?? 0) > 1;
+  const keysFor = (sections) => {
+    const seen = /* @__PURE__ */ new Map();
+    return sections.map((s) => {
+      const id = headingToId(s.heading);
+      if (!collides(id))
+        return id;
+      const level = (s.heading.match(/^#+/) ?? [""])[0].length;
+      const levelled = `${level}\0${id}`;
+      const n = seen.get(levelled) ?? 0;
+      seen.set(levelled, n + 1);
+      return `${levelled}\0${n}`;
+    });
+  };
+  return { beforeKeys: keysFor(before), afterKeys: keysFor(after) };
+}
 function identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter) {
   const changedSections = [];
   if (!sourceAfter && !targetAfter) {
@@ -56998,12 +57025,12 @@ function identifyChangedSections(sourceBefore, sourceAfter, targetBefore, target
   const sourceBeforeSections = extractSections(sourceBefore);
   const sourceAfterSections = extractSections(sourceAfter);
   const targetAfterSections = extractSections(targetAfter);
-  const beforeById = new Map(sourceBeforeSections.map((s) => [headingToId(s.heading), s]));
-  const afterById = new Map(sourceAfterSections.map((s) => [headingToId(s.heading), s]));
+  const { beforeKeys, afterKeys } = sectionMatchKeys(sourceBeforeSections, sourceAfterSections);
+  const beforeByKey = new Map(sourceBeforeSections.map((s, i) => [beforeKeys[i], s]));
+  const afterKeySet = new Set(afterKeys);
   for (let i = 0; i < sourceAfterSections.length; i++) {
     const section = sourceAfterSections[i];
-    const id = headingToId(section.heading);
-    const beforeSection = beforeById.get(id);
+    const beforeSection = beforeByKey.get(afterKeys[i]);
     const targetSection = targetAfterSections[i];
     if (!beforeSection) {
       changedSections.push({
@@ -57021,9 +57048,9 @@ function identifyChangedSections(sourceBefore, sourceAfter, targetBefore, target
       });
     }
   }
-  for (const section of sourceBeforeSections) {
-    const id = headingToId(section.heading);
-    if (!afterById.has(id)) {
+  for (let i = 0; i < sourceBeforeSections.length; i++) {
+    const section = sourceBeforeSections[i];
+    if (!afterKeySet.has(beforeKeys[i])) {
       changedSections.push({
         heading: section.heading,
         changeType: "deleted"

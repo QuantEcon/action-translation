@@ -7,6 +7,8 @@
  * - Review comment generation
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { identifyChangedSections, parseJsonResponse } from '../reviewer.js';
 import { ChangedSection } from '../types.js';
 
@@ -624,6 +626,154 @@ Updated content.`;
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
 
       expect(changes.length).toBeGreaterThan(0);
+    });
+  });
+
+  // #283: `headingToId` drops the heading level, so headings that differ only
+  // by level, or repeat, collided in the lookup map and an unchanged section
+  // was reported as changed.
+  describe('Headings that share an id (#283)', () => {
+    const summary = (changes: ChangedSection[]) =>
+      changes.map((c) => `${c.changeType}:${c.heading}`);
+    // A target-side change keeps the pure-rename sentinel out of the way.
+    const T_BEFORE = '# 标题\n\n旧。';
+    const T_AFTER = '# 标题\n\n新。';
+
+    it('reports only the changed one of two same-text headings at different levels', () => {
+      const before = `# Title
+
+## Exercises
+
+Top-level exercises.
+
+## Methods
+
+### Exercises
+
+Method exercises.`;
+      const after = before.replace('Method exercises.', 'Method exercises, revised.');
+
+      expect(summary(identifyChangedSections(before, after, T_BEFORE, T_AFTER))).toEqual([
+        'modified:### Exercises',
+      ]);
+
+      const after2 = before.replace('Top-level exercises.', 'Top-level exercises, revised.');
+      expect(summary(identifyChangedSections(before, after2, T_BEFORE, T_AFTER))).toEqual([
+        'modified:## Exercises',
+      ]);
+    });
+
+    it('reports nothing for an edit outside two same-text headings at different levels', () => {
+      const before = `# Title
+
+## Exercises
+
+A.
+
+## Other
+
+B.
+
+### Exercises
+
+C.`;
+      const after = before.replace('B.', 'B, revised.');
+
+      expect(summary(identifyChangedSections(before, after, T_BEFORE, T_AFTER))).toEqual([
+        'modified:## Other',
+      ]);
+    });
+
+    it('matches a heading repeated at one level positionally, the nth to the nth', () => {
+      const before = `# Title
+
+## Model A
+
+### Set Up
+
+First set-up.
+
+## Model B
+
+### Set Up
+
+Second set-up.`;
+      const after = before.replace('Second set-up.', 'Second set-up, revised.');
+
+      expect(summary(identifyChangedSections(before, after, T_BEFORE, T_AFTER))).toEqual([
+        'modified:### Set Up',
+      ]);
+      // And it is the second one: its content is the revised text.
+      const [change] = identifyChangedSections(before, after, T_BEFORE, T_AFTER);
+      expect(change.englishContent).toBe('Second set-up, revised.');
+
+      // An edit to neither repeat reports neither.
+      const after2 = before.replace('## Model B', '## Model B (revised)');
+      expect(summary(identifyChangedSections(before, after2, T_BEFORE, T_AFTER))).toEqual([
+        'added:## Model B (revised)',
+        'deleted:## Model B',
+      ]);
+    });
+
+    it('reports a duplicate heading added as added, and one removed as deleted', () => {
+      const one = `# Title
+
+## Solver
+
+Solve it.`;
+      const two = `${one}
+
+## Solver
+
+Solve it again.`;
+
+      expect(summary(identifyChangedSections(one, two, T_BEFORE, T_AFTER))).toEqual([
+        'added:## Solver',
+      ]);
+      expect(summary(identifyChangedSections(two, one, T_BEFORE, T_AFTER))).toEqual([
+        'deleted:## Solver',
+      ]);
+    });
+
+    it("reports only the edited section on the issue's own example, the harness lecture", () => {
+      // `### Applications in Economics` and `#### Applications in Economics`
+      // both occur; an edit confined to `## Eigenvalues and Eigenvectors` was
+      // reported with a spurious `modified:#### Applications in Economics`.
+      const lecture = fs.readFileSync(
+        path.join(
+          __dirname,
+          '..',
+          '..',
+          'tool-test-action-on-github',
+          'test-action-on-github-data',
+          'base-lecture.md'
+        ),
+        'utf-8'
+      );
+      const edited = lecture.replace('reveal important properties', 'reveal essential properties');
+      expect(edited).not.toBe(lecture);
+
+      expect(summary(identifyChangedSections(lecture, edited, T_BEFORE, T_AFTER))).toEqual([
+        'modified:## Eigenvalues and Eigenvectors',
+      ]);
+    });
+
+    it('still matches a heading whose level changed when its text is unique', () => {
+      const before = `# Title
+
+## Results
+
+Text.`;
+      const after = `# Title
+
+### Results
+
+Text.`;
+
+      // Unchanged from before #283: one section, matched by text, modified.
+      expect(summary(identifyChangedSections(before, after, T_BEFORE, T_AFTER))).toEqual([
+        'modified:### Results',
+      ]);
     });
   });
 });

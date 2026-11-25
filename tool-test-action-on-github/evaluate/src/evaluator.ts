@@ -151,6 +151,48 @@ function headingToId(heading: string): string {
 }
 
 /**
+ * Matching keys for the sections of a before/after pair (#283), kept in step
+ * with src/reviewer.ts. `headingToId` drops the heading level, so
+ * `## Exercises` and `### Exercises` share an id, and so does a heading
+ * repeated at one level; keyed on the id alone, an unchanged section was
+ * reported as changed. An id that occurs more than once on either side is
+ * keyed on level + id + occurrence (the nth such heading at a level matches
+ * the nth); an id unique on both sides keeps the id alone, as before.
+ */
+function sectionMatchKeys(
+  before: Array<{ heading: string }>,
+  after: Array<{ heading: string }>
+): { beforeKeys: string[]; afterKeys: string[] } {
+  const count = (sections: Array<{ heading: string }>) => {
+    const counts = new Map<string, number>();
+    for (const s of sections) {
+      const id = headingToId(s.heading);
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    return counts;
+  };
+  const beforeCounts = count(before);
+  const afterCounts = count(after);
+  const collides = (id: string) =>
+    (beforeCounts.get(id) ?? 0) > 1 || (afterCounts.get(id) ?? 0) > 1;
+
+  const keysFor = (sections: Array<{ heading: string }>) => {
+    const seen = new Map<string, number>();
+    return sections.map(s => {
+      const id = headingToId(s.heading);
+      if (!collides(id)) return id;
+      const level = (s.heading.match(/^#+/) ?? [''])[0].length;
+      const levelled = `${level}\u0000${id}`;
+      const n = seen.get(levelled) ?? 0;
+      seen.set(levelled, n + 1);
+      // NUL cannot occur in an id, so a levelled key never equals a bare one.
+      return `${levelled}\u0000${n}`;
+    });
+  };
+  return { beforeKeys: keysFor(before), afterKeys: keysFor(after) };
+}
+
+/**
  * Identify changed sections by comparing before and after content
  * Handles: preamble changes, section additions, modifications, deletions, reordering
  */
@@ -209,15 +251,16 @@ export function identifyChangedSections(
   const sourceAfterSections = extractSections(sourceAfter);
   const targetAfterSections = extractSections(targetAfter);
   
-  // Build maps for quick lookup by ID
-  const beforeById = new Map(sourceBeforeSections.map(s => [headingToId(s.heading), s]));
-  const afterById = new Map(sourceAfterSections.map(s => [headingToId(s.heading), s]));
-  
+  // Build maps for quick lookup by matching key (#283: not the bare id, which
+  // collides for headings that differ only by level or repeat)
+  const { beforeKeys, afterKeys } = sectionMatchKeys(sourceBeforeSections, sourceAfterSections);
+  const beforeByKey = new Map(sourceBeforeSections.map((s, i) => [beforeKeys[i], s]));
+  const afterKeySet = new Set(afterKeys);
+
   // Check for added and modified sections
   for (let i = 0; i < sourceAfterSections.length; i++) {
     const section = sourceAfterSections[i];
-    const id = headingToId(section.heading);
-    const beforeSection = beforeById.get(id);
+    const beforeSection = beforeByKey.get(afterKeys[i]);
     
     // Find corresponding Chinese section by position
     const targetSection = targetAfterSections[i];
@@ -242,9 +285,9 @@ export function identifyChangedSections(
   }
   
   // Check for deleted sections
-  for (const section of sourceBeforeSections) {
-    const id = headingToId(section.heading);
-    if (!afterById.has(id)) {
+  for (let i = 0; i < sourceBeforeSections.length; i++) {
+    const section = sourceBeforeSections[i];
+    if (!afterKeySet.has(beforeKeys[i])) {
       changedSections.push({
         heading: section.heading,
         changeType: 'deleted',
