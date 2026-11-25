@@ -14,6 +14,7 @@
 
 import { TranslationReviewer } from '../reviewer.js';
 import { parseReviewVerdict } from '../review-verdict.js';
+import { buildForwardPRBody } from '../cli/forward-pr-creator.js';
 
 const SOURCE_REPO = 'QuantEcon/lecture-source';
 const TARGET_OWNER = 'QuantEcon';
@@ -35,6 +36,17 @@ function b64(content: string): string {
 }
 
 const PR_BODY = `Translation of source changes.\n\n### Source PR\n**[#${SOURCE_PR} - Remove the lecture](https://github.com/${SOURCE_REPO}/pull/${SOURCE_PR})**\n`;
+
+function resyncBody(sha: string): string {
+  return buildForwardPRBody('intro.md', SOURCE_REPO, DOCS, 'Content changes detected', {
+    sourceCommitSha: sha,
+    targetBaseSha: TARGET_BASE,
+    sourceLanguage: 'en',
+    targetLanguage: 'zh-cn',
+    model: 'test-model',
+    statePath: '.translate/state/intro.md.yml',
+  });
+}
 
 interface PrFile {
   filename: string;
@@ -58,6 +70,13 @@ interface Harness {
   failSourceListing?: boolean;
   /** Throw this instead of serving target content — a non-404 API failure. */
   targetFetchError?: Error;
+  /**
+   * Throw this instead of serving source content for these paths — a non-404
+   * API failure on one file's source read (#261).
+   */
+  sourceFetchError?: { error: Error; paths: string[]; ref?: string };
+  /** Make the translation PR a CLI forward resync PR pinned to this commit. */
+  resyncSha?: string;
 }
 
 interface Recorder {
@@ -82,8 +101,9 @@ function makeReviewer(h: Harness, rec: Recorder): TranslationReviewer {
       pulls: {
         get: async (p: { repo: string }) => {
           if (p.repo === TARGET_REPO) {
+            const body = h.resyncSha ? resyncBody(h.resyncSha) : PR_BODY;
             return {
-              data: { body: PR_BODY, head: { sha: TARGET_HEAD }, base: { sha: TARGET_BASE } },
+              data: { body, head: { sha: TARGET_HEAD }, base: { sha: TARGET_BASE } },
             };
           }
           return { data: { head: { sha: SOURCE_HEAD }, base: { sha: SOURCE_BASE } } };
@@ -93,6 +113,14 @@ function makeReviewer(h: Harness, rec: Recorder): TranslationReviewer {
       repos: {
         getContent: async (p: { repo: string; path: string; ref: string }) => {
           if (h.targetFetchError && p.repo === TARGET_REPO) throw h.targetFetchError;
+          if (
+            h.sourceFetchError &&
+            p.repo !== TARGET_REPO &&
+            h.sourceFetchError.paths.includes(p.path) &&
+            (h.sourceFetchError.ref === undefined || h.sourceFetchError.ref === p.ref)
+          ) {
+            throw h.sourceFetchError.error;
+          }
           const table =
             p.repo === TARGET_REPO
               ? p.ref === TARGET_HEAD
@@ -489,5 +517,140 @@ describe('reviewPR on deletion PRs (#210)', () => {
     );
 
     await expect(run(reviewer)).rejects.toThrow(/no source content could be fetched/);
+  });
+});
+
+// The per-file source-fetch gate (#261). A source read that fails with
+// anything but a 404 used to read as "file absent": the file dropped out of
+// the review, and the run could PASS having reviewed less than the PR. Only a
+// 404 means absent (D-2026-11-15-only-a-404-means-absent).
+describe('reviewPR per-file source-fetch gate (#261)', () => {
+  const FILES = ['lectures/a.md', 'lectures/b.md', 'lectures/c.md'];
+  const serverError = () => Object.assign(new Error('Server Error'), { status: 500 });
+  const allSources = Object.fromEntries(FILES.map((f) => [f, SOURCE_INTRO]));
+  const without = (table: Record<string, string>, path: string) =>
+    Object.fromEntries(Object.entries(table).filter(([k]) => k !== path));
+  const threeFiles = (over: Partial<Harness> = {}): Harness => ({
+    targetFiles: FILES.map(modified),
+    sourceFiles: FILES.map(modified),
+    sourceContent: allSources,
+    targetHeadContent: Object.fromEntries(FILES.map((f) => [f, TARGET_INTRO_AFTER])),
+    targetBaseContent: Object.fromEntries(FILES.map((f) => [f, TARGET_INTRO_BEFORE])),
+    ...over,
+  });
+
+  it('reviews all three files when every read succeeds', async () => {
+    const rec = newRecorder();
+    const result = await run(makeReviewer(threeFiles(), rec));
+
+    expect(rec.modelCalls).toEqual(['evaluateTranslation', 'evaluateDiff']);
+    expect(result.recommendationReasons.join('\n')).not.toMatch(/source content/);
+    expect(result.recommendation).toBe('auto-merge');
+  });
+
+  it("fails the run, naming the file, when one file's source read at head returns 500", async () => {
+    const rec = newRecorder();
+    const reviewer = makeReviewer(
+      threeFiles({
+        sourceFetchError: { error: serverError(), paths: ['lectures/b.md'], ref: SOURCE_HEAD },
+      }),
+      rec
+    );
+
+    await expect(run(reviewer)).rejects.toThrow(
+      /Could not read source lectures\/b\.md @ sourceh: Server Error/
+    );
+    // Before any model call, and nothing posted: a rerun reviews the whole PR.
+    expect(rec.modelCalls).toEqual([]);
+    expect(rec.comments).toEqual([]);
+  });
+
+  it("fails the run, naming the file, when one file's source read at base returns 500", async () => {
+    const rec = newRecorder();
+    const reviewer = makeReviewer(
+      threeFiles({
+        sourceFetchError: { error: serverError(), paths: ['lectures/b.md'], ref: SOURCE_BASE },
+      }),
+      rec
+    );
+
+    await expect(run(reviewer)).rejects.toThrow(/Could not read source lectures\/b\.md @ sourceb/);
+    expect(rec.modelCalls).toEqual([]);
+  });
+
+  it("fails a resync PR's run, naming the file, when one source read returns 500", async () => {
+    const rec = newRecorder();
+    const reviewer = makeReviewer(
+      threeFiles({
+        resyncSha: '450bafecd23db638602150b47f4272b98aad3146',
+        sourceFetchError: { error: serverError(), paths: ['lectures/b.md'] },
+      }),
+      rec
+    );
+
+    await expect(run(reviewer)).rejects.toThrow(
+      /Could not read source lectures\/b\.md @ 450bafe: Server Error/
+    );
+    expect(rec.modelCalls).toEqual([]);
+    expect(rec.comments).toEqual([]);
+  });
+
+  it('routes a 404 on one file to editor, naming the file in the reasons and the comment', async () => {
+    const rec = newRecorder();
+    const others = without(allSources, 'lectures/b.md');
+    const result = await run(makeReviewer(threeFiles({ sourceContent: others }), rec));
+
+    // The other two files were reviewed.
+    expect(rec.modelCalls).toEqual(['evaluateTranslation', 'evaluateDiff']);
+    expect(result.recommendation).toBe('editor');
+    expect(result.recommendationReasons).toContain(
+      'source content could not be fetched for lectures/b.md — the review compared that file against nothing'
+    );
+    expect(result.reviewComment).toContain('source content could not be fetched for lectures/b.md');
+    const verdict = parseReviewVerdict(result.reviewComment);
+    expect(verdict?.recommendation).toBe('editor');
+    expect(verdict?.recommendationReasons.join('\n')).toContain('lectures/b.md');
+  });
+
+  it('routes a 404 on one file of a resync PR to editor, naming the file', async () => {
+    const rec = newRecorder();
+    const others = without(allSources, 'lectures/c.md');
+    const result = await run(
+      makeReviewer(
+        threeFiles({
+          resyncSha: '450bafecd23db638602150b47f4272b98aad3146',
+          sourceContent: others,
+        }),
+        rec
+      )
+    );
+
+    expect(result.recommendation).toBe('editor');
+    expect(result.recommendationReasons.join('\n')).toMatch(
+      /source content could not be fetched for lectures\/c\.md/
+    );
+  });
+
+  it('leaves out a file the translation PR removes — the deletion blocker covers it', async () => {
+    const rec = newRecorder();
+    const result = await run(
+      makeReviewer(
+        {
+          targetFiles: [modified('lectures/a.md'), removed('lectures/b.md')],
+          sourceFiles: [modified('lectures/a.md')],
+          // The source has no b.md either, so its source read is a 404.
+          sourceContent: { 'lectures/a.md': SOURCE_INTRO },
+          targetHeadContent: { 'lectures/a.md': TARGET_INTRO_AFTER },
+          targetBaseContent: { 'lectures/a.md': TARGET_INTRO_BEFORE },
+        },
+        rec
+      )
+    );
+
+    expect(result.recommendation).toBe('editor');
+    expect(result.recommendationReasons.join('\n')).not.toMatch(
+      /source content could not be fetched/
+    );
+    expect(result.recommendationReasons.join('\n')).toMatch(/blocker/);
   });
 });

@@ -56762,6 +56762,9 @@ function computeRecommendation(input) {
   }
   if (input.sourceContentMissing) {
     reasons.push("source content could not be fetched \u2014 the review compared against nothing");
+  } else if (input.sourceContentMissingFiles && input.sourceContentMissingFiles.length > 0) {
+    const files = input.sourceContentMissingFiles;
+    reasons.push(`source content could not be fetched for ${files.join(", ")} \u2014 the review compared ${files.length === 1 ? "that file" : "those files"} against nothing`);
   }
   if (input.findingsSuppressed) {
     reasons.push("findings suppressed by max-suggestions=0 \u2014 the findings half of the gate is blind");
@@ -56850,6 +56853,10 @@ function isActionReviewComment(body) {
 }
 function isNotFoundError(error4) {
   return typeof error4 === "object" && error4 !== null && error4.status === 404;
+}
+function sourceReadError(path9, ref, error4) {
+  const message = error4 instanceof Error ? error4.message : String(error4);
+  return new Error(`Could not read source ${path9} @ ${ref.substring(0, 7)}: ${message} \u2014 failing the review rather than reviewing the PR without this file`, { cause: error4 });
 }
 function parseJsonResponse(text) {
   let parsed;
@@ -57084,66 +57091,81 @@ var TranslationReviewer = class {
    * sync deletes its translation as for a removal (#398), and GitHub lists
    * the move as `renamed`, under the new path.
    *
-   * Fail-closed by construction: if listing the source PR throws, the outer
-   * catch returns an EMPTY `removed` set, so no file is excused and absent
-   * source content stays fatal. Absence of evidence is never read as evidence
-   * of deletion.
+   * Fail-closed by construction: if listing the source PR throws, the catch
+   * returns EMPTY maps and an EMPTY `removed` set, so no file is excused and
+   * absent source content stays fatal. Absence of evidence is never read as
+   * evidence of deletion.
+   *
+   * That catch covers the listing only (#261). A per-file read that fails with
+   * anything but a 404 throws, naming the file: inside the old catch-all it
+   * returned partial maps, the file dropped out of the review, and the run
+   * could PASS having reviewed less than the PR. A 404 leaves the file out of
+   * the maps; the caller routes such a file to `editor` by name.
    */
   async getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames, docsFolder) {
     const before = /* @__PURE__ */ new Map();
     const after = /* @__PURE__ */ new Map();
     const removed = /* @__PURE__ */ new Set();
+    let sourcePr;
+    let sourceFiles;
     try {
-      const { data: sourcePr } = await this.octokit.rest.pulls.get({
+      ({ data: sourcePr } = await this.octokit.rest.pulls.get({
+        owner: sourceOwner,
+        repo: sourceRepoName,
+        pull_number: sourcePrNumber
+      }));
+      sourceFiles = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
         owner: sourceOwner,
         repo: sourceRepoName,
         pull_number: sourcePrNumber
       });
-      const sourceFiles = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
-        owner: sourceOwner,
-        repo: sourceRepoName,
-        pull_number: sourcePrNumber
-      });
-      for (const filename of filenames) {
-        const sourceFile = sourceFiles.find((f) => f.filename === filename);
-        const movedOut = sourceFiles.some((f) => f.status === "renamed" && f.previous_filename === filename && !f.filename.startsWith(docsFolder));
-        if (sourceFile?.status === "removed" || !sourceFile && movedOut) {
-          removed.add(filename);
-        }
-        const beforeFilename = sourceFile?.status === "renamed" && sourceFile.previous_filename ? sourceFile.previous_filename : filename;
-        if (!sourceFile || sourceFile.status !== "added") {
-          try {
-            const { data: beforeData } = await this.octokit.rest.repos.getContent({
-              owner: sourceOwner,
-              repo: sourceRepoName,
-              path: beforeFilename,
-              ref: sourcePr.base.sha
-            });
-            if ("content" in beforeData) {
-              before.set(filename, Buffer.from(beforeData.content, "base64").toString("utf-8"));
-            }
-          } catch {
+    } catch (error4) {
+      core6.warning(`Could not fetch source PR #${sourcePrNumber}: ${error4}`);
+      return { before, after, removed };
+    }
+    for (const filename of filenames) {
+      const sourceFile = sourceFiles.find((f) => f.filename === filename);
+      const movedOut = sourceFiles.some((f) => f.status === "renamed" && f.previous_filename === filename && !f.filename.startsWith(docsFolder));
+      if (sourceFile?.status === "removed" || !sourceFile && movedOut) {
+        removed.add(filename);
+      }
+      const beforeFilename = sourceFile?.status === "renamed" && sourceFile.previous_filename ? sourceFile.previous_filename : filename;
+      if (!sourceFile || sourceFile.status !== "added") {
+        try {
+          const { data: beforeData } = await this.octokit.rest.repos.getContent({
+            owner: sourceOwner,
+            repo: sourceRepoName,
+            path: beforeFilename,
+            ref: sourcePr.base.sha
+          });
+          if ("content" in beforeData) {
+            before.set(filename, Buffer.from(beforeData.content, "base64").toString("utf-8"));
           }
-        }
-        if (!removed.has(filename)) {
-          try {
-            const { data: afterData } = await this.octokit.rest.repos.getContent({
-              owner: sourceOwner,
-              repo: sourceRepoName,
-              path: filename,
-              ref: sourcePr.head.sha
-            });
-            if ("content" in afterData) {
-              after.set(filename, Buffer.from(afterData.content, "base64").toString("utf-8"));
-            }
-          } catch {
+        } catch (error4) {
+          if (!isNotFoundError(error4)) {
+            throw sourceReadError(beforeFilename, sourcePr.base.sha, error4);
           }
         }
       }
-      core6.info(`\u2713 Fetched source PR #${sourcePrNumber} diff for ${filenames.length} file(s)`);
-    } catch (error4) {
-      core6.warning(`Could not fetch source PR #${sourcePrNumber}: ${error4}`);
+      if (!removed.has(filename)) {
+        try {
+          const { data: afterData } = await this.octokit.rest.repos.getContent({
+            owner: sourceOwner,
+            repo: sourceRepoName,
+            path: filename,
+            ref: sourcePr.head.sha
+          });
+          if ("content" in afterData) {
+            after.set(filename, Buffer.from(afterData.content, "base64").toString("utf-8"));
+          }
+        } catch (error4) {
+          if (!isNotFoundError(error4)) {
+            throw sourceReadError(filename, sourcePr.head.sha, error4);
+          }
+        }
+      }
     }
+    core6.info(`\u2713 Fetched source PR #${sourcePrNumber} diff: ${after.size}/${filenames.length} file(s) at head`);
     return { before, after, removed };
   }
   /**
@@ -57156,6 +57178,8 @@ var TranslationReviewer = class {
    * "this file was deleted by the change under review" to read off it. Absent
    * source content on the resync path therefore stays fatal, exactly as before
    * (#210 is a sync-path fix).
+   *
+   * A read that fails with anything but a 404 throws, naming the file (#261).
    */
   async getSourceAtCommit(sourceOwner, sourceRepoName, commitSha, filenames) {
     const before = /* @__PURE__ */ new Map();
@@ -57172,7 +57196,9 @@ var TranslationReviewer = class {
           after.set(filename, Buffer.from(data.content, "base64").toString("utf-8"));
         }
       } catch (error4) {
-        core6.warning(`Could not fetch ${filename} @ ${commitSha.substring(0, 7)}: ${error4}`);
+        if (!isNotFoundError(error4))
+          throw sourceReadError(filename, commitSha, error4);
+        core6.warning(`Source ${filename} not found @ ${commitSha.substring(0, 7)}`);
       }
     }
     core6.info(`\u2713 Fetched source @ ${commitSha.substring(0, 7)} for ${after.size}/${filenames.length} file(s)`);
@@ -57430,6 +57456,7 @@ var TranslationReviewer = class {
     if (sourceContentMissing) {
       core6.warning("No source content was fetched for any reviewed file \u2014 the verdict is not a real comparison and routes to editor");
     }
+    const sourceContentMissingFiles = reviewableFiles.filter((f) => !sourceAfterMap.has(f.filename)).filter((f) => resyncMetadata !== void 0 || f.status !== "removed").map((f) => f.filename);
     const { recommendation, reasons } = computeRecommendation({
       verdict,
       scores: {
@@ -57444,6 +57471,7 @@ var TranslationReviewer = class {
       findings: allFindings,
       findingsMalformed: translationQuality.findingsMalformed,
       sourceContentMissing,
+      sourceContentMissingFiles,
       // With max-suggestions: 0 the prompt asks for no findings at all, so an
       // empty findings array is not evidence of a clean translation.
       findingsSuppressed: this.maxSuggestions === 0

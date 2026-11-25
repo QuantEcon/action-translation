@@ -452,6 +452,11 @@ export interface RecommendationInput {
   findingsMalformed: boolean;
   /** Source content could not be fetched: the comparison was against nothing. */
   sourceContentMissing?: boolean;
+  /**
+   * Reviewed files whose source side is absent (a 404) while others were
+   * compared (#261): that part of the review compared against nothing.
+   */
+  sourceContentMissingFiles?: string[];
   /** `max-suggestions: 0` asked the model for no findings, so an empty list proves nothing. */
   findingsSuppressed?: boolean;
 }
@@ -504,6 +509,12 @@ export function computeRecommendation(input: RecommendationInput): {
   }
   if (input.sourceContentMissing) {
     reasons.push('source content could not be fetched — the review compared against nothing');
+  } else if (input.sourceContentMissingFiles && input.sourceContentMissingFiles.length > 0) {
+    const files = input.sourceContentMissingFiles;
+    reasons.push(
+      `source content could not be fetched for ${files.join(', ')} — the review compared ` +
+        `${files.length === 1 ? 'that file' : 'those files'} against nothing`
+    );
   }
   if (input.findingsSuppressed) {
     reasons.push(

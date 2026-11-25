@@ -172,7 +172,7 @@ The split exists because these booleans gate absolutely but were all model outpu
 - zero `blocker` or `major` findings (any category)
 - zero `minor` findings in the gating categories `accuracy`, `terminology`, `syntax`, `diff-check`, `other`
 - every criterion meets its floor **and sits within the 1–10 scale** — provisionally accuracy ≥ 9, terminology ≥ 9, fluency ≥ 8, formatting ≥ 8, to be calibrated from shadow-mode data
-- the source content was actually fetched (a failed fetch means the review compared against nothing)
+- the source content was actually fetched for every reviewed file. A file whose source the source repository does not have (a 404) routes to `editor`, named in `recommendationReasons`; a source read that fails any other way fails the review run, so no verdict is posted and a rerun reviews the whole PR
 - findings were not suppressed by `max-suggestions: 0`
 
 Each `diffChecks` entry must be **literally `true`**; a missing key or a quoted `"false"` is a failed check, not a passing one.

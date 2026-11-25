@@ -175,6 +175,23 @@ function isNotFoundError(error: unknown): boolean {
 }
 
 /**
+ * A source read that failed for a reason other than 404, named by file.
+ *
+ * Only a 404 means a source file is absent (D-2026-11-15-only-a-404-means-absent).
+ * Anything else — a rate limit, a 5xx — used to read as absence: the file
+ * dropped out of the review and the run could PASS having reviewed less than
+ * the PR (#261). It now fails the run, so a rerun reviews the whole PR.
+ */
+function sourceReadError(path: string, ref: string, error: unknown): Error {
+  const message = error instanceof Error ? error.message : String(error);
+  return new Error(
+    `Could not read source ${path} @ ${ref.substring(0, 7)}: ${message} — ` +
+      `failing the review rather than reviewing the PR without this file`,
+    { cause: error }
+  );
+}
+
+/**
  * Extract JSON from an LLM response string.
  * Tries multiple strategies: raw parse, markdown code block extraction, greedy regex.
  * Returns a non-null object (throws if the parsed value is not an object).
@@ -533,10 +550,16 @@ export class TranslationReviewer {
    * sync deletes its translation as for a removal (#398), and GitHub lists
    * the move as `renamed`, under the new path.
    *
-   * Fail-closed by construction: if listing the source PR throws, the outer
-   * catch returns an EMPTY `removed` set, so no file is excused and absent
-   * source content stays fatal. Absence of evidence is never read as evidence
-   * of deletion.
+   * Fail-closed by construction: if listing the source PR throws, the catch
+   * returns EMPTY maps and an EMPTY `removed` set, so no file is excused and
+   * absent source content stays fatal. Absence of evidence is never read as
+   * evidence of deletion.
+   *
+   * That catch covers the listing only (#261). A per-file read that fails with
+   * anything but a 404 throws, naming the file: inside the old catch-all it
+   * returned partial maps, the file dropped out of the review, and the run
+   * could PASS having reviewed less than the PR. A 404 leaves the file out of
+   * the maps; the caller routes such a file to `editor` by name.
    */
   private async getSourceDiff(
     sourceOwner: string,
@@ -549,83 +572,92 @@ export class TranslationReviewer {
     const after = new Map<string, string>();
     const removed = new Set<string>();
 
+    let sourcePr: { base: { sha: string }; head: { sha: string } };
+    let sourceFiles: PrListFile[];
     try {
       // Get source PR details
-      const { data: sourcePr } = await this.octokit.rest.pulls.get({
+      ({ data: sourcePr } = await this.octokit.rest.pulls.get({
+        owner: sourceOwner,
+        repo: sourceRepoName,
+        pull_number: sourcePrNumber,
+      }));
+
+      // Get files changed in source PR (paginate — PRs can touch >30 files)
+      sourceFiles = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
         owner: sourceOwner,
         repo: sourceRepoName,
         pull_number: sourcePrNumber,
       });
+    } catch (error) {
+      core.warning(`Could not fetch source PR #${sourcePrNumber}: ${error}`);
+      return { before, after, removed };
+    }
 
-      // Get files changed in source PR (paginate — PRs can touch >30 files)
-      const sourceFiles: PrListFile[] = await this.octokit.paginate(
-        this.octokit.rest.pulls.listFiles,
-        {
-          owner: sourceOwner,
-          repo: sourceRepoName,
-          pull_number: sourcePrNumber,
-        }
+    for (const filename of filenames) {
+      // Check if this file was changed in source PR
+      const sourceFile = sourceFiles.find((f: PrListFile) => f.filename === filename);
+      const movedOut = sourceFiles.some(
+        (f: PrListFile) =>
+          f.status === 'renamed' &&
+          f.previous_filename === filename &&
+          !f.filename.startsWith(docsFolder)
       );
 
-      for (const filename of filenames) {
-        // Check if this file was changed in source PR
-        const sourceFile = sourceFiles.find((f: PrListFile) => f.filename === filename);
-        const movedOut = sourceFiles.some(
-          (f: PrListFile) =>
-            f.status === 'renamed' &&
-            f.previous_filename === filename &&
-            !f.filename.startsWith(docsFolder)
-        );
+      if (sourceFile?.status === 'removed' || (!sourceFile && movedOut)) {
+        removed.add(filename);
+      }
 
-        if (sourceFile?.status === 'removed' || (!sourceFile && movedOut)) {
-          removed.add(filename);
-        }
+      // For renamed files, use previous filename for "before"
+      const beforeFilename =
+        sourceFile?.status === 'renamed' && sourceFile.previous_filename
+          ? sourceFile.previous_filename
+          : filename;
 
-        // For renamed files, use previous filename for "before"
-        const beforeFilename =
-          sourceFile?.status === 'renamed' && sourceFile.previous_filename
-            ? sourceFile.previous_filename
-            : filename;
-
-        // Get content BEFORE (from base ref)
-        if (!sourceFile || sourceFile.status !== 'added') {
-          try {
-            const { data: beforeData } = await this.octokit.rest.repos.getContent({
-              owner: sourceOwner,
-              repo: sourceRepoName,
-              path: beforeFilename,
-              ref: sourcePr.base.sha,
-            });
-            if ('content' in beforeData) {
-              before.set(filename, Buffer.from(beforeData.content, 'base64').toString('utf-8'));
-            }
-          } catch {
-            // File didn't exist before
+      // Get content BEFORE (from base ref)
+      if (!sourceFile || sourceFile.status !== 'added') {
+        try {
+          const { data: beforeData } = await this.octokit.rest.repos.getContent({
+            owner: sourceOwner,
+            repo: sourceRepoName,
+            path: beforeFilename,
+            ref: sourcePr.base.sha,
+          });
+          if ('content' in beforeData) {
+            before.set(filename, Buffer.from(beforeData.content, 'base64').toString('utf-8'));
           }
-        }
-
-        // Get content AFTER (from head ref)
-        if (!removed.has(filename)) {
-          try {
-            const { data: afterData } = await this.octokit.rest.repos.getContent({
-              owner: sourceOwner,
-              repo: sourceRepoName,
-              path: filename,
-              ref: sourcePr.head.sha,
-            });
-            if ('content' in afterData) {
-              after.set(filename, Buffer.from(afterData.content, 'base64').toString('utf-8'));
-            }
-          } catch {
-            // File doesn't exist after (deleted)
+        } catch (error) {
+          // A 404: the file didn't exist before. Anything else is a failed read.
+          if (!isNotFoundError(error)) {
+            throw sourceReadError(beforeFilename, sourcePr.base.sha, error);
           }
         }
       }
 
-      core.info(`✓ Fetched source PR #${sourcePrNumber} diff for ${filenames.length} file(s)`);
-    } catch (error) {
-      core.warning(`Could not fetch source PR #${sourcePrNumber}: ${error}`);
+      // Get content AFTER (from head ref)
+      if (!removed.has(filename)) {
+        try {
+          const { data: afterData } = await this.octokit.rest.repos.getContent({
+            owner: sourceOwner,
+            repo: sourceRepoName,
+            path: filename,
+            ref: sourcePr.head.sha,
+          });
+          if ('content' in afterData) {
+            after.set(filename, Buffer.from(afterData.content, 'base64').toString('utf-8'));
+          }
+        } catch (error) {
+          // A 404: the source has no such file at head, and the caller routes
+          // it to `editor` by name. Anything else is a failed read.
+          if (!isNotFoundError(error)) {
+            throw sourceReadError(filename, sourcePr.head.sha, error);
+          }
+        }
+      }
     }
+
+    core.info(
+      `✓ Fetched source PR #${sourcePrNumber} diff: ${after.size}/${filenames.length} file(s) at head`
+    );
 
     return { before, after, removed };
   }
@@ -640,6 +672,8 @@ export class TranslationReviewer {
    * "this file was deleted by the change under review" to read off it. Absent
    * source content on the resync path therefore stays fatal, exactly as before
    * (#210 is a sync-path fix).
+   *
+   * A read that fails with anything but a 404 throws, naming the file (#261).
    */
   private async getSourceAtCommit(
     sourceOwner: string,
@@ -662,7 +696,10 @@ export class TranslationReviewer {
           after.set(filename, Buffer.from(data.content, 'base64').toString('utf-8'));
         }
       } catch (error) {
-        core.warning(`Could not fetch ${filename} @ ${commitSha.substring(0, 7)}: ${error}`);
+        // Only a 404 means the source has no such file (#261); the caller
+        // routes it to `editor` by name. Anything else fails the run.
+        if (!isNotFoundError(error)) throw sourceReadError(filename, commitSha, error);
+        core.warning(`Source ${filename} not found @ ${commitSha.substring(0, 7)}`);
       }
     }
 
@@ -1195,16 +1232,25 @@ export class TranslationReviewer {
       ...modelCheckFindings,
       ...deterministicFindings,
     ]);
-    // A failed source fetch is only a warning on the fetch path (getSourceDiff
-    // catches everything and returns empty maps), so the review can end up
-    // scoring the target against nothing and calling it clean. That must never
-    // reach auto-merge.
+    // Defence in depth: the pre-flight abort above already refuses a review
+    // with no source content at all, so this gate should never fire. That
+    // must never reach auto-merge.
     const sourceContentMissing = sourceEnglish.trim() === '';
     if (sourceContentMissing) {
       core.warning(
         'No source content was fetched for any reviewed file — the verdict is not a real comparison and routes to editor'
       );
     }
+    // A reviewed file whose source read was a 404 (#261): the rest of the PR
+    // was compared, this file was compared against nothing. A non-404 read
+    // fails the run before here; this is the genuine-absence residual, and it
+    // routes to `editor` with the file named rather than vanishing from
+    // `reviewedPairs` unremarked. A file this translation PR removes is left
+    // out on the sync path, where `unexpectedDeletionFindings` blocks it.
+    const sourceContentMissingFiles = reviewableFiles
+      .filter((f) => !sourceAfterMap.has(f.filename))
+      .filter((f) => resyncMetadata !== undefined || f.status !== 'removed')
+      .map((f) => f.filename);
 
     const { recommendation, reasons } = computeRecommendation({
       verdict,
@@ -1220,6 +1266,7 @@ export class TranslationReviewer {
       findings: allFindings,
       findingsMalformed: translationQuality.findingsMalformed,
       sourceContentMissing,
+      sourceContentMissingFiles,
       // With max-suggestions: 0 the prompt asks for no findings at all, so an
       // empty findings array is not evidence of a clean translation.
       findingsSuppressed: this.maxSuggestions === 0,
