@@ -53848,6 +53848,7 @@ var path6 = __toESM(require("path"), 1);
 // dist/cli/translate-state.js
 var fs5 = __toESM(require("fs"), 1);
 var path4 = __toESM(require("path"), 1);
+var import_util = require("util");
 var TRANSLATE_DIR = ".translate";
 var STATE_DIR = "state";
 var _cachedVersion;
@@ -53931,25 +53932,122 @@ function mergeFileState(existing, state, shownPath) {
     const message = error4 instanceof Error ? error4.message.split("\n")[0] : String(error4);
     return {
       content,
+      overwritten: true,
       warning: `${shownPath} could not be read as YAML (${message}), so it was overwritten: any keys it held besides the ones sync writes are gone`
+    };
+  }
+  if (parsed === void 0 || parsed === null) {
+    return {
+      content,
+      warning: `${shownPath} held no keys (it was empty, or only comments), so it was overwritten`
     };
   }
   if (!isPlainMapping(parsed)) {
     return {
       content,
+      overwritten: true,
       warning: `${shownPath} was not a YAML mapping of keys to values, so it was overwritten: any keys it held besides the ones sync writes are gone`
     };
   }
-  const kept = {};
-  for (const [key, value] of Object.entries(parsed)) {
-    if (!ENGINE_STATE_KEYS.has(key))
-      kept[key] = value;
-  }
-  if (Object.keys(kept).length === 0)
+  const keptKeys = Object.keys(parsed).filter((key) => !ENGINE_STATE_KEYS.has(key));
+  if (keptKeys.length === 0)
     return { content };
+  const blocks = keptKeyBlocks(existing);
+  if (blocks) {
+    const merged = content + blocks.join("");
+    if (keepsValues(merged, parsed, keptKeys, content))
+      return { content: merged };
+  }
+  const kept = {};
+  for (const key of keptKeys) {
+    Object.defineProperty(kept, key, {
+      value: parsed[key],
+      enumerable: true,
+      writable: true,
+      configurable: true
+    });
+  }
   return {
-    content: content + dump(kept, { lineWidth: -1, quotingType: '"', schema: CORE_SCHEMA })
+    content: content + dump(kept, { lineWidth: -1, quotingType: '"', schema: CORE_SCHEMA }),
+    warning: `${shownPath}: the keys it held besides the ones sync writes were kept, but their text could not be carried over as written, so their values were re-serialised: quoting, comments and number formatting may have changed`
   };
+}
+function keptKeyBlocks(text) {
+  if (text.startsWith("\uFEFF") || text.includes("	"))
+    return void 0;
+  const lines = text.split("\n").map((line) => line.endsWith("\r") ? line.slice(0, -1) : line);
+  if (lines.length > 0 && lines[lines.length - 1] === "")
+    lines.pop();
+  const isBlankOrComment = (line) => line.trim() === "" || line.trimStart().startsWith("#");
+  const opener = lines.findIndex((line) => !isBlankOrComment(line));
+  if (opener !== -1 && /^---\s*(#.*)?$/.test(lines[opener]))
+    lines.splice(opener, 1);
+  const keyLines = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^(---|\.\.\.)(\s|$)/.test(line) || line.startsWith("%"))
+      return void 0;
+    if (line === "" || /^\s/.test(line) || line.startsWith("#"))
+      continue;
+    if (/^-(\s|$)/.test(line))
+      continue;
+    if (/^[{[?]/.test(line))
+      return void 0;
+    keyLines.push(i);
+  }
+  if (keyLines.length === 0)
+    return void 0;
+  const starts = keyLines.map((keyLine, index) => {
+    if (index === 0)
+      return 0;
+    let start = keyLine;
+    while (start > keyLines[index - 1] + 1 && isBlankOrComment(lines[start - 1]))
+      start--;
+    return start;
+  });
+  const blocks = [];
+  let before = /* @__PURE__ */ new Set();
+  for (let index = 0; index < starts.length; index++) {
+    const end = index + 1 < starts.length ? starts[index + 1] : lines.length;
+    let blockLines = lines.slice(starts[index], end);
+    if (index + 1 === starts.length) {
+      while (blockLines.length > 0 && blockLines[blockLines.length - 1].trim() === "") {
+        blockLines = blockLines.slice(0, -1);
+      }
+    }
+    let loaded;
+    try {
+      loaded = load(lines.slice(0, end).join("\n") + "\n", { schema: CORE_SCHEMA });
+    } catch {
+      return void 0;
+    }
+    if (!isPlainMapping(loaded))
+      return void 0;
+    const keys = Object.keys(loaded);
+    const added = keys.filter((key) => !before.has(key));
+    if (added.length !== 1 || keys.length !== before.size + 1)
+      return void 0;
+    before = new Set(keys);
+    if (!ENGINE_STATE_KEYS.has(added[0]))
+      blocks.push(blockLines.join("\n") + "\n");
+  }
+  return blocks;
+}
+function keepsValues(merged, original, keptKeys, engineText) {
+  let reloaded;
+  let engine;
+  try {
+    reloaded = load(merged, { schema: CORE_SCHEMA });
+    engine = load(engineText, { schema: CORE_SCHEMA });
+  } catch {
+    return false;
+  }
+  if (!isPlainMapping(reloaded) || !isPlainMapping(engine))
+    return false;
+  const engineKeys = Object.keys(engine);
+  if (Object.keys(reloaded).length !== engineKeys.length + keptKeys.length)
+    return false;
+  return engineKeys.every((key) => (0, import_util.isDeepStrictEqual)(reloaded[key], engine[key])) && keptKeys.every((key) => Object.prototype.hasOwnProperty.call(reloaded, key) && (0, import_util.isDeepStrictEqual)(reloaded[key], original[key]));
 }
 function serializeFileState(state) {
   return dump(state, { lineWidth: -1, quotingType: '"' });
@@ -55057,6 +55155,8 @@ var SyncOrchestrator = class {
       const merged = mergeFileState(existing, state, statePath);
       if (merged.warning)
         this.logger.warning(merged.warning);
+      if (merged.overwritten)
+        (result.overwrittenStateFiles ??= []).push(statePath);
       result.translatedFiles.push({
         path: statePath,
         content: merged.content,
@@ -55772,7 +55872,19 @@ The translation of each lecture below is at an earlier source commit than the En
 
 ${lines.join("\n")}`;
 }
-async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet) {
+function formatOverwrittenStatesNotice(paths) {
+  if (paths.length === 0)
+    return "";
+  const lines = paths.map((p) => `- \`${p}\``);
+  return `
+
+### \u26A0\uFE0F State Files Overwritten
+
+Each state file below could not be read as a YAML mapping, so this PR writes it afresh: any keys it held besides the ones sync writes, such as a sign-off, are gone. Restore them from the file's history if they matter.
+
+${lines.join("\n")}`;
+}
+async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet, overwrittenStates) {
   const { targetOwner, targetRepo } = config;
   const { data: targetRepoData } = await octokit.rest.repos.get({
     owner: targetOwner,
@@ -55818,7 +55930,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     });
     logger.info(`Deleted: ${file.path}`);
   }
-  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet);
+  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet, overwrittenStates);
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
   let pr;
   try {
@@ -55897,7 +56009,7 @@ async function findPullForBranch(octokit, targetOwner, targetRepo, branchName, l
   }
   return void 0;
 }
-function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet) {
+function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet, overwrittenStates) {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);
   let filesChangedSection = "";
@@ -55959,6 +56071,7 @@ ${lines.join("\n")}`;
   const scopeNotice = formatScopeNotice(scopeSkipped ?? []);
   const stillOpenNotice = formatStillOpenNotice(stillOpen ?? []);
   const lectureSetNotice = lectureSet ? formatLectureSetNotice(lectureSet) : "";
+  const overwrittenNotice = formatOverwrittenStatesNotice(overwrittenStates ?? []);
   const metadataFiles = fileMetadata ? fileMetadata.map((f) => {
     const entry = {
       path: f.path,
@@ -55993,7 +56106,7 @@ This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoNam
 ### Source PR
 **[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ""}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
 
-${filesChangedSection}${failedFilesNotice}${stillOpenNotice}${skippedNotice}${droppedNotice}${scopeNotice}${lectureSetNotice}
+${filesChangedSection}${failedFilesNotice}${stillOpenNotice}${skippedNotice}${droppedNotice}${scopeNotice}${lectureSetNotice}${overwrittenNotice}
 
 ### Details
 - **Source Language**: ${config.sourceLanguage}
@@ -56133,10 +56246,14 @@ function planRebaseRead(reads) {
 var RebaseReadError = class extends Error {
   deletedSinceOpened;
   addedOnMainSinceOpened;
-  constructor(message, deletedSinceOpened, addedOnMainSinceOpened = []) {
+  unreadStates;
+  otherErrors;
+  constructor(message, deletedSinceOpened, addedOnMainSinceOpened = [], unreadStates = [], otherErrors = false) {
     super(message);
     this.deletedSinceOpened = deletedSinceOpened;
     this.addedOnMainSinceOpened = addedOnMainSinceOpened;
+    this.unreadStates = unreadStates;
+    this.otherErrors = otherErrors;
     this.name = "RebaseReadError";
   }
 };
@@ -56306,7 +56423,7 @@ async function checkSyncPremise(input, reader, logger) {
     if (read.status === "error") {
       const error4 = `Fetch failed (state): ${file.filename}: could not read ${statePath} from ${edition} (${read.message}), so whether its translation starts from this PR's English could not be checked. It was not synced.`;
       logger.error(error4);
-      outcomes.push({ error: error4 });
+      outcomes.push({ error: error4, unread: { file: file.filename, statePath, status: read.message } });
       continue;
     }
     if (read.status === "missing") {
@@ -56396,6 +56513,8 @@ async function checkSyncPremise(input, reader, logger) {
       result.files.push(entry.keep);
     } else if ("error" in entry) {
       result.errors.push(entry.error);
+      if (entry.unread)
+        (result.unreadStates ??= []).push(entry.unread);
     } else if (entry.mismatch.case === "still-open") {
       const lecture = entry.mismatch;
       const one = lecture.openPulls.length === 1;
@@ -56460,6 +56579,14 @@ function resyncParagraph(prNumber, mergeSha) {
     "must print 0. A structural-parity failure repeats exactly on a resync, so fix its cause first."
   ];
 }
+function unreadStateLines(unread, prNumber) {
+  const one = unread.length === 1;
+  return [
+    `${one ? "This lecture was" : "These lectures were"} held back, not translated: the read of ${one ? "its" : "each one's"} state file answered something other than "not found", and sync keeps the keys a state file holds besides its own, so it does not write over a file it could not read. A failed read is transient more often than not: once the state file reads again, sync ${one ? "it" : "them"} again with \`${RESYNC_COMMAND}\` on #${prNumber}, under the condition below.`,
+    "",
+    ...unread.map((lecture) => `- \`${lecture.file}\`: \`${lecture.statePath}\` (${lecture.status})`)
+  ];
+}
 function bibliographyIntro(input) {
   return `This run synced nothing: it could not read the bibliography a sync needs to carry the entries its citations use (the edition's \`${input.docsFolder}_config.yml\`, and the files its \`bibtex_bibfiles\` lists, in the edition and in the source). No lecture was translated and nothing in ${input.targetRepo} changed. Make the file the error names readable (a transient error needs nothing), then sync this PR's changes again: with \`${RESYNC_COMMAND}\` under the condition below, or lecture by lecture from a checkout of the source's default branch:`;
 }
@@ -56482,16 +56609,29 @@ function failureRecoveryLines(input) {
   if (input.folderMoved)
     return folderMovedLines(input.folderMoved, input.docsFolder);
   const heldBack = input.heldBack ?? [];
+  const unread = input.unreadStates ?? [];
   const premise = formatPremiseRecovery(heldBack, input.docsFolder, input.targetLanguage);
-  const otherErrors = input.errors.length > heldBack.length;
-  if (!otherErrors)
+  const otherErrors = input.errors.length > heldBack.length + unread.length;
+  if (!otherErrors && unread.length === 0)
     return premise;
+  const lines = [];
+  if (premise.length > 0)
+    lines.push(...premise, "");
+  if (unread.length > 0) {
+    if (premise.length > 0) {
+      lines.push("**For the lectures whose state file could not be read:**", "");
+    }
+    lines.push(...unreadStateLines(unread, input.prNumber), "");
+    if (!otherErrors) {
+      lines.push(...resyncParagraph(input.prNumber, input.mergeSha));
+      return lines;
+    }
+  }
+  if (lines.length > 0)
+    lines.push("**For the other errors:**", "");
   const syncedNothing = input.bibliographyUnread || input.lectureSetUnread;
   const lectures = syncedNothing ? [] : input.failedLectures ?? [];
   const stillOpen = input.stillOpen ?? [];
-  const lines = [];
-  if (premise.length > 0)
-    lines.push(...premise, "", "**For the other errors:**", "");
   lines.push(input.lectureSetUnread ? lectureSetIntro(input) : input.bibliographyUnread ? bibliographyIntro(input) : "Recover a lecture from a checkout of the source's default branch, not by re-running this sync:", "");
   const removals = input.lectureSetUnread ? input.heldRemovals ?? [] : [];
   if (removals.length > 0) {
@@ -56546,6 +56686,14 @@ function rebaseFailureComment(input) {
   }
   if (added.length > 0 && deleted.length === 0 && lectures.length === 0) {
     return lines.slice(0, -1).join("\n");
+  }
+  const unread = input.unreadStates ?? [];
+  if (unread.length > 0) {
+    const one = unread.length === 1;
+    lines.push(`The rebase stopped before the branch moved, and translated nothing: the read of ${one ? "the state file" : "each state file"} below answered something other than "not found", and the rebase keeps the keys a state file holds besides its own, so it does not write over a file it could not read. A failed read is transient more often than not: once it reads again, re-run the failed rebase workflow run, which rebuilds this PR on the current \`main\`.`, "", ...unread.map((lecture) => `- \`${lecture.file}\`: \`${lecture.statePath}\` (${lecture.status})`));
+    if (!input.otherErrors)
+      return lines.join("\n");
+    lines.push("");
   }
   lines.push(`Resolve the conflicts by hand, or regenerate the overlapping lectures with \`translate forward -f <file>\`${files}, run from a checkout of the source's default branch, where \`<file>\` is the lecture's path inside the docs folder. \`translate forward\` regenerates the whole lecture, so on a lecture that has been natively reviewed, carry the changes in by hand instead.`);
   const metadata = input.metadata;
@@ -58609,7 +58757,9 @@ The translation content is preserved; only unchanged sections were updated to ma
             overlapping,
             docsFolder: inputs.docsFolder,
             deletedSinceOpened: error4 instanceof RebaseReadError ? error4.deletedSinceOpened : void 0,
-            addedOnMainSinceOpened: error4 instanceof RebaseReadError ? error4.addedOnMainSinceOpened : void 0
+            addedOnMainSinceOpened: error4 instanceof RebaseReadError ? error4.addedOnMainSinceOpened : void 0,
+            unreadStates: error4 instanceof RebaseReadError ? error4.unreadStates : void 0,
+            otherErrors: error4 instanceof RebaseReadError ? error4.otherErrors : void 0
           })
         });
       } catch {
@@ -58875,10 +59025,10 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
   }
   const { shas: existingStateShas, reads: stateReads } = await fetchExistingStateShas(octokit, owner, repo, filesToSync, inputs.docsFolder, baseSha);
   const unreadStates = holdUnreadDeletionStates(filesToSync, stateReads, inputs.docsFolder, `${owner}/${repo}`);
-  const unreadWritten = holdUnreadWrittenStates(unreadStates.files, stateReads, inputs.docsFolder, `${owner}/${repo}`);
+  const unreadWritten = holdUnreadWrittenStates(unreadStates.files, stateReads, inputs.docsFolder, `${owner}/${repo}`, "It was not rebased.");
   const stateErrors = [...unreadStates.errors, ...unreadWritten.errors];
   if (stateErrors.length > 0) {
-    throw new Error(`state read failed for ${stateErrors.length} file(s); branch left untouched: ` + stateErrors.join("; "));
+    throw new RebaseReadError(`state read failed for ${stateErrors.length} file(s); branch left untouched: ` + stateErrors.join("; "), [], [], unreadWritten.unread, unreadStates.errors.length > 0);
   }
   const stateConfig = {
     sourceCommitSha,
@@ -59089,7 +59239,7 @@ async function runSync() {
     core9.error(error4);
   filesToSync = unreadStates.files;
   fetchErrors.push(...unreadStates.errors);
-  const unreadWritten = holdUnreadWrittenStates(filesToSync, stateReads, inputs.docsFolder, `${targetOwner}/${targetRepo}`, (file) => file.type === "markdown" && takesUpdateMode(file));
+  const unreadWritten = holdUnreadWrittenStates(filesToSync, stateReads, inputs.docsFolder, `${targetOwner}/${targetRepo}`, "It was not synced.", (file) => file.type === "markdown" && takesUpdateMode(file));
   for (const error4 of unreadWritten.errors)
     core9.error(error4);
   filesToSync = unreadWritten.files;
@@ -59203,7 +59353,8 @@ async function runSync() {
         // Only the lectures this PR delivers: one that failed is in the
         // failure issue instead.
         premise.stillOpen.filter((lecture) => result.processedFiles.includes(lecture.file)),
-        reportOf(gaps)
+        reportOf(gaps),
+        result.overwrittenStateFiles
       );
       prUrl = prResult.prUrl;
       core9.setOutput("pr-url", prResult.prUrl);
@@ -59226,6 +59377,7 @@ async function runSync() {
         mergeSha: effectiveSha,
         heldBack: premise.heldBack,
         failedLectures,
+        unreadStates: [...unreadWritten.unread, ...premise.unreadStates ?? []],
         bibliographyUnread: bibliographyError !== void 0,
         // A bibliography hold synced nothing, so no lecture behind an open
         // PR failed: its diagnosis would read as an error of its own.
@@ -59507,20 +59659,22 @@ function holdUnreadDeletionStates(files, reads, docsFolder, targetRepo, reported
   }
   return { files: kept, errors };
 }
-function holdUnreadWrittenStates(files, reads, docsFolder, targetRepo, reported = () => false) {
+function holdUnreadWrittenStates(files, reads, docsFolder, targetRepo, outcome, reported = () => false) {
   const kept = [];
   const errors = [];
+  const unread = [];
   for (const file of files) {
     const writes = file.type === "markdown" || file.type === "renamed";
     const statePath = writes ? stateFileFor(file.filename, docsFolder) : void 0;
     const read = statePath ? reads.get(statePath) : void 0;
     if (statePath && read?.status === "error" && !reported(file)) {
-      errors.push(`Fetch failed (state): ${file.filename}: could not read ${statePath} from ${targetRepo} (${read.message}), so the keys it holds besides the ones sync writes could not be kept. It was not synced.`);
+      errors.push(`Fetch failed (state): ${file.filename}: could not read ${statePath} from ${targetRepo} (${read.message}), so the keys it holds besides the ones sync writes could not be kept. ${outcome}`);
+      unread.push({ file: file.filename, statePath, status: read.message });
       continue;
     }
     kept.push(file);
   }
-  return { files: kept, errors };
+  return { files: kept, errors, unread };
 }
 async function postSuccessComment(octokit, prNumber, targetLanguage, targetRepo, prUrl, processedFiles) {
   try {

@@ -58,6 +58,7 @@
 import * as yaml from 'js-yaml';
 import { isTranslationBranch } from './branch-naming.js';
 import { parseTranslationSyncMetadata } from './pr-creator.js';
+import type { UnreadState } from './recovery-advice.js';
 import type { FileToSync, Logger } from './sync-orchestrator.js';
 import { docsRelativePath, stateFileFor } from './sync-scope.js';
 
@@ -472,6 +473,12 @@ export interface PremiseResult {
    * state file the edition could not serve. Each fails the run.
    */
   errors: string[];
+  /**
+   * The lectures among those `errors` name whose state file the edition could
+   * not serve, for their own recovery advice (#290): a failed read is usually
+   * transient. Absent when there are none.
+   */
+  unreadStates?: UnreadState[];
 }
 
 /**
@@ -489,7 +496,9 @@ export async function checkSyncPremise(
   // In file order: a file to sync, a held-back file's error, or a file whose
   // English differs, whose case the listing of open PRs below may still change.
   const outcomes: Array<
-    { keep: FileToSync } | { error: string } | { mismatch: PremiseMismatch; file: FileToSync }
+    | { keep: FileToSync }
+    | { error: string; unread?: UnreadState }
+    | { mismatch: PremiseMismatch; file: FileToSync }
   > = [];
 
   for (const file of input.files) {
@@ -511,7 +520,7 @@ export async function checkSyncPremise(
         `(${read.message}), so whether its translation starts from this PR's English could not ` +
         `be checked. It was not synced.`;
       logger.error(error);
-      outcomes.push({ error });
+      outcomes.push({ error, unread: { file: file.filename, statePath, status: read.message } });
       continue;
     }
     if (read.status === 'missing') {
@@ -632,6 +641,7 @@ export async function checkSyncPremise(
       result.files.push(entry.keep);
     } else if ('error' in entry) {
       result.errors.push(entry.error);
+      if (entry.unread) (result.unreadStates ??= []).push(entry.unread);
     } else if (entry.mismatch.case === 'still-open') {
       const lecture = entry.mismatch;
       const one = lecture.openPulls.length === 1;

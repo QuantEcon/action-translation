@@ -599,25 +599,187 @@ describe('a state file keeps the keys the engine does not own (#290)', () => {
     );
   });
 
-  it('drops YAML comments, which a parse does not keep', () => {
-    seed('# signed off by hand\nsource-sha: old\nreviewed: done # the editor\n');
-    writeFileState(tmpDir, 'intro.md', state);
-    const written = fs.readFileSync(statePath(), 'utf-8');
-    expect(written).not.toContain('#');
-    expect(written.endsWith('reviewed: done\n')).toBe(true);
+  it("keeps a kept key's comments, and drops those in the engine keys' region", () => {
+    seed(
+      '# signed off by hand\nsource-sha: old # the old one\n# about the sign-off\n' +
+        'reviewed: done # the editor\n'
+    );
+    expect(writeFileState(tmpDir, 'intro.md', state)).toBeUndefined();
+    expect(fs.readFileSync(statePath(), 'utf-8')).toBe(
+      serializeFileState(withVersion) + '# about the sign-off\nreviewed: done # the editor\n'
+    );
   });
 
   it.each([
     ['unparseable YAML', 'source-sha: [abc\nreviewed: x\n', 'could not be read as YAML'],
     ['a list', '- a\n- b\n', 'was not a YAML mapping'],
     ['a scalar', 'just-a-string\n', 'was not a YAML mapping'],
-    ['an empty file', '', 'was not a YAML mapping'],
   ])('overwrites %s with a warning', (_what, content, warning) => {
     seed(content);
     const returned = writeFileState(tmpDir, 'intro.md', state);
     expect(returned).toContain(`.translate/state/intro.md.yml ${warning}`);
     expect(returned).toContain('so it was overwritten');
+    expect(returned).toContain('any keys it held besides the ones sync writes are gone');
     expect(fs.readFileSync(statePath(), 'utf-8')).toBe(serializeFileState(withVersion));
+    expect(mergeFileState(content, withVersion, 'x').overwritten).toBe(true);
+  });
+
+  it('keeps the ruled behaviour for a repeated key: not a mapping, overwritten with a warning', () => {
+    const merged = mergeFileState(
+      'source-sha: a\nreviewed: x\nreviewed: y\n',
+      withVersion,
+      '.translate/state/intro.md.yml'
+    );
+    expect(merged.content).toBe(serializeFileState(withVersion));
+    expect(merged.overwritten).toBe(true);
+    expect(merged.warning).toBe(
+      '.translate/state/intro.md.yml could not be read as YAML (duplicated mapping key (3:1)), ' +
+        'so it was overwritten: any keys it held besides the ones sync writes are gone'
+    );
+  });
+
+  it.each([
+    ['an empty file', ''],
+    ['a blank file', '\n\n'],
+    ['a comment-only file', '# nothing yet\n'],
+  ])('overwrites %s with a warning that it held no keys', (_what, content) => {
+    seed(content);
+    expect(writeFileState(tmpDir, 'intro.md', state)).toBe(
+      '.translate/state/intro.md.yml held no keys (it was empty, or only comments), so it was ' +
+        'overwritten'
+    );
+    expect(fs.readFileSync(statePath(), 'utf-8')).toBe(serializeFileState(withVersion));
+    // Nothing was lost, so the sync PR body does not name it.
+    expect(mergeFileState(content, withVersion, 'x').overwritten).toBeUndefined();
+  });
+
+  describe('a kept key is carried as the text it was', () => {
+    const engine = () => serializeFileState(withVersion);
+    const kept = (existing: string) => {
+      const merged = mergeFileState(existing, withVersion, 'x');
+      expect(merged.warning).toBeUndefined();
+      expect(merged.content.startsWith(engine())).toBe(true);
+      return merged.content.slice(engine().length);
+    };
+
+    // Each of these a load and dump retyped (#290's review): a leading zero
+    // lost, an exponent or a hex number read as a number, a long integer
+    // rounded, a trailing zero dropped.
+    it.each([
+      'target-sha: 0123456',
+      'target-sha: 1234e56',
+      'n: 1e5',
+      'n: 1.10',
+      'n: 0x1f',
+      'n: 0o17',
+      'n: 1_000',
+      'n: 1234567890123456789',
+      'n: 12345678901234567890123456789012345678901',
+      'p: 007',
+      't: 1:30',
+      'd: 2026-11-25T10:00:00Z',
+      'yes: on',
+      'b: TRUE',
+    ])('keeps `%s` verbatim', (line) => {
+      expect(kept(`source-sha: old\n${line}\n`)).toBe(`${line}\n`);
+    });
+
+    it('keeps a nested map, a sequence and a block scalar, with their comments', () => {
+      const text = [
+        '# the sign-off',
+        'reviewed:',
+        '  by: an-editor # who',
+        '  checked: [intro, exercises]',
+        '  notes:',
+        '    - first round',
+        '    # between',
+        '    - second round',
+        'history:',
+        '- {by: a, date: 2026-01-01}',
+        '- by: b',
+        '  date: 2026-02-02',
+        'note: |',
+        '  line one',
+        '',
+        '  trailing  ',
+        'folded: >-',
+        '  a b',
+        '  c',
+        '',
+      ].join('\n');
+      expect(kept('source-sha: old\nmode: NEW\n' + text)).toBe(text);
+    });
+
+    it('keeps the kept keys in their order, after the engine keys, wherever they stood', () => {
+      expect(kept('2026: year\nsource-sha: old\nz: 1\nmode: NEW\n1: one\n')).toBe(
+        '2026: year\nz: 1\n1: one\n'
+      );
+    });
+
+    it('keeps a `__proto__` key, and keys named like Object methods', () => {
+      const text = '__proto__: {a: 1}\nconstructor: x\ntoString: y\n';
+      expect(kept('source-sha: old\n' + text)).toBe(text);
+      const loaded = yaml.load(mergeFileState(text, withVersion, 'x').content, {
+        schema: yaml.CORE_SCHEMA,
+      }) as Record<string, unknown>;
+      expect(Object.prototype.hasOwnProperty.call(loaded, '__proto__')).toBe(true);
+    });
+
+    it('keeps anchors and aliases between kept keys', () => {
+      const text = 'base: &b {by: me}\nreviewed:\n  <<: *b\n  date: 2026-01-01\n';
+      expect(kept('source-sha: old\n' + text)).toBe(text);
+    });
+
+    it('makes CRLF line endings LF, values unchanged', () => {
+      expect(kept('source-sha: old\r\nreviewed:\r\n  by: me\r\nnote: |\r\n  a\r\n  b\r\n')).toBe(
+        'reviewed:\n  by: me\nnote: |\n  a\n  b\n'
+      );
+    });
+
+    it('leaves out a document-start marker above the first key', () => {
+      expect(kept('---\nsource-sha: old\nreviewed: x\n')).toBe('reviewed: x\n');
+    });
+
+    it('is written the same by a second write', () => {
+      const first = mergeFileState('reviewed: x # c\nsource-sha: a\n', withVersion, 'x');
+      expect(mergeFileState(first.content, withVersion, 'x')).toEqual(first);
+    });
+  });
+
+  describe('falls back to dumping the kept values, with a warning, when the text cannot be carried', () => {
+    const fallbackWarning =
+      'x: the keys it held besides the ones sync writes were kept, but their text could not be ' +
+      'carried over as written, so their values were re-serialised: quoting, comments and ' +
+      'number formatting may have changed';
+
+    it.each([
+      ['an alias of an anchor in an engine key', 'source-sha: &s abc\nreviewed: *s\n'],
+      ['a flow mapping at the top', '{source-sha: abc, reviewed: x}\n'],
+      ['a byte-order mark', '\u{feff}source-sha: abc\nreviewed: x\n'],
+      ['a tab in a value', 'source-sha: abc\nreviewed: "a\tb"\n'],
+      ['a complex key', '? [a, b]\n: c\nsource-sha: abc\n'],
+    ])('%s', (_what, existing) => {
+      const original = yaml.load(existing, { schema: yaml.CORE_SCHEMA }) as Record<string, unknown>;
+      const merged = mergeFileState(existing, withVersion, 'x');
+      expect(merged.warning).toBe(fallbackWarning);
+      expect(merged.overwritten).toBeUndefined();
+      // The values are kept, re-serialised.
+      const loaded = yaml.load(merged.content, { schema: yaml.CORE_SCHEMA }) as Record<
+        string,
+        unknown
+      >;
+      for (const key of Object.keys(original).filter((k) => k !== 'source-sha')) {
+        expect(loaded[key]).toEqual(original[key]);
+      }
+    });
+
+    it('keeps a `__proto__` key there too', () => {
+      const merged = mergeFileState('{__proto__: {a: 1}, b: 2}\n', withVersion, 'x');
+      expect(merged.warning).toBe(fallbackWarning);
+      expect(merged.content.slice(serializeFileState(withVersion).length)).toBe(
+        '__proto__:\n  a: 1\nb: 2\n'
+      );
+    });
   });
 
   it('still fails when the existing file cannot be read', () => {

@@ -3733,5 +3733,100 @@ describe("a state file's other keys in the built bundle's runSync (#290)", () =>
         expectCleanRun(log);
       });
     });
+
+    it('advises a resync once the state file reads, under the precondition, and not the CLI', () => {
+      check(run, (log) => {
+        const recovery = recoveryOf(log.issues[0]);
+        expect(recovery).toContain(
+          'This lecture was held back, not translated: the read of its state file answered ' +
+            'something other than "not found"'
+        );
+        expect(recovery).toContain(
+          'once the state file reads again, sync it again with `\\translate-resync` on #7, ' +
+            'under the condition below.'
+        );
+        expect(recovery).toContain(
+          '- `lectures/c-new.md`: `.translate/state/c-new.md.yml` (status 500: HTTP 500)'
+        );
+        expect(recovery).toContain('must print 0.');
+        expect(recovery).not.toContain('not by re-running this sync');
+        expect(recovery).not.toContain('translate forward');
+        expect(recovery).not.toContain('translate init');
+      });
+    });
+  });
+
+  describe('an update whose state file the edition cannot read', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('state-keys-unread-update', {
+        scope: 'all',
+        prFiles: [{ filename: 'lectures/b.md', status: 'modified' }],
+        source: {
+          ...listedAtMerge('b'),
+          [atMerge('lectures/b.md')]: lecture('Bravo'),
+          [atParent('lectures/b.md')]: lecture('Bravo'),
+        },
+        target: {
+          'lectures/b.md': translated('Bravo'),
+          '.translate/state/b.md.yml': { status: 500 },
+        },
+      });
+    }, 90_000);
+
+    it('reports it once, from the premise check, and advises a resync', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(log.writes).toEqual([]);
+        // One error: the premise check's, which reads the same file; the
+        // state hold does not report it again.
+        expect(issueErrors(log.issues[0])).toEqual([
+          'Fetch failed (state): lectures/b.md: could not read .translate/state/b.md.yml from ' +
+            `${EDITION} (status 500: HTTP 500), so whether its translation starts from this ` +
+            "PR's English could not be checked. It was not synced.",
+        ]);
+        const recovery = recoveryOf(log.issues[0]);
+        expect(recovery).toContain('- `lectures/b.md`: `.translate/state/b.md.yml` (status 500');
+        expect(recovery).toContain('`\\translate-resync` on #7');
+        expect(recovery).not.toContain('translate forward');
+        expectCleanRun(log);
+      });
+    });
+  });
+
+  describe('an update over a state file that is not a YAML mapping', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('state-keys-unparseable', {
+        scope: 'all',
+        prFiles: [{ filename: 'lectures/b.md', status: 'modified' }],
+        source: {
+          ...listedAtMerge('b'),
+          [atMerge('lectures/b.md')]: lecture('Bravo'),
+          [atParent('lectures/b.md')]: lecture('Bravo'),
+        },
+        target: {
+          'lectures/b.md': translated('Bravo'),
+          '.translate/state/b.md.yml': '- reviewed\n- by an-editor\n',
+        },
+      });
+    }, 90_000);
+
+    it('writes it afresh, and names it in the PR body', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(0);
+        expect(log.writes).toEqual(
+          expect.arrayContaining([updated('.translate/state/b.md.yml', STATE_WRITTEN)])
+        );
+        expect(log.pulls[0].body).toContain(
+          '### \u{26a0}\u{fe0f} State Files Overwritten\n\nEach state file below could not be ' +
+            'read as a YAML mapping, so this PR writes it afresh'
+        );
+        expect(log.pulls[0].body).toContain('\n- `.translate/state/b.md.yml`\n');
+        // Not part of the metadata.
+        expect(declaredFiles(log.pulls[0].body).map((f) => f.path)).toEqual(['lectures/b.md']);
+        expectCleanRun(log);
+      });
+    });
   });
 });

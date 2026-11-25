@@ -15,6 +15,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { isDeepStrictEqual } from 'util';
 import * as yaml from 'js-yaml';
 import { TranslateConfig, FileState } from './types.js';
 
@@ -431,10 +432,17 @@ export const ENGINE_STATE_KEYS: ReadonlySet<string> = new Set([
   'tool-version',
 ]);
 
-/** A state file's new text, and a warning when the old one was overwritten unread. */
+/** A state file's new text, and a warning when the old one's keys were not all carried as written. */
 export interface MergedFileState {
   content: string;
   warning?: string;
+  /**
+   * True when the existing file held text that did not load as a YAML mapping
+   * (unparseable, a duplicate key, a list or a scalar), so it was overwritten
+   * and whatever it held is gone. An empty or comment-only file is not
+   * counted: it held no keys.
+   */
+  overwritten?: boolean;
 }
 
 /**
@@ -445,17 +453,26 @@ export interface MergedFileState {
  * The engine's keys come first, in the order `state` gives them, written by
  * `serializeFileState` exactly as before: a file with no other key is written
  * byte for byte as it was before this merge existed. Every other top-level
- * key of the existing file follows, in its order, with its value, such as an
- * editor's `reviewed:` sign-off block. A key of `state` the engine does not
- * own is ignored: such keys come from the existing file.
+ * key of the existing file follows, in its order, such as an editor's
+ * `reviewed:` sign-off block. A key of `state` the engine does not own is
+ * ignored: such keys come from the existing file.
  *
- * As in `writeConfig`, the existing file is loaded and the kept keys dumped
- * with CORE_SCHEMA, so a bare `date: 2026-11-25` stays the text it was, and
- * values round-trip as written; YAML comments and quoting in the existing file
- * are not kept (js-yaml keeps values only). Unlike `writeConfig`, an existing
- * file that is not a YAML mapping (unparseable, empty, a list or a scalar) is
- * overwritten with a warning rather than refused: it has no keys to keep, and
- * `translate status --write-state` is the documented repair for one.
+ * Each kept key is carried as the text it was (`keptKeyBlocks`): its line,
+ * every line under it, and the comment and blank lines just above it, with
+ * line endings made LF. So `target-sha: 0123456` keeps its leading zero, and
+ * a quoted, folded or commented value keeps its form. Comments in the
+ * engine's keys' region (between or under the engine's keys, or at the top
+ * of the file above one) are not kept. The result is loaded again and each
+ * kept key's value compared with the existing file's; when the text cannot
+ * be split with confidence or that check fails, the kept keys are dumped
+ * from their loaded values instead, as `writeConfig` does, with a warning
+ * that their text may have been re-serialised.
+ *
+ * Unlike `writeConfig`, an existing file that is not a YAML mapping
+ * (unparseable, a repeated key, a list or a scalar) is overwritten with a
+ * warning rather than refused: it has no keys to keep, and
+ * `translate status --write-state` is the documented repair for one. An empty
+ * or comment-only file is overwritten too, with a warning that says so.
  */
 export function mergeFileState(
   existing: string | undefined,
@@ -476,29 +493,162 @@ export function mergeFileState(
     const message = error instanceof Error ? error.message.split('\n')[0] : String(error);
     return {
       content,
+      overwritten: true,
       warning:
         `${shownPath} could not be read as YAML (${message}), so it was overwritten: any keys ` +
         'it held besides the ones sync writes are gone',
     };
   }
+  if (parsed === undefined || parsed === null) {
+    // Empty, blank, comment-only, or a bare `~`: no key to keep.
+    return {
+      content,
+      warning: `${shownPath} held no keys (it was empty, or only comments), so it was overwritten`,
+    };
+  }
   if (!isPlainMapping(parsed)) {
     return {
       content,
+      overwritten: true,
       warning:
         `${shownPath} was not a YAML mapping of keys to values, so it was overwritten: any ` +
         'keys it held besides the ones sync writes are gone',
     };
   }
 
-  const kept: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(parsed)) {
-    if (!ENGINE_STATE_KEYS.has(key)) kept[key] = value;
+  const keptKeys = Object.keys(parsed).filter((key) => !ENGINE_STATE_KEYS.has(key));
+  if (keptKeys.length === 0) return { content };
+
+  const blocks = keptKeyBlocks(existing);
+  if (blocks) {
+    const merged = content + blocks.join('');
+    if (keepsValues(merged, parsed, keptKeys, content)) return { content: merged };
   }
-  if (Object.keys(kept).length === 0) return { content };
+
+  // Dumped from the loaded values. `__proto__` is defined, not assigned,
+  // which would set the object's prototype and drop the key.
+  const kept: Record<string, unknown> = {};
+  for (const key of keptKeys) {
+    Object.defineProperty(kept, key, {
+      value: parsed[key],
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+  }
   return {
     content:
       content + yaml.dump(kept, { lineWidth: -1, quotingType: '"', schema: yaml.CORE_SCHEMA }),
+    warning:
+      `${shownPath}: the keys it held besides the ones sync writes were kept, but their text ` +
+      'could not be carried over as written, so their values were re-serialised: quoting, ' +
+      'comments and number formatting may have changed',
   };
+}
+
+/**
+ * The raw text of each top-level key of a YAML block mapping that the engine
+ * does not own (#290), in order, each ending in a newline, with line endings
+ * made LF; or undefined when the text cannot be split with confidence: a
+ * byte-order mark, a tab, a directive or a document marker (`---`, `...`), a
+ * flow mapping or a complex key at the top, or a block that does not load
+ * alone as a mapping of exactly one key (as when it aliases an anchor
+ * defined in another block).
+ *
+ * A top-level key starts at a line with no indent that is not blank, not a
+ * comment, and not a sequence entry (`- `, which belongs to the key above).
+ * Its block runs to the next one, and takes the comment and blank lines just
+ * above its key line; those above the first key go with the first key.
+ */
+function keptKeyBlocks(text: string): string[] | undefined {
+  if (text.startsWith('\u{feff}') || text.includes('\t')) return undefined;
+  const lines = text.split('\n').map((line) => (line.endsWith('\r') ? line.slice(0, -1) : line));
+  if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+
+  const isBlankOrComment = (line: string) => line.trim() === '' || line.trimStart().startsWith('#');
+  // One document-start marker above the first key opens the document, and
+  // is left out; any other marker means more than one document.
+  const opener = lines.findIndex((line) => !isBlankOrComment(line));
+  if (opener !== -1 && /^---\s*(#.*)?$/.test(lines[opener])) lines.splice(opener, 1);
+  const keyLines: number[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^(---|\.\.\.)(\s|$)/.test(line) || line.startsWith('%')) return undefined;
+    if (line === '' || /^\s/.test(line) || line.startsWith('#')) continue;
+    if (/^-(\s|$)/.test(line)) continue;
+    if (/^[{[?]/.test(line)) return undefined;
+    keyLines.push(i);
+  }
+  if (keyLines.length === 0) return undefined;
+
+  // Each block starts at its key line, less the comment and blank lines above it.
+  const starts = keyLines.map((keyLine, index) => {
+    if (index === 0) return 0;
+    let start = keyLine;
+    while (start > keyLines[index - 1] + 1 && isBlankOrComment(lines[start - 1])) start--;
+    return start;
+  });
+
+  // Each block's key is the one the text up to its end adds to the text up to
+  // the block before: an alias may name an anchor in an earlier block, so a
+  // block cannot always be loaded alone.
+  const blocks: string[] = [];
+  let before = new Set<string>();
+  for (let index = 0; index < starts.length; index++) {
+    const end = index + 1 < starts.length ? starts[index + 1] : lines.length;
+    let blockLines = lines.slice(starts[index], end);
+    // The last block does not carry the file's trailing blank lines.
+    if (index + 1 === starts.length) {
+      while (blockLines.length > 0 && blockLines[blockLines.length - 1].trim() === '') {
+        blockLines = blockLines.slice(0, -1);
+      }
+    }
+    let loaded: unknown;
+    try {
+      loaded = yaml.load(lines.slice(0, end).join('\n') + '\n', { schema: yaml.CORE_SCHEMA });
+    } catch {
+      return undefined;
+    }
+    if (!isPlainMapping(loaded)) return undefined;
+    const keys = Object.keys(loaded);
+    const added = keys.filter((key) => !before.has(key));
+    if (added.length !== 1 || keys.length !== before.size + 1) return undefined;
+    before = new Set(keys);
+    if (!ENGINE_STATE_KEYS.has(added[0])) blocks.push(blockLines.join('\n') + '\n');
+  }
+  return blocks;
+}
+
+/**
+ * Whether `merged` loads as a mapping whose engine keys are those `engineText`
+ * holds and whose other keys are exactly `keptKeys`, each with the value
+ * `original` gave it.
+ */
+function keepsValues(
+  merged: string,
+  original: Record<string, unknown>,
+  keptKeys: string[],
+  engineText: string
+): boolean {
+  let reloaded: unknown;
+  let engine: unknown;
+  try {
+    reloaded = yaml.load(merged, { schema: yaml.CORE_SCHEMA });
+    engine = yaml.load(engineText, { schema: yaml.CORE_SCHEMA });
+  } catch {
+    return false;
+  }
+  if (!isPlainMapping(reloaded) || !isPlainMapping(engine)) return false;
+  const engineKeys = Object.keys(engine);
+  if (Object.keys(reloaded).length !== engineKeys.length + keptKeys.length) return false;
+  return (
+    engineKeys.every((key) => isDeepStrictEqual(reloaded[key], engine[key])) &&
+    keptKeys.every(
+      (key) =>
+        Object.prototype.hasOwnProperty.call(reloaded, key) &&
+        isDeepStrictEqual(reloaded[key], original[key])
+    )
+  );
 }
 
 /**

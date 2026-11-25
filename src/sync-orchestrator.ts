@@ -135,6 +135,12 @@ export interface SyncProcessingResult {
    * was removed and a pre-existing target entry may still dangle.
    */
   filteredTocPaths?: string[];
+  /**
+   * State files this run wrote over an existing file that did not load as a
+   * YAML mapping, so whatever it held is gone (#290). The PR body names them;
+   * absent when there are none.
+   */
+  overwrittenStateFiles?: string[];
 }
 
 // =============================================================================
@@ -1222,6 +1228,7 @@ export class SyncOrchestrator {
       const existing = read?.status === 'found' ? read.content : movedState;
       const merged = mergeFileState(existing, state, statePath);
       if (merged.warning) this.logger.warning(merged.warning);
+      if (merged.overwritten) (result.overwrittenStateFiles ??= []).push(statePath);
 
       result.translatedFiles.push({
         path: statePath,

@@ -1070,17 +1070,51 @@ describe("rebase mode, a lecture's state file with keys the engine does not own 
     ).toEqual([`GET /repos/${EDITION}/contents/.translate/state/x.md.yml?ref=${BASE}`]);
   });
 
-  it('fails, with the branch untouched, when the state file read fails', () => {
+  it("rebuilds the state file from main's copy: a key only the PR's branch holds is not kept", () => {
+    // The branch's state file has a sign-off; main's, read at the pinned SHA,
+    // has a key added since the PR opened. The rebase regenerates the
+    // lecture, and keeps main's keys, not the branch's (#290).
+    const added = 'checked-by: a-maintainer\n';
+    const run = runRebase(
+      'state-keys-main-wins',
+      rebaseScenario({
+        ...scenario(STATE + added),
+        target: {
+          ...scenario(STATE + added).target,
+          [`.translate/state/x.md.yml@${SIBLING_BRANCH}`]: STATE + SIGN_OFF,
+          [`.translate/state/x.md.yml@${OLD_BASE}`]: STATE,
+        },
+      })
+    );
+    const log = checkedLog(run, 0);
+
+    const entry = log.trees[0].tree.find((e) => e.path === '.translate/state/x.md.yml');
+    const content = String(entry!.content);
+    expect(content).toMatch(/\ntool-version: [^\n]+\nchecked-by: a-maintainer\n$/);
+    expect(content).not.toContain('reviewed:');
+    // The branch's state file is never read.
+    expect(
+      editionReads(log).filter((line) => line.includes('/contents/.translate/state/x.md.yml'))
+    ).toEqual([`GET /repos/${EDITION}/contents/.translate/state/x.md.yml?ref=${BASE}`]);
+  });
+
+  it('fails, with the branch untouched, when the state file read fails, and advises a re-run', () => {
     const run = runRebase('state-keys-502', scenario({ status: 502 }));
     const log = checkedLog(run, 1);
 
     expect(log.trees).toEqual([]);
     expect(log.refUpdates).toEqual([]);
-    expect(log.comments[0].body).toContain(
+    const { body } = log.comments[0];
+    expect(body).toContain(
       'state read failed for 1 file(s); branch left untouched: Fetch failed (state): ' +
         `lectures/x.md: could not read .translate/state/x.md.yml from ${EDITION} ` +
         '(status 502: HTTP 502), so the keys it holds besides the ones sync writes could not ' +
-        'be kept. It was not synced.'
+        'be kept. It was not rebased.'
     );
+    expect(body).toContain('re-run the failed rebase workflow run');
+    expect(body).toContain('- `lectures/x.md`: `.translate/state/x.md.yml` (status 502: HTTP 502)');
+    // Not the advice for a lecture that failed to translate.
+    expect(body).not.toContain('translate forward');
+    expect(body).not.toContain('translate-resync');
   });
 });

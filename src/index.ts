@@ -64,6 +64,7 @@ import {
   failureIssueTitle,
   FailureIssueInput,
   rebaseFailureComment,
+  UnreadState,
 } from './recovery-advice.js';
 import { runReview } from './action/review.js';
 import { coreLogger } from './action/core-logger.js';
@@ -297,6 +298,8 @@ async function runRebase(): Promise<void> {
               error instanceof RebaseReadError ? error.deletedSinceOpened : undefined,
             addedOnMainSinceOpened:
               error instanceof RebaseReadError ? error.addedOnMainSinceOpened : undefined,
+            unreadStates: error instanceof RebaseReadError ? error.unreadStates : undefined,
+            otherErrors: error instanceof RebaseReadError ? error.otherErrors : undefined,
           }),
         });
       } catch {
@@ -785,13 +788,18 @@ async function rebaseSinglePR(
     unreadStates.files,
     stateReads,
     inputs.docsFolder,
-    `${owner}/${repo}`
+    `${owner}/${repo}`,
+    'It was not rebased.'
   );
   const stateErrors = [...unreadStates.errors, ...unreadWritten.errors];
   if (stateErrors.length > 0) {
-    throw new Error(
+    throw new RebaseReadError(
       `state read failed for ${stateErrors.length} file(s); branch left untouched: ` +
-        stateErrors.join('; ')
+        stateErrors.join('; '),
+      [],
+      [],
+      unreadWritten.unread,
+      unreadStates.errors.length > 0
     );
   }
   const stateConfig: StateGenerationConfig = {
@@ -1234,6 +1242,7 @@ async function runSync(): Promise<void> {
     stateReads,
     inputs.docsFolder,
     `${targetOwner}/${targetRepo}`,
+    'It was not synced.',
     (file) => file.type === 'markdown' && takesUpdateMode(file)
   );
   for (const error of unreadWritten.errors) core.error(error);
@@ -1430,7 +1439,8 @@ async function runSync(): Promise<void> {
         // Only the lectures this PR delivers: one that failed is in the
         // failure issue instead.
         premise.stillOpen.filter((lecture) => result.processedFiles.includes(lecture.file)),
-        reportOf(gaps)
+        reportOf(gaps),
+        result.overwrittenStateFiles
       );
 
       prUrl = prResult.prUrl;
@@ -1480,6 +1490,7 @@ async function runSync(): Promise<void> {
           mergeSha: effectiveSha,
           heldBack: premise.heldBack,
           failedLectures,
+          unreadStates: [...unreadWritten.unread, ...(premise.unreadStates ?? [])],
           bibliographyUnread: bibliographyError !== undefined,
           // A bibliography hold synced nothing, so no lecture behind an open
           // PR failed: its diagnosis would read as an error of its own.
@@ -2026,17 +2037,21 @@ function holdUnreadDeletionStates(
  * to. The write keeps the keys the existing file holds that the engine does
  * not own, such as an editor's sign-off, so a failed read must not be taken
  * for no file (`D-2026-11-15-only-a-404-means-absent`). `reported` names the
- * files whose read another check already reports as an error.
+ * files whose read another check already reports as an error. `outcome`
+ * ends each error: what became of the lecture. Each held lecture is also
+ * returned in `unread`, for its recovery advice.
  */
 function holdUnreadWrittenStates(
   files: FileToSync[],
   reads: StateReads,
   docsFolder: string,
   targetRepo: string,
+  outcome: string,
   reported: (file: FileToSync) => boolean = () => false
-): { files: FileToSync[]; errors: string[] } {
+): { files: FileToSync[]; errors: string[]; unread: UnreadState[] } {
   const kept: FileToSync[] = [];
   const errors: string[] = [];
+  const unread: UnreadState[] = [];
   for (const file of files) {
     const writes = file.type === 'markdown' || file.type === 'renamed';
     const statePath = writes ? stateFileFor(file.filename, docsFolder) : undefined;
@@ -2045,13 +2060,14 @@ function holdUnreadWrittenStates(
       errors.push(
         `Fetch failed (state): ${file.filename}: could not read ${statePath} from ${targetRepo} ` +
           `(${read.message}), so the keys it holds besides the ones sync writes could not be ` +
-          'kept. It was not synced.'
+          `kept. ${outcome}`
       );
+      unread.push({ file: file.filename, statePath, status: read.message });
       continue;
     }
     kept.push(file);
   }
-  return { files: kept, errors };
+  return { files: kept, errors, unread };
 }
 
 // =============================================================================
@@ -2184,6 +2200,7 @@ async function createFailureIssue(
     | 'mergeSha'
     | 'heldBack'
     | 'failedLectures'
+    | 'unreadStates'
     | 'stillOpen'
     | 'bibliographyUnread'
     | 'lectureSetUnread'

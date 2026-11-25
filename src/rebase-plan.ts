@@ -39,6 +39,8 @@
  * imported (#169).
  */
 
+import type { UnreadState } from './recovery-advice.js';
+
 /** One read of the edition: the file is there, GitHub answered 404, or the read failed. */
 export type ReadStatus = 'found' | 'missing' | 'error';
 
@@ -177,14 +179,21 @@ export type AddedLecture = DeletedLecture;
 
 /**
  * A rebase that failed before the branch moved, carrying the lectures a PR
- * merged since the rebased PR opened deleted, and those it added that this PR
- * adds too, so the failure comment can say what to do about them.
+ * merged since the rebased PR opened deleted, those it added that this PR
+ * adds too, and those whose state file could not be read, so the failure
+ * comment can say what to do about them.
  */
 export class RebaseReadError extends Error {
   constructor(
     message: string,
     readonly deletedSinceOpened: DeletedLecture[],
-    readonly addedOnMainSinceOpened: AddedLecture[] = []
+    readonly addedOnMainSinceOpened: AddedLecture[] = [],
+    /**
+     * Lectures whose own state file could not be read (#290), and whether
+     * anything else failed beside them.
+     */
+    readonly unreadStates: UnreadState[] = [],
+    readonly otherErrors = false
   ) {
     super(message);
     this.name = 'RebaseReadError';
