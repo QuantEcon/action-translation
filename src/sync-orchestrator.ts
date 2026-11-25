@@ -30,12 +30,9 @@ import { Glossary, TranslatedFile, RebaseCache } from './types.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
-import {
-  serializeFileState,
-  stateFileRelativePath,
-  getToolVersion,
-} from './cli/translate-state.js';
+import { mergeFileState, stateFileRelativePath, getToolVersion } from './cli/translate-state.js';
 import { FileState } from './cli/types.js';
+import type { StateRead } from './sync-premise.js';
 import { mergeTargetCaptions } from './toc-captions.js';
 import { collectTocFiles } from './lecture-set.js';
 
@@ -81,6 +78,13 @@ export interface StateGenerationConfig {
   sourceCommitSha: string;
   /** Map from state file path → existing git blob SHA (for updates via Octokit) */
   existingStateShas: Map<string, string>;
+  /**
+   * What the run's read of each existing state file returned, by state path
+   * (#290). A state file written over one that was found keeps that file's
+   * keys the engine does not own; one whose read failed is not written.
+   * Without it, every state file is written fresh, as before.
+   */
+  existingStates?: Map<string, StateRead>;
   /** Docs folder prefix to strip from filenames (e.g. 'lectures/') so state paths are docs-relative */
   docsFolder: string;
 }
@@ -992,6 +996,7 @@ export class SyncOrchestrator {
     });
 
     // Mark old file for deletion
+    let movedState: string | undefined;
     if (file.oldFileSha && file.previousFilename) {
       result.filesToDelete.push({
         path: file.previousFilename,
@@ -1009,6 +1014,11 @@ export class SyncOrchestrator {
         if (oldStateSha) {
           result.filesToDelete.push({ path: oldStatePath, sha: oldStateSha });
           this.logger.info(`Marked old state file for deletion: ${oldStatePath}`);
+          // The state file moves with the lecture: the new one keeps the old
+          // one's keys the engine does not own, unless the new path already
+          // has a state file of its own (#290).
+          const oldRead = this.stateConfig.existingStates?.get(oldStatePath);
+          if (oldRead?.status === 'found') movedState = oldRead.content;
         }
       }
     }
@@ -1020,7 +1030,8 @@ export class SyncOrchestrator {
         file.newContent,
         file.sourceCommitSha,
         file.targetContent ? 'UPDATE' : 'NEW',
-        result
+        result,
+        movedState
       );
     }
   }
@@ -1161,13 +1172,20 @@ export class SyncOrchestrator {
   /**
    * Generate a .translate/state/ file for a processed markdown file.
    * Only generates when stateConfig is provided (opt-in).
+   *
+   * Written over the existing state file the run read, keeping that file's
+   * keys the engine does not own (#290); for a rename with no state file at
+   * its new path, over the old path's (`movedState`). One whose read failed
+   * is not written, so the file in the edition stays as it is: the caller
+   * holds such a lecture back before it gets here.
    */
   private async maybeGenerateStateFile(
     filename: string,
     sourceContent: string,
     perFileCommitSha: string | undefined,
     mode: 'NEW' | 'UPDATE',
-    result: SyncProcessingResult
+    result: SyncProcessingResult,
+    movedState?: string
   ): Promise<void> {
     if (!this.stateConfig) return;
 
@@ -1191,9 +1209,23 @@ export class SyncOrchestrator {
       const statePath = stateFileRelativePath(docsRelName);
       const existingSha = this.stateConfig.existingStateShas.get(statePath);
 
+      // Only a 404 means there is no state file to keep keys from: a failed
+      // read is not written over (D-2026-11-15-only-a-404-means-absent).
+      const read = this.stateConfig.existingStates?.get(statePath);
+      if (read?.status === 'error') {
+        this.logger.warning(
+          `Not writing ${statePath}: it could not be read (${read.message}), so the keys it ` +
+            'holds besides the ones sync writes could not be kept'
+        );
+        return;
+      }
+      const existing = read?.status === 'found' ? read.content : movedState;
+      const merged = mergeFileState(existing, state, statePath);
+      if (merged.warning) this.logger.warning(merged.warning);
+
       result.translatedFiles.push({
         path: statePath,
-        content: serializeFileState(state),
+        content: merged.content,
         sha: existingSha,
       });
 

@@ -598,6 +598,11 @@ tool-version: <tool version>   # Version that performed this sync
 
 A file written by hand needs `source-sha`, `synced-at`, `model` and `mode` as text and `section-count` as a number. A bare date (`synced-at: 2026-03-06`) is read as text, but a value YAML reads as a number must be quoted: an all-digit `source-sha: 1111111` is rejected, and `doctor` and `status --write-state` name the key.
 
+**Other keys are kept** ([#290](https://github.com/QuantEcon/action-translation/issues/290)). The six keys above belong to the engine: every write sets them. Any other top-level key, such as an editor's `reviewed:` sign-off block, is kept with its value when `init`, `forward` (on disk and with `--github`), `status --write-state`, `headingmap` or the sync Action writes the file, and when rebase mode rebuilds it. The engine's keys come first, in the order above, and the kept keys follow in their own order. A file with no other key is written exactly as before. A renamed lecture's state file moves with it, its other keys included, unless the new path already has a state file of its own. A removed lecture's state file is still deleted, other keys and all. Two limits:
+
+- **Comments and quoting are not kept.** The file is read and written as YAML values, as `config.yml` is, so a `# comment` in it is lost on the next write, and a kept value may be written with different quoting (a bare date stays bare). Keep notes in values, not comments.
+- **A file that is not a YAML mapping is overwritten, with a warning** naming it: it has no keys to keep. `status --write-state` refuses such a file unless `--force` is given, and is the repair for one. A state file that cannot be read at all (a folder in its place, say) still fails the write. The sync Action holds back a lecture whose state file it could not read for any reason but a 404, rather than write over it.
+
 ### How each command uses `.translate/`
 
 | Command | Reads | Writes |
@@ -609,7 +614,7 @@ A file written by hand needs `source-sha`, `synced-at`, `model` and `mode` as te
 | `setup` | — | Creates config as part of scaffolding |
 | `doctor` | Reads config, checks state files; with `--require-state`, also `state-exceptions` | — |
 | `headingmap` | — | Injects heading-maps into target files |
-| Sync Action | Under `sync-scope: existing`, syncs a changed lecture only if its state file exists | Writes state for each lecture it syncs; deletes it with a removed lecture |
+| Sync Action | Under `sync-scope: existing`, syncs a changed lecture only if its state file exists | Writes state for each lecture it syncs, keeping keys it does not own; deletes it with a removed lecture |
 
 Without its state file a lecture is out of scope under `sync-scope: existing`, so `init` fails a lecture whose state file it cannot write: the translation stays on disk, the lecture is reported failed (`state-write` in `--report-json`), and the run exits 1. A state folder it cannot write at all stops the run before any translation. For each lecture left without its state file, the run prints the `translate status --write-state` command that records it once the cause is fixed, with the edition's own `-s`, `-t`, `-l` and `-d`, since `status` reads no config. That run records the lecture's sync point with `model: unknown` and `mode: RESYNC`; if it refuses because the English has a commit dated after the lecture's last commit, commit the lecture first. `forward` reports the same failure for a file it writes locally. When the source clone has no commit for a lecture, both warn that its state file records `source-sha: unknown`, which `status` reports `OUTDATED` once the lecture is committed.
 

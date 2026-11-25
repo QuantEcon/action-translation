@@ -113,6 +113,12 @@ export interface WriteStateResult {
   }>;
   /** The files whose state could not be written, with the error. */
   failed: Array<{ file: string; error: string }>;
+  /**
+   * The files among `written` whose existing state file was not a YAML
+   * mapping, so it was overwritten rather than merged (#290), with the
+   * warning. Absent when there were none.
+   */
+  overwritten?: Array<{ file: string; warning: string }>;
 }
 
 /**
@@ -626,7 +632,7 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
             ? existingState.model
             : 'unknown';
 
-        writeFileState(target, entry.file, {
+        const overwritten = writeFileState(target, entry.file, {
           'source-sha': sourceGit?.lastCommit ?? 'unknown',
           'synced-at':
             targetGit?.lastModified?.toISOString().split('T')[0] ??
@@ -636,6 +642,9 @@ export async function runStatus(options: StatusOptions): Promise<StatusResult> {
           'section-count': parsed.sections.length,
         });
         writeState.written.push(entry.file);
+        if (overwritten) {
+          (writeState.overwritten ??= []).push({ file: entry.file, warning: overwritten });
+        }
       } catch (error) {
         // Recorded, not thrown: the other files still get theirs, and the
         // CLI fails the run once the table is printed (#401).
@@ -753,6 +762,9 @@ export function formatWriteStateSummary(result: WriteStateResult, target: string
   }
   for (const failure of result.failed) {
     lines.push(`  ✗ ${failure.file}: state file not written: ${failure.error}`);
+  }
+  for (const overwrite of result.overwritten ?? []) {
+    lines.push(`  ⚠ ${overwrite.file}: ${overwrite.warning}`);
   }
   return lines.join('\n');
 }

@@ -18,6 +18,7 @@ import {
   HeadingmapOptions,
 } from '../commands/headingmap.js';
 import { extractHeadingMap } from '../../heading-map.js';
+import { getToolVersion } from '../translate-state.js';
 import { writeToc } from '../../test-support/toc-fixture.js';
 
 // ============================================================================
@@ -754,6 +755,37 @@ describe('runHeadingmap', () => {
     const stateContent = fs.readFileSync(path.join(stateDir, 'intro.md.yml'), 'utf-8');
     expect(stateContent).toContain('section-count: 2');
     expect(stateContent).not.toContain('section-count: 99');
+  });
+
+  test('keeps the keys of the state file the engine does not own (#290)', async () => {
+    const sourceDir = path.join(tmpDir, 'source');
+    const targetDir = path.join(tmpDir, 'target');
+    writeMd(path.join(sourceDir, 'lectures', 'intro.md'), SOURCE_2_SECTIONS);
+    writeMd(path.join(targetDir, 'lectures', 'intro.md'), TARGET_2_SECTIONS_NO_MAP);
+    const stateDir = path.join(targetDir, '.translate', 'state');
+    fs.mkdirSync(stateDir, { recursive: true });
+    const engine =
+      'source-sha: abc123\nsynced-at: "2026-01-01"\nmodel: claude-sonnet-4-6\nmode: NEW\n';
+    fs.writeFileSync(
+      path.join(stateDir, 'intro.md.yml'),
+      engine +
+        'reviewed:\n  by: an-editor\n  date: 2026-11-20\nsection-count: 99\ntool-version: 0.8.0\n'
+    );
+
+    await runHeadingmap({
+      source: sourceDir,
+      target: targetDir,
+      docsFolder: 'lectures',
+      exclude: [],
+      dryRun: false,
+    });
+
+    // The engine's keys first, as before; the editor's block after them.
+    expect(fs.readFileSync(path.join(stateDir, 'intro.md.yml'), 'utf-8')).toBe(
+      engine +
+        `section-count: 2\ntool-version: ${getToolVersion()}\n` +
+        'reviewed:\n  by: an-editor\n  date: 2026-11-20\n'
+    );
   });
 });
 

@@ -762,15 +762,25 @@ async function rebaseSinglePR(
     inputs.docsFolder,
     `${owner}/${repo}`
   );
-  if (unreadStates.errors.length > 0) {
+  // A lecture whose own state file could not be read stops it too: the
+  // rebuilt state file would lose that file's other keys (#290).
+  const unreadWritten = holdUnreadWrittenStates(
+    unreadStates.files,
+    stateReads,
+    inputs.docsFolder,
+    `${owner}/${repo}`
+  );
+  const stateErrors = [...unreadStates.errors, ...unreadWritten.errors];
+  if (stateErrors.length > 0) {
     throw new Error(
-      `state read failed for ${unreadStates.errors.length} file(s); branch left untouched: ` +
-        unreadStates.errors.join('; ')
+      `state read failed for ${stateErrors.length} file(s); branch left untouched: ` +
+        stateErrors.join('; ')
     );
   }
   const stateConfig: StateGenerationConfig = {
     sourceCommitSha,
     existingStateShas,
+    existingStates: stateReads,
     docsFolder: inputs.docsFolder,
   };
 
@@ -1199,6 +1209,20 @@ async function runSync(): Promise<void> {
   filesToSync = unreadStates.files;
   fetchErrors.push(...unreadStates.errors);
 
+  // A lecture whose own state file could not be read is held back too, as
+  // the write would lose that file's other keys (#290). The premise check
+  // reports a changed lecture's, which is the same read.
+  const unreadWritten = holdUnreadWrittenStates(
+    filesToSync,
+    stateReads,
+    inputs.docsFolder,
+    `${targetOwner}/${targetRepo}`,
+    (file) => file.type === 'markdown' && takesUpdateMode(file)
+  );
+  for (const error of unreadWritten.errors) core.error(error);
+  filesToSync = unreadWritten.files;
+  fetchErrors.push(...unreadWritten.errors);
+
   // The premise of update mode (#420): a lecture whose translation does not
   // start from the English this PR changed is held back before any model
   // call, and its error says which case it is, unless an open translation PR
@@ -1230,6 +1254,7 @@ async function runSync(): Promise<void> {
   const stateConfig: StateGenerationConfig = {
     sourceCommitSha: effectiveSha,
     existingStateShas,
+    existingStates: stateReads,
     docsFolder: inputs.docsFolder,
   };
 
@@ -1856,7 +1881,9 @@ async function fetchSourcePrInfo(
  * otherwise. Sync mode needs them so Octokit can update (rather than create)
  * state files; both modes use them to decide whether a removed or renamed
  * lecture has a state file to delete. Missing state files are silently
- * skipped — they'll be created as new files.
+ * skipped — they'll be created as new files. The reads carry each file's
+ * content, which the orchestrator writes over keeping the keys it does not
+ * own (#290), so the state write makes no read of its own.
  */
 async function fetchExistingStateShas(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1968,6 +1995,40 @@ function holdUnreadDeletionStates(
         `Fetch failed (state): ${file.filename}: could not read ${statePath} from ${targetRepo} ` +
           `(${read.message}), so whether to delete it is unknown. ` +
           `It was not ${file.type === 'removed' ? 'removed' : 'synced'}.`
+      );
+      continue;
+    }
+    kept.push(file);
+  }
+  return { files: kept, errors };
+}
+
+/**
+ * Hold back each lecture whose own state file the run would write but could
+ * not read (#290): a changed or renamed lecture's, at the path it is written
+ * to. The write keeps the keys the existing file holds that the engine does
+ * not own, such as an editor's sign-off, so a failed read must not be taken
+ * for no file (`D-2026-11-15-only-a-404-means-absent`). `reported` names the
+ * files whose read another check already reports as an error.
+ */
+function holdUnreadWrittenStates(
+  files: FileToSync[],
+  reads: StateReads,
+  docsFolder: string,
+  targetRepo: string,
+  reported: (file: FileToSync) => boolean = () => false
+): { files: FileToSync[]; errors: string[] } {
+  const kept: FileToSync[] = [];
+  const errors: string[] = [];
+  for (const file of files) {
+    const writes = file.type === 'markdown' || file.type === 'renamed';
+    const statePath = writes ? stateFileFor(file.filename, docsFolder) : undefined;
+    const read = statePath ? reads.get(statePath) : undefined;
+    if (statePath && read?.status === 'error' && !reported(file)) {
+      errors.push(
+        `Fetch failed (state): ${file.filename}: could not read ${statePath} from ${targetRepo} ` +
+          `(${read.message}), so the keys it holds besides the ones sync writes could not be ` +
+          'kept. It was not synced.'
       );
       continue;
     }

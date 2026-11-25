@@ -53901,6 +53901,56 @@ function getToolVersion() {
   _cachedVersion = "unknown";
   return _cachedVersion;
 }
+function isPlainMapping(value) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+var ENGINE_STATE_KEYS = /* @__PURE__ */ new Set([
+  "source-sha",
+  "synced-at",
+  "model",
+  "mode",
+  "section-count",
+  "tool-version"
+]);
+function mergeFileState(existing, state, shownPath) {
+  const engine = {};
+  for (const [key, value] of Object.entries(state)) {
+    if (ENGINE_STATE_KEYS.has(key))
+      engine[key] = value;
+  }
+  const content = serializeFileState(engine);
+  if (existing === void 0)
+    return { content };
+  let parsed;
+  try {
+    parsed = load(existing, { schema: CORE_SCHEMA });
+  } catch (error4) {
+    const message = error4 instanceof Error ? error4.message.split("\n")[0] : String(error4);
+    return {
+      content,
+      warning: `${shownPath} could not be read as YAML (${message}), so it was overwritten: any keys it held besides the ones sync writes are gone`
+    };
+  }
+  if (!isPlainMapping(parsed)) {
+    return {
+      content,
+      warning: `${shownPath} was not a YAML mapping of keys to values, so it was overwritten: any keys it held besides the ones sync writes are gone`
+    };
+  }
+  const kept = {};
+  for (const [key, value] of Object.entries(parsed)) {
+    if (!ENGINE_STATE_KEYS.has(key))
+      kept[key] = value;
+  }
+  if (Object.keys(kept).length === 0)
+    return { content };
+  return {
+    content: content + dump(kept, { lineWidth: -1, quotingType: '"', schema: CORE_SCHEMA })
+  };
+}
 function serializeFileState(state) {
   return dump(state, { lineWidth: -1, quotingType: '"' });
 }
@@ -54843,6 +54893,7 @@ var SyncOrchestrator = class {
       path: file.filename,
       content: translatedContent
     });
+    let movedState;
     if (file.oldFileSha && file.previousFilename) {
       result.filesToDelete.push({
         path: file.previousFilename,
@@ -54856,11 +54907,14 @@ var SyncOrchestrator = class {
         if (oldStateSha) {
           result.filesToDelete.push({ path: oldStatePath, sha: oldStateSha });
           this.logger.info(`Marked old state file for deletion: ${oldStatePath}`);
+          const oldRead = this.stateConfig.existingStates?.get(oldStatePath);
+          if (oldRead?.status === "found")
+            movedState = oldRead.content;
         }
       }
     }
     if (file.newContent) {
-      await this.maybeGenerateStateFile(file.filename, file.newContent, file.sourceCommitSha, file.targetContent ? "UPDATE" : "NEW", result);
+      await this.maybeGenerateStateFile(file.filename, file.newContent, file.sourceCommitSha, file.targetContent ? "UPDATE" : "NEW", result, movedState);
     }
   }
   /**
@@ -54969,8 +55023,14 @@ var SyncOrchestrator = class {
   /**
    * Generate a .translate/state/ file for a processed markdown file.
    * Only generates when stateConfig is provided (opt-in).
+   *
+   * Written over the existing state file the run read, keeping that file's
+   * keys the engine does not own (#290); for a rename with no state file at
+   * its new path, over the old path's (`movedState`). One whose read failed
+   * is not written, so the file in the edition stays as it is: the caller
+   * holds such a lecture back before it gets here.
    */
-  async maybeGenerateStateFile(filename, sourceContent, perFileCommitSha, mode, result) {
+  async maybeGenerateStateFile(filename, sourceContent, perFileCommitSha, mode, result, movedState) {
     if (!this.stateConfig)
       return;
     const commitSha = perFileCommitSha || this.stateConfig.sourceCommitSha;
@@ -54988,9 +55048,18 @@ var SyncOrchestrator = class {
       const docsRelName = this.toDocsRelative(filename);
       const statePath = stateFileRelativePath(docsRelName);
       const existingSha = this.stateConfig.existingStateShas.get(statePath);
+      const read = this.stateConfig.existingStates?.get(statePath);
+      if (read?.status === "error") {
+        this.logger.warning(`Not writing ${statePath}: it could not be read (${read.message}), so the keys it holds besides the ones sync writes could not be kept`);
+        return;
+      }
+      const existing = read?.status === "found" ? read.content : movedState;
+      const merged = mergeFileState(existing, state, statePath);
+      if (merged.warning)
+        this.logger.warning(merged.warning);
       result.translatedFiles.push({
         path: statePath,
-        content: serializeFileState(state),
+        content: merged.content,
         sha: existingSha
       });
       this.logger.info(`Generated state file: ${statePath}`);
@@ -58711,12 +58780,15 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
   }
   const { shas: existingStateShas, reads: stateReads } = await fetchExistingStateShas(octokit, owner, repo, filesToSync, inputs.docsFolder, baseSha);
   const unreadStates = holdUnreadDeletionStates(filesToSync, stateReads, inputs.docsFolder, `${owner}/${repo}`);
-  if (unreadStates.errors.length > 0) {
-    throw new Error(`state read failed for ${unreadStates.errors.length} file(s); branch left untouched: ` + unreadStates.errors.join("; "));
+  const unreadWritten = holdUnreadWrittenStates(unreadStates.files, stateReads, inputs.docsFolder, `${owner}/${repo}`);
+  const stateErrors = [...unreadStates.errors, ...unreadWritten.errors];
+  if (stateErrors.length > 0) {
+    throw new Error(`state read failed for ${stateErrors.length} file(s); branch left untouched: ` + stateErrors.join("; "));
   }
   const stateConfig = {
     sourceCommitSha,
     existingStateShas,
+    existingStates: stateReads,
     docsFolder: inputs.docsFolder
   };
   const orchestrator = new SyncOrchestrator({
@@ -58922,6 +58994,11 @@ async function runSync() {
     core9.error(error4);
   filesToSync = unreadStates.files;
   fetchErrors.push(...unreadStates.errors);
+  const unreadWritten = holdUnreadWrittenStates(filesToSync, stateReads, inputs.docsFolder, `${targetOwner}/${targetRepo}`, (file) => file.type === "markdown" && takesUpdateMode(file));
+  for (const error4 of unreadWritten.errors)
+    core9.error(error4);
+  filesToSync = unreadWritten.files;
+  fetchErrors.push(...unreadWritten.errors);
   const premise = await checkSyncPremise({
     files: filesToSync,
     stateReads,
@@ -58937,6 +59014,7 @@ async function runSync() {
   const stateConfig = {
     sourceCommitSha: effectiveSha,
     existingStateShas,
+    existingStates: stateReads,
     docsFolder: inputs.docsFolder
   };
   const orchestrator = new SyncOrchestrator({
@@ -59328,6 +59406,21 @@ function holdUnreadDeletionStates(files, reads, docsFolder, targetRepo, reported
     const read = statePath ? reads.get(statePath) : void 0;
     if (statePath && read?.status === "error" && !reported(file)) {
       errors.push(`Fetch failed (state): ${file.filename}: could not read ${statePath} from ${targetRepo} (${read.message}), so whether to delete it is unknown. It was not ${file.type === "removed" ? "removed" : "synced"}.`);
+      continue;
+    }
+    kept.push(file);
+  }
+  return { files: kept, errors };
+}
+function holdUnreadWrittenStates(files, reads, docsFolder, targetRepo, reported = () => false) {
+  const kept = [];
+  const errors = [];
+  for (const file of files) {
+    const writes = file.type === "markdown" || file.type === "renamed";
+    const statePath = writes ? stateFileFor(file.filename, docsFolder) : void 0;
+    const read = statePath ? reads.get(statePath) : void 0;
+    if (statePath && read?.status === "error" && !reported(file)) {
+      errors.push(`Fetch failed (state): ${file.filename}: could not read ${statePath} from ${targetRepo} (${read.message}), so the keys it holds besides the ones sync writes could not be kept. It was not synced.`);
       continue;
     }
     kept.push(file);

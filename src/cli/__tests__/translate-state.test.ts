@@ -12,6 +12,7 @@ import {
   readFileState,
   inspectFileState,
   writeFileState,
+  mergeFileState,
   isSourceChanged,
   serializeFileState,
   serializeConfig,
@@ -489,6 +490,139 @@ describe('file state read/write', () => {
     const result = readFileState(tmpDir, 'intro.md');
     expect(result?.['source-sha']).toBe('new1234f');
     expect(result?.mode).toBe('RESYNC');
+  });
+});
+
+describe('a state file keeps the keys the engine does not own (#290)', () => {
+  const state: FileState = {
+    'source-sha': 'abc1234f',
+    'synced-at': '2026-11-25',
+    model: 'claude-sonnet-5',
+    mode: 'UPDATE',
+    'section-count': 4,
+  };
+  const withVersion = { ...state, 'tool-version': getToolVersion() };
+  const statePath = () => path.join(tmpDir, '.translate', 'state', 'intro.md.yml');
+  const seed = (content: string) => {
+    fs.mkdirSync(path.dirname(statePath()), { recursive: true });
+    fs.writeFileSync(statePath(), content, 'utf-8');
+  };
+  const REVIEWED = [
+    'reviewed:',
+    '  by: an-editor',
+    '  role: native reviewer',
+    '  date: 2026-11-20',
+    '  target-sha: 9f8e7d6',
+    '  source-sha: "0123456"',
+    '  via: approval',
+    '  checked: [intro, exercises]',
+    '  notes:',
+    '    - first round',
+    '    - second round',
+    'status: reviewed',
+    'weight: 3',
+    'flag: true',
+    'nothing: null',
+    '',
+  ].join('\n');
+
+  // Existing state files as the engine and its tests have written them: the
+  // fixtures of the bundle tests, the e2e harness's seed, a headingmap test's,
+  // and every file the CLI writes. None has a key the engine does not own.
+  const ENGINE_ONLY_FIXTURES: string[] = [
+    'source-sha: 1111111\nsynced-at: "2026-10-01"\nmodel: claude-sonnet-5\nmode: NEW\nsection-count: 1\n',
+    "source-sha: abc1234\nsynced-at: '2026-10-01'\nmodel: claude-sonnet-5\nmode: NEW\nsection-count: 1\n",
+    'source-sha: abc123\nsynced-at: "2026-01-01"\nmodel: claude-sonnet-4-6\nmode: NEW\nsection-count: 99\ntool-version: 0.8.0\n',
+    'source-sha: "0123456"\nsynced-at: 2026-10-19\nmodel: claude-sonnet-5\nmode: RESYNC\nsection-count: 7\ntool-version: 0.33.0\n',
+    serializeFileState({ ...state, mode: 'NEW', 'tool-version': '0.30.0' }),
+    serializeFileState({ ...state, 'source-sha': 'unknown', mode: 'RESYNC' }),
+  ];
+
+  it.each(ENGINE_ONLY_FIXTURES.map((fixture, i) => [i, fixture]))(
+    'writes a file with no other key byte for byte as before (fixture %i)',
+    (_i, fixture) => {
+      expect(mergeFileState(fixture, withVersion, 'x').content).toBe(
+        serializeFileState(withVersion)
+      );
+      seed(fixture);
+      expect(writeFileState(tmpDir, 'intro.md', state)).toBeUndefined();
+      expect(fs.readFileSync(statePath(), 'utf-8')).toBe(serializeFileState(withVersion));
+    }
+  );
+
+  it('writes a new file byte for byte as before', () => {
+    expect(mergeFileState(undefined, withVersion, 'x')).toEqual({
+      content: serializeFileState(withVersion),
+    });
+    expect(writeFileState(tmpDir, 'intro.md', state)).toBeUndefined();
+    expect(fs.readFileSync(statePath(), 'utf-8')).toBe(serializeFileState(withVersion));
+  });
+
+  it('keeps the engine keys in the order the writer gives them, as before', () => {
+    // headingmap passes the existing state back in, in the file's order.
+    const reordered = { model: 'm', mode: 'NEW', 'source-sha': 's', 'synced-at': 'd' };
+    const given = { ...reordered, 'section-count': 2 } as FileState;
+    expect(mergeFileState('model: x\n', given, 'x').content).toBe(serializeFileState(given));
+  });
+
+  it('keeps every other key, its value and its order, after the engine keys', () => {
+    seed('source-sha: old\nmode: NEW\n' + REVIEWED);
+    expect(writeFileState(tmpDir, 'intro.md', state)).toBeUndefined();
+    const written = fs.readFileSync(statePath(), 'utf-8');
+    expect(written.startsWith(serializeFileState(withVersion))).toBe(true);
+    const loaded = yaml.load(written, { schema: yaml.CORE_SCHEMA }) as Record<string, unknown>;
+    const before = yaml.load(REVIEWED, { schema: yaml.CORE_SCHEMA }) as Record<string, unknown>;
+    expect(Object.keys(loaded)).toEqual([...Object.keys(withVersion), ...Object.keys(before)]);
+    for (const key of Object.keys(before)) expect(loaded[key]).toEqual(before[key]);
+    // A bare date stays the text it was, and a quoted all-digit SHA a string.
+    expect(written).toContain('  date: 2026-11-20\n');
+    expect(written).toContain('  source-sha: "0123456"\n');
+    // The engine's values win over the file's.
+    expect(loaded['source-sha']).toBe('abc1234f');
+    expect(loaded.mode).toBe('UPDATE');
+    expect(readFileState(tmpDir, 'intro.md')).toMatchObject(state);
+  });
+
+  it('keeps the other keys through a second write unchanged', () => {
+    seed(serializeFileState(withVersion) + 'reviewed:\n  by: an-editor\n');
+    writeFileState(tmpDir, 'intro.md', state);
+    const once = fs.readFileSync(statePath(), 'utf-8');
+    writeFileState(tmpDir, 'intro.md', state);
+    expect(fs.readFileSync(statePath(), 'utf-8')).toBe(once);
+    expect(once).toBe(serializeFileState(withVersion) + 'reviewed:\n  by: an-editor\n');
+  });
+
+  it('ignores a key of the given state that the engine does not own', () => {
+    const given = { ...withVersion, reviewed: 'stale' } as unknown as FileState;
+    expect(mergeFileState('reviewed: kept\n', given, 'x').content).toBe(
+      serializeFileState(withVersion) + 'reviewed: kept\n'
+    );
+  });
+
+  it('drops YAML comments, which a parse does not keep', () => {
+    seed('# signed off by hand\nsource-sha: old\nreviewed: done # the editor\n');
+    writeFileState(tmpDir, 'intro.md', state);
+    const written = fs.readFileSync(statePath(), 'utf-8');
+    expect(written).not.toContain('#');
+    expect(written.endsWith('reviewed: done\n')).toBe(true);
+  });
+
+  it.each([
+    ['unparseable YAML', 'source-sha: [abc\nreviewed: x\n', 'could not be read as YAML'],
+    ['a list', '- a\n- b\n', 'was not a YAML mapping'],
+    ['a scalar', 'just-a-string\n', 'was not a YAML mapping'],
+    ['an empty file', '', 'was not a YAML mapping'],
+  ])('overwrites %s with a warning', (_what, content, warning) => {
+    seed(content);
+    const returned = writeFileState(tmpDir, 'intro.md', state);
+    expect(returned).toContain(`.translate/state/intro.md.yml ${warning}`);
+    expect(returned).toContain('so it was overwritten');
+    expect(fs.readFileSync(statePath(), 'utf-8')).toBe(serializeFileState(withVersion));
+  });
+
+  it('still fails when the existing file cannot be read', () => {
+    fs.mkdirSync(statePath(), { recursive: true });
+    expect(() => writeFileState(tmpDir, 'intro.md', state)).toThrow(/EISDIR/);
   });
 });
 

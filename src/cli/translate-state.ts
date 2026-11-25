@@ -395,15 +395,110 @@ export function readFileState(targetPath: string, filename: string): FileState |
 }
 
 /**
- * Write per-file state to .translate/state/<filename>.yml.
- * Creates intermediate directories as needed.
+ * Write per-file state to .translate/state/<filename>.yml, keeping every key
+ * the existing file holds that the engine does not own (#290; see
+ * `mergeFileState`). Creates intermediate directories as needed.
+ *
+ * Returns a warning when an existing file was not a YAML mapping and was
+ * overwritten, for the caller to print; undefined otherwise. A file that
+ * cannot be read or written still throws, and fails the caller's run
+ * (`D-2026-11-15-a-failed-cli-state-write-is-a-failure`).
  */
-export function writeFileState(targetPath: string, filename: string, state: FileState): void {
+export function writeFileState(
+  targetPath: string,
+  filename: string,
+  state: FileState
+): string | undefined {
   const filePath = stateFilePath(targetPath, filename);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const withVersion = { ...state, 'tool-version': getToolVersion() };
-  const content = serializeFileState(withVersion);
-  fs.writeFileSync(filePath, content, 'utf-8');
+  const existing = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf-8') : undefined;
+  const merged = mergeFileState(existing, withVersion, stateFileRelativePath(filename));
+  fs.writeFileSync(filePath, merged.content, 'utf-8');
+  return merged.warning;
+}
+
+/**
+ * The keys the engine owns in a state file: every write sets them from what
+ * it did, and never carries a value of one from the file it replaces.
+ */
+export const ENGINE_STATE_KEYS: ReadonlySet<string> = new Set([
+  'source-sha',
+  'synced-at',
+  'model',
+  'mode',
+  'section-count',
+  'tool-version',
+]);
+
+/** A state file's new text, and a warning when the old one was overwritten unread. */
+export interface MergedFileState {
+  content: string;
+  warning?: string;
+}
+
+/**
+ * The text of a state file written over `existing` (undefined: no file), from
+ * the engine's `state` (#290). Pure: both the CLI's `writeFileState` and the
+ * Action's sync and rebase use it.
+ *
+ * The engine's keys come first, in the order `state` gives them, written by
+ * `serializeFileState` exactly as before: a file with no other key is written
+ * byte for byte as it was before this merge existed. Every other top-level
+ * key of the existing file follows, in its order, with its value, such as an
+ * editor's `reviewed:` sign-off block. A key of `state` the engine does not
+ * own is ignored: such keys come from the existing file.
+ *
+ * As in `writeConfig`, the existing file is loaded and the kept keys dumped
+ * with CORE_SCHEMA, so a bare `date: 2026-11-25` stays the text it was, and
+ * values round-trip as written; YAML comments and quoting in the existing file
+ * are not kept (js-yaml keeps values only). Unlike `writeConfig`, an existing
+ * file that is not a YAML mapping (unparseable, empty, a list or a scalar) is
+ * overwritten with a warning rather than refused: it has no keys to keep, and
+ * `translate status --write-state` is the documented repair for one.
+ */
+export function mergeFileState(
+  existing: string | undefined,
+  state: FileState,
+  shownPath: string
+): MergedFileState {
+  const engine: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(state)) {
+    if (ENGINE_STATE_KEYS.has(key)) engine[key] = value;
+  }
+  const content = serializeFileState(engine as unknown as FileState);
+  if (existing === undefined) return { content };
+
+  let parsed: unknown;
+  try {
+    parsed = yaml.load(existing, { schema: yaml.CORE_SCHEMA });
+  } catch (error) {
+    const message = error instanceof Error ? error.message.split('\n')[0] : String(error);
+    return {
+      content,
+      warning:
+        `${shownPath} could not be read as YAML (${message}), so it was overwritten: any keys ` +
+        'it held besides the ones sync writes are gone',
+    };
+  }
+  if (!isPlainMapping(parsed)) {
+    return {
+      content,
+      warning:
+        `${shownPath} was not a YAML mapping of keys to values, so it was overwritten: any ` +
+        'keys it held besides the ones sync writes are gone',
+    };
+  }
+
+  const kept: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(parsed)) {
+    if (!ENGINE_STATE_KEYS.has(key)) kept[key] = value;
+  }
+  if (Object.keys(kept).length === 0) return { content };
+  return {
+    content:
+      content + yaml.dump(kept, { lineWidth: -1, quotingType: '"', schema: yaml.CORE_SCHEMA }),
+  };
 }
 
 /**

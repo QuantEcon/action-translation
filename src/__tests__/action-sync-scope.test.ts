@@ -3640,3 +3640,98 @@ describe("a fragment with no title in the built bundle's runSync (#449)", () => 
     });
   });
 });
+
+describe("a state file's other keys in the built bundle's runSync (#290)", () => {
+  const SIGN_OFF = 'reviewed:\n  by: an-editor\n  date: 2026-11-20\n';
+
+  describe('a rename and an update over state files with a sign-off', () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('state-keys-kept', {
+        scope: 'all',
+        prFiles: [
+          { filename: 'lectures/c-new.md', status: 'renamed', previous_filename: 'lectures/c.md' },
+          { filename: 'lectures/b.md', status: 'modified' },
+        ],
+        source: {
+          ...listedAtMerge('c-new', 'b'),
+          [atMerge('lectures/c-new.md')]: lecture('Charlie'),
+          [atParent('lectures/c.md')]: lecture('Charlie'),
+          // The English did not change, so neither needs the model.
+          [atMerge('lectures/b.md')]: lecture('Bravo'),
+          [atParent('lectures/b.md')]: lecture('Bravo'),
+        },
+        target: {
+          'lectures/c.md': translated('Charlie'),
+          'lectures/b.md': translated('Bravo'),
+          '.translate/state/c.md.yml': STATE + SIGN_OFF,
+          '.translate/state/b.md.yml': STATE + 'status: reviewed\n',
+        },
+      });
+    }, 90_000);
+
+    it("writes each state file with the existing file's other keys after the engine's", () => {
+      check(run, (log) => {
+        expect(log.writes).toEqual(
+          expect.arrayContaining([
+            added('.translate/state/c-new.md.yml', STATE_WRITTEN + SIGN_OFF),
+            // An update writes what a rename does: mode UPDATE, one section.
+            updated('.translate/state/b.md.yml', STATE_WRITTEN + 'status: reviewed\n'),
+          ])
+        );
+        // The renamed lecture's old state file still goes.
+        expect(log.deletes).toEqual(expect.arrayContaining([deleted('.translate/state/c.md.yml')]));
+        expect(run.status).toBe(0);
+        expectCleanRun(log);
+      });
+    });
+
+    it('makes no read of a state file beyond the ones it made before', () => {
+      check(run, (log) => {
+        expect(
+          log.requests.filter((request) => request.startsWith(readEdition('.translate/state/')))
+        ).toEqual([
+          readEdition('.translate/state/b.md.yml'),
+          readEdition('.translate/state/c-new.md.yml'),
+          readEdition('.translate/state/c.md.yml'),
+        ]);
+      });
+    });
+  });
+
+  describe("a rename whose new path's state file the edition cannot read", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('state-keys-unread', {
+        scope: 'all',
+        prFiles: [
+          { filename: 'lectures/c-new.md', status: 'renamed', previous_filename: 'lectures/c.md' },
+        ],
+        source: {
+          ...listedAtMerge('c-new'),
+          [atMerge('lectures/c-new.md')]: lecture('Charlie'),
+          [atParent('lectures/c.md')]: lecture('Charlie'),
+        },
+        target: {
+          'lectures/c.md': translated('Charlie'),
+          '.translate/state/c.md.yml': STATE,
+          '.translate/state/c-new.md.yml': { status: 500 },
+        },
+      });
+    }, 90_000);
+
+    it('holds the lecture back, writes nothing for it, and fails the run naming the read', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(log.writes).toEqual([]);
+        expect(log.deletes).toEqual([]);
+        expect(issueErrors(log.issues[0])).toEqual([
+          'Fetch failed (state): lectures/c-new.md: could not read ' +
+            `.translate/state/c-new.md.yml from ${EDITION} (status 500: HTTP 500), so the keys ` +
+            'it holds besides the ones sync writes could not be kept. It was not synced.',
+        ]);
+        expectCleanRun(log);
+      });
+    });
+  });
+});

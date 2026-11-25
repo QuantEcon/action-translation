@@ -38,7 +38,7 @@ import { ForwardOptions, ForwardFileResult, FileState } from '../types.js';
 import { runStatus, FileStatusEntry, FileSyncStatus } from './status.js';
 import {
   writeFileState,
-  serializeFileState,
+  mergeFileState,
   stateFileRelativePath,
   getToolVersion,
 } from '../translate-state.js';
@@ -625,13 +625,39 @@ async function resyncFile(
       );
     }
     if (options.github) {
-      // Git: create branch, write content + state, commit, push
-      const stateFiles = [
-        {
-          relPath: stateFileRelativePath(file),
-          content: serializeFileState({ ...fileState, 'tool-version': getToolVersion() }),
-        },
-      ];
+      // Git: create branch, write content + state, commit, push. The branch
+      // starts from the working tree's HEAD, and the state file is written
+      // over the working tree's copy, so that copy's keys the engine does not
+      // own are kept (#290). A path outside the repository is not read here:
+      // gitPrepareAndPush refuses it.
+      const statePath = stateFileRelativePath(file);
+      const repoRoot = path.resolve(targetRepoPath);
+      const stateAbs = path.resolve(repoRoot, statePath);
+      let existingState: string | undefined;
+      try {
+        if (stateAbs.startsWith(repoRoot + path.sep) && fs.existsSync(stateAbs)) {
+          existingState = fs.readFileSync(stateAbs, 'utf-8');
+        }
+      } catch (error) {
+        logger.error(
+          `  ${file}: could not read ${statePath}, so its keys could not be kept: ` +
+            (error instanceof Error ? error.message : String(error))
+        );
+        return {
+          file,
+          triageResult,
+          outputContent,
+          tokensUsed,
+          summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
+        };
+      }
+      const merged = mergeFileState(
+        existingState,
+        { ...fileState, 'tool-version': getToolVersion() },
+        statePath
+      );
+      if (merged.warning) logger.warn(`  ${file}: ${merged.warning}`);
+      const stateFiles = [{ relPath: statePath, content: merged.content }];
       const gRunner = gitRunner ?? realGitRunner;
       const gitResult = gitPrepareAndPush(
         file,
@@ -700,7 +726,8 @@ async function resyncFile(
       // `sync-scope: existing`, so a failed write is an error (#378); the
       // translation stays on disk.
       try {
-        writeFileState(targetRepoPath, file, fileState);
+        const overwritten = writeFileState(targetRepoPath, file, fileState);
+        if (overwritten) logger.warn(`  ${file}: ${overwritten}`);
       } catch (error) {
         logger.error(
           `  ${file} was written, but ${stateFileRelativePath(file)} was not: ` +

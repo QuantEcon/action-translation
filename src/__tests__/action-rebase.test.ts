@@ -918,3 +918,64 @@ describe('rebase mode, a lecture main does not have (#389, #351)', () => {
     );
   });
 });
+
+describe("rebase mode, a lecture's state file with keys the engine does not own (#290)", () => {
+  const EN = '# Lecture X\n\nIntro.\n\n## Part One\n\nBody one.\n';
+  const ML = '# പാഠം X\n\nആമുഖം.\n\n## ഭാഗം ഒന്ന്\n\nഉള്ളടക്കം.\n';
+  const SIGN_OFF = 'reviewed:\n  by: an-editor\n  date: 2026-11-20\n';
+  const base = rebaseScenario();
+  /** The sibling PR rebuilds x.md, whose English did not change: no model call. */
+  const scenario = (state: string | { status: number }) =>
+    rebaseScenario({
+      openPulls: [
+        {
+          number: SIBLING_PR,
+          head: { ref: SIBLING_BRANCH, sha: 'head000' },
+          body: bodyFor({
+            ...METADATA,
+            files: [...METADATA.files, { path: 'lectures/x.md', type: 'markdown' }],
+          }),
+        },
+      ],
+      source: {
+        ...base.source,
+        [`lectures/x.md@${SOURCE_SHA}`]: EN,
+        [`lectures/x.md@${SOURCE_SHA}^`]: EN,
+      },
+      target: {
+        ...base.target,
+        'lectures/x.md': ML,
+        [`.translate/state/x.md.yml@${BASE}`]: state,
+      },
+    });
+
+  it("rebuilds the state file with main's other keys after the engine's", () => {
+    const run = runRebase('state-keys-kept', scenario(STATE + SIGN_OFF));
+    const log = checkedLog(run, 0);
+
+    const entry = log.trees[0].tree.find((e) => e.path === '.translate/state/x.md.yml');
+    expect(entry).toBeDefined();
+    const content = String(entry!.content);
+    expect(content).toMatch(/^source-sha: feed0000\n/);
+    expect(content).toContain('mode: UPDATE\n');
+    expect(content.endsWith(SIGN_OFF)).toBe(true);
+    // The state file is read once, at the pinned main, as before.
+    expect(
+      editionReads(log).filter((line) => line.includes('/contents/.translate/state/x.md.yml'))
+    ).toEqual([`GET /repos/${EDITION}/contents/.translate/state/x.md.yml?ref=${BASE}`]);
+  });
+
+  it('fails, with the branch untouched, when the state file read fails', () => {
+    const run = runRebase('state-keys-502', scenario({ status: 502 }));
+    const log = checkedLog(run, 1);
+
+    expect(log.trees).toEqual([]);
+    expect(log.refUpdates).toEqual([]);
+    expect(log.comments[0].body).toContain(
+      'state read failed for 1 file(s); branch left untouched: Fetch failed (state): ' +
+        `lectures/x.md: could not read .translate/state/x.md.yml from ${EDITION} ` +
+        '(status 502: HTTP 502), so the keys it holds besides the ones sync writes could not ' +
+        'be kept. It was not synced.'
+    );
+  });
+});
