@@ -342,7 +342,7 @@ Scope is set per job. If the Japanese edition takes lectures one at a time, add 
 
 ### Target repo — Review workflow
 
-Create `.github/workflows/review-translations.yml` in the **new target** repository:
+`translate setup` already committed `.github/workflows/review-translations.yml` and `.github/workflows/rebase-translations.yml` to the **new target** repository. You only need to create the review workflow yourself if you made the repository by hand. It reads:
 
 ```yaml
 name: Review Translations
@@ -472,7 +472,7 @@ Each target repository maintains its own `.translate/state/` independently.
 - [ ] Content translated: `translate init` for every lecture, or `translate init -f` for one reviewed lecture per PR
 - [ ] Translated content pushed to target repo, or the first lecture's PR merged with its state file
 - [ ] Source workflow updated with new language job (with `sync-scope: existing` for an edition built one lecture at a time)
-- [ ] Target workflow created for review
+- [ ] Target review workflow in place (written by `translate setup`, or created by hand)
 - [ ] Secrets configured in both repos
 - [ ] Pipeline tested with a small change
 

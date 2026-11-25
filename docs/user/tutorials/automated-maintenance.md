@@ -115,8 +115,11 @@ jobs:
           if [ "$OUTDATED" -gt 0 ]; then
             echo "" >> /tmp/status-comment.md
             echo "⚠️ **$OUTDATED of $TOTAL files are outdated.** Consider running \`translate forward\` to resync." >> /tmp/status-comment.md
-          else
+          elif [ "$ALIGNED" -eq "$TOTAL" ]; then
             echo "✅ **All $TOTAL files are aligned.**" >> /tmp/status-comment.md
+          else
+            # Not outdated is not aligned: SOURCE_ONLY, TARGET_ONLY, SOURCE_AHEAD, ...
+            echo "ℹ️ **$ALIGNED of $TOTAL files are aligned.** Counts: $(jq -r '.summary | "source only \(.sourceOnly), target only \(.targetOnly), source ahead \(.sourceAhead), target ahead \(.targetAhead), missing heading-map \(.missingHeadingMap), unlisted \(.unlisted)"' /tmp/status.json). Review the list above." >> /tmp/status-comment.md
           fi
 
       - name: Post to tracking Issue
