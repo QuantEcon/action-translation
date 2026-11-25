@@ -217,6 +217,7 @@ describe('translate init --report-json', () => {
           message: expect.stringMatching(
             /^structural parity check failed for broken\.md:\n.*\(intro\)=/
           ),
+          refusedOutput: '.translate/refused/broken.md',
         },
         elapsedMs: expect.any(Number),
         usage: expect.objectContaining({ outputTokens: 850, thinkingTokens: 250, apiCalls: 1 }),
@@ -512,6 +513,82 @@ describe('translate init -f', () => {
       .map((call) => String(call[0]))
       .find((line) => line.includes('Translating single file:'));
     expect(picked).toContain('Translating single file: jax_intro.md');
+  });
+});
+
+describe('translate init keeps what the parity guard refused (#364, #430)', () => {
+  const stderrText = (): string => errorSpy.mock.calls.map((call) => String(call[0])).join('\n');
+
+  it('writes the refused bytes under .translate/refused/, names them, and shows their ends', async () => {
+    writeSource(['good.md', 'broken.md']);
+    api.reply(GOOD, BREAKS_PARITY);
+    const opts = options({});
+
+    await runInit(opts);
+
+    const target = path.join(tmpDir, 'target');
+    const kept = path.join(target, '.translate', 'refused', 'broken.md');
+    const bytes = fs.readFileSync(kept, 'utf-8');
+    // The bytes the guard checked: the model's text after the in-code repairs
+    expect(bytes).toContain('## 介绍');
+    expect(bytes).toContain('translation:');
+    expect(bytes).not.toContain('(intro)=');
+    expect(fs.readFileSync(path.join(target, '.translate', 'refused', '.gitignore'), 'utf-8')).toBe(
+      '*\n'
+    );
+    // Still a failure, and the lecture is not written
+    expect(fs.existsSync(path.join(target, 'lectures', 'broken.md'))).toBe(false);
+
+    const note = 'The refused output is kept at .translate/refused/broken.md';
+    const markdown = fs.readFileSync(path.join(target, 'TRANSLATION-REPORT.md'), 'utf-8');
+    expect(markdown).toContain(`- **broken.md**: structural parity check failed for broken.md:\n`);
+    expect(markdown).toContain(`${note}\n\n  First and last lines of the refused output:\n`);
+    expect(readReport(opts.reportJson!).lectures[1].failure).toMatchObject({
+      kind: 'parity',
+      message: expect.stringContaining(note),
+      refusedOutput: '.translate/refused/broken.md',
+    });
+    const lines = bytes.replace(/\n$/, '').split('\n');
+    expect(stderrText()).toContain(
+      "broken.md: the refused output's first and last lines:\n" +
+        `  | ${lines[0]}\n  | ${lines[1]}\n  | ${lines[2]}\n  | …\n` +
+        `  | ${lines[lines.length - 3]}\n  | ${lines[lines.length - 2]}\n  | ${lines[lines.length - 1]}`
+    );
+  });
+
+  it('removes a refused output once the lecture is translated', async () => {
+    writeSource(['broken.md']);
+    api.reply(BREAKS_PARITY);
+    await runInit(options({ reportJson: undefined }));
+    const kept = path.join(tmpDir, 'target', '.translate', 'refused', 'broken.md');
+    expect(fs.existsSync(kept)).toBe(true);
+
+    api.reply(GOOD);
+    const stats = await runInit(options({ reportJson: undefined }));
+
+    expect(stats.successCount).toBe(1);
+    expect(fs.existsSync(kept)).toBe(false);
+    expect(fs.existsSync(path.join(tmpDir, 'target', 'lectures', 'broken.md'))).toBe(true);
+  });
+
+  it('fails the lecture as before when the output cannot be kept, and says why', async () => {
+    writeSource(['broken.md']);
+    const target = path.join(tmpDir, 'target');
+    fs.mkdirSync(path.join(target, '.translate'), { recursive: true });
+    fs.symlinkSync(path.join(tmpDir, 'elsewhere'), path.join(target, '.translate', 'refused'));
+    api.reply(BREAKS_PARITY);
+    const opts = options({});
+
+    const stats = await runInit(opts);
+
+    expect(stats.failureCount).toBe(1);
+    expect(fs.existsSync(path.join(tmpDir, 'elsewhere'))).toBe(false);
+    expect(readReport(opts.reportJson!).lectures[0].failure).toEqual({
+      kind: 'parity',
+      message: expect.stringContaining(
+        'The refused output was not kept: .translate/refused is a symbolic link'
+      ),
+    });
   });
 });
 

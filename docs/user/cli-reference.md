@@ -572,6 +572,8 @@ The `.translate/` folder in the target repo stores persistent sync metadata. It 
         └── topic.md.yml    # Mirrors docs-folder subdirectories
 ```
 
+`refused/` appears beside them once the parity guard refuses a translation; it is never committed (see [What the parity guard refused](#what-the-parity-guard-refused)).
+
 ### `config.yml`
 
 ```yaml
@@ -602,14 +604,27 @@ A file written by hand needs `source-sha`, `synced-at`, `model` and `mode` as te
 |---------|-------|--------|
 | `status` | Uses `source-sha` for exact staleness, and with `--write-state` to find English changes since it | `--write-state` bootstraps config + state |
 | `backward` | Skips files whose English is unchanged since `source-sha` | — |
-| `forward` | — | Updates state after successful resync |
-| `init` | `--skip-existing` skips lectures the edition has, and warns when one has no readable state file | Writes config, and state for each lecture it translates |
+| `forward` | — | Updates state after successful resync; keeps a refused output in `refused/` |
+| `init` | `--skip-existing` skips lectures the edition has, and warns when one has no readable state file | Writes config, and state for each lecture it translates; keeps a refused output in `refused/` |
 | `setup` | — | Creates config as part of scaffolding |
 | `doctor` | Reads config, checks state files; with `--require-state`, also `state-exceptions` | — |
 | `headingmap` | — | Injects heading-maps into target files |
 | Sync Action | Under `sync-scope: existing`, syncs a changed lecture only if its state file exists | Writes state for each lecture it syncs; deletes it with a removed lecture |
 
 Without its state file a lecture is out of scope under `sync-scope: existing`, so `init` fails a lecture whose state file it cannot write: the translation stays on disk, the lecture is reported failed (`state-write` in `--report-json`), and the run exits 1. A state folder it cannot write at all stops the run before any translation. For each lecture left without its state file, the run prints the `translate status --write-state` command that records it once the cause is fixed, with the edition's own `-s`, `-t`, `-l` and `-d`, since `status` reads no config. That run records the lecture's sync point with `model: unknown` and `mode: RESYNC`; if it refuses because the English has a commit dated after the lecture's last commit, commit the lecture first. `forward` reports the same failure for a file it writes locally. When the source clone has no commit for a lecture, both warn that its state file records `source-sha: unknown`, which `status` reports `OUTDATED` once the lecture is committed.
+
+### What the parity guard refused
+
+Before `init` or `forward` writes a translation, the structural parity guard checks the exact bytes it would write: among other checks, every directive and anchor of the English must survive. When the guard refuses them, the lecture fails as before and nothing is written to the docs folder, but the refused bytes are kept, so the refusal can be diagnosed ([#364](https://github.com/QuantEcon/action-translation/issues/364)): a whole-document code fence, for instance, reads in the guard's message only as a renamed directive.
+
+- **Where.** `.translate/refused/<lecture>` in the target, at the lecture's path under the docs folder, `.md` kept: `cobweb.md` goes to `.translate/refused/cobweb.md`, `_admonition/gpu.md` to `.translate/refused/_admonition/gpu.md`. `forward --github` keeps it in the same place in the target clone.
+- **Named.** The failure says `The refused output is kept at .translate/refused/<lecture>`: in `TRANSLATION-REPORT.md`'s Failures entry, in the full error `init -f` prints on stderr, in `forward`'s log and bulk summary, and in `--report-json` as the failure's `refusedOutput`. The console, and the Failures entry, also show the output's first and last three lines, where a wrapper shows at a glance.
+- **Whole message.** `--report-json` keeps a parity failure's message whole, every violation listed; other failures' messages are still cut at 500 characters ([#430](https://github.com/QuantEcon/action-translation/issues/430)).
+- **Out of git.** The folder holds a `.gitignore` of `*`, written with it, so it is never committed, in an edition set up before this folder existed too. `setup` also lists `.translate/refused/` in the `.gitignore` it writes. `status`, `doctor` (with `--require-state` too) and sync do not read the folder: a refused output is neither a lecture nor a state file.
+- **Cleared.** A later translation of the lecture that is written removes its refused output.
+- **Not kept** when the way there is a symbolic link (`.translate`, `.translate/refused`, a folder below it or the file) or the folder cannot be written: the failure says `The refused output was not kept:` and why, and the lecture fails as it would have.
+
+`rate-check.sh` runs `init` with each draw's run directory as the target, so a refused draw's output is in `<draw>/.translate/refused/` there.
 
 ### Graceful absence
 

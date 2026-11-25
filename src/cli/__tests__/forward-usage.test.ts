@@ -1,5 +1,6 @@
 /**
- * The token total a bulk `translate forward` prints (#356).
+ * The token total a bulk `translate forward` prints (#356), and the refused
+ * output it keeps (#364).
  *
  * The summary summed `tokensUsed`, which only a successful resync set, and left
  * out triage: a file the parity guard refused, or whose triage the model
@@ -104,6 +105,11 @@ describe('forward bulk summary: API usage (#356)', () => {
       builtInGlossaryDir: path.join(__dirname, '..', '..', '..', 'glossary'),
     };
 
+    // An earlier run's refusal of good.md, which this run's resync replaces (#364)
+    const refusedDir = path.join(tmpDir, 'target', '.translate', 'refused');
+    fs.mkdirSync(refusedDir, { recursive: true });
+    fs.writeFileSync(path.join(refusedDir, 'good.md'), 'stale');
+
     const results = await runForwardBulk(options, logger);
 
     expect(api.requests).toHaveLength(5);
@@ -119,5 +125,19 @@ describe('forward bulk summary: API usage (#356)', () => {
       '  API usage:       5 call(s), 2300 input + 375 output tokens, cache: 0 read + 0 written'
     );
     expect(lines.some((line) => line.includes('Total tokens'))).toBe(false);
+
+    // What the parity guard refused is kept, named, and shown at its ends (#364)
+    const kept = fs.readFileSync(path.join(refusedDir, 'broken.md'), 'utf-8');
+    expect(kept).toContain('## 介绍');
+    expect(kept).not.toContain('(intro)=');
+    expect(results[0].refusedOutput).toBe('.translate/refused/broken.md');
+    expect(lines).toContain(
+      '  The refused output is kept at .translate/refused/broken.md. Its first and last lines:'
+    );
+    const keptLines = kept.replace(/\n$/, '').split('\n');
+    expect(lines).toContain(`    | ${keptLines[0]}`);
+    expect(lines).toContain(`    | ${keptLines[keptLines.length - 1]}`);
+    expect(lines).toContain('    broken.md (refused output: .translate/refused/broken.md)');
+    expect(fs.existsSync(path.join(refusedDir, 'good.md'))).toBe(false);
   });
 });

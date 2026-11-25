@@ -275,6 +275,10 @@ describe('runSetup with mock runners', () => {
 
       // Check .gitignore
       expect(fs.existsSync(path.join(repoDir, '.gitignore'))).toBe(true);
+      // What the parity guard refuses stays out of git (#364)
+      expect(fs.readFileSync(path.join(repoDir, '.gitignore'), 'utf-8')).toContain(
+        '\n.translate/refused/\n'
+      );
 
       // Check README
       const readme = fs.readFileSync(path.join(repoDir, 'README.md'), 'utf-8');

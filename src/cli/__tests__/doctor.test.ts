@@ -28,6 +28,7 @@ import {
 } from '../commands/doctor.js';
 import { writeConfig, writeFileState } from '../translate-state.js';
 import { writeToc } from '../../test-support/toc-fixture.js';
+import { keepRefusedOutput } from '../refused-output.js';
 
 // ============================================================================
 // HELPERS
@@ -1412,6 +1413,35 @@ describe('runDoctor', () => {
           exceptionErrors: [],
         },
       });
+    });
+
+    // A refused output (#364) sits under .translate/ beside the state files,
+    // as a .md file: neither the state check nor the lecture set may see it,
+    // since five editions require this check in CI.
+    test.each([
+      ['lectures', 'lectures'],
+      ['the repository root', '.'],
+    ])('does not see a refused output, with the docs in %s', async (_where, docsFolder) => {
+      writeMd(
+        path.join(tmpDir, '.translate', 'config.yml'),
+        `source-language: en\ntarget-language: ml\ndocs-folder: ${docsFolder}\n`
+      );
+      const dir = path.join(tmpDir, docsFolder);
+      writeMd(path.join(dir, 'intro.md'), TARGET_WITH_MAP);
+      writeToc(dir, ['intro']);
+      writeFileState(tmpDir, 'intro.md', VALID_STATE);
+      const run = () =>
+        runDoctor({ target: tmpDir, checkGh: false, json: false, requireState: true });
+
+      const before = await run();
+      expect(keepRefusedOutput(tmpDir, 'intro.md', TARGET_WITH_MAP)).toMatchObject({ kept: true });
+      expect(keepRefusedOutput(tmpDir, 'sub/draft.md', TARGET_WITH_MAP)).toMatchObject({
+        kept: true,
+      });
+      const after = await run();
+
+      expect(before.checks.find((c) => c.name === '.translate/state/')?.status).toBe('pass');
+      expect(after).toEqual(before);
     });
   });
 });

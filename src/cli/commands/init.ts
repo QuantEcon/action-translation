@@ -62,6 +62,12 @@ import {
   usageSince,
   writeRunReport,
 } from '../run-report.js';
+import {
+  describeKeptOutput,
+  keepRefusedOutput,
+  refusedOutputPreview,
+  removeRefusedOutput,
+} from '../refused-output.js';
 
 // ============================================================================
 // TYPES
@@ -99,7 +105,8 @@ interface TranslationStats {
    */
   usage: ApiUsage;
   totalTimeMs: number;
-  failures: Array<{ file: string; error: string }>;
+  /** `preview`: a parity refusal's first and last lines, as refusedOutputPreview gives them (#364). */
+  failures: Array<{ file: string; error: string; preview?: string[] }>;
 }
 
 // ============================================================================
@@ -554,9 +561,15 @@ export async function translateLecture(
   // guard compares forward from, so it can never be re-examined. Checks the
   // exact bytes that would be written; failing the file loudly is the point.
   // The front-matter rule runs with it (#288).
+  // The refused bytes are kept, so that the refusal can be diagnosed (#364).
   const parity = checkWrittenDocument(sourceContent, finalContent);
   if (!parity.ok) {
-    throw new StructuralParityError(formatParityViolations(lectureFile, parity));
+    const kept = keepRefusedOutput(targetPath, lectureFile, finalContent);
+    throw new StructuralParityError(
+      `${formatParityViolations(lectureFile, parity)}\n${describeKeptOutput(kept)}`,
+      kept.kept ? kept.path : undefined,
+      refusedOutputPreview(finalContent)
+    );
   }
 
   // Write to target folder
@@ -567,6 +580,8 @@ export async function translateLecture(
   }
   fs.mkdirSync(path.dirname(targetFilePath), { recursive: true });
   fs.writeFileSync(targetFilePath, finalContent, 'utf-8');
+  // An earlier run's refusal of this lecture no longer holds.
+  removeRefusedOutput(targetPath, lectureFile);
 
   const elapsedMs = Date.now() - startTime;
   return {
@@ -580,6 +595,24 @@ export async function translateLecture(
 // ============================================================================
 // REPORT GENERATION
 // ============================================================================
+
+/**
+ * A refused output's preview as a fenced block inside its Failures entry. The
+ * fence is longer than any run of backticks in the lines, since the output of
+ * a fence-wrapped response starts with one.
+ */
+function previewBlock(lines: string[]): string {
+  const longest = Math.max(
+    0,
+    ...lines
+      .map((line) => line.match(/`+/g) ?? [])
+      .flat()
+      .map((run) => run.length)
+  );
+  const fence = '`'.repeat(Math.max(3, longest + 1));
+  const body = lines.map((line) => `  ${line}`).join('\n');
+  return `\n  First and last lines of the refused output:\n\n  ${fence}text\n${body}\n  ${fence}\n\n`;
+}
 
 function generateReport(
   targetPath: string,
@@ -617,6 +650,7 @@ function generateReport(
     report += `\n## Failures\n\n`;
     for (const failure of stats.failures) {
       report += `- **${failure.file}**: ${failure.error}\n`;
+      if (failure.preview) report += previewBlock(failure.preview);
     }
   }
 
@@ -974,7 +1008,13 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     } catch (error) {
       stats.failureCount++;
       const errorMsg = error instanceof Error ? error.message : String(error);
-      stats.failures.push({ file: lecture, error: errorMsg });
+      stats.failures.push({
+        file: lecture,
+        error: errorMsg,
+        ...(error instanceof StructuralParityError && error.preview
+          ? { preview: error.preview }
+          : {}),
+      });
       record = {
         file: lecture,
         outcome: 'failed',
@@ -1022,6 +1062,14 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     if (record.failure) {
       console.error(formatFailureLine(record.file, record.failure));
     }
+  }
+  // What the parity guard refused, at a glance: a wrapper such as a code
+  // fence shows in its first and last lines (#364). The whole output is in
+  // .translate/refused/, as each failure's message says.
+  for (const failure of stats.failures) {
+    if (!failure.preview) continue;
+    console.error(`\n${failure.file}: the refused output's first and last lines:`);
+    for (const line of failure.preview) console.error(`  | ${line}`);
   }
   // The failure line keeps 200 characters. With `-f` no TRANSLATION-REPORT.md
   // carries the rest, such as a parity check's full list (#134), so it is

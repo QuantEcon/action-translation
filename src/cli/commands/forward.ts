@@ -25,6 +25,12 @@ import * as yaml from 'js-yaml';
 import cliProgress from 'cli-progress';
 import { TranslationService } from '../../translator.js';
 import { ApiUsage, emptyApiUsage, formatUsage, mergeUsage } from '../../models.js';
+import {
+  describeKeptOutput,
+  keepRefusedOutput,
+  refusedOutputPreview,
+  removeRefusedOutput,
+} from '../refused-output.js';
 import { Glossary } from '../../types.js';
 import { triageForward } from '../forward-triage.js';
 import { languageLabel } from '../../language-config.js';
@@ -471,12 +477,21 @@ async function resyncFile(
       outputContent = verbatim.content;
 
       // The front-matter rule runs with it (#288).
+      // The refused bytes are kept, so that the refusal can be diagnosed
+      // (#364): in the target clone, in --github mode too, where the folder's
+      // own .gitignore keeps it out of the branch.
       const parity = checkWrittenDocument(sourceContent, outputContent);
       if (!parity.ok) {
+        const kept = keepRefusedOutput(targetRepoPath, file, outputContent);
         logger.error(`  ${formatParityViolations(file, parity)}`);
+        logger.error(`  ${describeKeptOutput(kept)}. Its first and last lines:`);
+        for (const line of refusedOutputPreview(outputContent)) {
+          logger.error(`    | ${line}`);
+        }
         return {
           file,
           triageResult,
+          ...(kept.kept ? { refusedOutput: kept.path } : {}),
           summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
         };
       }
@@ -609,6 +624,8 @@ async function resyncFile(
         }
       );
       if (prResult.success) {
+        // An earlier run's refusal of this file no longer holds.
+        removeRefusedOutput(targetRepoPath, file);
         prUrl = prResult.url;
         logger.info(`  ✅ PR created: ${prUrl}`);
       } else {
@@ -625,6 +642,8 @@ async function resyncFile(
       // Write to local disk (state goes to .translate/state/ in the worktree)
       fs.writeFileSync(targetFilePath, outputContent, 'utf-8');
       logger.info(`  ✅ Written to ${targetFilePath}`);
+      // An earlier run's refusal of this file no longer holds.
+      removeRefusedOutput(targetRepoPath, file);
       // A lecture without its state file is out of sync's scope under
       // `sync-scope: existing`, so a failed write is an error (#378); the
       // translation stays on disk.
@@ -870,7 +889,7 @@ export function printBulkSummary(results: ForwardFileResult[], logger: ForwardLo
   if (totalErrors > 0) {
     logger.info(`  Files errored:   ${totalErrors}`);
     for (const r of results.filter((x) => x.summary.errors > 0)) {
-      logger.info(`    ${r.file}`);
+      logger.info(`    ${r.file}${r.refusedOutput ? ` (refused output: ${r.refusedOutput})` : ''}`);
     }
   }
   if (usage.apiCalls > 0) {

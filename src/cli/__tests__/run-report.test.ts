@@ -91,6 +91,23 @@ describe('classifyFailure', () => {
     expect(classifyFailure(error)).toEqual({ kind: 'parity', message: error.message });
   });
 
+  it('parity: the whole message, every violation, and where the refused output was kept (#430, #364)', () => {
+    const violations = Array.from(
+      { length: 40 },
+      (_, i) => `  - directive #${i + 1} missing from output: {code-cell}`
+    ).join('\n');
+    const message = `structural parity check failed for x.md:\n${violations}`;
+    expect(message.length).toBeGreaterThan(1000);
+
+    expect(classifyFailure(new StructuralParityError(message))).toEqual({
+      kind: 'parity',
+      message,
+    });
+    expect(
+      classifyFailure(new StructuralParityError(message, '.translate/refused/x.md', ['a']))
+    ).toEqual({ kind: 'parity', message, refusedOutput: '.translate/refused/x.md' });
+  });
+
   it.each([
     [401, 'authentication_error'],
     [403, 'permission_error'],
