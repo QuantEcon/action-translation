@@ -94,6 +94,8 @@ describe('generateSourceWorkflowYaml', () => {
     expect(yaml).toContain('permissions:\n      contents: read');
     expect(yaml).toContain('paths:');
     expect(yaml).toContain("'lectures/**/*.md'");
+    expect(yaml).toContain("'lectures/_toc.yml'");
+    expect(yaml).not.toMatch(/^\s+- '_toc\.yml'/m);
     expect(yaml).toContain('target-repo: QuantEcon/lecture-python-intro.zh-cn');
     expect(yaml).toContain('target-language: zh-cn');
     expect(yaml).toContain('docs-folder: lectures');
@@ -109,6 +111,7 @@ describe('generateSourceWorkflowYaml', () => {
   test('uses custom docs-folder in paths filter', () => {
     const yaml = generateSourceWorkflowYaml('Owner/repo.fa', 'fa', 'docs');
     expect(yaml).toContain("'docs/**/*.md'");
+    expect(yaml).toContain("'docs/_toc.yml'");
     expect(yaml).toContain('docs-folder: docs');
   });
 
@@ -117,12 +120,15 @@ describe('generateSourceWorkflowYaml', () => {
       const yaml = generateSourceWorkflowYaml('Owner/repo.fa', 'fa', root);
       expect(yaml).toContain("'**/*.md'");
       expect(yaml).not.toContain("'./**/*.md'");
+      // A root docs folder keeps the bare filter: its TOC is the root one.
+      expect(yaml).toMatch(/^\s+- '_toc\.yml'/m);
     }
     // `./lectures/` used to emit a broken `lectures//**/*.md` — the strip
     // regex was missing its `g` flag, so only one decoration came off.
     for (const decorated of ['lectures', 'lectures/', 'lectures//', './lectures/', '/lectures/']) {
       const yaml = generateSourceWorkflowYaml('Owner/repo.fa', 'fa', decorated);
       expect(yaml).toContain("'lectures/**/*.md'");
+      expect(yaml).toContain("'lectures/_toc.yml'");
       expect(yaml).not.toContain('//');
     }
   });

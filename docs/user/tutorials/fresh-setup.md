@@ -386,7 +386,7 @@ on:
     branches: [main]
     paths:
       - 'lectures/**/*.md'
-      - '_toc.yml'
+      - 'lectures/_toc.yml'
   issue_comment:
     types: [created]
 

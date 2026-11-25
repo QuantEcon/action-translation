@@ -524,6 +524,10 @@ interface SyncJob {
   permissions: unknown;
   /** `on.pull_request.branches` of the workflow the job belongs to. */
   branches: unknown;
+  /** `on.pull_request.paths` of the workflow; undefined when it has no filter. */
+  paths: string[] | undefined;
+  /** The `docs-folder` input of the job's action step. */
+  docsFolder: string | undefined;
 }
 
 function walk(target: string): string[] {
@@ -558,12 +562,40 @@ function render(source: string): string {
     .replace(/__LANG__/g, 'fa');
 }
 
+/** What a sync job that omits `docs-folder` runs with: the input's default in action.yml. */
+const ACTION_DOCS_FOLDER_DEFAULT = (
+  yaml.load(fs.readFileSync(path.join(ROOT, 'action.yml'), 'utf8')) as {
+    inputs: Record<string, { default: string }>;
+  }
+).inputs['docs-folder'].default;
+
+/** The `with:` inputs of the job's `action-translation` step. */
+function actionStepInputs(job: Record<string, unknown>): Record<string, string | undefined> {
+  const steps = (job.steps ?? []) as Array<{ uses?: string; with?: Record<string, string> }>;
+  const step = steps.find((st) => st.uses?.includes('action-translation'));
+  return step?.with ?? {};
+}
+
+/** A GitHub `paths` glob as a regular expression: `**` crosses folders, `*` does not. */
+function globToRegExp(glob: string): RegExp {
+  const body = glob
+    .split('**')
+    .map((part) =>
+      part
+        .split('*')
+        .map((lit) => lit.replace(/[.+^${}()|[\]\\?]/g, '\\$&'))
+        .join('[^/]*')
+    )
+    .join('.*');
+  return new RegExp(`^${body}$`);
+}
+
 function syncJobsIn(where: string, source: string): SyncJob[] {
   // A parse error here is the failure, not something to skip: the #192 fix
   // rewrote a folded `if:` in fourteen places and a mis-folded one would
   // silently stop the workflow firing on merges at all.
   const doc = yaml.load(render(source)) as {
-    on?: { pull_request?: { branches?: unknown } };
+    on?: { pull_request?: { branches?: unknown; paths?: unknown } };
     jobs?: Record<string, Record<string, unknown>>;
   };
   return Object.entries(doc?.jobs ?? {})
@@ -573,6 +605,8 @@ function syncJobsIn(where: string, source: string): SyncJob[] {
       condition: job.if as string,
       permissions: job.permissions,
       branches: doc.on?.pull_request?.branches,
+      paths: doc.on?.pull_request?.paths as string[] | undefined,
+      docsFolder: actionStepInputs(job)['docs-folder'],
     }));
 }
 
@@ -628,6 +662,28 @@ describe('the \\translate-resync trigger gate', () => {
     } finally {
       fs.rmSync(clone, { recursive: true, force: true });
     }
+  });
+
+  it.each(ALL_SYNC_JOBS.map((j) => [j.where, j] as const))(
+    '%s fires on a PR that changes only the docs folder _toc.yml (#382)',
+    (_where, job) => {
+      // The action syncs `<docs-folder>/_toc.yml` and ignores a root one, so a
+      // filter that lists a bare `_toc.yml` for `lectures` never fires on the
+      // file that matters. A workflow with no `paths` filter fires on any file.
+      if (job.paths === undefined) return;
+      const folder = (job.docsFolder ?? ACTION_DOCS_FOLDER_DEFAULT).replace(/^\.?\/+|\/+$/g, '');
+      const toc = folder === '' || folder === '.' ? '_toc.yml' : `${folder}/_toc.yml`;
+      expect(job.paths.some((glob) => globToRegExp(glob).test(toc))).toBe(true);
+    }
+  );
+
+  it('matches paths globs the way GitHub does (#382)', () => {
+    expect(globToRegExp('lectures/_toc.yml').test('lectures/_toc.yml')).toBe(true);
+    expect(globToRegExp('_toc.yml').test('lectures/_toc.yml')).toBe(false);
+    expect(globToRegExp('lectures/**/*.md').test('lectures/_toc.yml')).toBe(false);
+    expect(globToRegExp('lectures/**').test('lectures/_toc.yml')).toBe(true);
+    expect(globToRegExp('**/*.md').test('lectures/intro.md')).toBe(true);
+    expect(globToRegExp('lectures/*.md').test('lectures/a/b.md')).toBe(false);
   });
 
   it('leaves no copy of the pre-#192 ungated form anywhere', () => {

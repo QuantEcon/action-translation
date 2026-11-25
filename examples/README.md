@@ -21,6 +21,7 @@ on:
     branches: [main]
     paths:
       - 'lectures/**/*.md'
+      - 'lectures/_toc.yml'
   issue_comment:
     types: [created]
 
@@ -92,6 +93,7 @@ on:
     branches: [main]
     paths:
       - 'lectures/**/*.md'
+      - 'lectures/_toc.yml'
   issue_comment:
     types: [created]
 
