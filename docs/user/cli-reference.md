@@ -66,7 +66,7 @@ npx translate status -s <source-path> -t <target-path> [options]
 | `ALIGNED` | Structure matches, heading-map present, no newer source commits |
 | `SOURCE_AHEAD` | Source has more sections than target |
 | `TARGET_AHEAD` | Target has more sections than source |
-| `OUTDATED` | Source has newer commits than target |
+| `OUTDATED` | Source has newer commits than target; with a state file, the English file's content differs from its content at the recorded `source-sha` |
 | `MISSING_HEADINGMAP` | No heading-map in target frontmatter |
 | `SOURCE_ONLY` | File exists in source but not target |
 | `TARGET_ONLY` | File exists in target but not source |
@@ -599,7 +599,7 @@ A file written by hand needs `source-sha`, `synced-at`, `model` and `mode` as te
 | Command | Reads | Writes |
 |---------|-------|--------|
 | `status` | Uses `source-sha` for exact staleness, and with `--write-state` to find English changes since it | `--write-state` bootstraps config + state |
-| `backward` | Skips files where `source-sha` is unchanged | — |
+| `backward` | Skips files whose English is unchanged since `source-sha` | — |
 | `forward` | — | Updates state after successful resync |
 | `init` | `--skip-existing` skips lectures the edition has, and warns when one has no readable state file | Writes config, and state for each lecture it translates |
 | `setup` | — | Creates config as part of scaffolding |

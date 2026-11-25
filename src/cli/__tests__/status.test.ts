@@ -23,7 +23,12 @@ import {
   StatusResult,
   writeStateFailed,
 } from '../commands/status.js';
-import { readFileState, readStateExceptions, writeFileState } from '../translate-state.js';
+import {
+  isSourceChanged,
+  readFileState,
+  readStateExceptions,
+  writeFileState,
+} from '../translate-state.js';
 import { getFileGitMetadata } from '../git-metadata.js';
 import { writeToc } from '../../test-support/toc-fixture.js';
 
@@ -1570,6 +1575,69 @@ describe('--write-state carried-change guard (#380)', () => {
 
     await writeState({ file: 'advanced/topic.md', carried: true });
     expect(readFileState(target, 'advanced/topic.md')?.['source-sha']).toBe(fixed);
+  });
+
+  // ------------------------------------------------------------------------
+  // Reading staleness, not only guarding --write-state (#391): status and
+  // backward's skip (isSourceChanged) ask about content when the recorded
+  // commit is not the file's last.
+  // ------------------------------------------------------------------------
+
+  it('reads a lecture synced from a --no-ff merge commit as ALIGNED (#391)', async () => {
+    syncedFromMergeCommit();
+
+    const entry = (await statusOf()).entries.find((e) => e.file === 'lecture.md');
+    expect(entry?.status).toBe('ALIGNED');
+    expect(entry?.flags).not.toContain('OUTDATED');
+    expect(
+      await isSourceChanged(source, 'lectures', 'lecture.md', readFileState(target, 'lecture.md'))
+    ).toBe(false);
+  });
+
+  it('reads a lecture synced after a rebase merge whose last commit did not touch it as ALIGNED (#391)', async () => {
+    commit(source, { 'lectures/lecture.md': SOURCE_2_SECTIONS }, '2026-10-01', 'Add lecture');
+    // The rebased PR: a fix to the lecture, then an unrelated commit, which is
+    // the commit a rebase merge leaves at the tip
+    commit(source, { 'lectures/lecture.md': SOURCE_FIXED }, '2026-10-03', 'FIX: typo');
+    const tip = commit(source, { 'README.md': '# Lectures\n' }, '2026-10-03', 'Edit README');
+    commit(target, { 'lectures/lecture.md': TARGET_REVIEWED }, '2026-10-04', 'Sync');
+    recordSyncPoint(tip);
+
+    expect((await statusOf()).entries.find((e) => e.file === 'lecture.md')?.status).toBe('ALIGNED');
+    expect(
+      await isSourceChanged(source, 'lectures', 'lecture.md', readFileState(target, 'lecture.md'))
+    ).toBe(false);
+  });
+
+  it('reads a lecture OUTDATED when its English changed after the merge commit, whatever the dates (#391)', async () => {
+    syncedFromMergeCommit();
+    // Authored before the lecture's last commit, so the date check cannot see it
+    commit(
+      source,
+      { 'lectures/lecture.md': SOURCE_FIXED.replace('More content.', 'More content, revised.') },
+      '2026-10-03',
+      'Revise section two'
+    );
+
+    const entry = (await statusOf()).entries.find((e) => e.file === 'lecture.md');
+    expect(entry?.status).toBe('OUTDATED');
+    expect(entry?.details).toContain('source-sha changed since last sync');
+    expect(
+      await isSourceChanged(source, 'lectures', 'lecture.md', readFileState(target, 'lecture.md'))
+    ).toBe(true);
+  });
+
+  it('keeps a lecture OUTDATED when its recorded commit is not in the local clone (#391)', async () => {
+    commit(source, { 'lectures/lecture.md': SOURCE_2_SECTIONS }, '2026-10-01', 'Add lecture');
+    commit(target, { 'lectures/lecture.md': TARGET_2_SECTIONS_WITH_MAP }, '2026-10-02', 'Draft');
+    recordSyncPoint(ABSENT_SHA);
+
+    expect((await statusOf()).entries.find((e) => e.file === 'lecture.md')?.status).toBe(
+      'OUTDATED'
+    );
+    expect(
+      await isSourceChanged(source, 'lectures', 'lecture.md', readFileState(target, 'lecture.md'))
+    ).toBe(true);
   });
 });
 
