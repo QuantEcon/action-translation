@@ -470,17 +470,22 @@ async function rebaseSinglePR(
         continue;
       }
 
-      let oldContent = '';
-      try {
-        const result = await fetchFileContent(
-          octokit,
-          sourceOwner,
-          sourceRepoName,
-          file.path,
-          `${sourceCommitSha}^`
+      // The English before the PR's source commit. Any failed read leaves it
+      // empty, as before; the plan below tells a 404 from another failure
+      // where that decides what the rebase does (#467).
+      const parentRead = await readEditionFile(
+        octokit,
+        sourceOwner,
+        sourceRepoName,
+        file.path,
+        `${sourceCommitSha}^`
+      );
+      const oldContent = parentRead.status === 'found' ? parentRead.content : '';
+      if (parentRead.status === 'error') {
+        core.info(
+          `${file.path}: could not read the parent commit's English (${parentRead.message})`
         );
-        oldContent = result.content;
-      } catch {
+      } else if (oldContent === '') {
         core.info(`${file.path}: New file (no parent commit content)`);
       }
 
@@ -497,8 +502,9 @@ async function rebaseSinglePR(
 
       // What the edition has decides what the rebase does with the lecture
       // (#389, #351, #467; see rebase-plan.ts). When `main` has it, the
-      // baseline is read too, and the branch only if the baseline answers
-      // 404; the other reads are made only when `main` answers 404.
+      // baseline is read too; if that answers 404, the source parent decides,
+      // and the branch is read only when the PR's source change adds the
+      // lecture. The other reads are made only when `main` answers 404.
       const onMain = await readEditionFile(octokit, owner, repo, editionPath, baseSha);
       const reads: RebaseReads = { onMain: onMain.status };
       let newOnMain: EditionRead | undefined;
@@ -519,8 +525,13 @@ async function rebaseSinglePR(
         );
         reads.atBaseline = atBaseline.status;
         if (atBaseline.status === 'missing') {
-          onBranch = await readEditionFile(octokit, owner, repo, file.path, pr.head.ref);
-          reads.onBranch = onBranch.status;
+          // An empty parent leaves nothing to diff against, as a 404 does.
+          reads.sourceParent =
+            parentRead.status === 'error' ? 'error' : oldContent !== '' ? 'found' : 'missing';
+          if (reads.sourceParent === 'missing') {
+            onBranch = await readEditionFile(octokit, owner, repo, file.path, pr.head.ref);
+            reads.onBranch = onBranch.status;
+          }
         }
       } else if (onMain.status === 'missing' && !newPathSettles && metadata.targetBaseSha) {
         atBaseline = await readEditionFile(
@@ -560,6 +571,12 @@ async function rebaseSinglePR(
             );
           case 'branch-read':
             throw new Error(`Could not read ${file.path} on ${pr.head.ref} (${failure(onBranch)})`);
+          case 'source-parent-read':
+            throw new Error(
+              `Could not read ${file.path} from ${sourceOwner}/${sourceRepoName} at ` +
+                `${sourceCommitSha.slice(0, 7)}^, which says whether this PR's source change ` +
+                `adds the lecture (${failure(parentRead)})`
+            );
           case 'no-baseline':
             throw new Error(
               `${editionPath} is not on ${baseBranch}, and this PR records no baseline (it ` +
@@ -582,8 +599,8 @@ async function rebaseSinglePR(
         throw new Error(
           `${editionPath} was not on ${baseBranch} when this PR opened ` +
             `(${metadata.targetBaseSha?.slice(0, 7)}) and is there now ` +
-            `(${baseSha.slice(0, 7)}): a PR merged since added it, and this PR adds it too, so ` +
-            'neither translation was replaced'
+            `(${baseSha.slice(0, 7)}): a PR merged since added it, and this PR's source change ` +
+            'adds it too, so neither translation was replaced'
         );
       }
       if (plan.action === 'drop') {

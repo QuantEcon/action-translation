@@ -56102,6 +56102,11 @@ function planRebaseRead(reads) {
       return { action: "update" };
     if (reads.atBaseline === "error")
       return { action: "error", reason: "baseline-read" };
+    if (reads.sourceParent === "found")
+      return { action: "update" };
+    if (reads.sourceParent === void 0 || reads.sourceParent === "error") {
+      return { action: "error", reason: "source-parent-read" };
+    }
     if (reads.onBranch === void 0 || reads.onBranch === "error") {
       return { action: "error", reason: "branch-read" };
     }
@@ -56537,7 +56542,10 @@ function rebaseFailureComment(input) {
   }
   if (added.length > 0) {
     const one = added.length === 1;
-    lines.push(`${listOf(added.map(deletedName))} ${one ? "is" : "are"} on \`main\` now but ${one ? "was" : "were"} not when this PR opened: a PR merged since added ${one ? "it" : "them"}, and this PR adds ${one ? "it" : "them"} too, so the edition has two translations of ${one ? "it" : "each"}. The rebase does not choose between them, and translates neither again. Decide which copy wins. To keep \`main\`'s, make ${one ? "the lecture and its state file" : "those lectures and their state files"} on this PR's branch match \`main\`, or close the PR if nothing else is left in it. To keep this PR's, resolve the conflict on its branch by hand, keeping the branch's copy. This PR's baseline lacks ${one ? "the lecture" : "them"}, so a later rebase of it stops here again: merge or close it once the choice is made.`, "");
+    lines.push(`${listOf(added.map(deletedName))} ${one ? "is" : "are"} on \`main\` now but ${one ? "was" : "were"} not when this PR opened: a PR merged since added ${one ? "it" : "them"}, and this PR's source change adds ${one ? "it" : "them"} too, so the edition has two translations of ${one ? "it" : "each"}. The rebase does not choose between them, and changed neither. Decide which copy wins. To keep \`main\`'s, make ${one ? "the lecture and its state file" : "those lectures and their state files"} on this PR's branch match \`main\`, or close the PR if nothing else is left in it. To keep this PR's, resolve the conflict on its branch by hand, keeping the branch's copy. Until this PR merges or closes, a later rebase of it stops here again, whatever the branch's copy then holds: this PR's baseline lacks ${one ? "the lecture" : "them"}, and its branch has ${one ? "it" : "them"}.`, "");
+  }
+  if (added.length > 0 && deleted.length === 0 && lectures.length === 0) {
+    return lines.slice(0, -1).join("\n");
   }
   lines.push(`Resolve the conflicts by hand, or regenerate the overlapping lectures with \`translate forward -f <file>\`${files}, run from a checkout of the source's default branch, where \`<file>\` is the lecture's path inside the docs folder. \`translate forward\` regenerates the whole lecture, so on a lecture that has been natively reviewed, carry the changes in by hand instead.`);
   const metadata = input.metadata;
@@ -58701,11 +58709,11 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
         core9.info(`${file.path}: Could not fetch source content at ${sourceCommitSha} \u2014 skipping`);
         continue;
       }
-      let oldContent = "";
-      try {
-        const result2 = await fetchFileContent(octokit, sourceOwner, sourceRepoName, file.path, `${sourceCommitSha}^`);
-        oldContent = result2.content;
-      } catch {
+      const parentRead = await readEditionFile(octokit, sourceOwner, sourceRepoName, file.path, `${sourceCommitSha}^`);
+      const oldContent = parentRead.status === "found" ? parentRead.content : "";
+      if (parentRead.status === "error") {
+        core9.info(`${file.path}: could not read the parent commit's English (${parentRead.message})`);
+      } else if (oldContent === "") {
         core9.info(`${file.path}: New file (no parent commit content)`);
       }
       const renamed = fileType === "renamed" && file.previousPath !== void 0 && isDocsMarkdownPath(file.previousPath, inputs.docsFolder);
@@ -58724,8 +58732,11 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
         atBaseline = await readEditionFile(octokit, owner, repo, editionPath2, metadata.targetBaseSha);
         reads.atBaseline = atBaseline.status;
         if (atBaseline.status === "missing") {
-          onBranch = await readEditionFile(octokit, owner, repo, file.path, pr.head.ref);
-          reads.onBranch = onBranch.status;
+          reads.sourceParent = parentRead.status === "error" ? "error" : oldContent !== "" ? "found" : "missing";
+          if (reads.sourceParent === "missing") {
+            onBranch = await readEditionFile(octokit, owner, repo, file.path, pr.head.ref);
+            reads.onBranch = onBranch.status;
+          }
         }
       } else if (onMain.status === "missing" && !newPathSettles && metadata.targetBaseSha) {
         atBaseline = await readEditionFile(octokit, owner, repo, editionPath2, metadata.targetBaseSha);
@@ -58749,6 +58760,8 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
             throw new Error(`Could not read ${editionPath2} at this PR's baseline ${metadata.targetBaseSha?.slice(0, 7)} (${failure(atBaseline)})`);
           case "branch-read":
             throw new Error(`Could not read ${file.path} on ${pr.head.ref} (${failure(onBranch)})`);
+          case "source-parent-read":
+            throw new Error(`Could not read ${file.path} from ${sourceOwner}/${sourceRepoName} at ${sourceCommitSha.slice(0, 7)}^, which says whether this PR's source change adds the lecture (${failure(parentRead)})`);
           case "no-baseline":
             throw new Error(`${editionPath2} is not on ${baseBranch}, and this PR records no baseline (it predates the rebase cache), so a lecture deleted since it opened cannot be told from one it adds. It was not translated from scratch`);
         }
@@ -58759,7 +58772,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
       }
       if (plan.action === "added-on-main-since-opened") {
         addedOnMainSinceOpened.push({ editionPath: editionPath2, path: file.path });
-        throw new Error(`${editionPath2} was not on ${baseBranch} when this PR opened (${metadata.targetBaseSha?.slice(0, 7)}) and is there now (${baseSha.slice(0, 7)}): a PR merged since added it, and this PR adds it too, so neither translation was replaced`);
+        throw new Error(`${editionPath2} was not on ${baseBranch} when this PR opened (${metadata.targetBaseSha?.slice(0, 7)}) and is there now (${baseSha.slice(0, 7)}): a PR merged since added it, and this PR's source change adds it too, so neither translation was replaced`);
       }
       if (plan.action === "drop") {
         core9.info(`${editionPath2}: deleted from ${baseBranch} since this PR opened, and ${file.path} is no longer on ${pr.head.ref}: nothing to carry`);

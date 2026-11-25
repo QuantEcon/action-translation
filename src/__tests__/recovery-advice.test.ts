@@ -413,21 +413,23 @@ describe('rebase-failure comment (#281)', () => {
     });
     expect(comment.split('\n').slice(4, 6)).toEqual([
       '`lectures/a.md` is on `main` now but was not when this PR opened: a PR merged since ' +
-        'added it, and this PR adds it too, so the edition has two translations of it. The ' +
-        'rebase does not choose between them, and translates neither again. Decide which ' +
+        "added it, and this PR's source change adds it too, so the edition has two translations " +
+        'of it. The rebase does not choose between them, and changed neither. Decide which ' +
         "copy wins. To keep `main`'s, make the lecture and its state file on this PR's branch " +
         "match `main`, or close the PR if nothing else is left in it. To keep this PR's, " +
-        "resolve the conflict on its branch by hand, keeping the branch's copy. This PR's " +
-        'baseline lacks the lecture, so a later rebase of it stops here again: merge or close ' +
-        'it once the choice is made.',
+        "resolve the conflict on its branch by hand, keeping the branch's copy. Until this PR " +
+        "merges or closes, a later rebase of it stops here again, whatever the branch's copy " +
+        "then holds: this PR's baseline lacks the lecture, and its branch has it.",
       '',
     ]);
+    // Another overlapping lecture still gets the general advice.
     expect(comment).toContain('`translate forward -f <file>` (here: `sub/b.md`)');
   });
 
-  it('names several lectures main got first together', () => {
+  it('for lectures main got first and nothing else, gives only that advice (#467)', () => {
     const comment = rebaseFailureComment({
       ...input,
+      metadata: metadata(1101),
       addedOnMainSinceOpened: [
         { editionPath: 'lectures/a.md', path: 'lectures/a.md' },
         { editionPath: 'lectures/sub/b.md', path: 'lectures/sub/b.md' },
@@ -435,9 +437,25 @@ describe('rebase-failure comment (#281)', () => {
     });
     expect(comment).toContain(
       '`lectures/a.md` and `lectures/sub/b.md` are on `main` now but were not when this PR ' +
-        'opened: a PR merged since added them, and this PR adds them too, so the edition has ' +
-        'two translations of each.'
+        "opened: a PR merged since added them, and this PR's source change adds them too, so " +
+        'the edition has two translations of each.'
     );
+    expect(comment).toContain("this PR's baseline lacks them, and its branch has them.");
+    // Regenerating or resyncing would make a third translation.
+    expect(comment).not.toContain('translate forward');
+    expect(comment).not.toContain('translate-resync');
+    expect(comment.endsWith('its branch has them.')).toBe(true);
+  });
+
+  it('for a lecture main got first beside a deleted one, keeps the general advice', () => {
+    const comment = rebaseFailureComment({
+      ...input,
+      overlapping: ['lectures/a.md', 'lectures/sub/b.md'],
+      deletedSinceOpened: [{ editionPath: 'lectures/sub/b.md', path: 'lectures/sub/b.md' }],
+      addedOnMainSinceOpened: [{ editionPath: 'lectures/a.md', path: 'lectures/a.md' }],
+    });
+    expect(comment).toContain('Decide which copy wins.');
+    expect(comment).toContain('Resolve the conflicts by hand');
     expect(comment).not.toContain('(here:');
   });
 });

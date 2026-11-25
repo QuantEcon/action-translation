@@ -15,16 +15,53 @@ describe('planRebaseRead', () => {
     });
   });
 
-  it('stops for a lecture main has, the baseline lacks and the branch has (#467)', () => {
-    expect(planRebaseRead({ onMain: 'found', atBaseline: 'missing', onBranch: 'found' })).toEqual({
-      action: 'added-on-main-since-opened',
-    });
+  it('stops for a lecture main has, the baseline lacks, the source change adds and the branch has (#467)', () => {
+    expect(
+      planRebaseRead({
+        onMain: 'found',
+        atBaseline: 'missing',
+        sourceParent: 'missing',
+        onBranch: 'found',
+      })
+    ).toEqual({ action: 'added-on-main-since-opened' });
+  });
+
+  it('updates a lecture main got since the PR opened when its source change edits it (#467)', () => {
+    // A stacked edit: the parent's English is there to diff against. The
+    // branch is not read, and would not matter.
+    for (const onBranch of [undefined, 'found', 'missing', 'error'] as const) {
+      expect(
+        planRebaseRead({ onMain: 'found', atBaseline: 'missing', sourceParent: 'found', onBranch })
+      ).toEqual({ action: 'update' });
+    }
   });
 
   it('updates a lecture main has and the baseline lacks when the PR never delivered it', () => {
-    expect(planRebaseRead({ onMain: 'found', atBaseline: 'missing', onBranch: 'missing' })).toEqual(
+    expect(
+      planRebaseRead({
+        onMain: 'found',
+        atBaseline: 'missing',
+        sourceParent: 'missing',
+        onBranch: 'missing',
+      })
+    ).toEqual({ action: 'update' });
+  });
+
+  it('fails when main got the lecture since and the source parent read fails, or was not made (#467)', () => {
+    for (const sourceParent of ['error', undefined] as const) {
+      expect(
+        planRebaseRead({ onMain: 'found', atBaseline: 'missing', sourceParent, onBranch: 'found' })
+      ).toEqual({ action: 'error', reason: 'source-parent-read' });
+    }
+  });
+
+  it('does not consult the source parent for a lecture main and the baseline both have', () => {
+    expect(planRebaseRead({ onMain: 'found', atBaseline: 'found', sourceParent: 'error' })).toEqual(
       { action: 'update' }
     );
+    expect(planRebaseRead({ onMain: 'found', sourceParent: 'missing' })).toEqual({
+      action: 'update',
+    });
   });
 
   it('fails when main has the lecture and the read of the baseline or branch fails (#467)', () => {
@@ -36,14 +73,17 @@ describe('planRebaseRead', () => {
       action: 'error',
       reason: 'baseline-read',
     });
-    expect(planRebaseRead({ onMain: 'found', atBaseline: 'missing', onBranch: 'error' })).toEqual({
-      action: 'error',
-      reason: 'branch-read',
-    });
-    expect(planRebaseRead({ onMain: 'found', atBaseline: 'missing' })).toEqual({
-      action: 'error',
-      reason: 'branch-read',
-    });
+    expect(
+      planRebaseRead({
+        onMain: 'found',
+        atBaseline: 'missing',
+        sourceParent: 'missing',
+        onBranch: 'error',
+      })
+    ).toEqual({ action: 'error', reason: 'branch-read' });
+    expect(
+      planRebaseRead({ onMain: 'found', atBaseline: 'missing', sourceParent: 'missing' })
+    ).toEqual({ action: 'error', reason: 'branch-read' });
   });
 
   it('fails when the read of main fails, rather than take it as a new lecture', () => {

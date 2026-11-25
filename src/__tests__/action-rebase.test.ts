@@ -104,12 +104,15 @@ const SIBLING_BODY = bodyFor(METADATA);
 interface Scenario {
   mergedPrFiles: Array<{ filename: string; status: string }>;
   openPulls: Array<{ number: number; head: { ref: string; sha: string }; body: string }>;
-  source: Record<string, string>;
+  /** As `target`, without the plain-path and array forms. */
+  source: Record<string, string | { status: number }>;
   /** A path absent here answers 404; `{ status }` fails the read with that status. */
   target: Record<string, string | { status: number }>;
   pullStates?: Record<string, string>;
   treeUnchanged?: boolean;
   gitFailures?: { trees?: number; commits?: number; refs?: number };
+  /** The model's replies, in turn; with none, every model call fails. */
+  modelReplies?: string[];
 }
 
 function rebaseScenario(extra: Partial<Scenario> = {}): Scenario {
@@ -142,6 +145,7 @@ interface RunLog {
   refUpdates: Array<{ ref: string; sha: string; force: boolean }>;
   pullUpdates: Array<{ number: number; state?: string }>;
   modelRequests: number;
+  modelPrompts: string[];
   unmocked: string[];
   mockKept: boolean;
   crash: string | null;
@@ -284,8 +288,11 @@ function describeRun(run: BundleRun): string {
   ].join('\n');
 }
 
-/** The run's log, after the checks every rebase run must pass. */
-function checkedLog(run: BundleRun, expectedStatus: number): RunLog {
+/**
+ * The run's log, after the checks every rebase run must pass. A run makes no
+ * model call unless the test says how many.
+ */
+function checkedLog(run: BundleRun, expectedStatus: number, modelRequests = 0): RunLog {
   const where = `\n${describeRun(run)}`;
   if (!run.log) throw new Error(`the runner left no log${where}`);
   if (run.log.crash) throw new Error(`the bundle crashed: ${run.log.crash}${where}`);
@@ -294,7 +301,7 @@ function checkedLog(run: BundleRun, expectedStatus: number): RunLog {
   }
   expect(run.log.unmocked).toEqual([]);
   expect(run.log.mockKept).toBe(true);
-  expect(run.log.modelRequests).toBe(0);
+  expect(run.log.modelRequests).toBe(modelRequests);
   // Nothing reaches the branch through the contents API any more.
   expect(run.log.writes).toEqual([]);
   expect(run.log.deletes).toEqual([]);
@@ -802,7 +809,16 @@ describe('rebase mode, a lecture main does not have (#389, #351)', () => {
     // No model call: checkedLog fails on one.
     const log = checkedLog(run, 1);
 
-    // Main, which has it; the baseline, which lacks it; the branch, which has it.
+    // The source parent, which lacks it; main, which has it; the baseline,
+    // which lacks it; the branch, which has it.
+    expect(
+      log.requests.filter((line) =>
+        line.startsWith(`GET /repos/${SOURCE_REPO}/contents/lectures/x`)
+      )
+    ).toEqual([
+      `GET /repos/${SOURCE_REPO}/contents/lectures/x.md?ref=${SOURCE_SHA}`,
+      `GET /repos/${SOURCE_REPO}/contents/lectures/x.md?ref=${SOURCE_SHA}^`,
+    ]);
     expect(reads(log, 'lectures/x.md')).toEqual([
       at('lectures/x.md', BASE),
       at('lectures/x.md', OLD_BASE),
@@ -817,17 +833,106 @@ describe('rebase mode, a lecture main does not have (#389, #351)', () => {
     expect(body).toContain(`⚠️ **Automatic rebase failed** after #${MERGED_PR} was merged.`);
     expect(body).toContain(
       `lectures/x.md: Error: lectures/x.md was not on main when this PR opened (${OLD_BASE}) ` +
-        `and is there now (${BASE}): a PR merged since added it, and this PR adds it too, so ` +
-        'neither translation was replaced'
+        `and is there now (${BASE}): a PR merged since added it, and this PR's source change ` +
+        'adds it too, so neither translation was replaced'
     );
     expect(body).toContain(
       '`lectures/x.md` is on `main` now but was not when this PR opened: a PR merged since ' +
-        'added it, and this PR adds it too'
+        "added it, and this PR's source change adds it too"
     );
     expect(body).toContain('Decide which copy wins.');
-    // Neither copy is offered for regeneration.
-    expect(body).not.toContain('(here: `x.md`)');
+    // Only the advice for this stop: neither copy is offered for
+    // regeneration, and no resync, which would make a third.
+    expect(body).not.toContain('translate forward');
+    expect(body).not.toContain('translate-resync');
     expect(run.stdout).toContain('Rebase complete: 0 rebased, 0 skipped, 1 errors.');
+  });
+
+  it('updates a lecture main got since the PR opened that its source change edits, as a stacked update (#467)', () => {
+    // Source PR 11 added x.md and PR 12 then edited its second section; the
+    // edition merged PR 11's sync after PR 12's sync opened, which carries
+    // x.md too under `sync-scope: all`.
+    const EN_TWO =
+      '# Lecture X\n\nIntro.\n\n## Part One\n\nBody one.\n\n## Part Two\n\nBody two.\n';
+    const EN_TWO_EDITED = EN_TWO.replace('Body two.', 'Body two, changed.');
+    const ML_TWO =
+      '# ml-title\n\nml-intro.\n\n## ml-one\n\nml-body-one.\n\n## ml-two\n\nml-body-two.\n';
+    const run = runRebase(
+      'stacked-edit',
+      rebaseScenario({
+        mergedPrFiles: [{ filename: 'lectures/x.md', status: 'added' }],
+        openPulls: siblingWith([{ path: 'lectures/x.md', type: 'markdown' }]),
+        source: {
+          ...base.source,
+          [`lectures/x.md@${SOURCE_SHA}`]: EN_TWO_EDITED,
+          [`lectures/x.md@${SOURCE_SHA}^`]: EN_TWO,
+        },
+        target: {
+          ...base.target,
+          [`lectures/x.md@${BASE}`]: ML_TWO,
+          [`lectures/x.md@${SIBLING_BRANCH}`]: ML_TWO.replace('ml-intro.', 'ml-intro, branch.'),
+        },
+        modelReplies: ['## ml-two\n\nml-body-two, changed.'],
+      })
+    );
+    // One model call, for the one section the source change edits.
+    const log = checkedLog(run, 0, 1);
+    expect(log.modelPrompts[0]).toContain(
+      '[OLD en VERSION]\n## Part Two\n\nBody two.\n[/OLD en VERSION]'
+    );
+    expect(log.modelPrompts[0]).toContain(
+      '[CURRENT ml TRANSLATION]\n## ml-two\n\nml-body-two.\n[/CURRENT ml TRANSLATION]'
+    );
+
+    // The branch is not read: the source parent has the lecture.
+    expect(reads(log, 'lectures/x.md')).toEqual([
+      at('lectures/x.md', BASE),
+      at('lectures/x.md', OLD_BASE),
+    ]);
+    // The rest of main's copy is kept, and the branch's own copy is not used.
+    const written = log.trees[0].tree.find((entry) => entry.path === 'lectures/x.md');
+    expect(written?.content).toBe(
+      '---\ntranslation:\n  title: ml-title\n  headings:\n    Part One: ml-one\n' +
+        '    Part Two: ml-two\n---\n\n' +
+        ML_TWO.replace('ml-body-two.', 'ml-body-two, changed.')
+    );
+    expect(log.refUpdates).toHaveLength(1);
+    expect(log.comments[0].body).toContain('Automatically rebased');
+    expect(run.stdout).toContain('♻️ Rebase complete: 1 rebased, 0 skipped, 0 errors.');
+  });
+
+  it('fails, with the branch untouched, when main got the lecture since and the source parent read fails (#467)', () => {
+    const run = runRebase(
+      'source-parent-502',
+      rebaseScenario({
+        openPulls: siblingWith([{ path: 'lectures/x.md', type: 'markdown' }]),
+        source: {
+          ...base.source,
+          [`lectures/x.md@${SOURCE_SHA}`]: EN,
+          [`lectures/x.md@${SOURCE_SHA}^`]: { status: 502 },
+        },
+        target: {
+          ...base.target,
+          [`lectures/x.md@${BASE}`]: ML,
+          [`lectures/x.md@${SIBLING_BRANCH}`]: ML_REVIEWED,
+        },
+      })
+    );
+    const log = checkedLog(run, 1);
+
+    // Neither taken as a stop nor as an update: the branch is never read.
+    expect(reads(log, 'lectures/x.md')).toEqual([
+      at('lectures/x.md', BASE),
+      at('lectures/x.md', OLD_BASE),
+    ]);
+    expect(log.trees).toEqual([]);
+    expect(log.refUpdates).toEqual([]);
+    expect(log.comments[0].body).toContain(
+      `lectures/x.md: Error: Could not read lectures/x.md from ${SOURCE_REPO} at ` +
+        `${SOURCE_SHA.slice(0, 7)}^, which says whether this PR's source change adds the ` +
+        'lecture (status 502: HTTP 502)'
+    );
+    expect(log.comments[0].body).not.toContain('Decide which copy wins.');
   });
 
   it('updates a lecture main and the baseline both have, reading the baseline once for the plan and the cache', () => {
