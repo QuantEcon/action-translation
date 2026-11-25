@@ -25,6 +25,12 @@
  * nest: a ```{code-cell} inside a ```` ```{note} ```` is code inside prose, and no
  * single regex gets that right.
  *
+ * French runs two passes over the same masked prose, in order: the
+ * non-breaking space before `; : ! ?`, then the elision apostrophe before
+ * inline markup (`l'[x](y)` → `l’[x](y)`, #324), which docutils smartquotes
+ * would otherwise render as a closing quote. Both respect the same line
+ * classes and masks, so neither touches code, math, links or frontmatter.
+ *
  * Unknown directives are treated as CODE. Missing a non-breaking space is
  * cosmetic; corrupting a code cell is a real bug, so the conservative default
  * is to leave things alone.
@@ -294,6 +300,36 @@ function applyFrenchSpacing(text: string): string {
 }
 
 /**
+ * The closed list of French elision prefixes. Matched at a word start only, so
+ * a genuine quote (`'s'*x*`, `'l'[1]`) or a non-elided form (`Hawai'[i]`,
+ * `O'`Reilly``) is never touched.
+ */
+export const ELISION_PREFIXES = 'c|d|j|l|m|n|s|t|qu|jusqu|lorsqu|puisqu|quoiqu|quelqu|presqu';
+
+/**
+ * A French elision apostrophe directly before inline markup (#324):
+ * `l'[Exercice 1](x)`, `d'*arguments*`, `d'{ref}`appels``, `d'« apprendre »`.
+ * Docutils smartquotes sees a straight `'` that ends a text node and, for
+ * French, renders it as a closing quote: "de l”Exercice 1". Before markup an
+ * elision is always an apostrophe, so it is written as U+2019 in the source.
+ *
+ * The lookahead is a masked span (inline code, math, a link, an HTML tag — a
+ * placeholder here) or the start of a link, role, emphasis, « or “. A straight
+ * `"` is deliberately left out (`d'"objets"` renders as `d’ » objets »` in a
+ * real build), and so are in-word apostrophes (`aujourd'hui`, `l'exécution`):
+ * smartquotes already curls those, and converting them would only add diff
+ * noise. Link TEXT is masked with its link, so `[l'*x*](y)` is a known limit.
+ */
+const ELISION_BEFORE_MARKUP = new RegExp(
+  `(?<![\\p{L}\\p{N}'‘’])(${ELISION_PREFIXES})'(?=${PLACEHOLDER}|[\\[{*_«“])`,
+  'giu'
+);
+
+function applyFrenchElision(text: string): string {
+  return text.replace(ELISION_BEFORE_MARKUP, '$1’');
+}
+
+/**
  * Footnote and link-reference definitions — `[^id]: text`, `[label]: url` —
  * require the colon immediately after `]`. An inserted NBSP stops the line
  * parsing as a definition: it renders as literal paragraph text and every
@@ -349,7 +385,9 @@ function applyToProse(line: string, rule: (text: string) => string): string {
  * with "[object Undefined]". A Map has no such chain, so the lookup can only
  * ever find a rule we actually registered.
  */
-const RULES = new Map<string, (text: string) => string>([['fr', applyFrenchSpacing]]);
+const RULES = new Map<string, (text: string) => string>([
+  ['fr', (text) => applyFrenchElision(applyFrenchSpacing(text))],
+]);
 
 /**
  * Apply deterministic typography rules for `language` to translated MyST

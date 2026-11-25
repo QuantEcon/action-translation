@@ -459,6 +459,7 @@ describe('applyTypography', () => {
         'title: Essai',
         '---',
         'Voici : un essai ! Vraiment ?',
+        "Voir l'[exemple](x), d'*arguments* et l'« idée » ?",
         '<style>',
         '  .auto { width: 70%; }',
         '</style>',
@@ -477,6 +478,93 @@ describe('applyTypography', () => {
       ].join('\n');
       const once = applyTypography(src, 'fr');
       expect(applyTypography(once, 'fr')).toBe(once);
+    });
+  });
+
+  // #324: smartquotes renders a straight `'` before markup as a closing quote
+  // (`de l”Exercice 1`), so an elision before markup is written as U+2019.
+  describe('French elision apostrophe before inline markup (#324)', () => {
+    const R = '’';
+
+    it.each([
+      ["de l'[Exercice 1](x)", `de l${R}[Exercice 1](x)`], // link
+      ["d'`AxesSubplot`", `d${R}\`AxesSubplot\``], // inline code
+      ["d'{ref}`appels`", `d${R}{ref}\`appels\``], // role
+      ["l'*Étape 1*", `l${R}*Étape 1*`], // emphasis
+      ["l'**évaluation**", `l${R}**évaluation**`], // strong
+      ["d'_arguments_", `d${R}_arguments_`], // underscore emphasis
+      ["d'$x$", `d${R}$x$`], // inline math
+      ["d'« apprendre »", `d${R}« apprendre »`], // guillemet
+      ["jusqu'`n`", `jusqu${R}\`n\``], // long prefix
+      ["L'[Exercice](x)", `L${R}[Exercice](x)`], // capital, sentence start
+      ["qu'*il*", `qu${R}*il*`],
+      ["lorsqu'“x”", `lorsqu${R}“x”`], // curly double quote
+      ["d'<b>gras</b>", `d${R}<b>gras</b>`], // masked HTML tag
+    ])('curls %p', (src, expected) => {
+      expect(applyTypography(src, 'fr')).toBe(expected);
+    });
+
+    it.each([
+      ["l'exécution", 'plain elision before a letter'],
+      ["aujourd'hui", 'in-word apostrophe'],
+      ["'s'*gras*", 'a genuine quote, not a word start'],
+      ["'l'[1]", 'a genuine quote before a bracket'],
+      ["Hawai'[i]", 'not an elision prefix'],
+      ["O'`Reilly`", 'not an elision prefix'],
+      [`d'"objets"`, 'straight double quote is deliberately excluded'],
+      ["`l'*x*`", 'inside inline code'],
+      ["$l'*x*$", 'inside inline math'],
+      ["Voir https://x.org/l'[a] ici", 'inside a bare URL'],
+      ["Voir [l'*x*](y) ici", 'inside link text (documented limit)'],
+    ])('leaves %p alone (%s)', (src) => {
+      expect(applyTypography(src, 'fr')).toBe(src);
+    });
+
+    it('leaves front matter, code cells, display math, <style> and directive options alone', () => {
+      const src = [
+        '---',
+        "title: l'[x](y)",
+        '---',
+        '```{code-cell} python',
+        "s = d'[0]",
+        '```',
+        '$$',
+        "l'{x}",
+        '$$',
+        '<style>',
+        "/* l'*x* */",
+        '</style>',
+        '```{figure} a.png',
+        ":alt: l'*x*",
+        '```',
+      ].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(src);
+    });
+
+    it('applies with the NBSP pass on the same line', () => {
+      expect(applyTypography("Voici l'[exemple](x) !", 'fr')).toBe(
+        `Voici l${R}[exemple](x)${NBSP}!`
+      );
+    });
+
+    it('typesets headings too', () => {
+      expect(applyTypography("## L'*essentiel* ?", 'fr')).toBe(`## L${R}*essentiel*${NBSP}?`);
+    });
+
+    it('is idempotent', () => {
+      const once = applyTypography("de l'[Exercice 1](x), d'*arguments* et l'« idée » !", 'fr');
+      expect(applyTypography(once, 'fr')).toBe(once);
+    });
+
+    it('is a no-op on text that already has U+2019 everywhere', () => {
+      const src = `de l${R}[Exercice 1](x), d${R}*arguments*, aujourd${R}hui et l${R}exécution.`;
+      expect(applyTypography(src, 'fr')).toBe(src);
+    });
+
+    it('leaves other languages alone', () => {
+      const src = "de l'[Exercice 1](x)";
+      expect(applyTypography(src, 'en')).toBe(src);
+      expect(applyTypography(src, 'zh-cn')).toBe(src);
     });
   });
 

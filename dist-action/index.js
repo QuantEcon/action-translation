@@ -49808,6 +49808,11 @@ function applyFrenchSpacing(text) {
     return `${before}${NBSP}${run2}`;
   });
 }
+var ELISION_PREFIXES = "c|d|j|l|m|n|s|t|qu|jusqu|lorsqu|puisqu|quoiqu|quelqu|presqu";
+var ELISION_BEFORE_MARKUP = new RegExp(`(?<![\\p{L}\\p{N}'\u2018\u2019])(${ELISION_PREFIXES})'(?=${PLACEHOLDER}|[\\[{*_\xAB\u201C])`, "giu");
+function applyFrenchElision(text) {
+  return text.replace(ELISION_BEFORE_MARKUP, "$1\u2019");
+}
 var DEFINITION_LABEL = /^\s{0,3}\[[^\]]*\]:/;
 var DEFINITION_CORRUPTED = /^(\s{0,3}\[[^\]]*\])[\u00A0\u202F]+:/;
 function applyToProse(line, rule) {
@@ -49834,7 +49839,9 @@ function applyToProse(line, rule) {
   }
   return out;
 }
-var RULES = /* @__PURE__ */ new Map([["fr", applyFrenchSpacing]]);
+var RULES = /* @__PURE__ */ new Map([
+  ["fr", (text) => applyFrenchElision(applyFrenchSpacing(text))]
+]);
 function applyTypography(content, language) {
   const rule = RULES.get(language);
   if (!rule)
@@ -52922,7 +52929,7 @@ var {
 // dist/heading-map.js
 var PATH_SEPARATOR = "::";
 function normalizeHeadingForMatch(heading) {
-  return MystParser.stripMystRoles(heading.replace(/^#+\s+/, "")).replace(/[\u00A0\u202F]/g, " ").replace(/\s+/g, " ").replace(/ ([;:!?])/g, "$1").trim();
+  return MystParser.stripMystRoles(heading.replace(/^#+\s+/, "")).replace(/[\u2018\u2019]/g, "'").replace(/[\u00A0\u202F]/g, " ").replace(/\s+/g, " ").replace(/ ([;:!?])/g, "$1").trim();
 }
 function cleanHeadingText(heading) {
   return MystParser.stripMystRoles(heading.replace(/^#+\s+/, "").trim());

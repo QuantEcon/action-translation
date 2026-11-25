@@ -812,3 +812,113 @@ describe('UPDATE sync passes non-prose lines through byte-identical (#325)', () 
     expect(out).not.toContain(`-${NBSP}:`);
   });
 });
+
+describe('elision apostrophes in headings and the heading map (#324)', () => {
+  const R = '’';
+  let processor: FileProcessor;
+  let mockTranslator: jest.Mocked<TranslationService>;
+
+  beforeEach(() => {
+    mockTranslator = {
+      translateSection: jest.fn(),
+      translateFullDocument: jest.fn(),
+    } as any;
+    processor = new FileProcessor(mockTranslator, false);
+  });
+
+  const oldSource = `---
+title: Test
+---
+
+# Test Lecture
+
+Intro.
+
+## The {doc}\`Basics <intro>\`
+
+See the [exercise](x).
+
+## Changed Section
+
+Old content.`;
+  const newSource = oldSource.replace('Old content.', 'New content.');
+
+  // Written before #324: straight apostrophes in the body and in the map. The
+  // map value is role-stripped, so nothing follows its apostrophe.
+  const seededTarget = `---
+title: Test
+translation:
+  title: Leçon de test
+  headings:
+    The Basics: L'essentiel
+    Changed Section: Section modifiée
+---
+
+# Leçon de test
+
+Introduction.
+
+## L'{doc}\`essentiel <intro>\`
+
+Voir l'[exercice](x).
+
+## Section modifiée
+
+Ancien contenu.`;
+
+  it('curls the body, keeps the role-stripped map value, and a later sync still finds the section', async () => {
+    mockTranslator.translateSection.mockResolvedValue({
+      success: true,
+      translatedSection: '## Section modifiée\n\nNouveau contenu.',
+    });
+
+    const firstSync = await processor.processSectionBased(
+      oldSource,
+      newSource,
+      seededTarget,
+      'test.md',
+      'en',
+      'fr'
+    );
+
+    // The untouched section is healed in the body...
+    expect(firstSync).toContain(`## L${R}{doc}\`essentiel <intro>\``);
+    expect(firstSync).toContain(`Voir l${R}[exercice](x).`);
+    // ...while its map value has no markup after the apostrophe and stays straight.
+    expect(extractHeadingMap(firstSync).get('The Basics')).toBe("L'essentiel");
+
+    // Second sync: a further source section removes the positional fallback, so
+    // the heading map alone must locate the curled section, past a human edit.
+    const edited = firstSync.replace(
+      `Voir l${R}[exercice](x).`,
+      `Voir d${R}abord l${R}[exercice](x).`
+    );
+    const newerSource = `${newSource}
+
+## More Ideas
+
+A postscript.`;
+    mockTranslator.translateSection.mockResolvedValue({
+      success: true,
+      translatedSection: "## Plus d'*idées*\n\nUn post-scriptum.",
+    });
+
+    const skipped: string[] = [];
+    const secondSync = await processor.processSectionBased(
+      newSource,
+      newerSource,
+      edited,
+      'test.md',
+      'en',
+      'fr',
+      undefined,
+      (h) => skipped.push(h)
+    );
+
+    expect(skipped).toEqual([]);
+    expect(secondSync).toContain(`Voir d${R}abord l${R}[exercice](x).`);
+    // A heading the model writes fresh: body and map value are typeset alike.
+    expect(secondSync).toContain(`## Plus d${R}*idées*`);
+    expect(extractHeadingMap(secondSync).get('More Ideas')).toBe(`Plus d${R}*idées*`);
+  });
+});

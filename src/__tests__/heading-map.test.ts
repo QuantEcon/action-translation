@@ -1186,6 +1186,34 @@ describe('normalizeHeadingForMatch — typography-variant canonicalization', () 
       normalizeHeadingForMatch('Exemple : ordre')
     );
   });
+
+  // #324: French typography curls an elision before markup in the body, but the
+  // role-stripped map value has no markup after the apostrophe and stays straight.
+  describe('curly single quotes fold to a straight apostrophe (#324)', () => {
+    const R = '’';
+
+    it('matches a curled body heading against a straight map value', () => {
+      const bodyHeading = `## L${R}{doc}\`essentiel <intro>\``;
+      const mapValue = "L'essentiel";
+      expect(normalizeHeadingForMatch(bodyHeading)).toBe(normalizeHeadingForMatch(mapValue));
+    });
+
+    it('matches a straight body heading against a curled map value', () => {
+      expect(normalizeHeadingForMatch("## L'*essentiel*")).toBe(
+        normalizeHeadingForMatch(`L${R}*essentiel*`)
+      );
+    });
+
+    it('folds U+2018 as well', () => {
+      expect(normalizeHeadingForMatch('‘x’')).toBe("'x'");
+    });
+
+    it('still tells different headings apart', () => {
+      expect(normalizeHeadingForMatch(`L${R}essentiel`)).not.toBe(
+        normalizeHeadingForMatch("L'accessoire")
+      );
+    });
+  });
 });
 
 describe('cleanHeadingText', () => {

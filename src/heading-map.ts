@@ -34,7 +34,10 @@ export type HeadingMap = Map<string, string>;
  * before the high punctuation `; : ! ?` — every shape French typography can
  * produce or consume (`Quoi\u00A0?!` gains an NBSP where the model emitted no
  * space at all, `Alpha  :` has its run collapsed), so all typography-variants
- * of one heading normalize identically. Written map values stay as typeset.
+ * of one heading normalize identically. Curly single quotes fold to `'` too:
+ * French typography curls an elision before markup (`L'{doc}`x`` →
+ * `L’{doc}`x``), but the role-stripped map value `L'x` has no markup after the
+ * apostrophe and stays straight (#324). Written map values stay as typeset.
  *
  * Known asymmetry, accepted: display text beginning with `# ` (a role wrapping
  * `# Comments`) loses that prefix when a bare map value is normalized but keeps
@@ -44,6 +47,7 @@ export type HeadingMap = Map<string, string>;
  */
 export function normalizeHeadingForMatch(heading: string): string {
   return MystParser.stripMystRoles(heading.replace(/^#+\s+/, ''))
+    .replace(/[\u2018\u2019]/g, "'")
     .replace(/[\u00A0\u202F]/g, ' ')
     .replace(/\s+/g, ' ')
     .replace(/ ([;:!?])/g, '$1')

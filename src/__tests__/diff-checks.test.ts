@@ -153,6 +153,22 @@ describe('checkHeadingMapCorrect', () => {
     expect(result.passed).toBe(true);
   });
 
+  // #324: the body curls an elision before a role; the role-stripped map value
+  // cannot, so the two differ by the apostrophe alone. Either side may be curly.
+  it.each([
+    ["L'essentiel", 'L’{doc}`essentiel <intro>`'],
+    ['L’essentiel', "L'{doc}`essentiel <intro>`"],
+  ])('tolerates map value %p against body heading %p', async (mapValue, bodyHeading) => {
+    const source = `# T\n\n## Essentials\n\nx\n`;
+    const target =
+      `---\ntranslation:\n  headings:\n    Essentials: "${mapValue}"\n---\n\n` +
+      `# T\n\n## ${bodyHeading}\n\nx\n`;
+
+    const result = await checkHeadingMapCorrect(parser, [pair(source, target)]);
+
+    expect(result.passed).toBe(true);
+  });
+
   it('does not require a map for a document with no sections', async () => {
     const source = `# Title only\n\nJust prose.\n`;
     const target = `# 仅标题\n\n只是散文。\n`;
