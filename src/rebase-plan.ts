@@ -14,13 +14,20 @@
  *   lecture lacks (#351);
  * - a read that failed for any other reason did the same.
  *
+ * And it read a lecture `main` has as an update, so a lecture the PR adds
+ * that another PR added to `main` first was translated again, its old English
+ * empty and the cache missing at the baseline, in place of the PR's reviewed
+ * translation (#467).
+ *
  * `planRebaseRead` decides from up to four reads. On `main` at the SHA the
  * rebase pinned, it looks for the lecture, or for a rename its old path, and
  * then, for a rename whose old path is gone, its new one. At the PR's
  * baseline, `targetBaseSha` (`main` when the PR opened), it looks for the
  * path the edition held the lecture under. On the PR's branch it looks for
  * the lecture under its new name. Each read is found, missing (a 404) or an
- * error, and a read is made only when the plan needs it.
+ * error, and a read is made only when the plan needs it. When `main` has the
+ * lecture, the baseline is read too (when the PR has one), and the branch only
+ * once the baseline answers 404.
  *
  * This module is pure, and lives outside `src/index.ts`, which cannot be
  * imported (#169).
@@ -48,8 +55,18 @@ export interface RebaseReads {
 }
 
 export type RebaseReadPlan =
-  /** `main` has it: rebuild it on `main` as before, with the rebase cache. */
+  /**
+   * `main` has it, and so did the baseline (or the PR records none, or the
+   * branch lacks it): rebuild it on `main` as before, with the rebase cache.
+   */
   | { action: 'update' }
+  /**
+   * On `main`, not at the baseline, and on the branch: a PR merged since this
+   * one opened added the lecture this PR adds too, so the edition has two
+   * translations of it. The rebase does not choose between them: fail before
+   * the branch moves, with no model call (#467).
+   */
+  | { action: 'added-on-main-since-opened' }
   /**
    * A rename whose old path is gone from `main` while its new one is there,
    * as after another PR made the same move: rebuild the new path as an update.
@@ -83,12 +100,26 @@ export type RebaseReadPlan =
   | { action: 'error'; reason: 'main-read' | 'baseline-read' | 'branch-read' | 'no-baseline' };
 
 /**
- * Decide from the reads made so far. Once `main` answers 404, the caller
- * reads a rename's new path on `main`; unless that settles it, the baseline
- * (when the PR has one); and unless that read fails, the branch.
+ * Decide from the reads made so far. When `main` has the lecture, the caller
+ * reads the baseline (when the PR has one) and, if that answers 404, the
+ * branch. Once `main` answers 404, it reads a rename's new path on `main`;
+ * unless that settles it, the baseline (when the PR has one); and unless that
+ * read fails, the branch.
  */
 export function planRebaseRead(reads: RebaseReads): RebaseReadPlan {
-  if (reads.onMain === 'found') return { action: 'update' };
+  if (reads.onMain === 'found') {
+    // A PR opened before the cache has no baseline to read: as before.
+    if (reads.atBaseline === undefined || reads.atBaseline === 'found') return { action: 'update' };
+    if (reads.atBaseline === 'error') return { action: 'error', reason: 'baseline-read' };
+    if (reads.onBranch === undefined || reads.onBranch === 'error') {
+      return { action: 'error', reason: 'branch-read' };
+    }
+    // Not on the branch: the PR never delivered it, so no reviewed text of
+    // its own is lost, and `main`'s copy is updated as before.
+    return reads.onBranch === 'found'
+      ? { action: 'added-on-main-since-opened' }
+      : { action: 'update' };
+  }
   if (reads.onMain === 'error') return { action: 'error', reason: 'main-read' };
   if (reads.newPathOnMain === 'found') return { action: 'update-at-new-path' };
   if (reads.newPathOnMain === 'error') return { action: 'error', reason: 'main-read' };
@@ -112,14 +143,22 @@ export interface DeletedLecture {
 }
 
 /**
+ * A lecture the rebased PR adds that a PR merged since it opened added to
+ * `main` first (#467). Same shape as a deleted one: for a rename,
+ * `editionPath` is the old path `main` now has.
+ */
+export type AddedLecture = DeletedLecture;
+
+/**
  * A rebase that failed before the branch moved, carrying the lectures a PR
- * merged since the rebased PR opened deleted, so the failure comment can say
- * what to do about them.
+ * merged since the rebased PR opened deleted, and those it added that this PR
+ * adds too, so the failure comment can say what to do about them.
  */
 export class RebaseReadError extends Error {
   constructor(
     message: string,
-    readonly deletedSinceOpened: DeletedLecture[]
+    readonly deletedSinceOpened: DeletedLecture[],
+    readonly addedOnMainSinceOpened: AddedLecture[] = []
   ) {
     super(message);
     this.name = 'RebaseReadError';

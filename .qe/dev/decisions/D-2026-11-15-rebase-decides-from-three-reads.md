@@ -1,3 +1,5 @@
+> Extended by `D-2026-11-25-rebase-stops-when-main-got-the-lecture-first` (a lecture `main` has).
+
 # Rebase decides what a lecture missing from `main` is from three reads: `main`, the PR's baseline and the PR's branch
 
 **Context**: Rebase mode read each lecture of a sibling PR on `main` alone, and took any failed

@@ -40,7 +40,7 @@ import {
 } from './sync-premise.js';
 import { docsRelativePath } from './sync-scope.js';
 import { stateFileRelativePath } from './cli/translate-state.js';
-import type { DeletedLecture } from './rebase-plan.js';
+import type { AddedLecture, DeletedLecture } from './rebase-plan.js';
 
 /** A lecture whose sync failed, for the per-lecture recovery lines. */
 export interface FailedLecture {
@@ -345,6 +345,11 @@ export interface RebaseFailureInput {
    * merged since deleted (#389). The rebase does not bring them back.
    */
   deletedSinceOpened?: DeletedLecture[];
+  /**
+   * Lectures the PR adds that a PR merged since it opened added to `main`
+   * first (#467). The rebase does not choose between the two translations.
+   */
+  addedOnMainSinceOpened?: AddedLecture[];
 }
 
 /** A deleted lecture as the comment names it, with its path in the PR for a rename. */
@@ -363,11 +368,13 @@ function deletedName(lecture: DeletedLecture): string {
  */
 export function rebaseFailureComment(input: RebaseFailureInput): string {
   const deleted = input.deletedSinceOpened ?? [];
+  const added = input.addedOnMainSinceOpened ?? [];
   // A deleted lecture is not one to regenerate: `forward` would bring it back.
+  // Nor is one with two translations: regenerating it would replace both.
+  const held = [...deleted, ...added];
   const lectures = input.overlapping
     .filter(
-      (path) =>
-        path.endsWith('.md') && !deleted.some((d) => d.path === path || d.editionPath === path)
+      (path) => path.endsWith('.md') && !held.some((d) => d.path === path || d.editionPath === path)
     )
     .map((path) => `\`${fileArgument(path, input.docsFolder)}\``);
   const files = lectures.length > 0 ? ` (here: ${lectures.join(', ')})` : '';
@@ -389,6 +396,23 @@ export function rebaseFailureComment(input: RebaseFailureInput): string {
         'close the PR if nothing else is left in it. If ' +
         `${one ? 'the lecture' : 'a lecture'} should stay in the edition, restore it on \`main\` ` +
         'first, then resolve this PR by hand.',
+      ''
+    );
+  }
+  if (added.length > 0) {
+    const one = added.length === 1;
+    lines.push(
+      `${listOf(added.map(deletedName))} ${one ? 'is' : 'are'} on \`main\` now but ` +
+        `${one ? 'was' : 'were'} not when this PR opened: a PR merged since added ` +
+        `${one ? 'it' : 'them'}, and this PR adds ${one ? 'it' : 'them'} too, so the edition ` +
+        `has two translations of ${one ? 'it' : 'each'}. The rebase does not choose between ` +
+        "them, and translates neither again. Decide which copy wins. To keep `main`'s, make " +
+        `${one ? 'the lecture and its state file' : 'those lectures and their state files'} on ` +
+        "this PR's branch match `main`, or close the PR if nothing else is left in it. To keep " +
+        "this PR's, resolve the conflict on its branch by hand, keeping the branch's copy. " +
+        "This PR's baseline lacks " +
+        `${one ? 'the lecture' : 'them'}, so a later rebase of it stops here again: merge or ` +
+        'close it once the choice is made.',
       ''
     );
   }

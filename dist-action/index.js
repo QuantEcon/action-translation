@@ -56028,8 +56028,16 @@ async function refreshStaleBranch(octokit, owner, repo, prNumber) {
 
 // dist/rebase-plan.js
 function planRebaseRead(reads) {
-  if (reads.onMain === "found")
-    return { action: "update" };
+  if (reads.onMain === "found") {
+    if (reads.atBaseline === void 0 || reads.atBaseline === "found")
+      return { action: "update" };
+    if (reads.atBaseline === "error")
+      return { action: "error", reason: "baseline-read" };
+    if (reads.onBranch === void 0 || reads.onBranch === "error") {
+      return { action: "error", reason: "branch-read" };
+    }
+    return reads.onBranch === "found" ? { action: "added-on-main-since-opened" } : { action: "update" };
+  }
   if (reads.onMain === "error")
     return { action: "error", reason: "main-read" };
   if (reads.newPathOnMain === "found")
@@ -56050,9 +56058,11 @@ function planRebaseRead(reads) {
 }
 var RebaseReadError = class extends Error {
   deletedSinceOpened;
-  constructor(message, deletedSinceOpened) {
+  addedOnMainSinceOpened;
+  constructor(message, deletedSinceOpened, addedOnMainSinceOpened = []) {
     super(message);
     this.deletedSinceOpened = deletedSinceOpened;
+    this.addedOnMainSinceOpened = addedOnMainSinceOpened;
     this.name = "RebaseReadError";
   }
 };
@@ -56442,7 +56452,9 @@ function deletedName(lecture) {
 }
 function rebaseFailureComment(input) {
   const deleted = input.deletedSinceOpened ?? [];
-  const lectures = input.overlapping.filter((path9) => path9.endsWith(".md") && !deleted.some((d) => d.path === path9 || d.editionPath === path9)).map((path9) => `\`${fileArgument(path9, input.docsFolder)}\``);
+  const added = input.addedOnMainSinceOpened ?? [];
+  const held = [...deleted, ...added];
+  const lectures = input.overlapping.filter((path9) => path9.endsWith(".md") && !held.some((d) => d.path === path9 || d.editionPath === path9)).map((path9) => `\`${fileArgument(path9, input.docsFolder)}\``);
   const files = lectures.length > 0 ? ` (here: ${lectures.join(", ")})` : "";
   const lines = [
     `\u26A0\uFE0F **Automatic rebase failed** after #${input.mergedPrNumber} was merged.`,
@@ -56453,6 +56465,10 @@ function rebaseFailureComment(input) {
   if (deleted.length > 0) {
     const one = deleted.length === 1;
     lines.push(`${listOf(deleted.map(deletedName))} ${one ? "is" : "are"} no longer on \`main\`: ${one ? "it was" : "they were"} there when this PR opened, and a PR merged since deleted ${one ? "it" : "them"}. The rebase does not bring a deleted lecture back. If the deletion stands, remove ` + (one ? "the lecture and its state file" : "those lectures and their state files") + ` from this PR's branch (the next rebase then leaves ${one ? "it" : "them"} out), or close the PR if nothing else is left in it. If ${one ? "the lecture" : "a lecture"} should stay in the edition, restore it on \`main\` first, then resolve this PR by hand.`, "");
+  }
+  if (added.length > 0) {
+    const one = added.length === 1;
+    lines.push(`${listOf(added.map(deletedName))} ${one ? "is" : "are"} on \`main\` now but ${one ? "was" : "were"} not when this PR opened: a PR merged since added ${one ? "it" : "them"}, and this PR adds ${one ? "it" : "them"} too, so the edition has two translations of ${one ? "it" : "each"}. The rebase does not choose between them, and translates neither again. Decide which copy wins. To keep \`main\`'s, make ${one ? "the lecture and its state file" : "those lectures and their state files"} on this PR's branch match \`main\`, or close the PR if nothing else is left in it. To keep this PR's, resolve the conflict on its branch by hand, keeping the branch's copy. This PR's baseline lacks ${one ? "the lecture" : "them"}, so a later rebase of it stops here again: merge or close it once the choice is made.`, "");
   }
   lines.push(`Resolve the conflicts by hand, or regenerate the overlapping lectures with \`translate forward -f <file>\`${files}, run from a checkout of the source's default branch, where \`<file>\` is the lecture's path inside the docs folder. \`translate forward\` regenerates the whole lecture, so on a lecture that has been natively reviewed, carry the changes in by hand instead.`);
   const metadata = input.metadata;
@@ -58433,7 +58449,8 @@ The translation content is preserved; only unchanged sections were updated to ma
             metadata,
             overlapping,
             docsFolder: inputs.docsFolder,
-            deletedSinceOpened: error4 instanceof RebaseReadError ? error4.deletedSinceOpened : void 0
+            deletedSinceOpened: error4 instanceof RebaseReadError ? error4.deletedSinceOpened : void 0,
+            addedOnMainSinceOpened: error4 instanceof RebaseReadError ? error4.addedOnMainSinceOpened : void 0
           })
         });
       } catch {
@@ -58467,6 +58484,8 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
   const fetchErrors = [];
   const carried = [];
   const deletedSinceOpened = [];
+  const addedOnMainSinceOpened = [];
+  const baselineReads = /* @__PURE__ */ new Map();
   for (const file of metadata.files) {
     const fileType = file.type || "markdown";
     try {
@@ -58550,7 +58569,14 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
         reads.newPathOnMain = newOnMain.status;
       }
       const newPathSettles = newOnMain?.status === "found" || newOnMain?.status === "error";
-      if (onMain.status === "missing" && !newPathSettles && metadata.targetBaseSha) {
+      if (onMain.status === "found" && metadata.targetBaseSha) {
+        atBaseline = await readEditionFile(octokit, owner, repo, editionPath2, metadata.targetBaseSha);
+        reads.atBaseline = atBaseline.status;
+        if (atBaseline.status === "missing") {
+          onBranch = await readEditionFile(octokit, owner, repo, file.path, pr.head.ref);
+          reads.onBranch = onBranch.status;
+        }
+      } else if (onMain.status === "missing" && !newPathSettles && metadata.targetBaseSha) {
         atBaseline = await readEditionFile(octokit, owner, repo, editionPath2, metadata.targetBaseSha);
         reads.atBaseline = atBaseline.status;
         if (atBaseline.status !== "error") {
@@ -58558,6 +58584,8 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
           reads.onBranch = onBranch.status;
         }
       }
+      if (atBaseline)
+        baselineReads.set(editionPath2, atBaseline);
       const plan = planRebaseRead(reads);
       const failure = (read) => read?.status === "error" ? read.message : "unknown";
       if (plan.action === "error") {
@@ -58577,6 +58605,10 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
       if (plan.action === "deleted-since-opened") {
         deletedSinceOpened.push({ editionPath: editionPath2, path: file.path });
         throw new Error(`${editionPath2} was on ${baseBranch} when this PR opened (${metadata.targetBaseSha?.slice(0, 7)}) and is not there now (${baseSha.slice(0, 7)}): a PR merged since deleted it, so this PR's change to it was not carried`);
+      }
+      if (plan.action === "added-on-main-since-opened") {
+        addedOnMainSinceOpened.push({ editionPath: editionPath2, path: file.path });
+        throw new Error(`${editionPath2} was not on ${baseBranch} when this PR opened (${metadata.targetBaseSha?.slice(0, 7)}) and is there now (${baseSha.slice(0, 7)}): a PR merged since added it, and this PR adds it too, so neither translation was replaced`);
       }
       if (plan.action === "drop") {
         core9.info(`${editionPath2}: deleted from ${baseBranch} since this PR opened, and ${file.path} is no longer on ${pr.head.ref}: nothing to carry`);
@@ -58642,7 +58674,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
     }
   }
   if (fetchErrors.length > 0) {
-    throw new RebaseReadError(`content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join("; ")}`, deletedSinceOpened);
+    throw new RebaseReadError(`content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join("; ")}`, deletedSinceOpened, addedOnMainSinceOpened);
   }
   if (filesToSync.length === 0 && carried.length === 0) {
     core9.info(`PR #${pr.number}: No files to process after content fetch. Skipping.`);
@@ -58657,8 +58689,12 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
     const prBranch = pr.head.ref;
     for (const file of filesToSync) {
       try {
+        const planned = baselineReads.get(file.filename);
+        if (planned && planned.status !== "found") {
+          throw new Error(`${file.filename} was not read at ${targetBaseSha}`);
+        }
         const { content: previousTranslation } = await fetchFileContent(octokit, owner, repo, file.filename, prBranch);
-        const { content: oldTargetContent } = await fetchFileContent(octokit, owner, repo, file.filename, targetBaseSha);
+        const { content: oldTargetContent } = planned ?? await fetchFileContent(octokit, owner, repo, file.filename, targetBaseSha);
         rebaseCache.set(file.filename, { previousTranslation, oldTargetContent });
         core9.info(`${file.filename}: Loaded rebase cache (previous translation + old baseline)`);
       } catch {

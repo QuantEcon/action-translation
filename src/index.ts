@@ -30,7 +30,13 @@ import { isTranslationBranch } from './branch-naming.js';
 import { FAILURE_ISSUE_LABEL } from './contracts.js';
 import { refreshStaleBranch } from './rebase-siblings.js';
 import { writeRebasedBranch } from './git-commit.js';
-import { DeletedLecture, planRebaseRead, RebaseReadError, RebaseReads } from './rebase-plan.js';
+import {
+  AddedLecture,
+  DeletedLecture,
+  planRebaseRead,
+  RebaseReadError,
+  RebaseReads,
+} from './rebase-plan.js';
 import { stateFileRelativePath } from './cli/translate-state.js';
 import {
   applySyncScope,
@@ -289,6 +295,8 @@ async function runRebase(): Promise<void> {
             docsFolder: inputs.docsFolder,
             deletedSinceOpened:
               error instanceof RebaseReadError ? error.deletedSinceOpened : undefined,
+            addedOnMainSinceOpened:
+              error instanceof RebaseReadError ? error.addedOnMainSinceOpened : undefined,
           }),
         });
       } catch {
@@ -357,6 +365,10 @@ async function rebaseSinglePR(
   // merged since this one opened deleted (#389).
   const carried: Array<{ path: string; content: string }> = [];
   const deletedSinceOpened: DeletedLecture[] = [];
+  // Lectures this PR adds that a PR merged since it opened added first (#467).
+  const addedOnMainSinceOpened: AddedLecture[] = [];
+  // Each lecture's read at the PR's baseline, by the path read, for the cache.
+  const baselineReads = new Map<string, EditionRead>();
 
   for (const file of metadata.files) {
     // Determine file type from metadata (default to 'markdown' for backward compat)
@@ -484,8 +496,9 @@ async function rebaseSinglePR(
       const editionPath = renamed && file.previousPath ? file.previousPath : file.path;
 
       // What the edition has decides what the rebase does with the lecture
-      // (#389, #351; see rebase-plan.ts). The other reads are made only when
-      // `main` answers 404.
+      // (#389, #351, #467; see rebase-plan.ts). When `main` has it, the
+      // baseline is read too, and the branch only if the baseline answers
+      // 404; the other reads are made only when `main` answers 404.
       const onMain = await readEditionFile(octokit, owner, repo, editionPath, baseSha);
       const reads: RebaseReads = { onMain: onMain.status };
       let newOnMain: EditionRead | undefined;
@@ -496,7 +509,20 @@ async function rebaseSinglePR(
         reads.newPathOnMain = newOnMain.status;
       }
       const newPathSettles = newOnMain?.status === 'found' || newOnMain?.status === 'error';
-      if (onMain.status === 'missing' && !newPathSettles && metadata.targetBaseSha) {
+      if (onMain.status === 'found' && metadata.targetBaseSha) {
+        atBaseline = await readEditionFile(
+          octokit,
+          owner,
+          repo,
+          editionPath,
+          metadata.targetBaseSha
+        );
+        reads.atBaseline = atBaseline.status;
+        if (atBaseline.status === 'missing') {
+          onBranch = await readEditionFile(octokit, owner, repo, file.path, pr.head.ref);
+          reads.onBranch = onBranch.status;
+        }
+      } else if (onMain.status === 'missing' && !newPathSettles && metadata.targetBaseSha) {
         atBaseline = await readEditionFile(
           octokit,
           owner,
@@ -510,6 +536,9 @@ async function rebaseSinglePR(
           reads.onBranch = onBranch.status;
         }
       }
+      // The rebase cache reads each lecture at the baseline: it reuses this
+      // read rather than make it again.
+      if (atBaseline) baselineReads.set(editionPath, atBaseline);
       const plan = planRebaseRead(reads);
       const failure = (read: EditionRead | undefined) =>
         read?.status === 'error' ? read.message : 'unknown';
@@ -546,6 +575,15 @@ async function rebaseSinglePR(
             `(${metadata.targetBaseSha?.slice(0, 7)}) and is not there now ` +
             `(${baseSha.slice(0, 7)}): a PR merged since deleted it, so this PR's change to it ` +
             'was not carried'
+        );
+      }
+      if (plan.action === 'added-on-main-since-opened') {
+        addedOnMainSinceOpened.push({ editionPath, path: file.path });
+        throw new Error(
+          `${editionPath} was not on ${baseBranch} when this PR opened ` +
+            `(${metadata.targetBaseSha?.slice(0, 7)}) and is there now ` +
+            `(${baseSha.slice(0, 7)}): a PR merged since added it, and this PR adds it too, so ` +
+            'neither translation was replaced'
         );
       }
       if (plan.action === 'drop') {
@@ -637,7 +675,8 @@ async function rebaseSinglePR(
   if (fetchErrors.length > 0) {
     throw new RebaseReadError(
       `content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join('; ')}`,
-      deletedSinceOpened
+      deletedSinceOpened,
+      addedOnMainSinceOpened
     );
   }
 
@@ -665,6 +704,13 @@ async function rebaseSinglePR(
 
     for (const file of filesToSync) {
       try {
+        // The plan above read most lectures at the baseline already (#467):
+        // one it did not find there has no cache, so skip the branch read.
+        const planned = baselineReads.get(file.filename);
+        if (planned && planned.status !== 'found') {
+          throw new Error(`${file.filename} was not read at ${targetBaseSha}`);
+        }
+
         // Read the previously translated file from the PR branch
         const { content: previousTranslation } = await fetchFileContent(
           octokit,
@@ -674,14 +720,10 @@ async function rebaseSinglePR(
           prBranch
         );
 
-        // Read the old target baseline (what target main looked like when PR was created)
-        const { content: oldTargetContent } = await fetchFileContent(
-          octokit,
-          owner,
-          repo,
-          file.filename,
-          targetBaseSha
-        );
+        // Read the old target baseline (what target main looked like when PR
+        // was created), unless the plan above already read it.
+        const { content: oldTargetContent } =
+          planned ?? (await fetchFileContent(octokit, owner, repo, file.filename, targetBaseSha));
 
         rebaseCache.set(file.filename, { previousTranslation, oldTargetContent });
         core.info(`${file.filename}: Loaded rebase cache (previous translation + old baseline)`);

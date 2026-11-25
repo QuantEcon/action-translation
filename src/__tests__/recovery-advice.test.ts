@@ -405,6 +405,41 @@ describe('rebase-failure comment (#281)', () => {
     );
     expect(comment).toContain('`translate forward -f <file>` (here: `sub/b.md`)');
   });
+
+  it('for a lecture main got first, says to pick a copy, and does not offer to regenerate it (#467)', () => {
+    const comment = rebaseFailureComment({
+      ...input,
+      addedOnMainSinceOpened: [{ editionPath: 'lectures/a.md', path: 'lectures/a.md' }],
+    });
+    expect(comment.split('\n').slice(4, 6)).toEqual([
+      '`lectures/a.md` is on `main` now but was not when this PR opened: a PR merged since ' +
+        'added it, and this PR adds it too, so the edition has two translations of it. The ' +
+        'rebase does not choose between them, and translates neither again. Decide which ' +
+        "copy wins. To keep `main`'s, make the lecture and its state file on this PR's branch " +
+        "match `main`, or close the PR if nothing else is left in it. To keep this PR's, " +
+        "resolve the conflict on its branch by hand, keeping the branch's copy. This PR's " +
+        'baseline lacks the lecture, so a later rebase of it stops here again: merge or close ' +
+        'it once the choice is made.',
+      '',
+    ]);
+    expect(comment).toContain('`translate forward -f <file>` (here: `sub/b.md`)');
+  });
+
+  it('names several lectures main got first together', () => {
+    const comment = rebaseFailureComment({
+      ...input,
+      addedOnMainSinceOpened: [
+        { editionPath: 'lectures/a.md', path: 'lectures/a.md' },
+        { editionPath: 'lectures/sub/b.md', path: 'lectures/sub/b.md' },
+      ],
+    });
+    expect(comment).toContain(
+      '`lectures/a.md` and `lectures/sub/b.md` are on `main` now but were not when this PR ' +
+        'opened: a PR merged since added them, and this PR adds them too, so the edition has ' +
+        'two translations of each.'
+    );
+    expect(comment).not.toContain('(here:');
+  });
 });
 
 describe('the resync command is spelt with a backslash everywhere (#281)', () => {
