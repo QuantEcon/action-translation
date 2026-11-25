@@ -56823,6 +56823,56 @@ function normalizeFindings(rawFindings, legacyIssues, validFiles) {
 function sortAndCapFindings(findings) {
   return [...findings].sort((a, b) => severityRank(a.severity) - severityRank(b.severity)).slice(0, MAX_FINDINGS);
 }
+var MIN_QUOTED_SPAN = 6;
+var QUOTED_SPAN_PATTERNS = [
+  /`([^`\n]+)`/g,
+  /"([^"\n]+)"/g,
+  /“([^”\n]+)”/g,
+  /‘([^’\n]+)’/g,
+  /「([^」\n]+)」/g,
+  /『([^』\n]+)』/g,
+  /«([^»\n]+)»/g,
+  /‹([^›\n]+)›/g,
+  /(?<![\p{L}\p{N}])'([^'\n]+)'(?![\p{L}\p{N}])/gu
+];
+var NARROW_AND_NO_BREAK_SPACES = new RegExp(`[${String.fromCharCode(160, 8239)}]`, "g");
+function normalizeForAttribution(text) {
+  return text.replace(NARROW_AND_NO_BREAK_SPACES, " ").replace(/[‘’]/g, "'").replace(/\s+/g, " ").trim().toLowerCase();
+}
+function quotedSpans(text) {
+  const spans = /* @__PURE__ */ new Set();
+  for (const pattern of QUOTED_SPAN_PATTERNS) {
+    for (const match of text.matchAll(pattern)) {
+      const span = match[1].trim();
+      if ([...span].length < MIN_QUOTED_SPAN)
+        continue;
+      spans.add(normalizeForAttribution(span));
+    }
+  }
+  return [...spans];
+}
+function reattributeFindings(findings, files) {
+  const texts = new Map(files.map((file) => [file.filename, file.texts.map(normalizeForAttribution)]));
+  const holds = (filename, span) => (texts.get(filename) ?? []).some((text) => text.includes(span));
+  const reattributed = [];
+  const result = findings.map((finding, index) => {
+    const named = finding.file;
+    if (named === null || !texts.has(named))
+      return finding;
+    const spans = quotedSpans(`${finding.description}
+${finding.suggestion ?? ""}`);
+    if (spans.length === 0)
+      return finding;
+    if (spans.some((span) => holds(named, span)))
+      return finding;
+    const others = [...texts.keys()].filter((filename) => filename !== named && spans.some((span) => holds(filename, span)));
+    if (others.length !== 1)
+      return finding;
+    reattributed.push({ index, from: named, to: others[0] });
+    return { ...finding, file: others[0], location: null };
+  });
+  return { findings: result, reattributed };
+}
 function findingToDisplayString(finding) {
   const tag = `**[${finding.severity} \xB7 ${finding.category}]**`;
   const where = [finding.file, finding.location].filter(Boolean).join(" \u2014 ");
@@ -57489,6 +57539,7 @@ var TranslationReviewer = class {
     let targetBefore = "";
     const changedSections = [];
     const filePairs = /* @__PURE__ */ new Map();
+    const targetBeforeByFile = /* @__PURE__ */ new Map();
     for (const file of reviewableFiles) {
       try {
         const { data: targetData } = await this.octokit.rest.repos.getContent({
@@ -57515,7 +57566,9 @@ var TranslationReviewer = class {
           ref: pr.base.sha
         });
         if ("content" in targetBeforeData) {
-          targetBefore += decodeFileContent(targetBeforeData, "target", file.filename, pr.base.sha) + "\n\n";
+          const content = decodeFileContent(targetBeforeData, "target", file.filename, pr.base.sha);
+          targetBefore += content + "\n\n";
+          targetBeforeByFile.set(file.filename, content);
         }
       } catch (error4) {
         if (!isNotFoundError(error4))
@@ -57544,7 +57597,16 @@ var TranslationReviewer = class {
     if (sourceEnglish.trim() === "") {
       throw new Error(`Review aborted: no source content could be fetched for ${reviewableFilenames.join(", ")} \u2014 nothing to review against`);
     }
-    const translationQuality = await this.evaluateTranslation(sourceEnglish, targetTranslation, changedSections, reviewableFilenames, glossaryTerms, targetLanguage);
+    const evaluatedQuality = await this.evaluateTranslation(sourceEnglish, targetTranslation, changedSections, reviewableFilenames, glossaryTerms, targetLanguage);
+    const translationQuality = this.attributeFindings(evaluatedQuality, reviewableFilenames, [...filePairs.entries()].map(([filename, pair]) => ({
+      filename,
+      texts: [
+        pair.source,
+        pair.target,
+        sourceBeforeMap.get(filename),
+        targetBeforeByFile.get(filename)
+      ].filter((text) => text !== void 0)
+    })));
     let diffQuality;
     let diffUnparseable = false;
     try {
@@ -57853,6 +57915,26 @@ Every file removed here is also deleted by source PR #${sourcePrNumber}, so the 
       reviewedHeadSha: pr.head.sha,
       reviewComment
     };
+  }
+  /**
+   * Move each finding whose quotes belong to one other reviewed file to that
+   * file (#223; see `reattributeFindings`), logging each move, and rebuild
+   * the comment's lines from the result. A single-file PR, or one with a
+   * reviewed file whose text this run does not hold, is returned unchanged.
+   */
+  attributeFindings(quality, reviewedFilenames, files) {
+    if (reviewedFilenames.length < 2)
+      return quality;
+    const held = new Set(files.filter((f) => f.texts.length > 0).map((f) => f.filename));
+    if (!reviewedFilenames.every((filename) => held.has(filename)))
+      return quality;
+    const { findings, reattributed } = reattributeFindings(quality.findings, files);
+    if (reattributed.length === 0)
+      return quality;
+    for (const move of reattributed) {
+      core6.info(`Finding ${move.index} re-attributed from ${move.from} to ${move.to}: its quotes are in ${move.to} and not in ${move.from} (#223)`);
+    }
+    return { ...quality, findings, issues: findings.map(findingToDisplayString) };
   }
   /**
    * Evaluate translation quality using Claude

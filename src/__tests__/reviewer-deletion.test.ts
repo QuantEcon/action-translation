@@ -82,6 +82,8 @@ interface Harness {
    * the file's real `size`.
    */
   omittedContent?: { side: 'source' | 'target'; paths: string[]; ref?: string };
+  /** The `findings` evaluateTranslation answers with; none by default. */
+  findings?: unknown[];
 }
 
 interface Recorder {
@@ -168,7 +170,7 @@ function makeReviewer(h: Harness, rec: Recorder): TranslationReviewer {
         formatting: 9,
         syntaxErrors: [],
         issues: [],
-        findings: [],
+        findings: h.findings ?? [],
         strengths: ['good'],
         summary: 'Fine.',
       };
@@ -767,5 +769,78 @@ describe('reviewPR per-file source-fetch gate (#261)', () => {
     // Not a failed read and not a missing file: the run reviews all three.
     expect(rec.modelCalls).toEqual(['evaluateTranslation', 'evaluateDiff']);
     expect(result.recommendationReasons.join('\n')).not.toMatch(/source content/);
+  });
+});
+
+describe('reviewPR moves a finding that quotes another file of the PR (#223)', () => {
+  const A = 'lectures/a.md';
+  const B = 'lectures/b.md';
+  const B_SOURCE = '# Money\n\nSo that the deficit is measured per young person.\n';
+  const B_TARGET = '# 货币\n\n因此赤字是以每个年轻人计算的。\n';
+  const FINDING = {
+    severity: 'minor',
+    category: 'accuracy',
+    file: A,
+    location: '## 介绍',
+    description: '“每个年轻人计算”不够精确。',
+    suggestion: '以每个年轻人为单位衡量',
+  };
+  const twoFiles = (over: Partial<Harness> = {}): Harness => ({
+    targetFiles: [A, B].map(modified),
+    sourceFiles: [A, B].map(modified),
+    sourceContent: { [A]: SOURCE_INTRO, [B]: B_SOURCE },
+    targetHeadContent: { [A]: TARGET_INTRO_AFTER, [B]: B_TARGET },
+    targetBaseContent: { [A]: TARGET_INTRO_BEFORE, [B]: B_TARGET },
+    findings: [FINDING],
+    ...over,
+  });
+  let stdout: jest.SpyInstance;
+  const logged = () => stdout.mock.calls.map((call) => String(call[0])).join('');
+
+  beforeEach(() => {
+    stdout = jest.spyOn(process.stdout, 'write').mockImplementation(() => true);
+  });
+  afterEach(() => stdout.mockRestore());
+
+  it('records it under the file it quotes, with no location, in the verdict and the comment', async () => {
+    const rec = newRecorder();
+    const result = await run(makeReviewer(twoFiles(), rec));
+
+    const verdict = parseReviewVerdict(result.reviewComment);
+    expect(verdict?.findings).toEqual([
+      {
+        severity: 'minor',
+        category: 'accuracy',
+        file: B,
+        location: null,
+        description: FINDING.description,
+        suggestion: FINDING.suggestion,
+      },
+    ]);
+    expect(result.reviewComment).toContain(`**[minor · accuracy]** ${B}: “每个年轻人计算”`);
+    expect(result.reviewComment).not.toContain(`${A} — ## 介绍`);
+    expect(logged()).toContain(
+      `Finding 0 re-attributed from ${A} to ${B}: its quotes are in ${B} and not in ${A} (#223)`
+    );
+  });
+
+  it('leaves the finding where the model put it on a single-file PR', async () => {
+    const rec = newRecorder();
+    const result = await run(
+      makeReviewer(
+        twoFiles({
+          targetFiles: [modified(A)],
+          sourceFiles: [modified(A)],
+          findings: [{ ...FINDING, file: A }],
+        }),
+        rec
+      )
+    );
+
+    expect(parseReviewVerdict(result.reviewComment)?.findings[0]).toMatchObject({
+      file: A,
+      location: '## 介绍',
+    });
+    expect(logged()).not.toContain('re-attributed');
   });
 });

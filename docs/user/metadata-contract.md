@@ -129,7 +129,7 @@ Embedded at the end of the review comment (the comment whose first line is the `
 |-------|--------|
 | `severity` | `blocker` (meaning inversion, wrong math/code, build-breaking MyST) · `major` (misleading accuracy/terminology error) · `minor` (correct but awkward; minor inconsistency) · `nit` (stylistic) |
 | `category` | `accuracy`, `fluency`, `terminology`, `formatting`, `syntax`, `structure`, `diff-check`, `other` (`other` is the fail-closed bucket for anything unclassifiable; `diff-check` carries a model-asserted diff check that reported failure, or one left unjudged because the diff evaluation did not parse, marked by a fixed phrase; see [When the diff evaluation does not parse](#diff-checks-and-their-provenance)) |
-| `file` | One of the PR's reviewed paths, or `null` when not attributable (single-file PRs are always attributed) |
+| `file` | One of the PR's reviewed paths, or `null` when not attributable (single-file PRs are always attributed). On a multi-file PR the engine checks a reviewer finding's file against its quotes (below) and may move it to another reviewed file |
 | `location` | Free text (section heading or short quote), or `null` |
 | `description` / `suggestion` | Free text; `suggestion` may be `null` |
 
@@ -142,6 +142,8 @@ Embedded at the end of the review comment (the comment whose first line is the `
 | Diff-quality issues | `minor` / `structure` | **no** — see below |
 | Deterministic check failures | `minor` / `structure` | **no** — their `diffChecks` boolean gates instead, so gating here would double-count |
 | Model-asserted check failures | `minor` / `diff-check` | **yes** — this is how a `model` check reaches the gate at all |
+
+**A reviewer finding's file is checked against its quotes** ([#223](https://github.com/QuantEcon/action-translation/issues/223)). The reviewer has filed a finding under one lecture while quoting another of the same PR. On a PR that reviews more than one file, the engine takes the text a reviewer finding quotes in its `description` and `suggestion`: in backticks, or in straight, curly, CJK corner (「」『』) or guillemet quotation marks, each at least 6 characters once trimmed. It looks for each quote in every reviewed file's English and translation, before and after the PR, comparing with runs of whitespace collapsed, U+00A0 and U+202F read as spaces, curly apostrophes read as straight ones, and case ignored. Only when no quote is in the named file and the quotes found are all in one other reviewed file, and in no third, does the finding move to that file, with `location` set to `null`, since it described the wrong file. Otherwise the finding stays as the reviewer wrote it, so a quote common to several lectures, such as a heading or a glossary term, never moves one. Severity, category and text never change and no finding is dropped, so routing is unchanged; each move is logged in the review run. Verdicts written before this check may attribute such a finding to the wrong file, so per-file counts across that boundary are not comparable. A finding whose quotes match no file, or several, keeps its file and location, which may still be wrong.
 
 Diff-quality issues are recorded at `minor`/`structure`, which is not a gating combination. `evaluateDiff` returns free prose with no severity concept, and in practice it mixes real observations with narration and self-correction. The strings are kept in `findings[]` for visibility, not as a signal. Treating that prose as gating would both bury the real signal and bias the shadow-phase calibration data.
 

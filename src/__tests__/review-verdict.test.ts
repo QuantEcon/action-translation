@@ -20,7 +20,10 @@ import {
   getEngineRef,
   formatEngineVersion,
   normalizeFindings,
+  normalizeForAttribution,
   parseReviewVerdict,
+  quotedSpans,
+  reattributeFindings,
   sanitizeCommentText,
   sortAndCapFindings,
   truncateField,
@@ -392,6 +395,179 @@ describe('findingToDisplayString', () => {
     expect(s).toContain('lectures/aiyagari.md');
     expect(s).toContain('## Model');
     expect(s).toContain('→ better text');
+  });
+});
+
+describe('reattributeFindings (#223)', () => {
+  // lecture-python.zh-cn#208: the finding names kesten_processes.md and its
+  // Gibrat heading, and quotes a passage of olg_adaptive_money.md.
+  const KESTEN = 'lectures/kesten_processes.md';
+  const OLG = 'lectures/olg_adaptive_money.md';
+  const KESTEN_EN =
+    "# Kesten Processes and Firm Dynamics\n\n## Exercises\n\n### Gibrat's law\n\n" +
+    "Gibrat's law of proportionate growth says firm growth is independent of firm size.\n";
+  const KESTEN_ZH =
+    '# Kesten过程与企业动态\n\n## 练习\n\n### Gibrat定律\n\n' +
+    'Gibrat比例增长定律指出，企业增长与企业规模无关。\n';
+  const OLG_EN =
+    '# Monetarism and Adaptive Expectations\n\n## Exercises\n\n' +
+    'Following {cite:t}`Sargent1993`, we study two economies that differ only in the ' +
+    'process for government expenditures, with $w_1 = 20$, $w_2 = 10$, $N = 1$, so that ' +
+    '$\\bar G$ is measured per young person.\n';
+  const OLG_ZH =
+    '# 货币主义与适应性预期\n\n## 练习\n\n' +
+    '按照 {cite:t}`Sargent1993` 的做法，我们研究两个仅在政府支出过程上有所不同的经济体，' +
+    '其中 $w_1 = 20$，$w_2 = 10$，$N = 1$，因此 $\\bar G$ 是以每个年轻人计算的。\n';
+  const files = [
+    { filename: KESTEN, texts: [KESTEN_EN, KESTEN_ZH] },
+    { filename: OLG, texts: [OLG_EN, OLG_ZH] },
+  ];
+  const AS_EMITTED: ReviewFinding = {
+    severity: 'minor',
+    category: 'accuracy',
+    file: KESTEN,
+    location: '### Gibrat定律',
+    description:
+      '“per young person”翻译为“每个年轻人计算”不够精确，此处指“以每个年轻人为单位衡量”的赤字，' +
+      '建议更明确表达单位含义。',
+    suggestion: '使得$\\bar G$以每个年轻人为单位来衡量',
+  };
+  const about = (file: string | null, description: string, extra: Partial<ReviewFinding> = {}) =>
+    ({
+      severity: 'major',
+      category: 'terminology',
+      file,
+      location: '## 练习',
+      description,
+      suggestion: null,
+      ...extra,
+    }) as ReviewFinding;
+
+  it("moves the issue's finding to the lecture it quotes, clearing its location", () => {
+    const { findings, reattributed } = reattributeFindings([AS_EMITTED], files);
+    expect(findings).toEqual([{ ...AS_EMITTED, file: OLG, location: null }]);
+    expect(reattributed).toEqual([{ index: 0, from: KESTEN, to: OLG }]);
+  });
+
+  it('changes nothing else, drops nothing, and keeps the order', () => {
+    const kept = about(KESTEN, 'The heading “Gibrat比例增长定律” reads oddly.');
+    const { findings } = reattributeFindings([kept, AS_EMITTED, kept], files);
+    expect(findings).toHaveLength(3);
+    expect(findings[0]).toBe(kept);
+    expect(findings[2]).toBe(kept);
+    expect(findings[1]).toMatchObject({
+      severity: 'minor',
+      category: 'accuracy',
+      description: AS_EMITTED.description,
+      suggestion: AS_EMITTED.suggestion,
+    });
+  });
+
+  it('leaves a finding one of whose quotes is in its own file', () => {
+    const f = about(KESTEN, '“企业增长与企业规模无关” and “每个年轻人计算” differ in tone.');
+    expect(reattributeFindings([f], files)).toEqual({ findings: [f], reattributed: [] });
+  });
+
+  it("finds a quote in its own file's English as well as its translation", () => {
+    const f = about(KESTEN, 'The phrase "proportionate growth" and “每个年轻人计算”.');
+    expect(reattributeFindings([f], files).reattributed).toEqual([]);
+  });
+
+  describe('a string common to several lectures moves nothing', () => {
+    const third = {
+      filename: 'lectures/wealth_dynamics.md',
+      texts: ['# Wealth Dynamics\n\n## Exercises\n\nUse `np.linspace` here.\n', '## 练习\n'],
+    };
+    const withThird = [
+      { filename: KESTEN, texts: [KESTEN_EN, KESTEN_ZH + 'Call `np.linspace`.\n'] },
+      { filename: OLG, texts: [OLG_EN + 'Use `np.linspace`.\n', OLG_ZH] },
+      third,
+    ];
+
+    it.each([
+      ['a heading every lecture has', 'The heading "Exercises" should be translated as 习题.'],
+      ['a code identifier every lecture uses', 'The call `np.linspace` is fine as it is.'],
+    ])('%s, found in the named file too', (_what, description) => {
+      const f = about(KESTEN, description);
+      expect(reattributeFindings([f], withThird).reattributed).toEqual([]);
+    });
+
+    it('a heading the named file lacks but several others have', () => {
+      // Named to a file without it; OLG and the third lecture both have it.
+      const f = about(KESTEN, 'The heading "Exercises" should read 习题.');
+      const noExercises = [
+        { filename: KESTEN, texts: ['# Kesten\n', '# Kesten过程\n'] },
+        { filename: OLG, texts: [OLG_EN, OLG_ZH] },
+        third,
+      ];
+      expect(reattributeFindings([f], noExercises).reattributed).toEqual([]);
+    });
+
+    it('quotes found in two different other files', () => {
+      const f = about(KESTEN, '“每个年轻人计算” and “Wealth Dynamics” are both off.');
+      expect(reattributeFindings([f], withThird).reattributed).toEqual([]);
+    });
+  });
+
+  it('leaves a finding whose quotes are in no file', () => {
+    const f = about(KESTEN, 'Prefer “以每个年轻人为单位衡量” here.');
+    expect(reattributeFindings([f], files).reattributed).toEqual([]);
+  });
+
+  it('leaves a finding with no quote, or only short ones', () => {
+    // 计算 and GDP are quoted, but under six characters.
+    for (const description of [
+      'The deficit per young person is unclear.',
+      'Use “计算” for GDP, not “GDP”.',
+      "The lecture's heading isn't right, and it's long.",
+    ]) {
+      const f = about(KESTEN, description);
+      expect(reattributeFindings([f], files).reattributed).toEqual([]);
+    }
+  });
+
+  it('leaves a finding with no file, or a file it was not given', () => {
+    const none = about(null, '“每个年轻人计算”');
+    const other = about('lectures/unknown.md', '“每个年轻人计算”');
+    expect(reattributeFindings([none, other], files).findings).toEqual([none, other]);
+  });
+
+  it('reads quotes from the suggestion too', () => {
+    const f = about(KESTEN, 'Unclear unit.', { suggestion: 'Keep “每个年轻人计算”, add a unit.' });
+    expect(reattributeFindings([f], files).findings[0].file).toBe(OLG);
+  });
+
+  it.each([
+    ['backticks', '`以每个年轻人计算`'],
+    ['straight double quotes', '"以每个年轻人计算"'],
+    ['straight single quotes', "the phrase 'measured per young person' is"],
+    ['curly single quotes', '‘measured per young person’'],
+    ['CJK corner brackets', '「以每个年轻人计算」'],
+    ['CJK white corner brackets', '『以每个年轻人计算』'],
+    ['guillemets', '« measured per young person »'],
+    ['single guillemets', '‹measured per young person›'],
+  ])('takes a quote in %s', (_what, description) => {
+    expect(reattributeFindings([about(KESTEN, description)], files).findings[0].file).toBe(OLG);
+  });
+
+  it('compares across spacing, non-breaking spaces, apostrophes and case', () => {
+    const typeset = [
+      { filename: KESTEN, texts: [KESTEN_EN, KESTEN_ZH] },
+      {
+        filename: OLG,
+        texts: ['It is the  government’s\ndeficit, measured per young person.\n'],
+      },
+    ];
+    const f = about(KESTEN, "“Government's deficit, measured per young person”");
+    expect(reattributeFindings([f], typeset).findings[0].file).toBe(OLG);
+  });
+
+  it('normalises text and extracts quotes as documented', () => {
+    expect(normalizeForAttribution(' A b c\n\td’e ')).toBe("a b c d'e");
+    expect(quotedSpans('“短” and “long enough” and `code_x` and "twice" "twice"')).toEqual([
+      'code_x',
+      'long enough',
+    ]);
   });
 });
 

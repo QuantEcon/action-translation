@@ -427,6 +427,122 @@ export function sortAndCapFindings(findings: ReviewFinding[]): ReviewFinding[] {
     .slice(0, MAX_FINDINGS);
 }
 
+// ============================================================================
+// FINDING ATTRIBUTION (#223)
+// ============================================================================
+
+/** A quoted span shorter than this, in characters after trimming, is not used. */
+export const MIN_QUOTED_SPAN = 6;
+
+/**
+ * Text quoted in a finding: in backticks, or in straight, curly, CJK corner
+ * or guillemet quotation marks. A straight single quote counts only where no
+ * letter or digit touches it from outside, so an apostrophe opens nothing.
+ */
+const QUOTED_SPAN_PATTERNS: readonly RegExp[] = [
+  /`([^`\n]+)`/g,
+  /"([^"\n]+)"/g,
+  /“([^”\n]+)”/g,
+  /‘([^’\n]+)’/g,
+  /「([^」\n]+)」/g,
+  /『([^』\n]+)』/g,
+  /«([^»\n]+)»/g,
+  /‹([^›\n]+)›/g,
+  /(?<![\p{L}\p{N}])'([^'\n]+)'(?![\p{L}\p{N}])/gu,
+];
+
+/**
+ * U+00A0 and U+202F, built from their code points: a literal one in the
+ * source is easy to lose in an edit, and lint refuses it.
+ */
+const NARROW_AND_NO_BREAK_SPACES = new RegExp(`[${String.fromCharCode(0x00a0, 0x202f)}]`, 'g');
+
+/**
+ * Text as the attribution check compares it: U+00A0 and U+202F read as
+ * spaces, every run of whitespace as one space, curly apostrophes as straight
+ * ones, and letters in lower case.
+ */
+export function normalizeForAttribution(text: string): string {
+  return text
+    .replace(NARROW_AND_NO_BREAK_SPACES, ' ')
+    .replace(/[‘’]/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+/** The quoted spans of `text` long enough to use, normalised, without repeats. */
+export function quotedSpans(text: string): string[] {
+  const spans = new Set<string>();
+  for (const pattern of QUOTED_SPAN_PATTERNS) {
+    for (const match of text.matchAll(pattern)) {
+      const span = match[1].trim();
+      if ([...span].length < MIN_QUOTED_SPAN) continue;
+      spans.add(normalizeForAttribution(span));
+    }
+  }
+  return [...spans];
+}
+
+/** A reviewed file and the texts a finding about it may quote: its English and its translation. */
+export interface AttributionFile {
+  filename: string;
+  texts: string[];
+}
+
+/** One finding moved to another file: its index in the list, and the two files. */
+export interface FindingReattribution {
+  index: number;
+  from: string;
+  to: string;
+}
+
+/**
+ * Re-attribute a finding whose quotes belong to another file of the PR (#223).
+ *
+ * The reviewer sometimes files a finding under one lecture while its
+ * description quotes another (lecture-python.zh-cn#208). For each finding
+ * named to a reviewed file, the quoted spans of its description and
+ * suggestion (see `quotedSpans`) are looked for in every reviewed file's
+ * texts. Only when no span is in the named file and the spans found are all
+ * in exactly one other file is the finding moved there, with its location
+ * cleared, since that described the wrong file. Everything else is left as it
+ * is: a finding with no usable span, one with no file or a file not reviewed,
+ * one a span ties to its own file, and one whose spans are in several other
+ * files or in none. A string common to several lectures, such as a heading
+ * like "Exercises" or a glossary term, therefore never moves a finding. No
+ * finding is dropped, and severity, category and text are never changed.
+ *
+ * Pure and deterministic. The caller runs it on multi-file PRs only: a
+ * single-file PR already attributes every finding to its one file.
+ */
+export function reattributeFindings(
+  findings: ReviewFinding[],
+  files: AttributionFile[]
+): { findings: ReviewFinding[]; reattributed: FindingReattribution[] } {
+  const texts = new Map(
+    files.map((file) => [file.filename, file.texts.map(normalizeForAttribution)])
+  );
+  const holds = (filename: string, span: string) =>
+    (texts.get(filename) ?? []).some((text) => text.includes(span));
+
+  const reattributed: FindingReattribution[] = [];
+  const result = findings.map((finding, index) => {
+    const named = finding.file;
+    if (named === null || !texts.has(named)) return finding;
+    const spans = quotedSpans(`${finding.description}\n${finding.suggestion ?? ''}`);
+    if (spans.length === 0) return finding;
+    if (spans.some((span) => holds(named, span))) return finding;
+    const others = [...texts.keys()].filter(
+      (filename) => filename !== named && spans.some((span) => holds(filename, span))
+    );
+    if (others.length !== 1) return finding;
+    reattributed.push({ index, from: named, to: others[0] });
+    return { ...finding, file: others[0], location: null };
+  });
+  return { findings: result, reattributed };
+}
+
 /** Render a finding for the human-readable review comment. */
 export function findingToDisplayString(finding: ReviewFinding): string {
   const tag = `**[${finding.severity} · ${finding.category}]**`;
