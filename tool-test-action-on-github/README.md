@@ -122,7 +122,7 @@ For measurements beyond the gate, such as the Claude 5.5 evaluation:
 |---|---|
 | `--source-dir DIR` | Takes the `--fixtures` from DIR, for example pinned real lectures, instead of `test-action-on-github-data/`. |
 | `--localize none\|default\|RULES` | `none` is the default, as before. `default` passes no `--localize`, so the engine applies its own default rules, and `meta.txt` records which they were. The value is checked against the engine before any draw. |
-| `--run-dir DIR`, `--resume` | Writes the run to DIR, which must be outside the repository. With `--resume`, finished draws are kept and the rest are drawn, provided the engine and inputs still match `meta.txt` (exit 2 otherwise). |
+| `--run-dir DIR`, `--resume` | Writes the run to DIR, which must be outside the repository. With `--resume`, finished draws are kept and the rest are drawn, provided the engine, the inputs and `--max-refusals` still match `meta.txt` (exit 2 otherwise). |
 | `--redraw-infra` | Draws a run's infra draws again. The replaced attempts stay in the cell's infra share, so a redraw tops up the valid draws without hiding how many were lost. |
 | `--ref-deps own` | With `--ref`, runs `npm ci` from the ref's own lockfile. By default the ref borrows this checkout's `node_modules`, so an old ref runs on *this* checkout's SDK. `meta.txt` records the SDK actually loaded either way. |
 | `--engine-dir DIR` | Uses an engine you built yourself. |

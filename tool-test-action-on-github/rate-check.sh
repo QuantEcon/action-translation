@@ -290,7 +290,7 @@ if [ -n "$ENGINE_DIR_ARG" ]; then
 elif [ -n "$REF" ]; then
     ENGINE_MODE="ref"; REF_DEPS="${REF_DEPS:-shared}"
     WORKTREE="${TMPDIR:-/tmp}/rate-check-wt.$$"
-    git -C "$REPO_ROOT" worktree add -q "$WORKTREE" "$REF" || { echo "cannot check out $REF" >&2; WORKTREE=""; exit 2; }
+    git -C "$REPO_ROOT" worktree add -q --detach "$WORKTREE" "$REF" || { echo "cannot check out $REF" >&2; WORKTREE=""; exit 2; }
     if [ "$REF_DEPS" = own ]; then
         echo "Installing $REF's own dependencies (npm ci from its package-lock.json)..."
         (cd "$WORKTREE" && npm ci --ignore-scripts --no-audit --no-fund --loglevel=error) || { echo "npm ci failed in the $REF worktree" >&2; exit 2; }
@@ -355,8 +355,9 @@ write_meta() {
 }
 write_meta > "$META_NEW"
 
-# --resume: the engine and the inputs must be the ones the run started with.
-IDENTITY_KEYS="ENGINE_SHA_FULL ENGINE_DIST_SHA256 TRANSLATOR_SHA256 PARITY_SHA256 SDK_VERSION GLOSSARY_SHA256 REF MODEL LANGS FIXTURES FIXTURES_SHA256 SOURCE_DIR LOCALIZE LOCALIZE_RULES REPORTS"
+# --resume: the engine, the inputs and the failure threshold must be the ones the run started
+# with: a verdict that a changed --max-refusals could flip leaves no trace of why it flipped.
+IDENTITY_KEYS="ENGINE_SHA_FULL ENGINE_DIST_SHA256 TRANSLATOR_SHA256 PARITY_SHA256 SDK_VERSION GLOSSARY_SHA256 REF MODEL MAX_REFUSALS LANGS FIXTURES FIXTURES_SHA256 SOURCE_DIR LOCALIZE LOCALIZE_RULES REPORTS"
 if [ "$RUN_DIR_IS_NEW" = 0 ]; then
     OLD_META="$RUN_DIR/meta.txt"
     grep -q "^MARKERS='1'" "$OLD_META" || { echo "$RUN_DIR was written by a rate-check without completion markers and cannot be resumed" >&2; exit 2; }
@@ -368,7 +369,7 @@ if [ "$RUN_DIR_IS_NEW" = 0 ]; then
 "; fi
     done
     if [ -n "$MISMATCH" ]; then
-        printf 'cannot resume %s: this engine or input differs from the run'"'"'s\n%s' "$RUN_DIR" "$MISMATCH" >&2
+        printf 'cannot resume %s: this engine, input or threshold differs from the run'"'"'s\n%s' "$RUN_DIR" "$MISMATCH" >&2
         exit 2
     fi
     OLD_DRAWS="$(grep -m1 "^DRAWS=" "$OLD_META" | sed "s/^DRAWS='\{0,1\}\([0-9]*\).*/\1/" || true)"
@@ -469,8 +470,9 @@ run_one() {
     if [ "$LOCALIZE" = default ]; then set --; else set -- --localize "$LOCALIZE"; fi
     if [ "$REPORTS" = 1 ]; then set -- "$@" --report-json "$out.json"; fi
     start="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    # cwd is the engine dir so the CLI picks up THAT checkout's glossary. `exec`, so that $! is
-    # the CLI itself: on_signal stops it by the PID recorded in the lock.
+    # cwd is the engine dir; the CLI reads its glossary relative to its own module, so the
+    # engine under test supplies it either way. `exec`, so that $! is the CLI itself:
+    # on_signal stops it by the PID recorded in the lock.
     (cd "$ENGINE_DIR" && exec node "$CLI" init -s "$SRC_DIR" -t "$out" --target-language "$lang" \
         -d . -f "$fx" -m "$MODEL" "$@" > "$out.log" 2>&1) &
     cli=$!
