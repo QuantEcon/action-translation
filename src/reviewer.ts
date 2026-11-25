@@ -52,6 +52,7 @@ import {
   truncateField,
   DiffCheckName,
   DIFF_CHECK_NAMES,
+  DIFF_EVALUATION_UNPARSEABLE,
 } from './review-verdict.js';
 
 // Default model for review (can be overridden)
@@ -172,6 +173,54 @@ function isNotFoundError(error: unknown): boolean {
   return (
     typeof error === 'object' && error !== null && (error as { status?: number }).status === 404
   );
+}
+
+/**
+ * Every attempt of a review call came back as text that does not parse as the
+ * verdict JSON (#284). Thrown by `callWithRetry` only when the retry budget is
+ * spent on parse failures; API errors, refusals, truncation and an empty
+ * response keep their own errors. `reviewPR` degrades on this error from
+ * `evaluateDiff` alone; from `evaluateTranslation` it fails the run, as before.
+ */
+export class ReviewParseExhaustedError extends Error {
+  readonly operation: string;
+  readonly attempts: number;
+
+  constructor(operation: string, attempts: number, cause: unknown) {
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    super(`${operation}: Failed to parse response after ${attempts} attempts: ${detail}`, {
+      cause,
+    });
+    this.name = 'ReviewParseExhaustedError';
+    this.operation = operation;
+    this.attempts = attempts;
+  }
+}
+
+/**
+ * The diff result recorded when `evaluateDiff` returned no parseable verdict
+ * (#284, ruled 2026-11-15 and 2026-11-25): every model-judged check false, and
+ * one issue naming the failure with the fixed phrase. `structurePreserved` and
+ * `headingMapCorrect` are false here too, but `reviewPR` replaces both with the
+ * deterministic results, so they are reported as themselves.
+ */
+function unparseableDiffQuality(attempts: number): DiffQualityResult {
+  const notJudged = `Not evaluated: ${DIFF_EVALUATION_UNPARSEABLE}.`;
+  return {
+    score: 0,
+    scopeCorrect: false,
+    positionCorrect: false,
+    structurePreserved: false,
+    headingMapCorrect: false,
+    issues: [
+      `${DIFF_EVALUATION_UNPARSEABLE} after ${attempts} attempts — the model-judged diff ` +
+        `checks were not judged and are recorded as failed (#284).`,
+    ],
+    summary: `The ${DIFF_EVALUATION_UNPARSEABLE} after ${attempts} attempts; the model-judged diff checks are recorded as failed.`,
+    scopeDetails: notJudged,
+    positionDetails: notJudged,
+    structureDetails: notJudged,
+  };
 }
 
 /**
@@ -503,9 +552,9 @@ export class TranslationReviewer {
           (error instanceof Error && error.message.includes('No JSON object'));
 
         if ((!isApiRetryable && !isParseFailure) || attempt === maxRetries) {
-          if (isParseFailure) {
-            core.error(`${operationName}: Failed to parse response after ${maxRetries} attempts`);
-          }
+          // Typed, so the caller can tell a spent parse budget from an API
+          // failure (#284). The caller decides whether it is fatal.
+          if (isParseFailure) throw new ReviewParseExhaustedError(operationName, maxRetries, error);
           throw error;
         }
 
@@ -1033,19 +1082,39 @@ export class TranslationReviewer {
     // Evaluate diff quality. For resync PRs the source has no before/after —
     // pass the current source as both and tell the evaluator large target
     // diffs are expected.
-    const diffQuality = await this.evaluateDiff(
-      resyncMetadata ? sourceEnglish : sourceBefore,
-      sourceEnglish,
-      targetBefore,
-      targetTranslation,
-      markdownFiles.map((f) => ({
-        filename: f.filename,
-        status: f.status as 'added' | 'modified' | 'removed' | 'renamed',
-        additions: f.additions,
-        deletions: f.deletions,
-      })),
-      resyncMetadata !== undefined
-    );
+    //
+    // An unparseable reply on every attempt degrades instead of failing the
+    // run (#284): the translation evaluation is already paid for, and a run
+    // with no verdict block reads like a review that has not run yet. Only
+    // the spent parse budget is caught, and only here — an API error, a
+    // refusal or a truncation still fails the run, and so does an
+    // unparseable `evaluateTranslation`.
+    let diffQuality: DiffQualityResult;
+    let diffUnparseable = false;
+    try {
+      diffQuality = await this.evaluateDiff(
+        resyncMetadata ? sourceEnglish : sourceBefore,
+        sourceEnglish,
+        targetBefore,
+        targetTranslation,
+        markdownFiles.map((f) => ({
+          filename: f.filename,
+          status: f.status as 'added' | 'modified' | 'removed' | 'renamed',
+          additions: f.additions,
+          deletions: f.deletions,
+        })),
+        resyncMetadata !== undefined
+      );
+    } catch (error) {
+      if (!(error instanceof ReviewParseExhaustedError)) throw error;
+      core.warning(
+        `evaluateDiff: ${DIFF_EVALUATION_UNPARSEABLE} after ${error.attempts} attempts ` +
+          `(${error.message}) — scopeCorrect and positionCorrect are recorded as failed and the ` +
+          `PR routes to editor; the deterministic diff checks still run (#284)`
+      );
+      diffUnparseable = true;
+      diffQuality = unparseableDiffQuality(error.attempts);
+    }
 
     // Deterministic diff checks (#148). `structurePreserved` and
     // `headingMapCorrect` are recomputed from ground truth the engine already
@@ -1171,6 +1240,10 @@ export class TranslationReviewer {
     // as a `diff-check` finding rather than a boolean the gate treats as
     // measured fact. Demoting it out of the boolean field must not open the
     // gate it used to close — `diff-check` is a gating category.
+    //
+    // A check left unjudged because the diff evaluation never parsed (#284)
+    // gates the same way, but says so with the fixed phrase: in calibration
+    // data it must not read as the model reporting the check as failed.
     const modelCheckFindings: ReviewFinding[] = (['scopeCorrect', 'positionCorrect'] as const)
       .filter((name) => diffChecks[name] !== true)
       .map((name) => ({
@@ -1179,8 +1252,12 @@ export class TranslationReviewer {
         file: soleFile,
         location: null,
         description: truncateField(
-          `${name}: the reviewer reported this check as failed. This is a model judgement, not a ` +
-            `deterministic check — verify against the source diff before treating it as a defect (#148).`
+          diffUnparseable
+            ? `${name}: ${DIFF_EVALUATION_UNPARSEABLE}, so this check was not judged and is ` +
+                `recorded as failed. Not a model judgement and not a defect found in the ` +
+                `translation — check the diff by hand (#284).`
+            : `${name}: the reviewer reported this check as failed. This is a model judgement, not a ` +
+                `deterministic check — verify against the source diff before treating it as a defect (#148).`
         ),
         suggestion: null,
       }));

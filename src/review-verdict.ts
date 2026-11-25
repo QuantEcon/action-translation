@@ -28,6 +28,17 @@ export const REVIEW_VERDICT_MARKER = 'translation-review-verdict';
 /** Schema version of the verdict block. Bump on breaking changes (#66). */
 export const REVIEW_VERDICT_SCHEMA_VERSION = 1;
 
+/**
+ * The fixed phrase every finding carries when the diff evaluation returned no
+ * parseable verdict after its retries (#284). The review then degrades instead
+ * of failing: the model-judged diff checks are recorded as failed and gate
+ * through `diff-check` findings that carry this phrase, so calibration data can
+ * tell an unparseable reply from a check the model really reported as failed.
+ * Changing it breaks every query that greps for it; see
+ * docs/user/metadata-contract.md.
+ */
+export const DIFF_EVALUATION_UNPARSEABLE = 'diff evaluation returned no parseable verdict';
+
 /** Findings kept in the block, worst first — bounds the comment size. */
 const MAX_FINDINGS = 20;
 

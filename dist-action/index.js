@@ -56581,6 +56581,7 @@ var fs7 = __toESM(require("fs"), 1);
 var path7 = __toESM(require("path"), 1);
 var REVIEW_VERDICT_MARKER = "translation-review-verdict";
 var REVIEW_VERDICT_SCHEMA_VERSION = 1;
+var DIFF_EVALUATION_UNPARSEABLE = "diff evaluation returned no parseable verdict";
 var MAX_FINDINGS = 20;
 var MAX_FIELD_LENGTH = 400;
 var SEVERITIES = ["blocker", "major", "minor", "nit"];
@@ -56854,6 +56855,36 @@ function isActionReviewComment(body) {
 function isNotFoundError(error4) {
   return typeof error4 === "object" && error4 !== null && error4.status === 404;
 }
+var ReviewParseExhaustedError = class extends Error {
+  operation;
+  attempts;
+  constructor(operation, attempts, cause) {
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    super(`${operation}: Failed to parse response after ${attempts} attempts: ${detail}`, {
+      cause
+    });
+    this.name = "ReviewParseExhaustedError";
+    this.operation = operation;
+    this.attempts = attempts;
+  }
+};
+function unparseableDiffQuality(attempts) {
+  const notJudged = `Not evaluated: ${DIFF_EVALUATION_UNPARSEABLE}.`;
+  return {
+    score: 0,
+    scopeCorrect: false,
+    positionCorrect: false,
+    structurePreserved: false,
+    headingMapCorrect: false,
+    issues: [
+      `${DIFF_EVALUATION_UNPARSEABLE} after ${attempts} attempts \u2014 the model-judged diff checks were not judged and are recorded as failed (#284).`
+    ],
+    summary: `The ${DIFF_EVALUATION_UNPARSEABLE} after ${attempts} attempts; the model-judged diff checks are recorded as failed.`,
+    scopeDetails: notJudged,
+    positionDetails: notJudged,
+    structureDetails: notJudged
+  };
+}
 function sourceReadError(path9, ref, error4) {
   const message = error4 instanceof Error ? error4.message : String(error4);
   return new Error(`Could not read source ${path9} @ ${ref.substring(0, 7)}: ${message} \u2014 failing the review rather than reviewing the PR without this file`, { cause: error4 });
@@ -57053,9 +57084,8 @@ var TranslationReviewer = class {
         const isApiRetryable = isRetryableAnthropicError(error4);
         const isParseFailure = error4 instanceof SyntaxError || error4 instanceof Error && error4.message.includes("No JSON object");
         if (!isApiRetryable && !isParseFailure || attempt === maxRetries) {
-          if (isParseFailure) {
-            core6.error(`${operationName}: Failed to parse response after ${maxRetries} attempts`);
-          }
+          if (isParseFailure)
+            throw new ReviewParseExhaustedError(operationName, maxRetries, error4);
           throw error4;
         }
         const delay = baseDelayMs * Math.pow(2, attempt - 1);
@@ -57358,12 +57388,22 @@ var TranslationReviewer = class {
       throw new Error(`Review aborted: no source content could be fetched for ${reviewableFilenames.join(", ")} \u2014 nothing to review against`);
     }
     const translationQuality = await this.evaluateTranslation(sourceEnglish, targetTranslation, changedSections, reviewableFilenames, glossaryTerms, targetLanguage);
-    const diffQuality = await this.evaluateDiff(resyncMetadata ? sourceEnglish : sourceBefore, sourceEnglish, targetBefore, targetTranslation, markdownFiles.map((f) => ({
-      filename: f.filename,
-      status: f.status,
-      additions: f.additions,
-      deletions: f.deletions
-    })), resyncMetadata !== void 0);
+    let diffQuality;
+    let diffUnparseable = false;
+    try {
+      diffQuality = await this.evaluateDiff(resyncMetadata ? sourceEnglish : sourceBefore, sourceEnglish, targetBefore, targetTranslation, markdownFiles.map((f) => ({
+        filename: f.filename,
+        status: f.status,
+        additions: f.additions,
+        deletions: f.deletions
+      })), resyncMetadata !== void 0);
+    } catch (error4) {
+      if (!(error4 instanceof ReviewParseExhaustedError))
+        throw error4;
+      core6.warning(`evaluateDiff: ${DIFF_EVALUATION_UNPARSEABLE} after ${error4.attempts} attempts (${error4.message}) \u2014 scopeCorrect and positionCorrect are recorded as failed and the PR routes to editor; the deterministic diff checks still run (#284)`);
+      diffUnparseable = true;
+      diffQuality = unparseableDiffQuality(error4.attempts);
+    }
     const reviewedPairs = [...filePairs.entries()].filter(([, v]) => v.source !== void 0 && v.target !== void 0).map(([filename, v]) => ({
       filename,
       source: v.source,
@@ -57424,7 +57464,7 @@ var TranslationReviewer = class {
       category: "diff-check",
       file: soleFile,
       location: null,
-      description: truncateField(`${name}: the reviewer reported this check as failed. This is a model judgement, not a deterministic check \u2014 verify against the source diff before treating it as a defect (#148).`),
+      description: truncateField(diffUnparseable ? `${name}: ${DIFF_EVALUATION_UNPARSEABLE}, so this check was not judged and is recorded as failed. Not a model judgement and not a defect found in the translation \u2014 check the diff by hand (#284).` : `${name}: the reviewer reported this check as failed. This is a model judgement, not a deterministic check \u2014 verify against the source diff before treating it as a defect (#148).`),
       suggestion: null
     }));
     const deterministicFindings = Object.entries(deterministic).filter(([name, result2]) => name !== "verbatimDirectives" && result2 !== void 0).flatMap(([, result2]) => result2.details).map((detail) => ({

@@ -12,12 +12,14 @@
  * to 9 HTTP attempts while the log said `attempt N/3`.
  */
 
-import { TranslationReviewer } from '../reviewer.js';
+import { TranslationReviewer, ReviewParseExhaustedError } from '../reviewer.js';
+import { DIFF_EVALUATION_UNPARSEABLE, parseReviewVerdict } from '../review-verdict.js';
 
 jest.mock('@actions/core', () => ({
   info: jest.fn(),
   error: jest.fn(),
   warning: jest.fn(),
+  notice: jest.fn(),
 }));
 
 const mockFinalMessage = jest.fn();
@@ -60,7 +62,7 @@ jest.mock('@anthropic-ai/sdk', () => {
 });
 
 import Anthropic, { APIError, BadRequestError } from '@anthropic-ai/sdk';
-import { ModelRefusalError } from '../models.js';
+import { ModelRefusalError, TruncatedResponseError } from '../models.js';
 
 const MockAnthropic = Anthropic as unknown as jest.Mock;
 
@@ -139,6 +141,16 @@ describe('reviewer callWithRetry', () => {
     });
   });
 
+  it('throws a typed parse error once three attempts fail to parse (#284)', async () => {
+    mockFinalMessage.mockResolvedValue(response('{\n  ok: true }'));
+
+    const outcome = expect(call(reviewer)).rejects.toBeInstanceOf(ReviewParseExhaustedError);
+    await jest.runAllTimersAsync();
+    await outcome;
+    expect(mockStream).toHaveBeenCalledTimes(3);
+    expect(reviewer.getUsage().apiCalls).toBe(3);
+  });
+
   it('a refusal propagates after exactly one call — neither retried nor a parse failure', async () => {
     mockFinalMessage.mockResolvedValueOnce({
       ...response('{"accuracy": 9'),
@@ -203,6 +215,230 @@ describe('reviewer callWithRetry', () => {
       Object.entries(params).filter(([key]) => key === 'thinking' || key === 'output_config')
     );
     expect(sentPolicy).toStrictEqual(fields);
+  });
+});
+
+// #284: `evaluateDiff` returns unparseable JSON about 2% of the time. The
+// three retries stay (some parse failures are transient); when all three fail,
+// the review degrades instead of dying, keeping the paid translation
+// evaluation and posting a verdict that routes to editor.
+describe('reviewPR when evaluateDiff never parses (#284)', () => {
+  // No `##` headings, so the deterministic heading-map check passes with no map.
+  const SOURCE_BEFORE = `# Introduction\n\nAn old overview of the model.\n`;
+  const SOURCE_AFTER = `# Introduction\n\nAn overview of the model.\n`;
+  const TARGET_BEFORE = `# 介绍\n\n旧的模型概述。\n`;
+  const TARGET_AFTER = `# 介绍\n\n模型概述。\n`;
+  const b64 = (s: string) => Buffer.from(s, 'utf-8').toString('base64');
+  const TRANSLATION_JSON = JSON.stringify({
+    accuracy: 9,
+    fluency: 9,
+    terminology: 9,
+    formatting: 9,
+    syntaxErrors: [],
+    issues: [],
+    findings: [],
+    strengths: ['good'],
+    summary: 'Fine.',
+  });
+  const DIFF_JSON = JSON.stringify({
+    scopeCorrect: true,
+    positionCorrect: true,
+    structurePreserved: true,
+    headingMapCorrect: true,
+    issues: [],
+    summary: 'Fine.',
+    scopeDetails: 'ok',
+    positionDetails: 'ok',
+    structureDetails: 'ok',
+  });
+  // The field shape: a property-name error at position 1, every attempt.
+  const UNPARSEABLE = '{\n  scopeCorrect: true }';
+
+  let comments: string[];
+
+  function makeReviewer(): TranslationReviewer {
+    const reviewer = new TranslationReviewer('test-key', 'test-token');
+    comments = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (reviewer as any).octokit = {
+      rest: {
+        pulls: {
+          get: async (p: { repo: string }) =>
+            p.repo === 'tgt'
+              ? {
+                  data: {
+                    body: '### Source PR\n**[#5 - Edit](https://example.invalid/5)**\n',
+                    head: { sha: 'targethead' },
+                    base: { sha: 'targetbase' },
+                  },
+                }
+              : { data: { head: { sha: 'sourcehead' }, base: { sha: 'sourcebase' } } },
+          listFiles: 'listFiles',
+        },
+        repos: {
+          getContent: async (p: { repo: string; ref: string }) => {
+            const content =
+              p.repo === 'tgt'
+                ? p.ref === 'targethead'
+                  ? TARGET_AFTER
+                  : TARGET_BEFORE
+                : p.ref === 'sourcehead'
+                  ? SOURCE_AFTER
+                  : SOURCE_BEFORE;
+            return { data: { content: b64(content) } };
+          },
+        },
+      },
+      paginate: async () => [
+        { filename: 'lectures/intro.md', status: 'modified', additions: 1, deletions: 1 },
+      ],
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (reviewer as any).postReviewComment = async (_n: number, _o: string, _r: string, b: string) => {
+      comments.push(b);
+    };
+    return reviewer;
+  }
+
+  async function review(reviewer: TranslationReviewer) {
+    const promise = reviewer.reviewPR(1, 'o/src', 'o', 'tgt', 'lectures', undefined, 'zh-cn');
+    // Settle the promise before draining timers, so a rejection is never unhandled.
+    const settled = promise.then(
+      (value) => ({ value, error: undefined }),
+      (error: unknown) => ({ value: undefined, error })
+    );
+    await jest.runAllTimersAsync();
+    return settled;
+  }
+
+  const coreMock = jest.requireMock('@actions/core') as {
+    warning: jest.Mock;
+    error: jest.Mock;
+  };
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    mockStream.mockClear();
+    mockFinalMessage.mockReset();
+    coreMock.warning.mockClear();
+    coreMock.error.mockClear();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('posts a verdict that routes to editor, with the fixed phrase, after three unparseable replies', async () => {
+    mockFinalMessage
+      .mockResolvedValueOnce(response(TRANSLATION_JSON))
+      .mockResolvedValueOnce(response(UNPARSEABLE))
+      .mockResolvedValueOnce(response(UNPARSEABLE))
+      .mockResolvedValueOnce(response(UNPARSEABLE));
+    const reviewer = makeReviewer();
+
+    const { value: result, error } = await review(reviewer);
+
+    // The run does not fail: reviewPR resolves and the comment is posted.
+    expect(error).toBeUndefined();
+    expect(comments).toHaveLength(1);
+    expect(mockStream).toHaveBeenCalledTimes(4); // 1 translation + 3 diff attempts
+    expect(result?.recommendation).toBe('editor');
+
+    // The paid translation evaluation is kept.
+    expect(result?.translationQuality.accuracy).toBe(9);
+
+    const verdict = parseReviewVerdict(comments[0]);
+    expect(verdict).not.toBeNull();
+    // The model-judged checks are recorded as failed ...
+    expect(verdict?.diffChecks.scopeCorrect).toBe(false);
+    expect(verdict?.diffChecks.positionCorrect).toBe(false);
+    // ... and gate through diff-check findings that carry the fixed phrase.
+    const diffCheckFindings = verdict?.findings.filter((f) => f.category === 'diff-check') ?? [];
+    expect(diffCheckFindings).toHaveLength(2);
+    for (const f of diffCheckFindings) {
+      expect(f.description).toContain(DIFF_EVALUATION_UNPARSEABLE);
+      expect(f.description).not.toMatch(/the reviewer reported this check as failed/);
+    }
+    expect(verdict?.recommendationReasons.join('\n')).toMatch(/minor finding\(s\) in gating/);
+
+    // The deterministic checks ran and report as themselves: this pair passes both.
+    expect(verdict?.diffCheckSources?.structurePreserved).toBe('deterministic');
+    expect(verdict?.diffChecks.structurePreserved).toBe(true);
+    expect(verdict?.diffChecks.headingMapCorrect).toBe(true);
+    expect(verdict?.recommendationReasons.join('\n')).not.toMatch(/diff check failed/);
+
+    // A workflow warning, not an error annotation.
+    const warnings = coreMock.warning.mock.calls.map((c) => String(c[0]));
+    expect(warnings.some((w) => w.includes(DIFF_EVALUATION_UNPARSEABLE))).toBe(true);
+    expect(coreMock.error).not.toHaveBeenCalled();
+
+    // Every paid attempt counts, the three failed ones included.
+    expect(reviewer.getUsage().apiCalls).toBe(4);
+  });
+
+  it('takes the normal path when the second diff attempt parses', async () => {
+    mockFinalMessage
+      .mockResolvedValueOnce(response(TRANSLATION_JSON))
+      .mockResolvedValueOnce(response(UNPARSEABLE))
+      .mockResolvedValueOnce(response(DIFF_JSON));
+
+    const { value: result, error } = await review(makeReviewer());
+
+    expect(error).toBeUndefined();
+    expect(mockStream).toHaveBeenCalledTimes(3);
+    expect(result?.recommendation).toBe('auto-merge');
+    expect(comments[0]).not.toContain(DIFF_EVALUATION_UNPARSEABLE);
+  });
+
+  it('still fails the run on an API error in evaluateDiff', async () => {
+    mockFinalMessage
+      .mockResolvedValueOnce(response(TRANSLATION_JSON))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .mockRejectedValueOnce(new (BadRequestError as any)(400, undefined, 'bad request'));
+
+    const { error } = await review(makeReviewer());
+
+    expect(error).toBeInstanceOf(BadRequestError);
+    expect(comments).toEqual([]);
+  });
+
+  it('still fails the run on a refusal in evaluateDiff', async () => {
+    mockFinalMessage.mockResolvedValueOnce(response(TRANSLATION_JSON)).mockResolvedValueOnce({
+      ...response('{"scopeCorrect": tr'),
+      stop_reason: 'refusal',
+      stop_details: { type: 'refusal', category: 'cyber', explanation: null },
+    });
+
+    const { error } = await review(makeReviewer());
+
+    expect(error).toBeInstanceOf(ModelRefusalError);
+    expect(comments).toEqual([]);
+  });
+
+  it('still fails the run on a truncated evaluateDiff reply', async () => {
+    mockFinalMessage
+      .mockResolvedValueOnce(response(TRANSLATION_JSON))
+      .mockResolvedValueOnce({ ...response('{"scopeCorrect": tr'), stop_reason: 'max_tokens' });
+
+    const { error } = await review(makeReviewer());
+
+    expect(error).toBeInstanceOf(TruncatedResponseError);
+    expect(comments).toEqual([]);
+  });
+
+  it('still fails the run when evaluateTranslation never parses — the ruling covers evaluateDiff only', async () => {
+    mockFinalMessage
+      .mockResolvedValueOnce(response(UNPARSEABLE))
+      .mockResolvedValueOnce(response(UNPARSEABLE))
+      .mockResolvedValueOnce(response(UNPARSEABLE));
+
+    const { error } = await review(makeReviewer());
+
+    expect(error).toBeInstanceOf(ReviewParseExhaustedError);
+    expect((error as Error).message).toMatch(
+      /evaluateTranslation: Failed to parse response after 3 attempts/
+    );
+    expect(comments).toEqual([]);
   });
 });
 
