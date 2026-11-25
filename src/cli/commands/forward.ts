@@ -24,6 +24,7 @@ import * as path from 'path';
 import * as yaml from 'js-yaml';
 import cliProgress from 'cli-progress';
 import { TranslationService } from '../../translator.js';
+import { ApiUsage, emptyApiUsage, formatUsage, mergeUsage } from '../../models.js';
 import { Glossary } from '../../types.js';
 import { triageForward } from '../forward-triage.js';
 import { languageLabel } from '../../language-config.js';
@@ -288,6 +289,11 @@ export async function finalizeResyncContent(
 /**
  * Resync a single file: triage → whole-file RESYNC → output.
  *
+ * Every result carries the file's API usage, triage and resync, on every path
+ * (#356): a file the parity guard or a later check refuses was paid for too.
+ * `usage` receives it as the calls return, so a caller that catches a throw
+ * (a triage that failed) still has what was spent.
+ *
  * Exported for direct testing.
  */
 export async function resyncSingleFile(
@@ -297,6 +303,33 @@ export async function resyncSingleFile(
   docsFolder: string,
   options: ForwardOptions,
   logger: ForwardLogger = defaultLogger,
+  ghRunner?: GhRunner,
+  gitRunner?: GitRunner,
+  usage: ApiUsage = emptyApiUsage()
+): Promise<ForwardFileResult> {
+  const result = await resyncFile(
+    file,
+    sourceRepoPath,
+    targetRepoPath,
+    docsFolder,
+    options,
+    logger,
+    usage,
+    ghRunner,
+    gitRunner
+  );
+  return { ...result, usage: { ...usage } };
+}
+
+/** resyncSingleFile's work, adding every API call's usage to `usage`. */
+async function resyncFile(
+  file: string,
+  sourceRepoPath: string,
+  targetRepoPath: string,
+  docsFolder: string,
+  options: ForwardOptions,
+  logger: ForwardLogger,
+  usage: ApiUsage,
   ghRunner?: GhRunner,
   gitRunner?: GitRunner
 ): Promise<ForwardFileResult> {
@@ -325,6 +358,7 @@ export async function resyncSingleFile(
     sourceLanguage: languageLabel(options.sourceLanguage),
     targetLanguage: languageLabel(options.language),
     testMode: options.test,
+    usage,
   });
 
   if (
@@ -398,6 +432,7 @@ export async function resyncSingleFile(
       sourceContent,
       targetContent,
     });
+    mergeUsage(usage, translator.getUsage());
     // What went into the request, beside what the loader reported: until #348
     // the loader said 357 terms while the request carried none.
     logger.info(
@@ -733,6 +768,8 @@ export async function runForwardBulk(
 
     const batchResults = await Promise.all(
       batch.map(async (file) => {
+        // Kept here so that a file whose triage threw still counts its calls (#356)
+        const usage = emptyApiUsage();
         try {
           return await resyncSingleFile(
             file,
@@ -742,7 +779,8 @@ export async function runForwardBulk(
             fileOptions,
             logger,
             ghRunner,
-            gitRunner
+            gitRunner,
+            usage
           );
         } catch (error) {
           logger.error(
@@ -755,6 +793,7 @@ export async function runForwardBulk(
               verdict: 'CONTENT_CHANGES' as const,
               reason: 'Error during processing',
             },
+            usage,
             summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
           };
         }
@@ -806,12 +845,14 @@ export function printBulkSummary(results: ForwardFileResult[], logger: ForwardLo
 
   let totalResynced = 0;
   let totalErrors = 0;
-  let totalTokens = 0;
+  // Every file's calls, triage and resync, a refused or failed file's
+  // included (#356)
+  const usage = emptyApiUsage();
 
   for (const r of results) {
     totalResynced += r.summary.resynced;
     totalErrors += r.summary.errors;
-    if (r.tokensUsed) totalTokens += r.tokensUsed;
+    if (r.usage) mergeUsage(usage, r.usage);
   }
 
   logger.info('─── Forward Resync Summary ───────────────────────────');
@@ -832,8 +873,8 @@ export function printBulkSummary(results: ForwardFileResult[], logger: ForwardLo
       logger.info(`    ${r.file}`);
     }
   }
-  if (totalTokens > 0) {
-    logger.info(`  Total tokens:    ${totalTokens.toLocaleString()}`);
+  if (usage.apiCalls > 0) {
+    logger.info(`  API usage:       ${formatUsage(usage)}`);
   }
   logger.info('─────────────────────────────────────────────────────');
 }

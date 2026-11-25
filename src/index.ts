@@ -62,6 +62,7 @@ import {
 import { runReview } from './action/review.js';
 import { coreLogger } from './action/core-logger.js';
 import { getBuiltInGlossaryDir } from './runtime-paths.js';
+import { formatUsage } from './models.js';
 
 /**
  * Main entry point for the GitHub Action
@@ -1285,9 +1286,7 @@ async function runSync(): Promise<void> {
   core.setOutput('cache-creation-input-tokens', String(usage.cacheCreationInputTokens));
   core.setOutput('cache-read-input-tokens', String(usage.cacheReadInputTokens));
   core.setOutput('api-calls', String(usage.apiCalls));
-  core.info(
-    `API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens, cache: ${usage.cacheReadInputTokens} read + ${usage.cacheCreationInputTokens} written`
-  );
+  core.info(`API usage: ${formatUsage(usage)}`);
 
   // Create PR in target repo with translated content
   let prUrl: string | undefined;

@@ -19,6 +19,8 @@ import {
   extractResponseText,
   TruncatedResponseError,
   isRetryableAnthropicError,
+  ApiUsage,
+  addUsage,
 } from '../models.js';
 import { AuthenticationError, BadRequestError } from '@anthropic-ai/sdk';
 import { ForwardTriageResult, ForwardTriageVerdict } from './types.js';
@@ -192,7 +194,9 @@ function sleep(ms: number): Promise<void> {
  * @param file          Filename for reporting
  * @param sourceContent Full SOURCE document content
  * @param targetContent Full TARGET document content
- * @param options       Configuration
+ * @param options       Configuration; `usage`, when given, receives every
+ *                      response's usage, a truncated or refused one included,
+ *                      so a caller can count a triage that throws (#356)
  * @returns ForwardTriageResult
  */
 export async function triageForward(
@@ -205,6 +209,7 @@ export async function triageForward(
     sourceLanguage: string;
     targetLanguage: string;
     testMode: boolean;
+    usage?: ApiUsage;
   }
 ): Promise<ForwardTriageResult> {
   // Quick check: if content is byte-identical, skip everything
@@ -237,6 +242,7 @@ export async function triageForward(
         ...modelRequestParams(options.model, 'analysis'),
         messages: [{ role: 'user', content: prompt }],
       });
+      if (options.usage && response.usage) addUsage(options.usage, response.usage);
       // Only an end_turn is interpreted. Truncated output must not be — and
       // the typed error is retryable, so one truncation no longer discards the
       // paid analysis. A refusal or any other stop reason is not retried.

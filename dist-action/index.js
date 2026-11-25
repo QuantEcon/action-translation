@@ -47752,6 +47752,9 @@ function addUsage(usage, responseUsage) {
   usage.cacheReadInputTokens += responseUsage.cache_read_input_tokens ?? 0;
   usage.apiCalls += 1;
 }
+function formatUsage(usage) {
+  return `${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens, cache: ${usage.cacheReadInputTokens} read + ${usage.cacheCreationInputTokens} written`;
+}
 function isRetryableAnthropicError(error4) {
   return error4 instanceof RateLimitError || error4 instanceof APIConnectionError || error4 instanceof APIError && (error4.status !== void 0 && error4.status >= 500 || error4.status === void 0 && error4.message?.includes("overloaded")) || isStreamCutShort(error4) || isBodyCutShort(error4);
 }
@@ -58753,7 +58756,7 @@ async function runSync() {
   core9.setOutput("cache-creation-input-tokens", String(usage.cacheCreationInputTokens));
   core9.setOutput("cache-read-input-tokens", String(usage.cacheReadInputTokens));
   core9.setOutput("api-calls", String(usage.apiCalls));
-  core9.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens, cache: ${usage.cacheReadInputTokens} read + ${usage.cacheCreationInputTokens} written`);
+  core9.info(`API usage: ${formatUsage(usage)}`);
   let prUrl;
   if (result.translatedFiles.length > 0 || result.filesToDelete.length > 0) {
     try {

@@ -418,7 +418,7 @@ describe('translate init: a state file it cannot write (#378)', () => {
       },
     ]);
     // The spent tokens still count.
-    expect(stats.totalTokens).toBe(2900);
+    expect(stats.usage).toMatchObject({ inputTokens: 2000, outputTokens: 900, apiCalls: 1 });
     expect(fs.existsSync(path.join(target, 'lectures', 'good.md'))).toBe(true);
     const report = readReport(opts.reportJson!);
     expect(report.summary).toMatchObject({ ok: 0, failed: 1 });
@@ -512,6 +512,25 @@ describe('translate init -f', () => {
       .map((call) => String(call[0]))
       .find((line) => line.includes('Translating single file:'));
     expect(picked).toContain('Translating single file: jax_intro.md');
+  });
+});
+
+describe("translate init's printed token total (#356)", () => {
+  it('counts the refused lecture: one total from the translator, on the console and in TRANSLATION-REPORT.md', async () => {
+    writeSource(['good.md', 'broken.md']);
+    api.reply(GOOD, BREAKS_PARITY);
+
+    const stats = await runInit(options({ reportJson: undefined }));
+
+    expect(stats).toMatchObject({ successCount: 1, failureCount: 1 });
+    expect(stats.usage).toMatchObject({ inputTokens: 4000, outputTokens: 1750, apiCalls: 2 });
+    const line = '2 call(s), 4000 input + 1750 output tokens, cache: 0 read + 0 written';
+    const logged = logSpy.mock.calls.map((call) => String(call[0]));
+    expect(logged).toContain(`  API usage: ${line}`);
+    expect(logged.some((l) => /Tokens: /.test(l))).toBe(false);
+    const report = fs.readFileSync(path.join(tmpDir, 'target', 'TRANSLATION-REPORT.md'), 'utf-8');
+    expect(report).toContain(`- **API Usage**: ${line}\n`);
+    expect(report).not.toContain('Total Tokens Used');
   });
 });
 

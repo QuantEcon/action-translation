@@ -34,7 +34,7 @@ import {
   formatHeadingmapJson,
   HeadingmapOptions,
 } from './commands/headingmap.js';
-import { DEFAULT_CLAUDE_MODEL } from '../models.js';
+import { DEFAULT_CLAUDE_MODEL, formatUsage } from '../models.js';
 import {
   runDoctor,
   formatDoctorTable,
@@ -412,6 +412,10 @@ program
           console.log(
             `\n  ${opts.file}: ${summary.resynced} resynced, ${summary.new} new, ${summary.removed} removed, ${summary.unchanged} unchanged${summary.errors > 0 ? `, ${summary.errors} errors` : ''}`
           );
+        }
+        // Triage and resync, a refused file's included (#356)
+        if (result.usage && result.usage.apiCalls > 0) {
+          console.log(`  API usage: ${formatUsage(result.usage)}`);
         }
         if (summary.errors > 0) {
           process.exit(1);

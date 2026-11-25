@@ -489,9 +489,11 @@ npx translate init \
 
 A run without `-f` writes `TRANSLATION-REPORT.md` to the target directory with:
 - Total lectures, success/failure/skipped counts
-- Total tokens used, total time
+- The run's API usage, total time
 - Configuration details
 - List of any failures with error messages
+
+The API usage, in the report and in the console summary, counts every response the run received, those of the lectures that failed included (an attempt that failed before its response came back, such as a dropped connection that was retried, has no usage to count): `<calls> call(s), <input> input + <output> output tokens, cache: <read> read + <written> written`, the line the Action logs as `API usage:`. `forward` prints the same line for its calls, triage included: once per file with `-f`, and for the whole run in a bulk run's summary.
 
 ---
 

@@ -202,7 +202,7 @@ Example output:
   Files resynced:  3
   Files skipped:   1
     intro.md: i18n only
-  Total tokens:    36,360
+  API usage:       7 call(s), 24210 input + 12150 output tokens, cache: 0 read + 0 written
 ─────────────────────────────────────────────────────
 ```
 

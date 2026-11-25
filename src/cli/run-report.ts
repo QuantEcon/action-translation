@@ -174,7 +174,7 @@ export interface LectureReport {
   failure?: FailureInfo;
   /** Translation, checks and write; the state-file write excluded. */
   elapsedMs: number;
-  /** ok only: the final response's input + output tokens (the Markdown report's figure). */
+  /** ok only: the final response's input + output tokens; the run's `usage` counts every call. */
   tokensUsed?: number;
   /** ok only: characters written to the target file. */
   outputChars?: number;
