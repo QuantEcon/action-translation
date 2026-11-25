@@ -1623,7 +1623,7 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
   // until a later run of the same PR recovers it. A run that opens its PR has
   // always closed it. A scoped run that passes without a PR now closes it too,
   // which on a partial edition is an ordinary outcome. An `all` run without a
-  // PR still leaves it open.
+  // PR closes it as well, since D-2026-11-25 (the tests further down).
 
   describe("'existing': nothing in scope, with a failure issue open (#387)", () => {
     let run: BundleRun;

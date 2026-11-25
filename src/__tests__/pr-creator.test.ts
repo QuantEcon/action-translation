@@ -1006,6 +1006,23 @@ describe('createTranslationPR when pulls.create fails (#92)', () => {
     expect(octokit.rest.pulls.requestReviewers).not.toHaveBeenCalled();
   });
 
+  it('waits two seconds between lookups', async () => {
+    const create = jest.fn().mockRejectedValue(createError);
+    const list = jest.fn().mockResolvedValue({ data: [] });
+    const octokit = mockOctokit(create, list);
+
+    const settled = createTranslationPR(octokit, files, [], config, mockLogger()).catch(
+      (error: unknown) => error
+    );
+    await jest.advanceTimersByTimeAsync(1999);
+    expect(list).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(1);
+    expect(list).toHaveBeenCalledTimes(2);
+    await jest.runAllTimersAsync();
+    expect(await settled).toBe(createError);
+    expect(list).toHaveBeenCalledTimes(3);
+  });
+
   it('ignores a listed PR whose head is another branch', async () => {
     const create = jest.fn().mockRejectedValue(createError);
     const list = jest

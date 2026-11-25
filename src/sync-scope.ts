@@ -16,7 +16,7 @@
  * Only a 404 means "not in scope". Any other failure is an error for that
  * lecture, which fails the run and opens the failure issue, as a non-404 ToC
  * read does (#254): taking a read error as absence, which
- * `fetchAllFileContents` still does on the `all` path (F36 on #169), would
+ * `fetchAllFileContents` did on the `all` path until #466 (F36 on #169), would
  * turn an outage into a silent skip of a reviewed lecture. The edition itself
  * is read first for the same reason, because GitHub also answers 404 for a
  * repository the token cannot see.
