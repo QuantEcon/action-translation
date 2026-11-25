@@ -48606,6 +48606,10 @@ function checkWrittenDocument(sourceContent, outputContent) {
 
 // dist/translator.js
 var INCOMPLETE_DOCUMENT_MARKER = "-----> INCOMPLETE DOCUMENT <------";
+var INCOMPLETE_DOCUMENT_STOP = "The model stopped and printed the incomplete-document marker";
+function incompleteDocumentError(outputTokens, maxTokens) {
+  return `${INCOMPLETE_DOCUMENT_STOP} after ${outputTokens} output tokens, short of its limit of ${maxTokens}: the response was not truncated.`;
+}
 var RETRY_CONFIG = {
   maxRetries: 3,
   baseDelayMs: 1e3
@@ -49096,7 +49100,7 @@ Provide the complete translated document maintaining exact MyST structure.`;
     if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
       return {
         success: false,
-        error: `Document exceeded token limits and was truncated. This document needs section-by-section translation rather than bulk translation.`
+        error: incompleteDocumentError(response.usage.output_tokens, maxTokens)
       };
     }
     this.log(`Translation complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
@@ -49204,7 +49208,7 @@ ${targetContent}`;
       if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
         return {
           success: false,
-          error: `Document exceeded token limits and was truncated. This document may need a simpler resync approach.`,
+          error: incompleteDocumentError(response.usage.output_tokens, maxTokens),
           ...sent
         };
       }

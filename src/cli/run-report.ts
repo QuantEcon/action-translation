@@ -23,6 +23,7 @@ import {
   isRetryableAnthropicError,
   isStreamCutShort,
 } from '../models.js';
+import { INCOMPLETE_DOCUMENT_STOP } from '../translator.js';
 
 /** The class of a failed file, in the order `classifyFailure` tests them. */
 export type FailureKind =
@@ -34,7 +35,7 @@ export type FailureKind =
   | 'infra' // 429, 5xx, overload, connection error or a stream or body cut short, after the retries
   | 'api-error' // any other API error: a 400, a 404 for an unknown model, ...
   | 'too-large' // refused before the call: over the whole-document output budget
-  | 'incomplete' // the model printed the incomplete-document marker
+  | 'incomplete' // the model stopped and printed the incomplete-document marker (not a truncation)
   | 'no-text' // an end_turn without a text block
   | 'state-write' // the lecture was written, its state file was not (#378)
   | 'error'; // anything else
@@ -131,7 +132,7 @@ export function classifyFailure(error: unknown): FailureInfo {
   if (fullMessage.startsWith('Document too large')) {
     return { kind: 'too-large', message };
   }
-  if (fullMessage.includes('Document exceeded token limits')) {
+  if (fullMessage.includes(INCOMPLETE_DOCUMENT_STOP)) {
     return { kind: 'incomplete', message };
   }
   if (fullMessage.includes('response contained no text')) {

@@ -575,6 +575,28 @@ describe('rate-check-summary.mjs — legacy engines (no --report-json)', () => {
     });
   });
 
+  it('reads the incomplete-document marker as incomplete, in its old and its new wording (#428)', () => {
+    const runDir = freshDir('legacy-incomplete');
+    writeMeta(runDir, { ...reportMeta(2, 'zh-cn'), REPORTS: '0' });
+    const zh = path.join(runDir, 'zh-cn', 'game-theory');
+    writeLegacyDraw(zh, 1, {
+      failure:
+        'Document exceeded token limits and was truncated. This document needs section-by-section translation rather than bulk translation.',
+    });
+    writeLegacyDraw(zh, 2, {
+      failure:
+        'The model stopped and printed the incomplete-document marker after 8 output tokens, short of its limit of 32000: the response was not truncated.',
+    });
+
+    const result = run('node', [SUMMARIZER, runDir]);
+    expect(result.code).toBe(1);
+    expect(cell(readSummary(runDir), 'zh-cn')).toMatchObject({
+      failed: 2,
+      infra: 0,
+      byKind: { incomplete: 2 },
+    });
+  });
+
   it('reads a run directory written before this change (no REPORTS, MARKERS or LOCALIZE)', () => {
     const passing = freshDir('old-format-pass');
     const failing = freshDir('old-format-fail');
