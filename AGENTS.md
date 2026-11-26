@@ -159,9 +159,11 @@ gh pr view N --repo QuantEcon/action-translation --json closingIssuesReferences 
 ```
 
 
-### Addressing Copilot PR Review Comments
+### Addressing PR Review Comments
 
-After pushing a PR, Copilot may leave review comments. To address them:
+Copilot is not requested on PRs here by default (since 2026-11-26), and no merge waits on it.
+When a review is requested, from Copilot or a person, and it leaves inline comments, address
+them:
 
 1. **Fetch review comments** — get comment IDs:
    ```bash
