@@ -46,9 +46,19 @@ describe('tool-review-injection and the unparseable diff evaluation (#284)', () 
     );
   });
 
-  it('recognises the phrase in a finding or in a reason, and nothing else', () => {
+  it('recognises the phrase in a reason only, not in a finding a model may have written', () => {
     const cases = {
       finding: { findings: [DEGRADED_FINDING], recommendationReasons: [] },
+      quoted: {
+        findings: [
+          {
+            ...DEGRADED_FINDING,
+            category: 'accuracy',
+            description: `The translation renders "${DIFF_EVALUATION_UNPARSEABLE}" literally.`,
+          },
+        ],
+        recommendationReasons: ['1 minor finding(s) in gating categories'],
+      },
       reason: {
         findings: [],
         recommendationReasons: [`${DIFF_EVALUATION_UNPARSEABLE} — not judged`],
@@ -70,7 +80,7 @@ describe('tool-review-injection and the unparseable diff evaluation (#284)', () 
           'console.log(JSON.stringify(Object.fromEntries(Object.entries(cases).map(' +
           '([k, v]) => [k, lib.diffEvaluationDegraded(v)]))));'
       )
-    ).toEqual({ finding: true, reason: true, modelJudged: false, none: false });
+    ).toEqual({ finding: false, quoted: false, reason: true, modelJudged: false, none: false });
   });
 
   it('scores a degraded review on a clean control as a failed run, not a false positive', () => {

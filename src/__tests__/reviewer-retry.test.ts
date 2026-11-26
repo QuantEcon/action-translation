@@ -151,6 +151,36 @@ describe('reviewer callWithRetry', () => {
     expect(reviewer.getUsage().apiCalls).toBe(3);
   });
 
+  it('takes a SyntaxError from the transport for no parse failure: no reply was parsed', async () => {
+    mockFinalMessage.mockRejectedValue(new SyntaxError('Unexpected token in the stream'));
+
+    const outcome = call(reviewer).then(
+      () => undefined,
+      (error: unknown) => error
+    );
+    await jest.runAllTimersAsync();
+    const error = await outcome;
+
+    expect(error).toBeInstanceOf(SyntaxError);
+    expect(error).not.toBeInstanceOf(ReviewParseExhaustedError);
+    expect(mockStream).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the parse error as the cause of the typed error', async () => {
+    mockFinalMessage.mockResolvedValue(response('{\n  ok: true }'));
+
+    const outcome = call(reviewer).then(
+      () => undefined,
+      (error: unknown) => error
+    );
+    await jest.runAllTimersAsync();
+    const error = (await outcome) as ReviewParseExhaustedError;
+
+    expect(error).toBeInstanceOf(ReviewParseExhaustedError);
+    expect(error.cause).toBeInstanceOf(SyntaxError);
+    expect(error.message).toContain((error.cause as Error).message);
+  });
+
   it('a refusal propagates after exactly one call — neither retried nor a parse failure', async () => {
     mockFinalMessage.mockResolvedValueOnce({
       ...response('{"accuracy": 9'),
@@ -487,6 +517,18 @@ describe('reviewPR when evaluateDiff never parses (#284)', () => {
     const { error } = await review(makeReviewer());
 
     expect(error).toBeInstanceOf(BadRequestError);
+    expect(comments).toEqual([]);
+  });
+
+  it('still fails the run when the evaluateDiff transport rejects with a raw SyntaxError, with no reply', async () => {
+    mockFinalMessage
+      .mockResolvedValueOnce(response(TRANSLATION_JSON))
+      .mockRejectedValue(new SyntaxError('Unexpected end of JSON input'));
+
+    const { error } = await review(makeReviewer());
+
+    expect(error).toBeInstanceOf(SyntaxError);
+    expect(error).not.toBeInstanceOf(ReviewParseExhaustedError);
     expect(comments).toEqual([]);
   });
 

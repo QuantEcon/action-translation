@@ -56869,6 +56869,12 @@ var ReviewParseExhaustedError = class extends Error {
     this.attempts = attempts;
   }
 };
+var ReplyParseError = class extends Error {
+  constructor(cause) {
+    super(cause instanceof Error ? cause.message : String(cause), { cause });
+    this.name = "ReplyParseError";
+  }
+};
 function unparseableDiffQuality(attempts) {
   const notJudged = `Not evaluated: ${DIFF_EVALUATION_UNPARSEABLE}.`;
   return {
@@ -57137,16 +57143,21 @@ var TranslationReviewer = class {
         if (!text.trim()) {
           throw new Error(`${operationName}: response contained no text`);
         }
-        return parseJsonResponse(text);
+        try {
+          return parseJsonResponse(text);
+        } catch (parseError) {
+          throw new ReplyParseError(parseError);
+        }
       } catch (error4) {
         if (error4 instanceof AuthenticationError || error4 instanceof BadRequestError) {
           throw error4;
         }
         const isApiRetryable = isRetryableAnthropicError(error4);
-        const isParseFailure = error4 instanceof SyntaxError || error4 instanceof Error && error4.message.includes("No JSON object");
+        const isParseFailure = error4 instanceof ReplyParseError;
         if (!isApiRetryable && !isParseFailure || attempt === maxRetries) {
-          if (isParseFailure)
-            throw new ReviewParseExhaustedError(operationName, maxRetries, error4);
+          if (isParseFailure) {
+            throw new ReviewParseExhaustedError(operationName, maxRetries, error4.cause);
+          }
           throw error4;
         }
         const delay = baseDelayMs * Math.pow(2, attempt - 1);

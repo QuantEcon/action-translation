@@ -266,14 +266,17 @@ export const DIFF_EVALUATION_UNPARSEABLE = 'diff evaluation returned no parseabl
  * out. Scored as they stand they would make the review `operative`, and a
  * false positive on a control, where before #284 the same run died and was
  * scored as `reviewFailed`. The scorer treats it as it treats `reviewFailed`.
+ *
+ * Only the reasons are read, as the contract says: the engine writes them, and
+ * it always writes this one. A finding's description can carry model-authored
+ * text, so a real finding that quotes the phrase must not turn a real review
+ * into a failed run.
  */
 export function diffEvaluationDegraded(verdict) {
   if (!verdict) return false;
-  const texts = [
-    ...(verdict.findings || []).map((f) => f?.description),
-    ...(verdict.recommendationReasons || []),
-  ];
-  return texts.some((t) => typeof t === 'string' && t.includes(DIFF_EVALUATION_UNPARSEABLE));
+  return (verdict.recommendationReasons || []).some(
+    (t) => typeof t === 'string' && t.includes(DIFF_EVALUATION_UNPARSEABLE)
+  );
 }
 
 /**

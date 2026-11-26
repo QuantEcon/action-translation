@@ -202,6 +202,18 @@ export class ReviewParseExhaustedError extends Error {
 }
 
 /**
+ * A reply that came back complete but does not parse as the JSON verdict,
+ * thrown only at the parse site in `callWithRetry`. Its message is the parse
+ * error's own, and the parse error is its cause.
+ */
+class ReplyParseError extends Error {
+  constructor(cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause), { cause });
+    this.name = 'ReplyParseError';
+  }
+}
+
+/**
  * The diff result recorded when `evaluateDiff` returned no parseable verdict
  * (#284, ruled 2026-11-15 and 2026-11-25): every model-judged check false, and
  * one issue naming the failure with the fixed phrase. `structurePreserved` and
@@ -660,7 +672,14 @@ export class TranslationReviewer {
           throw new Error(`${operationName}: response contained no text`);
         }
 
-        return parseJsonResponse(text);
+        // A parse failure is marked here, at the parse of a reply that came
+        // back, so that no other error (a transport rejecting with a raw
+        // SyntaxError, say) is taken for one and turned into a degraded review.
+        try {
+          return parseJsonResponse(text);
+        } catch (parseError) {
+          throw new ReplyParseError(parseError);
+        }
       } catch (error) {
         // Don't retry on non-transient API errors
         if (error instanceof AuthenticationError || error instanceof BadRequestError) {
@@ -672,14 +691,14 @@ export class TranslationReviewer {
         // lacked — an overload on either streamed review call aborted the
         // whole review and re-paid both prompts (#164/F52).
         const isApiRetryable = isRetryableAnthropicError(error);
-        const isParseFailure =
-          error instanceof SyntaxError ||
-          (error instanceof Error && error.message.includes('No JSON object'));
+        const isParseFailure = error instanceof ReplyParseError;
 
         if ((!isApiRetryable && !isParseFailure) || attempt === maxRetries) {
           // Typed, so the caller can tell a spent parse budget from an API
           // failure (#284). The caller decides whether it is fatal.
-          if (isParseFailure) throw new ReviewParseExhaustedError(operationName, maxRetries, error);
+          if (isParseFailure) {
+            throw new ReviewParseExhaustedError(operationName, maxRetries, error.cause);
+          }
           throw error;
         }
 

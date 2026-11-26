@@ -669,6 +669,31 @@ describe('reviewPR per-file source-fetch gate (#261)', () => {
     expect(result.recommendationReasons.join('\n')).toMatch(/blocker/);
   });
 
+  it('names a file a resync PR removes whose source read is a 404: no deletion blocker runs there', async () => {
+    const rec = newRecorder();
+    const result = await run(
+      makeReviewer(
+        {
+          resyncSha: '450bafecd23db638602150b47f4272b98aad3146',
+          targetFiles: [modified('lectures/a.md'), removed('lectures/b.md')],
+          sourceFiles: [],
+          sourceContent: { 'lectures/a.md': SOURCE_INTRO },
+          targetHeadContent: { 'lectures/a.md': TARGET_INTRO_AFTER },
+          targetBaseContent: {
+            'lectures/a.md': TARGET_INTRO_BEFORE,
+            'lectures/b.md': TARGET_INTRO_BEFORE,
+          },
+        },
+        rec
+      )
+    );
+
+    expect(result.recommendation).toBe('editor');
+    expect(result.recommendationReasons).toContain(
+      'source content could not be fetched for lectures/b.md \u{2014} the review compared that file against nothing'
+    );
+  });
+
   // GitHub returns a file over 1 MB with `content: ""` and its real size.
   // Decoded as is, that was an empty document: neither failed nor named, so a
   // multi-file PR could still record auto-merge. It is not a 404 — the file

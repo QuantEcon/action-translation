@@ -816,6 +816,58 @@ Sub exercises.`;
         { heading: '## Exercises', changeType: 'deleted' },
       ]);
     });
+
+    // `reviewPR` concatenates every reviewed file (each followed by a blank
+    // line, in the PR's file order) and matches once, so ids collide ACROSS
+    // files too: a multi-file PR whose files share a heading is paired as one
+    // document.
+    describe('across the files of a multi-file PR (the concatenation reviewPR matches)', () => {
+      const lecture = (title: string, overview: string, exercises: string) =>
+        `# ${title}\n\n## Overview\n\n${overview}\n\n## Exercises\n\n${exercises}\n`;
+      const concat = (...files: string[]) => files.map((f) => `${f}\n\n`).join('');
+
+      it('reports only the edited section when two files share their headings', () => {
+        const a = lecture('A', 'A overview.', 'A exercises.');
+        const before = concat(a, lecture('B', 'B overview.', 'B exercises.'));
+        const after = concat(a, lecture('B', 'B overview, revised.', 'B exercises.'));
+
+        // Before #283: three `modified` entries (both Overviews and an Exercises).
+        expect(summary(identifyChangedSections(before, after, T_BEFORE, T_AFTER))).toEqual([
+          'modified:## Overview',
+        ]);
+      });
+
+      // KNOWN DEFECT, pinned so that the fix changes this test deliberately:
+      // a new file that sorts before an existing modified file shifts the
+      // nth-to-nth pairing by one file. The new file's sections pair with the
+      // existing file's old sections and read `modified`; the existing file's
+      // sections read `added`, its unchanged `## Exercises` included. The
+      // truth is two `added` (the new file) and one `modified` (`## Overview`
+      // of b.md). To be fixed by pairing Changed Sections per file.
+      it('mispairs a new file that sorts before an existing modified one (known defect)', () => {
+        const before = concat(lecture('B', 'B overview.', 'B exercises.'));
+        const after = concat(
+          lecture('New', 'New overview.', 'New exercises.'),
+          lecture('B', 'B overview, revised.', 'B exercises.')
+        );
+
+        const changes = identifyChangedSections(before, after, T_BEFORE, T_AFTER);
+        expect(summary(changes)).toEqual([
+          'modified:## Overview',
+          'modified:## Exercises',
+          'added:## Overview',
+          'added:## Exercises',
+        ]);
+        // The `modified` pair is the new file's text; the `added` pair is b.md's.
+        // (A file's last section runs on into the next file's title line.)
+        expect(changes.map((c) => c.englishContent?.split('\n')[0])).toEqual([
+          'New overview.',
+          'New exercises.',
+          'B overview, revised.',
+          'B exercises.',
+        ]);
+      });
+    });
   });
 });
 
