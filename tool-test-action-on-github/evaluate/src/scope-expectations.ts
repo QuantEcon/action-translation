@@ -14,9 +14,9 @@
  *   leaves lecture-minimal.md out, and 20 moves the state file with the
  *   lecture. The check reads the PR's file list and body.
  * - The scenarios that change only lecture.md (09 to 15, 22, 23, 25, 26 and
- *   28) sync as under `all`, since the target has the state file, except
- *   that the state file is updated rather than added. The check holds the PR
- *   to those two files, and the model evaluates lecture.md as usual.
+ *   28) sync as under `all`: the target has the state file in every run
+ *   (#290), so it is updated. The check holds the PR to those two files, and
+ *   the model evaluates lecture.md as usual.
  * - The scenarios that change only lecture-minimal.md (01 to 08, 16, 21, 24
  *   and 27) open no translation PR. A matched one is a failure. An unmatched
  *   source PR is the expected result only if its sync run passed, since a

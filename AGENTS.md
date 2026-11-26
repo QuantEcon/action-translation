@@ -264,13 +264,18 @@ Before creating a release, verify the following:
    The harness defaults to `main`, so the release itself is only gated if you ask for it by
    name. This step verifies the **tagged bytes**, not a branch that may have moved since.
 
-   Once its sync runs have finished, check that every translation PR kept the sign-off block
-   the reset lays down in `lecture.md`'s state file (#290; `gh` only, no model calls), and put
-   its total line on the release PR beside the gate tally:
+   Once its sync runs have finished, and before any other harness run resets the lanes,
+   check that every translation PR kept the sign-off block the reset lays down in
+   `lecture.md`'s state file (#290; `gh` only, no model calls):
 
    ```bash
-   node tool-test-action-on-github/check-state-keys.mjs
+   node tool-test-action-on-github/check-state-keys.mjs --expect-full
    ```
+
+   On a full three-lane gate its last line must read `state keys kept: 42 across 84 PRs —
+   PASS`; put it on the release PR beside the gate tally. `--expect-full` fails a lane that
+   does not hold all 28 translation PRs, so a check run too early, or after the `@v0` smoke
+   has reset the lanes, fails rather than passing on what is left.
 4b. **Rate-check the full-document fixtures at the tag** — alongside 4a, before moving the floating tag:
 
    ```bash

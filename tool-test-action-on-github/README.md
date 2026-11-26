@@ -220,11 +220,11 @@ Under the default `all`, the state files in each lane's translation PRs are:
 So a full run carries the block in 14 files per lane. Once the run's sync workflows have finished, and before the next reset, check every translation PR (`gh api` only, no model calls):
 
 ```bash
-node tool-test-action-on-github/check-state-keys.mjs                    # zh-cn, fa and ml
-node tool-test-action-on-github/check-state-keys.mjs --languages zh-cn
+node tool-test-action-on-github/check-state-keys.mjs --expect-full      # the release gate: zh-cn, fa and ml
+node tool-test-action-on-github/check-state-keys.mjs --languages zh-cn  # a smaller run
 ```
 
-It reads `lecture.md.yml` on each target's `main` and the state files at each open translation PR's head. A file that comes from `lecture.md`'s must end with the block byte for byte, after exactly the engine's six fields and a rewritten `source-sha`. Every other added state file must hold the six fields and nothing else, and no PR body may list a state file under "State Files Overwritten". It prints one line per lane and a total, `state keys kept: 42 across 84 PRs — PASS`, which goes on the release PR beside the gate tally. Exit 0 on a pass, 1 on any failure, 2 on a usage or `gh` error. A lane of 28 PRs must keep the block in exactly 14 files; a smaller run, such as the `@v0` smoke, is judged on the PRs it has. An engine without [#476](https://github.com/QuantEcon/action-translation/pull/476) (v0.33.0 and older) drops the block, so at such a ref, a control run for instance, the check fails while the gate's counts are unaffected.
+It reads `lecture.md.yml` on each target's `main` and the state files at each open translation PR's head. A file that comes from `lecture.md`'s must end with the block byte for byte, after exactly the engine's six fields and a rewritten `source-sha`. Every other added state file must hold the six fields and nothing else, no PR body may list a state file under "State Files Overwritten", and a PR that changes a lecture must write that lecture's state file (sync's state write is non-fatal, so a skipped one leaves nothing else to judge). It prints one line per lane and a total; the gate's reads `state keys kept: 42 across 84 PRs — PASS` and goes on the release PR beside the gate tally. Exit 0 on a pass, 1 on any failure, 2 on a usage or `gh` error. A lane with no translation PR always fails, since it proves nothing. With `--expect-full` each lane must hold all 28 translation PRs with the block in exactly 14 files, so a check run too early, or after another run has reset the lanes, fails. Without it, a smaller run, such as `--scenarios 09`, is judged on the PRs it has. An engine without [#476](https://github.com/QuantEcon/action-translation/pull/476) (v0.33.0 and older) drops the block, so at such a ref, a control run for instance, the check fails while the gate's counts are unaffected.
 
 ## Scope runs
 

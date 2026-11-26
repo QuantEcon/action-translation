@@ -817,6 +817,124 @@ describe('check-state-keys.mjs (#290)', () => {
     const bad = run('node', [CHECK, '--frobnicate']);
     expect(bad.stderr).toContain('unknown option --frobnicate');
     expect(bad.code).toBe(2);
+
+    // An option missing its value is refused, not read as "go live".
+    const bare = run('node', [CHECK, '--offline']);
+    expect(bare.stderr).toContain('--offline needs a value');
+    expect(bare.code).toBe(2);
+  });
+
+  it('never passes on nothing: a lane with no translation PR fails', () => {
+    const result = check([{ language: 'zh-cn', mainText: MAIN, prs: [] }]);
+    expect(result.stdout).toContain('no open translation PR to judge');
+    expect(result.stdout).toContain('— FAIL');
+    expect(result.code).toBe(1);
+  });
+
+  it('with --expect-full, holds each lane to 28 PRs and 14 kept, above and below', () => {
+    const lane = (prs: unknown[]) => [{ language: 'zh-cn', mainText: MAIN, prs }];
+    const full = Array.from({ length: 28 }, (_, i) => (i < 14 ? keptPr(i + 1) : plainPr(i + 1)));
+    const pass = check(lane(full), ['--expect-full']);
+    expect(pass.stdout).toContain('zh-cn: kept 14, plain 14, across 28 PR(s) — ok');
+    expect(pass.code).toBe(0);
+
+    // A lane short of a PR (one sync failed), or one with an extra.
+    const short = check(lane(full.slice(1)), ['--expect-full']);
+    expect(short.stdout).toContain('a full run has 28 translation PRs per lane; this one has 27');
+    expect(short.code).toBe(1);
+    const extra = check(lane([...full, plainPr(29)]), ['--expect-full']);
+    expect(extra.stdout).toContain('this one has 29');
+    expect(extra.code).toBe(1);
+
+    // Kept above 14 is as wrong as below.
+    const over = [...full];
+    over[14] = keptPr(15);
+    expect(check(lane(over)).stdout).toContain('this one in 15');
+
+    // Without --expect-full, the smoke's single PR passes; with it, it fails.
+    expect(check(lane([plainPr(1)])).code).toBe(0);
+    expect(check(lane([plainPr(1)]), ['--expect-full']).code).toBe(1);
+  });
+
+  it('fails a PR that changed a lecture but wrote no state file for it', () => {
+    const lectureOnly = { number: 3, body: 'Sync.', lectures: ['lecture.md'], files: [] };
+    const result = check([{ language: 'zh-cn', mainText: MAIN, prs: [lectureOnly] }]);
+    expect(result.stdout).toContain(
+      'PR #3: lecture.md changed, but its state file .translate/state/lecture.md.yml was not written'
+    );
+    expect(result.code).toBe(1);
+
+    const withState = { ...keptPr(4), lectures: ['lecture.md'] };
+    expect(check([{ language: 'zh-cn', mainText: MAIN, prs: [withState] }]).code).toBe(0);
+  });
+
+  it('tells a state file that comes from lecture.md’s from one that does not', () => {
+    const judged = (files: File[]) =>
+      check([{ language: 'zh-cn', mainText: MAIN, prs: [pr(5, files)] }]);
+    // An added lecture.md.yml is a fresh file, not lecture.md's carried.
+    const added = judged([
+      { path: '.translate/state/lecture.md.yml', status: 'added', text: engine() + TAIL },
+    ]);
+    expect(added.stdout).toContain('engine fields are');
+    expect(added.code).toBe(1);
+    // A rename from some other file is not lecture.md's either.
+    const elsewhere = judged([
+      {
+        path: '.translate/state/b.md.yml',
+        status: 'renamed',
+        previous: '.translate/state/a.md.yml',
+        text: engine(),
+      },
+    ]);
+    expect(elsewhere.stdout).toContain('kept 0, plain 1');
+    expect(elsewhere.code).toBe(0);
+    // An addition beside lecture.md.yml modified (not removed) is a new lecture.
+    const beside = judged([
+      { path: '.translate/state/lecture.md.yml', status: 'modified', text: engine() + TAIL },
+      { path: '.translate/state/game-theory.md.yml', status: 'added', text: engine() },
+    ]);
+    expect(beside.stdout).toContain('kept 1, plain 1');
+    expect(beside.code).toBe(0);
+  });
+
+  it.each([
+    [
+      'a short source-sha',
+      engine('abc1234') + TAIL,
+      'source-sha is abc1234, expected a 40-hex commit',
+    ],
+    [
+      'the block followed by more text',
+      engine() + TAIL + 'extra: 1\n',
+      'the kept block is missing',
+    ],
+  ])('fails %s, and counts nothing kept for it', (_label, text, problem) => {
+    const result = check([
+      {
+        language: 'zh-cn',
+        mainText: MAIN,
+        prs: [pr(6, [{ path: '.translate/state/lecture.md.yml', status: 'modified', text }])],
+      },
+    ]);
+    expect(result.stdout).toContain(problem);
+    expect(result.stdout).toContain('zh-cn: kept 0, plain 0');
+    expect(result.code).toBe(1);
+  });
+
+  it('fails when main does not start with the engine fields, or a file was not read', () => {
+    const bad = check([{ language: 'zh-cn', mainText: `x: 1\n${TAIL}`, prs: [keptPr(1)] }]);
+    expect(bad.stdout).toContain("does not start with the engine's fields");
+    expect(bad.code).toBe(1);
+
+    const unread = check([
+      {
+        language: 'zh-cn',
+        mainText: MAIN,
+        prs: [pr(7, [{ path: '.translate/state/lecture.md.yml', status: 'modified' }])],
+      },
+    ]);
+    expect(unread.stdout).toContain('PR #7: .translate/state/lecture.md.yml: no content read');
+    expect(unread.code).toBe(1);
   });
 });
 

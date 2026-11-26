@@ -531,7 +531,7 @@ delimiter rows, which already break a table in the fr edition's pandas lecture.
 
 ## Health & context
 
-- With #290's harness check: **3,189 tests across 91 suites**; 3,178 with #477's fix (#487). At
+- With #290's harness check: **3,196 tests across 91 suites**; 3,178 with #477's fix (#487). At
   `36d1a77`, the overnight stack
   merged: 3,173, counted 2026-11-26 in the main clone (one skips when the suite runs as root). Since #465 a
   clone holding the harness's gitignored test clones counts the same as a clean one. Before the

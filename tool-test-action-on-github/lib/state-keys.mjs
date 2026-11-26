@@ -98,13 +98,22 @@ function comesFromLecture(file, prFiles) {
 /**
  * Judge one translation PR. `files` lists every state file it touches, as
  * `{ path, status, previous?, text? }` (`text` is the file at the PR's head,
- * absent for a removal). Returns counts and a list of problems.
+ * absent for a removal). `lectures`, when given, lists the lecture files the
+ * PR adds or changes (the targets' docs folder is the repository root), each of
+ * which must come with its state file: sync's state write is non-fatal, so a
+ * skipped one leaves nothing else to judge. Returns counts and problems.
  */
 export function judgePr(pr, tail, oldSourceSha) {
   const result = { kept: 0, plain: 0, problems: [] };
   const say = (msg) => result.problems.push(`PR #${pr.number}: ${msg}`);
   if (typeof pr.body === 'string' && pr.body.includes(OVERWRITTEN_HEADING)) {
     say(`its body lists "${OVERWRITTEN_HEADING}"`);
+  }
+  const written = new Set(pr.files.filter((f) => f.status !== 'removed').map((f) => f.path));
+  for (const lecture of pr.lectures ?? []) {
+    if (!written.has(`.translate/state/${lecture}.yml`)) {
+      say(`${lecture} changed, but its state file .translate/state/${lecture}.yml was not written`);
+    }
   }
   for (const file of pr.files) {
     if (file.status === 'removed') continue;
@@ -130,17 +139,27 @@ export function judgePr(pr, tail, oldSourceSha) {
 }
 
 /**
- * Judge one lane: `{ language, mainText, prs: [...] }`. In a full run (28
- * translation PRs) exactly FULL_RUN_KEPT files must carry the block; a smaller
- * run is judged on what it has.
+ * Judge one lane: `{ language, mainText, prs: [...] }`. A lane with no
+ * translation PR proves nothing and fails (the check ran before the sync runs
+ * finished, or after the next reset). With `expectFull`, as the release gate
+ * runs it, a lane must hold exactly FULL_RUN_PRS translation PRs with the
+ * block in exactly FULL_RUN_KEPT state files; without it, a smaller run (the
+ * `@v0` smoke, a `--scenarios` run) is judged on the PRs it has, and a lane
+ * that happens to hold FULL_RUN_PRS is still held to FULL_RUN_KEPT.
  */
-export function judgeLane(lane) {
+export function judgeLane(lane, { expectFull = false } = {}) {
   const out = { language: lane.language, prs: lane.prs.length, kept: 0, plain: 0, problems: [] };
   let tail;
   try {
     tail = expectedTail(lane.mainText ?? '');
   } catch (error) {
     out.problems.push(error.message);
+    return out;
+  }
+  if (lane.prs.length === 0) {
+    out.problems.push(
+      'no open translation PR to judge: run this after the sync runs finish and before the next reset'
+    );
     return out;
   }
   const oldSha = mainSourceSha(lane.mainText);
@@ -150,7 +169,12 @@ export function judgeLane(lane) {
     out.plain += r.plain;
     out.problems.push(...r.problems);
   }
-  if (lane.prs.length === FULL_RUN_PRS && out.kept !== FULL_RUN_KEPT) {
+  if (expectFull && lane.prs.length !== FULL_RUN_PRS) {
+    out.problems.push(
+      `a full run has ${FULL_RUN_PRS} translation PRs per lane; this one has ${lane.prs.length}`
+    );
+  }
+  if ((expectFull || lane.prs.length === FULL_RUN_PRS) && out.kept !== FULL_RUN_KEPT) {
     out.problems.push(
       `a full run carries the block in ${FULL_RUN_KEPT} state files; this one in ${out.kept}`
     );

@@ -1120,9 +1120,14 @@ else
     done
     _codes=""
     for L in "${LANGUAGES[@]}"; do _codes="${_codes:+$_codes,}$(lang_code "$L")"; done
-    echo "4. When the sync runs have finished, check that every translation PR kept"
-    echo "   the state file's sign-off block (#290; no model calls):"
-    echo "     node tool-test-action-on-github/check-state-keys.mjs --languages $_codes"
+    echo "4. When the sync runs have finished, and before the next reset, check that"
+    echo "   every translation PR kept the state file's sign-off block (#290; no model calls):"
+    if [ "$SCOPED_LANGUAGES" = false ] && [ -z "$ONLY_SCENARIOS" ] && [ "$SYNC_SCOPE" = all ]; then
+        # A full run: hold every lane to all 28 translation PRs (release step 4a).
+        echo "     node tool-test-action-on-github/check-state-keys.mjs --expect-full"
+    else
+        echo "     node tool-test-action-on-github/check-state-keys.mjs --languages $_codes"
+    fi
     echo ""
     echo "View source PRs:"
     echo "  gh pr list --repo $OWNER/$SOURCE_REPO"
