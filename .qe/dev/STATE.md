@@ -358,8 +358,8 @@ session), #474's release order (heal the fr edition before a release carrying #3
 `939ceaf` first; the rest rest on the 2026-11-11 validation. An independent review on 2026-11-26
 commented on all six PRs, and its findings were applied in a second commit on each branch
 (log section "2026-11-26 — independent review"); #290 stays open for its harness exercise, and
-whether a rebase keeps a state key that only the PR branch holds is open
-(`D-2026-11-25-state-files-keep-keys-the-engine-does-not-own`).
+a rebase keeps the default branch's state keys, as ruled on 2026-11-26, since a sign-off
+arrives by its own follow-up PR (`D-2026-11-25-state-files-keep-keys-the-engine-does-not-own`).
 
 **Before it (2026-11-16, after the `--require-state` rollout):**
 
@@ -516,8 +516,8 @@ delimiter rows, which already break a table in the fr edition's pandas lecture.
 
 ## Health & context
 
-- With the 2026-11-25 stack merged (#471 to #476), after the 2026-11-26 review round: **3,158
-  tests across 91 suites** (one
+- With the 2026-11-25 stack merged (#471 to #476), after the 2026-11-26 review and re-check rounds:
+  **3,171 tests across 91 suites** (one
   skips when the suite runs as root). Before it, at `939ceaf`: `main` green; **2,762 tests across 88 suites** (zero skips, type-checked) with
   `doctor --require-state` (#370, #449's P4), 2,705 before it at `d73f874` (counted 2026-11-16
   in a clean worktree; a tree holding the harness's gitignored clones counts 15 more, see log

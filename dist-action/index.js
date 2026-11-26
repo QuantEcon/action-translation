@@ -53962,7 +53962,7 @@ function mergeFileState(existing, state, shownPath) {
     if (keepsValues(merged, parsed, keptKeys, content))
       return { content: merged };
   }
-  const asText = keptKeysAsText(existing, keptKeys);
+  const asText = keptKeysAsText(existing, keptKeys, parsed);
   if (asText !== void 0) {
     const merged = content + asText;
     if (keepsValues(merged, parsed, keptKeys, content)) {
@@ -54017,7 +54017,7 @@ var TEXT_KEEPING_SCHEMA = FAILSAFE_SCHEMA.extend({
     represent: (value) => value.text
   }))
 });
-function keptKeysAsText(existing, keptKeys) {
+function keptKeysAsText(existing, keptKeys, parsed) {
   let loaded;
   try {
     loaded = load(existing, { schema: TEXT_KEEPING_SCHEMA });
@@ -54027,24 +54027,78 @@ function keptKeysAsText(existing, keptKeys) {
   if (!isPlainMapping(loaded))
     return void 0;
   const mapping = loaded;
-  if (!keptKeys.every((key) => Object.prototype.hasOwnProperty.call(mapping, key))) {
-    return void 0;
-  }
-  const withNulls = (value) => {
+  const hasOwn2 = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
+  const coreKey = (key, core10) => {
+    if (hasOwn2(core10, key))
+      return key;
+    let value;
+    try {
+      value = load(key, { schema: CORE_SCHEMA });
+    } catch {
+      return void 0;
+    }
+    if (value !== null && typeof value !== "boolean" && typeof value !== "number") {
+      return void 0;
+    }
+    return hasOwn2(core10, String(value)) ? String(value) : void 0;
+  };
+  let marker = "plain-key-";
+  while (existing.includes(marker))
+    marker += "x";
+  const keyTexts = [];
+  let failed = false;
+  const pairedMapping = (value, core10, keys2) => {
+    const out = /* @__PURE__ */ new Map();
+    const used = /* @__PURE__ */ new Set();
+    for (const key of keys2) {
+      const name = coreKey(key, core10);
+      if (name === void 0 || used.has(name)) {
+        failed = true;
+        continue;
+      }
+      used.add(name);
+      let written = key;
+      if (name !== key) {
+        keyTexts.push(key);
+        written = `${marker}${keyTexts.length - 1}${marker}`;
+      }
+      out.set(written, paired(value[key], core10[name]));
+    }
+    return definedCopy([...out.keys()], (key) => out.get(key));
+  };
+  const paired = (value, core10) => {
     if (value === null)
       return new PlainScalar("null");
-    if (Array.isArray(value))
-      return value.map(withNulls);
+    if (Array.isArray(value)) {
+      if (!Array.isArray(core10) || core10.length !== value.length) {
+        failed = true;
+        return value;
+      }
+      return value.map((item, index) => paired(item, core10[index]));
+    }
     if (isPlainMapping(value)) {
-      return definedCopy(Object.keys(value), (key) => withNulls(value[key]));
+      if (!isPlainMapping(core10)) {
+        failed = true;
+        return value;
+      }
+      return pairedMapping(value, core10, Object.keys(value));
     }
     return value;
   };
+  const keys = Object.keys(mapping).filter((key) => {
+    const name = coreKey(key, parsed);
+    return name === void 0 || !ENGINE_STATE_KEYS.has(name);
+  });
+  const kept = pairedMapping(mapping, parsed, keys);
+  if (failed || Object.keys(kept).length !== keptKeys.length)
+    return void 0;
+  let dumped;
   try {
-    return dump(definedCopy(keptKeys, (key) => withNulls(mapping[key])), { ...DUMP_OPTIONS, schema: TEXT_KEEPING_SCHEMA });
+    dumped = dump(kept, { ...DUMP_OPTIONS, schema: TEXT_KEEPING_SCHEMA });
   } catch {
     return void 0;
   }
+  return keyTexts.reduce((text, keyText, index) => text.split(`${marker}${index}${marker}`).join(keyText), dumped);
 }
 function keptKeyBlocks(text) {
   if (text.startsWith("\uFEFF") || text.includes("	"))
@@ -56764,10 +56818,11 @@ function rebaseFailureComment(input) {
     const one = added.length === 1;
     lines.push(`${listOf(added.map(deletedName))} ${one ? "is" : "are"} on \`main\` now but ${one ? "was" : "were"} not when this PR opened: a PR merged since added ${one ? "it" : "them"}, and this PR's source change adds ${one ? "it" : "them"} too, so the edition has two translations of ${one ? "it" : "each"}. The rebase does not choose between them, and changed neither. Decide which copy wins. To keep \`main\`'s, make ${one ? "the lecture and its state file" : "those lectures and their state files"} on this PR's branch match \`main\`, or close the PR if nothing else is left in it. To keep this PR's, resolve the conflict on its branch by hand, keeping the branch's copy. Until this PR merges or closes, a later rebase of it stops here again, whatever the branch's copy then holds: this PR's baseline lacks ${one ? "the lecture" : "them"}, and its branch has ${one ? "it" : "them"}.`, "");
   }
-  if (added.length > 0 && deleted.length === 0 && lectures.length === 0) {
+  const unread = input.unreadStates ?? [];
+  const failedReads = input.failedReads ?? [];
+  if (added.length > 0 && deleted.length === 0 && lectures.length === 0 && unread.length === 0 && failedReads.length === 0) {
     return lines.slice(0, -1).join("\n");
   }
-  const unread = input.unreadStates ?? [];
   if (unread.length > 0) {
     const one = unread.length === 1;
     lines.push(`The rebase stopped before the branch moved, and translated nothing: the read of ${one ? "the state file" : "each state file"} below answered something other than "not found", and the rebase keeps the keys a state file holds besides its own, so it does not write over a file it could not read. A failed read is transient more often than not: once it reads again, re-run the failed rebase workflow run, which rebuilds this PR on the current \`main\`.`, "", ...unread.map((lecture) => `- \`${lecture.file}\`: \`${lecture.statePath}\` (${lecture.status})`));
@@ -56775,7 +56830,6 @@ function rebaseFailureComment(input) {
       return lines.join("\n");
     lines.push("");
   }
-  const failedReads = input.failedReads ?? [];
   if (failedReads.length > 0) {
     const one = failedReads.length === 1;
     lines.push(`The rebase stopped before the branch moved, and translated nothing: ${one ? "the read below" : "each read below"} answered something other than "not found", and what the rebase does with the lecture depends on it. A failed read is transient more often than not: once it reads again, re-run the failed rebase workflow run, which rebuilds this PR on the current \`main\`.`, "", ...failedReads.map((read) => `- \`${read.file}\`: ${read.read} (${read.status})`));
@@ -59129,7 +59183,16 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
     }
   }
   if (fetchErrors.length > 0) {
-    throw new RebaseReadError(`content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join("; ")}`, deletedSinceOpened, addedOnMainSinceOpened, [], fetchErrors.length > failedReads.length, failedReads);
+    throw new RebaseReadError(
+      `content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join("; ")}`,
+      deletedSinceOpened,
+      addedOnMainSinceOpened,
+      [],
+      // A lecture deleted or added on `main` since the PR opened has advice
+      // of its own, so it is not one of the other errors.
+      fetchErrors.length > failedReads.length + deletedSinceOpened.length + addedOnMainSinceOpened.length,
+      failedReads
+    );
   }
   if (filesToSync.length === 0 && carried.length === 0) {
     core9.info(`PR #${pr.number}: No files to process after content fetch. Skipping.`);

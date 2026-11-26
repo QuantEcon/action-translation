@@ -733,7 +733,10 @@ async function rebaseSinglePR(
       deletedSinceOpened,
       addedOnMainSinceOpened,
       [],
-      fetchErrors.length > failedReads.length,
+      // A lecture deleted or added on `main` since the PR opened has advice
+      // of its own, so it is not one of the other errors.
+      fetchErrors.length >
+        failedReads.length + deletedSinceOpened.length + addedOnMainSinceOpened.length,
       failedReads
     );
   }

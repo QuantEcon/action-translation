@@ -495,12 +495,20 @@ export function rebaseFailureComment(input: RebaseFailureInput): string {
       ''
     );
   }
+  const unread = input.unreadStates ?? [];
+  const failedReads = input.failedReads ?? [];
   // A stop for two translations alone gets only its own advice: regenerating
-  // the lecture, or resyncing the source PR, would make a third.
-  if (added.length > 0 && deleted.length === 0 && lectures.length === 0) {
+  // the lecture, or resyncing the source PR, would make a third. A failed
+  // read beside it still gets the re-run advice below.
+  if (
+    added.length > 0 &&
+    deleted.length === 0 &&
+    lectures.length === 0 &&
+    unread.length === 0 &&
+    failedReads.length === 0
+  ) {
     return lines.slice(0, -1).join('\n');
   }
-  const unread = input.unreadStates ?? [];
   if (unread.length > 0) {
     const one = unread.length === 1;
     lines.push(
@@ -520,7 +528,6 @@ export function rebaseFailureComment(input: RebaseFailureInput): string {
     if (!input.otherErrors) return lines.join('\n');
     lines.push('');
   }
-  const failedReads = input.failedReads ?? [];
   if (failedReads.length > 0) {
     const one = failedReads.length === 1;
     lines.push(

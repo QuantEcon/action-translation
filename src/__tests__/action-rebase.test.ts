@@ -937,6 +937,44 @@ describe('rebase mode, a lecture main does not have (#389, #351)', () => {
     expect(log.comments[0].body).not.toContain('translate forward');
   });
 
+  it('for a deleted lecture beside a failed read on another, advises a re-run and not regeneration', () => {
+    const run = runRebase(
+      'deleted-and-failed-read',
+      rebaseScenario({
+        mergedPrFiles: [
+          { filename: 'lectures/_toc.yml', status: 'modified' },
+          { filename: 'lectures/x.md', status: 'removed' },
+        ],
+        openPulls: siblingWith([
+          { path: 'lectures/x.md', type: 'markdown' },
+          { path: 'lectures/y.md', type: 'markdown' },
+        ]),
+        source: {
+          ...base.source,
+          [`lectures/x.md@${SOURCE_SHA}`]: EN,
+          [`lectures/x.md@${SOURCE_SHA}^`]: EN_BEFORE,
+          [`lectures/y.md@${SOURCE_SHA}`]: EN,
+          [`lectures/y.md@${SOURCE_SHA}^`]: { status: 502 },
+        },
+        target: {
+          ...base.target,
+          [`lectures/x.md@${OLD_BASE}`]: ML,
+          [`lectures/x.md@${SIBLING_BRANCH}`]: ML_REVIEWED,
+          [`lectures/y.md@${BASE}`]: ML,
+        },
+      })
+    );
+    const log = checkedLog(run, 1);
+
+    expect(log.refUpdates).toEqual([]);
+    const { body } = log.comments[0];
+    expect(body).toContain('`lectures/x.md` is no longer on `main`');
+    expect(body).toContain('re-run the failed rebase workflow run');
+    // The deletion is not one of the other errors: no regeneration advice.
+    expect(body).not.toContain('Resolve the conflicts by hand');
+    expect(body).not.toContain('translate forward');
+  });
+
   it('updates a lecture main and the baseline both have, reading the baseline once for the plan and the cache', () => {
     const run = runRebase(
       'update-with-cache',

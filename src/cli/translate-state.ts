@@ -468,11 +468,12 @@ export interface MergedFileState {
  * kept key's value compared with the existing file's; when the text cannot
  * be split with confidence or that check fails, the kept keys are written out
  * again from a load that keeps each plain scalar's text (`keptKeysAsText`),
- * so no value is rewritten (`1234e56` stays `1234e56`), with a warning that
- * quoting, comments and layout may have changed. Only when that fails too
- * (a mapping key that reads as a number) are they dumped from their CORE
- * values, as `writeConfig` does, with a warning that number formatting may
- * have changed as well.
+ * so no value and no mapping key is rewritten (`1234e56` stays `1234e56`,
+ * and a key `0x1f` stays `0x1f`), with a warning that quoting, comments and
+ * layout may have changed. Only when that fails too (a key written both
+ * plain and quoted, `0x1f` and `"0x1f"`, which that load reads as one key
+ * twice) are they dumped from their CORE values, as `writeConfig` does, with
+ * a warning that number formatting may have changed as well.
  *
  * Unlike `writeConfig`, an existing file that is not a YAML mapping
  * (unparseable, a repeated key, a list or a scalar, or a value with an
@@ -550,7 +551,7 @@ export function mergeFileState(
   // `1234e56`, `0x1f` and `0123456` stay as written, where a dump of their
   // CORE values would give `1.234e+59`, `31` and `123456`, and an abbreviated
   // SHA is exactly such a value. Checked as the carried text is.
-  const asText = keptKeysAsText(existing, keptKeys);
+  const asText = keptKeysAsText(existing, keptKeys, parsed);
   if (asText !== undefined) {
     const merged = content + asText;
     if (keepsValues(merged, parsed, keptKeys, content)) {
@@ -564,7 +565,8 @@ export function mergeFileState(
     }
   }
 
-  // Last resort, as when a mapping key is a number: dumped from the values.
+  // Last resort, as when a key is written both plain and quoted (`0x1f` and
+  // `"0x1f"`): dumped from the values.
   return {
     content:
       content +
@@ -637,11 +639,21 @@ const TEXT_KEEPING_SCHEMA = yaml.FAILSAFE_SCHEMA.extend({
 });
 
 /**
- * The kept keys of `existing`, written with `TEXT_KEEPING_SCHEMA`; or
- * undefined when it does not load so as a mapping holding each of them (a
- * mapping key CORE_SCHEMA reads as a number, say).
+ * The kept keys of `existing` (`keptKeys`, as `parsed`, its CORE_SCHEMA load,
+ * names them), written with `TEXT_KEEPING_SCHEMA`; or undefined when it does
+ * not load so as a mapping holding each of them once.
+ *
+ * A mapping key, at any depth, loads here by its text (`0x1f`) but under
+ * CORE_SCHEMA by the string of its value (`31`). Each key is paired with its
+ * CORE name, and one whose text differs is dumped as a placeholder, which
+ * the dump writes plain, then replaced by its text: `0x1f: x` stays as
+ * written, as its value would.
  */
-function keptKeysAsText(existing: string, keptKeys: string[]): string | undefined {
+function keptKeysAsText(
+  existing: string,
+  keptKeys: string[],
+  parsed: Record<string, unknown>
+): string | undefined {
   let loaded: unknown;
   try {
     loaded = yaml.load(existing, { schema: TEXT_KEEPING_SCHEMA });
@@ -650,27 +662,94 @@ function keptKeysAsText(existing: string, keptKeys: string[]): string | undefine
   }
   if (!isPlainMapping(loaded)) return undefined;
   const mapping = loaded;
-  if (!keptKeys.every((key) => Object.prototype.hasOwnProperty.call(mapping, key))) {
-    return undefined;
-  }
-  // An empty value loads as null without a type; it is written `null`, as
-  // CORE_SCHEMA writes it.
-  const withNulls = (value: unknown): unknown => {
+
+  const hasOwn = (object: object, key: string) => Object.prototype.hasOwnProperty.call(object, key);
+  // The key of `core` that the key `key` loaded here names: the same string,
+  // or, for a plain key CORE_SCHEMA reads as a null, boolean or number, the
+  // string of that value.
+  const coreKey = (key: string, core: Record<string, unknown>): string | undefined => {
+    if (hasOwn(core, key)) return key;
+    let value: unknown;
+    try {
+      value = yaml.load(key, { schema: yaml.CORE_SCHEMA });
+    } catch {
+      return undefined;
+    }
+    if (value !== null && typeof value !== 'boolean' && typeof value !== 'number') {
+      return undefined;
+    }
+    return hasOwn(core, String(value)) ? String(value) : undefined;
+  };
+
+  // The placeholder cannot occur in the file, so it cannot occur in the dump
+  // except where it was put; the trailing marker keeps `…1…` out of `…10…`.
+  let marker = 'plain-key-';
+  while (existing.includes(marker)) marker += 'x';
+  const keyTexts: string[] = [];
+  let failed = false;
+
+  const pairedMapping = (
+    value: Record<string, unknown>,
+    core: Record<string, unknown>,
+    keys: string[]
+  ): Record<string, unknown> => {
+    const out = new Map<string, unknown>();
+    const used = new Set<string>();
+    for (const key of keys) {
+      const name = coreKey(key, core);
+      if (name === undefined || used.has(name)) {
+        failed = true;
+        continue;
+      }
+      used.add(name);
+      let written = key;
+      if (name !== key) {
+        keyTexts.push(key);
+        written = `${marker}${keyTexts.length - 1}${marker}`;
+      }
+      out.set(written, paired(value[key], core[name]));
+    }
+    return definedCopy([...out.keys()], (key) => out.get(key));
+  };
+  const paired = (value: unknown, core: unknown): unknown => {
+    // An empty value loads as null without a type; it is written `null`, as
+    // CORE_SCHEMA writes it.
     if (value === null) return new PlainScalar('null');
-    if (Array.isArray(value)) return value.map(withNulls);
+    if (Array.isArray(value)) {
+      if (!Array.isArray(core) || core.length !== value.length) {
+        failed = true;
+        return value;
+      }
+      return value.map((item, index) => paired(item, core[index]));
+    }
     if (isPlainMapping(value)) {
-      return definedCopy(Object.keys(value), (key) => withNulls(value[key]));
+      if (!isPlainMapping(core)) {
+        failed = true;
+        return value;
+      }
+      return pairedMapping(value, core, Object.keys(value));
     }
     return value;
   };
+
+  // The engine's keys are left out by the name CORE_SCHEMA gives them.
+  const keys = Object.keys(mapping).filter((key) => {
+    const name = coreKey(key, parsed);
+    return name === undefined || !ENGINE_STATE_KEYS.has(name);
+  });
+  const kept = pairedMapping(mapping, parsed, keys);
+  if (failed || Object.keys(kept).length !== keptKeys.length) return undefined;
+
+  let dumped: string;
   try {
-    return yaml.dump(
-      definedCopy(keptKeys, (key) => withNulls(mapping[key])),
-      { ...DUMP_OPTIONS, schema: TEXT_KEEPING_SCHEMA }
-    );
+    dumped = yaml.dump(kept, { ...DUMP_OPTIONS, schema: TEXT_KEEPING_SCHEMA });
   } catch {
     return undefined;
   }
+  return keyTexts.reduce(
+    (text, keyText, index) => text.split(`${marker}${index}${marker}`).join(keyText),
+    dumped
+  );
 }
 
 /**

@@ -563,6 +563,24 @@ describe('rebase-failure comment (#281)', () => {
     expect(comment).toContain('Resolve the conflicts by hand');
   });
 
+  it('for lectures main got first beside a failed read on another lecture, keeps the re-run advice', () => {
+    const comment = rebaseFailureComment({
+      ...input,
+      metadata: metadata(1101),
+      addedOnMainSinceOpened: [
+        { editionPath: 'lectures/a.md', path: 'lectures/a.md' },
+        { editionPath: 'lectures/sub/b.md', path: 'lectures/sub/b.md' },
+      ],
+      failedReads: [{ file: 'lectures/c.md', read: 'lectures/c.md on b', status: 's' }],
+    });
+    expect(comment).toContain('Decide which copy wins.');
+    expect(comment).toContain('re-run the failed rebase workflow run');
+    expect(comment).toContain('- `lectures/c.md`: lectures/c.md on b (s)');
+    // Still no regeneration or resync, which would make a third translation.
+    expect(comment).not.toContain('translate forward');
+    expect(comment).not.toContain('translate-resync');
+  });
+
   it('for a lecture main got first beside a deleted one, keeps the general advice', () => {
     const comment = rebaseFailureComment({
       ...input,

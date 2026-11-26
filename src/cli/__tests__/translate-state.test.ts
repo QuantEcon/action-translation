@@ -907,9 +907,87 @@ describe('a state file keeps the keys the engine does not own (#290)', () => {
       expect(again.content).toBe(merged.content);
     });
 
-    it('dumps the values as a last resort when a kept mapping key reads as a number', () => {
+    // A mapping key CORE_SCHEMA reads as a number (`0x1f`, which it names
+    // `31`) is written back as its text too. This file reached the last-resort
+    // dump, and came back as `"31": x` and `signed-off-sha: 1.234e+59`.
+    it.each([
+      ['a tab', (body: string) => `source-sha: abc\n${body}note: "a${TAB}b"\n`],
+      ['a byte-order mark', (body: string) => `\u{feff}source-sha: abc\n${body}`],
+      ['a document-end marker', (body: string) => `source-sha: abc\n${body}...\n`],
+      ['a %YAML directive', (body: string) => `%YAML 1.2\n---\nsource-sha: abc\n${body}`],
+      ['CR-only line endings', (body: string) => `source-sha: abc\n${body}`.replace(/\n/g, '\r')],
+      [
+        'indented top-level keys',
+        (body: string) => `  source-sha: abc\n${body.replace(/^/gm, '  ')}`,
+      ],
+    ])('keeps a mapping key that reads as a number as written, beside %s', (_what, make) => {
+      const existing = make('signed-off-sha: 1234e56\n0x1f: x\n');
+      const merged = mergeFileState(existing, withVersion, 'x');
+      expect(merged.warning).toBe(fallbackWarning);
+      expect(kept(existing)).toContain('signed-off-sha: 1234e56\n');
+      expect(kept(existing)).toContain('0x1f: x\n');
+      expect(merged.content).not.toContain('"31"');
+      // Loaded again, the same keys and values as the original.
+      const original = yaml.load(existing, { schema: yaml.CORE_SCHEMA }) as Record<string, unknown>;
+      const loaded = yaml.load(merged.content, { schema: yaml.CORE_SCHEMA }) as Record<
+        string,
+        unknown
+      >;
+      expect(loaded['31']).toBe('x');
+      expect(loaded['signed-off-sha']).toEqual(original['signed-off-sha']);
+      // Idempotent: the output carries as text on the next write.
+      const again = mergeFileState(merged.content, withVersion, 'x');
+      expect(again.warning).toBeUndefined();
+      expect(again.content).toBe(merged.content);
+    });
+
+    // A key whose text is already the name CORE_SCHEMA gives it (`true`, `-1`)
+    // cannot be told from the same key quoted, so it is written quoted: the
+    // key is the same, only its quoting changes.
+    it('keeps null, boolean, float and nested numeric keys as their text', () => {
+      const existing = [
+        '\u{feff}source-sha: abc',
+        '~: tilde',
+        'true: yes-key',
+        '.inf: big',
+        '-1: minus',
+        'reviewed:',
+        '  0o17: octal',
+        '  by:',
+        '    - {0x2a: hex, sha: 0123456}',
+        '',
+      ].join('\n');
+      const merged = mergeFileState(existing, withVersion, 'x');
+      expect(merged.warning).toBe(fallbackWarning);
+      expect(kept(existing)).toBe(
+        [
+          '~: tilde',
+          '"true": yes-key',
+          '.inf: big',
+          '"-1": minus',
+          'reviewed:',
+          '  0o17: octal',
+          '  by:',
+          '    - 0x2a: hex',
+          '      sha: 0123456',
+          '',
+        ].join('\n')
+      );
+      const original = yaml.load(existing, { schema: yaml.CORE_SCHEMA }) as Record<string, unknown>;
+      const loaded = yaml.load(merged.content, { schema: yaml.CORE_SCHEMA }) as Record<
+        string,
+        unknown
+      >;
+      for (const key of Object.keys(original).filter((k) => k !== 'source-sha')) {
+        expect(loaded[key]).toEqual(original[key]);
+      }
+    });
+
+    it('dumps the values as a last resort when a key is written both plain and quoted', () => {
+      // CORE_SCHEMA reads `0x2a` as `42` and `"0x2a"` as itself, two keys; the
+      // text-keeping load reads both as `0x2a`, one key twice.
       const merged = mergeFileState(
-        `source-sha: abc\nnote: "a${TAB}b"\n0x2a: x\n`,
+        `source-sha: abc\nnote: "a${TAB}b"\n0x2a: x\n"0x2a": other\n`,
         withVersion,
         'x'
       );
@@ -919,6 +997,7 @@ describe('a state file keeps the keys the engine does not own (#290)', () => {
           'and number formatting may have changed'
       );
       expect(merged.content).toContain('"42": x\n');
+      expect(merged.content).toContain('"0x2a": other\n');
     });
   });
 

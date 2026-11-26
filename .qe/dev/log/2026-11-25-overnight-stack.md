@@ -142,3 +142,13 @@ and applied in one new commit per branch (no commit rewritten), then the stack w
   (the plan reads the parent at the old path; #478 unchanged); the state-file fallback keeps
   each value's text (`1234e56` stays) and names an unsupported tag; failed plan reads advise a
   re-run; records for #290 (one question open) and #223. Left: a way out of the stop (follow-up).
+
+A re-check of #475 and #476 on 2026-11-26 brought two rulings, applied in one more commit on each:
+
+- #475: a reply that is valid JSON but not an object is a parse failure, as built (Matt): it
+  retries and, in the diff evaluation, degrades; tests, changelog, contract and record say so.
+- #476: a rebase keeps the default branch's keys, as built (Matt): a sign-off arrives by its own
+  follow-up PR after the sync PR merges; the record marks the question ruled. Also fixed: a
+  numeric mapping key keeps its text on the state-file fallback, and two rebase-advice nits.
+- #471 to #474 went to the merge coordinator as an ordered batch; push nothing to them from here.
+- Still open: Matt's own yes on narrowing #467.
