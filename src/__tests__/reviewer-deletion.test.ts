@@ -782,7 +782,10 @@ describe('reviewPR moves a finding that quotes another file of the PR (#223)', (
     category: 'accuracy',
     file: A,
     location: '## 介绍',
-    description: '“每个年轻人计算”不够精确。',
+    // Two quotes, both in B, as in the issue's finding.
+    description:
+      '\u{201c}per young person\u{201d}\u{7ffb}\u{8bd1}\u{4e3a}\u{201c}\u{6bcf}\u{4e2a}' +
+      '\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}\u{201d}\u{4e0d}\u{591f}\u{7cbe}\u{786e}\u{3002}',
     suggestion: '以每个年轻人为单位衡量',
   };
   const twoFiles = (over: Partial<Harness> = {}): Harness => ({
@@ -817,7 +820,9 @@ describe('reviewPR moves a finding that quotes another file of the PR (#223)', (
         suggestion: FINDING.suggestion,
       },
     ]);
-    expect(result.reviewComment).toContain(`**[minor · accuracy]** ${B}: “每个年轻人计算”`);
+    expect(result.reviewComment).toContain(
+      `**[minor \u{b7} accuracy]** ${B}: \u{201c}per young person\u{201d}`
+    );
     expect(result.reviewComment).not.toContain(`${A} — ## 介绍`);
     expect(logged()).toContain(
       `Finding 0 re-attributed from ${A} to ${B}: its quotes are in ${B} and not in ${A} (#223)`
@@ -842,5 +847,47 @@ describe('reviewPR moves a finding that quotes another file of the PR (#223)', (
       location: '## 介绍',
     });
     expect(logged()).not.toContain('re-attributed');
+  });
+
+  it('leaves it when a reviewed file has no text this run holds, which its quotes may be from', async () => {
+    // C is reviewed, but neither repository serves it after the PR, so the
+    // review holds no text of it.
+    const C = 'lectures/c.md';
+    const rec = newRecorder();
+    const result = await run(
+      makeReviewer(
+        twoFiles({
+          targetFiles: [modified(A), modified(B), modified(C)],
+          sourceFiles: [modified(A), modified(B), modified(C)],
+        }),
+        rec
+      )
+    );
+
+    expect(parseReviewVerdict(result.reviewComment)?.findings[0]).toMatchObject({ file: A });
+    expect(logged()).not.toContain('re-attributed');
+  });
+
+  it("searches each file's translation before the PR too", async () => {
+    // The PR replaced the text the finding quotes in B: only B's base holds it.
+    const rec = newRecorder();
+    const result = await run(
+      makeReviewer(
+        twoFiles({
+          sourceContent: { [A]: SOURCE_INTRO, [B]: '# Money\n\nThe deficit.\n' },
+          targetHeadContent: { [A]: TARGET_INTRO_AFTER, [B]: '# \u{8d27}\u{5e01}\n' },
+          targetBaseContent: {
+            [A]: TARGET_INTRO_BEFORE,
+            [B]: B_TARGET + 'per young person\n',
+          },
+        }),
+        rec
+      )
+    );
+
+    expect(parseReviewVerdict(result.reviewComment)?.findings[0]).toMatchObject({
+      file: B,
+      location: null,
+    });
   });
 });

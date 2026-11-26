@@ -56980,52 +56980,92 @@ function sortAndCapFindings(findings) {
   return [...findings].sort((a, b) => severityRank(a.severity) - severityRank(b.severity)).slice(0, MAX_FINDINGS);
 }
 var MIN_QUOTED_SPAN = 6;
+var STRONG_QUOTED_SPAN = 20;
 var QUOTED_SPAN_PATTERNS = [
   /`([^`\n]+)`/g,
-  /"([^"\n]+)"/g,
-  /“([^”\n]+)”/g,
-  /‘([^’\n]+)’/g,
-  /「([^」\n]+)」/g,
-  /『([^』\n]+)』/g,
-  /«([^»\n]+)»/g,
-  /‹([^›\n]+)›/g,
+  /(?<![\p{L}\p{N}])"(?=\S)([^"\n]+)(?<=\S)"(?![\p{L}\p{N}])/gu,
+  /\u{201c}([^\u{201d}\n]+)\u{201d}/gu,
+  /(?<![\p{L}\p{N}])\u{2018}([^\u{2018}\n]+)\u{2019}(?![\p{L}\p{N}])/gu,
+  /\u{300c}([^\u{300d}\n]+)\u{300d}/gu,
+  /\u{300e}([^\u{300f}\n]+)\u{300f}/gu,
+  /\u{ab}([^\u{bb}\n]+)\u{bb}/gu,
+  /\u{2039}([^\u{203a}\n]+)\u{203a}/gu,
   /(?<![\p{L}\p{N}])'([^'\n]+)'(?![\p{L}\p{N}])/gu
 ];
-var NARROW_AND_NO_BREAK_SPACES = new RegExp(`[${String.fromCharCode(160, 8239)}]`, "g");
+var CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
 function normalizeForAttribution(text) {
-  return text.replace(NARROW_AND_NO_BREAK_SPACES, " ").replace(/[‘’]/g, "'").replace(/\s+/g, " ").trim().toLowerCase();
+  return text.normalize("NFKC").replace(/\{[A-Za-z][\w.:+-]*\}(?=`)/g, "").replace(/[`*]/g, "").replace(/(?<![\p{L}\p{N}])_+|_+(?![\p{L}\p{N}])/gu, "").replace(/[\u{2018}\u{2019}]/gu, "'").replace(/\s+/g, " ").trim().toLowerCase();
+}
+function withoutSpaces(normalized) {
+  return normalized.replace(/\s+/g, "");
 }
 function quotedSpans(text) {
   const spans = /* @__PURE__ */ new Set();
   for (const pattern of QUOTED_SPAN_PATTERNS) {
     for (const match of text.matchAll(pattern)) {
-      const span = match[1].trim();
+      const span = normalizeForAttribution(match[1]);
       if ([...span].length < MIN_QUOTED_SPAN)
         continue;
-      spans.add(normalizeForAttribution(span));
+      spans.add(span);
     }
   }
   return [...spans];
 }
 function reattributeFindings(findings, files) {
-  const texts = new Map(files.map((file) => [file.filename, file.texts.map(normalizeForAttribution)]));
-  const holds = (filename, span) => (texts.get(filename) ?? []).some((text) => text.includes(span));
+  const texts = new Map(files.map((file) => {
+    const spaced = [...file.sources, ...file.targets].map(normalizeForAttribution);
+    return [
+      file.filename,
+      {
+        spaced,
+        unspaced: spaced.map(withoutSpaces),
+        bothSides: file.sources.length > 0 && file.targets.length > 0
+      }
+    ];
+  }));
+  const holds = (filename, span) => {
+    const file = texts.get(filename);
+    if (!file)
+      return false;
+    return CJK.test(span) ? file.unspaced.some((text) => text.includes(withoutSpaces(span))) : file.spaced.some((text) => text.includes(span));
+  };
+  const namedHolds = (filename, span) => holds(filename, span) || (texts.get(filename)?.unspaced ?? []).some((text) => text.includes(withoutSpaces(span)));
   const reattributed = [];
   const result = findings.map((finding, index) => {
     const named = finding.file;
-    if (named === null || !texts.has(named))
+    if (named === null || !texts.get(named)?.bothSides)
       return finding;
-    const spans = quotedSpans(`${finding.description}
-${finding.suggestion ?? ""}`);
+    const spans = quotedSpans(finding.description);
     if (spans.length === 0)
       return finding;
-    if (spans.some((span) => holds(named, span)))
+    if (spans.some((span) => namedHolds(named, span)))
       return finding;
-    const others = [...texts.keys()].filter((filename) => filename !== named && spans.some((span) => holds(filename, span)));
-    if (others.length !== 1)
+    const others = [...texts.keys()].filter((filename) => filename !== named);
+    const found = [];
+    let nowhere = 0;
+    let destination;
+    for (const span of spans) {
+      const holders = others.filter((filename) => holds(filename, span));
+      if (holders.length === 0) {
+        nowhere++;
+        continue;
+      }
+      if (holders.length > 1)
+        return finding;
+      if (destination !== void 0 && destination !== holders[0])
+        return finding;
+      destination = holders[0];
+      found.push(span);
+    }
+    if (destination === void 0)
       return finding;
-    reattributed.push({ index, from: named, to: others[0] });
-    return { ...finding, file: others[0], location: null };
+    const strong = found.length >= 2 || [...found[0]].length >= STRONG_QUOTED_SPAN;
+    if (!strong)
+      return finding;
+    if (nowhere > 1 || nowhere === 1 && found.length < 2)
+      return finding;
+    reattributed.push({ index, from: named, to: destination });
+    return { ...finding, file: destination, location: null };
   });
   return { findings: result, reattributed };
 }
@@ -57756,12 +57796,8 @@ var TranslationReviewer = class {
     const evaluatedQuality = await this.evaluateTranslation(sourceEnglish, targetTranslation, changedSections, reviewableFilenames, glossaryTerms, targetLanguage);
     const translationQuality = this.attributeFindings(evaluatedQuality, reviewableFilenames, [...filePairs.entries()].map(([filename, pair]) => ({
       filename,
-      texts: [
-        pair.source,
-        pair.target,
-        sourceBeforeMap.get(filename),
-        targetBeforeByFile.get(filename)
-      ].filter((text) => text !== void 0)
+      sources: [pair.source, sourceBeforeMap.get(filename)].filter((text) => text !== void 0),
+      targets: [pair.target, targetBeforeByFile.get(filename)].filter((text) => text !== void 0)
     })));
     let diffQuality;
     let diffUnparseable = false;
@@ -58081,7 +58117,7 @@ Every file removed here is also deleted by source PR #${sourcePrNumber}, so the 
   attributeFindings(quality, reviewedFilenames, files) {
     if (reviewedFilenames.length < 2)
       return quality;
-    const held = new Set(files.filter((f) => f.texts.length > 0).map((f) => f.filename));
+    const held = new Set(files.filter((f) => f.sources.length + f.targets.length > 0).map((f) => f.filename));
     if (!reviewedFilenames.every((filename) => held.has(filename)))
       return quality;
     const { findings, reattributed } = reattributeFindings(quality.findings, files);

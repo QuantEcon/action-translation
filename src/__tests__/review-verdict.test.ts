@@ -419,8 +419,8 @@ describe('reattributeFindings (#223)', () => {
     '按照 {cite:t}`Sargent1993` 的做法，我们研究两个仅在政府支出过程上有所不同的经济体，' +
     '其中 $w_1 = 20$，$w_2 = 10$，$N = 1$，因此 $\\bar G$ 是以每个年轻人计算的。\n';
   const files = [
-    { filename: KESTEN, texts: [KESTEN_EN, KESTEN_ZH] },
-    { filename: OLG, texts: [OLG_EN, OLG_ZH] },
+    { filename: KESTEN, sources: [KESTEN_EN], targets: [KESTEN_ZH] },
+    { filename: OLG, sources: [OLG_EN], targets: [OLG_ZH] },
   ];
   const AS_EMITTED: ReviewFinding = {
     severity: 'minor',
@@ -476,11 +476,12 @@ describe('reattributeFindings (#223)', () => {
   describe('a string common to several lectures moves nothing', () => {
     const third = {
       filename: 'lectures/wealth_dynamics.md',
-      texts: ['# Wealth Dynamics\n\n## Exercises\n\nUse `np.linspace` here.\n', '## 练习\n'],
+      sources: ['# Wealth Dynamics\n\n## Exercises\n\nUse `np.linspace` here.\n'],
+      targets: ['## \u{7ec3}\u{4e60}\n'],
     };
     const withThird = [
-      { filename: KESTEN, texts: [KESTEN_EN, KESTEN_ZH + 'Call `np.linspace`.\n'] },
-      { filename: OLG, texts: [OLG_EN + 'Use `np.linspace`.\n', OLG_ZH] },
+      { filename: KESTEN, sources: [KESTEN_EN], targets: [KESTEN_ZH + 'Call `np.linspace`.\n'] },
+      { filename: OLG, sources: [OLG_EN + 'Use `np.linspace`.\n'], targets: [OLG_ZH] },
       third,
     ];
 
@@ -496,8 +497,8 @@ describe('reattributeFindings (#223)', () => {
       // Named to a file without it; OLG and the third lecture both have it.
       const f = about(KESTEN, 'The heading "Exercises" should read 习题.');
       const noExercises = [
-        { filename: KESTEN, texts: ['# Kesten\n', '# Kesten过程\n'] },
-        { filename: OLG, texts: [OLG_EN, OLG_ZH] },
+        { filename: KESTEN, sources: ['# Kesten\n'], targets: ['# Kesten\u{8fc7}\u{7a0b}\n'] },
+        files[1],
         third,
       ];
       expect(reattributeFindings([f], noExercises).reattributed).toEqual([]);
@@ -532,30 +533,265 @@ describe('reattributeFindings (#223)', () => {
     expect(reattributeFindings([none, other], files).findings).toEqual([none, other]);
   });
 
-  it('reads quotes from the suggestion too', () => {
-    const f = about(KESTEN, 'Unclear unit.', { suggestion: 'Keep “每个年轻人计算”, add a unit.' });
-    expect(reattributeFindings([f], files).findings[0].file).toBe(OLG);
+  it('never reads quotes from the suggestion, which proposes text rather than quoting it', () => {
+    // The suggestion names OLG's text twice; the description quotes nothing.
+    const f = about(KESTEN, 'Unclear unit.', {
+      suggestion:
+        'Keep \u{201c}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}\u{201d} and \u{201c}measured per young person\u{201d}.',
+    });
+    expect(reattributeFindings([f], files).reattributed).toEqual([]);
   });
 
   it.each([
-    ['backticks', '`以每个年轻人计算`'],
-    ['straight double quotes', '"以每个年轻人计算"'],
-    ['straight single quotes', "the phrase 'measured per young person' is"],
-    ['curly single quotes', '‘measured per young person’'],
-    ['CJK corner brackets', '「以每个年轻人计算」'],
-    ['CJK white corner brackets', '『以每个年轻人计算』'],
-    ['guillemets', '« measured per young person »'],
-    ['single guillemets', '‹measured per young person›'],
-  ])('takes a quote in %s', (_what, description) => {
-    expect(reattributeFindings([about(KESTEN, description)], files).findings[0].file).toBe(OLG);
+    [
+      'backticks',
+      '`\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}`',
+      '\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}',
+    ],
+    ['straight double quotes', 'the "measured per young person" part', 'measured per young person'],
+    [
+      'straight single quotes',
+      "the phrase 'measured per young person' is",
+      'measured per young person',
+    ],
+    [
+      'curly double quotes',
+      '\u{201c}\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}\u{201d}',
+      '\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}',
+    ],
+    [
+      'curly single quotes',
+      '\u{2018}measured per young person\u{2019}',
+      'measured per young person',
+    ],
+    [
+      'CJK corner brackets',
+      '\u{300c}\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}\u{300d}',
+      '\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}',
+    ],
+    [
+      'CJK white corner brackets',
+      '\u{300e}\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}\u{300f}',
+      '\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}',
+    ],
+    ['guillemets', '\u{ab} measured per young person \u{bb}', 'measured per young person'],
+    ['single guillemets', '\u{2039}measured per young person\u{203a}', 'measured per young person'],
+  ])('takes a quote in %s', (_what, description, span) => {
+    expect(quotedSpans(description)).toEqual([span]);
+  });
+
+  it('moves a finding on two quotes in another file, or one of 20 characters or more', () => {
+    const two = about(
+      KESTEN,
+      '\u{201c}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}\u{201d} and \u{201c}\u{653f}\u{5e9c}\u{652f}\u{51fa}\u{8fc7}\u{7a0b}\u{201d} are off.'
+    );
+    expect(reattributeFindings([two], files).findings[0].file).toBe(OLG);
+    // 25 characters, alone.
+    const long = about(
+      KESTEN,
+      'The phrase \u{201c}measured per young person\u{201d} is mistranslated.'
+    );
+    expect(reattributeFindings([long], files).findings[0].file).toBe(OLG);
+  });
+
+  it('leaves a finding on one short quote in another file', () => {
+    // Seven characters, alone: too little to go on.
+    const f = about(
+      KESTEN,
+      '\u{201c}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}\u{201d}\u{4e0d}\u{591f}\u{7cbe}\u{786e}\u{3002}'
+    );
+    expect(reattributeFindings([f], files).reattributed).toEqual([]);
+  });
+
+  it('leaves a finding one of whose quotes is found nowhere, beside one found elsewhere', () => {
+    // The review's case: the faulty text, quoted in a form no file holds, and
+    // the standard phrase it should be, which another file has.
+    const f = about(
+      KESTEN,
+      '\u{201c}Gibrat \u{6bd4}\u{4f8b} \u{589e}\u{957f}\u{7684}\u{5b9a}\u{5f8b}\u{201d} should be \u{201c}measured per young person\u{201d}, as elsewhere.'
+    );
+    expect(reattributeFindings([f], files).reattributed).toEqual([]);
+    // Two found nowhere beside two found: still left.
+    const g = about(
+      KESTEN,
+      '\u{201c}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}\u{201d} and \u{201c}\u{653f}\u{5e9c}\u{652f}\u{51fa}\u{8fc7}\u{7a0b}\u{201d} should read \u{201c}\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{4e3a}\u{5355}\u{4f4d}\u{8861}\u{91cf}\u{201d} and \u{201c}\u{653f}\u{5e9c}\u{5f00}\u{652f}\u{7684}\u{8fc7}\u{7a0b}\u{201d}.'
+    );
+    expect(reattributeFindings([g], files).reattributed).toEqual([]);
+  });
+
+  it('leaves a finding whose named file lacks an English or a translated text', () => {
+    const f = about(
+      KESTEN,
+      '\u{201c}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}\u{201d} and \u{201c}\u{653f}\u{5e9c}\u{652f}\u{51fa}\u{8fc7}\u{7a0b}\u{201d} are off.'
+    );
+    for (const named of [
+      { filename: KESTEN, sources: [], targets: [KESTEN_ZH] },
+      { filename: KESTEN, sources: [KESTEN_EN], targets: [] },
+    ]) {
+      expect(reattributeFindings([f], [named, files[1]]).reattributed).toEqual([]);
+    }
+  });
+
+  describe('what the review found moved a correct finding, moves nothing now', () => {
+    // A file of the PR with a glossary term and a stock phrase the named
+    // file lacks.
+    const OTHER = 'lectures/other.md';
+    const other = {
+      filename: OTHER,
+      sources: ['The household maximizes expected utility subject to the budget constraint.\n'],
+      targets: [
+        '\u{5bb6}\u{5ead}\u{5728}\u{9884}\u{7b97}\u{7ea6}\u{675f}\u{4e0b}\u{6700}\u{5927}\u{5316}\u{671f}\u{671b}\u{6548}\u{7528}\u{3002}\n',
+      ],
+    };
+    const withOther = [files[0], other];
+
+    it.each([
+      [
+        'a glossary term the named file lacks',
+        'Use the glossary form \u{201c}\u{671f}\u{671b}\u{6548}\u{7528}\u{201d} here.',
+      ],
+      [
+        'an English glossary term the named file lacks',
+        'Write \u{201c}expected utility\u{201d} throughout.',
+      ],
+      ['a short phrase from another file', 'The series says \u{201c}budget constraint\u{201d}.'],
+      ['a suggested replacement, in the suggestion only', 'The wording is off.'],
+    ])('%s', (_what, description) => {
+      const f = about(KESTEN, description, {
+        suggestion:
+          '\u{6539}\u{4e3a}\u{201c}\u{5728}\u{9884}\u{7b97}\u{7ea6}\u{675f}\u{4e0b}\u{6700}\u{5927}\u{5316}\u{671f}\u{671b}\u{6548}\u{7528}\u{201d}',
+      });
+      expect(reattributeFindings([f], withOther).reattributed).toEqual([]);
+    });
+  });
+
+  describe('CJK text the named file holds in another form keeps the finding there', () => {
+    const A = 'a.md';
+    const B = 'b.md';
+    /** Named to A, whose translation is `a`; B's translation is `b`. */
+    const stays = (a: string, b: string, description: string) => {
+      const f = about(A, description);
+      const pair = [
+        { filename: A, sources: ['# A\n'], targets: [a] },
+        { filename: B, sources: ['# B\n'], targets: [b] },
+      ];
+      expect(reattributeFindings([f], pair).reattributed).toEqual([]);
+    };
+
+    it('emphasis markers inside the phrase', () => {
+      // Each case's second quote is in the other file alone, so only the
+      // comparison of the first keeps the finding where it is.
+      stays(
+        '\u{6211}\u{4eec}\u{4f7f}\u{7528}**\u{52a8}\u{6001}\u{89c4}\u{5212}**\u{65b9}\u{6cd5}\u{6c42}\u{89e3}\u{8be5}\u{95ee}\u{9898}\u{3002}',
+        '\u{53e6}\u{4e00}\u{8bb2}\u{4e5f}\u{63d0}\u{5230}\u{52a8}\u{6001}\u{89c4}\u{5212}\u{65b9}\u{6cd5}\u{6c42}\u{89e3}\u{3002}\u{53e6}\u{4e00}\u{8bb2}\u{7684}\u{7ed3}\u{8bba}\u{90e8}\u{5206}',
+        '\u{201c}\u{52a8}\u{6001}\u{89c4}\u{5212}\u{65b9}\u{6cd5}\u{6c42}\u{89e3}\u{201d}\u{8868}\u{8ff0}\u{4e0d}\u{51c6}\u{786e}\u{ff0c}\u{89c1}\u{201c}\u{53e6}\u{4e00}\u{8bb2}\u{7684}\u{7ed3}\u{8bba}\u{90e8}\u{5206}\u{201d}'
+      );
+    });
+
+    it('a hard-wrapped line', () => {
+      stays(
+        '\u{56e0}\u{6b64} $\\bar G$ \u{662f}\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\n\u{4eba}\u{8ba1}\u{7b97}\u{7684}\u{3002}',
+        '\u{8fd9}\u{91cc}\u{7684}\u{8d64}\u{5b57}\u{662f}\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}\u{7684}\u{3002}',
+        '\u{201c}\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}\u{7684}\u{201d}\u{4e0e}\u{201c}\u{8fd9}\u{91cc}\u{7684}\u{8d64}\u{5b57}\u{662f}\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}\u{7684}\u{201d}\u{4e0d}\u{591f}\u{7cbe}\u{786e}'
+      );
+    });
+
+    it('full-width against half-width punctuation', () => {
+      // One quote of 20 characters or more, which could move it alone.
+      stays(
+        '\u{5176}\u{4e2d} w_1 = 20\u{ff0c}w_2 = 10\u{ff0c}N = 1 \u{65f6}\u{6210}\u{7acb}',
+        '\u{5176}\u{4e2d} w_1 = 20, w_2 = 10, N = 1 \u{65f6}\u{6210}\u{7acb}',
+        '\u{201c}w_1 = 20, w_2 = 10, N = 1 \u{65f6}\u{6210}\u{7acb}\u{201d}\u{5904}\u{6807}\u{70b9}\u{5e94}\u{7edf}\u{4e00}'
+      );
+    });
+
+    it('full-width Latin letters', () => {
+      stays(
+        '\u{4f7f}\u{7528}\u{ff30}\u{ff59}\u{ff54}\u{ff48}\u{ff4f}\u{ff4e}\u{8bed}\u{8a00}\u{8fdb}\u{884c}\u{7f16}\u{7a0b}',
+        '\u{4f7f}\u{7528}Python\u{8bed}\u{8a00}\u{8fdb}\u{884c}\u{7f16}\u{7a0b}\u{3002}\u{53e6}\u{89c1}\u{7b2c}\u{4e8c}\u{8bb2}\u{7684}\u{7ec3}\u{4e60}\u{90e8}\u{5206}',
+        '\u{201c}\u{4f7f}\u{7528}Python\u{8bed}\u{8a00}\u{201d}\u{5e94}\u{4fdd}\u{7559}\u{82f1}\u{6587}\u{ff0c}\u{89c1}\u{201c}\u{53e6}\u{89c1}\u{7b2c}\u{4e8c}\u{8bb2}\u{7684}\u{7ec3}\u{4e60}\u{90e8}\u{5206}\u{201d}'
+      );
+    });
+
+    it('a MyST role around the phrase', () => {
+      stays(
+        '\u{53c2}\u{89c1} {doc}`\u{52a8}\u{6001}\u{89c4}\u{5212}\u{5bfc}\u{8bba} <dp_intro>` \u{4e00}\u{8bb2}\u{7684}\u{5185}\u{5bb9}',
+        '\u{53c2}\u{89c1}\u{52a8}\u{6001}\u{89c4}\u{5212}\u{5bfc}\u{8bba}\u{4e00}\u{8bb2}\u{7684}\u{5185}\u{5bb9}\u{3002}\u{672c}\u{8bb2}\u{7684}\u{5176}\u{4f59}\u{90e8}\u{5206}',
+        '\u{201c}\u{53c2}\u{89c1}\u{52a8}\u{6001}\u{89c4}\u{5212}\u{5bfc}\u{8bba}\u{201d}\u{94fe}\u{63a5}\u{6587}\u{5b57}\u{6709}\u{8bef}\u{ff0c}\u{89c1}\u{201c}\u{672c}\u{8bb2}\u{7684}\u{5176}\u{4f59}\u{90e8}\u{5206}\u{201d}'
+      );
+    });
+
+    it('a suggested replacement the other file holds', () => {
+      const f = about(A, '\u{8bd1}\u{6587}\u{4e0d}\u{591f}\u{7cbe}\u{786e}', {
+        suggestion:
+          '\u{6539}\u{4e3a}\u{201c}\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{4e3a}\u{5355}\u{4f4d}\u{8861}\u{91cf}\u{201d}',
+      });
+      const pair = [
+        {
+          filename: A,
+          sources: ['# A\n'],
+          targets: [
+            '\u{653f}\u{5e9c}\u{7684}\u{8d64}\u{5b57}\u{6309}\u{4eba}\u{5934}\u{8ba1}\u{7b97}\u{5f97}\u{51fa}\u{3002}',
+          ],
+        },
+        {
+          filename: B,
+          sources: ['# B\n'],
+          targets: [
+            '\u{56e0}\u{6b64}\u{8d64}\u{5b57}\u{662f}\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{4e3a}\u{5355}\u{4f4d}\u{8861}\u{91cf}\u{7684}\u{3002}',
+          ],
+        },
+      ];
+      expect(reattributeFindings([f], pair).reattributed).toEqual([]);
+    });
+
+    it("a quote of the English, when the named file's English is not held", () => {
+      const f = about(A, '\u{201c}measured per young person\u{201d} is mistranslated');
+      const pair = [
+        {
+          filename: A,
+          sources: [],
+          targets: [
+            '\u{653f}\u{5e9c}\u{7684}\u{8d64}\u{5b57}\u{6309}\u{4eba}\u{5934}\u{8ba1}\u{7b97}\u{5f97}\u{51fa}\u{3002}',
+          ],
+        },
+        {
+          filename: B,
+          sources: ['The deficit is measured per young person in this economy.'],
+          targets: ['\u{8d64}\u{5b57}'],
+        },
+      ];
+      expect(reattributeFindings([f], pair).reattributed).toEqual([]);
+    });
+
+    it('spacing around inline math', () => {
+      stays(
+        '\u{56e0}\u{6b64}$\\bar G$\u{662f}\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}\u{7684}',
+        '\u{56e0}\u{6b64} $\\bar G$ \u{662f}\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}\u{7684}',
+        '\u{201c}\u{56e0}\u{6b64} $\\bar G$ \u{662f}\u{4ee5}\u{6bcf}\u{4e2a}\u{5e74}\u{8f7b}\u{4eba}\u{8ba1}\u{7b97}\u{7684}\u{201d}\u{4e0d}\u{591f}\u{7cbe}\u{786e}'
+      );
+    });
+  });
+
+  it('opens no quote at an apostrophe or an inch mark', () => {
+    expect(
+      quotedSpans('the firms\u{2019} profits \u{2018}and the workers\u{2019} wages\u{2019}')
+    ).toEqual(["and the workers' wages"]);
+    expect(quotedSpans('5" disk and 3.5" disk drives are "legacy media"')).toEqual([
+      'legacy media',
+    ]);
+    expect(quotedSpans("the authors' model and the students' view of it")).toEqual([]);
   });
 
   it('compares across spacing, non-breaking spaces, apostrophes and case', () => {
     const typeset = [
-      { filename: KESTEN, texts: [KESTEN_EN, KESTEN_ZH] },
+      files[0],
       {
         filename: OLG,
-        texts: ['It is the  government’s\ndeficit, measured per young person.\n'],
+        targets: [OLG_ZH],
+        sources: [
+          'It is the  government\u{2019}s\ndeficit, measured\u{a0}per\u{202f}young person.\n',
+        ],
       },
     ];
     const f = about(KESTEN, "“Government's deficit, measured per young person”");
@@ -568,6 +804,10 @@ describe('reattributeFindings (#223)', () => {
       'code_x',
       'long enough',
     ]);
+    // Compatibility forms, a MyST role, emphasis and backticks.
+    expect(normalizeForAttribution('{doc}`\u{ff30}\u{ff59} **x** _em_ w_1`\u{a0}\u{ff0c}')).toBe(
+      'py x em w_1 ,'
+    );
   });
 });
 

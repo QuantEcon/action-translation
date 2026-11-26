@@ -431,44 +431,63 @@ export function sortAndCapFindings(findings: ReviewFinding[]): ReviewFinding[] {
 // FINDING ATTRIBUTION (#223)
 // ============================================================================
 
-/** A quoted span shorter than this, in characters after trimming, is not used. */
+/** A quoted span shorter than this, in characters once normalised, is not used. */
 export const MIN_QUOTED_SPAN = 6;
 
 /**
+ * A single usable span this long, in characters once normalised, can move a
+ * finding by itself; shorter ones take two. A short phrase or a glossary term
+ * is too often in several lectures, or in the named one in another form.
+ */
+export const STRONG_QUOTED_SPAN = 20;
+
+/**
  * Text quoted in a finding: in backticks, or in straight, curly, CJK corner
- * or guillemet quotation marks. A straight single quote counts only where no
- * letter or digit touches it from outside, so an apostrophe opens nothing.
+ * or guillemet quotation marks. A straight quote, and a curly single quote,
+ * opens only where no letter or digit touches it from before, and closes only
+ * where none follows, so an apostrophe (`the firms' profits`) or an inch mark
+ * (`5"`) opens nothing. A curly single quote runs to the last closing mark
+ * before the next opening one, so a curly apostrophe inside it (as in a
+ * quoted "the workers' wages") does not end it.
  */
 const QUOTED_SPAN_PATTERNS: readonly RegExp[] = [
   /`([^`\n]+)`/g,
-  /"([^"\n]+)"/g,
-  /“([^”\n]+)”/g,
-  /‘([^’\n]+)’/g,
-  /「([^」\n]+)」/g,
-  /『([^』\n]+)』/g,
-  /«([^»\n]+)»/g,
-  /‹([^›\n]+)›/g,
+  /(?<![\p{L}\p{N}])"(?=\S)([^"\n]+)(?<=\S)"(?![\p{L}\p{N}])/gu,
+  /\u{201c}([^\u{201d}\n]+)\u{201d}/gu,
+  /(?<![\p{L}\p{N}])\u{2018}([^\u{2018}\n]+)\u{2019}(?![\p{L}\p{N}])/gu,
+  /\u{300c}([^\u{300d}\n]+)\u{300d}/gu,
+  /\u{300e}([^\u{300f}\n]+)\u{300f}/gu,
+  /\u{ab}([^\u{bb}\n]+)\u{bb}/gu,
+  /\u{2039}([^\u{203a}\n]+)\u{203a}/gu,
   /(?<![\p{L}\p{N}])'([^'\n]+)'(?![\p{L}\p{N}])/gu,
 ];
 
-/**
- * U+00A0 and U+202F, built from their code points: a literal one in the
- * source is easy to lose in an edit, and lint refuses it.
- */
-const NARROW_AND_NO_BREAK_SPACES = new RegExp(`[${String.fromCharCode(0x00a0, 0x202f)}]`, 'g');
+/** Han, kana and Hangul: text with any of them is compared without whitespace. */
+const CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
 
 /**
- * Text as the attribution check compares it: U+00A0 and U+202F read as
- * spaces, every run of whitespace as one space, curly apostrophes as straight
- * ones, and letters in lower case.
+ * Text as the attribution check compares it. Compatibility forms are folded
+ * (NFKC: full-width Latin, digits and punctuation to half-width, and U+00A0
+ * and U+202F to spaces); a MyST role's `{name}` prefix, backticks, `*`, and an
+ * `_` at a word's edge (emphasis, not `w_1`) are removed; curly apostrophes
+ * read as straight ones; every run of whitespace is one space; letters are in
+ * lower case.
  */
 export function normalizeForAttribution(text: string): string {
   return text
-    .replace(NARROW_AND_NO_BREAK_SPACES, ' ')
-    .replace(/[‘’]/g, "'")
+    .normalize('NFKC')
+    .replace(/\{[A-Za-z][\w.:+-]*\}(?=`)/g, '')
+    .replace(/[`*]/g, '')
+    .replace(/(?<![\p{L}\p{N}])_+|_+(?![\p{L}\p{N}])/gu, '')
+    .replace(/[\u{2018}\u{2019}]/gu, "'")
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
+}
+
+/** Normalised text with no whitespace at all, as CJK text is compared. */
+function withoutSpaces(normalized: string): string {
+  return normalized.replace(/\s+/g, '');
 }
 
 /** The quoted spans of `text` long enough to use, normalised, without repeats. */
@@ -476,18 +495,23 @@ export function quotedSpans(text: string): string[] {
   const spans = new Set<string>();
   for (const pattern of QUOTED_SPAN_PATTERNS) {
     for (const match of text.matchAll(pattern)) {
-      const span = match[1].trim();
+      const span = normalizeForAttribution(match[1]);
       if ([...span].length < MIN_QUOTED_SPAN) continue;
-      spans.add(normalizeForAttribution(span));
+      spans.add(span);
     }
   }
   return [...spans];
 }
 
-/** A reviewed file and the texts a finding about it may quote: its English and its translation. */
+/**
+ * A reviewed file and the texts a finding about it may quote: its English
+ * (`sources`) and its translation (`targets`), each before and after the PR
+ * where the file had them.
+ */
 export interface AttributionFile {
   filename: string;
-  texts: string[];
+  sources: string[];
+  targets: string[];
 }
 
 /** One finding moved to another file: its index in the list, and the two files. */
@@ -502,16 +526,30 @@ export interface FindingReattribution {
  *
  * The reviewer sometimes files a finding under one lecture while its
  * description quotes another (lecture-python.zh-cn#208). For each finding
- * named to a reviewed file, the quoted spans of its description and
- * suggestion (see `quotedSpans`) are looked for in every reviewed file's
- * texts. Only when no span is in the named file and the spans found are all
- * in exactly one other file is the finding moved there, with its location
- * cleared, since that described the wrong file. Everything else is left as it
- * is: a finding with no usable span, one with no file or a file not reviewed,
- * one a span ties to its own file, and one whose spans are in several other
- * files or in none. A string common to several lectures, such as a heading
- * like "Exercises" or a glossary term, therefore never moves a finding. No
- * finding is dropped, and severity, category and text are never changed.
+ * named to a reviewed file, the quoted spans of its description (see
+ * `quotedSpans`; never its suggestion, which proposes text rather than
+ * quoting it) are looked for in every reviewed file's texts. The finding
+ * moves, with its location cleared since that described the wrong file, only
+ * when all of these hold:
+ *
+ * - the named file has both an English and a translated text to search;
+ * - no span is in the named file, compared forgivingly: as normalised, and
+ *   also with all whitespace removed, since a miss there is what licenses the
+ *   move;
+ * - every span found is in one and the same other file, and in no other;
+ * - the evidence is enough: two spans found there, or one of at least
+ *   `STRONG_QUOTED_SPAN` characters;
+ * - no span is found nowhere, except one beside two or more found there: the
+ *   reviewer's own proposed wording, as in the #223 example. A span found
+ *   nowhere is otherwise most often the named file's own text, quoted in a
+ *   form the comparison missed.
+ *
+ * A span with CJK characters is compared with all whitespace removed on both
+ * sides, so a hard-wrapped line or spacing around inline math does not hide
+ * it. Everything else is left as it is, so a string common to several
+ * lectures, such as a heading like "Exercises" or a glossary term, never
+ * moves a finding. No finding is dropped, and severity, category and text are
+ * never changed.
  *
  * Pure and deterministic. The caller runs it on multi-file PRs only: a
  * single-file PR already attributes every finding to its one file.
@@ -521,24 +559,61 @@ export function reattributeFindings(
   files: AttributionFile[]
 ): { findings: ReviewFinding[]; reattributed: FindingReattribution[] } {
   const texts = new Map(
-    files.map((file) => [file.filename, file.texts.map(normalizeForAttribution)])
+    files.map((file) => {
+      const spaced = [...file.sources, ...file.targets].map(normalizeForAttribution);
+      return [
+        file.filename,
+        {
+          spaced,
+          unspaced: spaced.map(withoutSpaces),
+          bothSides: file.sources.length > 0 && file.targets.length > 0,
+        },
+      ];
+    })
   );
-  const holds = (filename: string, span: string) =>
-    (texts.get(filename) ?? []).some((text) => text.includes(span));
+  /** Whether a file's texts hold `span`; CJK spans are compared without whitespace. */
+  const holds = (filename: string, span: string) => {
+    const file = texts.get(filename);
+    if (!file) return false;
+    return CJK.test(span)
+      ? file.unspaced.some((text) => text.includes(withoutSpaces(span)))
+      : file.spaced.some((text) => text.includes(span));
+  };
+  /** The named file's side: also with all whitespace removed, whatever the span. */
+  const namedHolds = (filename: string, span: string) =>
+    holds(filename, span) ||
+    (texts.get(filename)?.unspaced ?? []).some((text) => text.includes(withoutSpaces(span)));
 
   const reattributed: FindingReattribution[] = [];
   const result = findings.map((finding, index) => {
     const named = finding.file;
-    if (named === null || !texts.has(named)) return finding;
-    const spans = quotedSpans(`${finding.description}\n${finding.suggestion ?? ''}`);
+    if (named === null || !texts.get(named)?.bothSides) return finding;
+    const spans = quotedSpans(finding.description);
     if (spans.length === 0) return finding;
-    if (spans.some((span) => holds(named, span))) return finding;
-    const others = [...texts.keys()].filter(
-      (filename) => filename !== named && spans.some((span) => holds(filename, span))
-    );
-    if (others.length !== 1) return finding;
-    reattributed.push({ index, from: named, to: others[0] });
-    return { ...finding, file: others[0], location: null };
+    if (spans.some((span) => namedHolds(named, span))) return finding;
+
+    const others = [...texts.keys()].filter((filename) => filename !== named);
+    const found: string[] = [];
+    let nowhere = 0;
+    let destination: string | undefined;
+    for (const span of spans) {
+      const holders = others.filter((filename) => holds(filename, span));
+      if (holders.length === 0) {
+        nowhere++;
+        continue;
+      }
+      if (holders.length > 1) return finding;
+      if (destination !== undefined && destination !== holders[0]) return finding;
+      destination = holders[0];
+      found.push(span);
+    }
+    if (destination === undefined) return finding;
+    const strong = found.length >= 2 || [...found[0]].length >= STRONG_QUOTED_SPAN;
+    if (!strong) return finding;
+    if (nowhere > 1 || (nowhere === 1 && found.length < 2)) return finding;
+
+    reattributed.push({ index, from: named, to: destination });
+    return { ...finding, file: destination, location: null };
   });
   return { findings: result, reattributed };
 }

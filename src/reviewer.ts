@@ -1244,12 +1244,12 @@ export class TranslationReviewer {
       reviewableFilenames,
       [...filePairs.entries()].map(([filename, pair]) => ({
         filename,
-        texts: [
-          pair.source,
-          pair.target,
-          sourceBeforeMap.get(filename),
-          targetBeforeByFile.get(filename),
-        ].filter((text): text is string => text !== undefined),
+        sources: [pair.source, sourceBeforeMap.get(filename)].filter(
+          (text): text is string => text !== undefined
+        ),
+        targets: [pair.target, targetBeforeByFile.get(filename)].filter(
+          (text): text is string => text !== undefined
+        ),
       }))
     );
 
@@ -1761,7 +1761,9 @@ export class TranslationReviewer {
     files: AttributionFile[]
   ): TranslationQualityResult {
     if (reviewedFilenames.length < 2) return quality;
-    const held = new Set(files.filter((f) => f.texts.length > 0).map((f) => f.filename));
+    const held = new Set(
+      files.filter((f) => f.sources.length + f.targets.length > 0).map((f) => f.filename)
+    );
     if (!reviewedFilenames.every((filename) => held.has(filename))) return quality;
     const { findings, reattributed } = reattributeFindings(quality.findings, files);
     if (reattributed.length === 0) return quality;
