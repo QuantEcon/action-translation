@@ -36,10 +36,12 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
+      # Pinned: mystmd 1.13.0 (2026-11-12) began to require Node >= 22, so the
+      # unpinned install failed every build from 2026-11-15. Bump it on purpose.
       - name: Install MyST
-        run: npm install -g mystmd
+        run: npm install -g mystmd@1.14.0
 
       - name: Build documentation
         run: myst build --html
