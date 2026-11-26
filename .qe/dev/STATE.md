@@ -344,8 +344,7 @@ Roadmap detail lives in the project trackers (reading order in
 order, by the PR organiser on Matt's yes, each pinned to a head whose tree equals the one
 reviewed (log `2026-11-26-overnight-stack-merge`): #471
 `8d2926a`, #472 `ebfc475`, #473 `cd1adb5`, #474 `c740b97`, #475 `eaf9062`, #476 `36d1a77`.
-**Nothing is released**: the editions run `@v0` at v0.33.0, and seven fragments wait in
-`changelog.d/`. Closed: #465, #390, #383, #382 (#471); #466, #92, #387 (#472); #384, #356,
+Until v0.34.0 is released (its release PR is below) the editions run `@v0` at v0.33.0. Closed: #465, #390, #383, #382 (#471); #466, #92, #387 (#472); #384, #356,
 #364, #430 (#473); #284, #283 (#475); #467 (#476). #474 closes nothing yet: #324 and #325 each
 wait on a fr-edition repair. Still open from the stack: #290 (its harness exercise), #223 (its
 "unlocated" remedy), #391 and #428 (their other halves), #399 and #409 (in part), #261 (box 5
@@ -365,18 +364,19 @@ records: `D-2026-11-25-a-passing-sync-closes-the-failure-issue-under-all`,
 
 *Before a release carrying the stack reaches `@v0`*: heal lecture-python-programming.fr with
 the patched `scripts/typography/apply.mjs` in one edition PR (#324), and repair fr's
-`getting_started.md` `<style>` block only after that release (#325); run #290's harness
-exercise, which a target state file holding an extra key in the harness's base fixtures would
-fold into release step 4a; and say in the release notes how to detect a degraded review (the
-fixed phrase in `recommendationReasons`), which no fragment states.
+`getting_started.md` `<style>` block only after that release (#325, `mini:project-translation`'s,
+on this session's word that `@v0` has moved); #290's harness exercise is part of release step
+4a since #488; and the release notes say how to detect a degraded review (the fixed phrase in
+`recommendationReasons`).
 
 *Next (Matt's rulings of 2026-11-26, log `2026-11-26-rulings-and-follow-ups`)*: #477 is fixed in
 #487 and the docs deploy in #485 (green again since `742101b`). **v0.34.0's release PR** carries
-everything since v0.33.0: the overnight stack, #487, and the #290 harness check (#488). After it
+everything since v0.33.0: the overnight stack, #468, #487, and (no user-visible change) #469,
+#485, #486 and the #290 harness check (#488). After it
 merges, each on Matt's go: tag `v0.34.0`; release step 4a at the tag, then
 `check-state-keys.mjs --expect-full` (which must read `state keys kept: 42 across 84 PRs —
 PASS`, after which #290 can close); 4b on the laptop; `@v0` moves only once the
-lecture-python-programming.fr heal (#324) has merged; the `@v0` smoke; `gh release create`.
+lecture-python-programming.fr heal (#324) has merged; the `@v0` smoke; `gh release create`; then fr's `<style>` repair (#325).
 After it: the action family's standard (below) and #470. #463's look-back and other edition
 work belong to `mini:project-translation`.
 
