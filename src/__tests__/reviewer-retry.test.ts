@@ -570,6 +570,52 @@ describe('reviewPR when evaluateDiff never parses (#284)', () => {
     );
     expect(comments).toEqual([]);
   });
+
+  // Ruled 2026-11-26: a reply that came back and is not a verdict is a parse
+  // failure like any other. Valid JSON that is not an object is retried, and
+  // in the diff evaluation it degrades the review. Before, it failed the run
+  // after one call.
+  describe.each([
+    ['an array', '[1,2]'],
+    ['null', 'null'],
+  ])('a reply that is valid JSON but not an object (%s)', (_label, reply) => {
+    it('is retried three times in evaluateDiff and then degrades the review to editor', async () => {
+      mockFinalMessage
+        .mockResolvedValueOnce(response(TRANSLATION_JSON))
+        .mockResolvedValueOnce(response(reply))
+        .mockResolvedValueOnce(response(reply))
+        .mockResolvedValueOnce(response(reply));
+      const reviewer = makeReviewer();
+
+      const { value: result, error } = await review(reviewer);
+
+      expect(error).toBeUndefined();
+      expect(mockStream).toHaveBeenCalledTimes(4); // 1 translation + 3 diff attempts
+      expect(reviewer.getUsage().apiCalls).toBe(4);
+      expect(comments).toHaveLength(1);
+      expect(result?.recommendation).toBe('editor');
+      const verdict = parseReviewVerdict(comments[0]);
+      expect(verdict?.recommendation).toBe('editor');
+      expect(verdict?.recommendationReasons).toContain(
+        `${DIFF_EVALUATION_UNPARSEABLE} — scopeCorrect and positionCorrect were not judged`
+      );
+      const warnings = coreMock.warning.mock.calls.map((c) => String(c[0]));
+      expect(warnings.some((w) => w.includes('Response JSON is not an object'))).toBe(true);
+    });
+
+    it('is retried three times in evaluateTranslation and then fails the run', async () => {
+      mockFinalMessage.mockResolvedValue(response(reply));
+
+      const { error } = await review(makeReviewer());
+
+      expect(error).toBeInstanceOf(ReviewParseExhaustedError);
+      expect((error as Error).message).toMatch(
+        /evaluateTranslation: the retry budget of 3 attempts ended on a reply that does not parse: Response JSON is not an object/
+      );
+      expect(mockStream).toHaveBeenCalledTimes(3);
+      expect(comments).toEqual([]);
+    });
+  });
 });
 
 describe('review call sites cap output with maxTokensFor(model, "review")', () => {
