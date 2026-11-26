@@ -39,6 +39,15 @@ export const REVIEW_VERDICT_SCHEMA_VERSION = 1;
  */
 export const DIFF_EVALUATION_UNPARSEABLE = 'diff evaluation returned no parseable verdict';
 
+/**
+ * The reason a model-asserted diff check that reported failure gates by
+ * (#477), followed by `: <check>`. Worded unlike a deterministic check's
+ * `diff check failed: <check>` on purpose (#148): calibration can still tell
+ * model opinion from measured fact by the reason alone. See
+ * docs/user/metadata-contract.md.
+ */
+export const MODEL_ASSERTED_CHECK_FAILED = 'model-asserted check failed';
+
 /** Findings kept in the block, worst first — bounds the comment size. */
 const MAX_FINDINGS = 20;
 
@@ -645,8 +654,9 @@ export interface RecommendationInput {
    * Provenance of each diff check (#148). A check absent from this map — or an
    * absent map entirely — gates as a check, the same reading `ReviewVerdictV2`
    * documents for a block with no provenance: absence must never downgrade a
-   * check to advisory, which would be fail-open. Model-asserted checks gate
-   * through `findings` instead.
+   * check to advisory, which would be fail-open. A model-asserted check gates
+   * through its `diff-check` finding and through a reason of its own
+   * (`MODEL_ASSERTED_CHECK_FAILED`, #477), never as `diff check failed`.
    */
   diffCheckSources?: Partial<Record<DiffCheckName, DiffCheckSource>>;
   syntaxErrorCount: number;
@@ -713,6 +723,20 @@ export function computeRecommendation(input: RecommendationInput): {
   for (const check of DIFF_CHECK_NAMES) {
     if (input.diffCheckSources?.[check] === 'model') continue;
     if (input.diffChecks?.[check] !== true) reasons.push(`diff check failed: ${check}`);
+  }
+  // A model-asserted check that reported failure gates by a reason of its own
+  // too (#477). Its `diff-check` finding is `minor`, so twenty other minor
+  // findings could cap it out of `findings` and leave nothing to gate. The
+  // reason is worded apart from the deterministic one above, so the #148 split
+  // between opinion and fact survives in the reasons. Not added when the diff
+  // evaluation did not parse: nothing was judged, and that has its own reason.
+  if (!input.diffEvaluationUnparseable) {
+    for (const check of DIFF_CHECK_NAMES) {
+      if (input.diffCheckSources?.[check] !== 'model') continue;
+      if (input.diffChecks?.[check] !== true) {
+        reasons.push(`${MODEL_ASSERTED_CHECK_FAILED}: ${check}`);
+      }
+    }
   }
   if (input.diffEvaluationUnparseable) {
     reasons.push(

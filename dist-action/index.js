@@ -56982,6 +56982,7 @@ var path7 = __toESM(require("path"), 1);
 var REVIEW_VERDICT_MARKER = "translation-review-verdict";
 var REVIEW_VERDICT_SCHEMA_VERSION = 1;
 var DIFF_EVALUATION_UNPARSEABLE = "diff evaluation returned no parseable verdict";
+var MODEL_ASSERTED_CHECK_FAILED = "model-asserted check failed";
 var MAX_FINDINGS = 20;
 var MAX_FIELD_LENGTH = 400;
 var SEVERITIES = ["blocker", "major", "minor", "nit"];
@@ -57247,6 +57248,15 @@ function computeRecommendation(input) {
       continue;
     if (input.diffChecks?.[check] !== true)
       reasons.push(`diff check failed: ${check}`);
+  }
+  if (!input.diffEvaluationUnparseable) {
+    for (const check of DIFF_CHECK_NAMES) {
+      if (input.diffCheckSources?.[check] !== "model")
+        continue;
+      if (input.diffChecks?.[check] !== true) {
+        reasons.push(`${MODEL_ASSERTED_CHECK_FAILED}: ${check}`);
+      }
+    }
   }
   if (input.diffEvaluationUnparseable) {
     reasons.push(`${DIFF_EVALUATION_UNPARSEABLE} \u2014 scopeCorrect and positionCorrect were not judged`);
