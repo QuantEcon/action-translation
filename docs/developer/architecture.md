@@ -147,6 +147,7 @@ src/cli/
 ├── git-metadata.ts        # File-level git metadata + commit timeline
 ├── report-generator.ts    # Markdown/JSON report formatting
 ├── run-report.ts          # init --report-json: failure classes (classifyFailure), report schema, atomic write
+├── refused-output.ts      # What the parity guard refused, kept under .translate/refused/ for diagnosis (#364)
 ├── review-formatter.ts    # Chalk card renderer for review command
 ├── review-session.ts      # Pure state machine (accept/skip/reject)
 ├── issue-generator.ts     # GitHub Issue title/body/label generator

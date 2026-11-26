@@ -195,6 +195,16 @@ describe('git-metadata', () => {
       expect(await fileChangedSince(repo, 'unknown', LECTURE)).toBeUndefined();
     });
 
+    it('fileChangedSince: undefined for an object that is not a commit, such as the tree at HEAD', async () => {
+      // HEAD's own tree holds the same content as HEAD, so a diff against it
+      // would read "unchanged" and clear OUTDATED for a hand-edited state file.
+      const tree = git(repo, ['rev-parse', 'HEAD^{tree}']).trim();
+      const blob = git(repo, ['rev-parse', `HEAD:${LECTURE}`]).trim();
+      expect(await fileChangedSince(repo, tree, LECTURE)).toBeUndefined();
+      expect(await fileChangedSince(repo, tree.slice(0, 7), LECTURE)).toBeUndefined();
+      expect(await fileChangedSince(repo, blob, LECTURE)).toBeUndefined();
+    });
+
     it('never passes a recorded value that reads as an option to git', async () => {
       const leak = path.join(repo, 'leak.txt');
       const before = fs.readdirSync(repo).sort();

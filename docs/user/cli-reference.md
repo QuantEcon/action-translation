@@ -66,7 +66,7 @@ npx translate status -s <source-path> -t <target-path> [options]
 | `ALIGNED` | Structure matches, heading-map present, no newer source commits |
 | `SOURCE_AHEAD` | Source has more sections than target |
 | `TARGET_AHEAD` | Target has more sections than source |
-| `OUTDATED` | Source has newer commits than target |
+| `OUTDATED` | Source has newer commits than target; with a state file, the English file's content differs from its content at the recorded `source-sha` |
 | `MISSING_HEADINGMAP` | No heading-map in target frontmatter |
 | `SOURCE_ONLY` | File exists in source but not target |
 | `TARGET_ONLY` | File exists in target but not source |
@@ -336,7 +336,7 @@ npx translate init -s <source-path> -t <target-path> --target-language <code> [o
 | `-m, --model <model>` | `claude-sonnet-5` | Claude model |
 | `-f, --file <file>` | *(all lectures)* | Translate a single lecture file (e.g., `cobweb.md`) |
 | `--batch-delay <ms>` | `1000` | Delay between lectures in ms (rate limiting) |
-| `--resume-from <file>` | *(none)* | Resume from a specific lecture file |
+| `--resume-from <file>` | *(none)* | Resume a bulk run from a specific lecture file, named as for `-f`; cannot be combined with `-f` |
 | `--skip-existing` | `false` | Skip lectures the edition already has; never overwrites a translation |
 | `-j, --parallel <n>` | `1` | Number of parallel translations |
 | `--glossary <path>` | *(auto)* | Path to glossary JSON file (default: built-in glossary for the language) |
@@ -461,7 +461,7 @@ npx translate init \
   --resume-from cobweb.md
 ```
 
-Partial filename matches are supported — `--resume-from cobweb` will also work.
+`--resume-from` names the lecture as `-f` does, by the same steps: `--resume-from cobweb` also works, and so does `--resume-from gpu.md` for `_admonition/gpu.md`. A name that matches no lecture, or more than one, stops the run before any translation or write, naming the lectures it matched, instead of starting again from the first lecture. So does an empty name, as a script passing an unset variable (`--resume-from "$NEXT"`) gives it. The run translates that lecture and every one after it in ToC order, and `--dry-run` lists those. It applies to a bulk run: with `-f` too, `init` stops before any translation or write and says the two cannot be combined.
 
 **Re-run after partial failure (skip already-translated files):**
 
@@ -489,9 +489,11 @@ npx translate init \
 
 A run without `-f` writes `TRANSLATION-REPORT.md` to the target directory with:
 - Total lectures, success/failure/skipped counts
-- Total tokens used, total time
+- The run's API usage, total time
 - Configuration details
 - List of any failures with error messages
+
+The API usage, in the report and in the console summary, counts every response the run received, those of the lectures that failed included (an attempt that failed before its response came back, such as a dropped connection that was retried, has no usage to count): `<calls> call(s), <input> input + <output> output tokens, cache: <read> read + <written> written`, the line the Action logs as `API usage:`. `forward` prints the same line for its calls, triage included: once per file with `-f`, and for the whole run in a bulk run's summary.
 
 ---
 
@@ -570,6 +572,8 @@ The `.translate/` folder in the target repo stores persistent sync metadata. It 
         └── topic.md.yml    # Mirrors docs-folder subdirectories
 ```
 
+`refused/` appears beside them once the parity guard refuses a translation; it is never committed (see [What the parity guard refused](#what-the-parity-guard-refused)).
+
 ### `config.yml`
 
 ```yaml
@@ -599,15 +603,29 @@ A file written by hand needs `source-sha`, `synced-at`, `model` and `mode` as te
 | Command | Reads | Writes |
 |---------|-------|--------|
 | `status` | Uses `source-sha` for exact staleness, and with `--write-state` to find English changes since it | `--write-state` bootstraps config + state |
-| `backward` | Skips files where `source-sha` is unchanged | — |
-| `forward` | — | Updates state after successful resync |
-| `init` | `--skip-existing` skips lectures the edition has, and warns when one has no readable state file | Writes config, and state for each lecture it translates |
+| `backward` | Skips files whose English is unchanged since `source-sha` | — |
+| `forward` | — | Updates state after successful resync; keeps a refused output in `refused/` |
+| `init` | `--skip-existing` skips lectures the edition has, and warns when one has no readable state file | Writes config, and state for each lecture it translates; keeps a refused output in `refused/` |
 | `setup` | — | Creates config as part of scaffolding |
 | `doctor` | Reads config, checks state files; with `--require-state`, also `state-exceptions` | — |
 | `headingmap` | — | Injects heading-maps into target files |
 | Sync Action | Under `sync-scope: existing`, syncs a changed lecture only if its state file exists | Writes state for each lecture it syncs; deletes it with a removed lecture |
 
 Without its state file a lecture is out of scope under `sync-scope: existing`, so `init` fails a lecture whose state file it cannot write: the translation stays on disk, the lecture is reported failed (`state-write` in `--report-json`), and the run exits 1. A state folder it cannot write at all stops the run before any translation. For each lecture left without its state file, the run prints the `translate status --write-state` command that records it once the cause is fixed, with the edition's own `-s`, `-t`, `-l` and `-d`, since `status` reads no config. That run records the lecture's sync point with `model: unknown` and `mode: RESYNC`; if it refuses because the English has a commit dated after the lecture's last commit, commit the lecture first. `forward` reports the same failure for a file it writes locally. When the source clone has no commit for a lecture, both warn that its state file records `source-sha: unknown`, which `status` reports `OUTDATED` once the lecture is committed.
+
+### What the parity guard refused
+
+Before `init` or `forward` writes a translation, the structural parity guard checks the exact bytes it would write: among other checks, every directive and anchor of the English must survive. When the guard refuses them, the lecture fails as before and nothing is written to the docs folder, but the refused bytes are kept, so the refusal can be diagnosed ([#364](https://github.com/QuantEcon/action-translation/issues/364)): a whole-document code fence, for instance, reads in the guard's message only as a renamed directive.
+
+- **Where.** `.translate/refused/<lecture>` in the target, at the lecture's path under the docs folder, `.md` kept: `cobweb.md` goes to `.translate/refused/cobweb.md`, `_admonition/gpu.md` to `.translate/refused/_admonition/gpu.md`. `forward --github` keeps it in the same place in the target clone.
+- **Named.** The failure says `The refused output is kept at .translate/refused/<lecture>`: in `TRANSLATION-REPORT.md`'s Failures entry, in the full error `init -f` prints on stderr, in `forward`'s log and bulk summary, and in `--report-json` as the failure's `refusedOutput`; on the console, `init` also names it above the preview, since its one-line failure summary keeps 200 characters. The console, and the Failures entry, also show the output's first and last three lines, where a wrapper shows at a glance: the first three are the body's, after the front matter `init` and `forward` put on it, so a code fence that opens the reply is the first line shown. Each preview line drops a Windows line ending, shows other control characters as `�`, and stops at 200 characters, saying how many more there were.
+- **Whole message.** `--report-json` keeps a parity failure's message whole, every violation listed; other failures' messages are still cut at 500 characters ([#430](https://github.com/QuantEcon/action-translation/issues/430)).
+- **Out of git.** The folder holds a `.gitignore` of `*`, checked before every write and replaced when it has no `*` line (an empty one, say), so the folder is never committed, in an edition set up before this folder existed too. A lecture named `.gitignore` is not kept there. `setup` also lists `.translate/refused/` in the `.gitignore` it writes. `status`, `doctor` (with `--require-state` too) and sync do not read the folder: a refused output is neither a lecture nor a state file.
+- **Cleared.** A later translation of the lecture that is written removes its refused output.
+- **Not kept** when the way there is a symbolic link (`.translate`, `.translate/refused`, its `.gitignore`, a folder below it or the file) or the folder cannot be written: the failure says `The refused output was not kept:` and why, and the lecture fails as it would have.
+- **A local build at the root.** With `docs-folder: .`, `.translate/refused/` is inside the docs folder. CI never sees it, since it is not committed, but a local `jupyter-book build .` does not skip folders whose names start with a dot, so it would parse a refused lecture and, with a kernelspec, execute it. Delete `.translate/refused/` before a local build, or add `.translate` to `exclude_patterns` in `_config.yml`.
+
+`rate-check.sh` runs `init` with each draw's run directory as the target, so a refused draw's output is in `<draw>/.translate/refused/` there.
 
 ### Graceful absence
 

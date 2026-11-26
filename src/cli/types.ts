@@ -8,6 +8,7 @@
  */
 
 import { Glossary, Section } from '../types.js';
+import { ApiUsage } from '../models.js';
 
 // ============================================================================
 // STAGE 1: DOCUMENT-LEVEL TRIAGE
@@ -243,7 +244,9 @@ export interface ForwardFileResult {
   triageResult: ForwardTriageResult;
   outputContent?: string; // Full resynced TARGET file (undefined if skipped/errored)
   prUrl?: string; // PR URL if --github mode
-  tokensUsed?: number; // Total tokens used for the RESYNC call
+  tokensUsed?: number; // The RESYNC call's final response: input + output tokens
+  usage?: ApiUsage; // Every API call for this file, triage and resync, on every path (#356)
+  refusedOutput?: string; // Where the parity guard's refused output was kept, from the target root (#364)
   summary: {
     resynced: number; // 1 if whole-file resync succeeded, 0 otherwise
     unchanged: number; // Not used in whole-file mode

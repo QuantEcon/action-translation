@@ -23,6 +23,7 @@ import {
   isRetryableAnthropicError,
   isStreamCutShort,
 } from '../models.js';
+import { INCOMPLETE_DOCUMENT_STOP } from '../translator.js';
 
 /** The class of a failed file, in the order `classifyFailure` tests them. */
 export type FailureKind =
@@ -34,7 +35,7 @@ export type FailureKind =
   | 'infra' // 429, 5xx, overload, connection error or a stream or body cut short, after the retries
   | 'api-error' // any other API error: a 400, a 404 for an unknown model, ...
   | 'too-large' // refused before the call: over the whole-document output budget
-  | 'incomplete' // the model printed the incomplete-document marker
+  | 'incomplete' // the model stopped and printed the incomplete-document marker (not a truncation)
   | 'no-text' // an end_turn without a text block
   | 'state-write' // the lecture was written, its state file was not (#378)
   | 'error'; // anything else
@@ -54,8 +55,17 @@ export class StateWriteError extends Error {
 /** Why one file failed. */
 export interface FailureInfo {
   kind: FailureKind;
-  /** The error message, cut at 500 characters. */
+  /**
+   * The error message, cut at 500 characters, except a parity failure's,
+   * which is kept whole: every violation it lists (#430).
+   */
   message: string;
+  /**
+   * parity: where the refused output was kept, relative to the target
+   * repository (`.translate/refused/<lecture>`, #364); absent when it was not
+   * kept, which the message then says.
+   */
+  refusedOutput?: string;
   /** model-refusal: the stop_details category, null when the API named none. */
   category?: string | null;
   /** unexpected-stop: the stop reason, null when the response had none. */
@@ -68,7 +78,19 @@ export interface FailureInfo {
 
 /** The structural parity guard refused a file's output (thrown by init). */
 export class StructuralParityError extends Error {
-  constructor(message: string) {
+  /**
+   * @param message - The guard's violations, and where the output was kept
+   * @param refusedOutput - Where the refused output was kept, when it was (#364)
+   * @param preview - The refused output's first and last lines, for the console
+   * @param keptNote - The message's last line, which says where the output was
+   *   kept or why it was not, for a caller that shows it apart from the list
+   */
+  constructor(
+    message: string,
+    readonly refusedOutput?: string,
+    readonly preview?: string[],
+    readonly keptNote?: string
+  ) {
     super(message);
     this.name = 'StructuralParityError';
   }
@@ -105,7 +127,12 @@ export function classifyFailure(error: unknown): FailureInfo {
     return { kind: 'unexpected-stop', message, stopReason: error.stopReason };
   }
   if (error instanceof StructuralParityError) {
-    return { kind: 'parity', message };
+    // Whole: the cut kept no more than four violations of a long list (#430)
+    return {
+      kind: 'parity',
+      message: fullMessage,
+      ...(error.refusedOutput ? { refusedOutput: error.refusedOutput } : {}),
+    };
   }
   if (error instanceof StateWriteError) {
     return { kind: 'state-write', message };
@@ -131,7 +158,7 @@ export function classifyFailure(error: unknown): FailureInfo {
   if (fullMessage.startsWith('Document too large')) {
     return { kind: 'too-large', message };
   }
-  if (fullMessage.includes('Document exceeded token limits')) {
+  if (fullMessage.includes(INCOMPLETE_DOCUMENT_STOP)) {
     return { kind: 'incomplete', message };
   }
   if (fullMessage.includes('response contained no text')) {
@@ -173,7 +200,7 @@ export interface LectureReport {
   failure?: FailureInfo;
   /** Translation, checks and write; the state-file write excluded. */
   elapsedMs: number;
-  /** ok only: the final response's input + output tokens (the Markdown report's figure). */
+  /** ok only: the final response's input + output tokens; the run's `usage` counts every call. */
   tokensUsed?: number;
   /** ok only: characters written to the target file. */
   outputChars?: number;

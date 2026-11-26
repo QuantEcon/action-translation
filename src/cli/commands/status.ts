@@ -316,8 +316,15 @@ export async function checkFileStatus(
   if (stateAware) {
     const fileState = readFileState(targetRepoPath, file);
     if (fileState && sourceMetadata) {
-      // Exact comparison: has the source file changed since last sync?
-      const isStale = sourceMetadata.lastCommit !== fileState['source-sha'];
+      // Has the source file changed since last sync? The same commit is the
+      // fast path. A different one is asked about content: sync records the
+      // source PR's merge commit, which after a merge-commit or rebase merge
+      // is not the file's last commit though the file is unchanged (#391).
+      // When git cannot tell (the recorded commit is not in the clone), the
+      // lecture stays OUTDATED.
+      const isStale =
+        sourceMetadata.lastCommit !== fileState['source-sha'] &&
+        (await fileChangedSince(sourceRepoPath, fileState['source-sha'], docsRelPath)) !== false;
       if (isStale && !flags.includes('OUTDATED')) {
         flags.push('OUTDATED');
         details.push(`source-sha changed since last sync`);

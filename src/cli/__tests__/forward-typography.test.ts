@@ -25,6 +25,14 @@ const mockResync = jest.fn();
 jest.mock('../../translator.js', () => ({
   TranslationService: jest.fn().mockImplementation(() => ({
     translateDocumentResync: mockResync,
+    getUsage: () => ({
+      inputTokens: 0,
+      outputTokens: 0,
+      thinkingTokens: 0,
+      cacheCreationInputTokens: 0,
+      cacheReadInputTokens: 0,
+      apiCalls: 0,
+    }),
   })),
 }));
 

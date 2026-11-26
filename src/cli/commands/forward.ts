@@ -24,6 +24,13 @@ import * as path from 'path';
 import * as yaml from 'js-yaml';
 import cliProgress from 'cli-progress';
 import { TranslationService } from '../../translator.js';
+import { ApiUsage, emptyApiUsage, formatUsage, mergeUsage } from '../../models.js';
+import {
+  describeKeptOutput,
+  keepRefusedOutput,
+  refusedOutputPreview,
+  removeRefusedOutput,
+} from '../refused-output.js';
 import { Glossary } from '../../types.js';
 import { triageForward } from '../forward-triage.js';
 import { languageLabel } from '../../language-config.js';
@@ -288,6 +295,11 @@ export async function finalizeResyncContent(
 /**
  * Resync a single file: triage → whole-file RESYNC → output.
  *
+ * Every result carries the file's API usage, triage and resync, on every path
+ * (#356): a file the parity guard or a later check refuses was paid for too.
+ * `usage` receives it as the calls return, so a caller that catches a throw
+ * (a triage that failed) still has what was spent.
+ *
  * Exported for direct testing.
  */
 export async function resyncSingleFile(
@@ -297,6 +309,85 @@ export async function resyncSingleFile(
   docsFolder: string,
   options: ForwardOptions,
   logger: ForwardLogger = defaultLogger,
+  ghRunner?: GhRunner,
+  gitRunner?: GitRunner,
+  usage: ApiUsage = emptyApiUsage()
+): Promise<ForwardFileResult> {
+  const result = await resyncFile(
+    file,
+    sourceRepoPath,
+    targetRepoPath,
+    docsFolder,
+    options,
+    logger,
+    usage,
+    ghRunner,
+    gitRunner
+  );
+  return { ...result, usage: { ...usage } };
+}
+
+/**
+ * `forward -f`: resync one file and print its outcome and API usage.
+ *
+ * The usage line is printed whether the resync returns or throws: a triage
+ * the model refused, or a document found too large after a paid triage, was
+ * paid for too (#356). It is left out only when no call was made.
+ */
+export async function runForwardSingleFile(
+  file: string,
+  options: ForwardOptions,
+  print: (line: string) => void = (line) => console.log(line),
+  logger: ForwardLogger = defaultLogger,
+  ghRunner?: GhRunner,
+  gitRunner?: GitRunner
+): Promise<ForwardFileResult> {
+  const usage = emptyApiUsage();
+  try {
+    const result = await resyncSingleFile(
+      file,
+      options.source,
+      options.target,
+      options.docsFolder,
+      options,
+      logger,
+      ghRunner,
+      gitRunner,
+      usage
+    );
+    const { summary, triageResult } = result;
+    if (
+      triageResult.verdict !== 'CONTENT_CHANGES' &&
+      triageResult.verdict !== 'TARGET_HAS_ADDITIONS'
+    ) {
+      const label = triageResult.verdict === 'IDENTICAL' ? 'identical' : 'i18n only';
+      print(`\n  ${file}: SKIPPED (${label})`);
+    } else {
+      if (triageResult.verdict === 'TARGET_HAS_ADDITIONS') {
+        print(`\n  ⚠️  ${file}: TARGET has additions that were lost during resync`);
+      }
+      print(
+        `\n  ${file}: ${summary.resynced} resynced, ${summary.new} new, ${summary.removed} removed, ${summary.unchanged} unchanged${summary.errors > 0 ? `, ${summary.errors} errors` : ''}`
+      );
+    }
+    return result;
+  } finally {
+    // Triage and resync, a refused file's included (#356)
+    if (usage.apiCalls > 0) {
+      print(`  API usage: ${formatUsage(usage)}`);
+    }
+  }
+}
+
+/** resyncSingleFile's work, adding every API call's usage to `usage`. */
+async function resyncFile(
+  file: string,
+  sourceRepoPath: string,
+  targetRepoPath: string,
+  docsFolder: string,
+  options: ForwardOptions,
+  logger: ForwardLogger,
+  usage: ApiUsage,
   ghRunner?: GhRunner,
   gitRunner?: GitRunner
 ): Promise<ForwardFileResult> {
@@ -325,6 +416,7 @@ export async function resyncSingleFile(
     sourceLanguage: languageLabel(options.sourceLanguage),
     targetLanguage: languageLabel(options.language),
     testMode: options.test,
+    usage,
   });
 
   if (
@@ -398,6 +490,7 @@ export async function resyncSingleFile(
       sourceContent,
       targetContent,
     });
+    mergeUsage(usage, translator.getUsage());
     // What went into the request, beside what the loader reported: until #348
     // the loader said 357 terms while the request carried none.
     logger.info(
@@ -436,12 +529,21 @@ export async function resyncSingleFile(
       outputContent = verbatim.content;
 
       // The front-matter rule runs with it (#288).
+      // The refused bytes are kept, so that the refusal can be diagnosed
+      // (#364): in the target clone, in --github mode too, where the folder's
+      // own .gitignore keeps it out of the branch.
       const parity = checkWrittenDocument(sourceContent, outputContent);
       if (!parity.ok) {
+        const kept = keepRefusedOutput(targetRepoPath, file, outputContent);
         logger.error(`  ${formatParityViolations(file, parity)}`);
+        logger.error(`  ${describeKeptOutput(kept)}. Its first and last lines:`);
+        for (const line of refusedOutputPreview(outputContent)) {
+          logger.error(`    | ${line}`);
+        }
         return {
           file,
           triageResult,
+          ...(kept.kept ? { refusedOutput: kept.path } : {}),
           summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
         };
       }
@@ -574,6 +676,8 @@ export async function resyncSingleFile(
         }
       );
       if (prResult.success) {
+        // An earlier run's refusal of this file no longer holds.
+        removeRefusedOutput(targetRepoPath, file);
         prUrl = prResult.url;
         logger.info(`  ✅ PR created: ${prUrl}`);
       } else {
@@ -590,6 +694,8 @@ export async function resyncSingleFile(
       // Write to local disk (state goes to .translate/state/ in the worktree)
       fs.writeFileSync(targetFilePath, outputContent, 'utf-8');
       logger.info(`  ✅ Written to ${targetFilePath}`);
+      // An earlier run's refusal of this file no longer holds.
+      removeRefusedOutput(targetRepoPath, file);
       // A lecture without its state file is out of sync's scope under
       // `sync-scope: existing`, so a failed write is an error (#378); the
       // translation stays on disk.
@@ -733,6 +839,8 @@ export async function runForwardBulk(
 
     const batchResults = await Promise.all(
       batch.map(async (file) => {
+        // Kept here so that a file whose triage threw still counts its calls (#356)
+        const usage = emptyApiUsage();
         try {
           return await resyncSingleFile(
             file,
@@ -742,7 +850,8 @@ export async function runForwardBulk(
             fileOptions,
             logger,
             ghRunner,
-            gitRunner
+            gitRunner,
+            usage
           );
         } catch (error) {
           logger.error(
@@ -755,6 +864,7 @@ export async function runForwardBulk(
               verdict: 'CONTENT_CHANGES' as const,
               reason: 'Error during processing',
             },
+            usage,
             summary: { resynced: 0, unchanged: 0, new: 0, removed: 0, errors: 1 },
           };
         }
@@ -806,12 +916,14 @@ export function printBulkSummary(results: ForwardFileResult[], logger: ForwardLo
 
   let totalResynced = 0;
   let totalErrors = 0;
-  let totalTokens = 0;
+  // Every file's calls, triage and resync, a refused or failed file's
+  // included (#356)
+  const usage = emptyApiUsage();
 
   for (const r of results) {
     totalResynced += r.summary.resynced;
     totalErrors += r.summary.errors;
-    if (r.tokensUsed) totalTokens += r.tokensUsed;
+    if (r.usage) mergeUsage(usage, r.usage);
   }
 
   logger.info('─── Forward Resync Summary ───────────────────────────');
@@ -829,11 +941,11 @@ export function printBulkSummary(results: ForwardFileResult[], logger: ForwardLo
   if (totalErrors > 0) {
     logger.info(`  Files errored:   ${totalErrors}`);
     for (const r of results.filter((x) => x.summary.errors > 0)) {
-      logger.info(`    ${r.file}`);
+      logger.info(`    ${r.file}${r.refusedOutput ? ` (refused output: ${r.refusedOutput})` : ''}`);
     }
   }
-  if (totalTokens > 0) {
-    logger.info(`  Total tokens:    ${totalTokens.toLocaleString()}`);
+  if (usage.apiCalls > 0) {
+    logger.info(`  API usage:       ${formatUsage(usage)}`);
   }
   logger.info('─────────────────────────────────────────────────────');
 }

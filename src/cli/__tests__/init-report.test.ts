@@ -217,6 +217,7 @@ describe('translate init --report-json', () => {
           message: expect.stringMatching(
             /^structural parity check failed for broken\.md:\n.*\(intro\)=/
           ),
+          refusedOutput: '.translate/refused/broken.md',
         },
         elapsedMs: expect.any(Number),
         usage: expect.objectContaining({ outputTokens: 850, thinkingTokens: 250, apiCalls: 1 }),
@@ -418,7 +419,7 @@ describe('translate init: a state file it cannot write (#378)', () => {
       },
     ]);
     // The spent tokens still count.
-    expect(stats.totalTokens).toBe(2900);
+    expect(stats.usage).toMatchObject({ inputTokens: 2000, outputTokens: 900, apiCalls: 1 });
     expect(fs.existsSync(path.join(target, 'lectures', 'good.md'))).toBe(true);
     const report = readReport(opts.reportJson!);
     expect(report.summary).toMatchObject({ ok: 0, failed: 1 });
@@ -515,6 +516,204 @@ describe('translate init -f', () => {
   });
 });
 
+describe('translate init keeps what the parity guard refused (#364, #430)', () => {
+  const stderrText = (): string => errorSpy.mock.calls.map((call) => String(call[0])).join('\n');
+
+  it('writes the refused bytes under .translate/refused/, names them, and shows their ends', async () => {
+    writeSource(['good.md', 'broken.md']);
+    api.reply(GOOD, BREAKS_PARITY);
+    const opts = options({});
+
+    await runInit(opts);
+
+    const target = path.join(tmpDir, 'target');
+    const kept = path.join(target, '.translate', 'refused', 'broken.md');
+    const bytes = fs.readFileSync(kept, 'utf-8');
+    // The bytes the guard checked: the model's text after the in-code repairs
+    expect(bytes).toContain('## 介绍');
+    expect(bytes).toContain('translation:');
+    expect(bytes).not.toContain('(intro)=');
+    expect(fs.readFileSync(path.join(target, '.translate', 'refused', '.gitignore'), 'utf-8')).toBe(
+      '*\n'
+    );
+    // Still a failure, and the lecture is not written
+    expect(fs.existsSync(path.join(target, 'lectures', 'broken.md'))).toBe(false);
+
+    const note = 'The refused output is kept at .translate/refused/broken.md';
+    const markdown = fs.readFileSync(path.join(target, 'TRANSLATION-REPORT.md'), 'utf-8');
+    expect(markdown).toContain(`- **broken.md**: structural parity check failed for broken.md:\n`);
+    // A paragraph of the entry, after a blank line: on the line after the
+    // indented violations Markdown would fold it into the last one
+    expect(markdown).toMatch(/\n {2}- [^\n]+\n\n {2}The refused output is kept at /);
+    expect(markdown).toContain(`\n\n  ${note}\n\n  First and last lines of the refused output:\n`);
+    expect(readReport(opts.reportJson!).lectures[1].failure).toMatchObject({
+      kind: 'parity',
+      message: expect.stringContaining(note),
+      refusedOutput: '.translate/refused/broken.md',
+    });
+    // The preview starts with the body, after the front matter init put on
+    // it, and its header names where the output is: the ✗ line above keeps
+    // 200 characters, which a long list of violations fills
+    expect(bytes.startsWith('---\ntranslation:\n')).toBe(true);
+    const lines = bytes.replace(/\n$/, '').split('\n');
+    const body = lines.slice(lines.indexOf('---', 1) + 1);
+    while (body[0] === '') body.shift();
+    expect(body[0]).toBe('# 测试讲座');
+    expect(stderrText()).toContain(
+      `broken.md: ${note}. Its first and last lines:\n` +
+        `  | ${body[0]}\n  | ${body[1]}\n  | ${body[2]}\n  | …\n` +
+        `  | ${lines[lines.length - 3]}\n  | ${lines[lines.length - 2]}\n  | ${lines[lines.length - 1]}`
+    );
+  });
+
+  it('removes a refused output once the lecture is translated', async () => {
+    writeSource(['broken.md']);
+    api.reply(BREAKS_PARITY);
+    await runInit(options({ reportJson: undefined }));
+    const kept = path.join(tmpDir, 'target', '.translate', 'refused', 'broken.md');
+    expect(fs.existsSync(kept)).toBe(true);
+
+    api.reply(GOOD);
+    const stats = await runInit(options({ reportJson: undefined }));
+
+    expect(stats.successCount).toBe(1);
+    expect(fs.existsSync(kept)).toBe(false);
+    expect(fs.existsSync(path.join(tmpDir, 'target', 'lectures', 'broken.md'))).toBe(true);
+  });
+
+  it('fails the lecture as before when the output cannot be kept, and says why', async () => {
+    writeSource(['broken.md']);
+    const target = path.join(tmpDir, 'target');
+    fs.mkdirSync(path.join(target, '.translate'), { recursive: true });
+    fs.symlinkSync(path.join(tmpDir, 'elsewhere'), path.join(target, '.translate', 'refused'));
+    api.reply(BREAKS_PARITY);
+    const opts = options({});
+
+    const stats = await runInit(opts);
+
+    expect(stats.failureCount).toBe(1);
+    expect(fs.existsSync(path.join(tmpDir, 'elsewhere'))).toBe(false);
+    expect(readReport(opts.reportJson!).lectures[0].failure).toEqual({
+      kind: 'parity',
+      message: expect.stringContaining(
+        'The refused output was not kept: .translate/refused is a symbolic link'
+      ),
+    });
+  });
+});
+
+describe("translate init's printed token total (#356)", () => {
+  it('counts the refused lecture: one total from the translator, on the console and in TRANSLATION-REPORT.md', async () => {
+    writeSource(['good.md', 'broken.md']);
+    api.reply(GOOD, BREAKS_PARITY);
+
+    const stats = await runInit(options({ reportJson: undefined }));
+
+    expect(stats).toMatchObject({ successCount: 1, failureCount: 1 });
+    expect(stats.usage).toMatchObject({ inputTokens: 4000, outputTokens: 1750, apiCalls: 2 });
+    const line = '2 call(s), 4000 input + 1750 output tokens, cache: 0 read + 0 written';
+    const logged = logSpy.mock.calls.map((call) => String(call[0]));
+    expect(logged).toContain(`  API usage: ${line}`);
+    expect(logged.some((l) => /Tokens: /.test(l))).toBe(false);
+    const report = fs.readFileSync(path.join(tmpDir, 'target', 'TRANSLATION-REPORT.md'), 'utf-8');
+    expect(report).toContain(`- **API Usage**: ${line}\n`);
+    expect(report).not.toContain('Total Tokens Used');
+  });
+});
+
+describe('translate init --resume-from (#384)', () => {
+  const logLines = (): string[] => logSpy.mock.calls.map((call) => String(call[0]));
+
+  it('resumes from the lecture named exactly, not an earlier one whose name contains it', async () => {
+    writeSource(['intro.md', 'ak_solow.md', 'solow.md', 'cobweb.md']);
+
+    await runInit(options({ dryRun: true, resumeFrom: 'solow' }));
+
+    const lines = logLines();
+    expect(lines).toContain('Resuming from: solow.md\n');
+    const listed = lines.filter((line) => /^ {2}\d+\. /.test(line));
+    expect(listed.map((line) => line.trim().split(' ').slice(0, 2).join(' '))).toEqual([
+      '3. solow.md',
+      '4. cobweb.md',
+    ]);
+  });
+
+  it('translates from the resumed lecture on', async () => {
+    writeSource(['intro.md', 'ak_solow.md', 'solow.md', 'cobweb.md']);
+    api.reply(GOOD, GOOD);
+
+    const stats = await runInit(options({ resumeFrom: 'solow.md' }));
+
+    expect(api.requests).toHaveLength(2);
+    expect(stats.successCount).toBe(2);
+    const docs = path.join(tmpDir, 'target', 'lectures');
+    expect(fs.existsSync(path.join(docs, 'solow.md'))).toBe(true);
+    expect(fs.existsSync(path.join(docs, 'cobweb.md'))).toBe(true);
+    expect(fs.existsSync(path.join(docs, 'intro.md'))).toBe(false);
+    expect(fs.existsSync(path.join(docs, 'ak_solow.md'))).toBe(false);
+  });
+
+  it('refuses a name that matches no lecture, before any model call or write', async () => {
+    writeSource(['intro.md', 'solow.md', 'cobweb.md']);
+
+    await expect(runInit(options({ resumeFrom: 'sollow.md' }))).rejects.toThrow(
+      "sollow.md is not in the source's lecture set"
+    );
+
+    expect(api.requests).toHaveLength(0);
+    expect(fs.existsSync(path.join(tmpDir, 'target'))).toBe(false);
+  });
+
+  it.each([false, true])(
+    'refuses an empty name, as -f does, before any model call or write (dry run: %s)',
+    async (dryRun) => {
+      writeSource(['intro.md', 'solow.md', 'cobweb.md']);
+      api.reply(GOOD, GOOD, GOOD);
+      const empty =
+        'The lecture name is empty: -f and --resume-from each take a lecture file, such as cobweb.md.';
+
+      await expect(runInit(options({ dryRun, resumeFrom: '' }))).rejects.toThrow(empty);
+      await expect(runInit(options({ dryRun, file: '' }))).rejects.toThrow(empty);
+      await expect(runInit(options({ dryRun, file: 'intro.md', resumeFrom: '' }))).rejects.toThrow(
+        '--resume-from applies to a bulk run; it cannot be combined with -f.'
+      );
+
+      expect(logLines().some((line) => /^ {2}\d+\. /.test(line))).toBe(false);
+      expect(api.requests).toHaveLength(0);
+      expect(fs.existsSync(path.join(tmpDir, 'target'))).toBe(false);
+    }
+  );
+
+  it('refuses to be combined with -f, before any model call or write', async () => {
+    writeSource(['good.md', 'broken.md']);
+
+    for (const dryRun of [false, true]) {
+      await expect(
+        runInit(options({ dryRun, file: 'good.md', resumeFrom: 'broken.md' }))
+      ).rejects.toThrow(
+        '--resume-from applies to a bulk run; it cannot be combined with -f. ' +
+          'Use -f alone to translate one lecture, or --resume-from alone to translate from it on.'
+      );
+    }
+
+    expect(api.requests).toHaveLength(0);
+    expect(fs.existsSync(path.join(tmpDir, 'target'))).toBe(false);
+  });
+
+  it('refuses a name that matches more than one lecture, naming them', async () => {
+    writeSource(['intro.md', 'ak_solow.md', 'solow_model.md']);
+
+    await expect(runInit(options({ resumeFrom: 'solow' }))).rejects.toThrow(
+      'solow names 2 lectures: ak_solow.md, solow_model.md. Name one by its path in the docs folder.'
+    );
+    await expect(runInit(options({ dryRun: true, resumeFrom: 'solow' }))).rejects.toThrow(
+      /^solow names 2 lectures/
+    );
+
+    expect(api.requests).toHaveLength(0);
+  });
+});
+
 describe('translate init into an existing edition (#134)', () => {
   const MATCHING_CONFIG =
     '# routing notes the edition keeps\nsource-language: en\ntarget-language: zh-cn\n' +
@@ -573,6 +772,25 @@ describe('translate init into an existing edition (#134)', () => {
     expect(stats.failureCount).toBe(1);
     expect(fs.existsSync(path.join(target, 'TRANSLATION-REPORT.md'))).toBe(false);
     const stderr = errorSpy.mock.calls.map((call) => String(call[0]));
+    expect(stderr).toContain(`\ngood.md failed:\n${stats.failures[0].error}`);
+  });
+
+  it('an -f round says once where the refused output was kept', async () => {
+    writeEdition(MATCHING_CONFIG);
+    api.reply(BREAKS_PARITY);
+
+    const stats = await runInit(options({ file: 'good.md' }));
+
+    const note = stats.failures[0].keptNote;
+    expect(note).toContain('.translate/refused/good.md');
+    // The one-line failure summary may carry it, cut at 200 characters;
+    // below it, the preview's header and the full message do not both say it.
+    const stderr = errorSpy.mock.calls
+      .map((call) => String(call[0]))
+      .filter((line) => !/^\S good\.md: parity /.test(line))
+      .join('\n');
+    expect(stderr.split(note!).length - 1).toBe(1);
+    expect(stderr).toContain("\ngood.md: The refused output's first and last lines:\n");
     expect(stderr).toContain(`\ngood.md failed:\n${stats.failures[0].error}`);
   });
 

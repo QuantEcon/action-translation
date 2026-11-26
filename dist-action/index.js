@@ -47752,6 +47752,9 @@ function addUsage(usage, responseUsage) {
   usage.cacheReadInputTokens += responseUsage.cache_read_input_tokens ?? 0;
   usage.apiCalls += 1;
 }
+function formatUsage(usage) {
+  return `${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens, cache: ${usage.cacheReadInputTokens} read + ${usage.cacheCreationInputTokens} written`;
+}
 function isRetryableAnthropicError(error4) {
   return error4 instanceof RateLimitError || error4 instanceof APIConnectionError || error4 instanceof APIError && (error4.status !== void 0 && error4.status >= 500 || error4.status === void 0 && error4.message?.includes("overloaded")) || isStreamCutShort(error4) || isBodyCutShort(error4);
 }
@@ -48606,6 +48609,10 @@ function checkWrittenDocument(sourceContent, outputContent) {
 
 // dist/translator.js
 var INCOMPLETE_DOCUMENT_MARKER = "-----> INCOMPLETE DOCUMENT <------";
+var INCOMPLETE_DOCUMENT_STOP = "The model stopped and printed the incomplete-document marker";
+function incompleteDocumentError(outputTokens, maxTokens) {
+  return `${INCOMPLETE_DOCUMENT_STOP} after ${outputTokens} output tokens, short of its limit of ${maxTokens}: the response was not truncated.`;
+}
 var RETRY_CONFIG = {
   maxRetries: 3,
   baseDelayMs: 1e3
@@ -49096,7 +49103,7 @@ Provide the complete translated document maintaining exact MyST structure.`;
     if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
       return {
         success: false,
-        error: `Document exceeded token limits and was truncated. This document needs section-by-section translation rather than bulk translation.`
+        error: incompleteDocumentError(response.usage.output_tokens, maxTokens)
       };
     }
     this.log(`Translation complete: ${response.usage.input_tokens} input tokens, ${response.usage.output_tokens} output tokens`);
@@ -49204,7 +49211,7 @@ ${targetContent}`;
       if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
         return {
           success: false,
-          error: `Document exceeded token limits and was truncated. This document may need a simpler resync approach.`,
+          error: incompleteDocumentError(response.usage.output_tokens, maxTokens),
           ...sent
         };
       }
@@ -58070,7 +58077,7 @@ async function runReview(builtInGlossaryDir) {
   core8.setOutput("cache-creation-input-tokens", String(usage.cacheCreationInputTokens));
   core8.setOutput("cache-read-input-tokens", String(usage.cacheReadInputTokens));
   core8.setOutput("api-calls", String(usage.apiCalls));
-  core8.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens, cache: ${usage.cacheReadInputTokens} read + ${usage.cacheCreationInputTokens} written`);
+  core8.info(`API usage: ${formatUsage(usage)}`);
   core8.info(`\u2705 Review complete: ${result.verdict} \u2192 ${result.recommendation} (Translation: ${result.translationQuality.score}/10, Diff: ${result.diffQuality.score}/10)`);
 }
 function detectTargetLanguage(repoName) {
@@ -58749,7 +58756,7 @@ async function runSync() {
   core9.setOutput("cache-creation-input-tokens", String(usage.cacheCreationInputTokens));
   core9.setOutput("cache-read-input-tokens", String(usage.cacheReadInputTokens));
   core9.setOutput("api-calls", String(usage.apiCalls));
-  core9.info(`API usage: ${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens, cache: ${usage.cacheReadInputTokens} read + ${usage.cacheCreationInputTokens} written`);
+  core9.info(`API usage: ${formatUsage(usage)}`);
   let prUrl;
   if (result.translatedFiles.length > 0 || result.filesToDelete.length > 0) {
     try {

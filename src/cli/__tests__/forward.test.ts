@@ -494,6 +494,58 @@ describe('resyncSingleFile', () => {
       }
     });
 
+    it('removes an earlier refused output once the PR is created, and keeps it when the PR fails (#364)', async () => {
+      const fixture = createTempFixture({
+        sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## Section\n\nContent here.',
+        targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## 部分\n\n翻译内容。',
+        filename: 'stale.md',
+      });
+
+      try {
+        const mockGitRunner = (args: string[], _cwd: string) => {
+          if (args[0] === 'rev-parse' && args[1] === '--abbrev-ref') {
+            return { stdout: 'main', stderr: '', status: 0 };
+          }
+          if (args[0] === 'rev-parse' && args[1] === '--verify') {
+            return { stdout: '', stderr: '', status: 1 };
+          }
+          return { stdout: '', stderr: '', status: 0 };
+        };
+        const options = makeOptions({
+          source: fixture.sourceRepo,
+          target: fixture.targetRepo,
+          github: 'Org/Repo',
+          test: true,
+        });
+        const stale = path.join(fixture.targetRepo, '.translate', 'refused', 'stale.md');
+        fs.mkdirSync(path.dirname(stale), { recursive: true });
+        fs.writeFileSync(stale, 'an earlier refusal');
+        const run = (status: number) =>
+          resyncSingleFile(
+            fixture.filename,
+            fixture.sourceRepo,
+            fixture.targetRepo,
+            'lectures',
+            options,
+            silentLogger,
+            () => ({
+              stdout: status === 0 ? 'https://github.com/Org/Repo/pull/2' : '',
+              stderr: status === 0 ? '' : 'permission denied',
+              status,
+            }),
+            mockGitRunner
+          );
+
+        expect((await run(1)).summary.errors).toBe(1);
+        expect(fs.existsSync(stale)).toBe(true);
+
+        expect((await run(0)).prUrl).toBe('https://github.com/Org/Repo/pull/2');
+        expect(fs.existsSync(stale)).toBe(false);
+      } finally {
+        fixture.cleanup();
+      }
+    });
+
     it('reports error when PR creation fails', async () => {
       const fixture = createTempFixture({
         sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## Section\n\nContent here.',

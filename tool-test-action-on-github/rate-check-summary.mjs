@@ -243,6 +243,15 @@ const STREAM_CUT_SHORT = new Set([
 ]);
 
 /**
+ * The incomplete-document marker's failure, as the engine words it (INCOMPLETE_DOCUMENT_STOP in
+ * src/translator.ts, since #428) and as the older tags a control run draws word it.
+ */
+const INCOMPLETE_DOCUMENT = [
+  'The model stopped and printed the incomplete-document marker',
+  'Document exceeded token limits',
+];
+
+/**
  * Classify a failure message with the engine's failure kinds, in its classifyFailure order
  * (refusal, truncated, unexpected stop, parity, auth, infra, other API error, too large,
  * incomplete, no text, error). For engines that write no report: the message is what init put in
@@ -286,7 +295,7 @@ export function classifyFailureMessage(message) {
   if (status !== undefined && /^\d{3} (\{|status code)/.test(first))
     return { kind: 'api-error', status, type: errorType };
   if (/^Document too large/.test(first)) return { kind: 'too-large' };
-  if (/Document exceeded token limits/.test(first)) return { kind: 'incomplete' };
+  if (INCOMPLETE_DOCUMENT.some((text) => first.includes(text))) return { kind: 'incomplete' };
   if (/response contained no text/.test(first)) return { kind: 'no-text' };
   return { kind: 'error' };
 }

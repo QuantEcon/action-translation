@@ -496,7 +496,11 @@ export function configRelativePath(): string {
 
 /**
  * Check whether a source file has changed since the last sync.
- * Compares the recorded source-sha against the current HEAD SHA for that file.
+ * Compares the recorded source-sha against the last commit that touched the
+ * file; when they differ, compares the file's content at the recorded commit
+ * with HEAD, so a recorded commit that did not touch the file (the merge
+ * commit sync records after a merge-commit or rebase merge, #391) reads as
+ * unchanged. A recorded commit git cannot find in the clone reads as changed.
  *
  * @param sourceRepoPath - Path to the source git repository
  * @param docsFolder - Documentation folder within repos
@@ -513,10 +517,12 @@ export async function isSourceChanged(
   if (!state) return true; // No state = always consider changed
 
   // Get current HEAD SHA for this file
-  const { getFileGitMetadata } = await import('./git-metadata.js');
+  const { getFileGitMetadata, fileChangedSince } = await import('./git-metadata.js');
   const filePath = docsFolder ? path.join(docsFolder, filename) : filename;
   const metadata = await getFileGitMetadata(sourceRepoPath, filePath);
   if (!metadata) return true; // Can't determine = treat as changed
 
-  return metadata.lastCommit !== state['source-sha'];
+  if (metadata.lastCommit === state['source-sha']) return false;
+  // undefined (git cannot tell) counts as changed
+  return (await fileChangedSince(sourceRepoPath, state['source-sha'], filePath)) !== false;
 }

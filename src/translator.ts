@@ -48,6 +48,24 @@ import { unwrapDocumentFence } from './whole-document.js';
  */
 const INCOMPLETE_DOCUMENT_MARKER = '-----> INCOMPLETE DOCUMENT <------';
 
+/**
+ * The start of a whole-document failure whose response holds the incomplete-
+ * document marker. Such a response ended normally: one that reaches its
+ * output limit stops with `max_tokens` and is refused earlier as truncated
+ * (TruncatedResponseError), so the marker always means the model chose to stop
+ * (#428). The run report classifies a failure as `incomplete` by this text.
+ */
+export const INCOMPLETE_DOCUMENT_STOP =
+  'The model stopped and printed the incomplete-document marker';
+
+/** The whole-document failure for a response that holds the incomplete-document marker. */
+export function incompleteDocumentError(outputTokens: number, maxTokens: number): string {
+  return (
+    `${INCOMPLETE_DOCUMENT_STOP} after ${outputTokens} output tokens, ` +
+    `short of its limit of ${maxTokens}: the response was not truncated.`
+  );
+}
+
 /** Retry configuration for API calls */
 export const RETRY_CONFIG = {
   maxRetries: 3,
@@ -723,9 +741,7 @@ Provide the complete translated document maintaining exact MyST structure.`;
     if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
       return {
         success: false,
-        error:
-          `Document exceeded token limits and was truncated. ` +
-          `This document needs section-by-section translation rather than bulk translation.`,
+        error: incompleteDocumentError(response.usage.output_tokens, maxTokens),
       };
     }
 
@@ -867,9 +883,7 @@ ${targetContent}`;
       if (translatedText.includes(INCOMPLETE_DOCUMENT_MARKER)) {
         return {
           success: false,
-          error:
-            `Document exceeded token limits and was truncated. ` +
-            `This document may need a simpler resync approach.`,
+          error: incompleteDocumentError(response.usage.output_tokens, maxTokens),
           ...sent,
         };
       }

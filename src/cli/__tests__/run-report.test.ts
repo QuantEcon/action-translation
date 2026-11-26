@@ -19,7 +19,7 @@ import {
   UnexpectedStopReasonError,
   emptyApiUsage,
 } from '../../models.js';
-import { RETRY_CONFIG, TranslationService } from '../../translator.js';
+import { RETRY_CONFIG, TranslationService, incompleteDocumentError } from '../../translator.js';
 import {
   FakeAnthropicApi,
   FakeContentBlock,
@@ -89,6 +89,23 @@ describe('classifyFailure', () => {
     );
     expect(error.name).toBe('StructuralParityError');
     expect(classifyFailure(error)).toEqual({ kind: 'parity', message: error.message });
+  });
+
+  it('parity: the whole message, every violation, and where the refused output was kept (#430, #364)', () => {
+    const violations = Array.from(
+      { length: 40 },
+      (_, i) => `  - directive #${i + 1} missing from output: {code-cell}`
+    ).join('\n');
+    const message = `structural parity check failed for x.md:\n${violations}`;
+    expect(message.length).toBeGreaterThan(1000);
+
+    expect(classifyFailure(new StructuralParityError(message))).toEqual({
+      kind: 'parity',
+      message,
+    });
+    expect(
+      classifyFailure(new StructuralParityError(message, '.translate/refused/x.md', ['a']))
+    ).toEqual({ kind: 'parity', message, refusedOutput: '.translate/refused/x.md' });
   });
 
   it.each([
@@ -196,9 +213,8 @@ describe('classifyFailure', () => {
         )
       ).kind
     ).toBe('too-large');
-    expect(
-      classifyFailure(new Error('Document exceeded token limits and was truncated. ...')).kind
-    ).toBe('incomplete');
+    // The translator's own message, by its shared text (#428)
+    expect(classifyFailure(new Error(incompleteDocumentError(8, 32000))).kind).toBe('incomplete');
     expect(
       classifyFailure(new Error('translateFullDocument: response contained no text')).kind
     ).toBe('no-text');
@@ -280,6 +296,35 @@ describe('classifyFailure on errors the real SDK raised from a stream', () => {
     );
 
     expect(classifyFailure(error)).toMatchObject({ kind: 'model-refusal', category: 'bio' });
+  });
+
+  it('the incomplete-document marker in a finished response is incomplete, not a truncation (#428)', async () => {
+    const marked = {
+      content: [text('# 市场\n\n-----> INCOMPLETE DOCUMENT <------')],
+      stop_reason: 'end_turn' as const,
+      usage: { input_tokens: 15271, output_tokens: 8 },
+    };
+    api.reply(marked, marked);
+    const service = new TranslationService('test-key', 'claude-sonnet-5-5');
+
+    const results = [
+      await service.translateFullDocument(DOCUMENT),
+      await service.translateDocumentResync({
+        sourceLanguage: 'en',
+        targetLanguage: 'zh-cn',
+        sourceContent: '# Markets\n',
+        targetContent: '# 市场\n',
+      }),
+    ];
+
+    for (const result of results) {
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(
+        /^The model stopped and printed the incomplete-document marker after 8 output tokens, short of its limit of \d+: the response was not truncated\.$/
+      );
+      expect(result.error).not.toMatch(/token limits|section-by-section/);
+      expect(classifyFailure(new Error(result.error)).kind).toBe('incomplete');
+    }
   });
 });
 

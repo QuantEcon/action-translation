@@ -437,6 +437,28 @@ export function addUsage(
   usage.apiCalls += 1;
 }
 
+/** Add one accumulated usage into another, field by field. */
+export function mergeUsage(into: ApiUsage, more: ApiUsage): void {
+  into.inputTokens += more.inputTokens;
+  into.outputTokens += more.outputTokens;
+  into.thinkingTokens += more.thinkingTokens;
+  into.cacheCreationInputTokens += more.cacheCreationInputTokens;
+  into.cacheReadInputTokens += more.cacheReadInputTokens;
+  into.apiCalls += more.apiCalls;
+}
+
+/**
+ * A run's API usage on one line, as the Action logs it after `API usage:` and
+ * the CLI prints it in its summaries (#356):
+ * `<calls> call(s), <input> input + <output> output tokens, cache: <read> read + <written> written`.
+ */
+export function formatUsage(usage: ApiUsage): string {
+  return (
+    `${usage.apiCalls} call(s), ${usage.inputTokens} input + ${usage.outputTokens} output tokens, ` +
+    `cache: ${usage.cacheReadInputTokens} read + ${usage.cacheCreationInputTokens} written`
+  );
+}
+
 /**
  * The one transport-retry predicate for every Anthropic call site (#164/F78).
  *

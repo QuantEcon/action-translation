@@ -31,7 +31,13 @@ import { formatParityViolations } from '../../structural-parity.js';
 import { checkWrittenDocument, restoreHead } from '../../whole-document.js';
 import { applyVerbatimDirectives } from '../../verbatim-directives.js';
 import { RuleId, buildLocalizationPrompt, getFontRequirements } from '../../localization-rules.js';
-import { maxTokensFor, requestPolicyFor } from '../../models.js';
+import {
+  ApiUsage,
+  emptyApiUsage,
+  formatUsage,
+  maxTokensFor,
+  requestPolicyFor,
+} from '../../models.js';
 import { costUSD } from '../../model-pricing.js';
 import { ensureTrailingNewline } from './forward.js';
 import {
@@ -56,6 +62,12 @@ import {
   usageSince,
   writeRunReport,
 } from '../run-report.js';
+import {
+  describeKeptOutput,
+  keepRefusedOutput,
+  refusedOutputPreview,
+  removeRefusedOutput,
+} from '../refused-output.js';
 
 // ============================================================================
 // TYPES
@@ -86,9 +98,15 @@ interface TranslationStats {
   successCount: number;
   skippedCount: number;
   failureCount: number;
-  totalTokens: number;
+  /**
+   * The translator's API usage: every call that returned a final message,
+   * refused and parity-failed lectures included (#356). Filled in once the
+   * lectures are done; zero on a dry run.
+   */
+  usage: ApiUsage;
   totalTimeMs: number;
-  failures: Array<{ file: string; error: string }>;
+  /** `preview`: a parity refusal's first and last lines, as refusedOutputPreview gives them (#364). */
+  failures: Array<{ file: string; error: string; preview?: string[]; keptNote?: string }>;
 }
 
 // ============================================================================
@@ -161,6 +179,14 @@ function notInLectureSet(file: string, set: LectureSet, lectures: string[]): str
  * `-f topic` must not pick `a/topic.md` over `b/topic.md` unseen.
  */
 export function findInitLecture(file: string, set: LectureSet, lectures: string[]): string {
+  // An empty name is contained in every path: refuse it rather than read it
+  // as "every lecture", or as no name at all.
+  if (file.trim() === '') {
+    throw new Error(
+      'The lecture name is empty: -f and --resume-from each take a lecture file, ' +
+        'such as cobweb.md.'
+    );
+  }
   // `-f intro`, `-f intro.md` and `-f intro.ipynb` all name `intro.md`.
   const target = `${tocStem(file)}.md`;
   const steps = [
@@ -543,9 +569,17 @@ export async function translateLecture(
   // guard compares forward from, so it can never be re-examined. Checks the
   // exact bytes that would be written; failing the file loudly is the point.
   // The front-matter rule runs with it (#288).
+  // The refused bytes are kept, so that the refusal can be diagnosed (#364).
   const parity = checkWrittenDocument(sourceContent, finalContent);
   if (!parity.ok) {
-    throw new StructuralParityError(formatParityViolations(lectureFile, parity));
+    const kept = keepRefusedOutput(targetPath, lectureFile, finalContent);
+    const note = describeKeptOutput(kept);
+    throw new StructuralParityError(
+      `${formatParityViolations(lectureFile, parity)}\n${note}`,
+      kept.kept ? kept.path : undefined,
+      refusedOutputPreview(finalContent),
+      note
+    );
   }
 
   // Write to target folder
@@ -556,6 +590,8 @@ export async function translateLecture(
   }
   fs.mkdirSync(path.dirname(targetFilePath), { recursive: true });
   fs.writeFileSync(targetFilePath, finalContent, 'utf-8');
+  // An earlier run's refusal of this lecture no longer holds.
+  removeRefusedOutput(targetPath, lectureFile);
 
   const elapsedMs = Date.now() - startTime;
   return {
@@ -569,6 +605,24 @@ export async function translateLecture(
 // ============================================================================
 // REPORT GENERATION
 // ============================================================================
+
+/**
+ * A refused output's preview as a fenced block inside its Failures entry. The
+ * fence is longer than any run of backticks in the lines, since the output of
+ * a fence-wrapped response starts with one.
+ */
+function previewBlock(lines: string[]): string {
+  const longest = Math.max(
+    0,
+    ...lines
+      .map((line) => line.match(/`+/g) ?? [])
+      .flat()
+      .map((run) => run.length)
+  );
+  const fence = '`'.repeat(Math.max(3, longest + 1));
+  const body = lines.map((line) => `  ${line}`).join('\n');
+  return `\n  First and last lines of the refused output:\n\n  ${fence}text\n${body}\n  ${fence}\n\n`;
+}
 
 function generateReport(
   targetPath: string,
@@ -587,7 +641,7 @@ function generateReport(
 - **Total Lectures**: ${stats.totalLectures}
 - **Successfully Translated**: ${stats.successCount}${stats.skippedCount > 0 ? `\n- **Skipped (already translated)**: ${stats.skippedCount}` : ''}
 - **Failed**: ${stats.failureCount}
-- **Total Tokens Used**: ${stats.totalTokens.toLocaleString()}
+- **API Usage**: ${formatUsage(stats.usage)}
 - **Total Time**: ${(stats.totalTimeMs / 1000 / 60).toFixed(1)} minutes
 - **Average Time per Lecture**: ${(avgTimePerLecture / 1000).toFixed(1)} seconds
 
@@ -605,7 +659,15 @@ function generateReport(
   if (stats.failures.length > 0) {
     report += `\n## Failures\n\n`;
     for (const failure of stats.failures) {
-      report += `- **${failure.file}**: ${failure.error}\n`;
+      // The note on the refused output is a paragraph of its own in the
+      // entry: on the line after the indented violations, Markdown would fold
+      // it into the last one.
+      const note = failure.keptNote;
+      const split = note !== undefined && failure.error.endsWith(`\n${note}`);
+      const body = split ? failure.error.slice(0, -(note.length + 1)) : failure.error;
+      report += `- **${failure.file}**: ${body}\n`;
+      if (split) report += `\n  ${note}\n`;
+      if (failure.preview) report += previewBlock(failure.preview);
     }
   }
 
@@ -634,8 +696,8 @@ Generated by \`translate init\`
  * translator's own total: every call that returned a final message, refused,
  * truncated and parity-failed ones included. An attempt that threw before its
  * final message, every retried one among them, returns no usage; `retries`
- * counts the retried ones. The Markdown report's token figure sums only the
- * final responses of the lectures that succeeded (#356).
+ * counts the retried ones. The Markdown report and the console summary print
+ * the same total (#356).
  */
 function buildRunReport(
   options: InitOptions,
@@ -692,6 +754,14 @@ function buildRunReport(
  * Run the init command — bulk translate all lectures in a project.
  */
 export async function runInit(options: InitOptions): Promise<TranslationStats> {
+  // -f narrows the lecture list to one before --resume-from would look in it,
+  // so any other name read as "not in the source's lecture set".
+  if (options.file !== undefined && options.resumeFrom !== undefined) {
+    throw new Error(
+      '--resume-from applies to a bulk run; it cannot be combined with -f. ' +
+        'Use -f alone to translate one lecture, or --resume-from alone to translate from it on.'
+    );
+  }
   const startedAt = new Date();
   if (options.dryRun) {
     console.log(chalk.bold.yellow('\n🔍 DRY RUN — No changes will be made\n'));
@@ -736,13 +806,14 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     successCount: 0,
     skippedCount: 0,
     failureCount: 0,
-    totalTokens: 0,
+    usage: emptyApiUsage(),
     totalTimeMs: 0,
     failures: [],
   };
 
-  // Filter to single file if specified
-  if (options.file) {
+  // Filter to single file if specified. `-f ""` is refused by the resolver,
+  // not read as no -f, which would translate the whole series.
+  if (options.file !== undefined) {
     // An exact match wins over an entry that merely contains the name: `-f
     // intro.md` must not translate a `jax_intro.md` listed before it.
     const found = findInitLecture(options.file, set, lectures);
@@ -765,6 +836,19 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     console.log('');
   }
 
+  // --resume-from names a lecture as -f does, through the same resolver: a
+  // name that matches none, or more than one, stops the run here, before any
+  // model call, rather than restarting the series from its first lecture or
+  // resuming from the first entry that contains the name (#384).
+  // An empty name (`--resume-from "$NEXT"` with NEXT unset) is refused there
+  // too, not read as no --resume-from.
+  let startIndex = 0;
+  if (options.resumeFrom !== undefined) {
+    const from = findInitLecture(options.resumeFrom, set, lectures);
+    startIndex = lectures.indexOf(from);
+    console.log(chalk.yellow(`Resuming from: ${from}\n`));
+  }
+
   // Checked before the dry run returns, so a preview refuses as the run would.
   const editionConfig: TranslateConfig = {
     'source-language': options.sourceLanguage,
@@ -776,16 +860,19 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   if (options.dryRun) {
     // The preview applies --skip-existing as the real run does, so its list
     // is the real run's list (#379).
-    const skip = options.skipExisting ? filterSkipExisting(options, lectures) : undefined;
+    // ...and starts where --resume-from does, numbering each lecture by its
+    // place in the series.
+    const planned = lectures.slice(startIndex);
+    const skip = options.skipExisting ? filterSkipExisting(options, planned) : undefined;
     const skippedSet = new Set(skip?.skipped ?? []);
     // Every lecture in the set has its file: a ToC entry without one is
     // reported above, not listed here (#449).
     console.log(chalk.yellow('Would translate the following lectures:'));
-    lectures.forEach((lecture, index) => {
+    planned.forEach((lecture, index) => {
       const marker = skippedSet.has(lecture)
         ? chalk.yellow('⊘ skipped (already in the edition)')
         : chalk.green('✓');
-      console.log(chalk.gray(`  ${index + 1}. ${lecture} ${marker}`));
+      console.log(chalk.gray(`  ${startIndex + index + 1}. ${lecture} ${marker}`));
     });
     if (skip) {
       for (const warning of skip.warnings) {
@@ -855,27 +942,6 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   // Phase 5: Translate lectures
   const translator = new TranslationService(options.apiKey, options.model, false);
 
-  // Handle resume
-  let startIndex = 0;
-  if (options.resumeFrom) {
-    const idx = lectures.indexOf(options.resumeFrom);
-    if (idx === -1) {
-      // Try partial match
-      const partial = lectures.findIndex((l) => l.includes(options.resumeFrom!));
-      if (partial !== -1) {
-        startIndex = partial;
-        console.log(chalk.yellow(`Resuming from: ${lectures[partial]}\n`));
-      } else {
-        console.log(
-          chalk.yellow(`Resume file not found: ${options.resumeFrom}, starting from beginning\n`)
-        );
-      }
-    } else {
-      startIndex = idx;
-      console.log(chalk.yellow(`Resuming from: ${lectures[idx]}\n`));
-    }
-  }
-
   const CONCURRENCY = options.parallel;
   let remaining = lectures.slice(startIndex);
 
@@ -925,7 +991,6 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
         options,
         glossary
       );
-      stats.totalTokens += result.tokensUsed;
       stats.totalTimeMs += result.elapsedMs;
 
       // Write the lecture's state file before counting the lecture (#378).
@@ -971,7 +1036,16 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     } catch (error) {
       stats.failureCount++;
       const errorMsg = error instanceof Error ? error.message : String(error);
-      stats.failures.push({ file: lecture, error: errorMsg });
+      stats.failures.push({
+        file: lecture,
+        error: errorMsg,
+        ...(error instanceof StructuralParityError && error.preview
+          ? { preview: error.preview }
+          : {}),
+        ...(error instanceof StructuralParityError && error.keptNote
+          ? { keptNote: error.keptNote }
+          : {}),
+      });
       record = {
         file: lecture,
         outcome: 'failed',
@@ -1020,6 +1094,19 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
       console.error(formatFailureLine(record.file, record.failure));
     }
   }
+  // What the parity guard refused, at a glance: a wrapper such as a code
+  // fence shows in its first and last lines (#364). The whole output is in
+  // .translate/refused/. The header names where, since the failure line above
+  // keeps 200 characters and a long list of violations cuts the note off.
+  // With `-f` the full message printed below ends with the note, so the
+  // header leaves it out rather than say it twice.
+  for (const failure of stats.failures) {
+    if (!failure.preview) continue;
+    const where =
+      failure.keptNote && !options.file ? `${failure.keptNote}. Its` : "The refused output's";
+    console.error(`\n${failure.file}: ${where} first and last lines:`);
+    for (const line of failure.preview) console.error(`  | ${line}`);
+  }
   // The failure line keeps 200 characters. With `-f` no TRANSLATION-REPORT.md
   // carries the rest, such as a parity check's full list (#134), so it is
   // printed here.
@@ -1041,6 +1128,9 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
       console.error(`  ${writeStateCommand(options, record.file)}`);
     }
   }
+
+  // Every call, not only the successful lectures' final responses (#356)
+  stats.usage = translator.getUsage();
 
   // Phase 6: Generate report. Not for `-f`, whose round's PR would have to
   // delete it (#134): its one lecture's failure is on stderr above, and
@@ -1080,7 +1170,7 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   if (stats.failureCount > 0) {
     console.log(chalk.red(`  ✗ Failed: ${stats.failureCount}`));
   }
-  console.log(chalk.gray(`  Tokens: ${stats.totalTokens.toLocaleString()}`));
+  console.log(chalk.gray(`  API usage: ${formatUsage(stats.usage)}`));
   console.log(chalk.gray(`  Time: ${(stats.totalTimeMs / 1000 / 60).toFixed(1)} minutes`));
   console.log(chalk.bold.cyan('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n'));
 

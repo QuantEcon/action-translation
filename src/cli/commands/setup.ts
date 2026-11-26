@@ -274,6 +274,9 @@ Thumbs.db
 
 # Environment
 .env
+
+# Translation output the parity guard refused, kept for diagnosis (#364)
+.translate/refused/
 `;
 }
 
