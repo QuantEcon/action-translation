@@ -291,10 +291,28 @@ elif [ -n "$REF" ]; then
     ENGINE_MODE="ref"; REF_DEPS="${REF_DEPS:-shared}"
     WORKTREE="${TMPDIR:-/tmp}/rate-check-wt.$$"
     # Resolve to a commit first: --detach takes no remote-only branch name, which a plain
-    # `worktree add` would have turned into a local tracking branch.
-    REF_SHA="$(git -C "$REPO_ROOT" rev-parse -q --verify "$REF^{commit}" 2>/dev/null \
-        || git -C "$REPO_ROOT" rev-parse -q --verify "origin/$REF^{commit}" 2>/dev/null)" \
-        || { echo "cannot check out $REF" >&2; WORKTREE=""; exit 2; }
+    # `worktree add` would have turned into a local tracking branch. The name itself wins;
+    # else the remote-tracking branch of the one remote that has it, under any remote's name.
+    # Remotes that have it at different commits are ambiguous and refused.
+    REF_SHA="$(git -C "$REPO_ROOT" rev-parse -q --verify "$REF^{commit}" 2>/dev/null || true)"
+    if [ -z "$REF_SHA" ]; then
+        REF_REMOTES=""
+        for REMOTE in $(git -C "$REPO_ROOT" remote); do
+            SHA="$(git -C "$REPO_ROOT" rev-parse -q --verify "refs/remotes/$REMOTE/$REF^{commit}" 2>/dev/null || true)"
+            [ -n "$SHA" ] || continue
+            REF_REMOTES="$REF_REMOTES $REMOTE"
+            if [ -z "$REF_SHA" ]; then
+                REF_SHA="$SHA"
+            elif [ "$REF_SHA" != "$SHA" ]; then
+                REF_SHA="ambiguous"
+            fi
+        done
+        if [ "$REF_SHA" = ambiguous ]; then
+            echo "cannot check out $REF: the remotes${REF_REMOTES} each have it at a different commit; name one, as <remote>/$REF" >&2
+            WORKTREE=""; exit 2
+        fi
+    fi
+    [ -n "$REF_SHA" ] || { echo "cannot check out $REF" >&2; WORKTREE=""; exit 2; }
     git -C "$REPO_ROOT" worktree add -q --detach "$WORKTREE" "$REF_SHA" || { echo "cannot check out $REF" >&2; WORKTREE=""; exit 2; }
     if [ "$REF_DEPS" = own ]; then
         echo "Installing $REF's own dependencies (npm ci from its package-lock.json)..."

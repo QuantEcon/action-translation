@@ -656,7 +656,7 @@ describe('rate-check.sh — arguments', () => {
 });
 
 describe('rate-check.sh --ref (#409)', () => {
-  it('takes a branch that is checked out elsewhere, as a detached worktree', () => {
+  it('resolves a checked-out branch or a remote-only branch, and refuses an unknown or ambiguous name before any worktree exists', () => {
     // A throwaway repository on `main` holding this tool: `--ref main` names a branch that is
     // checked out in the repository itself, which a worktree without --detach refuses. The
     // run goes as far as compiling the ref, where a stub `npx` stops it at no cost.
@@ -704,8 +704,9 @@ describe('rate-check.sh --ref (#409)', () => {
     expect(result.stderr).toContain('compiling main failed');
     expect(result.code).toBe(2);
 
-    // A branch that exists only on the remote resolves through origin/<name>, as it did
-    // before --detach; a name that resolves nowhere is refused before any worktree exists.
+    // A branch that exists only on a remote resolves through that remote's tracking branch,
+    // whatever the remote is called; a name that resolves nowhere, or that two remotes hold
+    // at different commits, is refused before any worktree exists.
     const refRun = (ref: string, dir: string) =>
       run(
         'bash',
@@ -722,13 +723,27 @@ describe('rate-check.sh --ref (#409)', () => {
         ],
         { cwd: repo, env: { PATH: `${bin}:${process.env.PATH}`, TMPDIR: root } }
       );
-    expect(git('update-ref', 'refs/remotes/origin/feature', 'HEAD').code).toBe(0);
+    expect(git('remote', 'add', 'upstream', path.join(root, 'no-upstream')).code).toBe(0);
+    expect(git('remote', 'add', 'mirror', path.join(root, 'no-mirror')).code).toBe(0);
+    expect(git('update-ref', 'refs/remotes/upstream/feature', 'HEAD').code).toBe(0);
     const remoteOnly = refRun('feature', 'run-remote');
     expect(remoteOnly.stderr).not.toContain('cannot check out');
     expect(remoteOnly.stderr).toContain('compiling feature failed');
     const unknown = refRun('no-such-ref', 'run-unknown');
     expect(unknown.stderr).toContain('cannot check out no-such-ref');
     expect(unknown.code).toBe(2);
+
+    // Two remotes holding the branch at the same commit agree; at different commits, refused.
+    expect(git('update-ref', 'refs/remotes/mirror/feature', 'HEAD').code).toBe(0);
+    expect(refRun('feature', 'run-agree').stderr).toContain('compiling feature failed');
+    fs.writeFileSync(path.join(repo, 'README'), 'y\n');
+    expect(git('commit', '-q', '-am', 'second').code).toBe(0);
+    expect(git('update-ref', 'refs/remotes/mirror/feature', 'HEAD').code).toBe(0);
+    const ambiguous = refRun('feature', 'run-ambiguous');
+    expect(ambiguous.stderr).toContain('cannot check out feature');
+    expect(ambiguous.stderr).toContain('remotes mirror upstream each have it');
+    expect(ambiguous.code).toBe(2);
+    expect(git('worktree', 'list', '--porcelain').stdout.match(/^worktree /gm)).toHaveLength(1);
   });
 });
 
