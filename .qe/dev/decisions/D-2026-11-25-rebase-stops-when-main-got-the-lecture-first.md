@@ -36,7 +36,7 @@ these rows (`planRebaseRead` in `src/rebase-plan.ts`):
 | 200 | 200 | | | The usual case | Updates the lecture, as before; the rebase cache reuses the baseline read |
 | 200 | 404 | 200 | | The PR's source change edits a lecture the edition got since it opened | Updates `main`'s copy, as before: a stacked update |
 | 200 | 404 | 404 (or empty) | 200 | The PR's source change adds the lecture, and a PR merged since added it first | Fails before the branch moves, with no model call; the comment names the path and asks a person to decide which copy wins |
-| 200 | 404 | 404 (or empty) | 404 | The PR never delivered it | Updates `main`'s copy, as before |
+| 200 | 404 | 404 (or empty) | 404 | The PR never delivered it | Treated as an update of `main`'s copy, as before. With no English at the parent to diff against, that update fails with the missing-title error when the copy has a title, also as before; this record does not change it |
 | 200 | any other status, or 404 then any other status on the parent or the branch | | | | Fails, with the branch untouched |
 | 200, and the PR predates the cache | | | | No baseline to read | Updates, as before |
 

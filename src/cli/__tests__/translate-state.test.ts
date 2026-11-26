@@ -758,6 +758,16 @@ describe('a state file keeps the keys the engine does not own (#290)', () => {
       ['a byte-order mark', '\u{feff}source-sha: abc\nreviewed: x\n'],
       ['a tab in a value', 'source-sha: abc\nreviewed: "a\tb"\n'],
       ['a complex key', '? [a, b]\n: c\nsource-sha: abc\n'],
+      // These two split cleanly and only the value check catches them: the comment line
+      // is part of the scalar, and the blank lines are part of a kept-chomping one.
+      [
+        'a block scalar that ends in a comment-like line before an engine key',
+        'note: |\n  line\n  # in scalar\nsource-sha: abc\n',
+      ],
+      [
+        'a keep-chomping block scalar at the end of the file',
+        'source-sha: abc\nnote: |+\n  line\n\n\n',
+      ],
     ])('%s', (_what, existing) => {
       const original = yaml.load(existing, { schema: yaml.CORE_SCHEMA }) as Record<string, unknown>;
       const merged = mergeFileState(existing, withVersion, 'x');
