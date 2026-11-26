@@ -247,6 +247,39 @@ export function isGatingFinding(f) {
 }
 
 /**
+ * The fixed phrase a verdict carries when the engine's diff evaluation returned
+ * no parseable verdict (#284). It must equal `DIFF_EVALUATION_UNPARSEABLE` in
+ * src/review-verdict.ts: this tool does not import from src/, so the literal is
+ * repeated here, and src/__tests__/review-injection-scoring.test.ts asserts
+ * that the two agree.
+ */
+export const DIFF_EVALUATION_UNPARSEABLE = 'diff evaluation returned no parseable verdict';
+
+/**
+ * A verdict from a review whose diff evaluation never parsed (#284).
+ *
+ * The engine still posts that verdict, with `scopeCorrect`/`positionCorrect`
+ * recorded as failed and two gating `minor`/`diff-check` findings that say so,
+ * and routes it to `editor` by a reason carrying the same phrase. Those
+ * findings record the engine's failure to get an answer, not a judgement about
+ * the translation, and the metadata contract tells consumers to leave them
+ * out. Scored as they stand they would make the review `operative`, and a
+ * false positive on a control, where before #284 the same run died and was
+ * scored as `reviewFailed`. The scorer treats it as it treats `reviewFailed`.
+ *
+ * Only the reasons are read, as the contract says: the engine writes them, and
+ * it always writes this one. A finding's description can carry model-authored
+ * text, so a real finding that quotes the phrase must not turn a real review
+ * into a failed run.
+ */
+export function diffEvaluationDegraded(verdict) {
+  if (!verdict) return false;
+  return (verdict.recommendationReasons || []).some(
+    (t) => typeof t === 'string' && t.includes(DIFF_EVALUATION_UNPARSEABLE)
+  );
+}
+
+/**
  * Decompose a verdict into the surfaces the certification reports separately.
  *
  * The issue's metric is catch rate on the OPERATIVE surface — "did a >=minor

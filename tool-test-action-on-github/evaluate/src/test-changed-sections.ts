@@ -3,6 +3,7 @@
  * Quick validation of identifyChangedSections
  */
 
+import { readFileSync } from 'node:fs';
 import { identifyChangedSections } from './evaluator.js';
 
 console.log('Testing identifyChangedSections...\n');
@@ -464,6 +465,121 @@ New sub-subsection with computation details.`;
 
   const result = identifyChangedSections(before, after, before, after);
   return result.length === 1 && result[0].heading === '#### Computing Eigenvalues' && result[0].changeType === 'added';
+});
+
+// #283: headings that share an id (same text at two levels, or repeated)
+const summary = (r: ReturnType<typeof identifyChangedSections>) =>
+  r.map(c => `${c.changeType}:${c.heading}`).join('|');
+
+test('Same heading text at two levels: only the changed one is reported (#283)', () => {
+  const before = `## Exercises
+
+Top-level exercises.
+
+## Methods
+
+### Exercises
+
+Method exercises.`;
+  const after = before.replace('Method exercises.', 'Method exercises, revised.');
+  return summary(identifyChangedSections(before, after, before, after)) === 'modified:### Exercises';
+});
+
+test('Same heading text at two levels: an edit elsewhere reports neither (#283)', () => {
+  const before = `## Exercises
+
+A.
+
+## Other
+
+B.
+
+### Exercises
+
+C.`;
+  const after = before.replace('B.', 'B, revised.');
+  return summary(identifyChangedSections(before, after, before, after)) === 'modified:## Other';
+});
+
+test('A heading repeated at one level matches the nth to the nth (#283)', () => {
+  const before = `## Model A
+
+### Set Up
+
+First set-up.
+
+## Model B
+
+### Set Up
+
+Second set-up.`;
+  const after = before.replace('Second set-up.', 'Second set-up, revised.');
+  const result = identifyChangedSections(before, after, before, after);
+  return summary(result) === 'modified:### Set Up' && result[0].englishContent === 'Second set-up, revised.';
+});
+
+test('A duplicate heading added is added, one removed is deleted (#283)', () => {
+  const one = `## Solver
+
+Solve it.`;
+  const two = `${one}
+
+## Solver
+
+Solve it again.`;
+  return (
+    summary(identifyChangedSections(one, two, one, two)) === 'added:## Solver' &&
+    summary(identifyChangedSections(two, one, two, one)) === 'deleted:## Solver'
+  );
+});
+
+test("The issue's example: an edit to one section of the harness lecture (#283)", () => {
+  const lecture = readFileSync(
+    new URL('../../test-action-on-github-data/base-lecture.md', import.meta.url),
+    'utf-8'
+  );
+  const edited = lecture.replace('reveal important properties', 'reveal essential properties');
+  return (
+    edited !== lecture &&
+    summary(identifyChangedSections(lecture, edited, lecture, edited)) ===
+      'modified:## Eigenvalues and Eigenvectors'
+  );
+});
+
+test('A unique heading whose level changed still matches as modified (#283)', () => {
+  const before = `## Results
+
+Text.`;
+  const after = `### Results
+
+Text.`;
+  return summary(identifyChangedSections(before, after, before, after)) === 'modified:### Results';
+});
+
+test('A level change on one of two same-text headings reads as one modification (#283)', () => {
+  const before = `## Exercises
+
+Top-level exercises.
+
+## Exercises
+
+More exercises.`;
+  const after = before.replace('## Exercises\n\nMore', '### Exercises\n\nMore');
+  return summary(identifyChangedSections(before, after, before, after)) === 'modified:### Exercises';
+});
+
+test('Deleting one of two same-text headings at different levels deletes that level (#283)', () => {
+  const before = `## Exercises
+
+Top-level exercises.
+
+### Exercises
+
+Sub exercises.`;
+  const after = `### Exercises
+
+Sub exercises.`;
+  return summary(identifyChangedSections(before, after, before, after)) === 'deleted:## Exercises';
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

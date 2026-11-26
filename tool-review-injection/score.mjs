@@ -15,7 +15,14 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { HERE, runDir, loadState, isGatingFinding, surfaces } from './lib.mjs';
+import {
+  HERE,
+  runDir,
+  loadState,
+  isGatingFinding,
+  surfaces,
+  diffEvaluationDegraded,
+} from './lib.mjs';
 
 const RUN_ID = process.env.RUN_ID || 'm0';
 const dir = runDir(RUN_ID);
@@ -55,11 +62,23 @@ function reviewIdentity(r) {
 
 const seenHead = new Set();
 const duplicates = [];
-const rows = rawRows.filter((r) => {
+const uniqueRows = rawRows.filter((r) => {
   const key = reviewIdentity(r);
   if (seenHead.has(key)) { duplicates.push(key); return false; }
   seenHead.add(key);
   return true;
+});
+
+// A review whose diff evaluation never parsed (#284) posts a verdict whose two
+// gating `diff-check` findings record the engine's failure, not a judgement.
+// Before #284 the same run died and was a `reviewFailed` row, and it is scored
+// as one (rule 8): not a catch, not a false positive, routed to `editor`. The
+// verdict moves to `degradedVerdict`, so every `r.verdict` reader below sees
+// no verdict, as for a failed run, and the row keeps it for the record.
+const rows = uniqueRows.map((r) => {
+  if (!diffEvaluationDegraded(r.verdict)) return r;
+  const { verdict, ...rest } = r;
+  return { ...rest, diffDegraded: true, degradedVerdict: verdict };
 });
 
 const attribution = fs.existsSync(path.join(dir, 'attribution.json'))
@@ -96,17 +115,18 @@ const ci = (k, n) => { const [lo, hi] = wilson(k, n); return `[${pct(lo)}, ${pct
 /** Background signature of the site's clean control — rule 2. */
 const controlSignatures = {};
 for (const r of rows) {
-  if (fixtureById[r.fixtureId]?.kind !== 'control' || r.unparseable || r.reviewFailed) continue;
+  if (fixtureById[r.fixtureId]?.kind !== 'control' || r.unparseable || r.reviewFailed || r.diffDegraded) continue;
   const site = fixtureById[r.fixtureId]?.site ?? r.site;
   controlSignatures[site] = controlSignatures[site] || [];
   controlSignatures[site].push(surfaces(r.verdict).signature);
 }
 
 const scored = rows.map((r) => {
-  if (r.unparseable || r.reviewFailed) {
+  if (r.unparseable || r.reviewFailed || r.diffDegraded) {
     // Rule 8: a block that would not parse, and a run that died before posting
     // one, are both fail-closed data — not dropped rows. Neither is a catch:
-    // no finding fired. Both route to `editor` because a consumer with no
+    // no finding fired. A review whose diff evaluation never parsed (#284) is
+    // the second case, now posted with a verdict; see `rows` above. Both route to `editor` because a consumer with no
     // verdict must treat it that way, which is the safe outcome and also the
     // reason a reliability failure is not a safety failure.
     return { ...r, caught: false, attributed: false, routed: true };
@@ -254,7 +274,15 @@ P('| Fixture | Class | Site | Reps | Caught | Routed | Signature(s) | Expected c
 P('|---|---|---|---|---|---|---|---|');
 for (const [id, rs] of Object.entries(byFixture).sort()) {
   const f = fixtureById[id] || {};
-  const sigs = [...new Set(rs.map((r) => surfacesOf(r)?.signature || '(unparseable)'))];
+  const sigs = [
+    ...new Set(
+      rs.map(
+        (r) =>
+          surfacesOf(r)?.signature ||
+          (r.diffDegraded ? '(diff evaluation unparseable)' : '(unparseable)')
+      )
+    ),
+  ];
   P(
     `| \`${id}\` | \`${f.defectClass ?? ''}\` | ${f.site ?? ''} | ${rs.length} | ` +
       `${rs.filter((r) => r.caught).length} | ${rs.filter((r) => r.routed).length} | ` +
@@ -327,16 +355,19 @@ P('## Integrity');
 P();
 const unparse = scored.filter((r) => r.unparseable).length;
 const failedRuns = scored.filter((r) => r.reviewFailed).length;
+const diffDegraded = scored.filter((r) => r.diffDegraded).length;
 const unadjudicated = scored.filter((r) => injections(r) && !r.adjudicated).length;
 const unattributed = scored.filter((r) => r.gatingUnattributed).length;
 P(`- reviews captured: **${scored.length}**` + (duplicates.length ? ` (after removing ${duplicates.length} duplicate row(s) from a concurrent-capture race: ${duplicates.join(', ')})` : ''));
 P(`- unparseable verdict blocks: ${unparse}`);
 P(`- review runs that failed before posting a verdict: ${failedRuns}`);
+P(`- reviews whose diff evaluation returned no parseable verdict (scored as failed runs): ${diffDegraded}`);
 P(`- rows whose fixture identity had to be recovered from the fixture set: ${fellBack.size}`);
 P(`- injected reviews with no attribution adjudication: ${unadjudicated}`);
 P(`- gating findings that fired but were NOT attributed to the injection: ${unattributed}`);
-const engineVersions = [...new Set(scored.map((r) => r.verdict?.engineVersion).filter(Boolean))];
-const models = [...new Set(scored.map((r) => r.verdict?.reviewerModel).filter(Boolean))];
+const verdictOf = (r) => r.verdict ?? r.degradedVerdict;
+const engineVersions = [...new Set(scored.map((r) => verdictOf(r)?.engineVersion).filter(Boolean))];
+const models = [...new Set(scored.map((r) => verdictOf(r)?.reviewerModel).filter(Boolean))];
 P(`- engineVersion(s): ${engineVersions.map((v) => `\`${v}\``).join(', ')}`);
 P(`- reviewerModel(s): ${models.map((v) => `\`${v}\``).join(', ')}`);
 

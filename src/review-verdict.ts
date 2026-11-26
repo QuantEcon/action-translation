@@ -28,6 +28,17 @@ export const REVIEW_VERDICT_MARKER = 'translation-review-verdict';
 /** Schema version of the verdict block. Bump on breaking changes (#66). */
 export const REVIEW_VERDICT_SCHEMA_VERSION = 1;
 
+/**
+ * The fixed phrase every finding carries when the diff evaluation returned no
+ * parseable verdict after its retries (#284). The review then degrades instead
+ * of failing: the model-judged diff checks are recorded as failed and gate
+ * through `diff-check` findings that carry this phrase, so calibration data can
+ * tell an unparseable reply from a check the model really reported as failed.
+ * Changing it breaks every query that greps for it; see
+ * docs/user/metadata-contract.md.
+ */
+export const DIFF_EVALUATION_UNPARSEABLE = 'diff evaluation returned no parseable verdict';
+
 /** Findings kept in the block, worst first — bounds the comment size. */
 const MAX_FINDINGS = 20;
 
@@ -452,8 +463,21 @@ export interface RecommendationInput {
   findingsMalformed: boolean;
   /** Source content could not be fetched: the comparison was against nothing. */
   sourceContentMissing?: boolean;
+  /**
+   * Reviewed files whose source side is absent (a 404) while others were
+   * compared (#261): that part of the review compared against nothing.
+   */
+  sourceContentMissingFiles?: string[];
   /** `max-suggestions: 0` asked the model for no findings, so an empty list proves nothing. */
   findingsSuppressed?: boolean;
+  /**
+   * The diff evaluation returned no parseable verdict (#284), so the
+   * model-judged checks were never judged. Gates by a reason of its own: the
+   * `diff-check` findings that also record it can be capped out of the
+   * findings list by twenty model findings, and the model-sourced booleans
+   * are skipped above.
+   */
+  diffEvaluationUnparseable?: boolean;
 }
 
 /**
@@ -499,11 +523,22 @@ export function computeRecommendation(input: RecommendationInput): {
     if (input.diffCheckSources?.[check] === 'model') continue;
     if (input.diffChecks?.[check] !== true) reasons.push(`diff check failed: ${check}`);
   }
+  if (input.diffEvaluationUnparseable) {
+    reasons.push(
+      `${DIFF_EVALUATION_UNPARSEABLE} — scopeCorrect and positionCorrect were not judged`
+    );
+  }
   if (input.findingsMalformed) {
     reasons.push('findings payload missing or malformed (fail-closed)');
   }
   if (input.sourceContentMissing) {
     reasons.push('source content could not be fetched — the review compared against nothing');
+  } else if (input.sourceContentMissingFiles && input.sourceContentMissingFiles.length > 0) {
+    const files = input.sourceContentMissingFiles;
+    reasons.push(
+      `source content could not be fetched for ${files.join(', ')} — the review compared ` +
+        `${files.length === 1 ? 'that file' : 'those files'} against nothing`
+    );
   }
   if (input.findingsSuppressed) {
     reasons.push(

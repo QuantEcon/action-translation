@@ -56581,6 +56581,7 @@ var fs7 = __toESM(require("fs"), 1);
 var path7 = __toESM(require("path"), 1);
 var REVIEW_VERDICT_MARKER = "translation-review-verdict";
 var REVIEW_VERDICT_SCHEMA_VERSION = 1;
+var DIFF_EVALUATION_UNPARSEABLE = "diff evaluation returned no parseable verdict";
 var MAX_FINDINGS = 20;
 var MAX_FIELD_LENGTH = 400;
 var SEVERITIES = ["blocker", "major", "minor", "nit"];
@@ -56757,11 +56758,17 @@ function computeRecommendation(input) {
     if (input.diffChecks?.[check] !== true)
       reasons.push(`diff check failed: ${check}`);
   }
+  if (input.diffEvaluationUnparseable) {
+    reasons.push(`${DIFF_EVALUATION_UNPARSEABLE} \u2014 scopeCorrect and positionCorrect were not judged`);
+  }
   if (input.findingsMalformed) {
     reasons.push("findings payload missing or malformed (fail-closed)");
   }
   if (input.sourceContentMissing) {
     reasons.push("source content could not be fetched \u2014 the review compared against nothing");
+  } else if (input.sourceContentMissingFiles && input.sourceContentMissingFiles.length > 0) {
+    const files = input.sourceContentMissingFiles;
+    reasons.push(`source content could not be fetched for ${files.join(", ")} \u2014 the review compared ${files.length === 1 ? "that file" : "those files"} against nothing`);
   }
   if (input.findingsSuppressed) {
     reasons.push("findings suppressed by max-suggestions=0 \u2014 the findings half of the gate is blind");
@@ -56851,6 +56858,58 @@ function isActionReviewComment(body) {
 function isNotFoundError(error4) {
   return typeof error4 === "object" && error4 !== null && error4.status === 404;
 }
+var ReviewParseExhaustedError = class extends Error {
+  operation;
+  attempts;
+  constructor(operation, attempts, cause) {
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    super(`${operation}: the retry budget of ${attempts} attempts ended on a reply that does not parse: ${detail}`, { cause });
+    this.name = "ReviewParseExhaustedError";
+    this.operation = operation;
+    this.attempts = attempts;
+  }
+};
+var ReplyParseError = class extends Error {
+  constructor(cause) {
+    super(cause instanceof Error ? cause.message : String(cause), { cause });
+    this.name = "ReplyParseError";
+  }
+};
+function unparseableDiffQuality(attempts) {
+  const notJudged = `Not evaluated: ${DIFF_EVALUATION_UNPARSEABLE}.`;
+  return {
+    score: 0,
+    scopeCorrect: false,
+    positionCorrect: false,
+    structurePreserved: false,
+    headingMapCorrect: false,
+    issues: [
+      `${DIFF_EVALUATION_UNPARSEABLE}: the retry budget of ${attempts} attempts ended on a parse failure. The model-judged diff checks were not judged and are recorded as failed (#284).`
+    ],
+    summary: `The ${DIFF_EVALUATION_UNPARSEABLE}: the retry budget of ${attempts} attempts ended on a parse failure, and the model-judged diff checks are recorded as failed.`,
+    scopeDetails: notJudged,
+    positionDetails: notJudged,
+    structureDetails: notJudged
+  };
+}
+var FileContentOmittedError = class extends Error {
+  constructor(side, path9, ref, size) {
+    super(`Could not read ${side} ${path9} @ ${ref.substring(0, 7)}: the contents API returned no content for this ${size}-byte file (GitHub omits the content of a file over 1 MB) \u2014 failing the review rather than reviewing the PR without this file`);
+    this.name = "FileContentOmittedError";
+  }
+};
+function sourceReadError(path9, ref, error4) {
+  if (error4 instanceof FileContentOmittedError)
+    return error4;
+  const message = error4 instanceof Error ? error4.message : String(error4);
+  return new Error(`Could not read source ${path9} @ ${ref.substring(0, 7)}: ${message} \u2014 failing the review rather than reviewing the PR without this file`, { cause: error4 });
+}
+function decodeFileContent(data, side, path9, ref) {
+  if (data.content === "" && typeof data.size === "number" && data.size > 0) {
+    throw new FileContentOmittedError(side, path9, ref, data.size);
+  }
+  return Buffer.from(data.content, "base64").toString("utf-8");
+}
 function parseJsonResponse(text) {
   let parsed;
   try {
@@ -56925,6 +56984,52 @@ function extractSections(content) {
 function headingToId(heading) {
   return heading.replace(/^#{2,6}\s+/, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
 }
+function sectionMatchKeys(before, after) {
+  const count = (sections) => {
+    const counts = /* @__PURE__ */ new Map();
+    for (const s of sections) {
+      const id = headingToId(s.heading);
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    return counts;
+  };
+  const beforeCounts = count(before);
+  const afterCounts = count(after);
+  const collides = (id) => (beforeCounts.get(id) ?? 0) > 1 || (afterCounts.get(id) ?? 0) > 1;
+  const keysFor = (sections) => {
+    const seen = /* @__PURE__ */ new Map();
+    return sections.map((s) => {
+      const id = headingToId(s.heading);
+      if (!collides(id))
+        return id;
+      const level = (s.heading.match(/^#+/) ?? [""])[0].length;
+      const levelled = `${level}\0${id}`;
+      const n = seen.get(levelled) ?? 0;
+      seen.set(levelled, n + 1);
+      return `${levelled}\0${n}`;
+    });
+  };
+  return { beforeKeys: keysFor(before), afterKeys: keysFor(after) };
+}
+function pairSections(before, after) {
+  const { beforeKeys, afterKeys } = sectionMatchKeys(before, after);
+  const beforeIndexByKey = new Map(beforeKeys.map((key, j) => [key, j]));
+  const afterToBefore = afterKeys.map((key) => beforeIndexByKey.get(key));
+  const matched = new Set(afterToBefore.filter((j) => j !== void 0));
+  const leftoverById = /* @__PURE__ */ new Map();
+  before.forEach((s, j) => {
+    if (matched.has(j))
+      return;
+    const id = headingToId(s.heading);
+    leftoverById.set(id, [...leftoverById.get(id) ?? [], j]);
+  });
+  after.forEach((s, i) => {
+    if (afterToBefore[i] !== void 0)
+      return;
+    afterToBefore[i] = leftoverById.get(headingToId(s.heading))?.shift();
+  });
+  return afterToBefore;
+}
 function identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter) {
   const changedSections = [];
   if (!sourceAfter && !targetAfter) {
@@ -56960,12 +57065,12 @@ function identifyChangedSections(sourceBefore, sourceAfter, targetBefore, target
   const sourceBeforeSections = extractSections(sourceBefore);
   const sourceAfterSections = extractSections(sourceAfter);
   const targetAfterSections = extractSections(targetAfter);
-  const beforeById = new Map(sourceBeforeSections.map((s) => [headingToId(s.heading), s]));
-  const afterById = new Map(sourceAfterSections.map((s) => [headingToId(s.heading), s]));
+  const afterToBefore = pairSections(sourceBeforeSections, sourceAfterSections);
+  const pairedBefore = new Set(afterToBefore);
   for (let i = 0; i < sourceAfterSections.length; i++) {
     const section = sourceAfterSections[i];
-    const id = headingToId(section.heading);
-    const beforeSection = beforeById.get(id);
+    const j = afterToBefore[i];
+    const beforeSection = j === void 0 ? void 0 : sourceBeforeSections[j];
     const targetSection = targetAfterSections[i];
     if (!beforeSection) {
       changedSections.push({
@@ -56983,9 +57088,9 @@ function identifyChangedSections(sourceBefore, sourceAfter, targetBefore, target
       });
     }
   }
-  for (const section of sourceBeforeSections) {
-    const id = headingToId(section.heading);
-    if (!afterById.has(id)) {
+  for (let i = 0; i < sourceBeforeSections.length; i++) {
+    const section = sourceBeforeSections[i];
+    if (!pairedBefore.has(i)) {
       changedSections.push({
         heading: section.heading,
         changeType: "deleted"
@@ -57038,16 +57143,20 @@ var TranslationReviewer = class {
         if (!text.trim()) {
           throw new Error(`${operationName}: response contained no text`);
         }
-        return parseJsonResponse(text);
+        try {
+          return parseJsonResponse(text);
+        } catch (parseError) {
+          throw new ReplyParseError(parseError);
+        }
       } catch (error4) {
         if (error4 instanceof AuthenticationError || error4 instanceof BadRequestError) {
           throw error4;
         }
         const isApiRetryable = isRetryableAnthropicError(error4);
-        const isParseFailure = error4 instanceof SyntaxError || error4 instanceof Error && error4.message.includes("No JSON object");
+        const isParseFailure = error4 instanceof ReplyParseError;
         if (!isApiRetryable && !isParseFailure || attempt === maxRetries) {
           if (isParseFailure) {
-            core6.error(`${operationName}: Failed to parse response after ${maxRetries} attempts`);
+            throw new ReviewParseExhaustedError(operationName, maxRetries, error4.cause);
           }
           throw error4;
         }
@@ -57084,66 +57193,81 @@ var TranslationReviewer = class {
    * sync deletes its translation as for a removal (#398), and GitHub lists
    * the move as `renamed`, under the new path.
    *
-   * Fail-closed by construction: if listing the source PR throws, the outer
-   * catch returns an EMPTY `removed` set, so no file is excused and absent
-   * source content stays fatal. Absence of evidence is never read as evidence
-   * of deletion.
+   * Fail-closed by construction: if listing the source PR throws, the catch
+   * returns EMPTY maps and an EMPTY `removed` set, so no file is excused and
+   * absent source content stays fatal. Absence of evidence is never read as
+   * evidence of deletion.
+   *
+   * That catch covers the listing only (#261). A per-file read that fails with
+   * anything but a 404 throws, naming the file: inside the old catch-all it
+   * returned partial maps, the file dropped out of the review, and the run
+   * could PASS having reviewed less than the PR. A 404 leaves the file out of
+   * the maps; the caller routes such a file to `editor` by name.
    */
   async getSourceDiff(sourceOwner, sourceRepoName, sourcePrNumber, filenames, docsFolder) {
     const before = /* @__PURE__ */ new Map();
     const after = /* @__PURE__ */ new Map();
     const removed = /* @__PURE__ */ new Set();
+    let sourcePr;
+    let sourceFiles;
     try {
-      const { data: sourcePr } = await this.octokit.rest.pulls.get({
+      ({ data: sourcePr } = await this.octokit.rest.pulls.get({
+        owner: sourceOwner,
+        repo: sourceRepoName,
+        pull_number: sourcePrNumber
+      }));
+      sourceFiles = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
         owner: sourceOwner,
         repo: sourceRepoName,
         pull_number: sourcePrNumber
       });
-      const sourceFiles = await this.octokit.paginate(this.octokit.rest.pulls.listFiles, {
-        owner: sourceOwner,
-        repo: sourceRepoName,
-        pull_number: sourcePrNumber
-      });
-      for (const filename of filenames) {
-        const sourceFile = sourceFiles.find((f) => f.filename === filename);
-        const movedOut = sourceFiles.some((f) => f.status === "renamed" && f.previous_filename === filename && !f.filename.startsWith(docsFolder));
-        if (sourceFile?.status === "removed" || !sourceFile && movedOut) {
-          removed.add(filename);
-        }
-        const beforeFilename = sourceFile?.status === "renamed" && sourceFile.previous_filename ? sourceFile.previous_filename : filename;
-        if (!sourceFile || sourceFile.status !== "added") {
-          try {
-            const { data: beforeData } = await this.octokit.rest.repos.getContent({
-              owner: sourceOwner,
-              repo: sourceRepoName,
-              path: beforeFilename,
-              ref: sourcePr.base.sha
-            });
-            if ("content" in beforeData) {
-              before.set(filename, Buffer.from(beforeData.content, "base64").toString("utf-8"));
-            }
-          } catch {
+    } catch (error4) {
+      core6.warning(`Could not fetch source PR #${sourcePrNumber}: ${error4}`);
+      return { before, after, removed };
+    }
+    for (const filename of filenames) {
+      const sourceFile = sourceFiles.find((f) => f.filename === filename);
+      const movedOut = sourceFiles.some((f) => f.status === "renamed" && f.previous_filename === filename && !f.filename.startsWith(docsFolder));
+      if (sourceFile?.status === "removed" || !sourceFile && movedOut) {
+        removed.add(filename);
+      }
+      const beforeFilename = sourceFile?.status === "renamed" && sourceFile.previous_filename ? sourceFile.previous_filename : filename;
+      if (!sourceFile || sourceFile.status !== "added") {
+        try {
+          const { data: beforeData } = await this.octokit.rest.repos.getContent({
+            owner: sourceOwner,
+            repo: sourceRepoName,
+            path: beforeFilename,
+            ref: sourcePr.base.sha
+          });
+          if ("content" in beforeData) {
+            before.set(filename, decodeFileContent(beforeData, "source", beforeFilename, sourcePr.base.sha));
           }
-        }
-        if (!removed.has(filename)) {
-          try {
-            const { data: afterData } = await this.octokit.rest.repos.getContent({
-              owner: sourceOwner,
-              repo: sourceRepoName,
-              path: filename,
-              ref: sourcePr.head.sha
-            });
-            if ("content" in afterData) {
-              after.set(filename, Buffer.from(afterData.content, "base64").toString("utf-8"));
-            }
-          } catch {
+        } catch (error4) {
+          if (!isNotFoundError(error4)) {
+            throw sourceReadError(beforeFilename, sourcePr.base.sha, error4);
           }
         }
       }
-      core6.info(`\u2713 Fetched source PR #${sourcePrNumber} diff for ${filenames.length} file(s)`);
-    } catch (error4) {
-      core6.warning(`Could not fetch source PR #${sourcePrNumber}: ${error4}`);
+      if (!removed.has(filename)) {
+        try {
+          const { data: afterData } = await this.octokit.rest.repos.getContent({
+            owner: sourceOwner,
+            repo: sourceRepoName,
+            path: filename,
+            ref: sourcePr.head.sha
+          });
+          if ("content" in afterData) {
+            after.set(filename, decodeFileContent(afterData, "source", filename, sourcePr.head.sha));
+          }
+        } catch (error4) {
+          if (!isNotFoundError(error4)) {
+            throw sourceReadError(filename, sourcePr.head.sha, error4);
+          }
+        }
+      }
     }
+    core6.info(`\u2713 Fetched source PR #${sourcePrNumber} diff: ${after.size}/${filenames.length} file(s) at head`);
     return { before, after, removed };
   }
   /**
@@ -57156,6 +57280,8 @@ var TranslationReviewer = class {
    * "this file was deleted by the change under review" to read off it. Absent
    * source content on the resync path therefore stays fatal, exactly as before
    * (#210 is a sync-path fix).
+   *
+   * A read that fails with anything but a 404 throws, naming the file (#261).
    */
   async getSourceAtCommit(sourceOwner, sourceRepoName, commitSha, filenames) {
     const before = /* @__PURE__ */ new Map();
@@ -57169,10 +57295,12 @@ var TranslationReviewer = class {
           ref: commitSha
         });
         if ("content" in data) {
-          after.set(filename, Buffer.from(data.content, "base64").toString("utf-8"));
+          after.set(filename, decodeFileContent(data, "source", filename, commitSha));
         }
       } catch (error4) {
-        core6.warning(`Could not fetch ${filename} @ ${commitSha.substring(0, 7)}: ${error4}`);
+        if (!isNotFoundError(error4))
+          throw sourceReadError(filename, commitSha, error4);
+        core6.warning(`Source ${filename} not found @ ${commitSha.substring(0, 7)}`);
       }
     }
     core6.info(`\u2713 Fetched source @ ${commitSha.substring(0, 7)} for ${after.size}/${filenames.length} file(s)`);
@@ -57285,7 +57413,7 @@ var TranslationReviewer = class {
           ref: pr.head.sha
         });
         if ("content" in targetData) {
-          const content = Buffer.from(targetData.content, "base64").toString("utf-8");
+          const content = decodeFileContent(targetData, "target", file.filename, pr.head.sha);
           targetTranslation += content + "\n\n";
           filePairs.set(file.filename, { ...filePairs.get(file.filename), target: content });
         }
@@ -57302,7 +57430,7 @@ var TranslationReviewer = class {
           ref: pr.base.sha
         });
         if ("content" in targetBeforeData) {
-          targetBefore += Buffer.from(targetBeforeData.content, "base64").toString("utf-8") + "\n\n";
+          targetBefore += decodeFileContent(targetBeforeData, "target", file.filename, pr.base.sha) + "\n\n";
         }
       } catch (error4) {
         if (!isNotFoundError(error4))
@@ -57332,12 +57460,22 @@ var TranslationReviewer = class {
       throw new Error(`Review aborted: no source content could be fetched for ${reviewableFilenames.join(", ")} \u2014 nothing to review against`);
     }
     const translationQuality = await this.evaluateTranslation(sourceEnglish, targetTranslation, changedSections, reviewableFilenames, glossaryTerms, targetLanguage);
-    const diffQuality = await this.evaluateDiff(resyncMetadata ? sourceEnglish : sourceBefore, sourceEnglish, targetBefore, targetTranslation, markdownFiles.map((f) => ({
-      filename: f.filename,
-      status: f.status,
-      additions: f.additions,
-      deletions: f.deletions
-    })), resyncMetadata !== void 0);
+    let diffQuality;
+    let diffUnparseable = false;
+    try {
+      diffQuality = await this.evaluateDiff(resyncMetadata ? sourceEnglish : sourceBefore, sourceEnglish, targetBefore, targetTranslation, markdownFiles.map((f) => ({
+        filename: f.filename,
+        status: f.status,
+        additions: f.additions,
+        deletions: f.deletions
+      })), resyncMetadata !== void 0);
+    } catch (error4) {
+      if (!(error4 instanceof ReviewParseExhaustedError))
+        throw error4;
+      core6.warning(`evaluateDiff: ${DIFF_EVALUATION_UNPARSEABLE} (${error4.message}) \u2014 scopeCorrect and positionCorrect are recorded as failed and the PR routes to editor; the deterministic diff checks still run (#284)`);
+      diffUnparseable = true;
+      diffQuality = unparseableDiffQuality(error4.attempts);
+    }
     const reviewedPairs = [...filePairs.entries()].filter(([, v]) => v.source !== void 0 && v.target !== void 0).map(([filename, v]) => ({
       filename,
       source: v.source,
@@ -57398,7 +57536,7 @@ var TranslationReviewer = class {
       category: "diff-check",
       file: soleFile,
       location: null,
-      description: truncateField(`${name}: the reviewer reported this check as failed. This is a model judgement, not a deterministic check \u2014 verify against the source diff before treating it as a defect (#148).`),
+      description: truncateField(diffUnparseable ? `${name}: ${DIFF_EVALUATION_UNPARSEABLE}, so this check was not judged and is recorded as failed. Not a model judgement and not a defect found in the translation \u2014 check the diff by hand (#284).` : `${name}: the reviewer reported this check as failed. This is a model judgement, not a deterministic check \u2014 verify against the source diff before treating it as a defect (#148).`),
       suggestion: null
     }));
     const deterministicFindings = Object.entries(deterministic).filter(([name, result2]) => name !== "verbatimDirectives" && result2 !== void 0).flatMap(([, result2]) => result2.details).map((detail) => ({
@@ -57430,6 +57568,7 @@ var TranslationReviewer = class {
     if (sourceContentMissing) {
       core6.warning("No source content was fetched for any reviewed file \u2014 the verdict is not a real comparison and routes to editor");
     }
+    const sourceContentMissingFiles = reviewableFiles.filter((f) => !sourceAfterMap.has(f.filename)).filter((f) => resyncMetadata !== void 0 || f.status !== "removed").map((f) => f.filename);
     const { recommendation, reasons } = computeRecommendation({
       verdict,
       scores: {
@@ -57444,6 +57583,11 @@ var TranslationReviewer = class {
       findings: allFindings,
       findingsMalformed: translationQuality.findingsMalformed,
       sourceContentMissing,
+      sourceContentMissingFiles,
+      // Gates by its own reason (#284): the two `diff-check` findings that
+      // also record it can be capped out of `allFindings` by twenty model
+      // findings, and the model-sourced booleans are skipped by the rubric.
+      diffEvaluationUnparseable: diffUnparseable,
       // With max-suggestions: 0 the prompt asks for no findings at all, so an
       // empty findings array is not evidence of a clean translation.
       findingsSuppressed: this.maxSuggestions === 0

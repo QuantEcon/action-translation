@@ -7,6 +7,8 @@
  * - Review comment generation
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { identifyChangedSections, parseJsonResponse } from '../reviewer.js';
 import { ChangedSection } from '../types.js';
 
@@ -624,6 +626,247 @@ Updated content.`;
       const changes = identifyChangedSections(sourceBefore, sourceAfter, targetBefore, targetAfter);
 
       expect(changes.length).toBeGreaterThan(0);
+    });
+  });
+
+  // #283: `headingToId` drops the heading level, so headings that differ only
+  // by level, or repeat, collided in the lookup map and an unchanged section
+  // was reported as changed.
+  describe('Headings that share an id (#283)', () => {
+    const summary = (changes: ChangedSection[]) =>
+      changes.map((c) => `${c.changeType}:${c.heading}`);
+    // A target-side change keeps the pure-rename sentinel out of the way.
+    const T_BEFORE = '# 标题\n\n旧。';
+    const T_AFTER = '# 标题\n\n新。';
+
+    it('reports only the changed one of two same-text headings at different levels', () => {
+      const before = `# Title
+
+## Exercises
+
+Top-level exercises.
+
+## Methods
+
+### Exercises
+
+Method exercises.`;
+      const after = before.replace('Method exercises.', 'Method exercises, revised.');
+
+      expect(summary(identifyChangedSections(before, after, T_BEFORE, T_AFTER))).toEqual([
+        'modified:### Exercises',
+      ]);
+
+      const after2 = before.replace('Top-level exercises.', 'Top-level exercises, revised.');
+      expect(summary(identifyChangedSections(before, after2, T_BEFORE, T_AFTER))).toEqual([
+        'modified:## Exercises',
+      ]);
+    });
+
+    it('reports nothing for an edit outside two same-text headings at different levels', () => {
+      const before = `# Title
+
+## Exercises
+
+A.
+
+## Other
+
+B.
+
+### Exercises
+
+C.`;
+      const after = before.replace('B.', 'B, revised.');
+
+      expect(summary(identifyChangedSections(before, after, T_BEFORE, T_AFTER))).toEqual([
+        'modified:## Other',
+      ]);
+    });
+
+    it('matches a heading repeated at one level positionally, the nth to the nth', () => {
+      const before = `# Title
+
+## Model A
+
+### Set Up
+
+First set-up.
+
+## Model B
+
+### Set Up
+
+Second set-up.`;
+      const after = before.replace('Second set-up.', 'Second set-up, revised.');
+
+      expect(summary(identifyChangedSections(before, after, T_BEFORE, T_AFTER))).toEqual([
+        'modified:### Set Up',
+      ]);
+      // And it is the second one: its content is the revised text.
+      const [change] = identifyChangedSections(before, after, T_BEFORE, T_AFTER);
+      expect(change.englishContent).toBe('Second set-up, revised.');
+
+      // An edit to neither repeat reports neither.
+      const after2 = before.replace('## Model B', '## Model B (revised)');
+      expect(summary(identifyChangedSections(before, after2, T_BEFORE, T_AFTER))).toEqual([
+        'added:## Model B (revised)',
+        'deleted:## Model B',
+      ]);
+    });
+
+    it('reports a duplicate heading added as added, and one removed as deleted', () => {
+      const one = `# Title
+
+## Solver
+
+Solve it.`;
+      const two = `${one}
+
+## Solver
+
+Solve it again.`;
+
+      expect(summary(identifyChangedSections(one, two, T_BEFORE, T_AFTER))).toEqual([
+        'added:## Solver',
+      ]);
+      expect(summary(identifyChangedSections(two, one, T_BEFORE, T_AFTER))).toEqual([
+        'deleted:## Solver',
+      ]);
+    });
+
+    it("reports only the edited section on the issue's own example, the harness lecture", () => {
+      // `### Applications in Economics` and `#### Applications in Economics`
+      // both occur; an edit confined to `## Eigenvalues and Eigenvectors` was
+      // reported with a spurious `modified:#### Applications in Economics`.
+      const lecture = fs.readFileSync(
+        path.join(
+          __dirname,
+          '..',
+          '..',
+          'tool-test-action-on-github',
+          'test-action-on-github-data',
+          'base-lecture.md'
+        ),
+        'utf-8'
+      );
+      const edited = lecture.replace('reveal important properties', 'reveal essential properties');
+      expect(edited).not.toBe(lecture);
+
+      expect(summary(identifyChangedSections(lecture, edited, T_BEFORE, T_AFTER))).toEqual([
+        'modified:## Eigenvalues and Eigenvectors',
+      ]);
+    });
+
+    it('still matches a heading whose level changed when its text is unique', () => {
+      const before = `# Title
+
+## Results
+
+Text.`;
+      const after = `# Title
+
+### Results
+
+Text.`;
+
+      // Unchanged from before #283: one section, matched by text, modified.
+      expect(summary(identifyChangedSections(before, after, T_BEFORE, T_AFTER))).toEqual([
+        'modified:### Results',
+      ]);
+    });
+
+    it('reads a level change on one of two same-text headings as one modification', () => {
+      const before = `# Title
+
+## Exercises
+
+Top-level exercises.
+
+## Exercises
+
+More exercises.`;
+      const after = before.replace('## Exercises\n\nMore', '### Exercises\n\nMore');
+      expect(after).not.toBe(before);
+
+      // As for a unique heading: no false DELETED line before the reviewer.
+      expect(summary(identifyChangedSections(before, after, T_BEFORE, T_AFTER))).toEqual([
+        'modified:### Exercises',
+      ]);
+    });
+
+    it('deletes the right level when one of two same-text headings goes', () => {
+      const before = `# Title
+
+## Exercises
+
+Top-level exercises.
+
+### Exercises
+
+Sub exercises.`;
+      const after = `# Title
+
+### Exercises
+
+Sub exercises.`;
+
+      // Exactly the deleted `##`, not the surviving `###` paired to it.
+      expect(identifyChangedSections(before, after, T_BEFORE, T_AFTER)).toEqual([
+        { heading: '## Exercises', changeType: 'deleted' },
+      ]);
+    });
+
+    // `reviewPR` concatenates every reviewed file (each followed by a blank
+    // line, in the PR's file order) and matches once, so ids collide ACROSS
+    // files too: a multi-file PR whose files share a heading is paired as one
+    // document.
+    describe('across the files of a multi-file PR (the concatenation reviewPR matches)', () => {
+      const lecture = (title: string, overview: string, exercises: string) =>
+        `# ${title}\n\n## Overview\n\n${overview}\n\n## Exercises\n\n${exercises}\n`;
+      const concat = (...files: string[]) => files.map((f) => `${f}\n\n`).join('');
+
+      it('reports only the edited section when two files share their headings', () => {
+        const a = lecture('A', 'A overview.', 'A exercises.');
+        const before = concat(a, lecture('B', 'B overview.', 'B exercises.'));
+        const after = concat(a, lecture('B', 'B overview, revised.', 'B exercises.'));
+
+        // Before #283: three `modified` entries (both Overviews and an Exercises).
+        expect(summary(identifyChangedSections(before, after, T_BEFORE, T_AFTER))).toEqual([
+          'modified:## Overview',
+        ]);
+      });
+
+      // KNOWN DEFECT, pinned so that the fix changes this test deliberately:
+      // a new file that sorts before an existing modified file shifts the
+      // nth-to-nth pairing by one file. The new file's sections pair with the
+      // existing file's old sections and read `modified`; the existing file's
+      // sections read `added`, its unchanged `## Exercises` included. The
+      // truth is two `added` (the new file) and one `modified` (`## Overview`
+      // of b.md). To be fixed by pairing Changed Sections per file.
+      it('mispairs a new file that sorts before an existing modified one (known defect)', () => {
+        const before = concat(lecture('B', 'B overview.', 'B exercises.'));
+        const after = concat(
+          lecture('New', 'New overview.', 'New exercises.'),
+          lecture('B', 'B overview, revised.', 'B exercises.')
+        );
+
+        const changes = identifyChangedSections(before, after, T_BEFORE, T_AFTER);
+        expect(summary(changes)).toEqual([
+          'modified:## Overview',
+          'modified:## Exercises',
+          'added:## Overview',
+          'added:## Exercises',
+        ]);
+        // The `modified` pair is the new file's text; the `added` pair is b.md's.
+        // (A file's last section runs on into the next file's title line.)
+        expect(changes.map((c) => c.englishContent?.split('\n')[0])).toEqual([
+          'New overview.',
+          'New exercises.',
+          'B overview, revised.',
+          'B exercises.',
+        ]);
+      });
     });
   });
 });

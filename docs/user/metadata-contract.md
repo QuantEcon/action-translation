@@ -128,7 +128,7 @@ Embedded at the end of the review comment (the comment whose first line is the `
 | Field | Values |
 |-------|--------|
 | `severity` | `blocker` (meaning inversion, wrong math/code, build-breaking MyST) · `major` (misleading accuracy/terminology error) · `minor` (correct but awkward; minor inconsistency) · `nit` (stylistic) |
-| `category` | `accuracy`, `fluency`, `terminology`, `formatting`, `syntax`, `structure`, `diff-check`, `other` (`other` is the fail-closed bucket for anything unclassifiable; `diff-check` carries a model-asserted diff check that reported failure) |
+| `category` | `accuracy`, `fluency`, `terminology`, `formatting`, `syntax`, `structure`, `diff-check`, `other` (`other` is the fail-closed bucket for anything unclassifiable; `diff-check` carries a model-asserted diff check that reported failure, or one left unjudged because the diff evaluation did not parse, marked by a fixed phrase; see [When the diff evaluation does not parse](#diff-checks-and-their-provenance)) |
 | `file` | One of the PR's reviewed paths, or `null` when not attributable (single-file PRs are always attributed) |
 | `location` | Free text (section heading or short quote), or `null` |
 | `description` / `suggestion` | Free text; `suggestion` may be `null` |
@@ -160,6 +160,8 @@ Only `deterministic` checks gate as checks. A `model` check that reports failure
 
 The split exists because these booleans gate absolutely but were all model output, and a confidently wrong one is indistinguishable from a real structural failure. That fired on the second organic production PR reviewed under verdict v2 ([#148](https://github.com/QuantEcon/action-translation/issues/148)). Consumers computing their own gate should treat a `model` check as advisory and a `deterministic` one as fact.
 
+**When the diff evaluation does not parse.** If the diff evaluation's retry budget of three attempts ends on a reply that does not parse as a JSON object (invalid JSON, or valid JSON that is not an object, such as `[1,2]` or `null`), the review still posts its verdict ([#284](https://github.com/QuantEcon/action-translation/issues/284)). `scopeCorrect` and `positionCorrect` are recorded as `false`, and the PR routes to `editor` by a `recommendationReasons` entry that contains the fixed phrase **`diff evaluation returned no parseable verdict`** (`DIFF_EVALUATION_UNPARSEABLE` in `src/review-verdict.ts`). That reason gates on its own, whatever the findings say. Each of the two checks also gets a `minor`/`diff-check` finding whose `description` contains the phrase, and one `minor`/`structure` finding carries it too, but `findings[]` is capped at 20, worst first, so a review with many findings of its own may not show them; read the reason, not the findings, to detect the case. The run ends green with a workflow warning, and the deterministic checks are run and reported as usual. A `diff-check` finding with that phrase means the model gave no answer, not that it judged the check failed, so leave such findings out of calibration counts of model-reported failures. The translation evaluation is not covered: if its reply never parses, the review run fails and no verdict is posted.
+
 **Reading absence.** The field is optional and is missing from every block written before v0.23.0. Absence means **treat every check as gating**. Those checks were in fact all model-derived, but under the contract of the day they also gated absolutely — so reading absence as "`model`, therefore advisory" would retroactively open a gate that was closed, which is fail-open on historical data. Provenance that is present but malformed causes the whole block to fail to parse, so a consumer never sees a partial map.
 
 ### The recommendation rubric
@@ -172,7 +174,8 @@ The split exists because these booleans gate absolutely but were all model outpu
 - zero `blocker` or `major` findings (any category)
 - zero `minor` findings in the gating categories `accuracy`, `terminology`, `syntax`, `diff-check`, `other`
 - every criterion meets its floor **and sits within the 1–10 scale** — provisionally accuracy ≥ 9, terminology ≥ 9, fluency ≥ 8, formatting ≥ 8, to be calibrated from shadow-mode data
-- the source content was actually fetched (a failed fetch means the review compared against nothing)
+- the diff evaluation returned a parseable verdict (otherwise the review routes to `editor` by the reason described under [When the diff evaluation does not parse](#diff-checks-and-their-provenance))
+- the source content was actually fetched for every reviewed file. A file whose source the source repository does not have (a 404) routes to `editor`, named in `recommendationReasons`, when another reviewed file's source was read; when no reviewed file has source content (every source read is a 404), there is nothing to compare against, and the review run fails with `Review aborted: no source content could be fetched for …`, posting no verdict. A source read that fails any other way fails the review run, so no verdict is posted and a rerun reviews the whole PR. A file the contents API returns without its content (GitHub does this above 1 MB, with `content` empty and `size` above 0) is such a failed read, on the source side and on the translation side alike, and the error names the file and its size; a genuinely empty file (`size` 0) is reviewed as empty
 - findings were not suppressed by `max-suggestions: 0`
 
 Each `diffChecks` entry must be **literally `true`**; a missing key or a quoted `"false"` is a failed check, not a passing one.

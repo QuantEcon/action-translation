@@ -10,6 +10,7 @@
 
 import {
   CRITERION_FLOORS,
+  DIFF_EVALUATION_UNPARSEABLE,
   REVIEW_VERDICT_SCHEMA_VERSION,
   ReviewVerdictV2,
   buildVerdictBlock,
@@ -950,6 +951,46 @@ describe('malformed model output cannot open the gate', () => {
     const out = computeRecommendation({ ...CLEAN_INPUT, sourceContentMissing: true });
     expect(out.recommendation).toBe('editor');
     expect(out.reasons.join()).toContain('source content');
+  });
+
+  it('a file with no source content gates by name, once, beside the files compared (#261)', () => {
+    const one = computeRecommendation({
+      ...CLEAN_INPUT,
+      sourceContentMissingFiles: ['lectures/b.md'],
+    });
+    expect(one.recommendation).toBe('editor');
+    expect(one.reasons).toEqual([
+      'source content could not be fetched for lectures/b.md — the review compared that file against nothing',
+    ]);
+
+    const two = computeRecommendation({
+      ...CLEAN_INPUT,
+      sourceContentMissingFiles: ['lectures/b.md', 'lectures/c.md'],
+    });
+    expect(two.reasons).toEqual([
+      'source content could not be fetched for lectures/b.md, lectures/c.md — the review compared those files against nothing',
+    ]);
+
+    // An empty list gates nothing.
+    expect(
+      computeRecommendation({ ...CLEAN_INPUT, sourceContentMissingFiles: [] }).recommendation
+    ).toBe('auto-merge');
+  });
+
+  it('an unparseable diff evaluation gates by its own reason, carrying the fixed phrase (#284)', () => {
+    // Consumers grep verdicts for this exact text; changing it breaks them.
+    expect(DIFF_EVALUATION_UNPARSEABLE).toBe('diff evaluation returned no parseable verdict');
+
+    const out = computeRecommendation({ ...CLEAN_INPUT, diffEvaluationUnparseable: true });
+    expect(out.recommendation).toBe('editor');
+    expect(out.reasons).toEqual([
+      'diff evaluation returned no parseable verdict — scopeCorrect and positionCorrect were not judged',
+    ]);
+
+    // Not set, or false, gates nothing.
+    expect(
+      computeRecommendation({ ...CLEAN_INPUT, diffEvaluationUnparseable: false }).recommendation
+    ).toBe('auto-merge');
   });
 
   it('suppressed findings gate: an empty list proves nothing when none were requested', () => {
