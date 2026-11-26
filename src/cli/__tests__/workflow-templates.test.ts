@@ -28,7 +28,7 @@ import * as yaml from 'js-yaml';
 import { generateSourceWorkflowYaml } from '../commands/setup.js';
 import { MystParser } from '../../parser.js';
 import { NOT_SYNCED_HEADING } from '../../sync-scope.js';
-import { readFileState } from '../translate-state.js';
+import { mergeFileState, readFileState } from '../translate-state.js';
 
 const ROOT = path.join(__dirname, '..', '..', '..');
 const CANONICAL = fs.readFileSync(path.join(ROOT, 'examples', 'review-translations.yml'), 'utf8');
@@ -421,17 +421,20 @@ describe('the E2E harness workflow rendering', () => {
       expect(doc.jobs[checkName!]).not.toHaveProperty('name');
     });
 
-    it('writes a state file for lecture.md only, and only under existing', async () => {
+    it('writes a state file for lecture.md only, in every run, carrying a sign-off block (#290)', async () => {
       const write =
         /cat > "\.translate\/state\/\$TEST_FILE_LECTURE\.yml" <<EOF\n([\s\S]*?)\nEOF\n/.exec(
           script
         );
       expect(write).not.toBeNull();
-      // Inside the `existing` branch, so the default reset writes no state file.
+      // Outside any `existing` branch, so the default reset, the release
+      // gate's, writes it too: every `if [ "$SYNC_SCOPE" = existing ]` before
+      // the write has closed again.
       const before = script.slice(0, write!.index);
       const guard = before.lastIndexOf('if [ "$SYNC_SCOPE" = existing ]; then');
-      expect(guard).toBeGreaterThan(-1);
-      expect(before.slice(guard)).not.toMatch(/^\s*fi\s*$/m);
+      expect(guard === -1 || /^\s*fi\s*$/m.test(before.slice(guard))).toBe(true);
+      // Its values are derived in every real run, not only under existing.
+      expect(script).toMatch(/if \[ "\$DRY_RUN" = false \]; then\n\s*STATE_SOURCE_SHA="\$\(git -C/);
       // The only state file the harness writes. lecture-minimal.md stays
       // without one: it plays the English copy on a partial edition's main.
       expect(script.match(/>\s*"?\.translate\/state\//g)).toHaveLength(1);
@@ -458,13 +461,35 @@ describe('the E2E harness workflow rendering', () => {
       try {
         fs.mkdirSync(path.join(tmp, '.translate', 'state'), { recursive: true });
         fs.writeFileSync(path.join(tmp, '.translate', 'state', 'lecture.md.yml'), `${content}\n`);
-        expect(readFileState(tmp, 'lecture.md')).toEqual({
+        expect(readFileState(tmp, 'lecture.md')).toMatchObject({
           'source-sha': 'a'.repeat(40),
           'synced-at': '2026-10-19',
           model: 'claude-sonnet-5',
           mode: 'NEW',
           'section-count': sections,
+          reviewed: expect.objectContaining({ by: 'mmcky', role: 'editor' }),
         });
+        // And what sync writes over it keeps the sign-off block as written,
+        // the property check-state-keys.mjs checks on the lanes (#290).
+        const block = content.slice(content.indexOf('\n\n# Editor sign-off') + 1);
+        expect(block).toContain('reviewed:\n');
+        expect(block).toContain('  target-sha: 1234e56\n');
+        expect(block).toContain('  source-sha: 0123456\n');
+        const merged = mergeFileState(
+          `${content}\n`,
+          {
+            'source-sha': 'b'.repeat(40),
+            'synced-at': '2026-10-20',
+            model: 'claude-sonnet-5',
+            mode: 'UPDATE',
+            'section-count': sections,
+            'tool-version': '0.0.0-test',
+          },
+          'lecture.md.yml'
+        );
+        expect(merged.overwritten).toBeFalsy();
+        expect(merged.content.endsWith(`${block}\n`)).toBe(true);
+        expect(merged.content.startsWith(`source-sha: ${'b'.repeat(40)}\n`)).toBe(true);
       } finally {
         fs.rmSync(tmp, { recursive: true, force: true });
       }
