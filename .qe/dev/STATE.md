@@ -347,8 +347,8 @@ the engine side of #325 and #324 (#474); #261's source-fetch gate, #284 and #283
 #290 and #223's first remedy (#476). Start from log `2026-11-25-overnight-stack`, which lists
 what each PR closes, the three confirmations #476 needs (the #467 stop was narrowed in the
 session), #474's release order (heal the fr edition before a release carrying #324 reaches
-`@v0`) and two defects found and not fixed, to file: the finding cap can drop a gating finding,
-and rebasing a renamed lecture fails with a missing-title error. Records:
+`@v0`) and two defects found and not fixed, now filed: the finding cap can drop a gating finding
+(#477), and rebasing a renamed lecture fails with a missing-title error (#478). Records:
 `D-2026-11-25-a-passing-sync-closes-the-failure-issue-under-all`,
 `D-2026-11-25-refused-output-is-kept-under-translate-refused`,
 `D-2026-11-25-an-unparseable-diff-evaluation-degrades-the-review` and

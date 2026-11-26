@@ -87,9 +87,9 @@ fixes. Findings that changed a PR:
 - **The finding cap can drop a gating finding on `main` today**: a model-reported
   `scopeCorrect: false` gates only through its `minor` finding, which 20 other minor findings
   push out of the cap, so the verdict reads `auto-merge`. Either fix changes verdict behaviour
-  during the shadow window. Described in #475's body; to file.
+  during the shadow window. Described in #475's body; filed as #477.
 - **Rebasing a renamed lecture fails with a missing-title error**: the old English is read at
-  the new path of the source commit's parent. Described in #476's body; to file.
+  the new path of the source commit's parent. Described in #476's body; filed as #478.
 - The source read at `sha^` in sync still has a bare `catch`; a rename whose old file is empty
   or over 1 MB reads as new (#472's body).
 - Typography: a `---` option block inside a prose directive is typeset; a double-backtick span
@@ -113,5 +113,5 @@ fixes. Findings that changed a PR:
 ## Next
 
 - Matt's review and merges, in order, with the confirmations above.
-- File the two defects under "Found, not fixed".
+- A ruling on #477, since either fix changes verdicts during the shadow window.
 - A release carrying the stack, after the fr edition heal for #324.
