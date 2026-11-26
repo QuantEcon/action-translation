@@ -517,7 +517,7 @@ delimiter rows, which already break a table in the fr edition's pandas lecture.
 ## Health & context
 
 - With the 2026-11-25 stack merged (#471 to #476), after the 2026-11-26 review and re-check rounds:
-  **3,171 tests across 91 suites** (one
+  **3,173 tests across 91 suites** (one
   skips when the suite runs as root). Before it, at `939ceaf`: `main` green; **2,762 tests across 88 suites** (zero skips, type-checked) with
   `doctor --require-state` (#370, #449's P4), 2,705 before it at `d73f874` (counted 2026-11-16
   in a clean worktree; a tree holding the harness's gitignored clones counts 15 more, see log
