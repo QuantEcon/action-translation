@@ -470,10 +470,12 @@ export interface MergedFileState {
  * again from a load that keeps each plain scalar's text (`keptKeysAsText`),
  * so no value and no mapping key is rewritten (`1234e56` stays `1234e56`,
  * and a key `0x1f` stays `0x1f`), with a warning that quoting, comments and
- * layout may have changed. Only when that fails too (a key written both
- * plain and quoted, `0x1f` and `"0x1f"`, which that load reads as one key
- * twice) are they dumped from their CORE values, as `writeConfig` does, with
- * a warning that number formatting may have changed as well.
+ * layout may have changed. Only when that fails too are they dumped from
+ * their CORE values, as `writeConfig` does, with a warning that number
+ * formatting may have changed as well. That is rare: a key written both
+ * plain and quoted (`0x1f` and `"0x1f"`, which that load reads as one key
+ * twice), a sequence used as a key with a numeric item (`? [1, 0x1f]`), or
+ * an anchor that refers to itself (`&a {self: *a}`).
  *
  * Unlike `writeConfig`, an existing file that is not a YAML mapping
  * (unparseable, a repeated key, a list or a scalar, or a value with an
@@ -711,23 +713,37 @@ function keptKeysAsText(
     }
     return definedCopy([...out.keys()], (key) => out.get(key));
   };
+  // The nodes the walk is inside. An anchor that refers to itself (`&a {self: *a}`)
+  // loads as a cycle, which the walk would follow without end: it is left to the dump.
+  const open = new Set<object>();
   const paired = (value: unknown, core: unknown): unknown => {
     // An empty value loads as null without a type; it is written `null`, as
     // CORE_SCHEMA writes it.
     if (value === null) return new PlainScalar('null');
-    if (Array.isArray(value)) {
-      if (!Array.isArray(core) || core.length !== value.length) {
+    if (typeof value === 'object') {
+      if (open.has(value)) {
         failed = true;
         return value;
       }
-      return value.map((item, index) => paired(item, core[index]));
-    }
-    if (isPlainMapping(value)) {
-      if (!isPlainMapping(core)) {
-        failed = true;
-        return value;
+      open.add(value);
+      try {
+        if (Array.isArray(value)) {
+          if (!Array.isArray(core) || core.length !== value.length) {
+            failed = true;
+            return value;
+          }
+          return value.map((item, index) => paired(item, core[index]));
+        }
+        if (isPlainMapping(value)) {
+          if (!isPlainMapping(core)) {
+            failed = true;
+            return value;
+          }
+          return pairedMapping(value, core, Object.keys(value));
+        }
+      } finally {
+        open.delete(value);
       }
-      return pairedMapping(value, core, Object.keys(value));
     }
     return value;
   };
@@ -737,7 +753,13 @@ function keptKeysAsText(
     const name = coreKey(key, parsed);
     return name === undefined || !ENGINE_STATE_KEYS.has(name);
   });
-  const kept = pairedMapping(mapping, parsed, keys);
+  let kept: Record<string, unknown>;
+  try {
+    kept = pairedMapping(mapping, parsed, keys);
+  } catch {
+    // Nothing the walk meets may fail the write: the dump is the fallback.
+    return undefined;
+  }
   if (failed || Object.keys(kept).length !== keptKeys.length) return undefined;
 
   let dumped: string;

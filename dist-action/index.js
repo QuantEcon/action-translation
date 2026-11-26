@@ -54066,22 +54066,34 @@ function keptKeysAsText(existing, keptKeys, parsed) {
     }
     return definedCopy([...out.keys()], (key) => out.get(key));
   };
+  const open = /* @__PURE__ */ new Set();
   const paired = (value, core10) => {
     if (value === null)
       return new PlainScalar("null");
-    if (Array.isArray(value)) {
-      if (!Array.isArray(core10) || core10.length !== value.length) {
+    if (typeof value === "object") {
+      if (open.has(value)) {
         failed = true;
         return value;
       }
-      return value.map((item, index) => paired(item, core10[index]));
-    }
-    if (isPlainMapping(value)) {
-      if (!isPlainMapping(core10)) {
-        failed = true;
-        return value;
+      open.add(value);
+      try {
+        if (Array.isArray(value)) {
+          if (!Array.isArray(core10) || core10.length !== value.length) {
+            failed = true;
+            return value;
+          }
+          return value.map((item, index) => paired(item, core10[index]));
+        }
+        if (isPlainMapping(value)) {
+          if (!isPlainMapping(core10)) {
+            failed = true;
+            return value;
+          }
+          return pairedMapping(value, core10, Object.keys(value));
+        }
+      } finally {
+        open.delete(value);
       }
-      return pairedMapping(value, core10, Object.keys(value));
     }
     return value;
   };
@@ -54089,7 +54101,12 @@ function keptKeysAsText(existing, keptKeys, parsed) {
     const name = coreKey(key, parsed);
     return name === void 0 || !ENGINE_STATE_KEYS.has(name);
   });
-  const kept = pairedMapping(mapping, parsed, keys);
+  let kept;
+  try {
+    kept = pairedMapping(mapping, parsed, keys);
+  } catch {
+    return void 0;
+  }
   if (failed || Object.keys(kept).length !== keptKeys.length)
     return void 0;
   let dumped;

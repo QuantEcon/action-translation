@@ -999,6 +999,27 @@ describe('a state file keeps the keys the engine does not own (#290)', () => {
       expect(merged.content).toContain('"42": x\n');
       expect(merged.content).toContain('"0x2a": other\n');
     });
+
+    // An anchor that refers to itself loads as a cycle. The key-pairing walk must
+    // not follow it without end: the write falls back, it does not throw into a sync.
+    it.each([
+      ['a mapping that holds itself', 'reviewed: &a\n  by: x\n  self: *a\n'],
+      ['a sequence that holds itself', 'reviewed: &a [*a]\n'],
+    ])('falls back, and does not throw, on %s', (_what, kept) => {
+      const BOM = String.fromCharCode(0xfeff);
+      const merged = mergeFileState(`${BOM}source-sha: old\n${kept}`, withVersion, 'x');
+      expect(merged.overwritten).toBeUndefined();
+      expect(merged.warning).toContain('could not be carried over as written');
+      const loaded = yaml.load(merged.content, { schema: yaml.CORE_SCHEMA }) as Record<
+        string,
+        unknown
+      >;
+      expect(loaded['source-sha']).toBe(withVersion['source-sha']);
+      // The cycle survives the round trip.
+      const reviewed = loaded.reviewed as Record<string, unknown> | unknown[];
+      const inner = Array.isArray(reviewed) ? reviewed[0] : reviewed.self;
+      expect(inner).toBe(reviewed);
+    });
   });
 
   it.each([
