@@ -87,7 +87,8 @@ const OBJECT_NAME = /^[0-9a-f]{4,64}$/i;
  * @param filePath - Relative path to the file within the repo
  * @returns false when the content is the same (exit 0), true when it differs
  *   (exit 1), and undefined when git cannot tell: the commit is not in the
- *   local clone (shallow, not pulled, another repository) or git failed
+ *   local clone (shallow, not pulled, another repository), the id names an
+ *   object that is not a commit, or git failed
  */
 export async function fileChangedSince(
   repoPath: string,
@@ -96,7 +97,10 @@ export async function fileChangedSince(
 ): Promise<boolean | undefined> {
   if (!OBJECT_NAME.test(sha)) return undefined;
   try {
-    await execFileAsync('git', ['diff', '--quiet', sha, 'HEAD', '--', filePath], {
+    // Peeled to a commit: a tree or blob id would diff too, and a tree id
+    // recorded by hand would clear OUTDATED. Any object that is not a commit
+    // reads as "cannot tell".
+    await execFileAsync('git', ['diff', '--quiet', `${sha}^{commit}`, 'HEAD', '--', filePath], {
       cwd: repoPath,
     });
     return false;

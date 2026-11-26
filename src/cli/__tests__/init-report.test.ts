@@ -664,6 +664,26 @@ describe('translate init --resume-from (#384)', () => {
     expect(fs.existsSync(path.join(tmpDir, 'target'))).toBe(false);
   });
 
+  it.each([false, true])(
+    'refuses an empty name, as -f does, before any model call or write (dry run: %s)',
+    async (dryRun) => {
+      writeSource(['intro.md', 'solow.md', 'cobweb.md']);
+      api.reply(GOOD, GOOD, GOOD);
+      const empty =
+        'The lecture name is empty: -f and --resume-from each take a lecture file, such as cobweb.md.';
+
+      await expect(runInit(options({ dryRun, resumeFrom: '' }))).rejects.toThrow(empty);
+      await expect(runInit(options({ dryRun, file: '' }))).rejects.toThrow(empty);
+      await expect(runInit(options({ dryRun, file: 'intro.md', resumeFrom: '' }))).rejects.toThrow(
+        '--resume-from applies to a bulk run; it cannot be combined with -f.'
+      );
+
+      expect(logLines().some((line) => /^ {2}\d+\. /.test(line))).toBe(false);
+      expect(api.requests).toHaveLength(0);
+      expect(fs.existsSync(path.join(tmpDir, 'target'))).toBe(false);
+    }
+  );
+
   it('refuses to be combined with -f, before any model call or write', async () => {
     writeSource(['good.md', 'broken.md']);
 
@@ -752,6 +772,25 @@ describe('translate init into an existing edition (#134)', () => {
     expect(stats.failureCount).toBe(1);
     expect(fs.existsSync(path.join(target, 'TRANSLATION-REPORT.md'))).toBe(false);
     const stderr = errorSpy.mock.calls.map((call) => String(call[0]));
+    expect(stderr).toContain(`\ngood.md failed:\n${stats.failures[0].error}`);
+  });
+
+  it('an -f round says once where the refused output was kept', async () => {
+    writeEdition(MATCHING_CONFIG);
+    api.reply(BREAKS_PARITY);
+
+    const stats = await runInit(options({ file: 'good.md' }));
+
+    const note = stats.failures[0].keptNote;
+    expect(note).toContain('.translate/refused/good.md');
+    // The one-line failure summary may carry it, cut at 200 characters;
+    // below it, the preview's header and the full message do not both say it.
+    const stderr = errorSpy.mock.calls
+      .map((call) => String(call[0]))
+      .filter((line) => !/^\S good\.md: parity /.test(line))
+      .join('\n');
+    expect(stderr.split(note!).length - 1).toBe(1);
+    expect(stderr).toContain("\ngood.md: The refused output's first and last lines:\n");
     expect(stderr).toContain(`\ngood.md failed:\n${stats.failures[0].error}`);
   });
 

@@ -461,7 +461,7 @@ npx translate init \
   --resume-from cobweb.md
 ```
 
-`--resume-from` names the lecture as `-f` does, by the same steps: `--resume-from cobweb` also works, and so does `--resume-from gpu.md` for `_admonition/gpu.md`. A name that matches no lecture, or more than one, stops the run before any translation or write, naming the lectures it matched, instead of starting again from the first lecture. The run translates that lecture and every one after it in ToC order, and `--dry-run` lists those. It applies to a bulk run: with `-f` too, `init` stops before any translation or write and says the two cannot be combined.
+`--resume-from` names the lecture as `-f` does, by the same steps: `--resume-from cobweb` also works, and so does `--resume-from gpu.md` for `_admonition/gpu.md`. A name that matches no lecture, or more than one, stops the run before any translation or write, naming the lectures it matched, instead of starting again from the first lecture. So does an empty name, as a script passing an unset variable (`--resume-from "$NEXT"`) gives it. The run translates that lecture and every one after it in ToC order, and `--dry-run` lists those. It applies to a bulk run: with `-f` too, `init` stops before any translation or write and says the two cannot be combined.
 
 **Re-run after partial failure (skip already-translated files):**
 

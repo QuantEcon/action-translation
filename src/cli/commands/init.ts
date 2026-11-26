@@ -179,6 +179,14 @@ function notInLectureSet(file: string, set: LectureSet, lectures: string[]): str
  * `-f topic` must not pick `a/topic.md` over `b/topic.md` unseen.
  */
 export function findInitLecture(file: string, set: LectureSet, lectures: string[]): string {
+  // An empty name is contained in every path: refuse it rather than read it
+  // as "every lecture", or as no name at all.
+  if (file.trim() === '') {
+    throw new Error(
+      'The lecture name is empty: -f and --resume-from each take a lecture file, ' +
+        'such as cobweb.md.'
+    );
+  }
   // `-f intro`, `-f intro.md` and `-f intro.ipynb` all name `intro.md`.
   const target = `${tocStem(file)}.md`;
   const steps = [
@@ -748,7 +756,7 @@ function buildRunReport(
 export async function runInit(options: InitOptions): Promise<TranslationStats> {
   // -f narrows the lecture list to one before --resume-from would look in it,
   // so any other name read as "not in the source's lecture set".
-  if (options.file && options.resumeFrom) {
+  if (options.file !== undefined && options.resumeFrom !== undefined) {
     throw new Error(
       '--resume-from applies to a bulk run; it cannot be combined with -f. ' +
         'Use -f alone to translate one lecture, or --resume-from alone to translate from it on.'
@@ -803,8 +811,9 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
     failures: [],
   };
 
-  // Filter to single file if specified
-  if (options.file) {
+  // Filter to single file if specified. `-f ""` is refused by the resolver,
+  // not read as no -f, which would translate the whole series.
+  if (options.file !== undefined) {
     // An exact match wins over an entry that merely contains the name: `-f
     // intro.md` must not translate a `jax_intro.md` listed before it.
     const found = findInitLecture(options.file, set, lectures);
@@ -831,8 +840,10 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   // name that matches none, or more than one, stops the run here, before any
   // model call, rather than restarting the series from its first lecture or
   // resuming from the first entry that contains the name (#384).
+  // An empty name (`--resume-from "$NEXT"` with NEXT unset) is refused there
+  // too, not read as no --resume-from.
   let startIndex = 0;
-  if (options.resumeFrom) {
+  if (options.resumeFrom !== undefined) {
     const from = findInitLecture(options.resumeFrom, set, lectures);
     startIndex = lectures.indexOf(from);
     console.log(chalk.yellow(`Resuming from: ${from}\n`));
@@ -1087,9 +1098,12 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
   // fence shows in its first and last lines (#364). The whole output is in
   // .translate/refused/. The header names where, since the failure line above
   // keeps 200 characters and a long list of violations cuts the note off.
+  // With `-f` the full message printed below ends with the note, so the
+  // header leaves it out rather than say it twice.
   for (const failure of stats.failures) {
     if (!failure.preview) continue;
-    const where = failure.keptNote ? `${failure.keptNote}. Its` : "The refused output's";
+    const where =
+      failure.keptNote && !options.file ? `${failure.keptNote}. Its` : "The refused output's";
     console.error(`\n${failure.file}: ${where} first and last lines:`);
     for (const line of failure.preview) console.error(`  | ${line}`);
   }
