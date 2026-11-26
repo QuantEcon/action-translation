@@ -2272,6 +2272,38 @@ describe("the lecture set in the built bundle's runSync (#449)", () => {
     }
   );
 
+  // The nothing-to-sync exit under `all`, in test mode: the E2E harness runs
+  // here, and a close at this exit would close a real failure issue (#387).
+  describe("'all': a source PR that changes only a README.md, with a failure issue open, in test mode", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('lecture-set-readme-all-test-mode', {
+        scope: 'all',
+        prFiles: [{ filename: 'lectures/README.md', status: 'modified' }],
+        source: {
+          ...changedInSource('lectures/README.md', 'Readme'),
+          [atMerge('lectures/a.md')]: lecture('Alpha'),
+          ...listedAtMerge('a'),
+        },
+        target: { 'lectures/README.md': translated('Readme') },
+        issues: OPEN_ISSUES,
+        testMode: true,
+      });
+    }, 90_000);
+
+    it('makes no issue request at all, and passes', () => {
+      check(run, (log) => {
+        expect(log.requests).toEqual([PR_FILES, ...READ_LECTURE_SET, readSource('lectures/a.md')]);
+        expect(log.requests).not.toContain(LIST_ISSUES);
+        expect(log.comments).toEqual([]);
+        expect(log.issueUpdates).toEqual([]);
+        expect(log.issues).toEqual([]);
+        expect(run.status).toBe(0);
+        expectCleanRun(log);
+      });
+    });
+  });
+
   describe("'all': a ToC that is not YAML", () => {
     const ERROR = refused(
       // js-yaml's message goes on to quote the ToC's lines; only its first
