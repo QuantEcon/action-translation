@@ -338,13 +338,22 @@ Roadmap detail lives in the project trackers (reading order in
 
 ## Next
 
-**Resume here (2026-11-26, the overnight stack merged):**
+**Resume here (2026-11-26, v0.34.0 released):**
+
+*Released, 2026-11-26*: **v0.34.0 is released** (#489, `d1d07b9`), and `v0` points at it. It
+carries the overnight stack (#471–#476), the #477 change (#487), #468, and the #290 harness check
+(#488). §4a read 84 of 84, every verdict PASS (no #375 WARN), and
+`state keys kept: 42 across 84 PRs — PASS`, so #290 closed; §4b read 0 of 36; the `@v0` smoke
+passed on all three lanes. lecture-python-programming.fr's typography heal (#324) landed first,
+as lecture-python-programming.fr#118. Still open: #325 (fr's `<style>` repair, an edition PR
+by `mini:project-translation` now that `v0` has moved) and #324 (closes with it). Log
+`2026-11-26-v0340-release`.
 
 *Merged, 2026-11-26*: **the overnight stack, #471 to #476, is squash-merged on `main`**, in
 order, by the PR organiser on Matt's yes, each pinned to a head whose tree equals the one
 reviewed (log `2026-11-26-overnight-stack-merge`): #471
 `8d2926a`, #472 `ebfc475`, #473 `cd1adb5`, #474 `c740b97`, #475 `eaf9062`, #476 `36d1a77`.
-Until v0.34.0 is released (its release PR is below) the editions run `@v0` at v0.33.0. Closed: #465, #390, #383, #382 (#471); #466, #92, #387 (#472); #384, #356,
+v0.34.0 is released (above); the editions run it at `@v0`. Closed: #465, #390, #383, #382 (#471); #466, #92, #387 (#472); #384, #356,
 #364, #430 (#473); #284, #283 (#475); #467 (#476). #474 closes nothing yet: #324 and #325 each
 wait on a fr-edition repair. Still open from the stack: #290 (its harness exercise), #223 (its
 "unlocated" remedy), #391 and #428 (their other halves), #399 and #409 (in part), #261 (box 5
@@ -370,14 +379,7 @@ on this session's word that `@v0` has moved); #290's harness exercise is part of
 `recommendationReasons`).
 
 *Next (Matt's rulings of 2026-11-26, log `2026-11-26-rulings-and-follow-ups`)*: #477 is fixed in
-#487 and the docs deploy in #485 (green again since `742101b`). **v0.34.0's release PR** carries
-everything since v0.33.0: the overnight stack, #468, #487, and (no user-visible change) #469,
-#485, #486 and the #290 harness check (#488). After it
-merges, each on Matt's go: tag `v0.34.0`; release step 4a at the tag, then
-`check-state-keys.mjs --expect-full` (which must read `state keys kept: 42 across 84 PRs —
-PASS`, after which #290 can close); 4b on the laptop; `@v0` moves only once the
-lecture-python-programming.fr heal (#324) has merged; the `@v0` smoke; `gh release create`; then fr's `<style>` repair (#325).
-After it: the action family's standard (below) and #470. #463's look-back and other edition
+#487 and the docs deploy in #485 (green again since `742101b`). v0.34.0 shipped on those rulings (above). Next: the action family's standard (below) and #470. #463's look-back and other edition
 work belong to `mini:project-translation`.
 
 **Before it (2026-11-16, after the `--require-state` rollout):**
