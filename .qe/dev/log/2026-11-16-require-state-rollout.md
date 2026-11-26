@@ -38,11 +38,14 @@ empty commit on the same tree (`af254a9`). Nothing needed tidying.
 - **Retirement condition 3 is met**, in the terms ruled on 2026-10-19: every edition that
   syncs runs the state check as a required check on every PR and on pushes to `main`.
   `sync-scope` still waits on conditions 1 and 2 (#259, #142).
-- **55 open edition PRs had no `state-files` run** when the rule went on: 4, 12, 2, 8 and 29.
+- **55 open edition PRs had no `state-files` run** when the rule went on: 4 in
+  lecture-intro.zh-cn, 12 in lecture-python.zh-cn, 2 in fa, 8 in fr and 29 in
+  lecture-python-programming.zh-cn.
   Each needs one new event before it can merge.
 - **A look-back** around 2026-11-23 is #463. It covers blocked PRs, failures for reasons other
   than a missing state file, and the editions that became PR-only. The settings change is logged
-  in QuantEcon/infrastructure's `github/settings-changelog.md`.
+  in QuantEcon/infrastructure's `github/settings-changelog.md`, by QuantEcon/infrastructure#156
+  (merged 2026-11-16).
 - **The workflows pin `v0.33.0`.** A later release changes nothing in the editions until their
   pins move.
 - **An edition that starts to sync joins the rollout first.** ml needs its declarations or
