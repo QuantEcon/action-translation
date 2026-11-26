@@ -63,6 +63,7 @@ import {
   buildFailureIssueBody,
   failureIssueTitle,
   FailureIssueInput,
+  FailedRead,
   rebaseFailureComment,
   UnreadState,
 } from './recovery-advice.js';
@@ -299,6 +300,7 @@ async function runRebase(): Promise<void> {
             addedOnMainSinceOpened:
               error instanceof RebaseReadError ? error.addedOnMainSinceOpened : undefined,
             unreadStates: error instanceof RebaseReadError ? error.unreadStates : undefined,
+            failedReads: error instanceof RebaseReadError ? error.failedReads : undefined,
             otherErrors: error instanceof RebaseReadError ? error.otherErrors : undefined,
           }),
         });
@@ -370,6 +372,8 @@ async function rebaseSinglePR(
   const deletedSinceOpened: DeletedLecture[] = [];
   // Lectures this PR adds that a PR merged since it opened added first (#467).
   const addedOnMainSinceOpened: AddedLecture[] = [];
+  // Reads the plan needed that failed, for the re-run advice (#467).
+  const failedReads: FailedRead[] = [];
   // Each lecture's read at the PR's baseline, by the path read, for the cache.
   const baselineReads = new Map<string, EditionRead>();
 
@@ -505,14 +509,17 @@ async function rebaseSinglePR(
 
       // What the edition has decides what the rebase does with the lecture
       // (#389, #351, #467; see rebase-plan.ts). When `main` has it, the
-      // baseline is read too; if that answers 404, the source parent decides,
-      // and the branch is read only when the PR's source change adds the
-      // lecture. The other reads are made only when `main` answers 404.
+      // baseline is read too; if that answers 404 or fails, the source parent
+      // decides, and the branch is read only when the PR's source change adds
+      // the lecture. The other reads are made only when `main` answers 404.
       const onMain = await readEditionFile(octokit, owner, repo, editionPath, baseSha);
       const reads: RebaseReads = { onMain: onMain.status };
       let newOnMain: EditionRead | undefined;
       let atBaseline: EditionRead | undefined;
       let onBranch: EditionRead | undefined;
+      // The source parent as the plan reads it (see below).
+      let planParentPath = file.path;
+      let planParentRead = parentRead;
       if (onMain.status === 'missing' && renamed) {
         newOnMain = await readEditionFile(octokit, owner, repo, file.path, baseSha);
         reads.newPathOnMain = newOnMain.status;
@@ -527,11 +534,31 @@ async function rebaseSinglePR(
           metadata.targetBaseSha
         );
         reads.atBaseline = atBaseline.status;
-        if (atBaseline.status === 'missing') {
+        if (atBaseline.status !== 'found') {
+          // A failed baseline read decides nothing when the source change
+          // edits the lecture: that is an update either way, with no cache.
+          // For a rename, the parent has the lecture at its old path; reading
+          // the new path, which always 404s there (#478), would take the
+          // rename for an addition. Only the plan reads it there: the update
+          // still diffs against `oldContent`, as before.
+          if (file.previousPath !== undefined) {
+            planParentPath = file.previousPath;
+            planParentRead = await readEditionFile(
+              octokit,
+              sourceOwner,
+              sourceRepoName,
+              file.previousPath,
+              `${sourceCommitSha}^`
+            );
+          }
           // An empty parent leaves nothing to diff against, as a 404 does.
           reads.sourceParent =
-            parentRead.status === 'error' ? 'error' : oldContent !== '' ? 'found' : 'missing';
-          if (reads.sourceParent === 'missing') {
+            planParentRead.status === 'error'
+              ? 'error'
+              : planParentRead.status === 'found' && planParentRead.content !== ''
+                ? 'found'
+                : 'missing';
+          if (reads.sourceParent === 'missing' && atBaseline.status === 'missing') {
             onBranch = await readEditionFile(octokit, owner, repo, file.path, pr.head.ref);
             reads.onBranch = onBranch.status;
           }
@@ -558,27 +585,30 @@ async function rebaseSinglePR(
         read?.status === 'error' ? read.message : 'unknown';
 
       if (plan.action === 'error') {
+        // A failed read gets the re-run advice (#467), named by what was read.
+        const failedRead = (read: string, result: EditionRead | undefined, detail = '') => {
+          failedReads.push({ file: file.path, read, status: failure(result) });
+          return new Error(`Could not read ${read}${detail} (${failure(result)})`);
+        };
         switch (plan.reason) {
           case 'main-read': {
             const [path, read] =
               onMain.status === 'error' ? [editionPath, onMain] : [file.path, newOnMain];
-            throw new Error(
-              `Could not read ${path} from ${owner}/${repo} at ${baseSha.slice(0, 7)} ` +
-                `(${failure(read)})`
-            );
+            throw failedRead(`${path} from ${owner}/${repo} at ${baseSha.slice(0, 7)}`, read);
           }
           case 'baseline-read':
-            throw new Error(
-              `Could not read ${editionPath} at this PR's baseline ` +
-                `${metadata.targetBaseSha?.slice(0, 7)} (${failure(atBaseline)})`
+            throw failedRead(
+              `${editionPath} at this PR's baseline ${metadata.targetBaseSha?.slice(0, 7)}`,
+              atBaseline
             );
           case 'branch-read':
-            throw new Error(`Could not read ${file.path} on ${pr.head.ref} (${failure(onBranch)})`);
+            throw failedRead(`${file.path} on ${pr.head.ref}`, onBranch);
           case 'source-parent-read':
-            throw new Error(
-              `Could not read ${file.path} from ${sourceOwner}/${sourceRepoName} at ` +
-                `${sourceCommitSha.slice(0, 7)}^, which says whether this PR's source change ` +
-                `adds the lecture (${failure(parentRead)})`
+            throw failedRead(
+              `${planParentPath} from ${sourceOwner}/${sourceRepoName} at ` +
+                `${sourceCommitSha.slice(0, 7)}^`,
+              planParentRead,
+              ", which says whether this PR's source change adds the lecture"
             );
           case 'no-baseline':
             throw new Error(
@@ -621,6 +651,11 @@ async function rebaseSinglePR(
         const statePath = stateFileFor(file.path, inputs.docsFolder);
         const state = await readEditionFile(octokit, owner, repo, statePath, pr.head.ref);
         if (state.status === 'error') {
+          failedReads.push({
+            file: file.path,
+            read: `${statePath} on ${pr.head.ref}`,
+            status: state.message,
+          });
           throw new Error(`Could not read ${statePath} on ${pr.head.ref} (${state.message})`);
         }
         carried.push({ path: file.path, content: onBranch.content });
@@ -696,7 +731,10 @@ async function rebaseSinglePR(
     throw new RebaseReadError(
       `content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join('; ')}`,
       deletedSinceOpened,
-      addedOnMainSinceOpened
+      addedOnMainSinceOpened,
+      [],
+      fetchErrors.length > failedReads.length,
+      failedReads
     );
   }
 

@@ -114,6 +114,19 @@ export interface UnreadState {
   status: string;
 }
 
+/**
+ * A read the rebase plan needed that failed with something other than a 404
+ * (#467): of `main`, the PR's baseline, its branch, or the source parent.
+ */
+export interface FailedRead {
+  /** The lecture's path in the PR. */
+  file: string;
+  /** What was read, as `lectures/x.md at this PR's baseline 1234567`. */
+  read: string;
+  /** What the read answered, as `status 502: ...`. */
+  status: string;
+}
+
 /** The deterministic title of a sync failure issue, which a later success closes by. */
 export function failureIssueTitle(prNumber: number, targetLanguage: string): string {
   return `Translation sync failed for PR #${prNumber} (${targetLanguage})`;
@@ -407,8 +420,13 @@ export interface RebaseFailureInput {
    */
   unreadStates?: UnreadState[];
   /**
-   * With `unreadStates`: whether the rebase failed for anything else too, which
-   * keeps the general advice below theirs.
+   * Reads of the edition or the source that failed where they decided what
+   * the rebase does (#467): a re-run is the advice, as for `unreadStates`.
+   */
+  failedReads?: FailedRead[];
+  /**
+   * With `unreadStates` or `failedReads`: whether the rebase failed for
+   * anything else too, which keeps the general advice below theirs.
    */
   otherErrors?: boolean;
 }
@@ -499,6 +517,21 @@ export function rebaseFailureComment(input: RebaseFailureInput): string {
     );
     // A failed read alone needs only the re-run: regenerating would replace
     // the translation for a transient error.
+    if (!input.otherErrors) return lines.join('\n');
+    lines.push('');
+  }
+  const failedReads = input.failedReads ?? [];
+  if (failedReads.length > 0) {
+    const one = failedReads.length === 1;
+    lines.push(
+      `The rebase stopped before the branch moved, and translated nothing: ` +
+        `${one ? 'the read below' : 'each read below'} answered something other than ` +
+        '"not found", and what the rebase does with the lecture depends on it. A failed read ' +
+        'is transient more often than not: once it reads again, re-run the failed rebase ' +
+        'workflow run, which rebuilds this PR on the current `main`.',
+      '',
+      ...failedReads.map((read) => `- \`${read.file}\`: ${read.read} (${read.status})`)
+    );
     if (!input.otherErrors) return lines.join('\n');
     lines.push('');
   }

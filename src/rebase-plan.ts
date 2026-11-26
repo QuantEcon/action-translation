@@ -32,14 +32,16 @@
  * source commit (its parent) says whether that commit adds the lecture. Each
  * read is found, missing (a 404) or an error, and the plan consults a read
  * only when it needs it. When `main` has the lecture, the baseline is read
- * too (when the PR has one); once that answers 404, the source parent
- * decides, and the branch is read only when the parent lacks the lecture.
+ * too (when the PR has one); once that answers 404 or fails, the source
+ * parent decides, and the branch is read only when the parent lacks the
+ * lecture. A rename's source parent is read at its old path: renames are
+ * outside the stop, since the parent has the lecture there.
  *
  * This module is pure, and lives outside `src/index.ts`, which cannot be
  * imported (#169).
  */
 
-import type { UnreadState } from './recovery-advice.js';
+import type { FailedRead, UnreadState } from './recovery-advice.js';
 
 /** One read of the edition: the file is there, GitHub answered 404, or the read failed. */
 export type ReadStatus = 'found' | 'missing' | 'error';
@@ -63,8 +65,10 @@ export interface RebaseReads {
   /**
    * The English at the parent of the PR's source commit: 'missing' when that
    * commit adds the lecture (a 404, or an empty file, which leaves nothing to
-   * diff against). Consulted only when `main` has the lecture and the
-   * baseline lacks it; undefined when not read.
+   * diff against). For a rename it is read at the old path, which is where
+   * the parent has the lecture, so a rename is never taken for an addition.
+   * Consulted only when `main` has the lecture and the baseline lacks it or
+   * could not be read; undefined when not read.
    */
   sourceParent?: ReadStatus;
 }
@@ -122,7 +126,7 @@ export type RebaseReadPlan =
 
 /**
  * Decide from the reads made so far. When `main` has the lecture, the caller
- * reads the baseline (when the PR has one) and, if that answers 404, consults
+ * reads the baseline (when the PR has one) and, if that answers 404 or fails, consults
  * the source parent and, if that lacks the lecture, reads the branch. Once
  * `main` answers 404, it reads a rename's new path on `main`; unless that
  * settles it, the baseline (when the PR has one); and unless that read fails,
@@ -132,10 +136,15 @@ export function planRebaseRead(reads: RebaseReads): RebaseReadPlan {
   if (reads.onMain === 'found') {
     // A PR opened before the cache has no baseline to read: as before.
     if (reads.atBaseline === undefined || reads.atBaseline === 'found') return { action: 'update' };
-    if (reads.atBaseline === 'error') return { action: 'error', reason: 'baseline-read' };
-    // The PR's source change edits a lecture the edition got since it opened:
-    // a stacked update of `main`'s copy, diffed against the parent's English.
+    // The PR's source change edits the lecture: a stacked update of `main`'s
+    // copy, diffed against the parent's English. That holds whether the
+    // baseline lacks it (the edition got it since the PR opened) or could
+    // not be read; a failed baseline read then only costs the rebase cache,
+    // as it did before #467.
     if (reads.sourceParent === 'found') return { action: 'update' };
+    // Otherwise the baseline decides between the stop and an update, so a
+    // failed read of it is fatal.
+    if (reads.atBaseline === 'error') return { action: 'error', reason: 'baseline-read' };
     if (reads.sourceParent === undefined || reads.sourceParent === 'error') {
       return { action: 'error', reason: 'source-parent-read' };
     }
@@ -193,7 +202,9 @@ export class RebaseReadError extends Error {
      * anything else failed beside them.
      */
     readonly unreadStates: UnreadState[] = [],
-    readonly otherErrors = false
+    readonly otherErrors = false,
+    /** Reads the plan needed that failed (#467), for the re-run advice. */
+    readonly failedReads: FailedRead[] = []
   ) {
     super(message);
     this.name = 'RebaseReadError';

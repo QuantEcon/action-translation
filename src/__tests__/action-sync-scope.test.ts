@@ -3822,7 +3822,9 @@ describe("a state file's other keys in the built bundle's runSync (#290)", () =>
           '### \u{26a0}\u{fe0f} State Files Overwritten\n\nEach state file below could not be ' +
             'read as a YAML mapping, so this PR writes it afresh'
         );
-        expect(log.pulls[0].body).toContain('\n- `.translate/state/b.md.yml`\n');
+        expect(log.pulls[0].body).toContain(
+          '\n- `.translate/state/b.md.yml`: it is not a YAML mapping of keys to values\n'
+        );
         // Not part of the metadata.
         expect(declaredFiles(log.pulls[0].body).map((f) => f.path)).toEqual(['lectures/b.md']);
         expectCleanRun(log);

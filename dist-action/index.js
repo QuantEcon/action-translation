@@ -53930,10 +53930,13 @@ function mergeFileState(existing, state, shownPath) {
     parsed = load(existing, { schema: CORE_SCHEMA });
   } catch (error4) {
     const message = error4 instanceof Error ? error4.message.split("\n")[0] : String(error4);
+    const tag = /^unknown tag !<([^>]*)>/.exec(message)?.[1];
+    const reason = tag !== void 0 ? `it uses the YAML tag ${tag.replace(/^tag:yaml\.org,2002:/, "!!")}, which state files do not support` : `it could not be read as YAML (${message})`;
     return {
       content,
       overwritten: true,
-      warning: `${shownPath} could not be read as YAML (${message}), so it was overwritten: any keys it held besides the ones sync writes are gone`
+      overwrittenReason: reason,
+      warning: (tag !== void 0 ? `${shownPath} could not be read, since ${reason}, so it was overwritten` : `${shownPath} could not be read as YAML (${message}), so it was overwritten`) + ": any keys it held besides the ones sync writes are gone"
     };
   }
   if (parsed === void 0 || parsed === null) {
@@ -53946,6 +53949,7 @@ function mergeFileState(existing, state, shownPath) {
     return {
       content,
       overwritten: true,
+      overwrittenReason: "it is not a YAML mapping of keys to values",
       warning: `${shownPath} was not a YAML mapping of keys to values, so it was overwritten: any keys it held besides the ones sync writes are gone`
     };
   }
@@ -53958,19 +53962,89 @@ function mergeFileState(existing, state, shownPath) {
     if (keepsValues(merged, parsed, keptKeys, content))
       return { content: merged };
   }
-  const kept = {};
-  for (const key of keptKeys) {
-    Object.defineProperty(kept, key, {
-      value: parsed[key],
+  const asText = keptKeysAsText(existing, keptKeys);
+  if (asText !== void 0) {
+    const merged = content + asText;
+    if (keepsValues(merged, parsed, keptKeys, content)) {
+      return {
+        content: merged,
+        warning: `${shownPath}: the keys it held besides the ones sync writes were kept, but their text could not be carried over as written, so they were written out again: each value keeps its text, but quoting, comments and layout may have changed`
+      };
+    }
+  }
+  return {
+    content: content + dump(definedCopy(keptKeys, (key) => parsed[key]), DUMP_OPTIONS),
+    warning: `${shownPath}: the keys it held besides the ones sync writes were kept, but their text could not be carried over as written, so their values were re-serialised: quoting, comments and number formatting may have changed`
+  };
+}
+var DUMP_OPTIONS = {
+  lineWidth: -1,
+  quotingType: '"',
+  schema: CORE_SCHEMA
+};
+function definedCopy(keys, valueOf) {
+  const copy = {};
+  for (const key of keys) {
+    Object.defineProperty(copy, key, {
+      value: valueOf(key),
       enumerable: true,
       writable: true,
       configurable: true
     });
   }
-  return {
-    content: content + dump(kept, { lineWidth: -1, quotingType: '"', schema: CORE_SCHEMA }),
-    warning: `${shownPath}: the keys it held besides the ones sync writes were kept, but their text could not be carried over as written, so their values were re-serialised: quoting, comments and number formatting may have changed`
+  return copy;
+}
+var PlainScalar = class {
+  text;
+  constructor(text) {
+    this.text = text;
+  }
+  // So that js-yaml, which names a mapping key by its string, names it by the text.
+  get [Symbol.toStringTag]() {
+    return "PlainScalar";
+  }
+  toString() {
+    return this.text;
+  }
+};
+var TEXT_KEEPING_SCHEMA = FAILSAFE_SCHEMA.extend({
+  // The four implicit types of CORE_SCHEMA (the typings do not list the field).
+  implicit: CORE_SCHEMA.implicit.map((type2) => new Type(type2.tag, {
+    kind: "scalar",
+    resolve: type2.resolve,
+    construct: (data) => new PlainScalar(String(data)),
+    instanceOf: PlainScalar,
+    represent: (value) => value.text
+  }))
+});
+function keptKeysAsText(existing, keptKeys) {
+  let loaded;
+  try {
+    loaded = load(existing, { schema: TEXT_KEEPING_SCHEMA });
+  } catch {
+    return void 0;
+  }
+  if (!isPlainMapping(loaded))
+    return void 0;
+  const mapping = loaded;
+  if (!keptKeys.every((key) => Object.prototype.hasOwnProperty.call(mapping, key))) {
+    return void 0;
+  }
+  const withNulls = (value) => {
+    if (value === null)
+      return new PlainScalar("null");
+    if (Array.isArray(value))
+      return value.map(withNulls);
+    if (isPlainMapping(value)) {
+      return definedCopy(Object.keys(value), (key) => withNulls(value[key]));
+    }
+    return value;
   };
+  try {
+    return dump(definedCopy(keptKeys, (key) => withNulls(mapping[key])), { ...DUMP_OPTIONS, schema: TEXT_KEEPING_SCHEMA });
+  } catch {
+    return void 0;
+  }
 }
 function keptKeyBlocks(text) {
   if (text.startsWith("\uFEFF") || text.includes("	"))
@@ -55155,8 +55229,12 @@ var SyncOrchestrator = class {
       const merged = mergeFileState(existing, state, statePath);
       if (merged.warning)
         this.logger.warning(merged.warning);
-      if (merged.overwritten)
-        (result.overwrittenStateFiles ??= []).push(statePath);
+      if (merged.overwritten) {
+        (result.overwrittenStateFiles ??= []).push({
+          path: statePath,
+          reason: merged.overwrittenReason ?? "it is not a YAML mapping of keys to values"
+        });
+      }
       result.translatedFiles.push({
         path: statePath,
         content: merged.content,
@@ -55872,10 +55950,10 @@ The translation of each lecture below is at an earlier source commit than the En
 
 ${lines.join("\n")}`;
 }
-function formatOverwrittenStatesNotice(paths) {
-  if (paths.length === 0)
+function formatOverwrittenStatesNotice(states) {
+  if (states.length === 0)
     return "";
-  const lines = paths.map((p) => `- \`${p}\``);
+  const lines = states.map((s) => `- \`${s.path}\`: ${s.reason}`);
   return `
 
 ### \u26A0\uFE0F State Files Overwritten
@@ -56213,10 +56291,10 @@ function planRebaseRead(reads) {
   if (reads.onMain === "found") {
     if (reads.atBaseline === void 0 || reads.atBaseline === "found")
       return { action: "update" };
-    if (reads.atBaseline === "error")
-      return { action: "error", reason: "baseline-read" };
     if (reads.sourceParent === "found")
       return { action: "update" };
+    if (reads.atBaseline === "error")
+      return { action: "error", reason: "baseline-read" };
     if (reads.sourceParent === void 0 || reads.sourceParent === "error") {
       return { action: "error", reason: "source-parent-read" };
     }
@@ -56248,12 +56326,14 @@ var RebaseReadError = class extends Error {
   addedOnMainSinceOpened;
   unreadStates;
   otherErrors;
-  constructor(message, deletedSinceOpened, addedOnMainSinceOpened = [], unreadStates = [], otherErrors = false) {
+  failedReads;
+  constructor(message, deletedSinceOpened, addedOnMainSinceOpened = [], unreadStates = [], otherErrors = false, failedReads = []) {
     super(message);
     this.deletedSinceOpened = deletedSinceOpened;
     this.addedOnMainSinceOpened = addedOnMainSinceOpened;
     this.unreadStates = unreadStates;
     this.otherErrors = otherErrors;
+    this.failedReads = failedReads;
     this.name = "RebaseReadError";
   }
 };
@@ -56691,6 +56771,14 @@ function rebaseFailureComment(input) {
   if (unread.length > 0) {
     const one = unread.length === 1;
     lines.push(`The rebase stopped before the branch moved, and translated nothing: the read of ${one ? "the state file" : "each state file"} below answered something other than "not found", and the rebase keeps the keys a state file holds besides its own, so it does not write over a file it could not read. A failed read is transient more often than not: once it reads again, re-run the failed rebase workflow run, which rebuilds this PR on the current \`main\`.`, "", ...unread.map((lecture) => `- \`${lecture.file}\`: \`${lecture.statePath}\` (${lecture.status})`));
+    if (!input.otherErrors)
+      return lines.join("\n");
+    lines.push("");
+  }
+  const failedReads = input.failedReads ?? [];
+  if (failedReads.length > 0) {
+    const one = failedReads.length === 1;
+    lines.push(`The rebase stopped before the branch moved, and translated nothing: ${one ? "the read below" : "each read below"} answered something other than "not found", and what the rebase does with the lecture depends on it. A failed read is transient more often than not: once it reads again, re-run the failed rebase workflow run, which rebuilds this PR on the current \`main\`.`, "", ...failedReads.map((read) => `- \`${read.file}\`: ${read.read} (${read.status})`));
     if (!input.otherErrors)
       return lines.join("\n");
     lines.push("");
@@ -58795,6 +58883,7 @@ The translation content is preserved; only unchanged sections were updated to ma
             deletedSinceOpened: error4 instanceof RebaseReadError ? error4.deletedSinceOpened : void 0,
             addedOnMainSinceOpened: error4 instanceof RebaseReadError ? error4.addedOnMainSinceOpened : void 0,
             unreadStates: error4 instanceof RebaseReadError ? error4.unreadStates : void 0,
+            failedReads: error4 instanceof RebaseReadError ? error4.failedReads : void 0,
             otherErrors: error4 instanceof RebaseReadError ? error4.otherErrors : void 0
           })
         });
@@ -58830,6 +58919,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
   const carried = [];
   const deletedSinceOpened = [];
   const addedOnMainSinceOpened = [];
+  const failedReads = [];
   const baselineReads = /* @__PURE__ */ new Map();
   for (const file of metadata.files) {
     const fileType = file.type || "markdown";
@@ -58909,6 +58999,8 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
       let newOnMain;
       let atBaseline;
       let onBranch;
+      let planParentPath = file.path;
+      let planParentRead = parentRead;
       if (onMain.status === "missing" && renamed) {
         newOnMain = await readEditionFile(octokit, owner, repo, file.path, baseSha);
         reads.newPathOnMain = newOnMain.status;
@@ -58917,9 +59009,13 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
       if (onMain.status === "found" && metadata.targetBaseSha) {
         atBaseline = await readEditionFile(octokit, owner, repo, editionPath2, metadata.targetBaseSha);
         reads.atBaseline = atBaseline.status;
-        if (atBaseline.status === "missing") {
-          reads.sourceParent = parentRead.status === "error" ? "error" : oldContent !== "" ? "found" : "missing";
-          if (reads.sourceParent === "missing") {
+        if (atBaseline.status !== "found") {
+          if (file.previousPath !== void 0) {
+            planParentPath = file.previousPath;
+            planParentRead = await readEditionFile(octokit, sourceOwner, sourceRepoName, file.previousPath, `${sourceCommitSha}^`);
+          }
+          reads.sourceParent = planParentRead.status === "error" ? "error" : planParentRead.status === "found" && planParentRead.content !== "" ? "found" : "missing";
+          if (reads.sourceParent === "missing" && atBaseline.status === "missing") {
             onBranch = await readEditionFile(octokit, owner, repo, file.path, pr.head.ref);
             reads.onBranch = onBranch.status;
           }
@@ -58937,17 +59033,21 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
       const plan = planRebaseRead(reads);
       const failure = (read) => read?.status === "error" ? read.message : "unknown";
       if (plan.action === "error") {
+        const failedRead = (read, result2, detail = "") => {
+          failedReads.push({ file: file.path, read, status: failure(result2) });
+          return new Error(`Could not read ${read}${detail} (${failure(result2)})`);
+        };
         switch (plan.reason) {
           case "main-read": {
             const [path9, read] = onMain.status === "error" ? [editionPath2, onMain] : [file.path, newOnMain];
-            throw new Error(`Could not read ${path9} from ${owner}/${repo} at ${baseSha.slice(0, 7)} (${failure(read)})`);
+            throw failedRead(`${path9} from ${owner}/${repo} at ${baseSha.slice(0, 7)}`, read);
           }
           case "baseline-read":
-            throw new Error(`Could not read ${editionPath2} at this PR's baseline ${metadata.targetBaseSha?.slice(0, 7)} (${failure(atBaseline)})`);
+            throw failedRead(`${editionPath2} at this PR's baseline ${metadata.targetBaseSha?.slice(0, 7)}`, atBaseline);
           case "branch-read":
-            throw new Error(`Could not read ${file.path} on ${pr.head.ref} (${failure(onBranch)})`);
+            throw failedRead(`${file.path} on ${pr.head.ref}`, onBranch);
           case "source-parent-read":
-            throw new Error(`Could not read ${file.path} from ${sourceOwner}/${sourceRepoName} at ${sourceCommitSha.slice(0, 7)}^, which says whether this PR's source change adds the lecture (${failure(parentRead)})`);
+            throw failedRead(`${planParentPath} from ${sourceOwner}/${sourceRepoName} at ${sourceCommitSha.slice(0, 7)}^`, planParentRead, ", which says whether this PR's source change adds the lecture");
           case "no-baseline":
             throw new Error(`${editionPath2} is not on ${baseBranch}, and this PR records no baseline (it predates the rebase cache), so a lecture deleted since it opened cannot be told from one it adds. It was not translated from scratch`);
         }
@@ -58968,6 +59068,11 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
         const statePath = stateFileFor(file.path, inputs.docsFolder);
         const state = await readEditionFile(octokit, owner, repo, statePath, pr.head.ref);
         if (state.status === "error") {
+          failedReads.push({
+            file: file.path,
+            read: `${statePath} on ${pr.head.ref}`,
+            status: state.message
+          });
           throw new Error(`Could not read ${statePath} on ${pr.head.ref} (${state.message})`);
         }
         carried.push({ path: file.path, content: onBranch.content });
@@ -59024,7 +59129,7 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
     }
   }
   if (fetchErrors.length > 0) {
-    throw new RebaseReadError(`content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join("; ")}`, deletedSinceOpened, addedOnMainSinceOpened);
+    throw new RebaseReadError(`content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join("; ")}`, deletedSinceOpened, addedOnMainSinceOpened, [], fetchErrors.length > failedReads.length, failedReads);
   }
   if (filesToSync.length === 0 && carried.length === 0) {
     core9.info(`PR #${pr.number}: No files to process after content fetch. Skipping.`);

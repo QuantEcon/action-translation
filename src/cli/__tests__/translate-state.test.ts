@@ -746,11 +746,11 @@ describe('a state file keeps the keys the engine does not own (#290)', () => {
     });
   });
 
-  describe('falls back to dumping the kept values, with a warning, when the text cannot be carried', () => {
+  describe('falls back to writing the kept values out again, with a warning, when the text cannot be carried', () => {
     const fallbackWarning =
       'x: the keys it held besides the ones sync writes were kept, but their text could not be ' +
-      'carried over as written, so their values were re-serialised: quoting, comments and ' +
-      'number formatting may have changed';
+      'carried over as written, so they were written out again: each value keeps its text, but ' +
+      'quoting, comments and layout may have changed';
 
     it.each([
       ['an alias of an anchor in an engine key', 'source-sha: &s abc\nreviewed: *s\n'],
@@ -758,6 +758,10 @@ describe('a state file keeps the keys the engine does not own (#290)', () => {
       ['a byte-order mark', '\u{feff}source-sha: abc\nreviewed: x\n'],
       ['a tab in a value', 'source-sha: abc\nreviewed: "a\tb"\n'],
       ['a complex key', '? [a, b]\n: c\nsource-sha: abc\n'],
+      ['a document-end marker', 'source-sha: abc\nreviewed: x\n...\n'],
+      ['a %YAML directive', '%YAML 1.2\n---\nsource-sha: abc\nreviewed: x\n'],
+      ['indented top-level keys', '  source-sha: abc\n  reviewed: x\n'],
+      ['CR-only line endings', 'source-sha: abc\rreviewed: x\r'],
       // These two split cleanly and only the value check catches them: the comment line
       // is part of the scalar, and the blank lines are part of a kept-chomping one.
       [
@@ -790,6 +794,149 @@ describe('a state file keeps the keys the engine does not own (#290)', () => {
         '__proto__:\n  a: 1\nb: 2\n'
       );
     });
+
+    // A plain scalar that CORE_SCHEMA reads as a number is written back as the
+    // text it was: an abbreviated SHA of digits, or of digits and one `e`, is
+    // exactly such a value (#290).
+    const kept = (existing: string) =>
+      mergeFileState(existing, withVersion, 'x').content.slice(
+        serializeFileState(withVersion).length
+      );
+    const TAB = '\t';
+
+    it.each([
+      ['a tab', `reviewed: "a${TAB}b"\n`],
+      ['a byte-order mark', '\u{feff}'],
+      ['a document-end marker', ''],
+      ['a %YAML directive', '%YAML 1.2\n---\n'],
+      ['CR-only line endings', ''],
+    ])('keeps each abbreviated SHA as written, beside %s', (what, extra) => {
+      const body = 'signed-off-sha: 1234e56\nhex-sha: 0x1f\nzero-sha: 0123456\n';
+      const existing =
+        what === 'a document-end marker'
+          ? `source-sha: abc\n${body}...\n`
+          : what === 'CR-only line endings'
+            ? `source-sha: abc\n${body}`.replace(/\n/g, '\r')
+            : what === 'a tab'
+              ? `source-sha: abc\n${body}${extra}`
+              : `${extra}source-sha: abc\n${body}`;
+      const merged = mergeFileState(existing, withVersion, 'x');
+      expect(merged.warning).toBe(fallbackWarning);
+      expect(kept(existing)).toContain(
+        'signed-off-sha: 1234e56\nhex-sha: 0x1f\nzero-sha: 0123456\n'
+      );
+    });
+
+    it('keeps them as written beside indented top-level keys', () => {
+      const existing = '  source-sha: abc\n  signed-off-sha: 1234e56\n  zero-sha: 0123456\n';
+      expect(mergeFileState(existing, withVersion, 'x').warning).toBe(fallbackWarning);
+      expect(kept(existing)).toBe('signed-off-sha: 1234e56\nzero-sha: 0123456\n');
+    });
+
+    it('writes plain scalars back as the same plain text, and quoted ones quoted', () => {
+      const existing = [
+        'source-sha: abc',
+        `note: "a${TAB}b"`,
+        'flag: true',
+        'nothing: null',
+        'tilde: ~',
+        'empty:',
+        'exp: 1e5',
+        'octal: 0o17',
+        'quoted-flag: "true"',
+        "quoted-zero: '0123456'",
+        'text: plain words',
+        '',
+      ].join('\n');
+      expect(kept(existing)).toBe(
+        [
+          // The tab, which sent the file down this path, is written escaped.
+          'note: "a\\tb"',
+          'flag: true',
+          'nothing: null',
+          'tilde: ~',
+          'empty: null',
+          'exp: 1e5',
+          'octal: 0o17',
+          'quoted-flag: "true"',
+          'quoted-zero: "0123456"',
+          'text: plain words',
+          '',
+        ].join('\n')
+      );
+    });
+
+    it('gives, loaded again, the values the original gave, with numeric text kept', () => {
+      const existing = [
+        'source-sha: abc',
+        `note: "a${TAB}b"`,
+        'signed-off-sha: 1234e56',
+        'hex: 0x1f',
+        'zero: 0123456',
+        'flag: true',
+        'nothing: null',
+        'exp: 1e5',
+        'quoted-flag: "true"',
+        'reviewed:',
+        '  by: [an-editor, 0x2a]',
+        '  at:',
+        '    - 2026-11-25',
+        '    - "2.50"',
+        '    - 2.50',
+        '    - {sha: 0123456, ok: yes}',
+        '',
+      ].join('\n');
+      const merged = mergeFileState(existing, withVersion, 'x');
+      expect(merged.warning).toBe(fallbackWarning);
+      const original = yaml.load(existing, { schema: yaml.CORE_SCHEMA }) as Record<string, unknown>;
+      const loaded = yaml.load(merged.content, { schema: yaml.CORE_SCHEMA }) as Record<
+        string,
+        unknown
+      >;
+      for (const key of Object.keys(original).filter((k) => k !== 'source-sha')) {
+        expect(loaded[key]).toEqual(original[key]);
+      }
+      // Nested maps and sequences round-trip, their numeric text as written.
+      expect(kept(existing)).toContain(
+        'reviewed:\n  by:\n    - an-editor\n    - 0x2a\n  at:\n    - 2026-11-25\n' +
+          '    - "2.50"\n    - 2.50\n    - sha: 0123456\n      ok: "yes"\n'
+      );
+      // Idempotent: the output carries as text on the next write.
+      const again = mergeFileState(merged.content, withVersion, 'x');
+      expect(again.warning).toBeUndefined();
+      expect(again.content).toBe(merged.content);
+    });
+
+    it('dumps the values as a last resort when a kept mapping key reads as a number', () => {
+      const merged = mergeFileState(
+        `source-sha: abc\nnote: "a${TAB}b"\n0x2a: x\n`,
+        withVersion,
+        'x'
+      );
+      expect(merged.warning).toBe(
+        'x: the keys it held besides the ones sync writes were kept, but their text could not ' +
+          'be carried over as written, so their values were re-serialised: quoting, comments ' +
+          'and number formatting may have changed'
+      );
+      expect(merged.content).toContain('"42": x\n');
+    });
+  });
+
+  it.each([
+    ['!!timestamp', 'reviewed-at: !!timestamp 2026-11-25\n', '!!timestamp'],
+    ['!!binary', 'blob: !!binary aGk=\n', '!!binary'],
+    ['a custom tag', 'reviewed: !signoff an-editor\n', '!signoff'],
+  ])('overwrites a mapping with an explicit %s tag, saying why', (_what, line, tag) => {
+    const merged = mergeFileState(`source-sha: abc\n${line}`, withVersion, 'x');
+    expect(merged.content).toBe(serializeFileState(withVersion));
+    expect(merged.overwritten).toBe(true);
+    expect(merged.overwrittenReason).toBe(
+      `it uses the YAML tag ${tag}, which state files do not support`
+    );
+    expect(merged.warning).toBe(
+      `x could not be read, since it uses the YAML tag ${tag}, which state files do not ` +
+        'support, so it was overwritten: any keys it held besides the ones sync writes are gone'
+    );
   });
 
   it('still fails when the existing file cannot be read', () => {

@@ -443,6 +443,8 @@ export interface MergedFileState {
    * counted: it held no keys.
    */
   overwritten?: boolean;
+  /** With `overwritten`: why, as a clause (`it uses the YAML tag !!timestamp, ...`). */
+  overwrittenReason?: string;
 }
 
 /**
@@ -464,12 +466,18 @@ export interface MergedFileState {
  * engine's keys' region (between or under the engine's keys, or at the top
  * of the file above one) are not kept. The result is loaded again and each
  * kept key's value compared with the existing file's; when the text cannot
- * be split with confidence or that check fails, the kept keys are dumped
- * from their loaded values instead, as `writeConfig` does, with a warning
- * that their text may have been re-serialised.
+ * be split with confidence or that check fails, the kept keys are written out
+ * again from a load that keeps each plain scalar's text (`keptKeysAsText`),
+ * so no value is rewritten (`1234e56` stays `1234e56`), with a warning that
+ * quoting, comments and layout may have changed. Only when that fails too
+ * (a mapping key that reads as a number) are they dumped from their CORE
+ * values, as `writeConfig` does, with a warning that number formatting may
+ * have changed as well.
  *
  * Unlike `writeConfig`, an existing file that is not a YAML mapping
- * (unparseable, a repeated key, a list or a scalar) is overwritten with a
+ * (unparseable, a repeated key, a list or a scalar, or a value with an
+ * explicit tag such as `!!timestamp`, `!!binary` or a custom `!tag`, which
+ * state files do not support) is overwritten with a
  * warning rather than refused: it has no keys to keep, and
  * `translate status --write-state` is the documented repair for one. An empty
  * or comment-only file is overwritten too, with a warning that says so.
@@ -491,12 +499,24 @@ export function mergeFileState(
     parsed = yaml.load(existing, { schema: yaml.CORE_SCHEMA });
   } catch (error) {
     const message = error instanceof Error ? error.message.split('\n')[0] : String(error);
+    // A value with an explicit tag (`!!timestamp`, `!!binary`, any `!custom`)
+    // is valid YAML that state files do not support: said so, since the file
+    // otherwise looks well-formed.
+    const tag = /^unknown tag !<([^>]*)>/.exec(message)?.[1];
+    const reason =
+      tag !== undefined
+        ? `it uses the YAML tag ${tag.replace(/^tag:yaml\.org,2002:/, '!!')}, which state ` +
+          'files do not support'
+        : `it could not be read as YAML (${message})`;
     return {
       content,
       overwritten: true,
+      overwrittenReason: reason,
       warning:
-        `${shownPath} could not be read as YAML (${message}), so it was overwritten: any keys ` +
-        'it held besides the ones sync writes are gone',
+        (tag !== undefined
+          ? `${shownPath} could not be read, since ${reason}, so it was overwritten`
+          : `${shownPath} could not be read as YAML (${message}), so it was overwritten`) +
+        ': any keys it held besides the ones sync writes are gone',
     };
   }
   if (parsed === undefined || parsed === null) {
@@ -510,6 +530,7 @@ export function mergeFileState(
     return {
       content,
       overwritten: true,
+      overwrittenReason: 'it is not a YAML mapping of keys to values',
       warning:
         `${shownPath} was not a YAML mapping of keys to values, so it was overwritten: any ` +
         'keys it held besides the ones sync writes are gone',
@@ -525,25 +546,131 @@ export function mergeFileState(
     if (keepsValues(merged, parsed, keptKeys, content)) return { content: merged };
   }
 
-  // Dumped from the loaded values. `__proto__` is defined, not assigned,
-  // which would set the object's prototype and drop the key.
-  const kept: Record<string, unknown> = {};
-  for (const key of keptKeys) {
-    Object.defineProperty(kept, key, {
-      value: parsed[key],
-      enumerable: true,
-      writable: true,
-      configurable: true,
-    });
+  // Written again from the loaded values, each plain scalar as its own text:
+  // `1234e56`, `0x1f` and `0123456` stay as written, where a dump of their
+  // CORE values would give `1.234e+59`, `31` and `123456`, and an abbreviated
+  // SHA is exactly such a value. Checked as the carried text is.
+  const asText = keptKeysAsText(existing, keptKeys);
+  if (asText !== undefined) {
+    const merged = content + asText;
+    if (keepsValues(merged, parsed, keptKeys, content)) {
+      return {
+        content: merged,
+        warning:
+          `${shownPath}: the keys it held besides the ones sync writes were kept, but their ` +
+          'text could not be carried over as written, so they were written out again: each ' +
+          'value keeps its text, but quoting, comments and layout may have changed',
+      };
+    }
   }
+
+  // Last resort, as when a mapping key is a number: dumped from the values.
   return {
     content:
-      content + yaml.dump(kept, { lineWidth: -1, quotingType: '"', schema: yaml.CORE_SCHEMA }),
+      content +
+      yaml.dump(
+        definedCopy(keptKeys, (key) => parsed[key]),
+        DUMP_OPTIONS
+      ),
     warning:
       `${shownPath}: the keys it held besides the ones sync writes were kept, but their text ` +
       'could not be carried over as written, so their values were re-serialised: quoting, ' +
       'comments and number formatting may have changed',
   };
+}
+
+const DUMP_OPTIONS: yaml.DumpOptions = {
+  lineWidth: -1,
+  quotingType: '"',
+  schema: yaml.CORE_SCHEMA,
+};
+
+/**
+ * An object holding `keys`, each with `valueOf(key)`. `__proto__` is defined,
+ * not assigned, which would set the object's prototype and drop the key.
+ */
+function definedCopy(keys: string[], valueOf: (key: string) => unknown): Record<string, unknown> {
+  const copy: Record<string, unknown> = {};
+  for (const key of keys) {
+    Object.defineProperty(copy, key, {
+      value: valueOf(key),
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+  }
+  return copy;
+}
+
+/** A plain scalar CORE_SCHEMA reads as a null, boolean or number, kept as its text. */
+class PlainScalar {
+  constructor(readonly text: string) {}
+  // So that js-yaml, which names a mapping key by its string, names it by the text.
+  get [Symbol.toStringTag](): string {
+    return 'PlainScalar';
+  }
+  toString(): string {
+    return this.text;
+  }
+}
+
+/**
+ * CORE_SCHEMA, except that a scalar it reads as a null, boolean, integer or
+ * float loads as a `PlainScalar` holding its text, and dumps as that text,
+ * unquoted. Strings resolve and quote as under CORE_SCHEMA, so a quoted
+ * `"true"` stays a quoted string. Only the fallback of `mergeFileState` uses it.
+ */
+const TEXT_KEEPING_SCHEMA = yaml.FAILSAFE_SCHEMA.extend({
+  // The four implicit types of CORE_SCHEMA (the typings do not list the field).
+  implicit: (
+    yaml.CORE_SCHEMA as unknown as { implicit: Array<yaml.Type & { tag: string }> }
+  ).implicit.map(
+    (type) =>
+      new yaml.Type(type.tag, {
+        kind: 'scalar',
+        resolve: type.resolve,
+        construct: (data: unknown) => new PlainScalar(String(data)),
+        instanceOf: PlainScalar,
+        represent: (value: object) => (value as PlainScalar).text,
+      })
+  ),
+});
+
+/**
+ * The kept keys of `existing`, written with `TEXT_KEEPING_SCHEMA`; or
+ * undefined when it does not load so as a mapping holding each of them (a
+ * mapping key CORE_SCHEMA reads as a number, say).
+ */
+function keptKeysAsText(existing: string, keptKeys: string[]): string | undefined {
+  let loaded: unknown;
+  try {
+    loaded = yaml.load(existing, { schema: TEXT_KEEPING_SCHEMA });
+  } catch {
+    return undefined;
+  }
+  if (!isPlainMapping(loaded)) return undefined;
+  const mapping = loaded;
+  if (!keptKeys.every((key) => Object.prototype.hasOwnProperty.call(mapping, key))) {
+    return undefined;
+  }
+  // An empty value loads as null without a type; it is written `null`, as
+  // CORE_SCHEMA writes it.
+  const withNulls = (value: unknown): unknown => {
+    if (value === null) return new PlainScalar('null');
+    if (Array.isArray(value)) return value.map(withNulls);
+    if (isPlainMapping(value)) {
+      return definedCopy(Object.keys(value), (key) => withNulls(value[key]));
+    }
+    return value;
+  };
+  try {
+    return yaml.dump(
+      definedCopy(keptKeys, (key) => withNulls(mapping[key])),
+      { ...DUMP_OPTIONS, schema: TEXT_KEEPING_SCHEMA }
+    );
+  } catch {
+    return undefined;
+  }
 }
 
 /**

@@ -33,6 +33,7 @@ import * as yaml from 'js-yaml';
 import { mergeFileState, stateFileRelativePath, getToolVersion } from './cli/translate-state.js';
 import { FileState } from './cli/types.js';
 import type { StateRead } from './sync-premise.js';
+import type { OverwrittenState } from './pr-creator.js';
 import { mergeTargetCaptions } from './toc-captions.js';
 import { collectTocFiles } from './lecture-set.js';
 
@@ -140,7 +141,7 @@ export interface SyncProcessingResult {
    * YAML mapping, so whatever it held is gone (#290). The PR body names them;
    * absent when there are none.
    */
-  overwrittenStateFiles?: string[];
+  overwrittenStateFiles?: OverwrittenState[];
 }
 
 // =============================================================================
@@ -1228,7 +1229,12 @@ export class SyncOrchestrator {
       const existing = read?.status === 'found' ? read.content : movedState;
       const merged = mergeFileState(existing, state, statePath);
       if (merged.warning) this.logger.warning(merged.warning);
-      if (merged.overwritten) (result.overwrittenStateFiles ??= []).push(statePath);
+      if (merged.overwritten) {
+        (result.overwrittenStateFiles ??= []).push({
+          path: statePath,
+          reason: merged.overwrittenReason ?? 'it is not a YAML mapping of keys to values',
+        });
+      }
 
       result.translatedFiles.push({
         path: statePath,

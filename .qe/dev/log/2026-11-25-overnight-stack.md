@@ -43,7 +43,7 @@ Each PR is based on the one before; #471 is based on `main`.
 | #473 | CLI | #384, #356, #364, #430 | #391 (sync still records the merge commit), #428 (the prompt's escape hatch) |
 | #474 | French typography | | #325, #324 (each waits on its fr edition repair) |
 | #475 | reviewer | #284, #283 | #261 (box 5 built) |
-| #476 | stretch | #467, #290 | #223 (its "unlocated" remedy needs a schema change) |
+| #476 | stretch | #467 | #290 (its harness exercise was not run, and whether a rebase keeps a branch-only key is open), #223 (its "unlocated" remedy needs a schema change) |
 
 3,117 tests pass across 91 suites at #476's head (2,761 at `939ceaf`; one more is skipped when
 the suite runs as root).
@@ -115,3 +115,30 @@ fixes. Findings that changed a PR:
 - Matt's review and merges, in order, with the confirmations above.
 - A ruling on #477, since either fix changes verdicts during the shadow window.
 - A release carrying the stack, after the fr edition heal for #324.
+
+## 2026-11-26 — independent review
+
+A second, independent review commented on each PR; its findings were checked against the code
+and applied in one new commit per branch (no commit rewritten), then the stack was restacked.
+
+- #471: `rate-check.sh --ref` resolves a remote-only branch under any remote and refuses one two
+  remotes disagree on; the `--ref` test is renamed to what it proves; the rename recipe covers a
+  merge commit and a heavily edited rename (`D` beside `A`). Left: the `--max-refusals` string
+  identity, the probe-directory filter, the stale STATE count.
+- #472: a bundle test pins that a test-mode run at the nothing-to-sync exit under `all` makes no
+  issue request (the review's mutant now fails). Left: the failure-issue wording for a failed
+  read, the #92 lookup's `head.repo`.
+- #473: `--resume-from ""` and `-f ""` are refused, not read as absent; `source-sha` is peeled
+  to a commit, so a tree id stays OUTDATED; `init -f` says once where the refused output went.
+  Left by ruling: the unique-substring step.
+- #474: an unclosed raw block inside a directive ends at the directive's closing fence; a line
+  starting `<pre> ...` stays a raw block, now documented; the three surviving mutants are killed.
+  Left: a raw block not at line start, elisions in directive titles, `x_t'*y*`.
+- #475: the #283 changelog entry says "within one lecture" and discloses the multi-file
+  pairing, with a test pinning its known wrong case (follow-up: pair per file); a parse failure
+  is only a reply that did not parse; the injection scorer reads reasons only; a resync removal
+  404 is tested; the contract says an all-404 review aborts.
+- #476: a failed baseline read is fatal only where it decides; renames are outside the #467 stop
+  (the plan reads the parent at the old path; #478 unchanged); the state-file fallback keeps
+  each value's text (`1234e56` stays) and names an unsupported tag; failed plan reads advise a
+  re-run; records for #290 (one question open) and #223. Left: a way out of the stop (follow-up).

@@ -136,13 +136,21 @@ export function formatStillOpenNotice(lectures: StillOpenNotice[]): string {
   return `\n\n### ⚠️ Earlier Translation PR Still Open\n\nThe translation of each lecture below is at an earlier source commit than the English this source PR changed, and an open translation PR carries the changes in between. This PR was built on the translation without them. **Merge the earlier PR first**: once it merges, rebase mode rebuilds this PR on top of it.\n\n${lines.join('\n')}`;
 }
 
+/** A state file this PR writes over a file that did not load as a YAML mapping (#290). */
+export interface OverwrittenState {
+  path: string;
+  /** Why, as a clause: `it uses the YAML tag !!timestamp, which state files do not support`. */
+  reason: string;
+}
+
 /**
  * The PR-body notice for state files this PR writes over a file that did not
- * load as a YAML mapping (#290), or '' when there are none.
+ * load as a YAML mapping (#290), or '' when there are none. Each says why,
+ * since a file that uses an unsupported tag looks well-formed.
  */
-export function formatOverwrittenStatesNotice(paths: string[]): string {
-  if (paths.length === 0) return '';
-  const lines = paths.map((p) => `- \`${p}\``);
+export function formatOverwrittenStatesNotice(states: OverwrittenState[]): string {
+  if (states.length === 0) return '';
+  const lines = states.map((s) => `- \`${s.path}\`: ${s.reason}`);
   return `\n\n### \u{26a0}\u{fe0f} State Files Overwritten\n\nEach state file below could not be read as a YAML mapping, so this PR writes it afresh: any keys it held besides the ones sync writes, such as a sign-off, are gone. Restore them from the file's history if they matter.\n\n${lines.join('\n')}`;
 }
 
@@ -189,7 +197,7 @@ export async function createTranslationPR(
   scopeSkipped?: ScopeSkip[],
   stillOpen?: StillOpenNotice[],
   lectureSet?: LectureSetReport,
-  overwrittenStates?: string[]
+  overwrittenStates?: OverwrittenState[]
 ): Promise<PrCreationResult> {
   const { targetOwner, targetRepo } = config;
 
@@ -405,7 +413,7 @@ export function buildPrBody(
   scopeSkipped?: ScopeSkip[],
   stillOpen?: StillOpenNotice[],
   lectureSet?: LectureSetReport,
-  overwrittenStates?: string[]
+  overwrittenStates?: OverwrittenState[]
 ): string {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);

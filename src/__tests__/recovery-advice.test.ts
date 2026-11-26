@@ -530,6 +530,39 @@ describe('rebase-failure comment (#281)', () => {
     expect(comment).toContain('Resolve the conflicts by hand');
   });
 
+  it('for a read the plan needed that failed, advises a re-run and nothing else (#467)', () => {
+    const comment = rebaseFailureComment({
+      ...input,
+      metadata: metadata(1101),
+      failedReads: [
+        {
+          file: 'lectures/a.md',
+          read: "lectures/a.md at this PR's baseline 1234567",
+          status: 'status 502: HTTP 502',
+        },
+      ],
+    });
+    expect(comment.split('\n').slice(4)).toEqual([
+      'The rebase stopped before the branch moved, and translated nothing: the read below ' +
+        'answered something other than "not found", and what the rebase does with the lecture ' +
+        'depends on it. A failed read is transient more often than not: once it reads again, ' +
+        're-run the failed rebase workflow run, which rebuilds this PR on the current `main`.',
+      '',
+      "- `lectures/a.md`: lectures/a.md at this PR's baseline 1234567 (status 502: HTTP 502)",
+    ]);
+  });
+
+  it('for a failed read beside another failure, keeps the general advice', () => {
+    const comment = rebaseFailureComment({
+      ...input,
+      failedReads: [{ file: 'lectures/a.md', read: 'lectures/a.md on b', status: 's' }],
+      otherErrors: true,
+    });
+    expect(comment).toContain('re-run the failed rebase workflow run');
+    expect(comment).toContain('- `lectures/a.md`: lectures/a.md on b (s)');
+    expect(comment).toContain('Resolve the conflicts by hand');
+  });
+
   it('for a lecture main got first beside a deleted one, keeps the general advice', () => {
     const comment = rebaseFailureComment({
       ...input,

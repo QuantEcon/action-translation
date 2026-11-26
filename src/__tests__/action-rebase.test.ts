@@ -933,6 +933,8 @@ describe('rebase mode, a lecture main does not have (#389, #351)', () => {
         'lecture (status 502: HTTP 502)'
     );
     expect(log.comments[0].body).not.toContain('Decide which copy wins.');
+    expect(log.comments[0].body).toContain('re-run the failed rebase workflow run');
+    expect(log.comments[0].body).not.toContain('translate forward');
   });
 
   it('updates a lecture main and the baseline both have, reading the baseline once for the plan and the cache', () => {
@@ -998,6 +1000,106 @@ describe('rebase mode, a lecture main does not have (#389, #351)', () => {
         '(status 502: HTTP 502)'
     );
     expect(log.comments[0].body).not.toContain('Decide which copy wins.');
+    // A failed read gets the re-run advice, not regeneration.
+    expect(log.comments[0].body).toContain('re-run the failed rebase workflow run');
+    expect(log.comments[0].body).toContain(
+      `- \`lectures/x.md\`: lectures/x.md at this PR's baseline ${OLD_BASE} (status 502: HTTP 502)`
+    );
+    expect(log.comments[0].body).not.toContain('translate forward');
+  });
+
+  it('rebases, without the cache, a lecture whose baseline read fails when its source change edits it', () => {
+    // The baseline decides nothing when the source parent has the lecture:
+    // an update either way. Its failed read costs the cache only, as before #467.
+    const run = runRebase(
+      'baseline-read-502-edit',
+      rebaseScenario({
+        openPulls: siblingWith([{ path: 'lectures/x.md', type: 'markdown' }]),
+        // The English did not change, so the update needs no model call.
+        source: {
+          ...base.source,
+          [`lectures/x.md@${SOURCE_SHA}`]: EN,
+          [`lectures/x.md@${SOURCE_SHA}^`]: EN,
+        },
+        target: {
+          ...base.target,
+          [`lectures/x.md@${BASE}`]: ML,
+          [`lectures/x.md@${OLD_BASE}`]: { status: 502 },
+          [`lectures/x.md@${SIBLING_BRANCH}`]: ML_REVIEWED,
+        },
+      })
+    );
+    const log = checkedLog(run, 0);
+
+    // Main, the baseline (502); the cache does not read again, nor the branch.
+    expect(reads(log, 'lectures/x.md')).toEqual([
+      at('lectures/x.md', BASE),
+      at('lectures/x.md', OLD_BASE),
+    ]);
+    expect(run.stdout).toContain(
+      'lectures/x.md: Could not load rebase cache \u{2014} will re-translate'
+    );
+    expect(log.trees[0].tree.map((entry) => entry.path)).toContain('lectures/x.md');
+    expect(log.refUpdates).toHaveLength(1);
+    expect(log.comments[0].body).toContain('Automatically rebased');
+    expect(run.stdout).toContain('Rebase complete: 1 rebased, 0 skipped, 0 errors.');
+  });
+
+  it('does not take a rename for an addition: main got its old path since, and the stop stays out (#467, #478)', () => {
+    // `main` got q1.md since the PR opened, and the PR renames q1.md to
+    // q2.md. The source parent has q1.md, so the plan reads it there and
+    // takes an update, as before #467. That update still diffs against the
+    // English at the NEW path, which the parent lacks, and fails as it does
+    // on `main`: #478's defect, not this stop's.
+    const run = runRebase(
+      'renamed-old-path-on-main',
+      rebaseScenario({
+        // The ToC makes the overlap: the sibling check ignores a rename's old
+        // path (a defect on `main`, outside this change).
+        mergedPrFiles: [
+          { filename: 'lectures/_toc.yml', status: 'modified' },
+          { filename: 'lectures/q1.md', status: 'added' },
+        ],
+        openPulls: siblingWith([
+          { path: 'lectures/q2.md', type: 'renamed', previousPath: 'lectures/q1.md' },
+        ]),
+        source: {
+          ...base.source,
+          [`lectures/q2.md@${SOURCE_SHA}`]: EN,
+          [`lectures/q1.md@${SOURCE_SHA}^`]: EN_BEFORE,
+        },
+        target: {
+          ...base.target,
+          [`lectures/q1.md@${BASE}`]: ML,
+          [`lectures/q2.md@${SIBLING_BRANCH}`]: ML_REVIEWED,
+        },
+      })
+    );
+    const log = checkedLog(run, 1);
+
+    // The parent at the new path, for the update's old English, and at the
+    // old path, for the plan.
+    expect(
+      log.requests.filter((line) =>
+        line.startsWith(`GET /repos/${SOURCE_REPO}/contents/lectures/q`)
+      )
+    ).toEqual([
+      `GET /repos/${SOURCE_REPO}/contents/lectures/q2.md?ref=${SOURCE_SHA}`,
+      `GET /repos/${SOURCE_REPO}/contents/lectures/q2.md?ref=${SOURCE_SHA}^`,
+      `GET /repos/${SOURCE_REPO}/contents/lectures/q1.md?ref=${SOURCE_SHA}^`,
+    ]);
+    const { body } = log.comments[0];
+    expect(body).not.toContain('Decide which copy wins.');
+    expect(body).not.toContain("this PR's source change adds it too");
+    // The outcome before this stop existed, byte for byte: the update's
+    // missing-title failure, with the general advice.
+    expect(body).toContain(
+      'Error: translation produced 1 error(s); branch left untouched: Error processing ' +
+        'lectures/q2.md: MissingTitleError: Document must have a # title heading'
+    );
+    expect(log.comments).toHaveLength(1);
+    expect(log.trees).toEqual([]);
+    expect(log.refUpdates).toEqual([]);
   });
 
   it('fails when the read of main fails, rather than translate the lecture as new', () => {

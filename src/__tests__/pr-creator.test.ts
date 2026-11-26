@@ -18,6 +18,7 @@ import {
   createTranslationPR,
   formatOverwrittenStatesNotice,
   formatStillOpenNotice,
+  OverwrittenState,
   parseTranslationSyncMetadata,
   PrCreatorConfig,
   StillOpenNotice,
@@ -530,7 +531,7 @@ describe('buildPrBody still-open notice (#420)', () => {
 
   it('names each state file written over one that was not a YAML mapping, after the other notices (#290)', () => {
     const files = [{ path: 'lectures/a.md', content: 'x', sha: 's' }];
-    const withOverwritten = (paths: string[] | undefined) =>
+    const withOverwritten = (paths: OverwrittenState[] | undefined) =>
       buildPrBody(
         files,
         [],
@@ -548,12 +549,20 @@ describe('buildPrBody still-open notice (#420)', () => {
       );
     expect(formatOverwrittenStatesNotice([])).toBe('');
     expect(withOverwritten([])).toBe(withOverwritten(undefined));
-    const text = withOverwritten(['.translate/state/a.md.yml', '.translate/state/b.md.yml']);
+    const text = withOverwritten([
+      { path: '.translate/state/a.md.yml', reason: 'it is not a YAML mapping of keys to values' },
+      {
+        path: '.translate/state/b.md.yml',
+        reason: 'it uses the YAML tag !!timestamp, which state files do not support',
+      },
+    ]);
     expect(text).toContain(
       '\n\n### \u{26a0}\u{fe0f} State Files Overwritten\n\nEach state file below could not be ' +
         'read as a YAML mapping, so this PR writes it afresh: any keys it held besides the ones ' +
         "sync writes, such as a sign-off, are gone. Restore them from the file's history if " +
-        'they matter.\n\n- `.translate/state/a.md.yml`\n- `.translate/state/b.md.yml`\n'
+        'they matter.\n\n- `.translate/state/a.md.yml`: it is not a YAML mapping of keys to ' +
+        'values\n- `.translate/state/b.md.yml`: it uses the YAML tag !!timestamp, which state ' +
+        'files do not support\n'
     );
     expect(parseTranslationSyncMetadata(text)?.files).toEqual([{ path: 'lectures/a.md' }]);
   });

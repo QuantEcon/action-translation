@@ -64,15 +64,37 @@ describe('planRebaseRead', () => {
     });
   });
 
-  it('fails when main has the lecture and the read of the baseline or branch fails (#467)', () => {
-    expect(planRebaseRead({ onMain: 'found', atBaseline: 'error' })).toEqual({
-      action: 'error',
-      reason: 'baseline-read',
-    });
-    expect(planRebaseRead({ onMain: 'found', atBaseline: 'error', onBranch: 'error' })).toEqual({
-      action: 'error',
-      reason: 'baseline-read',
-    });
+  it('updates, without the cache, a lecture main has whose baseline read fails when its source change edits it', () => {
+    // The baseline decides nothing here: found or missing, the plan is an
+    // update. Before #467 a failed read there only missed the cache.
+    for (const onBranch of [undefined, 'found', 'missing', 'error'] as const) {
+      expect(
+        planRebaseRead({ onMain: 'found', atBaseline: 'error', sourceParent: 'found', onBranch })
+      ).toEqual({ action: 'update' });
+    }
+  });
+
+  it('fails when main has the lecture and the read of the baseline or branch fails, where it decides (#467)', () => {
+    // The parent lacks the lecture: the baseline decides between the stop
+    // and an update.
+    expect(
+      planRebaseRead({ onMain: 'found', atBaseline: 'error', sourceParent: 'missing' })
+    ).toEqual({ action: 'error', reason: 'baseline-read' });
+    expect(
+      planRebaseRead({
+        onMain: 'found',
+        atBaseline: 'error',
+        sourceParent: 'missing',
+        onBranch: 'error',
+      })
+    ).toEqual({ action: 'error', reason: 'baseline-read' });
+    // Both unknown: the baseline's failure is named, as the first read.
+    for (const sourceParent of ['error', undefined] as const) {
+      expect(planRebaseRead({ onMain: 'found', atBaseline: 'error', sourceParent })).toEqual({
+        action: 'error',
+        reason: 'baseline-read',
+      });
+    }
     expect(
       planRebaseRead({
         onMain: 'found',
