@@ -55696,15 +55696,23 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
   }
   const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet);
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
-  const { data: pr } = await octokit.rest.pulls.create({
-    owner: targetOwner,
-    repo: targetRepo,
-    title: prTitle,
-    body: prBody,
-    head: branchName,
-    base: defaultBranch
-  });
-  logger.info(`Created PR: ${pr.html_url}`);
+  let pr;
+  try {
+    ({ data: pr } = await octokit.rest.pulls.create({
+      owner: targetOwner,
+      repo: targetRepo,
+      title: prTitle,
+      body: prBody,
+      head: branchName,
+      base: defaultBranch
+    }));
+    logger.info(`Created PR: ${pr.html_url}`);
+  } catch (createError) {
+    pr = await findPullForBranch(octokit, targetOwner, targetRepo, branchName, logger);
+    if (!pr)
+      throw createError;
+    logger.warning(`Creating the PR reported an error (${createError instanceof Error ? createError.message : String(createError)}), but PR #${pr.number} exists for branch ${branchName}: adopting it: ${pr.html_url}`);
+  }
   const labelsToAdd = buildLabelSet(config.prLabels, sourcePrInfo?.labels);
   if (labelsToAdd.length > 0) {
     const maxAttempts = 3;
@@ -55740,6 +55748,30 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     branchName,
     prNumber: pr.number
   };
+}
+async function findPullForBranch(octokit, targetOwner, targetRepo, branchName, logger) {
+  const maxAttempts = 3;
+  const delayMs = 2e3;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const { data } = await octokit.rest.pulls.list({
+        owner: targetOwner,
+        repo: targetRepo,
+        head: `${targetOwner}:${branchName}`,
+        state: "all"
+      });
+      const found = (data ?? []).find((p) => p?.head?.ref === branchName);
+      if (found)
+        return found;
+      logger.info(`No PR found for branch ${branchName} (lookup ${attempt}/${maxAttempts})`);
+    } catch (lookupError) {
+      logger.info(`Lookup ${attempt}/${maxAttempts} of the PR for branch ${branchName} failed: ${lookupError instanceof Error ? lookupError.message : String(lookupError)}`);
+    }
+    if (attempt < maxAttempts) {
+      await new Promise((resolve4) => setTimeout(resolve4, delayMs));
+    }
+  }
+  return void 0;
 }
 function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet) {
   const newFiles = translatedFiles.filter((f) => !f.sha);
@@ -58624,8 +58656,8 @@ async function runSync() {
     if (placeErrors.length === 0) {
       core9.info(scope ? "sync-scope: existing \u2014 nothing this PR changed is in scope. No translation PR." : "Nothing this PR changed is in the lecture set. No translation PR.");
       await writeSummary({ scope, errorCount: 0 });
-      if (!isTestMode && scope) {
-        await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, nothingToDeliverResolution(prNumber, inputs.targetLanguage));
+      if (!isTestMode) {
+        await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, nothingToDeliverResolution(prNumber, inputs.targetLanguage, scope !== void 0));
       }
       return;
     }
@@ -58794,8 +58826,8 @@ async function runSync() {
     } else if (prUrl) {
       await postSuccessComment(octokit, prNumber, inputs.targetLanguage, inputs.targetRepo, prUrl, result.processedFiles);
       await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, `\u2705 A later sync for PR #${prNumber} (${inputs.targetLanguage}) succeeded: ${prUrl}`);
-    } else if (scope) {
-      await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, nothingToDeliverResolution(prNumber, inputs.targetLanguage));
+    } else {
+      await closeFailureIssues(octokit, prNumber, inputs.targetLanguage, nothingToDeliverResolution(prNumber, inputs.targetLanguage, scope !== void 0));
     }
   }
 }
@@ -58850,7 +58882,11 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
         const result = await fetchFileContent(octokit, targetOwner, targetRepo, file.filename);
         targetContent = result.content;
         existingFileSha = result.sha;
-      } catch {
+      } catch (error4) {
+        const status = error4?.status;
+        if (status !== 404) {
+          throw new Error(`Could not read ${file.filename} from ${targetOwner}/${targetRepo} (status ${status ?? "unknown"}): ${error4}`);
+        }
         isNewFile = true;
         core9.info(`${file.filename} does not exist in target repo - will create it`);
       }
@@ -58893,7 +58929,11 @@ async function fetchAllFileContents(octokit, classified, inputs, targetOwner, ta
           targetContent = result.content;
           oldFileSha = result.sha;
           core9.info(`Found existing translation at ${previousFilename} - will transfer to ${file.filename}`);
-        } catch {
+        } catch (error4) {
+          const status = error4?.status;
+          if (status !== 404) {
+            throw new Error(`Could not read ${previousFilename} from ${targetOwner}/${targetRepo} (status ${status ?? "unknown"}): ${error4}`);
+          }
           core9.info(`${previousFilename} does not exist in target repo`);
         }
       }
@@ -59113,8 +59153,8 @@ Closing this failure report.`
     core9.warning(`Could not close failure issues for PR #${prNumber}: ${error4}`);
   }
 }
-function nothingToDeliverResolution(prNumber, targetLanguage) {
-  const resolution = `\u2705 A later sync for PR #${prNumber} (${targetLanguage}) passed with nothing to deliver to this edition (sync-scope: existing)`;
+function nothingToDeliverResolution(prNumber, targetLanguage, scoped) {
+  const resolution = `\u2705 A later sync for PR #${prNumber} (${targetLanguage}) passed with nothing to deliver to this edition${scoped ? " (sync-scope: existing)" : ""}`;
   const { serverUrl, runId } = github3.context;
   if (!Number.isFinite(runId) || runId <= 0)
     return `${resolution}.`;

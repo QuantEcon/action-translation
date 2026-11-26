@@ -81,7 +81,7 @@ When the sync workflow encounters an error (API failure, parsing error, etc.), i
 - Recovery advice for each failed lecture
 - The label `translation-sync-failure`
 
-To recover, follow the issue's advice. For a lecture the edition has, run `translate forward -f <file>` from a checkout of the source's default branch, except on a natively reviewed lecture, which takes the change by hand; for a lecture the edition does not have yet, run `translate init -f <file>`. Comment `\translate-resync` on the original merged PR only when no file the PR changed has changed on the source's default branch since it merged (#276), and after fixing the cause: a resync repeats a structural-parity failure exactly. To retry only a specific language, use `\translate-resync zh-cn` or `\translate-resync fa`. A later sync of the same PR and language closes the issue when it opens its translation PR without errors, or, under `sync-scope: existing`, when it passes with nothing to deliver.
+To recover, follow the issue's advice. For a lecture the edition has, run `translate forward -f <file>` from a checkout of the source's default branch, except on a natively reviewed lecture, which takes the change by hand; for a lecture the edition does not have yet, run `translate init -f <file>`. Comment `\translate-resync` on the original merged PR only when no file the PR changed has changed on the source's default branch since it merged (#276), and after fixing the cause: a resync repeats a structural-parity failure exactly. To retry only a specific language, use `\translate-resync zh-cn` or `\translate-resync fa`. A later sync of the same PR and language closes the issue when it opens its translation PR without errors, or when it passes with nothing to deliver.
 
 ### Why does the failure issue say a lecture's translation is "behind"?
 
@@ -100,7 +100,7 @@ Yes. On successful sync, the action posts a **confirmation comment** on the sour
 - A link to the translation PR in the target repo
 - A list of translated files
 
-This gives visibility to the PR author and reviewers that the translation was created. Under `sync-scope: existing`, a run left with nothing to sync posts no comment on the source PR; its job summary lists what it skipped, and it closes any failure issue an earlier run opened for the same PR and language, with a comment that links the run.
+This gives visibility to the PR author and reviewers that the translation was created. A run left with nothing to sync posts no comment on the source PR; under `sync-scope: existing` its job summary lists what it skipped. Under either scope it closes any failure issue an earlier run opened for the same PR and language, with a comment that links the run.
 
 :::{note}
 Because success comments are posted via the GitHub API on the source PR, they trigger the `issue_comment` event again. This causes the sync workflows to start, but the `if:` condition correctly skips them (the comment body doesn't start with `\translate-resync`). These skipped runs use no compute and complete in ~1 second. This is a known GitHub Actions limitation — `issue_comment` cannot filter by comment body at the trigger level.

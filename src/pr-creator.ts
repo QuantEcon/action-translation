@@ -255,17 +255,31 @@ export async function createTranslationPR(
   // Build PR title
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
 
-  // Create pull request
-  const { data: pr } = await octokit.rest.pulls.create({
-    owner: targetOwner,
-    repo: targetRepo,
-    title: prTitle,
-    body: prBody,
-    head: branchName,
-    base: defaultBranch,
-  });
-
-  logger.info(`Created PR: ${pr.html_url}`);
+  // Create pull request. GitHub can create it and still answer with an error,
+  // as when it times out returning the response (#92), so an error here means
+  // "unknown", not "not created": the branch name is unique to this run, so a
+  // PR whose head is that branch is this run's PR, and is adopted. Only when
+  // none turns up is the create's own error thrown.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let pr: any;
+  try {
+    ({ data: pr } = await octokit.rest.pulls.create({
+      owner: targetOwner,
+      repo: targetRepo,
+      title: prTitle,
+      body: prBody,
+      head: branchName,
+      base: defaultBranch,
+    }));
+    logger.info(`Created PR: ${pr.html_url}`);
+  } catch (createError) {
+    pr = await findPullForBranch(octokit, targetOwner, targetRepo, branchName, logger);
+    if (!pr) throw createError;
+    logger.warning(
+      `Creating the PR reported an error (${createError instanceof Error ? createError.message : String(createError)}), ` +
+        `but PR #${pr.number} exists for branch ${branchName}: adopting it: ${pr.html_url}`
+    );
+  }
 
   // Add labels (non-fatal — PR is already created)
   // Retry up to 3 times with delay to handle GitHub API propagation delays
@@ -319,6 +333,48 @@ export async function createTranslationPR(
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
+
+/**
+ * The PR whose head is `branchName` in the target repo, after `pulls.create`
+ * failed (#92), or undefined when none turns up. Up to three lookups, two
+ * seconds apart, since a PR GitHub just created may not list at once; a lookup
+ * that itself fails counts as one that found nothing.
+ */
+async function findPullForBranch(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  octokit: any,
+  targetOwner: string,
+  targetRepo: string,
+  branchName: string,
+  logger: Logger
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any | undefined> {
+  const maxAttempts = 3;
+  const delayMs = 2000;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const { data } = await octokit.rest.pulls.list({
+        owner: targetOwner,
+        repo: targetRepo,
+        head: `${targetOwner}:${branchName}`,
+        state: 'all',
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const found = (data ?? []).find((p: any) => p?.head?.ref === branchName);
+      if (found) return found;
+      logger.info(`No PR found for branch ${branchName} (lookup ${attempt}/${maxAttempts})`);
+    } catch (lookupError) {
+      logger.info(
+        `Lookup ${attempt}/${maxAttempts} of the PR for branch ${branchName} failed: ` +
+          `${lookupError instanceof Error ? lookupError.message : String(lookupError)}`
+      );
+    }
+    if (attempt < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  return undefined;
+}
 
 /**
  * Build the PR body with file change details.

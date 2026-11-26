@@ -16,17 +16,19 @@
  * - with nothing in scope, the run passes with no PR, no failure issue and no
  *   comment on the source PR: it writes the job summary, and closes the
  *   failure issues earlier runs opened for the PR;
- * - a scoped run that passes without a PR closes those issues and cites
- *   itself, while a run that opens its PR cites the PR, in the text it has
- *   always used; a test-mode run, a failed run and an `all` run without a PR
- *   leave them open (the scoped half of #387);
+ * - a run that passes without a PR closes those issues and cites itself,
+ *   naming `sync-scope: existing` only when scoped, while a run that opens its
+ *   PR cites the PR, in the text it has always used; a test-mode run and a
+ *   failed run leave them open (#387);
  * - a state file that cannot be read fails the run, and its error heads the
  *   failure issue's list, while the lectures that could be read still sync;
  * - an edition that cannot be read fails the run with nothing synced, the ToC
  *   and removals included, and no file in it is read, nor any source file but
  *   the lecture set's;
  * - an in-scope lecture the content fetch cannot read is not translated from
- *   scratch, and its error is logged;
+ *   scratch, and its error is logged; under `all`, neither is a changed or
+ *   renamed lecture whose edition read fails with anything but a 404, while a
+ *   404 still makes it a new lecture (#466);
  * - the job summary of a failed run says that it failed, and with how many
  *   errors;
  * - under `all`, the run makes the requests it made before the input existed,
@@ -631,6 +633,11 @@ const CLOSED_BY_PR = `✅ A later sync for PR #${PR_NUMBER} (ml) succeeded: ${PR
 const CLOSED_BY_RUN =
   `✅ A later sync for PR #${PR_NUMBER} (ml) passed with nothing to deliver to this edition ` +
   `(sync-scope: existing): ${RUN_URL}\n\nClosing this failure report.`;
+
+/** The same comment from an `all` run, which does not name the scope (#387). */
+const CLOSED_BY_UNSCOPED_RUN =
+  `✅ A later sync for PR #${PR_NUMBER} (ml) passed with nothing to deliver to this edition` +
+  `: ${RUN_URL}\n\nClosing this failure report.`;
 
 /** The same, from a run with no run ID: the sentence ends without a link. */
 const CLOSED_BY_RUN_WITHOUT_LINK =
@@ -1286,8 +1293,10 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
         },
         target: {
           '.translate/state/a.md.yml': STATE,
-          // The scope check reads the lecture; the content fetch then gets a 502.
-          'lectures/a.md': [translated('Alpha'), { status: 502 }],
+          // The scope check reads the lecture; the content fetch then gets a
+          // 404, as if it went in between. (Any other status fails the fetch
+          // itself, as under `all`: #466.)
+          'lectures/a.md': [translated('Alpha'), { status: 404 }],
           'lectures/_toc.yml': TOC_BEFORE,
         },
       });
@@ -1332,6 +1341,116 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
 
     it('makes no model call, and sends every request to the fake', () => {
       check(run, expectCleanRun);
+    });
+  });
+
+  // #466: under `all` there is no scope check, so the content fetch's own read
+  // decides whether the edition has the lecture. Only a 404 means it does not;
+  // any other status used to read as "absent" and translate the lecture from
+  // scratch over its reviewed translation.
+  describe("'all': a changed lecture whose edition read answers 500 (#466)", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('all-changed-lecture-500', {
+        scope: 'all',
+        prFiles: [{ filename: 'lectures/b.md', status: 'modified' }],
+        source: { ...changedInSource('lectures/b.md', 'Bravo'), ...listedAtMerge('b') },
+        target: { 'lectures/b.md': { status: 500 } },
+      });
+    }, 90_000);
+
+    it('does not translate the lecture from scratch, write it or open a PR', () => {
+      check(run, (log) => {
+        expect(log.writes).toEqual([]);
+        expect(log.deletes).toEqual([]);
+        expect(log.pulls).toEqual([]);
+      });
+    });
+
+    it('fails the run with a failure issue that names the read', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(log.issues).toHaveLength(1);
+        const errors = issueErrors(log.issues[0]) ?? [];
+        expect(errors).toHaveLength(1);
+        expect(errors[0]).toMatch(/^Fetch failed \(markdown\): lectures\/b\.md: /);
+        expect(errors[0]).toContain(`Could not read lectures/b.md from ${EDITION} (status 500)`);
+        expect(log.comments).toEqual([]);
+      });
+    });
+
+    it('makes no model call, and sends every request to the fake', () => {
+      check(run, expectCleanRun);
+    });
+  });
+
+  describe("'all': a renamed lecture whose old path's edition read answers 500 (#466)", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('all-renamed-lecture-500', {
+        scope: 'all',
+        prFiles: [
+          { filename: 'lectures/a-new.md', status: 'renamed', previous_filename: 'lectures/a.md' },
+        ],
+        source: {
+          [atMerge('lectures/a-new.md')]: lecture('Alpha'),
+          [atParent('lectures/a.md')]: lecture('Alpha'),
+          ...listedAtMerge('a-new'),
+        },
+        target: { 'lectures/a.md': { status: 500 } },
+      });
+    }, 90_000);
+
+    it('neither translates the new path from scratch nor touches the old one', () => {
+      check(run, (log) => {
+        expect(log.writes).toEqual([]);
+        expect(log.deletes).toEqual([]);
+        expect(log.pulls).toEqual([]);
+      });
+    });
+
+    it('fails the run with a failure issue that names the read', () => {
+      check(run, (log) => {
+        expect(run.status).toBe(1);
+        expect(log.issues).toHaveLength(1);
+        const errors = issueErrors(log.issues[0]) ?? [];
+        expect(errors).toHaveLength(1);
+        expect(errors[0]).toMatch(/^Fetch failed \(renamed\): lectures\/a-new\.md: /);
+        expect(errors[0]).toContain(`Could not read lectures/a.md from ${EDITION} (status 500)`);
+        expect(log.comments).toEqual([]);
+        expect(run.stdout).toContain(
+          '::error::Error fetching content for renamed file lectures/a-new.md: '
+        );
+      });
+    });
+
+    it('makes no model call, and sends every request to the fake', () => {
+      check(run, expectCleanRun);
+    });
+  });
+
+  describe("'all': a changed lecture the edition answers 404 for (#466)", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('all-changed-lecture-404', {
+        scope: 'all',
+        prFiles: [{ filename: 'lectures/b.md', status: 'modified' }],
+        source: { ...changedInSource('lectures/b.md', 'Bravo'), ...listedAtMerge('b') },
+        target: {},
+      });
+    }, 90_000);
+
+    it('still takes it as a new lecture and sends it to the model', () => {
+      check(run, (log) => {
+        expect(log.requests).toContain(readEdition('lectures/b.md'));
+        // The fake model answers no call, so the new lecture fails and the run
+        // opens a failure issue; what matters is that it reached the model.
+        expect(log.modelRequests).toBeGreaterThan(0);
+        expect(log.issues).toHaveLength(1);
+        expect(issueErrors(log.issues[0])?.[0]).toMatch(/^Error processing lectures\/b\.md: /);
+        expect(log.unmocked).toEqual([]);
+        expect(log.crash).toBeNull();
+      });
     });
   });
 
@@ -1504,7 +1623,7 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
   // until a later run of the same PR recovers it. A run that opens its PR has
   // always closed it. A scoped run that passes without a PR now closes it too,
   // which on a partial edition is an ordinary outcome. An `all` run without a
-  // PR still leaves it open.
+  // PR closes it as well, since D-2026-11-25 (the tests further down).
 
   describe("'existing': nothing in scope, with a failure issue open (#387)", () => {
     let run: BundleRun;
@@ -1717,26 +1836,38 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
       run = runBundle('all-removal-open-issue', { scope: 'all', ...REMOVES_A_MISSING_LECTURE });
     }, 90_000);
 
-    // #387's scoped half leaves `all` as it was: no request for an issue.
-    // #396 adds the edition read its 404 needs, and the state file's read.
-    it('makes no request for an issue', () => {
+    // #387's `all` half: the run closes the failure issue as a scoped run
+    // does, with the same requests. #396 adds the edition read its 404 needs,
+    // and the state file's read.
+    it('looks for the lecture and its state file, then closes the failure issue', () => {
       check(run, (log) => {
         expect(log.requests).toEqual([
           PR_FILES,
           readEdition('lectures/gone.md'),
           EDITION_READ,
           readEdition('.translate/state/gone.md.yml'),
+          ...CLOSE_FAILURE_ISSUE,
         ]);
       });
     });
 
-    it('leaves the failure issue open, opens no PR, and passes', () => {
+    it('says the run passed with nothing to deliver, without naming a scope, and links the run', () => {
       check(run, (log) => {
-        expect(log.comments).toEqual([]);
-        expect(log.issueUpdates).toEqual([]);
+        expect(log.comments).toEqual([
+          { on: `${SOURCE_REPO}#${FAILURE_ISSUE}`, body: CLOSED_BY_UNSCOPED_RUN },
+        ]);
+        expect(log.issueUpdates).toEqual([CLOSED]);
+      });
+    });
+
+    it('opens no PR and no failure issue, and passes', () => {
+      check(run, (log) => {
         expect(log.pulls).toEqual([]);
         expect(log.issues).toEqual([]);
+        expect(log.writes).toEqual([]);
+        expect(log.deletes).toEqual([]);
         expect(run.status).toBe(0);
+        expect(run.outputs['pr-url']).toBeUndefined();
       });
     });
 
@@ -1745,11 +1876,11 @@ describe("sync-scope in the built bundle's runSync (#344)", () => {
     });
   });
 
-  describe("'existing': the same run past the scope check, in test mode", () => {
+  describe.each(['existing', 'all'] as const)("'%s': the same run, in test mode", (scope) => {
     let run: BundleRun;
     beforeAll(() => {
-      run = runBundle('existing-removal-open-issue-test-mode', {
-        scope: 'existing',
+      run = runBundle(`${scope}-removal-open-issue-test-mode`, {
+        scope,
         ...REMOVES_A_MISSING_LECTURE,
         testMode: true,
       });
@@ -2100,9 +2231,9 @@ describe("the lecture set in the built bundle's runSync (#449)", () => {
             PR_FILES,
             ...READ_LECTURE_SET,
             readSource('lectures/a.md'),
-            // A scoped run that passes with nothing to deliver closes the
-            // failure issue, as before (#387); an `all` run leaves it open.
-            ...(scope === 'existing' ? CLOSE_FAILURE_ISSUE : []),
+            // A run that passes with nothing to deliver closes the failure
+            // issue under either scope (#387).
+            ...CLOSE_FAILURE_ISSUE,
           ]);
         });
       });
@@ -2114,7 +2245,14 @@ describe("the lecture set in the built bundle's runSync (#449)", () => {
           expect(log.issues).toEqual([]);
           expect(log.writes).toEqual([]);
           expect(run.outputs).toEqual({});
-          expect(log.issueUpdates).toEqual(scope === 'existing' ? [CLOSED] : []);
+          expect(log.issueUpdates).toEqual([CLOSED]);
+          // The one comment is the one that closes the failure issue.
+          expect(log.comments).toEqual([
+            {
+              on: `${SOURCE_REPO}#${FAILURE_ISSUE}`,
+              body: scope === 'existing' ? CLOSED_BY_RUN : CLOSED_BY_UNSCOPED_RUN,
+            },
+          ]);
           expectCleanRun(log);
         });
       });
@@ -2133,6 +2271,38 @@ describe("the lecture set in the built bundle's runSync (#449)", () => {
       });
     }
   );
+
+  // The nothing-to-sync exit under `all`, in test mode: the E2E harness runs
+  // here, and a close at this exit would close a real failure issue (#387).
+  describe("'all': a source PR that changes only a README.md, with a failure issue open, in test mode", () => {
+    let run: BundleRun;
+    beforeAll(() => {
+      run = runBundle('lecture-set-readme-all-test-mode', {
+        scope: 'all',
+        prFiles: [{ filename: 'lectures/README.md', status: 'modified' }],
+        source: {
+          ...changedInSource('lectures/README.md', 'Readme'),
+          [atMerge('lectures/a.md')]: lecture('Alpha'),
+          ...listedAtMerge('a'),
+        },
+        target: { 'lectures/README.md': translated('Readme') },
+        issues: OPEN_ISSUES,
+        testMode: true,
+      });
+    }, 90_000);
+
+    it('makes no issue request at all, and passes', () => {
+      check(run, (log) => {
+        expect(log.requests).toEqual([PR_FILES, ...READ_LECTURE_SET, readSource('lectures/a.md')]);
+        expect(log.requests).not.toContain(LIST_ISSUES);
+        expect(log.comments).toEqual([]);
+        expect(log.issueUpdates).toEqual([]);
+        expect(log.issues).toEqual([]);
+        expect(run.status).toBe(0);
+        expectCleanRun(log);
+      });
+    });
+  });
 
   describe("'all': a ToC that is not YAML", () => {
     const ERROR = refused(
