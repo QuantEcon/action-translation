@@ -256,6 +256,32 @@ describe('computeRecommendation', () => {
     ]);
   });
 
+  it('a check with no model provenance gates once, as a check, never also as model-asserted (#477)', () => {
+    // An absent map, or one missing the check, reads as deterministic (#148):
+    // the check gates as `diff check failed` and must not be counted twice.
+    const failed = { ...CLEAN_INPUT.diffChecks, scopeCorrect: false };
+    for (const diffCheckSources of [undefined, {}, { positionCorrect: 'model' as const }]) {
+      expect(
+        computeRecommendation({ ...CLEAN_INPUT, diffChecks: failed, diffCheckSources }).reasons
+      ).toEqual(['diff check failed: scopeCorrect']);
+    }
+  });
+
+  it('missing diffChecks gate every check, each by its own provenance, without throwing (#477)', () => {
+    const out = computeRecommendation({
+      ...CLEAN_INPUT,
+      diffChecks: null as unknown as typeof CLEAN_INPUT.diffChecks,
+      diffCheckSources: { scopeCorrect: 'model', positionCorrect: 'model' },
+    });
+    expect(out.recommendation).toBe('editor');
+    expect(out.reasons).toEqual([
+      'diff check failed: structurePreserved',
+      'diff check failed: headingMapCorrect',
+      'model-asserted check failed: scopeCorrect',
+      'model-asserted check failed: positionCorrect',
+    ]);
+  });
+
   it('an unparseable diff evaluation adds no model-asserted reason, since nothing was judged (#477, #284)', () => {
     const out = computeRecommendation({
       ...CLEAN_INPUT,

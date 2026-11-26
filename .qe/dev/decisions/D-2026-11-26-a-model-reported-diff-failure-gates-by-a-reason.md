@@ -4,8 +4,9 @@
 not gate as a check: `computeRecommendation` skips it, so its `false` is never recorded as
 `diff check failed`, the wording calibration reads as measured fact. It gated only through the
 `minor` `diff-check` finding the reviewer adds for it. `findings[]` keeps the worst 20, and a
-stable sort puts the translation evaluation's own findings first among equals, so a reply with
-20 `minor` findings cut that finding and the verdict read `auto-merge` beside a published
+stable sort puts the translation evaluation's own findings first among equals, so any 20
+findings sorted ahead of it (20 `minor` translation findings, or 15 beside 5 diff-quality
+issues) cut that finding and the verdict read `auto-merge` beside a published
 `scopeCorrect: false` (#477, found by the review of #475 and reproduced at `939ceaf`). No merge
 followed, since `auto-merge-mode` accepts only `off` and `shadow`, but it wrote false points into
 the shadow-mode calibration data, and would merge wrongly once an active mode exists. Either
