@@ -81,6 +81,8 @@ npx translate setup \
 
 This shows what would be created without touching GitHub.
 
+`setup` writes the sync workflow for the **source** repo only when you pass `--source-workflow <path>`, which writes it to that path. Without the option it prints a reminder to add the workflow yourself (Step 4a).
+
 **Create the repository:**
 
 ```bash
@@ -92,7 +94,7 @@ npx translate setup \
 This:
 1. Creates `QuantEcon/lecture-python-intro.zh-cn` on GitHub
 2. Clones it locally to `./lecture-python-intro.zh-cn/`
-3. Writes `.translate/config.yml`, `.github/workflows/translation-sync.yml`, `.gitignore`, `README.md`
+3. Writes `.translate/config.yml`, `.github/workflows/review-translations.yml`, `.github/workflows/rebase-translations.yml`, `.gitignore`, `README.md`
 4. Commits and pushes
 
 **What you get:**
@@ -103,7 +105,8 @@ lecture-python-intro.zh-cn/
 │   └── config.yml          # source-language: en, target-language: zh-cn
 ├── .github/
 │   └── workflows/
-│       └── translation-sync.yml
+│       ├── review-translations.yml
+│       └── rebase-translations.yml
 ├── .gitignore
 └── README.md
 ```
@@ -147,9 +150,9 @@ The `init` command runs a 7-phase pipeline:
 | 2. Read the lecture set | The lectures the source's `_toc.yml` lists, then the `.md` files they include, such as `_admonition/gpu.md`, which is translated like any lecture |
 | 3. Setup target | Creates the docs folder structure, and writes `.translate/config.yml` if the target has none |
 | 4. Copy non-markdown files | Images, `_config.yml`, `_toc.yml`, CSS, data files the target does not already have |
-| 5. Translate lectures | Sequential translation with progress bar |
-| 6. Generate heading-maps | Position-based section matching, injected into frontmatter |
-| 7. Write report | `TRANSLATION-REPORT.md` with stats and any failures (not with `-f`) |
+| 5. Translate lectures | Sequential translation with progress bar; each lecture's heading-map (position-based section matching) is built as it is translated and injected into its frontmatter |
+| 6. Write report | `TRANSLATION-REPORT.md` with stats and any failures (not with `-f`) |
+| 7. Summary | Prints the totals |
 
 A progress bar shows the current lecture being translated.
 
@@ -368,7 +371,7 @@ Then run the check once more: the lecture should now read `ALIGNED`, and merging
 
 ## Step 4: Configure workflows and secrets
 
-You need two workflows: one in the **source** repo (to trigger translations) and one in the **target** repo (to review them).
+You need a sync workflow in the **source** repo (to trigger translations). The **target** repo's review and rebase workflows were already committed by `setup` in Step 1.
 
 ### 4a: Source repo — Sync workflow
 
@@ -383,7 +386,7 @@ on:
     branches: [main]
     paths:
       - 'lectures/**/*.md'
-      - '_toc.yml'
+      - 'lectures/_toc.yml'
   issue_comment:
     types: [created]
 
@@ -445,9 +448,9 @@ The PAT needs `repo` scope because the action creates PRs in the target reposito
 Create a fine-grained Personal Access Token scoped to just the target repository for better security.
 :::
 
-### 4c: Target repo — Review workflow (optional)
+### 4c: Target repo — Review workflow (already written by `setup`)
 
-Create `.github/workflows/review-translations.yml` in the **target** repository:
+`translate setup` already committed `.github/workflows/review-translations.yml` (and `.github/workflows/rebase-translations.yml`, which rebases the other open translation PRs when one merges) to the **target** repository, with the source repo and docs folder filled in. You only need to create the review file yourself if you made the repository by hand instead of running `setup`. It reads:
 
 ```yaml
 name: Review Translations

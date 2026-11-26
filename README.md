@@ -32,7 +32,7 @@ on:
   pull_request:
     types: [closed]
     branches: [main]
-    paths: ['lectures/**/*.md']
+    paths: ['lectures/**/*.md', 'lectures/_toc.yml']
   issue_comment:
     types: [created]
 

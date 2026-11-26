@@ -655,6 +655,98 @@ describe('rate-check.sh — arguments', () => {
   });
 });
 
+describe('rate-check.sh --ref (#409)', () => {
+  it('resolves a checked-out branch or a remote-only branch, and refuses an unknown or ambiguous name before any worktree exists', () => {
+    // A throwaway repository on `main` holding this tool: `--ref main` names a branch that is
+    // checked out in the repository itself, which a worktree without --detach refuses. The
+    // run goes as far as compiling the ref, where a stub `npx` stops it at no cost.
+    const root = freshDir('ref-branch');
+    const repo = path.join(root, 'repo');
+    const tool = path.join(repo, 'tool-test-action-on-github');
+    fs.mkdirSync(tool, { recursive: true });
+    fs.copyFileSync(RATE_CHECK, path.join(tool, 'rate-check.sh'));
+    for (const name of [
+      'lib',
+      'rate-check-summary.mjs',
+      'test-action-on-github.sh',
+      'test-action-on-github-data',
+    ]) {
+      fs.symlinkSync(path.join(TOOL, name), path.join(tool, name));
+    }
+    const bin = path.join(root, 'bin');
+    fs.mkdirSync(bin);
+    fs.writeFileSync(path.join(bin, 'npx'), '#!/bin/sh\nexit 1\n', { mode: 0o755 });
+    const git = (...gitArgs: string[]) =>
+      run('git', ['-c', 'user.email=t@example.com', '-c', 'user.name=t', ...gitArgs], {
+        cwd: repo,
+      });
+    expect(git('init', '-q', '-b', 'main').code).toBe(0);
+    fs.writeFileSync(path.join(repo, 'README'), 'x\n');
+    expect(git('add', 'README').code).toBe(0);
+    expect(git('commit', '-q', '-m', 'init').code).toBe(0);
+
+    const result = run(
+      'bash',
+      [
+        path.join(tool, 'rate-check.sh'),
+        '--ref',
+        'main',
+        '--draws',
+        '1',
+        '--languages',
+        'zh-cn',
+        '--run-dir',
+        path.join(root, 'run'),
+      ],
+      { cwd: repo, env: { PATH: `${bin}:${process.env.PATH}`, TMPDIR: root } }
+    );
+    expect(result.stderr).not.toContain('cannot check out');
+    expect(result.stderr).toContain('compiling main failed');
+    expect(result.code).toBe(2);
+
+    // A branch that exists only on a remote resolves through that remote's tracking branch,
+    // whatever the remote is called; a name that resolves nowhere, or that two remotes hold
+    // at different commits, is refused before any worktree exists.
+    const refRun = (ref: string, dir: string) =>
+      run(
+        'bash',
+        [
+          path.join(tool, 'rate-check.sh'),
+          '--ref',
+          ref,
+          '--draws',
+          '1',
+          '--languages',
+          'zh-cn',
+          '--run-dir',
+          path.join(root, dir),
+        ],
+        { cwd: repo, env: { PATH: `${bin}:${process.env.PATH}`, TMPDIR: root } }
+      );
+    expect(git('remote', 'add', 'upstream', path.join(root, 'no-upstream')).code).toBe(0);
+    expect(git('remote', 'add', 'mirror', path.join(root, 'no-mirror')).code).toBe(0);
+    expect(git('update-ref', 'refs/remotes/upstream/feature', 'HEAD').code).toBe(0);
+    const remoteOnly = refRun('feature', 'run-remote');
+    expect(remoteOnly.stderr).not.toContain('cannot check out');
+    expect(remoteOnly.stderr).toContain('compiling feature failed');
+    const unknown = refRun('no-such-ref', 'run-unknown');
+    expect(unknown.stderr).toContain('cannot check out no-such-ref');
+    expect(unknown.code).toBe(2);
+
+    // Two remotes holding the branch at the same commit agree; at different commits, refused.
+    expect(git('update-ref', 'refs/remotes/mirror/feature', 'HEAD').code).toBe(0);
+    expect(refRun('feature', 'run-agree').stderr).toContain('compiling feature failed');
+    fs.writeFileSync(path.join(repo, 'README'), 'y\n');
+    expect(git('commit', '-q', '-am', 'second').code).toBe(0);
+    expect(git('update-ref', 'refs/remotes/mirror/feature', 'HEAD').code).toBe(0);
+    const ambiguous = refRun('feature', 'run-ambiguous');
+    expect(ambiguous.stderr).toContain('cannot check out feature');
+    expect(ambiguous.stderr).toContain('remotes mirror upstream each have it');
+    expect(ambiguous.code).toBe(2);
+    expect(git('worktree', 'list', '--porcelain').stdout.match(/^worktree /gm)).toHaveLength(1);
+  });
+});
+
 describe('rate-check — never a success-shaped result without a verdict', () => {
   /** A preload that ends one helper (by its file name) at once: exit 0, no output. */
   function silence(name: string): string {
@@ -855,6 +947,11 @@ describe('rate-check.sh — a run of this checkout against a fake API', () => {
     const other = run('bash', [...args(), '--resume', '--model', 'claude-sonnet-5-5']);
     expect(other.code).toBe(2);
     expect(other.stderr).toContain('MODEL');
+    // The threshold is part of the run's identity: a resume cannot flip a verdict by changing it (#409)
+    const looser = run('bash', [...args(), '--resume', '--max-refusals', '3']);
+    expect(looser.code).toBe(2);
+    expect(looser.stderr).toContain('MAX_REFUSALS');
+    expect(looser.stderr).toMatch(/MAX_REFUSALS: run has '1', now '3'/);
     expect(run('bash', args()).code).toBe(2); // the run exists and no --resume
   });
 

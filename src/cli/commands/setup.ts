@@ -138,12 +138,21 @@ function normalizePathsFilter(docsFolder: string): string {
   return trimmed === '' || trimmed === '.' ? '**/*.md' : `${trimmed}/**/*.md`;
 }
 
+// The table of contents the action syncs lives at <docs-folder>/_toc.yml; a bare
+// `_toc.yml` filter matches only a file at the repository root, which the action
+// ignores, so a TOC-only PR would never start a sync (#382).
+function normalizeTocFilter(docsFolder: string): string {
+  const trimmed = trimDocsFolder(docsFolder);
+  return trimmed === '' || trimmed === '.' ? '_toc.yml' : `${trimmed}/_toc.yml`;
+}
+
 export function generateSourceWorkflowYaml(
   targetRepo: string,
   targetLanguage: string,
   docsFolder: string
 ): string {
   const pathsFilter = normalizePathsFilter(docsFolder);
+  const tocFilter = normalizeTocFilter(docsFolder);
   // Echo the cleaned value into the input line too — a decorated folder like
   // `lectures//` should not survive into the scaffolded workflow.
   docsFolder = trimDocsFolder(docsFolder) || '.';
@@ -160,7 +169,7 @@ on:
     branches: [main]
     paths:
       - '${pathsFilter}'
-      - '_toc.yml'
+      - '${tocFilter}'
   issue_comment:
     types: [created]
 

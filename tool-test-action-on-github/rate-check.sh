@@ -44,7 +44,7 @@
 #   --resume         continue the run in --run-dir: draws with a completion marker are kept,
 #                    unfinished ones are drawn again. The engine and inputs must match the run's
 #                    meta.txt (commit, dist/ and glossary hashes, SDK, model, localize, fixtures and
-#                    their hashes, languages, report mode), or it exits 2. --draws may grow, not shrink.
+#                    their hashes, languages, report mode, --max-refusals), or it exits 2. --draws may grow, not shrink.
 #   --redraw-infra   with --run-dir (implies --resume): move every draw whose current attempt was
 #                    an infra failure aside to <i>.infra<k>.* and draw it again. The replaced
 #                    attempts stay in the cell's infra share. Needs an engine with --report-json.
@@ -290,7 +290,30 @@ if [ -n "$ENGINE_DIR_ARG" ]; then
 elif [ -n "$REF" ]; then
     ENGINE_MODE="ref"; REF_DEPS="${REF_DEPS:-shared}"
     WORKTREE="${TMPDIR:-/tmp}/rate-check-wt.$$"
-    git -C "$REPO_ROOT" worktree add -q "$WORKTREE" "$REF" || { echo "cannot check out $REF" >&2; WORKTREE=""; exit 2; }
+    # Resolve to a commit first: --detach takes no remote-only branch name, which a plain
+    # `worktree add` would have turned into a local tracking branch. The name itself wins;
+    # else the remote-tracking branch of the one remote that has it, under any remote's name.
+    # Remotes that have it at different commits are ambiguous and refused.
+    REF_SHA="$(git -C "$REPO_ROOT" rev-parse -q --verify "$REF^{commit}" 2>/dev/null || true)"
+    if [ -z "$REF_SHA" ]; then
+        REF_REMOTES=""
+        for REMOTE in $(git -C "$REPO_ROOT" remote); do
+            SHA="$(git -C "$REPO_ROOT" rev-parse -q --verify "refs/remotes/$REMOTE/$REF^{commit}" 2>/dev/null || true)"
+            [ -n "$SHA" ] || continue
+            REF_REMOTES="$REF_REMOTES $REMOTE"
+            if [ -z "$REF_SHA" ]; then
+                REF_SHA="$SHA"
+            elif [ "$REF_SHA" != "$SHA" ]; then
+                REF_SHA="ambiguous"
+            fi
+        done
+        if [ "$REF_SHA" = ambiguous ]; then
+            echo "cannot check out $REF: the remotes${REF_REMOTES} each have it at a different commit; name one, as <remote>/$REF" >&2
+            WORKTREE=""; exit 2
+        fi
+    fi
+    [ -n "$REF_SHA" ] || { echo "cannot check out $REF" >&2; WORKTREE=""; exit 2; }
+    git -C "$REPO_ROOT" worktree add -q --detach "$WORKTREE" "$REF_SHA" || { echo "cannot check out $REF" >&2; WORKTREE=""; exit 2; }
     if [ "$REF_DEPS" = own ]; then
         echo "Installing $REF's own dependencies (npm ci from its package-lock.json)..."
         (cd "$WORKTREE" && npm ci --ignore-scripts --no-audit --no-fund --loglevel=error) || { echo "npm ci failed in the $REF worktree" >&2; exit 2; }
@@ -355,8 +378,9 @@ write_meta() {
 }
 write_meta > "$META_NEW"
 
-# --resume: the engine and the inputs must be the ones the run started with.
-IDENTITY_KEYS="ENGINE_SHA_FULL ENGINE_DIST_SHA256 TRANSLATOR_SHA256 PARITY_SHA256 SDK_VERSION GLOSSARY_SHA256 REF MODEL LANGS FIXTURES FIXTURES_SHA256 SOURCE_DIR LOCALIZE LOCALIZE_RULES REPORTS"
+# --resume: the engine, the inputs and the failure threshold must be the ones the run started
+# with: a verdict that a changed --max-refusals could flip leaves no trace of why it flipped.
+IDENTITY_KEYS="ENGINE_SHA_FULL ENGINE_DIST_SHA256 TRANSLATOR_SHA256 PARITY_SHA256 SDK_VERSION GLOSSARY_SHA256 REF MODEL MAX_REFUSALS LANGS FIXTURES FIXTURES_SHA256 SOURCE_DIR LOCALIZE LOCALIZE_RULES REPORTS"
 if [ "$RUN_DIR_IS_NEW" = 0 ]; then
     OLD_META="$RUN_DIR/meta.txt"
     grep -q "^MARKERS='1'" "$OLD_META" || { echo "$RUN_DIR was written by a rate-check without completion markers and cannot be resumed" >&2; exit 2; }
@@ -368,7 +392,7 @@ if [ "$RUN_DIR_IS_NEW" = 0 ]; then
 "; fi
     done
     if [ -n "$MISMATCH" ]; then
-        printf 'cannot resume %s: this engine or input differs from the run'"'"'s\n%s' "$RUN_DIR" "$MISMATCH" >&2
+        printf 'cannot resume %s: this engine, input or threshold differs from the run'"'"'s\n%s' "$RUN_DIR" "$MISMATCH" >&2
         exit 2
     fi
     OLD_DRAWS="$(grep -m1 "^DRAWS=" "$OLD_META" | sed "s/^DRAWS='\{0,1\}\([0-9]*\).*/\1/" || true)"
@@ -469,8 +493,9 @@ run_one() {
     if [ "$LOCALIZE" = default ]; then set --; else set -- --localize "$LOCALIZE"; fi
     if [ "$REPORTS" = 1 ]; then set -- "$@" --report-json "$out.json"; fi
     start="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    # cwd is the engine dir so the CLI picks up THAT checkout's glossary. `exec`, so that $! is
-    # the CLI itself: on_signal stops it by the PID recorded in the lock.
+    # cwd is the engine dir; the CLI reads its glossary relative to its own module, so the
+    # engine under test supplies it either way. `exec`, so that $! is the CLI itself:
+    # on_signal stops it by the PID recorded in the lock.
     (cd "$ENGINE_DIR" && exec node "$CLI" init -s "$SRC_DIR" -t "$out" --target-language "$lang" \
         -d . -f "$fx" -m "$MODEL" "$@" > "$out.log" 2>&1) &
     cli=$!

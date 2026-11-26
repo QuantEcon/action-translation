@@ -51,6 +51,14 @@ jobs:
       - name: Test
         run: npm test
 
+      # The evaluator is a separate package the root Jest config never enters;
+      # its self-test makes no API calls (#390).
+      - name: Evaluator self-test
+        working-directory: tool-test-action-on-github/evaluate
+        run: |
+          npm ci
+          npm test
+
       - name: Verify dist-action bundle is up to date
         run: |
           if [ -n "$(git status --porcelain dist-action)" ]; then

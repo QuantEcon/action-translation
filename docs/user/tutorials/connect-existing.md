@@ -74,7 +74,7 @@ Sync Status: lecture-python-intro ↔ lecture-python-intro.zh-cn (zh-cn)
 | Status | What it means | Action needed |
 |---|---|---|
 | `ALIGNED` | Sections match and file is up to date | None |
-| `MISSING_HEADINGMAP` | No heading-map in target frontmatter | Add heading-map (Step 3) |
+| `MISSING_HEADINGMAP` | No heading-map in target frontmatter | Add heading-map (Step 5) |
 | `OUTDATED` | Source has newer commits | Resync later (see [Resync Tutorial](resync-drifted.md)) |
 | `SOURCE_AHEAD` | Source has more sections than target | Resync later |
 | `SOURCE_ONLY` | File exists only in source | Translate new file later |
@@ -89,7 +89,7 @@ npx translate doctor \
   -t ~/repos/lecture-python-intro.zh-cn
 ```
 
-This reports configuration health across all dimensions. All items should be ✅ by the end of Step 5.
+This reports configuration health across all dimensions. The Workflow check fails or warns until the target repo has a workflow that references action-translation, which Step 6c adds, so every item should be ✅ only at the end of Step 7.
 
 ---
 
@@ -131,22 +131,9 @@ If you're confident the translations are current (e.g., they were just completed
 
 ## Step 3: Catch up stale translations
 
-For files flagged as `CONTENT_STALE`, use the `forward` command to bring them up to date. The `forward` command preserves existing localization (RTL adaptations, font configuration, `# i18n` code, locale-specific links) while updating the translation to match the current source content.
+For each file Step 2 flagged `CONTENT_CHANGES`, use the `forward` command to bring it up to date. The `forward` command preserves existing localization (RTL adaptations, font configuration, `# i18n` code, locale-specific links) while updating the translation to match the current source content.
 
-```bash
-# Dry run first — see what would change
-npx translate forward \
-  -s ~/repos/lecture-python-intro \
-  -t ~/repos/lecture-python-intro.zh-cn \
-  --dry-run
-
-# Resync all stale files
-npx translate forward \
-  -s ~/repos/lecture-python-intro \
-  -t ~/repos/lecture-python-intro.zh-cn
-```
-
-For a single file:
+`forward` has no `--dry-run`: Step 2's `--check-sync` is the preview. Resync each flagged file by name with `-f`. A bulk `forward` run, without `-f`, finds files by their status flags, and a content-stale file whose structure matches and that has no `.translate/` state carries none, so the bulk run skips it.
 
 ```bash
 npx translate forward \
@@ -583,7 +570,7 @@ On a partial edition, an English copy can show `SOURCE_AHEAD` too; leave it (see
 ### Files exist in only one repo
 
 - `SOURCE_ONLY` — new file that hasn't been translated yet. Translate it with `init -f <file>`, since `forward` only resyncs a file the target already has; [Tutorial: Resync a Drifted Target](resync-drifted.md) lists what else `init -f` changes. Under the default `sync-scope: all`, you can instead wait for the sync action to translate it when a PR changes it. Under `sync-scope: existing`, sync never translates it: add it in its own reviewed PR, as in [One reviewed lecture at a time](fresh-setup.md#one-reviewed-lecture-at-a-time).
-- `TARGET_ONLY` — a file that was deleted from source. Consider deleting it from target too.
+- `TARGET_ONLY` — a file that was deleted from source, or a deliberate edition-only file. If the source deleted or renamed it, remove or move it together with its state file, as in [Tutorial: Resync a Drifted Target](resync-drifted.md#target-only-files-target-only).
 
 ## Next steps
 

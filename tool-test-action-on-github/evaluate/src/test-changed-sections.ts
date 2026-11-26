@@ -142,13 +142,15 @@ New background.`;
 });
 
 // Test 8: No changes
-test('No changes returns empty array', () => {
+test('No changes returns the pure-rename sentinel', () => {
   const content = `## Introduction
 
 Content here.`;
 
   const result = identifyChangedSections(content, content, content, content);
-  return result.length === 0;
+  return result.length === 1 &&
+    result[0].heading.includes('no content changes') &&
+    result[0].changeType === 'modified';
 });
 
 // Test 9: Target-only changes (Chinese translation updated)
