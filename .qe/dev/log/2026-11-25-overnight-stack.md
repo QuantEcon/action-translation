@@ -152,3 +152,10 @@ A re-check of #475 and #476 on 2026-11-26 brought two rulings, applied in one mo
   numeric mapping key keeps its text on the state-file fallback, and two rebase-advice nits.
 - #471 to #474 went to the merge coordinator as an ordered batch; push nothing to them from here.
 - Still open: Matt's own yes on narrowing #467.
+
+## 2026-11-26 — merged
+
+All six were squash-merged on 2026-11-26, in order, by the PR organiser on Matt's yes: #471
+`8d2926a`, #472 `ebfc475`, #473 `cd1adb5`, #474 `c740b97`, #475 `eaf9062`, #476 `36d1a77`.
+Matt's yes on narrowing #467 was "Accept narrowing, merge". The third review round, the
+retargets and the merge are in log `2026-11-26-overnight-stack-merge`.

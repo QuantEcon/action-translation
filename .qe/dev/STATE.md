@@ -1,4 +1,4 @@
-verified: 2026-09-23
+verified: 2026-11-26 (Next and Health & context; the other sections as of 2026-09-23)
 
 # STATE
 
@@ -338,28 +338,41 @@ Roadmap detail lives in the project trackers (reading order in
 
 ## Next
 
-**Resume here (2026-11-25, with the overnight stack open):**
+**Resume here (2026-11-26, the overnight stack merged):**
 
-*Overnight stack, 2026-11-25*: **six stacked draft PRs wait for Matt's review, #471 to #476**,
-each based on the one before; nothing is merged or released. They carry #465, #390, #383, #382
-(#471); #466, #92, #387 (#472); #384, #356, #364, #430 and the `status` half of #391 (#473);
-the engine side of #325 and #324 (#474); #261's source-fetch gate, #284 and #283 (#475); #467,
-#290 and #223's first remedy (#476). Start from log `2026-11-25-overnight-stack`, which lists
-what each PR closes, the three confirmations #476 needs (the #467 stop was narrowed in the
-session), #474's release order (heal the fr edition before a release carrying #324 reaches
-`@v0`) and two defects found and not fixed, now filed: the finding cap can drop a gating finding
-(#477), and rebasing a renamed lecture fails with a missing-title error (#478). Records:
-`D-2026-11-25-a-passing-sync-closes-the-failure-issue-under-all`,
-`D-2026-11-25-refused-output-is-kept-under-translate-refused`,
-`D-2026-11-25-an-unparseable-diff-evaluation-degrades-the-review`,
-`D-2026-11-25-rebase-stops-when-main-got-the-lecture-first`,
-`D-2026-11-25-state-files-keep-keys-the-engine-does-not-own` and
-`D-2026-11-25-a-finding-moves-only-on-strong-quote-evidence`. 42 open issues were validated at
-`939ceaf` first; the rest rest on the 2026-11-11 validation. An independent review on 2026-11-26
-commented on all six PRs, and its findings were applied in a second commit on each branch
-(log section "2026-11-26 — independent review"); #290 stays open for its harness exercise, and
-a rebase keeps the default branch's state keys, as ruled on 2026-11-26, since a sign-off
-arrives by its own follow-up PR (`D-2026-11-25-state-files-keep-keys-the-engine-does-not-own`).
+*Merged, 2026-11-26*: **the overnight stack, #471 to #476, is squash-merged on `main`**, in
+order, by the PR organiser on Matt's yes, each pinned to a head whose tree equals the one
+reviewed (log `2026-11-26-overnight-stack-merge`): #471
+`8d2926a`, #472 `ebfc475`, #473 `cd1adb5`, #474 `c740b97`, #475 `eaf9062`, #476 `36d1a77`.
+**Nothing is released**: the editions run `@v0` at v0.33.0, and seven fragments wait in
+`changelog.d/`. Closed: #465, #390, #383, #382 (#471); #466, #92, #387 (#472); #384, #356,
+#364, #430 (#473); #284, #283 (#475); #467 (#476). #474 closes nothing yet: #324 and #325 each
+wait on a fr-edition repair. Still open from the stack: #290 (its harness exercise), #223 (its
+"unlocated" remedy), #391 and #428 (their other halves), #399 and #409 (in part), #261 (box 5
+built). Filed during it: #477 (the finding cap can drop the gating finding), #478 (rebasing a
+renamed lecture fails with a missing-title error), #482 (#283's per-file pairing) and #483 (a
+way out of the #467 stop). Matt's rulings on 2026-11-26: a rebase keeps the default branch's
+state keys, since "Everything should transit a PR" and a sign-off arrives by its own follow-up
+PR (`D-2026-11-25-state-files-keep-keys-the-engine-does-not-own`); a JSON reply that is not an
+object is a parse failure (`D-2026-11-25-an-unparseable-diff-evaluation-degrades-the-review`);
+and the narrowed #467 stop, "Accept narrowing, merge", the confirmation
+`D-2026-11-25-rebase-stops-when-main-got-the-lecture-first` asked for at merge. The other
+records: `D-2026-11-25-a-passing-sync-closes-the-failure-issue-under-all`,
+`D-2026-11-25-refused-output-is-kept-under-translate-refused` and
+`D-2026-11-25-a-finding-moves-only-on-strong-quote-evidence`. Logs `2026-11-25-overnight-stack`
+(the build, its validation of 42 issues and its reviews) and `2026-11-26-overnight-stack-merge`
+(the review rounds and the merge).
+
+*Before a release carrying the stack reaches `@v0`*: heal lecture-python-programming.fr with
+the patched `scripts/typography/apply.mjs` in one edition PR (#324), and repair fr's
+`getting_started.md` `<style>` block only after that release (#325); run #290's harness
+exercise, which a target state file holding an extra key in the harness's base fixtures would
+fold into release step 4a; and say in the release notes how to detect a degraded review (the
+fixed phrase in `recommendationReasons`), which no fragment states.
+
+*Next, for Matt*: #477, since either fix changes verdicts during the shadow window; the action
+family's standard (below), where `deploy-docs.yml` matters now, because Deploy Documentation
+fails on every push to `main`, as it already did at v0.33.0; and #463's look-back.
 
 **Before it (2026-11-16, after the `--require-state` rollout):**
 
@@ -516,12 +529,12 @@ delimiter rows, which already break a table in the fr edition's pandas lecture.
 
 ## Health & context
 
-- With the 2026-11-25 stack merged (#471 to #476), after the 2026-11-26 review and re-check rounds:
-  **3,173 tests across 91 suites** (one
-  skips when the suite runs as root). Before it, at `939ceaf`: `main` green; **2,762 tests across 88 suites** (zero skips, type-checked) with
+- `main` green at `36d1a77`, the overnight stack merged: **3,173 tests across 91 suites**,
+  counted 2026-11-26 in the main clone (one skips when the suite runs as root). Since #465 a
+  clone holding the harness's gitignored test clones counts the same as a clean one. Before the
+  stack, at `939ceaf`: **2,762 tests across 88 suites** (zero skips, type-checked) with
   `doctor --require-state` (#370, #449's P4), 2,705 before it at `d73f874` (counted 2026-11-16
-  in a clean worktree; a tree holding the harness's gitignored clones counts 15 more, see log
-  `2026-11-16-overnight-stack`); lint at
+  in a clean worktree); lint at
   `--max-warnings 0` including root `*.mjs`, CI checks formatting and
   `.qe/dev/` path:line references. Note `npm test` fails 11 cli-smoke tests on a stale `dist/`
   — run `npm run build` first; that guard is deliberate, not a break.
