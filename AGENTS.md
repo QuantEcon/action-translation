@@ -263,6 +263,14 @@ Before creating a release, verify the following:
 
    The harness defaults to `main`, so the release itself is only gated if you ask for it by
    name. This step verifies the **tagged bytes**, not a branch that may have moved since.
+
+   Once its sync runs have finished, check that every translation PR kept the sign-off block
+   the reset lays down in `lecture.md`'s state file (#290; `gh` only, no model calls), and put
+   its total line on the release PR beside the gate tally:
+
+   ```bash
+   node tool-test-action-on-github/check-state-keys.mjs
+   ```
 4b. **Rate-check the full-document fixtures at the tag** — alongside 4a, before moving the floating tag:
 
    ```bash
