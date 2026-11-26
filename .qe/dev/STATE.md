@@ -371,10 +371,14 @@ fold into release step 4a; and say in the release notes how to detect a degraded
 fixed phrase in `recommendationReasons`), which no fragment states.
 
 *Next (Matt's rulings of 2026-11-26, log `2026-11-26-rulings-and-follow-ups`)*: #477 is fixed in
-#487 and the docs deploy in #485 (green again since `742101b`). v0.34.0 follows once #487 and
-the #290 harness fixture merge, with the fr heal before `@v0` moves. After it: the action
-family's standard (below) and #470. #463's look-back and other edition work belong to
-`mini:project-translation`.
+#487 and the docs deploy in #485 (green again since `742101b`). **v0.34.0's release PR** carries
+everything since v0.33.0: the overnight stack, #487, and the #290 harness check (#488). After it
+merges, each on Matt's go: tag `v0.34.0`; release step 4a at the tag, then
+`check-state-keys.mjs --expect-full` (which must read `state keys kept: 42 across 84 PRs —
+PASS`, after which #290 can close); 4b on the laptop; `@v0` moves only once the
+lecture-python-programming.fr heal (#324) has merged; the `@v0` smoke; `gh release create`.
+After it: the action family's standard (below) and #470. #463's look-back and other edition
+work belong to `mini:project-translation`.
 
 **Before it (2026-11-16, after the `--require-state` rollout):**
 
