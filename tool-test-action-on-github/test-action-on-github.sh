@@ -22,13 +22,18 @@
 #                   resolution (QuantEcon/action-translation#109) without
 #                   embedding two versions in one run (#202).
 #   --sync-scope    `all` (the default) or `existing`. `existing` replays the
-#                   scenarios on a partial edition (#344): every target reset
-#                   lays down .translate/state/lecture.md.yml and none for
-#                   lecture-minimal.md, and every PR this run creates carries the
-#                   `test-sync-scope-existing` label, which the sync workflow
-#                   turns into `sync-scope: existing`. The ref must declare the
-#                   input. A smoke test, not the release gate; the expected
-#                   results are in README.md, "Scope runs".
+#                   scenarios on a partial edition (#344): every PR this run
+#                   creates carries the `test-sync-scope-existing` label, which
+#                   the sync workflow turns into `sync-scope: existing`, and the
+#                   state file every reset lays down for lecture.md (and none for
+#                   lecture-minimal.md) decides what is in scope. The ref must
+#                   declare the input. A smoke test, not the release gate; the
+#                   expected results are in README.md, "Scope runs".
+#
+# Every target reset, in either scope, lays down .translate/state/lecture.md.yml
+# with an editor sign-off block after the engine's fields (#290). Every
+# translation PR must carry that block as written; check-state-keys.mjs checks
+# it after the run (release step 4a).
 #
 # Prerequisites:
 # - GitHub CLI (gh) must be installed and authenticated, with the `workflow`
@@ -434,10 +439,10 @@ fi
 if [ "$SYNC_SCOPE" = existing ]; then
     echo -e "  ${YELLOW}⚠ SYNC-SCOPE RUN — sync-scope: existing (#344)${NC}"
     echo -e "  ${YELLOW}  Every PR this run creates carries the $SCOPE_LABEL label,${NC}"
-    echo -e "  ${YELLOW}  which the sync workflows turn into sync-scope: existing. Every target${NC}"
-    echo -e "  ${YELLOW}  reset lays down .translate/state/$TEST_FILE_LECTURE.yml and none for${NC}"
-    echo -e "  ${YELLOW}  $TEST_FILE_MINIMAL. This is a SMOKE TEST, not the release gate: the${NC}"
-    echo -e "  ${YELLOW}  gate's lanes stay on the default, sync-scope: all.${NC}"
+    echo -e "  ${YELLOW}  which the sync workflows turn into sync-scope: existing. As in every${NC}"
+    echo -e "  ${YELLOW}  run, each target has .translate/state/$TEST_FILE_LECTURE.yml and none${NC}"
+    echo -e "  ${YELLOW}  for $TEST_FILE_MINIMAL. This is a SMOKE TEST, not the release gate:${NC}"
+    echo -e "  ${YELLOW}  the gate's lanes stay on the default, sync-scope: all.${NC}"
     echo ""
 fi
 TOTAL_WORKFLOWS=$(( ${#LANGUAGES[@]} * 3 ))
@@ -581,13 +586,15 @@ fi
 #
 echo -e "${BLUE}Step 2: Preparing target repositories...${NC}"
 
-# Under --sync-scope existing every target gets one state file, for lecture.md,
-# written as `init` writes it: block style, with synced-at quoted as js-yaml
-# dumps it (unquoted, it loads as a date and readFileState rejects the file).
-# source-sha is the source commit that last touched lecture.md, which is what
-# `init` records, read from the clone Step 1 just reset. Scope reads only
-# whether the file exists; a valid one keeps `translate status` truthful too.
-if [ "$SYNC_SCOPE" = existing ] && [ "$DRY_RUN" = false ]; then
+# Every target gets one state file, for lecture.md, as production editions all
+# carry state files (#290). It is written as `init` writes it: block style, with
+# synced-at quoted as js-yaml dumps it (unquoted, it loads as a date and
+# readFileState rejects the file). source-sha is the source commit that last
+# touched lecture.md, which is what `init` records, read from the clone Step 1
+# just reset, so the sync premise check finds each scenario's old English there
+# and holds. Under --sync-scope existing the file's existence decides scope; a
+# valid one keeps `translate status` truthful too.
+if [ "$DRY_RUN" = false ]; then
     STATE_SOURCE_SHA="$(git -C "$WORK_DIR/$SOURCE_REPO" log -1 --format=%H -- "$TEST_FILE_LECTURE")"
     STATE_SYNCED_AT="$(date -u +%Y-%m-%d)"
     STATE_SECTION_COUNT="$(grep -c '^## ' "$DATA_DIR/base-lecture.md" || true)"
@@ -606,9 +613,7 @@ for L in "${LANGUAGES[@]}"; do
         echo -e "${CYAN}[DRY RUN] Would reset $OWNER/$repo ($name):${NC}"
         echo -e "${CYAN}  - base-minimal-$code.md, base-lecture-$code.md, base-toc-$code.yml, _config.yml, references.bib${NC}"
         echo -e "${CYAN}  - .github/workflows/{review,rebase}-translations.yml @ $ACTION_REF${NC}"
-        if [ "$SYNC_SCOPE" = existing ]; then
-            echo -e "${CYAN}  - .translate/state/$TEST_FILE_LECTURE.yml (sync-scope: existing; none for $TEST_FILE_MINIMAL)${NC}"
-        fi
+        echo -e "${CYAN}  - .translate/state/$TEST_FILE_LECTURE.yml with an editor sign-off block (none for $TEST_FILE_MINIMAL)${NC}"
         continue
     fi
 
@@ -657,21 +662,39 @@ editors:
   secondary: []
 EOF
 
-        # sync-scope: existing (#344). lecture-minimal.md gets no state file on
-        # purpose: it plays the English copy on a partial edition's main (the
-        # Malayalam edition's intro.md), present as a .md and absent as state,
-        # so it must stay out of scope. model is the action's default
-        # (src/models.ts); tool-version is left absent, as in config.yml above.
-        if [ "$SYNC_SCOPE" = existing ]; then
-            mkdir -p .translate/state
-            cat > ".translate/state/$TEST_FILE_LECTURE.yml" <<EOF
+        # lecture.md's state file, in every run. lecture-minimal.md gets none on
+        # purpose: under sync-scope: existing (#344) it plays the English copy
+        # on a partial edition's main (the Malayalam edition's intro.md),
+        # present as a .md and absent as state, so it must stay out of scope;
+        # under all, it covers a state file sync writes afresh. model is the
+        # action's default (src/models.ts); tool-version is left absent, as in
+        # config.yml above.
+        #
+        # The `reviewed:` block is an editor sign-off, a key the engine does not
+        # own (#290): every writer must carry it as written, after its own
+        # fields (D-2026-11-25-state-files-keep-keys-the-engine-does-not-own),
+        # and check-state-keys.mjs checks every translation PR for it. Its
+        # values are literals, the same in every run, and chosen to break a
+        # careless rewrite: a nested map with a comment above it, a float-like
+        # 1234e56 and a leading-zero 0123456 (both SHAs as text), an unquoted
+        # date, a quoted string, and a nested key named like an engine field.
+        mkdir -p .translate/state
+        cat > ".translate/state/$TEST_FILE_LECTURE.yml" <<EOF
 source-sha: $STATE_SOURCE_SHA
 synced-at: "$STATE_SYNCED_AT"
 model: claude-sonnet-5
 mode: NEW
 section-count: $STATE_SECTION_COUNT
+
+# Editor sign-off (harness fixture, #290): every state write must carry this block as written.
+reviewed:
+  by: mmcky
+  role: editor
+  date: 2026-11-20
+  target-sha: 1234e56
+  source-sha: 0123456
+  via: "sign-off workflow"
 EOF
-        fi
 
         render_target_workflows
         assert_no_placeholders
@@ -679,9 +702,7 @@ EOF
         commit_and_push "Reset: base state for testing ($name) [$ACTION_REF]"
     )
     echo -e "${GREEN}✓${NC} $name target reset; review + rebase rendered @ $ACTION_REF"
-    if [ "$SYNC_SCOPE" = existing ]; then
-        echo -e "  .translate/state/$TEST_FILE_LECTURE.yml laid down (sync-scope: existing)"
-    fi
+    echo -e "  .translate/state/$TEST_FILE_LECTURE.yml laid down, with its sign-off block (#290)"
 done
 
 echo ""
@@ -1058,7 +1079,7 @@ if [ "$DRY_RUN" = true ]; then
     echo "     - 28: Exercise family added (ml keeps exercise/hint/solution blocks verbatim)"
     if [ "$SYNC_SCOPE" = existing ]; then
         echo "4. Create each PR with the '$SCOPE_LABEL' label, then add 'test-translation'"
-        echo "   (sync-scope: existing; every target also gets .translate/state/$TEST_FILE_LECTURE.yml)"
+        echo "   (sync-scope: existing; as in every run, each target has .translate/state/$TEST_FILE_LECTURE.yml)"
     else
         echo "4. Add 'test-translation' label to each PR"
     fi
@@ -1097,6 +1118,16 @@ else
     for L in "${LANGUAGES[@]}"; do
         echo "     gh pr list --repo $OWNER/$SOURCE_REPO.$(lang_code "$L")   # $(lang_name "$L")"
     done
+    _codes=""
+    for L in "${LANGUAGES[@]}"; do _codes="${_codes:+$_codes,}$(lang_code "$L")"; done
+    echo "4. When the sync runs have finished, and before the next reset, check that"
+    echo "   every translation PR kept the state file's sign-off block (#290; no model calls):"
+    if [ "$SCOPED_LANGUAGES" = false ] && [ -z "$ONLY_SCENARIOS" ] && [ "$SYNC_SCOPE" = all ]; then
+        # A full run: hold every lane to all 28 translation PRs (release step 4a).
+        echo "     node tool-test-action-on-github/check-state-keys.mjs --expect-full"
+    else
+        echo "     node tool-test-action-on-github/check-state-keys.mjs --languages $_codes"
+    fi
     echo ""
     echo "View source PRs:"
     echo "  gh pr list --repo $OWNER/$SOURCE_REPO"

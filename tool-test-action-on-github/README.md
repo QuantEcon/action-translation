@@ -200,6 +200,32 @@ The tool tests translation scenarios across five phases:
 | 27 | Citation backfill | `{cite}` role introduced; the cited key lives in the source's `references.bib` but not the target's, so the sync PR must carry the backfilled entry (#117; verifies action-translation#256 defect 3). The target repos' `_config.yml` + `references.bib` fixtures are what arm the guard — see `base-config.yml`. |
 | 28 | Exercise family added | An `## Exercises` section with `{exercise-start}`/`{hint}`/`{solution-start}` blocks is appended to `lecture.md` — the first exercise-family directives in the suite. On `.ml` the sync output must carry every block byte-identical to the source (verbatim-directive policy, `D-2026-09-03-ml-all-exercise-content-stays-english`, enforced by `verbatim-directives.ts` and the `verbatimDirectives` diff-check); on `.zh-cn` and `.fa` the blocks translate as ordinary prose. |
 
+## State files
+
+Every target reset, in either scope, lays down one state file, `.translate/state/lecture.md.yml`, and none for `lecture-minimal.md`, as production editions all carry state files. The file holds what `init` writes, except `tool-version`: the source commit that last touched `lecture.md`, the date, the default model, `mode: NEW`, and the section count of `base-lecture.md`. Because its `source-sha` is that commit, the sync premise check finds each scenario's old English there and holds.
+
+After the engine's fields comes an editor sign-off block, `reviewed:`, a key the engine does not own ([#290](https://github.com/QuantEcon/action-translation/issues/290)). Every state-file writer must carry it as written, after its own fields (`D-2026-11-25-state-files-keep-keys-the-engine-does-not-own`). Its values are literals, the same in every run, chosen to break a careless rewrite: a nested map with a comment above it, `target-sha: 1234e56` (YAML reads it as a float) and `source-sha: 0123456` (an integer with a leading zero), an unquoted date, and a quoted string.
+
+Under the default `all`, the state files in each lane's translation PRs are:
+
+| Scenarios | `.translate/state/` in the translation PR |
+|---|---|
+| 09–15, 22, 23, 25, 26, 28 | `lecture.md.yml` modified, carrying the block |
+| 19 | `lecture.md.yml` modified, carrying the block; `lecture-minimal.md.yml` added |
+| 20 | `linear-algebra.md.yml` added, carrying the block (it is `lecture.md.yml`'s, moved); `lecture.md.yml` removed |
+| 18 | `lecture.md.yml` removed |
+| 01–08, 16, 21, 24, 27 | `lecture-minimal.md.yml` added |
+| 17 | `game-theory.md.yml` added |
+
+So a full run carries the block in 14 files per lane. Once the run's sync workflows have finished, and before the next reset, check every translation PR (`gh api` only, no model calls):
+
+```bash
+node tool-test-action-on-github/check-state-keys.mjs --expect-full      # the release gate: zh-cn, fa and ml
+node tool-test-action-on-github/check-state-keys.mjs --languages zh-cn  # a smaller run
+```
+
+It reads `lecture.md.yml` on each target's `main` and the state files at each open translation PR's head. A file that comes from `lecture.md`'s must end with the block byte for byte, after exactly the engine's six fields and a rewritten `source-sha`. Every other added state file must hold the six fields and nothing else, no PR body may list a state file under "State Files Overwritten", and a PR that changes a lecture must write that lecture's state file (sync's state write is non-fatal, so a skipped one leaves nothing else to judge). It prints one line per lane and a total; the gate's reads `state keys kept: 42 across 84 PRs — PASS` and goes on the release PR beside the gate tally. Exit 0 on a pass, 1 on any failure, 2 on a usage or `gh` error. A lane with no translation PR always fails, since it proves nothing. With `--expect-full` each lane must hold all 28 translation PRs with the block in exactly 14 files, so a check run too early, or after another run has reset the lanes, fails. Without it, a smaller run, such as `--scenarios 09`, is judged on the PRs it has. An engine without [#476](https://github.com/QuantEcon/action-translation/pull/476) (v0.33.0 and older) drops the block, so at such a ref, a control run for instance, the check fails while the gate's counts are unaffected.
+
 ## Scope runs
 
 `--sync-scope existing` replays the scenarios on a partial edition, the case the action's `sync-scope` input exists for ([#344](https://github.com/QuantEcon/action-translation/issues/344)). Under `existing`, a changed lecture syncs only when the target has its state file, `.translate/state/<file>.yml` (for example `lecture.md.yml`). The others are skipped before any model call, and listed in the PR body under `### Lectures Not Synced` and in the sync run's job summary. Removals and `_toc.yml` sync as under `all`.
@@ -208,9 +234,8 @@ The tool tests translation scenarios across five phases:
 ./tool-test-action-on-github/test-action-on-github.sh --sync-scope existing --scenarios 17,19,20
 ```
 
-The option changes two things:
+The target reset is the same as in every run (see [State files](#state-files)): `lecture.md` has its state file and `lecture-minimal.md` none. Under `existing`, `lecture-minimal.md` then plays the English copy on a partial edition's `main` (the Malayalam edition's `intro.md`): present as a `.md`, absent as state, so it must stay out of scope. The option changes one thing:
 
-- **The target reset** lays down one state file in every target, `.translate/state/lecture.md.yml`, and none for `lecture-minimal.md`. `lecture-minimal.md` then plays the English copy on a partial edition's `main` (the Malayalam edition's `intro.md`): present as a `.md`, absent as state, so it must stay out of scope. The state file holds what `init` writes, except `tool-version`: the source commit that last touched `lecture.md`, the date, the default model, `mode: NEW`, and the section count of `base-lecture.md`.
 - **Every PR the run creates** carries the `test-sync-scope-existing` label. It goes on when the PR is created, before `test-translation`, so the event that fires the sync already carries it. The sync workflow's mode step turns it into `sync-scope: existing`; without it the workflow passes `all`. The PR body says which scope it runs under. The action copies a source PR's labels, all but `test-translation`, onto its translation PR, so the translation PRs carry the label too. The targets' review workflows ignore it.
 
 The ref must declare the input: v0.30.0 ([#346](https://github.com/QuantEcon/action-translation/issues/346)) or later, or a branch that carries #344. The script reads `action.yml` at the resolved commit and stops if the input is missing. An older ref would log `Unexpected input(s) 'sync-scope'` and sync every lecture, so the run would test nothing it claims to. A default run on an older ref, such as a control at a previous tag, logs the same warning and otherwise runs unchanged.
@@ -224,7 +249,7 @@ The ref must declare the input: v0.30.0 ([#346](https://github.com/QuantEcon/act
 | 20 | Rename `lecture.md` → `linear-algebra.md` + `_toc.yml` | In scope: the previous path has its state file. Adds `linear-algebra.md` and `.translate/state/linear-algebra.md.yml`, deletes `lecture.md` and `.translate/state/lecture.md.yml` (GitHub may show either pair as a rename), and updates `_toc.yml`. No `### Lectures Not Synced` section. |
 | 18 | Delete `lecture.md` + `_toc.yml` | Removals follow the `.md`: deletes `lecture.md` and its state file, and updates `_toc.yml`. |
 | 01–08, 16, 21, 24, 27 | `lecture-minimal.md` only | No translation PR. The sync run passes, and its job summary lists `lecture-minimal.md` as not synced. |
-| 09–15, 22, 23, 25, 26, 28 | `lecture.md` only | As under `all`, except that `.translate/state/lecture.md.yml` is updated rather than added. No `### Lectures Not Synced` section. |
+| 09–15, 22, 23, 25, 26, 28 | `lecture.md` only | As under `all`: `lecture.md` and its state file updated, the state file carrying its sign-off block. No `### Lectures Not Synced` section. |
 
 The table assumes every scope read succeeds. When a source PR changes or renames a lecture, the action reads the target repository first, because GitHub answers 404 for a repository the token cannot see, as it does for a missing state file. If that read fails, nothing syncs, not even `_toc.yml` or a removal. A state-file or `.md` read that fails with any status but 404 leaves only that lecture neither synced nor skipped, and the other lectures still sync. Either error fails the sync run, and its job summary lists the error under `### ❌ Scope unknown`. When an error leaves nothing to sync, the run fails at once with no PR, before it reads anything more from the target, and outside test mode it opens the failure issue. Test mode opens no failure issue, so the red sync run is the signal. For the scenarios that expect no translation PR, the evaluator reads that run.
 
@@ -241,7 +266,7 @@ A source PR whose scenario expects a translation PR, and has none, is a failure:
 - **A smoke test, not the release gate.** The gate's lanes stay on the default, `all`, and the census says so under `existing`.
 - **Real API spend.** With `--scenarios 17,19,20`, as above, each language makes one billed sync translation (19's) and two billed reviews (19's and 20's); 17 makes no model call. A full scope run, without `--scenarios`, makes 13 billed sync translations per language, for 19 and the twelve scenarios that change only `lecture.md`. It makes 14 billed reviews, for those and 20, whose sync moves the lecture without translating it. 17, 18 and the scenarios that change only `lecture-minimal.md` make no model call.
 - **`--languages` still narrows the estate.** The source reset re-renders `.github/` from the narrowed list, so the other languages' sync workflows stay deleted until a run without `--languages`.
-- **The next default run undoes the setup.** Its reset deletes `.translate/` in every target, state file included, and its PRs carry no scope label.
+- **The next default run drops only the label.** Its reset lays the same state file down again, and its PRs carry no scope label.
 
 ## Directory Structure
 

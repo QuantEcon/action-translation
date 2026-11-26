@@ -641,6 +641,303 @@ describe('rate-check-summary.mjs — legacy engines (no --report-json)', () => {
   });
 });
 
+// ============================================================================
+// check-state-keys.mjs (#290): after a gate run, every translation PR must
+// carry the sign-off block the reset lays down in lecture.md's state file.
+// ============================================================================
+
+describe('check-state-keys.mjs (#290)', () => {
+  const CHECK = path.join(TOOL, 'check-state-keys.mjs');
+  const OLD_SHA = 'a'.repeat(40);
+  const NEW_SHA = 'b'.repeat(40);
+  // As test-action-on-github.sh's reset writes it.
+  const TAIL =
+    '\n# Editor sign-off (harness fixture, #290): every state write must carry this block as written.\n' +
+    'reviewed:\n  by: mmcky\n  role: editor\n  date: 2026-11-20\n' +
+    '  target-sha: 1234e56\n  source-sha: 0123456\n  via: "sign-off workflow"\n';
+  const MAIN =
+    `source-sha: ${OLD_SHA}\nsynced-at: "2026-11-26"\nmodel: claude-sonnet-5\nmode: NEW\n` +
+    `section-count: 6\n${TAIL}`;
+  // As the engine writes a state file: its six fields, in order.
+  const engine = (sha = NEW_SHA, mode = 'UPDATE') =>
+    `source-sha: ${sha}\nsynced-at: "2026-11-27"\nmodel: claude-sonnet-5\nmode: ${mode}\n` +
+    'section-count: 6\ntool-version: 0.34.0\n';
+
+  type File = { path: string; status: string; previous?: string; text?: string };
+  const pr = (number: number, files: File[], body = 'Sync.') => ({ number, body, files });
+  const keptPr = (n: number) =>
+    pr(n, [{ path: '.translate/state/lecture.md.yml', status: 'modified', text: engine() + TAIL }]);
+  const plainPr = (n: number) =>
+    pr(n, [
+      {
+        path: '.translate/state/lecture-minimal.md.yml',
+        status: 'added',
+        text: engine(NEW_SHA, 'NEW'),
+      },
+    ]);
+
+  function check(lanes: unknown[], args: string[] = []) {
+    const file = path.join(scratch, `state-keys-${Math.random().toString(36).slice(2)}.json`);
+    fs.writeFileSync(file, JSON.stringify(lanes));
+    return run('node', [CHECK, '--offline', file, ...args]);
+  }
+
+  it('passes a lane whose PRs kept the block, including a rename either way GitHub shows it', () => {
+    const result = check([
+      {
+        language: 'zh-cn',
+        mainText: MAIN,
+        prs: [
+          keptPr(1),
+          plainPr(2),
+          // A rename shown as a removal plus an addition, as scenario 20 can be.
+          pr(3, [
+            { path: '.translate/state/lecture.md.yml', status: 'removed' },
+            {
+              path: '.translate/state/linear-algebra.md.yml',
+              status: 'added',
+              text: engine() + TAIL,
+            },
+          ]),
+          // The same rename shown as one renamed file.
+          pr(4, [
+            {
+              path: '.translate/state/linear-algebra.md.yml',
+              status: 'renamed',
+              previous: '.translate/state/lecture.md.yml',
+              text: engine() + TAIL,
+            },
+          ]),
+          // Scenario 18 deletes lecture.md: nothing to judge.
+          pr(5, [{ path: '.translate/state/lecture.md.yml', status: 'removed' }]),
+        ],
+      },
+    ]);
+    expect(result.stdout).toContain('zh-cn: kept 3, plain 1, across 5 PR(s) — ok');
+    expect(result.stdout).toContain('state keys kept: 3 across 5 PRs — PASS');
+    expect(result.code).toBe(0);
+  });
+
+  it.each([
+    ['dropped', engine(), 'the kept block is missing or changed'],
+    // What a re-serialising writer does to the SHA-like value (#290's hazard).
+    [
+      'rewritten',
+      engine() + TAIL.replace('1234e56', '1.234e+59'),
+      'the kept block is missing or changed',
+    ],
+    ['not rewritten', engine(OLD_SHA) + TAIL, 'source-sha is unchanged from main'],
+    [
+      'moved before the engine fields',
+      TAIL.slice(1) + engine(),
+      'the kept block is missing or changed',
+    ],
+    [
+      'beside an extra engine-looking field',
+      engine() + 'reviewed-by: x\n' + TAIL,
+      'engine fields are [source-sha, synced-at, model, mode, section-count, tool-version, reviewed-by]',
+    ],
+  ])('fails a PR whose block was %s', (_label, text, problem) => {
+    const result = check([
+      {
+        language: 'fa',
+        mainText: MAIN,
+        prs: [pr(7, [{ path: '.translate/state/lecture.md.yml', status: 'modified', text }])],
+      },
+    ]);
+    expect(result.stdout).toContain(`PR #7: .translate/state/lecture.md.yml: ${problem}`);
+    expect(result.stdout).toContain('— FAIL');
+    expect(result.code).toBe(1);
+  });
+
+  it('fails a fresh state file holding anything but the engine fields', () => {
+    const result = check([
+      {
+        language: 'ml',
+        mainText: MAIN,
+        prs: [
+          pr(8, [
+            {
+              path: '.translate/state/game-theory.md.yml',
+              status: 'added',
+              text: engine(NEW_SHA, 'NEW') + TAIL,
+            },
+          ]),
+        ],
+      },
+    ]);
+    expect(result.stdout).toContain(
+      'PR #8: .translate/state/game-theory.md.yml: engine fields are'
+    );
+    expect(result.code).toBe(1);
+  });
+
+  it('fails a PR whose body lists a state file as overwritten', () => {
+    const body = 'Sync.\n\n### ⚠️ State Files Overwritten\n\n- `.translate/state/lecture.md.yml`';
+    const lane = { language: 'zh-cn', mainText: MAIN, prs: [{ ...keptPr(9), body }] };
+    const result = check([lane]);
+    expect(result.stdout).toContain('PR #9: its body lists "State Files Overwritten"');
+    expect(result.code).toBe(1);
+  });
+
+  it('fails when main holds no kept block, since the check would then prove nothing', () => {
+    const result = check([
+      { language: 'zh-cn', mainText: engine(OLD_SHA, 'NEW'), prs: [keptPr(1)] },
+    ]);
+    expect(result.stdout).toContain("holds no key after the engine's fields");
+    expect(result.code).toBe(1);
+  });
+
+  it('holds a full run of 28 PRs to 14 kept, and judges a smaller run on what it has', () => {
+    const full = Array.from({ length: 28 }, (_, i) => (i < 13 ? keptPr(i + 1) : plainPr(i + 1)));
+    const short = check([{ language: 'zh-cn', mainText: MAIN, prs: full }]);
+    expect(short.stdout).toContain(
+      'a full run carries the block in 14 state files; this one in 13'
+    );
+    expect(short.code).toBe(1);
+
+    full[13] = keptPr(14);
+    expect(check([{ language: 'zh-cn', mainText: MAIN, prs: full }]).code).toBe(0);
+
+    // The @v0 smoke (scenario 01 only): one plain file passes.
+    const smoke = check([{ language: 'zh-cn', mainText: MAIN, prs: [plainPr(1)] }]);
+    expect(smoke.stdout).toContain('zh-cn: kept 0, plain 1, across 1 PR(s) — ok');
+    expect(smoke.code).toBe(0);
+  });
+
+  it('judges only the languages asked for, and refuses an unknown option', () => {
+    const lanes = [
+      { language: 'zh-cn', mainText: MAIN, prs: [keptPr(1)] },
+      { language: 'fa', mainText: MAIN, prs: [pr(2, [])] },
+    ];
+    const one = check(lanes, ['--languages', 'fa']);
+    expect(one.stdout).not.toContain('zh-cn:');
+    expect(one.stdout).toContain('fa: kept 0, plain 0, across 1 PR(s) — ok');
+
+    const bad = run('node', [CHECK, '--frobnicate']);
+    expect(bad.stderr).toContain('unknown option --frobnicate');
+    expect(bad.code).toBe(2);
+
+    // An option missing its value is refused, not read as "go live".
+    const bare = run('node', [CHECK, '--offline']);
+    expect(bare.stderr).toContain('--offline needs a value');
+    expect(bare.code).toBe(2);
+  });
+
+  it('never passes on nothing: a lane with no translation PR fails', () => {
+    const result = check([{ language: 'zh-cn', mainText: MAIN, prs: [] }]);
+    expect(result.stdout).toContain('no open translation PR to judge');
+    expect(result.stdout).toContain('— FAIL');
+    expect(result.code).toBe(1);
+  });
+
+  it('with --expect-full, holds each lane to 28 PRs and 14 kept, above and below', () => {
+    const lane = (prs: unknown[]) => [{ language: 'zh-cn', mainText: MAIN, prs }];
+    const full = Array.from({ length: 28 }, (_, i) => (i < 14 ? keptPr(i + 1) : plainPr(i + 1)));
+    const pass = check(lane(full), ['--expect-full']);
+    expect(pass.stdout).toContain('zh-cn: kept 14, plain 14, across 28 PR(s) — ok');
+    expect(pass.code).toBe(0);
+
+    // A lane short of a PR (one sync failed), or one with an extra.
+    const short = check(lane(full.slice(1)), ['--expect-full']);
+    expect(short.stdout).toContain('a full run has 28 translation PRs per lane; this one has 27');
+    expect(short.code).toBe(1);
+    const extra = check(lane([...full, plainPr(29)]), ['--expect-full']);
+    expect(extra.stdout).toContain('this one has 29');
+    expect(extra.code).toBe(1);
+
+    // Kept above 14 is as wrong as below.
+    const over = [...full];
+    over[14] = keptPr(15);
+    expect(check(lane(over)).stdout).toContain('this one in 15');
+
+    // Without --expect-full, the smoke's single PR passes; with it, it fails.
+    expect(check(lane([plainPr(1)])).code).toBe(0);
+    expect(check(lane([plainPr(1)]), ['--expect-full']).code).toBe(1);
+  });
+
+  it('fails a PR that changed a lecture but wrote no state file for it', () => {
+    const lectureOnly = { number: 3, body: 'Sync.', lectures: ['lecture.md'], files: [] };
+    const result = check([{ language: 'zh-cn', mainText: MAIN, prs: [lectureOnly] }]);
+    expect(result.stdout).toContain(
+      'PR #3: lecture.md changed, but its state file .translate/state/lecture.md.yml was not written'
+    );
+    expect(result.code).toBe(1);
+
+    const withState = { ...keptPr(4), lectures: ['lecture.md'] };
+    expect(check([{ language: 'zh-cn', mainText: MAIN, prs: [withState] }]).code).toBe(0);
+  });
+
+  it('tells a state file that comes from lecture.md’s from one that does not', () => {
+    const judged = (files: File[]) =>
+      check([{ language: 'zh-cn', mainText: MAIN, prs: [pr(5, files)] }]);
+    // An added lecture.md.yml is a fresh file, not lecture.md's carried.
+    const added = judged([
+      { path: '.translate/state/lecture.md.yml', status: 'added', text: engine() + TAIL },
+    ]);
+    expect(added.stdout).toContain('engine fields are');
+    expect(added.code).toBe(1);
+    // A rename from some other file is not lecture.md's either.
+    const elsewhere = judged([
+      {
+        path: '.translate/state/b.md.yml',
+        status: 'renamed',
+        previous: '.translate/state/a.md.yml',
+        text: engine(),
+      },
+    ]);
+    expect(elsewhere.stdout).toContain('kept 0, plain 1');
+    expect(elsewhere.code).toBe(0);
+    // An addition beside lecture.md.yml modified (not removed) is a new lecture.
+    const beside = judged([
+      { path: '.translate/state/lecture.md.yml', status: 'modified', text: engine() + TAIL },
+      { path: '.translate/state/game-theory.md.yml', status: 'added', text: engine() },
+    ]);
+    expect(beside.stdout).toContain('kept 1, plain 1');
+    expect(beside.code).toBe(0);
+  });
+
+  it.each([
+    [
+      'a short source-sha',
+      engine('abc1234') + TAIL,
+      'source-sha is abc1234, expected a 40-hex commit',
+    ],
+    [
+      'the block followed by more text',
+      engine() + TAIL + 'extra: 1\n',
+      'the kept block is missing',
+    ],
+  ])('fails %s, and counts nothing kept for it', (_label, text, problem) => {
+    const result = check([
+      {
+        language: 'zh-cn',
+        mainText: MAIN,
+        prs: [pr(6, [{ path: '.translate/state/lecture.md.yml', status: 'modified', text }])],
+      },
+    ]);
+    expect(result.stdout).toContain(problem);
+    expect(result.stdout).toContain('zh-cn: kept 0, plain 0');
+    expect(result.code).toBe(1);
+  });
+
+  it('fails when main does not start with the engine fields, or a file was not read', () => {
+    const bad = check([{ language: 'zh-cn', mainText: `x: 1\n${TAIL}`, prs: [keptPr(1)] }]);
+    expect(bad.stdout).toContain("does not start with the engine's fields");
+    expect(bad.code).toBe(1);
+
+    const unread = check([
+      {
+        language: 'zh-cn',
+        mainText: MAIN,
+        prs: [pr(7, [{ path: '.translate/state/lecture.md.yml', status: 'modified' }])],
+      },
+    ]);
+    expect(unread.stdout).toContain('PR #7: .translate/state/lecture.md.yml: no content read');
+    expect(unread.code).toBe(1);
+  });
+});
+
 describe('rate-check.sh — arguments', () => {
   it('parses (bash -n)', () => {
     expect(run('bash', ['-n', RATE_CHECK]).code).toBe(0);
