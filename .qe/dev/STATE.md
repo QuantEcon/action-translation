@@ -370,9 +370,11 @@ exercise, which a target state file holding an extra key in the harness's base f
 fold into release step 4a; and say in the release notes how to detect a degraded review (the
 fixed phrase in `recommendationReasons`), which no fragment states.
 
-*Next, for Matt*: #477, since either fix changes verdicts during the shadow window; the action
-family's standard (below), where `deploy-docs.yml` matters now, because Deploy Documentation
-fails on every push to `main`, as it already did at v0.33.0; and #463's look-back.
+*Next (Matt's rulings of 2026-11-26, log `2026-11-26-rulings-and-follow-ups`)*: #477 is fixed in
+#487 and the docs deploy in #485 (green again since `742101b`). v0.34.0 follows once #487 and
+the #290 harness fixture merge, with the fr heal before `@v0` moves. After it: the action
+family's standard (below) and #470. #463's look-back and other edition work belong to
+`mini:project-translation`.
 
 **Before it (2026-11-16, after the `--require-state` rollout):**
 
@@ -529,8 +531,8 @@ delimiter rows, which already break a table in the fr edition's pandas lecture.
 
 ## Health & context
 
-- `main` green at `36d1a77`, the overnight stack merged: **3,173 tests across 91 suites**,
-  counted 2026-11-26 in the main clone (one skips when the suite runs as root). Since #465 a
+- With #477's fix (#487): **3,178 tests across 91 suites**. At `36d1a77`, the overnight stack
+  merged: 3,173, counted 2026-11-26 in the main clone (one skips when the suite runs as root). Since #465 a
   clone holding the harness's gitignored test clones counts the same as a clean one. Before the
   stack, at `939ceaf`: **2,762 tests across 88 suites** (zero skips, type-checked) with
   `doctor --require-state` (#370, #449's P4), 2,705 before it at `d73f874` (counted 2026-11-16

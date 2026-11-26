@@ -11,6 +11,7 @@
 import {
   CRITERION_FLOORS,
   DIFF_EVALUATION_UNPARSEABLE,
+  MODEL_ASSERTED_CHECK_FAILED,
   REVIEW_VERDICT_SCHEMA_VERSION,
   ReviewVerdictV2,
   buildVerdictBlock,
@@ -206,6 +207,92 @@ describe('computeRecommendation', () => {
     });
     expect(out.recommendation).toBe('editor');
     expect(out.reasons.join()).toContain('positionCorrect');
+  });
+
+  it('a model-asserted check that failed gates by a reason of its own, never as a diff check (#477, #148)', () => {
+    // Consumers tell opinion from fact by this text; changing it breaks them.
+    expect(MODEL_ASSERTED_CHECK_FAILED).toBe('model-asserted check failed');
+    const sources = {
+      scopeCorrect: 'model',
+      positionCorrect: 'model',
+      structurePreserved: 'deterministic',
+      headingMapCorrect: 'deterministic',
+    } as const;
+
+    const out = computeRecommendation({
+      ...CLEAN_INPUT,
+      diffChecks: { ...CLEAN_INPUT.diffChecks, scopeCorrect: false },
+      diffCheckSources: sources,
+    });
+    // It gates with no finding at all, so the findings cap cannot remove it.
+    expect(out.recommendation).toBe('editor');
+    expect(out.reasons).toEqual(['model-asserted check failed: scopeCorrect']);
+    expect(out.reasons.join()).not.toContain('diff check failed');
+
+    // Passing model-asserted checks gate nothing.
+    expect(computeRecommendation({ ...CLEAN_INPUT, diffCheckSources: sources })).toEqual({
+      recommendation: 'auto-merge',
+      reasons: [],
+    });
+
+    // Anything but a strict `true` gates, as for a deterministic check: a
+    // quoted "false" from model JSON is truthy.
+    const quoted = computeRecommendation({
+      ...CLEAN_INPUT,
+      diffChecks: { ...CLEAN_INPUT.diffChecks, positionCorrect: 'false' as unknown as boolean },
+      diffCheckSources: sources,
+    });
+    expect(quoted.reasons).toEqual(['model-asserted check failed: positionCorrect']);
+
+    // A deterministic failure beside a model one keeps its own wording.
+    const both = computeRecommendation({
+      ...CLEAN_INPUT,
+      diffChecks: { ...CLEAN_INPUT.diffChecks, scopeCorrect: false, headingMapCorrect: false },
+      diffCheckSources: sources,
+    });
+    expect(both.reasons).toEqual([
+      'diff check failed: headingMapCorrect',
+      'model-asserted check failed: scopeCorrect',
+    ]);
+  });
+
+  it('a check with no model provenance gates once, as a check, never also as model-asserted (#477)', () => {
+    // An absent map, or one missing the check, reads as deterministic (#148):
+    // the check gates as `diff check failed` and must not be counted twice.
+    const failed = { ...CLEAN_INPUT.diffChecks, scopeCorrect: false };
+    for (const diffCheckSources of [undefined, {}, { positionCorrect: 'model' as const }]) {
+      expect(
+        computeRecommendation({ ...CLEAN_INPUT, diffChecks: failed, diffCheckSources }).reasons
+      ).toEqual(['diff check failed: scopeCorrect']);
+    }
+  });
+
+  it('missing diffChecks gate every check, each by its own provenance, without throwing (#477)', () => {
+    const out = computeRecommendation({
+      ...CLEAN_INPUT,
+      diffChecks: null as unknown as typeof CLEAN_INPUT.diffChecks,
+      diffCheckSources: { scopeCorrect: 'model', positionCorrect: 'model' },
+    });
+    expect(out.recommendation).toBe('editor');
+    expect(out.reasons).toEqual([
+      'diff check failed: structurePreserved',
+      'diff check failed: headingMapCorrect',
+      'model-asserted check failed: scopeCorrect',
+      'model-asserted check failed: positionCorrect',
+    ]);
+  });
+
+  it('an unparseable diff evaluation adds no model-asserted reason, since nothing was judged (#477, #284)', () => {
+    const out = computeRecommendation({
+      ...CLEAN_INPUT,
+      diffChecks: { ...CLEAN_INPUT.diffChecks, scopeCorrect: false, positionCorrect: false },
+      diffCheckSources: { scopeCorrect: 'model', positionCorrect: 'model' },
+      diffEvaluationUnparseable: true,
+    });
+    expect(out.recommendation).toBe('editor');
+    expect(out.reasons).toEqual([
+      'diff evaluation returned no parseable verdict — scopeCorrect and positionCorrect were not judged',
+    ]);
   });
 
   it('routes a malformed findings payload to editor (fail-closed)', () => {
@@ -1136,8 +1223,10 @@ describe('reviewPR verdict block emission', () => {
     expect(result.recommendation).toBe('editor');
     expect(result.wouldAutoMerge).toBe(false);
 
-    // Gated, but as a finding — not as `diff check failed: positionCorrect`.
+    // Gated as a finding and by a reason of its own (#477) — never as
+    // `diff check failed: positionCorrect`, the deterministic wording.
     expect(result.recommendationReasons.join()).toContain('gating categories');
+    expect(result.recommendationReasons).toContain('model-asserted check failed: positionCorrect');
     expect(result.recommendationReasons.join()).not.toContain('diff check failed');
 
     const parsed = parseReviewVerdict(captured.comment!);
@@ -1146,6 +1235,54 @@ describe('reviewPR verdict block emission', () => {
     expect(finding).toBeDefined();
     expect(finding!.description).toContain('positionCorrect');
     expect(finding!.description).toContain('model judgement');
+  });
+
+  // #477's reproduction: the model-asserted check's `diff-check` finding is
+  // `minor`, and twenty minor translation findings sort ahead of it, so the
+  // cap of twenty drops it. Before the fix the verdict read auto-merge
+  // (wouldAutoMerge in shadow) beside a published scopeCorrect: false.
+  it('a model-asserted failure still gates when twenty minor findings cap its finding out (#477)', async () => {
+    const captured: { comment?: string } = {};
+    const twentyMinors = Array.from({ length: 20 }, (_, i) =>
+      finding({ severity: 'minor', category: 'fluency', description: `Fluency nit ${i + 1}.` })
+    );
+    const reviewer = makeReviewer({ ...CLEAN_RESPONSE, findings: twentyMinors }, captured);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (reviewer as any).callWithRetry = async (_p: string, _m: number, operation: string) => {
+      if (operation === 'evaluateTranslation') return { ...CLEAN_RESPONSE, findings: twentyMinors };
+      return {
+        scopeCorrect: false,
+        positionCorrect: true,
+        structurePreserved: true,
+        headingMapCorrect: true,
+        issues: [],
+        summary: 'Out of scope.',
+        scopeDetails: 'a section the source did not change was rewritten',
+        positionDetails: 'ok',
+        structureDetails: 'ok',
+      };
+    };
+
+    const result = await reviewer.reviewPR(
+      42,
+      'QuantEcon/lecture-python-programming',
+      'QuantEcon',
+      'lecture-python-programming.zh-cn',
+      'lectures',
+      undefined,
+      'zh-cn',
+      'shadow'
+    );
+
+    const parsed = parseReviewVerdict(captured.comment!);
+    // The premise: the cap really did drop the diff-check finding.
+    expect(parsed!.findings).toHaveLength(20);
+    expect(parsed!.findings.some((f) => f.category === 'diff-check')).toBe(false);
+    expect(parsed!.diffChecks.scopeCorrect).toBe(false);
+    // And the verdict still routes to a person, by the reason.
+    expect(result.recommendation).toBe('editor');
+    expect(result.wouldAutoMerge).toBe(false);
+    expect(result.recommendationReasons).toEqual(['model-asserted check failed: scopeCorrect']);
   });
 
   it('a deterministic diffCheck still gates as a check, naming itself', async () => {
