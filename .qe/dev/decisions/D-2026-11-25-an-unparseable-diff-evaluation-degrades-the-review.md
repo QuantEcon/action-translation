@@ -34,9 +34,10 @@ a review that has not run yet. Ruled by @mmcky on 2026-11-15 (the overnight plan
   "Changed Sections" list given to the reviewer on such lectures. That list is engine-computed
   input, not prompt text, and the change edits no prompt string. Lectures whose headings are all
   distinct get exactly the list they got before.
-- **A reply that is valid JSON but not an object is a parse failure** (2026-11-26). In @mmcky's
-  words, in his comment on #475 of 2026-11-26: "a reply that came back and is not a verdict is
-  a parse failure like any other." A reply such as `[1,2]` or `null` is therefore retried, and
+- **A reply that is valid JSON but not an object is a parse failure** (2026-11-26). Ruled by
+  @mmcky on 2026-11-26, accepting the review's recommendation to keep it: a reply that came
+  back and is not a verdict is a parse failure like any other (the wording is the review's, in
+  its comment on #475). A reply such as `[1,2]` or `null` is therefore retried, and
   when the budget ends on one in `evaluateDiff`, the review degrades as above; in
   `evaluateTranslation` the run still fails, now after three calls. Before, both failed the run
   after one call. During the shadow window this adds degraded-review records (any such reply
