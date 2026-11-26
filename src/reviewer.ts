@@ -47,6 +47,8 @@ import {
   getEngineVersion,
   getEngineRef,
   normalizeFindings,
+  reattributeFindings,
+  AttributionFile,
   sanitizeCommentText,
   sortAndCapFindings,
   truncateField,
@@ -1104,6 +1106,9 @@ export class TranslationReviewer {
     // but useless for structural comparison — parity and heading maps are
     // per-document properties.
     const filePairs = new Map<string, { source?: string; target?: string }>();
+    // Each file's translation before the PR, for the finding attribution
+    // check (#223): a finding may quote the text the PR replaced.
+    const targetBeforeByFile = new Map<string, string>();
 
     // No catch-all around this body. There used to be one, and it was the
     // second half of #210: it wrapped the target fetch and the source fetch
@@ -1156,8 +1161,9 @@ export class TranslationReviewer {
           ref: pr.base.sha,
         });
         if ('content' in targetBeforeData) {
-          targetBefore +=
-            decodeFileContent(targetBeforeData, 'target', file.filename, pr.base.sha) + '\n\n';
+          const content = decodeFileContent(targetBeforeData, 'target', file.filename, pr.base.sha);
+          targetBefore += content + '\n\n';
+          targetBeforeByFile.set(file.filename, content);
         }
       } catch (error) {
         // A 404 means the file is new in the target — a normal state, and the
@@ -1222,13 +1228,29 @@ export class TranslationReviewer {
     }
 
     // Evaluate translation quality
-    const translationQuality = await this.evaluateTranslation(
+    const evaluatedQuality = await this.evaluateTranslation(
       sourceEnglish,
       targetTranslation,
       changedSections,
       reviewableFilenames,
       glossaryTerms,
       targetLanguage
+    );
+    // A finding whose quotes are all in one other file of a multi-file PR,
+    // and none in its own, is moved to that file (#223). The findings the
+    // reviewer is asked for are unchanged; only their file is checked.
+    const translationQuality = this.attributeFindings(
+      evaluatedQuality,
+      reviewableFilenames,
+      [...filePairs.entries()].map(([filename, pair]) => ({
+        filename,
+        sources: [pair.source, sourceBeforeMap.get(filename)].filter(
+          (text): text is string => text !== undefined
+        ),
+        targets: [pair.target, targetBeforeByFile.get(filename)].filter(
+          (text): text is string => text !== undefined
+        ),
+      }))
     );
 
     // Evaluate diff quality. For resync PRs the source has no before/after —
@@ -1725,6 +1747,33 @@ export class TranslationReviewer {
       reviewedHeadSha: pr.head.sha,
       reviewComment,
     };
+  }
+
+  /**
+   * Move each finding whose quotes belong to one other reviewed file to that
+   * file (#223; see `reattributeFindings`), logging each move, and rebuild
+   * the comment's lines from the result. A single-file PR, or one with a
+   * reviewed file whose text this run does not hold, is returned unchanged.
+   */
+  private attributeFindings(
+    quality: TranslationQualityResult,
+    reviewedFilenames: string[],
+    files: AttributionFile[]
+  ): TranslationQualityResult {
+    if (reviewedFilenames.length < 2) return quality;
+    const held = new Set(
+      files.filter((f) => f.sources.length + f.targets.length > 0).map((f) => f.filename)
+    );
+    if (!reviewedFilenames.every((filename) => held.has(filename))) return quality;
+    const { findings, reattributed } = reattributeFindings(quality.findings, files);
+    if (reattributed.length === 0) return quality;
+    for (const move of reattributed) {
+      core.info(
+        `Finding ${move.index} re-attributed from ${move.from} to ${move.to}: its quotes are ` +
+          `in ${move.to} and not in ${move.from} (#223)`
+      );
+    }
+    return { ...quality, findings, issues: findings.map(findingToDisplayString) };
   }
 
   /**

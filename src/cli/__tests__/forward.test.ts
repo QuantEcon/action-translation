@@ -331,6 +331,149 @@ describe('resyncSingleFile', () => {
       }
     });
 
+    // An editor's sign-off, which the engine does not own (#290).
+    const SIGN_OFF = 'reviewed:\n  by: an-editor\n  date: 2026-11-20\n';
+    const seedState = (targetRepo: string, file: string, content: string): string => {
+      const statePath = path.join(targetRepo, '.translate', 'state', `${file}.yml`);
+      fs.mkdirSync(path.dirname(statePath), { recursive: true });
+      fs.writeFileSync(statePath, content, 'utf-8');
+      return statePath;
+    };
+    const okGitRunner = (args: string[], _cwd: string) => {
+      if (args[0] === 'rev-parse' && args[1] === '--abbrev-ref') {
+        return { stdout: 'main', stderr: '', status: 0 };
+      }
+      if (args[0] === 'rev-parse' && args[1] === '--verify') {
+        return { stdout: '', stderr: '', status: 1 };
+      }
+      return { stdout: '', stderr: '', status: 0 };
+    };
+    const okGhRunner = () => ({
+      stdout: 'https://github.com/Org/Repo/pull/3',
+      stderr: '',
+      status: 0,
+    });
+
+    it.each([
+      ['on disk', undefined],
+      ['in the --github commit', 'Org/Repo'],
+    ])('keeps the keys the engine does not own, %s (#290)', async (_where, github) => {
+      const fixture = createTempFixture({
+        sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## Section\n\nNew content.',
+        targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## 部分\n\n旧内容。',
+        filename: 'signed.md',
+      });
+      const statePath = seedState(
+        fixture.targetRepo,
+        'signed.md',
+        'source-sha: old\nmode: NEW\n' + SIGN_OFF
+      );
+
+      try {
+        const result = await resyncSingleFile(
+          fixture.filename,
+          fixture.sourceRepo,
+          fixture.targetRepo,
+          'lectures',
+          makeOptions({ source: fixture.sourceRepo, target: fixture.targetRepo, github }),
+          silentLogger,
+          okGhRunner,
+          okGitRunner
+        );
+
+        expect(result.summary.errors).toBe(0);
+        const written = fs.readFileSync(statePath, 'utf-8');
+        expect(written).toContain('mode: RESYNC\n');
+        expect(written).not.toContain('source-sha: old');
+        expect(written.endsWith(SIGN_OFF)).toBe(true);
+      } finally {
+        fixture.cleanup();
+      }
+    });
+
+    it.each([
+      ['on disk', undefined],
+      ['in the --github commit', 'Org/Repo'],
+    ])(
+      'overwrites a state file that is not a YAML mapping, %s, with a warning (#290)',
+      async (_where, github) => {
+        const fixture = createTempFixture({
+          sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## Section\n\nNew content.',
+          targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## 部分\n\n旧内容。',
+          filename: 'broken.md',
+        });
+        const statePath = seedState(fixture.targetRepo, 'broken.md', '- not\n- a mapping\n');
+        const warnings: string[] = [];
+
+        try {
+          const result = await resyncSingleFile(
+            fixture.filename,
+            fixture.sourceRepo,
+            fixture.targetRepo,
+            'lectures',
+            makeOptions({ source: fixture.sourceRepo, target: fixture.targetRepo, github }),
+            { ...silentLogger, warn: (msg: string) => warnings.push(msg) },
+            okGhRunner,
+            okGitRunner
+          );
+
+          expect(result.summary.errors).toBe(0);
+          expect(fs.readFileSync(statePath, 'utf-8')).toContain('mode: RESYNC\n');
+          expect(warnings).toContainEqual(
+            '  broken.md: .translate/state/broken.md.yml was not a YAML mapping of keys to ' +
+              'values, so it was overwritten: any keys it held besides the ones sync writes are gone'
+          );
+        } finally {
+          fixture.cleanup();
+        }
+      }
+    );
+
+    it('fails the --github file when the existing state file cannot be read (#290)', async () => {
+      const fixture = createTempFixture({
+        sourceContent: '---\ntitle: Test\n---\n\n# Title\n\n## Section\n\nNew content.',
+        targetContent: '---\ntitle: Test\n---\n\n# 标题\n\n## 部分\n\n旧内容。',
+        filename: 'unread.md',
+      });
+      // A folder where the state file should be: reading it throws.
+      fs.mkdirSync(path.join(fixture.targetRepo, '.translate', 'state', 'unread.md.yml'), {
+        recursive: true,
+      });
+      const errors: string[] = [];
+      const gitCalls: string[][] = [];
+
+      try {
+        const result = await resyncSingleFile(
+          fixture.filename,
+          fixture.sourceRepo,
+          fixture.targetRepo,
+          'lectures',
+          makeOptions({
+            source: fixture.sourceRepo,
+            target: fixture.targetRepo,
+            github: 'Org/Repo',
+          }),
+          { ...silentLogger, error: (msg: string) => errors.push(msg) },
+          okGhRunner,
+          (args, cwd) => {
+            gitCalls.push(args);
+            return okGitRunner(args, cwd);
+          }
+        );
+
+        expect(result.summary.errors).toBe(1);
+        expect(result.prUrl).toBeUndefined();
+        expect(gitCalls).toEqual([]);
+        expect(errors).toEqual([
+          expect.stringMatching(
+            /^ {2}unread\.md: could not read \.translate\/state\/unread\.md\.yml, so its keys could not be kept: .*EISDIR/
+          ),
+        ]);
+      } finally {
+        fixture.cleanup();
+      }
+    });
+
     it('warns when the source clone has no commit for the lecture', async () => {
       // createTempFixture makes plain folders, not git clones.
       const fixture = createTempFixture({

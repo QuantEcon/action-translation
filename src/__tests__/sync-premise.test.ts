@@ -667,7 +667,14 @@ describe('checkSyncPremise', () => {
       `Fetch failed (state): ${A}: could not read ${A_STATE} from ${EDITION_NAME} (status 500: ` +
       "HTTP 500), so whether its translation starts from this PR's English could not be " +
       'checked. It was not synced.';
-    expect(result).toEqual({ files: [], heldBack: [], stillOpen: [], errors: [error] });
+    expect(result).toEqual({
+      files: [],
+      heldBack: [],
+      stillOpen: [],
+      errors: [error],
+      // For the failure issue's advice: a re-run, not the CLI (#290).
+      unreadStates: [{ file: A, statePath: A_STATE, status: 'status 500: HTTP 500' }],
+    });
     expect(calls).toEqual([]);
     expect(lines).toEqual([`error: ${error}`]);
   });

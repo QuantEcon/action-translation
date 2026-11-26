@@ -210,6 +210,54 @@ describe('failure issue (#281)', () => {
     ).not.toContain('Delete each from the edition by hand');
   });
 
+  describe('with lectures whose state file could not be read (#290)', () => {
+    const unread = {
+      file: 'lectures/a.md',
+      statePath: '.translate/state/a.md.yml',
+      status: 'status 502: HTTP 502',
+    };
+    const unreadError = 'Fetch failed (state): lectures/a.md: could not read ...';
+
+    it('alone: advises a resync once it reads, under the precondition, and names the read', () => {
+      const lines = failureRecoveryLines({
+        ...BASE,
+        errors: [unreadError],
+        unreadStates: [unread],
+      });
+      expect(lines.slice(0, 4)).toEqual([
+        'This lecture was held back, not translated: the read of its state file answered ' +
+          'something other than "not found", and sync keeps the keys a state file holds ' +
+          'besides its own, so it does not write over a file it could not read. A failed read ' +
+          'is transient more often than not: once the state file reads again, sync it again ' +
+          'with `\\translate-resync` on #1105, under the condition below.',
+        '',
+        '- `lectures/a.md`: `.translate/state/a.md.yml` (status 502: HTTP 502)',
+        '',
+      ]);
+      const text = lines.join('\n');
+      expect(text).toContain(`    git rev-list --count ${MERGE}..origin/main -- <path>`);
+      expect(text).not.toContain('not by re-running this sync');
+      expect(text).not.toContain('translate forward');
+      expect(text).not.toContain('translate init');
+    });
+
+    it('beside other errors: gives their advice after its own', () => {
+      const text = failureRecoveryLines({
+        ...BASE,
+        errors: [unreadError, unreadError.replace('a.md', 'b.md'), PARITY_ERROR],
+        unreadStates: [unread, { ...unread, file: 'lectures/b.md' }],
+        failedLectures: [{ file: 'lectures/mix_model.md', inEdition: true }],
+      }).join('\n');
+      expect(text).toContain('These lectures were held back, not translated');
+      expect(text).toContain("each one's state file");
+      expect(text).toContain('sync them again with');
+      expect(text.indexOf('- `lectures/b.md`: `.translate/state/a.md.yml`')).toBeLessThan(
+        text.indexOf('**For the other errors:**')
+      );
+      expect(text).toContain('- `lectures/mix_model.md`: `translate forward -f mix_model.md`.');
+    });
+  });
+
   describe('with lectures held back by the premise check (#420)', () => {
     const behind: HeldBackLecture = {
       file: 'lectures/mle_intro.md',
@@ -404,6 +452,145 @@ describe('rebase-failure comment (#281)', () => {
       '`lectures/a.md` (`lectures/a-new.md` in this PR) is no longer on `main`'
     );
     expect(comment).toContain('`translate forward -f <file>` (here: `sub/b.md`)');
+  });
+
+  it('for a lecture main got first, says to pick a copy, and does not offer to regenerate it (#467)', () => {
+    const comment = rebaseFailureComment({
+      ...input,
+      addedOnMainSinceOpened: [{ editionPath: 'lectures/a.md', path: 'lectures/a.md' }],
+    });
+    expect(comment.split('\n').slice(4, 6)).toEqual([
+      '`lectures/a.md` is on `main` now but was not when this PR opened: a PR merged since ' +
+        "added it, and this PR's source change adds it too, so the edition has two translations " +
+        'of it. The rebase does not choose between them, and changed neither. Decide which ' +
+        "copy wins. To keep `main`'s, make the lecture and its state file on this PR's branch " +
+        "match `main`, or close the PR if nothing else is left in it. To keep this PR's, " +
+        "resolve the conflict on its branch by hand, keeping the branch's copy. Until this PR " +
+        "merges or closes, a later rebase of it stops here again, whatever the branch's copy " +
+        "then holds: this PR's baseline lacks the lecture, and its branch has it.",
+      '',
+    ]);
+    // Another overlapping lecture still gets the general advice.
+    expect(comment).toContain('`translate forward -f <file>` (here: `sub/b.md`)');
+  });
+
+  it('for lectures main got first and nothing else, gives only that advice (#467)', () => {
+    const comment = rebaseFailureComment({
+      ...input,
+      metadata: metadata(1101),
+      addedOnMainSinceOpened: [
+        { editionPath: 'lectures/a.md', path: 'lectures/a.md' },
+        { editionPath: 'lectures/sub/b.md', path: 'lectures/sub/b.md' },
+      ],
+    });
+    expect(comment).toContain(
+      '`lectures/a.md` and `lectures/sub/b.md` are on `main` now but were not when this PR ' +
+        "opened: a PR merged since added them, and this PR's source change adds them too, so " +
+        'the edition has two translations of each.'
+    );
+    expect(comment).toContain("this PR's baseline lacks them, and its branch has them.");
+    // Regenerating or resyncing would make a third translation.
+    expect(comment).not.toContain('translate forward');
+    expect(comment).not.toContain('translate-resync');
+    expect(comment.endsWith('its branch has them.')).toBe(true);
+  });
+
+  it('for a state file it could not read, advises a re-run and nothing else (#290)', () => {
+    const comment = rebaseFailureComment({
+      ...input,
+      metadata: metadata(1101),
+      unreadStates: [
+        {
+          file: 'lectures/a.md',
+          statePath: '.translate/state/a.md.yml',
+          status: 'status 502: HTTP 502',
+        },
+      ],
+    });
+    expect(comment.split('\n').slice(4)).toEqual([
+      'The rebase stopped before the branch moved, and translated nothing: the read of the ' +
+        'state file below answered something other than "not found", and the rebase keeps the ' +
+        'keys a state file holds besides its own, so it does not write over a file it could ' +
+        'not read. A failed read is transient more often than not: once it reads again, re-run ' +
+        'the failed rebase workflow run, which rebuilds this PR on the current `main`.',
+      '',
+      '- `lectures/a.md`: `.translate/state/a.md.yml` (status 502: HTTP 502)',
+    ]);
+  });
+
+  it('for a state file it could not read beside another failure, keeps the general advice', () => {
+    const comment = rebaseFailureComment({
+      ...input,
+      unreadStates: [
+        { file: 'lectures/a.md', statePath: '.translate/state/a.md.yml', status: 's' },
+      ],
+      otherErrors: true,
+    });
+    expect(comment).toContain('re-run the failed rebase workflow run');
+    expect(comment).toContain('Resolve the conflicts by hand');
+  });
+
+  it('for a read the plan needed that failed, advises a re-run and nothing else (#467)', () => {
+    const comment = rebaseFailureComment({
+      ...input,
+      metadata: metadata(1101),
+      failedReads: [
+        {
+          file: 'lectures/a.md',
+          read: "lectures/a.md at this PR's baseline 1234567",
+          status: 'status 502: HTTP 502',
+        },
+      ],
+    });
+    expect(comment.split('\n').slice(4)).toEqual([
+      'The rebase stopped before the branch moved, and translated nothing: the read below ' +
+        'answered something other than "not found", and what the rebase does with the lecture ' +
+        'depends on it. A failed read is transient more often than not: once it reads again, ' +
+        're-run the failed rebase workflow run, which rebuilds this PR on the current `main`.',
+      '',
+      "- `lectures/a.md`: lectures/a.md at this PR's baseline 1234567 (status 502: HTTP 502)",
+    ]);
+  });
+
+  it('for a failed read beside another failure, keeps the general advice', () => {
+    const comment = rebaseFailureComment({
+      ...input,
+      failedReads: [{ file: 'lectures/a.md', read: 'lectures/a.md on b', status: 's' }],
+      otherErrors: true,
+    });
+    expect(comment).toContain('re-run the failed rebase workflow run');
+    expect(comment).toContain('- `lectures/a.md`: lectures/a.md on b (s)');
+    expect(comment).toContain('Resolve the conflicts by hand');
+  });
+
+  it('for lectures main got first beside a failed read on another lecture, keeps the re-run advice', () => {
+    const comment = rebaseFailureComment({
+      ...input,
+      metadata: metadata(1101),
+      addedOnMainSinceOpened: [
+        { editionPath: 'lectures/a.md', path: 'lectures/a.md' },
+        { editionPath: 'lectures/sub/b.md', path: 'lectures/sub/b.md' },
+      ],
+      failedReads: [{ file: 'lectures/c.md', read: 'lectures/c.md on b', status: 's' }],
+    });
+    expect(comment).toContain('Decide which copy wins.');
+    expect(comment).toContain('re-run the failed rebase workflow run');
+    expect(comment).toContain('- `lectures/c.md`: lectures/c.md on b (s)');
+    // Still no regeneration or resync, which would make a third translation.
+    expect(comment).not.toContain('translate forward');
+    expect(comment).not.toContain('translate-resync');
+  });
+
+  it('for a lecture main got first beside a deleted one, keeps the general advice', () => {
+    const comment = rebaseFailureComment({
+      ...input,
+      overlapping: ['lectures/a.md', 'lectures/sub/b.md'],
+      deletedSinceOpened: [{ editionPath: 'lectures/sub/b.md', path: 'lectures/sub/b.md' }],
+      addedOnMainSinceOpened: [{ editionPath: 'lectures/a.md', path: 'lectures/a.md' }],
+    });
+    expect(comment).toContain('Decide which copy wins.');
+    expect(comment).toContain('Resolve the conflicts by hand');
+    expect(comment).not.toContain('(here:');
   });
 });
 

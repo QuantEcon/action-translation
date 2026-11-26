@@ -14,17 +14,34 @@
  *   lecture lacks (#351);
  * - a read that failed for any other reason did the same.
  *
- * `planRebaseRead` decides from up to four reads. On `main` at the SHA the
+ * And it read a lecture `main` has as an update. When the PR's own source
+ * change adds the lecture and another PR added it to `main` first, as a sync
+ * and a `\translate-resync` of one source PR both do, the update had no old
+ * English to diff against: it failed with a missing-title error that named
+ * neither PR, before any model call and with the branch as it was (#467).
+ * A lecture `main` got first that the PR's source change only edits, as when
+ * a second source PR edits a lecture before the edition merges the first
+ * one's sync, is an ordinary stacked update and stays one.
+ *
+ * `planRebaseRead` decides from up to five reads. On `main` at the SHA the
  * rebase pinned, it looks for the lecture, or for a rename its old path, and
  * then, for a rename whose old path is gone, its new one. At the PR's
  * baseline, `targetBaseSha` (`main` when the PR opened), it looks for the
  * path the edition held the lecture under. On the PR's branch it looks for
- * the lecture under its new name. Each read is found, missing (a 404) or an
- * error, and a read is made only when the plan needs it.
+ * the lecture under its new name. In the source, the English before the PR's
+ * source commit (its parent) says whether that commit adds the lecture. Each
+ * read is found, missing (a 404) or an error, and the plan consults a read
+ * only when it needs it. When `main` has the lecture, the baseline is read
+ * too (when the PR has one); once that answers 404 or fails, the source
+ * parent decides, and the branch is read only when the parent lacks the
+ * lecture. A rename's source parent is read at its old path: renames are
+ * outside the stop, since the parent has the lecture there.
  *
  * This module is pure, and lives outside `src/index.ts`, which cannot be
  * imported (#169).
  */
+
+import type { FailedRead, UnreadState } from './recovery-advice.js';
 
 /** One read of the edition: the file is there, GitHub answered 404, or the read failed. */
 export type ReadStatus = 'found' | 'missing' | 'error';
@@ -45,11 +62,33 @@ export interface RebaseReads {
   atBaseline?: ReadStatus;
   /** The lecture on the PR's branch, under its new name; undefined when not read. */
   onBranch?: ReadStatus;
+  /**
+   * The English at the parent of the PR's source commit: 'missing' when that
+   * commit adds the lecture (a 404, or an empty file, which leaves nothing to
+   * diff against). For a rename it is read at the old path, which is where
+   * the parent has the lecture, so a rename is never taken for an addition.
+   * Consulted only when `main` has the lecture and the baseline lacks it or
+   * could not be read; undefined when not read.
+   */
+  sourceParent?: ReadStatus;
 }
 
 export type RebaseReadPlan =
-  /** `main` has it: rebuild it on `main` as before, with the rebase cache. */
+  /**
+   * `main` has it, and so did the baseline (or the PR records none, or the
+   * PR's source change edits it, or the branch lacks it): rebuild it on
+   * `main` as before, with the rebase cache where the baseline has it.
+   */
   | { action: 'update' }
+  /**
+   * On `main`, not at the baseline, absent before the PR's source commit, and
+   * on the branch: the PR's source change adds the lecture, and a PR merged
+   * since this one opened added it to `main` first, so the edition has two
+   * independent translations of it and nothing to diff the English against.
+   * The rebase does not choose between them: fail before the branch moves,
+   * with no model call (#467).
+   */
+  | { action: 'added-on-main-since-opened' }
   /**
    * A rename whose old path is gone from `main` while its new one is there,
    * as after another PR made the same move: rebuild the new path as an update.
@@ -80,15 +119,44 @@ export type RebaseReadPlan =
    * A read failed, or `main` lacks it and the PR records no baseline, so
    * whether it was deleted since cannot be told. Fail before the branch moves.
    */
-  | { action: 'error'; reason: 'main-read' | 'baseline-read' | 'branch-read' | 'no-baseline' };
+  | {
+      action: 'error';
+      reason: 'main-read' | 'baseline-read' | 'branch-read' | 'source-parent-read' | 'no-baseline';
+    };
 
 /**
- * Decide from the reads made so far. Once `main` answers 404, the caller
- * reads a rename's new path on `main`; unless that settles it, the baseline
- * (when the PR has one); and unless that read fails, the branch.
+ * Decide from the reads made so far. When `main` has the lecture, the caller
+ * reads the baseline (when the PR has one) and, if that answers 404 or fails, consults
+ * the source parent and, if that lacks the lecture, reads the branch. Once
+ * `main` answers 404, it reads a rename's new path on `main`; unless that
+ * settles it, the baseline (when the PR has one); and unless that read fails,
+ * the branch.
  */
 export function planRebaseRead(reads: RebaseReads): RebaseReadPlan {
-  if (reads.onMain === 'found') return { action: 'update' };
+  if (reads.onMain === 'found') {
+    // A PR opened before the cache has no baseline to read: as before.
+    if (reads.atBaseline === undefined || reads.atBaseline === 'found') return { action: 'update' };
+    // The PR's source change edits the lecture: a stacked update of `main`'s
+    // copy, diffed against the parent's English. That holds whether the
+    // baseline lacks it (the edition got it since the PR opened) or could
+    // not be read; a failed baseline read then only costs the rebase cache,
+    // as it did before #467.
+    if (reads.sourceParent === 'found') return { action: 'update' };
+    // Otherwise the baseline decides between the stop and an update, so a
+    // failed read of it is fatal.
+    if (reads.atBaseline === 'error') return { action: 'error', reason: 'baseline-read' };
+    if (reads.sourceParent === undefined || reads.sourceParent === 'error') {
+      return { action: 'error', reason: 'source-parent-read' };
+    }
+    if (reads.onBranch === undefined || reads.onBranch === 'error') {
+      return { action: 'error', reason: 'branch-read' };
+    }
+    // Not on the branch: the PR never delivered it, so no reviewed text of
+    // its own is lost, and `main`'s copy is updated as before.
+    return reads.onBranch === 'found'
+      ? { action: 'added-on-main-since-opened' }
+      : { action: 'update' };
+  }
   if (reads.onMain === 'error') return { action: 'error', reason: 'main-read' };
   if (reads.newPathOnMain === 'found') return { action: 'update-at-new-path' };
   if (reads.newPathOnMain === 'error') return { action: 'error', reason: 'main-read' };
@@ -112,14 +180,31 @@ export interface DeletedLecture {
 }
 
 /**
+ * A lecture the rebased PR adds that a PR merged since it opened added to
+ * `main` first (#467). Same shape as a deleted one: for a rename,
+ * `editionPath` is the old path `main` now has.
+ */
+export type AddedLecture = DeletedLecture;
+
+/**
  * A rebase that failed before the branch moved, carrying the lectures a PR
- * merged since the rebased PR opened deleted, so the failure comment can say
- * what to do about them.
+ * merged since the rebased PR opened deleted, those it added that this PR
+ * adds too, and those whose state file could not be read, so the failure
+ * comment can say what to do about them.
  */
 export class RebaseReadError extends Error {
   constructor(
     message: string,
-    readonly deletedSinceOpened: DeletedLecture[]
+    readonly deletedSinceOpened: DeletedLecture[],
+    readonly addedOnMainSinceOpened: AddedLecture[] = [],
+    /**
+     * Lectures whose own state file could not be read (#290), and whether
+     * anything else failed beside them.
+     */
+    readonly unreadStates: UnreadState[] = [],
+    readonly otherErrors = false,
+    /** Reads the plan needed that failed (#467), for the re-run advice. */
+    readonly failedReads: FailedRead[] = []
   ) {
     super(message);
     this.name = 'RebaseReadError';

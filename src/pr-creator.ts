@@ -136,6 +136,24 @@ export function formatStillOpenNotice(lectures: StillOpenNotice[]): string {
   return `\n\n### ⚠️ Earlier Translation PR Still Open\n\nThe translation of each lecture below is at an earlier source commit than the English this source PR changed, and an open translation PR carries the changes in between. This PR was built on the translation without them. **Merge the earlier PR first**: once it merges, rebase mode rebuilds this PR on top of it.\n\n${lines.join('\n')}`;
 }
 
+/** A state file this PR writes over a file that did not load as a YAML mapping (#290). */
+export interface OverwrittenState {
+  path: string;
+  /** Why, as a clause: `it uses the YAML tag !!timestamp, which state files do not support`. */
+  reason: string;
+}
+
+/**
+ * The PR-body notice for state files this PR writes over a file that did not
+ * load as a YAML mapping (#290), or '' when there are none. Each says why,
+ * since a file that uses an unsupported tag looks well-formed.
+ */
+export function formatOverwrittenStatesNotice(states: OverwrittenState[]): string {
+  if (states.length === 0) return '';
+  const lines = states.map((s) => `- \`${s.path}\`: ${s.reason}`);
+  return `\n\n### \u{26a0}\u{fe0f} State Files Overwritten\n\nEach state file below could not be read as a YAML mapping, so this PR writes it afresh: any keys it held besides the ones sync writes, such as a sign-off, are gone. Restore them from the file's history if they matter.\n\n${lines.join('\n')}`;
+}
+
 export interface PrCreationResult {
   prUrl: string;
   branchName: string;
@@ -161,6 +179,7 @@ export interface PrCreationResult {
  * @param scopeSkipped - Lectures `sync-scope: existing` left out of the run (#344)
  * @param stillOpen - Lectures synced on top of an open translation PR (#420)
  * @param lectureSet - What the lecture set left out or found missing (#449)
+ * @param overwrittenStates - State files written over a file that was not a YAML mapping (#290)
  * @returns PR creation result with URL and branch name
  */
 export async function createTranslationPR(
@@ -177,7 +196,8 @@ export async function createTranslationPR(
   failedNewFiles?: FailedNewFilesNotice,
   scopeSkipped?: ScopeSkip[],
   stillOpen?: StillOpenNotice[],
-  lectureSet?: LectureSetReport
+  lectureSet?: LectureSetReport,
+  overwrittenStates?: OverwrittenState[]
 ): Promise<PrCreationResult> {
   const { targetOwner, targetRepo } = config;
 
@@ -249,7 +269,8 @@ export async function createTranslationPR(
     failedNewFiles,
     scopeSkipped,
     stillOpen,
-    lectureSet
+    lectureSet,
+    overwrittenStates
   );
 
   // Build PR title
@@ -391,7 +412,8 @@ export function buildPrBody(
   failedNewFiles?: FailedNewFilesNotice,
   scopeSkipped?: ScopeSkip[],
   stillOpen?: StillOpenNotice[],
-  lectureSet?: LectureSetReport
+  lectureSet?: LectureSetReport,
+  overwrittenStates?: OverwrittenState[]
 ): string {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);
@@ -477,6 +499,11 @@ export function buildPrBody(
   // Absent when there are none; never part of the metadata's `files` below.
   const lectureSetNotice = lectureSet ? formatLectureSetNotice(lectureSet) : '';
 
+  // State files written over one that was not a YAML mapping (#290): the run
+  // log warns, and the editor, who may have kept keys of their own in it,
+  // reads it here. Absent when there are none; never part of the metadata.
+  const overwrittenNotice = formatOverwrittenStatesNotice(overwrittenStates ?? []);
+
   // Build machine-readable metadata for rebase mode
   // Use fileMetadata (with type info) if available, otherwise fall back to path-only
   const metadataFiles: TranslationSyncMetadata['files'] = fileMetadata
@@ -515,7 +542,7 @@ This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoNam
 ### Source PR
 **[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ''}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
 
-${filesChangedSection}${failedFilesNotice}${stillOpenNotice}${skippedNotice}${droppedNotice}${scopeNotice}${lectureSetNotice}
+${filesChangedSection}${failedFilesNotice}${stillOpenNotice}${skippedNotice}${droppedNotice}${scopeNotice}${lectureSetNotice}${overwrittenNotice}
 
 ### Details
 - **Source Language**: ${config.sourceLanguage}

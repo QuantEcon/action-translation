@@ -53848,6 +53848,7 @@ var path6 = __toESM(require("path"), 1);
 // dist/cli/translate-state.js
 var fs5 = __toESM(require("fs"), 1);
 var path4 = __toESM(require("path"), 1);
+var import_util = require("util");
 var TRANSLATE_DIR = ".translate";
 var STATE_DIR = "state";
 var _cachedVersion;
@@ -53900,6 +53901,298 @@ function getToolVersion() {
   }
   _cachedVersion = "unknown";
   return _cachedVersion;
+}
+function isPlainMapping(value) {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    return false;
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+var ENGINE_STATE_KEYS = /* @__PURE__ */ new Set([
+  "source-sha",
+  "synced-at",
+  "model",
+  "mode",
+  "section-count",
+  "tool-version"
+]);
+function mergeFileState(existing, state, shownPath) {
+  const engine = {};
+  for (const [key, value] of Object.entries(state)) {
+    if (ENGINE_STATE_KEYS.has(key))
+      engine[key] = value;
+  }
+  const content = serializeFileState(engine);
+  if (existing === void 0)
+    return { content };
+  let parsed;
+  try {
+    parsed = load(existing, { schema: CORE_SCHEMA });
+  } catch (error4) {
+    const message = error4 instanceof Error ? error4.message.split("\n")[0] : String(error4);
+    const tag = /^unknown tag !<([^>]*)>/.exec(message)?.[1];
+    const reason = tag !== void 0 ? `it uses the YAML tag ${tag.replace(/^tag:yaml\.org,2002:/, "!!")}, which state files do not support` : `it could not be read as YAML (${message})`;
+    return {
+      content,
+      overwritten: true,
+      overwrittenReason: reason,
+      warning: (tag !== void 0 ? `${shownPath} could not be read, since ${reason}, so it was overwritten` : `${shownPath} could not be read as YAML (${message}), so it was overwritten`) + ": any keys it held besides the ones sync writes are gone"
+    };
+  }
+  if (parsed === void 0 || parsed === null) {
+    return {
+      content,
+      warning: `${shownPath} held no keys (it was empty, or only comments), so it was overwritten`
+    };
+  }
+  if (!isPlainMapping(parsed)) {
+    return {
+      content,
+      overwritten: true,
+      overwrittenReason: "it is not a YAML mapping of keys to values",
+      warning: `${shownPath} was not a YAML mapping of keys to values, so it was overwritten: any keys it held besides the ones sync writes are gone`
+    };
+  }
+  const keptKeys = Object.keys(parsed).filter((key) => !ENGINE_STATE_KEYS.has(key));
+  if (keptKeys.length === 0)
+    return { content };
+  const blocks = keptKeyBlocks(existing);
+  if (blocks) {
+    const merged = content + blocks.join("");
+    if (keepsValues(merged, parsed, keptKeys, content))
+      return { content: merged };
+  }
+  const asText = keptKeysAsText(existing, keptKeys, parsed);
+  if (asText !== void 0) {
+    const merged = content + asText;
+    if (keepsValues(merged, parsed, keptKeys, content)) {
+      return {
+        content: merged,
+        warning: `${shownPath}: the keys it held besides the ones sync writes were kept, but their text could not be carried over as written, so they were written out again: each value keeps its text, but quoting, comments and layout may have changed`
+      };
+    }
+  }
+  return {
+    content: content + dump(definedCopy(keptKeys, (key) => parsed[key]), DUMP_OPTIONS),
+    warning: `${shownPath}: the keys it held besides the ones sync writes were kept, but their text could not be carried over as written, so their values were re-serialised: quoting, comments and number formatting may have changed`
+  };
+}
+var DUMP_OPTIONS = {
+  lineWidth: -1,
+  quotingType: '"',
+  schema: CORE_SCHEMA
+};
+function definedCopy(keys, valueOf) {
+  const copy = {};
+  for (const key of keys) {
+    Object.defineProperty(copy, key, {
+      value: valueOf(key),
+      enumerable: true,
+      writable: true,
+      configurable: true
+    });
+  }
+  return copy;
+}
+var PlainScalar = class {
+  text;
+  constructor(text) {
+    this.text = text;
+  }
+  // So that js-yaml, which names a mapping key by its string, names it by the text.
+  get [Symbol.toStringTag]() {
+    return "PlainScalar";
+  }
+  toString() {
+    return this.text;
+  }
+};
+var TEXT_KEEPING_SCHEMA = FAILSAFE_SCHEMA.extend({
+  // The four implicit types of CORE_SCHEMA (the typings do not list the field).
+  implicit: CORE_SCHEMA.implicit.map((type2) => new Type(type2.tag, {
+    kind: "scalar",
+    resolve: type2.resolve,
+    construct: (data) => new PlainScalar(String(data)),
+    instanceOf: PlainScalar,
+    represent: (value) => value.text
+  }))
+});
+function keptKeysAsText(existing, keptKeys, parsed) {
+  let loaded;
+  try {
+    loaded = load(existing, { schema: TEXT_KEEPING_SCHEMA });
+  } catch {
+    return void 0;
+  }
+  if (!isPlainMapping(loaded))
+    return void 0;
+  const mapping = loaded;
+  const hasOwn2 = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
+  const coreKey = (key, core10) => {
+    if (hasOwn2(core10, key))
+      return key;
+    let value;
+    try {
+      value = load(key, { schema: CORE_SCHEMA });
+    } catch {
+      return void 0;
+    }
+    if (value !== null && typeof value !== "boolean" && typeof value !== "number") {
+      return void 0;
+    }
+    return hasOwn2(core10, String(value)) ? String(value) : void 0;
+  };
+  let marker = "plain-key-";
+  while (existing.includes(marker))
+    marker += "x";
+  const keyTexts = [];
+  let failed = false;
+  const pairedMapping = (value, core10, keys2) => {
+    const out = /* @__PURE__ */ new Map();
+    const used = /* @__PURE__ */ new Set();
+    for (const key of keys2) {
+      const name = coreKey(key, core10);
+      if (name === void 0 || used.has(name)) {
+        failed = true;
+        continue;
+      }
+      used.add(name);
+      let written = key;
+      if (name !== key) {
+        keyTexts.push(key);
+        written = `${marker}${keyTexts.length - 1}${marker}`;
+      }
+      out.set(written, paired(value[key], core10[name]));
+    }
+    return definedCopy([...out.keys()], (key) => out.get(key));
+  };
+  const open = /* @__PURE__ */ new Set();
+  const paired = (value, core10) => {
+    if (value === null)
+      return new PlainScalar("null");
+    if (typeof value === "object") {
+      if (open.has(value)) {
+        failed = true;
+        return value;
+      }
+      open.add(value);
+      try {
+        if (Array.isArray(value)) {
+          if (!Array.isArray(core10) || core10.length !== value.length) {
+            failed = true;
+            return value;
+          }
+          return value.map((item, index) => paired(item, core10[index]));
+        }
+        if (isPlainMapping(value)) {
+          if (!isPlainMapping(core10)) {
+            failed = true;
+            return value;
+          }
+          return pairedMapping(value, core10, Object.keys(value));
+        }
+      } finally {
+        open.delete(value);
+      }
+    }
+    return value;
+  };
+  const keys = Object.keys(mapping).filter((key) => {
+    const name = coreKey(key, parsed);
+    return name === void 0 || !ENGINE_STATE_KEYS.has(name);
+  });
+  let kept;
+  try {
+    kept = pairedMapping(mapping, parsed, keys);
+  } catch {
+    return void 0;
+  }
+  if (failed || Object.keys(kept).length !== keptKeys.length)
+    return void 0;
+  let dumped;
+  try {
+    dumped = dump(kept, { ...DUMP_OPTIONS, schema: TEXT_KEEPING_SCHEMA });
+  } catch {
+    return void 0;
+  }
+  return keyTexts.reduce((text, keyText, index) => text.split(`${marker}${index}${marker}`).join(keyText), dumped);
+}
+function keptKeyBlocks(text) {
+  if (text.startsWith("\uFEFF") || text.includes("	"))
+    return void 0;
+  const lines = text.split("\n").map((line) => line.endsWith("\r") ? line.slice(0, -1) : line);
+  if (lines.length > 0 && lines[lines.length - 1] === "")
+    lines.pop();
+  const isBlankOrComment = (line) => line.trim() === "" || line.trimStart().startsWith("#");
+  const opener = lines.findIndex((line) => !isBlankOrComment(line));
+  if (opener !== -1 && /^---\s*(#.*)?$/.test(lines[opener]))
+    lines.splice(opener, 1);
+  const keyLines = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (/^(---|\.\.\.)(\s|$)/.test(line) || line.startsWith("%"))
+      return void 0;
+    if (line === "" || /^\s/.test(line) || line.startsWith("#"))
+      continue;
+    if (/^-(\s|$)/.test(line))
+      continue;
+    if (/^[{[?]/.test(line))
+      return void 0;
+    keyLines.push(i);
+  }
+  if (keyLines.length === 0)
+    return void 0;
+  const starts = keyLines.map((keyLine, index) => {
+    if (index === 0)
+      return 0;
+    let start = keyLine;
+    while (start > keyLines[index - 1] + 1 && isBlankOrComment(lines[start - 1]))
+      start--;
+    return start;
+  });
+  const blocks = [];
+  let before = /* @__PURE__ */ new Set();
+  for (let index = 0; index < starts.length; index++) {
+    const end = index + 1 < starts.length ? starts[index + 1] : lines.length;
+    let blockLines = lines.slice(starts[index], end);
+    if (index + 1 === starts.length) {
+      while (blockLines.length > 0 && blockLines[blockLines.length - 1].trim() === "") {
+        blockLines = blockLines.slice(0, -1);
+      }
+    }
+    let loaded;
+    try {
+      loaded = load(lines.slice(0, end).join("\n") + "\n", { schema: CORE_SCHEMA });
+    } catch {
+      return void 0;
+    }
+    if (!isPlainMapping(loaded))
+      return void 0;
+    const keys = Object.keys(loaded);
+    const added = keys.filter((key) => !before.has(key));
+    if (added.length !== 1 || keys.length !== before.size + 1)
+      return void 0;
+    before = new Set(keys);
+    if (!ENGINE_STATE_KEYS.has(added[0]))
+      blocks.push(blockLines.join("\n") + "\n");
+  }
+  return blocks;
+}
+function keepsValues(merged, original, keptKeys, engineText) {
+  let reloaded;
+  let engine;
+  try {
+    reloaded = load(merged, { schema: CORE_SCHEMA });
+    engine = load(engineText, { schema: CORE_SCHEMA });
+  } catch {
+    return false;
+  }
+  if (!isPlainMapping(reloaded) || !isPlainMapping(engine))
+    return false;
+  const engineKeys = Object.keys(engine);
+  if (Object.keys(reloaded).length !== engineKeys.length + keptKeys.length)
+    return false;
+  return engineKeys.every((key) => (0, import_util.isDeepStrictEqual)(reloaded[key], engine[key])) && keptKeys.every((key) => Object.prototype.hasOwnProperty.call(reloaded, key) && (0, import_util.isDeepStrictEqual)(reloaded[key], original[key]));
 }
 function serializeFileState(state) {
   return dump(state, { lineWidth: -1, quotingType: '"' });
@@ -54843,6 +55136,7 @@ var SyncOrchestrator = class {
       path: file.filename,
       content: translatedContent
     });
+    let movedState;
     if (file.oldFileSha && file.previousFilename) {
       result.filesToDelete.push({
         path: file.previousFilename,
@@ -54856,11 +55150,14 @@ var SyncOrchestrator = class {
         if (oldStateSha) {
           result.filesToDelete.push({ path: oldStatePath, sha: oldStateSha });
           this.logger.info(`Marked old state file for deletion: ${oldStatePath}`);
+          const oldRead = this.stateConfig.existingStates?.get(oldStatePath);
+          if (oldRead?.status === "found")
+            movedState = oldRead.content;
         }
       }
     }
     if (file.newContent) {
-      await this.maybeGenerateStateFile(file.filename, file.newContent, file.sourceCommitSha, file.targetContent ? "UPDATE" : "NEW", result);
+      await this.maybeGenerateStateFile(file.filename, file.newContent, file.sourceCommitSha, file.targetContent ? "UPDATE" : "NEW", result, movedState);
     }
   }
   /**
@@ -54969,8 +55266,14 @@ var SyncOrchestrator = class {
   /**
    * Generate a .translate/state/ file for a processed markdown file.
    * Only generates when stateConfig is provided (opt-in).
+   *
+   * Written over the existing state file the run read, keeping that file's
+   * keys the engine does not own (#290); for a rename with no state file at
+   * its new path, over the old path's (`movedState`). One whose read failed
+   * is not written, so the file in the edition stays as it is: the caller
+   * holds such a lecture back before it gets here.
    */
-  async maybeGenerateStateFile(filename, sourceContent, perFileCommitSha, mode, result) {
+  async maybeGenerateStateFile(filename, sourceContent, perFileCommitSha, mode, result, movedState) {
     if (!this.stateConfig)
       return;
     const commitSha = perFileCommitSha || this.stateConfig.sourceCommitSha;
@@ -54988,9 +55291,24 @@ var SyncOrchestrator = class {
       const docsRelName = this.toDocsRelative(filename);
       const statePath = stateFileRelativePath(docsRelName);
       const existingSha = this.stateConfig.existingStateShas.get(statePath);
+      const read = this.stateConfig.existingStates?.get(statePath);
+      if (read?.status === "error") {
+        this.logger.warning(`Not writing ${statePath}: it could not be read (${read.message}), so the keys it holds besides the ones sync writes could not be kept`);
+        return;
+      }
+      const existing = read?.status === "found" ? read.content : movedState;
+      const merged = mergeFileState(existing, state, statePath);
+      if (merged.warning)
+        this.logger.warning(merged.warning);
+      if (merged.overwritten) {
+        (result.overwrittenStateFiles ??= []).push({
+          path: statePath,
+          reason: merged.overwrittenReason ?? "it is not a YAML mapping of keys to values"
+        });
+      }
       result.translatedFiles.push({
         path: statePath,
-        content: serializeFileState(state),
+        content: merged.content,
         sha: existingSha
       });
       this.logger.info(`Generated state file: ${statePath}`);
@@ -55703,7 +56021,19 @@ The translation of each lecture below is at an earlier source commit than the En
 
 ${lines.join("\n")}`;
 }
-async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet) {
+function formatOverwrittenStatesNotice(states) {
+  if (states.length === 0)
+    return "";
+  const lines = states.map((s) => `- \`${s.path}\`: ${s.reason}`);
+  return `
+
+### \u26A0\uFE0F State Files Overwritten
+
+Each state file below could not be read as a YAML mapping, so this PR writes it afresh: any keys it held besides the ones sync writes, such as a sign-off, are gone. Restore them from the file's history if they matter.
+
+${lines.join("\n")}`;
+}
+async function createTranslationPR(octokit, translatedFiles, filesToDelete, config, logger, sourcePrInfo, skippedSections, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet, overwrittenStates) {
   const { targetOwner, targetRepo } = config;
   const { data: targetRepoData } = await octokit.rest.repos.get({
     owner: targetOwner,
@@ -55749,7 +56079,7 @@ async function createTranslationPR(octokit, translatedFiles, filesToDelete, conf
     });
     logger.info(`Deleted: ${file.path}`);
   }
-  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet);
+  const prBody = buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, baseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet, overwrittenStates);
   const prTitle = buildPrTitle(translatedFiles, filesToDelete, config, sourcePrInfo);
   let pr;
   try {
@@ -55828,7 +56158,7 @@ async function findPullForBranch(octokit, targetOwner, targetRepo, branchName, l
   }
   return void 0;
 }
-function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet) {
+function buildPrBody(translatedFiles, filesToDelete, config, sourcePrInfo, skippedSections, targetBaseSha, fileMetadata, droppedTargetSections, failedNewFiles, scopeSkipped, stillOpen, lectureSet, overwrittenStates) {
   const newFiles = translatedFiles.filter((f) => !f.sha);
   const updatedFiles = translatedFiles.filter((f) => f.sha);
   let filesChangedSection = "";
@@ -55890,6 +56220,7 @@ ${lines.join("\n")}`;
   const scopeNotice = formatScopeNotice(scopeSkipped ?? []);
   const stillOpenNotice = formatStillOpenNotice(stillOpen ?? []);
   const lectureSetNotice = lectureSet ? formatLectureSetNotice(lectureSet) : "";
+  const overwrittenNotice = formatOverwrittenStatesNotice(overwrittenStates ?? []);
   const metadataFiles = fileMetadata ? fileMetadata.map((f) => {
     const entry = {
       path: f.path,
@@ -55924,7 +56255,7 @@ This PR contains automated translations from [${sourceRepoOwner}/${sourceRepoNam
 ### Source PR
 **[#${prNumber}${sourcePrTitle ? ` - ${sourcePrTitle}` : ""}](https://github.com/${sourceRepoOwner}/${sourceRepoName}/pull/${prNumber})**
 
-${filesChangedSection}${failedFilesNotice}${stillOpenNotice}${skippedNotice}${droppedNotice}${scopeNotice}${lectureSetNotice}
+${filesChangedSection}${failedFilesNotice}${stillOpenNotice}${skippedNotice}${droppedNotice}${scopeNotice}${lectureSetNotice}${overwrittenNotice}
 
 ### Details
 - **Source Language**: ${config.sourceLanguage}
@@ -56028,8 +56359,21 @@ async function refreshStaleBranch(octokit, owner, repo, prNumber) {
 
 // dist/rebase-plan.js
 function planRebaseRead(reads) {
-  if (reads.onMain === "found")
-    return { action: "update" };
+  if (reads.onMain === "found") {
+    if (reads.atBaseline === void 0 || reads.atBaseline === "found")
+      return { action: "update" };
+    if (reads.sourceParent === "found")
+      return { action: "update" };
+    if (reads.atBaseline === "error")
+      return { action: "error", reason: "baseline-read" };
+    if (reads.sourceParent === void 0 || reads.sourceParent === "error") {
+      return { action: "error", reason: "source-parent-read" };
+    }
+    if (reads.onBranch === void 0 || reads.onBranch === "error") {
+      return { action: "error", reason: "branch-read" };
+    }
+    return reads.onBranch === "found" ? { action: "added-on-main-since-opened" } : { action: "update" };
+  }
   if (reads.onMain === "error")
     return { action: "error", reason: "main-read" };
   if (reads.newPathOnMain === "found")
@@ -56050,9 +56394,17 @@ function planRebaseRead(reads) {
 }
 var RebaseReadError = class extends Error {
   deletedSinceOpened;
-  constructor(message, deletedSinceOpened) {
+  addedOnMainSinceOpened;
+  unreadStates;
+  otherErrors;
+  failedReads;
+  constructor(message, deletedSinceOpened, addedOnMainSinceOpened = [], unreadStates = [], otherErrors = false, failedReads = []) {
     super(message);
     this.deletedSinceOpened = deletedSinceOpened;
+    this.addedOnMainSinceOpened = addedOnMainSinceOpened;
+    this.unreadStates = unreadStates;
+    this.otherErrors = otherErrors;
+    this.failedReads = failedReads;
     this.name = "RebaseReadError";
   }
 };
@@ -56222,7 +56574,7 @@ async function checkSyncPremise(input, reader, logger) {
     if (read.status === "error") {
       const error4 = `Fetch failed (state): ${file.filename}: could not read ${statePath} from ${edition} (${read.message}), so whether its translation starts from this PR's English could not be checked. It was not synced.`;
       logger.error(error4);
-      outcomes.push({ error: error4 });
+      outcomes.push({ error: error4, unread: { file: file.filename, statePath, status: read.message } });
       continue;
     }
     if (read.status === "missing") {
@@ -56312,6 +56664,8 @@ async function checkSyncPremise(input, reader, logger) {
       result.files.push(entry.keep);
     } else if ("error" in entry) {
       result.errors.push(entry.error);
+      if (entry.unread)
+        (result.unreadStates ??= []).push(entry.unread);
     } else if (entry.mismatch.case === "still-open") {
       const lecture = entry.mismatch;
       const one = lecture.openPulls.length === 1;
@@ -56376,6 +56730,14 @@ function resyncParagraph(prNumber, mergeSha) {
     "must print 0. A structural-parity failure repeats exactly on a resync, so fix its cause first."
   ];
 }
+function unreadStateLines(unread, prNumber) {
+  const one = unread.length === 1;
+  return [
+    `${one ? "This lecture was" : "These lectures were"} held back, not translated: the read of ${one ? "its" : "each one's"} state file answered something other than "not found", and sync keeps the keys a state file holds besides its own, so it does not write over a file it could not read. A failed read is transient more often than not: once the state file reads again, sync ${one ? "it" : "them"} again with \`${RESYNC_COMMAND}\` on #${prNumber}, under the condition below.`,
+    "",
+    ...unread.map((lecture) => `- \`${lecture.file}\`: \`${lecture.statePath}\` (${lecture.status})`)
+  ];
+}
 function bibliographyIntro(input) {
   return `This run synced nothing: it could not read the bibliography a sync needs to carry the entries its citations use (the edition's \`${input.docsFolder}_config.yml\`, and the files its \`bibtex_bibfiles\` lists, in the edition and in the source). No lecture was translated and nothing in ${input.targetRepo} changed. Make the file the error names readable (a transient error needs nothing), then sync this PR's changes again: with \`${RESYNC_COMMAND}\` under the condition below, or lecture by lecture from a checkout of the source's default branch:`;
 }
@@ -56398,16 +56760,29 @@ function failureRecoveryLines(input) {
   if (input.folderMoved)
     return folderMovedLines(input.folderMoved, input.docsFolder);
   const heldBack = input.heldBack ?? [];
+  const unread = input.unreadStates ?? [];
   const premise = formatPremiseRecovery(heldBack, input.docsFolder, input.targetLanguage);
-  const otherErrors = input.errors.length > heldBack.length;
-  if (!otherErrors)
+  const otherErrors = input.errors.length > heldBack.length + unread.length;
+  if (!otherErrors && unread.length === 0)
     return premise;
+  const lines = [];
+  if (premise.length > 0)
+    lines.push(...premise, "");
+  if (unread.length > 0) {
+    if (premise.length > 0) {
+      lines.push("**For the lectures whose state file could not be read:**", "");
+    }
+    lines.push(...unreadStateLines(unread, input.prNumber), "");
+    if (!otherErrors) {
+      lines.push(...resyncParagraph(input.prNumber, input.mergeSha));
+      return lines;
+    }
+  }
+  if (lines.length > 0)
+    lines.push("**For the other errors:**", "");
   const syncedNothing = input.bibliographyUnread || input.lectureSetUnread;
   const lectures = syncedNothing ? [] : input.failedLectures ?? [];
   const stillOpen = input.stillOpen ?? [];
-  const lines = [];
-  if (premise.length > 0)
-    lines.push(...premise, "", "**For the other errors:**", "");
   lines.push(input.lectureSetUnread ? lectureSetIntro(input) : input.bibliographyUnread ? bibliographyIntro(input) : "Recover a lecture from a checkout of the source's default branch, not by re-running this sync:", "");
   const removals = input.lectureSetUnread ? input.heldRemovals ?? [] : [];
   if (removals.length > 0) {
@@ -56442,7 +56817,9 @@ function deletedName(lecture) {
 }
 function rebaseFailureComment(input) {
   const deleted = input.deletedSinceOpened ?? [];
-  const lectures = input.overlapping.filter((path9) => path9.endsWith(".md") && !deleted.some((d) => d.path === path9 || d.editionPath === path9)).map((path9) => `\`${fileArgument(path9, input.docsFolder)}\``);
+  const added = input.addedOnMainSinceOpened ?? [];
+  const held = [...deleted, ...added];
+  const lectures = input.overlapping.filter((path9) => path9.endsWith(".md") && !held.some((d) => d.path === path9 || d.editionPath === path9)).map((path9) => `\`${fileArgument(path9, input.docsFolder)}\``);
   const files = lectures.length > 0 ? ` (here: ${lectures.join(", ")})` : "";
   const lines = [
     `\u26A0\uFE0F **Automatic rebase failed** after #${input.mergedPrNumber} was merged.`,
@@ -56453,6 +56830,29 @@ function rebaseFailureComment(input) {
   if (deleted.length > 0) {
     const one = deleted.length === 1;
     lines.push(`${listOf(deleted.map(deletedName))} ${one ? "is" : "are"} no longer on \`main\`: ${one ? "it was" : "they were"} there when this PR opened, and a PR merged since deleted ${one ? "it" : "them"}. The rebase does not bring a deleted lecture back. If the deletion stands, remove ` + (one ? "the lecture and its state file" : "those lectures and their state files") + ` from this PR's branch (the next rebase then leaves ${one ? "it" : "them"} out), or close the PR if nothing else is left in it. If ${one ? "the lecture" : "a lecture"} should stay in the edition, restore it on \`main\` first, then resolve this PR by hand.`, "");
+  }
+  if (added.length > 0) {
+    const one = added.length === 1;
+    lines.push(`${listOf(added.map(deletedName))} ${one ? "is" : "are"} on \`main\` now but ${one ? "was" : "were"} not when this PR opened: a PR merged since added ${one ? "it" : "them"}, and this PR's source change adds ${one ? "it" : "them"} too, so the edition has two translations of ${one ? "it" : "each"}. The rebase does not choose between them, and changed neither. Decide which copy wins. To keep \`main\`'s, make ${one ? "the lecture and its state file" : "those lectures and their state files"} on this PR's branch match \`main\`, or close the PR if nothing else is left in it. To keep this PR's, resolve the conflict on its branch by hand, keeping the branch's copy. Until this PR merges or closes, a later rebase of it stops here again, whatever the branch's copy then holds: this PR's baseline lacks ${one ? "the lecture" : "them"}, and its branch has ${one ? "it" : "them"}.`, "");
+  }
+  const unread = input.unreadStates ?? [];
+  const failedReads = input.failedReads ?? [];
+  if (added.length > 0 && deleted.length === 0 && lectures.length === 0 && unread.length === 0 && failedReads.length === 0) {
+    return lines.slice(0, -1).join("\n");
+  }
+  if (unread.length > 0) {
+    const one = unread.length === 1;
+    lines.push(`The rebase stopped before the branch moved, and translated nothing: the read of ${one ? "the state file" : "each state file"} below answered something other than "not found", and the rebase keeps the keys a state file holds besides its own, so it does not write over a file it could not read. A failed read is transient more often than not: once it reads again, re-run the failed rebase workflow run, which rebuilds this PR on the current \`main\`.`, "", ...unread.map((lecture) => `- \`${lecture.file}\`: \`${lecture.statePath}\` (${lecture.status})`));
+    if (!input.otherErrors)
+      return lines.join("\n");
+    lines.push("");
+  }
+  if (failedReads.length > 0) {
+    const one = failedReads.length === 1;
+    lines.push(`The rebase stopped before the branch moved, and translated nothing: ${one ? "the read below" : "each read below"} answered something other than "not found", and what the rebase does with the lecture depends on it. A failed read is transient more often than not: once it reads again, re-run the failed rebase workflow run, which rebuilds this PR on the current \`main\`.`, "", ...failedReads.map((read) => `- \`${read.file}\`: ${read.read} (${read.status})`));
+    if (!input.otherErrors)
+      return lines.join("\n");
+    lines.push("");
   }
   lines.push(`Resolve the conflicts by hand, or regenerate the overlapping lectures with \`translate forward -f <file>\`${files}, run from a checkout of the source's default branch, where \`<file>\` is the lecture's path inside the docs folder. \`translate forward\` regenerates the whole lecture, so on a lecture that has been natively reviewed, carry the changes in by hand instead.`);
   const metadata = input.metadata;
@@ -56737,6 +57137,96 @@ function normalizeFindings(rawFindings, legacyIssues, validFiles) {
 }
 function sortAndCapFindings(findings) {
   return [...findings].sort((a, b) => severityRank(a.severity) - severityRank(b.severity)).slice(0, MAX_FINDINGS);
+}
+var MIN_QUOTED_SPAN = 6;
+var STRONG_QUOTED_SPAN = 20;
+var QUOTED_SPAN_PATTERNS = [
+  /`([^`\n]+)`/g,
+  /(?<![\p{L}\p{N}])"(?=\S)([^"\n]+)(?<=\S)"(?![\p{L}\p{N}])/gu,
+  /\u{201c}([^\u{201d}\n]+)\u{201d}/gu,
+  /(?<![\p{L}\p{N}])\u{2018}([^\u{2018}\n]+)\u{2019}(?![\p{L}\p{N}])/gu,
+  /\u{300c}([^\u{300d}\n]+)\u{300d}/gu,
+  /\u{300e}([^\u{300f}\n]+)\u{300f}/gu,
+  /\u{ab}([^\u{bb}\n]+)\u{bb}/gu,
+  /\u{2039}([^\u{203a}\n]+)\u{203a}/gu,
+  /(?<![\p{L}\p{N}])'([^'\n]+)'(?![\p{L}\p{N}])/gu
+];
+var CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
+function normalizeForAttribution(text) {
+  return text.normalize("NFKC").replace(/\{[A-Za-z][\w.:+-]*\}(?=`)/g, "").replace(/[`*]/g, "").replace(/(?<![\p{L}\p{N}])_+|_+(?![\p{L}\p{N}])/gu, "").replace(/[\u{2018}\u{2019}]/gu, "'").replace(/\s+/g, " ").trim().toLowerCase();
+}
+function withoutSpaces(normalized) {
+  return normalized.replace(/\s+/g, "");
+}
+function quotedSpans(text) {
+  const spans = /* @__PURE__ */ new Set();
+  for (const pattern of QUOTED_SPAN_PATTERNS) {
+    for (const match of text.matchAll(pattern)) {
+      const span = normalizeForAttribution(match[1]);
+      if ([...span].length < MIN_QUOTED_SPAN)
+        continue;
+      spans.add(span);
+    }
+  }
+  return [...spans];
+}
+function reattributeFindings(findings, files) {
+  const texts = new Map(files.map((file) => {
+    const spaced = [...file.sources, ...file.targets].map(normalizeForAttribution);
+    return [
+      file.filename,
+      {
+        spaced,
+        unspaced: spaced.map(withoutSpaces),
+        bothSides: file.sources.length > 0 && file.targets.length > 0
+      }
+    ];
+  }));
+  const holds = (filename, span) => {
+    const file = texts.get(filename);
+    if (!file)
+      return false;
+    return CJK.test(span) ? file.unspaced.some((text) => text.includes(withoutSpaces(span))) : file.spaced.some((text) => text.includes(span));
+  };
+  const namedHolds = (filename, span) => holds(filename, span) || (texts.get(filename)?.unspaced ?? []).some((text) => text.includes(withoutSpaces(span)));
+  const reattributed = [];
+  const result = findings.map((finding, index) => {
+    const named = finding.file;
+    if (named === null || !texts.get(named)?.bothSides)
+      return finding;
+    const spans = quotedSpans(finding.description);
+    if (spans.length === 0)
+      return finding;
+    if (spans.some((span) => namedHolds(named, span)))
+      return finding;
+    const others = [...texts.keys()].filter((filename) => filename !== named);
+    const found = [];
+    let nowhere = 0;
+    let destination;
+    for (const span of spans) {
+      const holders = others.filter((filename) => holds(filename, span));
+      if (holders.length === 0) {
+        nowhere++;
+        continue;
+      }
+      if (holders.length > 1)
+        return finding;
+      if (destination !== void 0 && destination !== holders[0])
+        return finding;
+      destination = holders[0];
+      found.push(span);
+    }
+    if (destination === void 0)
+      return finding;
+    const strong = found.length >= 2 || [...found[0]].length >= STRONG_QUOTED_SPAN;
+    if (!strong)
+      return finding;
+    if (nowhere > 1 || nowhere === 1 && found.length < 2)
+      return finding;
+    reattributed.push({ index, from: named, to: destination });
+    return { ...finding, file: destination, location: null };
+  });
+  return { findings: result, reattributed };
 }
 function findingToDisplayString(finding) {
   const tag = `**[${finding.severity} \xB7 ${finding.category}]**`;
@@ -57404,6 +57894,7 @@ var TranslationReviewer = class {
     let targetBefore = "";
     const changedSections = [];
     const filePairs = /* @__PURE__ */ new Map();
+    const targetBeforeByFile = /* @__PURE__ */ new Map();
     for (const file of reviewableFiles) {
       try {
         const { data: targetData } = await this.octokit.rest.repos.getContent({
@@ -57430,7 +57921,9 @@ var TranslationReviewer = class {
           ref: pr.base.sha
         });
         if ("content" in targetBeforeData) {
-          targetBefore += decodeFileContent(targetBeforeData, "target", file.filename, pr.base.sha) + "\n\n";
+          const content = decodeFileContent(targetBeforeData, "target", file.filename, pr.base.sha);
+          targetBefore += content + "\n\n";
+          targetBeforeByFile.set(file.filename, content);
         }
       } catch (error4) {
         if (!isNotFoundError(error4))
@@ -57459,7 +57952,12 @@ var TranslationReviewer = class {
     if (sourceEnglish.trim() === "") {
       throw new Error(`Review aborted: no source content could be fetched for ${reviewableFilenames.join(", ")} \u2014 nothing to review against`);
     }
-    const translationQuality = await this.evaluateTranslation(sourceEnglish, targetTranslation, changedSections, reviewableFilenames, glossaryTerms, targetLanguage);
+    const evaluatedQuality = await this.evaluateTranslation(sourceEnglish, targetTranslation, changedSections, reviewableFilenames, glossaryTerms, targetLanguage);
+    const translationQuality = this.attributeFindings(evaluatedQuality, reviewableFilenames, [...filePairs.entries()].map(([filename, pair]) => ({
+      filename,
+      sources: [pair.source, sourceBeforeMap.get(filename)].filter((text) => text !== void 0),
+      targets: [pair.target, targetBeforeByFile.get(filename)].filter((text) => text !== void 0)
+    })));
     let diffQuality;
     let diffUnparseable = false;
     try {
@@ -57768,6 +58266,26 @@ Every file removed here is also deleted by source PR #${sourcePrNumber}, so the 
       reviewedHeadSha: pr.head.sha,
       reviewComment
     };
+  }
+  /**
+   * Move each finding whose quotes belong to one other reviewed file to that
+   * file (#223; see `reattributeFindings`), logging each move, and rebuild
+   * the comment's lines from the result. A single-file PR, or one with a
+   * reviewed file whose text this run does not hold, is returned unchanged.
+   */
+  attributeFindings(quality, reviewedFilenames, files) {
+    if (reviewedFilenames.length < 2)
+      return quality;
+    const held = new Set(files.filter((f) => f.sources.length + f.targets.length > 0).map((f) => f.filename));
+    if (!reviewedFilenames.every((filename) => held.has(filename)))
+      return quality;
+    const { findings, reattributed } = reattributeFindings(quality.findings, files);
+    if (reattributed.length === 0)
+      return quality;
+    for (const move of reattributed) {
+      core6.info(`Finding ${move.index} re-attributed from ${move.from} to ${move.to}: its quotes are in ${move.to} and not in ${move.from} (#223)`);
+    }
+    return { ...quality, findings, issues: findings.map(findingToDisplayString) };
   }
   /**
    * Evaluate translation quality using Claude
@@ -58433,7 +58951,11 @@ The translation content is preserved; only unchanged sections were updated to ma
             metadata,
             overlapping,
             docsFolder: inputs.docsFolder,
-            deletedSinceOpened: error4 instanceof RebaseReadError ? error4.deletedSinceOpened : void 0
+            deletedSinceOpened: error4 instanceof RebaseReadError ? error4.deletedSinceOpened : void 0,
+            addedOnMainSinceOpened: error4 instanceof RebaseReadError ? error4.addedOnMainSinceOpened : void 0,
+            unreadStates: error4 instanceof RebaseReadError ? error4.unreadStates : void 0,
+            failedReads: error4 instanceof RebaseReadError ? error4.failedReads : void 0,
+            otherErrors: error4 instanceof RebaseReadError ? error4.otherErrors : void 0
           })
         });
       } catch {
@@ -58467,6 +58989,9 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
   const fetchErrors = [];
   const carried = [];
   const deletedSinceOpened = [];
+  const addedOnMainSinceOpened = [];
+  const failedReads = [];
+  const baselineReads = /* @__PURE__ */ new Map();
   for (const file of metadata.files) {
     const fileType = file.type || "markdown";
     try {
@@ -58531,11 +59056,11 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
         core9.info(`${file.path}: Could not fetch source content at ${sourceCommitSha} \u2014 skipping`);
         continue;
       }
-      let oldContent = "";
-      try {
-        const result2 = await fetchFileContent(octokit, sourceOwner, sourceRepoName, file.path, `${sourceCommitSha}^`);
-        oldContent = result2.content;
-      } catch {
+      const parentRead = await readEditionFile(octokit, sourceOwner, sourceRepoName, file.path, `${sourceCommitSha}^`);
+      const oldContent = parentRead.status === "found" ? parentRead.content : "";
+      if (parentRead.status === "error") {
+        core9.info(`${file.path}: could not read the parent commit's English (${parentRead.message})`);
+      } else if (oldContent === "") {
         core9.info(`${file.path}: New file (no parent commit content)`);
       }
       const renamed = fileType === "renamed" && file.previousPath !== void 0 && isDocsMarkdownPath(file.previousPath, inputs.docsFolder);
@@ -58545,12 +59070,28 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
       let newOnMain;
       let atBaseline;
       let onBranch;
+      let planParentPath = file.path;
+      let planParentRead = parentRead;
       if (onMain.status === "missing" && renamed) {
         newOnMain = await readEditionFile(octokit, owner, repo, file.path, baseSha);
         reads.newPathOnMain = newOnMain.status;
       }
       const newPathSettles = newOnMain?.status === "found" || newOnMain?.status === "error";
-      if (onMain.status === "missing" && !newPathSettles && metadata.targetBaseSha) {
+      if (onMain.status === "found" && metadata.targetBaseSha) {
+        atBaseline = await readEditionFile(octokit, owner, repo, editionPath2, metadata.targetBaseSha);
+        reads.atBaseline = atBaseline.status;
+        if (atBaseline.status !== "found") {
+          if (file.previousPath !== void 0) {
+            planParentPath = file.previousPath;
+            planParentRead = await readEditionFile(octokit, sourceOwner, sourceRepoName, file.previousPath, `${sourceCommitSha}^`);
+          }
+          reads.sourceParent = planParentRead.status === "error" ? "error" : planParentRead.status === "found" && planParentRead.content !== "" ? "found" : "missing";
+          if (reads.sourceParent === "missing" && atBaseline.status === "missing") {
+            onBranch = await readEditionFile(octokit, owner, repo, file.path, pr.head.ref);
+            reads.onBranch = onBranch.status;
+          }
+        }
+      } else if (onMain.status === "missing" && !newPathSettles && metadata.targetBaseSha) {
         atBaseline = await readEditionFile(octokit, owner, repo, editionPath2, metadata.targetBaseSha);
         reads.atBaseline = atBaseline.status;
         if (atBaseline.status !== "error") {
@@ -58558,18 +59099,26 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
           reads.onBranch = onBranch.status;
         }
       }
+      if (atBaseline)
+        baselineReads.set(editionPath2, atBaseline);
       const plan = planRebaseRead(reads);
       const failure = (read) => read?.status === "error" ? read.message : "unknown";
       if (plan.action === "error") {
+        const failedRead = (read, result2, detail = "") => {
+          failedReads.push({ file: file.path, read, status: failure(result2) });
+          return new Error(`Could not read ${read}${detail} (${failure(result2)})`);
+        };
         switch (plan.reason) {
           case "main-read": {
             const [path9, read] = onMain.status === "error" ? [editionPath2, onMain] : [file.path, newOnMain];
-            throw new Error(`Could not read ${path9} from ${owner}/${repo} at ${baseSha.slice(0, 7)} (${failure(read)})`);
+            throw failedRead(`${path9} from ${owner}/${repo} at ${baseSha.slice(0, 7)}`, read);
           }
           case "baseline-read":
-            throw new Error(`Could not read ${editionPath2} at this PR's baseline ${metadata.targetBaseSha?.slice(0, 7)} (${failure(atBaseline)})`);
+            throw failedRead(`${editionPath2} at this PR's baseline ${metadata.targetBaseSha?.slice(0, 7)}`, atBaseline);
           case "branch-read":
-            throw new Error(`Could not read ${file.path} on ${pr.head.ref} (${failure(onBranch)})`);
+            throw failedRead(`${file.path} on ${pr.head.ref}`, onBranch);
+          case "source-parent-read":
+            throw failedRead(`${planParentPath} from ${sourceOwner}/${sourceRepoName} at ${sourceCommitSha.slice(0, 7)}^`, planParentRead, ", which says whether this PR's source change adds the lecture");
           case "no-baseline":
             throw new Error(`${editionPath2} is not on ${baseBranch}, and this PR records no baseline (it predates the rebase cache), so a lecture deleted since it opened cannot be told from one it adds. It was not translated from scratch`);
         }
@@ -58577,6 +59126,10 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
       if (plan.action === "deleted-since-opened") {
         deletedSinceOpened.push({ editionPath: editionPath2, path: file.path });
         throw new Error(`${editionPath2} was on ${baseBranch} when this PR opened (${metadata.targetBaseSha?.slice(0, 7)}) and is not there now (${baseSha.slice(0, 7)}): a PR merged since deleted it, so this PR's change to it was not carried`);
+      }
+      if (plan.action === "added-on-main-since-opened") {
+        addedOnMainSinceOpened.push({ editionPath: editionPath2, path: file.path });
+        throw new Error(`${editionPath2} was not on ${baseBranch} when this PR opened (${metadata.targetBaseSha?.slice(0, 7)}) and is there now (${baseSha.slice(0, 7)}): a PR merged since added it, and this PR's source change adds it too, so neither translation was replaced`);
       }
       if (plan.action === "drop") {
         core9.info(`${editionPath2}: deleted from ${baseBranch} since this PR opened, and ${file.path} is no longer on ${pr.head.ref}: nothing to carry`);
@@ -58586,6 +59139,11 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
         const statePath = stateFileFor(file.path, inputs.docsFolder);
         const state = await readEditionFile(octokit, owner, repo, statePath, pr.head.ref);
         if (state.status === "error") {
+          failedReads.push({
+            file: file.path,
+            read: `${statePath} on ${pr.head.ref}`,
+            status: state.message
+          });
           throw new Error(`Could not read ${statePath} on ${pr.head.ref} (${state.message})`);
         }
         carried.push({ path: file.path, content: onBranch.content });
@@ -58642,7 +59200,16 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
     }
   }
   if (fetchErrors.length > 0) {
-    throw new RebaseReadError(`content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join("; ")}`, deletedSinceOpened);
+    throw new RebaseReadError(
+      `content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join("; ")}`,
+      deletedSinceOpened,
+      addedOnMainSinceOpened,
+      [],
+      // A lecture deleted or added on `main` since the PR opened has advice
+      // of its own, so it is not one of the other errors.
+      fetchErrors.length > failedReads.length + deletedSinceOpened.length + addedOnMainSinceOpened.length,
+      failedReads
+    );
   }
   if (filesToSync.length === 0 && carried.length === 0) {
     core9.info(`PR #${pr.number}: No files to process after content fetch. Skipping.`);
@@ -58657,8 +59224,12 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
     const prBranch = pr.head.ref;
     for (const file of filesToSync) {
       try {
+        const planned = baselineReads.get(file.filename);
+        if (planned && planned.status !== "found") {
+          throw new Error(`${file.filename} was not read at ${targetBaseSha}`);
+        }
         const { content: previousTranslation } = await fetchFileContent(octokit, owner, repo, file.filename, prBranch);
-        const { content: oldTargetContent } = await fetchFileContent(octokit, owner, repo, file.filename, targetBaseSha);
+        const { content: oldTargetContent } = planned ?? await fetchFileContent(octokit, owner, repo, file.filename, targetBaseSha);
         rebaseCache.set(file.filename, { previousTranslation, oldTargetContent });
         core9.info(`${file.filename}: Loaded rebase cache (previous translation + old baseline)`);
       } catch {
@@ -58675,12 +59246,15 @@ async function rebaseSinglePR(octokit, pr, metadata, inputs, mergedPrNumber) {
   }
   const { shas: existingStateShas, reads: stateReads } = await fetchExistingStateShas(octokit, owner, repo, filesToSync, inputs.docsFolder, baseSha);
   const unreadStates = holdUnreadDeletionStates(filesToSync, stateReads, inputs.docsFolder, `${owner}/${repo}`);
-  if (unreadStates.errors.length > 0) {
-    throw new Error(`state read failed for ${unreadStates.errors.length} file(s); branch left untouched: ` + unreadStates.errors.join("; "));
+  const unreadWritten = holdUnreadWrittenStates(unreadStates.files, stateReads, inputs.docsFolder, `${owner}/${repo}`, "It was not rebased.");
+  const stateErrors = [...unreadStates.errors, ...unreadWritten.errors];
+  if (stateErrors.length > 0) {
+    throw new RebaseReadError(`state read failed for ${stateErrors.length} file(s); branch left untouched: ` + stateErrors.join("; "), [], [], unreadWritten.unread, unreadStates.errors.length > 0);
   }
   const stateConfig = {
     sourceCommitSha,
     existingStateShas,
+    existingStates: stateReads,
     docsFolder: inputs.docsFolder
   };
   const orchestrator = new SyncOrchestrator({
@@ -58886,6 +59460,11 @@ async function runSync() {
     core9.error(error4);
   filesToSync = unreadStates.files;
   fetchErrors.push(...unreadStates.errors);
+  const unreadWritten = holdUnreadWrittenStates(filesToSync, stateReads, inputs.docsFolder, `${targetOwner}/${targetRepo}`, "It was not synced.", (file) => file.type === "markdown" && takesUpdateMode(file));
+  for (const error4 of unreadWritten.errors)
+    core9.error(error4);
+  filesToSync = unreadWritten.files;
+  fetchErrors.push(...unreadWritten.errors);
   const premise = await checkSyncPremise({
     files: filesToSync,
     stateReads,
@@ -58901,6 +59480,7 @@ async function runSync() {
   const stateConfig = {
     sourceCommitSha: effectiveSha,
     existingStateShas,
+    existingStates: stateReads,
     docsFolder: inputs.docsFolder
   };
   const orchestrator = new SyncOrchestrator({
@@ -58994,7 +59574,8 @@ async function runSync() {
         // Only the lectures this PR delivers: one that failed is in the
         // failure issue instead.
         premise.stillOpen.filter((lecture) => result.processedFiles.includes(lecture.file)),
-        reportOf(gaps)
+        reportOf(gaps),
+        result.overwrittenStateFiles
       );
       prUrl = prResult.prUrl;
       core9.setOutput("pr-url", prResult.prUrl);
@@ -59017,6 +59598,7 @@ async function runSync() {
         mergeSha: effectiveSha,
         heldBack: premise.heldBack,
         failedLectures,
+        unreadStates: [...unreadWritten.unread, ...premise.unreadStates ?? []],
         bibliographyUnread: bibliographyError !== void 0,
         // A bibliography hold synced nothing, so no lecture behind an open
         // PR failed: its diagnosis would read as an error of its own.
@@ -59297,6 +59879,23 @@ function holdUnreadDeletionStates(files, reads, docsFolder, targetRepo, reported
     kept.push(file);
   }
   return { files: kept, errors };
+}
+function holdUnreadWrittenStates(files, reads, docsFolder, targetRepo, outcome, reported = () => false) {
+  const kept = [];
+  const errors = [];
+  const unread = [];
+  for (const file of files) {
+    const writes = file.type === "markdown" || file.type === "renamed";
+    const statePath = writes ? stateFileFor(file.filename, docsFolder) : void 0;
+    const read = statePath ? reads.get(statePath) : void 0;
+    if (statePath && read?.status === "error" && !reported(file)) {
+      errors.push(`Fetch failed (state): ${file.filename}: could not read ${statePath} from ${targetRepo} (${read.message}), so the keys it holds besides the ones sync writes could not be kept. ${outcome}`);
+      unread.push({ file: file.filename, statePath, status: read.message });
+      continue;
+    }
+    kept.push(file);
+  }
+  return { files: kept, errors, unread };
 }
 async function postSuccessComment(octokit, prNumber, targetLanguage, targetRepo, prUrl, processedFiles) {
   try {

@@ -40,7 +40,7 @@ import {
 } from './sync-premise.js';
 import { docsRelativePath } from './sync-scope.js';
 import { stateFileRelativePath } from './cli/translate-state.js';
-import type { DeletedLecture } from './rebase-plan.js';
+import type { AddedLecture, DeletedLecture } from './rebase-plan.js';
 
 /** A lecture whose sync failed, for the per-lecture recovery lines. */
 export interface FailedLecture {
@@ -96,6 +96,35 @@ export interface FailureIssueInput {
    * book and the run was refused (#398). Its advice replaces the rest.
    */
   folderMoved?: { from: string; to: string };
+  /**
+   * Lectures held back because the read of their own state file answered
+   * something other than a 404 (#290). Each has its own error; a failed read
+   * is transient more often than not, so they get a resync, not the CLI.
+   */
+  unreadStates?: UnreadState[];
+}
+
+/** A lecture held back because its own state file could not be read (#290). */
+export interface UnreadState {
+  /** Source path; for a rename, the new path. */
+  file: string;
+  /** The state file whose read failed, from the repository root. */
+  statePath: string;
+  /** What the read answered, as `status 502: ...`. */
+  status: string;
+}
+
+/**
+ * A read the rebase plan needed that failed with something other than a 404
+ * (#467): of `main`, the PR's baseline, its branch, or the source parent.
+ */
+export interface FailedRead {
+  /** The lecture's path in the PR. */
+  file: string;
+  /** What was read, as `lectures/x.md at this PR's baseline 1234567`. */
+  read: string;
+  /** What the read answered, as `status 502: ...`. */
+  status: string;
 }
 
 /** The deterministic title of a sync failure issue, which a later success closes by. */
@@ -180,6 +209,28 @@ function resyncParagraph(prNumber: number, mergeSha: string | undefined): string
 }
 
 /**
+ * The advice for lectures held back because their own state file could not
+ * be read (#290). The lecture was not translated, and a failed read is
+ * transient more often than not, so the advice is to sync again once it
+ * reads, under the resync's precondition, which follows.
+ */
+function unreadStateLines(unread: UnreadState[], prNumber: number): string[] {
+  const one = unread.length === 1;
+  return [
+    `${one ? 'This lecture was' : 'These lectures were'} held back, not translated: the read of ` +
+      `${one ? 'its' : "each one's"} state file answered something other than "not found", ` +
+      'and sync keeps the keys a state file holds besides its own, so it does not write over a ' +
+      'file it could not read. A failed read is transient more often than not: once the state ' +
+      `file reads again, sync ${one ? 'it' : 'them'} again with \`${RESYNC_COMMAND}\` on ` +
+      `#${prNumber}, under the condition below.`,
+    '',
+    ...unread.map(
+      (lecture) => `- \`${lecture.file}\`: \`${lecture.statePath}\` (${lecture.status})`
+    ),
+  ];
+}
+
+/**
  * The opening of the advice when the edition's bibliography could not be read
  * (#386). The sync stopped before any lecture, so it can run again once the
  * read works, under the resync's precondition, or lecture by lecture.
@@ -247,15 +298,28 @@ function folderMovedLines(moved: { from: string; to: string }, docsFolder: strin
 export function failureRecoveryLines(input: FailureIssueInput): string[] {
   if (input.folderMoved) return folderMovedLines(input.folderMoved, input.docsFolder);
   const heldBack = input.heldBack ?? [];
+  const unread = input.unreadStates ?? [];
   const premise = formatPremiseRecovery(heldBack, input.docsFolder, input.targetLanguage);
-  const otherErrors = input.errors.length > heldBack.length;
-  if (!otherErrors) return premise;
+  const otherErrors = input.errors.length > heldBack.length + unread.length;
+  if (!otherErrors && unread.length === 0) return premise;
+
+  const lines: string[] = [];
+  if (premise.length > 0) lines.push(...premise, '');
+  if (unread.length > 0) {
+    if (premise.length > 0) {
+      lines.push('**For the lectures whose state file could not be read:**', '');
+    }
+    lines.push(...unreadStateLines(unread, input.prNumber), '');
+    if (!otherErrors) {
+      lines.push(...resyncParagraph(input.prNumber, input.mergeSha));
+      return lines;
+    }
+  }
+  if (lines.length > 0) lines.push('**For the other errors:**', '');
 
   const syncedNothing = input.bibliographyUnread || input.lectureSetUnread;
   const lectures = syncedNothing ? [] : (input.failedLectures ?? []);
   const stillOpen = input.stillOpen ?? [];
-  const lines: string[] = [];
-  if (premise.length > 0) lines.push(...premise, '', '**For the other errors:**', '');
   lines.push(
     input.lectureSetUnread
       ? lectureSetIntro(input)
@@ -345,6 +409,26 @@ export interface RebaseFailureInput {
    * merged since deleted (#389). The rebase does not bring them back.
    */
   deletedSinceOpened?: DeletedLecture[];
+  /**
+   * Lectures the PR adds that a PR merged since it opened added to `main`
+   * first (#467). The rebase does not choose between the two translations.
+   */
+  addedOnMainSinceOpened?: AddedLecture[];
+  /**
+   * Lectures whose own state file the rebase could not read (#290): the
+   * rebase stopped for them, and a re-run is the advice.
+   */
+  unreadStates?: UnreadState[];
+  /**
+   * Reads of the edition or the source that failed where they decided what
+   * the rebase does (#467): a re-run is the advice, as for `unreadStates`.
+   */
+  failedReads?: FailedRead[];
+  /**
+   * With `unreadStates` or `failedReads`: whether the rebase failed for
+   * anything else too, which keeps the general advice below theirs.
+   */
+  otherErrors?: boolean;
 }
 
 /** A deleted lecture as the comment names it, with its path in the PR for a rename. */
@@ -363,11 +447,13 @@ function deletedName(lecture: DeletedLecture): string {
  */
 export function rebaseFailureComment(input: RebaseFailureInput): string {
   const deleted = input.deletedSinceOpened ?? [];
+  const added = input.addedOnMainSinceOpened ?? [];
   // A deleted lecture is not one to regenerate: `forward` would bring it back.
+  // Nor is one with two translations: regenerating it would replace both.
+  const held = [...deleted, ...added];
   const lectures = input.overlapping
     .filter(
-      (path) =>
-        path.endsWith('.md') && !deleted.some((d) => d.path === path || d.editionPath === path)
+      (path) => path.endsWith('.md') && !held.some((d) => d.path === path || d.editionPath === path)
     )
     .map((path) => `\`${fileArgument(path, input.docsFolder)}\``);
   const files = lectures.length > 0 ? ` (here: ${lectures.join(', ')})` : '';
@@ -391,6 +477,70 @@ export function rebaseFailureComment(input: RebaseFailureInput): string {
         'first, then resolve this PR by hand.',
       ''
     );
+  }
+  if (added.length > 0) {
+    const one = added.length === 1;
+    lines.push(
+      `${listOf(added.map(deletedName))} ${one ? 'is' : 'are'} on \`main\` now but ` +
+        `${one ? 'was' : 'were'} not when this PR opened: a PR merged since added ` +
+        `${one ? 'it' : 'them'}, and this PR's source change adds ${one ? 'it' : 'them'} too, ` +
+        `so the edition has two translations of ${one ? 'it' : 'each'}. The rebase does not ` +
+        'choose between them, and changed neither. Decide which copy wins. To keep ' +
+        `\`main\`'s, make ${one ? 'the lecture and its state file' : 'those lectures and their state files'} ` +
+        "on this PR's branch match `main`, or close the PR if nothing else is left in it. To " +
+        "keep this PR's, resolve the conflict on its branch by hand, keeping the branch's " +
+        'copy. Until this PR merges or closes, a later rebase of it stops here again, ' +
+        "whatever the branch's copy then holds: this PR's baseline lacks " +
+        `${one ? 'the lecture' : 'them'}, and its branch has ${one ? 'it' : 'them'}.`,
+      ''
+    );
+  }
+  const unread = input.unreadStates ?? [];
+  const failedReads = input.failedReads ?? [];
+  // A stop for two translations alone gets only its own advice: regenerating
+  // the lecture, or resyncing the source PR, would make a third. A failed
+  // read beside it still gets the re-run advice below.
+  if (
+    added.length > 0 &&
+    deleted.length === 0 &&
+    lectures.length === 0 &&
+    unread.length === 0 &&
+    failedReads.length === 0
+  ) {
+    return lines.slice(0, -1).join('\n');
+  }
+  if (unread.length > 0) {
+    const one = unread.length === 1;
+    lines.push(
+      `The rebase stopped before the branch moved, and translated nothing: the read of ` +
+        `${one ? 'the state file' : 'each state file'} below answered something other than ` +
+        '"not found", and the rebase keeps the keys a state file holds besides its own, so it ' +
+        'does not write over a file it could not read. A failed read is transient more often ' +
+        'than not: once it reads again, re-run the failed rebase workflow run, which rebuilds ' +
+        'this PR on the current `main`.',
+      '',
+      ...unread.map(
+        (lecture) => `- \`${lecture.file}\`: \`${lecture.statePath}\` (${lecture.status})`
+      )
+    );
+    // A failed read alone needs only the re-run: regenerating would replace
+    // the translation for a transient error.
+    if (!input.otherErrors) return lines.join('\n');
+    lines.push('');
+  }
+  if (failedReads.length > 0) {
+    const one = failedReads.length === 1;
+    lines.push(
+      `The rebase stopped before the branch moved, and translated nothing: ` +
+        `${one ? 'the read below' : 'each read below'} answered something other than ` +
+        '"not found", and what the rebase does with the lecture depends on it. A failed read ' +
+        'is transient more often than not: once it reads again, re-run the failed rebase ' +
+        'workflow run, which rebuilds this PR on the current `main`.',
+      '',
+      ...failedReads.map((read) => `- \`${read.file}\`: ${read.read} (${read.status})`)
+    );
+    if (!input.otherErrors) return lines.join('\n');
+    lines.push('');
   }
   lines.push(
     'Resolve the conflicts by hand, or regenerate the overlapping lectures with ' +

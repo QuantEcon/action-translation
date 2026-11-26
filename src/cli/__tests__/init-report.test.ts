@@ -491,6 +491,44 @@ describe('translate init: a state file it cannot write (#378)', () => {
   });
 });
 
+describe('translate init: a state file it writes over (#290)', () => {
+  const seed = (content: string): string => {
+    const statePath = path.join(tmpDir, 'target', '.translate', 'state', 'good.md.yml');
+    fs.mkdirSync(path.dirname(statePath), { recursive: true });
+    fs.writeFileSync(statePath, content, 'utf-8');
+    return statePath;
+  };
+
+  it('keeps the keys the engine does not own', async () => {
+    writeSource(['good.md']);
+    api.reply(GOOD);
+    const statePath = seed(
+      'source-sha: old\nmode: RESYNC\nreviewed:\n  by: an-editor\n  date: 2026-11-20\n'
+    );
+
+    const stats = await runInit(options({ file: 'good.md' }));
+
+    expect(stats.successCount).toBe(1);
+    const written = fs.readFileSync(statePath, 'utf-8');
+    expect(written).toContain('mode: NEW\n');
+    expect(written).not.toContain('source-sha: old');
+    expect(written.endsWith('reviewed:\n  by: an-editor\n  date: 2026-11-20\n')).toBe(true);
+  });
+
+  it('overwrites one that is not a YAML mapping, with a warning after the run', async () => {
+    writeSource(['good.md']);
+    api.reply(GOOD);
+    const statePath = seed('source-sha: [broken\n');
+
+    const stats = await runInit(options({ file: 'good.md' }));
+
+    expect(stats.successCount).toBe(1);
+    expect(fs.readFileSync(statePath, 'utf-8')).toContain('mode: NEW\n');
+    const logged = logSpy.mock.calls.map((call) => String(call[0])).join('\n');
+    expect(logged).toContain('good.md: .translate/state/good.md.yml could not be read as YAML');
+  });
+});
+
 describe('translate init -f', () => {
   it('prefers the lecture named exactly over an earlier one whose name contains it', async () => {
     writeSource(['jax_intro.md', 'intro.md']);

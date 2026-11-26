@@ -31,6 +31,11 @@
  *                  fails the request with that HTTP status
  *   openPulls      also read by sync mode, which lists the edition's open PRs
  *                  when a lecture's translation is behind (#420)
+ *   modelReplies   optional [text]: the model host answers each request, in
+ *                  turn, with one streamed message whose only text is the next
+ *                  of these, ending in `end_turn`. Once they run out, or with
+ *                  none, it refuses every request with a 400. The user text of
+ *                  each request goes to the log's `modelPrompts`
  *
  * Rebase mode runs in the edition, so GITHUB_REPOSITORY names the edition and
  * RUNNER_SOURCE_REPO the source repository. Its scenario adds:
@@ -116,6 +121,8 @@ const log = {
   pullUpdates: [],
   /** Requests to the model host. */
   modelRequests: 0,
+  /** The user text each request to the model host sent, in order. */
+  modelPrompts: [],
   /** Requests nothing here fakes, to GitHub or to any other host. Each one fails. */
   unmocked: [],
   /** Whether the MockAgent still held undici's global dispatcher slot at exit. */
@@ -335,13 +342,82 @@ agent
   .reply(answerGitHub)
   .persist();
 
-// The model host refuses every request with a 400, which the translator does
-// not retry, so a model call fails fast and is counted in `modelRequests`.
+/** The user text of a Messages API request body. */
+function userText(rawBody) {
+  let body;
+  try {
+    body = JSON.parse(String(rawBody));
+  } catch {
+    return '';
+  }
+  return (body.messages ?? [])
+    .filter((message) => message.role === 'user')
+    .flatMap((message) =>
+      typeof message.content === 'string'
+        ? [message.content]
+        : message.content.filter((block) => block.type === 'text').map((block) => block.text)
+    )
+    .join('');
+}
+
+/** One streamed message whose only text is `text`, as the Messages API sends it. */
+function streamedReply(text, model) {
+  const usage = {
+    input_tokens: 120,
+    output_tokens: 1,
+    cache_creation_input_tokens: 0,
+    cache_read_input_tokens: 0,
+  };
+  const events = [
+    {
+      type: 'message_start',
+      message: {
+        id: `msg_fake_${log.modelRequests}`,
+        type: 'message',
+        role: 'assistant',
+        model,
+        content: [],
+        stop_reason: null,
+        stop_sequence: null,
+        stop_details: null,
+        usage,
+      },
+    },
+    { type: 'content_block_start', index: 0, content_block: { type: 'text', text: '' } },
+    { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } },
+    { type: 'content_block_stop', index: 0 },
+    {
+      type: 'message_delta',
+      delta: { stop_reason: 'end_turn', stop_sequence: null, stop_details: null },
+      usage: { output_tokens: 40 },
+    },
+    { type: 'message_stop' },
+  ];
+  return new Response(
+    events.map((event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`).join(''),
+    { status: 200, headers: { 'content-type': 'text/event-stream' } }
+  );
+}
+
+// The model host answers from `modelReplies` while they last, and otherwise
+// refuses every request with a 400, which the translator does not retry, so
+// a model call fails fast. Every request is counted in `modelRequests`.
 const modelOrigin = new URL(ANTHROPIC_BASE_URL).origin;
-globalThis.fetch = async (input) => {
+const MODEL_REPLIES = [...(scenario.modelReplies ?? [])];
+globalThis.fetch = async (input, init) => {
   const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url);
   if (url.origin === modelOrigin) {
     log.modelRequests += 1;
+    log.modelPrompts.push(userText(init?.body));
+    if (MODEL_REPLIES.length > 0) {
+      let model = '';
+      try {
+        model = JSON.parse(String(init?.body)).model ?? '';
+      } catch {
+        // An unparseable body still gets the reply; the model name is cosmetic.
+      }
+      return streamedReply(MODEL_REPLIES.shift(), model);
+    }
     return new Response(
       JSON.stringify({
         type: 'error',

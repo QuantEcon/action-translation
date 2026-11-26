@@ -980,6 +980,71 @@ describe('--write-state safeguard', () => {
     expect(result.entries).toHaveLength(1);
   });
 
+  it('keeps the keys of a state file the engine does not own (#290)', async () => {
+    const sourceDir = path.join(tmpDir, 'source', 'lectures');
+    const targetDir = path.join(tmpDir, 'target', 'lectures');
+    writeMd(path.join(sourceDir, 'intro.md'), SOURCE_2_SECTIONS);
+    writeMd(path.join(targetDir, 'intro.md'), TARGET_2_SECTIONS_WITH_MAP);
+    const statePath = path.join(tmpDir, 'target', '.translate', 'state', 'intro.md.yml');
+    fs.mkdirSync(path.dirname(statePath), { recursive: true });
+    fs.writeFileSync(
+      statePath,
+      "source-sha: abc123\nsynced-at: '2026-10-01'\nmodel: m\nmode: NEW\nsection-count: 1\n" +
+        'reviewed:\n  by: an-editor\n',
+      'utf-8'
+    );
+
+    const result = await runStatus({
+      source: path.join(tmpDir, 'source'),
+      target: path.join(tmpDir, 'target'),
+      docsFolder: 'lectures',
+      language: 'zh-cn',
+      exclude: [],
+      writeState: true,
+    });
+
+    expect(result.writeState?.written).toEqual(['intro.md']);
+    expect(result.writeState?.overwritten).toBeUndefined();
+    const written = fs.readFileSync(statePath, 'utf-8');
+    expect(written).toContain('mode: RESYNC\n');
+    expect(written).toContain('model: m\n');
+    expect(written.endsWith('reviewed:\n  by: an-editor\n')).toBe(true);
+  });
+
+  it('with --force, overwrites a state file that is not a YAML mapping and says so (#290)', async () => {
+    const sourceDir = path.join(tmpDir, 'source', 'lectures');
+    const targetDir = path.join(tmpDir, 'target', 'lectures');
+    writeMd(path.join(sourceDir, 'intro.md'), SOURCE_2_SECTIONS);
+    writeMd(path.join(targetDir, 'intro.md'), TARGET_2_SECTIONS_WITH_MAP);
+    const statePath = path.join(tmpDir, 'target', '.translate', 'state', 'intro.md.yml');
+    fs.mkdirSync(path.dirname(statePath), { recursive: true });
+    fs.writeFileSync(statePath, '{{{ not yaml at all', 'utf-8');
+
+    const result = await runStatus({
+      source: path.join(tmpDir, 'source'),
+      target: path.join(tmpDir, 'target'),
+      docsFolder: 'lectures',
+      language: 'zh-cn',
+      exclude: [],
+      writeState: true,
+      force: true,
+    });
+
+    expect(result.writeState?.written).toEqual(['intro.md']);
+    expect(result.writeState?.overwritten).toEqual([
+      {
+        file: 'intro.md',
+        warning: expect.stringMatching(
+          /^\.translate\/state\/intro\.md\.yml could not be read as YAML .*, so it was overwritten/
+        ),
+      },
+    ]);
+    expect(formatWriteStateSummary(result.writeState!, 'target')).toContain(
+      '  ⚠ intro.md: .translate/state/intro.md.yml could not be read as YAML'
+    );
+    expect(fs.readFileSync(statePath, 'utf-8')).toContain('mode: RESYNC\n');
+  });
+
   it('should allow --write-state with --force even when dates would block', async () => {
     const sourceDir = path.join(tmpDir, 'source', 'lectures');
     const targetDir = path.join(tmpDir, 'target', 'lectures');

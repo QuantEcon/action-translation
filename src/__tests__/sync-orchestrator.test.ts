@@ -1415,6 +1415,140 @@ parts:
       // 3 top-level sections (## headings)
       expect(state['section-count']).toBe(3);
     });
+
+    describe('over an existing state file (#290)', () => {
+      const SIGN_OFF = 'reviewed:\n  by: an-editor\n  date: 2026-11-20\n';
+      const update: FileToSync = {
+        filename: 'lectures/intro.md',
+        type: 'markdown',
+        newContent: '# Introduction\n\n## Section One\n\nUpdated',
+        oldContent: '# Introduction\n\n## Section One\n\nUpdated',
+        targetContent: '# 介绍\n\n## 第一节\n\n已更新',
+        existingFileSha: 'target-sha',
+        isNewFile: false,
+      };
+      const orchestratorWith = (
+        existingStates: StateGenerationConfig['existingStates'],
+        shas: Array<[string, string]> = []
+      ) =>
+        new SyncOrchestrator(
+          {
+            sourceLanguage: 'en',
+            targetLanguage: 'zh-cn',
+            claudeModel: 'claude-sonnet-4-20250514',
+            anthropicApiKey: 'test-key',
+          },
+          stateLogger,
+          {
+            sourceCommitSha: 'abc123',
+            existingStateShas: new Map(shas),
+            existingStates,
+            docsFolder: 'lectures/',
+          }
+        );
+      const stateOf = (result: { translatedFiles: Array<{ path: string; content: string }> }) =>
+        result.translatedFiles.find((f) => f.path.startsWith('.translate/'));
+      const warnings = () =>
+        stateLogger.messages.filter((m) => m.level === 'warning').map((m) => m.msg);
+
+      it('keeps the keys the engine does not own', async () => {
+        const result = await orchestratorWith(
+          new Map([
+            [
+              '.translate/state/intro.md.yml',
+              { status: 'found', content: 'source-sha: old\nmode: NEW\n' + SIGN_OFF },
+            ],
+          ])
+        ).processFiles([update]);
+
+        const content = stateOf(result)!.content;
+        expect(content.endsWith(SIGN_OFF)).toBe(true);
+        const state = yaml.load(content) as Record<string, unknown>;
+        expect(state['source-sha']).toBe('abc123');
+        expect(state.mode).toBe('UPDATE');
+      });
+
+      it('writes a file with no other key exactly as a fresh one', async () => {
+        const fresh = await orchestratorWith(new Map()).processFiles([update]);
+        const over = await orchestratorWith(
+          new Map([
+            [
+              '.translate/state/intro.md.yml',
+              {
+                status: 'found',
+                content: 'source-sha: old\nsynced-at: "2026-01-01"\nmodel: m\nmode: NEW\n',
+              },
+            ],
+          ])
+        ).processFiles([update]);
+        expect(stateOf(over)!.content).toBe(stateOf(fresh)!.content);
+      });
+
+      it('overwrites one that is not a YAML mapping, with a warning', async () => {
+        const result = await orchestratorWith(
+          new Map([['.translate/state/intro.md.yml', { status: 'found', content: '- a list\n' }]])
+        ).processFiles([update]);
+
+        expect(stateOf(result)!.content).toContain('mode: UPDATE\n');
+        expect(warnings()).toContainEqual(
+          expect.stringContaining('.translate/state/intro.md.yml was not a YAML mapping')
+        );
+      });
+
+      it('does not write over one whose read failed', async () => {
+        const result = await orchestratorWith(
+          new Map([['.translate/state/intro.md.yml', { status: 'error', message: 'status 502' }]])
+        ).processFiles([update]);
+
+        expect(stateOf(result)).toBeUndefined();
+        expect(warnings()).toContainEqual(
+          expect.stringContaining('Not writing .translate/state/intro.md.yml: it could not be read')
+        );
+      });
+
+      const rename: FileToSync = {
+        filename: 'lectures/new-name.md',
+        type: 'renamed',
+        newContent: '# Content\n\n## Section\n\nText',
+        oldContent: '# Content\n\n## Section\n\nText',
+        targetContent: '# 内容\n\n## 部分\n\n文本',
+        previousFilename: 'lectures/old-name.md',
+        oldFileSha: 'old-file-sha',
+        isNewFile: false,
+      };
+
+      it('moves the keys with a renamed lecture whose old state file it deletes', async () => {
+        const result = await orchestratorWith(
+          new Map([
+            ['.translate/state/old-name.md.yml', { status: 'found', content: SIGN_OFF }],
+            ['.translate/state/new-name.md.yml', { status: 'missing' }],
+          ]),
+          [['.translate/state/old-name.md.yml', 'old-state-sha']]
+        ).processFiles([rename]);
+
+        expect(stateOf(result)!.path).toBe('.translate/state/new-name.md.yml');
+        expect(stateOf(result)!.content.endsWith(SIGN_OFF)).toBe(true);
+        expect(result.filesToDelete.map((f) => f.path)).toContain(
+          '.translate/state/old-name.md.yml'
+        );
+      });
+
+      it("keeps the new path's own state file's keys over the old path's", async () => {
+        const result = await orchestratorWith(
+          new Map([
+            ['.translate/state/old-name.md.yml', { status: 'found', content: 'old: 1\n' }],
+            ['.translate/state/new-name.md.yml', { status: 'found', content: 'new: 2\n' }],
+          ]),
+          [
+            ['.translate/state/old-name.md.yml', 'old-state-sha'],
+            ['.translate/state/new-name.md.yml', 'new-state-sha'],
+          ]
+        ).processFiles([rename]);
+
+        expect(stateOf(result)!.content.endsWith('new: 2\n')).toBe(true);
+        expect(stateOf(result)!.content).not.toContain('old: 1');
+      });
+    });
   });
 });
 

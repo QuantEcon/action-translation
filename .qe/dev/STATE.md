@@ -14,7 +14,7 @@ Roadmap detail lives in the project trackers (reading order in
   thin switch around it (record `D-2026-10-19-sync-scope-existing-reads-state-files`). Folded
   in on 2026-10-19: #380 (`status --write-state` refuses English changes not yet carried, until
   `--carried`) and #387's scoped half (a scoped run that passes without a PR closes the stale
-  failure issue; `all` unchanged, so #387 stays open). The harness scope smoke passed on all
+  failure issue; the `all` half is built in #472). The harness scope smoke passed on all
   three lanes on 2026-10-22, at `b747bf8` (results in log `2026-10-19-sync-scope-harness-handover`,
   #377). Ruled on
   2026-10-19, in the records: a state file counts by existence (the CLI's reader gets fixed
@@ -338,7 +338,30 @@ Roadmap detail lives in the project trackers (reading order in
 
 ## Next
 
-**Resume here (2026-11-16, after the `--require-state` rollout):**
+**Resume here (2026-11-25, with the overnight stack open):**
+
+*Overnight stack, 2026-11-25*: **six stacked draft PRs wait for Matt's review, #471 to #476**,
+each based on the one before; nothing is merged or released. They carry #465, #390, #383, #382
+(#471); #466, #92, #387 (#472); #384, #356, #364, #430 and the `status` half of #391 (#473);
+the engine side of #325 and #324 (#474); #261's source-fetch gate, #284 and #283 (#475); #467,
+#290 and #223's first remedy (#476). Start from log `2026-11-25-overnight-stack`, which lists
+what each PR closes, the three confirmations #476 needs (the #467 stop was narrowed in the
+session), #474's release order (heal the fr edition before a release carrying #324 reaches
+`@v0`) and two defects found and not fixed, now filed: the finding cap can drop a gating finding
+(#477), and rebasing a renamed lecture fails with a missing-title error (#478). Records:
+`D-2026-11-25-a-passing-sync-closes-the-failure-issue-under-all`,
+`D-2026-11-25-refused-output-is-kept-under-translate-refused`,
+`D-2026-11-25-an-unparseable-diff-evaluation-degrades-the-review`,
+`D-2026-11-25-rebase-stops-when-main-got-the-lecture-first`,
+`D-2026-11-25-state-files-keep-keys-the-engine-does-not-own` and
+`D-2026-11-25-a-finding-moves-only-on-strong-quote-evidence`. 42 open issues were validated at
+`939ceaf` first; the rest rest on the 2026-11-11 validation. An independent review on 2026-11-26
+commented on all six PRs, and its findings were applied in a second commit on each branch
+(log section "2026-11-26 — independent review"); #290 stays open for its harness exercise, and
+a rebase keeps the default branch's state keys, as ruled on 2026-11-26, since a sign-off
+arrives by its own follow-up PR (`D-2026-11-25-state-files-keep-keys-the-engine-does-not-own`).
+
+**Before it (2026-11-16, after the `--require-state` rollout):**
 
 *Released, 2026-11-16*: **v0.33.0 is released** (#461, `d68f54d`), and `v0` points at it. Its
 payload is #460, `translate doctor --require-state` (closed #370), CLI only. §4a read 84 of 84,
@@ -493,7 +516,9 @@ delimiter rows, which already break a table in the fr edition's pandas lecture.
 
 ## Health & context
 
-- `main` green; **2,762 tests across 88 suites** (zero skips, type-checked) with
+- With the 2026-11-25 stack merged (#471 to #476), after the 2026-11-26 review and re-check rounds:
+  **3,173 tests across 91 suites** (one
+  skips when the suite runs as root). Before it, at `939ceaf`: `main` green; **2,762 tests across 88 suites** (zero skips, type-checked) with
   `doctor --require-state` (#370, #449's P4), 2,705 before it at `d73f874` (counted 2026-11-16
   in a clean worktree; a tree holding the harness's gitignored clones counts 15 more, see log
   `2026-11-16-overnight-stack`); lint at

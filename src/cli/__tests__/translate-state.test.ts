@@ -12,6 +12,7 @@ import {
   readFileState,
   inspectFileState,
   writeFileState,
+  mergeFileState,
   isSourceChanged,
   serializeFileState,
   serializeConfig,
@@ -489,6 +490,558 @@ describe('file state read/write', () => {
     const result = readFileState(tmpDir, 'intro.md');
     expect(result?.['source-sha']).toBe('new1234f');
     expect(result?.mode).toBe('RESYNC');
+  });
+});
+
+describe('a state file keeps the keys the engine does not own (#290)', () => {
+  const state: FileState = {
+    'source-sha': 'abc1234f',
+    'synced-at': '2026-11-25',
+    model: 'claude-sonnet-5',
+    mode: 'UPDATE',
+    'section-count': 4,
+  };
+  const withVersion = { ...state, 'tool-version': getToolVersion() };
+  const statePath = () => path.join(tmpDir, '.translate', 'state', 'intro.md.yml');
+  const seed = (content: string) => {
+    fs.mkdirSync(path.dirname(statePath()), { recursive: true });
+    fs.writeFileSync(statePath(), content, 'utf-8');
+  };
+  const REVIEWED = [
+    'reviewed:',
+    '  by: an-editor',
+    '  role: native reviewer',
+    '  date: 2026-11-20',
+    '  target-sha: 9f8e7d6',
+    '  source-sha: "0123456"',
+    '  via: approval',
+    '  checked: [intro, exercises]',
+    '  notes:',
+    '    - first round',
+    '    - second round',
+    'status: reviewed',
+    'weight: 3',
+    'flag: true',
+    'nothing: null',
+    '',
+  ].join('\n');
+
+  // Existing state files as the engine and its tests have written them: the
+  // fixtures of the bundle tests, the e2e harness's seed, a headingmap test's,
+  // and every file the CLI writes. None has a key the engine does not own.
+  const ENGINE_ONLY_FIXTURES: string[] = [
+    'source-sha: 1111111\nsynced-at: "2026-10-01"\nmodel: claude-sonnet-5\nmode: NEW\nsection-count: 1\n',
+    "source-sha: abc1234\nsynced-at: '2026-10-01'\nmodel: claude-sonnet-5\nmode: NEW\nsection-count: 1\n",
+    'source-sha: abc123\nsynced-at: "2026-01-01"\nmodel: claude-sonnet-4-6\nmode: NEW\nsection-count: 99\ntool-version: 0.8.0\n',
+    'source-sha: "0123456"\nsynced-at: 2026-10-19\nmodel: claude-sonnet-5\nmode: RESYNC\nsection-count: 7\ntool-version: 0.33.0\n',
+    serializeFileState({ ...state, mode: 'NEW', 'tool-version': '0.30.0' }),
+    serializeFileState({ ...state, 'source-sha': 'unknown', mode: 'RESYNC' }),
+  ];
+
+  it.each(ENGINE_ONLY_FIXTURES.map((fixture, i) => [i, fixture]))(
+    'writes a file with no other key byte for byte as before (fixture %i)',
+    (_i, fixture) => {
+      expect(mergeFileState(fixture, withVersion, 'x').content).toBe(
+        serializeFileState(withVersion)
+      );
+      seed(fixture);
+      expect(writeFileState(tmpDir, 'intro.md', state)).toBeUndefined();
+      expect(fs.readFileSync(statePath(), 'utf-8')).toBe(serializeFileState(withVersion));
+    }
+  );
+
+  it('writes a new file byte for byte as before', () => {
+    expect(mergeFileState(undefined, withVersion, 'x')).toEqual({
+      content: serializeFileState(withVersion),
+    });
+    expect(writeFileState(tmpDir, 'intro.md', state)).toBeUndefined();
+    expect(fs.readFileSync(statePath(), 'utf-8')).toBe(serializeFileState(withVersion));
+  });
+
+  it('keeps the engine keys in the order the writer gives them, as before', () => {
+    // headingmap passes the existing state back in, in the file's order.
+    const reordered = { model: 'm', mode: 'NEW', 'source-sha': 's', 'synced-at': 'd' };
+    const given = { ...reordered, 'section-count': 2 } as FileState;
+    expect(mergeFileState('model: x\n', given, 'x').content).toBe(serializeFileState(given));
+  });
+
+  it('keeps every other key, its value and its order, after the engine keys', () => {
+    seed('source-sha: old\nmode: NEW\n' + REVIEWED);
+    expect(writeFileState(tmpDir, 'intro.md', state)).toBeUndefined();
+    const written = fs.readFileSync(statePath(), 'utf-8');
+    expect(written.startsWith(serializeFileState(withVersion))).toBe(true);
+    const loaded = yaml.load(written, { schema: yaml.CORE_SCHEMA }) as Record<string, unknown>;
+    const before = yaml.load(REVIEWED, { schema: yaml.CORE_SCHEMA }) as Record<string, unknown>;
+    expect(Object.keys(loaded)).toEqual([...Object.keys(withVersion), ...Object.keys(before)]);
+    for (const key of Object.keys(before)) expect(loaded[key]).toEqual(before[key]);
+    // A bare date stays the text it was, and a quoted all-digit SHA a string.
+    expect(written).toContain('  date: 2026-11-20\n');
+    expect(written).toContain('  source-sha: "0123456"\n');
+    // The engine's values win over the file's.
+    expect(loaded['source-sha']).toBe('abc1234f');
+    expect(loaded.mode).toBe('UPDATE');
+    expect(readFileState(tmpDir, 'intro.md')).toMatchObject(state);
+  });
+
+  it('keeps the other keys through a second write unchanged', () => {
+    seed(serializeFileState(withVersion) + 'reviewed:\n  by: an-editor\n');
+    writeFileState(tmpDir, 'intro.md', state);
+    const once = fs.readFileSync(statePath(), 'utf-8');
+    writeFileState(tmpDir, 'intro.md', state);
+    expect(fs.readFileSync(statePath(), 'utf-8')).toBe(once);
+    expect(once).toBe(serializeFileState(withVersion) + 'reviewed:\n  by: an-editor\n');
+  });
+
+  it('ignores a key of the given state that the engine does not own', () => {
+    const given = { ...withVersion, reviewed: 'stale' } as unknown as FileState;
+    expect(mergeFileState('reviewed: kept\n', given, 'x').content).toBe(
+      serializeFileState(withVersion) + 'reviewed: kept\n'
+    );
+  });
+
+  it("keeps a kept key's comments, and drops those in the engine keys' region", () => {
+    seed(
+      '# signed off by hand\nsource-sha: old # the old one\n# about the sign-off\n' +
+        'reviewed: done # the editor\n'
+    );
+    expect(writeFileState(tmpDir, 'intro.md', state)).toBeUndefined();
+    expect(fs.readFileSync(statePath(), 'utf-8')).toBe(
+      serializeFileState(withVersion) + '# about the sign-off\nreviewed: done # the editor\n'
+    );
+  });
+
+  it.each([
+    ['unparseable YAML', 'source-sha: [abc\nreviewed: x\n', 'could not be read as YAML'],
+    ['a list', '- a\n- b\n', 'was not a YAML mapping'],
+    ['a scalar', 'just-a-string\n', 'was not a YAML mapping'],
+  ])('overwrites %s with a warning', (_what, content, warning) => {
+    seed(content);
+    const returned = writeFileState(tmpDir, 'intro.md', state);
+    expect(returned).toContain(`.translate/state/intro.md.yml ${warning}`);
+    expect(returned).toContain('so it was overwritten');
+    expect(returned).toContain('any keys it held besides the ones sync writes are gone');
+    expect(fs.readFileSync(statePath(), 'utf-8')).toBe(serializeFileState(withVersion));
+    expect(mergeFileState(content, withVersion, 'x').overwritten).toBe(true);
+  });
+
+  it('keeps the ruled behaviour for a repeated key: not a mapping, overwritten with a warning', () => {
+    const merged = mergeFileState(
+      'source-sha: a\nreviewed: x\nreviewed: y\n',
+      withVersion,
+      '.translate/state/intro.md.yml'
+    );
+    expect(merged.content).toBe(serializeFileState(withVersion));
+    expect(merged.overwritten).toBe(true);
+    expect(merged.warning).toBe(
+      '.translate/state/intro.md.yml could not be read as YAML (duplicated mapping key (3:1)), ' +
+        'so it was overwritten: any keys it held besides the ones sync writes are gone'
+    );
+  });
+
+  it.each([
+    ['an empty file', ''],
+    ['a blank file', '\n\n'],
+    ['a comment-only file', '# nothing yet\n'],
+  ])('overwrites %s with a warning that it held no keys', (_what, content) => {
+    seed(content);
+    expect(writeFileState(tmpDir, 'intro.md', state)).toBe(
+      '.translate/state/intro.md.yml held no keys (it was empty, or only comments), so it was ' +
+        'overwritten'
+    );
+    expect(fs.readFileSync(statePath(), 'utf-8')).toBe(serializeFileState(withVersion));
+    // Nothing was lost, so the sync PR body does not name it.
+    expect(mergeFileState(content, withVersion, 'x').overwritten).toBeUndefined();
+  });
+
+  describe('a kept key is carried as the text it was', () => {
+    const engine = () => serializeFileState(withVersion);
+    const kept = (existing: string) => {
+      const merged = mergeFileState(existing, withVersion, 'x');
+      expect(merged.warning).toBeUndefined();
+      expect(merged.content.startsWith(engine())).toBe(true);
+      return merged.content.slice(engine().length);
+    };
+
+    // Each of these a load and dump retyped (#290's review): a leading zero
+    // lost, an exponent or a hex number read as a number, a long integer
+    // rounded, a trailing zero dropped.
+    it.each([
+      'target-sha: 0123456',
+      'target-sha: 1234e56',
+      'n: 1e5',
+      'n: 1.10',
+      'n: 0x1f',
+      'n: 0o17',
+      'n: 1_000',
+      'n: 1234567890123456789',
+      'n: 12345678901234567890123456789012345678901',
+      'p: 007',
+      't: 1:30',
+      'd: 2026-11-25T10:00:00Z',
+      'yes: on',
+      'b: TRUE',
+    ])('keeps `%s` verbatim', (line) => {
+      expect(kept(`source-sha: old\n${line}\n`)).toBe(`${line}\n`);
+    });
+
+    it('keeps a nested map, a sequence and a block scalar, with their comments', () => {
+      const text = [
+        '# the sign-off',
+        'reviewed:',
+        '  by: an-editor # who',
+        '  checked: [intro, exercises]',
+        '  notes:',
+        '    - first round',
+        '    # between',
+        '    - second round',
+        'history:',
+        '- {by: a, date: 2026-01-01}',
+        '- by: b',
+        '  date: 2026-02-02',
+        'note: |',
+        '  line one',
+        '',
+        '  trailing  ',
+        'folded: >-',
+        '  a b',
+        '  c',
+        '',
+      ].join('\n');
+      expect(kept('source-sha: old\nmode: NEW\n' + text)).toBe(text);
+    });
+
+    it('keeps the kept keys in their order, after the engine keys, wherever they stood', () => {
+      expect(kept('2026: year\nsource-sha: old\nz: 1\nmode: NEW\n1: one\n')).toBe(
+        '2026: year\nz: 1\n1: one\n'
+      );
+    });
+
+    it('keeps a `__proto__` key, and keys named like Object methods', () => {
+      const text = '__proto__: {a: 1}\nconstructor: x\ntoString: y\n';
+      expect(kept('source-sha: old\n' + text)).toBe(text);
+      const loaded = yaml.load(mergeFileState(text, withVersion, 'x').content, {
+        schema: yaml.CORE_SCHEMA,
+      }) as Record<string, unknown>;
+      expect(Object.prototype.hasOwnProperty.call(loaded, '__proto__')).toBe(true);
+    });
+
+    it('keeps anchors and aliases between kept keys', () => {
+      const text = 'base: &b {by: me}\nreviewed:\n  <<: *b\n  date: 2026-01-01\n';
+      expect(kept('source-sha: old\n' + text)).toBe(text);
+    });
+
+    it('makes CRLF line endings LF, values unchanged', () => {
+      expect(kept('source-sha: old\r\nreviewed:\r\n  by: me\r\nnote: |\r\n  a\r\n  b\r\n')).toBe(
+        'reviewed:\n  by: me\nnote: |\n  a\n  b\n'
+      );
+    });
+
+    it('leaves out a document-start marker above the first key', () => {
+      expect(kept('---\nsource-sha: old\nreviewed: x\n')).toBe('reviewed: x\n');
+    });
+
+    it('is written the same by a second write', () => {
+      const first = mergeFileState('reviewed: x # c\nsource-sha: a\n', withVersion, 'x');
+      expect(mergeFileState(first.content, withVersion, 'x')).toEqual(first);
+    });
+  });
+
+  describe('falls back to writing the kept values out again, with a warning, when the text cannot be carried', () => {
+    const fallbackWarning =
+      'x: the keys it held besides the ones sync writes were kept, but their text could not be ' +
+      'carried over as written, so they were written out again: each value keeps its text, but ' +
+      'quoting, comments and layout may have changed';
+
+    it.each([
+      ['an alias of an anchor in an engine key', 'source-sha: &s abc\nreviewed: *s\n'],
+      ['a flow mapping at the top', '{source-sha: abc, reviewed: x}\n'],
+      ['a byte-order mark', '\u{feff}source-sha: abc\nreviewed: x\n'],
+      ['a tab in a value', 'source-sha: abc\nreviewed: "a\tb"\n'],
+      ['a complex key', '? [a, b]\n: c\nsource-sha: abc\n'],
+      ['a document-end marker', 'source-sha: abc\nreviewed: x\n...\n'],
+      ['a %YAML directive', '%YAML 1.2\n---\nsource-sha: abc\nreviewed: x\n'],
+      ['indented top-level keys', '  source-sha: abc\n  reviewed: x\n'],
+      ['CR-only line endings', 'source-sha: abc\rreviewed: x\r'],
+      // These two split cleanly and only the value check catches them: the comment line
+      // is part of the scalar, and the blank lines are part of a kept-chomping one.
+      [
+        'a block scalar that ends in a comment-like line before an engine key',
+        'note: |\n  line\n  # in scalar\nsource-sha: abc\n',
+      ],
+      [
+        'a keep-chomping block scalar at the end of the file',
+        'source-sha: abc\nnote: |+\n  line\n\n\n',
+      ],
+    ])('%s', (_what, existing) => {
+      const original = yaml.load(existing, { schema: yaml.CORE_SCHEMA }) as Record<string, unknown>;
+      const merged = mergeFileState(existing, withVersion, 'x');
+      expect(merged.warning).toBe(fallbackWarning);
+      expect(merged.overwritten).toBeUndefined();
+      // The values are kept, re-serialised.
+      const loaded = yaml.load(merged.content, { schema: yaml.CORE_SCHEMA }) as Record<
+        string,
+        unknown
+      >;
+      for (const key of Object.keys(original).filter((k) => k !== 'source-sha')) {
+        expect(loaded[key]).toEqual(original[key]);
+      }
+    });
+
+    it('keeps a `__proto__` key there too', () => {
+      const merged = mergeFileState('{__proto__: {a: 1}, b: 2}\n', withVersion, 'x');
+      expect(merged.warning).toBe(fallbackWarning);
+      expect(merged.content.slice(serializeFileState(withVersion).length)).toBe(
+        '__proto__:\n  a: 1\nb: 2\n'
+      );
+    });
+
+    // A plain scalar that CORE_SCHEMA reads as a number is written back as the
+    // text it was: an abbreviated SHA of digits, or of digits and one `e`, is
+    // exactly such a value (#290).
+    const kept = (existing: string) =>
+      mergeFileState(existing, withVersion, 'x').content.slice(
+        serializeFileState(withVersion).length
+      );
+    const TAB = '\t';
+
+    it.each([
+      ['a tab', `reviewed: "a${TAB}b"\n`],
+      ['a byte-order mark', '\u{feff}'],
+      ['a document-end marker', ''],
+      ['a %YAML directive', '%YAML 1.2\n---\n'],
+      ['CR-only line endings', ''],
+    ])('keeps each abbreviated SHA as written, beside %s', (what, extra) => {
+      const body = 'signed-off-sha: 1234e56\nhex-sha: 0x1f\nzero-sha: 0123456\n';
+      const existing =
+        what === 'a document-end marker'
+          ? `source-sha: abc\n${body}...\n`
+          : what === 'CR-only line endings'
+            ? `source-sha: abc\n${body}`.replace(/\n/g, '\r')
+            : what === 'a tab'
+              ? `source-sha: abc\n${body}${extra}`
+              : `${extra}source-sha: abc\n${body}`;
+      const merged = mergeFileState(existing, withVersion, 'x');
+      expect(merged.warning).toBe(fallbackWarning);
+      expect(kept(existing)).toContain(
+        'signed-off-sha: 1234e56\nhex-sha: 0x1f\nzero-sha: 0123456\n'
+      );
+    });
+
+    it('keeps them as written beside indented top-level keys', () => {
+      const existing = '  source-sha: abc\n  signed-off-sha: 1234e56\n  zero-sha: 0123456\n';
+      expect(mergeFileState(existing, withVersion, 'x').warning).toBe(fallbackWarning);
+      expect(kept(existing)).toBe('signed-off-sha: 1234e56\nzero-sha: 0123456\n');
+    });
+
+    it('writes plain scalars back as the same plain text, and quoted ones quoted', () => {
+      const existing = [
+        'source-sha: abc',
+        `note: "a${TAB}b"`,
+        'flag: true',
+        'nothing: null',
+        'tilde: ~',
+        'empty:',
+        'exp: 1e5',
+        'octal: 0o17',
+        'quoted-flag: "true"',
+        "quoted-zero: '0123456'",
+        'text: plain words',
+        '',
+      ].join('\n');
+      expect(kept(existing)).toBe(
+        [
+          // The tab, which sent the file down this path, is written escaped.
+          'note: "a\\tb"',
+          'flag: true',
+          'nothing: null',
+          'tilde: ~',
+          'empty: null',
+          'exp: 1e5',
+          'octal: 0o17',
+          'quoted-flag: "true"',
+          'quoted-zero: "0123456"',
+          'text: plain words',
+          '',
+        ].join('\n')
+      );
+    });
+
+    it('gives, loaded again, the values the original gave, with numeric text kept', () => {
+      const existing = [
+        'source-sha: abc',
+        `note: "a${TAB}b"`,
+        'signed-off-sha: 1234e56',
+        'hex: 0x1f',
+        'zero: 0123456',
+        'flag: true',
+        'nothing: null',
+        'exp: 1e5',
+        'quoted-flag: "true"',
+        'reviewed:',
+        '  by: [an-editor, 0x2a]',
+        '  at:',
+        '    - 2026-11-25',
+        '    - "2.50"',
+        '    - 2.50',
+        '    - {sha: 0123456, ok: yes}',
+        '',
+      ].join('\n');
+      const merged = mergeFileState(existing, withVersion, 'x');
+      expect(merged.warning).toBe(fallbackWarning);
+      const original = yaml.load(existing, { schema: yaml.CORE_SCHEMA }) as Record<string, unknown>;
+      const loaded = yaml.load(merged.content, { schema: yaml.CORE_SCHEMA }) as Record<
+        string,
+        unknown
+      >;
+      for (const key of Object.keys(original).filter((k) => k !== 'source-sha')) {
+        expect(loaded[key]).toEqual(original[key]);
+      }
+      // Nested maps and sequences round-trip, their numeric text as written.
+      expect(kept(existing)).toContain(
+        'reviewed:\n  by:\n    - an-editor\n    - 0x2a\n  at:\n    - 2026-11-25\n' +
+          '    - "2.50"\n    - 2.50\n    - sha: 0123456\n      ok: "yes"\n'
+      );
+      // Idempotent: the output carries as text on the next write.
+      const again = mergeFileState(merged.content, withVersion, 'x');
+      expect(again.warning).toBeUndefined();
+      expect(again.content).toBe(merged.content);
+    });
+
+    // A mapping key CORE_SCHEMA reads as a number (`0x1f`, which it names
+    // `31`) is written back as its text too. This file reached the last-resort
+    // dump, and came back as `"31": x` and `signed-off-sha: 1.234e+59`.
+    it.each([
+      ['a tab', (body: string) => `source-sha: abc\n${body}note: "a${TAB}b"\n`],
+      ['a byte-order mark', (body: string) => `\u{feff}source-sha: abc\n${body}`],
+      ['a document-end marker', (body: string) => `source-sha: abc\n${body}...\n`],
+      ['a %YAML directive', (body: string) => `%YAML 1.2\n---\nsource-sha: abc\n${body}`],
+      ['CR-only line endings', (body: string) => `source-sha: abc\n${body}`.replace(/\n/g, '\r')],
+      [
+        'indented top-level keys',
+        (body: string) => `  source-sha: abc\n${body.replace(/^/gm, '  ')}`,
+      ],
+    ])('keeps a mapping key that reads as a number as written, beside %s', (_what, make) => {
+      const existing = make('signed-off-sha: 1234e56\n0x1f: x\n');
+      const merged = mergeFileState(existing, withVersion, 'x');
+      expect(merged.warning).toBe(fallbackWarning);
+      expect(kept(existing)).toContain('signed-off-sha: 1234e56\n');
+      expect(kept(existing)).toContain('0x1f: x\n');
+      expect(merged.content).not.toContain('"31"');
+      // Loaded again, the same keys and values as the original.
+      const original = yaml.load(existing, { schema: yaml.CORE_SCHEMA }) as Record<string, unknown>;
+      const loaded = yaml.load(merged.content, { schema: yaml.CORE_SCHEMA }) as Record<
+        string,
+        unknown
+      >;
+      expect(loaded['31']).toBe('x');
+      expect(loaded['signed-off-sha']).toEqual(original['signed-off-sha']);
+      // Idempotent: the output carries as text on the next write.
+      const again = mergeFileState(merged.content, withVersion, 'x');
+      expect(again.warning).toBeUndefined();
+      expect(again.content).toBe(merged.content);
+    });
+
+    // A key whose text is already the name CORE_SCHEMA gives it (`true`, `-1`)
+    // cannot be told from the same key quoted, so it is written quoted: the
+    // key is the same, only its quoting changes.
+    it('keeps null, boolean, float and nested numeric keys as their text', () => {
+      const existing = [
+        '\u{feff}source-sha: abc',
+        '~: tilde',
+        'true: yes-key',
+        '.inf: big',
+        '-1: minus',
+        'reviewed:',
+        '  0o17: octal',
+        '  by:',
+        '    - {0x2a: hex, sha: 0123456}',
+        '',
+      ].join('\n');
+      const merged = mergeFileState(existing, withVersion, 'x');
+      expect(merged.warning).toBe(fallbackWarning);
+      expect(kept(existing)).toBe(
+        [
+          '~: tilde',
+          '"true": yes-key',
+          '.inf: big',
+          '"-1": minus',
+          'reviewed:',
+          '  0o17: octal',
+          '  by:',
+          '    - 0x2a: hex',
+          '      sha: 0123456',
+          '',
+        ].join('\n')
+      );
+      const original = yaml.load(existing, { schema: yaml.CORE_SCHEMA }) as Record<string, unknown>;
+      const loaded = yaml.load(merged.content, { schema: yaml.CORE_SCHEMA }) as Record<
+        string,
+        unknown
+      >;
+      for (const key of Object.keys(original).filter((k) => k !== 'source-sha')) {
+        expect(loaded[key]).toEqual(original[key]);
+      }
+    });
+
+    it('dumps the values as a last resort when a key is written both plain and quoted', () => {
+      // CORE_SCHEMA reads `0x2a` as `42` and `"0x2a"` as itself, two keys; the
+      // text-keeping load reads both as `0x2a`, one key twice.
+      const merged = mergeFileState(
+        `source-sha: abc\nnote: "a${TAB}b"\n0x2a: x\n"0x2a": other\n`,
+        withVersion,
+        'x'
+      );
+      expect(merged.warning).toBe(
+        'x: the keys it held besides the ones sync writes were kept, but their text could not ' +
+          'be carried over as written, so their values were re-serialised: quoting, comments ' +
+          'and number formatting may have changed'
+      );
+      expect(merged.content).toContain('"42": x\n');
+      expect(merged.content).toContain('"0x2a": other\n');
+    });
+
+    // An anchor that refers to itself loads as a cycle. The key-pairing walk must
+    // not follow it without end: the write falls back, it does not throw into a sync.
+    it.each([
+      ['a mapping that holds itself', 'reviewed: &a\n  by: x\n  self: *a\n'],
+      ['a sequence that holds itself', 'reviewed: &a [*a]\n'],
+    ])('falls back, and does not throw, on %s', (_what, kept) => {
+      const BOM = String.fromCharCode(0xfeff);
+      const merged = mergeFileState(`${BOM}source-sha: old\n${kept}`, withVersion, 'x');
+      expect(merged.overwritten).toBeUndefined();
+      expect(merged.warning).toContain('could not be carried over as written');
+      const loaded = yaml.load(merged.content, { schema: yaml.CORE_SCHEMA }) as Record<
+        string,
+        unknown
+      >;
+      expect(loaded['source-sha']).toBe(withVersion['source-sha']);
+      // The cycle survives the round trip.
+      const reviewed = loaded.reviewed as Record<string, unknown> | unknown[];
+      const inner = Array.isArray(reviewed) ? reviewed[0] : reviewed.self;
+      expect(inner).toBe(reviewed);
+    });
+  });
+
+  it.each([
+    ['!!timestamp', 'reviewed-at: !!timestamp 2026-11-25\n', '!!timestamp'],
+    ['!!binary', 'blob: !!binary aGk=\n', '!!binary'],
+    ['a custom tag', 'reviewed: !signoff an-editor\n', '!signoff'],
+  ])('overwrites a mapping with an explicit %s tag, saying why', (_what, line, tag) => {
+    const merged = mergeFileState(`source-sha: abc\n${line}`, withVersion, 'x');
+    expect(merged.content).toBe(serializeFileState(withVersion));
+    expect(merged.overwritten).toBe(true);
+    expect(merged.overwrittenReason).toBe(
+      `it uses the YAML tag ${tag}, which state files do not support`
+    );
+    expect(merged.warning).toBe(
+      `x could not be read, since it uses the YAML tag ${tag}, which state files do not ` +
+        'support, so it was overwritten: any keys it held besides the ones sync writes are gone'
+    );
+  });
+
+  it('still fails when the existing file cannot be read', () => {
+    fs.mkdirSync(statePath(), { recursive: true });
+    expect(() => writeFileState(tmpDir, 'intro.md', state)).toThrow(/EISDIR/);
   });
 });
 

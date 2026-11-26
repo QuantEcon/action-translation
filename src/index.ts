@@ -30,7 +30,13 @@ import { isTranslationBranch } from './branch-naming.js';
 import { FAILURE_ISSUE_LABEL } from './contracts.js';
 import { refreshStaleBranch } from './rebase-siblings.js';
 import { writeRebasedBranch } from './git-commit.js';
-import { DeletedLecture, planRebaseRead, RebaseReadError, RebaseReads } from './rebase-plan.js';
+import {
+  AddedLecture,
+  DeletedLecture,
+  planRebaseRead,
+  RebaseReadError,
+  RebaseReads,
+} from './rebase-plan.js';
 import { stateFileRelativePath } from './cli/translate-state.js';
 import {
   applySyncScope,
@@ -57,7 +63,9 @@ import {
   buildFailureIssueBody,
   failureIssueTitle,
   FailureIssueInput,
+  FailedRead,
   rebaseFailureComment,
+  UnreadState,
 } from './recovery-advice.js';
 import { runReview } from './action/review.js';
 import { coreLogger } from './action/core-logger.js';
@@ -289,6 +297,11 @@ async function runRebase(): Promise<void> {
             docsFolder: inputs.docsFolder,
             deletedSinceOpened:
               error instanceof RebaseReadError ? error.deletedSinceOpened : undefined,
+            addedOnMainSinceOpened:
+              error instanceof RebaseReadError ? error.addedOnMainSinceOpened : undefined,
+            unreadStates: error instanceof RebaseReadError ? error.unreadStates : undefined,
+            failedReads: error instanceof RebaseReadError ? error.failedReads : undefined,
+            otherErrors: error instanceof RebaseReadError ? error.otherErrors : undefined,
           }),
         });
       } catch {
@@ -357,6 +370,12 @@ async function rebaseSinglePR(
   // merged since this one opened deleted (#389).
   const carried: Array<{ path: string; content: string }> = [];
   const deletedSinceOpened: DeletedLecture[] = [];
+  // Lectures this PR adds that a PR merged since it opened added first (#467).
+  const addedOnMainSinceOpened: AddedLecture[] = [];
+  // Reads the plan needed that failed, for the re-run advice (#467).
+  const failedReads: FailedRead[] = [];
+  // Each lecture's read at the PR's baseline, by the path read, for the cache.
+  const baselineReads = new Map<string, EditionRead>();
 
   for (const file of metadata.files) {
     // Determine file type from metadata (default to 'markdown' for backward compat)
@@ -458,17 +477,22 @@ async function rebaseSinglePR(
         continue;
       }
 
-      let oldContent = '';
-      try {
-        const result = await fetchFileContent(
-          octokit,
-          sourceOwner,
-          sourceRepoName,
-          file.path,
-          `${sourceCommitSha}^`
+      // The English before the PR's source commit. Any failed read leaves it
+      // empty, as before; the plan below tells a 404 from another failure
+      // where that decides what the rebase does (#467).
+      const parentRead = await readEditionFile(
+        octokit,
+        sourceOwner,
+        sourceRepoName,
+        file.path,
+        `${sourceCommitSha}^`
+      );
+      const oldContent = parentRead.status === 'found' ? parentRead.content : '';
+      if (parentRead.status === 'error') {
+        core.info(
+          `${file.path}: could not read the parent commit's English (${parentRead.message})`
         );
-        oldContent = result.content;
-      } catch {
+      } else if (oldContent === '') {
         core.info(`${file.path}: New file (no parent commit content)`);
       }
 
@@ -484,19 +508,62 @@ async function rebaseSinglePR(
       const editionPath = renamed && file.previousPath ? file.previousPath : file.path;
 
       // What the edition has decides what the rebase does with the lecture
-      // (#389, #351; see rebase-plan.ts). The other reads are made only when
-      // `main` answers 404.
+      // (#389, #351, #467; see rebase-plan.ts). When `main` has it, the
+      // baseline is read too; if that answers 404 or fails, the source parent
+      // decides, and the branch is read only when the PR's source change adds
+      // the lecture. The other reads are made only when `main` answers 404.
       const onMain = await readEditionFile(octokit, owner, repo, editionPath, baseSha);
       const reads: RebaseReads = { onMain: onMain.status };
       let newOnMain: EditionRead | undefined;
       let atBaseline: EditionRead | undefined;
       let onBranch: EditionRead | undefined;
+      // The source parent as the plan reads it (see below).
+      let planParentPath = file.path;
+      let planParentRead = parentRead;
       if (onMain.status === 'missing' && renamed) {
         newOnMain = await readEditionFile(octokit, owner, repo, file.path, baseSha);
         reads.newPathOnMain = newOnMain.status;
       }
       const newPathSettles = newOnMain?.status === 'found' || newOnMain?.status === 'error';
-      if (onMain.status === 'missing' && !newPathSettles && metadata.targetBaseSha) {
+      if (onMain.status === 'found' && metadata.targetBaseSha) {
+        atBaseline = await readEditionFile(
+          octokit,
+          owner,
+          repo,
+          editionPath,
+          metadata.targetBaseSha
+        );
+        reads.atBaseline = atBaseline.status;
+        if (atBaseline.status !== 'found') {
+          // A failed baseline read decides nothing when the source change
+          // edits the lecture: that is an update either way, with no cache.
+          // For a rename, the parent has the lecture at its old path; reading
+          // the new path, which always 404s there (#478), would take the
+          // rename for an addition. Only the plan reads it there: the update
+          // still diffs against `oldContent`, as before.
+          if (file.previousPath !== undefined) {
+            planParentPath = file.previousPath;
+            planParentRead = await readEditionFile(
+              octokit,
+              sourceOwner,
+              sourceRepoName,
+              file.previousPath,
+              `${sourceCommitSha}^`
+            );
+          }
+          // An empty parent leaves nothing to diff against, as a 404 does.
+          reads.sourceParent =
+            planParentRead.status === 'error'
+              ? 'error'
+              : planParentRead.status === 'found' && planParentRead.content !== ''
+                ? 'found'
+                : 'missing';
+          if (reads.sourceParent === 'missing' && atBaseline.status === 'missing') {
+            onBranch = await readEditionFile(octokit, owner, repo, file.path, pr.head.ref);
+            reads.onBranch = onBranch.status;
+          }
+        }
+      } else if (onMain.status === 'missing' && !newPathSettles && metadata.targetBaseSha) {
         atBaseline = await readEditionFile(
           octokit,
           owner,
@@ -510,27 +577,39 @@ async function rebaseSinglePR(
           reads.onBranch = onBranch.status;
         }
       }
+      // The rebase cache reads each lecture at the baseline: it reuses this
+      // read rather than make it again.
+      if (atBaseline) baselineReads.set(editionPath, atBaseline);
       const plan = planRebaseRead(reads);
       const failure = (read: EditionRead | undefined) =>
         read?.status === 'error' ? read.message : 'unknown';
 
       if (plan.action === 'error') {
+        // A failed read gets the re-run advice (#467), named by what was read.
+        const failedRead = (read: string, result: EditionRead | undefined, detail = '') => {
+          failedReads.push({ file: file.path, read, status: failure(result) });
+          return new Error(`Could not read ${read}${detail} (${failure(result)})`);
+        };
         switch (plan.reason) {
           case 'main-read': {
             const [path, read] =
               onMain.status === 'error' ? [editionPath, onMain] : [file.path, newOnMain];
-            throw new Error(
-              `Could not read ${path} from ${owner}/${repo} at ${baseSha.slice(0, 7)} ` +
-                `(${failure(read)})`
-            );
+            throw failedRead(`${path} from ${owner}/${repo} at ${baseSha.slice(0, 7)}`, read);
           }
           case 'baseline-read':
-            throw new Error(
-              `Could not read ${editionPath} at this PR's baseline ` +
-                `${metadata.targetBaseSha?.slice(0, 7)} (${failure(atBaseline)})`
+            throw failedRead(
+              `${editionPath} at this PR's baseline ${metadata.targetBaseSha?.slice(0, 7)}`,
+              atBaseline
             );
           case 'branch-read':
-            throw new Error(`Could not read ${file.path} on ${pr.head.ref} (${failure(onBranch)})`);
+            throw failedRead(`${file.path} on ${pr.head.ref}`, onBranch);
+          case 'source-parent-read':
+            throw failedRead(
+              `${planParentPath} from ${sourceOwner}/${sourceRepoName} at ` +
+                `${sourceCommitSha.slice(0, 7)}^`,
+              planParentRead,
+              ", which says whether this PR's source change adds the lecture"
+            );
           case 'no-baseline':
             throw new Error(
               `${editionPath} is not on ${baseBranch}, and this PR records no baseline (it ` +
@@ -548,6 +627,15 @@ async function rebaseSinglePR(
             'was not carried'
         );
       }
+      if (plan.action === 'added-on-main-since-opened') {
+        addedOnMainSinceOpened.push({ editionPath, path: file.path });
+        throw new Error(
+          `${editionPath} was not on ${baseBranch} when this PR opened ` +
+            `(${metadata.targetBaseSha?.slice(0, 7)}) and is there now ` +
+            `(${baseSha.slice(0, 7)}): a PR merged since added it, and this PR's source change ` +
+            'adds it too, so neither translation was replaced'
+        );
+      }
       if (plan.action === 'drop') {
         // Deleted from main since the PR opened, and off its branch too:
         // nothing to bring back, so the rebuilt PR goes without it.
@@ -563,6 +651,11 @@ async function rebaseSinglePR(
         const statePath = stateFileFor(file.path, inputs.docsFolder);
         const state = await readEditionFile(octokit, owner, repo, statePath, pr.head.ref);
         if (state.status === 'error') {
+          failedReads.push({
+            file: file.path,
+            read: `${statePath} on ${pr.head.ref}`,
+            status: state.message,
+          });
           throw new Error(`Could not read ${statePath} on ${pr.head.ref} (${state.message})`);
         }
         carried.push({ path: file.path, content: onBranch.content });
@@ -637,7 +730,14 @@ async function rebaseSinglePR(
   if (fetchErrors.length > 0) {
     throw new RebaseReadError(
       `content fetch failed for ${fetchErrors.length} file(s); branch left untouched: ${fetchErrors.join('; ')}`,
-      deletedSinceOpened
+      deletedSinceOpened,
+      addedOnMainSinceOpened,
+      [],
+      // A lecture deleted or added on `main` since the PR opened has advice
+      // of its own, so it is not one of the other errors.
+      fetchErrors.length >
+        failedReads.length + deletedSinceOpened.length + addedOnMainSinceOpened.length,
+      failedReads
     );
   }
 
@@ -665,6 +765,13 @@ async function rebaseSinglePR(
 
     for (const file of filesToSync) {
       try {
+        // The plan above read most lectures at the baseline already (#467):
+        // one it did not find there has no cache, so skip the branch read.
+        const planned = baselineReads.get(file.filename);
+        if (planned && planned.status !== 'found') {
+          throw new Error(`${file.filename} was not read at ${targetBaseSha}`);
+        }
+
         // Read the previously translated file from the PR branch
         const { content: previousTranslation } = await fetchFileContent(
           octokit,
@@ -674,14 +781,10 @@ async function rebaseSinglePR(
           prBranch
         );
 
-        // Read the old target baseline (what target main looked like when PR was created)
-        const { content: oldTargetContent } = await fetchFileContent(
-          octokit,
-          owner,
-          repo,
-          file.filename,
-          targetBaseSha
-        );
+        // Read the old target baseline (what target main looked like when PR
+        // was created), unless the plan above already read it.
+        const { content: oldTargetContent } =
+          planned ?? (await fetchFileContent(octokit, owner, repo, file.filename, targetBaseSha));
 
         rebaseCache.set(file.filename, { previousTranslation, oldTargetContent });
         core.info(`${file.filename}: Loaded rebase cache (previous translation + old baseline)`);
@@ -720,15 +823,30 @@ async function rebaseSinglePR(
     inputs.docsFolder,
     `${owner}/${repo}`
   );
-  if (unreadStates.errors.length > 0) {
-    throw new Error(
-      `state read failed for ${unreadStates.errors.length} file(s); branch left untouched: ` +
-        unreadStates.errors.join('; ')
+  // A lecture whose own state file could not be read stops it too: the
+  // rebuilt state file would lose that file's other keys (#290).
+  const unreadWritten = holdUnreadWrittenStates(
+    unreadStates.files,
+    stateReads,
+    inputs.docsFolder,
+    `${owner}/${repo}`,
+    'It was not rebased.'
+  );
+  const stateErrors = [...unreadStates.errors, ...unreadWritten.errors];
+  if (stateErrors.length > 0) {
+    throw new RebaseReadError(
+      `state read failed for ${stateErrors.length} file(s); branch left untouched: ` +
+        stateErrors.join('; '),
+      [],
+      [],
+      unreadWritten.unread,
+      unreadStates.errors.length > 0
     );
   }
   const stateConfig: StateGenerationConfig = {
     sourceCommitSha,
     existingStateShas,
+    existingStates: stateReads,
     docsFolder: inputs.docsFolder,
   };
 
@@ -1157,6 +1275,21 @@ async function runSync(): Promise<void> {
   filesToSync = unreadStates.files;
   fetchErrors.push(...unreadStates.errors);
 
+  // A lecture whose own state file could not be read is held back too, as
+  // the write would lose that file's other keys (#290). The premise check
+  // reports a changed lecture's, which is the same read.
+  const unreadWritten = holdUnreadWrittenStates(
+    filesToSync,
+    stateReads,
+    inputs.docsFolder,
+    `${targetOwner}/${targetRepo}`,
+    'It was not synced.',
+    (file) => file.type === 'markdown' && takesUpdateMode(file)
+  );
+  for (const error of unreadWritten.errors) core.error(error);
+  filesToSync = unreadWritten.files;
+  fetchErrors.push(...unreadWritten.errors);
+
   // The premise of update mode (#420): a lecture whose translation does not
   // start from the English this PR changed is held back before any model
   // call, and its error says which case it is, unless an open translation PR
@@ -1188,6 +1321,7 @@ async function runSync(): Promise<void> {
   const stateConfig: StateGenerationConfig = {
     sourceCommitSha: effectiveSha,
     existingStateShas,
+    existingStates: stateReads,
     docsFolder: inputs.docsFolder,
   };
 
@@ -1346,7 +1480,8 @@ async function runSync(): Promise<void> {
         // Only the lectures this PR delivers: one that failed is in the
         // failure issue instead.
         premise.stillOpen.filter((lecture) => result.processedFiles.includes(lecture.file)),
-        reportOf(gaps)
+        reportOf(gaps),
+        result.overwrittenStateFiles
       );
 
       prUrl = prResult.prUrl;
@@ -1396,6 +1531,7 @@ async function runSync(): Promise<void> {
           mergeSha: effectiveSha,
           heldBack: premise.heldBack,
           failedLectures,
+          unreadStates: [...unreadWritten.unread, ...(premise.unreadStates ?? [])],
           bibliographyUnread: bibliographyError !== undefined,
           // A bibliography hold synced nothing, so no lecture behind an open
           // PR failed: its diagnosis would read as an error of its own.
@@ -1814,7 +1950,9 @@ async function fetchSourcePrInfo(
  * otherwise. Sync mode needs them so Octokit can update (rather than create)
  * state files; both modes use them to decide whether a removed or renamed
  * lecture has a state file to delete. Missing state files are silently
- * skipped — they'll be created as new files.
+ * skipped — they'll be created as new files. The reads carry each file's
+ * content, which the orchestrator writes over keeping the keys it does not
+ * own (#290), so the state write makes no read of its own.
  */
 async function fetchExistingStateShas(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1932,6 +2070,45 @@ function holdUnreadDeletionStates(
     kept.push(file);
   }
   return { files: kept, errors };
+}
+
+/**
+ * Hold back each lecture whose own state file the run would write but could
+ * not read (#290): a changed or renamed lecture's, at the path it is written
+ * to. The write keeps the keys the existing file holds that the engine does
+ * not own, such as an editor's sign-off, so a failed read must not be taken
+ * for no file (`D-2026-11-15-only-a-404-means-absent`). `reported` names the
+ * files whose read another check already reports as an error. `outcome`
+ * ends each error: what became of the lecture. Each held lecture is also
+ * returned in `unread`, for its recovery advice.
+ */
+function holdUnreadWrittenStates(
+  files: FileToSync[],
+  reads: StateReads,
+  docsFolder: string,
+  targetRepo: string,
+  outcome: string,
+  reported: (file: FileToSync) => boolean = () => false
+): { files: FileToSync[]; errors: string[]; unread: UnreadState[] } {
+  const kept: FileToSync[] = [];
+  const errors: string[] = [];
+  const unread: UnreadState[] = [];
+  for (const file of files) {
+    const writes = file.type === 'markdown' || file.type === 'renamed';
+    const statePath = writes ? stateFileFor(file.filename, docsFolder) : undefined;
+    const read = statePath ? reads.get(statePath) : undefined;
+    if (statePath && read?.status === 'error' && !reported(file)) {
+      errors.push(
+        `Fetch failed (state): ${file.filename}: could not read ${statePath} from ${targetRepo} ` +
+          `(${read.message}), so the keys it holds besides the ones sync writes could not be ` +
+          `kept. ${outcome}`
+      );
+      unread.push({ file: file.filename, statePath, status: read.message });
+      continue;
+    }
+    kept.push(file);
+  }
+  return { files: kept, errors, unread };
 }
 
 // =============================================================================
@@ -2064,6 +2241,7 @@ async function createFailureIssue(
     | 'mergeSha'
     | 'heldBack'
     | 'failedLectures'
+    | 'unreadStates'
     | 'stillOpen'
     | 'bibliographyUnread'
     | 'lectureSetUnread'

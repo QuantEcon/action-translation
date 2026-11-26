@@ -1003,13 +1003,14 @@ export async function runInit(options: InitOptions): Promise<TranslationStats> {
         const sourceFile = path.join(options.source, options.docsFolder, lecture);
         const sourceContent = fs.readFileSync(sourceFile, 'utf-8');
         const parsed = await stateParser.parseSections(sourceContent, sourceFile);
-        writeFileState(options.target, lecture, {
+        const overwritten = writeFileState(options.target, lecture, {
           'source-sha': sourceGit?.lastCommit ?? 'unknown',
           'synced-at': new Date().toISOString().split('T')[0],
           model: options.model,
           mode: 'NEW',
           'section-count': parsed.sections.length,
         });
+        if (overwritten) stateWarnings.push(`${lecture}: ${overwritten}`);
       } catch (error) {
         throw new StateWriteError(
           `translated, but ${statePath} was not written: ` +
