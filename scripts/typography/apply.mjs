@@ -13,7 +13,9 @@
  * describing headings that no longer match it.
  *
  * The transform is idempotent and only ever changes whitespace before the
- * target language's high punctuation, so re-running it is safe.
+ * target language's high punctuation and, for French, a straight elision
+ * apostrophe before inline markup into U+2019 (`l'[x](y)` → `l’[x](y)`, #324),
+ * so re-running it is safe.
  *
  * Prereq: `npm run build:cli`.
  *
@@ -27,7 +29,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import yaml from 'js-yaml';
-import { applyTypography, hasTypographyRules } from '../../dist/typography.js';
+import { applyTypography, hasTypographyRules, ELISION_PREFIXES } from '../../dist/typography.js';
 import { extractHeadingMap, extractTranslationTitle, injectHeadingMap } from '../../dist/heading-map.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -47,15 +49,25 @@ const dir = path.join(repo, folder);
 if (!fs.existsSync(dir)) { console.error(`No ${folder}/ in ${repo}`); process.exit(1); }
 
 /**
- * Prove we only ever touched spacing before high punctuation.
+ * Prove we only ever touched spacing before high punctuation, and elision
+ * apostrophes.
  *
  * `\\_` is js-yaml's escape for U+00A0 in a double-quoted scalar, so a typeset
  * heading map serialises as "\u2026LLM\\_?". That parses straight back to a
  * non-breaking space (verified against extractHeadingMap), so for comparison it
  * counts as one \u2014 otherwise this check would flag every file whose frontmatter
  * it had correctly updated.
+ *
+ * A U+2019 after an elision prefix at a word start (`l\u2019`, `jusqu\u2019`) folds to a
+ * straight `'`, so the elision pass (#324) passes; any other curly quote still
+ * counts as a change.
  */
-const normalize = (s) => s.replace(/\\_/g, ' ').replace(/[ \u00A0\u202F\t]*([;:!?])/g, '$1');
+const ELISION_CURLED = new RegExp(`(?<![\\p{L}\\p{N}'\u2018\u2019])(${ELISION_PREFIXES})\u2019`, 'giu');
+const normalize = (s) =>
+  s
+    .replace(/\\_/g, ' ')
+    .replace(ELISION_CURLED, "$1'")
+    .replace(/[ \u00A0\u202F\t]*([;:!?])/g, '$1');
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n/;
 const stripFrontmatter = (s) => { const m = s.match(FRONTMATTER); return m ? s.slice(m[0].length) : s; };
@@ -96,7 +108,8 @@ for (const f of files) {
     out = injectHeadingMap(out, typesetMap, typesetTitle);
   }
 
-  // 3. Safety net: nothing but spacing before high punctuation may differ.
+  // 3. Safety net: nothing but spacing before high punctuation and elision
+  // apostrophes may differ.
   //
   // Body and frontmatter are checked differently on purpose. The body is
   // compared as text, because that is where corruption would actually hurt.
@@ -120,8 +133,12 @@ for (const f of files) {
   }
 
   if (out === src) { console.log(`  · ${f} — already correct`); continue; }
+  // Net change: a negative count is a repaired table delimiter row, which loses the
+  // non-breaking spaces an earlier engine wrote into it (#325).
   const added = (out.match(/\u00A0/g) || []).length - (src.match(/\u00A0/g) || []).length;
-  console.log(`  ✓ ${f} — ${added} non-breaking space(s)`);
+  const spaces = added < 0 ? `${-added} non-breaking space(s) removed` : `${added} non-breaking space(s)`;
+  const elisions = (out.match(ELISION_CURLED) || []).length - (src.match(ELISION_CURLED) || []).length;
+  console.log(`  ✓ ${f} — ${spaces} (net), ${elisions} elision apostrophe(s)`);
   if (!dryRun) fs.writeFileSync(p, out, 'utf-8');
   changed++;
 }

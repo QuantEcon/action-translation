@@ -49694,12 +49694,34 @@ var PROSE_DIRECTIVES = /* @__PURE__ */ new Set([
 var FENCE_OPEN = /^(\s{0,3})(`{3,}|~{3,}|:{3,})\s*(?:\{([\w:-]+)\})?/;
 var DIRECTIVE_OPTION = /^\s*:[a-zA-Z][\w-]*:/;
 var MATH_DELIM = /\$\$/g;
+var HTML_LITERAL_OPEN = /^\s*<(script|pre|style|textarea)(?=[\s>]|$)/i;
+var CELL_BREAK = /^\s*\+\+\+/;
+function isDelimiterRow(line) {
+  return /^[\s|:-]+$/.test(line) && line.includes("|") && line.includes("-");
+}
+function repairDelimiterRow(line) {
+  return line.replace(/[\u00A0\u202F]/g, "");
+}
+function proseContextClass(line) {
+  if (isDelimiterRow(line))
+    return "delimiter-row";
+  if (CELL_BREAK.test(line) || /^[\s|:-]+$/.test(line))
+    return "literal";
+  return "prose";
+}
+function closesFence(open, fence) {
+  if (!open || !fence)
+    return false;
+  const [, , marker, directive] = open;
+  return !directive && marker[0] === fence.marker[0] && marker.length >= fence.marker.length;
+}
 function classifyLines(lines) {
-  const eligible = new Array(lines.length).fill(false);
+  const classes = new Array(lines.length).fill("literal");
   const stack = [];
   let inFrontmatter = false;
   let inMathBlock = false;
   let awaitingOptions = false;
+  let htmlCloser = null;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (i === 0 && line.trim() === "---") {
@@ -49713,12 +49735,18 @@ function classifyLines(lines) {
     }
     const top = stack[stack.length - 1];
     const open = FENCE_OPEN.exec(line);
-    if (top && !top.prose) {
-      if (open) {
-        const [, , marker, directive] = open;
-        if (!directive && marker[0] === top.marker[0] && marker.length >= top.marker.length)
-          stack.pop();
+    if (htmlCloser) {
+      if (htmlCloser.test(line)) {
+        htmlCloser = null;
+        continue;
       }
+      if (!closesFence(open, top))
+        continue;
+      htmlCloser = null;
+    }
+    if (top && !top.prose) {
+      if (closesFence(open, top))
+        stack.pop();
       continue;
     }
     const delimiters = (line.match(MATH_DELIM) || []).length;
@@ -49728,30 +49756,34 @@ function classifyLines(lines) {
       continue;
     }
     if (open) {
-      const [, , marker, directive] = open;
-      if (top && !directive && marker[0] === top.marker[0] && marker.length >= top.marker.length) {
+      const directive = open[3];
+      if (closesFence(open, top)) {
         stack.pop();
         continue;
       }
+      const marker = open[2];
       const prose = Boolean(directive) && PROSE_DIRECTIVES.has(directive.toLowerCase());
       stack.push({ marker, prose });
       awaitingOptions = prose;
       continue;
     }
-    if (!top) {
-      eligible[i] = true;
-      continue;
-    }
-    if (awaitingOptions) {
+    if (top && awaitingOptions) {
       if (DIRECTIVE_OPTION.test(line))
         continue;
       if (line.trim() === "")
         continue;
       awaitingOptions = false;
     }
-    eligible[i] = true;
+    const html = HTML_LITERAL_OPEN.exec(line);
+    if (html) {
+      const closer = new RegExp(`</${html[1]}>`, "i");
+      if (!closer.test(line))
+        htmlCloser = closer;
+      continue;
+    }
+    classes[i] = proseContextClass(line);
   }
-  return eligible;
+  return classes;
 }
 var INLINE_PROTECTED = [
   /\$[^$\n]+\$/g,
@@ -49760,6 +49792,9 @@ var INLINE_PROTECTED = [
   // inline code — also covers MyST roles: {doc}`intro <sec:intro>`
   /!?\[[^\]]*\]\([^)]*\)/g,
   // links and images, including the URL
+  // A whole one-line <style>…</style> (or script/pre/textarea) span, content
+  // included — the generic tag mask below masks only the tags (#325).
+  /<(script|pre|style|textarea)\b[^>]*>.*?<\/\1>/gi,
   /<[^>\n]+>/g,
   // HTML tags and autolinks
   /&(?:[a-zA-Z]+\d*|#\d+|#x[0-9a-fA-F]+);/g,
@@ -49780,6 +49815,11 @@ function applyFrenchSpacing(text) {
       return match;
     return `${before}${NBSP}${run2}`;
   });
+}
+var ELISION_PREFIXES = "c|d|j|l|m|n|s|t|qu|jusqu|lorsqu|puisqu|quoiqu|quelqu|presqu";
+var ELISION_BEFORE_MARKUP = new RegExp(`(?<![\\p{L}\\p{N}'\u2018\u2019])(${ELISION_PREFIXES})'(?=${PLACEHOLDER}|[\\[{*_\xAB\u201C])`, "giu");
+function applyFrenchElision(text) {
+  return text.replace(ELISION_BEFORE_MARKUP, "$1\u2019");
 }
 var DEFINITION_LABEL = /^\s{0,3}\[[^\]]*\]:/;
 var DEFINITION_CORRUPTED = /^(\s{0,3}\[[^\]]*\])[\u00A0\u202F]+:/;
@@ -49807,14 +49847,22 @@ function applyToProse(line, rule) {
   }
   return out;
 }
-var RULES = /* @__PURE__ */ new Map([["fr", applyFrenchSpacing]]);
+var RULES = /* @__PURE__ */ new Map([
+  ["fr", (text) => applyFrenchElision(applyFrenchSpacing(text))]
+]);
 function applyTypography(content, language) {
   const rule = RULES.get(language);
   if (!rule)
     return content;
   const lines = content.split("\n");
-  const eligible = classifyLines(lines);
-  return lines.map((line, i) => eligible[i] ? applyToProse(line, rule) : line).join("\n");
+  const classes = classifyLines(lines);
+  return lines.map((line, i) => {
+    if (classes[i] === "prose")
+      return applyToProse(line, rule);
+    if (classes[i] === "delimiter-row")
+      return repairDelimiterRow(line);
+    return line;
+  }).join("\n");
 }
 
 // dist/file-processor.js
@@ -52889,7 +52937,7 @@ var {
 // dist/heading-map.js
 var PATH_SEPARATOR = "::";
 function normalizeHeadingForMatch(heading) {
-  return MystParser.stripMystRoles(heading.replace(/^#+\s+/, "")).replace(/[\u00A0\u202F]/g, " ").replace(/\s+/g, " ").replace(/ ([;:!?])/g, "$1").trim();
+  return MystParser.stripMystRoles(heading.replace(/^#+\s+/, "")).replace(/[\u2018\u2019]/g, "'").replace(/[\u00A0\u202F]/g, " ").replace(/\s+/g, " ").replace(/ ([;:!?])/g, "$1").trim();
 }
 function cleanHeadingText(heading) {
   return MystParser.stripMystRoles(heading.replace(/^#+\s+/, "").trim());

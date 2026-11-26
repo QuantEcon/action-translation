@@ -1,4 +1,4 @@
-import { applyTypography, hasTypographyRules } from '../typography.js';
+import { applyTypography, ELISION_PREFIXES, hasTypographyRules } from '../typography.js';
 
 const NBSP = '\u00A0';
 
@@ -262,6 +262,440 @@ describe('applyTypography', () => {
     it('leaves a code directive in a ::: fence alone', () => {
       const src = [':::{code-cell} python', 'x = a if b else c  # a ? b : c', ':::'].join('\n');
       expect(applyTypography(src, 'fr')).toBe(src);
+    });
+  });
+
+  // #325: lines that are not prose although they sit where prose may appear.
+  describe('raw HTML literal blocks (#325)', () => {
+    it('ends a one-line block on its own line, so the prose after it is still typeset', () => {
+      const src = ['<pre>a : b</pre>', '', 'Oui : non'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        ['<pre>a : b</pre>', '', `Oui${NBSP}: non`].join('\n')
+      );
+    });
+
+    // English getting_started.md: the fr edition shipped `width : 70% ;` with
+    // U+00A0, which is not CSS whitespace, so the declarations were dropped.
+    const styleBlock = [
+      '<style>',
+      '  .auto {',
+      '    width: 70%;',
+      '    height: auto;',
+      '  }',
+      '  .terminal {',
+      '    width: 80%;',
+      '    height: auto;',
+      '  }',
+      '</style>',
+    ];
+
+    it('leaves a multi-line <style> block byte-identical', () => {
+      const src = ['Voici :', '', ...styleBlock, '', 'Fini !'].join('\n');
+      const out = applyTypography(src, 'fr');
+      expect(out).toContain(styleBlock.join('\n'));
+      expect(out).not.toMatch(/width\s+:/);
+    });
+
+    it('still typesets prose immediately before and after the block', () => {
+      const src = ['Voici :', ...styleBlock, 'Fini !'].join('\n');
+      const out = applyTypography(src, 'fr');
+      expect(out).toBe([`Voici${NBSP}:`, ...styleBlock, `Fini${NBSP}!`].join('\n'));
+    });
+
+    it('leaves a single-line <style> span alone', () => {
+      const src = '<style>.a { width: 1px; }</style>';
+      expect(applyTypography(src, 'fr')).toBe(src);
+    });
+
+    it('masks a one-line <style> span mid-line and typesets the prose around it', () => {
+      const src = 'Avant : <style>.a { width: 1px; }</style> après !';
+      expect(applyTypography(src, 'fr')).toBe(
+        `Avant${NBSP}: <style>.a { width: 1px; }</style> après${NBSP}!`
+      );
+    });
+
+    it('matches the tag case-insensitively', () => {
+      const src = ['<STYLE type="text/css">', 'p { margin: 0; }', '</Style>', 'Fini !'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        ['<STYLE type="text/css">', 'p { margin: 0; }', '</Style>', `Fini${NBSP}!`].join('\n')
+      );
+    });
+
+    it.each(['script', 'pre', 'textarea'])('leaves a <%s> block alone', (tag) => {
+      const src = [`<${tag}>`, 'a ? b : c;', 'Quoi !', `</${tag}>`, 'Fini !'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        [`<${tag}>`, 'a ? b : c;', 'Quoi !', `</${tag}>`, `Fini${NBSP}!`].join('\n')
+      );
+    });
+
+    it('leaves a <style> block inside a {note} alone, typesetting the note prose', () => {
+      const src = ['```{note}', 'Voici :', ...styleBlock, 'Fini !', '```', 'Après !'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        ['```{note}', `Voici${NBSP}:`, ...styleBlock, `Fini${NBSP}!`, '```', `Après${NBSP}!`].join(
+          '\n'
+        )
+      );
+    });
+
+    it('treats fences and $$ inside the block as literal text', () => {
+      const src = ['<pre>', '```', '$$', 'a : b', '</pre>', 'Fini !'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        ['<pre>', '```', '$$', 'a : b', '</pre>', `Fini${NBSP}!`].join('\n')
+      );
+    });
+
+    it('runs an unclosed block to the end of the document, as CommonMark does', () => {
+      const src = ['Avant !', '<style>', 'p { margin: 0; }', '', 'Après !'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        [`Avant${NBSP}!`, '<style>', 'p { margin: 0; }', '', 'Après !'].join('\n')
+      );
+    });
+
+    // MyST parses a directive body as a document of its own, so an unclosed
+    // block opened inside one ends at the directive's closing fence.
+    it('ends an unclosed block inside a directive at the fence that closes the directive', () => {
+      const src = ['```{note}', 'Voici :', '<style>', 'a : b ;', '```', 'Prose : oui ?'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        [
+          '```{note}',
+          `Voici${NBSP}:`,
+          '<style>',
+          'a : b ;',
+          '```',
+          `Prose${NBSP}: oui${NBSP}?`,
+        ].join('\n')
+      );
+    });
+
+    it('ends it at the fence of the directive it opened in, inside nested directives', () => {
+      const src = [
+        '::::{note}',
+        ':::{tip}',
+        '<style>',
+        'a : b ;',
+        ':::',
+        'Note : oui ?',
+        '::::',
+        'Prose : oui ?',
+        '| a | b |',
+        `| :-${NBSP}: | --- |`,
+      ].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        [
+          '::::{note}',
+          ':::{tip}',
+          '<style>',
+          'a : b ;',
+          ':::',
+          `Note${NBSP}: oui${NBSP}?`,
+          '::::',
+          `Prose${NBSP}: oui${NBSP}?`,
+          '| a | b |',
+          '| :-: | --- |',
+        ].join('\n')
+      );
+    });
+
+    it('does not end a block inside a directive at a fence that opens another', () => {
+      // A fence inside the raw block is literal text; only a closing fence for
+      // the enclosing directive (no name, same character, long enough) ends it.
+      const src = [':::{note}', '<pre>', '```{code-cell}', 'a : b', '::', ':::', 'Fin !'].join(
+        '\n'
+      );
+      expect(applyTypography(src, 'fr')).toBe(
+        [':::{note}', '<pre>', '```{code-cell}', 'a : b', '::', ':::', `Fin${NBSP}!`].join('\n')
+      );
+    });
+
+    it('takes a paragraph that starts with a <pre> tag for a raw block, as CommonMark does', () => {
+      // `<pre>` followed by a space starts a type-1 HTML block by the spec, so
+      // the rest of the document is raw HTML to a renderer and is left alone;
+      // inside a directive, to its closing fence.
+      const top = ['Avant !', '<pre> est une balise : oui ?', 'Plus tard : non !'].join('\n');
+      expect(applyTypography(top, 'fr')).toBe(
+        [`Avant${NBSP}!`, '<pre> est une balise : oui ?', 'Plus tard : non !'].join('\n')
+      );
+      const inNote = ['```{note}', '<pre> est une balise : oui ?', '```', 'Fin !'].join('\n');
+      expect(applyTypography(inNote, 'fr')).toBe(
+        ['```{note}', '<pre> est une balise : oui ?', '```', `Fin${NBSP}!`].join('\n')
+      );
+    });
+
+    it('protects an indented opener and its block', () => {
+      const src = ['Voici :', '   <style>', 'a : b ;', '   </style>', 'Fini !'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        [`Voici${NBSP}:`, '   <style>', 'a : b ;', '   </style>', `Fini${NBSP}!`].join('\n')
+      );
+    });
+
+    it('opens no block for a tag in the middle of a line', () => {
+      const src = ['Texte <pre> ici : oui ?', 'Suite : non !'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        [`Texte <pre> ici${NBSP}: oui${NBSP}?`, `Suite${NBSP}: non${NBSP}!`].join('\n')
+      );
+    });
+
+    it('leaves the whole closer line as written, text after the closer included', () => {
+      // CommonMark ends a type-1 block at the end of the line holding the
+      // closer, so `Texte : oui ?` after `</style>` is part of the raw block.
+      const src = ['<style>', 'p { margin: 0; }', 'a : b ; </style> Texte : oui ?', 'Fini !'].join(
+        '\n'
+      );
+      expect(applyTypography(src, 'fr')).toBe(
+        ['<style>', 'p { margin: 0; }', 'a : b ; </style> Texte : oui ?', `Fini${NBSP}!`].join('\n')
+      );
+    });
+
+    it('does not take a longer tag name for an opener', () => {
+      // `<prefix>` is not `<pre>`; the line is prose with an inline tag.
+      expect(applyTypography('<prefix> Voici :', 'fr')).toBe(`<prefix> Voici${NBSP}:`);
+    });
+
+    it('leaves a <style> block inside a code fence to the fence', () => {
+      const src = ['```html', '<style>', '```', 'Fini !'].join('\n');
+      // The fence closes on line 3; `<style>` inside code never opens a block.
+      expect(applyTypography(src, 'fr')).toBe(
+        ['```html', '<style>', '```', `Fini${NBSP}!`].join('\n')
+      );
+    });
+
+    it('does not heal an already-damaged <style> block', () => {
+      // The edition repair is a separate, one-off PR (#325); the engine only stops
+      // writing new damage.
+      const damaged = ['<style>', `  width${NBSP}: 70%${NBSP};`, '</style>'].join('\n');
+      expect(applyTypography(damaged, 'fr')).toBe(damaged);
+    });
+  });
+
+  describe('MyST cell breaks (#325)', () => {
+    it('leaves a +++ line with JSON metadata alone', () => {
+      const src = ['Avant :', '+++ {"user_expressions": []}', 'Après !'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        [`Avant${NBSP}:`, '+++ {"user_expressions": []}', `Après${NBSP}!`].join('\n')
+      );
+    });
+
+    it('leaves a +++ line inside a {note} alone', () => {
+      const src = ['```{note}', '+++ {"tags": ["x"]}', 'Voici !', '```'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        ['```{note}', '+++ {"tags": ["x"]}', `Voici${NBSP}!`, '```'].join('\n')
+      );
+    });
+
+    it('leaves a bare +++ alone', () => {
+      expect(applyTypography('+++', 'fr')).toBe('+++');
+    });
+  });
+
+  describe('GFM table delimiter rows (#325)', () => {
+    const table = (delimiter: string) =>
+      ['Le tableau :', '', '| A | B |', delimiter, '| x : y | z ! |', '', 'Fini !'].join('\n');
+    const typesetTable = (delimiter: string) =>
+      [
+        `Le tableau${NBSP}:`,
+        '',
+        '| A | B |',
+        delimiter,
+        `| x${NBSP}: y | z${NBSP}! |`,
+        '',
+        `Fini${NBSP}!`,
+      ].join('\n');
+
+    it.each([
+      '| :-: | ---: |',
+      '| :--- | ---: |',
+      '| :---: | :---: |',
+      '| :-: | :-: |',
+      '|:--|--:|',
+      '|-----|----:|',
+      ':-: | --:',
+      '   | --- | --- |',
+    ])('leaves %p alone and still typesets the rows and prose around it', (delimiter) => {
+      expect(applyTypography(table(delimiter), 'fr')).toBe(typesetTable(delimiter));
+    });
+
+    it('leaves a delimiter row inside a {note} alone', () => {
+      const src = ['```{note}', '| A | B |', '| :-: | ---: |', '```'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(src);
+    });
+
+    it.each([
+      [`| :-${NBSP}: | :-${NBSP}: |`, '| :-: | :-: |'], // the fr pandas.md row
+      [`| :---${NBSP}: | ---\u202F: |`, '| :---: | ---: |'],
+    ])('repairs the damaged row %p', (damaged, repaired) => {
+      expect(applyTypography(table(damaged), 'fr')).toBe(typesetTable(repaired));
+    });
+
+    it('leaves a damaged-looking row inside a code fence alone', () => {
+      const src = ['```text', `| :-${NBSP}: |`, '```'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(src);
+    });
+
+    it.each([
+      // A thematic break and a bare colon-dash run carry no pipe: never repaired,
+      // and, holding no words, never spaced either (`:---:` used to become `:---\u00A0:`).
+      ['---', '---'],
+      [':---:', ':---:'],
+      [`:---${NBSP}:`, `:---${NBSP}:`],
+      // Prose with a pipe or a dash is still prose.
+      ['- item : un', `- item${NBSP}: un`],
+      ['a | b : c', `a | b${NBSP}: c`],
+      // A thematic break with a stray NBSP is not a delimiter row, so it is not "repaired".
+      [`---${NBSP}`, `---${NBSP}`],
+      // Pipes and colons with no dash: no delimiter row either, so left as written.
+      [`| :${NBSP}| : |`, `| :${NBSP}| : |`],
+    ])('does not treat %p as a delimiter row', (line, expected) => {
+      expect(applyTypography(['Avant.', '', line].join('\n'), 'fr')).toBe(
+        ['Avant.', '', expected].join('\n')
+      );
+    });
+
+    it('does not repair a delimiter row in a language without rules', () => {
+      const src = `| :-${NBSP}: |`;
+      expect(applyTypography(src, 'zh-cn')).toBe(src);
+    });
+  });
+
+  describe('idempotence over every line class', () => {
+    it('applying twice equals applying once', () => {
+      const src = [
+        '---',
+        'title: Essai',
+        '---',
+        'Voici : un essai ! Vraiment ?',
+        "Voir l'[exemple](x), d'*arguments* et l'« idée » ?",
+        '<style>',
+        '  .auto { width: 70%; }',
+        '</style>',
+        '<style>.a { width: 1px; }</style>',
+        '+++ {"user_expressions": []}',
+        '| A | B |',
+        `| :-${NBSP}: | ---: |`,
+        '| x : y | z ! |',
+        '[^a]: Une note ! Vraiment ?',
+        '```{note}',
+        '<pre>',
+        'a : b',
+        '</pre>',
+        'Dans la note ?!',
+        '```',
+        ':::{tip}',
+        '<style>',
+        'a : b ;',
+        ':::',
+        'Prose : oui ?',
+        '   <script>',
+        'a ? b : c; </script> Texte : oui ?',
+        '<pre> est une balise : oui ?',
+        'Plus tard : non !',
+      ].join('\n');
+      const once = applyTypography(src, 'fr');
+      expect(applyTypography(once, 'fr')).toBe(once);
+    });
+  });
+
+  // #324: smartquotes renders a straight `'` before markup as a closing quote
+  // (`de l”Exercice 1`), so an elision before markup is written as U+2019.
+  describe('French elision apostrophe before inline markup (#324)', () => {
+    const R = '’';
+
+    // Every prefix of the closed list, so that dropping one fails a test.
+    it.each(ELISION_PREFIXES.split('|'))('curls the elision after %s', (prefix) => {
+      expect(applyTypography(`${prefix}'*x*`, 'fr')).toBe(`${prefix}${R}*x*`);
+    });
+
+    it('curls before a footnote or reference-link bracket, which no mask covers', () => {
+      expect(applyTypography("l'[^1] et l'[texte][ref]", 'fr')).toBe(
+        `l${R}[^1] et l${R}[texte][ref]`
+      );
+    });
+
+    it.each(["2l'*x*", "‘l'*x*", "’l'*x*"])(
+      'leaves %s alone: the prefix does not start a word',
+      (src) => {
+        expect(applyTypography(src, 'fr')).toBe(src);
+      }
+    );
+
+    it.each([
+      ["de l'[Exercice 1](x)", `de l${R}[Exercice 1](x)`], // link
+      ["d'`AxesSubplot`", `d${R}\`AxesSubplot\``], // inline code
+      ["d'{ref}`appels`", `d${R}{ref}\`appels\``], // role
+      ["l'*Étape 1*", `l${R}*Étape 1*`], // emphasis
+      ["l'**évaluation**", `l${R}**évaluation**`], // strong
+      ["d'_arguments_", `d${R}_arguments_`], // underscore emphasis
+      ["d'$x$", `d${R}$x$`], // inline math
+      ["d'« apprendre »", `d${R}« apprendre »`], // guillemet
+      ["jusqu'`n`", `jusqu${R}\`n\``], // long prefix
+      ["L'[Exercice](x)", `L${R}[Exercice](x)`], // capital, sentence start
+      ["qu'*il*", `qu${R}*il*`],
+      ["lorsqu'“x”", `lorsqu${R}“x”`], // curly double quote
+      ["d'<b>gras</b>", `d${R}<b>gras</b>`], // masked HTML tag
+    ])('curls %p', (src, expected) => {
+      expect(applyTypography(src, 'fr')).toBe(expected);
+    });
+
+    it.each([
+      ["l'exécution", 'plain elision before a letter'],
+      ["aujourd'hui", 'in-word apostrophe'],
+      ["'s'*gras*", 'a genuine quote, not a word start'],
+      ["'l'[1]", 'a genuine quote before a bracket'],
+      ["Hawai'[i]", 'not an elision prefix'],
+      ["O'`Reilly`", 'not an elision prefix'],
+      [`d'"objets"`, 'straight double quote is deliberately excluded'],
+      ["`l'*x*`", 'inside inline code'],
+      ["$l'*x*$", 'inside inline math'],
+      ["Voir https://x.org/l'[a] ici", 'inside a bare URL'],
+      ["Voir [l'*x*](y) ici", 'inside link text (documented limit)'],
+    ])('leaves %p alone (%s)', (src) => {
+      expect(applyTypography(src, 'fr')).toBe(src);
+    });
+
+    it('leaves front matter, code cells, display math, <style> and directive options alone', () => {
+      const src = [
+        '---',
+        "title: l'[x](y)",
+        '---',
+        '```{code-cell} python',
+        "s = d'[0]",
+        '```',
+        '$$',
+        "l'{x}",
+        '$$',
+        '<style>',
+        "/* l'*x* */",
+        '</style>',
+        '```{figure} a.png',
+        ":alt: l'*x*",
+        '```',
+      ].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(src);
+    });
+
+    it('applies with the NBSP pass on the same line', () => {
+      expect(applyTypography("Voici l'[exemple](x) !", 'fr')).toBe(
+        `Voici l${R}[exemple](x)${NBSP}!`
+      );
+    });
+
+    it('typesets headings too', () => {
+      expect(applyTypography("## L'*essentiel* ?", 'fr')).toBe(`## L${R}*essentiel*${NBSP}?`);
+    });
+
+    it('is idempotent', () => {
+      const once = applyTypography("de l'[Exercice 1](x), d'*arguments* et l'« idée » !", 'fr');
+      expect(applyTypography(once, 'fr')).toBe(once);
+    });
+
+    it('is a no-op on text that already has U+2019 everywhere', () => {
+      const src = `de l${R}[Exercice 1](x), d${R}*arguments*, aujourd${R}hui et l${R}exécution.`;
+      expect(applyTypography(src, 'fr')).toBe(src);
+    });
+
+    it('leaves other languages alone', () => {
+      const src = "de l'[Exercice 1](x)";
+      expect(applyTypography(src, 'en')).toBe(src);
+      expect(applyTypography(src, 'zh-cn')).toBe(src);
     });
   });
 

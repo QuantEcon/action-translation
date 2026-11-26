@@ -11,8 +11,12 @@
  *
  * The hard part is NOT the substitution, it is knowing where prose ends. Code
  * (`a ? b : c`), math (`$\{x : x > 0\}$`), YAML frontmatter (`key: value`),
- * MyST anchors (`(sec:intro)=`) and URLs (`https://`) all contain the same
- * characters and must never be touched. Two independent defences:
+ * MyST anchors (`(sec:intro)=`), URLs (`https://`), raw `<style>`/`<script>`
+ * blocks (CSS `width: 70%;`), `+++ {json}` cell breaks and GFM table delimiter
+ * rows (`| :-: |`) all contain the same characters and must never be touched
+ * (#325). A line that starts with `<pre>`, `<style>`, `<script>` or
+ * `<textarea>` opens such a raw block even when it reads as a sentence, as
+ * CommonMark says; see `HTML_LITERAL_OPEN`. Two independent defences:
  *
  *   1. classify every line as prose-eligible or not, then mask inline
  *      constructs within the eligible ones, and
@@ -22,6 +26,12 @@
  * Line classification is a stateful walk rather than a regex, because fences
  * nest: a ```{code-cell} inside a ```` ```{note} ```` is code inside prose, and no
  * single regex gets that right.
+ *
+ * French runs two passes over the same masked prose, in order: the
+ * non-breaking space before `; : ! ?`, then the elision apostrophe before
+ * inline markup (`l'[x](y)` → `l’[x](y)`, #324), which docutils smartquotes
+ * would otherwise render as a closing quote. Both respect the same line
+ * classes and masks, so neither touches code, math, links or frontmatter.
  *
  * Unknown directives are treated as CODE. Missing a non-breaking space is
  * cosmetic; corrupting a code cell is a real bug, so the conservative default
@@ -95,18 +105,95 @@ const DIRECTIVE_OPTION = /^\s*:[a-zA-Z][\w-]*:/;
  */
 const MATH_DELIM = /\$\$/g;
 
+/**
+ * CommonMark type-1 HTML blocks: `<script>`, `<pre>`, `<style>`, `<textarea>`
+ * (case-insensitive). Their content is literal — CSS, JavaScript, preformatted
+ * text — and U+00A0 is not CSS whitespace, so a typeset `width : 70% ;` drops
+ * the declaration (#325, the fr `getting_started` figures). The block runs from
+ * the opener through the first line holding the matching closer, that whole
+ * line included; opener and closer may share a line. An unclosed block runs to
+ * the end of the document, as in CommonMark, or, when it opened inside a
+ * directive, to the fence that closes that directive. Leading whitespace of
+ * any width is accepted, so an indented block is protected too.
+ *
+ * The test is CommonMark's own, so it also takes a PARAGRAPH that merely
+ * starts with the tag: `<pre> est une balise...` at the start of a line is a
+ * raw HTML block by the spec (the tag is followed by a space), and with no
+ * `</pre>` after it nothing below it is typeset, to the end of the document or
+ * of the enclosing directive. That is what a Markdown renderer does with the
+ * line too; write the tag in backticks to mention it in prose.
+ */
+const HTML_LITERAL_OPEN = /^\s*<(script|pre|style|textarea)(?=[\s>]|$)/i;
+
+/**
+ * A MyST cell break, `+++` optionally followed by JSON metadata
+ * (`+++ {"user_expressions": []}`). U+00A0 is not JSON whitespace, so a typeset
+ * colon makes jupytext reject the file (#325).
+ */
+const CELL_BREAK = /^\s*\+\+\+/;
+
+/**
+ * A GFM table delimiter row (`| :-: | ---: |`): only pipes, colons, dashes and
+ * whitespace, with at least one pipe and one dash. The pipe requirement keeps a
+ * thematic break or frontmatter fence (`---`) and a bare `:---:` out. JS `\s`
+ * includes U+00A0 and U+202F, so a row the earlier transform damaged
+ * (`| :-\u00A0: |`) matches too and is repaired by `repairDelimiterRow`.
+ */
+function isDelimiterRow(line: string): boolean {
+  return /^[\s|:-]+$/.test(line) && line.includes('|') && line.includes('-');
+}
+
+/**
+ * The earlier transform spaced the colon of a delimiter cell (`:-:` →
+ * `:-\u00A0:`), which stops the row parsing as a delimiter row and renders the
+ * whole table as a paragraph of pipes (the fr `pandas.md` table). No
+ * non-breaking space is legitimate in a delimiter row, so they are removed —
+ * the same healing `DEFINITION_CORRUPTED` gives definitions, so an
+ * already-damaged edition heals on its next sync.
+ */
+function repairDelimiterRow(line: string): string {
+  return line.replace(/[\u00A0\u202F]/g, '');
+}
+
+/** How `applyTypography` treats a line. */
+type LineClass = 'literal' | 'prose' | 'delimiter-row';
+
+/**
+ * The class of a line that sits where prose may appear. A line of nothing but
+ * pipes, colons, dashes and whitespace that is not a delimiter row (`:---:`,
+ * `- :`) holds no words to typeset either, so it is left as written rather than
+ * spaced into `:---\u00A0:`; only a row with a pipe is repaired.
+ */
+function proseContextClass(line: string): LineClass {
+  if (isDelimiterRow(line)) return 'delimiter-row';
+  if (CELL_BREAK.test(line) || /^[\s|:-]+$/.test(line)) return 'literal';
+  return 'prose';
+}
+
 interface Fence {
   marker: string;
   prose: boolean;
 }
 
+/**
+ * Does this `FENCE_OPEN` match close `fence`? A closing fence uses the same
+ * character, at least as long, and carries no directive name.
+ */
+function closesFence(open: RegExpExecArray | null, fence: Fence | undefined): boolean {
+  if (!open || !fence) return false;
+  const [, , marker, directive] = open;
+  return !directive && marker[0] === fence.marker[0] && marker.length >= fence.marker.length;
+}
+
 /** Decide, line by line, which lines may carry prose typography. */
-function classifyLines(lines: string[]): boolean[] {
-  const eligible: boolean[] = new Array(lines.length).fill(false);
+function classifyLines(lines: string[]): LineClass[] {
+  const classes: LineClass[] = new Array(lines.length).fill('literal');
   const stack: Fence[] = [];
   let inFrontmatter = false;
   let inMathBlock = false;
   let awaitingOptions = false;
+  /** The closer of the open type-1 HTML block, if any. */
+  let htmlCloser: RegExp | null = null;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -124,15 +211,28 @@ function classifyLines(lines: string[]): boolean[] {
     const top = stack[stack.length - 1];
     const open = FENCE_OPEN.exec(line);
 
+    // Inside a raw <style>/<script>/<pre>/<textarea> block, look only for its
+    // closer: fences and `$$` inside it are literal text, not structure. The
+    // whole closer line is part of the block, as in CommonMark, so text after
+    // `</style>` on it is left as written too. One exception: a block opened
+    // inside a directive also ends at the fence that closes that directive,
+    // since MyST parses a directive body as a document of its own. That fence
+    // line then closes the directive below. At top level an unclosed block
+    // runs to the end of the document.
+    if (htmlCloser) {
+      if (htmlCloser.test(line)) {
+        htmlCloser = null;
+        continue;
+      }
+      if (!closesFence(open, top)) continue;
+      htmlCloser = null;
+    }
+
     // Inside a code fence, look only for its closer. This must come before the
     // math check: a `$$` inside a code cell is code, and toggling math state on
     // it would desync everything downstream.
     if (top && !top.prose) {
-      if (open) {
-        const [, , marker, directive] = open;
-        if (!directive && marker[0] === top.marker[0] && marker.length >= top.marker.length)
-          stack.pop();
-      }
+      if (closesFence(open, top)) stack.pop();
       continue;
     }
 
@@ -147,34 +247,37 @@ function classifyLines(lines: string[]): boolean[] {
     }
 
     if (open) {
-      const [, , marker, directive] = open;
-      // A closing fence uses the same character, at least as long, and carries
-      // no directive name.
-      if (top && !directive && marker[0] === top.marker[0] && marker.length >= top.marker.length) {
+      const directive = open[3];
+      if (closesFence(open, top)) {
         stack.pop();
         continue;
       }
+      const marker = open[2];
       const prose = Boolean(directive) && PROSE_DIRECTIVES.has(directive.toLowerCase());
       stack.push({ marker, prose });
       awaitingOptions = prose;
       continue;
     }
 
-    if (!top) {
-      eligible[i] = true;
-      continue;
-    }
-
     // Directive options (`:name: fig-one`) sit directly under the opener.
-    if (awaitingOptions) {
+    if (top && awaitingOptions) {
       if (DIRECTIVE_OPTION.test(line)) continue;
       if (line.trim() === '') continue;
       awaitingOptions = false;
     }
-    eligible[i] = true;
+
+    // A type-1 HTML block opens here, at top level or inside a prose directive.
+    const html = HTML_LITERAL_OPEN.exec(line);
+    if (html) {
+      const closer = new RegExp(`</${html[1]}>`, 'i');
+      if (!closer.test(line)) htmlCloser = closer;
+      continue;
+    }
+
+    classes[i] = proseContextClass(line);
   }
 
-  return eligible;
+  return classes;
 }
 
 /** Inline constructs that must survive untouched inside an otherwise-prose line. */
@@ -182,6 +285,9 @@ const INLINE_PROTECTED: RegExp[] = [
   /\$[^$\n]+\$/g, // inline math
   /`[^`\n]+`/g, // inline code — also covers MyST roles: {doc}`intro <sec:intro>`
   /!?\[[^\]]*\]\([^)]*\)/g, // links and images, including the URL
+  // A whole one-line <style>…</style> (or script/pre/textarea) span, content
+  // included — the generic tag mask below masks only the tags (#325).
+  /<(script|pre|style|textarea)\b[^>]*>.*?<\/\1>/gi,
   /<[^>\n]+>/g, // HTML tags and autolinks
   /&(?:[a-zA-Z]+\d*|#\d+|#x[0-9a-fA-F]+);/g, // HTML entities — &nbsp; ends in ;
   /https?:\/\/\S+/g, // bare URLs
@@ -216,6 +322,36 @@ function applyFrenchSpacing(text: string): string {
       return `${before}${NBSP}${run}`;
     }
   );
+}
+
+/**
+ * The closed list of French elision prefixes. Matched at a word start only, so
+ * a genuine quote (`'s'*x*`, `'l'[1]`) or a non-elided form (`Hawai'[i]`,
+ * `O'`Reilly``) is never touched.
+ */
+export const ELISION_PREFIXES = 'c|d|j|l|m|n|s|t|qu|jusqu|lorsqu|puisqu|quoiqu|quelqu|presqu';
+
+/**
+ * A French elision apostrophe directly before inline markup (#324):
+ * `l'[Exercice 1](x)`, `d'*arguments*`, `d'{ref}`appels``, `d'« apprendre »`.
+ * Docutils smartquotes sees a straight `'` that ends a text node and, for
+ * French, renders it as a closing quote: "de l”Exercice 1". Before markup an
+ * elision is always an apostrophe, so it is written as U+2019 in the source.
+ *
+ * The lookahead is a masked span (inline code, math, a link, an HTML tag — a
+ * placeholder here) or the start of a link, role, emphasis, « or “. A straight
+ * `"` is deliberately left out (`d'"objets"` renders as `d’ » objets »` in a
+ * real build), and so are in-word apostrophes (`aujourd'hui`, `l'exécution`):
+ * smartquotes already curls those, and converting them would only add diff
+ * noise. Link TEXT is masked with its link, so `[l'*x*](y)` is a known limit.
+ */
+const ELISION_BEFORE_MARKUP = new RegExp(
+  `(?<![\\p{L}\\p{N}'‘’])(${ELISION_PREFIXES})'(?=${PLACEHOLDER}|[\\[{*_«“])`,
+  'giu'
+);
+
+function applyFrenchElision(text: string): string {
+  return text.replace(ELISION_BEFORE_MARKUP, '$1’');
 }
 
 /**
@@ -274,7 +410,9 @@ function applyToProse(line: string, rule: (text: string) => string): string {
  * with "[object Undefined]". A Map has no such chain, so the lookup can only
  * ever find a rule we actually registered.
  */
-const RULES = new Map<string, (text: string) => string>([['fr', applyFrenchSpacing]]);
+const RULES = new Map<string, (text: string) => string>([
+  ['fr', (text) => applyFrenchElision(applyFrenchSpacing(text))],
+]);
 
 /**
  * Apply deterministic typography rules for `language` to translated MyST
@@ -286,8 +424,14 @@ export function applyTypography(content: string, language: string): string {
   if (!rule) return content;
 
   const lines = content.split('\n');
-  const eligible = classifyLines(lines);
-  return lines.map((line, i) => (eligible[i] ? applyToProse(line, rule) : line)).join('\n');
+  const classes = classifyLines(lines);
+  return lines
+    .map((line, i) => {
+      if (classes[i] === 'prose') return applyToProse(line, rule);
+      if (classes[i] === 'delimiter-row') return repairDelimiterRow(line);
+      return line;
+    })
+    .join('\n');
 }
 
 /** Languages with a deterministic typography pass. */
