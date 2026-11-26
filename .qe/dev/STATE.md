@@ -338,7 +338,24 @@ Roadmap detail lives in the project trackers (reading order in
 
 ## Next
 
-**Resume here (2026-11-16, after the `--require-state` rollout):**
+**Resume here (2026-11-25, with the overnight stack open):**
+
+*Overnight stack, 2026-11-25*: **six stacked draft PRs wait for Matt's review, #471 to #476**,
+each based on the one before; nothing is merged or released. They carry #465, #390, #383, #382
+(#471); #466, #92, #387 (#472); #384, #356, #364, #430 and the `status` half of #391 (#473);
+the engine side of #325 and #324 (#474); #261's source-fetch gate, #284 and #283 (#475); #467,
+#290 and #223's first remedy (#476). Start from log `2026-11-25-overnight-stack`, which lists
+what each PR closes, the three confirmations #476 needs (the #467 stop was narrowed in the
+session), #474's release order (heal the fr edition before a release carrying #324 reaches
+`@v0`) and two defects found and not fixed, to file: the finding cap can drop a gating finding,
+and rebasing a renamed lecture fails with a missing-title error. Records:
+`D-2026-11-25-a-passing-sync-closes-the-failure-issue-under-all`,
+`D-2026-11-25-refused-output-is-kept-under-translate-refused`,
+`D-2026-11-25-an-unparseable-diff-evaluation-degrades-the-review` and
+`D-2026-11-25-rebase-stops-when-main-got-the-lecture-first`. 42 open issues were validated at
+`939ceaf` first; the rest rest on the 2026-11-11 validation.
+
+**Before it (2026-11-16, after the `--require-state` rollout):**
 
 *Released, 2026-11-16*: **v0.33.0 is released** (#461, `d68f54d`), and `v0` points at it. Its
 payload is #460, `translate doctor --require-state` (closed #370), CLI only. §4a read 84 of 84,
@@ -493,7 +510,8 @@ delimiter rows, which already break a table in the fr edition's pandas lecture.
 
 ## Health & context
 
-- `main` green; **2,762 tests across 88 suites** (zero skips, type-checked) with
+- With the 2026-11-25 stack merged (#471 to #476): **3,118 tests across 91 suites** (one
+  skips when the suite runs as root). Before it, at `939ceaf`: `main` green; **2,762 tests across 88 suites** (zero skips, type-checked) with
   `doctor --require-state` (#370, #449's P4), 2,705 before it at `d73f874` (counted 2026-11-16
   in a clean worktree; a tree holding the harness's gitignored clones counts 15 more, see log
   `2026-11-16-overnight-stack`); lint at
