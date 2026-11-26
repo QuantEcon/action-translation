@@ -49709,6 +49709,12 @@ function proseContextClass(line) {
     return "literal";
   return "prose";
 }
+function closesFence(open, fence) {
+  if (!open || !fence)
+    return false;
+  const [, , marker, directive] = open;
+  return !directive && marker[0] === fence.marker[0] && marker.length >= fence.marker.length;
+}
 function classifyLines(lines) {
   const classes = new Array(lines.length).fill("literal");
   const stack = [];
@@ -49727,19 +49733,20 @@ function classifyLines(lines) {
         inFrontmatter = false;
       continue;
     }
-    if (htmlCloser) {
-      if (htmlCloser.test(line))
-        htmlCloser = null;
-      continue;
-    }
     const top = stack[stack.length - 1];
     const open = FENCE_OPEN.exec(line);
-    if (top && !top.prose) {
-      if (open) {
-        const [, , marker, directive] = open;
-        if (!directive && marker[0] === top.marker[0] && marker.length >= top.marker.length)
-          stack.pop();
+    if (htmlCloser) {
+      if (htmlCloser.test(line)) {
+        htmlCloser = null;
+        continue;
       }
+      if (!closesFence(open, top))
+        continue;
+      htmlCloser = null;
+    }
+    if (top && !top.prose) {
+      if (closesFence(open, top))
+        stack.pop();
       continue;
     }
     const delimiters = (line.match(MATH_DELIM) || []).length;
@@ -49749,11 +49756,12 @@ function classifyLines(lines) {
       continue;
     }
     if (open) {
-      const [, , marker, directive] = open;
-      if (top && !directive && marker[0] === top.marker[0] && marker.length >= top.marker.length) {
+      const directive = open[3];
+      if (closesFence(open, top)) {
         stack.pop();
         continue;
       }
+      const marker = open[2];
       const prose = Boolean(directive) && PROSE_DIRECTIVES.has(directive.toLowerCase());
       stack.push({ marker, prose });
       awaitingOptions = prose;

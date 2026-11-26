@@ -14,7 +14,9 @@
  * MyST anchors (`(sec:intro)=`), URLs (`https://`), raw `<style>`/`<script>`
  * blocks (CSS `width: 70%;`), `+++ {json}` cell breaks and GFM table delimiter
  * rows (`| :-: |`) all contain the same characters and must never be touched
- * (#325). Two independent defences:
+ * (#325). A line that starts with `<pre>`, `<style>`, `<script>` or
+ * `<textarea>` opens such a raw block even when it reads as a sentence, as
+ * CommonMark says; see `HTML_LITERAL_OPEN`. Two independent defences:
  *
  *   1. classify every line as prose-eligible or not, then mask inline
  *      constructs within the eligible ones, and
@@ -108,10 +110,18 @@ const MATH_DELIM = /\$\$/g;
  * (case-insensitive). Their content is literal — CSS, JavaScript, preformatted
  * text — and U+00A0 is not CSS whitespace, so a typeset `width : 70% ;` drops
  * the declaration (#325, the fr `getting_started` figures). The block runs from
- * the opener through the first line holding the matching closer; opener and
- * closer may share a line, and an unclosed block runs to the end of the
- * document, as in CommonMark. Leading whitespace of any width is accepted, so
- * an indented block is protected too.
+ * the opener through the first line holding the matching closer, that whole
+ * line included; opener and closer may share a line. An unclosed block runs to
+ * the end of the document, as in CommonMark, or, when it opened inside a
+ * directive, to the fence that closes that directive. Leading whitespace of
+ * any width is accepted, so an indented block is protected too.
+ *
+ * The test is CommonMark's own, so it also takes a PARAGRAPH that merely
+ * starts with the tag: `<pre> est une balise...` at the start of a line is a
+ * raw HTML block by the spec (the tag is followed by a space), and with no
+ * `</pre>` after it nothing below it is typeset, to the end of the document or
+ * of the enclosing directive. That is what a Markdown renderer does with the
+ * line too; write the tag in backticks to mention it in prose.
  */
 const HTML_LITERAL_OPEN = /^\s*<(script|pre|style|textarea)(?=[\s>]|$)/i;
 
@@ -165,6 +175,16 @@ interface Fence {
   prose: boolean;
 }
 
+/**
+ * Does this `FENCE_OPEN` match close `fence`? A closing fence uses the same
+ * character, at least as long, and carries no directive name.
+ */
+function closesFence(open: RegExpExecArray | null, fence: Fence | undefined): boolean {
+  if (!open || !fence) return false;
+  const [, , marker, directive] = open;
+  return !directive && marker[0] === fence.marker[0] && marker.length >= fence.marker.length;
+}
+
 /** Decide, line by line, which lines may carry prose typography. */
 function classifyLines(lines: string[]): LineClass[] {
   const classes: LineClass[] = new Array(lines.length).fill('literal');
@@ -188,25 +208,31 @@ function classifyLines(lines: string[]): LineClass[] {
       continue;
     }
 
-    // Inside a raw <style>/<script>/<pre>/<textarea> block, look only for its
-    // closer: fences and `$$` inside it are literal text, not structure.
-    if (htmlCloser) {
-      if (htmlCloser.test(line)) htmlCloser = null;
-      continue;
-    }
-
     const top = stack[stack.length - 1];
     const open = FENCE_OPEN.exec(line);
+
+    // Inside a raw <style>/<script>/<pre>/<textarea> block, look only for its
+    // closer: fences and `$$` inside it are literal text, not structure. The
+    // whole closer line is part of the block, as in CommonMark, so text after
+    // `</style>` on it is left as written too. One exception: a block opened
+    // inside a directive also ends at the fence that closes that directive,
+    // since MyST parses a directive body as a document of its own. That fence
+    // line then closes the directive below. At top level an unclosed block
+    // runs to the end of the document.
+    if (htmlCloser) {
+      if (htmlCloser.test(line)) {
+        htmlCloser = null;
+        continue;
+      }
+      if (!closesFence(open, top)) continue;
+      htmlCloser = null;
+    }
 
     // Inside a code fence, look only for its closer. This must come before the
     // math check: a `$$` inside a code cell is code, and toggling math state on
     // it would desync everything downstream.
     if (top && !top.prose) {
-      if (open) {
-        const [, , marker, directive] = open;
-        if (!directive && marker[0] === top.marker[0] && marker.length >= top.marker.length)
-          stack.pop();
-      }
+      if (closesFence(open, top)) stack.pop();
       continue;
     }
 
@@ -221,13 +247,12 @@ function classifyLines(lines: string[]): LineClass[] {
     }
 
     if (open) {
-      const [, , marker, directive] = open;
-      // A closing fence uses the same character, at least as long, and carries
-      // no directive name.
-      if (top && !directive && marker[0] === top.marker[0] && marker.length >= top.marker.length) {
+      const directive = open[3];
+      if (closesFence(open, top)) {
         stack.pop();
         continue;
       }
+      const marker = open[2];
       const prose = Boolean(directive) && PROSE_DIRECTIVES.has(directive.toLowerCase());
       stack.push({ marker, prose });
       awaitingOptions = prose;

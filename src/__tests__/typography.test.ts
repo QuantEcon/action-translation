@@ -351,6 +351,101 @@ describe('applyTypography', () => {
       );
     });
 
+    // MyST parses a directive body as a document of its own, so an unclosed
+    // block opened inside one ends at the directive's closing fence.
+    it('ends an unclosed block inside a directive at the fence that closes the directive', () => {
+      const src = ['```{note}', 'Voici :', '<style>', 'a : b ;', '```', 'Prose : oui ?'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        [
+          '```{note}',
+          `Voici${NBSP}:`,
+          '<style>',
+          'a : b ;',
+          '```',
+          `Prose${NBSP}: oui${NBSP}?`,
+        ].join('\n')
+      );
+    });
+
+    it('ends it at the fence of the directive it opened in, inside nested directives', () => {
+      const src = [
+        '::::{note}',
+        ':::{tip}',
+        '<style>',
+        'a : b ;',
+        ':::',
+        'Note : oui ?',
+        '::::',
+        'Prose : oui ?',
+        '| a | b |',
+        `| :-${NBSP}: | --- |`,
+      ].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        [
+          '::::{note}',
+          ':::{tip}',
+          '<style>',
+          'a : b ;',
+          ':::',
+          `Note${NBSP}: oui${NBSP}?`,
+          '::::',
+          `Prose${NBSP}: oui${NBSP}?`,
+          '| a | b |',
+          '| :-: | --- |',
+        ].join('\n')
+      );
+    });
+
+    it('does not end a block inside a directive at a fence that opens another', () => {
+      // A fence inside the raw block is literal text; only a closing fence for
+      // the enclosing directive (no name, same character, long enough) ends it.
+      const src = [':::{note}', '<pre>', '```{code-cell}', 'a : b', '::', ':::', 'Fin !'].join(
+        '\n'
+      );
+      expect(applyTypography(src, 'fr')).toBe(
+        [':::{note}', '<pre>', '```{code-cell}', 'a : b', '::', ':::', `Fin${NBSP}!`].join('\n')
+      );
+    });
+
+    it('takes a paragraph that starts with a <pre> tag for a raw block, as CommonMark does', () => {
+      // `<pre>` followed by a space starts a type-1 HTML block by the spec, so
+      // the rest of the document is raw HTML to a renderer and is left alone;
+      // inside a directive, to its closing fence.
+      const top = ['Avant !', '<pre> est une balise : oui ?', 'Plus tard : non !'].join('\n');
+      expect(applyTypography(top, 'fr')).toBe(
+        [`Avant${NBSP}!`, '<pre> est une balise : oui ?', 'Plus tard : non !'].join('\n')
+      );
+      const inNote = ['```{note}', '<pre> est une balise : oui ?', '```', 'Fin !'].join('\n');
+      expect(applyTypography(inNote, 'fr')).toBe(
+        ['```{note}', '<pre> est une balise : oui ?', '```', `Fin${NBSP}!`].join('\n')
+      );
+    });
+
+    it('protects an indented opener and its block', () => {
+      const src = ['Voici :', '   <style>', 'a : b ;', '   </style>', 'Fini !'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        [`Voici${NBSP}:`, '   <style>', 'a : b ;', '   </style>', `Fini${NBSP}!`].join('\n')
+      );
+    });
+
+    it('opens no block for a tag in the middle of a line', () => {
+      const src = ['Texte <pre> ici : oui ?', 'Suite : non !'].join('\n');
+      expect(applyTypography(src, 'fr')).toBe(
+        [`Texte <pre> ici${NBSP}: oui${NBSP}?`, `Suite${NBSP}: non${NBSP}!`].join('\n')
+      );
+    });
+
+    it('leaves the whole closer line as written, text after the closer included', () => {
+      // CommonMark ends a type-1 block at the end of the line holding the
+      // closer, so `Texte : oui ?` after `</style>` is part of the raw block.
+      const src = ['<style>', 'p { margin: 0; }', 'a : b ; </style> Texte : oui ?', 'Fini !'].join(
+        '\n'
+      );
+      expect(applyTypography(src, 'fr')).toBe(
+        ['<style>', 'p { margin: 0; }', 'a : b ; </style> Texte : oui ?', `Fini${NBSP}!`].join('\n')
+      );
+    });
+
     it('does not take a longer tag name for an opener', () => {
       // `<prefix>` is not `<pre>`; the line is prose with an inline tag.
       expect(applyTypography('<prefix> Voici :', 'fr')).toBe(`<prefix> Voici${NBSP}:`);
@@ -447,6 +542,8 @@ describe('applyTypography', () => {
       ['a | b : c', `a | b${NBSP}: c`],
       // A thematic break with a stray NBSP is not a delimiter row, so it is not "repaired".
       [`---${NBSP}`, `---${NBSP}`],
+      // Pipes and colons with no dash: no delimiter row either, so left as written.
+      [`| :${NBSP}| : |`, `| :${NBSP}| : |`],
     ])('does not treat %p as a delimiter row', (line, expected) => {
       expect(applyTypography(['Avant.', '', line].join('\n'), 'fr')).toBe(
         ['Avant.', '', expected].join('\n')
@@ -482,6 +579,15 @@ describe('applyTypography', () => {
         '</pre>',
         'Dans la note ?!',
         '```',
+        ':::{tip}',
+        '<style>',
+        'a : b ;',
+        ':::',
+        'Prose : oui ?',
+        '   <script>',
+        'a ? b : c; </script> Texte : oui ?',
+        '<pre> est une balise : oui ?',
+        'Plus tard : non !',
       ].join('\n');
       const once = applyTypography(src, 'fr');
       expect(applyTypography(once, 'fr')).toBe(once);
